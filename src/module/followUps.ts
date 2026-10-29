@@ -1,8 +1,9 @@
 /**
- * Follow-up buttons on a usage card: activities offered after an attack hits, which the user can run from the card or
- * ignore. Nothing prompts and the workflow doesn't wait. An activity declares itself a follow-up of its item's attacks
- * (midiProperties.followUp, with an optional condition); automations offer any activity with MidiQOL.addFollowUp.
- * Each entry keeps the attack's hit targets and whether it was a critical, so it runs as the attack left them.
+ * Follow-up buttons on a usage card: activities offered when another of the item's activities finishes, which the user
+ * can run from the card or ignore. Nothing prompts and the workflow doesn't wait. An activity declares itself a follow-up
+ * (midiProperties.followUp, with an optional condition and which creatures it runs at); automations offer any activity
+ * with MidiQOL.addFollowUp. Each entry keeps its targets and whether the use was a critical, so it runs as the use left
+ * them.
  */
 
 import { MODULE_ID, debug } from "../midi-qol.js";
@@ -15,23 +16,40 @@ const FOLLOW_UPS: string = "system.midi.followUps";
 
 export type FollowUpEntry = { activityUuid: string, label: string, targetUuids: string[], critical: boolean, used: boolean };
 
+export const followUpTargetModes = ["default", "self", "targets", "hitTargets", "missedTargets", "failedSaves", "saveTargets"] as const;
+export type FollowUpTargetMode = typeof followUpTargetModes[number];
+
+/** Who a follow-up runs at. Default: the creatures hit by an attack, else all the targets. */
+export function followUpTargets(workflow: Workflow, mode: FollowUpTargetMode | string = "default"): Set<Token.Implementation> {
+  switch (mode) {
+    case "self": return workflow.token ? new Set([workflow.token]) : new Set();
+    case "targets": return new Set(workflow.targets);
+    case "hitTargets": return new Set(workflow.hitTargets);
+    case "missedTargets": return workflow.targets.difference(workflow.hitTargets);
+    case "failedSaves": return new Set(workflow.failedSaves);
+    case "saveTargets": return new Set(workflow.saves);
+    default: return new Set(workflow.activity?.attack ? workflow.hitTargets : workflow.targets);
+  }
+}
+
 function followUpsOf(message: ChatMessage.Implementation | undefined): FollowUpEntry[] {
   return foundry.utils.deepClone(foundry.utils.getProperty(message ?? {}, "system.midi.followUps") ?? []) as FollowUpEntry[];
 }
 
 /**
- * Offer an activity as a button on the workflow's card, run at the workflow's hit targets. Returns false if the card or
- * the hit targets are missing, or the activity is already offered.
+ * Offer an activity as a button on the workflow's card, run at `options.targets` (default: the creatures an attack hit,
+ * else all the targets; none is allowed). Returns false if the card is missing or the activity is already offered.
  */
-export async function addFollowUp(workflow: Workflow, activity: Activity, options: { label?: string } = {}): Promise<boolean> {
+export async function addFollowUp(workflow: Workflow, activity: Activity, options: { label?: string, targets?: Iterable<Token.Implementation> } = {}): Promise<boolean> {
   const message = workflow.chatCard as ChatMessage.Implementation | undefined;
-  if (!message || !activity?.uuid || !workflow.hitTargets.size) return false;
+  if (!message || !activity?.uuid) return false;
+  const targets = Array.from(options.targets ?? followUpTargets(workflow));
   const followUps = followUpsOf(message);
   if (followUps.some(entry => entry.activityUuid === activity.uuid)) return false;
   followUps.push({
     activityUuid: activity.uuid,
     label: options.label ?? activity.name ?? "",
-    targetUuids: Array.from(workflow.hitTargets).map(token => token.document.uuid),
+    targetUuids: targets.map(token => token.document.uuid),
     critical: !!workflow.isCritical,
     used: false
   });
@@ -39,16 +57,21 @@ export async function addFollowUp(workflow: Workflow, activity: Activity, option
   return true;
 }
 
-/** The item's activities declared as follow-ups whose condition holds, offered once its attack hits. */
+/**
+ * The item's activities declared as follow-ups whose condition holds, offered once one of its other activities finishes.
+ * One that would run at no one, after a use that had targets (an attack that missed, no failed save), isn't offered.
+ */
 export async function offerFollowUps(workflow: Workflow): Promise<void> {
-  if (workflow.aborted || !workflow.hitTargets.size || !workflow.activity?.attack) return;
+  if (workflow.aborted) return;
   // @ts-expect-error no dnd5e-types
   const activities: Activity[] = workflow.item?.system.activities?.contents ?? [];
   for (const activity of activities) {
     if (activity === workflow.activity || !activity.midiProperties?.followUp) continue;
+    const targets = followUpTargets(workflow, activity.midiProperties.followUpTargets);
+    if (!targets.size && workflow.targets.size && activity.midiProperties.followUpTargets !== "self") continue;
     const condition = activity.midiProperties.followUpCondition;
-    if (condition && !await evalActivationCondition(workflow, condition, workflow.hitTargets.first(), { errorReturn: false, item: workflow.item })) continue;
-    await addFollowUp(workflow, activity);
+    if (condition && !await evalActivationCondition(workflow, condition, targets.first(), { errorReturn: false, item: workflow.item })) continue;
+    await addFollowUp(workflow, activity, { targets });
   }
 }
 
@@ -93,7 +116,8 @@ export async function runFollowUp(message: ChatMessage.Implementation, index: nu
     ui.notifications?.warn(game.i18n?.format("midi-qol.FollowUp.Unavailable", { name: entry.label }) ?? entry.label);
     return;
   }
-  const usage = { midiOptions: { targetUuids: entry.targetUuids, isCritical: entry.critical, workflowOptions: { targetConfirmation: "none" } } };
+  // No targets means none, not the user's current ones.
+  const usage = { midiOptions: { targetUuids: entry.targetUuids, ignoreUserTargets: true, isCritical: entry.critical, workflowOptions: { targetConfirmation: "none" } } };
   const workflow: Workflow | undefined = await completeActivityUse(activity, usage, { configure: false }, {});
   if (!workflow || workflow.aborted) return;
   const card = workflow.chatCard as ChatMessage.Implementation | undefined;

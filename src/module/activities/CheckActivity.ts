@@ -79,8 +79,6 @@ let defineMidiCheckActivityClass = <T extends Activity>(ActivityClass: T) => {
           }),
         }),
         friendlySave: new StringField({ initial: "default", name: "friendlySave" })
-        // WIP
-        // saveDisplay: new StringField({initial: "default"}),
       };
       return schema;
     }

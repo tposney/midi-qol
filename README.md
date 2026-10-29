@@ -246,6 +246,7 @@ If you prefer to configure settings manually, here's a recommended full automati
 | GM Attack Roll Display | GM Roll Hiding: what players see for GM attack rolls (Full Roll, Hide Formula, D20 Only, Attack Total Only, Hit/Miss Only, Hit/Miss/Critical/Fumble, Hidden), plus a Dice So Nice select (Show Dice/Ghost Dice/No Dice) |
 | GM Damage Roll Display | GM Roll Hiding: what players see for GM damage rolls (Full Roll/Damage Total Only/Hidden), plus a Dice So Nice select (Show Dice/Ghost Dice/No Dice) |
 | Show players when the GM rolls privately | When the GM rolls with a private, self or blind roll mode, other players see the card as a "rolled some dice" stand-in instead of nothing. "Really Hide private/blind/self-rolls" still hides it |
+| Chat card summaries | Each user's choice (dnd5e's client setting *Summarize chat cards*)/Always/Never: forces *Summarize chat cards* on or off for every user; a user's own choice is restored when set back to Each user's choice |
 | Add fake dice to GM Dice So Nice rolls | Adds random extra dice to the DSN animation so players can't count dice to deduce modifiers |
 | Preferred GM | Preferred GM for socket calls. If 'none' the first GM on the current scene will be used. (Migrated from module settings into the config panel in 13.0.43) |
 
@@ -336,6 +337,7 @@ Target Confirmation displays a dialog before completing an item roll, allowing y
 | Template Origin Height | Caster height activity templates are measured from: Caster's base (default)/Caster's top/Caster's eye level. An activity can override this in its Region settings |
 | Occlude upper floor surfaces | Multi-level scenes: upper floor surfaces are transparent when viewed from a lower floor, even if the token is not directly underneath (default on) |
 | Mark lower floors where creatures can't be seen | Per-player settings (Configure Settings › midi-qol), off by default. Scenes with levels: core draws a lower floor wherever an opening shows it but hides creatures standing there when a floor edge or wall blocks the line from your tokens' eyes; the squares where a medium creature would be hidden are marked, using core's own sight test. Style (tint, dim, hatch, outline, hatch and outline), colour and opacity are set per player |
+| Show attack roll details | Per-player setting, on by default. Icons beside an attack roll's total for its unusual parts (flanking, a target's granted attack bonus, an effect's attack bonus by the effect's image, exhaustion), green for a bonus and red for a penalty, and a tooltip on the total listing every term of the roll (ability, proficiency, roll bonus with the effects behind it, …) with advantage or disadvantage. The shown formula leaves the terms' labels out |
 
 ### Saves
 
@@ -350,6 +352,8 @@ Target Confirmation displays a dialog before completing an item roll, allowing y
 | Prompt GM to Roll Saves (Unlinked) | How unlinked NPC saves are rolled (Chat Message/Auto/Auto roll and show roll dialog/Monks Token Bar/Flash Token Bar/Rippers Epic Rolls) |
 | Prompt GM to Roll Saves (Linked) | How linked NPC saves are rolled (same options) |
 | Timeout before rolling for players | Seconds before midi rolls the player's save for them |
+
+**Who sees a save result:** a card's challenge (its DC and its NPC targets' results) belongs to the caster: under dnd5e's Challenge Visibility *Show only from other players* players see it on cards used by a player-owned caster (whoever clicked), never on an NPC's; the caster's owners always see it. *Auto check saves* then decides how much of an NPC's save players see (outcome, total, dice). Player characters, including player-owned NPCs, always show their roll as their save message does (blind and private rolls stay hidden); the outcome follows the settings. Target names are always shown.
 
 **Prompt Players to Roll Saves Options:**
 - **None (private roll)** / **None (public roll)** - midi rolls the save, shown privately (GM only) or publicly
@@ -475,13 +479,13 @@ On dnd5e 6 midi's advantage and disadvantage sources (flanking, unseen/invisible
 |---------|-------------|
 | Optional Game Rules | Master toggle for optional rules; the rows from Check Flanking to Enable Challenge Mode Armor Class are shown only when it is on |
 | Check Flanking | Check if you and allies flank opponent. Options: none, Advantage Only, Midi Flanking effect, Midi Flanked effect, Midi Flanked + no conga line, or Convenient Effects variants (if installed). Supports hex grids |
-| Flanking Bonus Type | What benefit flanking gives: Advantage (default) or +1 to +5 to hit (reduces target's effective AC) |
+| Flanking Bonus Type | What benefit flanking gives: Advantage (default) or +1 to +5 added to the attack roll (labelled Flanking or Flanked). Flanking applies to melee attacks against a single target; with *Roll a separate attack per target* each roll counts |
 | Flanking requires target can sense flanker | An ally only counts as a flanker if the target can sense them |
 | Show Flanking Positions | Highlight grid cells where an ally would create flanking against your current target |
-| Unseen/Invisible attackers have advantage/disadvantage on attacks | Do not apply/RAW (2014)/RAW (2024)/Use Token Vision. The 2024 mode checks visibility rather than the invisible condition. (2024 mode added in 13.0.43) |
+| Unseen/Invisible attackers have advantage/disadvantage on attacks | Do not apply/RAW (2014)/RAW (2024)/Use Token Vision. The 2024 mode (the default) checks visibility rather than the invisible condition. (2024 mode added in 13.0.43) |
 | Hidden attackers have adv/disadv on attacks | Do not apply/Check 'Hidden' Status/Perceptive |
+| Apply condition rules | The condition rules dnd5e doesn't apply (see Optional Rules › Condition Rules). Off by default |
 | Force vision when checking | Behave as if all tokens have vision enabled when checking; unchecked, tokens without vision see everything |
-| Attacking removes hidden (use CE/CV/CUB/core foundry specialStatus ) | Attacking removes hidden status |
 | Ranged attacks when a foe is closer than this have disadvantage. 0 disables | Distance in grid units (default 5) |
 | (House rule) Enabling this means that only the most effective Damage Reduction will apply. Off means DR accumulates | Max DR value |
 | (House Rule) Critical/Fumble always succeed/fail for saving throws | Natural 20/1 always succeed/fail on saves |
@@ -729,14 +733,15 @@ Configure an activity to automatically trigger another activity on the same item
 
 ### Follow-up Buttons
 
-An optional extra a creature may use after its attack hits (bonus damage once per rest, a rider) is offered as a button on the attack's card instead of a prompt: the workflow finishes as usual and the button can be used or ignored.
+An optional extra a creature may use after one of its item's activities (bonus damage once per rest after a hit, a rider after a failed save) is offered as a button on that activity's card instead of a prompt: the workflow finishes as usual and the button can be used or ignored.
 
 | Field | Description |
 |-------|-------------|
-| **Follow-up Button** | When another of this item's attacks hits, offer this activity as a button on the attack's card. |
-| **Follow-up Condition** | Offer it only when this condition is true, evaluated as the attack finishes (the first creature hit is the target). |
+| **Follow-up Button** | When another of this item's activities is used, offer this activity as a button on its card. |
+| **Follow-up Targets** | Who it runs at: by default the creatures an attack hit, else all the targets; or the user, all targets, hit, missed, failed or successful saves. It isn't offered when that is no one after a use that had targets (an attack that missed); after a use with no targets it is offered at no one. |
+| **Follow-up Condition** | Offer it only when this condition is true, evaluated as the use finishes (the first of the Follow-up Targets is the target). |
 
-The button is shown to the attacker's owners and the GM, greyed out when the activity's uses (its own or its item's) are spent. Clicking runs the activity at the creatures the attack hit, as a critical if the attack was one, spends its uses and links its card under the attack's; the button then goes. Automations can offer any activity, e.g. after checking that an attack qualifies, with `MidiQOL.addFollowUp(workflow, activity, { label })` (from `midi-qol.RollComplete` or a later workflow event; returns false if nothing was hit).
+The button is shown to the attacker's owners and the GM, greyed out when the activity's uses (its own or its item's) are spent. Clicking runs the activity at its targets, as a critical if the use was one, spends its uses and links its card under the first; the button then goes. Automations can offer any activity, e.g. after checking that an attack qualifies, with `MidiQOL.addFollowUp(workflow, activity, { label, targets })` (from `midi-qol.RollComplete` or a later workflow event; `targets` defaults as Follow-up Targets does; returns false if the card is gone or the activity is already offered).
 
 ### Over Time Effects (Activity Tab)
 
@@ -781,11 +786,12 @@ On dnd5e 6, midi runs dnd5e's Teleport activity as a workflow (targets, on-use m
 
 | Field | Description |
 |-------|-------------|
-| **Who Teleports** | *Controlled Tokens* (dnd5e's default), *Caster*, *Caster and Targets* (each target lands within 5 ft of the caster's destination) or *Targets* (each placed within the teleport distance of the caster). To move only creatures that fail a save, trigger the teleport from a save activity. |
+| **Who Teleports** | *Controlled Tokens* (dnd5e's default), *Caster*, *Caster and Targets* (each target lands within 5 ft of the caster's destination) *Targets* (each placed within the teleport distance of the caster) or *Swap Caster and Target* (the caster and the first target, within the teleport distance, trade places). To move only creatures that fail a save, trigger the teleport from a save activity. |
+| **Teleport** | *From the Card's Button* (dnd5e's) or *During the Use*: planned in the workflow after its effects and damage, before RollComplete; dismissing it leaves the button. A made teleport hides the card's Teleport button. |
 | **Destination Must Be Seen** | The caster must be able to see each destination (Misty Step). |
 | **Blocked Destination** | *Refuse*: an occupied space, a wall or (with *Destination Must Be Seen*) a space the caster can't see is refused and you pick again. *Fail*: the teleport fails for everyone and the item's damage activity is used on the travellers (Dimension Door). |
 
-The caster plans their own move; you place the others, and the GM moves tokens you don't own. On-use macro passes `preTeleport` (can cancel or change who moves) and `postTeleport`, and hooks `midi-qol.preTeleport` / `midi-qol.postTeleport`, fire around it.
+The caster plans their own move; you place the others, and the GM moves tokens you don't own. Square and hex grids are checked by grid space; gridless scenes by the tokens' bounds. A teleport used as a reaction pauses the reaction timeout while it is placed. `completeActivityUse` takes `midiOptions.teleport`: `{ destinations: { [tokenUuid]: { x, y, elevation } } }` (moves there without planning or picking, checked as picks are) or `"button"` (leaves a *During the Use* teleport to the button). On-use macro passes `preTeleport` (can cancel or change who moves) and `postTeleport`, and hooks `midi-qol.preTeleport` / `midi-qol.postTeleport`, fire around it.
 
 ## Concentration Automation
 
@@ -951,7 +957,7 @@ Targeting rules that don't need it: with *Calculate Cover* set, a target with to
 | Check Flanking | Flanking grants advantage, a to-hit bonus, or a Flanking/Flanked effect |
 | Unseen/Invisible attackers have advantage/disadvantage on attacks | Advantage for unseen attackers, disadvantage against targets they can't see |
 | Hidden attackers have adv/disadv on attacks | Advantage for hidden attackers, disadvantage if the target is hidden |
-| Attacking removes hidden (use CE/CV/CUB/core foundry specialStatus ) | Attacking reveals the attacker |
+| Apply condition rules | The condition rules dnd5e doesn't apply, for conditions added after it is turned on (see below) |
 | Ranged attacks when a foe is closer than this have disadvantage. 0 disables | Nearby foes give ranged attacks disadvantage |
 | (House rule) Enabling this means that only the most effective Damage Reduction will apply. Off means DR accumulates | Max DR value |
 | (House Rule) Critical/Fumble always succeed/fail for saving throws | Nat 20/1 on saves auto succeed/fail |
@@ -963,6 +969,22 @@ Targeting rules that don't need it: with *Calculate Cover* set, a target with to
 | (House Rule) Vitality Item | Damage at 0 HP reduces the Vitality Item's uses |
 
 "When an Incapacitated actor takes an action, MidiQOL should", "Check weapon range when attacking", "Targets you can see" and "Include height difference in distance calculations" are Mechanics tab settings and apply whether or not optional rules are on.
+
+## Condition Rules
+
+*Apply condition rules* adds the parts of each condition dnd5e doesn't apply itself to the condition's effect when it is created, however the condition is set (token HUD, sheet, an activity). Conditions already on tokens when it is turned on are unchanged; toggle them off and on. dnd5e already applies speed, petrified's resistances, restrained's Dexterity save disadvantage, poisoned's ability check disadvantage, exhaustion and initiative.
+
+| Condition | Added |
+|-----------|-------|
+| Blinded | Attacks have disadvantage, attacks against it advantage; only when *Unseen/Invisible attackers* is *Do not apply* (otherwise those rules cover it) |
+| Frightened | Attacks and ability checks have disadvantage (whether or not the source of fear is in sight) |
+| Paralyzed, Unconscious (and Dead) | Fails Strength and Dexterity saves, attacks against it have advantage, a hit within 5 ft is critical |
+| Petrified, Stunned | Fails Strength and Dexterity saves, attacks against it have advantage |
+| Prone | Attacks have disadvantage, attacks against it have advantage within 5 ft and disadvantage beyond |
+| Restrained | Attacks have disadvantage, attacks against it have advantage |
+| Silenced | Can't cast spells with a verbal component |
+
+The rule also applies the attack disadvantage dnd5e lists among its condition effects but doesn't roll: poisoned, 2014 exhaustion level 3 and above, and heavily encumbered (Strength and Dexterity attacks). Grappled (2024: disadvantage attacking anyone but the grappler) is not included.
 
 ## Active Defence
 

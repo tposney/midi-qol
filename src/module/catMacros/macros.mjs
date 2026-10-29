@@ -31,7 +31,6 @@ import {lesserRestoration} from './spells/lesserRestoration.mjs';
 import {phantasmalForce} from './spells/phantasmalForce.mjs';
 import {sanctuary} from './spells/sanctuary.mjs';
 import {sleep} from './spells/sleep.mjs';
-export {registerHideSearchSettings} from './actions/hide.mjs';
 // CAT macros of midi's sample items, keyed by the identifier items reference in flags.cat.macros.
 const catMacros = {
     'attack': attack,

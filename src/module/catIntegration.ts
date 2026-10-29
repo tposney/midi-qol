@@ -1,6 +1,6 @@
 import { MODULE_ID } from "../midi-qol.js";
 import { addNotes } from "./catMacros/automationNotes.mjs";
-import { registerCATMacros, registerHideSearchSettings } from "./catMacros/macros.mjs";
+import { registerCATMacros } from "./catMacros/macros.mjs";
 
 /** The last CAT whose medkit can update an item that an earlier update in the same run deleted. */
 const CAT_MEDKIT_FIX_MAX = "0.1.3";
@@ -90,7 +90,6 @@ function setupActorlessNotes() {
 }
 
 export function setupCATIntegration() {
-  registerHideSearchSettings();
   Hooks.once("catReady", async () => {
     setupCATMedkitFix();
     setupCATCastActivityFix();

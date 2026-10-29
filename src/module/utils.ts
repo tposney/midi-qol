@@ -1,4 +1,5 @@
 import type { AttackModifier } from "./Workflow.js";
+import { rollBonusLabel } from "./activities/AttackActivity.js";
 import { debug, i18n, error, warn, busyWait, allAttackTypes, debugEnabled, overTimeEffectsToDelete, getStaticID, savedOverTimeEffectsToDelete, GameSystemConfig, systemConcentrationId, MQItemMacroLabel, MODULE_ID, midiReactionEffect, midiBonusActionEffect, MQActivityMacroLabel, ceInterface, i18nFormat } from "../midi-qol.js";
 import { configSettings, autoRemoveTargets, checkRule, criticalDamage, criticalDamageGM, checkMechanic, safeGetGameSetting, debounceInterval, autoRollDamageOptions, showReactionAttackRollOptions, shouldDisplaySaveDC, DOWNGRADE_IMMUNITY_KEY, ALL_DAMAGE_KEY } from "./settings.js";
 import { log } from "../midi-qol.js";
@@ -1106,7 +1107,7 @@ export function midiCustomEffect(actor: Actor.Implementation, change: MidiChange
       const origin = originUuid ? fromUuidSync(originUuid) : undefined;
       const item = origin instanceof Item ? origin : (origin instanceof ActiveEffect && origin.parent instanceof Item ? origin.parent : undefined);
       if (activity?.macro?.command) args[0] = `ActivityMacro.${activityUuid}`;
-      else if (item && DAE.getItemMacroCommand(item)) args[0] = "ItemMacro";
+      else if (item && globalThis.DAE?.getItemMacroCommand(item)) args[0] = "ItemMacro";
       else {
         if (debugEnabled > 0) warn(`onUseMacroName change on ${change.effect?.name} (${actor.name}) has a blank macro name and its item has no macro`);
         return true;
@@ -1180,7 +1181,7 @@ export function midiCustomEffect(actor: Actor.Implementation, change: MidiChange
   } else if (change.key.startsWith(`flags.${MODULE_ID}.optional.`) && typeof change.value === "string"
     && (change.value.trim() === "ItemMacro" || change.value.trim() === MQItemMacroLabel)) {
     let macroString = change.value;
-    const sourceItemUuid = change.effect ? DAE.getEffectSource(change.effect).itemUuid : undefined;
+    const sourceItemUuid = change.effect ? globalThis.DAE?.getEffectSource(change.effect).itemUuid : undefined;
     if (sourceItemUuid) macroString = `ItemMacro.${sourceItemUuid}`;
     else if (originUuid?.includes("Item.")) {
       const itemUuid = originUuid?.includes("ActiveEffect.") ? originUuid.split(".").slice(0, -2).join(".") : originUuid;
@@ -4788,6 +4789,10 @@ export async function expireMyEffects(this: Workflow, effectsToExpire: string[])
   //
   expireAnyAction ||= expireBonusAction || expireReaction || expireTurnAction;
   if (expireAnyAction) effectsToExpire.push("1Action");
+  // Recorded as done with 1Action, or a later call in the same workflow expires them again
+  if (expireBonusAction) effectsToExpire.push("Bonus Action");
+  if (expireReaction) effectsToExpire.push("Reaction");
+  if (expireTurnAction) effectsToExpire.push("Turn Action");
   if (expireMiss) effectsToExpire.push("1Miss");
   // expire any effects on the actor that require it
   // if (debugEnabled && false) {
@@ -5989,14 +5994,14 @@ export async function doReactions(targetRef: TokenOrDocument | string, triggerTo
     }
 
     let result: any = await new Promise((resolve) => {
-      // set a timeout for taking over the roll
-      const timeoutId = setTimeout(() => {
-        resolve(noResult);
-      }, (configSettings.reactionTimeout ?? defaultTimeout) * 1000 * 2);
+      // set a timeout for taking over the roll; the reacting client pauses it while it waits on its user (placement)
+      const request = { id: foundry.utils.randomID(), userId: game.user!.id };
+      startReactionTimer(request.id, (configSettings.reactionTimeout ?? defaultTimeout) * 1000 * 2, () => resolve(noResult));
+      options.reactionRequest = request;
 
       // Compiler does not realise player can't be undefined to get here
       player && requestReactions(target, player, triggerTokenUuid, content ?? "", triggerType, reactionActivityList, resolve, chatMessage, options).then((result) => {
-        clearTimeout(timeoutId);
+        endReactionTimer(request.id);
       })
     });
     if (result?.name) {
@@ -6015,6 +6020,45 @@ export async function doReactions(targetRef: TokenOrDocument | string, triggerTo
     TroubleShooter.recordError(err, message);
     throw err;
   }
+}
+
+type ReactionTimer = { remaining: number, started: number, timeoutId?: ReturnType<typeof setTimeout>, onTimeout: () => void };
+const reactionTimers = new Map<string, ReactionTimer>();
+
+function startReactionTimer(id: string, ms: number, onTimeout: () => void) {
+  const timer: ReactionTimer = { remaining: ms, started: Date.now(), onTimeout };
+  timer.timeoutId = setTimeout(() => { reactionTimers.delete(id); onTimeout(); }, ms);
+  reactionTimers.set(id, timer);
+}
+
+function endReactionTimer(id: string) {
+  const timer = reactionTimers.get(id);
+  if (timer?.timeoutId) clearTimeout(timer.timeoutId);
+  reactionTimers.delete(id);
+}
+
+/** Pause (or resume, with the time that was left) a reaction request's timeout, on the requesting client. */
+export function _pauseReactionTimer({ id, pause }: { id: string, pause: boolean }) {
+  const timer = reactionTimers.get(id);
+  if (!timer) return;
+  if (pause) {
+    if (!timer.timeoutId) return;
+    clearTimeout(timer.timeoutId);
+    timer.timeoutId = undefined;
+    timer.remaining = Math.max(0, timer.remaining - (Date.now() - timer.started));
+  } else if (!timer.timeoutId) {
+    timer.started = Date.now();
+    timer.timeoutId = setTimeout(() => { reactionTimers.delete(id); timer.onTimeout(); }, timer.remaining);
+  }
+}
+
+/**
+ * A reaction being used waits on its user (e.g. placing a teleport): pause the requesting client's timeout, which
+ * would otherwise give up on the reaction, and resume it afterwards.
+ */
+export async function pauseReactionTimeout(request: { id: string, userId: string }, pause: boolean) {
+  if (request.userId === game.user?.id) return _pauseReactionTimer({ id: request.id, pause });
+  return socketlibSocket.executeAsUser("pauseReactionTimer", request.userId, { id: request.id, pause });
 }
 
 export async function requestReactions(
@@ -7663,6 +7707,46 @@ export function midiRenderBonusDamageRolls(rolls: Roll[], options?: any) {
   return midiRenderAggregatedDamageRolls(rolls, "modules/midi-qol/templates/bonus-damage-roll.html", options ?? {});
 }
 
+/**
+ * The attack roll's tooltip: a chip for every term after the d20 (its value and the label it was rolled with:
+ * Strength, Proficiency, Flanking, …, the Roll Bonus with the effects behind it), after whether the d20 had advantage
+ * or disadvantage, which alone is coloured (its sources are in the attribution tooltip).
+ */
+function attackTermChips(roll: Roll, modifiers: AttackModifier[], reasonIcon: (m: AttackModifier, cls: string) => string,
+  describeReason: (m: AttackModifier) => string): string {
+  const esc = foundry.utils.escapeHTML;
+  const sources = (foundry.utils.getProperty(roll, `options.${MODULE_ID}.rollBonusSources`) ?? []) as Array<{ label: string, value?: string }>;
+  const chips: string[] = [];
+  const advantageMode = roll.options?.advantageMode;
+  if (advantageMode === 1) chips.push(`<span class="midi-attack-reason-chip plus">${esc(i18n("DND5E.Advantage"))}</span>`);
+  else if (advantageMode === -1) chips.push(`<span class="midi-attack-reason-chip minus">${esc(i18n("DND5E.Disadvantage"))}</span>`);
+  let sign = 1;
+  roll.terms.forEach((term, index) => {
+    if (index === 0) return; // the d20
+    if (term instanceof foundry.dice.terms.OperatorTerm) {
+      sign = term.operator === "-" ? -1 : 1;
+      return;
+    }
+    const value = sign * Number(term.total ?? 0);
+    const label = term.flavor || i18n("midi-qol.AttackTerm.Bonus");
+    const valueText = `${value >= 0 ? "+" : ""}${value}`;
+    const dice = term instanceof foundry.dice.terms.DiceTerm || term instanceof foundry.dice.terms.ParentheticalTerm ? ` (${esc(term.formula.replace(/\[[^\]]*\]/g, ""))})` : "";
+    const modifier = modifiers.find(m => !m.advantage && m.label === label);
+    let detail = "";
+    if (label === rollBonusLabel() && sources.length) {
+      const parts = sources.map(src => src.value ? `${src.value} ${src.label}` : src.label);
+      // Plain numbers can be checked against the term; what they don't account for came from elsewhere (the sheet)
+      if (sources.every(src => src.value !== undefined && Number.isNumeric(src.value))) {
+        const other = value - sources.reduce((sum, src) => sum + Number(src.value), 0);
+        if (other) parts.push(`${other > 0 ? "+" : ""}${other} ${i18n("midi-qol.AttackTerm.Other")}`);
+      }
+      detail = `: ${esc(parts.join(", "))}`;
+    }
+    chips.push(`<span class="midi-attack-reason-chip">${modifier ? reasonIcon(modifier, "midi-attack-reason-icon") : ""} ${esc(valueText)}${dice} ${esc(label)}${detail}</span>`);
+  });
+  return chips.length ? `<div class="midi-attack-reason-chips">${chips.join("")}</div>` : "";
+}
+
 export async function midiRenderTemplateRoll(roll: Roll | undefined, template: string, options?: any) {
   if (!roll) return "";
   const advantageMode = roll.options?.advantageMode;
@@ -7705,12 +7789,34 @@ export async function midiRenderTemplateRoll(roll: Roll | undefined, template: s
     // url() in a custom property resolves against the stylesheet that uses it
     : `<span class="${cls} midi-attack-reason-mask" style="--midi-reason-icon: url('${foundry.utils.getRoute(m.kind === "flanked" ? "modules/midi-qol/icons/encirclement.svg" : "icons/svg/sword.svg")}')" role="img" aria-label="${foundry.utils.escapeHTML(m.label)}"${attrs}></span>`;
   const attackReasons = attackModifiers.map(m => reasonIcon(m, `midi-attack-reason ${reasonSign(m)}`, ` data-tooltip="${foundry.utils.escapeHTML(describeReason(m))}"`));
-  const attackReasonsTooltip = attackModifiers.length
-    ? `<div class="midi-attack-reason-chips">${attackModifiers.map(m => `<span class="midi-attack-reason-chip ${reasonSign(m)}">${reasonIcon(m, "midi-attack-reason-icon")} ${foundry.utils.escapeHTML(describeReason(m))}</span>`).join("")}</div>`
-    : "";
+  // Effects behind the roll bonus (Bless and the like) by their own image, outlined green or red; the weapon's own
+  // make-up (ability, proficiency, magic, ammunition) is the usual and gets none
+  const bonusSources = (foundry.utils.getProperty(roll, `options.${MODULE_ID}.rollBonusSources`) ?? []) as Array<{ label: string, value?: string, img?: string }>;
+  for (const src of bonusSources) {
+    const text = foundry.utils.escapeHTML(src.value ? `${src.value} ${src.label}` : src.label);
+    const sign = `${src.value ?? ""}`.startsWith("-") ? "minus" : "plus";
+    attackReasons.push(src.img
+      ? `<img src="${foundry.utils.escapeHTML(src.img)}" class="midi-attack-reason midi-attack-reason-effect ${sign}" alt="${foundry.utils.escapeHTML(src.label)}" data-tooltip="${text}">`
+      : `<i class="fas fa-wand-magic-sparkles midi-attack-reason ${sign}" data-tooltip="${text}"></i>`);
+  }
+  // Exhaustion's penalty (dnd5e's condition roll reduction, labelled when the roll was built), by its status image
+  const exhaustionLabel = i18n("DND5E.Exhaustion");
+  const exhaustionImg = CONFIG.statusEffects.find(effect => effect.id === "exhaustion")?.img;
+  let termSign = 1;
+  for (const term of template.endsWith("attack-roll.html") ? roll.terms : []) {
+    if (term instanceof foundry.dice.terms.OperatorTerm) { termSign = term.operator === "-" ? -1 : 1; continue; }
+    if (term.flavor !== exhaustionLabel) continue;
+    const value = termSign * Number(term.total ?? 0);
+    if (!value) continue;
+    const text = foundry.utils.escapeHTML(`${value > 0 ? "+" : ""}${value} ${exhaustionLabel}`);
+    attackReasons.push(exhaustionImg
+      ? `<img src="${foundry.utils.escapeHTML(exhaustionImg)}" class="midi-attack-reason midi-attack-reason-effect ${value < 0 ? "minus" : "plus"}" alt="${foundry.utils.escapeHTML(exhaustionLabel)}" data-tooltip="${text}">`
+      : `<i class="fas fa-face-tired midi-attack-reason ${value < 0 ? "minus" : "plus"}" data-tooltip="${text}"></i>`);
+  }
+  const attackReasonsTooltip = template.endsWith("attack-roll.html") ? attackTermChips(roll, attackModifiers, reasonIcon, describeReason) : "";
 
   const chatData = {
-    formula: attackModifiers.length ? roll.formula.replace(/\[[^\]]*\]/g, "") : roll.formula,
+    formula: template.endsWith("attack-roll.html") ? roll.formula.replace(/\[[^\]]*\]/g, "") : roll.formula,
     attackReasons,
     attackReasonsTooltip,
     user: game.user?.id,
@@ -8775,8 +8881,7 @@ export async function displayDSNForRoll(rolls?: Roll | Roll[], rollType?: string
             break;
           case "save":
           case "check": {
-            // Drive save/ability-check DSN visibility from autoCheckSaves (the activity's saveDisplay
-            // override, else the global), independent of the roll's message mode:
+            // Drive save/ability-check DSN visibility from Auto Check Saves, independent of the roll's message mode:
             //   allShow          → full public dice
             //   all / allNoRoll  → ghost (GM sees the real dice; players see ghost dice, not the values)
             //   whisper / gmOnly → GM only (players see nothing)

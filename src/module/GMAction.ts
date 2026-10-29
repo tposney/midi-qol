@@ -1,7 +1,7 @@
 import { checkRule, configSettings } from "./settings.js";
 import { withWorkflowOptionsCodec } from "./lib/workflowOptionsCodec.js";
 import { i18n, log, warn, gameStats, getCanvas, error, debugEnabled, debug, GameSystemConfig, MODULE_ID } from "../midi-qol.js";
-import { calculateDamageAmounts, hpChangeFromDetail, getToken, getTokenDocument, gmOverTimeEffect, fromActorUuid, promptReactions, hasUsedAction, hasUsedBonusAction, removeActionUsed, removeBonusActionUsed, removeReactionUsed, ReactionItemReference, isEffectExpired, expireEffects, deleteAppliedEffects, getAppliedEffects, CERemoveEffect, CEAddEffectWith, getActor, completeItemUse, completeActivityUse, localActivityOverTimeEffect, isValidTarget, hasUsedAnyReaction, getVitalityItem, MidiOptions, tokenSourceCenter, toggleStatus } from "./utils.js";
+import { _pauseReactionTimer, calculateDamageAmounts, hpChangeFromDetail, getToken, getTokenDocument, gmOverTimeEffect, fromActorUuid, promptReactions, hasUsedAction, hasUsedBonusAction, removeActionUsed, removeBonusActionUsed, removeReactionUsed, ReactionItemReference, isEffectExpired, expireEffects, deleteAppliedEffects, getAppliedEffects, CERemoveEffect, CEAddEffectWith, getActor, completeItemUse, completeActivityUse, localActivityOverTimeEffect, isValidTarget, hasUsedAnyReaction, getVitalityItem, MidiOptions, tokenSourceCenter, toggleStatus } from "./utils.js";
 import { ddbglPendingFired } from "./chatMessageHandling.js";
 import { DAMAGE_MESSAGE_TYPE } from "./ChatClasses/DamageCardMessage.js";
 import { DamageDescriptionObject, Workflow } from "./Workflow.js";
@@ -25,6 +25,7 @@ export let setupSocket = () => {
   socketlibSocket.register("applyEffects", _applyEffects);
   socketlibSocket.register("bonusCheck", _bonusCheck);
   socketlibSocket.register("chooseReactions", localDoReactions);
+  socketlibSocket.register("pauseReactionTimer", _pauseReactionTimer);
   socketlibSocket.register("completeItemUse", _completeItemUse);
   socketlibSocket.register("completeItemUseV2", _completeItemUse);
   socketlibSocket.register("completeActivityUse", _completeActivityUse);
@@ -903,6 +904,8 @@ async function rollAbility(data: {
   if (ability) config.ability = ability;
   if (skill) config.skill = skill;
   if (tool) config.tool = tool;
+  // The keys travel as flags; dnd5e and midi read only these from the event.
+  if (sd.heldModifiers) config.event = new KeyboardEvent("keydown", sd.heldModifiers);
   let dialog: RollDialogConfig = { configure: !fastForward };
   let message: RollMessageConfig = { create: chatMessage, rollMode: rollMode as RollMessageConfig["rollMode"] };
   if (normalizedRequest === "tool") {
@@ -2313,7 +2316,7 @@ export let processUndoDamageCard = (message: ChatMessage.Implementation, html: H
   return true;
 }
 
-async function _moveToken(data: { tokenUuid: string, newCenter: { x: number, y: number, elevation?: number }, options?: MoveTokenOptions }): Promise<any> {
+async function _moveToken(data: { tokenUuid: string, newCenter: { x: number, y: number, elevation?: number, level?: string }, options?: MoveTokenOptions }): Promise<any> {
   const tokenDocument = fromUuidSync(data.tokenUuid) as TokenDocument.Implementation | undefined;
   if (!tokenDocument || !canvas.grid || !tokenDocument.object) {
     const message = `moveToken | token not found or canvas not ready: ${data.tokenUuid}`;
@@ -2326,6 +2329,7 @@ async function _moveToken(data: { tokenUuid: string, newCenter: { x: number, y: 
   const snappedCenter = canvas.grid.getSnappedPoint(data.newCenter, { mode: CONST.GRID_SNAPPING_MODES.CENTER });
   const newPosition: Record<string, any> = { x: snappedCenter.x - targetToken.w / 2, y: snappedCenter.y - targetToken.h / 2 };
   if (data.newCenter.elevation !== undefined) newPosition.elevation = data.newCenter.elevation;
+  if (data.newCenter.level) newPosition.level = data.newCenter.level;
   // teleport uses dnd5e's "blink" action (as its Teleport activity does); walls and tokens are ignored below
   const action = teleport ? "blink" : CONFIG.Token.movement.defaultAction;
   const waypoint = { ...newPosition, action, forced: true, snapped: true };

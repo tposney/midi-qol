@@ -264,6 +264,8 @@
   },
   "midi-qol.SaveSummaryStyle.Name": "Save summary style",
   "midi-qol.SaveSummaryStyle.Hint": "With dnd5e's \"Summarize chat cards\" on, a card's saving throws are shown on the card instead of as separate messages. midi: midi's saves section (DC, success/failure, damage) is the summary. dnd5e: dnd5e's per-roll summaries, with midi's section listing only saves rolled through other modules. What players see follows Auto check Saves either way. With \"Summarize chat cards\" off the saves show as separate messages.",
+  "midi-qol.ChatCardSummaries.Name": "Chat card summaries",
+  "midi-qol.ChatCardSummaries.Hint": "Whether a card's saving throws are folded into it (midi's saves section or dnd5e's summaries) or shown as separate messages. Each user's choice follows their dnd5e \"Summarize chat cards\"; Always and Never set it for everyone (each user's own choice comes back when set to Each user's choice).",
   "midi-qol.SaveDamageLine.Name": "Show damage after each save",
   "midi-qol.SaveDamageLine.Hint": "Under a target's save result, when the save spares it some damage: the damage of each type it takes after its save (before resistances), and the feature that changed it (e.g. Super Saver).",
   "midi-qol.saveSummaryStyleOptions": {
@@ -272,6 +274,16 @@
     "expandedHints": {
       "midi": "midi's saves section is the card's summary of its saving throws; dnd5e's per-roll summaries are not drawn.",
       "dnd5e": "dnd5e's per-roll summaries are drawn; midi's saves section lists only saves without one, such as those rolled through other modules."
+    }
+  },
+  "midi-qol.chatCardSummariesOptions": {
+    "client": "Each user's choice",
+    "always": "Always",
+    "never": "Never",
+    "expandedHints": {
+      "client": "Each user's dnd5e \"Summarize chat cards\" decides.",
+      "always": "Saves are folded into their card for everyone; the save messages are hidden in the log.",
+      "never": "Saves show as separate messages for everyone; midi's saves section is not drawn."
     }
   },
   "midi-qol.autoCheckSavesOptions": {
@@ -546,6 +558,7 @@
   "midi-qol.RollOtherDamage.Hint": "<strong>Off</strong> Don't roll Other damage automatically.<br><strong>Condition True & Save Present</strong> If the condition is not blank and evaluates to true OR the item has a save and the activation condition is not false.<br><strong>Condition</strong> roll the Other damage if the other damage condition is empty or evaluates to true",
   "midi-qol.ApplyEffects": "Apply Active Effects",
   "midi-qol.FollowUp.Unavailable": "{name} has no uses left",
+  "midi-qol.FollowUp.Targets.default": "Hit targets for an attack, else all targets",
   "midi-qol.spell-damage": "Spell Damage",
   "midi-qol.RemoveButtons.Name": "Remove chat card buttons after roll",
   "midi-qol.ActiveConcentrationSpell.Title": "Active Concentration Spell",
@@ -607,6 +620,8 @@
     "vision": "Use Token Vision"
   },
   "midi-qol.InvisVision.Name": "Force vision when checking",
+  "midi-qol.ConditionRules.Name": "Apply condition rules",
+  "midi-qol.ConditionRules.Hint": "Applies the condition rules dnd5e doesn't, to conditions added after it is turned on, however they are added: attacks by a frightened, poisoned, prone or restrained creature (or one with 2014 exhaustion 3) have disadvantage; attacks against a paralyzed, petrified, restrained, stunned or unconscious creature have advantage, and against a prone one advantage within 5 ft and disadvantage beyond; hits within 5 ft on a paralyzed or unconscious creature are critical; paralyzed, petrified, stunned and unconscious creatures fail Strength and Dexterity saves; frightened creatures have disadvantage on ability checks; silenced creatures can't cast spells with a verbal component; blinded follows these rules only when the can't-see rules are off. Grappled is not included.",
   "midi-qol.InvisVision.Hint": "<strong>Checked</strong> behaves as if all tokens have vision enabled.<br><strong>Unchecked</strong> tokens without vision can see everything",
   "midi-qol.HiddenAdvantage.Name": "Hidden attackers have adv/disadv on attacks",
   "midi-qol.HiddenAdvantage.Hint": "Hidden attackers have advantage on attacks. Disadvantage if the target is hidden",
@@ -660,6 +675,8 @@
   "midi-qol.VisionTestHeight.Hint": "Which elevation to test for token visibility. Affects both Foundry's rendering and midi's vision checks.",
   "midi-qol.SurfaceOcclusion.Name": "Occlude upper floor surfaces",
   "midi-qol.SurfaceOcclusion.Hint": "In multi-level scenes, make upper floor surfaces transparent when viewing from a lower floor, even if the token is not directly underneath.",
+  "midi-qol.ShowAttackRollDetails.Name": "Show attack roll details",
+  "midi-qol.ShowAttackRollDetails.Hint": "Icons beside an attack roll's total for the unusual things in it (flanking, a target's granted bonus, an effect's bonus, exhaustion), and a tooltip on the total listing every term of the roll.",
   "midi-qol.HiddenGroundCue.Name": "Mark lower floors where creatures can't be seen",
   "midi-qol.HiddenGroundCue.Hint": "In scenes with levels, the floor below is drawn wherever an opening shows it, but a creature standing there is hidden if the floor's edge or a wall blocks the line from your token's eyes. Marks those squares, in the style chosen below.",
   "midi-qol.HiddenGroundCue.Style.Name": "Hidden ground style",
@@ -1019,16 +1036,22 @@
   },
   "midi-qol.Flanked": "Flanked",
   "midi-qol.ActivityStatuses.Label": "Statuses Applied",
-  "midi-qol.ActivityStatuses.Hint": "Applied to the targets directly, the same status the token HUD toggles, with the activity's effects: on a failed save, or always if On Save is ticked. Tied to concentration like the effects. A creature that already has the status keeps it.",
+  "midi-qol.ActivityStatuses.Hint": "Applied to the targets directly, the same status the token HUD toggles, with the activity's effects: if the save fails, or whatever the save; for an attack, only on a hit either way. Tied to concentration like the effects. A creature that already has the status keeps it.",
   "midi-qol.ActivityStatuses.Add": "Add Status",
   "midi-qol.ActivityStatuses.Delete": "Remove Status",
   "midi-qol.ActivityStatuses.Status": "Status",
   "midi-qol.ActivityStatuses.SpecialDuration": "Also Ends On",
   "midi-qol.ActivityStatuses.AddDuration": "Add…",
   "midi-qol.ActivityStatuses.DeleteDuration": "Remove",
-  "midi-qol.ActivityStatuses.OnSave": "On Save",
+  "midi-qol.ActivityStatuses.OnSave": "Apply",
+  "midi-qol.ActivityStatuses.OnFailedSave": "If the save fails",
+  "midi-qol.ActivityStatuses.WhateverTheSave": "Whatever the save",
   "midi-qol.InvisibleBrief": "Invisible (until it attacks, casts a spell or deals damage)",
   "midi-qol.Flanking": "Flanking",
+  "midi-qol.AttackTerm.RollBonus": "Roll Bonus",
+  "midi-qol.AttackTerm.Situational": "Situational",
+  "midi-qol.AttackTerm.Bonus": "Bonus",
+  "midi-qol.AttackTerm.Other": "Other",
   "midi-qol.FlankingBonus.Name": "Flanking Bonus Type",
   "midi-qol.FlankingBonus.Hint": "When flanking is detected, grant advantage (default) or add a fixed bonus to the attack roll. Flanking applies to melee attacks against a single target (with Roll a separate attack per target, each roll counts).",
   "midi-qol.SharpShooter": "Sharpshooter",
@@ -1470,11 +1493,15 @@
         },
         "followUp": {
           "label": "Follow-up Button",
-          "hint": "When another of this item's attacks hits, offer this activity as a button on the attack's card, run at the creatures hit (a critical as a critical)"
+          "hint": "When another of this item's activities is used, offer this activity as a button on its card, run at the Follow-up Targets (a critical as a critical)"
+        },
+        "followUpTargets": {
+          "label": "Follow-up Targets",
+          "hint": "Who the follow-up runs at. Not offered when that is no one after a use that had targets (an attack that missed, no failed save)"
         },
         "followUpCondition": {
           "label": "Follow-up Condition",
-          "hint": "Offer the button only when this condition is true (evaluated as the attack finishes, with the first creature hit as the target)"
+          "hint": "Offer the button only when this condition is true (evaluated as the use finishes, with the first of the Follow-up Targets as the target)"
         },
         "otherActivityCompatible": {
           "label": "Other Activity Compatible",
@@ -1764,7 +1791,11 @@
         "label": "Midi Teleport",
         "movers": {
           "label": "Who Teleports",
-          "hint": "Caster and targets: the caster plans their move and you place each target within 5 ft of the caster's destination. Targets: you place each target within the teleport distance of the caster (use a save activity that triggers this one to move only those that fail)."
+          "hint": "Caster and targets: the caster plans their move and you place each target within 5 ft of the caster's destination. Targets: you place each target within the teleport distance of the caster (use a save activity that triggers this one to move only those that fail). Swap: the caster and the first target, within the teleport distance, trade places."
+        },
+        "plan": {
+          "label": "Teleport",
+          "hint": "From the card's button, or during the use, after its effects and damage (you plan and place then; dismissing it leaves the button)."
         },
         "blocked": {
           "label": "Blocked Destination",
@@ -1780,7 +1811,12 @@
       "default": "Controlled Tokens (dnd5e)",
       "caster": "Caster",
       "casterAndTargets": "Caster and Targets",
-      "targets": "Targets"
+      "targets": "Targets",
+      "swap": "Swap Caster and Target"
+    },
+    "PlanModes": {
+      "button": "From the Card's Button",
+      "auto": "During the Use"
     },
     "BlockedModes": {
       "refuse": "Refuse",

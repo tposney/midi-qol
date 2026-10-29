@@ -69,6 +69,7 @@ declare module "fvtt-types/configuration" {
       "dnd5e.postBuildSavingThrowRollConfig": (process: RollProcessConfig, config: BasicRollConfig, index: number) => void;
       "dnd5e.postBuildDeathSaveRollConfig": (process: RollProcessConfig, config: BasicRollConfig, index: number) => void;
       "dnd5e.postBuildToolRollConfig": (process: RollProcessConfig, config: BasicRollConfig, index: number) => void;
+      "dnd5e.postBuildAttackRollConfig": (process: RollProcessConfig & { ability?: string, attackMode?: string }, config: BasicRollConfig, index: number) => void;
       "dnd5e.postSavingThrowRollConfiguration": (rolls: Roll[], config: RollProcessConfig, dialog: RollDialogConfig, message: RollMessageConfig) => boolean | void;
       "dnd5e.postSkillRollConfiguration": (rolls: Roll[], config: RollProcessConfig, dialog: RollDialogConfig, message: RollMessageConfig) => boolean | void;
       "dnd5e.postToolRollConfiguration": (rolls: Roll[], config: RollProcessConfig, dialog: RollDialogConfig, message: RollMessageConfig) => boolean | void;
@@ -139,6 +140,7 @@ declare module "fvtt-types/configuration" {
     "dnd5e.metricLengthUnits": boolean;
     "dnd5e.attackRollVisibility": string;
     "dnd5e.challengeVisibility": string;
+    "dnd5e.chatCardSummary": boolean;
     "midi-qol.MidiSoundSettings": Record<string, any>;
     "midi-qol.playerControlsInvisibleTokens": boolean;
     "midi-qol.RollStats": Record<string, Stats>;
@@ -153,6 +155,8 @@ declare module "fvtt-types/configuration" {
     "midi-qol.ForceHideRoll": boolean;
     "midi-qol.EnableWorkflow": boolean;
     "midi-qol.hiddenGroundCue": boolean;
+    "midi-qol.showAttackRollDetails": boolean;
+    "midi-qol.ownChatCardSummary": string;
     "midi-qol.hiddenGroundCueStyle": string;
     "midi-qol.hiddenGroundCueColor": foundry.data.fields.ColorField<{ nullable: boolean; initial: string }>;
     "midi-qol.hiddenGroundCueOpacity": number;
@@ -1470,6 +1474,7 @@ export interface Activity extends AnyMutableObject {
     triggeredActivityConditionText?: string;
     followUp?: boolean;
     followUpCondition?: string;
+    followUpTargets?: string;
     triggeredActivityTargets: string;
     triggeredActivityRollAs?: string;
     triggeredActivityConsume?: boolean;
@@ -1887,6 +1892,8 @@ export type SaveDetails = {
    *  A roll is always ONE type (save, skill check, or tool check), so one object suffices.
    */
   advantageByChoice?: Record<string, PreComputedAdvantageData>;
+  /** The modifier keys held when the activity was used, for the roll of the creature that used it */
+  heldModifiers?: { altKey: boolean; ctrlKey: boolean; metaKey: boolean; shiftKey: boolean };
 };
 
 export type ProcessTargetSaveContext = {

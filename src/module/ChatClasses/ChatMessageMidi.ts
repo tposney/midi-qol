@@ -3,6 +3,7 @@ import { TroubleShooter } from "../apps/TroubleShooter.js";
 import { Dnd5eSystem } from "../../globals.js";
 import { configSettings, forceHideRoll, safeGetGameSetting, saveToChatCard } from "../settings.js";
 import { displayTokenName, getToken, isDnd5eRollMessage } from "../utils.js";
+import { canSeePlayerOutcome, canSeeSaveResult, cardActor, challengeVisible, saveDetail, saveDisplayMode } from "../lib/saveVisibility.js";
 
 // Damage is auto-applied by midi when autoApplyDamage is one of the "yes*" modes.
 const midiAutoAppliesDamage = () => !!configSettings.autoApplyDamage?.toLowerCase().includes("yes");
@@ -199,6 +200,14 @@ export function defineChatMessageMidiClass(baseClass: ChatMessage.Implementation
       return super.canSelectTargets;
     }
 
+    /** A save or check rolled for a midi card shows its outcome as the card's saves section does. */
+    get shouldDisplayChallenge() {
+      const card = ["save", "check"].includes(this.type as string) ? midiCardOf(this) : undefined;
+      if (card) return this.speakerActor?.hasPlayerOwner ? canSeePlayerOutcome(cardActor(card), this.speakerActor) : canSeeSaveResult(cardActor(card), false);
+      // @ts-expect-error no dnd5e-types
+      return super.shouldDisplayChallenge;
+    }
+
     get canApplyDamage() {
       if ((this.flags?.[MODULE_ID]?.damageDetail?.length ?? 0) > 0 && this.isContentVisible && !!canvas.tokens?.controlled.length) return true;
       // @ts-expect-error no dnd5e-types
@@ -329,15 +338,16 @@ export function defineChatMessageMidiClass(baseClass: ChatMessage.Implementation
     }
 
     /**
-     * The attack roll's reasons (flanking, granted bonuses) are drawn by its template (midiRenderTemplateRoll): leave
-     * their labels out of the dice tooltip's formula too, and drop the icons and their tooltip wherever the attack's
-     * formula isn't shown, so nothing the GM hides from players is revealed.
+     * The attack roll's reasons and its terms' tooltip are drawn by its template (midiRenderTemplateRoll): leave the
+     * terms' labels out of the dice tooltip's formula too, and drop the icons and the tooltip wherever the attack's
+     * formula isn't shown (nothing the GM hides from players is revealed) or the player has turned them off.
      */
     #addAttackReasons(html: HTMLElement) {
       const formulas = html.querySelectorAll(".midi-attack-roll .dice-formula");
       const total = html.querySelector<HTMLElement>(".midi-attack-roll .dice-total");
-      if (!total?.querySelector(".midi-attack-reasons")) return;
-      if (!formulas.length) {
+      if (!total) return;
+      // Hidden from players by the GM's attack display, or turned off by this player
+      if (!formulas.length || game.settings?.get("midi-qol", "showAttackRollDetails") === false) {
         total.querySelector(".midi-attack-reasons")?.remove();
         delete total.dataset.tooltipHtml;
         return;
@@ -425,12 +435,12 @@ export function defineChatMessageMidiClass(baseClass: ChatMessage.Implementation
       if (foundry.utils.getProperty(this, `flags.${MODULE_ID}.obscureRoll`)) obscureRolls(html);
       // A save on its own in the log, belonging to a midi card, shows what midi's save display allows.
       const card = midiCardOf(this);
-      if (card && maskSaveForPlayers(html, this, card) === "remove") html.style.display = "none";
+      if (card) maskSaveForPlayers(html, this, card);
       // dnd5e 6 draws a card's save and check messages inside it as summaries, whatever their own visibility.
       html.querySelectorAll<HTMLElement>(".card-summary[data-message-id]").forEach(summary => {
         const source = game.messages?.get(summary.dataset.messageId ?? "");
         if (!source) return;
-        if (isMidiCard(this) && maskSaveForPlayers(summary, source, this) === "remove") return summary.remove();
+        if (isMidiCard(this)) maskSaveForPlayers(summary, source, this);
         const view = hiddenRollView(source);
         if (view === "none") summary.remove();
         else if (view === "placeholder") summary.replaceChildren(rolledPlaceholder());
@@ -546,7 +556,7 @@ export function defineChatMessageMidiClass(baseClass: ChatMessage.Implementation
         if (configSettings.autoCheckHit === "gmOnly") {
           hideAll(html, ".midi-qol-hits-display");
         }
-        this.applySaveVisibility(html, messageActor);
+        this.applySaveVisibility(html);
         this.applyAttackVisibility(html);
 
         // Confirm damage buttons
@@ -574,60 +584,68 @@ export function defineChatMessageMidiClass(baseClass: ChatMessage.Implementation
       }
     }
 
-    private applySaveVisibility(html: HTMLElement, messageActor: Actor.Implementation | undefined) {
-      const shouldDisplayChallenge = safeGetGameSetting("dnd5e", "challengeVisibility");
-      const autoCheckSaves = configSettings.autoCheckSaves;
-
-      if (autoCheckSaves === "gmOnly") {
-        hideAll(html, ".midi-qol-saves-display");
-        return;
-      }
+    private applySaveVisibility(html: HTMLElement) {
+      const mode = saveDisplayMode();
 
       // Strip save attribution tooltip and info icons when players can't see save details
-      if (!["all", "allShow"].includes(autoCheckSaves)) {
+      if (!["all", "allShow"].includes(mode)) {
         html.querySelectorAll(".midi-qol-target-name[data-tooltip-html]")?.forEach(el => el.removeAttribute("data-tooltip-html"));
         removeAll(html, ".midi-save-attribution-info");
       }
 
-      // Per-target result visibility keys on the TARGET (the saver) — the row classes
-      // (.midi-qol-npc-save-* vs .midi-qol-save-*) are assigned from each target's hasPlayerOwner:
-      //   NPC-target results → shown only when the challenge is fully public ("all")
-      //   PC-target results  → shown unless the challenge is hidden entirely ("none")
-      // The single save DC is one value for the activity, so its visibility follows the CASTER.
-      const dcHidden = shouldDisplayChallenge === "player" && !(messageActor as any)?.hasPlayerOwner;
-      const displayNPCSaves = shouldDisplayChallenge === "all";
-      const displayPlayerSaves = shouldDisplayChallenge !== "none";
-
-      if (!displayPlayerSaves || autoCheckSaves === "whisper" || this.blind) {
-        removeAll(html, ".midi-qol-save-total");
-        removeAll(html, ".midi-qol-save-tooltip");
-        removeAll(html, ".midi-qol-save-symbol");
+      // Player characters' rows are .midi-qol-save-*, NPCs' .midi-qol-npc-save-* (from the target's hasPlayerOwner).
+      // A player character's roll shows as dnd5e's summaries show its save message (as its whispers and roll mode allow
+      // this viewer); its outcome as the message's challenge (the save display, and to the target's owners).
+      const caster = cardActor(this);
+      const showNPCRows = !this.blind && canSeeSaveResult(caster, false);
+      const npcDetail = saveDetail(false);
+      const saveMessages = new Map<string, ChatMessage.Implementation>();
+      // @ts-expect-error no dnd5e types
+      for (const message of (this.getAssociatedRolls?.() ?? []) as ChatMessage.Implementation[]) {
+        if (!["save", "check"].includes(message.type as string)) continue;
+        const { scene, token } = message.speaker ?? {};
+        if (scene && token) saveMessages.set(`Scene.${scene}.Token.${token}`, message);
       }
-      if (!displayNPCSaves || autoCheckSaves === "whisper" || this.blind) {
+      html.querySelectorAll<HTMLElement>(".midi-qol-saves-display li.midi-qol-save-class:not(.midi-qol-npc-target)").forEach(row => {
+        const uuid = row.querySelector<HTMLElement>("[data-uuid]")?.dataset.uuid ?? "";
+        const message = saveMessages.get(uuid);
+        const target = (fromUuidSync(uuid, { strict: false }) as TokenDocument.Implementation | null)?.actor;
+        if (message && !this.blind && isObscured(message)) return obscureSaveRow(row);
+        const rollShown = !this.blind && (!message || (message.visible && message.isContentVisible));
+        if (!rollShown) row.querySelectorAll(".midi-qol-save-total, .midi-qol-save-tooltip").forEach(el => el.remove());
+        // @ts-expect-error no dnd5e types
+        const outcomeShown = message ? message.shouldDisplayChallenge : canSeePlayerOutcome(caster, target);
+        if (!rollShown || !outcomeShown) {
+          row.querySelectorAll(".midi-qol-save-symbol").forEach(el => el.remove());
+          row.classList.remove("success", "failure", "critical", "fumble");
+        }
+      });
+      if (!showNPCRows) {
         removeAll(html, ".midi-qol-npc-save-symbol");
         removeAll(html, ".midi-qol-npc-save-tooltip");
         removeAll(html, ".midi-qol-npc-save-total");
-      } else if (autoCheckSaves !== "allShow") {
-        removeAll(html, ".midi-qol-npc-save-tooltip");
-        if (autoCheckSaves === "allNoRoll") removeAll(html, ".midi-qol-npc-save-total");
+      } else {
+        if (npcDetail !== "dice") removeAll(html, ".midi-qol-npc-save-tooltip");
+        if (npcDetail === "outcome") removeAll(html, ".midi-qol-npc-save-total");
+        // A roll forced obscured (Which skill checks are rolled blind) shows its card's ?? here too.
+        html.querySelectorAll<HTMLElement>(".midi-qol-saves-display li.midi-qol-npc-target").forEach(row => {
+          const message = saveMessages.get(row.querySelector<HTMLElement>("[data-uuid]")?.dataset.uuid ?? "");
+          if (message && isObscured(message)) obscureSaveRow(row);
+        });
       }
 
-      // Save DC (single, activity-level) follows the caster.
-      const dcRemoved = dcHidden || shouldDisplayChallenge === "none" || autoCheckSaves === "whisper" || this.blind;
+      // The single, activity-level DC follows the card's challenge visibility.
+      const dcRemoved = this.blind || ["whisper", "gmOnly"].includes(mode) || !challengeVisible(caster);
       if (dcRemoved) removeAll(html, ".midi-qol-saveDC");
 
       // The total's tooltip ("5 = 2 + 3 vs DC 11") carries the dice and the DC.
       html.querySelectorAll<HTMLElement>(".midi-qol-save-total[data-tooltip]").forEach(el => {
-        const diceHidden = el.classList.contains("midi-qol-npc-save-total") && autoCheckSaves !== "allShow";
+        const diceHidden = el.classList.contains("midi-qol-npc-save-total") && npcDetail !== "dice";
         if (diceHidden || dcRemoved) el.removeAttribute("data-tooltip");
       });
 
-      if (!configSettings.highlightSuccess || !["all", "player"].includes(shouldDisplayChallenge) || ["whisper", "none"].includes(autoCheckSaves)) {
-        stripHighlight(html, ".midi-qol-saves-display .midi-qol-save-class");
-      }
-      if (!displayNPCSaves || !configSettings.highlightSuccess) {
-        stripHighlight(html, ".midi-qol-save-class.midi-qol-npc-target");
-      }
+      if (!configSettings.highlightSuccess) stripHighlight(html, ".midi-qol-saves-display .midi-qol-save-class:not(.midi-qol-npc-target)");
+      if (!configSettings.highlightSuccess || !showNPCRows) stripHighlight(html, ".midi-qol-save-class.midi-qol-npc-target");
     }
 
     private applyAttackVisibility(html: HTMLElement) {
@@ -772,6 +790,21 @@ export function hiddenRollView(message: ChatMessage.Implementation): "show" | "p
   return "placeholder";
 }
 
+/** A roll midi forced obscured: players see its card with ?? for the result. */
+function isObscured(message: ChatMessage.Implementation): boolean {
+  return !game.user?.isGM && !!foundry.utils.getProperty(message, `flags.${MODULE_ID}.obscureRoll`);
+}
+
+/** A save row whose roll is obscured: ?? for the total, no dice, DC or outcome. */
+function obscureSaveRow(row: HTMLElement) {
+  row.querySelectorAll<HTMLElement>(".midi-qol-save-total").forEach(el => {
+    el.removeAttribute("data-tooltip");
+    el.replaceChildren("??");
+  });
+  row.querySelectorAll(".midi-qol-save-tooltip, .midi-qol-save-symbol").forEach(el => el.remove());
+  row.classList.remove("success", "failure", "critical", "fumble");
+}
+
 /**
  * Public roll, hidden result: replace the totals and strip the breakdown, in both dnd5e's compact roll markup
  * (roll-compact.hbs) and the classic one. The colouring classes go too - a nat 1 or 20 would give it away.
@@ -783,6 +816,8 @@ function obscureRolls(html: HTMLElement) {
     el.classList.remove(...HIGHLIGHT);
   });
   html.querySelectorAll(".dice-tooltip, .roll-breakdown").forEach(el => el.remove());
+  // The compact markup's success/failure icons
+  html.querySelectorAll(".dice-roll .icons").forEach(el => el.replaceChildren());
   html.querySelectorAll<HTMLElement>(".critical, .fumble, .success, .failure, .min, .max")
     .forEach(el => el.classList.remove(...HIGHLIGHT));
   HIGHLIGHT.forEach(c => html.classList.remove(c));
@@ -860,20 +895,20 @@ function midiCardOf(message: ChatMessage.Implementation): ChatMessage.Implementa
 }
 
 /**
- * What a player sees of a save rolled for a midi card follows midi's save display, as midi's own saves section
- * does: gmOnly shows nothing, and for an NPC anything short of allShow drops the dice and allNoRoll the total.
+ * What a player sees of a save rolled for a midi card, as midi's own saves section shows it: who saved is always
+ * shown, and a player character's roll; the outcome, and an NPC's total and dice, only as far as midi's save display
+ * and dnd5e's challenge visibility both allow.
  */
-function maskSaveForPlayers(element: HTMLElement, save: ChatMessage.Implementation, card: ChatMessage.Implementation): "remove" | void {
-  // @ts-expect-error no dnd5e-types
-  const display = card.getAssociatedActivity?.()?.saveDisplay ?? "default";
-  const mode = display === "default" ? configSettings.autoCheckSaves : String(display);
-  if (mode === "gmOnly") return "remove";
-  if (mode === "whisper") {
+function maskSaveForPlayers(element: HTMLElement, save: ChatMessage.Implementation, card: ChatMessage.Implementation) {
+  const playerOwned = !!save.speakerActor?.hasPlayerOwner;
+  const visible = playerOwned ? canSeePlayerOutcome(cardActor(card), save.speakerActor) : canSeeSaveResult(cardActor(card), false);
+  if (!visible) {
     element.querySelectorAll<HTMLElement>(".success, .failure").forEach(el => el.classList.remove("success", "failure"));
     element.querySelectorAll(".dice-roll .icons").forEach(el => el.replaceChildren());
   }
-  if (save.speakerActor?.hasPlayerOwner) return;
-  if (mode !== "allShow") element.querySelectorAll(".roll-breakdown, .d20die, .dice-tooltip").forEach(el => el.remove());
-  if (mode === "allNoRoll") element.querySelectorAll(".dice-roll .total, .dice-total").forEach(el => el.remove());
+  if (playerOwned) return;
+  const detail = visible ? saveDetail(false) : "none";
+  if (detail !== "dice") element.querySelectorAll(".roll-breakdown, .d20die, .dice-tooltip").forEach(el => el.remove());
+  if (detail === "outcome" || detail === "none") element.querySelectorAll(".dice-roll .total, .dice-total").forEach(el => el.remove());
 }
 

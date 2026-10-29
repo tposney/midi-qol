@@ -82,6 +82,13 @@
     </div>
 
     <div class="form-group">
+      <label>{{localize "midi-qol.ChatCardSummaries.Name"}}</label>
+      <select name="chatCardSummaries" data-dtype="String">
+        {{midiSelectOptions chatCardSummariesOptions selected=configSettings.chatCardSummaries localize=true}}
+      </select>
+      <div class="notes midi-qol-faint">{{localize "midi-qol.ChatCardSummaries.Hint"}}</div>
+    </div>
+    <div class="form-group">
       <label>{{localize "midi-qol.dummyCards.Name"}}</label>
       <input type="checkbox" name="gmAttackDamageCards" data-dtype="Boolean" {{checked configSettings.gmAttackDamageCards}} />
       <div class="notes midi-qol-faint">{{localize "midi-qol.dummyCards.Hint"}}</div>

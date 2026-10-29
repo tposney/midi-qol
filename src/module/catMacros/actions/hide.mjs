@@ -1,11 +1,14 @@
 import {dialogUtils, documentUtils, effectUtils, tokenUtils} from '../proxy.mjs';
+import {canSee} from '../../utils.js';
 // 2024 Hide and Search. Hide is a DC 15 Stealth check whose configured effect makes the creature Invisible; the check's
 // total is recorded on that effect as the DC to find it (flags.midi-qol.hidden.dc). With CPR active, CPR's generic hide
 // macro applies the effect (Supreme Sneak, animation) and midi only records the DC, for any activity using CPR's macro;
 // without CPR midi's hide macro applies it. Hidden ends on an attack roll (the effect's own DAE 1Attack), on casting a
 // spell with a Verbal component (hook below), or when found; noise and the cover/obscurement requirement are the GM's.
+// House rule (Hide option Passive Perception): an enemy that can see the creature and whose passive Perception is at
+// least the total notices it, and the hide fails (or the GM decides, Hide option GM Confirms).
 // Search (any Perception check activity can use it) compares the check's total with each hidden enemy in the searcher's
-// line of sight (invisibility aside); the GM confirms who is found (setting searchConfirm), and their hidden effect ends.
+// line of sight (invisibility aside); those found (confirmed by the GM, Search option GM Confirms) stop hiding.
 const MODULE = 'midi-qol';
 const hiddenEffects = actor => actor?.effects.filter(e => e.flags?.[MODULE]?.hidden) ?? [];
 const hiddenEffect = actor => hiddenEffects(actor)[0];
@@ -13,19 +16,30 @@ const gmWhisper = () => game.users.filter(u => u.isGM).map(u => u.id);
 const cprActive = () => !!game.modules.get('chris-premades')?.active;
 // Results go with the action's card: deleting it (or a Generic Actions card above it) deletes them.
 const post = (actor, content, origin, whisper) => ChatMessage.create({speaker: ChatMessage.getSpeaker({actor}), content, whisper, flags: origin ? {[MODULE]: {origin}} : {}});
-export function registerHideSearchSettings() {
-    game.settings.register(MODULE, 'searchConfirm', {
-        name: 'Search: GM confirms who is found',
-        hint: 'When a Search finds hidden creatures, ask the GM before revealing them. Off: they are revealed at once.',
-        scope: 'world', config: true, type: Boolean, default: true
-    });
-}
 const usesMacro = (activity, source) => activity?.flags?.cat?.macros?.roll?.some(m => m.source === source && m.identifier === 'hide');
 const configuredEffect = (activity, source) => activity.flags.cat?.genericConfig?.[source]?.hide?.effect;
+// The activity's midi Hide/Search option `key` (CAT generic config), else its default.
+const option = (activity, identifier, key, fallback) => activity?.flags.cat?.genericConfig?.[MODULE]?.[identifier]?.[key] ?? fallback;
 function hideTotal(workflow) {
     const token = workflow.token?.document ?? workflow.token;
     const total = workflow.tokenSaves?.[token?.uuid]?.total;
     return Number.isFinite(total) && !workflow.failedSaves?.size ? total : undefined;
+}
+const passive = actor => actor?.system.skills?.prc?.passive ?? 0;
+function noticers(activity, token, total) {
+    if (!token || !option(activity, 'hide', 'passivePerception', false)) return [];
+    return token.parent.tokens.filter(t => t.id !== token.id && t.actor && tokenUtils.isEnemy(token, t)
+        && passive(t.actor) >= total && canSee(t, token, {forceVision: true}));
+}
+// Whether the hide fails: noticed, and the GM agrees or isn't asked.
+async function noticed(activity, actor, total, found, origin, title) {
+    if (!found.length) return false;
+    const list = found.map(t => `${t.name} (passive ${passive(t.actor)})`).join(', ');
+    const fail = !option(activity, 'hide', 'confirm', true) || await dialogUtils.confirm(title, `${actor.name} rolled Stealth ${total}. Noticed by: ${list}. Fail the hide?`, {userId: (game.users.activeGM ?? game.user).id});
+    if (!fail) return false;
+    const owners = game.users.filter(u => !u.isGM && actor.testUserPermission(u, 'OWNER')).map(u => u.id);
+    await post(actor, `<p>${actor.name} is noticed by ${found.map(t => t.name).join(', ')} and isn't hidden.</p>`, origin, [...gmWhisper(), ...owners]);
+    return true;
 }
 async function markHidden(actor, effect, dc, origin) {
     for (const old of hiddenEffects(actor)) if (old !== effect) await documentUtils.deleteDocument(old);
@@ -39,13 +53,16 @@ Hooks.on('midi-qol.RollComplete', workflow => {
     if (!cprActive() || !usesMacro(activity, 'chris-premades') || !workflow.actor) return;
     const effectId = configuredEffect(activity, 'chris-premades');
     const total = hideTotal(workflow);
-    if (effectId && total !== undefined) pendingDC.set(workflow.actor.uuid, {origin: `${activity.item.uuid}.ActiveEffect.${effectId}`, total, card: workflow.itemCardId});
+    // Who notices is decided now, before CPR's Invisible effect hides the creature from them.
+    if (effectId && total !== undefined) pendingDC.set(workflow.actor.uuid, {origin: `${activity.item.uuid}.ActiveEffect.${effectId}`, total, card: workflow.itemCardId,
+        found: noticers(activity, workflow.token?.document ?? workflow.token, total), title: activity.item.name, activity});
 });
 Hooks.on('createActiveEffect', async effect => {
     const actor = effect.parent;
     const pending = actor && pendingDC.get(actor.uuid);
     if (!pending || effect.origin !== pending.origin) return;
     pendingDC.delete(actor.uuid);
+    if (await noticed(pending.activity, actor, pending.total, pending.found, pending.card, pending.title)) return documentUtils.deleteDocument(effect);
     await markHidden(actor, effect, pending.total, pending.card);
 });
 async function hide({document: activity, workflow}) {
@@ -53,6 +70,8 @@ async function hide({document: activity, workflow}) {
     const total = hideTotal(workflow);
     const source = activity.item.effects.get(configuredEffect(activity, MODULE) ?? configuredEffect(activity, 'chris-premades'));
     if (total === undefined || !source) return;
+    const found = noticers(activity, workflow.token?.document ?? workflow.token, total);
+    if (await noticed(activity, workflow.actor, total, found, workflow.itemCardId, activity.item.name)) return;
     const data = source.toObject();
     delete data._id;
     data.transfer = false;
@@ -77,7 +96,7 @@ async function search({workflow}) {
     const missed = candidates.filter(t => total < dc(t)).map(t => `${t.name} (DC ${dc(t)})`).join(', ');
     if (!found.length) return post(actor, `<p>${actor.name} (Perception ${total}) finds no one${missed ? `; still hidden: ${missed}` : ''}.</p>`, workflow.itemCardId, gmWhisper());
     const list = found.map(t => `${t.name} (DC ${dc(t)})`).join(', ');
-    const go = !game.settings.get(MODULE, 'searchConfirm') || await dialogUtils.confirm(workflow.item.name, `${actor.name} rolled Perception ${total}. Found: ${list}.${missed ? ` Still hidden: ${missed}.` : ''} Reveal them?`, {userId: (game.users.activeGM ?? game.user).id});
+    const go = !option(workflow.activity, 'search', 'confirm', true) || await dialogUtils.confirm(workflow.item.name, `${actor.name} rolled Perception ${total}. Found: ${list}.${missed ? ` Still hidden: ${missed}.` : ''} Reveal them?`, {userId: (game.users.activeGM ?? game.user).id});
     if (!go) return;
     for (const t of found) await documentUtils.deleteDocument(hiddenEffect(t.actor));
     await post(actor, `<p>${actor.name} finds ${found.map(t => t.name).join(', ')}.</p>`, workflow.itemCardId);
@@ -91,20 +110,28 @@ Hooks.on('dnd5e.postUseActivity', activity => {
 });
 export const hideAction = {
     name: 'Hide',
-    version: '1.0.0',
+    version: '1.1.0',
     rules: 'all',
     generic: true,
     documents: ['activity'],
     roll: [{pass: 'activityRollFinished', macro: hide, priority: 50}],
     genericConfig: {
-        effect: {default: '', type: 'selectEffect', category: 'behavior', label: 'Effect'}
+        effect: {default: '', type: 'selectEffect', category: 'behavior', label: 'Effect'},
+        passivePerception: {default: false, type: 'checkbox', category: 'behavior', label: 'Passive Perception (house rule)',
+            hint: 'An enemy that can see the creature and whose passive Perception is at least its Stealth total notices it, and the hide fails.'},
+        confirm: {default: true, type: 'checkbox', category: 'behavior', label: 'GM Confirms',
+            hint: 'Ask the GM before a hide fails because it is noticed (Passive Perception).'}
     }
 };
 export const searchAction = {
     name: 'Search',
-    version: '1.0.0',
+    version: '1.1.0',
     rules: 'all',
     generic: true,
     documents: ['activity'],
-    roll: [{pass: 'activityRollFinished', macro: search, priority: 50}]
+    roll: [{pass: 'activityRollFinished', macro: search, priority: 50}],
+    genericConfig: {
+        confirm: {default: true, type: 'checkbox', category: 'behavior', label: 'GM Confirms',
+            hint: 'Ask the GM before revealing the hidden creatures a Search finds. Off: they are revealed at once.'}
+    }
 };

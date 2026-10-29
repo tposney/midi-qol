@@ -4,6 +4,7 @@
  */
 
 import { error, GameSystemConfig, i18n } from "../../midi-qol.js";
+import { canSeeSaveResult, cardActor } from "../lib/saveVisibility.js";
 import { Activity, ChatMessageRenderOptions, CombinedTargetDescriptor, Dnd5eChatMessage } from "../../globals.js";
 import { configSettings, safeGetGameSetting } from "../settings.js";
 import { getRemoveAllButtons, getRemoveAttackButtons, getRemoveDamageButtons, midiRenderAttackRoll,
@@ -77,6 +78,7 @@ export function midiButtonVisibility(message: Dnd5eChatMessage | undefined, acti
       && !(progress.effectsApplied && configSettings.autoItemEffects === "applyRemove"),
     allRemoved: done,
     savesResolved: !!progress.savesResolved,
+    teleported: !!progress.teleported,
     templatesPlaced: !!progress.templatesPlaced
   };
 }
@@ -172,6 +174,7 @@ export function setupUsageCardMessage() {
             confirmed: new BooleanField({ initial: false }),
             effectsApplied: new BooleanField({ initial: false }),
             savesResolved: new BooleanField({ initial: false }),
+            teleported: new BooleanField({ initial: false }),
             templatesPlaced: new BooleanField({ initial: false })
           }, { required: false }),
 
@@ -202,7 +205,8 @@ export function setupUsageCardMessage() {
       const visible = midiButtonVisibility(parent, parent.getAssociatedActivity?.());
       return buttons.map(button => {
         if (button.hidden || button.visibility !== "all") return button;
-        const spent = visible.allRemoved || (visible.savesResolved && ["rollSave", "rollCheck"].includes(button.action));
+        const spent = visible.allRemoved || (visible.savesResolved && ["rollSave", "rollCheck"].includes(button.action))
+          || (visible.teleported && button.action === "planTeleport");
         return spent ? { ...button, hidden: true } : button;
       });
     }
@@ -250,8 +254,7 @@ export function setupUsageCardMessage() {
 
     /**
      * dnd5e 6 folds the card's save and check messages into it as summaries for viewers with "Summarize chat cards"
-     * on. On a midi card that summary is midi's saves section (style "midi", with dnd5e's summaries kept for targets
-     * the section does not show) or dnd5e's per-roll summaries, with midi's section keeping only saves that have none:
+     * on. On a midi card that summary is midi's saves section (style "midi") or dnd5e's per-roll summaries, with midi's section keeping only saves that have none:
      * other modules' saves reach midi without a linked message.
      * With the setting off neither is drawn and the messages show in the log. Returns the save targets to omit.
      */
@@ -262,14 +265,9 @@ export function setupUsageCardMessage() {
         return "all";
       }
       if (configSettings.saveSummaryStyle !== "dnd5e") {
-        // midi's section stands in for dnd5e's summaries only for the targets it has a result for: with Auto Check Saves
-        // off its rows are just the targets, and a save rolled from the card's button is dnd5e's summary or nowhere.
-        // Those targets' empty rows are left out, as dnd5e's summary shows them.
-        const resolved = new Set((this.midi.sections?.saves?.data?.saves ?? [])
-          .filter((save: any) => save?.saveClass || (save?.rollTotal != null && save.rollTotal !== ""))
-          .map((save: any) => save?.target?.document?.uuid).filter(Boolean));
-        context.summaries = (context.summaries ?? []).filter((summary: any) => !resolved.has(summary.token?.uuid));
-        return new Set(context.summaries.map((summary: any) => summary.token?.uuid).filter(Boolean));
+        // midi's section stands in for dnd5e's summaries: a save rolled from the card's button is recorded in it (cardSaves.ts)
+        context.summaries = [];
+        return new Set();
       }
       return new Set((context.summaries ?? []).map((summary: any) => summary.token?.uuid).filter(Boolean));
     }
@@ -402,16 +400,10 @@ export function setupUsageCardMessage() {
       return lines;
     }
 
-    /** Whether this viewer may see a target's save result, as midi's saves section shows it to players. */
+    /** Whether this viewer may see a target's save result, as midi's saves section shows it. */
     #showsSaveResult(target: CombinedTargetDescriptor): boolean {
-      if (game.user?.isGM) return true;
-      const display = ((this.parent as Dnd5eChatMessage).getAssociatedActivity?.() as { saveDisplay?: string } | undefined)?.saveDisplay ?? "default";
-      const mode = display === "default" ? configSettings.autoCheckSaves : display;
-      if (["gmOnly", "whisper", "none"].includes(mode)) return false;
-      const challenge = safeGetGameSetting("dnd5e", "challengeVisibility");
-      if (challenge === "none") return false;
       const actor = fromUuidSync(target.actor, { strict: false });
-      return challenge === "all" || (actor instanceof Actor && actor.hasPlayerOwner);
+      return canSeeSaveResult(cardActor(this.parent), actor instanceof Actor && actor.hasPlayerOwner);
     }
 
     #recordedTargets(): { name?: string, img?: string, token?: string }[] {

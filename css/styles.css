@@ -744,6 +744,12 @@
   -webkit-mask: var(--midi-reason-icon) center / contain no-repeat;
   mask: var(--midi-reason-icon) center / contain no-repeat;
 }
+img.midi-attack-reason-effect {
+  border: none;
+  border-radius: 3px;
+  outline: 1.5px solid currentColor;
+  object-fit: cover;
+}
 .midi-attack-reason.plus,
 .midi-attack-reason-chip.plus {
   color: var(--color-level-success);

@@ -1,9 +1,11 @@
 import { warn, debug, log, i18n, i18nFormat, busyWait, MESSAGE_TYPES, error, debugEnabled, MQItemMacroLabel, GameSystemConfig, MODULE_ID, MQActivityMacroLabel, gameStats } from "../midi-qol.js";
+import { MidiTeleportActivity, TeleportOption } from "./activities/TeleportActivity.js";
 import { decodeWorkflowOptions, encodeWorkflowOptions, inheritableWorkflowOptions } from "./lib/workflowOptionsCodec.js";
 import { preferredActiveGM, prepareDamageListToJSON, socketlibSocket, timedAwaitExecuteAsGM, timedExecuteAsGM, unTimedExecuteAsGM } from "./GMAction.js";
 import { installedModules } from "./setupModules.js";
 import { offerFollowUps } from "./followUps.js";
-import { configSettings, autoRemoveTargets, checkRule, checkMechanic, safeGetGameSetting, useWeakReferences, saveToChatCard, onUseMacroOptions, shouldDisplaySaveDC } from "./settings.js";
+import { configSettings, autoRemoveTargets, checkRule, checkMechanic, safeGetGameSetting, useWeakReferences, saveToChatCard, onUseMacroOptions } from "./settings.js";
+import { challengeVisibleToPlayers, saveDisplayMode } from "./lib/saveVisibility.js";
 import {
   createDamageDetail,
   processDamageRoll,
@@ -2435,7 +2437,7 @@ export class Workflow {
       //@ts-expect-error flash-rolls-5e custom hook
       let flashId = Hooks.on("flash-rolls-5e.rollComplete", this.flashSavingCheck.bind(this));
       try {
-        const saveDisplay = (this.activity.saveDisplay ?? "default") === "default" ? configSettings.autoCheckSaves : this.activity.saveDisplay;
+        const saveDisplay = saveDisplayMode();
         await this.checkSaves(saveDisplay !== "allShow");
       } catch (err) {
         const message = ("midi-qol | checkSaves error")
@@ -2451,7 +2453,7 @@ export class Workflow {
       if (debugEnabled > 1) debug("Check Saves: renderChat message hooks length ", Hooks.events["renderChatMessageHTML"]?.length)
       await this.callMidiHooks("midi-qol.postCheckSaves");
       if (this.aborted) return this.WorkflowState_Abort;
-      const saveDisplay = (this.activity.saveDisplay ?? "default") === "default" ? configSettings.autoCheckSaves : this.activity.saveDisplay;
+      const saveDisplay = saveDisplayMode();
       await Workflow.removeItemCardButtons(this.itemCardUuid as string, { removeDnd5eSaveButtons: configSettings.autoCheckSaves !== "none", removeDnd5eTemplateButtons: this.placedTemplateCount >= (Number(this.activity?.target?.template?.count) || 1) });
       await this.displaySaves(saveDisplay === "whisper");
     } else {// has saves but we are not checking so do nothing with the damage
@@ -2694,8 +2696,11 @@ export class Workflow {
     this.effectTargets = new Set();
     this.otherEffectTargets = new Set();
     this.allOtherEffectTargets = new Set(this.targets);
-    this.effectTargetsOnSave = this.activationMatches;
-    this.otherEffectTargetsOnSave = this.otherActivationMatches;
+    // "On save" means whatever the save, not whatever the attack: an attack's on-save effects and statuses are for the
+    // creatures it hit (all targets for an activity without an attack, or when effects are forced on)
+    const hits: Set<Token.Implementation> = this.activity.attack ? new Set([...this.hitTargets, ...this.hitTargetsEC]) : this.targets;
+    this.effectTargetsOnSave = this.forceApplyEffects ? this.activationMatches : hits.filter(t => this.activationMatches!.has(t));
+    this.otherEffectTargetsOnSave = this.forceApplyEffects ? this.otherActivationMatches : hits.filter(t => this.otherActivationMatches!.has(t));
     if (this.forceApplyEffects) {
       this.effectTargets = new Set();
     } else if ((this.saveActivity?.save || this.saveActivity?.check) && this.activity.attack) {
@@ -2722,12 +2727,11 @@ export class Workflow {
       this.otherEffectTargets = this.targets;
     this.otherEffectTargets = this.otherEffectTargets.filter(t => this.otherActivationMatches!.has(t));
 
-    const ammunitionHits: Set<Token.Implementation> = this.activity.attack ? new Set([...this.hitTargets, ...this.hitTargetsEC]) : this.targets;
-    let ammunitionEffectTargets: Set<Token.Implementation> = this.forceApplyEffects ? this.targets : ammunitionHits;
+    let ammunitionEffectTargets: Set<Token.Implementation> = this.forceApplyEffects ? this.targets : hits;
     if (!this.forceApplyEffects && ammunitionHasSave && !ammunitionEffectCondition)
       ammunitionEffectTargets = ammunitionEffectTargets.filter(t => this.failedSaves.has(t));
     ammunitionEffectTargets = ammunitionEffectTargets.filter(t => ammunitionActivationMatches.has(t));
-    const ammunitionEffectTargetsOnSave = ammunitionHits.filter(t => ammunitionActivationMatches.has(t));
+    const ammunitionEffectTargetsOnSave = hits.filter(t => ammunitionActivationMatches.has(t));
 
     // Check consumption for other activity effects if not already checked
     // This handles the case where other activity has effects but no save and no damage
@@ -3292,6 +3296,8 @@ export class Workflow {
       error(message);
       TroubleShooter.recordError(new Error(message), message);
     }
+    // A teleport planned with the workflow: after its effects and damage, before RollComplete
+    if (!this.aborted && MidiTeleportActivity && this.activity instanceof MidiTeleportActivity) await this.activity.autoTeleport(this);
     const specialExpiries = [
       "isDamaged",
       "isHealed",
@@ -5794,7 +5800,7 @@ export class Workflow {
       request = `skill:${rollSkills[0]}`;
     }
 
-    const showdc = shouldDisplaySaveDC(this.actor);
+    const showdc = challengeVisibleToPlayers(this.actor);
 
     // MTB requestRoll options only reads: request, silent, rollmode, dc, showdc, callback
     const buildRequestData = (tokenData: MonksTokenBarRequest[], rollMode: string): AnyMutableObject => {
@@ -5911,7 +5917,7 @@ export class Workflow {
       type,
       options: {
         DC: rollDC,
-        showDC: shouldDisplaySaveDC(this.actor),
+        showDC: challengeVisibleToPlayers(this.actor),
         blindRoll: configSettings.autoCheckSaves === "whisper",
         showRollResults: false,
         hideNames: true,
@@ -5977,7 +5983,7 @@ export class Workflow {
     const BasicRoll = CONFIG.Dice.BasicRoll as typeof Roll;
 
     const requestId = target?.id ?? foundry.utils.randomID();
-    const saveDisplay = (this.activity.saveDisplay ?? "default") === "default" ? configSettings.autoCheckSaves : this.activity.saveDisplay;
+    const saveDisplay = saveDisplayMode();
 
     const promise = new Promise<Roll[] | Roll | null>((resolve) => {
       this.saveRequests[requestId] = resolve;
@@ -6100,7 +6106,7 @@ export class Workflow {
 
     let rollMode = ((this.activity.midiProperties?.rollMode ?? "default") !== "default")
       ? toMessageMode(this.activity.midiProperties!.rollMode)
-      : ["whisper", "gmOnly"].includes(this.#saveDisplay) ? "gm" : "public";
+      : ["whisper", "gmOnly"].includes(saveDisplayMode()) ? "gm" : "public";
 
     if (!owner?.isGM) {
       if ((this.activity.midiProperties?.rollMode ?? "default") === "default") {
@@ -6116,12 +6122,11 @@ export class Workflow {
       }
     }
 
-    // dnd5e challengeVisibility: when an NPC target's challenge should be hidden from players
-    // (visibility "player"/"none"), keep its save-roll chat card private to the GM — otherwise under
-    // autoCheckSaves "allShow" the dnd5e card is created public. Respect an explicit activity rollMode.
+    // An NPC's save message is kept to the GM when players don't see this card's challenge, as its row in midi's saves
+    // section isn't shown to them. Respect an explicit activity rollMode.
     if ((this.activity.midiProperties?.rollMode ?? "default") === "default"
       && !target.actor?.hasPlayerOwner
-      && !shouldDisplaySaveDC(target.actor as Actor)
+      && !challengeVisibleToPlayers(this.actor)
       && ["public", "ic"].includes(rollMode)) {
       rollMode = "gm";
     }
@@ -6438,6 +6443,10 @@ export class Workflow {
       rollTools,
       itemId: this.saveActivity?.item.id ?? "",
     };
+    // A creature rolling its own check or save (Hide, Search) rolls it with the keys held when it was used.
+    const event = this.rollOptions.event as AugmentedEvent | undefined;
+    if (event && target.actor?.uuid === this.actor?.uuid)
+      saveDetails.heldModifiers = { altKey: !!event.altKey, ctrlKey: !!event.ctrlKey, metaKey: !!event.metaKey, shiftKey: !!event.shiftKey };
 
     // Trackers (advantage and roll modifiers) for each choice the roll offers: abilities for a save or plain check,
     // else the skills or tools, each rolled with its ability.
@@ -6871,12 +6880,6 @@ export class Workflow {
     delete this.defenceTimeouts[requestId];
     handler(message.rolls[0])
     return true;
-  }
-
-  /** The activity's save display, or the world's Auto check Saves. */
-  get #saveDisplay(): string {
-    const display = this.activity.saveDisplay ?? "default";
-    return display === "default" ? configSettings.autoCheckSaves : String(display);
   }
 
   processSaveRoll(message: ChatMessage.Implementation, _html: HTMLElement | ChatMessage.Database.CreateOptions, _dataOrUserId: ChatMessage.MessageData | string) {
@@ -8604,7 +8607,7 @@ export class TrapWorkflow extends Workflow {
     //@ts-expect-error flash-rolls-5e custom hook
     let flashId = Hooks.on("flash-rolls-5e.rollComplete", this.flashSavingCheck.bind(this));
     try {
-      const saveDisplay = (this.activity.saveDisplay ?? "default") === "default" ? configSettings.autoCheckSaves : this.activity.saveDisplay;
+      const saveDisplay = saveDisplayMode();
       await this.checkSaves(saveDisplay !== "allShow");
     } catch (err) {
       TroubleShooter.recordError(err, "checkSaves");
@@ -8615,7 +8618,7 @@ export class TrapWorkflow extends Workflow {
       Hooks.off("flash-rolls-5e.rollComplete", flashId);
     }
     if (debugEnabled > 1) debug("Check Saves: renderChat message hooks length ", Hooks.events["renderChatMessageHTML"]?.length);
-    const saveDisplay = (this.activity.saveDisplay ?? "default") === "default" ? configSettings.autoCheckSaves : this.activity.saveDisplay;
+    const saveDisplay = saveDisplayMode();
     await this.displaySaves(saveDisplay === "whisper");
     return this.WorkflowState_SavesComplete;
   }
@@ -8964,6 +8967,10 @@ export type WorkflowOptions = InexactPartial<{
   preSelectedTargetUuids: string[];
   // UUID of the over-time effect that triggered this workflow, used by overtime processing.
   overTimeEffectUuid: string;
+  // A teleport's destinations, or "button" to leave a Plan: Auto teleport to the card's button.
+  teleport: TeleportOption;
+  // A reaction's use: the client that asked for it, which waits with a timeout (paused while its user places).
+  reactionRequest: { id: string, userId: string };
 }>
 
 // Workflow's `rollOptions`

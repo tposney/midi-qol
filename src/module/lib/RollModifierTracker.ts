@@ -5,6 +5,7 @@
 import { RollDialogConfig, RollProcessConfig } from "../../globals.js";
 import { GameSystemConfig, i18n, i18nFormat } from "../../midi-qol.js";
 import { rollFieldName } from "../rollFields.js";
+import { conditionModeSources } from "./conditionRules.js";
 import { createConditionData, evalAllConditions, evalAllConditionsAsync, tokenForActor, MidiOptions } from "../utils.js";
 import { ADVANTAGE, DISADVANTAGE, NORMAL } from "./rollKeys.js";
 
@@ -854,6 +855,7 @@ function attributeDnd5eSources(actor: Actor.Implementation, flags: AdvantageFlag
     // @ts-expect-error no dnd5e-types
     const own = foundry.utils.getProperty(actor.system._source, field);
     if (own === 1 || own === -1) attribute(own === 1 ? "ADV" : "DIS", `${field}:actor`, i18n("midi-qol.Dnd5eRollMode.Actor"));
+    for (const { mode, name } of conditionModeSources(actor, field)) attribute(mode === 1 ? "ADV" : "DIS", `${field}:condition:${name}`, name);
     for (const effect of actor.appliedEffects) {
       // @ts-expect-error fvtt-types v14 ActiveEffect
       for (const change of effect.system.changes as { key: string, type: string, value: unknown, applied?: boolean | null }[]) {

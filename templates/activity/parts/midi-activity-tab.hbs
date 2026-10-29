@@ -70,7 +70,10 @@
           <div class="form-group">
             <label>{{ localize "midi-qol.ActivityStatuses.OnSave" }}</label>
             <div class="form-fields">
-              <input type="checkbox" name="midiProperties.statuses.{{ @index }}.onSave" {{ checked this.onSave }}>
+              <select name="midiProperties.statuses.{{ @index }}.onSave">
+                <option value="false" {{#unless this.onSave}}selected{{/unless}}>{{ localize "midi-qol.ActivityStatuses.OnFailedSave" }}</option>
+                <option value="true" {{#if this.onSave}}selected{{/if}}>{{ localize "midi-qol.ActivityStatuses.WhateverTheSave" }}</option>
+              </select>
             </div>
           </div>
         </li>
@@ -127,7 +130,9 @@
     {{#if (ne fields.otherActivityId undefined)}}
       <fieldset>
         {{ formField fields.otherActivityId value=source.otherActivityId options=otherActivityOptions}}
-        {{ formField fields.otherActivityAsParentType value=source.otherActivityAsParentType input=@root.inputs.createCheckboxInput}}
+        {{#if fields.otherActivityAsParentType}}
+          {{ formField fields.otherActivityAsParentType value=source.otherActivityAsParentType input=@root.inputs.createCheckboxInput}}
+        {{/if}}
       </fieldset>
     {{/if}}
     <fieldset>
@@ -145,6 +150,7 @@
         {{/if}}
         {{ formField fields.followUp value=../source.midiProperties.followUp }}
         {{#if ../source.midiProperties.followUp}}
+          {{ formField fields.followUpTargets value=../source.midiProperties.followUpTargets localize=true }}
           {{ formField fields.followUpCondition value=../source.midiProperties.followUpCondition }}
         {{/if}}
       {{/with}}

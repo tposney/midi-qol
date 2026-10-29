@@ -1,12 +1,41 @@
 ### 14.6.5 (unreleased)
 
+* Fixed: an actor with a `flags.midi-qol.optional.*` change set to `ItemMacro` threw `DAE is not defined` when the world loaded (its first preparation runs before DAE's setup), leaving the actor's data incomplete.
+
+**Teleport activity**
+* Added: *Teleport*: *During the Use* plans the teleport in the workflow, after its effects and damage and before RollComplete; dismissed, the card keeps its Teleport button.
+* Added: *Who Teleports*: *Swap Caster and Target*.
+* Added: `midiOptions.teleport` for `completeActivityUse`: given destinations (no planning or picking) or `"button"`.
+* Changed: a teleport used as a reaction pauses the reaction timeout while it is placed (the attacker gave up on it).
+* Changed: a made teleport hides the card's Teleport button (a second click teleported again).
+* Changed: destinations on hex grids are checked by hex (occupied, within 5 ft, nearest free space, inside a wall); gridless distances are measured, not rounded to squares.
+* Changed: the caster dismissing their own plan cancels the teleport for everyone (with Controlled Tokens the others still moved).
+* Fixed: targets teleported with a caster whose move went to another level kept their own level (only the caster's elevation was copied); they go to the caster's level, and only tokens on that level count as occupying a space. `MidiQOL.moveToken` takes a `level`.
+* Fixed: a player placing a target they don't own (a GM's creature) got an error: Foundry places only owned tokens; the preview is the player's own token with the target's size and image.
+* Fixed: a just-targeted token teleported to a level not being viewed threw an error (Foundry's target animation drew on the undrawn token); it is untargeted first.
+* Fixed: the activity sheet's midi tab logged "Non-existent data field" for activity types without *otherActivityAsParentType* (teleport, transform, …).
+
 **Saves**
-* Fixed: with *Auto Check Saves* off and *Save summary style* midi, a save rolled from the card's button showed its result nowhere (dnd5e folded the save message into the card, and midi dropped dnd5e's summary for its own saves section, which had no saves); dnd5e's summary is now kept for every target midi's section doesn't show.
+* Fixed: with *Auto Check Saves* off and *Save summary style* midi, a save or check rolled from the card's button showed its result nowhere (dnd5e folded its message into the card, and midi drops dnd5e's summaries for its own saves section); midi now records it in its section: the total and result against the DC, a reroll replacing the row, a row for a creature that wasn't a target. Display only, as with dnd5e's summary.
+* Added: GM setting *Chat card summaries*: Each user's choice/Always/Never, forcing dnd5e's *Summarize chat cards* for every user (a user's own choice is put back afterwards).
+* Changed: a card's challenge (DC and NPC results) follows the caster's ownership, not who clicked: with Challenge Visibility *Show only from other players* players see NPC results on a player-owned caster's card (detail per *Auto Check Saves*: hidden since 14.6.4) and never see an NPC card's DC; the caster's owners always do. Player-owned NPCs count as player characters.
+* Changed: a player character's save row shows its roll as its save message does (blind and private rolls hidden, *only GM sees* no longer hides it); its outcome follows the visibility settings. Target names are always shown (*only GM sees anything* hid the whole section).
+* Fixed: hiding player characters' save totals also removed NPC totals.
+* Fixed: a check or save the activity's user rolls for its own creature (Hide's Stealth, Search's Perception, Influence…) ignored the Alt/Ctrl (advantage/disadvantage) and Shift keys held when it was used, including an action chosen in Generic Actions.
+* Fixed: a check or save forced obscured (*Which skill checks are rolled blind*, *Blind roll display* Obscured) showed its total and result to players in the card's saves section (e.g. Hide's Stealth); it shows ??, as its roll card does. An obscured roll's card and its dnd5e summary no longer show the success/failure icon.
+* Removed: the unused per-activity save display field.
+
+**Conditions**
+* Added: optional rule *Apply condition rules* (off by default), the condition rules dnd5e doesn't apply, added to a condition as it is created however it is set (token HUD, sheet, activity): attacks by a frightened, prone or restrained creature have disadvantage; attacks against a paralyzed, petrified, restrained, stunned or unconscious creature have advantage, against a prone one advantage within 5 ft and disadvantage beyond; hits within 5 ft on a paralyzed or unconscious creature are critical; paralyzed, petrified, stunned and unconscious creatures fail Strength and Dexterity saves; frightened creatures have disadvantage on ability checks; silenced creatures can't cast spells with a verbal component; blinded only when *Unseen/Invisible attackers* is off. It also applies the attack disadvantage dnd5e lists but doesn't roll: poisoned, 2014 exhaustion 3, heavily encumbered (Strength and Dexterity attacks). Replaces CPR 1's *Apply Midi-QOL Condition Effects*.
+* Added: the advantage attribution names the conditions behind dnd5e's own check and save advantage or disadvantage (poisoned, restrained, exhaustion).
 
 **Vision**
 * Changed: *Dim lower floors through surface holes* is replaced by the player setting *Mark lower floors where creatures can't be seen*: When foundry displays the lower floor all squares on the flower floor are visible, however, tokens on the lower floor may not be visible because the surface obscures them. Where a creature would be hidden from the selected token (core's sight test) such squares are marked in a style (tint, dim, hatch, outline), colour and opacity which each player chooses.
+* Changed: *Unseen/Invisible attackers have advantage/disadvantage* defaults to RAW (2024) where it was never set.
 
 **Activities**
+* Fixed: an effect or status applied whatever the save (*On Save*) also went to targets an attack missed (e.g. an attack whose save comes from the item's other activity); for an attack it now goes only to the creatures hit, saved or not.
+* Changed: *Statuses Applied*: *On Save* is a dropdown, *Apply: If the save fails / Whatever the save*.
 * Changed: the activity's *Midi Overtime* tab says which effect change runs an over-time activity (`flags.midi-qol.ActivityOverTime` = its identifier); marking an activity *Is Over Time* alone does nothing.
 
 **Regions**
@@ -18,10 +47,17 @@
 * Fixed: a `completeActivityUse` (a macro's, or an automation's such as a turn-start effect) that finished while another use was starting put its saved user targets back over the new use's, which could then hit no one; the targets are put back only if nothing has targeted since, and a use given its own targets decides on target confirmation from them.
 * Fixed: *Un-target at end of turn* (dead targets) untargeted every target at 0 hit points half a second after any use finished, so a Healer's Kit or Spare the Dying used on a downed creature in that time lost its target; midi now untargets only the finished use's own targets.
 
+**Flanking and attack rolls**
+* Changed: flanking is checked and applied only for a melee attack roll against a single target; an attack roll against several targets gets no flanking advantage or bonus (with *Roll a separate attack per target*, each roll has one target and counts).
+* Changed: a fixed flanking bonus (*Flanking Bonus Type* +1 to +5) is added to the attack roll, labelled Flanking or Flanked, instead of lowering the target's AC.
+* Changed: for an attack against a single target, the target's granted attack bonus (`flags.midi-qol.grants.attack.bonus`) is part of the attack roll and its total instead of lowering the target's AC on the card; against several targets it is still added per target when hits are checked.
+* Changed: changing the flanking settings removes Flanking and Flanked statuses already on tokens.
+* Added: attack roll details: icons beside the total for its unusual parts (flanking, a granted bonus, an effect's attack bonus by the effect's image, exhaustion), green for a bonus and red for a penalty, and a tooltip on the total listing every term of the roll (ability, proficiency, roll bonus with the effects behind it, …) with advantage or disadvantage; the shown formula leaves the labels out. Player setting *Show attack roll details*, on by default.
+
 **Macros**
-* Fixed: an effect change `flags.midi-qol.onUseMacroName` with `ItemMacro` on an aura's copy (Aura Effects) pointed at the aura effect rather than its item, so the macro never ran (the Jewel of Three Prayers' Prayer of Fortune); it now runs the item's macro.
+* Fixed: an effect change `flags.midi-qol.onUseMacroName` with `ItemMacro` on an aura's copy (Aura Effects) pointed at the aura effect rather than its item, so the macro never ran; it now runs the item's macro.
 * Fixed: a reaction passed to the `chooseReactions` socket as an object (`{itemName, id, uuid, …}`, the older form) made the reaction dialog fail to render, so nothing was offered; it is looked up by its uuid.
-* Added: while CAT 0.1.3 or older is active, midi guards its effect-origin lookup against cast activities (which have no effects in dnd5e 6): an item with one, such as the Jewel of Three Prayers, made CAT throw for every effect pointing at it.
+* Added: while CAT 0.1.3 or older is active, midi guards its effect-origin lookup against cast activities (which have no effects in dnd5e 6): an item with one made CAT throw for every effect pointing at it.
 * Fixed: an ammunition's onUse macros at the workflow-state passes (e.g. `postAttackRollComplete`, `preDamageRollComplete`) got the weapon as the macro item, so its `ItemMacro` never ran; the macro item is now the ammunition.
 * Changed: a blank onUse macro name is the item's own macro (the used activity's, else the item's; for an effect change, the effect's activity's, else its item's), and an item with a macro but no onUse macros runs the macro after active effects. An onUseMacroName effect change with no pass is ignored and reported.
 
@@ -29,7 +65,7 @@
 * Removed: the optional rule *Attacking removes hidden/invisible*. midi no longer ends Invisible or Hiding when a creature attacks; an effect ends by its own special duration (midi's Invisibility: 1Attack, 1Spell, DamageDealt on its status), so Greater Invisibility and other lasting invisibility survive an attack (midi was ending the spell and its concentration). Invisible set from the token HUD has no special duration and stays until removed by hand.
 * Added: status *Invisible (until it attacks, casts a spell or deals damage)*: ends itself as the Invisibility spell does (1Attack, 1Spell, DamageDealt). With DAE's *Dependent Conditions* on, the plain Invisible this status adds carries the token icon, so the token shows one. Removing Invisible (sheet or token HUD) removes this status too, with or without dependent conditions.
 * Added: *Statuses Applied* on the activity sheet (midi-qol tab › Use sub-tab): statuses applied to the targets directly, the same status the token HUD toggles, not an active effect carrying it; each with extra special durations and On Save. They follow the activity's effects (hit, failed save, activation condition), including the item's other activity and an ammunition activity, and depend on the caster's concentration. A creature that already has the status keeps it.
-* Changed: the *Invisibility* sample applies the Invisible status that way (no item effect); the status ends when the target attacks, casts a spell or deals damage (DamageDealt), ending the spell.
+* Changed: the *Invisibility* sample spell applies the Invisible status that way (no item effect); the status ends when the target attacks, casts a spell or deals damage (DamageDealt), ending the spell.
 
 **Damage**
 * Fixed: damage a creature absorbs (Damage Absorption) showed no hit point change on the damage card and logged "damage detail amount … !== hpDamage 0" (since 13.0.13: the card's figures didn't count absorbed damage as healing, its application did); the card now shows the healing, which was applied correctly.
@@ -42,13 +78,14 @@
 
 **Chat cards**
 * Fixed: a card showed the same picture twice when an activity's image is its item's (common in imported content); midi drops the duplicate activity icon, a different activity image, or dnd5e's activity type icon, still shows.
-* Added: follow-up buttons. An activity marked *Follow-up Button* (with an optional *Follow-up Condition*) is offered as a button on its item's attack card when the attack hits, for the attacker's owners and the GM; clicking runs it at the creatures hit (a critical as a critical), spends its uses and links its card to the attack's. `MidiQOL.addFollowUp(workflow, activity, {label})` offers any activity.
+* Added: follow-up buttons. An activity marked *Follow-up Button* (with an optional *Follow-up Condition*) is offered as a button on the card when another of its item's activities is used, for the user's owners and the GM; clicking runs it at its *Follow-up Targets* (by default the creatures an attack hit, else all the targets; or the user, hit, missed, failed or successful saves; not offered when that is no one after a use that had targets), a critical as a critical, spends its uses and links its card to the first. `MidiQOL.addFollowUp(workflow, activity, {label, targets})` offers any activity.
 * Added: hook `midi-qol.conditionData` to add data that conditions can read.
 * Changed: a damage card is linked to the card it came from (`system.origin`), and is deleted with it, and no longer repeats its speaker and whisper recipients.
 * Changed: an item used from inside another workflow of the same actor (e.g. CPR's Sneak Attack spending its use) has its card linked to that workflow's card and is deleted with it; if that workflow is aborted, the card stays, unlinked (e.g. CPR's grapple handing off to CAT).
 * Changed: **breaking** the dnd5e damage tray's Apply goes through midi: the workflow's damage hooks and macros run (CAT/CPR damage reductions apply) and a linked damage card records the undo.
 
 **Rolls and saves**
+* Fixed: an effect lasting until a Bonus Action, Reaction or Turn Action could be expired twice by one use, showing an "ActiveEffect … does not exist" error.
 * Fixed: an optional bonus counted by `@resources.legres.value` or `@resources.legact.value` never spent a use (dnd5e 6 derives those from `spent`), so e.g. a Legendary Resistance bonus (`save.fail.all` `success`) could be used without limit; using the bonus now spends a use.
 * Changed: an over-time roll's card shows the effect's icon and name once, with the activity type (Damage, Saving Throw) as its subtitle.
 * Fixed: an over-time action save with `rollType=skill` or `tool` (e.g. an Athletics check to escape) showed "undefined check" on its card and its roll never ended the effect; the card names the check and a success ends the effect.
@@ -56,16 +93,9 @@
 
 **New sample items**
 * Most of these came about because I needed them for my ember game and could not find another source. These are all AI generated and I'm confident that over time CPR/MISC/Gambits will come up with their own and better implementations. However I found them useful so thought I'd add them for anyone that needs them. Most of these use Covens Automation Toolkit (CAT) so make sure it is installed if you want to use them. I suggest making midi's sample items the last compendium to check when applying medkit via CAT.
-* 2024 actions (sample items › Actions; automation needs CAT): Attack, Check Cover, Generic Actions, Hide, Influence, Knock Out, Magic, Mount, Ready, Search, Squeeze, Stabilize, Study, Suffocation, Underwater. Generic Actions lists these and, with CPR installed, CPR's actions; actions both offer are listed twice, tagged with its source.
-* *Hide* follows the 2024 rules, as a generic action (midi's hide macro, usable on any activity; with CPR installed CPR's hide applies the effect): a DC 15 Stealth check makes you Hidden (Invisible), and your Stealth total is the DC to find you. Hidden ends when you make an attack roll, cast a spell with a Verbal component, or are found. *Search*: a Perception check finds hidden enemies in line of sight whose DC the total meets, ending their Hidden; setting *Search: GM confirms who is found*.
+* 2024 actions (sample items › Actions; automation needs CAT): Attack, Check Cover, Generic Actions, Hide, Influence, Knock Out, Magic, Mount, Ready, Search, Squeeze, Stabilize, Study, Suffocation, Underwater. Generic Actions lists these and, with CPR installed, CPR's actions; actions both offer are listed twice, tagged with its source. To set an action's options for every user, import it into the world's Items and set them there: Generic Actions uses the current compendium action with the options (CAT generic config) of a world item imported from that entry (`_stats.compendiumSource`), never one matched by name.
+* *Hide* follows the 2024 rules, as a generic action (midi's hide macro, usable on any activity; with CPR installed CPR's hide applies the effect): a DC 15 Stealth check makes you Hidden (Invisible), and your Stealth total is the DC to find you. Hidden ends when you make an attack roll, cast a spell with a Verbal component, or are found. *Search*: a Perception check finds hidden enemies in line of sight whose DC the total meets, ending their Hidden. Activity options (CAT medkit): Hide *Passive Perception (house rule)*, an enemy that can see you whose passive Perception is at least your total notices you and the hide fails; *GM Confirms* on Hide and Search, the GM confirms a noticed hide and who a Search finds (default on).
 * The actions' result messages (Hide's DC, Search, Check Cover, Influence) are deleted with the action's card, as is a chosen action with its Generic Actions card. Any message flagged `flags.midi-qol.origin` with a card's id is deleted with that card.
-The rest are just fun, with some interesting effects, so thought I'd push them too.
-* *Starfall Bullet* (homebrew legendary sling bullet): on a hit, 8d10 radiant to the target and DC 18 Dex for 4d10 fire (half on a success) to every other creature within 15 ft; the crater is difficult terrain filled with bright light for 1 minute (a region with a Midi Region Light, made by the GM and removed when the minute ends).
-* *Chainbreaker Bolt* (homebrew legendary crossbow bolt): on a hit, choose up to five more creatures, each within 30 ft of the last one hit; each takes the crossbow's damage dice plus 3d10 force.
-* *Arrow of Echoed Wounds* (homebrew legendary arrow): on a hit the arrow lodges for 1 minute, adding 2d6 piercing whenever the target takes damage; the target's Lodged Arrow item pulls the arrow out (DC 18 Medicine, 4d6 piercing on a failure).
-* *Cataclysm Bolts* (homebrew very rare crossbow bolts): on a hit, a d6 picks a fire burst (3d8 to the target and those within 5 ft), jagged ice, a necrotic pulse or six shards of shrapnel.
-* *Draught of the Echoing Step* (homebrew legendary potion): for 10 minutes you leave echoes of yourself; attacks against you have Disadvantage while one is beside you, an echo can take a hit meant for you, and as a reaction you can step to an echo so the attack misses and the echo bursts for 3d8 force at the attacker.
-* *Draught of the Second Breath* (homebrew legendary potion), drunk as a reaction when damage would drop you to 0: you rise at your hit point maximum, free of Charmed, Frightened, Paralyzed, Poisoned and Stunned, with resistance to all damage for a minute and a Constitution save to drop to 1 instead of 0, each success costing a level of Exhaustion when the minute ends.
 * SRD 2024 spells (those needing CAT say so): Calm Emotions, Command, Detect Magic (see below), Dragon's Breath, Ensnaring Strike, Faerie Fire, Guiding Bolt, Gust of Wind, Hellish Rebuke, Heroism, Identify, Lesser Restoration, Light, Pass without Trace, Phantasmal Force, Sanctuary, Sleep, Spare the Dying, Thunderwave, Web.
 * SRD 2024 equipment: Torch, Candle, Lamp, Hooded and Bullseye Lanterns, Healer's Kit, Eversmoking Bottle.
 * SRD 2024 Metamagic options (need CAT): Careful, Distant, Empowered, Extended, Heightened, Quickened, Seeking, Subtle, Transmuted and Twinned Spell.
@@ -74,6 +104,13 @@ The rest are just fun, with some interesting effects, so thought I'd push them t
 * Official, not SRD, so without rules text (apply them to your own copy with CAT's medkit): *Vow of Enmity* (Oath of Vengeance), *Dragonhide Belt, +2*, *Gloves of Soul Catching* (and an Elemental version adding the 2d10 to the strike's damage roll), *Jewel of Three Prayers* in its Dormant, Awakened and Exalted states (the latter two need Aura Effects; Prayer of Fortune is for allies, or any creature with the Ward aura set to Any; Exalted adds swimming for the wearer and nearby allies, and Golden Flash: a teleport whose landing bursts with radiance).
 * SRD monster features (sample items › Features › Monster Features), each offered by CAT only to its creature (most need CAT): Stench, Unnerving Gaze, Fear Aura, Death Burst, Death Throes, Life Drain, Vampire Bite, Grick Tentacles, Regeneration (Troll and Troll Limb with the SRD 5.2.1 acid/fire rule and amounts), Parry; Pack Tactics, Lightning and Acid Absorption for any NPC.
 * *Swallow* for the SRD Behir, Purple Worm, Remorhaz, Tarrasque, Kraken, Giant Frog and Giant Toad (sample items › Features › Monster Features, needs CAT): as many creatures at a time as the stat block says, damage when the stat block says (the swallower's turn start or end, the swallowed creature's own turn, or the Giant Frog's once-then-disgorge), regurgitation after enough damage from inside, escape at 0 hit points.
+The rest are just fun, with some interesting effects, so thought I'd push them too.
+* *Starfall Bullet* (homebrew legendary sling bullet): on a hit, 8d10 radiant to the target and DC 18 Dex for 4d10 fire (half on a success) to every other creature within 15 ft; the crater is difficult terrain filled with bright light for 1 minute (a region with a Midi Region Light, made by the GM and removed when the minute ends).
+* *Chainbreaker Bolt* (homebrew legendary crossbow bolt): on a hit, choose up to five more creatures, each within 30 ft of the last one hit; each takes the crossbow's damage dice plus 3d10 force.
+* *Arrow of Echoed Wounds* (homebrew legendary arrow): on a hit the arrow lodges for 1 minute, adding 2d6 piercing whenever the target takes damage; the target's Lodged Arrow item pulls the arrow out (DC 18 Medicine, 4d6 piercing on a failure).
+* *Cataclysm Bolts* (homebrew very rare crossbow bolts): on a hit, a d6 picks a fire burst (3d8 to the target and those within 5 ft), jagged ice, a necrotic pulse or six shards of shrapnel.
+* *Draught of the Echoing Step* (homebrew legendary potion): for 10 minutes you leave echoes of yourself; attacks against you have Disadvantage while one is beside you, an echo can take a hit meant for you, and as a reaction you can step to an echo so the attack misses and the echo bursts for 3d8 force at the attacker.
+* *Draught of the Second Breath* (homebrew legendary potion), drunk as a reaction when damage would drop you to 0: you rise at your hit point maximum, free of Charmed, Frightened, Paralyzed, Poisoned and Stunned, with resistance to all damage for a minute and a Constitution save to drop to 1 instead of 0, each success costing a level of Exhaustion when the minute ends.
 
 **Detect Magic and Detect Magic (Vision)** (sample items › Spells › 1st Level, need CAT)
 * *Detect Magic* has two activities. *Cast* (the spell, concentration, 10 minutes) whispers the caster's owners and the GM whether the caster senses magic within 30 feet, no more. *Sense Magic* (the spell's Magic action, no usage dialog or spell slot) gives the specifics, one line per creature or area.

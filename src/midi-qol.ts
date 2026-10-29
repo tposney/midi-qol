@@ -1054,7 +1054,7 @@ export function testfunc(...args: any[]) {
   console.warn("MidiQOL testfunc called ", ...args)
 }
 
-export async function moveToken(tokenRef: TokenOrDocument | string, newCenter: { x: number, y: number, elevation?: number }, options?: MoveTokenOptions | boolean, legacyOptions?: MoveTokenOptions) {
+export async function moveToken(tokenRef: TokenOrDocument | string, newCenter: { x: number, y: number, elevation?: number, level?: string }, options?: MoveTokenOptions | boolean, legacyOptions?: MoveTokenOptions) {
   // Backward compatibility: moveToken(token, center, animate: boolean, options?)
   let resolvedOptions: MoveTokenOptions | undefined;
   if (typeof options === "boolean") {

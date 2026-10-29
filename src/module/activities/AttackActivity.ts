@@ -496,6 +496,18 @@ let defineMidiAttackActivityClass = <T extends Activity>(ActivityClass: T) => {
           if (dialogConfig.configure && workflow) showAttackTargets(workflow);
           return true;
         });
+        // dnd5e adds its own parts when it builds each roll (with or without the dialog, and again when the dialog
+        // rebuilds it): label them then, so the roll's display can name every term, with the effects behind the
+        // combined roll bonus
+        hookIds["dnd5e.postBuildAttackRollConfig"] = Hooks.on("dnd5e.postBuildAttackRollConfig", (process, config) => {
+          const subject = process?.subject as { uuid?: string } | undefined;
+          if (subject?.uuid && subject.uuid !== this.uuid) return;
+          const options = (config.options ?? {}) as { ability?: string, attackMode?: string };
+          const ability = options.ability ?? process?.ability ?? this.ability;
+          config.parts = labelAttackParts(config.parts ?? [], ability);
+          const sources = rollBonusSources(this, ability, this.getActionType?.(options.attackMode ?? process?.attackMode) ?? this.actionType);
+          foundry.utils.setProperty(config, `options.${MODULE_ID}.rollBonusSources`, sources);
+        });
         hookIds["dnd5e.rollAttack"] = Hooks.once("dnd5e.rollAttack", (rolls, { ammoUpdate, subject }) => {
           if (ammoUpdate?.destroy) {
             // @ts-expect-error no dnd5e-types
@@ -869,4 +881,60 @@ export async function computeAttackAdvantage(
   }, tracker);
 
   return tracker;
+}
+/** The label of dnd5e's combined roll bonus term (its `@ruleBonus` part), which rollBonusSources breaks down. */
+export function rollBonusLabel(): string {
+  return i18n("midi-qol.AttackTerm.RollBonus");
+}
+
+/**
+ * dnd5e's attack roll parts (getAttackData: `@mod`, `@prof`, `@bonus`, …) with a label in brackets, which each
+ * evaluated term keeps as its flavor. Parts that aren't one of these references are left as they are.
+ */
+export function labelAttackParts(parts: string[], ability: string | undefined): string[] {
+  const labels: Record<string, string | undefined> = {
+    mod: ability ? GameSystemConfig.abilities[ability]?.label : undefined,
+    prof: i18n("DND5E.Proficiency"),
+    bonus: i18n("DND5E.BonusAttack"),
+    weaponMagic: i18n("DND5E.MagicalBonus"),
+    ammoMagic: i18n("DND5E.ConsumeAmmunition"),
+    ruleBonus: rollBonusLabel(),
+    situational: i18n("midi-qol.AttackTerm.Situational")
+  };
+  return parts.map(part => {
+    const key = /^@([\w.]+)$/.exec(part)?.[1];
+    if (!key) return part;
+    const label = key.startsWith("reductions.") ? i18n("DND5E.Exhaustion") : labels[key];
+    return label ? `${part}[${label.replace(/[[\]]/g, "")}]` : part;
+  });
+}
+
+/**
+ * The effects behind dnd5e's combined roll bonus for this attack (`@ruleBonus`: the attack roll bonuses for the
+ * ability, all attacks and the action type), each with its own value resolved against the actor's data. Only adding
+ * changes have a value of their own; an override or custom change is listed without one.
+ */
+export function rollBonusSources(activity: any, ability: string | undefined, actionType: string | undefined): Array<{ label: string, value?: string, img?: string }> {
+  const actor = activity?.actor;
+  if (!actor) return [];
+  const keys = new Set([
+    "system.rolls.attack.bonus",
+    ...(actionType ? [`system.rolls.attack.${actionType}.bonus`, `system.bonuses.${actionType}.attack`] : []),
+    ...(ability ? [`system.abilities.${ability}.attack.roll.bonus`] : [])
+  ]);
+  const rollData = actor.getRollData();
+  const sources: Array<{ label: string, value?: string, img?: string }> = [];
+  for (const effect of actor.allApplicableEffects()) {
+    if (!effect.active) continue;
+    for (const change of effect.system.changes ?? []) {
+      if (!keys.has(change.key)) continue;
+      if (change.type !== "add") {
+        sources.push({ label: effect.name, img: effect.img ?? undefined });
+        continue;
+      }
+      const resolved = Roll.replaceFormulaData(`${change.value}`.trim(), rollData).replace(/^\+\s*/, "");
+      sources.push({ label: effect.name, value: resolved.startsWith("-") ? resolved : `+${resolved}`, img: effect.img ?? undefined });
+    }
+  }
+  return sources;
 }

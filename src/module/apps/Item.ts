@@ -19,7 +19,7 @@ export class OnUseMacros {
   /** The item (or activity) has a macro of its own that a blank macro name can stand for. */
   static hasOwnMacro(item: Item.Implementation | undefined): boolean {
     if (!item) return false;
-    if (DAE.getItemMacroCommand(item)) return true;
+    if (globalThis.DAE?.getItemMacroCommand(item)) return true;
     // @ts-expect-error no dnd5e-types
     return !!item.system?.activities?.some((a: Activity) => a.macro?.command);
   }
@@ -35,7 +35,7 @@ export class OnUseMacros {
         resolved.items.push(macro);
         continue;
       }
-      const name = activity?.macro?.command ? activityMacroName : (item && DAE.getItemMacroCommand(item) ? "ItemMacro" : undefined);
+      const name = activity?.macro?.command ? activityMacroName : (item && globalThis.DAE?.getItemMacroCommand(item) ? "ItemMacro" : undefined);
       if (name) resolved.items.push(Object.assign(new OnUseMacro(`[${macro.option}]${name}`), { macroPassOptions: macro.macroPassOptions }));
     }
     return resolved;

@@ -6,7 +6,7 @@ import { ActiveDefenceWorkflow, AugmentedEvent, TrapWorkflow, Workflow, SavesFir
 import { TroubleShooter } from "../apps/TroubleShooter.js";
 import { midiButtonVisibility } from "../ChatClasses/UsageCardMessage.js";
 import { ConditionEditor } from "../apps/ConditionEditor.js";
-import { runFollowUp } from "../followUps.js";
+import { followUpTargetModes, runFollowUp } from "../followUps.js";
 import { RegionBehaviorEditor } from "../apps/RegionBehaviorEditor.js";
 import { averageDice, skipConcentrationActorUuids } from "../patching.js"
 import {
@@ -243,6 +243,8 @@ export let MidiActivityMixin = Base => {
           triggeredActivityConfigure: new BooleanField({ name: "triggeredActivityConfigure", initial: true }),
           // Offered as a button on the card when another of the item's activities hits (followUps.ts).
           followUp: new BooleanField({ name: "followUp", initial: false }),
+          followUpTargets: new StringField({ name: "followUpTargets", initial: "default", required: true, blank: false,
+            choices: Object.fromEntries(followUpTargetModes.map(mode => [mode, mode === "default" ? "midi-qol.FollowUp.Targets.default" : `midi-qol.TriggeredActivityTargetOptions.${mode}`])) }),
           //@ts-expect-error
           followUpCondition: new MidiConditionField({ name: "followUpCondition", initial: "" }),
           autoConsume: new BooleanField({ name: "autoConsume", initial: false }),
@@ -1939,6 +1941,7 @@ export let MidiActivityMixin = Base => {
         // dnd5e hides placeTemplate when !game.canvas.scene, which is true during page reload
         // before canvas is ready — only check permission here
         // REGION_CREATE replaced the deprecated TEMPLATE_CREATE in v14 (templates are regions); cast until fvtt-types catches up
+        case "planTeleport": if (visible.teleported) return true; break;
         case "placeTemplate":
           if (visible.templatesPlaced) return true;
           return !game.user?.can("REGION_CREATE" as User.ActionPermission);

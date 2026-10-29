@@ -80,8 +80,6 @@ let defineMidiSaveActivityClass = <T extends Activity>(ActivityClass: T) => {
           parts: new ArrayField(new DamageField()),
         }),
         friendlySave: new StringField({ initial: "default", name: "friendlySave" }),
-        // WIP
-        // saveDisplay: new StringField({initial: "default"})
       }
     }
 

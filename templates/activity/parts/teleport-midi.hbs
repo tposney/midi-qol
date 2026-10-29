@@ -1,6 +1,7 @@
 <fieldset>
     <legend>{{ localize "midi-qol.TELEPORT.FIELDS.midiTeleport.label" }}</legend>
     {{ formField fields.midiTeleport.fields.movers value=source.midiTeleport.movers localize=true rootId=partId }}
+    {{ formField fields.midiTeleport.fields.plan value=source.midiTeleport.plan localize=true rootId=partId }}
     {{ formField fields.midiTeleport.fields.blocked value=source.midiTeleport.blocked localize=true rootId=partId }}
     {{ formField fields.midiTeleport.fields.requireSight value=source.midiTeleport.requireSight input=inputs.createCheckboxInput rootId=partId }}
 </fieldset>

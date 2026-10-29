@@ -1,4 +1,5 @@
 import { registerHiddenGroundCueSetting } from "./lib/hiddenGroundCue.js";
+import { applyChatCardSummaries, registerChatCardSummariesSetting } from "./lib/chatCardSummaries.js";
 import { debug, setDebugLevel, i18n, debugEnabled, gameStats, updateFlankingStatusEffects } from "../midi-qol.js";
 import { ConfigPanel } from "./apps/ConfigPanel.js"
 import { DependentsExplorer } from "./apps/DependentsExplorer.js";
@@ -132,6 +133,7 @@ class ConfigSettings {
   autoCheckHit: string = "none";
   autoCheckSaves: string = "none";
   saveSummaryStyle: string = "midi";
+  chatCardSummaries: string = "client";
   autoFastForward: string[] = [];
   autoItemEffects: string = "off";
   autoRemoveSummonedCreature: boolean = false;
@@ -258,6 +260,7 @@ class ConfigSettings {
     showFlankingHighlight: false,
     checkRange: "longfail",
     targetMustBeSeen: "enforce",
+    conditionRules: false,
     coverCalculation: "none",
     criticalNat20: false,
     criticalSaves: false,
@@ -731,6 +734,7 @@ export let fetchParams = () => {
     flankingRequiresVisibility: false,
     checkRange: "longfail",
     targetMustBeSeen: "enforce",
+    conditionRules: false,
     coverCalculation: "none",
     displayBonusRolls: true,
     criticalNat20: false,
@@ -769,7 +773,10 @@ export let fetchParams = () => {
   if ([true, "longFail"].includes(configSettings.optionalRules.checkRange)) configSettings.optionalRules.checkRange = "longfail";
   if (!configSettings.optionalRules.checkRange) configSettings.optionalRules.checkRange = "none";
   configSettings.optionalRules.targetMustBeSeen ??= "enforce";
-  if (!configSettings.optionalRules.invisAdvantage) configSettings.optionalRules.invisAdvantage = "none";
+  // Never set: the default; the old boolean off stays off
+  //@ts-expect-error legacy boolean value
+  if (configSettings.optionalRules.invisAdvantage === false) configSettings.optionalRules.invisAdvantage = "none";
+  if (!configSettings.optionalRules.invisAdvantage) configSettings.optionalRules.invisAdvantage = "RAW2024";
   //@ts-expect-error legacy boolean value
   if (configSettings.optionalRules.invisAdvantage === true) configSettings.optionalRules.invisAdvantage = "RAW2014";
   // Migrate old "RAW" to "RAW2014"
@@ -808,6 +815,8 @@ export let fetchParams = () => {
   if (configSettings.damageResistanceMultiplier === undefined) configSettings.damageResistanceMultiplier = 0.5;
   if (configSettings.damageVulnerabilityMultiplier === undefined) configSettings.damageVulnerabilityMultiplier = 2;
   if (configSettings.saveSummaryStyle === undefined) configSettings.saveSummaryStyle = "midi";
+  if (!configSettings.chatCardSummaries) configSettings.chatCardSummaries = "client";
+  void applyChatCardSummaries();
   if (configSettings.attackPerTarget === undefined) configSettings.attackPerTarget = false;
   if (configSettings.autoRemoveTemplate === undefined) configSettings.autoRemoveTemplate = true;
   if (configSettings.autoRemoveInstantaneousTemplate === undefined) configSettings.autoRemoveInstantaneousTemplate = false;
@@ -1150,6 +1159,7 @@ export const autoTargetOptions = keysToExtendedOptionsObj("autoTargetOptions", [
 
 
 export const saveSummaryStyleOptions = keysToExtendedOptionsObj("saveSummaryStyleOptions", ["midi", "dnd5e"]);
+export const chatCardSummariesOptions = keysToExtendedOptionsObj("chatCardSummariesOptions", ["client", "always", "never"]);
 
 export const autoCheckSavesOptions = keysToExtendedOptionsObj("autoCheckSavesOptions", [
   "none",
@@ -1759,6 +1769,17 @@ export const registerSettings = function () {
   // ========================================
 
   registerHiddenGroundCueSetting();
+  registerChatCardSummariesSetting();
+  game.settings.register("midi-qol", "showAttackRollDetails", {
+    name: i18n("midi-qol.ShowAttackRollDetails.Name"),
+    hint: i18n("midi-qol.ShowAttackRollDetails.Hint"),
+    scope: "client",
+    config: true,
+    type: Boolean,
+    default: true,
+    // The cards already on screen show or drop the details as they are drawn again
+    onChange: () => { for (const message of game.messages?.contents.slice(-100) ?? []) void ui.chat?.updateMessage(message); }
+  });
 
   game.settings.register("midi-qol", "EnableWorkflow", {
     name: i18n("midi-qol.EnableWorkflow.Name"),

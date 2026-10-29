@@ -1,10 +1,12 @@
 import { log, i18n, error, i18nFormat, warn, debugEnabled, GameSystemConfig, MODULE_ID, gameStats, getStaticID, MIDI_IMPLYING_STATUSES } from "../midi-qol.js";
+import { saveDisplayMode } from "./lib/saveVisibility.js";
 import { configSettings, checkRule, checkMechanic, safeGetGameSetting, safeSetGameSetting, playerControlsInvisibleTokens } from "./settings.js";
 import { bonusDialog, createConditionData, displayDSNForRoll, expireRollEffect, getCriticalDamage, getDeadStatus, getOptionalCountRemainingShortFlag, getUnconsciousStatus, getVitalityDeadStatus, getWoundedStatus, hasUsedAction, hasUsedBonusAction, hasUsedReaction, midiRenderRoll, notificationNotify, removeActionUsed, removeBonusActionUsed, removeReactionUsed, tokenForActor, expireEffects, DSNMarkDiceDisplayed, evalAllConditionsAsync, hasCondition, areMidiKeysPressed, MidiOptions, getVitalityItem, checkMagicResistanceAndVulnerability, isAutoFastForward, FastForwardRollType, buildRollChoices, selectBestRollChoice, getTokenPerimeterPolygon, closestPointOnPerimeter, measurePointDistance, setUserInitiatedTarget, dnd5eRollType, updateUserTargets, isEffectExpired, processTurnOverTime, toggleStatus } from "./utils.js";
 import { computeActivityTemplateTargets } from "./activities/activityHelpers.js";
 import { installedModules } from "./setupModules.js";
 import { OnUseMacro, OnUseMacros } from "./apps/Item.js";
 import { initHiddenGroundCue } from "./lib/hiddenGroundCue.js";
+import { initConditionRules } from "./lib/conditionRules.js";
 import { TroubleShooter } from "./apps/TroubleShooter.js";
 import { MidiAttackActivity } from "./activities/AttackActivity.js";
 import { MidiActivityChoiceDialog } from "./apps/MidiActivityChoiceDialog.js";
@@ -98,6 +100,7 @@ export function initPatching() {
   libWrapper.register(MODULE_ID, "CONFIG.ActiveEffect.documentClass.prototype._preCreate", _preCreateActiveEffect, "WRAPPER");
   libWrapper.register(MODULE_ID, "CONFIG.Dice.D20Roll.prototype.configureModifiers", _configureModifiers, "WRAPPER");
   libWrapper.register(MODULE_ID, "dnd5e.applications.actor.BaseActorSheet.prototype._prepareItem", _prepareItem, "WRAPPER");
+  initConditionRules();
 
   // Setup document classes with both dnd5e's DependentDocumentMixin (for flag-based tracking)
   // and MidiDependentDocumentMixin (for our registry-based tracking of Actor/Item parents)
@@ -1428,11 +1431,9 @@ async function doD20Roll(this: Actor.Implementation, wrapped, kind: D20RollKind,
     // @ts-expect-error
     result.forEach(r => r.options.rollMode = rollMode);
     // Saves and checks ghost their 3D dice by the effective save display (an activity's own overrides the setting).
-    const activitySaveDisplay = config.midiOptions.workflow?.activity?.saveDisplay as string | undefined;
-    const saveDisplay = (activitySaveDisplay && activitySaveDisplay !== "default") ? activitySaveDisplay : configSettings.autoCheckSaves;
     // When obscuring, keep the 3D dice animation private so it can't reveal the hidden result to players
     const dsnRollMode = foundry.utils.getProperty(message, "data.flags.midi-qol.obscureRoll") ? "blind" : rollMode;
-    await displayDSNForRoll(result, kind.dsnType, dsnRollMode, isAbility ? saveDisplay : undefined, this);
+    await displayDSNForRoll(result, kind.dsnType, dsnRollMode, isAbility ? saveDisplayMode() : undefined, this);
     DSNMarkDiceDisplayed(result);
     foundry.utils.mergeObject(message.data, { "flags": config.flags ?? {} });
     // Set overtimeActorUuid AFTER message object is replaced by hook and merged
