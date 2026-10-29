@@ -2642,8 +2642,11 @@ export class Workflow {
     this.effectTargets = new Set();
     this.otherEffectTargets = new Set();
     this.allOtherEffectTargets = new Set(this.targets);
-    this.effectTargetsOnSave = this.activationMatches;
-    this.otherEffectTargetsOnSave = this.otherActivationMatches;
+    // "On save" means whatever the save, not whatever the attack: an attack's on-save effects are for the creatures it
+    // hit (all targets for an activity without an attack, or when effects are forced on)
+    const hits: Set<Token.Implementation> = this.activity.attack ? new Set([...this.hitTargets, ...this.hitTargetsEC]) : this.targets;
+    this.effectTargetsOnSave = this.forceApplyEffects ? this.activationMatches : hits.filter(t => this.activationMatches!.has(t));
+    this.otherEffectTargetsOnSave = this.forceApplyEffects ? this.otherActivationMatches : hits.filter(t => this.otherActivationMatches!.has(t));
     if (this.forceApplyEffects) {
       this.effectTargets = new Set();
     } else if ((this.saveActivity?.save || this.saveActivity?.check) && this.activity.attack) {

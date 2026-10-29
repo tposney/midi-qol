@@ -1,9 +1,13 @@
 ### 14.0.17 (unreleased)
 
+* From this release the v14 (Foundry 14 / dnd5e 5.3) line receives only bug fixes, no feature enhancements; new features go to the dnd5e 6 line.
+
 **Vision**
 * Changed: *Dim lower floors through surface holes* is replaced by the player setting *Mark lower floors where creatures can't be seen*: the squares of a lower floor, seen through an opening, where a creature would be hidden the selected token (core's sight test) are marked in a style (tint, dim, hatch, outline), colour and opacity each player chooses.
+* Changed: *Unseen/Invisible attackers have advantage/disadvantage* defaults to RAW (2024) where it was never set.
 
 **Activities**
+* Fixed: an effect applied whatever the save (*On Save*) also went to targets an attack missed (an attack whose save comes from the item's other activity); for an attack it now goes only to the creatures hit, saved or not.
 * Changed: the activity's *Midi Overtime* tab says which effect change runs an over-time activity (`flags.midi-qol.ActivityOverTime` = its identifier); marking an activity *Is Over Time* alone does nothing.
 
 **Regions**
@@ -24,7 +28,7 @@
 * Fixed: *Un-target at end of turn* (dead targets) untargeted every target at 0 hit points half a second after any use finished, so a Healer's Kit or Spare the Dying used on a downed creature in that time lost its target; midi now untargets only the finished use's own targets.
 
 **Macros**
-* Fixed: an effect change `flags.midi-qol.onUseMacroName` with `ItemMacro` on an aura's copy (Aura Effects) pointed at the aura effect rather than its item, so the macro never ran (the Jewel of the Three Prayers' Prayer of Fortune); it now runs the item's macro.
+* Fixed: an effect change `flags.midi-qol.onUseMacroName` with `ItemMacro` on an aura's copy (Aura Effects) pointed at the aura effect rather than its item, so the macro never ran; it now runs the item's macro.
 * Fixed: a reaction passed to the `chooseReactions` socket as an object (`{itemName, id, uuid, …}`, the older form) made the reaction dialog fail to render, so nothing was offered; it is looked up by its uuid.
 * Fixed: an ammunition's onUse macros at the workflow-state passes (e.g. `postAttackRollComplete`, `preDamageRollComplete`) got the weapon as the macro item, so its `ItemMacro` never ran; the macro item is now the ammunition.
 * Changed: a blank onUse macro name is the item's own macro (the used activity's, else the item's; for an effect change, the effect's activity's, else its item's), and an item with a macro but no onUse macros runs it after active effects. An onUseMacroName effect change with no pass is ignored and reported.
@@ -36,6 +40,7 @@
 * Fixed: damage to a creature at 0 hit points didn't count as damage, so `isDamaged` hooks, macros and special durations (e.g. Stable from a Healer's Kit) didn't fire; such damage now counts.
 
 **Rolls and saves**
+* Fixed: an effect lasting until a Bonus Action, Reaction or Turn Action could be expired twice by one use, showing an "ActiveEffect … does not exist" error.
 * Fixed: an over-time action save with `rollType=skill` (e.g. an Athletics check to escape): the card's button didn't carry the skill's ability; the button now carries it.
 * Fixed: Dice So Nice's *Hide NPC rolls* and *Disabled during combat* were ignored for the dice midi shows itself (attacks, damage, saves, checks, optional bonus rerolls); midi now honours them, including for dice other modules show through `MidiQOL.displayDSNForRoll`, which now takes the rolling actor.
 

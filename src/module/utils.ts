@@ -1118,7 +1118,7 @@ export function midiCustomEffect(actor: Actor.Implementation, change: MidiChange
       const origin = originUuid ? fromUuidSync(originUuid) : undefined;
       const item = origin instanceof Item ? origin : (origin instanceof ActiveEffect && origin.parent instanceof Item ? origin.parent : undefined);
       if (activity?.macro?.command) args[0] = `ActivityMacro.${activityUuid}`;
-      else if (item && DAE.getItemMacroCommand(item)) args[0] = "ItemMacro";
+      else if (item && globalThis.DAE?.getItemMacroCommand(item)) args[0] = "ItemMacro";
       else {
         if (debugEnabled > 0) warn(`onUseMacroName change on ${change.effect?.name} (${actor.name}) has a blank macro name and its item has no macro`);
         return true;
@@ -4855,6 +4855,10 @@ export async function expireMyEffects(this: Workflow, effectsToExpire: string[])
   //
   expireAnyAction ||= expireBonusAction || expireReaction || expireTurnAction;
   if (expireAnyAction) effectsToExpire.push("1Action");
+  // Recorded as done with 1Action, or a later call in the same workflow expires them again
+  if (expireBonusAction) effectsToExpire.push("Bonus Action");
+  if (expireReaction) effectsToExpire.push("Reaction");
+  if (expireTurnAction) effectsToExpire.push("Turn Action");
   if (expireMiss) effectsToExpire.push("1Miss");
   // expire any effects on the actor that require it
   // if (debugEnabled && false) {

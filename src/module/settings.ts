@@ -794,7 +794,10 @@ export let fetchParams = () => {
   if ([true, "longFail"].includes(configSettings.optionalRules.checkRange)) configSettings.optionalRules.checkRange = "longfail";
   if (!configSettings.optionalRules.checkRange) configSettings.optionalRules.checkRange = "none";
   configSettings.optionalRules.targetMustBeSeen ??= "enforce";
-  if (!configSettings.optionalRules.invisAdvantage) configSettings.optionalRules.invisAdvantage = "none";
+  // Never set: the default; the old boolean off stays off
+  //@ts-expect-error legacy boolean value
+  if (configSettings.optionalRules.invisAdvantage === false) configSettings.optionalRules.invisAdvantage = "none";
+  if (!configSettings.optionalRules.invisAdvantage) configSettings.optionalRules.invisAdvantage = "RAW2024";
   //@ts-expect-error legacy boolean value
   if (configSettings.optionalRules.invisAdvantage === true) configSettings.optionalRules.invisAdvantage = "RAW2014";
   // Migrate old "RAW" to "RAW2014"
