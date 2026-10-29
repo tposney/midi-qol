@@ -1,20 +1,19 @@
 ### 13.0.70 (unreleased)
-* Fixed: an effect lasting until a Bonus Action, Reaction or Turn Action could be expired twice by one use, showing an "ActiveEffect … does not exist" error.
-* Fixed: an effect applied whatever the save (*On Save*) also went to targets an attack missed (an attack whose save comes from the item's other activity); for an attack it now goes only to the creatures hit, saved or not.
-* Fixed: a use given its targets (a macro's or an automation's) re-read the user's targets when its saves were checked, so another use finishing at that moment could leave it with none and its damage was lost (e.g. damage landing as a creature's turn-start Regeneration finished); such a use keeps its own targets.
-* Fixed: an effect change `flags.midi-qol.onUseMacroName` with `ItemMacro` on an aura's copy (Aura Effects) pointed at the aura effect rather than its item, so the macro never ran (the Jewel of Three Prayers' Prayer of Fortune); it now runs the item's macro.
-* Fixed: a reaction passed to the `chooseReactions` socket as an object (`{itemName, id, uuid, …}`, the older form) made the reaction dialog fail to render, so nothing was offered; it is looked up by its uuid.
-* Fixed: a `completeActivityUse` (a macro's, or an automation's such as a turn-start effect) that finished while another use was starting put its saved user targets back over the new use's, which could then hit no one; the targets are put back only if nothing has targeted since, and a use given its own targets decides on target confirmation from them.
-* Fixed: an ammunition's onUse macros at the workflow-state passes (e.g. `postAttackRollComplete`, `preDamageRollComplete`) got the weapon as the macro item, so its `ItemMacro` never ran.
-* Fixed: Dice So Nice's *Hide NPC rolls* and *Disabled during combat* were ignored for the dice midi shows itself (attacks, damage, saves, checks, optional bonus rerolls), including dice other modules show through `MidiQOL.displayDSNForRoll`, which now takes the rolling actor.
-* Fixed: the *Jewel of Three Prayers (Awakened)* sample: Prayer of Fortune never offered its reroll, and only to an online player owner (now the GM when they are away), and is now for allies by default (the Ward aura can be set to any creature); Free the Body didn't end a condition that an effect such as a grapple grants.
-* Changed: the *Cataclysm Bolts* and *Mortar* samples are midi-qol homebrew, not from the DMG pages their source named.
+* Fixed: an "ActiveEffect … does not exist" error when one use ended an effect lasting until a Bonus Action, Reaction or Turn Action.
+* Fixed: an effect applied "whatever the save" also went to creatures an attack missed; it now goes only to the creatures hit.
+* Fixed: an automated use (a macro's, or a turn-start effect such as Regeneration) could lose its targets, and with them its damage, when another use started or finished at the same moment. Each use keeps its own targets, and the user's targets are put back only if nothing has targeted since.
+* Fixed: an effect change `flags.midi-qol.onUseMacroName` with `ItemMacro` on an aura's copy (Aura Effects) never ran the macro (e.g. the Jewel of Three Prayers' Prayer of Fortune); it now runs the item's macro.
+* Fixed: a reaction passed to the `chooseReactions` socket as an object (`{itemName, id, uuid, …}`, the older form) stopped the reaction dialog opening; it is looked up by its uuid.
+* Fixed: an ammunition's onUse macros at the workflow-state passes (e.g. `postAttackRollComplete`, `preDamageRollComplete`) ran with the weapon as the macro item, so the ammunition's `ItemMacro` never ran.
+* Fixed: Dice So Nice's *Hide NPC rolls* and *Disabled during combat* now apply to the dice midi shows (attacks, damage, saves, checks, bonus rerolls), including dice other modules show through `MidiQOL.displayDSNForRoll`, which now takes the rolling actor.
+* Fixed: the *Jewel of Three Prayers (Awakened)* sample: Prayer of Fortune never offered its reroll and now does, to the GM when the owner is away, and is for allies by default (the Ward aura can be set to any creature); Free the Body now ends a condition an effect such as a grapple grants.
+* Fixed: the *Cataclysm Bolts* sample can be loaded into a crossbow (ammunition type crossbow bolt), its d6 macro runs, its effects work against any creature, and shrapnel stops once the target drops.
 * Fixed: the *Brooch of Shielding* sample (was "Broach") let Magic Missile damage the wearer.
+* Changed: the *Cataclysm Bolts* and *Mortar* samples are midi-qol homebrew, not from the DMG pages their source named.
 * Changed: samples of official items that aren't SRD have no rules text (Absorb Elements, Toll the Dead, Rakish Audacity, Arcane Ward, Aura of Vitality, Elemental Attunement, Dragonhide Belt, Gloves of Soul Catching and its Elemental version, Jewel of Three Prayers, Vow of Enmity): each says which book and item to copy the text from, followed by midi-qol's notes.
 * Added: sample item *Starfall Bullet* (legendary sling bullet): on a hit, 8d10 radiant to the target and DC 18 Dex for 4d10 fire (half on a success) to every other creature within 15 ft; the crater is difficult terrain and lit for 1 minute (region and light made by the GM, removed when the minute ends).
 * Added: sample item *Chainbreaker Bolt* (legendary crossbow bolt): on a hit, choose up to five more creatures, each within 30 ft of the last one hit; each takes the crossbow's damage dice plus 3d10 force.
 * Added: sample item *Arrow of Echoed Wounds* (legendary arrow): on a hit it lodges for 1 minute, adding 2d6 piercing whenever the target takes damage; the target's Lodged Arrow item pulls it out (DC 18 Medicine, 4d6 piercing on a failure).
-* Fixed: the *Cataclysm Bolts* sample item could not be loaded into a crossbow (its ammunition type is now crossbow bolt), its d6 macro never ran, and its effects only worked against dragons; shrapnel stops once the target drops.
 
 ### 13.0.69
 * Requires DAE 13.0.31.
