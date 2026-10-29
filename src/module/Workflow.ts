@@ -3628,19 +3628,6 @@ export class Workflow {
           foundry.utils.setProperty(this.actor, "flags.midi.evaluated.disadvantage.attack.hidden", { value: true, effects: ["Hidden Defender"] });
         }
       }
-
-      if (checkRule("hiddenAdvantage") === "effect") {
-        const hiddenToken = this.token ? hasCondition(this.token.actor as Actor, "hidden") : false;
-        const hiddenTarget = hasCondition(firstTarget.actor as Actor, "hidden");
-        if (hiddenToken) {
-          this.attackRollModifierTracker.advantage.add('Attacker hidden', 'Attacker hidden');
-          foundry.utils.setProperty(this.actor, "flags.midi.evaluated.advantage.attack.hidden", { value: true, effects: ["Hidden Attacker"] });
-        }
-        if (hiddenTarget) {
-          this.attackRollModifierTracker.disadvantage.add('Target hidden', 'Target hidden');
-          foundry.utils.setProperty(this.actor, "flags.midi.evaluated.disadvantage.attack.hidden", { value: true, effects: ["Hidden Defender"] });
-        }
-      }
     }
 
     // Nearby foe gives disadvantage on ranged attacks
@@ -5353,6 +5340,8 @@ export class Workflow {
       }
     }
     const advMode = chosenTracker ?? saveDetails?.modifierTracker;
+    // Keys held when the creature's own roll was asked for change it after the tracker was built: name them.
+    if (saveDetails?.heldModifiers) advMode?.reconcileWithRoll(saveRoll?.options?.advantageMode, false);
     // @ts-expect-error CONFIG.Dice.D20Roll not typed
     const ADV_MODE: { DISADVANTAGE: number, NORMAL: number, ADVANTAGE: number } = CONFIG.Dice.D20Roll.ADV_MODE;
     const mode = saveRoll?.options?.advantageMode ?? advMode?.advantageMode ?? ADV_MODE.NORMAL;

@@ -243,6 +243,8 @@ declare module "fvtt-types/configuration" {
           failsRemaining?: number;  // Remaining fails needed for failCount
         };
         overtimeChatCardUuids?: string[];
+        /** A hide (sample Hide action): the Stealth total to find the creature */
+        hidden?: { dc?: number };
         transformedActorUuids?: string[];
         /** Detect Magic (Vision): the auras the caster sees, until `expires` (ms). Colours are 0xRRGGBB, levels 1-9. */
         magicSight?: {

@@ -1,3 +1,4 @@
+import { initHiding } from "./lib/hiding.js";
 import { log, i18n, error, i18nFormat, warn, debugEnabled, GameSystemConfig, MODULE_ID, gameStats, getStaticID, MIDI_IMPLYING_STATUSES } from "../midi-qol.js";
 import { saveDisplayMode } from "./lib/saveVisibility.js";
 import { configSettings, checkRule, checkMechanic, safeGetGameSetting, safeSetGameSetting, playerControlsInvisibleTokens } from "./settings.js";
@@ -101,6 +102,7 @@ export function initPatching() {
   libWrapper.register(MODULE_ID, "CONFIG.Dice.D20Roll.prototype.configureModifiers", _configureModifiers, "WRAPPER");
   libWrapper.register(MODULE_ID, "dnd5e.applications.actor.BaseActorSheet.prototype._prepareItem", _prepareItem, "WRAPPER");
   initConditionRules();
+  initHiding();
 
   // Setup document classes with both dnd5e's DependentDocumentMixin (for flag-based tracking)
   // and MidiDependentDocumentMixin (for our registry-based tracking of Actor/Item parents)

@@ -267,7 +267,7 @@ class ConfigSettings {
     displayBonusRolls: true,
     distanceIncludesHeight: false,
     distanceMeasurement: "center", // "center" = grid square centers, "perimeter" = token perimeters
-    hiddenAdvantage: "none",
+    hiddenAdvantage: "perObserver",
     incapacitated: "nothing",
     invisAdvantage: "RAW2024",
     invisVision: false,
@@ -743,7 +743,7 @@ export let fetchParams = () => {
     distanceMeasurement: "center",
     incapacitated: "nothing",
     invisAdvantage: "RAW2024",
-    hiddenAdvantage: "none",
+    hiddenAdvantage: "perObserver",
     maxDRValue: false,
     nearbyAllyRanged: 0,
     nearbyFoe: 5,
@@ -781,7 +781,8 @@ export let fetchParams = () => {
   if (configSettings.optionalRules.invisAdvantage === true) configSettings.optionalRules.invisAdvantage = "RAW2014";
   // Migrate old "RAW" to "RAW2014"
   if (configSettings.optionalRules.invisAdvantage === "RAW") configSettings.optionalRules.invisAdvantage = "RAW2014";
-  if (!configSettings.optionalRules.hiddenAdvantage) configSettings.optionalRules.hiddenAdvantage = "none";
+  // "effect" (Check 'Hidden' Status: hidden from everyone) became the per-observer rule (lib/hiding.ts)
+  if (!configSettings.optionalRules.hiddenAdvantage || configSettings.optionalRules.hiddenAdvantage === "effect") configSettings.optionalRules.hiddenAdvantage = "perObserver";
   //@ts-expect-error legacy nonexistent value
   if (configSettings.optionalRules.activeDefenceShowGM === true) {
     // old setting replaced with new
@@ -1496,7 +1497,8 @@ export const coverCalculationOptions = keysToExtendedOptionsObj("CoverCalculatio
 
 export const hiddenAdvantageOptions = keysToExtendedOptionsObj("HiddenAdvantageOptions", [
   "none",
-  "effect",
+  "perObserver",
+  "perObserverPassive",
   "perceptive"
 ]);
 

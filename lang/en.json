@@ -624,10 +624,11 @@
   "midi-qol.ConditionRules.Hint": "Applies the condition rules dnd5e doesn't, to conditions added after it is turned on, however they are added: attacks by a frightened, poisoned, prone or restrained creature (or one with 2014 exhaustion 3) have disadvantage; attacks against a paralyzed, petrified, restrained, stunned or unconscious creature have advantage, and against a prone one advantage within 5 ft and disadvantage beyond; hits within 5 ft on a paralyzed or unconscious creature are critical; paralyzed, petrified, stunned and unconscious creatures fail Strength and Dexterity saves; frightened creatures have disadvantage on ability checks; silenced creatures can't cast spells with a verbal component; blinded follows these rules only when the can't-see rules are off. Grappled is not included.",
   "midi-qol.InvisVision.Hint": "<strong>Checked</strong> behaves as if all tokens have vision enabled.<br><strong>Unchecked</strong> tokens without vision can see everything",
   "midi-qol.HiddenAdvantage.Name": "Hidden attackers have adv/disadv on attacks",
-  "midi-qol.HiddenAdvantage.Hint": "Hidden attackers have advantage on attacks. Disadvantage if the target is hidden",
+  "midi-qol.HiddenAdvantage.Hint": "How a creature with the Hiding condition (the Hide action) is treated. Per observer: it is Invisible, on the map and in the unseen attacker/target rules, to each creature that doesn't perceive it (itself, its allies, a sightless token unless Force vision when checking is on, see invisibility/truesight/blindsight/tremorsense, and with the house rule option a passive Perception at least the hide's DC do). Perceptive: the Perceptive module decides who spots whom.",
   "midi-qol.HiddenAdvantageOptions": {
     "none": "Do not apply",
-    "effect": "Check 'Hidden' Status",
+    "perObserver": "Hiding is Invisible to whoever doesn't perceive it",
+    "perObserverPassive": "As above, and a passive Perception at least the hide's DC perceives it (house rule)",
     "perceptive": "Perceptive"
   },
   "midi-qol.CantSeeAdvantage.Hint": "<strong>Use Token Vision</strong> Invisible attackers have advantage on targets who can't see them. Disadvantage if they can't see the target",
