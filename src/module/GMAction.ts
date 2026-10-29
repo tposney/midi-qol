@@ -944,6 +944,13 @@ async function rollAbility(data: {
   if (ability) config.ability = ability;
   if (skill) config.skill = skill;
   if (tool) config.tool = tool;
+  // The keys travel as flags; dnd5e and midi read only these from the event. dnd5e 5.3 also reads its target, so it is
+  // dispatched on a detached element (no listeners) to give it one.
+  if (sd.heldModifiers) {
+    const event = new KeyboardEvent("keydown", sd.heldModifiers);
+    document.createElement("div").dispatchEvent(event);
+    config.event = event;
+  }
   let dialog: RollDialogConfig = { configure: !fastForward };
   let message: RollMessageConfig = { create: chatMessage, rollMode: rollMode as RollMessageConfig["rollMode"] };
   if (normalizedRequest === "tool") {

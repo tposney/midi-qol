@@ -5265,7 +5265,7 @@ export class Workflow {
     this.saveDisplayData?.push({
       gmName: getTokenName(target),
       img,
-      targetClass: isPlayerOwned ? "midi-qol-player-target" : "midi-qol-npc-target",
+      targetClass: (isPlayerOwned ? "midi-qol-player-target" : "midi-qol-npc-target") + (this.isObscuredSave(saveDetails, midiChosenId) ? " midi-qol-obscured" : ""),
       target,
       saveSymbol: (rollDC === null) ? "" : (
         ((target.actor as Actor).hasPlayerOwner ? "" : "midi-qol-npc-save-symbol")
@@ -5284,6 +5284,15 @@ export class Workflow {
       saveTooltip,
       saveClass: (rollDC === null) ? "" : (saved ? "success" : "failure"),
     });
+  }
+
+  /** Whether midi forced this save roll obscured (Which ... are rolled blind, Blind roll display Obscured) */
+  protected isObscuredSave(saveDetails: SaveDetails | undefined, chosenId: string | undefined): boolean {
+    if ((configSettings.blindRollDisplay ?? "hidden") !== "obscured") return false;
+    const rollType = saveDetails?.rollType ?? "save";
+    const blind = rollType === "save" ? configSettings.rollSavesBlind : rollType === "skill" ? configSettings.rollSkillsBlind : configSettings.rollChecksBlind;
+    const choice = chosenId ?? (rollType === "skill" ? saveDetails?.rollSkills?.[0] : rollType === "tool" ? saveDetails?.rollTools?.[0] : saveDetails?.rollAbilities?.[0]);
+    return !!blind?.includes("all") || !!blind?.includes(choice ?? "");
   }
 
   /**
@@ -5994,12 +6003,12 @@ export class Workflow {
       }
     }
 
-    // dnd5e challengeVisibility: when an NPC target's challenge should be hidden from players
-    // (visibility "player"/"none"), keep its save-roll chat card private to the GM — otherwise under
+    // dnd5e challengeVisibility: when players don't see this card's challenge (it follows the caster: "player" shows a
+    // player-owned caster's), keep an NPC target's save-roll chat card private to the GM — otherwise under
     // autoCheckSaves "allShow" the dnd5e card is created public. Respect an explicit activity rollMode.
     if ((this.activity.midiProperties?.rollMode ?? "default") === "default"
       && !target.actor?.hasPlayerOwner
-      && !shouldDisplaySaveDC(target.actor as Actor)
+      && !shouldDisplaySaveDC(this.actor)
       && ["public", "ic"].includes(rollMode)) {
       rollMode = "gm";
     }
@@ -6317,6 +6326,10 @@ export class Workflow {
       rollTools,
       itemId: this.saveActivity?.item.id ?? "",
     };
+    // A creature rolling its own check or save rolls it with the keys held when it was used.
+    const event = this.rollOptions.event as AugmentedEvent | undefined;
+    if (event && target.actor?.uuid === this.actor?.uuid)
+      saveDetails.heldModifiers = { altKey: !!event.altKey, ctrlKey: !!event.ctrlKey, metaKey: !!event.metaKey, shiftKey: !!event.shiftKey };
 
     // Trackers (advantage and roll modifiers) for each choice the roll offers: abilities for a save or plain check,
     // else the skills or tools, each rolled with its ability.

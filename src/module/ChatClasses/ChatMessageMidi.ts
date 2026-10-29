@@ -706,13 +706,12 @@ export function defineChatMessageMidiClass(baseClass: ChatMessage.Implementation
         removeAll(html, ".midi-save-attribution-info");
       }
 
-      // Per-target result visibility keys on the TARGET (the saver) — the row classes
-      // (.midi-qol-npc-save-* vs .midi-qol-save-*) are assigned from each target's hasPlayerOwner:
-      //   NPC-target results → shown only when the challenge is fully public ("all")
+      // The row classes (.midi-qol-npc-save-* vs .midi-qol-save-*) come from each target's hasPlayerOwner:
+      //   NPC-target results → the card's challenge: "all", or "player" on a player-owned caster's card
       //   PC-target results  → shown unless the challenge is hidden entirely ("none")
-      // The single save DC is one value for the activity, so its visibility follows the CASTER.
+      // The single save DC is one value for the activity, so its visibility follows the CASTER too.
       const dcHidden = shouldDisplayChallenge === "player" && !(messageActor as any)?.hasPlayerOwner;
-      const displayNPCSaves = shouldDisplayChallenge === "all";
+      const displayNPCSaves = shouldDisplayChallenge === "all" || (shouldDisplayChallenge === "player" && !dcHidden);
       const displayPlayerSaves = shouldDisplayChallenge !== "none";
 
       if (!displayPlayerSaves || autoCheckSaves === "whisper" || this.blind) {
@@ -745,6 +744,15 @@ export function defineChatMessageMidiClass(baseClass: ChatMessage.Implementation
       if (!displayNPCSaves || !configSettings.highlightSuccess) {
         stripHighlight(html, ".midi-qol-save-class.midi-qol-npc-target");
       }
+      // A roll midi forced obscured shows ?? on its row, as on its roll card.
+      html.querySelectorAll<HTMLElement>(".midi-qol-saves-display li.midi-qol-obscured").forEach(row => {
+        row.querySelectorAll<HTMLElement>(".midi-qol-save-total").forEach(el => {
+          el.removeAttribute("data-tooltip");
+          el.replaceChildren("??");
+        });
+        row.querySelectorAll(".midi-qol-save-tooltip, .midi-qol-save-symbol").forEach(el => el.remove());
+        row.classList.remove("success", "failure", "critical", "fumble");
+      });
     }
 
     private applyAttackVisibility(html: HTMLElement) {

@@ -1710,6 +1710,8 @@ export type SaveDetails = {
    *  A roll is always ONE type (save, skill check, or tool check), so one object suffices.
    */
   advantageByChoice?: Record<string, PreComputedAdvantageData>;
+  /** The modifier keys held when the activity was used, for the roll of the creature that used it */
+  heldModifiers?: { altKey: boolean; ctrlKey: boolean; metaKey: boolean; shiftKey: boolean };
 };
 
 export type ProcessTargetSaveContext = {

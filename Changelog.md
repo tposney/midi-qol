@@ -3,16 +3,16 @@
 * From this release the v14 (Foundry 14 / dnd5e 5.3) line receives only bug fixes, no feature enhancements; new features go to the dnd5e 6 line.
 
 **Vision**
-* Changed: *Dim lower floors through surface holes* is replaced by the player setting *Mark lower floors where creatures can't be seen*: the squares of a lower floor, seen through an opening, where a creature would be hidden the selected token (core's sight test) are marked in a style (tint, dim, hatch, outline), colour and opacity each player chooses.
+* Changed: *Dim lower floors through surface holes* is replaced by the player setting *Mark lower floors where creatures can't be seen*. Through an opening you see the floor below, but not always the creatures on it: midi marks the squares where a creature would be hidden from your selected token, in the style (tint, dim, hatch, outline), colour and opacity you choose.
 * Changed: *Unseen/Invisible attackers have advantage/disadvantage* defaults to RAW (2024) where it was never set.
 
 **Activities**
-* Fixed: an effect applied whatever the save (*On Save*) also went to targets an attack missed (an attack whose save comes from the item's other activity); for an attack it now goes only to the creatures hit, saved or not.
-* Changed: the activity's *Midi Overtime* tab says which effect change runs an over-time activity (`flags.midi-qol.ActivityOverTime` = its identifier); marking an activity *Is Over Time* alone does nothing.
+* Fixed: an effect applied "whatever the save" also went to creatures an attack missed; it now goes only to the creatures hit.
+* Changed: the *Midi Overtime* tab explains which effect change runs an over-time activity (`flags.midi-qol.ActivityOverTime` set to its identifier); marking an activity *Is Over Time* alone does nothing.
 
 **Regions**
-* Fixed: the *Midi Region Light* behavior's light (or darkness) spilled outside its region (a radius around one point) and was placed at the centre of the region's bounds, which are clipped where walls or the scene edge constrain the region; the light is now confined to the region (a single-piece region; others are not clipped) and sits inside the region: the shape's own centre (an emanation's token, a circle's or rectangle's centre), or the centre of the area for cones and lines.
-* Added: *Midi Region Light* can be a source of darkness (Darkness), with a Priority, Constrained by Walls (off by default, as before), Fill Region (the radius reaches the whole region), and an animation list that includes the darkness animations.
+* Fixed: *Midi Region Light*'s light spilled outside its region and could sit off-centre. It now stays inside the region (single-piece regions) and is centred on the shape: an emanation's token, a circle's or rectangle's centre, the middle of a cone or line.
+* Added: *Midi Region Light* can be darkness, with *Priority*, *Constrained by Walls* (off by default), *Fill Region* and the darkness animations.
 
 **Sample items**
 * Added: *Starfall Bullet* (homebrew legendary sling bullet): on a hit, 8d10 radiant to the target and DC 18 Dex for 4d10 fire (half on a success) to every other creature within 15 ft; the crater is difficult terrain filled with bright light for 1 minute (a region with a Midi Region Light, made by the GM and removed when the minute ends).
@@ -20,12 +20,11 @@
 * Added: *Arrow of Echoed Wounds* (homebrew legendary arrow): on a hit it lodges for 1 minute, adding 2d6 piercing whenever the target takes damage; the target's Lodged Arrow item pulls it out (DC 18 Medicine, 4d6 piercing on a failure).
 * Changed: sample items › Items is sorted into Mundane, Weapons, Ammunition, Wands and Wondrous Items; midi's own creations are in Items › Homebrew, with the source "midi-qol homebrew". Fleet of Foot and Devil's Glaive moved to Features.
 * Changed: samples of official items that aren't SRD have no rules text (Absorb Elements, Toll the Dead, Rakish Audacity, Arcane Ward, Aura of Vitality, Elemental Attunement); their source names the book. Apply them to your own copy with CAT's medkit.
-* Fixed: the *Brooch of Shielding* sample (was "Broach") let Magic Missile damage the wearer; it is now the SRD 5.2 brooch (text, uncommon, CC-BY-4.0) with identifier `brooch-of-shielding`.
+* Fixed: the *Brooch of Shielding* sample (was "Broach") let Magic Missile damage the wearer; it is now the SRD 5.2 brooch, with identifier `brooch-of-shielding`.
 
 **Targeting**
-* Fixed: a use given its targets (a macro's or an automation's) re-read the user's targets when its saves were checked, so another use finishing at that moment could leave it with none and its damage was lost (e.g. damage landing as a creature's turn-start Regeneration finished); such a use keeps its own targets.
-* Fixed: a `completeActivityUse` (a macro's, or an automation's such as a turn-start effect) that finished while another use was starting put its saved user targets back over the new use's, which could then hit no one; the targets are put back only if nothing has targeted since, and a use given its own targets decides on target confirmation from them.
-* Fixed: *Un-target at end of turn* (dead targets) untargeted every target at 0 hit points half a second after any use finished, so a Healer's Kit or Spare the Dying used on a downed creature in that time lost its target; midi now untargets only the finished use's own targets.
+* Fixed: an automated use (a macro's, or a turn-start effect such as Regeneration) could lose its targets, and with them its damage, when another use started or finished at the same moment. Each use keeps its own targets, and the user's targets are put back only if nothing has targeted since.
+* Fixed: *Un-target at end of turn* (dead targets) cleared every target at 0 hit points shortly after any use, so a Healer's Kit or Spare the Dying used on a downed creature lost its target; only the finished use's targets are cleared.
 
 **Macros**
 * Fixed: an effect change `flags.midi-qol.onUseMacroName` with `ItemMacro` on an aura's copy (Aura Effects) pointed at the aura effect rather than its item, so the macro never ran; it now runs the item's macro.
@@ -34,15 +33,18 @@
 * Changed: a blank onUse macro name is the item's own macro (the used activity's, else the item's; for an effect change, the effect's activity's, else its item's), and an item with a macro but no onUse macros runs it after active effects. An onUseMacroName effect change with no pass is ignored and reported.
 
 **Damage**
-* Fixed: damage a creature absorbs (Damage Absorption) showed no hit point change on the damage card and logged "damage detail amount … !== hpDamage 0" (since 13.0.13: the card's figures didn't count absorbed damage as healing, its application did); the card now shows the healing, which was applied correctly.
-* Fixed: `MidiQOL.modifyDamageBy` (in an `isDamaged` or `preTargetDamageApplication` macro) changed only the damage detail, so the entry's `hpDamage` kept the old figure: special durations after the macro expired by it (damage turned into healing still ended `isDamaged` ones) and midi logged "damage detail amount … !== hpDamage"; the entry's figures now follow its detail, and the log appears only when the two really disagree.
-* Removed: setting `useDamageDetail` (it was always on): damage is applied from the damage detail. `MidiQOL.configSettings().useDamageDetail` reads true, with a deprecation warning.
-* Fixed: damage to a creature at 0 hit points didn't count as damage, so `isDamaged` hooks, macros and special durations (e.g. Stable from a Healer's Kit) didn't fire; such damage now counts.
+* Fixed: damage a creature absorbs (Damage Absorption) shows as healing on the damage card; it was applied correctly but shown as no change.
+* Fixed: `MidiQOL.modifyDamageBy` (in an `isDamaged` or `preTargetDamageApplication` macro) changed only part of the damage entry, so later special durations used the old figure; the whole entry now follows.
+* Removed: setting `useDamageDetail`, which was always on (`MidiQOL.configSettings().useDamageDetail` reads true, with a deprecation warning).
+* Fixed: damage to a creature at 0 hit points counts as damage, so `isDamaged` hooks, macros and special durations fire (e.g. Stable from a Healer's Kit ends).
 
 **Rolls and saves**
-* Fixed: an effect lasting until a Bonus Action, Reaction or Turn Action could be expired twice by one use, showing an "ActiveEffect … does not exist" error.
-* Fixed: an over-time action save with `rollType=skill` (e.g. an Athletics check to escape): the card's button didn't carry the skill's ability; the button now carries it.
-* Fixed: Dice So Nice's *Hide NPC rolls* and *Disabled during combat* were ignored for the dice midi shows itself (attacks, damage, saves, checks, optional bonus rerolls); midi now honours them, including for dice other modules show through `MidiQOL.displayDSNForRoll`, which now takes the rolling actor.
+* Fixed: with Challenge Visibility *Show only from other players*, players see an NPC's save result on a player-owned caster's card (as much as *Auto Check Saves* allows), and the NPC's save message is kept to the GM only when players don't see the card's challenge.
+* Fixed: a save or check midi forced obscured (*Which … are rolled blind*, *Blind roll display* Obscured) showed its total and result to players in the card's saves section; it shows ??.
+* Fixed: a check or save a creature rolls for its own activity ignored the Alt/Ctrl and Shift keys held when the activity was used.
+* Fixed: an "ActiveEffect … does not exist" error when one use ended an effect lasting until a Bonus Action, Reaction or Turn Action.
+* Fixed: an over-time action save with `rollType=skill` (e.g. an Athletics check to escape): its card's button now carries the skill's ability.
+* Fixed: Dice So Nice's *Hide NPC rolls* and *Disabled during combat* now apply to the dice midi shows (attacks, damage, saves, checks, bonus rerolls), including dice other modules show through `MidiQOL.displayDSNForRoll`, which now takes the rolling actor.
 
 ### 14.0.16
 
