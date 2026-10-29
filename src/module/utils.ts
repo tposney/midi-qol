@@ -4540,6 +4540,10 @@ export async function expireMyEffects(this: Workflow, effectsToExpire: string[])
   //
   expireAnyAction ||= expireBonusAction || expireReaction || expireTurnAction;
   if (expireAnyAction) effectsToExpire.push("1Action");
+  // Recorded as done with 1Action, or a later call in the same workflow expires them again
+  if (expireBonusAction) effectsToExpire.push("Bonus Action");
+  if (expireReaction) effectsToExpire.push("Reaction");
+  if (expireTurnAction) effectsToExpire.push("Turn Action");
   // expire any effects on the actor that require it
   // if (debugEnabled && false) {
   //   const test = this.actor.effects.map(ef => {
