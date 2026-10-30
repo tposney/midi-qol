@@ -1,4 +1,5 @@
 ### 13.0.70 (unreleased)
+* Fixed: `MidiQOL.contestedRoll` ignored its `rollOptions` (for both rolls, or per side in `source`/`target`): `advantage`, `disadvantage`, `fastForward` and `rollMode` now reach the checks.
 * Fixed: an "ActiveEffect … does not exist" error when one use ended an effect lasting until a Bonus Action, Reaction or Turn Action.
 * Fixed: an effect applied "whatever the save" also went to creatures an attack missed; it now goes only to the creatures hit.
 * Fixed: an automated use (a macro's, or a turn-start effect such as Regeneration) could lose its targets, and with them its damage, when another use started or finished at the same moment. Each use keeps its own targets, and the user's targets are put back only if nothing has targeted since.
