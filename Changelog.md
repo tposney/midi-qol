@@ -1,4 +1,5 @@
-### 13.0.70 (unreleased)
+### 13.0.70
+* Fixed: in new worlds the GM's critical hits didn't double damage dice (GM critical damage defaulted to a blank choice); a blank choice now follows the player setting.
 * Fixed: `MidiQOL.contestedRoll` ignored its `rollOptions` (for both rolls, or per side in `source`/`target`): `advantage`, `disadvantage`, `fastForward` and `rollMode` now reach the checks.
 * Fixed: an "ActiveEffect … does not exist" error when one use ended an effect lasting until a Bonus Action, Reaction or Turn Action.
 * Fixed: an effect applied "whatever the save" also went to creatures an attack missed; it now goes only to the creatures hit.

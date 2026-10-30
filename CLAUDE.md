@@ -148,7 +148,7 @@ Note: This approach doesn't handle embedded document hierarchy (effects stored a
 - **Changelog separation**: Test changes go in midi-qol-tests CHANGELOG.md only, not midi-qol's Changelog.md
 
 ### Related Modules
-- **chatlog-prune** (`/home/timp/foundry-data/foundryalpha/Data/modulesrc/chatlog-prune/`): Keep `ChatLogPrune.ts` and `ChatLogMidi.ts` in sync. midi-qol's built-in chat log pruning deprecated since 13.0.37.
+- **chatlog-prune** (`/home/timp/foundry-data/foundryalpha/Data/modulesrc/chatlog-prune/`): Chat log pruning lives in chatlog-prune. v13's `ChatLogMidi.ts` pruning is deprecated (13.0.37) and not kept in step with it.
 - **midi-qol-setup-wizard** (`/home/timp/foundry-data/foundryalpha/Data/modulesrc/midi-qol-setup-wizard/`): Key files: `scripts/wizard.js`, `wizard-steps.js`, `setting-definitions.js`, `module-definitions.js`. Launched via `Hooks.call("midi-qol-setup-wizard.launch")`.
 - **item-delete-check** (`/home/timp/foundry-data/foundryalpha/Data/modules/item-delete-check/`): Single `main.js`, no build step, `master` branch.
 
