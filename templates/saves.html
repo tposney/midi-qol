@@ -16,7 +16,7 @@
     <img class="midi-qol-save-img" src="{{save.img}}" />
     <div class="midi-qol-target-name midi-qol-save-name" id="{{save.target.id}}" data-uuid="{{save.target.document.uuid}}" data-tooltip-html="{{{save.attributionTooltip}}}" data-tooltip-direction="UP">
       <div class="name-stacked">
-        <span class="midi-qol-target-name title" id="save.target.id">{{save.gmName}}</span>
+        <span class="midi-qol-target-name title" id="save.target.id">{{midi-token-name save.target.document.uuid save.gmName}}</span>
       </div>
     </div>
     <div class="midi-qol-save-indicators">
@@ -31,7 +31,6 @@
         </span>
       </span>
     </div>
-    {{#if save.damageLine}}<div class="midi-qol-save-damage">{{save.damageLine}}</div>{{/if}}
   </li>
   {{/each}}
   {{#each unevaluated}}
@@ -41,7 +40,7 @@
     <img class="midi-qol-save-img" src="{{this.img}}" />
     <div class="midi-qol-target-name midi-qol-save-name" id="{{this.id}}" data-uuid="{{this.uuid}}">
       <div class="name-stacked">
-        <span class="midi-qol-target-name title">{{this.name}}</span>
+        <span class="midi-qol-target-name title">{{midi-token-name this.uuid this.name}}</span>
       </div>
     </div>
   </li>

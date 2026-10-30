@@ -1,10 +1,9 @@
 
-import { debug, debugEnabled, error, log, warn, busyWait} from "../midi-qol.js";
+import { debug, debugEnabled, error, log, warn, busyWait, MODULE_ID } from "../midi-qol.js";
 import { socketlibSocket, unTimedExecuteAsGM } from "./GMAction.js";
 import { configSettings } from "./settings.js";
 import { getConcentrationEffect, getTokenDocument, isReactionItem } from "./utils.js";
 import { UndoData, Workflow } from "./Workflow.js";
-import { rendersFromModel } from "./ChatClasses/UsageCardMessage.js";
 
 export let undoDataQueue: UndoData[] = [];
 let startedUndoDataQueue: UndoData[] = [];
@@ -38,7 +37,7 @@ export function _queueUndoDataDirect(undoDataDef: UndoDataDirect) {
   const undoData: UndoData = {
     id: undoDataDef.id ?? foundry.utils.randomID(),
     actorUuid: undoDataDef.actorUuid,
-    actorEntry: { actorUuid: undoDataDef.actorUuid, tokenUuid: undoDataDef.tokendocUuid, actorData: actor?.toObject(true), tokenData: tokenDoc?.toObject(true) },
+    actorEntry: { actorUuid: undoDataDef.actorUuid, tokenUuid: undoDataDef.tokendocUuid, actorData: snapshotActor(actor), tokenData: snapshotToken(tokenDoc) },
     chatCardUuids: undoDataDef.chatCardUuids ?? [],
     itemCardUuid: undoDataDef.itemCardUuid,
     actorName: actor.name,
@@ -84,6 +83,39 @@ export async function saveUndoData(workflow: Workflow): Promise<boolean> {
   return true;
 }
 
+/**
+ * Each actor's items and effects as last snapshotted: an unchanged one is shared by the next snapshot rather than
+ * copied, so a fight's entries hold each actor's items about once.
+ */
+const lastSnapshots = new Map<string, { items: Map<string, Item.Source>, effects: Map<string, ActiveEffect.Source> }>();
+
+/** The actor's source for undo; items and effects unchanged since its last snapshot are that snapshot's (shared, never mutated). */
+function snapshotActor(actor: Actor.Implementation | null | undefined): Actor.Source | undefined {
+  if (!actor) return undefined;
+  const data = actor.toObject(true) as Actor.Source;
+  const previous = lastSnapshots.get(actor.uuid);
+  const share = <T extends { _id?: string | null }>(sources: T[], last?: Map<string, T>) => sources.map(source => {
+    const earlier = last?.get(source._id ?? "");
+    return earlier && foundry.utils.objectsEqual(earlier, source) ? earlier : source;
+  });
+  data.items = share(data.items as Item.Source[], previous?.items) as typeof data.items;
+  data.effects = share(data.effects as ActiveEffect.Source[], previous?.effects) as typeof data.effects;
+  lastSnapshots.set(actor.uuid, {
+    items: new Map((data.items as Item.Source[]).map(item => [item._id ?? "", item])),
+    effects: new Map((data.effects as ActiveEffect.Source[]).map(effect => [effect._id ?? "", effect]))
+  });
+  return data;
+}
+
+/** The token's source for undo, without its actor delta (the actor's own snapshot restores that). */
+function snapshotToken(tokenDoc: TokenDocument.Implementation | null | undefined): TokenDocument.Source | undefined {
+  const data = tokenDoc?.toObject(true) as (TokenDocument.Source & { actorData?: unknown }) | undefined;
+  if (!data) return undefined;
+  delete (data as Partial<TokenDocument.Source>).delta;
+  delete data.actorData;
+  return data;
+}
+
 export function createTargetData(tokenUuid: string) {
   if (!tokenUuid) return undefined;
   const tokenDoc = fromUuidSync(tokenUuid) as TokenDocument.Implementation | undefined;
@@ -91,7 +123,7 @@ export function createTargetData(tokenUuid: string) {
     error("undo | createTargetData could not fetch token document for ", tokenUuid);
     return undefined;
   }
-  const targetData = { tokenUuid, actorUuid: tokenDoc.actor?.uuid ?? "", actorData: tokenDoc.actor?.toObject(true), tokenData: tokenDoc.toObject(true) };
+  const targetData = { tokenUuid, actorUuid: tokenDoc.actor?.uuid ?? "", actorData: snapshotActor(tokenDoc.actor), tokenData: snapshotToken(tokenDoc) };
   return targetData;
 }
 
@@ -100,8 +132,8 @@ export function startUndoWorkflow(undoData: UndoData): boolean {
   if (!configSettings.undoWorkflow) return true;
   let actor = fromUuidSync(undoData.actorUuid) as Actor.Implementation | TokenDocument.Implementation | null | undefined;
   if (actor instanceof TokenDocument) actor = actor.actor;
-  const actorData = actor?.toObject(true);
-  const tokenData = actor?.isToken ? actor.token!.toObject(true) : (fromUuidSync(undoData.tokendocUuid ?? "") as TokenDocument.Implementation)?.toObject(true);
+  const actorData = snapshotActor(actor);
+  const tokenData = snapshotToken(actor?.isToken ? actor.token : fromUuidSync(undoData.tokendocUuid ?? "") as TokenDocument.Implementation | undefined);
   undoData.actorEntry = { actorUuid: undoData.actorUuid, tokenUuid: undoData.tokendocUuid, actorData, tokenData };
   undoData.allTargets = new Collection(); // every token referenced by the workflow
   const concentrationEffect = getConcentrationEffect(actor, undoData.itemUuid);
@@ -117,27 +149,25 @@ export function startUndoWorkflow(undoData: UndoData): boolean {
       if (targetData) undoData.allTargets.set(dependent.uuid, targetData);
     }
   }
+  undoData.startedAt = Date.now();
   addQueueEntry(startedUndoDataQueue, undoData);
   return true;
 }
 
-export function updateUndoChatCardUuidsById(data: { id: string, chatCardUuids: string[] }) {
+/**
+ * Record messages a use produced that aren't linked to its card (another module's rolls, a re-posted card), on its undo
+ * entry (`id`, the workflow's id; none: the most recent entry). Messages linked to the card are found when undoing.
+ */
+export function addUndoChatCards(data: { id?: string, chatCardUuids: string[] }) {
   if (!configSettings.undoWorkflow) return;
-  const currentUndo = undoDataQueue.find(undoEntry => undoEntry.id === data.id);
-  if (!currentUndo) {
-    console.warn("midi-qol | updateUndoChatCardUuidsById | Could not find existing entry for ", data);
+  const entry = data.id
+    ? undoDataQueue.find(undoEntry => undoEntry.id === data.id) ?? startedUndoDataQueue.find(undoEntry => undoEntry.id === data.id)
+    : undoDataQueue[0];
+  if (!entry) {
+    warn("addUndoChatCards | no undo entry for ", data);
     return;
   }
-  currentUndo.chatCardUuids = data.chatCardUuids;
-}
-export function updateUndoChatCardUuids(data: UndoData) {
-  if (!configSettings.undoWorkflow) return;
-  const currentUndo = undoDataQueue.find(undoEntry => undoEntry.serverTime === data.serverTime && undoEntry.userId === data.userId);
-  if (!currentUndo) {
-    console.warn("midi-qol | updateUndoChatCardUuids | Could not find existing entry for ", data);
-    return;
-  }
-  currentUndo.chatCardUuids = data.chatCardUuids;
+  entry.chatCardUuids = [...new Set([...(entry.chatCardUuids ?? []), ...data.chatCardUuids])];
 }
 
 // Called after preamblecomplete so save references to all targets
@@ -160,31 +190,11 @@ export async function saveTargetsUndoData(workflow: Workflow) {
   return unTimedExecuteAsGM("queueUndoData", workflow.undoData)
 }
 
+/** A message for the most recent undo entry to remove (API). Messages linked to the use's card need not be added. */
 export async function addUndoChatMessage(message: ChatMessage.Implementation) {
-  const currentUndo = undoDataQueue[0];
   if (message instanceof Promise) message = await message;
-  if (configSettings.undoWorkflow && currentUndo && !currentUndo.chatCardUuids.some(uuid => uuid === message.uuid)) {
-    // Assumes workflow.undoData.chatCardUuids has been initialised
-    currentUndo.chatCardUuids = currentUndo.chatCardUuids.concat([message.uuid]);
-    unTimedExecuteAsGM("updateUndoChatCardUuids", currentUndo);
-  }
+  if (configSettings.undoWorkflow && message?.uuid) unTimedExecuteAsGM("addUndoChatCards", { chatCardUuids: [message.uuid] });
 }
-Hooks.on("createChatMessage", (message, data, user) => {
-  if (!configSettings.undoWorkflow) return;
-  if ((undoDataQueue ?? []).length < 1) return;
-  const currentUndo = undoDataQueue[0];
-  const speaker = message.speaker;
-  // if (currentUndo.userId !== user) return;
-  if (speaker.token) {
-    const tokenUuid = `Scene.${speaker.scene}.Token.${speaker.token}`;
-    // allTargets is keyed by actor uuid - resolve the speaker token's actor
-    const actorUuid = (fromUuidSync(tokenUuid) as TokenDocument.Implementation | null)?.actor?.uuid;
-    if (actorUuid && currentUndo.allTargets?.has(actorUuid)) currentUndo.chatCardUuids.push(message.uuid);
-  } else if (speaker.actor) {
-    const actorUuid = `Actor.${speaker.actor}`;
-    if (currentUndo.allTargets?.has(actorUuid)) currentUndo.chatCardUuids.push(message.uuid);
-  }
-});
 
 export function showUndoQueue() {
   console.log(undoDataQueue);
@@ -203,15 +213,15 @@ export function queueUndoData(data: UndoData): boolean {
     return false;
   };
   inProgress = foundry.utils.mergeObject(inProgress, data, { overwrite: false });
-  startedUndoDataQueue = startedUndoDataQueue.filter(undoData => undoData.userId !== data.userId || undoData.itemUuid !== data.itemUuid);
+  // This entry, and any started long ago whose use never finished (aborted before its targets were saved).
+  const stale = Date.now() - 10 * 60 * 1000;
+  startedUndoDataQueue = startedUndoDataQueue.filter(undoData => undoData.id !== data.id && (undoData.startedAt ?? 0) > stale);
 
   data.targets?.forEach(undoEntry => {
     if (!inProgress.allTargets?.get(undoEntry.actorUuid ?? "")) {
       const targetData = createTargetData(undoEntry.tokenUuid)
-      if (targetData) {
-        foundry.utils.mergeObject(undoEntry, targetData, { inplace: true });
-        inProgress.allTargets?.set(undoEntry.actorUuid!, undoEntry);
-      }
+      // Not mergeObject: it copies nested objects, losing the snapshot's shared items and effects.
+      if (targetData) inProgress.allTargets?.set(undoEntry.actorUuid!, { ...undoEntry, ...targetData });
     }
     /* This replaces the use of midi-qol concentration data but I'm not sure it's needed
     //@ts-expect-error
@@ -314,17 +324,32 @@ export async function _removeMostRecentWorkflow() {
   return;
 }
 
-export async function _removeChatCards(data: { chatCardUuids: string[] }) {
-  // TODO see if this might be async and awaited
-  if (!data.chatCardUuids) return;
-  try {
-    for (let uuid of data.chatCardUuids) {
-      const card = fromUuidSync(uuid) as ChatMessage.Implementation | undefined;
-      await removeChatCard(card);
+/** A card and every message linked to it (`system.origin`, or `flags.midi-qol.origin`), recursively. */
+function linkedMessages(card: ChatMessage.Implementation): ChatMessage.Implementation[] {
+  const found = new Map<string, ChatMessage.Implementation>([[card.id!, card]]);
+  const pending = [card.id!];
+  while (pending.length) {
+    const id = pending.shift();
+    for (const message of game.messages ?? []) {
+      if (found.has(message.id!)) continue;
+      const origin = (message._source.system as { origin?: string | null } | undefined)?.origin ?? message.getFlag(MODULE_ID, "origin");
+      if (origin !== id) continue;
+      found.set(message.id!, message);
+      pending.push(message.id!);
     }
+  }
+  return [...found.values()];
+}
+
+/** Delete the messages (*Undo chat colour* Delete), or mark them undone, in one operation. */
+async function removeChatCards(messages: ChatMessage.Implementation[]) {
+  const ids = messages.map(message => message.id!).filter(id => game.messages?.has(id));
+  if (!ids.length) return;
+  try {
+    if (configSettings.undoChatColor === "Delete") await ChatMessage.deleteDocuments(ids);
+    else await ChatMessage.updateDocuments(ids.map(_id => ({ _id, [`flags.${MODULE_ID}.undone`]: true })));
   } catch (err) {
-    error(err);
-    // debugger;
+    error("undo | removing chat cards", err);
   }
 }
 
@@ -400,9 +425,9 @@ async function undoSingleTokenActor({ tokenUuid, actorUuid, actorData, tokenData
   if (debugEnabled > 0) warn("undoSingleTokenActor | Items to add ", actor.name, itemsToAdd)
   if ((itemsToAdd?.length ?? 0) > 0) {
     // @ts-expect-error extra option silliness
-    if (globalThis.DAE?.actionQueue) await globalThis.DAE.actionQueue.add(actor.createEmbeddedDocuments.bind(actor), "Item", itemsToAdd, { keepId: true, isUndo: true });
+    if (globalThis.DAE?.actionQueue) await globalThis.DAE.actionQueue.add(actor.createEmbeddedDocuments.bind(actor), "Item", foundry.utils.deepClone(itemsToAdd), { keepId: true, isUndo: true });
     // @ts-expect-error extra option silliness
-    else await actor?.createEmbeddedDocuments("Item", itemsToAdd, { keepId: true, isUndo: true });
+    else await actor?.createEmbeddedDocuments("Item", foundry.utils.deepClone(itemsToAdd), { keepId: true, isUndo: true });
     await busyWait(100);
   }
   let effectsToAdd = actorData?.effects?.filter(efData => !actor.effects.some(effect => efData._id === effect.id));
@@ -415,21 +440,33 @@ async function undoSingleTokenActor({ tokenUuid, actorUuid, actorData, tokenData
       effectsToAdd = effectsToAdd?.filter(eff => !actor.effects.some(effect => effect.id === eff._id!));
       if (debugEnabled > 0) warn("undoSingleTokenActor | Effects to add are ", effectsToAdd, actor.name);
       // @ts-expect-error extra option silliness
-      await actor.createEmbeddedDocuments("ActiveEffect", effectsToAdd, { keepId: true, isUndo: true })
+      await actor.createEmbeddedDocuments("ActiveEffect", foundry.utils.deepClone(effectsToAdd), { keepId: true, isUndo: true })
     });
     // @ts-expect-error extra option silliness
-    else await actor.createEmbeddedDocuments("ActiveEffect", effectsToAdd, { keepId: true, isUndo: true });
+    else await actor.createEmbeddedDocuments("ActiveEffect", foundry.utils.deepClone(effectsToAdd), { keepId: true, isUndo: true });
   }
 
-  // @ts-expect-error extra option silliness
-  if (actorData && globalThis.DAE?.actionQueue) await globalThis.DAE.actionQueue.add(actor.updateEmbeddedDocuments.bind(actor), "Item", actorData.items, { keepId: true, isUndo: true });
-  // @ts-expect-error extra option silliness
-  else if (actorData) await actor.updateEmbeddedDocuments("Item", actorData.items, { keepId: true, isUndo: true });
-  if ((actorData?.effects?.length ?? 0) > 0) {
+  // Only the items and effects that changed since the snapshot, and only what changed in them.
+  const changedSince = (collection: { get(id: string): { toObject(source: boolean): object } | undefined }, saved: { _id?: string | null }[] = []) =>
+    saved.flatMap(source => {
+      const current = collection.get(source._id ?? "");
+      if (!current) return [];
+      const difference = foundry.utils.diffObject(current.toObject(true), source);
+      return foundry.utils.isEmpty(difference) ? [] : [{ ...difference, _id: source._id }];
+    });
+  const itemUpdates = changedSince(actor.items, actorData?.items as Item.Source[] | undefined);
+  if (itemUpdates.length) {
     // @ts-expect-error extra option silliness
-    if (globalThis.DAE?.actionQueue) await globalThis.DAE.actionQueue.add(actor.updateEmbeddedDocuments.bind(actor), "ActiveEffect", actorData!.effects, { keepId: true, isUndo: true });
+    if (globalThis.DAE?.actionQueue) await globalThis.DAE.actionQueue.add(actor.updateEmbeddedDocuments.bind(actor), "Item", itemUpdates, { keepId: true, isUndo: true });
     // @ts-expect-error extra option silliness
-    else await actor.updateEmbeddedDocuments("ActiveEffect", actorData!.effects, { keepId: true, isUndo: true });
+    else await actor.updateEmbeddedDocuments("Item", itemUpdates, { keepId: true, isUndo: true });
+  }
+  const effectUpdates = changedSince(actor.effects, actorData?.effects as ActiveEffect.Source[] | undefined);
+  if (effectUpdates.length) {
+    // @ts-expect-error extra option silliness
+    if (globalThis.DAE?.actionQueue) await globalThis.DAE.actionQueue.add(actor.updateEmbeddedDocuments.bind(actor), "ActiveEffect", effectUpdates, { keepId: true, isUndo: true });
+    // @ts-expect-error extra option silliness
+    else await actor.updateEmbeddedDocuments("ActiveEffect", effectUpdates, { keepId: true, isUndo: true });
   }
 
   actorChanges = actorData ? getChanges(actor.toObject(true), actorData) : {};
@@ -441,10 +478,9 @@ async function undoSingleTokenActor({ tokenUuid, actorUuid, actorData, tokenData
     await actor.update(actorChanges, { noConcentrationCheck: true })
   }
   if (tokenDoc) {
-    tokenChanges = tokenData ? getChanges(tokenDoc.toObject(true), tokenData) : {};
-    // @ts-expect-error pretty sure this doesn't exist but idk
-    delete tokenChanges.actorData;
-    delete tokenChanges.delta;
+    // Without the actor delta on either side: the snapshot has none, and the actor restore above covers it. (Changes are
+    // flattened, so deleting `delta` from them afterwards never removed its keys.)
+    tokenChanges = tokenData ? getChanges(snapshotToken(tokenDoc), tokenData) : {};
     if (!foundry.utils.isEmpty(tokenChanges)) {
       // @ts-expect-error extra option silliness
       await tokenDoc.update(tokenChanges, { noConcentrationCheck: true })
@@ -452,16 +488,9 @@ async function undoSingleTokenActor({ tokenUuid, actorUuid, actorData, tokenData
   }
 }
 
-export async function removeChatCard(chatCard?: ChatMessage.Implementation): Promise<ChatMessage.Implementation | undefined> {
-  if (!chatCard) return;
-  const shouldDelete = configSettings.undoChatColor === "Delete";
-  if (shouldDelete) {
-    if (debugEnabled > 1) debug("Deleting chat card ", chatCard.id, chatCard.uuid);
-    return await chatCard.delete();
-  }
-  if (rendersFromModel(chatCard)) return await chatCard.update({ "system.midi.undoneColor": configSettings.undoChatColor } as ChatMessage.UpdateData);
-  if (!chatCard.content) return;
-  return await chatCard.update({ content: `<div style="background-color: ${configSettings.undoChatColor};"> ${chatCard.content}</div>` });
+/** Delete a card, or mark it undone: shown when drawn (midi-qol-undone, coloured from the setting), its content untouched. */
+export async function removeChatCard(chatCard?: ChatMessage.Implementation) {
+  if (chatCard) await removeChatCards([chatCard]);
 }
 
 export async function undoWorkflow(undoData?: UndoData) {
@@ -476,10 +505,14 @@ export async function undoWorkflow(undoData?: UndoData) {
     await undoSingleTokenActor(undoEntry)
   };
   if (undoData.actorEntry) await undoSingleTokenActor(undoData.actorEntry);
-  // delete cards...
-  if (undoData.itemCardUuid) {
-    const message = fromUuidSync(undoData.itemCardUuid) as ChatMessage.Implementation | undefined;
-    await removeChatCard(message);
+  // The use's card and everything linked to it (saves, damage cards, notes, uses made from it), and anything recorded
+  // that isn't linked.
+  const messages = new Map<string, ChatMessage.Implementation>();
+  const card = undoData.itemCardUuid ? fromUuidSync(undoData.itemCardUuid, { strict: false }) : undefined;
+  if (card instanceof ChatMessage) for (const message of linkedMessages(card)) messages.set(message.id!, message);
+  for (const uuid of undoData.chatCardUuids ?? []) {
+    const message = fromUuidSync(uuid, { strict: false });
+    if (message instanceof ChatMessage) messages.set(message.id!, message);
   }
-  await _removeChatCards({ chatCardUuids: undoData.chatCardUuids });
+  await removeChatCards([...messages.values()]);
 }

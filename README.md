@@ -51,7 +51,7 @@ Midi-QOL is highly configurable with quick-start presets for common play styles,
 - [Flowchart](/docs/flowchart.md)
 - [Getting Started](/Getting%20Started.md)
 - [Macros](/MACROS.md)
-- [Workflow Fields](/docs/workflowfields-2026-02-01.md)
+- [Workflow Fields](/docs/workflowfields-2026-10-30.md)
 
 ---
 
@@ -330,14 +330,14 @@ Target Confirmation displays a dialog before completing an item roll, allowing y
 | Color code Hit/Miss/Save Display | Hits/saves in green, misses/failed saves in red |
 | Only highlight critical/fumble hits | Only highlight critical/fumble attack rolls, not normal hits/misses |
 | Auto check if attack hits target | None/Check - all see result/Check - only GM sees results/Check - only GM sees anything. Damage rolls if one+ targets hit and auto roll damage enabled; if None, midi assumes the attack hits |
-| Roll a separate attack per target | Roll a separate attack per target |
+| Roll a separate attack per target | Roll a separate attack per target (an attack activity's *Attack Roll Per Target* overrides it). The use places its template, chooses its targets and spends its cost; each target then gets its own use and card, linked to the first card, which shows each target's hit or miss as its attack resolves. An attack activity's *Ammunition* (weapons that use ammunition) sets what this spends: one per attack roll (default), one per use, or one per target (a single roll against several targets then needs and spends one each). Later targets use the ammunition chosen for the first. A target's attack that can't be made (not enough ammunition) waits at its attack button; cancelling it or deleting its card skips the remaining targets |
 | Walls block ranged attacks | No/Center Check/Levels Auto Cover/Simbul's Cover Calculator/Alternative Token Cover/Simple Cover 5e. Only walls that block movement (total cover) block the attack: darkness and sight-only walls (curtains) don't, a window does. With a cover module, its total cover blocks the attack |
 | Calculate Cover | None/dnd5e cover status only/Simbul's Cover Calculator/Simple Cover 5e/Levels Auto Cover/Alternative Token Cover. AC bonus for targets in cover. Unless None, a target with total cover (dnd5e's Total Cover status, or the module's) can't be targeted by an activity that targets creatures directly (not an area template or emanation); *dnd5e cover status only* uses the status alone. An activity's *Ignore total cover* skips this |
 | Vision test point height | Elevation tested for token visibility, for Foundry's rendering and midi's vision checks: Center (default) or Top |
 | Template Origin Height | Caster height activity templates are measured from: Caster's base (default)/Caster's top/Caster's eye level. An activity can override this in its Region settings |
 | Occlude upper floor surfaces | Multi-level scenes: upper floor surfaces are transparent when viewed from a lower floor, even if the token is not directly underneath (default on) |
 | Mark lower floors where creatures can't be seen | Per-player settings (Configure Settings › midi-qol), off by default. Scenes with levels: core draws a lower floor wherever an opening shows it but hides creatures standing there when a floor edge or wall blocks the line from your tokens' eyes; the squares where a medium creature would be hidden are marked, using core's own sight test. Style (tint, dim, hatch, outline, hatch and outline), colour and opacity are set per player |
-| Show attack roll details | Per-player setting, on by default. Icons beside an attack roll's total for its unusual parts (flanking, a target's granted attack bonus, an effect's attack bonus by the effect's image, exhaustion), green for a bonus and red for a penalty, and a tooltip on the total listing every term of the roll (ability, proficiency, roll bonus with the effects behind it, …) with advantage or disadvantage. The shown formula leaves the terms' labels out |
+| Show attack roll details | On by default. Icons beside an attack roll's total for its unusual parts (flanking, a target's granted attack bonus, an effect's attack bonus by the effect's image, exhaustion), green for a bonus and red for a penalty, and a tooltip on the total listing every term of the roll (ability, proficiency, roll bonus with the effects behind it, …) with advantage or disadvantage. The shown formula leaves the terms' labels out |
 
 ### Saves
 
@@ -346,7 +346,6 @@ Target Confirmation displays a dialog before completing an item roll, allowing y
 | DND5E Challenge Visibility | dnd5e setting: which roll DCs players see and whether successes/failures are highlighted (Show all/Show only from other players/Hide all) |
 | Auto check Saves | Off/Save - All see result only/Save - All see result + save total/Save - All see Result + Rolls/Save - only GM sees results + rolls/Save - only GM sees anything. If Off, midi assumes all targets failed. Supports multiple saves per activity (e.g., dex or con) — auto-selects the best modifier or prompts the player via dropdown. (Multiple saves added in 13.0.43) |
 | Save summary style | With dnd5e's "Summarize chat cards" on, a card's saves are shown on the card: *midi saves section* (default) or *dnd5e summaries* (midi's section then lists only saves rolled through other modules) |
-| Show damage after each save | Under a target's save result, when the save spares it some damage: the damage of each type it takes (before resistances) and the feature that changed it (default on) |
 | Default saving throw multiplier | Damage multiplier on save (default 0.5) |
 | Prompt Players to Roll Saves | How player saves are rolled (see below) |
 | Prompt GM to Roll Saves (Unlinked) | How unlinked NPC saves are rolled (Chat Message/Auto/Auto roll and show roll dialog/Monks Token Bar/Flash Token Bar/Rippers Epic Rolls) |
@@ -455,9 +454,6 @@ Roll statistics (Keep Roll Statistics, Save statistics Every, Player statistics 
 | Blind roll display | How rolls forced blind by the settings above appear to players: Hidden (players see nothing) (default) or Obscured (card shown, result ??) |
 | Expire 1Hit/1Attack/1Action on roll | Expire 1Hit/1Attack/1Action on roll, don't wait for damage |
 | Wait for damage application | Wait for damage application before continuing workflow |
-| When an Incapacitated actor takes an action, MidiQOL should | Do nothing/Enforce no actions/Post a warning only |
-| Check weapon range when attacking | Do not check range/target range > long range: fail (default)/target range > long range: disadvantage |
-| Targets you can see | For activities with *Targets you can see* set on their Targeting tab: Do not check/Unseen targets can't be targeted (default)/Post a warning only. Visibility follows *Force vision when checking* |
 | Require no shield equipped for two-handed/off-hand attacks | Enforce two-handed weapon rules |
 | Distance measurement method | How distances are measured between tokens: Default (Foundry Core) (center-to-center), Grid Square Centers (default; center of all covered grid squares), or Token Perimeters (shortest distance between token boundary polygons). (Added in 13.0.45) |
 | Gridless Grid | Use the square grid for all distance calculations in gridless scenes |
@@ -465,7 +461,7 @@ Roll statistics (Keep Roll Statistics, Save statistics Every, Player statistics 
 | Include height difference in distance calculations | Include height difference in distance calculations |
 | Constrain Template Placement | Anchor cone/ray templates with range Self/None to the caster's token border, and keep all templates within the activity's range during preview. (Renamed from "Anchor Ray/Cone Templates" in 13.0.45) |
 | Template Grid Snapping | Full Grid (default) snaps to grid vertices only; Half Grid to centres, vertices, corners and side midpoints. (Added in 13.0.47) |
-| Show before and after optional bonus chat card | Show bonus rolls in chat |
+| Show before and after optional bonus chat card | Show the roll before and after an optional bonus. For a roll made for a use card (attack, damage, a target's save or check, AC) it is a one-line note beside that roll naming the bonus and the totals (click a total for its dice); a save's shows each viewer as much as that target's save row (expandable totals, plain totals, the bonus's name alone, or nothing). Otherwise a chat message with both rolls |
 | Auto reroll initiative | Reroll initiative for all combatants at start of new round. Can break round/turn effect expiry |
 | Support undoing item rolls | Store undo data for all item/activity rolls. Undo via `MidiQOL.undoMostRecentWorkflow()` |
 | Undo Chat Cards Color | Delete removes the chat card on undo; otherwise undone cards are recoloured |
@@ -475,17 +471,25 @@ Roll statistics (Keep Roll Statistics, Save statistics Every, Player statistics 
 
 On dnd5e 6 midi's advantage and disadvantage sources (flanking, unseen/invisible, hidden, nearby foe, range) count alongside dnd5e's roll mode fields and advantage rules, and dnd5e decides the result.
 
+The tab starts with *Rules always applied*, which apply whether or not *Optional Game Rules* is on:
+
 | Setting | Description |
 |---------|-------------|
-| Optional Game Rules | Master toggle for optional rules; the rows from Check Flanking to Enable Challenge Mode Armor Class are shown only when it is on |
+| When an Incapacitated actor takes an action, MidiQOL should | Allow it/Enforce no actions/Post a warning only |
+| Check weapon range when attacking | Do not check range/target range > long range: fail (default)/target range > long range: disadvantage |
+| Targets you can see | For activities with *Targets you can see* set on their Targeting tab: Do not check/Unseen targets can't be targeted (default)/Post a warning only. Visibility follows *Force vision when checking* |
+| Force vision when checking | Behave as if all tokens have vision enabled when checking; unchecked, tokens without vision see everything |
+
+| Setting | Description |
+|---------|-------------|
+| Optional Game Rules | Master toggle for optional rules; the rows from Check Flanking to Vitality Death Requires are shown only when it is on |
 | Check Flanking | Check if you and allies flank opponent. Options: none, Advantage Only, Midi Flanking effect, Midi Flanked effect, Midi Flanked + no conga line, or Convenient Effects variants (if installed). Supports hex grids |
 | Flanking Bonus Type | What benefit flanking gives: Advantage (default) or +1 to +5 added to the attack roll (labelled Flanking or Flanked). Flanking applies to melee attacks against a single target; with *Roll a separate attack per target* each roll counts |
 | Flanking requires target can sense flanker | An ally only counts as a flanker if the target can sense them |
 | Show Flanking Positions | Highlight grid cells where an ally would create flanking against your current target |
 | Unseen/Invisible attackers have advantage/disadvantage on attacks | Do not apply/RAW (2014)/RAW (2024)/Use Token Vision. The 2024 mode (the default) checks visibility rather than the invisible condition. (2024 mode added in 13.0.43) |
-| Hidden attackers have adv/disadv on attacks | Do not apply/Check 'Hidden' Status/Perceptive |
+| Hidden attackers have adv/disadv on attacks | Do not apply/Hiding is Invisible to whoever doesn't perceive it (default)/As above, and a passive Perception at least the hide's DC perceives it (house rule)/Perceptive |
 | Apply condition rules | The condition rules dnd5e doesn't apply (see Optional Rules › Condition Rules). Off by default |
-| Force vision when checking | Behave as if all tokens have vision enabled when checking; unchecked, tokens without vision see everything |
 | Ranged attacks when a foe is closer than this have disadvantage. 0 disables | Distance in grid units (default 5) |
 | (House rule) Enabling this means that only the most effective Damage Reduction will apply. Off means DR accumulates | Max DR value |
 | (House Rule) Critical/Fumble always succeed/fail for saving throws | Natural 20/1 always succeed/fail on saves |
@@ -497,7 +501,7 @@ On dnd5e 6 midi's advantage and disadvantage sources (flanking, unseen/invisible
 | Show Active Defence DC | Show active defence DC in chat card |
 | Default display for active defence rolls | Roll visibility mode for active defence |
 | Enable Challenge Mode Armor Class | Alternative armor class rules (No Challenge Mode Armor/Challenge Mode Armor (Base)/Challenge Mode Armor (Scaled)/Challenge Mode Armor (Scaled No AR)) |
-| (House Rule) Vitality Item | Name of a feature item on the actor to track vitality (overflow damage at 0 HP reduces vitality). Item uses.max = max vitality, uses.spent = vitality lost. Shown always, only applies with Optional Game Rules on |
+| (House Rule) Vitality Item | Name of a feature item on the actor to track vitality (overflow damage at 0 HP reduces vitality). Item uses.max = max vitality, uses.spent = vitality lost |
 | Vitality Exhausted Condition | Condition to apply when vitality reaches 0 (default: Dead) |
 | Vitality Death Requires | When actor is dead: "Vitality of 0" or "Vitality of 0 AND HP of 0" |
 | Enable ddb-game-log support | Accept rolls from ddb-game-log to trigger midi workflows |
@@ -968,7 +972,7 @@ Targeting rules that don't need it: with *Calculate Cover* set, a target with to
 | Enable Challenge Mode Armor Class | See below |
 | (House Rule) Vitality Item | Damage at 0 HP reduces the Vitality Item's uses |
 
-"When an Incapacitated actor takes an action, MidiQOL should", "Check weapon range when attacking", "Targets you can see" and "Include height difference in distance calculations" are Mechanics tab settings and apply whether or not optional rules are on.
+"When an Incapacitated actor takes an action, MidiQOL should", "Check weapon range when attacking" and "Targets you can see" (Rules tab › Rules always applied) and "Include height difference in distance calculations" (Mechanics tab) apply whether or not optional rules are on.
 
 ## Condition Rules
 
@@ -1107,6 +1111,7 @@ Use the `midi-qol.preAttackRollConfig` hook or on-use pass to modify the tracker
 - Workflow types (TrapWorkflow, DamageOnlyWorkflow, DummyWorkflow)
 - OnUse macros
 - Damage bonus macros
+- Adding to chat cards (card notes, renderers, token names as each viewer may see them)
 - DAE vs Midi-QOL macro comparison
 
 ## Hooks Reference
@@ -1403,7 +1408,7 @@ turn=end, saveDC=15, saveAbility=wis, failCount=2+, removeCondition=@attributes.
 - For activity-based overtime effects (recommended for v13+), see the Over Time Effects section in Activity configuration
 
 > [!tip] Navigation
-> See [docs/workflowfields-2026-02-01.md](docs/workflowfields-2026-02-01.md) for available workflow data in conditions.
+> See [docs/workflowfields-2026-10-30.md](docs/workflowfields-2026-10-30.md) for available workflow data in conditions.
 
 ---
 

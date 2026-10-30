@@ -118,7 +118,7 @@ import { Activity, Dnd5eChatMessage, ActivitySave, ActivityCheck, ActivityUseCon
 import { AnyMutableObject, AnyObject, EmptyObject, InexactPartial } from "fvtt-types/utils";
 import Token = foundry.canvas.placeables.Token;
 import { MidiTransformActivity } from "./activities/TransformActivity.js";
-import { computeAttackAdvantage } from "./activities/AttackActivity.js";
+import { computeAttackAdvantage, MidiAttackActivity } from "./activities/AttackActivity.js";
 import { RollModifierTracker, CriticalModifierFlags, computeCriticalModifiers, computeTargetCriticalModifiers, getFlagDisplayName } from "./lib/RollModifierTracker.js";
 
 /**
@@ -2175,6 +2175,18 @@ export class Workflow {
       if (this.abort) return this.WorkflowState_Abort;
       return this.WorkflowState_AttackRollComplete;
     }
+    // Attack per target: this use has its targets (template, confirmation) and its cost; each target gets its own use
+    if (MidiAttackActivity && this.activity instanceof MidiAttackActivity && this.activity.attacksEachTarget
+      && this.targets.size > 1 && !this.workflowOptions?.attackSplit) {
+      if (this.chatCard) await this.performThrottledUpdate(this.chatCard, { "system.midi.progress.attacksSplit": true } as ChatMessage.UpdateData);
+      // The targets, filled in with each one's hit or miss as its own use resolves (addSplitAttackResult)
+      const rollMode = safeGetGameSetting("core", "messageMode") as string;
+      this.whisperAttackCard = configSettings.autoCheckHit === "whisper" || rollMode === "blind" || rollMode === "gm";
+      if (configSettings.autoCheckHit !== "none") await this.displayHitTargets(this.whisperAttackCard);
+      this.needsHitTargetsDisplayed = false;
+      await this.activity.attackEachTarget(this);
+      return this.WorkflowState_RollFinished;
+    }
     if (!this.activity.attack) {
       this.hitTargets = new Set(this.targets);
       this.hitTargetsEC = new Set();
@@ -3141,6 +3153,7 @@ export class Workflow {
           const {
             targetConfirmation: _triggeringTargetConfirmation,
             rollAttackPerTarget: _triggeringRollAttackPerTarget,
+            attackSplit: _triggeringAttackSplit,
             ...inheritedWorkflowOptions
           } = this.workflowOptions ?? {};
           // Only what transmission would carry: other modules' per-use state stays with this workflow.
@@ -4839,6 +4852,14 @@ export class Workflow {
       }), false);
   }
 
+  /** Attack per target: one target's hit or miss, from its own use, on this use's card */
+  async addSplitAttackResult(split: Workflow) {
+    this.hitDisplayData = { ...(this.hitDisplayData ?? {}), ...(split.hitDisplayData ?? {}) };
+    this.hitTargets = new Set([...this.hitTargets, ...split.hitTargets]);
+    this.hitTargetsEC = new Set([...this.hitTargetsEC, ...split.hitTargetsEC]);
+    if (configSettings.autoCheckHit !== "none") await this.displayHits(this.whisperAttackCard);
+  }
+
   async displayHitTargets(whisper = false) {
     this.hitDisplayData = {};
     this.needsHitTargetsDisplayed = false;
@@ -6345,7 +6366,7 @@ export class Workflow {
 
     let newRoll: Roll;
     if (owner?.isGM && game.user?.isGM) {
-      newRoll = await bonusCheck(target.actor!, result[0], rollType, failAbilityFlagsLength ? `fail.${rollAbility}` : "fail.all");
+      newRoll = await bonusCheck(target.actor!, result[0], rollType, failAbilityFlagsLength ? `fail.${rollAbility}` : "fail.all", { system: { origin: this.itemCardId } });
     } else {
       newRoll = await socketlibSocket.executeAsUser("bonusCheck", owner?.id, {
         actorUuid: (target.actor as Actor).uuid,
@@ -6890,10 +6911,8 @@ export class Workflow {
       const handler = this.saveRequests[requestId]
       delete this.saveRequests[requestId];
       delete this.saveTimeouts[requestId];
-      if (configSettings.undoWorkflow) {
-        if (this.undoData) this.undoData.chatCardUuids.push(message.uuid);
-        unTimedExecuteAsGM("updateUndoChatCardUuids", this.undoData);
-      }
+      // A save another module rolled may not be linked to the card: record it for undo.
+      if (configSettings.undoWorkflow && this.undoData) unTimedExecuteAsGM("addUndoChatCards", { id: this.undoData.id, chatCardUuids: [message.uuid] });
       handler(message.rolls[0])
     }
     return true;
@@ -8904,6 +8923,8 @@ export type WorkflowOptions = InexactPartial<{
    * AttackActivity via setProperty. Distinct from attackPerTarget above, which is an input.
    */
   rollAttackPerTarget: boolean;
+  /** One target's use of an attack per target: its index among `count`, and the ammunition the first chose. */
+  attackSplit: { index: number, count: number, ammunition?: string };
   attackMode: string;
   attackRollDSN: boolean;
   autoConsumeResource: string;
@@ -8981,8 +9002,11 @@ export type UndoData = {
   tokendocUuid?: string;
   actorUuid: string;
   actorName?: string;
+  /** Messages the use produced that aren't linked to its card (another module's rolls, a re-posted card) */
   chatCardUuids: string[];
   isReaction: boolean;
+  /** When the GM started the entry (Date.now()): started entries whose use never finished are dropped */
+  startedAt?: number;
   templateUuids: string[];
   sequencerUuid?: string;
   serverTime?: number;

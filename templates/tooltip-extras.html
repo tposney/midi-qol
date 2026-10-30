@@ -1,0 +1,23 @@
+{{!-- midi's lines at the top of a roll's breakdown: the formula, and the sources of advantage/disadvantage, as Move roll
+  formula to tooltip chooses (the label's info icon shows the sources whatever it is set to) --}}
+{{#if tooltipFormula}}
+<section class="tooltip-part">
+  <div class="dice-formula">{{formula}}</div>
+</section>
+{{/if}}
+{{#if attributions.length}}
+<section class="tooltip-part midi-attribution">
+  {{#each attributions}}
+  <div class="attribution-entry attribution-{{type}}">
+    <span class="attribution-type">{{localizedType}}:</span>
+    <span class="attribution-source">{{#if displayName}}{{displayName}}{{else}}{{source}}{{/if}}</span>
+  </div>
+  {{/each}}
+</section>
+{{/if}}
+{{!-- Legacy HTML-based attribution (backwards compatibility) --}}
+{{#if advTooltip}}
+<section class="tooltip-part">
+  {{{advTooltip}}}
+</section>
+{{/if}}

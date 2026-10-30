@@ -9,15 +9,16 @@ import { error, GameSystemConfig, i18n, i18nFormat, MODULE_ID } from "../../midi
 import { SaveDetails, TokenOrDocument } from "../../globals.js";
 import { CardNoteRenderContext } from "../ChatClasses/CardNoteMessage.js";
 import { preferredActiveGM, socketlibSocket } from "../GMAction.js";
-import { getCachedDocument, getToken, playerFor, rollModeToMessageMode, validRollAbility } from "../utils.js";
+import { getCachedDocument, getToken, getTokenDocument, playerFor, rollModeToMessageMode, validRollAbility } from "../utils.js";
 import { addCardNote, registerCardNoteRenderer, renderLinkedMessage, visibleRollTotal } from "./cardNotes.js";
+import { tokenName } from "./tokenNames.js";
 import { configSettings } from "../settings.js";
 
 export const CONTEST_NOTE_KIND = "midi-qol.contest";
 
 export type ContestNoteData = {
   flavor: string;
-  sides: Record<"source" | "target", { name: string, label: string }>;
+  sides: Record<"source" | "target", { name: string, uuid?: string, label: string }>;
   /** A roll was never made. */
   incomplete?: boolean;
 };
@@ -29,6 +30,11 @@ function markRoll(html: string, outcome: "success" | "failure" | undefined): str
   template.innerHTML = html;
   template.content.querySelectorAll("button.dice-roll, .dice-total").forEach(el => el.classList.add(outcome));
   return template.innerHTML;
+}
+
+/** A side's name as this viewer may see it. */
+function sideName(side: { name: string, uuid?: string }): string {
+  return side.uuid ? tokenName(side.uuid, side.name) : side.name;
 }
 
 async function renderContest({ data, messages }: CardNoteRenderContext): Promise<string> {
@@ -52,7 +58,7 @@ async function renderContest({ data, messages }: CardNoteRenderContext): Promise
     if (message) parts.push(markRoll(await renderLinkedMessage(message), rollOutcome(role)));
     else if (!incomplete && sides?.[role]) {
       parts.push(`<div class="midi-qol-contest-waiting"><i class="fa-solid fa-hourglass-half"></i> `
-        + `${escape(i18nFormat("midi-qol.ContestWaiting", { name: sides[role].name, roll: sides[role].label }))}</div>`);
+        + `${escape(i18nFormat("midi-qol.ContestWaiting", { name: sideName(sides[role]), roll: sides[role].label }))}</div>`);
     }
   }
   if (source && target) {
@@ -133,8 +139,8 @@ export async function contestedRoll(data: {
   const contestData: ContestNoteData = {
     flavor: contestFlavor,
     sides: {
-      source: { name: sourceToken?.name ?? "", label: rollLabel(source.rollType, source.ability) },
-      target: { name: targetToken?.name ?? "", label: rollLabel(target.rollType, target.ability) }
+      source: { name: sourceToken?.name ?? "", uuid: getTokenDocument(sourceToken)?.uuid, label: rollLabel(source.rollType, source.ability) },
+      target: { name: targetToken?.name ?? "", uuid: getTokenDocument(targetToken)?.uuid, label: rollLabel(target.rollType, target.ability) }
     }
   };
   const note = onCard ? await addCardNote(card, foundry.utils.escapeHTML(contestFlavor), {

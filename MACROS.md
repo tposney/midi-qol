@@ -6,13 +6,13 @@
 ## Table of Contents
 - [Getting Started](#getting-started)
 - [Triggering Workflows](#triggering-workflows)
-- [Item Roll Options](#item-roll-options)
 - [MidiQOL API Functions](#midiqol-api-functions)
 - [Hooks Reference](#hooks-reference)
 - [Workflow Types](#workflow-types)
 - [OnUse Macros](#onuse-macros)
 - [Damage Bonus Macros](#damage-bonus-macros)
 - [Macro Data Reference](#macro-data-reference)
+- [Adding to Chat Cards (Card Notes)](#adding-to-chat-cards-card-notes)
 - [DAE vs Midi-QOL Macros](#dae-vs-midi-qol-macros)
 - [Tips and Tricks](#tips-and-tricks)
 - [Sample Chat Logs](#sample-chat-logs)
@@ -23,7 +23,7 @@
 - [Flowchart](/docs/flowchart.md)
 - [Getting Started](/Getting%20Started.md)
 - [Readme](/README.md)
-- [Workflow Fields](/docs/workflowfields.md)
+- [Workflow Fields](/docs/workflowfields-2026-10-30.md)
 
 ---
 
@@ -33,18 +33,21 @@ For modules and macros that want to trigger midi-qol workflows, the recommended 
 
 ### Key Accelerators
 
-When triggering via UI or passing an event, key accelerators work as follows (based on speed rolls settings):
+Roll keys follow dnd5e's keybindings (Configure Controls), and apply when you pass the triggering `event`:
 
 | Key | Effect |
 |-----|--------|
-| `event.altKey: true` | Advantage roll |
-| `event.ctrlKey: true` | Disadvantage roll |
-| `event.shiftKey: true` | Auto roll the attack roll |
+| Alt | Advantage, and skip the roll dialog |
+| Ctrl | Disadvantage, and skip the roll dialog |
+| Shift | Normal roll, skip the roll dialog |
+| Shift+Alt / Shift+Ctrl / Shift+Alt+Ctrl | Force advantage / disadvantage / a normal roll |
+| F (midi's *Roll Toggle*) | Invert whether the roll dialog shows, and whether damage is rolled automatically |
+| V (midi's *Versatile*) | Roll a versatile weapon two-handed |
 
 ### Legacy Support
-- `item.roll()` still works but is deprecated in favor of `activity.use()`
-- `MidiQOL.applyTokenDamage` is exported
-- `MidiQOL.applyTokenDamageMany` is exported — applies different damage amounts per target with a single damage card
+- `item.roll()` no longer exists in dnd5e 6: use `activity.use()`, `item.use()` or `MidiQOL.completeActivityUse()`.
+- `MidiQOL.applyTokenDamage` is exported.
+- `MidiQOL.applyTokenDamageMany` is exported: it applies different damage amounts per target, with a single damage card.
 
 ### Roll Complete Hooks
 If you have macros that depend on being called when the roll is complete:
@@ -57,7 +60,7 @@ If you have macros that depend on being called when the roll is complete:
 
 ### activity.use() (Recommended)
 
-The primary way to trigger a midi-qol workflow is via the dnd5e `activity.use()` method. Midi-qol intercepts this call to create its workflow.
+The primary way to trigger a midi-qol workflow is via the dnd5e `activity.use()` method. Midi-qol intercepts this call to create its workflow. `activity.use()` resolves as soon as the use has started; to wait for the whole workflow, use `MidiQOL.completeActivityUse()` (below).
 
 ```js
 // Get an activity from an item
@@ -84,7 +87,7 @@ await activity.use(
   {
     // ActivityUseConfiguration
     consume: { resources: true, spellSlot: true },
-    scaling: 3, // Cast at 3rd level for spells
+    spell: { slot: "spell3" }, // cast a spell with a 3rd level slot
   },
   {
     // RollDialogConfig
@@ -100,59 +103,65 @@ await activity.use(
 **ActivityUseConfiguration options:**
 | Option | Type | Description |
 |--------|------|-------------|
-| `consume.resources` | boolean | Consume item resources |
+| `consume.resources` | boolean \| number[] | Consume item resources (or the consumption targets with these indices) |
 | `consume.spellSlot` | boolean | Consume spell slot |
-| `scaling` | number | Spell level or scaling value |
+| `spell.slot` | string | The spell slot to cast with, e.g. `"spell3"`, `"pact"` |
+| `scaling` | number | Levels above the base level, for non-spell scaling (spells take theirs from `spell.slot`) |
 | `midiOptions` | object | Midi-specific options (see below) |
 
 **Midi-specific options (in `midiOptions`):**
 | Option | Type | Description |
 |--------|------|-------------|
-| `activityId` | string | Use specific activity by ID |
-| `activityIdentifier` | string | Use specific activity by identifier |
 | `advantage` | boolean | Force advantage on attack |
-| `asUser` | User \| string | Execute as specified user |
-| `checkGMstatus` | boolean | Non-GM clients hand roll to GM client |
 | `disadvantage` | boolean | Force disadvantage on attack |
 | `fastForward` | boolean | Skip roll dialogs |
 | `fastForwardAttack` | boolean | Fast forward attack roll only |
 | `fastForwardDamage` | boolean | Fast forward damage roll only |
-| `ignoreUserTargets` | boolean | Ignore current user targets |
 | `isCritical` | boolean | Force critical hit |
-| `simulate` | boolean | Simulate the roll without applying |
-| `targetUuids` | string[] | Override targets by UUID |
-| `targetsToUse` | Set<Token> | Override targets by token set |
+| `spellLevel` | number | Cast a spell at this level without spending a slot (scales its damage and effects) |
+| `rollAs` | Actor | Use the activity as if this actor used it |
+| `targetsToUse` | Set<Token> | The targets for this use, instead of the user's targets |
 | `workflowOptions` | object | Additional workflow options (see below) |
 
+`targetUuids`, `ignoreUserTargets`, `asUser`, `checkGMstatus`, `activityId` and `activityIdentifier` are read only by `MidiQOL.completeActivityUse` / `MidiQOL.completeItemUse` (below): a plain `activity.use()` ignores them.
+
 **WorkflowOptions (in `midiOptions.workflowOptions`):**
+
+Leave an option out and the midi-qol configuration panel's setting applies.
+
 | Option | Type | Description |
 |--------|------|-------------|
 | `allowIncapacitated` | boolean | Allow use while incapacitated |
-| `autoRollAttack` | boolean | Auto roll attack |
-| `autoRollDamage` | string | `"always"`, `"onHit"`, or `"none"` |
-| `isReaction` | boolean | Mark as reaction |
+| `autoRollAttack` | boolean | Auto roll the attack |
+| `autoFastAttack` | boolean | Fast forward the attack roll |
+| `autoRollDamage` | string | `"always"`, `"onHit"`, `"saveOnly"` or `"none"` |
+| `fastForwardDamage` | boolean | Fast forward the damage roll |
+| `isReaction` | boolean | Record the use as a reaction (for undo) |
 | `noConcentrationCheck` | boolean | Skip concentration check |
 | `noOnUseMacro` | boolean | Skip onUse macros |
 | `noProvokeReaction` | boolean | Don't provoke reactions |
 | `noTargetOnUseMacro` | boolean | Skip target onUse macros |
-| `targetConfirmation` | string | Target confirmation mode |
+| `targetConfirmation` | string | `"always"` to always confirm targets, `"none"`/`"never"` to skip confirmation; anything else follows the settings |
 
 **Example - Triggering with specific targets:**
 ```js
 const item = actor.items.getName("Fireball");
 const activity = item.system.activities.contents[0];
 
-// Set targets by UUID
+// By token: activity.use takes a set of tokens
 await activity.use({
-  midiOptions: {
-    targetUuids: [target1.document.uuid, target2.document.uuid]
-  }
+  midiOptions: { targetsToUse: new Set([target1, target2]) }
+}, { configure: false }, { create: true });
+
+// By uuid, waiting for the whole workflow
+await MidiQOL.completeActivityUse(activity, {
+  midiOptions: { targetUuids: [target1.document.uuid, target2.document.uuid] }
 }, { configure: false }, { create: true });
 ```
 
 ### item.use() (Alternative)
 
-You can also trigger via the item, which will use the item's default activity:
+You can also trigger via the item. With several usable activities midi shows its activity choice dialog (with a roll key held, it takes the attack activity, else the first); with none, it posts the item's card.
 
 ```js
 const item = actor.items.getName("Longsword");
@@ -166,22 +175,6 @@ await item.use({
 
 ---
 
-## Item Roll Options
-
-Additional workflow processing options for `itemRoll(options)`:
-
-| Option | Type | Description |
-|--------|------|-------------|
-| `lateTargeting` | boolean | Force enable/disable target confirmation |
-| `autoRollAttack` | boolean | Force enable/disable auto rolling of the attack |
-| `autoFastAttack` | boolean | Force enable/disable fast forwarding of the attack |
-| `autoRollDamage` | string | `"always"`, `"onHit"`, or `"none"` |
-| `autoFastDamage` | boolean | Force enable/disable fastForward of the damage roll |
-
-Leaving these blank means configured workflow options from the midi-qol configuration panel will apply.
-
----
-
 ## MidiQOL API Functions
 
 ### completeActivityUse (Recommended)
@@ -190,7 +183,10 @@ Leaving these blank means configured workflow options from the midi-qol configur
 async MidiQOL.completeActivityUse(activity, usage, dialog, message)
 ```
 
-Returns a promise that completes the entire midi-qol workflow for an activity before resolving. This is the recommended API function for programmatic workflow triggering.
+Uses the activity and resolves when its midi-qol workflow has finished, with the workflow. This is the recommended API function for programmatic workflow triggering.
+
+- It resolves with the workflow when the workflow has cleaned up (`midi-qol.postCleanup`), or has been aborted (`midi-qol.preAbort`): check `workflow.aborted`.
+- It resolves with `undefined` if the use fails to start, if the workflow hasn't finished after 90 seconds, or for an activity midi doesn't run as a workflow.
 
 **Parameters:**
 | Parameter | Type | Description |
@@ -209,7 +205,7 @@ Returns a promise that completes the entire midi-qol workflow for an activity be
 | `consume.spellSlot` | boolean | Consume a spell slot |
 | `create` | object\|false | Creation settings, or false to skip creation |
 | `create.measuredTemplate` | boolean | Create a measured template |
-| `scaling` | number\|false | Scaling level (e.g., 2 = cast 2 levels higher), or false |
+| `scaling` | number\|false | Levels above the base level, for non-spell scaling (spells take theirs from `spell.slot`), or false |
 | `spell` | object | Spell-specific settings |
 | `spell.slot` | string | Spell slot key (e.g., `"spell3"` for 3rd level slot) |
 | `concentration` | object | Concentration settings |
@@ -229,8 +225,12 @@ Returns a promise that completes the entire midi-qol workflow for an activity be
 | `fastForward` | boolean | Skip roll dialogs |
 | `targetUuids` | string[] | Target these token UUIDs |
 | `targetsToUse` | Set<Token> | Target these tokens |
-| `checkGMStatus` | boolean | Non-GM clients hand roll to GM client |
-| `workflowOptions` | object | Additional workflow processing options |
+| `ignoreUserTargets` | boolean | Don't fall back to the user's targets |
+| `spellLevel` | number | Cast a spell at this level without spending a slot |
+| `rollAs` | Actor | Use the activity as if this actor used it |
+| `asUser` | User \| string | Run the use on this user's client |
+| `checkGMstatus` | boolean | Non-GM clients hand roll to GM client |
+| `workflowOptions` | object | Additional workflow processing options (see `activity.use()` above) |
 
 **Dialog configuration (second parameter):**
 | Option | Type | Description |
@@ -255,7 +255,7 @@ Returns a promise that completes the entire midi-qol workflow for an activity be
 | `data.flags` | object | Flags to add to the message |
 | `data.content` | string | Override the message content |
 | `data.speaker` | object | Override the chat speaker |
-| `rollMode` | string | Roll mode: `"publicroll"`, `"gmroll"`, `"blindroll"`, `"selfroll"` |
+| `rollMode` | string | Message mode (Foundry 14 names): `"public"`, `"gm"`, `"blind"`, `"self"`. The older names (`"gmroll"`…) silently fall back to the user's default |
 
 **Example:**
 ```js
@@ -281,7 +281,7 @@ const workflow = await MidiQOL.completeActivityUse(activity, {
   configure: false
 }, {
   create: true,
-  rollMode: "gmroll"  // Only visible to GM
+  rollMode: "gm"  // Only visible to GM
 });
 ```
 
@@ -298,7 +298,10 @@ const workflow = await MidiQOL.completeActivityUse(activity, {
 async MidiQOL.completeItemUse(item, config, dialog, message)
 ```
 
-Returns a promise that completes the entire midi-qol workflow for the item's default activity before resolving. This is a convenience wrapper around `completeActivityUse`.
+Uses one of the item's activities and resolves as `completeActivityUse` does. Which activity:
+- `midiOptions.activityId`, or `midiOptions.activityIdentifier` (the activity's *Identifier* on midi's activity tab, else its name slugified, e.g. `"save"`);
+- otherwise the only usable activity;
+- with several, midi's activity choice dialog. With none, it posts the item's card and resolves with that message, not a workflow.
 
 **Parameters:**
 | Parameter | Type | Description |
@@ -314,13 +317,13 @@ Returns a promise that completes the entire midi-qol workflow for the item's def
 | `chooseActivity` | boolean | Show activity selection dialog if multiple activities |
 | `consume.resources` | boolean | Consume item resources |
 | `consume.spellSlot` | boolean | Consume spell slot |
-| `scaling` | number | Spell level or scaling value |
+| `spell.slot` | string | The spell slot to cast with, e.g. `"spell3"` |
 
 **MidiOptions (in `config.midiOptions`):**
 | Option | Type | Description |
 |--------|------|-------------|
 | `activityId` | string | Use specific activity by ID |
-| `activityIdentifier` | string | Use specific activity by identifier |
+| `activityIdentifier` | string | Use the activity with this identifier (or slugified name) |
 | `checkGMstatus` | boolean | Non-GM clients hand roll to GM client |
 | `targetUuids` | string[] | Target these token UUIDs instead of current targets |
 | `ignoreUserTargets` | boolean | Ignore current user targets |
@@ -372,19 +375,109 @@ Pulsing rings around `tokens`, shown only on this client (e.g. the tokens a choi
 ### reactionDialog
 
 ```js
-async MidiQOL.reactionDialog(actor, triggerTokenUuid, reactionItems, rollFlavor, triggerType, options)
+async MidiQOL.reactionDialog(actor, triggerTokenUuid, reactionActivities, rollFlavor, triggerType, options)
 ```
 
-Creates a dialog of items that can be called by clicking on the icon.
+Creates a dialog of activities the actor can use, each used by clicking its icon.
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
-| `actor` | Actor5e | The actor who will do the item roll |
+| `actor` | Actor5e | The actor who will use the activity |
 | `triggerTokenUuid` | string | UUID of the target token |
-| `reactionItems` | Item[] | Array of items to display |
+| `reactionActivities` | Activity[] | The activities to offer |
 | `rollFlavor` | string | Text/HTML for dialog context |
 | `triggerType` | string | Not relevant |
-| `options` | object | Additional configuration |
+| `options` | object | `timeout` (seconds), and options merged over the use options midi builds |
+
+### Moving tokens
+
+```js
+await MidiQOL.moveToken(token, { x, y, elevation?, level? }, options?)            // to a centre point
+await MidiQOL.moveTokenAwayFromPoint(token, distance, { x, y }, options?)         // push away from a point
+await MidiQOL.teleportToken(token, { x, y, elevation?, sceneUuid? })              // instant, optionally to another scene
+```
+
+All three run on the GM's client, so players can move tokens they don't own. `token` is a token, token document or uuid; points are canvas pixels (centres), `distance` and `elevation` grid units. `moveToken`'s `level` moves the token to another level of a multi-level scene.
+
+| Option (`moveToken`, `moveTokenAwayFromPoint`) | Description |
+|---|---|
+| `animate` | Animate the move (default true) |
+| `teleport` | Instant, ignoring walls and tokens |
+| `ignoreWalls` / `ignoreTokens` | Move through walls / other tokens |
+| `autoRotate` | Turn the token to face the way it moves |
+
+### Effects on actors you don't own
+
+```js
+await MidiQOL.createEffects({ actorUuid, effects: [effectData], options: { keepId: true } });
+await MidiQOL.updateEffects({ actorUuid, updates: [{ _id, ...changes }] });
+await MidiQOL.removeEffects({ actorUuid, effects: [effectId] });   // a status id ("prone") removes that status
+```
+
+Run on the GM's client, so a player's macro can change a target's effects.
+
+### Reactions, bonus actions and actions
+
+```js
+MidiQOL.hasUsedReaction(actor)        MidiQOL.hasUsedBonusAction(actor)        MidiQOL.hasUsedAction(actor)
+await MidiQOL.setReactionUsed(actor)  await MidiQOL.setBonusActionUsed(actor)  await MidiQOL.setActionUsed(actor)
+await MidiQOL.removeReactionUsed(actor, force?)   await MidiQOL.removeBonusActionUsed(actor, force?)   await MidiQOL.removeActionUsed(actor)
+```
+
+The markers midi uses to enforce *Enforce reactions* / *Enforce bonus actions* (the action marker is a flag on the actor, so `setActionUsed` needs an owner of the actor). They expire on their own (turn start, combat end, rests); remove one by hand only when your automation refunds the action.
+
+### Distance, cover and visibility
+
+```js
+MidiQOL.getDistance(t1, t2, { wallsBlock?, includeCover?, includeElevation? })   // number, -1 if invalid or (wallsBlock) blocked
+MidiQOL.checkDistance(t1, t2, distance, { wallsBlock?, includeCover? })          // boolean: within distance
+MidiQOL.computeCoverBonus(attacker, target, activity?, { position? })            // AC bonus from cover
+MidiQOL.unseenTargets(activity, token, targets)        // the targets token can't see
+MidiQOL.totalCoverTargets(activity, token, targets)    // the targets in total cover from token
+```
+
+`getDistance` measures as midi does for range checks: the *Distance measurement method* setting, and height when *Include height difference* is on (unless `includeElevation` says otherwise). See also `canSee`, `canSense` and `getCoverBonus` above.
+
+### Concentration and dependents
+
+```js
+MidiQOL.getConcentrationEffect(actor, item?)           // the actor's concentration effect (for item, if given)
+await MidiQOL.doConcentrationCheck(actor, saveDC)       // ask for a concentration save
+await MidiQOL.addConcentrationDependent(actor, document, item?)   // document is deleted when that concentration ends
+await MidiQOL.addDependent(document, dependent)         // dependent is deleted when document is
+```
+
+Dependents are dnd5e's: an effect, template, region or item created by a spell can be tied to the caster's concentration or to another document.
+
+### Conditions
+
+```js
+const data = MidiQOL.createConditionData({ workflow?, actor?, item?, activity?, target?, extraData? });
+const result = await MidiQOL.evalCondition(conditionString, data);
+const values = MidiQOL.evalAllConditions(actor, "flags.midi-qol.someFlag", data);
+```
+
+The data midi's activation and effect conditions see (`workflow`, `item`, `activity`, `target`, `raceOrType`, the actor's roll data…). Add your own with the `midi-qol.conditionData` hook, given the condition data and what it was built from: `Hooks.on("midi-qol.conditionData", (conditionData, input) => { conditionData.myValue = … })`.
+
+### Players and tokens
+
+```js
+MidiQOL.playerFor(token)          // the user who controls the token (an active owner, else the GM)
+MidiQOL.playerForActor(actor)
+MidiQOL.getTokenForActor(actor)   // the actor's token on the scene, creating a temporary one if needed
+MidiQOL.getTokenPlayerName(token) // the token's name as players are shown it (see also MidiQOL.tokenName)
+```
+
+### Dice So Nice and undo
+
+```js
+await MidiQOL.displayDSNForRoll(rolls, rollType, rollMode, saveDisplay?, actor?)   // show dice as midi does
+await MidiQOL.undoMostRecentWorkflow()     // undo the last use (needs *Support undoing item rolls*)
+await MidiQOL.removeMostRecentWorkflow()   // drop it from the undo queue without undoing
+MidiQOL.showUndoQueue()
+```
+
+Pass the rolling actor to `displayDSNForRoll`, so Dice So Nice's *Hide NPC rolls* and *Disabled during combat* apply.
 
 ---
 
@@ -395,36 +488,45 @@ The passed workflow is "live" so changes will affect subsequent actions. `preAtt
 **Workflow Hooks:**
 | Hook | Returns | Description |
 |------|---------|-------------|
-| `midi-qol.preTargeting` | boolean | Before targeting. Return false to abort. |
-| `midi-qol.preItemRoll` | boolean | Before item roll. Return false to abort. |
+| `midi-qol.preTargeting` | boolean | Before targeting, with `{ activity, token, config, dialog, message }` (no workflow yet). Return false to abort. |
+| `midi-qol.preTargetingV2` | boolean | As preTargeting, with `{ workflow, usage, dialog, message }`. |
+| `midi-qol.preItemRoll` | boolean | Before the use, with `{ activity, token, config, dialog, message }`. Return false to abort. |
+| `midi-qol.preItemRollV2` | boolean | As preItemRoll, with `{ workflow, usage, dialog, message }`. |
 | `midi-qol.preAttackRoll` | boolean | Before attack roll. Return false to abort. |
 | `midi-qol.preAttackRollConfig` | boolean | Before attack roll configuration (after advantage/disadvantage). Return false to abort. |
 | `midi-qol.preCheckHits` | void | Before checking hits |
-| `midi-qol.hitsChecked` | void | After hits have been checked |
+| `midi-qol.hitsChecked` | void | After hits have been checked (only when *Auto check hits* is on) |
 | `midi-qol.AttackRollComplete` | void | After attack roll complete |
-| `midi-qol.preDamageRoll` | boolean | Before damage roll. Return false to abort. |
+| `midi-qol.preDamageRoll` | boolean | Before damage roll, with `(workflow, activity, config, dialog, message)`. Return false to abort. |
 | `midi-qol.DamageRollComplete` | void | After damage roll complete |
 | `midi-qol.preFormulaRoll` | boolean | Before utility formula roll. Return false to abort. |
-| `midi-qol.preCheckSaves` | void | Before auto checking saves |
-| `midi-qol.postCheckSaves` | void | After saves checked |
+| `midi-qol.preCheckSaves` | void | Before auto checking saves (only when *Auto check saves* is on) |
+| `midi-qol.postCheckSaves` | void | After saves checked (only when *Auto check saves* is on) |
 | `midi-qol.postActiveEffects` | void | After effects applied |
 | `midi-qol.preTeleport` | boolean | Teleport activity (dnd5e 6): `(workflow, { maxDistance, tokens, movers })` before anyone moves. Change `tokens` to change who moves; return false to cancel. dnd5e's `dnd5e.preTeleport` fires first. |
 | `midi-qol.postTeleport` | void | Teleport activity: `(workflow, results)` after the moves (each `{ token, plan, moved }`). |
 | `midi-qol.RollComplete` | void | After workflow completed |
-| `midi-qol.ReactionFilter` | async | Filter reactions |
+| `midi-qol.preAbort` | void | The workflow is being aborted |
+| `midi-qol.postCleanup` | void | The workflow has finished and cleaned up (what `completeActivityUse` waits for) |
+| `midi-qol.ReactionFilter` | async | `(reactions, options, triggerType, reactionActivityList)`: change the reactions offered; return false to offer none |
+
+**State Hooks:**
+Every workflow state also fires `midi-qol.pre<State>` before it and `midi-qol.post<State>` after it, e.g. `midi-qol.preWaitForSaves`, `midi-qol.postAttackRollComplete`, with the workflow. The states are the workflow's `WorkflowState_*` names (see Macro Passes below). Returning false from one ends the workflow (aborts it if `workflow.aborted` is set).
 
 **Item/Activity-Specific Hooks:**
-All workflow hooks also fire with item/activity UUID suffix:
+Workflow hooks also fire with an item or activity UUID suffix (not `ReactionFilter` or the damage calculation hooks):
 - `midi-qol.preAttackRoll.{item.uuid}`
 - `midi-qol.preAttackRoll.{activity.uuid}`
 - `midi-qol.preAttackRollConfig.{item.uuid}`
 - `midi-qol.preAttackRollConfig.{activity.uuid}`
 
+Hooks that can cancel also fire with `.{workflow.id}`.
+
 **Damage Calculation Hooks:**
 | Hook | Returns | Description |
 |------|---------|-------------|
 | `midi-qol.dnd5ePreCalculateDamage` | boolean | Before damage calculation. Return false to abort. |
-| `midi-qol.dnd5eCalculateDamage` | void | After damage calculation |
+| `midi-qol.dnd5eCalculateDamage` | boolean | After damage calculation. Return false to cancel it. |
 
 ---
 
@@ -433,10 +535,10 @@ All workflow hooks also fire with item/activity UUID suffix:
 ### TrapWorkflow
 
 ```js
-new MidiQOL.TrapWorkflow(actor, item, [targets], {x: number, y: number})
+new MidiQOL.TrapWorkflow(actor, activity, [targets], { x, y, direction?, removeDelay? })
 ```
 
-Rolls attack and/or damage and applies to passed targets. If item has area template, it will be placed at x,y and targets auto-selected.
+Uses the activity (not the item) and applies its attack and/or damage to the passed targets. If the activity has an area template, it is placed at x,y (pointing in `direction`) and the targets in it are selected.
 
 ### DamageOnlyWorkflow
 
@@ -457,14 +559,23 @@ new MidiQOL.DamageOnlyWorkflow(
 )
 ```
 
+### Attack per target
+
+With *Roll a separate attack per target* (or an attack activity's *Attack Roll Per Target*), a use with several targets places its template, chooses its targets and spends its cost, then hands its attack to one use per target:
+- Each target's use is a full workflow of its own, with one target and its own card linked to the first card. Its `workflowOptions.attackSplit` is `{ index, count, ammunition }`.
+- The first use's macros and hooks before the attack run once; it rolls no attack, and its `RollComplete` comes after all the targets' uses.
+- An onUse or RollComplete macro that should run once per use can check `workflow.workflowOptions.attackSplit`.
+
 ### DummyWorkflow
 
 For calling workflow functions without a full workflow:
 
 | Method | Description |
 |--------|-------------|
-| `async simulateAttack(token)` | Simulate attack roll, sets `workflow.expectedSaveRoll` |
-| `async simulateSaves([tokens])` | Simulate saves, returns `workflow.saveResults` |
+| `async simulateAttack(target)` | Simulate the attack roll against `target`; sets `workflow.expectedAttackRoll` |
+| `async simulateSave(targets)` | Simulate the targets' saves; sets `expectedSaveRoll` on each entry of `workflow.saveResults`, and returns the workflow |
+
+Options `advantage`, `disadvantage` and `fastForward` are read from the constructor's options.
 
 ---
 
@@ -474,49 +585,59 @@ Called during item workflow to customize behavior. Supports both item-based and 
 
 ### Specifying Macros
 
-For actor onUse macros, set via active effects:
+**On an item** (*On Use Macros* on the item sheet, `flags.midi-qol.onUseMacroName`): a comma-separated list of `[pass]name`, e.g. `[preAttackRoll]ItemMacro,[postActiveEffects]Macro.My Macro`.
+- An entry without `[pass]` runs at `postActiveEffects`.
+- A blank name is the item's own macro: the macro of the activity being used if it has one, else the item macro.
+- An item with a macro and no onUse macros runs that macro at `postActiveEffects`, so a macro used only by DAE must check `args[0]`.
+
+**On an actor**, through an active effect:
 ```
-flags.midi-qol.onUseMacroName CUSTOM macro,macroPass
+flags.midi-qol.onUseMacroName | Custom | macroName,macroPass
 ```
+- A blank name is the effect's activity macro, else its item's macro.
+- An entry without a pass is ignored, and reported.
 
 **Macro identifiers:**
 | Identifier | Description |
 |------------|-------------|
-| `ItemMacro` | Macro on the item that applied the effect |
+| `ItemMacro` | The used item's macro; in an effect change, the macro of the item the effect came from |
 | `ItemMacro.uuid/name` | Macro on another item by uuid or name |
-| `ActivityMacro` | Activity macro from first activity on source item |
+| `ActivityMacro` | The macro of the activity being used; in an effect change, the effect's activity (or, for a transfer effect, its item's first activity) |
 | `ActivityMacro.uuid/id/name` | Activity macro by uuid, identifier, or name |
-| `macro name` | World macro by exact name |
-| `Compendium.scope.name.macroName/Id` | Compendium macro |
-| `function.functionName` | Global function (bound to workflow) |
+| `ActivityMacro-<id>` | The activity macro, run only when the activity being used has this id |
+| `macro name` / `Macro.macro name` | World macro by exact name |
+| `Compendium.<scope>.<pack>.Macro.<id>` | Compendium macro, by its UUID only |
+| `function.functionName` | A global function, called with one object: `{ speaker, actor, token, character, item, rolledItem, macroItem, args, scope, workflow }` |
+
+Add `|uuid` to a name to run it with that item, activity or effect's item as its context (`macroItem`, `macroActivity`).
 
 ### Macro Passes
 
 > [!important] **Documentation:** A flowchart is available at [docs/flowchart.md](docs/flowchart.md).
-> Data available at each pass: [docs/workflowfields.md](docs/workflowfields.md).
+> Data available at each pass: [docs/workflowfields-2026-10-30.md](docs/workflowfields-2026-10-30.md).
 
 **Item/Actor passes:**
 | Pass | Description |
 |------|-------------|
-| `preTargeting` | Before targeting (*) |
-| `preItemRoll` | Before item roll (*) |
+| `preTargeting` | Before targeting. Return false to cancel the use |
+| `preItemRoll` | Before item roll. Return false to cancel the use |
 | `templatePlaced` | After template placed |
 | `preAttackRoll` | Before attack roll |
 | `preAttackRollConfig` | Before attack roll configuration |
 | `preCheckHits` | After attack, before hit check |
 | `postAttackRoll` | After attack adjudicated |
 | `preDamageRoll` | Before damage roll |
-| `preDamageRollConfig` | Before damage roll configuration |
+| `preDamageRollConfig` | Before damage roll configuration. Return false to cancel the roll |
 | `postDamageRoll` | After damage roll |
 | `preSave` | Before saves rolled |
 | `postSave` | After saves rolled |
-| `damageBonus` | When computing damage bonus (item only) |
-| `preDamageApplication` | Before damage applied |
-| `preActiveEffects` | Before effects applied |
+| `damageBonus` | When computing damage bonus (item only; `macroPass` is `"DamageBonus"`) |
+| `preDamageApplication` | Once per damaged target, before its damage is applied: change `workflow.damageItem` (that target's entry) |
+| `preActiveEffects` | Before effects applied. Return `{ haltEffectsApplication: true }` to apply none |
 | `postActiveEffects` | After effects applied |
 | `preTeleport` | Teleport activity (dnd5e 6), before anyone moves. `options.teleport` holds `maxDistance` and `tokens` (change them to change who moves); return false to cancel |
 | `postTeleport` | Teleport activity, after the moves. `options.teleport.results` lists each token, its plan and whether it moved |
-| `all` | Called at each pass above |
+| `all` | Called at every pass, including the state and target passes |
 
 **Workflow State Passes (dynamically generated):**
 
@@ -547,9 +668,11 @@ The workflow calls `pre{StateName}` and `post{StateName}` macros when transition
 | `preCleanup` | `postCleanup` | Workflow cleanup |
 | `preCompleted` | `postCompleted` | Workflow completed |
 | `preRollFinished` | `postRollFinished` | Roll finished (final state) |
+| `preAbort` | `postAbort` | The workflow is being aborted (`preAbort` runs even then) |
+| `preCancel` | `postCancel` | The workflow is being cancelled |
 
 > [!note]
-> Returning `false` from a pre-state macro or setting `workflow.aborted = true` will abort the workflow.
+> A state macro's return value is ignored: set `workflow.aborted = true` to abort the workflow. A `midi-qol.pre{StateName}` / `post{StateName}` hook returning false ends it.
 
 **Corresponding Hooks:**
 
@@ -558,8 +681,9 @@ For each workflow state, hooks are also called with the pattern:
 - `midi-qol.pre{StateName}.{item.uuid}`
 - `midi-qol.pre{StateName}.{activity.uuid}`
 - `midi-qol.premades.pre{StateName}` (for premade automation)
+- hooks that can cancel also fire with `.{workflow.id}`
 
-**Target-only passes (actor macros):**
+**Target-only passes (actor macros):** these run for the target's actor macros, with `tag: "TargetOnUse"`; `actor` in the macro is the target's actor.
 | Pass | Description |
 |------|-------------|
 | `isTargeted` | Target is targeted |
@@ -574,11 +698,12 @@ For each workflow state, hooks are also called with the pattern:
 | `isSaveFailure` | Target fails save |
 | `preTargetDamageApplication` | Before damage applied to target |
 | `isDamaged` | Target is damaged |
+| `isHealed` | Target is healed (instead of isDamaged) |
 | `postTargetEffectApplication` | After effects applied to target |
 
 ### Accessing Workflow Data
 
-The `workflow` object is available directly in your macro scope:
+The macro's scope has `workflow`, `args` (`args[0]` is the macro data below, also as `midiData`), `actor`, `token`, `rolledItem` and `rolledActivity` (what is being used), `macroItem` and `macroActivity` (the item or activity whose macro this is), and `options` (data for the pass, e.g. `{ usage, dialog, message }`, `teleport`):
 
 ```js
 // Access workflow properties
@@ -593,22 +718,25 @@ workflow.someProperty = value;
 
 ```js
 // In a postDamageRoll macro pass
-const damageRoll = await new Roll("1d10").evaluate();
-workflow.setDamageRoll(damageRoll);
+const damageRoll = await new CONFIG.Dice.DamageRoll("1d10", {}, { type: "fire" }).evaluate();
+await workflow.setDamageRolls([damageRoll]);
 ```
+
+To change the damage a target takes, use `MidiQOL.modifyDamageBy` (in an `isDamaged` or `preTargetDamageApplication` macro) rather than editing the damage list.
 
 ---
 
 ## Damage Bonus Macros
 
-Called after hits/saves adjudicated but BEFORE damage applied. Not dependent on specific item - called whenever damage is rolled by that character.
+A character's damage bonus macros (`flags.dnd5e.DamageBonusMacro`, and an item's or ammunition's `[damageBonus]` onUse macros) are called whenever that character rolls damage: after hits are checked and the damage is rolled, before saves and damage application. Not dependent on a specific item.
 
-**Return format:**
+**Return format:** a list of entries, each `{ damageRoll, damageType?, flavor? }` or a `Roll`:
 ```js
-return [{damageRoll: "2d6", flavor: "fire"}]
+return [{ damageRoll: "2d6", damageType: "fire", flavor: "Flame Tongue" }];
 ```
+The damage type is `damageType`, else a damage type named in `flavor`, else the first damage roll's type.
 
-Damage returned via damage bonus will NOT be increased for critical hits.
+Damage returned via damage bonus will NOT be increased for critical hits; check `args[0].isCritical` to do it yourself.
 
 ---
 
@@ -619,11 +747,11 @@ Data passed to OnUse and DamageBonus macros in `args[0]`:
 **Core Data:**
 | Field | Description |
 |-------|-------------|
-| `actor` | The actor using the item |
+| `actor` | The actor using the item (target passes: the target's actor) |
 | `actorData` | actor.toObject(false) |
 | `actorUuid` | Actor UUID |
 | `tokenUuid` | Token UUID |
-| `item` | item.toObject(false) with uuid property |
+| `item` | item.toObject(false) with a uuid property, and `actionType` (the used activity's) |
 | `itemData` | Same as item |
 | `itemUuid` | Item UUID |
 | `workflow` | The workflow object |
@@ -644,17 +772,19 @@ Data passed to OnUse and DamageBonus macros in `args[0]`:
 | `damageRoll` | Roll object for damage |
 | `damageRolls` | Array of damage rolls |
 | `damageTotal` | Damage total |
-| `damageDetail` | Array of DamageDescription (see below) |
-| `rawDamageDetail` | Raw damage before resistances/immunities |
+| `damageDetail` | Array of DamageDescription (see below): the damage rolled, before resistances |
 | `damageList` | Array of DamageListEntry per target (see below) |
 | `otherDamageTotal` | Other Roll damage total |
-| `otherDamageDetail` | Other Roll damage detail |
-| `rawOtherDamageDetail` | Raw other damage before resistances |
+| `otherDamageDetail` | Other Roll damage detail, before resistances |
+| `otherDamageList` | DamageListEntry per target for the other damage |
 | `bonusDamageRoll` | Bonus damage roll |
 | `bonusDamageRolls` | Array of bonus damage rolls |
 | `bonusDamageTotal` | Bonus damage total |
-| `bonusDamageDetail` | Bonus damage detail |
-| `rawBonusDamageDetail` | Raw bonus damage before resistances |
+| `bonusDamageDetail` | Bonus damage detail, before resistances |
+| `bonusDamageHTML` | The bonus damage as shown on the card |
+| `utilityRoll` / `utilityRolls` | The utility (formula) roll(s) |
+
+The workflow itself also has `workflow.rawDamageDetail` etc.
 
 **DamageDescription (damageDetail array elements):**
 | Field | Type | Description |
@@ -663,14 +793,9 @@ Data passed to OnUse and DamageBonus macros in `args[0]`:
 | `type` | string | Damage type (e.g., "fire", "slashing", "healing") |
 | `properties` | Set\<string\> | Damage properties (e.g., "magical", "silver") |
 | `active.multiplier` | number | Damage multiplier applied (0.5 for resistance, 2 for vulnerability) |
-| `active.resistance` | boolean | Resistance was applied |
-| `active.vulnerability` | boolean | Vulnerability was applied |
-| `active.immunity` | boolean | Immunity was applied |
-| `active.absorption` | boolean | Damage was absorbed (healed instead) |
-| `active.DR` | boolean | Damage reduction was applied |
-| `active.saved` | boolean | Target saved against this damage |
-| `active.superSaver` | boolean | Super saver applied (no damage on save) |
-| `active.semiSuperSaver` | boolean | Semi-super saver applied |
+| `active.type.<change>` / `active.all.<change>` | boolean | A change applied to this damage type, or to all damage. `<change>` is one of `resistance`, `vulnerability`, `immunity`, `modification`, `absorption`, `DR`, `saved`, `superSaver`, `semiSuperSaver`, `uncannyDodge` |
+
+On a calculated entry (a target's `damageDetail` in `damageList`), e.g. `entry.damageDetail[0].active?.type?.resistance`.
 
 **DamageListEntry (damageList array elements):**
 
@@ -699,7 +824,7 @@ Each entry represents damage applied to a specific target:
 
 **Example - Checking damage reduction:**
 ```js
-// In preDamageApplication or postActiveEffects
+// In postActiveEffects (in preDamageApplication, use workflow.damageItem: the list holds only the targets so far)
 for (const entry of workflow.damageList) {
   const rawTotal = entry.rawDamageDetail.reduce((sum, d) => sum + d.value, 0);
   const actualTotal = entry.damageDetail.reduce((sum, d) => sum + d.value, 0);
@@ -726,7 +851,7 @@ When damage is applied via GM action, the following fields are **recalculated** 
 - `wasHit` - determines if damage should apply
 - `oldHP`, `oldVitality`, `newVitality` - HP tracking
 
-This means if you modify `damageDetail` in `preDamageApplication`, the changes will be applied. Modifying `hpDamage` directly will have no effect.
+This means if you modify `workflow.damageItem.damageDetail` in `preDamageApplication`, the changes will be applied. Modifying `hpDamage` directly will have no effect. Easier still: `MidiQOL.modifyDamageBy`.
 
 **Target Data:**
 | Field | Description |
@@ -760,24 +885,26 @@ This means if you modify `damageDetail` in `preDamageApplication`, the changes w
 | `spellLevel` | Spell/item level |
 | `castLevel` | Same as spellLevel |
 | `castData` | Cast data object |
-| `rollData` | actor.getRollData() |
+| `rollData` | item.getRollData() (includes the actor's data) |
 | `rollOptions` | Roll options object |
 | `workflowOptions` | Workflow options |
 
 **Macro Context:**
 | Field | Description |
 |-------|-------------|
-| `tag` | `"OnUse"` or `"DamageBonus"` |
+| `tag` | `"OnUse"`, `"TargetOnUse"` (target passes) or `"DamageBonus"` |
 | `macroPass` | Current macro pass name |
 | `speaker` | Chat speaker data |
-| `sourceItemUuid` | UUID of source item (for ItemMacro) |
+| `sourceItemUuid` | UUID of the item whose macro this is (set for ItemMacro and ActivityMacro only) |
 | `event` | Triggering event |
+| `options` | Data for the pass (e.g. `{ usage, dialog, message }`, `teleport`) |
 
 **Template Data:**
 | Field | Description |
 |-------|-------------|
 | `templateId` | Template ID (deprecated) |
 | `templateUuid` | Template UUID (preferred) |
+| `templateUuids` | All the use's template UUIDs |
 
 **Chat Data:**
 | Field | Description |
@@ -785,15 +912,78 @@ This means if you modify `damageDetail` in `preDamageApplication`, the changes w
 | `itemCardUuid` | Chat message UUID |
 | `uuid` | Item UUID (deprecated, use itemUuid) |
 
-### Chat Card Integration
+## Adding to Chat Cards (Card Notes)
 
-The combo card has special divs for adding data:
-```html
-<div class="midi-qol-attack-roll"></div>
-<div class="midi-qol-damage-roll"></div>
-<div class="midi-qol-hits-display"></div>
-<div class="midi-qol-saves-display"></div>
+A midi usage card is drawn from its data, not from its `content`. Text spliced into `content`, or into the `midi-qol-attack-roll`/`midi-qol-saves-display` divs as older macros did, does nothing. (Writing `content` directly is turned into a note at the bottom of the card, with a console warning.) To add something to a card, add a **card note**.
+
+A note is its own chat message linked to the card. The card draws it in the place you name, and it is:
+- hidden in the chat log while the card draws it;
+- shown only to the users it is whispered to;
+- deleted with the card.
+
+Links, inline rolls (`[[1d6]]`, rolled once when the note is created) and enrichers work in a note.
+
+### addCardNote / removeCardNote
+
+```js
+const note = await MidiQOL.addCardNote(target, html, options);
+const removed = await MidiQOL.removeCardNote(target, key);
 ```
+
+- `target`: the card (a `ChatMessage`), its uuid, or a workflow (its card is used).
+- `addCardNote` returns the note message, or `undefined` if there is no card.
+- `removeCardNote` removes the notes with that key that this user may delete, and returns how many.
+
+| Option | Meaning |
+|---|---|
+| `anchor` | Where on the card: a section (`attack`, `hits`, `damage`, `otherDamage`, `bonusDamage`, `utility`, `saves`), `buttons` (before the card's buttons), `top` or `bottom` (default) |
+| `position` | Inside the anchor (`prepend`, `append`, default) or outside it (`before`, `after`) |
+| `key` | Adding a note again with the same key replaces this user's earlier note |
+| `label` | A heading drawn above the note |
+| `cssClass` | Extra classes on the note |
+| `sort` | Order among notes in the same place |
+| `visibility` | `all` (default), `gm`, or `owner` (the card actor's owners) |
+| `whisper` | Instead of `visibility`: the user ids to show the note to |
+| `kind`, `data` | Drawn by your renderer (see below); `html` is then the fallback |
+
+```js
+// A line under the target's save results, for the GM only
+await MidiQOL.addCardNote(workflow, `<p>${target.name} is <strong>marked</strong> until the end of its turn.</p>`,
+  { anchor: "saves", visibility: "gm", key: "my-module.mark" });
+```
+
+midi uses card notes itself, for contested rolls and for the before and after of an optional bonus (*Show before and after optional bonus chat card*).
+
+### Notes drawn by your code
+
+When a note's content depends on who is looking, or changes as rolls come in, register a renderer and add notes with a `kind`:
+
+```js
+MidiQOL.registerCardNoteRenderer("my-module.duel", async ({ note, card, data, messages }) => {
+  const total = MidiQOL.visibleRollTotal(messages.find(m => m.flags?.["midi-qol"]?.cardNote?.role === "challenger"));
+  return `<p>${data.title}: ${total ?? "??"}</p>`;
+});
+const note = await MidiQOL.addCardNote(workflow, "<p>Duel</p>", { anchor: "bottom", kind: "my-module.duel", data: { title: "Duel" } });
+```
+
+- **When it runs:** for each viewer, every time the card is drawn. It is given the note, the card, the note's `data` and the note's own messages. If no renderer is registered for the kind, the note's `html` is shown.
+- **The note's own messages:** pass `MidiQOL.cardNoteMessageData(note, role)` as a roll's message data, e.g. `actor.rollSkill({ skill: "ath" }, {}, { data: MidiQOL.cardNoteMessageData(note, "challenger") })`. Such a message is hidden in the log, given to the renderer, and deleted with the note. The `role` is yours, for telling the messages apart (`flags.midi-qol.cardNote.role`).
+- **`MidiQOL.renderLinkedMessage(message)`** draws one of those messages as dnd5e draws a roll summary on a card, masked as midi masks dnd5e's summaries: a private roll the viewer can't see shows as rolled, an obscured roll shows ??. It returns `""` if the viewer may not see the message, or if *Summarize chat cards* is off (the message is in the log instead).
+- **`MidiQOL.visibleRollTotal(message)`** gives the message's roll total only if this viewer may see it (not a private roll they can't see, not hidden, not obscured by *Blind roll display*); otherwise `undefined`.
+
+midi's contested rolls (`MidiQOL.contestedRoll`) are drawn this way, from public API only.
+
+### Token names as each viewer may see them
+
+midi's player-name rules (Anonymous, Hide NPC Names, *Hide NPC names*; the GM and the token's owners always see the real name) can be applied to anything you put on a card:
+- `MidiQOL.tokenName(uuid, fallback)`: the name this user may see.
+- `@MidiTokenName[uuid]{fallback}` in enriched text: card notes, messages, journals.
+- `{{midi-token-name uuid fallback}}` in Handlebars templates, which are drawn per viewer.
+- `MidiQOL.tokenNameMarkup(uuid, fallback)`: markup carrying `data-midi-token-uuid`, renamed for each viewer when the card is drawn. Use it in a renderer's output.
+
+### Other messages deleted with a card
+
+A message you create with `flags.midi-qol.origin` set to a card's id is deleted when that card is deleted.
 
 ---
 
@@ -805,7 +995,7 @@ The combo card has special divs for adding data:
 | **Requires midi** | No | Yes |
 | **Workflow access** | Limited (via passed args) | Full |
 | **Execution client** | Owner of actor with effect | Client doing workflow |
-| **Specification** | Effect key (macro.execute, macro.ItemMacro) | Item details or actor flags |
+| **Specification** | Effect key (`macro.execute`, `macro.itemMacro`, `macro.activityMacro`, `macro.actorUpdate`) | Item details or actor flags |
 
 ### DAE Macro Arguments
 
@@ -815,18 +1005,22 @@ macro.execute CUSTOM myWorldMacro @targetUuid @actorUuid @attributes.hp.value ##
 
 | Arg | Value |
 |-----|-------|
-| `args[0]` | "on" or "off" |
+| `args[0]` | `"on"`, `"off"`, or `"each"` (a repeating macro, at turn start or end) |
 | `args[1]` | Target token UUID |
 | `args[2]` | Actor UUID applying effect |
 | `args[3]` | HP of actor causing effect |
 | `args[4]` | HP of actor with effect |
 | `args[args.length - 1]` | lastArg data |
 
+- `@` references are filled from the caster when the effect is applied; `##` references are left for the target (`##attributes.hp.value` is the target's live value).
+- The `lastArg` object is appended after the arguments, so an optional argument you leave out receives `lastArg`: check `arg === lastArg`.
+- Arguments are split at operators and commas, so quote values such as `"+5"`.
+
 **Named arguments (v11+):**
 ```
 theTargetUuid=@targetUuid
 ```
-Populates `scope.theTargetUuid` and `theTargetUuid`.
+Populates `scope.theTargetUuid` and `theTargetUuid` (and removes it from `args`).
 
 ---
 
@@ -841,14 +1035,14 @@ foundry.utils.getProperty(actor, "flags.mymodule.temp")
 
 // Persistent (survives reload, visible to all clients)
 await actor.setFlag("mymodule", "key", value)
-await actor.getFlag("mymodule", "key")
+actor.getFlag("mymodule", "key")
 ```
 
 ### Which Macro Type to Use?
 
 | Type | Use Case |
 |------|----------|
-| `macro.execute/ItemMacro` | Change fields that shouldn't use active effects (tempHP, HP). Called when effect applied/removed. |
+| `macro.execute` / `macro.itemMacro` | Change fields that shouldn't use active effects (tempHP, HP). Called when effect applied/removed. |
 | `OnUse macros` | Do something when item used, even if attack missed. Execute within workflow context. |
 | `DamageBonusMacro` | Add damage to any attack (sneak attack, hunter's mark). Not item-specific. |
 
@@ -865,13 +1059,14 @@ const item = actor.items.getName("Longsword");
 const activity = item.system.activities.contents[0];
 // Or: item.system.activities.find(a => a.identifier === "attack")
 
-// Trigger the workflow with specific targets
+// Trigger the workflow with specific targets, and wait for it to finish
 const targets = Array.from(game.user.targets);
-await activity.use({
+const workflow = await MidiQOL.completeActivityUse(activity, {
   midiOptions: {
     targetUuids: targets.map(t => t.document.uuid)
   }
 }, { configure: false }, { create: true });
+// (activity.use() takes tokens instead: midiOptions: { targetsToUse: new Set(targets) })
 ```
 
 ### Programmatic Damage Application Example
@@ -890,7 +1085,7 @@ const damageItemData = {
         type: "save",
         name: "Spirit Guardians",
         save: {
-          ability: "wis",
+          ability: ["wis"],
           dc: { calculation: "", formula: "15" }
         },
         damage: {

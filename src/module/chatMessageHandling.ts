@@ -251,11 +251,8 @@ export function processCreateDDBGLMessages(message: ChatMessage.Implementation, 
     error(`ddb-game-log roll no workflow for ${item.name}`)
     return;
   }
-  if (configSettings.undoWorkflow && workflow.undoData && message) {
-    if (!workflow.undoData.chatCardUuids) workflow.undoData.chatCardUuids = [];
-    workflow.undoData.chatCardUuids = workflow.undoData.chatCardUuids.concat([message.uuid]);
-    unTimedExecuteAsGM("updateUndoChatCardUuids", workflow.undoData);
-  }
+  // D&D Beyond Gamelog's roll isn't linked to the card: record it for undo.
+  if (configSettings.undoWorkflow && workflow.undoData && message) unTimedExecuteAsGM("addUndoChatCards", { id: workflow.undoData.id, chatCardUuids: [message.uuid] });
   if (rollType === "attack") {
     let rolls = message.rolls;
     if (!(rolls instanceof Array)) rolls = [rolls];

@@ -93,27 +93,8 @@
       <div class="notes midi-qol-faint">{{localize "midi-qol.WaitForDamageApplication.Hint"}}</div>
     </div>
 
-    <div class="form-group">
-      <label>{{localize "midi-qol.Incapacitated.Name"}}</label>
-      <select name="optionalRules.incapacitated" data-dtype="String">
-        {{selectOptions IncapacitatedOptions selected=configSettings.optionalRules.incapacitated localize=true}}
-      </select>
-    </div>
   </div>
   <div class="midi-qol-box">
-    <div class="form-group">
-      <label>{{localize "midi-qol.CheckRange.Name"}}</label>
-      <select name="optionalRules.checkRange" data-dtype="String">
-        {{selectOptions CheckRangeOptions selected=configSettings.optionalRules.checkRange localize=true}}
-      </select>
-    </div>
-    <div class="form-group">
-      <label>{{localize "midi-qol.TargetMustBeSeen.Name"}}</label>
-      <select name="optionalRules.targetMustBeSeen" data-dtype="String">
-        {{selectOptions TargetMustBeSeenOptions selected=configSettings.optionalRules.targetMustBeSeen localize=true}}
-      </select>
-      <div class="notes midi-qol-faint">{{localize "midi-qol.TargetMustBeSeen.Hint"}}</div>
-    </div>
     <div class="form-group">
       <label>{{localize "midi-qol.CheckTwoHanded.Name"}}</label>
       <input type="checkbox" name="checkTwoHanded" {{checked configSettings.checkTwoHanded}} />

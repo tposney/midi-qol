@@ -1028,6 +1028,14 @@ const CUSTOM_RESISTANCE_MATCHERS: Record<string, { match: DamagePredicate; label
   },
 };
 
+/** A DR key's matcher: a custom type above, else an activity type (save, other, util…) matching damage from such activities. */
+function drMatcher(special: string): { match: DamagePredicate; label: string } | undefined {
+  if (CUSTOM_RESISTANCE_MATCHERS[special]) return CUSTOM_RESISTANCE_MATCHERS[special];
+  const actionTypes = GameSystemConfig.itemActionTypes as Record<string, string>;
+  if (special === "heal" || !actionTypes?.[special]) return undefined;
+  return { match: (d) => d.properties?.has(special) ?? false, label: actionTypes[special] };
+}
+
 function isDRType(type: string): boolean {
   return ["none", "midi-none"].includes(type);
 }
@@ -1210,7 +1218,7 @@ function applyDamageReduction({ actor, damages, options }: DamageCalcParams): bo
 
     if (!dm) continue;
 
-    const matcher = CUSTOM_RESISTANCE_MATCHERS[special];
+    const matcher = drMatcher(special);
     let selectedDamage: number;
     let dmActive = "";
 
@@ -1324,7 +1332,7 @@ function applyDamageReductionInline(
     for (const special of specificSpecials) {
       const dm = computeDR(special);
       if (!dm) continue;
-      const matcher = CUSTOM_RESISTANCE_MATCHERS[special];
+      const matcher = drMatcher(special);
       if (!matcher) continue;
 
       const bypasses = actorTraits.dm?.bypasses ?? new Set();
@@ -1350,7 +1358,7 @@ function applyDamageReductionInline(
     for (const special of specificSpecials) {
       const dm = computeDR(special);
       if (!dm) continue;
-      const matcher = CUSTOM_RESISTANCE_MATCHERS[special];
+      const matcher = drMatcher(special);
       if (!matcher) continue;
 
       const applied = distributeProportionally(special, dm, (d, bypasses) => matcher.match(d, bypasses));

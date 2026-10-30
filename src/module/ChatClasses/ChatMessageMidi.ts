@@ -3,6 +3,7 @@ import { TroubleShooter } from "../apps/TroubleShooter.js";
 import { Dnd5eSystem } from "../../globals.js";
 import { configSettings, forceHideRoll, safeGetGameSetting, saveToChatCard } from "../settings.js";
 import { displayTokenName, getToken, isDnd5eRollMessage } from "../utils.js";
+import { renameMarkedTokens } from "../lib/tokenNames.js";
 import { canSeePlayerOutcome, canSeeSaveResult, cardActor, challengeVisible, saveDetail, saveDisplayMode } from "../lib/saveVisibility.js";
 
 // Damage is auto-applied by midi when autoApplyDamage is one of the "yes*" modes.
@@ -340,14 +341,14 @@ export function defineChatMessageMidiClass(baseClass: ChatMessage.Implementation
     /**
      * The attack roll's reasons and its terms' tooltip are drawn by its template (midiRenderTemplateRoll): leave the
      * terms' labels out of the dice tooltip's formula too, and drop the icons and the tooltip wherever the attack's
-     * formula isn't shown (nothing the GM hides from players is revealed) or the player has turned them off.
+     * formula isn't shown (nothing the GM hides from players is revealed) or they are turned off (Workflow › Hits).
      */
     #addAttackReasons(html: HTMLElement) {
       const formulas = html.querySelectorAll(".midi-attack-roll .dice-formula");
       const total = html.querySelector<HTMLElement>(".midi-attack-roll .dice-total");
       if (!total) return;
-      // Hidden from players by the GM's attack display, or turned off by this player
-      if (!formulas.length || game.settings?.get("midi-qol", "showAttackRollDetails") === false) {
+      // Hidden from players by the GM's attack display, or turned off
+      if (!formulas.length || !configSettings.showAttackRollDetails) {
         total.querySelector(".midi-attack-reasons")?.remove();
         delete total.dataset.tooltipHtml;
         return;
@@ -645,6 +646,19 @@ export function defineChatMessageMidiClass(baseClass: ChatMessage.Implementation
         if (diceHidden || dcRemoved) el.removeAttribute("data-tooltip");
       });
 
+      // An optional bonus's note on a save shows as much as that target's save row: no note without its result, the
+      // bonus alone for the outcome, plain totals for the total, expandable rolls for the dice
+      html.querySelectorAll<HTMLElement>(".midi-qol-saves-display [data-midi-save-target]").forEach(line => {
+        const target = (fromUuidSync(line.dataset.midiSaveTarget ?? "", { strict: false }) as TokenDocument.Implementation | null)?.actor;
+        const playerOwned = !!target?.hasPlayerOwner;
+        const owner = !!target?.isOwner;
+        const visible = !this.blind && (owner ? canSeePlayerOutcome(caster, target, game.user) : canSeeSaveResult(caster, playerOwned));
+        if (!visible) return line.closest(".midi-qol-card-note")?.remove();
+        const detail = owner ? "dice" : saveDetail(playerOwned);
+        if (detail === "outcome") line.replaceChildren(...Array.from(line.querySelectorAll("strong")));
+        else if (detail === "total") line.querySelectorAll<HTMLElement>("a.inline-result").forEach(a => a.replaceWith(a.textContent?.trim() ?? ""));
+      });
+
       if (!configSettings.highlightSuccess) stripHighlight(html, ".midi-qol-saves-display .midi-qol-save-class:not(.midi-qol-npc-target)");
       if (!configSettings.highlightSuccess || !showNPCRows) stripHighlight(html, ".midi-qol-save-class.midi-qol-npc-target");
     }
@@ -692,6 +706,9 @@ export function defineChatMessageMidiClass(baseClass: ChatMessage.Implementation
         this._addLegacyCardDataset(html);
         this.maskHiddenRolls(html);
         this.#dropDuplicateActivityIcon(html);
+        // A card note shown on its own (its card can't draw it) names tokens as this user may see them.
+        if (!game.user?.isGM) renameMarkedTokens(html);
+        html.classList.toggle("midi-qol-undone", !!this.getFlag(MODULE_ID, "undone"));
         return applySpeakerNameAfter(enriched, html);
       }
       // Another player's view of a private card; the author of a blind roll still gets the card, its dice masked below.
@@ -717,9 +734,7 @@ export function defineChatMessageMidiClass(baseClass: ChatMessage.Implementation
       this._addLegacyCardDataset(html);
       this.maskHiddenRolls(html);
       this.#dropDuplicateActivityIcon(html);
-      const undoneColor = (this.system as { midi?: { undoneColor?: string } } | undefined)?.midi?.undoneColor;
-      const messageContent = html.querySelector<HTMLElement>(".message-content");
-      if (undoneColor && messageContent) messageContent.style.backgroundColor = undoneColor;
+      html.classList.toggle("midi-qol-undone", !!this.getFlag(MODULE_ID, "undone"));
       if (debugEnabled > 1) log("Finished enriching chat card", Date.now(), this.id);
       return applySpeakerNameAfter(enriched, html);
     }
@@ -827,18 +842,22 @@ function obscureRolls(html: HTMLElement) {
   HIGHLIGHT.forEach(c => html.classList.remove(c));
 }
 
-/** As dnd5e hides target AC from players short of "all", except that a player sees the AC of a token they own. */
+/**
+ * As dnd5e hides target AC from players short of "all", except that a player sees the AC of a token they own. The AC's
+ * modifier icons go with it: their tooltips carry the amounts (with several targets, a target's attack penalty too).
+ */
 function removeUnownedAC(html: HTMLElement) {
   html.querySelectorAll<HTMLElement>(".midi-qol-hits-display li[data-uuid]").forEach(row => {
     const target = fromUuidSync(row.dataset.uuid ?? "");
     const actor = target instanceof TokenDocument ? target.actor : target instanceof Actor ? target : null;
-    if (!actor?.isOwner) row.querySelector(".midi-qol-ac")?.remove();
+    if (!actor?.isOwner) row.querySelectorAll(".midi-qol-ac, .midi-qol-ac-icons").forEach(el => el.remove());
   });
 }
 
 /**
  * Names on a card as the viewing player is shown them: the speaker (header and card text), midi's hit and save rows
- * and dnd5e's summaries.
+ * (also named per viewer by their templates; older cards stored theirs), dnd5e's summaries, a card note's messages and
+ * names marked with `data-midi-token-uuid` (lib/tokenNames.ts).
  */
 function applyPlayerNames(html: HTMLElement) {
   const rename = (el: Element | null, uuid: string | undefined) => {
@@ -847,8 +866,9 @@ function applyPlayerNames(html: HTMLElement) {
   applySpeakerName(html);
   html.querySelectorAll<HTMLElement>(".midi-qol-hits-display li[data-uuid], .midi-qol-save-name[data-uuid]")
     .forEach(el => rename(el.querySelector(".midi-qol-target-name"), el.dataset.uuid));
-  html.querySelectorAll<HTMLElement>(".card-summary[data-target-uuid]")
+  html.querySelectorAll<HTMLElement>(".card-summary[data-target-uuid], .midi-qol-linked-message[data-target-uuid]")
     .forEach(el => rename(el.querySelector(".pill.target"), el.dataset.targetUuid));
+  renameMarkedTokens(html);
 }
 
 /**

@@ -103,16 +103,8 @@ export const defaultTargetConfirmationSettings = {
   gridPosition: { x: 0, y: 0 }
 };
 
-const defaultKeyMapping = {
-  "DND5E.Advantage": "altKey",
-  "DND5E.Disadvantage": "ctrlKey",
-  "DND5E.Critical": "altKey",
-  "DND5E.Versatile": "shiftKey"
-};
-
 class ConfigSettings {
   // fullAuto: boolean = false;
-  addChatDamageButtons: string = "none";
   addDead: string = "none";
   addFakeDice: boolean = false;
   addWounded: number = 0;
@@ -150,7 +142,6 @@ class ConfigSettings {
   defaultOtherActivity: string = "auto";
   averageDamage: string = "none";
   checkTwoHanded: boolean = false;
-  chooseAmmunition: boolean = true;
   collapsibleTargets: boolean = false;
   coloredBorders: string = "none";
   concentrationAutomation: boolean = false;
@@ -158,14 +149,13 @@ class ConfigSettings {
   gmConfirmAmmunition: boolean = false;
   consumeResource: string = "none";
   criticalDamage: string = "default";
-  criticalDamageGM: string = "none";
+  criticalDamageGM: string = "default";
   customSoundsPlaylist: string = "none";
   damageImmunities: string = "none";
   damageImmunityMultiplier: number = 0.0;
   damageResistanceMultiplier: number = 0.5;
   damageVulnerabilityMultiplier: number = 2;
   defaultSaveMult: number = 0.5;
-  saveDamageLine: boolean = true;
   doConcentrationCheck: string = "chat";
   griddedGridless: boolean = false;
   gridlessFudge: number | undefined = 0;
@@ -174,7 +164,6 @@ class ConfigSettings {
   enforceReactions = "none";
   enforceBonusActions = "none";
   enforceSingleWeaponTarget: boolean = false;
-  ghostRolls: boolean = false;
   gmAttackDisplay: string = "full";
   gmDamageDisplay: string = "full";
   gmAttackDsn: string = "show";
@@ -185,14 +174,11 @@ class ConfigSettings {
   gmAutoFastForward: string[] = [];
   gmConsumeResource: string = "none";
   gmDoReactions: string = "all";
-  gmHide3dDice: boolean = false;
   gmRemoveButtons: string = "all";
   preferredGM: string = "";
-  hideRollDetails: string = "none";
   ignoreSpellReactionRestriction: boolean = false;
   itemTypeList: string[] | undefined = undefined;
   keepRollStats: boolean = false;
-  keyMapping = defaultKeyMapping;
   mergeCardCondensed: boolean = false;
   addSheetButtons: boolean = true;
   mergeCardMulti: boolean = false;
@@ -200,6 +186,7 @@ class ConfigSettings {
   midiPropertiesTabRole: number = CONST.USER_ROLES.PLAYER;
   confirmAttackDamage: string = "none";
   highlightSuccess: boolean = true;
+  showAttackRollDetails: boolean = true;
   highLightCriticalAttackOnly: boolean = false;
   markPlayerDefeated: boolean = false;
   markNonPlayerDefeated: boolean = false;
@@ -208,7 +195,6 @@ class ConfigSettings {
   playerRollSaves: string = "none";
   playerSaveTimeout: number = 0;
   playerStatsOnly: boolean = false;
-  quickSettings: boolean = true;
   rangeTarget: string = "none";
   reactionTimeout: number = 10;
   recordAOO = "none";
@@ -227,15 +213,14 @@ class ConfigSettings {
   blindRollDisplay: string = "hidden";
   savesBeforeDamage: boolean = false;
   saveStatsEvery: number = 20;
-  showDSN: boolean = true;
   showFastForward: boolean = false;
   showItemDetails: string = "all";
   showReactionAttackRoll: string = "all";
   showReactionChatMessage: boolean = false;
   singleConcentrationRoll: boolean = true;
   singleDamageCalculation: boolean = true;
-  tempHPDamageConcentrationCheck: boolean = false;
-  concentrationIncapacitatedConditionCheck: boolean = false;
+  tempHPDamageConcentrationCheck: boolean = true;
+  concentrationIncapacitatedConditionCheck: boolean = true;
   toggleOptionalRules: boolean = false;
   useCustomSounds: boolean = true;
   usePlayerPortrait: boolean = false;
@@ -561,7 +546,6 @@ export async function importSettingsFromJSON(json) {
   await game.settings.set("midi-qol", "MidiSoundSettings", removeOldValues(json.midiSoundSettings) ?? {});
   await game.settings.set("midi-qol", "TargetConfirmation", removeOldValues(json.targetConfirmation));
 
-  // await game.settings.set("midi-qol", "AddChatDamageButtons", removeOldValues(json.addChatDamageButtons));
   // await game.settings.set("midi-qol", "ItemRollButtons", removeOldValues(json.itemRollButtons));
   // Migrate imported old fast-forward settings into new array format
   if (json.autoFastForwardAbilityRolls) {
@@ -652,6 +636,7 @@ export let fetchParams = () => {
   if (debugEnabled > 1) debug("Fetch Params Loading");
   const blfxActive = game.modules.get("boss-loot-assets-premium")?.active || game.modules.get("boss-loot-assets-free")?.active;
 
+  const showedAttackRollDetails = configSettings?.showAttackRollDetails ?? true;
   configSettings = game.settings.get("midi-qol", "ConfigSettings");
   if (configSettings.saveDROrder === undefined) configSettings.saveDROrder = "DRSaveDr";
   if (configSettings.singleDamageCalculation === undefined) configSettings.singleDamageCalculation = true;
@@ -680,6 +665,9 @@ export let fetchParams = () => {
   if (configSettings.addFakeDice === undefined) configSettings.addFakeDice = false;
   if (typeof configSettings.gmConsumeResource !== "string") configSettings.gmConsumeResource = "none";
   if (typeof configSettings.consumeResource !== "string") configSettings.consumeResource = "none";
+  // The panel's checkbox used to write optionalRules.enableddbGL, which nothing read
+  if (configSettings.optionalRules && Reflect.get(configSettings.optionalRules, "enableddbGL")) configSettings.enableDDBGL = true;
+  if (configSettings.optionalRules) Reflect.deleteProperty(configSettings.optionalRules, "enableddbGL");
   if (!configSettings.enableDDBGL) configSettings.enableDDBGL = false;
   if (!configSettings.showReactionChatMessage) configSettings.showReactionChatMessage = false;
   //@ts-expect-error legacy boolean value
@@ -698,13 +686,10 @@ export let fetchParams = () => {
   if (configSettings.rollAlternate === false) configSettings.rollAlternate = "off";
   //@ts-expect-error legacy boolean value
   if (configSettings.rollAlternate === true) configSettings.rollAlternate = "formula";
+  if (["adv", "formulaadv"].includes(configSettings.rollAlternate))
+    foundry.utils.logCompatibilityWarning("midi-qol | Move roll formula to tooltip: the Advantage Attribution options are deprecated. The sources of advantage/disadvantage are shown by the info icon on the roll's label.",
+      { since: "midi-qol 14.6.5", until: "midi-qol 14.8", once: true });
   if (configSettings.allowActorUseMacro === undefined) configSettings.allowActorUseMacro = configSettings.allowUseMacro;
-  if (!configSettings.keyMapping
-    || !configSettings.keyMapping["DND5E.Advantage"]
-    || !configSettings.keyMapping["DND5E.Disadvantage"]
-    || !configSettings.keyMapping["DND5E.Critical"]) {
-    configSettings.keyMapping = defaultKeyMapping;
-  }
 
   // MidiSounds.setupBasicSounds();
   // migrateExistingSounds();
@@ -717,46 +702,17 @@ export let fetchParams = () => {
   if (configSettings.paranoidGM === undefined) configSettings.paranoidGM = false;
   if (typeof configSettings.requiresTargets !== "string") configSettings.requiresTargets = "none";
   if (configSettings.tempHPDamageConcentrationCheck === undefined) configSettings.tempHPDamageConcentrationCheck = false;
-  if (configSettings.showDSN === undefined) configSettings.showDSN = true;
   if (configSettings.showFastForward === undefined) configSettings.showFastForward = true;
   if (configSettings.highlightSuccess === undefined) configSettings.highlightSuccess = true;
   if (configSettings.highLightCriticalAttackOnly === undefined) configSettings.highLightCriticalAttackOnly = false;
-  configSettings.optionalRules = foundry.utils.mergeObject({ // eventually split this into mechanics and rules
-    actionSpecialDurationImmediate: false,
-    activeDefence: false,
-    activeDefenceModifier: 12, // default value for active defence modifier
-    activeDefenceShow: "self",
-    activeDefenceDC: true,
-    challengeModeArmor: "none",
-    challengeModeArmorScale: false,
-    checkFlanking: "off",
-    flankingBonus: "advantage",
-    flankingRequiresVisibility: false,
-    checkRange: "longfail",
-    targetMustBeSeen: "enforce",
-    conditionRules: false,
-    coverCalculation: "none",
-    displayBonusRolls: true,
-    criticalNat20: false,
-    criticalSaves: false,
-    distanceIncludesHeight: false,
-    distanceMeasurement: "center",
-    incapacitated: "nothing",
-    invisAdvantage: "RAW2024",
-    hiddenAdvantage: "perObserver",
-    maxDRValue: false,
-    nearbyAllyRanged: 0,
-    nearbyFoe: 5,
-    optionalCritRule: -1,
-    wallsBlockRange: "center",
-    mergeCardMulti: false,
-    displayProperties: true,
-  }, configSettings.optionalRules ?? {}, { overwrite: true, insertKeys: true, insertValues: true });
+  configSettings.optionalRules = foundry.utils.mergeObject(new ConfigSettings().optionalRules, configSettings.optionalRules ?? {}, { overwrite: true, insertKeys: true, insertValues: true });
   // Was read and defaulted under a capitalised key the Rules tab never set (its checkbox saved an unticked false); carry it over once.
   if ("ActiveDefenceDC" in configSettings.optionalRules) {
     configSettings.optionalRules.activeDefenceDC = !!Reflect.get(configSettings.optionalRules, "ActiveDefenceDC");
     Reflect.deleteProperty(configSettings.optionalRules, "ActiveDefenceDC");
   }
+  // Legacy boolean: true checked actions without stopping them
+  if (String(configSettings.optionalRules.incapacitated) === "true") configSettings.optionalRules.incapacitated = "warn";
   if (!configSettings.optionalRules.incapacitated) configSettings.optionalRules.incapacitated = "nothing";
   if (!configSettings.optionalRules.wallsBlockRange) configSettings.optionalRules.wallsBlockRange = "center";
   // v14 Levels has no CONFIG.Levels.API/TemplateHandler; its sight wrapper is one "center" already uses.
@@ -810,7 +766,6 @@ export let fetchParams = () => {
   }
   if (configSettings.itemTypeList === undefined) configSettings.itemTypeList = Object.keys(CONFIG.Item.typeLabels);
   if (configSettings.defaultSaveMult === undefined) configSettings.defaultSaveMult = 0.5;
-  if (configSettings.saveDamageLine === undefined) configSettings.saveDamageLine = true;
   if (configSettings.ignoreSpellReactionRestriction === undefined) configSettings.ignoreSpellReactionRestriction = false;
   if (configSettings.damageImmunityMultiplier === undefined) configSettings.damageImmunityMultiplier = 0.0;
   if (configSettings.damageResistanceMultiplier === undefined) configSettings.damageResistanceMultiplier = 0.5;
@@ -819,19 +774,24 @@ export let fetchParams = () => {
   if (!configSettings.chatCardSummaries) configSettings.chatCardSummaries = "client";
   void applyChatCardSummaries();
   if (configSettings.attackPerTarget === undefined) configSettings.attackPerTarget = false;
+  if (configSettings.showAttackRollDetails === undefined) configSettings.showAttackRollDetails = true;
+  // The cards already on screen show or drop the details as they are drawn again
+  if (game.ready && configSettings.showAttackRollDetails !== showedAttackRollDetails)
+    for (const message of game.messages?.contents.slice(-100) ?? []) void ui.chat?.updateMessage(message);
   if (configSettings.autoRemoveTemplate === undefined) configSettings.autoRemoveTemplate = true;
   if (configSettings.autoRemoveInstantaneousTemplate === undefined) configSettings.autoRemoveInstantaneousTemplate = false;
   if (configSettings.removeConcentrationEffects === undefined) configSettings.removeConcentrationEffects = "effects";
   if (configSettings.doConcentrationCheck === undefined) configSettings.doConcentrationCheck = configSettings.removeConcentration ? "chat" : "none";
   if (configSettings.undoWorkflow === undefined) configSettings.undoWorkflow = false;
   if (configSettings.undoChatColor === undefined) configSettings.undoChatColor = "Delete";
+  // Undone cards are coloured by CSS from this, so a change recolours them all.
+  document.documentElement.style.setProperty("--midi-qol-undone-color", configSettings.undoChatColor === "Delete" ? "transparent" : configSettings.undoChatColor);
   if (configSettings.enforceSingleWeaponTarget == undefined) configSettings.enforceSingleWeaponTarget = false;
   if (configSettings.confirmAmmunition === undefined) configSettings.confirmAmmunition = false;
   if (configSettings.gmConfirmAmmunition === undefined) configSettings.gmConfirmAmmunition = false;
   if (configSettings.playerRollSaves === "noneDialog") configSettings.playerRollSaves = "noneDialogPrivate";
   // Removed: one damage card now serves the GM and the players
   Reflect.deleteProperty(configSettings, "hidePlayerDamageCard");
-  configSettings.quickSettings = true;
   //@ts-expect-error have removed the definition
   if (configSettings.averageNPCDamage !== undefined) {
     //@ts-expect-error delete the obsolete setting;
@@ -873,7 +833,8 @@ export let fetchParams = () => {
   if (configSettings.collapsibleTargets === undefined) configSettings.collapsibleTargets = true;
   if (configSettings.displayProperties === undefined) configSettings.displayProperties = true;
   criticalDamage = configSettings.criticalDamage ?? "default";
-  criticalDamageGM = configSettings.criticalDamageGM ?? criticalDamage;
+  if (!configSettings.criticalDamageGM || configSettings.criticalDamageGM === "none") configSettings.criticalDamageGM = criticalDamage;
+  criticalDamageGM = configSettings.criticalDamageGM;
   nsaFlag = game.settings.get("midi-qol", "showGM");
   const previousColoredBorders = coloredBorders;
   coloredBorders = configSettings.coloredBorders ?? "none";
@@ -886,7 +847,6 @@ export let fetchParams = () => {
     });
   }
   itemRollButtons = false; // game.settings.get("midi-qol", "ItemRollButtons");
-  if (configSettings.addChatDamageButtons === undefined) configSettings.addChatDamageButtons = "none";
 
   // Migrate old fast-forward settings to new granular arrays
   if (!fastForwardMigrationDone) {
@@ -1058,6 +1018,12 @@ export let fetchParams = () => {
       await migrateDisplaySaveDC(configSettings, "startup");
       await game.settings.set("midi-qol", "ConfigSettings", configSettings);
     });
+  }
+
+  // Settings added since the world last saved them, or left out of an imported file, take their defaults
+  const defaults = new ConfigSettings();
+  for (const key of Object.keys(defaults) as (keyof ConfigSettings)[]) {
+    if (configSettings[key] === undefined) Object.assign(configSettings, { [key]: foundry.utils.deepClone(defaults[key]) });
   }
 
   updateFlankingStatusEffects();
@@ -1334,6 +1300,12 @@ export const onUseMacroOptions = keysToExtendedOptionsObj("onUseMacroOptions", [
   "postTeleport",
   "isDamaged",
   "all"
+]);
+
+export const ammunitionPerTargetOptions = keysToOptionsObj("AmmunitionPerTargetOptions", [
+  "default",
+  "use",
+  "target"
 ]);
 
 export const confirmTargetOptions = keysToOptionsObj("ConfirmTargetOptions", [
@@ -1772,16 +1744,6 @@ export const registerSettings = function () {
 
   registerHiddenGroundCueSetting();
   registerChatCardSummariesSetting();
-  game.settings.register("midi-qol", "showAttackRollDetails", {
-    name: i18n("midi-qol.ShowAttackRollDetails.Name"),
-    hint: i18n("midi-qol.ShowAttackRollDetails.Hint"),
-    scope: "client",
-    config: true,
-    type: Boolean,
-    default: true,
-    // The cards already on screen show or drop the details as they are drawn again
-    onChange: () => { for (const message of game.messages?.contents.slice(-100) ?? []) void ui.chat?.updateMessage(message); }
-  });
 
   game.settings.register("midi-qol", "EnableWorkflow", {
     name: i18n("midi-qol.EnableWorkflow.Name"),

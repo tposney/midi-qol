@@ -20,7 +20,7 @@
             <img class="midi-qol-target-img" src="{{hit.img}}" />
             <div class="name-stacked">
               {{!-- Players are shown the name-hiding module's name, set at display time. --}}
-              <span class="midi-qol-target-name title" id="{{hit.target.id}}">{{hit.gmName}}</span>
+              <span class="midi-qol-target-name title" id="{{hit.target.id}}">{{midi-token-name hit.actorUuid hit.gmName}}</span>
             </div>
             {{#if hit.acIcons.length}}
             <span class="midi-qol-ac-icons">
@@ -43,7 +43,7 @@
             <i class="fas fa-question"></i>
             <img class="midi-qol-target-img" src="{{this.img}}" />
             <div class="name-stacked">
-              <span class="midi-qol-target-name title" id="{{this.id}}">{{this.name}}</span>
+              <span class="midi-qol-target-name title" id="{{this.id}}">{{midi-token-name this.uuid this.name}}</span>
             </div>
           </li>
           {{/each}}

@@ -1,15 +1,38 @@
-### 14.6.5 (unreleased)
+### 14.6.5
 
 * Compatibility: dnd5e 6.0.x only (maximum 6.0.999). dnd5e 6.1 changes damage application in ways that break midi's damage card; support follows in a later release.
+* Compatibility: requires DAE 14.6.4.
 * Added: `MidiQOL.addCardNote(card | uuid | workflow, html, { anchor, position, key, visibility | whisper })` / `removeCardNote(card, key)`: a note on a usage card, drawn where it names (`anchor`: buttons, attack, hits, damage, otherDamage, bonusDamage, utility, saves, top, bottom; `position`: before, prepend, append, after) and hidden in the log. A note is a chat message linked to the card: whispered notes show only to their recipients, links, inline rolls and enrichers work, and it is deleted with the card. Usage cards are drawn from their data, so splicing text into `content` no longer works.
-* Added: card notes drawn by your code: `MidiQOL.registerCardNoteRenderer(kind, renderer)` draws notes added with `{ kind, data }`, for each viewer whenever the card is drawn, from the note's data and its own messages (rolls made with `MidiQOL.cardNoteMessageData(note, role)` as their message data: hidden in the log, deleted with the note, drawn on the card with `MidiQOL.renderLinkedMessage`, masked as midi masks dnd5e's summaries; `MidiQOL.visibleRollTotal` gives a roll's total only if the viewer may see it). A note whose renderer isn't registered shows its html. Contested rolls are drawn this way (`lib/contestedRoll.ts`).
+* Added: card notes drawn by your code: `MidiQOL.registerCardNoteRenderer(kind, renderer)` draws notes added with `{ kind, data }`, for each viewer whenever the card is drawn, from the note's data and its own messages (rolls made with `MidiQOL.cardNoteMessageData(note, role)` as their message data: hidden in the log, deleted with the note, drawn on the card with `MidiQOL.renderLinkedMessage`, masked as midi masks dnd5e's summaries; `MidiQOL.visibleRollTotal` gives a roll's total only if the viewer may see it). A note whose renderer isn't registered shows its html. Contested rolls are drawn this way.
+* Added: token names as each viewer may see them (midi's player-name rules): `@MidiTokenName[uuid]{name}` in enriched text (card notes, messages, journals), `{{midi-token-name uuid name}}` in templates, `MidiQOL.tokenName(uuid)`; markup with `data-midi-token-uuid` is renamed on midi's cards.
 * Fixed: saves and checks shown on their use card also popped up as chat notifications.
+* Fixed: a critical hit whose damage had parenthesised dice (e.g. `1d8 + (2d6)`) failed and the use never finished (dnd5e 6 bug, worked around).
+* Fixed: a damage roll that fails stops the use with a message instead of leaving it waiting.
 * Fixed: with *Save summary style* midi, dnd5e's summaries of rolls midi's saves section doesn't show (e.g. another module's check on the use card) were hidden.
 * Changed: text written to a usage card's `content` becomes a note at the bottom of the card (with a console warning) instead of replacing the card.
 * Fixed: `MidiQOL.contestedRoll` results were not shown on the item card, and its checks could be hidden both from the card and the log. The card now shows the contest as soon as it starts: each side's check, or who it is still waiting for ("Waiting for actor1 (Athletics)"), then the result, which follows a reroll; if a roll is never made it says so. A total is shown only to viewers who can see that roll.
 * Fixed: `MidiQOL.contestedRoll` ignored its `rollOptions` (for both rolls, or per side in `source`/`target`): `advantage`, `disadvantage`, `fastForward` and `rollMode` now reach the checks.
-* Fixed: undo did not colour the undone workflow's card.
-* Fixed: an actor with a `flags.midi-qol.optional.*` change set to `ItemMacro` threw `DAE is not defined` when the world loaded (its first preparation runs before DAE's setup), leaving the actor's data incomplete.
+* Fixed: undo did not colour the undone workflow's card; a change to *Undo chat colour* now recolours cards already undone.
+* Changed: undo removes the use's card and every message linked to it (saves, damage cards, card notes, uses made from it) instead of guessing from who spoke; an undone card shows no buttons.
+* Fixed: a second quick use of the same item couldn't be undone.
+* Changed: undo data is much smaller (a repeat attack's entry is about a tenth of the size), and undo restores only the items and effects that changed.
+* Fixed: `MidiQOL.addUndoChatMessage` did nothing on a player's client.
+* Fixed: the AC modifier icons on a hit row (cover, reaction, a target's attack penalty) were different sizes and sat at different heights.
+* Fixed: players who may not see a target's AC (dnd5e's *Attack Result Visibility*) still saw its modifier icons, whose tooltips give the amounts (cover, a reaction, and with several targets a target's attack penalty); they are now hidden with the AC.
+* Changed: an attack roll's expanded breakdown is dnd5e's: the dice, then each modifier labelled (Proficiency +6, Blurred Form −2), where it showed only the dice. The sources of advantage and disadvantage above it are named ("Nearby foe") instead of showing internal keys.
+* Fixed: *Move roll formula to tooltip* ignored its advantage attribution options: a roll's breakdown listed the sources of advantage/disadvantage whatever it was set to. They are listed there only with *Advantage Attribution* or *Formula -> tooltip + adv attribution*; the info icon on the roll's label shows them either way.
+* Deprecated: *Move roll formula to tooltip*'s advantage attribution options (the label's info icon shows the same sources). A world using one gets a deprecation warning; they are due to be removed in 14.8.
+* Fixed: an attack rolled without the roll dialog spent the actor's first ammunition (even one with none left) instead of the activity's chosen ammunition, while the card named the chosen one.
+* Fixed: an actor with a `flags.midi-qol.optional.*` change set to `ItemMacro` threw `DAE is not defined` when the world loaded, leaving the actor's data incomplete.
+
+**Settings**
+* Fixed: settings added since a world last saved midi's settings, or missing from an imported settings file, were treated as off (e.g. the condition editor, sheet buttons, waiting for damage application); they now take their defaults.
+* Fixed: quick settings *GM Attack/Damage: Manual*, *Player Attack/Damage Roll: Manual* and *No Hits/Saves/damage application automation* set values the config panel doesn't offer; *Turn on Reaction processing* no longer changes how saves are rolled.
+* Changed: the Rules tab starts with *Rules always applied*: *When an Incapacitated actor takes an action*, *Check weapon range when attacking*, *Targets you can see* (moved from Mechanics) and *Force vision when checking*, which apply whether or not optional rules are enabled. The Vitality settings, which need optional rules enabled, are shown with them.
+* Changed: *When an Incapacitated actor takes an action*: the option *Do nothing* is now *Allow it*.
+* Fixed: the *Enable ddb-game-log support* checkbox did nothing; it now turns the integration on, and a world where it was ticked has it on.
+* Changed: new worlds default to *Temporary HP Concentration Check* and *Remove concentration when incapacitated status applied* on (the rules as written), and GM critical damage to *DND5e Settings Only* (it was a blank choice, so the GM's critical hits didn't double damage dice); a world with the blank choice saved follows the player setting.
+* Changed: the *Full Automation* and *No Automation* quick settings are rebuilt for this version. Full Automation now uses the 2024 invisibility rules, hiding per observer, GM damage rolled on a hit, and no target confirmation.
 
 **Teleport activity**
 * Added: *Teleport* option *During the Use*: the teleport is planned as part of the use, after its effects and damage; dismiss the plan and the card keeps its Teleport button.
@@ -34,6 +57,7 @@ Who sees what of a card's saves and checks:
 * With *Auto Check Saves* off, a save or check rolled from the card's button is recorded in midi's saves section: the total and result against the DC, a reroll replacing the row, a row for a creature that wasn't a target. Display only.
 * GM setting *Chat card summaries*: Each user's choice/Always/Never forces dnd5e's *Summarize chat cards* for every user (a user's own choice is put back afterwards).
 * Fixed: a check or save the activity's user rolls for its own creature (Hide's Stealth, Search's Perception, Influence…) ignored the Alt/Ctrl (advantage/disadvantage) and Shift keys held when it was used, including an action chosen in Generic Actions; the card's tooltip names the key press.
+* Removed: setting *Show damage after each save*. A target's damage is on the damage card (with its save and resistance marks, and the player view's own settings) and in dnd5e's damage tray.
 
 **Conditions**
 * Added: optional rule *Apply condition rules* (off by default): the condition rules dnd5e doesn't apply, however the condition is set (token HUD, sheet, activity). Replaces CPR 1's *Apply Midi-QOL Condition Effects*.
@@ -50,6 +74,7 @@ Who sees what of a card's saves and checks:
 * Changed: *Dim lower floors through surface holes* is replaced by the player setting *Mark lower floors where creatures can't be seen*. Through an opening you see the floor below, but not always the creatures on it: midi marks the squares where a creature would be hidden from your selected token, in the style (tint, dim, hatch, outline), colour and opacity you choose.
 
 **Activities**
+* Added: *Statuses Applied* on the activity sheet (midi-qol tab › Use): statuses put on the targets directly, as the token HUD does, rather than an effect carrying them. Each can have extra special durations and an On Save choice. They go to the same targets as the activity's effects (hit, failed save, activation condition; also from the item's other activity or an ammunition activity) and end with the caster's concentration. A creature that already has the status keeps it.
 * Fixed: an effect or status applied "whatever the save" also went to creatures an attack missed; it now goes only to the creatures hit.
 * Changed: *Statuses Applied*: *On Save* is a choice, *If the save fails* or *Whatever the save*.
 * Changed: the *Midi Overtime* tab explains which effect change runs an over-time activity (`flags.midi-qol.ActivityOverTime` set to its identifier); marking an activity *Is Over Time* alone does nothing.
@@ -63,16 +88,22 @@ Who sees what of a card's saves and checks:
 * Fixed: *Un-target at end of turn* (dead targets) cleared every target at 0 hit points shortly after any use, so a Healer's Kit or Spare the Dying used on a downed creature lost its target; only the finished use's targets are cleared.
 
 **Flanking and attack rolls**
+* Added: an attack per target works with area templates and emanations (e.g. a cone that makes an attack roll against each creature in it). The use places its template, chooses its targets and spends its cost; each target then gets its own use and card, linked to the first card, which shows each target's hit or miss as its attack resolves. The first use's `RollComplete` comes after the per-target uses, with no attack roll.
+* Added: attack activity *Ammunition* (weapons that use ammunition): one per attack roll (default), one per use, or one per target. With an attack per target, later targets use the first target's ammunition. A target's attack that can't be made waits at its attack button; cancelling it or deleting its card skips the remaining targets.
 * Changed: flanking applies only to a melee attack roll against a single target (with *Roll a separate attack per target*, each roll counts).
 * Changed: a fixed flanking bonus (+1 to +5) is added to the attack roll, labelled Flanking or Flanked, instead of lowering the target's AC.
 * Changed: against a single target, the target's granted attack bonus (`flags.midi-qol.grants.attack.bonus`) is part of the attack roll instead of lowering its AC; against several targets it still applies per target.
 * Changed: changing the flanking settings clears existing Flanking and Flanked statuses.
-* Added: attack roll details (player setting *Show attack roll details*, on by default): icons beside the total for its unusual parts (flanking, a granted bonus, an effect's bonus shown with the effect's image, exhaustion), green for a bonus and red for a penalty, and a tooltip on the total listing every part of the roll and any advantage or disadvantage.
+* Added: attack roll details (Workflow › Hits *Show attack roll details*, on by default): icons beside the total for its unusual parts (flanking, a granted bonus, an effect's bonus shown with the effect's image, exhaustion), green for a bonus and red for a penalty, and a tooltip on the total listing every part of the roll and any advantage or disadvantage.
 
 **Macros**
+* Fixed: an `onUseMacroName` effect change naming `ActivityMacro`, on an effect applied by an item's second or later activity, ran the item's first activity's macro instead of the effect's own activity's.
+* Fixed: DAE's field browser listed `flags.midi-qol.optional.NAME.displayChatCard` instead of `displayBonusRolls`.
+* Added: `MidiQOL.hasUsedAction(actor)` and `MidiQOL.setActionUsed(actor)`, alongside the reaction and bonus action helpers.
+* Added: hook `midi-qol.conditionData` to add data that conditions can read.
 * Fixed: an effect change `flags.midi-qol.onUseMacroName` with `ItemMacro` on an aura's copy (Aura Effects) pointed at the aura effect rather than its item, so the macro never ran; it now runs the item's macro.
 * Fixed: a reaction passed to the `chooseReactions` socket as an object (`{itemName, id, uuid, …}`, the older form) made the reaction dialog fail to render, so nothing was offered; it is looked up by its uuid.
-* Added: while CAT 0.1.3 or older is active, midi guards its effect-origin lookup against cast activities (which have no effects in dnd5e 6): an item with one made CAT throw for every effect pointing at it.
+* Fixed: with CAT 0.1.3 or older active, an item with a cast activity made CAT throw an error for every effect pointing at it.
 * Fixed: an ammunition's onUse macros at the workflow-state passes (e.g. `postAttackRollComplete`, `preDamageRollComplete`) got the weapon as the macro item, so its `ItemMacro` never ran; the macro item is now the ammunition.
 * Changed: a blank onUse macro name is the item's own macro (the used activity's, else the item's; for an effect change, the effect's activity's, else its item's), and an item with a macro but no onUse macros runs the macro after active effects. An onUseMacroName effect change with no pass is ignored and reported.
 
@@ -82,7 +113,6 @@ Who sees what of a card's saves and checks:
 * Added: two options for *Hidden attackers have adv/disadv on attacks*: *Hiding is Invisible to whoever doesn't perceive it* (the default, replacing *Check 'Hidden' Status*), and the same with a house rule where a passive Perception at least the hide's DC sees through it. A hiding creature (dnd5e's Hiding condition) is then Invisible, on the map and for attack rolls, to every creature that doesn't perceive it. These perceive it: the hider and its allies; a token with vision disabled, unless *Force vision when checking* is on; anything that sees invisible creatures (truesight, see invisibility, blindsight, tremorsense); and, with the house rule, a creature whose passive Perception is at least the DC. The DC is the Hide action's Stealth total, or 15 for Hiding set from the token HUD.
 * Added: a status *Invisible (until it attacks, casts a spell or deals damage)*, which ends itself the way the Invisibility spell does. The token shows a single Invisible icon, and removing Invisible from the sheet or token HUD also removes this status.
 * Changed: the *Invisibility* sample spell applies Invisible this way; it ends when the target attacks, casts a spell or deals damage, ending the spell.
-* Added: *Statuses Applied* on the activity sheet (midi-qol tab › Use): statuses put on the targets directly, as the token HUD does, rather than an effect carrying them. Each can have extra special durations and an On Save choice. They go to the same targets as the activity's effects (hit, failed save, activation condition; also from the item's other activity or an ammunition activity) and end with the caster's concentration. A creature that already has the status keeps it.
 
 **Damage**
 * Fixed: damage a creature absorbs (Damage Absorption) shows as healing on the damage card; it was applied correctly but shown as no change.
@@ -93,14 +123,22 @@ Who sees what of a card's saves and checks:
 * Added: setting *Enforce death saves* (Mechanics, off by default): damage to a character at 0 hit points is a failed death save, two for a critical hit, and death if it is at least the character's hit point maximum. Undo on the damage card restores the count and, after a death, the unconscious status. `flags.midi-qol.noDeathSaveFailureFromDamage` exempts a creature.
 
 **Chat cards**
+* Fixed: the lines between a card's sections were near-white in dark mode. They are now dnd5e's dotted divider (light or dark with the theme), and only between the attack, damage, utility and saves groups, not between an attack and its hits or between damage rolls. The dice tooltip, advantage tooltip and contested roll lines follow the theme too.
 * Fixed: a card no longer shows the same picture twice when the activity's image is its item's.
 * Added: follow-up buttons. An activity marked *Follow-up Button* (with an optional *Follow-up Condition*) appears as a button on the card when another activity of its item is used, for the user's owners and the GM. Clicking it runs the activity at its *Follow-up Targets*: by default the creatures an attack hit, else all the targets; or the user, the hit or missed targets, or the failed or successful saves. A critical stays a critical, its uses are spent, and its card is linked to the first. Macros can offer any activity with `MidiQOL.addFollowUp(workflow, activity, {label, targets})`.
-* Added: hook `midi-qol.conditionData` to add data that conditions can read.
 * Changed: a damage card is linked to the card it came from and deleted with it, and no longer repeats its speaker and whisper recipients.
 * Changed: the card of an item used inside another use by the same actor (e.g. CPR's Sneak Attack spending its use) is linked to that use's card and deleted with it, unless that use is aborted.
 * Changed (breaking): Apply on dnd5e's damage tray goes through midi: damage hooks and macros run (CAT/CPR damage reductions apply) and the linked damage card can undo it.
 
 **Rolls and saves**
+* Fixed: `flags.midi-qol.noAdvantage.check.*` and `noDisadvantage.check.*` didn't apply to skill checks using that ability (they did to tool checks).
+* Changed: `flags.midi-qol.deathSaveBonus` is deprecated: an effect using it now sets dnd5e's `system.attributes.death.roll.bonus`, so dice work; set on an actor directly it still works, with a warning, until 14.6.10.
+* Added: `flags.midi-qol.DR.save`, `.other`, `.util`, `.abil`, `.ench` and `.summ` reduce damage from activities of that type (they did nothing).
+* Changed: `flags.midi-qol.DR.{damage type}` (including `DR.healing` and `DR.temphp`) and `DR.all` are no longer offered in DAE's field browser: they only set dnd5e's `system.traits.dm.amount.{type}` and midi's `system.traits.dm.midi.all`, which are offered instead. Effects using them still work.
+* Fixed: DAE's field browser offered `system.traits.dm.{damage type}` and `system.traits.dm.midi.healing`, which don't exist, instead of `system.traits.dm.amount.{type}`.
+* Removed: `flags.midi-qol.advantage.damage.*` and `magicResistance.save.all` / `.check.all` / `.skill.all` from the DAE field browser; midi never read them.
+* Changed: an optional bonus's terms are named after the bonus, so an attack roll's breakdown shows e.g. "+5 Lucky Strike" rather than "+5 Bonus" (attack, save, check and AC bonuses; damage terms keep their damage type).
+* Changed: *Show before and after optional bonus chat card*: an optional bonus to a roll made for a use card (attack, damage, a target's save or check, the AC an attack is compared with) is a one-line note on the card beside the roll it changed (e.g. "Lucky Strike: 17 → 22", each total an inline roll that expands to its dice), instead of a message repeating both rolls. A save's note shows each viewer as much as that target's save row: expandable totals with the dice, plain totals with the total only, the bonus's name with the outcome only, nothing when the result is hidden. A save's before/after message used to be posted as a second save message, so with *Summarize chat cards* on it was never shown.
 * Fixed: an "ActiveEffect … does not exist" error when one use ended an effect lasting until a Bonus Action, Reaction or Turn Action.
 * Fixed: optional bonuses limited by `@resources.legres.value` or `@resources.legact.value` (e.g. Legendary Resistance) now spend a use; they could be used without limit.
 * Changed: an over-time roll's card shows the effect's icon and name once, with the activity type (Damage, Saving Throw) beneath.
@@ -108,7 +146,7 @@ Who sees what of a card's saves and checks:
 * Fixed: Dice So Nice's *Hide NPC rolls* and *Disabled during combat* now apply to the dice midi shows (attacks, damage, saves, checks, bonus rerolls), including dice other modules show through `MidiQOL.displayDSNForRoll`, which now takes the rolling actor.
 
 **New sample items**
-* Most of these came about because I needed them for my ember game and could not find another source. These are all AI generated and I'm confident that over time CPR/MISC/Gambits will come up with their own and better implementations. However I found them useful so thought I'd add them for anyone that needs them. Most of these use Covens Automation Toolkit (CAT) so make sure it is installed if you want to use them. I suggest making midi's sample items the last compendium to check when applying medkit via CAT.
+* Most of these came about because I needed them for my ember game and could not find another source. These are all AI generated and I'm confident that over time CPR/MISC/Gambits will come up with their own and better implementations. However I found them useful so thought I'd add them for anyone that needs them. Most of these use Coven's Automation Toolkit (CAT) so make sure it is installed if you want to use them. I suggest making midi's sample items the last compendium to check when applying medkit via CAT.
 * 2024 actions (sample items › Actions, need CAT): Attack, Check Cover, Generic Actions, Hide, Influence, Knock Out, Magic, Mount, Ready, Search, Squeeze, Stabilize, Study, Suffocation, Underwater. *Generic Actions* offers all of them and, with CPR, CPR's actions too (an action both offer is listed twice, tagged with its source). To give an action options for every player, import it from the compendium into the world's Items and set them there: Generic Actions uses those options with the current compendium version.
 * *Hide* (2024 rules): a DC 15 Stealth check; on a success you are hiding (dnd5e's Hiding condition), with your total as the DC to find you (see *Invisible and hidden*). It ends when you attack, cast a spell with a Verbal component, or are found. With CPR, CPR's hide applies its effect. *Search*: a Perception check finds hidden enemies in line of sight whose DC it meets; by default the GM confirms who is found (Search's *GM Confirms* option).
 * The actions' result messages (Hide's DC, Search, Check Cover, Influence) are deleted with the action's card, and a chosen action with its Generic Actions card. For macros: any message flagged `flags.midi-qol.origin` with a card's id is deleted with that card.

@@ -8,7 +8,7 @@ import { DamageDescriptionObject, Workflow } from "./Workflow.js";
 import { applyFailedDeathSaves, bonusCheck, revertFailedDeathSaves } from "./patching.js";
 import { RollModifierTracker } from "./lib/RollModifierTracker.js";
 import { actorEmbeddedByPath, repointCopiedDependentsSource } from "./lib/MidiDependentsRegistry.js";
-import { queueUndoData, startUndoWorkflow, updateUndoChatCardUuids, _removeMostRecentWorkflow, _undoMostRecentWorkflow, undoTillWorkflow, _queueUndoDataDirect, updateUndoChatCardUuidsById } from "./undo.js";
+import { queueUndoData, startUndoWorkflow, _removeMostRecentWorkflow, _undoMostRecentWorkflow, undoTillWorkflow, _queueUndoDataDirect, addUndoChatCards } from "./undo.js";
 import { TroubleShooter } from "./apps/TroubleShooter.js";
 import { StatUpdateMessage } from "./RollStats.js";
 import { DamageApplicationOptions, DamageDescription, DamageListEntry, DamageModDisplay, MonksTokenBarRequest, MoveTokenOptions, RollDialogConfig, RollMessageConfig, RollProcessConfig, SaveDetails, TeleportTokenDestination } from "../globals.js";
@@ -71,8 +71,7 @@ export let setupSocket = () => {
   socketlibSocket.register("updateItems", updateItems);
   socketlibSocket.register("recordStats", GMrecordStats)
   socketlibSocket.register("saveAllStats", GMsaveAllStats)
-  socketlibSocket.register("updateUndoChatCardUuids", updateUndoChatCardUuids);
-  socketlibSocket.register("updateUndoChatCardUuidsById", updateUndoChatCardUuidsById);
+  socketlibSocket.register("addUndoChatCards", addUndoChatCards);
   socketlibSocket.register("removeActionBonusReaction", removeActionBonusReaction);
   socketlibSocket.register("rollActionSave", rollActionSave);
   socketlibSocket.register("toggleStatusEffect", _toggleStatusEffect);
@@ -154,8 +153,7 @@ export class SaferSocket {
       case "undoMostRecentWorkflow":
       case "undoTillWorkflow":
       case "saveAllStats":
-      case "updateUndoChatCardUuids":
-      case "updateUndoChatCardUuidsById":
+      case "addUndoChatCards":
       case "deleteEffectsByUuid":
       default:
         error(`Non-GMs are not allowed to call ${handler}`);

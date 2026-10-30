@@ -20,21 +20,24 @@
 
 {{> "dnd5e.card-face" }}
 
-{{!-- Notes placed before midi's buttons (after dnd5e's, which the card face draws). --}}
+{{!-- Notes on midi's buttons (after dnd5e's, which the card face draws): before them here; prepend and append inside
+  the button block, before the first and after the last; after them, ahead of the results. With no buttons, all here. --}}
 {{#each midi.notes.buttons.before}}{{{ this }}}{{/each}}
+{{#unless midi.hasButtons}}
 {{#each midi.notes.buttons.prepend}}{{{ this }}}{{/each}}
 {{#each midi.notes.buttons.append}}{{{ this }}}{{/each}}
 {{#each midi.notes.buttons.after}}{{{ this }}}{{/each}}
+{{/unless}}
 
 {{#unless midi.hasButtons}}
 {{#each summaries}}
-<div class="card-summary" data-message-id="{{ id }}" data-target-uuid="{{ token.uuid }}">{{{ html }}}
-  {{#if midiDamageLine}}<div class="midi-qol-save-damage">{{ midiDamageLine }}</div>{{/if}}</div>
+<div class="card-summary" data-message-id="{{ id }}" data-target-uuid="{{ token.uuid }}">{{{ html }}}</div>
 {{/each}}
 {{/unless}}
 
 {{#if midi.hasButtons}}
 <div class="card-buttons midi-buttons">
+  {{#each midi.notes.buttons.prepend}}{{{ this }}}{{/each}}
 
   {{#if midi.buttons.attack}}
   {{#if midi.mergeCardMulti}}
@@ -96,6 +99,8 @@
     {{/if}}
   </div>
   {{/if}}
+  {{#each midi.notes.buttons.append}}{{{ this }}}{{/each}}
+  {{#each midi.notes.buttons.after}}{{{ this }}}{{/each}}
 
   {{!--
     The roll sections, rendered from `system.midi.sections` rather than spliced into `content`.
@@ -133,8 +138,7 @@
 {{!-- dnd5e's save/check summaries follow midi's saves heading, not above the rolls as on dnd5e's card; outside
   .card-buttons, whose dnd5e styling stretches every button in it. --}}
 {{#each summaries}}
-<div class="card-summary" data-message-id="{{ id }}" data-target-uuid="{{ token.uuid }}">{{{ html }}}
-  {{#if midiDamageLine}}<div class="midi-qol-save-damage">{{ midiDamageLine }}</div>{{/if}}</div>
+<div class="card-summary" data-message-id="{{ id }}" data-target-uuid="{{ token.uuid }}">{{{ html }}}</div>
 {{/each}}
 {{/if}}
 

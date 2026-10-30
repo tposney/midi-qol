@@ -115,6 +115,11 @@
       <div class="notes midi-qol-faint">{{{localize "midi-qol.HighLightCriticalAttackOnly.Hint"}}}</div>
     </div>
     <div class="form-group">
+      <label>{{localize "midi-qol.ShowAttackRollDetails.Name"}}</label>
+      <input type="checkbox" name="showAttackRollDetails" data-dtype="Boolean" {{checked configSettings.showAttackRollDetails}} />
+      <div class="notes midi-qol-faint">{{{localize "midi-qol.ShowAttackRollDetails.Hint"}}}</div>
+    </div>
+    <div class="form-group">
       <label>{{localize "midi-qol.AutoCheckHit.Name"}}</label>
       <select name="autoCheckHit" data-dtype="String">
         {{midiSelectOptions autoCheckHitOptions selected=configSettings.autoCheckHit localize=true}}
@@ -187,12 +192,6 @@
       </select>
       <div class="notes midi-qol-faint">{{localize "midi-qol.SaveSummaryStyle.Hint"}}</div>
     </div>
-    <div class="form-group">
-      <label>{{localize "midi-qol.SaveDamageLine.Name"}}</label>
-      <input type="checkbox" name="saveDamageLine" data-dtype="Boolean" {{checked configSettings.saveDamageLine}} />
-      <div class="notes midi-qol-faint">{{localize "midi-qol.SaveDamageLine.Hint"}}</div>
-    </div>
-
     <div class="form-group">
       <label>{{localize "midi-qol.DefaultSaveMult.Name"}}</label>
       <input type="number" step="any" name="defaultSaveMult" value="{{configSettings.defaultSaveMult}}" />

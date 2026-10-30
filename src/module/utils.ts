@@ -17,6 +17,7 @@ import Token = foundry.canvas.placeables.Token;
 import { AnyMutableObject, AnyObject } from "fvtt-types/utils";
 import { rendersFromModel } from "./ChatClasses/UsageCardMessage.js";
 import { contestedRoll } from "./lib/contestedRoll.js";
+import { addCardNote } from "./lib/cardNotes.js";
 
 const { ApplicationV2, DialogV2, HandlebarsApplicationMixin } = foundry.applications.api;
 
@@ -778,7 +779,7 @@ export async function processDamageRoll(workflow: Workflow, defaultDamageType: s
   // Explicitly typed because it only ever gets called with this, currently
   const toCheck: ("combinedDamage" | "otherDamage")[] = ["combinedDamage"];
   if (!configSettings.singleConcentrationRoll && workflow.otherDamageRolls) toCheck.push("otherDamage");
-  let chatCardUuids: string[] = [];
+  // Damage cards are linked to the usage card (system.origin), so undo finds them.
   for (let selector of toCheck) {
     workflow.damageList = [];
     preDamageList.forEach(damageEntry => {
@@ -808,15 +809,6 @@ export async function processDamageRoll(workflow: Workflow, defaultDamageType: s
       flagTags: workflow.flagTags,
       updateOptions: { noConcentrationCheck: workflow?.workflowOptions?.noConcentrationCheck ?? false, awaitDamageApplication: configSettings.waitForDamageApplication },
       forceApply: false
-    }).then(cardIds => {
-      if (cardIds) chatCardUuids.push(...cardIds);
-      if (workflow && configSettings.undoWorkflow) {
-        // Assumes workflow.undoData.chatCardUuids has been initialised
-        if (workflow.undoData) {
-          workflow.undoData.chatCardUuids = workflow.undoData.chatCardUuids.concat(chatCardUuids);
-          unTimedExecuteAsGM("updateUndoChatCardUuids", workflow.undoData);
-        }
-      }
     });
   }
   if (debugEnabled > 1) debug(`process damage roll complete for ${workflow.item.name} `, workflow.damageList)
@@ -1118,7 +1110,7 @@ export function midiCustomEffect(actor: Actor.Implementation, change: MidiChange
     if (args[0] === "ActivityMacro" || args[0] === MQActivityMacroLabel) {
       if (change.effect?.flags.dae?.activity) args[0] = `ActivityMacro.${change.effect.flags.dae.activity}`;
       // @ts-expect-error no dnd5e-types
-      if (change.effect.transfer) args[0] = `ActivityMacro.${change.effect.parent!.system.activities.contents[0].uuid}`;
+      else if (change.effect.transfer) args[0] = `ActivityMacro.${change.effect.parent!.system.activities.contents[0].uuid}`;
       else {
         const origin = fromUuidSync(change.effect?.origin) as Item.Implementation | ActiveEffect.Implementation | Activity | undefined;
         if (origin instanceof Item) {
@@ -5214,10 +5206,11 @@ async function displayBeforeAfterRolls(data: {
 }) {
   let { originalRoll, newRoll, rollMode, title, player, options, actor } = data;
   options ??= {};  //TODO match the renderRoll to the roll type
-  options.messageData ??= {};
+  // The roll's own message data, less what would make this message that roll's (a save's type and its card link)
+  const { type: _type, system: _system, ...messageData } = options.messageData ?? {};
   const newRollHTML = await midiRenderRoll(newRoll);
   const originalRollHTML = await midiRenderRoll(originalRoll);
-  const chatData: any = foundry.utils.mergeObject(options.messageData ?? {}, {
+  const chatData: any = foundry.utils.mergeObject(messageData, {
     flavor: `${title}`,
     speaker: ChatMessage.getSpeaker({ actor: actor }),
     content: `${originalRollHTML}<br>${newRollHTML}`,
@@ -5229,6 +5222,22 @@ async function displayBeforeAfterRolls(data: {
   const rawRollMode: string | undefined = originalRoll.options.rollMode || rollMode;
   (ChatMessage as ChatMessageWithApplyMode).applyMode(chatData, rollModeToMessageMode(rawRollMode));
   foundry.utils.setProperty(newRoll, `flags.${MODULE_ID}.chatMessageShown`, true);
+  // A roll made for a use card is shown on the card, beside the roll it changed, to those its roll mode allows
+  const card = options.card instanceof ChatMessage ? options.card : options.card ? fromUuidSync(options.card, { strict: false }) : undefined;
+  if (card instanceof ChatMessage) {
+    const users = game.users?.contents ?? [];
+    const allowed = chatData.blind ? users.filter(u => u.isGM) : chatData.whisper?.length ? users.filter(u => chatData.whisper.includes(u.id)) : users;
+    const anchor = options.anchor ?? "saves";
+    const whisper = allowed.length === users.length ? [] : allowed.map(u => u.id!);
+    // The card shows the roll itself: the note says what changed it, each total expanding to its roll's dice. A save's
+    // names its target, so the card shows each viewer as much of it as of that target's save (applySaveVisibility).
+    const bonuses = foundry.utils.escapeHTML((options.bonusLabels ?? []).join(", ") || title);
+    let html = `<strong>${bonuses}</strong>: ${originalRoll.toAnchor().outerHTML} → ${newRoll.toAnchor().outerHTML}`;
+    const targetUuid = anchor === "saves" ? (actor?.token ?? actor?.getActiveTokens(false, true)[0])?.uuid : undefined;
+    if (targetUuid) html = `<span data-midi-save-target="${targetUuid}">${html}</span>`;
+    const note = await addCardNote(card, html, { anchor, whisper });
+    if (note) return note;
+  }
   return await ChatMessage.create(chatData);
 }
 
@@ -5244,6 +5253,8 @@ export async function bonusDialog(
   const showDiceSoNice = !options.hideDSN && dice3dEnabled();
   let timeoutId: NodeJS.Timeout | undefined;
   if (!roll) return undefined;
+  if (this instanceof Workflow) options.card ??= this.itemCardUuid;
+  options.anchor ??= rollType === "attackRoll" ? "attack" : rollType === "damageRoll" ? "damage" : "saves";
   let newRoll = roll;
   let originalRoll = roll;
   let rollHTML = await midiRenderRoll(roll);
@@ -5252,6 +5263,13 @@ export async function bonusDialog(
   // does not live on the actor. Defaults to actor when not present in the map.
   const flagOwners: Record<string, any> = options.flagOwners ?? {};
   const ownerOf = (flagName: string): any => flagOwners[flagName] ?? this.actor;
+  const bonusLabel = (flagName: string): string => (foundry.utils.getProperty(ownerOf(flagName) ?? {}, `${flagName}.label`) as string) || flagName.split(".").at(-1) || flagName;
+  // The bonuses applied, by name, for the before and after display
+  const usedLabels: string[] = options.bonusLabels = [];
+  // A bonus's terms are named after it, so the roll's breakdown says where they came from
+  const nameTerms = (bonusRoll: Roll, flagName: string) => {
+    for (const term of bonusRoll.terms) if (!(term instanceof foundry.dice.terms.OperatorTerm)) term.options.flavor ||= bonusLabel(flagName);
+  };
 
   const callback = async (dialog, button) => {
     if (this.secondTimeoutId) {
@@ -5424,12 +5442,14 @@ export async function bonusDialog(
           await tempRoll.evaluate();
           setRollOperatorEvaluated(tempRoll);
           if (showDiceSoNice) await displayDSNForRoll(tempRoll, rollType, rollMode, undefined, this.actor);
+          nameTerms(tempRoll, button.key);
           newRoll = addRollTo(roll!, tempRoll);
         } else {
           //@ts-expect-error
           newRoll = CONFIG.Dice.D20Roll.fromRoll(roll);
           const tempRoll = await (new Roll(`${button.value}`, { ...((this.activity ?? this.item ?? this.actor)?.getRollData() ?? {}), ...roll!.data })).roll();
           if (showDiceSoNice) await displayDSNForRoll(tempRoll, rollType, rollMode, undefined, this.actor);
+          nameTerms(tempRoll, button.key);
           newRoll = addRollTo(newRoll, tempRoll);
         }
         break;
@@ -5451,6 +5471,7 @@ export async function bonusDialog(
     const optionalsUsed: string[] = foundry.utils.getProperty(roll, `flags.${MODULE_ID}.optionalsUsed`) as string[] ?? [];
     optionalsUsed.push(`${button.key}.${flagSelector}`);
     foundry.utils.setProperty(roll, `flags.${MODULE_ID}.optionalsUsed`, optionalsUsed);
+    usedLabels.push(bonusLabel(button.key));
     if (dialog) {
       validFlags = validFlags.filter(bf => bf !== button.key);
       if (validFlags.length === 0) {
@@ -5470,7 +5491,7 @@ export async function bonusDialog(
       dialog.render(true);
       // dialog.close();
     }
-    if (chatMessage) unTimedExecuteAsGM("updateUndoChatCardUuidsById", { id: undoId, chatCardUuids: [(await chatMessage).uuid] });
+    if (chatMessage) unTimedExecuteAsGM("addUndoChatCards", { id: undoId, chatCardUuids: [(await chatMessage).uuid] });
   }
 
   let parameters: { [key: string]: any } = {};
@@ -5531,9 +5552,7 @@ export async function bonusDialog(
     //@ts-expect-error
     const rollMode = foundry.utils.getProperty(ownerOf(lastForceFlag) ?? {}, lastForceFlag)?.rollMode ?? oldRoll.options.rollMode ?? safeGetGameSetting("core", "messageMode");
     const card = await displayBeforeAfterRolls({ originalRoll: oldRoll, newRoll: roll, rollMode, title, player, options, actor: this.actor });
-    if (card?.uuid && this instanceof Workflow) { // this does not work currently since the undoId has not yet been set
-      await unTimedExecuteAsGM("updateUndoChatCardUuidsById", { id: this.undoId, chatCardUuids: [card.uuid] });
-    }
+    if (card?.uuid && this instanceof Workflow && configSettings.undoWorkflow) await unTimedExecuteAsGM("addUndoChatCards", { id: this.id, chatCardUuids: [card.uuid] });
   }
   if (validFlags.length === 0) return roll;
   let timeout = options.timeout ?? configSettings.reactionTimeout ?? defaultTimeout;
@@ -5548,9 +5567,7 @@ export async function bonusDialog(
       if (showRoll && newRoll !== originalRoll) {
         //@ts-expect-error
         const card = await displayBeforeAfterRolls({ originalRoll, newRoll, rollMode: originalRoll.options.rollMode, title, player, options, actor: this.actor });
-        if (card?.uuid && this instanceof Workflow) { // this does not work currently since the undoId has not yet been set
-          await unTimedExecuteAsGM("updateUndoChatCardUuidsById", { id: this.undoId, chatCardUuids: [card.uuid] });
-        }
+        if (card?.uuid && this instanceof Workflow && configSettings.undoWorkflow) await unTimedExecuteAsGM("addUndoChatCards", { id: this.id, chatCardUuids: [card.uuid] });
       }
       resolve(newRoll)
     }
@@ -6084,6 +6101,7 @@ export async function requestReactions(
 
     if (options.workflow) {
       options.workflowId = options.workflow.id;
+      options.itemCardUuid ??= options.workflow.itemCardUuid;
       delete options.workflow;
     }
 
@@ -6185,7 +6203,7 @@ export async function promptReactions(
       let displayBonusRolls: boolean | undefined = validFlags.reduce((acc: boolean | undefined, flag: string) => (acc || (foundry.utils.getProperty(actor ?? {}, `${flag}.displayBonusRolls`) as boolean)), undefined);
       if (!displayBonusRolls) displayBonusRolls = checkMechanic("displayBonusRolls") as boolean;
       // @ts-expect-error no dnd5e-types
-      const newAC = await bonusDialog.bind(data)(validFlags, "ac", displayBonusRolls !== false, `${actor.name} - ${i18n("DND5E.AC")} ${actor.system.attributes.ac.value}`, acRoll, "roll");
+      const newAC = await bonusDialog.bind(data)(validFlags, "ac", displayBonusRolls !== false, `${actor.name} - ${i18n("DND5E.AC")} ${actor.system.attributes.ac.value}`, acRoll, "roll", { card: options.itemCardUuid, anchor: "hits" });
       const endTime = Date.now();
       if (debugEnabled > 0) warn("promptReactions | returned via bonus dialog ", endTime - startTime)
       // Only return the AC result if the user actually used an optional bonus (AC changed)
@@ -7587,26 +7605,33 @@ export async function renderAttributionTooltip(attributions: AttributionMap, tit
   ));
 }
 
-function getTooltip(roll: Roll, options: any = {}) {
-  const parts = roll.dice?.map(d => d.getTooltipData()) ?? [];
+/** Move roll formula to tooltip's (deprecated) advantage options: the sources of advantage in the roll's breakdown too */
+const showAdvantageAttribution = () => ["adv", "formulaadv"].includes(configSettings.rollAlternate);
 
-  // Prepare structured attributions with localized type names
+/** The sources of a roll's advantage/disadvantage for its breakdown, if Move roll formula to tooltip shows them there */
+function breakdownAttributions(roll: Roll | undefined) {
+  if (!showAdvantageAttribution()) return { attributions: [], advTooltip: undefined };
   // @ts-expect-error options.attributions
-  const rawAttributions: AttributionEntry[] = roll.options?.attributions ?? [];
-  const attributions = rawAttributions.map(attr => ({
-    ...attr,
-    localizedType: i18n(attributionTypeLocalization[attr.type] ?? attr.type)
-  }));
-
-  const templateData = {
-    // @ts-expect-error
-    advTooltip: roll.options?.advTooltip,
-    attributions,
-    tooltipFormula: options?.tooltipFormula ?? false,
-    formula: roll.formula,
-    parts
+  const raw: AttributionEntry[] = roll?.options?.attributions ?? [];
+  return {
+    attributions: raw.map(attr => ({ ...attr, localizedType: i18n(attributionTypeLocalization[attr.type] ?? attr.type) })),
+    // @ts-expect-error advTooltip
+    advTooltip: roll?.options?.advTooltip
   };
-  return foundry.applications.handlebars.renderTemplate("modules/midi-qol/templates/tooltip.html", templateData);
+}
+
+/** A roll's breakdown is dnd5e's (dice and labelled modifiers), with midi's lines at its top (tooltip-extras.html) */
+async function getTooltip(roll: Roll, options: any = {}) {
+  const extras = (await foundry.applications.handlebars.renderTemplate("modules/midi-qol/templates/tooltip-extras.html", {
+    ...breakdownAttributions(roll),
+    tooltipFormula: options?.tooltipFormula ?? false,
+    formula: roll.formula
+  })).trim();
+  const tooltip = await roll.getTooltip();
+  if (!extras) return tooltip;
+  const open = '<div class="dice-tooltip">';
+  if (tooltip.includes(open)) return tooltip.replace(open, `${open}${extras}`);
+  return `<div class="dice-tooltip-collapser">${open}${extras}</div></div>`;
 }
 
 export async function midiRenderRoll(roll: Roll) {
@@ -7664,20 +7689,11 @@ export async function midiRenderAggregatedDamageRolls(rolls: Roll[], template: s
   // As DamageMessageData joins them: aggregated rolls carry their own leading operator, others do not.
   const formula = damageRolls.map(r => aggregate ? r.formula : ` + ${r.formula}`).join("").replace(/^ \+ /, "");
 
-  // @ts-expect-error options.attributions
-  const rawAttributions: AttributionEntry[] = rolls[0]?.options?.attributions ?? [];
-  const attributions = rawAttributions.map(attr => ({
-    ...attr,
-    localizedType: i18n(attributionTypeLocalization[attr.type] ?? attr.type)
-  }));
-
   const tooltipFormula = options.tooltipFormula
     ?? ["formula", "formulaadv"].includes(configSettings.rollAlternate);
   const tooltip = await foundry.applications.handlebars.renderTemplate(
     "modules/midi-qol/templates/tooltip.html", {
-      // @ts-expect-error advTooltip
-      advTooltip: rolls[0]?.options?.advTooltip,
-      attributions,
+      ...breakdownAttributions(rolls[0]),
       tooltipFormula,
       formula,
       // One section per damage type, in the shape tooltip.html already renders.

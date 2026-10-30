@@ -6,4 +6,7 @@
   {{/if}}
   {{ formField fields.fumbleThreshold value=source.fumbleThreshold }}
   {{ formField fields.attackRollPerTarget value=source.attackRollPerTarget options=ConfirmTargetOptions localize=true}}
+  {{#if hasAmmunition}}
+  {{ formField fields.ammunitionPerTarget value=source.ammunitionPerTarget options=AmmunitionPerTargetOptions localize=true}}
+  {{/if}}
 </fieldset>

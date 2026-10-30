@@ -56,7 +56,7 @@ When an Active Effect with CUSTOM mode is applied, midi-qol processes the value 
 | **Deferred Evaluation Flags** | Value stored as-is, evaluated later when the flag is checked |
 | **String Flags** (onUseMacroName, DR.all, etc.) | Value stored as string |
 | **Number Flags** (DR.{attackType}) | Value parsed as number |
-| **Boolean Flags** (default) | Value evaluated as conditional expression |
+| **Boolean Flags** (default) | Value evaluated as conditional expression once, when the actor is prepared, with the actor's roll data only |
 
 ### BooleanFormula Fields
 
@@ -69,22 +69,24 @@ Flags marked as **BooleanFormula** in the sections below accept:
 
 All **Evaluated** flags in the advantage, disadvantage, noAdvantage, noDisadvantage, fail, success, critical, noCritical, fumble, noFumble, grants, magicResistance, and magicVulnerability categories are BooleanFormula fields.
 
-Additionally, the following special flags are BooleanFormula: `neverTarget`, `ignoreNearbyFoes`, `potentCantrip`, `sculptSpells`, `carefulSpells`, `sharpShooter`, `uncanny-dodge`, `inMotion`, `advantage.concentration`, `disadvantage.concentration`, `noAdvantage.concentration`, `noDisadvantage.concentration`, `fail.disadvantage.heavy`, and `canFlank`.
+Additionally, the following special flags are BooleanFormula: `neverTarget`, `ignoreNearbyFoes`, `potentCantrip`, `sculptSpells`, `carefulSpells`, `sharpShooter`, `uncanny-dodge`, `inMotion`, `advantage.concentration`, `disadvantage.concentration`, `noAdvantage.concentration`, `noDisadvantage.concentration`, `fail.disadvantage.heavy`, and `canFlank`. Of these, only `ignoreNearbyFoes`, `canFlank`, `sharpShooter`, `fail.disadvantage.heavy` (and `ignoreCover`) are evaluated per use; `neverTarget`, `potentCantrip`, `sculptSpells`, `carefulSpells`, `uncanny-dodge`, `inMotion` and `ignoreWalls` are read as stored truthy values, so a condition expression there is evaluated at most once, when the actor is prepared.
 
 > [!note]
 > Initiative advantage/disadvantage flags use the `flags.dnd5e.*` namespace, not `flags.midi-qol.*`. Use `flags.dnd5e.initiativeAdv`, `flags.dnd5e.initiativeDisadv`, etc. They are registered in the DAE field browser under midi-qol for convenience, but the actual initiative code checks the dnd5e flag paths.
 
-**Deferred evaluation flags** include:
+**Deferred evaluation flags** are exactly:
 - `flags.midi-qol.optional.*` - Optional bonus effects
 - `flags.midi-qol.advantage.*` / `disadvantage.*` - Advantage/disadvantage conditions
 - `flags.midi-qol.grants.*` - Target-applied effects
-- `flags.midi-qol.fail.*` / `success.*` - Auto-fail/success conditions
+- `flags.midi-qol.fail.*` - Auto-fail conditions
 - `flags.midi-qol.critical.*` / `noCritical.*` - Critical hit modifications
 - `flags.midi-qol.superSaver.*` / `semiSuperSaver.*` - Save damage modifications
 - `flags.midi-qol.max.damage.*` / `min.damage.*` - Damage roll extremes
 - `flags.midi-qol.OverTime` - Overtime effect definitions
 - `flags.midi-qol.rangeOverride.*` - Range override conditions
 - `flags.midi-qol.ignoreCover` / `ignoreWalls` - Cover/wall ignore conditions
+
+Everything else is **not** deferred, including `success.*`, `noAdvantage.*`, `noDisadvantage.*`, `fumble.*`, `noFumble.*`, `magicResistance.*` / `magicVulnerability.*`, `range.*` / `long.*` and the [special flags](#special-flags). A CUSTOM expression for one of those is evaluated once, when the actor is prepared, with only the actor's roll data (no target, item, activity or workflow); write such conditions as plain values, or use a deferred flag where one exists.
 
 For deferred flags, the value can be:
 - `true`, `1` → stored as boolean `true`
@@ -102,6 +104,7 @@ MacroReference, passType
 ```
 
 Where `MacroReference` can be:
+- blank (`, passType`) - The effect's own macro: its activity's macro if it has one, else its item's macro. A change with no `passType` is ignored and reported in the Troubleshooter.
 - `ItemMacro` - Calls the item's macro (automatically rewritten to include item UUID)
 - `ItemMacro.{itemUuid}` - Calls a specific item's macro
 - `ActivityMacro` - Calls the activity's macro (automatically rewritten to include activity UUID)
@@ -117,9 +120,11 @@ And `passType` is the macro pass (e.g., `preItemRoll`, `postActiveEffects`, etc.
 |-------------|--------------|
 | `ItemMacro` (on transferred effect) | `ItemMacro.{parentItemUuid}` |
 | `ItemMacro` (on non-transferred effect) | `ItemMacro.{originItemUuid}` |
-| `ActivityMacro` (with DAE activity flag) | `ActivityMacro.{daeActivityUuid}` |
-| `ActivityMacro` (on transferred effect) | `ActivityMacro.{firstActivityUuid}` |
-| `ActivityMacro` (on non-transferred effect) | `ActivityMacro.{originFirstActivityUuid}` |
+| blank (effect's activity has a macro) | `ActivityMacro.{effectActivityUuid}` |
+| blank (otherwise, effect's item has a macro) | `ItemMacro`, then rewritten as above |
+| `ActivityMacro` (effect applied by an activity) | `ActivityMacro.{effectActivityUuid}` (the effect's own activity) |
+| `ActivityMacro` (otherwise, on transferred effect) | `ActivityMacro.{firstActivityUuid}` |
+| `ActivityMacro` (otherwise, on non-transferred effect) | `ActivityMacro.{originFirstActivityUuid}` |
 | `ActivityMacro.{name}` | `ActivityMacro.{resolvedActivityUuid}` |
 
 The final stored value includes the origin item UUID appended with `|`:
@@ -137,6 +142,8 @@ Flags are accessed in two ways:
 |-------------|-------------|
 | **Evaluated** | Value is treated as a conditional expression and evaluated using `evalCondition()`. Can contain roll data references like `@abilities.str.mod > 2` |
 | **Direct** | Value is read directly as a number, boolean, or string without expression evaluation |
+| **Formula** | Value is a roll formula (number or dice) |
+| **Mapped** | Not read by midi: when the effect is applied the flag is mapped to the dnd5e field given |
 | **Special** | Custom processing logic (see count format options, bonus values) |
 
 Each section below indicates the access type for its flags.
@@ -217,6 +224,8 @@ details.cr >= 10
 | `target.superSaver` | Target is a super saver |
 | `target.semiSuperSaver` | Target is a semi-super saver |
 | `target.isHit` | Target was hit |
+| `target.isHitEC` | Same as `target.isHit` |
+| `target.system` | The target actor's `system` data (not just its roll data) |
 | `target.isCombatTurn` | Is target's combat turn |
 | `target.items` | Array of target's item roll data |
 | `target.equippedItems` | Array of target's equipped item roll data |
@@ -238,6 +247,13 @@ details.cr >= 10
 | `shouldRollDamage` | Should roll damage |
 | `damageTypes.{type}` | Damage includes this type (fire, cold, etc.) |
 | `riderStatuses.{status}` | Effect applies this status |
+| `otherDamageActivity` | The activity rolling the workflow's other damage, if any |
+
+**Effect Data (when the condition belongs to an effect):**
+| Path | Description |
+|------|-------------|
+| `effect` | The active effect |
+| `stackCount` | The effect's stack count |
 
 **Combat Data:**
 | Path | Description |
@@ -285,24 +301,34 @@ These functions are available in expressions. Actor/token parameters accept UUID
 | `fromUuidSync(uuid)` | Synchronously retrieves document by UUID |
 | `Roll` | Foundry Roll class |
 | `abs()`, `floor()`, `ceil()`, `min()`, `max()`, etc. | Math functions (use directly without `Math.` prefix) |
+| `getDistance(token1OrUuid, token2OrUuid, options)` | Returns distance between tokens using the *Distance Measurement* setting (preferred over `computeDistance`, agrees with midi's range checks) |
+| `checkDistance(token1, token2, distance, options)` | Returns true if the tokens are within `distance` |
+| `checkActivityRange(activity, tokenOrUuid, targets)` | Checks an activity's range from a token to targets |
+| `sizeNumeric(size)` | Numeric value of a size (e.g. `"med"`) |
+| `combat` | The current combat (`game.combat`) |
+| `contestedRoll(...)`, `confirm(...)` | Only in conditions evaluated asynchronously (they return promises) |
 | `evalRaceOrType(actorOrUuid)` | Returns race or type (lowercase), prefers race |
-| `evalTypeOrRaceEval(actorOrUuid)` | Returns type or race (lowercase), prefers type |
+| `evalTypeOrRace(actorOrUuid)` | Returns type or race (lowercase), prefers type. `evalTypeOrRaceEval` is a legacy alias |
 
 **findNearby options:**
 ```js
 {
   includeIncapacitated: false,  // Include incapacitated tokens
   includeToken: false,          // Include the source token
-  canSee: false,                // Only tokens that can see source
-  isSeen: false                 // Only tokens seen by source
+  canSee: false,                // Only tokens that can sense the source
+  isSeen: false,                // Only tokens the source can sense
+  relative: true,               // Disposition is relative to the source token's own disposition
+  maxSize: undefined            // Only tokens whose width * height is at most this
 }
 ```
 
-**disposition values:**
-- `-1` = Hostile
+**disposition values** (with the default `relative: true`, compared with the source token's own disposition):
+- `-1` = Opposite to the source token's disposition (enemies of a friendly or hostile token)
 - `0` = Neutral
-- `1` = Friendly
+- `1` = Same as the source token's disposition (allies)
 - `null` = Any disposition
+
+With `relative: false`, `-1`/`0`/`1` are the absolute Hostile/Neutral/Friendly dispositions. Strings (`"Hostile"`, `"Friendly"`, `"all"`...) and arrays are also accepted.
 
 ### Expression Examples
 
@@ -382,14 +408,16 @@ The expression is evaluated as JavaScript, and the result determines the flag va
 
 ## Absorption
 
-> **Deprecated:** These flags are mapped to `system.traits.da.*` fields. Use the system fields instead.
+> **No longer read:** `flags.midi-qol.absorption.*` does nothing. Use midi's Damage Absorption trait, `system.traits.da`, which works like dnd5e's immunity/resistance/vulnerability traits.
 
 Convert incoming damage of a specific type to healing.
 
-| Flag | Access | Mapped To |
-|------|--------|-----------|
-| `flags.midi-qol.absorption.all` | Direct | `system.traits.da.midi.all` |
-| `flags.midi-qol.absorption.{damageType}` | Direct | `system.traits.da.{damageType}` |
+| Field | Mode | Description |
+|-------|------|-------------|
+| `system.traits.da.value` | Add | Damage types absorbed, or `ALL` (all damage, not healing) |
+| `system.traits.da.bypasses` | Add | Physical damage with any of these properties (e.g. `mgc`) is not absorbed |
+| `system.traits.da.{damageType}` | Override | Multiplier for that damage type (default `-1`: heal by the damage dealt) |
+| `system.traits.da.midi.{custom}` | Override | Absorb damage matching a midi category (`spell`, `magical`, `non-magical-physical`... as for [`dm.midi`](#by-damage-properties-midi-specific)) |
 
 *Damage types: acid, bludgeoning, cold, fire, force, lightning, necrotic, piercing, poison, psychic, radiant, slashing, thunder, etc.*
 
@@ -424,14 +452,6 @@ Grant advantage on various roll types. All advantage flags are **Evaluated** (co
 
 *Schools: abj, con, div, enc, evo, ill, nec, trs.*
 
-### Damage Rolls
-
-| Flag | Access | Description |
-|------|--------|-------------|
-| `flags.midi-qol.advantage.damage.{attackType}` | Evaluated | Advantage (roll twice, take higher) on damage rolls for specific attack type |
-
-*Attack types: mwak, rwak, msak, rsak.*
-
 ### Saving Throws
 
 | Flag | Access | Description |
@@ -465,6 +485,8 @@ Grant advantage on various roll types. All advantage flags are **Evaluated** (co
 
 > [!note]
 > Ability check advantage/disadvantage flags also apply to skills that use that ability. For example, `advantage.check.dex` grants advantage on Acrobatics, Sleight of Hand, and Stealth checks (all DEX-based skills).
+>
+> `noAdvantage.check.*` / `noDisadvantage.check.*` apply to skill and tool checks using that ability too.
 
 ### Tool Checks
 
@@ -567,7 +589,7 @@ Grant disadvantage on various roll types. All disadvantage flags are **Evaluated
 
 ## No Advantage
 
-Prevent advantage on various roll types. These flags suppress advantage even when other sources would grant it. All noAdvantage flags are **Evaluated** (conditional expression) and registered as **BooleanFormula** fields with DAE.
+Prevent advantage on various roll types. These flags suppress advantage even when other sources would grant it. All noAdvantage flags are **Evaluated** (conditional expression) and registered as **BooleanFormula** fields with DAE. These are not [deferred](#how-custom-mode-processing-works): a CUSTOM condition is evaluated when the actor is prepared, with the actor's data only.
 
 ### All Rolls
 
@@ -605,6 +627,9 @@ Prevent advantage on various roll types. These flags suppress advantage even whe
 
 *Abilities: str, dex, con, int, wis, cha.*
 
+> [!note]
+> `noAdvantage.check.*` also applies to skill and tool checks using that ability.
+
 ### Skills
 
 | Flag | Access | Description |
@@ -638,7 +663,7 @@ Prevent advantage on various roll types. These flags suppress advantage even whe
 
 ## No Disadvantage
 
-Prevent disadvantage on various roll types. These flags suppress disadvantage even when other sources would impose it. All noDisadvantage flags are **Evaluated** (conditional expression) and registered as **BooleanFormula** fields with DAE.
+Prevent disadvantage on various roll types. These flags suppress disadvantage even when other sources would impose it. All noDisadvantage flags are **Evaluated** (conditional expression) and registered as **BooleanFormula** fields with DAE. These are not [deferred](#how-custom-mode-processing-works): a CUSTOM condition is evaluated when the actor is prepared, with the actor's data only.
 
 ### All Rolls
 
@@ -675,6 +700,9 @@ Prevent disadvantage on various roll types. These flags suppress disadvantage ev
 | `flags.midi-qol.noDisadvantage.check.{ability}` | Evaluated | Prevent disadvantage on specific ability checks |
 
 *Abilities: str, dex, con, int, wis, cha.*
+
+> [!note]
+> `noDisadvantage.check.*` also applies to skill and tool checks using that ability.
 
 ### Skills
 
@@ -735,7 +763,7 @@ Prevent attacks from being critical hits. All noCritical flags are **Evaluated**
 
 ## Fumble
 
-Force attacks to be fumbles (critical failures). All fumble flags are **Evaluated** (conditional expression) and registered as **BooleanFormula** fields with DAE.
+Force attacks to be fumbles (critical failures). All fumble flags are **Evaluated** (conditional expression) and registered as **BooleanFormula** fields with DAE. These are not [deferred](#how-custom-mode-processing-works): a CUSTOM condition is evaluated when the actor is prepared, with the actor's data only.
 
 | Flag | Access | Description |
 |------|--------|-------------|
@@ -748,7 +776,7 @@ Force attacks to be fumbles (critical failures). All fumble flags are **Evaluate
 
 ## No Fumble
 
-Prevent attacks from being fumbles. All noFumble flags are **Evaluated** (conditional expression) and registered as **BooleanFormula** fields with DAE.
+Prevent attacks from being fumbles. All noFumble flags are **Evaluated** (conditional expression) and registered as **BooleanFormula** fields with DAE. These are not [deferred](#how-custom-mode-processing-works): a CUSTOM condition is evaluated when the actor is prepared, with the actor's data only.
 
 | Flag | Access | Description |
 |------|--------|-------------|
@@ -763,59 +791,65 @@ Prevent attacks from being fumbles. All noFumble flags are **Evaluated** (condit
 
 Force automatic failure on rolls. All fail flags are **Evaluated** (conditional expression) and registered as **BooleanFormula** fields with DAE.
 
+> [!important] dnd5e 6 roll fields
+> Each dnd5e 6 roll field (`...roll`, beside its `bonus`, `min`, `max` and `mode`) has `fail` and `success` conditions added by midi. The per-roll `fail.*` flags below are mapped to those fields (the **Maps To** column) when the effect is applied; midi reads the field, not the flag. You can set the fields directly: e.g. `system.abilities.dex.save.roll.fail` OVERRIDE `true`, or a condition expression. Attacks also check `system.abilities.{ability}.attack.roll.fail`. Flags with no mapping (`—`) are read by midi itself.
+
 ### Ability Rolls
 
-| Flag | Access | Description |
-|------|--------|-------------|
-| `flags.midi-qol.fail.all` | Evaluated | Fail all actions |
-| `flags.midi-qol.fail.ability.all` | Evaluated | Fail all ability-based rolls |
-| `flags.midi-qol.fail.ability.save.all` | Evaluated | Fail all saving throws |
-| `flags.midi-qol.fail.ability.save.{ability}` | Evaluated | Fail specific ability saves |
-| `flags.midi-qol.fail.save.school.{school}` | Evaluated | Fail saves vs spells of a specific school |
-| `flags.midi-qol.fail.ability.check.all` | Evaluated | Fail all ability checks |
-| `flags.midi-qol.fail.ability.check.{ability}` | Evaluated | Fail specific ability checks |
+| Flag | Access | Description | Maps To |
+|------|--------|-------------|---------|
+| `flags.midi-qol.fail.all` | Evaluated | Fail all actions | — |
+| `flags.midi-qol.fail.ability.all` | Evaluated | Fail all ability-based rolls | — |
+| `flags.midi-qol.fail.ability.save.all` | Evaluated | Fail all saving throws | `system.rolls.ability.save.fail` |
+| `flags.midi-qol.fail.ability.save.{ability}` | Evaluated | Fail specific ability saves | `system.abilities.{ability}.save.roll.fail` |
+| `flags.midi-qol.fail.save.school.{school}` | Evaluated | Fail saves vs spells of a specific school | — |
+| `flags.midi-qol.fail.ability.check.all` | Evaluated | Fail all ability checks | `system.rolls.ability.check.fail` |
+| `flags.midi-qol.fail.ability.check.{ability}` | Evaluated | Fail specific ability checks | `system.abilities.{ability}.check.roll.fail` |
+| `flags.midi-qol.fail.concentration` | Evaluated | Fail concentration saves | `system.attributes.concentration.roll.fail` |
 
 *Abilities: str, dex, con, int, wis, cha.*
 *Spell schools: abj, con, div, enc, evo, ill, nec, trs.*
 
 ### Attack Rolls
 
-| Flag | Access | Description |
-|------|--------|-------------|
-| `flags.midi-qol.fail.attack.all` | Evaluated | Fail all attacks |
-| `flags.midi-qol.fail.attack.{attackType}` | Evaluated | Fail specific attack type |
+| Flag | Access | Description | Maps To |
+|------|--------|-------------|---------|
+| `flags.midi-qol.fail.attack.all` | Evaluated | Fail all attacks | `system.rolls.attack.fail` |
+| `flags.midi-qol.fail.attack.{attackType}` | Evaluated | Fail specific attack type | `system.rolls.attack.{attackType}.fail` |
 
-*Attack types: mwak, rwak, msak, rsak, heal, other, save, util.*
+*Attack types: mwak, rwak, msak, rsak. `heal`, `other`, `save` and `util` have no mapping and do nothing.*
 
 ### Skills
 
-| Flag | Access | Description |
-|------|--------|-------------|
-| `flags.midi-qol.fail.skill.all` | Evaluated | Fail all skill checks |
-| `flags.midi-qol.fail.skill.{skill}` | Evaluated | Fail specific skill |
+| Flag | Access | Description | Maps To |
+|------|--------|-------------|---------|
+| `flags.midi-qol.fail.skill.all` | Evaluated | Fail all skill checks | `system.rolls.ability.skill.fail` |
+| `flags.midi-qol.fail.skill.{skill}` | Evaluated | Fail specific skill | `system.skills.{skill}.roll.fail` |
 
 *Skills: acr, ani, arc, ath, dec, his, ins, itm, inv, med, nat, prc, per, prf, rel, slt, ste, sur.*
 
 ### Tool Checks
 
-| Flag | Access | Description |
-|------|--------|-------------|
-| `flags.midi-qol.fail.tool.all` | Evaluated | Fail all tool checks |
-| `flags.midi-qol.fail.tool.{tool}` | Evaluated | Fail specific tool check |
+| Flag | Access | Description | Maps To |
+|------|--------|-------------|---------|
+| `flags.midi-qol.fail.tool.all` | Evaluated | Fail all tool checks | `system.rolls.ability.tool.fail` |
+| `flags.midi-qol.fail.tool.{tool}` | Evaluated | Fail specific tool check | `system.tools.{tool}.roll.fail` |
 
 *Tools: alchemist, bagpipes, brewer, calligrapher, card, carpenter, cartographer, chess, cobbler, cook, dice, disg, drum, dulcimer, flute, forg, glassblower, herb, horn, jeweler, leatherworker, lute, lyre, mason, navg, painter, panflute, pois, potter, shawm, smith, thief, tinker, viol, weaver, woodcarver.*
 
 ### Death Saves
 
-| Flag | Access | Description |
-|------|--------|-------------|
-| `flags.midi-qol.fail.deathSave` | Evaluated | Fail all death saving throws |
+| Flag | Access | Description | Maps To |
+|------|--------|-------------|---------|
+| `flags.midi-qol.fail.deathSave` | Evaluated | Fail all death saving throws | `system.attributes.death.roll.fail` |
 
 ### Spellcasting
 
 | Flag | Access | Description |
 |------|--------|-------------|
+| `flags.midi-qol.fail.spell.all` | Evaluated | Cannot cast spells at all |
 | `flags.midi-qol.fail.spell.vocal` | Evaluated | Cannot cast spells with vocal components |
+| `flags.midi-qol.fail.spell.verbal` | Evaluated | Alias of `fail.spell.vocal` |
 | `flags.midi-qol.fail.spell.somatic` | Evaluated | Cannot cast spells with somatic components |
 | `flags.midi-qol.fail.spell.material` | Evaluated | Cannot cast spells with material components |
 
@@ -823,60 +857,61 @@ Force automatic failure on rolls. All fail flags are **Evaluated** (conditional 
 
 ## Auto-Success
 
-Force automatic success on rolls. All success flags are **Evaluated** (conditional expression) and registered as **BooleanFormula** fields with DAE.
+Force automatic success on rolls. All success flags are **Evaluated** (conditional expression) and registered as **BooleanFormula** fields with DAE. As for [Auto-Fail](#auto-fail), the per-roll flags map to the dnd5e 6 roll fields' `success` conditions. Unlike `fail.*`, `success.all` and `success.ability.all` are not deferred: a CUSTOM condition on them is evaluated when the actor is prepared; the mapped fields are evaluated per roll.
 
 ### All Rolls
 
-| Flag | Access | Description |
-|------|--------|-------------|
-| `flags.midi-qol.success.all` | Evaluated | Automatically succeed on all rolls |
+| Flag | Access | Description | Maps To |
+|------|--------|-------------|---------|
+| `flags.midi-qol.success.all` | Evaluated | Automatically succeed on all rolls | — |
 
 ### Attack Rolls
 
-| Flag | Access | Description |
-|------|--------|-------------|
-| `flags.midi-qol.success.attack.all` | Evaluated | All attacks automatically succeed |
-| `flags.midi-qol.success.attack.{attackType}` | Evaluated | Specific attack type auto-succeeds |
+| Flag | Access | Description | Maps To |
+|------|--------|-------------|---------|
+| `flags.midi-qol.success.attack.all` | Evaluated | All attacks automatically succeed | `system.rolls.attack.success` |
+| `flags.midi-qol.success.attack.{attackType}` | Evaluated | Specific attack type auto-succeeds | `system.rolls.attack.{attackType}.success` |
 
-*Attack types: mwak, rwak, msak, rsak, heal, other, save, util.*
+*Attack types: mwak, rwak, msak, rsak. `heal`, `other`, `save` and `util` have no mapping and do nothing.*
 
 ### Ability Rolls
 
-| Flag | Access | Description |
-|------|--------|-------------|
-| `flags.midi-qol.success.ability.all` | Evaluated | Succeed all ability-based rolls (saves and checks) |
-| `flags.midi-qol.success.ability.save.all` | Evaluated | Succeed all saving throws |
-| `flags.midi-qol.success.ability.save.{ability}` | Evaluated | Succeed specific ability saves |
-| `flags.midi-qol.success.save.school.{school}` | Evaluated | Succeed saves vs spells of a specific school |
-| `flags.midi-qol.success.ability.check.all` | Evaluated | Succeed all ability checks |
-| `flags.midi-qol.success.ability.check.{ability}` | Evaluated | Succeed specific ability checks |
+| Flag | Access | Description | Maps To |
+|------|--------|-------------|---------|
+| `flags.midi-qol.success.ability.all` | Evaluated | Succeed all ability-based rolls (saves and checks) | — |
+| `flags.midi-qol.success.ability.save.all` | Evaluated | Succeed all saving throws | `system.rolls.ability.save.success` |
+| `flags.midi-qol.success.ability.save.{ability}` | Evaluated | Succeed specific ability saves | `system.abilities.{ability}.save.roll.success` |
+| `flags.midi-qol.success.save.school.{school}` | Evaluated | Succeed saves vs spells of a specific school | — |
+| `flags.midi-qol.success.ability.check.all` | Evaluated | Succeed all ability checks | `system.rolls.ability.check.success` |
+| `flags.midi-qol.success.ability.check.{ability}` | Evaluated | Succeed specific ability checks | `system.abilities.{ability}.check.roll.success` |
+| `flags.midi-qol.success.concentration` | Evaluated | Succeed concentration saves | `system.attributes.concentration.roll.success` |
 
 *Abilities: str, dex, con, int, wis, cha.*
 *Spell schools: abj, con, div, enc, evo, ill, nec, trs.*
 
 ### Skills
 
-| Flag | Access | Description |
-|------|--------|-------------|
-| `flags.midi-qol.success.skill.all` | Evaluated | Succeed all skill checks |
-| `flags.midi-qol.success.skill.{skill}` | Evaluated | Succeed specific skill |
+| Flag | Access | Description | Maps To |
+|------|--------|-------------|---------|
+| `flags.midi-qol.success.skill.all` | Evaluated | Succeed all skill checks | `system.rolls.ability.skill.success` |
+| `flags.midi-qol.success.skill.{skill}` | Evaluated | Succeed specific skill | `system.skills.{skill}.roll.success` |
 
 *Skills: acr, ani, arc, ath, dec, his, ins, itm, inv, med, nat, prc, per, prf, rel, slt, ste, sur.*
 
 ### Tool Checks
 
-| Flag | Access | Description |
-|------|--------|-------------|
-| `flags.midi-qol.success.tool.all` | Evaluated | Succeed all tool checks |
-| `flags.midi-qol.success.tool.{tool}` | Evaluated | Succeed specific tool check |
+| Flag | Access | Description | Maps To |
+|------|--------|-------------|---------|
+| `flags.midi-qol.success.tool.all` | Evaluated | Succeed all tool checks | `system.rolls.ability.tool.success` |
+| `flags.midi-qol.success.tool.{tool}` | Evaluated | Succeed specific tool check | `system.tools.{tool}.roll.success` |
 
 *Tools: alchemist, bagpipes, brewer, calligrapher, card, carpenter, cartographer, chess, cobbler, cook, dice, disg, drum, dulcimer, flute, forg, glassblower, herb, horn, jeweler, leatherworker, lute, lyre, mason, navg, painter, panflute, pois, potter, shawm, smith, thief, tinker, viol, weaver, woodcarver.*
 
 ### Death Saves
 
-| Flag | Access | Description |
-|------|--------|-------------|
-| `flags.midi-qol.success.deathSave` | Evaluated | Succeed all death saving throws |
+| Flag | Access | Description | Maps To |
+|------|--------|-------------|---------|
+| `flags.midi-qol.success.deathSave` | Evaluated | Succeed all death saving throws | `system.attributes.death.roll.success` |
 
 ---
 
@@ -956,10 +991,21 @@ Prevent attacks against target from being fumbles. For multi-target attacks, ALL
 
 | Flag | Access | Description |
 |------|--------|-------------|
-| `flags.midi-qol.grants.attack.bonus.all` | Evaluated | Add to attacker's roll (expression) |
-| `flags.midi-qol.grants.attack.bonus.{attackType}` | Evaluated | Bonus to specific attack type |
+| `flags.midi-qol.grants.attack.bonus.all` | Formula | Bonus (number or dice) to attacks against this target |
+| `flags.midi-qol.grants.attack.bonus.{attackType}` | Formula | Bonus to specific attack type (added to `.all`) |
 
 *Attack types: mwak, rwak, msak, rsak, heal, other, save, util.*
+
+The value is a roll formula evaluated with the **target's** roll data, not a condition. With one target it is added to the attack roll; with several targets it is applied per target when hits are checked.
+
+### Grant Damage Bonus
+
+| Flag | Access | Description |
+|------|--------|-------------|
+| `flags.midi-qol.grants.bonus.damage.all` | Formula | Damage formula added to attackers' damage rolls against this target |
+| `flags.midi-qol.grants.bonus.damage.{attackType}` | Formula | As above for a specific attack type (used instead of `.all`) |
+
+The formula is rolled with the target's roll data. Only the first target's flag is used.
 
 ### Grant Attack Success/Failure
 
@@ -1065,17 +1111,14 @@ These flags are set on the **source actor** (caster) and suppress advantage/disa
 
 ## Magic Resistance/Vulnerability
 
-Advantage or disadvantage on saves against magical effects. All magic resistance/vulnerability flags are **Evaluated** (conditional expression) and registered as **BooleanFormula** fields with DAE.
+Advantage or disadvantage on saves against magical effects (spells and magic items). They apply only to saving throws. Registered as **BooleanFormula** fields with DAE, but not deferred: a condition is evaluated when the actor is prepared and sees no workflow, target or item.
 
 ### Magic Resistance
 
 | Flag | Access | Description |
 |------|--------|-------------|
 | `flags.midi-qol.magicResistance.all` | Evaluated | Advantage on all saves vs magic |
-| `flags.midi-qol.magicResistance.save.all` | Evaluated | Advantage on all saves vs magic |
 | `flags.midi-qol.magicResistance.{ability}` | Evaluated | Advantage on specific ability saves vs magic |
-| `flags.midi-qol.magicResistance.check.all` | Evaluated | Advantage on all checks vs magic |
-| `flags.midi-qol.magicResistance.skill.all` | Evaluated | Advantage on all skills vs magic |
 
 *Abilities: str, dex, con, int, wis, cha.*
 
@@ -1092,24 +1135,30 @@ Advantage or disadvantage on saves against magical effects. All magic resistance
 
 ## Min/Max Rolls
 
-Set minimum or maximum values for the d20 roll (not total). All min/max flags are **Direct** (numeric value).
+Set minimum or maximum values for the d20 roll (not total). Midi reads none of these flags: each is mapped to the dnd5e roll field's `min` / `max` when the effect is applied (the strongest value wins, as before), and dnd5e applies it. Prefer setting the field directly.
 
-> [!note]
-> Some flags are mapped to system fields (deprecated).
+| Flag (`flags.midi-qol.` omitted) | dnd5e field |
+|------|-------------|
+| `{min\|max}.ability.save.all` / `.check.all` | `system.rolls.ability.save.{min\|max}` / `system.rolls.ability.check.{min\|max}` |
+| `{min\|max}.ability.save.{ability}` / `.check.{ability}` | `system.abilities.{ability}.save.roll.{min\|max}` / `system.abilities.{ability}.check.roll.{min\|max}` |
+| `{min\|max}.skill.all` / `.skill.{skill}` | `system.rolls.ability.skill.{min\|max}` / `system.skills.{skill}.roll.{min\|max}` |
+| `{min\|max}.tool.all` / `.tool.{tool}` | `system.rolls.ability.tool.{min\|max}` / `system.tools.{tool}.roll.{min\|max}` |
+| `{min\|max}.attack.all` / `.attack.{attackType}` | `system.rolls.attack.{min\|max}` / `system.rolls.attack.{attackType}.{min\|max}` |
+| `{min\|max}.concentration` / `.ability.save.concentration` | `system.attributes.concentration.roll.{min\|max}` |
 
 ### Maximum Roll
 
 | Flag | Access | Description |
 |------|--------|-------------|
-| `flags.midi-qol.max.ability.save.all` | Direct | Maximum d20 roll for all saves |
-| `flags.midi-qol.max.ability.save.{ability}` | Direct | Maximum for specific ability saves |
-| `flags.midi-qol.max.ability.save.concentration` | Direct | Maximum for concentration saves. **Mapped to:** `system.attributes.concentration.roll.max` |
-| `flags.midi-qol.max.ability.check.all` | Direct | Maximum d20 roll for all checks |
-| `flags.midi-qol.max.ability.check.{ability}` | Direct | Maximum for specific ability checks |
-| `flags.midi-qol.max.skill.all` | Direct | Maximum d20 roll for all skills |
-| `flags.midi-qol.max.skill.{skill}` | Direct | Maximum for specific skill. **Mapped to:** `system.skills.{skill}.roll.max` |
-| `flags.midi-qol.max.tool.all` | Direct | Maximum d20 roll for all tool checks |
-| `flags.midi-qol.max.tool.{tool}` | Direct | Maximum for specific tool check |
+| `flags.midi-qol.max.ability.save.all` | Mapped | Maximum d20 roll for all saves |
+| `flags.midi-qol.max.ability.save.{ability}` | Mapped | Maximum for specific ability saves |
+| `flags.midi-qol.max.ability.save.concentration` | Mapped | Maximum for concentration saves |
+| `flags.midi-qol.max.ability.check.all` | Mapped | Maximum d20 roll for all checks |
+| `flags.midi-qol.max.ability.check.{ability}` | Mapped | Maximum for specific ability checks |
+| `flags.midi-qol.max.skill.all` | Mapped | Maximum d20 roll for all skills |
+| `flags.midi-qol.max.skill.{skill}` | Mapped | Maximum for specific skill |
+| `flags.midi-qol.max.tool.all` | Mapped | Maximum d20 roll for all tool checks |
+| `flags.midi-qol.max.tool.{tool}` | Mapped | Maximum for specific tool check |
 
 *Abilities: str, dex, con, int, wis, cha.*
 *Tools: alchemist, bagpipes, brewer, calligrapher, card, carpenter, cartographer, chess, cobbler, cook, dice, disg, drum, dulcimer, flute, forg, glassblower, herb, horn, jeweler, leatherworker, lute, lyre, mason, navg, painter, panflute, pois, potter, shawm, smith, thief, tinker, viol, weaver, woodcarver.*
@@ -1118,15 +1167,15 @@ Set minimum or maximum values for the d20 roll (not total). All min/max flags ar
 
 | Flag | Access | Description |
 |------|--------|-------------|
-| `flags.midi-qol.min.ability.save.all` | Direct | Minimum d20 roll for all saves |
-| `flags.midi-qol.min.ability.save.{ability}` | Direct | Minimum for specific ability saves |
-| `flags.midi-qol.min.ability.save.concentration` | Direct | Minimum for concentration saves. **Mapped to:** `system.attributes.concentration.roll.min` |
-| `flags.midi-qol.min.ability.check.all` | Direct | Minimum d20 roll for all checks |
-| `flags.midi-qol.min.ability.check.{ability}` | Direct | Minimum for specific ability checks |
-| `flags.midi-qol.min.skill.all` | Direct | Minimum d20 roll for all skill checks |
-| `flags.midi-qol.min.skill.{skill}` | Direct | Minimum for specific skill. **Mapped to:** `system.skills.{skill}.roll.min` |
-| `flags.midi-qol.min.tool.all` | Direct | Minimum d20 roll for all tool checks |
-| `flags.midi-qol.min.tool.{tool}` | Direct | Minimum for specific tool check |
+| `flags.midi-qol.min.ability.save.all` | Mapped | Minimum d20 roll for all saves |
+| `flags.midi-qol.min.ability.save.{ability}` | Mapped | Minimum for specific ability saves |
+| `flags.midi-qol.min.ability.save.concentration` | Mapped | Minimum for concentration saves |
+| `flags.midi-qol.min.ability.check.all` | Mapped | Minimum d20 roll for all checks |
+| `flags.midi-qol.min.ability.check.{ability}` | Mapped | Minimum for specific ability checks |
+| `flags.midi-qol.min.skill.all` | Mapped | Minimum d20 roll for all skill checks |
+| `flags.midi-qol.min.skill.{skill}` | Mapped | Minimum for specific skill |
+| `flags.midi-qol.min.tool.all` | Mapped | Minimum d20 roll for all tool checks |
+| `flags.midi-qol.min.tool.{tool}` | Mapped | Minimum for specific tool check |
 
 *Abilities: str, dex, con, int, wis, cha.*
 *Tools: alchemist, bagpipes, brewer, calligrapher, card, carpenter, cartographer, chess, cobbler, cook, dice, disg, drum, dulcimer, flute, forg, glassblower, herb, horn, jeweler, leatherworker, lute, lyre, mason, navg, painter, panflute, pois, potter, shawm, smith, thief, tinker, viol, weaver, woodcarver.*
@@ -1139,19 +1188,28 @@ Set minimum or maximum values for the d20 roll (not total). All min/max flags ar
 
 | Flag | Access | Description |
 |------|--------|-------------|
-| `flags.midi-qol.max.damage.all` | Direct | All damage rolls are maximized |
-| `flags.midi-qol.max.damage.{attackType}` | Direct | Specific attack type damage maximized |
-| `flags.midi-qol.min.damage.all` | Direct | All damage rolls are minimized |
-| `flags.midi-qol.min.damage.{attackType}` | Direct | Specific attack type damage minimized |
+| `flags.midi-qol.max.damage.all` | Evaluated | All damage rolls are maximized |
+| `flags.midi-qol.max.damage.{attackType}` | Evaluated | Specific attack type damage maximized |
+| `flags.midi-qol.min.damage.all` | Evaluated | All damage rolls are minimized |
+| `flags.midi-qol.min.damage.{attackType}` | Evaluated | Specific attack type damage minimized |
 
 *Attack types: mwak, rwak, msak, rsak, heal, other, save, util.*
+
+These are deferred conditions, evaluated when damage is rolled with the workflow's data and its first hit target.
 
 ### Damage Reroll
 
 | Flag | Access | Description |
 |------|--------|-------------|
-| `flags.midi-qol.damage.reroll-kh` | Direct | Reroll damage dice, keep highest |
-| `flags.midi-qol.damage.reroll-kl` | Direct | Reroll damage dice, keep lowest |
+| `flags.midi-qol.damage.reroll-kh` | Direct | Roll the whole damage roll twice and keep the higher total (truthy value) |
+| `flags.midi-qol.damage.reroll-kl` | Direct | Roll the whole damage roll twice and keep the lower total (truthy value) |
+
+### Damage Dice Modifiers
+
+| Flag | Access | Description |
+|------|--------|-------------|
+| `flags.midi-qol.rollModifiers.attack.{type}` | Direct | Dice modifiers (e.g. `r1`, `min2`) added to the d20 of attack rolls. Types: `all`, `mwak`, `rwak`, `msak`, `rsak`, `weapon`, `spell`, `tool`, `feat` |
+| `flags.midi-qol.rollModifiers.damage.{type}.{damageType}` | Direct | Dice modifiers added to damage dice. `{type}`: `all`, an action type or an item type; `{damageType}`: a damage type or `all` |
 
 ### Damage Modification (system.traits.dm)
 
@@ -1168,6 +1226,7 @@ Reduce damage of a specific type (e.g., fire, slashing):
 | `system.traits.dm.amount.fire` | Add | `-5` | Reduce fire damage by 5 |
 | `system.traits.dm.amount.slashing` | Add | `-10` | Reduce slashing damage by 10 |
 | `system.traits.dm.amount.{damageType}` | Add | `-X` | Reduce {damageType} damage by X |
+| `system.traits.dm.amount.healing` | Add | `-5` / `5` | Reduce / increase healing received (`temphp` for temporary hit points) |
 
 *Damage types: acid, bludgeoning, cold, fire, force, lightning, necrotic, piercing, poison, psychic, radiant, slashing, thunder.*
 
@@ -1183,9 +1242,8 @@ Reduce damage based on how it was dealt:
 | `system.traits.dm.midi.msak` | Add | `-3` | Reduce melee spell attack damage by 3 |
 | `system.traits.dm.midi.rsak` | Add | `-3` | Reduce ranged spell attack damage by 3 |
 | `system.traits.dm.midi.spell` | Add | `-5` | Reduce all spell damage by 5 |
-| `system.traits.dm.midi.heal` | Add | `-2` | Reduce healing received by 2 |
 
-*Action types: mwak, rwak, msak, rsak, heal, other, save, util, abil, ench, summ.*
+*Every activity type works: `mwak`, `rwak`, `msak`, `rsak`, `save`, `other`, `util`, `abil`, `ench` and `summ` match damage from activities of that type, and `all` matches all damage, as do the properties below. For healing received use dnd5e's `system.traits.dm.amount.healing` (a negative value reduces healing, a positive one increases it); `heal` is not a DR key. Values are roll formulas (e.g. `-1d4`, `-@abilities.con.mod`), rolled with the damaged actor's roll data. These keys modify damage only, never healing.*
 
 #### By Damage Properties (Midi-specific)
 
@@ -1193,6 +1251,7 @@ Reduce damage based on weapon/spell properties:
 
 | Field | Mode | Value | Effect |
 |-------|------|-------|--------|
+| `system.traits.dm.midi.magical` | Add | `-5` | Reduce magical damage by 5 |
 | `system.traits.dm.midi.non-magical` | Add | `-5` | Reduce non-magical damage by 5 |
 | `system.traits.dm.midi.non-magical-physical` | Add | `-5` | Reduce non-magical physical damage by 5 |
 | `system.traits.dm.midi.non-silver-physical` | Add | `-5` | Reduce non-silvered physical damage by 5 |
@@ -1223,14 +1282,16 @@ system.traits.dm.amount.cold ADD -5
 
 ## Range Modifiers
 
-Modify item range values. Range flags are **Evaluated** (expression with roll data).
+Modify activity range values when range is checked. The type-specific value and the `.all` value are both added to the activity's range (never below 0).
+
+`range.*` and `long.*` are not deferred flags: a CUSTOM expression is evaluated once, when the actor is prepared, with the actor's roll data only, so it cannot refer to the item or activity. Use numbers or actor-based expressions.
 
 ### Standard Range
 
 | Flag | Access | Description |
 |------|--------|-------------|
-| `flags.midi-qol.range.all` | Evaluated | Modify range for all items (use ADD mode with expression) |
-| `flags.midi-qol.range.{attackType}` | Evaluated | Modify range for specific attack type |
+| `flags.midi-qol.range.all` | Evaluated | Add to the normal range of all attacks |
+| `flags.midi-qol.range.{attackType}` | Evaluated | Add to the normal range of a specific attack type |
 
 *Attack types: mwak, rwak, msak, rsak, heal, other, save, util.*
 
@@ -1238,8 +1299,8 @@ Modify item range values. Range flags are **Evaluated** (expression with roll da
 
 | Flag | Access | Description |
 |------|--------|-------------|
-| `flags.midi-qol.long.all` | Evaluated | Modify long range for all items |
-| `flags.midi-qol.long.{attackType}` | Evaluated | Modify long range for specific attack type |
+| `flags.midi-qol.long.all` | Evaluated | Add to the long range of all attacks |
+| `flags.midi-qol.long.{attackType}` | Evaluated | Add to the long range of a specific attack type |
 
 *Attack types: mwak, rwak, msak, rsak, heal, other, save, util.*
 
@@ -1247,12 +1308,12 @@ Modify item range values. Range flags are **Evaluated** (expression with roll da
 
 | Flag | Access | Description |
 |------|--------|-------------|
-| `flags.midi-qol.rangeOverride.attack.all` | Evaluated | Override range for all attacks |
-| `flags.midi-qol.rangeOverride.attack.{attackType}` | Evaluated | Override range for specific attack type |
+| `flags.midi-qol.rangeOverride.attack.all` | Evaluated | If the attacker is out of range, another token you own that has this flag and is in range makes the attack |
+| `flags.midi-qol.rangeOverride.attack.{attackType}` | Evaluated | As above for a specific attack type |
 
 *Attack types: mwak, rwak, msak, rsak, heal, other, save, util.*
 
-**Example for blinded:** `flags.midi-qol.range.all ADD 5 - item.range.value` (sets range to 5)
+**Example:** `flags.midi-qol.range.rwak CUSTOM 30` adds 30 ft to the normal range of ranged weapon attacks. An expression that sets the range to a fixed value (e.g. 5 ft while blinded) is not possible: the activity's range (`activity.range.value`; items have no range in dnd5e 5+) is not available when the flag is evaluated.
 
 ---
 
@@ -1284,13 +1345,11 @@ No damage on save (normal damage on fail). Registered as **BooleanFormula** fiel
 
 | Flag | Access | Description |
 |------|--------|-------------|
-| `flags.midi-qol.concentrationSaveBonus` | Evaluated | Add bonus to concentration saves. **Mapped to:** `system.attributes.concentration.bonuses.save` |
-| `flags.midi-qol.deathSaveBonus` | Evaluated | Add bonus to death saves. **Native alternative:** `system.attributes.death.bonuses.save` |
+| `flags.midi-qol.concentrationSaveBonus` | Mapped | **Deprecated.** Add bonus to concentration saves. Effects are mapped to `system.attributes.concentration.roll.bonus`; use that field. Set on an actor directly it still works with a warning, until 14.6.10 |
+| `flags.midi-qol.deathSaveBonus` | Mapped | **Deprecated:** an effect using it sets `system.attributes.death.roll.bonus` (accepts dice); use that field. Set on an actor directly, it still works (as a JavaScript expression) with a warning, until 14.6.10 |
 | `flags.midi-qol.noDeathSaveFailureFromDamage` | Boolean | Damage at 0 HP adds no death save failures (with the *Enforce death saves* setting) |
-| `flags.midi-qol.save.fail.all` | Evaluated | Bonus applied when any save fails |
-| `flags.midi-qol.save.fail.{ability}` | Evaluated | Bonus applied when specific save fails |
 
-*Abilities: str, dex, con, int, wis, cha.*
+`flags.midi-qol.save.fail.*` is not read. For a bonus offered when a save fails, use [`flags.midi-qol.optional.NAME.save.fail.*`](#save-fail-bonuses).
 
 ---
 
@@ -1337,9 +1396,9 @@ When the actor makes an attack roll, they'll be prompted to use "Lucky - Reroll 
 | `bonusAction` | Tied to bonus action usage |
 | `every` | Always available (unlimited) |
 | `ItemUses.identifier.{itemIdentifier}` | Linked to an item's uses (e.g., `ItemUses.identifier.bardic-inspiration`) |
-| `ItemUses.partialNameMatch.{itemName}` | (e.g., `ItemUses.Insp`) |
+| `ItemUses.partialNameMatch.{itemName}` | (e.g., `ItemUses.partialNameMatch.Insp`) |
 | `ItemUses.exactNameMatch.{itemName}` | (e.g., `ItemUses.exactNameMatch.Bardic Inspiration`) |
-| `ItemUses.{itemName}` | Backwards compatibility only (e.g., `ItemUses.Bardic Inspiration`) |
+| `ItemUses.{itemName}` | Backwards compatibility only, exact name match (e.g., `ItemUses.Bardic Inspiration`) |
 | `ActivityUses.identifier.{itemIdentifier}.{activityIdentifier}` | Linked to an activity's uses (e.g., `ActivityUses.identifier.bardic-inspiration.sing-song`) |
 | `ActivityUses.id.{itemID}.{activityID}` | (e.g., `ActivityUses.id.iLKpfoGF7rGpvNWD.NegUUOdFH35S3xNi`) |
 | `ActivityUses.partialNameMatch.{itemName}.{activityName}` | (e.g., `ActivityUses.partialNameMatch.Insp.Song`) |
@@ -1476,9 +1535,9 @@ Only prompt when save fails.
 | Flag | Access | Description |
 |------|--------|-------------|
 | `flags.midi-qol.optional.NAME.ac` | Evaluated | Optional AC bonus (reaction) |
-| `flags.midi-qol.optional.NAME.criticalDamage` | Evaluated | Optional critical damage bonus |
+| `flags.midi-qol.optional.NAME.criticalDamage` | Direct | Switch (truthy): the `NAME.damage` bonus is rolled as critical damage, so dnd5e applies critical dice. Not a bonus value |
 | `flags.midi-qol.optional.NAME.displayBonusRolls` | Direct | Override display setting for this bonus (true/false) |
-| `flags.midi-qol.optional.NAME.rollMode` | Direct | Roll mode for this bonus (publicroll, gmroll, blindroll, selfroll) |
+| `flags.midi-qol.optional.NAME.rollMode` | Direct | Message mode for this bonus: `public`, `gm`, `blind`, `self` (legacy `publicroll`, `gmroll`, `blindroll`, `selfroll` are converted). The original roll's mode takes precedence |
 
 ---
 
@@ -1486,32 +1545,46 @@ Only prompt when save fails.
 
 ### Combat Features
 
+Flags marked **Truthy** are read as stored values, not evaluated per use: a CUSTOM condition on a non-deferred flag is evaluated once when the actor is prepared, and on `ignoreWalls` (deferred) any non-empty expression counts as true.
+
 | Flag | Access | BooleanFormula | Description |
 |------|--------|:--------------:|-------------|
 | `flags.midi-qol.ignoreNearbyFoes` | Evaluated | Yes | Ignore disadvantage on ranged attacks from nearby enemies |
 | `flags.midi-qol.sharpShooter` | Evaluated | Yes | No disadvantage at long range. **Deprecated:** Use `flags.dnd5e.sharpShooter` |
-| `flags.midi-qol.uncanny-dodge` | Evaluated | Yes | Halve incoming damage |
-| `flags.midi-qol.potentCantrip` | Evaluated | Yes | Cantrips do half damage on successful save |
-| `flags.midi-qol.neverTarget` | Evaluated | Yes | Token cannot be targeted |
-| `flags.midi-qol.inMotion` | Evaluated | Yes | Token is in motion |
+| `flags.midi-qol.ignoreCover` | Evaluated | No | Attacks ignore the target's cover (evaluated per attack and target) |
+| `flags.midi-qol.ignoreWalls` | Truthy | No | Distance measured from this actor's token ignores walls |
+| `flags.midi-qol.uncanny-dodge` | Truthy | Yes | Halve incoming damage from attacks |
+| `flags.midi-qol.potentCantrip` | Truthy | Yes | Cantrips do half damage on successful save |
+| `flags.midi-qol.neverTarget` | Truthy | Yes | Token cannot be targeted |
+| `flags.midi-qol.inMotion` | Truthy | Yes | Token is in motion |
 | `flags.midi-qol.canFlank` | Evaluated | Yes | Token can participate in flanking |
-| `flags.midi-qol.fail.disadvantage.heavy` | Evaluated | Yes | Disadvantage on attacks with heavy weapons |
+| `flags.midi-qol.fail.disadvantage.heavy` | Evaluated | Yes | Removes the disadvantage a small creature has with heavy weapons |
+| `flags.midi-qol.bloodsense` | Direct | No | Range (number): wounded targets within it count as seen by this actor |
 
 ### Spellcasting Features
 
 | Flag | Access | BooleanFormula | Description |
 |------|--------|:--------------:|-------------|
-| `flags.midi-qol.sculptSpells` | Evaluated | Yes | Pre-selected targets of save spells auto-succeed and receive super-saver status |
-| `flags.midi-qol.carefulSpells` | Evaluated | Yes | Pre-selected targets of save spells automatically succeed |
+| `flags.midi-qol.sculptSpells` | Truthy | Yes | Pre-selected targets of evocation save spells auto-succeed and receive super-saver status (range targeting or target confirmation only) |
+| `flags.midi-qol.carefulSpells` | Truthy | Yes | Pre-selected targets of save spells automatically succeed (range targeting or target confirmation only) |
 
 ### Over Time Effects
 
 | Flag | Access | Description |
 |------|--------|-------------|
 | `flags.midi-qol.OverTime` | Direct | Configure effects that trigger on turn start/end (string format) |
+| `flags.midi-qol.ActivityOverTime` | Direct | Identifier (string) of the over-time activity this effect triggers |
 
 > [!tip] Navigation
 > See the README for OverTime syntax and parameters. ([Activity Overtimes](/README.md#over-time-effects-activity-tab) or [Legacy Overtimes](/README.md#overtime-effects-flag-based))
+
+### Hiding and Vision
+
+| Flag | Access | Description |
+|------|--------|-------------|
+| `flags.midi-qol.hidden.dc` | Direct | On the Hiding condition effect: the hide's DC (default 15, e.g. when set from the token HUD) |
+| `token.flags.midi-qol.visionSourceHeight` | Direct | Token flag: height (0-100% of the token's height) its vision originates from. Overrides the vision height setting |
+| `token.flags.midi-qol.visionTargetHeight` | Direct | Token flag: height (0-100% of the token's height) at which other tokens test whether they can see it |
 
 ---
 
@@ -1526,7 +1599,8 @@ Track action economy usage. All action tracking flags are **Direct** (boolean/nu
 | `flags.midi-qol.actions.reaction` | Direct | Reaction used (true/false) |
 | `flags.midi-qol.actions.reactionsUsed` | Direct | Number of reactions used |
 | `flags.midi-qol.actions.reactionCombatRound` | Direct | Round reaction was used |
-| `flags.midi-qol.actions.reactionsReset` | Direct | When reactions reset ("never" to prevent) |
+| `flags.midi-qol.actions.reactionsMax` | Direct | Reactions allowed before the actor is marked as having used its reaction (default 1) |
+| `flags.midi-qol.actions.reactionsReset` | Direct | When reactions reset, if not the default: `eachTurn` (after one turn), `rest` (on a rest), `never` |
 
 ### Bonus Action Tracking
 
@@ -1535,7 +1609,8 @@ Track action economy usage. All action tracking flags are **Direct** (boolean/nu
 | `flags.midi-qol.actions.bonus` | Direct | Bonus action used (true/false) |
 | `flags.midi-qol.actions.bonusActionsUsed` | Direct | Number of bonus actions used |
 | `flags.midi-qol.actions.bonusActionCombatRound` | Direct | Round bonus action was used |
-| `flags.midi-qol.actions.bonusActionsReset` | Direct | When bonus actions reset ("never" to prevent) |
+| `flags.midi-qol.actions.bonusActionsMax` | Direct | Bonus actions allowed before the actor is marked as having used its bonus action (default 1) |
+| `flags.midi-qol.actions.bonusActionsReset` | Direct | When bonus actions reset, if not the default: `eachTurn` (after one turn), `rest` (on a rest), `never` |
 
 ---
 
@@ -1547,6 +1622,9 @@ Flags that can be set on items. All item flags are **Direct** (string/boolean va
 |------|--------|-------------|
 | `flags.midi-qol.onUseMacroName` | Direct | OnUse macro configuration |
 | `flags.midi-qol.syntheticItem` | Direct | Mark item as synthetic (created programmatically) |
+| `flags.midi-qol.noProvokeReaction` | Direct | Using this item (or an activity with this flag) does not prompt targets' reactions |
+| `flags.midi-qol.optional.NAME.*` | — | Optional bonuses (as [above](#optional-bonus-effects)) that apply only to uses of this item, e.g. set by an enchantment. An actor flag of the same NAME takes precedence |
+| `flags.midi-qol.detectMagic.vision` | Direct | On a Detect Magic spell automated with CAT: sensing magic also gives the caster Magic Sight (rings on magical tokens) |
 
 ---
 
@@ -1558,16 +1636,17 @@ Some midi-qol flags have native dnd5e equivalents. Both approaches work, but the
 
 | Native dnd5e Field | Value | Description |
 |--------------------|-------|-------------|
-| `system.attributes.death.bonuses.save` | string | Bonus formula (e.g., "+2", "@abilities.wis.mod") |
+| `system.attributes.death.roll.bonus` | string | Bonus formula (e.g., "+2", "1d4", "@abilities.wis.mod"). `system.attributes.death.bonuses.save` is deprecated in dnd5e 6 |
 | `system.attributes.death.roll.mode` | number | 1 = advantage, -1 = disadvantage, 0 = normal |
 | `system.attributes.death.roll.min` | number | Minimum die result (e.g., 10 for "can't roll below 10") |
 | `system.attributes.death.roll.max` | number | Maximum die result |
+| `system.attributes.death.roll.fail` / `.success` | string | Added by midi: automatic failure / success (condition expression) |
 
 **Comparison with midi-qol flags:**
 
 | Feature | Midi-qol Flags | Native dnd5e Fields |
 |---------|----------------|---------------------|
-| Conditional evaluation | Yes - supports `[condition]` syntax | No - always applies |
+| Conditional evaluation | Yes - the value is a condition expression | No - always applies (except midi's `fail` / `success` fields) |
 | Stacks with other effects | Yes - evaluated alongside other flags | Yes - processed by dnd5e |
 | Advantage + Disadvantage | Separate flags, can cancel out | Single `roll.mode` value |
 | Set via Active Effects | Yes | Yes |
@@ -1580,17 +1659,28 @@ Some midi-qol flags have native dnd5e equivalents. Both approaches work, but the
 
 **Example - Native dnd5e Active Effect:**
 ```
-Key: system.attributes.death.bonuses.save
+Key: system.attributes.death.roll.bonus
 Mode: Add
 Value: +2
 ```
 
-**Example - Midi-qol conditional (requires condition):**
+**Example - Midi-qol conditional:**
 ```
 Key: flags.midi-qol.advantage.deathSave
 Mode: Custom
-Value: 1[isRaging]
+Value: hasCondition(tokenUuid, "raging")
 ```
+
+### dnd5e 6 Roll Fields
+
+Every dnd5e 6 roll modification field (`system.abilities.{ability}.save.roll`, `.check.roll`, `.attack.roll`, `system.skills.{skill}.roll`, `system.tools.{tool}.roll`, `system.rolls.ability.{save|check|skill|tool}`, `system.rolls.attack[.{attackType}]`, `system.attributes.death.roll`, `system.attributes.concentration.roll`, `system.attributes.init.roll`) has, beside dnd5e's `bonus`, `min`, `max` and `mode`, two midi conditions:
+
+| Field | Description |
+|-------|-------------|
+| `{roll field}.fail` | Condition expression: the roll automatically fails |
+| `{roll field}.success` | Condition expression: the roll automatically succeeds |
+
+The old `fail.*`, `success.*`, `min.*` and `max.*` flags are mapped onto these fields (see [Auto-Fail](#auto-fail) and [Min/Max Rolls](#minmax-rolls)).
 
 ---
 
@@ -1646,7 +1736,7 @@ These flags have been renamed to clearer equivalents.
 
 ### Advantage/Disadvantage Ability Save/Check Flags
 
-The following flags have been renamed for consistency. The old flags with `ability` in the path are deprecated since v13.0.38 and will be removed in v14.
+The following flags were renamed for consistency. The old flags with `ability` in the path **no longer work** (no mapping and no warning): replace them.
 
 | Deprecated Flag | Replacement |
 |-----------------|-------------|
@@ -1662,7 +1752,7 @@ The following flags have been renamed for consistency. The old flags with `abili
 *Abilities: str, dex, con, int, wis, cha.*
 
 > [!warning]
-> The deprecated flags will continue to work via field mappings and code-level support, but will generate deprecation warnings in the console. Update your Active Effects to use the new flag names.
+> Effects still using these keys silently do nothing. Update your Active Effects to use the new flag names. (`advantage.ability.all` / `disadvantage.ability.all` are not affected: they are current flags.)
 
 ### Other Deprecated
 

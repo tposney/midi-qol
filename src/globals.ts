@@ -16,6 +16,7 @@ import { AttributionMap, AugmentedEvent, DamageDescriptionObject, DamageOnlyWork
 import { MidiOptions } from "./module/utils";
 import * as utils from "./module/utils";
 import * as cardNotes from "./module/lib/cardNotes";
+import * as tokenNames from "./module/lib/tokenNames";
 import * as contestedRollModule from "./module/lib/contestedRoll";
 import * as tokenHighlight from "./module/lib/tokenHighlight";
 import * as workflowOptionsCodec from "./module/lib/workflowOptionsCodec";
@@ -157,7 +158,6 @@ declare module "fvtt-types/configuration" {
     "midi-qol.ForceHideRoll": boolean;
     "midi-qol.EnableWorkflow": boolean;
     "midi-qol.hiddenGroundCue": boolean;
-    "midi-qol.showAttackRollDetails": boolean;
     "midi-qol.ownChatCardSummary": string;
     "midi-qol.hiddenGroundCueStyle": string;
     "midi-qol.hiddenGroundCueColor": foundry.data.fields.ColorField<{ nullable: boolean; initial: string }>;
@@ -517,6 +517,8 @@ declare module "fvtt-types/configuration" {
         attackTotal?: number;
         attackRoll?: Roll.Data | Roll;
         attackRollCount?: number;
+        /** The workflow was undone: the card is drawn with the undo colour */
+        undone?: boolean;
         /** One of a card note's messages (MidiQOL.cardNoteMessageData): its role, for the note's renderer */
         cardNote?: { role?: string };
         bonusDamageDetail?: DamageDescriptionObject[];
@@ -788,6 +790,8 @@ declare global {
     cardNoteMessageData: typeof cardNotes.cardNoteMessageData;
     renderLinkedMessage: typeof cardNotes.renderLinkedMessage;
     visibleRollTotal: typeof cardNotes.visibleRollTotal;
+    tokenName: typeof tokenNames.tokenName;
+    tokenNameMarkup: typeof tokenNames.tokenNameMarkup;
     contestedRoll: typeof contestedRollModule.contestedRoll;
     displayDSNForRoll: typeof utils.displayDSNForRoll;
     doConcentrationCheck: typeof utils.doConcentrationCheck;
@@ -796,6 +800,7 @@ declare global {
     findNearbyCount: typeof utils.findNearbyCount;
     getTraitMult: typeof utils.getTraitMult,
     hasCondition: typeof utils.hasCondition;
+    hasUsedAction: typeof utils.hasUsedAction;
     hasUsedBonusAction: typeof utils.hasUsedBonusAction;
     hasUsedReaction: typeof utils.hasUsedReaction;
     humanoid: string[];
@@ -803,6 +808,7 @@ declare global {
     raceOrType: typeof utils.raceOrType;
     typeOrRace: typeof utils.typeOrRace;
     safeGetGameSetting: typeof settings.safeGetGameSetting;
+    setActionUsed: typeof utils.setActionUsed;
     setBonusActionUsed: typeof utils.setBonusActionUsed;
     setReactionUsed: typeof utils.setReactionUsed;
   }
@@ -858,6 +864,8 @@ declare global {
     cardNoteMessageData: typeof cardNotes.cardNoteMessageData;
     renderLinkedMessage: typeof cardNotes.renderLinkedMessage;
     visibleRollTotal: typeof cardNotes.visibleRollTotal;
+    tokenName: typeof tokenNames.tokenName;
+    tokenNameMarkup: typeof tokenNames.tokenNameMarkup;
     contestedRoll: typeof contestedRollModule.contestedRoll;
     createConditionData: typeof utils.createConditionData;
     createDamageDetail: typeof utils.createDamageDetail;
@@ -896,6 +904,7 @@ declare global {
     getVitalityMax: typeof utils.getVitalityMax,
     getVitalityValue: typeof utils.getVitalityValue,
     hasCondition: typeof utils.hasCondition,
+    hasUsedAction: typeof utils.hasUsedAction,
     hasUsedBonusAction: typeof utils.hasUsedBonusAction,
     hasUsedReaction: typeof utils.hasUsedReaction,
     hasVitalitySystem: typeof utils.hasVitalitySystem,
@@ -943,6 +952,7 @@ declare global {
     safeGetGameSetting: typeof settings.safeGetGameSetting;
     shouldDisplaySaveDC: typeof settings.shouldDisplaySaveDC;
     selectTargetsFromTemplates: typeof selectTargetsFromTemplates;
+    setActionUsed: typeof utils.setActionUsed;
     setBonusActionUsed: typeof utils.setBonusActionUsed;
     setReactionUsed: typeof utils.setReactionUsed;
     showItemInfo: (item: Item.Implementation) => Promise<ChatMessage.Implementation | undefined>;

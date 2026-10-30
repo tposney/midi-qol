@@ -266,8 +266,6 @@
   "midi-qol.SaveSummaryStyle.Hint": "With dnd5e's \"Summarize chat cards\" on, a card's saving throws are shown on the card instead of as separate messages. midi: midi's saves section (DC, success/failure, damage) is the summary. dnd5e: dnd5e's per-roll summaries, with midi's section listing only saves rolled through other modules. What players see follows Auto check Saves either way. With \"Summarize chat cards\" off the saves show as separate messages.",
   "midi-qol.ChatCardSummaries.Name": "Chat card summaries",
   "midi-qol.ChatCardSummaries.Hint": "Whether a card's saving throws are folded into it (midi's saves section or dnd5e's summaries) or shown as separate messages. Each user's choice follows their dnd5e \"Summarize chat cards\"; Always and Never set it for everyone (each user's own choice comes back when set to Each user's choice).",
-  "midi-qol.SaveDamageLine.Name": "Show damage after each save",
-  "midi-qol.SaveDamageLine.Hint": "Under a target's save result, when the save spares it some damage: the damage of each type it takes after its save (before resistances), and the feature that changed it (e.g. Super Saver).",
   "midi-qol.saveSummaryStyleOptions": {
     "midi": "midi saves section",
     "dnd5e": "dnd5e summaries",
@@ -609,7 +607,7 @@
   "midi-qol.AttackMacro.Hint": "Comma separated list of macros to call when calculating attack roll which will be applied when checking if the attack hit the targets",
   "midi-qol.DAEMidiQOL": "DAE/Midi-QOL specific",
   "midi-qol.OptionalRules.Name": "Optional Game Rules",
-  "midi-qol.OptionalRules.Hint": "DND5E Game rules that you may wish to enable. Generally, don't work with better rolls.",
+  "midi-qol.OptionalRules.Hint": "Game rules that you may wish to enable.",
   "midi-qol.InvisAdvantage.Name": "Unseen/Invisible attackers have advantage/disadvantage on attacks",
   "midi-qol.RAW2014Invisible.Hint": "<strong>RAW (2014)</strong> Invisible condition always grants adv/disadv; other senses (blindsight, tremorsense) negate unseen adv/disadv.",
   "midi-qol.RAW2024Invisible.Hint": "<strong>RAW (2024)</strong> Only grants adv/disadv if the other creature cannot <em>see</em> you — blindsight/truesight negate, but tremorsense does not.",
@@ -676,6 +674,8 @@
   "midi-qol.VisionTestHeight.Hint": "Which elevation to test for token visibility. Affects both Foundry's rendering and midi's vision checks.",
   "midi-qol.SurfaceOcclusion.Name": "Occlude upper floor surfaces",
   "midi-qol.SurfaceOcclusion.Hint": "In multi-level scenes, make upper floor surfaces transparent when viewing from a lower floor, even if the token is not directly underneath.",
+  "midi-qol.RulesAlwaysApplied.Name": "Rules always applied",
+  "midi-qol.RulesAlwaysApplied.Hint": "These apply whether or not optional rules are enabled below.",
   "midi-qol.ShowAttackRollDetails.Name": "Show attack roll details",
   "midi-qol.ShowAttackRollDetails.Hint": "Icons beside an attack roll's total for the unusual things in it (flanking, a target's granted bonus, an effect's bonus, exhaustion), and a tooltip on the total listing every term of the roll.",
   "midi-qol.HiddenGroundCue.Name": "Mark lower floors where creatures can't be seen",
@@ -730,7 +730,7 @@
   "midi-qol.NearbyAllyRanged.Hint": "Ranged Attacks with allies nearby (5 feet) to the target have disadvantage for targets smaller than this (w*h). 0 disables",
   "midi-qol.Incapacitated.Name": "When an Incapacitated actor takes an action, MidiQOL should",
   "midi-qol.IncapacitatedOptions": {
-    "nothing": "Do nothing",
+    "nothing": "Allow it",
     "enforce": "Enforce no actions",
     "warn": "Post a warning only"
   },
@@ -1069,12 +1069,12 @@
   "midi-qol.FlankingBonusOptions.5": "+5 to hit",
   "midi-qol.FlankingLabel": "Flanking",
   "midi-qol.RollAlternate.Name": "Move roll formula to tooltip",
-  "midi-qol.RollAlternate.Hint": "Use alternate roll display on merge card moving the roll formula to the tooltip and optionally add advantage attribution",
+  "midi-qol.RollAlternate.Hint": "Move the roll formula into the roll's expanded breakdown. The advantage attribution options also list the sources of advantage/disadvantage there; they are deprecated, as the info icon on the roll's label shows them.",
   "midi-qol.RollAlternateOptions": {
     "off": "default tooltip",
     "formula": "Formula -> tooltip",
-    "adv": "Advantage Attribution",
-    "formulaadv": "Formula -> tooltip + adv attribution"
+    "adv": "Advantage Attribution (deprecated)",
+    "formulaadv": "Formula -> tooltip + adv attribution (deprecated)"
   },
   "midi-qol.OptionalCritRule.Name": "(House Rule) Critical Roll Margin",
   "midi-qol.OptionalCritRule.Hint": "Attack Rolls this much above AC are critical. -1 disables",
@@ -1165,6 +1165,7 @@
   },
   "midi-qol.cubNotSupported": "Combat Utility Belt will not be migrated to version 11. Midi will remove support for CUB in midi version 11.1.0",
   "midi-qol.ContestedRoll": "Contested Roll",
+  "midi-qol.DamageRollFailed": "{item}: the damage roll failed and the use was stopped ({error})",
   "midi-qol.ContestWaiting": "Waiting for {name} ({roll})",
   "midi-qol.ContestNoResult": "{flavor}: no result, a roll was not made",
   "midi-qol.versus": "versus",
@@ -1268,6 +1269,11 @@
     "DRSaveDr": "dm.midi/dnd5e.dm -> Saves/(dr/dv/di) - dnd5e RAW",
     "SaveDRDr": "Saves -> dm.midi/dm.dnd5e -> (dr/dv/di)",
     "SaveDrDR": "Saves -> dm -> (dr/dv/di) -> dm.midi"
+  },
+  "midi-qol.AmmunitionPerTargetOptions": {
+    "default": "One per attack roll",
+    "use": "One per use",
+    "target": "One per target"
   },
   "midi-qol.ConfirmTargetOptions": {
     "default": "Midi Settings",
@@ -1649,7 +1655,11 @@
       },
       "attackRollPerTarget": {
         "label": "Attack Roll Per Target",
-        "hint": "Roll a separate attack roll for each target. Creates a chat card for each target."
+        "hint": "Roll a separate attack roll for each target, each with its own chat card. The use places its template and confirms its targets first, then attacks each target in turn."
+      },
+      "ammunitionPerTarget": {
+        "label": "Ammunition",
+        "hint": "Ammunition spent when the attack has several targets: one per attack roll, one for the whole use (e.g. a shotgun), or one for each target (e.g. a volley of arrows)."
       },
       "fumbleThreshold": {
         "label": "Fumble Threshold",
@@ -1852,6 +1862,7 @@
   "midi-qol.NoAmmunition": "There are 0 {name} in your inventory",
   "midi-qol.NoAmmunitionAvailable": "There is no ammunition in your inventory.",
   "midi-qol.NoAmmunitionSelected": "You must select the ammunition to use.",
+  "midi-qol.NotEnoughAmmunition": "The attack needs {needed} {name}; there are {quantity} in your inventory",
   "midi-qol.TwoHandedShieldWarning": "Cannot use two-handed or off-hand attack with a shield equipped",
   "midi-qol.otherActivityConsumptionFailed": "{actorName}: {itemName} ({activityName}) - insufficient resources for other activity",
   "midi-qol.RefundOtherActivityResource": "Refund Other Resource",
@@ -2108,8 +2119,6 @@
   "midi-qol.flagTemplate.grants.noAdvantage.tool.description": "{label} checks will not have advantage.",
   "midi-qol.flagTemplate.grants.noDisadvantage.tool.name": "Grants No Disadvantage ({label})",
   "midi-qol.flagTemplate.grants.noDisadvantage.tool.description": "{label} checks will not have disadvantage.",
-  "midi-qol.flagTemplate.DR.damageType.name": "Damage Reduction ({label})",
-  "midi-qol.flagTemplate.DR.damageType.description": "{label} Damage Reduction.",
   "dae.1Miss": "1 Miss: Expires on the next {type} attack by the character that hits no target",
   "dae.isMissed": "is Missed: Expires if the character is attacked by a weapon/spell attack and missed",
   "dae.MidiQOL.fieldData": {

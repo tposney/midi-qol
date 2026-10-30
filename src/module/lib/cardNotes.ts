@@ -116,7 +116,8 @@ export async function renderLinkedMessage(message: ChatMessage.Implementation | 
   const html = await (message.system as { render?: (options: object) => Promise<string> }).render?.({ summary: true }) ?? "";
   // Marked with its message so the card masks it as it masks dnd5e's summaries (hidden or obscured rolls); not dnd5e's
   // own .card-summary, which dnd5e lays out and gives a delete control as a top-level summary.
-  return html ? `<div class="midi-qol-linked-message" data-message-id="${message.id}">${html}</div>` : "";
+  const token = (message as { getAssociatedToken?: () => TokenDocument.Implementation | undefined }).getAssociatedToken?.();
+  return html ? `<div class="midi-qol-linked-message" data-message-id="${message.id}"${token ? ` data-target-uuid="${token.uuid}"` : ""}>${html}</div>` : "";
 }
 
 /**

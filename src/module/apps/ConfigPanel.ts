@@ -565,7 +565,7 @@ let quickSettingsDetails: any = {
       gmAutoAttack: false,
       gmAutoDamage: "none",
       gmAutoFastForward: [],
-      gmRemoveButtons: "none"
+      gmRemoveButtons: "off"
     },
   },
   ShowItemInfo: {
@@ -595,7 +595,7 @@ let quickSettingsDetails: any = {
       autoRollAttack: false,
       autoRollDamage: "none",
       autoFastForward: [],
-      removeButtons: "none"
+      removeButtons: "off"
     },
   },
   DamageAuto: {
@@ -627,14 +627,14 @@ let quickSettingsDetails: any = {
       autoCheckSaves: "none",
       playerRollSaves: "chat",
       playerSaveTimeout: 30,
-      rollNPCSaves: "chat",
+      rollNPCSaves: "none",
       autoTarget: "wallsBlockIgnoreDefeated",
       rangeTarget: "alwaysIgnoreDefeated",
-      rollNPCLinkedSaves: "chat",
+      rollNPCLinkedSaves: "none",
       autoCEEffects: "cepri",
       autoItemEffects: "off",
       allowUseMacro: true,
-      autoApplyDamage: "no"
+      autoApplyDamage: "none"
     }
   },
   EnableReactions: {
@@ -656,14 +656,6 @@ let quickSettingsDetails: any = {
       }
       if (current.autoCheckSaves === "none") {
         settings.autoCheckSaves = "whisper";
-        changesMade = true;
-      }
-      if (current.playerRollSaves === "none") {
-        settings.playerRollSaves = "chat";
-        changesMade = true;
-      }
-      if (current.rollNPCLinkedSaves === "none") {
-        settings.rollNPCLinkedSaves = "chat";
         changesMade = true;
       }
       if (current.autoApplyDamage === "none") {

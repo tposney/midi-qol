@@ -1105,6 +1105,12 @@ export let MidiActivityMixin = Base => {
         const message = "doDamageRoll error";
         TroubleShooter.recordError(err, message);
         error(message, err);
+        // The workflow waits for this roll: stop it rather than leave it suspended.
+        if (config.workflow && config.midiOptions?.updateWorkflow !== false && !config.workflow.aborted) {
+          ui.notifications?.error(i18nFormat("midi-qol.DamageRollFailed", { item: this.item?.name ?? "", error: (err as Error)?.message ?? String(err) }));
+          config.workflow.aborted = true;
+          await config.workflow.performState(config.workflow.WorkflowState_Abort);
+        }
       } finally {
         if (preRollDamageHookId) Hooks.off("dnd5e.preRollDamage", preRollDamageHookId);
         if (rollDamageHookId) Hooks.off("dnd5e.rollDamage", rollDamageHookId);
@@ -1686,8 +1692,8 @@ export let MidiActivityMixin = Base => {
       workflow.itemUsesReaction = false;
       const reactingActor = this.actor;
       const inReactionContext = !usage.midiOptions?.workflowOptions?.notReaction && !!reactingActor?.inCombat;
-      // Classified unless the caller says otherwise; follows checkReaction when not given. The
-      // attackPerTarget loop checks reactions on its first target only but classifies every target.
+      // Classified unless the caller says otherwise; follows checkReaction when not given. An attack per target's
+      // per-target uses check no reactions (the first use did) but classify every target.
       if (inReactionContext && reactingActor && (options.checkAoO ?? options.checkReaction)) {
         const isTurn = game.combat?.combatant === game.combat?.getCombatantsByActor(reactingActor)[0];
         if (!isTurn && needsAOOCheck(reactingActor) && this.attack && this.effectiveActivationType !== "special")

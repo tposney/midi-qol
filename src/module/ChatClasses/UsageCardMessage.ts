@@ -3,9 +3,8 @@
  * advantage presentation and the damage tray. Design notes: dnd5e-v6-checklist, M13.
  */
 
-import { error, GameSystemConfig, i18n } from "../../midi-qol.js";
-import { canSeeSaveResult, cardActor } from "../lib/saveVisibility.js";
-import { Activity, ChatMessageRenderOptions, CombinedTargetDescriptor, Dnd5eChatMessage } from "../../globals.js";
+import { error } from "../../midi-qol.js";
+import { Activity, ChatMessageRenderOptions, Dnd5eChatMessage } from "../../globals.js";
 import { configSettings, safeGetGameSetting } from "../settings.js";
 import { getRemoveAllButtons, getRemoveAttackButtons, getRemoveDamageButtons, midiRenderAttackRoll,
   midiRenderDamageRolls, midiRenderOtherDamageRolls, midiRenderBonusDamageRolls, midiRenderFormulaRoll, renderRollAttributionIcon, renderSaveRollHTML } from "../utils.js";
@@ -26,23 +25,6 @@ const SECTION_ROLL_RENDERERS: Record<string, (rolls: Roll[]) => Promise<string> 
 /** Roll types midi tags damage rolls with; the presence of one means damage has been rolled. */
 const DAMAGE_ROLL_TYPES = ["defaultDamage", "otherDamage", "bonusDamage"];
 
-/** The card flag holding each damage roll type's damage by type. */
-const DAMAGE_DETAIL_FLAGS: Record<string, string> = { defaultDamage: "damageDetail", otherDamage: "otherDamageDetail", bonusDamage: "bonusDamageDetail" };
-
-/** A target's multiplier, after its save, for damage a successful save multiplies by `onSave` (as applySaves applies it). */
-function saveDamageMultiplier(target: CombinedTargetDescriptor, onSave: number): number {
-  if (onSave === configSettings.defaultSaveMult) {
-    if (target.superSaver) return target.saved ? 0 : configSettings.defaultSaveMult;
-    if (target.semiSuperSaver) return target.saved ? 0 : 1;
-  }
-  return target.saved ? onSave : 1;
-}
-
-function damageTypeLabel(type: string): string {
-  const types = { ...GameSystemConfig.damageTypes, ...GameSystemConfig.healingTypes } as Record<string, { label?: string }>;
-  return types[type]?.label ?? type;
-}
-
 /**
  * Which of the card's buttons this user should see. Policy comes from the settings at render (GM and player
  * settings differ), progress mostly from `message.rolls`. Used for midi's buttons and dnd5e's.
@@ -59,23 +41,25 @@ export function midiButtonVisibility(message: Dnd5eChatMessage | undefined, acti
   const confirmEnabled = !!midi.confirmAttackDamage;
   const confirmPending = confirmEnabled && !progress.confirmed;
   // midi's card actions dispatch through the activity: once its item is gone none of them can run.
-  const done = !!progress.allRemoved || !activity;
+  const done = !!progress.allRemoved || !activity || !!message?.getFlag(MODULE_ID, "undone");
   const removeAll = done || getRemoveAllButtons(activity);
+  // Attacks handed to one use per target: those cards attack, damage and apply effects.
+  const split = !!progress.attacksSplit;
 
   // Rolled and the policy removes its control; also governs dnd5e's buttons where midi draws none.
   const attackSpent = attackRolled && !confirmPending && (removeAll || getRemoveAttackButtons(activity));
   const damageSpent = damageRolled && !confirmPending && (removeAll || getRemoveDamageButtons(activity));
 
   return {
-    attack: !done && !!midi.hasAttack && !attackSpent,
-    damage: !done && !!midi.hasDamage && !damageSpent,
+    attack: !done && !split && !!midi.hasAttack && !attackSpent,
+    damage: !done && !split && !!midi.hasDamage && !damageSpent,
     attackSpent: done || attackSpent,
     damageSpent: done || damageSpent,
     // An activity with no attack roll still confirms, with one button instead of hit/miss.
-    confirm: !done && confirmPending,
-    confirmHitMiss: !done && confirmPending && !!midi.hasAttackRoll,
-    cancel: !done && confirmPending && !!configSettings.undoWorkflow,
-    effects: !done && !!midi.hasEffects
+    confirm: !done && !split && confirmPending,
+    confirmHitMiss: !done && !split && confirmPending && !!midi.hasAttackRoll,
+    cancel: !done && !split && confirmPending && !!configSettings.undoWorkflow,
+    effects: !done && !split && !!midi.hasEffects
       && !(progress.effectsApplied && configSettings.autoItemEffects === "applyRemove"),
     allRemoved: done,
     savesResolved: !!progress.savesResolved,
@@ -172,6 +156,8 @@ export function setupUsageCardMessage() {
           // Only events that leave no other trace; the rest is derived (see midiButtonVisibility).
           progress: new SchemaField({
             allRemoved: new BooleanField({ initial: false }),
+            // The use's attacks were handed to one use per target; their cards carry the rolls.
+            attacksSplit: new BooleanField({ initial: false }),
             confirmed: new BooleanField({ initial: false }),
             effectsApplied: new BooleanField({ initial: false }),
             savesResolved: new BooleanField({ initial: false }),
@@ -190,10 +176,7 @@ export function setupUsageCardMessage() {
               data: new ObjectField({ required: false }),
               html: new StringField({ required: false, blank: true })
             }, { required: false, nullable: true, initial: null })
-          ])), { required: false }),
-
-          // The undo colour of a card whose workflow was undone.
-          undoneColor: new StringField({ required: false, blank: true })
+          ])), { required: false })
         }, { required: false })
       };
     }
@@ -242,10 +225,7 @@ export function setupUsageCardMessage() {
 
       // Notes, and messages a note owns, are drawn by the notes.
       context.summaries = (context.summaries ?? []).filter((summary: any) => !drawnSeparately(game.messages?.get(summary.id)));
-      const saveDamageLines = this.#saveDamageLines();
-      if (saveDamageLines.size) context.summaries = (context.summaries ?? []).map((summary: any) =>
-        ({ ...summary, midiDamageLine: saveDamageLines.get(summary.token?.uuid ?? "") }));
-      const sections = await this.#renderSections(this.#applySaveSummaries(context), saveDamageLines);
+      const sections = await this.#renderSections(this.#applySaveSummaries(context));
       context.midi = {
         ...(this.midi ?? {}),
         sections,
@@ -343,7 +323,7 @@ export function setupUsageCardMessage() {
     }
 
     /** The sections for rendering: roll-backed ones from `message.rolls`, template ones per viewer, `html` as stored. */
-    async #renderSections(omitSaves: Set<string> | "all" = new Set(), saveDamageLines = new Map<string, string>()): Promise<Record<string, unknown>> {
+    async #renderSections(omitSaves: Set<string> | "all" = new Set()): Promise<Record<string, unknown>> {
       const stored: Record<string, any> = this.midi?.sections ?? {};
       const out: Record<string, unknown> = {};
       for (const name of SECTION_NAMES) {
@@ -362,8 +342,7 @@ export function setupUsageCardMessage() {
             ...section,
             html: await foundry.applications.handlebars.renderTemplate(section.template, {
               ...(section.data ?? {}),
-              ...(section.data?.saves ? { saves: (await this.#withSaveRolls(section.data.saves)).map((save: any) => ({ ...save,
-                damageLine: save.saveClass ? saveDamageLines.get(save.target?.document?.uuid ?? "") : undefined })) } : {}),
+              ...(section.data?.saves ? { saves: await this.#withSaveRolls(section.data.saves) } : {}),
               // Against everything midi evaluated, not just the rows left once dnd5e's summaries replace some.
               unevaluated: this.#unevaluatedTargets(name, stored[name]?.data ?? section.data),
               // Resolved per viewer, not per roller.
@@ -386,54 +365,6 @@ export function setupUsageCardMessage() {
         out[name] = { ...section, label, html };
       }
       return out;
-    }
-
-    /**
-     * Per target token, the damage of each type after its save: the rolled damage times its save multiplier, before
-     * resistances. Only targets the save spares some damage, and whose save result this viewer may see.
-     */
-    #saveDamageLines(): Map<string, string> {
-      const lines = new Map<string, string>();
-      if (!configSettings.saveDamageLine) return lines;
-      const flags = (this.parent.flags as Record<string, any> | undefined)?.[MODULE_ID];
-      type Part = { value?: number, type?: string, midiAmmunition?: boolean };
-      const details = Object.entries(DAMAGE_DETAIL_FLAGS)
-        .map(([rollType, flag]) => ({ rollType, parts: (flags?.[flag] ?? []) as Part[] }))
-        .filter(detail => detail.parts.length);
-      if (!details.length) return lines;
-      const otherMatches: string[] | undefined = flags?.otherDamageMatchUuids;
-      const ammunitionMatches: string[] | undefined = flags?.ammunitionDamageMatchUuids;
-      for (const target of this.#recordedTargets() as CombinedTargetDescriptor[]) {
-        if (!target.token || typeof target.saved !== "boolean" || !this.#showsSaveResult(target)) continue;
-        // Each part this target takes, with what a successful save does to it (the ammunition's follows its own save).
-        const parts = details.flatMap(({ rollType, parts }) => parts
-          .filter(part => rollType !== "otherDamage"
-            || ((part.midiAmmunition ? ammunitionMatches : otherMatches)?.includes(target.token!) ?? true))
-          .map(part => {
-            const streamOnSave = target.saveMults?.[rollType as "defaultDamage" | "otherDamage" | "bonusDamage"] ?? configSettings.defaultSaveMult;
-            return { part, onSave: part.midiAmmunition ? (target.saveMults?.ammunition ?? streamOnSave) : streamOnSave };
-          }));
-        const mults = parts.map(({ onSave }) => saveDamageMultiplier(target, onSave));
-        if (mults.every(mult => mult === 1)) continue;
-        const byType = new Map<string, number>();
-        for (const [index, { part }] of parts.entries()) {
-          const type = part.type ?? "";
-          byType.set(type, (byType.get(type) ?? 0) + Math.floor((part.value ?? 0) * mults[index]));
-        }
-        const changesSave = parts.some(({ onSave }) => onSave === configSettings.defaultSaveMult);
-        const reason = !changesSave ? undefined
-          : target.superSaver ? i18n("DND5E.DamageApplication.Change.SuperSaver")
-          : target.semiSuperSaver ? i18n("DND5E.DamageApplication.Change.SemiSuperSaver") : undefined;
-        const amounts = [...byType].map(([type, amount]) => `${damageTypeLabel(type)} ${amount}`);
-        lines.set(target.token, [reason, ...amounts].filter(Boolean).join(" · "));
-      }
-      return lines;
-    }
-
-    /** Whether this viewer may see a target's save result, as midi's saves section shows it. */
-    #showsSaveResult(target: CombinedTargetDescriptor): boolean {
-      const actor = fromUuidSync(target.actor, { strict: false });
-      return canSeeSaveResult(cardActor(this.parent), actor instanceof Actor && actor.hasPlayerOwner);
     }
 
     #recordedTargets(): { name?: string, img?: string, token?: string }[] {

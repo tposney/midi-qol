@@ -79,12 +79,26 @@ function applyChosenAbilityModifiers(type: "skill" | "tool") {
   };
 }
 
+/**
+ * A parenthetical term's data with its inner roll as data, not the live Roll. dnd5e 6 doubles a parenthesised damage
+ * term on a critical by cloning it (`RollTerm.fromData(deepClone(term.toJSON()))`); deepClone keeps class instances,
+ * so the copy shared the original's inner Roll and evaluating the second threw "already evaluated", stopping the
+ * workflow. JSON output is unchanged (JSON.stringify calls the inner roll's toJSON anyway). Remove once dnd5e clones
+ * through JSON.
+ */
+function parentheticalToJSON(this: unknown, wrapped: () => Record<string, unknown>): Record<string, unknown> {
+  const data = wrapped();
+  if (data.roll instanceof Roll) data.roll = data.roll.toJSON();
+  return data;
+}
+
 export function initPatching() {
   libWrapper = globalThis.libWrapper;
   Hooks.on("dnd5e.postBuildSkillRollConfig", applyChosenAbilityModifiers("skill"));
   Hooks.on("dnd5e.postBuildToolRollConfig", applyChosenAbilityModifiers("tool"));
   // TODO this needs more work libWrapper.register(MODULE_ID, "CONFIG.Item.documentClass.migrateData", removeMidiProperties, "WRAPPER");
   libWrapper.register(MODULE_ID, "CONFIG.Actor.documentClass.prototype.prepareDerivedData", _prepareDerivedData, "WRAPPER");
+  libWrapper.register(MODULE_ID, "foundry.dice.terms.ParentheticalTerm.prototype.toJSON", parentheticalToJSON, "WRAPPER");
   // For new onUse macros stuff.
   libWrapper.register(MODULE_ID, "CONFIG.Item.documentClass.prototype.prepareData", itemPrepareData, "WRAPPER");
   libWrapper.register(MODULE_ID, "CONFIG.Actor.documentClass.prototype.prepareData", actorPrepareData, "WRAPPER");
@@ -684,7 +698,8 @@ export async function bonusCheck(actor: Actor.Implementation, result: Roll, cate
       `${actor.name} - ${title}`,
       data.roll,
       "roll",
-      { messageData }
+      // A save or check rolled for a use card is linked to it; the bonus is shown there
+      { messageData, card: game.messages?.get(messageData?.system?.origin?.id ?? messageData?.system?.origin ?? ""), anchor: "saves" }
     );
     if (newRoll) result = newRoll;
   }
@@ -1566,8 +1581,11 @@ async function rollDeathSave(this: Actor.Implementation, wrapped, config: RollPr
   if (advantage !== undefined) options.advantage = advantage;
   if (disadvantage !== undefined) options.disadvantage = disadvantage;
 
-  // Handle death save bonus
+  // Only reached when set on the actor directly; effects are mapped by DAE to system.attributes.death.roll.bonus. Remove in 14.6.10.
   if (deathSaveBonus) {
+    foundry.utils.logCompatibilityWarning(
+      "midi-qol | flags.midi-qol.deathSaveBonus is deprecated; use system.attributes.death.roll.bonus. Setting it on an actor directly stops working in 14.6.10.",
+      { once: true });
     const conditionData = createConditionData({ workflow: undefined, target: undefined, actor: this });
     let bonus: any;
     if (typeof deathSaveBonus === "number") {
@@ -2006,6 +2024,8 @@ export async function computeSkillAdvantage(actor: Actor.Implementation, skillId
     // As dnd5e does, the ability's check advantage applies to the skill
     skillFlags.advantageFlags.push("advantage.ability.all", "advantage.check.all", `advantage.check.${abilityId}`);
     skillFlags.disadvantageFlags.push("disadvantage.ability.all", "disadvantage.check.all", `disadvantage.check.${abilityId}`);
+    skillFlags.noAdvantageFlags?.push("noAdvantage.check.all", `noAdvantage.check.${abilityId}`);
+    skillFlags.noDisadvantageFlags?.push("noDisadvantage.check.all", `noDisadvantage.check.${abilityId}`);
   }
 
   // For skills, source actor is the caster (workflow.actor) if any

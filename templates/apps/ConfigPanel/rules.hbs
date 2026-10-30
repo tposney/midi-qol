@@ -1,5 +1,34 @@
 <section id="midi-config-rules" class="tab midi-scrollable-list{{#if tab.active}} active{{/if}}" data-group="{{tab.group}}" data-tab="{{tab.id}}">
     <div class="midi-qol-box">
+        <div class="midi-qol-settings heading">{{localize "midi-qol.RulesAlwaysApplied.Name"}}</div>
+        <div class="notes midi-qol-faint">{{localize "midi-qol.RulesAlwaysApplied.Hint"}}</div>
+        <div class="form-group">
+            <label>{{localize "midi-qol.Incapacitated.Name"}}</label>
+            <select name="optionalRules.incapacitated" data-dtype="String">
+                {{selectOptions IncapacitatedOptions selected=configSettings.optionalRules.incapacitated localize=true}}
+            </select>
+        </div>
+        <div class="form-group">
+            <label>{{localize "midi-qol.CheckRange.Name"}}</label>
+            <select name="optionalRules.checkRange" data-dtype="String">
+                {{selectOptions CheckRangeOptions selected=configSettings.optionalRules.checkRange localize=true}}
+            </select>
+        </div>
+        <div class="form-group">
+            <label>{{localize "midi-qol.TargetMustBeSeen.Name"}}</label>
+            <select name="optionalRules.targetMustBeSeen" data-dtype="String">
+                {{selectOptions TargetMustBeSeenOptions selected=configSettings.optionalRules.targetMustBeSeen localize=true}}
+            </select>
+            <div class="notes midi-qol-faint">{{localize "midi-qol.TargetMustBeSeen.Hint"}}</div>
+        </div>
+        <div class="form-group">
+            <label>{{localize "midi-qol.InvisVision.Name"}}</label>
+            <input type="checkbox" name="optionalRules.invisVision" data-dtype="Boolean" {{checked
+            configSettings.optionalRules.invisVision}} />
+            <div class="notes midi-qol-faint">{{{localize "midi-qol.InvisVision.Hint"}}}</div>
+        </div>
+    </div>
+    <div class="midi-qol-box">
         <div class="form-group optionalRulesEnabled">
             <label>{{localize "midi-qol.OptionalRules.Name"}}</label>
             <input type="checkbox" name="optionalRulesEnabled" data-dtype="Boolean" {{checked
@@ -57,12 +86,6 @@
                             {{selectOptions HiddenAdvantageOptions selected=configSettings.optionalRules.hiddenAdvantage localize=true}}
                         </select>
                         <div class="notes midi-qol-faint">{{{localize "midi-qol.HiddenAdvantage.Hint"}}}</div>
-                    </div>
-                    <div class="form-group">
-                        <label>{{localize "midi-qol.InvisVision.Name"}}</label>
-                        <input type="checkbox" name="optionalRules.invisVision" data-dtype="Boolean" {{checked
-                        configSettings.optionalRules.invisVision}} />
-                        <div class="notes midi-qol-faint">{{{localize "midi-qol.InvisVision.Hint"}}}</div>
                     </div>
                 </div>
                 <div class="form-group">
@@ -147,36 +170,36 @@
                         </ul>
                     </div>
                 </div>
+                <div class="midi-qol-box">
+                    <div class="form-group">
+                        <label>{{localize "midi-qol.OptionalRuleVitality.Name"}}</label>
+                        <input type="text" name="optionalRules.vitalityItem"
+                            value="{{configSettings.optionalRules.vitalityItem}}" />
+                        <div class="notes midi-qol-faint">{{{localize "midi-qol.OptionalRuleVitality.Hint"}}}</div>
+                    </div>
+                    <div class="form-group">
+                        <label>{{localize "midi-qol.OptionalRuleVitalityCondition.Name"}}</label>
+                        <select name="optionalRules.vitalityDeadCondition" data-dtype="String">
+                            {{selectOptions StatusEffectOptions selected=configSettings.optionalRules.vitalityDeadCondition localize=true}}
+                        </select>
+                        <div class="notes midi-qol-faint">{{{localize "midi-qol.OptionalRuleVitalityCondition.Hint"}}}</div>
+                    </div>
+                    <div class="form-group">
+                        <label>{{localize "midi-qol.OptionalRuleVitalityDeathRequires.Name"}}</label>
+                        <select name="optionalRules.vitalityDeathRequires" data-dtype="String">
+                            {{selectOptions vitalityDeathRequiresOptions selected=configSettings.optionalRules.vitalityDeathRequires localize=true}}
+                        </select>
+                        <div class="notes midi-qol-faint">{{{localize "midi-qol.OptionalRuleVitalityDeathRequires.Hint"}}}</div>
+                    </div>
             {{/if}}
         </div>
-        <div class="midi-qol-box">
-            <div class="form-group">
-                <label>{{localize "midi-qol.OptionalRuleVitality.Name"}}</label>
-                <input type="text" name="optionalRules.vitalityItem"
-                    value="{{configSettings.optionalRules.vitalityItem}}" />
-                <div class="notes midi-qol-faint">{{{localize "midi-qol.OptionalRuleVitality.Hint"}}}</div>
-            </div>
-            <div class="form-group">
-                <label>{{localize "midi-qol.OptionalRuleVitalityCondition.Name"}}</label>
-                <select name="optionalRules.vitalityDeadCondition" data-dtype="String">
-                    {{selectOptions StatusEffectOptions selected=configSettings.optionalRules.vitalityDeadCondition localize=true}}
-                </select>
-                <div class="notes midi-qol-faint">{{{localize "midi-qol.OptionalRuleVitalityCondition.Hint"}}}</div>
-            </div>
-            <div class="form-group">
-                <label>{{localize "midi-qol.OptionalRuleVitalityDeathRequires.Name"}}</label>
-                <select name="optionalRules.vitalityDeathRequires" data-dtype="String">
-                    {{selectOptions vitalityDeathRequiresOptions selected=configSettings.optionalRules.vitalityDeathRequires localize=true}}
-                </select>
-                <div class="notes midi-qol-faint">{{{localize "midi-qol.OptionalRuleVitalityDeathRequires.Hint"}}}</div>
-            </div>
         </div>
     </div>
     <div class="midi-qol-box">
         <div class="form-group">
             <label>{{localize "midi-qol.ddbGL.Name"}}</label>
-            <input type="checkbox" name="optionalRules.enableddbGL" data-dtype="Boolean" {{checked
-            configSettings.optionalRules.enableddbGL}} />
+            <input type="checkbox" name="enableDDBGL" data-dtype="Boolean" {{checked
+            configSettings.enableDDBGL}} />
             <div class="notes midi-qol-faint">{{{localize "midi-qol.ddbGL.Hint"}}}</div>
         </div>
     </div>
