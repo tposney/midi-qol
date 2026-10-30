@@ -511,6 +511,9 @@ let defineMidiAttackActivityClass = <T extends Activity>(ActivityClass: T) => {
           message.rollMode = rollMode as keyof CONFIG.Dice.RollModes;
         }
         config.attackMode ??= this.attackMode ?? "oneHanded";
+        // Without the dialog dnd5e spends its last-used or first ammunition, not midi's choice
+        // @ts-expect-error no dnd5e-types
+        if (this.item.system.properties?.has("amm")) config.ammunition ??= this.ammunition || undefined;
         // @ts-expect-error isVersatile is a dnd5e getter
         if (config.event && areMidiKeysPressed(config.event, "Versatile") && this.item.isVersatile) {
           config.attackMode = "twoHanded";
@@ -522,7 +525,7 @@ let defineMidiAttackActivityClass = <T extends Activity>(ActivityClass: T) => {
           // if (workflow) workflow.aborted = true;
           return null;
         }
-        if (dialog.configure && rolls[0]?.options?.ammunition && rolls[0].options.ammunition !== this.ammunition) {
+        if (rolls[0]?.options?.ammunition && rolls[0].options.ammunition !== this.ammunition) {
           await this.update({ ammunition: rolls[0].options.ammunition });
           this.ammunition = rolls[0].options.ammunition;
           this.ammunitionItem = this.actor?.items.get(this.ammunition);

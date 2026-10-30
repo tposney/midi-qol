@@ -1,4 +1,4 @@
-### 14.0.17 (unreleased)
+### 14.0.17
 
 * From this release the v14 (Foundry 14 / dnd5e 5.3) line receives only bug fixes, no feature enhancements; new features go to the dnd5e 6 line.
 
@@ -7,6 +7,8 @@
 * Changed: *Unseen/Invisible attackers have advantage/disadvantage* defaults to RAW (2024) where it was never set.
 
 **Activities**
+* Fixed: the AC modifier icons on a hit row (cover, reaction, a target's attack penalty) were different sizes and sat at different heights.
+* Fixed: an attack rolled without the roll dialog spent the actor's first ammunition (even one with none left) instead of the activity's chosen ammunition, while the card named the chosen one.
 * Fixed: an effect applied "whatever the save" also went to creatures an attack missed; it now goes only to the creatures hit.
 * Changed: the *Midi Overtime* tab explains which effect change runs an over-time activity (`flags.midi-qol.ActivityOverTime` set to its identifier); marking an activity *Is Over Time* alone does nothing.
 
@@ -34,6 +36,7 @@
 * Changed: a blank onUse macro name is the item's own macro (the used activity's, else the item's; for an effect change, the effect's activity's, else its item's), and an item with a macro but no onUse macros runs it after active effects. An onUseMacroName effect change with no pass is ignored and reported.
 
 **Damage**
+* Fixed: in new worlds the GM's critical hits didn't double damage dice (GM critical damage defaulted to a blank choice); a blank choice now follows the player setting.
 * Fixed: damage a creature absorbs (Damage Absorption) shows as healing on the damage card; it was applied correctly but shown as no change.
 * Fixed: `MidiQOL.modifyDamageBy` (in an `isDamaged` or `preTargetDamageApplication` macro) changed only part of the damage entry, so later special durations used the old figure; the whole entry now follows.
 * Removed: setting `useDamageDetail`, which was always on (`MidiQOL.configSettings().useDamageDetail` reads true, with a deprecation warning).

@@ -280,12 +280,12 @@
     "chris-premades": {
       "info": {
         "source": "midi-qol.midiqol-sample-items",
-        "version": "14.0.14"
+        "version": "14.0.17"
       }
     },
     "cat": {
       "automation": {
-        "version": "14.0.14"
+        "version": "14.0.17"
       }
     }
   },

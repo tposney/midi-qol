@@ -160,7 +160,7 @@ class ConfigSettings {
   consumeResource: string = "none";
   convenientEffectsReaction: string = "Reaction";
   criticalDamage: string = "default";
-  criticalDamageGM: string = "none";
+  criticalDamageGM: string = "default";
   criticalSound: string = "";
   customSoundsPlaylist: string = "none";
   damageImmunities: string = "none";
@@ -889,7 +889,8 @@ export let fetchParams = () => {
   if (configSettings.collapsibleTargets === undefined) configSettings.collapsibleTargets = true;
   if (configSettings.displayProperties === undefined) configSettings.displayProperties = true;
   criticalDamage = configSettings.criticalDamage ?? "default";
-  criticalDamageGM = configSettings.criticalDamageGM ?? criticalDamage;
+  if (!configSettings.criticalDamageGM || configSettings.criticalDamageGM === "none") configSettings.criticalDamageGM = criticalDamage;
+  criticalDamageGM = configSettings.criticalDamageGM;
   nsaFlag = game.settings.get("midi-qol", "showGM");
   const previousColoredBorders = coloredBorders;
   coloredBorders = configSettings.coloredBorders ?? "none";

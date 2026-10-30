@@ -384,12 +384,12 @@
     "chris-premades": {
       "info": {
         "source": "midi-qol.midiqol-sample-items",
-        "version": "13.0.55"
+        "version": "14.0.17"
       }
     },
     "cat": {
       "automation": {
-        "version": "13.0.55"
+        "version": "14.0.17"
       }
     }
   },

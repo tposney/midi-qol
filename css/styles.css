@@ -1780,30 +1780,44 @@ section.midi-qol.tab > .sheet-tabs [data-tab] label {
   margin-left: auto;
 }
 
-/* AC modifier icons in hit/save display (cover, flanking, reaction, grants) */
+/* AC modifier icons in hit/save display (cover, flanking, reaction, grants): one row, each in the same 14px box */
+.midi-qol-ac-icons {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  flex-shrink: 0;
+}
+
+.midi-qol-ac-icon,
+.midi-qol-ac-icon-img,
+.midi-qol-ac-icon-fa {
+  width: 14px;
+  height: 14px;
+  flex: 0 0 14px;
+}
+
 .midi-qol-ac-icon {
   --icon-fill: #777;
   --icon-size: 14px;
-  display: inline-block;
-  vertical-align: text-bottom;
-  margin-right: 1px;
+  display: block;
 }
 
 /* Image-based AC icons (Sharpshooter/Spell Sniper .webp, core SVGs with hardcoded fills) */
 .midi-qol-ac-icon-img {
-  display: inline !important;
+  display: block !important;
   width: 14px !important;
   height: 14px !important;
-  vertical-align: -0.125em;
-  margin-right: 1px;
+  border: none;
   filter: brightness(0) invert(0.5);
 }
 
 /* Font Awesome icons (grants AC bonus) */
 .midi-qol-ac-icon-fa {
-  font-size: 8px;
-  vertical-align: -0.125em;
-  margin-right: 1px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  line-height: 1;
   color: #777;
 }
 
