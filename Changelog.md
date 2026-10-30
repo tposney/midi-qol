@@ -27,6 +27,7 @@
 * Fixed: *Un-target at end of turn* (dead targets) cleared every target at 0 hit points shortly after any use, so a Healer's Kit or Spare the Dying used on a downed creature lost its target; only the finished use's targets are cleared.
 
 **Macros**
+* Fixed: `MidiQOL.contestedRoll` ignored its `rollOptions` (for both rolls, or per side in `source`/`target`): `advantage`, `disadvantage`, `fastForward` and `rollMode` now reach the checks.
 * Fixed: an effect change `flags.midi-qol.onUseMacroName` with `ItemMacro` on an aura's copy (Aura Effects) pointed at the aura effect rather than its item, so the macro never ran; it now runs the item's macro.
 * Fixed: a reaction passed to the `chooseReactions` socket as an object (`{itemName, id, uuid, …}`, the older form) made the reaction dialog fail to render, so nothing was offered; it is looked up by its uuid.
 * Fixed: an ammunition's onUse macros at the workflow-state passes (e.g. `postAttackRollComplete`, `preDamageRollComplete`) got the weapon as the macro item, so its `ItemMacro` never ran; the macro item is now the ammunition.

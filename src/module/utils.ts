@@ -8958,14 +8958,15 @@ export async function contestedRoll(data: {
   const buildContestedSaveDetails = (
     actorUuid: string,
     rollType: string,
-    abilityOrSkill: string
+    abilityOrSkill: string,
+    rollOptions: { advantage?: boolean, disadvantage?: boolean }
   ): SaveDetails => {
     const normalizedType = normalizeRollType(rollType);
     const isSkill = rollType === "skill";
     return {
       actorUuid,
-      advantage: undefined,
-      disadvantage: undefined,
+      advantage: rollOptions.advantage,
+      disadvantage: rollOptions.disadvantage,
       modifierTracker: undefined,
       isFriendly: false,
       isMagicSave: false,
@@ -8983,25 +8984,30 @@ export async function contestedRoll(data: {
     };
   };
 
+  // Options for both rolls, then each side's own: advantage, disadvantage, fastForward, rollMode.
+  const sourceRollOptions = { ...(data.rollOptions ?? {}), ...(source.rollOptions ?? {}) };
+  const targetRollOptions = { ...(data.rollOptions ?? {}), ...(target.rollOptions ?? {}) };
   const sourceSaveDetails = buildContestedSaveDetails(
     sourceDocument?.actor?.uuid ?? "",
     source.rollType,
-    source.ability
+    source.ability,
+    sourceRollOptions
   );
   const targetSaveDetails = buildContestedSaveDetails(
     targetDocument?.actor?.uuid ?? "",
     target.rollType,
-    target.ability
+    target.ability,
+    targetRollOptions
   );
 
   const resultPromises = [
     socketlibSocket.executeAsUser("rollAbility", player1.id, {
       saveDetails: sourceSaveDetails,
-      displayOptions: { chatMessage: true }
+      displayOptions: { chatMessage: true, fastForward: sourceRollOptions.fastForward, rollMode: rollModeToMessageMode(sourceRollOptions.rollMode) }
     }),
     socketlibSocket.executeAsUser("rollAbility", player2.id, {
       saveDetails: targetSaveDetails,
-      displayOptions: { chatMessage: true }
+      displayOptions: { chatMessage: true, fastForward: targetRollOptions.fastForward, rollMode: rollModeToMessageMode(targetRollOptions.rollMode) }
     }),
   ];
 
