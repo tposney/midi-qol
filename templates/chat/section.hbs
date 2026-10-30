@@ -1,12 +1,16 @@
 {{!--
-  One roll section of the usage card.
+  One roll section of the usage card, with the card's notes placed around and inside it (`notes`, rendered).
 
   `midi-qol-section-filled` is applied only when the section has content, which is the same signal
   the old splice used — the empty container and the filled one were different markup, and midi's CSS
   distinguishes them.
 --}}
-<div class="midi-qol-{{ name }}{{#if section.html }} midi-qol-section-filled{{/if}}">
+{{#each notes.before}}{{{ this }}}{{/each}}
+<div class="midi-qol-{{ name }}{{#if (or section.html notes.prepend notes.append) }} midi-qol-section-filled{{/if}}">
+    {{#each notes.prepend}}{{{ this }}}{{/each}}
     {{#if section.label }}<div class="midi-roll-label">{{{ section.label }}}</div>{{/if}}
     {{{ section.html }}}
+    {{#each notes.append}}{{{ this }}}{{/each}}
     <div class="end-midi-qol-{{ name }}"></div>
 </div>
+{{#each notes.after}}{{{ this }}}{{/each}}

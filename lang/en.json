@@ -1165,6 +1165,8 @@
   },
   "midi-qol.cubNotSupported": "Combat Utility Belt will not be migrated to version 11. Midi will remove support for CUB in midi version 11.1.0",
   "midi-qol.ContestedRoll": "Contested Roll",
+  "midi-qol.ContestWaiting": "Waiting for {name} ({roll})",
+  "midi-qol.ContestNoResult": "{flavor}: no result, a roll was not made",
   "midi-qol.versus": "versus",
   "midi-qol.Skipped": "Skipped",
   "midi-qol.ExportTroubleShooting": "Export Trouble Shooting Data",

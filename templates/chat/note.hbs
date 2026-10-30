@@ -1,0 +1,5 @@
+{{!-- A note on a usage card (MidiQOL.addCardNote): drawn by the card, or on its own when the card can't draw it. --}}
+<div class="midi-qol-card-note {{ cssClass }}" data-midi-note="{{ id }}">
+  {{#if label }}<div class="midi-roll-label">{{{ label }}}</div>{{/if}}
+  {{{ html }}}
+</div>

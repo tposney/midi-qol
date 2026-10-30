@@ -519,6 +519,7 @@ function linkRollToCard(message: AnyMutableObject, midiOptions: MidiOptions | un
   const cardId: string | undefined = midiOptions?.workflow?.itemCardId ?? (card instanceof ChatMessage ? card.id ?? undefined : undefined);
   if (!cardId) return undefined;
   foundry.utils.setProperty(message, "data.system.origin", cardId);
+  if (midiOptions?.cardNote) foundry.utils.setProperty(message, `data.flags.${MODULE_ID}.cardNote`, midiOptions.cardNote);
   const activity = midiOptions?.workflow?.saveActivity
     ?? (midiOptions?.saveActivityUuid ? fromUuidSync(midiOptions.saveActivityUuid) : undefined)
     // @ts-expect-error no dnd5e-types

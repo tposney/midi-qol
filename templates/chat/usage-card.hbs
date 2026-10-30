@@ -20,6 +20,12 @@
 
 {{> "dnd5e.card-face" }}
 
+{{!-- Notes placed before midi's buttons (after dnd5e's, which the card face draws). --}}
+{{#each midi.notes.buttons.before}}{{{ this }}}{{/each}}
+{{#each midi.notes.buttons.prepend}}{{{ this }}}{{/each}}
+{{#each midi.notes.buttons.append}}{{{ this }}}{{/each}}
+{{#each midi.notes.buttons.after}}{{{ this }}}{{/each}}
+
 {{#unless midi.hasButtons}}
 {{#each summaries}}
 <div class="card-summary" data-message-id="{{ id }}" data-target-uuid="{{ token.uuid }}">{{{ html }}}
@@ -99,21 +105,29 @@
     third-party macros all select on them, so removing them would break more than it tidied.
   --}}
   <div class="midi-results">
+    {{#each midi.notes.top.before}}{{{ this }}}{{/each}}
+    {{#each midi.notes.top.prepend}}{{{ this }}}{{/each}}
+    {{#each midi.notes.top.append}}{{{ this }}}{{/each}}
+    {{#each midi.notes.top.after}}{{{ this }}}{{/each}}
     {{#if midi.condensed}}
     <div class="flexrow 2">
-      {{> "midi.section" name="attack-roll" section=midi.sections.attack }}
-      {{> "midi.section" name="damage-roll" section=midi.sections.damage }}
+      {{> "midi.section" name="attack-roll" section=midi.sections.attack notes=midi.notes.attack }}
+      {{> "midi.section" name="damage-roll" section=midi.sections.damage notes=midi.notes.damage }}
     </div>
-    {{> "midi.section" name="hits-display" section=midi.sections.hits }}
+    {{> "midi.section" name="hits-display" section=midi.sections.hits notes=midi.notes.hits }}
     {{else}}
-    {{> "midi.section" name="attack-roll" section=midi.sections.attack }}
-    {{> "midi.section" name="hits-display" section=midi.sections.hits }}
-    {{> "midi.section" name="damage-roll" section=midi.sections.damage }}
+    {{> "midi.section" name="attack-roll" section=midi.sections.attack notes=midi.notes.attack }}
+    {{> "midi.section" name="hits-display" section=midi.sections.hits notes=midi.notes.hits }}
+    {{> "midi.section" name="damage-roll" section=midi.sections.damage notes=midi.notes.damage }}
     {{/if}}
-    {{> "midi.section" name="other-damage-roll" section=midi.sections.otherDamage }}
-    {{> "midi.section" name="bonus-damage-roll" section=midi.sections.bonusDamage }}
-    {{> "midi.section" name="utility-roll"      section=midi.sections.utility }}
-    {{> "midi.section" name="saves-display"     section=midi.sections.saves }}
+    {{> "midi.section" name="other-damage-roll" section=midi.sections.otherDamage notes=midi.notes.otherDamage }}
+    {{> "midi.section" name="bonus-damage-roll" section=midi.sections.bonusDamage notes=midi.notes.bonusDamage }}
+    {{> "midi.section" name="utility-roll"      section=midi.sections.utility notes=midi.notes.utility }}
+    {{> "midi.section" name="saves-display"     section=midi.sections.saves notes=midi.notes.saves }}
+    {{#each midi.notes.bottom.before}}{{{ this }}}{{/each}}
+    {{#each midi.notes.bottom.prepend}}{{{ this }}}{{/each}}
+    {{#each midi.notes.bottom.append}}{{{ this }}}{{/each}}
+    {{#each midi.notes.bottom.after}}{{{ this }}}{{/each}}
   </div>
 </div>
 {{!-- dnd5e's save/check summaries follow midi's saves heading, not above the rolls as on dnd5e's card; outside

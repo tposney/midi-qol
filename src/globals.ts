@@ -15,6 +15,8 @@ import { ConditionEditor } from "./module/apps/ConditionEditor";
 import { AttributionMap, AugmentedEvent, DamageDescriptionObject, DamageOnlyWorkflow, DDBGameLogWorkflow, DummyWorkflow, TrapWorkflow, UndoData, UserWorkflow, Workflow, WorkflowOptions, WorkflowRollOptions } from "./module/Workflow";
 import { MidiOptions } from "./module/utils";
 import * as utils from "./module/utils";
+import * as cardNotes from "./module/lib/cardNotes";
+import * as contestedRollModule from "./module/lib/contestedRoll";
 import * as tokenHighlight from "./module/lib/tokenHighlight";
 import * as workflowOptionsCodec from "./module/lib/workflowOptionsCodec";
 import * as settings from "./module/settings";
@@ -515,6 +517,8 @@ declare module "fvtt-types/configuration" {
         attackTotal?: number;
         attackRoll?: Roll.Data | Roll;
         attackRollCount?: number;
+        /** One of a card note's messages (MidiQOL.cardNoteMessageData): its role, for the note's renderer */
+        cardNote?: { role?: string };
         bonusDamageDetail?: DamageDescriptionObject[];
         bonusDamageRolls?: Roll.Data[] | Roll[];
         bonusDamageTotal?: number;
@@ -676,10 +680,11 @@ declare global {
     }
   }
 
-  /** fvtt-types brands module sub-types, so "midi-qol.damage" needs declaring to be assignable. */
+  /** fvtt-types brands module sub-types, so midi's message types need declaring to be assignable. */
   interface DataModelConfig {
     ChatMessage: {
       "midi-qol.damage": typeof import("./module/ChatClasses/DamageCardMessage.js").MidiDamageMessageData;
+      "midi-qol.note": typeof import("./module/ChatClasses/CardNoteMessage.js").MidiNoteMessageData;
     };
   }
 
@@ -777,7 +782,13 @@ declare global {
     tokenAtPosition: typeof utils.tokenAtPosition;
     computeDistance: typeof utils.computeDistance;
     getDistance: typeof utils.getDistance;
-    contestedRoll: typeof utils.contestedRoll;
+    addCardNote: typeof cardNotes.addCardNote;
+    removeCardNote: typeof cardNotes.removeCardNote;
+    registerCardNoteRenderer: typeof cardNotes.registerCardNoteRenderer;
+    cardNoteMessageData: typeof cardNotes.cardNoteMessageData;
+    renderLinkedMessage: typeof cardNotes.renderLinkedMessage;
+    visibleRollTotal: typeof cardNotes.visibleRollTotal;
+    contestedRoll: typeof contestedRollModule.contestedRoll;
     displayDSNForRoll: typeof utils.displayDSNForRoll;
     doConcentrationCheck: typeof utils.doConcentrationCheck;
     chooseEffect: typeof utils.chooseEffect;
@@ -841,7 +852,13 @@ declare global {
     computeToolAdvantage: typeof patching.computeToolAdvantage;
     ConfigPanel: typeof ConfigPanel;
     configSettings: () => typeof configSettings;
-    contestedRoll: typeof utils.contestedRoll;
+    addCardNote: typeof cardNotes.addCardNote;
+    removeCardNote: typeof cardNotes.removeCardNote;
+    registerCardNoteRenderer: typeof cardNotes.registerCardNoteRenderer;
+    cardNoteMessageData: typeof cardNotes.cardNoteMessageData;
+    renderLinkedMessage: typeof cardNotes.renderLinkedMessage;
+    visibleRollTotal: typeof cardNotes.visibleRollTotal;
+    contestedRoll: typeof contestedRollModule.contestedRoll;
     createConditionData: typeof utils.createConditionData;
     createDamageDetail: typeof utils.createDamageDetail;
     decodeWorkflowOptions: typeof workflowOptionsCodec.decodeWorkflowOptions;
@@ -1671,7 +1688,8 @@ export type Dnd5eChatMessage = ChatMessage.Implementation & {
   getAssociatedActivity?(options?: { scaled?: boolean }): Activity | undefined;
   getAssociatedActor?(): Actor.Implementation | undefined;
   getAssociatedItem?(options?: { scaled?: boolean }): Item.Implementation | undefined;
-  getAssociatedRolls?(type: string): Roll[];
+  /** dnd5e's registry of messages linked to this one (`system.origin`), optionally of one message type. */
+  getAssociatedRolls?(type?: string): ChatMessage.Implementation[];
   getAssociatedToken?(): TokenDocument.Implementation | undefined;
 };
 
@@ -1888,6 +1906,8 @@ export type SaveDetails = {
   rollTools?: string[];
   /** Activity's item ID */
   itemId: string;
+  /** The roll's message is one of a card note's (itemCardUuid is the note): its role, e.g. a contested roll's check */
+  cardNote?: { role?: string };
   /** The save roll for this target */
   saveRoll?: Roll;
   /** Pre-computed advantage/disadvantage per choice (ability/skill/tool), for multi-choice dialogs.

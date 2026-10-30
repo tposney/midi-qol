@@ -15,6 +15,8 @@ import { Activity, ActivityUseConfiguration, CalcDamageOptions, MidiChangeData, 
 
 import Token = foundry.canvas.placeables.Token;
 import { AnyMutableObject, AnyObject } from "fvtt-types/utils";
+import { rendersFromModel } from "./ChatClasses/UsageCardMessage.js";
+import { contestedRoll } from "./lib/contestedRoll.js";
 
 const { ApplicationV2, DialogV2, HandlebarsApplicationMixin } = foundry.applications.api;
 
@@ -2532,6 +2534,7 @@ export function restoreWorkflowTokenSets<T>(data: T): T {
 
 export type MidiOptions = {
   activityId?: string;
+  cardNote?: SaveDetails["cardNote"];
   activityIdentifier?: string;
   advantage?: boolean;
   asUser?: User.Implementation | string;
@@ -8995,142 +8998,6 @@ export function validRollAbility(rollType: string, ability: string): string | un
       if (GameSystemConfig.skills[ability]) return ability;
       return Object.keys(GameSystemConfig.skills).find(skl => GameSystemConfig.skills[skl].label.toLocaleLowerCase() === ability.trim().toLocaleLowerCase())
     default: return undefined;
-  }
-}
-
-export async function contestedRoll(data: {
-  source: { rollType: string, ability: string, token: TokenOrDocument | string, rollOptions: any },
-  target: { rollType: string, ability: string, token: TokenOrDocument | string, rollOptions: any },
-  displayResults: boolean,
-  itemCardUuid: string,
-  flavor: string,
-  rollOptions: any,
-  success: (results) => {}, failure: (results) => {}, drawn: (results) => {}
-}): Promise<{ result: number | undefined, rolls: any[] }> {
-  const source = data.source;
-  const target = data.target;
-  const sourceToken = getToken(source?.token);
-  const targetToken = getToken(target?.token);
-  const { success, failure, drawn, displayResults, itemCardUuid, flavor } = data;
-
-  let canProceed = true;
-  if (!source || !target || !sourceToken || !targetToken || !source.rollType || !target.rollType || !source.ability || !target.ability || !validRollAbility(source.rollType, source.ability) || !validRollAbility(target.rollType, target.ability)) {
-    error(`contestRoll | source[${sourceToken?.name}], target[${targetToken?.name}], source.rollType[${source.rollType}], target.rollType[${target?.rollType}], source.ability[${source.ability}], target.ability[${target?.ability}] must all be defined`);
-    canProceed = false;
-  }
-  if (!["test", "abil", "save", "skill"].includes(source?.rollType ?? "")) {
-    error(`contestedRoll | sourceRollType must be one of test/abil/skill/save not ${source.rollType}`);
-    canProceed = false;
-  }
-  if (!["test", "abil", "save", "skill"].includes(target?.rollType ?? "")) {
-    error(`contestedRoll | target.rollType must be one of test/abil/skill/save not ${target.rollType}`);
-    canProceed = false;
-  }
-  if (!canProceed) return { result: undefined, rolls: [] }
-
-  const sourceDocument = sourceToken!.document;
-  const targetDocument = targetToken!.document;
-
-  source.ability = validRollAbility(source.rollType, source.ability) ?? "";
-  target.ability = validRollAbility(target.rollType, target.ability) ?? "";
-
-  let player1 = playerFor(sourceToken);
-  if (!player1?.active) player1 = preferredActiveGM();
-  let player2 = playerFor(targetToken);
-  if (!player2?.active) player2 = preferredActiveGM();
-  if (!player1 || !player2) return { result: undefined, rolls: [] };
-  // Normalize roll types for SaveDetails
-  const normalizeRollType = (rt: string): string => {
-    if (rt === "abil" || rt === "test") return "check";
-    return rt.trim();
-  };
-
-  // Build SaveDetails for each participant
-  const buildContestedSaveDetails = (
-    actorUuid: string,
-    rollType: string,
-    abilityOrSkill: string
-  ): SaveDetails => {
-    const normalizedType = normalizeRollType(rollType);
-    const isSkill = rollType === "skill";
-    return {
-      actorUuid,
-      advantage: undefined,
-      disadvantage: undefined,
-      modifierTracker: undefined,
-      isFriendly: false,
-      isMagicSave: false,
-      isConcentrationCheck: undefined,
-      rollDC: 0,
-      saveItemUuid: "",
-      workflowId: "",
-      itemCardUuid: itemCardUuid ?? "",
-      workflowOptions: {},
-      rollType: normalizedType,
-      rollAbilities: isSkill ? [] : [abilityOrSkill.trim()],
-      rollSkills: isSkill ? [abilityOrSkill.trim()] : [],
-      rollTools: [],
-      itemId: "",
-    };
-  };
-
-  const sourceSaveDetails = buildContestedSaveDetails(
-    sourceDocument?.actor?.uuid ?? "",
-    source.rollType,
-    source.ability
-  );
-  const targetSaveDetails = buildContestedSaveDetails(
-    targetDocument?.actor?.uuid ?? "",
-    target.rollType,
-    target.ability
-  );
-
-  const resultPromises = [
-    socketlibSocket.executeAsUser("rollAbility", player1.id, {
-      saveDetails: sourceSaveDetails,
-      displayOptions: { chatMessage: true }
-    }),
-    socketlibSocket.executeAsUser("rollAbility", player2.id, {
-      saveDetails: targetSaveDetails,
-      displayOptions: { chatMessage: true }
-    }),
-  ];
-
-  let results = await Promise.all(resultPromises);
-  let roll1 = results[0];
-  let roll2 = results[1];
-  if (roll1 instanceof Array) roll1 = roll1[0];
-  if (roll2 instanceof Array) roll2 = roll2[0];
-  let result: number | undefined = roll1.total - roll2.total;
-  if (isNaN(result)) result = undefined;
-  if (displayResults !== false) {
-    let resultString: string;
-    if (result === undefined) resultString = "";
-    else resultString = result > 0 ? i18n("midi-qol.save-success") : result < 0 ? i18n("midi-qol.save-failure") : result === 0 ? i18n("midi-qol.save-drawn") : "no result"
-    const skippedString = i18n("midi-qol.Skipped");
-    const content = `${flavor ?? i18n("midi-qol.ContestedRoll")} ${resultString} ${roll1.total ?? skippedString} ${i18n("midi-qol.versus")} ${roll2.total ?? skippedString}`;
-    displayContestedResults(itemCardUuid, content, ChatMessage.getSpeaker({ token: sourceToken }), flavor);
-  }
-
-  const rollsToReturn = [roll1, roll2];
-  if (result === undefined) return { result, rolls: rollsToReturn };
-  if (result > 0 && success) success(rollsToReturn);
-  else if (result < 0 && failure) failure(rollsToReturn);
-  else if (result === 0 && drawn) drawn(rollsToReturn)
-  return { result, rolls: rollsToReturn };
-}
-
-function displayContestedResults(chatCardUuid: string | undefined, resultContent: string, speaker: ChatMessage.SpeakerData, flavor: string | undefined) {
-  let itemCard = (getCachedDocument(chatCardUuid) ?? fromUuidSync(chatCardUuid)) as ChatMessage.Implementation | undefined;
-  if (itemCard) {
-    let content: string = foundry.utils.duplicate(itemCard.content ?? "")
-    const searchRE = /<div class="midi-qol-saves-display">[\s\S]*?<div class="end-midi-qol-saves-display">/;
-    const replaceString = `<div class="midi-qol-saves-display">${resultContent}<div class="end-midi-qol-saves-display">`;
-    content = content.replace(searchRE, replaceString);
-    itemCard.update({ content: compactCardContent(content) });
-  } else {
-    // const title = `${flavor ?? i18n("miidi-qol:ContestedRoll")} results`;
-    ChatMessage.create({ content: `<p>${resultContent}</p>`, speaker });
   }
 }
 

@@ -436,8 +436,9 @@ export function defineChatMessageMidiClass(baseClass: ChatMessage.Implementation
       // A save on its own in the log, belonging to a midi card, shows what midi's save display allows.
       const card = midiCardOf(this);
       if (card) maskSaveForPlayers(html, this, card);
-      // dnd5e 6 draws a card's save and check messages inside it as summaries, whatever their own visibility.
-      html.querySelectorAll<HTMLElement>(".card-summary[data-message-id]").forEach(summary => {
+      // dnd5e 6 draws a card's save and check messages inside it as summaries, whatever their own visibility; card notes
+      // draw their own messages (renderLinkedMessage).
+      html.querySelectorAll<HTMLElement>(".card-summary[data-message-id], .midi-qol-linked-message[data-message-id]").forEach(summary => {
         const source = game.messages?.get(summary.dataset.messageId ?? "");
         if (!source) return;
         if (isMidiCard(this)) maskSaveForPlayers(summary, source, this);
@@ -601,7 +602,7 @@ export function defineChatMessageMidiClass(baseClass: ChatMessage.Implementation
       const npcDetail = saveDetail(false);
       const saveMessages = new Map<string, ChatMessage.Implementation>();
       // @ts-expect-error no dnd5e types
-      for (const message of (this.getAssociatedRolls?.() ?? []) as ChatMessage.Implementation[]) {
+      for (const message of this.getAssociatedRolls?.() ?? []) {
         if (!["save", "check"].includes(message.type as string)) continue;
         const { scene, token } = message.speaker ?? {};
         if (scene && token) saveMessages.set(`Scene.${scene}.Token.${token}`, message);
@@ -716,6 +717,9 @@ export function defineChatMessageMidiClass(baseClass: ChatMessage.Implementation
       this._addLegacyCardDataset(html);
       this.maskHiddenRolls(html);
       this.#dropDuplicateActivityIcon(html);
+      const undoneColor = (this.system as { midi?: { undoneColor?: string } } | undefined)?.midi?.undoneColor;
+      const messageContent = html.querySelector<HTMLElement>(".message-content");
+      if (undoneColor && messageContent) messageContent.style.backgroundColor = undoneColor;
       if (debugEnabled > 1) log("Finished enriching chat card", Date.now(), this.id);
       return applySpeakerNameAfter(enriched, html);
     }
@@ -791,7 +795,7 @@ export function hiddenRollView(message: ChatMessage.Implementation): "show" | "p
 }
 
 /** A roll midi forced obscured: players see its card with ?? for the result. */
-function isObscured(message: ChatMessage.Implementation): boolean {
+export function isObscured(message: ChatMessage.Implementation): boolean {
   return !game.user?.isGM && !!foundry.utils.getProperty(message, `flags.${MODULE_ID}.obscureRoll`);
 }
 

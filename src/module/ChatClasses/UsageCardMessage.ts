@@ -12,6 +12,7 @@ import { getRemoveAllButtons, getRemoveAttackButtons, getRemoveDamageButtons, mi
 import { MODULE_ID } from "../../midi-qol.js";
 import { Workflow } from "../Workflow.js";
 import { followUpButtons } from "../followUps.js";
+import { NOTE_MESSAGE_TYPE, noteCard, notesOf } from "./CardNoteMessage.js";
 
 /** Renderer per roll-backed section; damage renderers aggregate the section's rolls into one block. */
 const SECTION_ROLL_RENDERERS: Record<string, (rolls: Roll[]) => Promise<string> | string> = {
@@ -189,7 +190,10 @@ export function setupUsageCardMessage() {
               data: new ObjectField({ required: false }),
               html: new StringField({ required: false, blank: true })
             }, { required: false, nullable: true, initial: null })
-          ])), { required: false })
+          ])), { required: false }),
+
+          // The undo colour of a card whose workflow was undone.
+          undoneColor: new StringField({ required: false, blank: true })
         }, { required: false })
       };
     }
@@ -236,6 +240,8 @@ export function setupUsageCardMessage() {
       // midi applies the effects itself and offers no button for them, so there is nothing for a tray to do.
       if (["applyNoButton", "applyRemove"].includes(configSettings.autoItemEffects)) context.effects = [];
 
+      // Notes, and messages a note owns, are drawn by the notes.
+      context.summaries = (context.summaries ?? []).filter((summary: any) => !drawnSeparately(game.messages?.get(summary.id)));
       const saveDamageLines = this.#saveDamageLines();
       if (saveDamageLines.size) context.summaries = (context.summaries ?? []).map((summary: any) =>
         ({ ...summary, midiDamageLine: saveDamageLines.get(summary.token?.uuid ?? "") }));
@@ -247,14 +253,33 @@ export function setupUsageCardMessage() {
         // The damage roll about to be made; Handlebars has no arithmetic helper.
         nextDamageRollCount: (this.midi?.damageRollCount ?? 0) + 1,
         followUps: followUpButtons(this.parent),
-        damageApplicationTypes: this.#damageApplicationTypes()
+        damageApplicationTypes: this.#damageApplicationTypes(),
+        notes: await this.#renderNotes()
       };
       return context;
     }
 
+    /** The notes this viewer may see, rendered, by anchor and position. */
+    async #renderNotes(): Promise<Record<string, Record<string, string[]>>> {
+      const out: Record<string, Record<string, string[]>> = {};
+      const place = (anchor: string, position: string, html: string) => ((out[anchor] ??= {})[position] ??= []).push(html);
+      const notes = notesOf(this.parent).filter(note => note.visible)
+        .sort((a, b) => (((a.system as { sort?: number }).sort ?? 0) - ((b.system as { sort?: number }).sort ?? 0)) || ((a.timestamp ?? 0) - (b.timestamp ?? 0)));
+      for (const note of notes) {
+        const system = note.system as { anchor?: string, position?: string, render?: (options: object) => Promise<string> };
+        try {
+          place(system.anchor ?? "bottom", system.position ?? "append", await system.render?.({ summary: true }) ?? "");
+        } catch (err) {
+          error(`card note ${note.id} could not be rendered`, err);
+        }
+      }
+      return out;
+    }
+
     /**
      * dnd5e 6 folds the card's save and check messages into it as summaries for viewers with "Summarize chat cards"
-     * on. On a midi card that summary is midi's saves section (style "midi") or dnd5e's per-roll summaries, with midi's section keeping only saves that have none:
+     * on. On a midi card that summary is midi's saves section (style "midi": dnd5e's summaries of the saves and checks it
+     * has a result row for are dropped, others kept) or dnd5e's per-roll summaries, with midi's section keeping only saves that have none:
      * other modules' saves reach midi without a linked message.
      * With the setting off neither is drawn and the messages show in the log. Returns the save targets to omit.
      */
@@ -265,8 +290,13 @@ export function setupUsageCardMessage() {
         return "all";
       }
       if (configSettings.saveSummaryStyle !== "dnd5e") {
-        // midi's section stands in for dnd5e's summaries: a save rolled from the card's button is recorded in it (cardSaves.ts)
-        context.summaries = [];
+        // midi's section stands in for the summaries of the saves and checks it shows a result for (a save rolled from the
+        // card's button is recorded in it, cardSaves.ts); any other summary is dnd5e's to show.
+        const shown = new Set((this.midi?.sections?.saves?.data?.saves ?? [])
+          .filter((save: any) => save?.saveClass || (save?.rollTotal != null && save.rollTotal !== ""))
+          .map((save: any) => save?.target?.document?.uuid).filter(Boolean));
+        context.summaries = (context.summaries ?? []).filter((summary: any) =>
+          !(["save", "check"].includes(game.messages?.get(summary.id)?.type ?? "") && shown.has(summary.token?.uuid)));
         return new Set();
       }
       return new Set((context.summaries ?? []).map((summary: any) => summary.token?.uuid).filter(Boolean));
@@ -438,6 +468,17 @@ export function setupUsageCardMessage() {
 
   CONFIG.ChatMessage.dataModels[USAGE_MESSAGE_TYPE] = MidiUsageMessageData;
   Hooks.on("createChatMessage", linkToExecutingWorkflow);
+  // Notifications render with canClose, which dnd5e treats as a popout and so doesn't hide a message a card summarises:
+  // a message hidden in the log (a save or check on its card, a card note, a note's checks) would pop up on its own.
+  Hooks.once("setup", () => globalThis.libWrapper.register(MODULE_ID, "foundry.applications.sidebar.tabs.ChatLog.prototype.notify",
+    function (this: unknown, wrapped: (...args: unknown[]) => unknown, message: ChatMessage.Implementation, options: { existing?: HTMLElement } = {}, ...rest: unknown[]) {
+      const logged = options.existing ?? ui.chat?.element?.querySelector<HTMLElement>(`.message[data-message-id="${message?.id}"]`);
+      if (logged?.hidden) return;
+      return wrapped(message, options, ...rest);
+    }, "MIXED"));
+  Hooks.on("createChatMessage", redrawForNoteMessage);
+  Hooks.on("updateChatMessage", redrawForNoteMessage);
+  Hooks.on("deleteChatMessage", redrawForNoteMessage);
 
   // A card whose item is deleted loses its buttons, but only when rendered again; redraw the ones on screen.
   Hooks.on("deleteItem", (item: Item.Implementation) => {
@@ -448,6 +489,26 @@ export function setupUsageCardMessage() {
       if (ui.chat?.element?.querySelector(`.message[data-message-id="${message.id}"]`)) ui.chat.updateMessage(message);
     }
   });
+}
+
+/** A usage card drawn from its data, not from stored markup. */
+export function rendersFromModel(message: ChatMessage.Implementation): boolean {
+  return !!MidiUsageMessageData && message.system instanceof MidiUsageMessageData && !message._source.content;
+}
+
+/** Messages linked to a card that the card draws in their own place, not among dnd5e's summaries: its notes. */
+function drawnSeparately(message: ChatMessage.Implementation | undefined): boolean {
+  return message?.type === NOTE_MESSAGE_TYPE;
+}
+
+/**
+ * dnd5e redraws a message's parent when one of its messages is created, deleted or changes: for a note's message that is
+ * the note, which is hidden, so its card is redrawn here. A reroll changes a message's rolls, which dnd5e ignores.
+ */
+function redrawForNoteMessage(message: ChatMessage.Implementation) {
+  const note = game.messages?.get((message._source.system as { origin?: string } | undefined)?.origin ?? "");
+  const card = note?.type === NOTE_MESSAGE_TYPE ? noteCard(note) : undefined;
+  if (card && ui.chat?.element?.querySelector(`.message[data-message-id="${card.id}"]`)) ui.chat.updateMessage(card);
 }
 
 /**

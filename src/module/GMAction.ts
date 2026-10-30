@@ -880,6 +880,7 @@ async function rollAbility(data: {
     itemCardUuid,
     advantage,
     disadvantage,
+    cardNote: sd.cardNote,
   };
 
   let config: RollProcessConfig = {

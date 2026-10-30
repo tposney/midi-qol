@@ -50,7 +50,8 @@ export async function preloadTemplates() {
     "modules/midi-qol/templates/apps/TroubleShooter/modules.hbs",
     "modules/midi-qol/templates/apps/TroubleShooter/problems.hbs",
     "modules/midi-qol/templates/apps/TroubleShooter/summary.hbs",
-    "modules/midi-qol/templates/apps/UndoWorkflow/undo-workflow.hbs"
+    "modules/midi-qol/templates/apps/UndoWorkflow/undo-workflow.hbs",
+    "modules/midi-qol/templates/chat/note.hbs"
   ];
   // `midi.section` is referenced by name from usage-card.hbs, so it needs a registered alias the way
   // dnd5e registers its own card partials as `dnd5e.card-face` and friends.

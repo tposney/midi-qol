@@ -1,5 +1,14 @@
 ### 14.6.5 (unreleased)
 
+* Compatibility: dnd5e 6.0.x only (maximum 6.0.999). dnd5e 6.1 changes damage application in ways that break midi's damage card; support follows in a later release.
+* Added: `MidiQOL.addCardNote(card | uuid | workflow, html, { anchor, position, key, visibility | whisper })` / `removeCardNote(card, key)`: a note on a usage card, drawn where it names (`anchor`: buttons, attack, hits, damage, otherDamage, bonusDamage, utility, saves, top, bottom; `position`: before, prepend, append, after) and hidden in the log. A note is a chat message linked to the card: whispered notes show only to their recipients, links, inline rolls and enrichers work, and it is deleted with the card. Usage cards are drawn from their data, so splicing text into `content` no longer works.
+* Added: card notes drawn by your code: `MidiQOL.registerCardNoteRenderer(kind, renderer)` draws notes added with `{ kind, data }`, for each viewer whenever the card is drawn, from the note's data and its own messages (rolls made with `MidiQOL.cardNoteMessageData(note, role)` as their message data: hidden in the log, deleted with the note, drawn on the card with `MidiQOL.renderLinkedMessage`, masked as midi masks dnd5e's summaries; `MidiQOL.visibleRollTotal` gives a roll's total only if the viewer may see it). A note whose renderer isn't registered shows its html. Contested rolls are drawn this way (`lib/contestedRoll.ts`).
+* Fixed: saves and checks shown on their use card also popped up as chat notifications.
+* Fixed: with *Save summary style* midi, dnd5e's summaries of rolls midi's saves section doesn't show (e.g. another module's check on the use card) were hidden.
+* Changed: text written to a usage card's `content` becomes a note at the bottom of the card (with a console warning) instead of replacing the card.
+* Fixed: `MidiQOL.contestedRoll` results were not shown on the item card, and its checks could be hidden both from the card and the log. The card now shows the contest as soon as it starts: each side's check, or who it is still waiting for ("Waiting for actor1 (Athletics)"), then the result, which follows a reroll; if a roll is never made it says so. A total is shown only to viewers who can see that roll.
+* Fixed: `MidiQOL.contestedRoll` ignored its `rollOptions` (for both rolls, or per side in `source`/`target`): `advantage`, `disadvantage`, `fastForward` and `rollMode` now reach the checks.
+* Fixed: undo did not colour the undone workflow's card.
 * Fixed: an actor with a `flags.midi-qol.optional.*` change set to `ItemMacro` threw `DAE is not defined` when the world loaded (its first preparation runs before DAE's setup), leaving the actor's data incomplete.
 
 **Teleport activity**

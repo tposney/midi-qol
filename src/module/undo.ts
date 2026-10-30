@@ -4,6 +4,7 @@ import { socketlibSocket, unTimedExecuteAsGM } from "./GMAction.js";
 import { configSettings } from "./settings.js";
 import { getConcentrationEffect, getTokenDocument, isReactionItem } from "./utils.js";
 import { UndoData, Workflow } from "./Workflow.js";
+import { rendersFromModel } from "./ChatClasses/UsageCardMessage.js";
 
 export let undoDataQueue: UndoData[] = [];
 let startedUndoDataQueue: UndoData[] = [];
@@ -452,12 +453,14 @@ async function undoSingleTokenActor({ tokenUuid, actorUuid, actorData, tokenData
 }
 
 export async function removeChatCard(chatCard?: ChatMessage.Implementation): Promise<ChatMessage.Implementation | undefined> {
-  if (!chatCard || !chatCard.content) return;
+  if (!chatCard) return;
   const shouldDelete = configSettings.undoChatColor === "Delete";
   if (shouldDelete) {
     if (debugEnabled > 1) debug("Deleting chat card ", chatCard.id, chatCard.uuid);
     return await chatCard.delete();
   }
+  if (rendersFromModel(chatCard)) return await chatCard.update({ "system.midi.undoneColor": configSettings.undoChatColor } as ChatMessage.UpdateData);
+  if (!chatCard.content) return;
   return await chatCard.update({ content: `<div style="background-color: ${configSettings.undoChatColor};"> ${chatCard.content}</div>` });
 }
 
