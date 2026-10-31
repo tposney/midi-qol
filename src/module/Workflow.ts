@@ -5848,7 +5848,7 @@ return {
       flashRequestType = "savingthrow"; // default
     }
 
-    // A tool or skill check also lists the ability it is rolled with; its key is the tool or skill (#1575).
+    // A tool or skill check also lists the ability it is rolled with; its key is the tool or skill (https://gitlab.com/tposney/midi-qol/-/issues/1575).
     const flashRollKey = rollType === "skill" ? rollSkills?.[0]
       : rollType === "tool" ? rollTools?.[0]
         : rollAbilities?.[0];

@@ -8025,7 +8025,7 @@ function checkDetectionModes(tk: Token.Implementation) {
 
 /**
  * The token's own vision source while Foundry keeps one, else one detached from the canvas, so the token is left
- * as it was (#1571). Cached until the token's vision data, the walls, lights or scene change.
+ * as it was (https://gitlab.com/tposney/midi-qol/-/issues/1571). Cached until the token's vision data, the walls, lights or scene change.
  */
 function checkVisionSource(tk: Token.Implementation, detectionModes: ReturnType<typeof checkDetectionModes>): CheckVisionSource {
   if (tk.hasSight && tk.vision?.los) return tk.vision;

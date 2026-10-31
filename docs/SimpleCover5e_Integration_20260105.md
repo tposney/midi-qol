@@ -207,7 +207,7 @@ Test file: `midi-qol-tests/src/32-simple-cover-tests.ts`
 
 ## Changes Made (2026-01-05)
 
-### Issue #1546 - Enhanced Simple Cover 5e Integration
+### Issue [#1546](https://gitlab.com/tposney/midi-qol/-/issues/1546) - Enhanced Simple Cover 5e Integration
 
 1. **Added `losCheck` parameter** - Tied to `wallsBlockRange === "simplecover5e"` setting
 2. **Added `activity` parameter** - Passed when defined for cover rule processing

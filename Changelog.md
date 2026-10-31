@@ -1,3 +1,6 @@
+### 13.0.71
+* Changed: updates are served from GitLab Pages (https://tposney.gitlab.io/midi-qol/v13/module.json), so update checks no longer fail when GitLab rate-limits repository files. Changelog: https://tposney.gitlab.io/midi-qol/v13/changelog.html.
+
 ### 13.0.70
 * Fixed: in new worlds the GM's critical hits didn't double damage dice (GM critical damage defaulted to a blank choice); a blank choice now follows the player setting.
 * Fixed: `MidiQOL.contestedRoll` ignored its `rollOptions` (for both rolls, or per side in `source`/`target`): `advantage`, `disadvantage`, `fastForward` and `rollMode` now reach the checks.
@@ -33,18 +36,18 @@
 * From this release the v13 (Foundry 13 / dnd5e 5.x) line receives only bug fixes, no feature enhancements.
 * Fixed: on dnd5e 5.3, ignoring or downgrading an immunity, resistance or vulnerability for specific damage types left an "All Damage" trait (e.g. DAE's `system.traits.dr.all`) in force; `idi.<type>`/`ddi.<type>` now apply against an "All Damage" immunity, and downgrading a type the target isn't immune to no longer drops its resistance.
 * Changed: with fast forward off, Alt or Ctrl on an attack skip the roll dialog with advantage or disadvantage, as dnd5e does (they opened the dialog).
-* Fixed: Roll Toggle did nothing on skill, ability, save and tool rolls with fast forward off; held, it now skips the dialog of a roll that isn't fast forwarded and shows it for one that is, keeping Alt/Ctrl's advantage or disadvantage. Bound to Shift it opens the dialog for fast forwarded rolls (#1553).
+* Fixed: Roll Toggle did nothing on skill, ability, save and tool rolls with fast forward off; held, it now skips the dialog of a roll that isn't fast forwarded and shows it for one that is, keeping Alt/Ctrl's advantage or disadvantage. Bound to Shift it opens the dialog for fast forwarded rolls ([#1553](https://gitlab.com/tposney/midi-qol/-/issues/1553)).
 * Fixed: *Confirm targets if targeting allies and hostiles* had no effect (saved under a misspelt key); existing settings carry over.
 * Fixed: *Show Active Defence DC* had no effect; the DC was always shown. Existing worlds keep showing it until the box is unticked.
 * Fixed: with *Attack display* set to Hit/Miss/Critical/Fumble, players saw `midi-qol.criticalHit` or `midi-qol.fumble` instead of the text for a critical or fumble.
 * Fixed: some Quick Settings presets wrote settings that don't exist.
 * README: the auto-fail and min/max save examples now use the keys midi reads (`fail.ability.save.dex`, `min.ability.save.all`).
 * Fixed: an effect with an `ActivityOverTime` change logged "activity not found" each turn for its other changes, and could take the roll mode from a change value that happened to be an activity UUID.
-* Fixed: tool and skill checks requested through Flash Token Bar were sent with the ability as the roll key, so players rolled a plain ability check (#1575).
-* Fixed: skill and tool checks applied the `min`/`max`/`fail`/`success.ability.check` flags of the skill's default ability, not the one rolled, passed in or chosen in the roll dialog (#1572).
-* Fixed: *Force vision when checking* left a token's vision switched on until its next update, then tested stale vision (#1571). `MidiQOL.canSee`/`canSense`/`canSenseModes` take `{ forceVision }`.
-* Fixed: another module's activities (e.g. Custom D&D 5e's Move) could not be a *Trigger Activity* (#1570).
-* Fixed: an over-time action save with nothing to roll posted an empty card; README Hold Person example corrected (#1569).
+* Fixed: tool and skill checks requested through Flash Token Bar were sent with the ability as the roll key, so players rolled a plain ability check ([#1575](https://gitlab.com/tposney/midi-qol/-/issues/1575)).
+* Fixed: skill and tool checks applied the `min`/`max`/`fail`/`success.ability.check` flags of the skill's default ability, not the one rolled, passed in or chosen in the roll dialog ([#1572](https://gitlab.com/tposney/midi-qol/-/issues/1572)).
+* Fixed: *Force vision when checking* left a token's vision switched on until its next update, then tested stale vision ([#1571](https://gitlab.com/tposney/midi-qol/-/issues/1571)). `MidiQOL.canSee`/`canSense`/`canSenseModes` take `{ forceVision }`.
+* Fixed: another module's activities (e.g. Custom D&D 5e's Move) could not be a *Trigger Activity* ([#1570](https://gitlab.com/tposney/midi-qol/-/issues/1570)).
+* Fixed: an over-time action save with nothing to roll posted an empty card; README Hold Person example corrected ([#1569](https://gitlab.com/tposney/midi-qol/-/issues/1569)).
 * Fixed: an *Always Apply* effect went to every target once any target passed the activity's *Active Effect Condition*; it now goes only to targets that pass it, as the condition's hint now says.
 * Fixed: with *Force a concentration save when damage taken* set to *Chat Message + Auto Roll*, taking damage could roll the concentration save twice.
 * Fixed: the *Default saving throw multiplier* setting was ignored; a successful save always took half damage.
@@ -97,7 +100,7 @@
 * Strip template indentation from midi's chat card markup before it is stored; the item description is left as authored.
 * Target rows store one name span instead of a gm/player pair when the two names match.
 * Moved the repeated inline styles on save rows into the stylesheet.
-* Target confirmation: add `includeTargets` support and a "not allowed" overlay when hovering a non-selectable token (backport of MR !433, thanks @pgervais70).
+* Target confirmation: add `includeTargets` support and a "not allowed" overlay when hovering a non-selectable token (backport of MR [!433](https://gitlab.com/tposney/midi-qol/-/merge_requests/433), thanks @pgervais70).
 * Add a "Blind roll display" setting: forced-blind saves/checks/skills can show a public card with the result obscured as `??` (result, dice breakdown and success/crit/fumble highlight hidden from players) instead of being fully hidden.
 * Fixed damage modification (`system.traits.dm`) and midi damage reduction being applied once per damage category (base/other/bonus) instead of once per activity. New "Single Damage Calculation" setting (default on) computes all of a target's damage in one pass; disable it to restore the old behaviour.
 * Fixed multi-target save/check/skill chat cards using the first target's token as the speaker for every roll.
@@ -111,13 +114,13 @@
 * The damage tray honours its expand/collapse state.
 * The actor on-use macro pass dropdown marks the selected option.
 * The consume dialog is no longer forced when consumption reports no errors.
-* Organise the Midi activity settings into subtabs (MR !420, thanks @garrysmod367).
-* Fix socketed (GM-executed) workflows (MR !427, thanks @baconnugget).
-* Fix temp-max HP handling on the undo card (MR !417, thanks @baconnugget).
-* Default `constrainTemplatePlacement` to false (MR !408, thanks @thatlonelybugbear).
-* Add the `icon` CSS class to the dnd5e header-control button (MR !429, thanks @olegbol2005).
-* Updated pt-BR translation (MR !426, thanks @cardosomafrasantana).
-* Offer spell reactions castable with a higher-level slot when no slot of the spell's own level is available (e.g. Shield with only level 3 slots) (MR !430, thanks @thatlonelybugbear).
+* Organise the Midi activity settings into subtabs (MR [!420](https://gitlab.com/tposney/midi-qol/-/merge_requests/420), thanks @garrysmod367).
+* Fix socketed (GM-executed) workflows (MR [!427](https://gitlab.com/tposney/midi-qol/-/merge_requests/427), thanks @baconnugget).
+* Fix temp-max HP handling on the undo card (MR [!417](https://gitlab.com/tposney/midi-qol/-/merge_requests/417), thanks @baconnugget).
+* Default `constrainTemplatePlacement` to false (MR [!408](https://gitlab.com/tposney/midi-qol/-/merge_requests/408), thanks @thatlonelybugbear).
+* Add the `icon` CSS class to the dnd5e header-control button (MR [!429](https://gitlab.com/tposney/midi-qol/-/merge_requests/429), thanks @olegbol2005).
+* Updated pt-BR translation (MR [!426](https://gitlab.com/tposney/midi-qol/-/merge_requests/426), thanks @cardosomafrasantana).
+* Offer spell reactions castable with a higher-level slot when no slot of the spell's own level is available (e.g. Shield with only level 3 slots) (MR [!430](https://gitlab.com/tposney/midi-qol/-/merge_requests/430), thanks @thatlonelybugbear).
 * Fix chat cards from a sequence of rolls displaying out of order / with stale timestamps — content updates no longer overwrite the message's creation timestamp.
 * Activity choice dialog applies the `midi-qol.itemUseActivitySelect` prune hook before prompting — a single surviving activity is used with no dialog, an empty list skips the use; hook fires once.
 * Fix concurrent summon spells stealing each other's created tokens. The `dnd5e.postSummon` handler used a one-shot `Hooks.once`, so when two summon workflows overlapped one could capture the other's tokens; it now listens with a per-activity filter and only reacts to its own summon.
@@ -167,10 +170,10 @@
 * Fix for double consumption when using a spell from an item with item uses.
 
 ### 13.0.58
-* Fix Active Defence display icons/colours to match saving throw presentation — defence success now shows as a positive result (MR !413, thanks @morepurplemorebetter).
-* Fix Active Defence Modifier hint text to match the actual code formulas (MR !413, thanks @Bacon).
-* Fix capitalization typo in `bonusActionUsed` and `reactionUsed` status effect changes — `Flags.midi-qol` → `flags.midi-qol` (MR !415, thanks @baconnugget).
-* Updated pt-BR translation (MR !410, !411, thanks @Kharmans).
+* Fix Active Defence display icons/colours to match saving throw presentation — defence success now shows as a positive result (MR [!413](https://gitlab.com/tposney/midi-qol/-/merge_requests/413), thanks @morepurplemorebetter).
+* Fix Active Defence Modifier hint text to match the actual code formulas (MR [!413](https://gitlab.com/tposney/midi-qol/-/merge_requests/413), thanks @Bacon).
+* Fix capitalization typo in `bonusActionUsed` and `reactionUsed` status effect changes — `Flags.midi-qol` → `flags.midi-qol` (MR [!415](https://gitlab.com/tposney/midi-qol/-/merge_requests/415), thanks @baconnugget).
+* Updated pt-BR translation (MR [!410](https://gitlab.com/tposney/midi-qol/-/merge_requests/410), [!411](https://gitlab.com/tposney/midi-qol/-/merge_requests/411), thanks @Kharmans).
 * Fix `workflow.damageList` being empty during `preDamageApplication` OnUse macros — damage entries are now added to the list before the macro is called.
 * Fix `dnd5e.preUseActivity` hook receiving stale targets from a previous item use in `messageConfig.data.flags.dnd5e.targets`. Targets now correctly reflect the current use.
 * Fix re-rolling attack from a card button (after switching targets) still using the old target for damage application.
@@ -239,11 +242,11 @@
 
 ### 13.0.54
 * Fix for AC display in hit card being incorrect for some flags affecting target ac/to hit bonuses.
-* Fixed fast-forward for utility rolls, fixed activity range when reach is overridden, use utility formula name if provided instead of activity title for roll result (MR !409). Thanks @elwin.
+* Fixed fast-forward for utility rolls, fixed activity range when reach is overridden, use utility formula name if provided instead of activity title for roll result (MR [!409](https://gitlab.com/tposney/midi-qol/-/merge_requests/409)). Thanks @elwin.
 
 ### 13.0.53
 * Weapons attack single target setting now correctly enforces single target for weapons with no target specification
-* Fix false-positive Flash Rolls detection in getAdvantageSourceInfo (MR !406). Thanks @Carolingian.
+* Fix false-positive Flash Rolls detection in getAdvantageSourceInfo (MR [!406](https://gitlab.com/tposney/midi-qol/-/merge_requests/406)). Thanks @Carolingian.
 * Fix for error being thrown on CONFIG.specialStatusEffects.INVISIBLE being set to null.
 * Some changes to support the next version of macro autocomplete.
 
@@ -253,7 +256,7 @@
 * Fix for skill/tool checks when showing the configuration dialog to allow choosing the ability to use, matches dnd5e functionality.
 * For check activities you can now specify no skill/tool or ability, in which case midi will just do a normal d20 roll and compare against the dc.
 * If a utility activity has no damage, but the other activity does and the other activity condition prevents it from firing, midi would loop endlessly trying to roll damage until the failsafe cut in and the workflow is aborted.
-* Fix attack/save advantage mode label on chat cards showing the wrong mode after re-render. The displayed label now uses the resolved roll result rather than the pre-roll tracker state. (MR !407, @thatlonelybugbear).
+* Fix attack/save advantage mode label on chat cards showing the wrong mode after re-render. The displayed label now uses the resolved roll result rather than the pre-roll tracker state. (MR [!407](https://gitlab.com/tposney/midi-qol/-/merge_requests/407), @thatlonelybugbear).
 * The isAttacked special duration will only fire for activities that have an attack roll. It will now fire only when the attack roll completes, previously it was also checked at other points in the workflow, after the damage roll completed for example.
 * Reinstate gm sees all whispered messages setting, accidentally removed in 13.0.39.
 * Fix for another race condition in roll statistics that would cause some roll data to get dropped.
@@ -310,7 +313,7 @@
 * Fix for advantage/disadvantage condition expressions using the actor's own token as `target` instead of the opposing entity (e.g., the defender for attacks, the caster for saves).
 * Fix for `fail.attack`, `success.attack`, and `grants.attack.success/fail` condition flags incorrectly seeing the attacker's data as `target` instead of the actual target in condition expressions.* Fix for flanked not correctly setting flanked on diagonals when using perimeter distance measurement.
 * Fix for roll statistics dropping some rolls from recording. Rewrote stats recording so that clients send raw roll data to the GM which applies increments to a single authoritative copy, eliminating race conditions when multiple players roll simultaneously.
-* Merged target confirmation improvements (MR !405) - thanks @Elwin
+* Merged target confirmation improvements (MR [!405](https://gitlab.com/tposney/midi-qol/-/merge_requests/405)) - thanks @Elwin
   - Target validation now runs on initial render and on every target change, filtering out invalid targets (defeated, wrong disposition for enemy/ally-only activities, excluded targets from workflow options).
   - Targets are no longer re-rendered if the target set hasn't actually changed.
 * Fix for perimeter distance LoS check being too permissive, allowing attacks through walls in some multi-square token configurations. Replaced custom extreme-point geometry with `testCollision` ray casting using 17 boundary test points from attacker center to target, matching Foundry's native `_canSenseModes` approach.
@@ -493,9 +496,9 @@ This is a fairly substantial update so don't update just before game time. You h
 * Fix for deleting the wrong damage part when deleting a damage part from an attack activity.
 
 **Merged Contributions**
-* Allow easy logging of sandbox evaluation data via `MidiQOL.logEvaluationData = true` (MR !396, thanks @thatlonelybugbear).
-* Updated pt-BR localization (MR !398, thanks @Kharmans).
-* Optional Bonus Value: critical — allows optional bonuses to force critical on attacks, damage, checks, saves, and skills (MR !399, thanks @baconnugget).
+* Allow easy logging of sandbox evaluation data via `MidiQOL.logEvaluationData = true` (MR [!396](https://gitlab.com/tposney/midi-qol/-/merge_requests/396), thanks @thatlonelybugbear).
+* Updated pt-BR localization (MR [!398](https://gitlab.com/tposney/midi-qol/-/merge_requests/398), thanks @Kharmans).
+* Optional Bonus Value: critical — allows optional bonuses to force critical on attacks, damage, checks, saves, and skills (MR [!399](https://gitlab.com/tposney/midi-qol/-/merge_requests/399), thanks @baconnugget).
 
 **Others**
 * Migrated several standalone module settings into the midi-qol config panel for easier discovery:
@@ -617,8 +620,8 @@ panel.
   - Midi still recognises the flags (in case they are directly set by code rather than an active effect) and will log a warning, use the flag, but not rewrite the flag.
   
 **Community Contributions:**
-* MR !393: Updated Portuguese (Brazil) translation. Thanks Kharmans.
-* MR !394: Fixed concentration checks not showing item names. Reworked logic to use `actor.concentration.items` Set instead of `effect.flags.dnd5e.itemUuid` which may be undefined. Thanks thatlonelybugbear.
+* MR [!393](https://gitlab.com/tposney/midi-qol/-/merge_requests/393): Updated Portuguese (Brazil) translation. Thanks Kharmans.
+* MR [!394](https://gitlab.com/tposney/midi-qol/-/merge_requests/394): Fixed concentration checks not showing item names. Reworked logic to use `actor.concentration.items` Set instead of `effect.flags.dnd5e.itemUuid` which may be undefined. Thanks thatlonelybugbear.
 
 **New Features:**
 * Significant rework for advantage/disadvantage processing for saves/checks/skills etc. The result of the midi flag advantage flags should now be fully passed through to other roller modules, such as MTB, Epic Rolls and flash rolls.
@@ -697,10 +700,10 @@ panel.
 * The sample items compendium is now build from the pack-src directory. So suggesting changes to the sample items compendium can now simply attach the item json to the suggestion.
 
 **Community Contributions:**
-* MR !387: Fixed `game.combat?.turn` conditional always being false when turn is 0 or there's only one combatant. This affected optional uses remaining checks. Thanks thatlonelybugbear.
-* MR !390: Fixed deprecation warnings in TroubleShooter. Thanks thatlonelybugbear.
-* MR !391: Documentation improvements across FLAGS.md, MACROS.md, README.md, and workflow docs. Thanks Bacon.
-* MR !392: Updated Brazilian Portuguese (pt-BR) translation. Thanks Kharmans.
+* MR [!387](https://gitlab.com/tposney/midi-qol/-/merge_requests/387): Fixed `game.combat?.turn` conditional always being false when turn is 0 or there's only one combatant. This affected optional uses remaining checks. Thanks thatlonelybugbear.
+* MR [!390](https://gitlab.com/tposney/midi-qol/-/merge_requests/390): Fixed deprecation warnings in TroubleShooter. Thanks thatlonelybugbear.
+* MR [!391](https://gitlab.com/tposney/midi-qol/-/merge_requests/391): Documentation improvements across FLAGS.md, MACROS.md, README.md, and workflow docs. Thanks Bacon.
+* MR [!392](https://gitlab.com/tposney/midi-qol/-/merge_requests/392): Updated Brazilian Portuguese (pt-BR) translation. Thanks Kharmans.
 
 ### 13.0.36
 **New Features:**
@@ -717,14 +720,14 @@ panel.
 * Damage card display improvements for cross-platform consistency:
   - Replaced HTML arrow entity with Font Awesome icon for consistent vertical alignment across macOS and Linux.
   - Fixed total damage display showing "-0" instead of "0" when no damage is applied.
-* Enhanced Simple Cover 5e integration (issue #1546):
+* Enhanced Simple Cover 5e integration (issue [#1546](https://gitlab.com/tposney/midi-qol/-/issues/1546)):
   - Now passes the activity to getCover() so cover rules (ignore/override logic based on item properties) are applied.
   - Added "Simple Cover 5e" as a "Walls Block Range" option which enables Line of Sight checking - blocked LoS is treated as total cover.
   - Uses the bonus value directly from the API for more accurate cover calculation.
 
 **Bug Fixes:**
-* Fixed `damageTypes.<type>` conditions not being available for optional damage bonuses (issue #1550). The damage type data was not being passed correctly during the bonus evaluation phase due to a timing issue where `workflow.damageRolls` was empty when condition evaluation occurred.
-* Issue #1549 (save rolls showing success/failure when DC should be hidden) resolved as part of the DC display refactoring below - the target DC is no longer passed to dnd5e when visibility settings would hide it from the player.
+* Fixed `damageTypes.<type>` conditions not being available for optional damage bonuses (issue [#1550](https://gitlab.com/tposney/midi-qol/-/issues/1550)). The damage type data was not being passed correctly during the bonus evaluation phase due to a timing issue where `workflow.damageRolls` was empty when condition evaluation occurred.
+* Issue [#1549](https://gitlab.com/tposney/midi-qol/-/issues/1549) (save rolls showing success/failure when DC should be hidden) resolved as part of the DC display refactoring below - the target DC is no longer passed to dnd5e when visibility settings would hide it from the player.
 
 **Breaking Changes:**
 Since this change affects what players see please check your settings and the displayed cards before game time since I might have screwed up.
@@ -782,7 +785,7 @@ Since this change affects what players see please check your settings and the di
 
 **Bug Fixes:**
 * Levels Volumetric Templates: Now pre-filters tokens for incapacitated/defeated status before passing to VolumetricTemplates, matching the behavior when not using volumetric templates.
-* Fixed Activity Visibility "Level Limit" being ignored when midi-qol is enabled (#1548). Activities now properly respect dnd5e visibility settings (level limits, attunement requirements, etc.) on both default dnd5e sheets and Tidy5e sheets.
+* Fixed Activity Visibility "Level Limit" being ignored when midi-qol is enabled ([#1548](https://gitlab.com/tposney/midi-qol/-/issues/1548)). Activities now properly respect dnd5e visibility settings (level limits, attunement requirements, etc.) on both default dnd5e sheets and Tidy5e sheets.
 
 **Documentation**
 - new directory docs, which includes documentation of significant changes.
@@ -801,8 +804,8 @@ Since this change affects what players see please check your settings and the di
   - Fixed TrapWorkflow infinite loop when using activities with attacks. The `WorkflowState_WaitForAttackRoll` now properly checks `context.attackRoll` to detect when resuming after attack completion.
   - Fixed TrapWorkflow not syncing `game.user.targets` from targets passed to constructor. Targets are now synced immediately in the constructor for proper workflow execution.
   - Fixed D20Roll.buildPost error in TrapWorkflow by not passing `shiftOnlyEvent` (which lacks required `target` property) to `rollAttack`.
-* !385: Fixed targeting logic for "Weapon's attack single target" setting with activities that have emanation shapes (like Steel Wind Strike) - thanks @thatlonelybugbear
-* !386: Updated pt-BR.json - thanks @Kharmans
+* [!385](https://gitlab.com/tposney/midi-qol/-/merge_requests/385): Fixed targeting logic for "Weapon's attack single target" setting with activities that have emanation shapes (like Steel Wind Strike) - thanks @thatlonelybugbear
+* [!386](https://gitlab.com/tposney/midi-qol/-/merge_requests/386): Updated pt-BR.json - thanks @Kharmans
 
 **Code Improvements:**
 * Refactored `skipConcentrationCheck` from actor flags to module-level Set for tracking actors that should skip concentration checks. Avoids database writes so is faster.
@@ -811,7 +814,7 @@ Since this change affects what players see please check your settings and the di
 * Midi-qol uses AI (Claude) for test and documentation generation and some bug fixes.
 
 **New Features:**
-* !381: Added option to skip concentration checks when HP is consumed for activity activation - thanks @baconnugget
+* [!381](https://gitlab.com/tposney/midi-qol/-/merge_requests/381): Added option to skip concentration checks when HP is consumed for activity activation - thanks @baconnugget
 * Expanded `ignoreTraits` to support individual damage types. You can now specify specific damage types to bypass:
   - `idi.fire` - Ignore fire immunity only (other immunities still apply)
   - `idr.cold` - Ignore cold resistance only
@@ -825,8 +828,8 @@ Since this change affects what players see please check your settings and the di
 * Fixed grants.noAdvantage/grants.noDisadvantage not working correctly for saves.
 * Fixed flanking advantage being applied when `checkFlanking` is not set to "advonly". Expects the status effect to provide advantage.
 * Fixed chat log DOM duplication when scrolling to the top after messages were deleted.
-* !382: Improve flash-rolls-5e integration for automatic saving throws (switch to flash-rolls-5e.rollComplete hook, use request.token for NPC matching) - thanks @carolingian
-* !380: Bugfix - edge cases for optional bonus check.all and save.all (tool checks and death saves now properly trigger optional bonuses) - thanks @Bacon
+* [!382](https://gitlab.com/tposney/midi-qol/-/merge_requests/382): Improve flash-rolls-5e integration for automatic saving throws (switch to flash-rolls-5e.rollComplete hook, use request.token for NPC matching) - thanks @carolingian
+* [!380](https://gitlab.com/tposney/midi-qol/-/merge_requests/380): Bugfix - edge cases for optional bonus check.all and save.all (tool checks and death saves now properly trigger optional bonuses) - thanks @Bacon
 
 **Translations:**
 * Updated pt-BR.json - thanks @Kharmans

@@ -1,6 +1,6 @@
 # Roll Toggle and dnd5e's roll keys (2026-10-16)
 
-midi-qol #1553 asked that, with fast forward on, a key open the roll configuration dialog. midi's **Roll Toggle** key (default F) does that; binding it to Shift gives exactly what was asked. Checking every key combination against dnd5e showed where midi differed from dnd5e and from itself.
+midi-qol [#1553](https://gitlab.com/tposney/midi-qol/-/issues/1553) asked that, with fast forward on, a key open the roll configuration dialog. midi's **Roll Toggle** key (default F) does that; binding it to Shift gives exactly what was asked. Checking every key combination against dnd5e showed where midi differed from dnd5e and from itself.
 
 ## The rules (skill/ability/save/tool rolls and attacks)
 
