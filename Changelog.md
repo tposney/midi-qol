@@ -1,6 +1,6 @@
 ### 14.6.6
 
-* Changed: updates are served from GitLab Pages (https://tposney.gitlab.io/midi-qol/dnd6/module.json), so update checks no longer fail when GitLab rate-limits repository files. Changelog: https://tposney.gitlab.io/midi-qol/dnd6/changelog.html.
+* Changed: updates are served from GitLab Pages, so update checks no longer fail when GitLab rate-limits repository files. Installed copies move over with this update. Manifest URL: https://tposney.gitlab.io/midi-qol/dnd6/module.json. Changelog: https://tposney.gitlab.io/midi-qol/dnd6/changelog.html.
 * Fixed: the deprecation warning for *Move roll formula to tooltip*'s advantage attribution options appeared several times when a world loaded; it appears once.
 
 **Sample items**
