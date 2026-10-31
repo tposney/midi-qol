@@ -1,0 +1,116 @@
+{
+  "_id": "mqmSteadfast0000",
+  "name": "Steadfast",
+  "ownership": {
+    "default": 0
+  },
+  "type": "feat",
+  "system": {
+    "description": {
+      "value": "<p>the [[lookup @name lowercase]]{monster} can't be frightened while it can see an allied creature <strong>within 30 feet</strong> of it.</p><div class=\"cat-description\"><p><em>midi-qol: Immune to Frightened; whether an ally is in sight within 30 feet is not checked.</em></p></div>",
+      "chat": ""
+    },
+    "source": {
+      "custom": "midi-qol sample",
+      "rules": "2024",
+      "book": "SRD 5.1",
+      "license": "CC-BY-4.0"
+    },
+    "uses": {
+      "max": "",
+      "spent": 0,
+      "recovery": []
+    },
+    "type": {
+      "value": "monster",
+      "subtype": ""
+    },
+    "requirements": "",
+    "activities": {},
+    "enchant": {},
+    "prerequisites": {
+      "level": null,
+      "items": [],
+      "repeatable": false
+    },
+    "properties": [],
+    "identifier": "steadfast",
+    "advancement": {},
+    "crewed": false
+  },
+  "flags": {
+    "dnd5e": {},
+    "cat": {
+      "automation": {
+        "version": "14.6.6",
+        "npc": true
+      }
+    }
+  },
+  "img": "icons/magic/defensive/illusion-evasion-echo-purple.webp",
+  "effects": [
+    {
+      "name": "Steadfast",
+      "img": "icons/magic/defensive/illusion-evasion-echo-purple.webp",
+      "transfer": true,
+      "disabled": false,
+      "description": "<p>Always on: the text requires an ally she can see within 30 feet. Disable the effect when there is none.</p>",
+      "system": {
+        "changes": [
+          {
+            "key": "system.traits.ci.value",
+            "value": "frightened",
+            "type": "add",
+            "phase": "initial",
+            "_id": "tKF3tHJkvrtBeseM",
+            "conditions": "{}",
+            "replacement": ""
+          }
+        ],
+        "origin": {
+          "actor": null,
+          "behavior": null,
+          "effect": null,
+          "item": null,
+          "message": null
+        },
+        "conditions": "{}",
+        "magical": false,
+        "rider": {
+          "statuses": []
+        }
+      },
+      "_id": "mqSteadfastEff00",
+      "type": "base",
+      "start": null,
+      "duration": {
+        "value": null,
+        "units": "seconds",
+        "expiry": null,
+        "expired": false
+      },
+      "origin": null,
+      "tint": "#ffffff",
+      "statuses": [],
+      "showIcon": 1,
+      "folder": null,
+      "sort": 0,
+      "flags": {},
+      "_key": "!items.effects!mqmSteadfast0000.mqSteadfastEff00"
+    }
+  ],
+  "folder": "MonsterFeatFldr0",
+  "sort": 0,
+  "_stats": {
+    "compendiumSource": null,
+    "duplicateSource": null,
+    "coreVersion": null,
+    "systemId": null,
+    "systemVersion": null,
+    "createdTime": null,
+    "modifiedTime": null,
+    "lastModifiedBy": null,
+    "exportSource": null
+  },
+  "_key": "!items!mqmSteadfast0000"
+}

@@ -632,6 +632,8 @@ export let fetchSoundSettings = () => {
   }
 }
 
+// Settings load from several places; the deprecation is reported once per session
+let warnedRollAlternate = false;
 export let fetchParams = () => {
   if (debugEnabled > 1) debug("Fetch Params Loading");
   const blfxActive = game.modules.get("boss-loot-assets-premium")?.active || game.modules.get("boss-loot-assets-free")?.active;
@@ -686,9 +688,11 @@ export let fetchParams = () => {
   if (configSettings.rollAlternate === false) configSettings.rollAlternate = "off";
   //@ts-expect-error legacy boolean value
   if (configSettings.rollAlternate === true) configSettings.rollAlternate = "formula";
-  if (["adv", "formulaadv"].includes(configSettings.rollAlternate))
+  if (["adv", "formulaadv"].includes(configSettings.rollAlternate) && !warnedRollAlternate) {
+    warnedRollAlternate = true;
     foundry.utils.logCompatibilityWarning("midi-qol | Move roll formula to tooltip: the Advantage Attribution options are deprecated. The sources of advantage/disadvantage are shown by the info icon on the roll's label.",
-      { since: "midi-qol 14.6.5", until: "midi-qol 14.8", once: true });
+      { since: "midi-qol 14.6.5", until: "midi-qol 14.8" });
+  }
   if (configSettings.allowActorUseMacro === undefined) configSettings.allowActorUseMacro = configSettings.allowUseMacro;
 
   // MidiSounds.setupBasicSounds();

@@ -1,0 +1,116 @@
+{
+  "_id": "mqmBrave00000000",
+  "name": "Brave",
+  "ownership": {
+    "default": 0
+  },
+  "type": "feat",
+  "system": {
+    "description": {
+      "value": "<p>the [[lookup @name lowercase]]{monster} has advantage on saving throws against being Frightened.</p><div class=\"cat-description\"><p><em>midi-qol: Advantage on saves against Frightened.</em></p><p><em>Automation requires Coven's Automation Toolkit (CAT).</em></p></div>",
+      "chat": ""
+    },
+    "source": {
+      "custom": "midi-qol sample",
+      "rules": "2024",
+      "book": "SRD 5.1",
+      "license": "CC-BY-4.0"
+    },
+    "uses": {
+      "max": "",
+      "spent": 0,
+      "recovery": []
+    },
+    "type": {
+      "value": "monster",
+      "subtype": ""
+    },
+    "requirements": "",
+    "activities": {},
+    "enchant": {},
+    "prerequisites": {
+      "level": null,
+      "items": [],
+      "repeatable": false
+    },
+    "properties": [],
+    "identifier": "brave",
+    "advancement": {},
+    "crewed": false
+  },
+  "flags": {
+    "dnd5e": {},
+    "cat": {
+      "automation": {
+        "version": "14.6.6",
+        "npc": true
+      }
+    }
+  },
+  "img": "icons/skills/social/intimidation-impressing.webp",
+  "effects": [
+    {
+      "name": "Brave",
+      "img": "icons/skills/social/intimidation-impressing.webp",
+      "transfer": true,
+      "disabled": false,
+      "description": "",
+      "system": {
+        "changes": [
+          {
+            "key": "flags.cat.CR.frightened",
+            "value": 1,
+            "type": "override",
+            "phase": "final",
+            "_id": "LbV8Qa9m2D1Qo4QK",
+            "conditions": "{}",
+            "replacement": ""
+          }
+        ],
+        "origin": {
+          "actor": null,
+          "behavior": null,
+          "effect": null,
+          "item": null,
+          "message": null
+        },
+        "conditions": "{}",
+        "magical": false,
+        "rider": {
+          "statuses": []
+        }
+      },
+      "_id": "mqBraveEff000000",
+      "type": "base",
+      "start": null,
+      "duration": {
+        "value": null,
+        "units": "seconds",
+        "expiry": null,
+        "expired": false
+      },
+      "origin": null,
+      "tint": "#ffffff",
+      "statuses": [],
+      "showIcon": 1,
+      "folder": null,
+      "sort": 0,
+      "flags": {},
+      "_key": "!items.effects!mqmBrave00000000.mqBraveEff000000"
+    }
+  ],
+  "folder": "MonsterFeatFldr0",
+  "sort": 0,
+  "_stats": {
+    "compendiumSource": null,
+    "duplicateSource": null,
+    "coreVersion": null,
+    "systemId": null,
+    "systemVersion": null,
+    "createdTime": null,
+    "modifiedTime": null,
+    "lastModifiedBy": null,
+    "exportSource": null
+  },
+  "_key": "!items!mqmBrave00000000"
+}

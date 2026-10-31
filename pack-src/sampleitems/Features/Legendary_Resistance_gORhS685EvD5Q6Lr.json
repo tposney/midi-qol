@@ -58,6 +58,16 @@
       "system": {
         "changes": [
           {
+            "key": "flags.midi-qol.optional.LegRes.label",
+            "type": "custom",
+            "value": "Legendary Resistance",
+            "priority": 20,
+            "phase": "initial",
+            "_id": "mqLegResLabel000",
+            "conditions": "{}",
+            "replacement": ""
+          },
+          {
             "key": "flags.midi-qol.optional.LegRes.save.fail.all",
             "value": "success",
             "priority": 20,
@@ -221,7 +231,7 @@
     },
     "cat": {
       "automation": {
-        "version": "14.6.0"
+        "version": "14.6.6"
       }
     }
   },

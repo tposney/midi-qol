@@ -2315,7 +2315,7 @@ export function _prepareDerivedData(this: Actor.Implementation, wrapped, ...args
 function _prepareItem(wrapped, item, ctx) {
   wrapped(item, ctx);
   // Filter from ctx.activities to preserve dnd5e's visibility filtering (including level limits)
-  // Fixes issue #1548: Activity Visibility "Level Limit" ignored when midi-qol is enabled
+  // Fixes issue https://gitlab.com/tposney/midi-qol/-/issues/1548: Activity Visibility "Level Limit" ignored when midi-qol is enabled
   if (ctx.activities) {
     // ctx.activities holds the sheet's prepared context objects, not Activity documents, so the
     // flag has to be read back off the item - filtering on a.midiProperties never matched anything.

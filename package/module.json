@@ -2,7 +2,7 @@
   "id": "midi-qol",
   "title": "Midi QOL",
   "description": "Automates rolling weapon/spell attacks and applying damage amongst other things",
-  "version": "14.6.5",
+  "version": "14.6.6",
   "authors": [
     {
       "name": "Tim Posney",
@@ -93,6 +93,15 @@
       "type": "ActiveEffect",
       "system": "dnd5e",
       "lang": []
+    },
+    {
+      "name": "midiqol-sample-summons",
+      "label": "MidiQOL Sample Summons",
+      "path": "./packs/summons",
+      "module": "world",
+      "type": "Actor",
+      "system": "dnd5e",
+      "lang": []
     }
   ],
   "packFolders": [
@@ -100,7 +109,8 @@
       "name": "Midi Samples",
       "packs": [
         "midiqol-sample-items",
-        "midiqol-active-effects"
+        "midiqol-active-effects",
+        "midiqol-sample-summons"
       ]
     }
   ],
@@ -166,7 +176,7 @@
     "allowBugReporter": true
   },
   "url": "https://gitlab.com/tposney/midi-qol",
-  "manifest": "https://gitlab.com/tposney/midi-qol/raw/dnd6/package/module.json",
-  "download": "https://gitlab.com/tposney/midi-qol/raw/dnd6/package/midi-qol-v14.6.5.zip",
-  "changelog": "https://gitlab.com/tposney/midi-qol/raw/dnd6/Changelog.md"
+  "manifest": "https://tposney.gitlab.io/midi-qol/dnd6/module.json",
+  "download": "https://tposney.gitlab.io/midi-qol/versions/14.6.6/midi-qol-v14.6.6.zip",
+  "changelog": "https://tposney.gitlab.io/midi-qol/dnd6/changelog.html"
 }

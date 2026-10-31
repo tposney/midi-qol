@@ -1,0 +1,125 @@
+{
+  "_id": "mqmDarkDevot2024",
+  "name": "Dark Devotion",
+  "ownership": {
+    "default": 0
+  },
+  "type": "feat",
+  "system": {
+    "description": {
+      "value": "<p>the [[lookup @name lowercase]]{monster} has<strong> advantage </strong>on saving throws against being charmed or frightened.</p><div class=\"cat-description\"><p><em>midi-qol: Advantage on saves against Charmed and Frightened.</em></p><p><em>Automation requires Coven's Automation Toolkit (CAT).</em></p></div>",
+      "chat": ""
+    },
+    "source": {
+      "custom": "midi-qol sample",
+      "rules": "2024",
+      "book": "SRD 5.1",
+      "license": "CC-BY-4.0"
+    },
+    "uses": {
+      "max": "",
+      "spent": 0,
+      "recovery": []
+    },
+    "type": {
+      "value": "monster",
+      "subtype": ""
+    },
+    "requirements": "",
+    "activities": {},
+    "enchant": {},
+    "prerequisites": {
+      "level": null,
+      "items": [],
+      "repeatable": false
+    },
+    "properties": [],
+    "identifier": "dark-devotion",
+    "advancement": {},
+    "crewed": false
+  },
+  "flags": {
+    "dnd5e": {},
+    "cat": {
+      "automation": {
+        "version": "14.6.6",
+        "npc": true
+      }
+    }
+  },
+  "img": "icons/magic/control/control-influence-rally-purple.webp",
+  "effects": [
+    {
+      "name": "Dark Devotion",
+      "img": "icons/magic/control/control-influence-rally-purple.webp",
+      "transfer": true,
+      "disabled": false,
+      "description": "",
+      "system": {
+        "changes": [
+          {
+            "key": "flags.cat.CR.charmed",
+            "value": 1,
+            "type": "override",
+            "phase": "final",
+            "_id": "WH7bU8yhITk8jNFP",
+            "conditions": "{}",
+            "replacement": ""
+          },
+          {
+            "key": "flags.cat.CR.frightened",
+            "value": 1,
+            "type": "override",
+            "phase": "final",
+            "_id": "mX20WtlRxkagUyen",
+            "conditions": "{}",
+            "replacement": ""
+          }
+        ],
+        "origin": {
+          "actor": null,
+          "behavior": null,
+          "effect": null,
+          "item": null,
+          "message": null
+        },
+        "conditions": "{}",
+        "magical": false,
+        "rider": {
+          "statuses": []
+        }
+      },
+      "_id": "mqDarkDevotionEf",
+      "type": "base",
+      "start": null,
+      "duration": {
+        "value": null,
+        "units": "seconds",
+        "expiry": null,
+        "expired": false
+      },
+      "origin": null,
+      "tint": "#ffffff",
+      "statuses": [],
+      "showIcon": 1,
+      "folder": null,
+      "sort": 0,
+      "flags": {},
+      "_key": "!items.effects!mqmDarkDevot2024.mqDarkDevotionEf"
+    }
+  ],
+  "folder": "MonsterFeatFldr0",
+  "sort": 0,
+  "_stats": {
+    "compendiumSource": null,
+    "duplicateSource": null,
+    "coreVersion": null,
+    "systemId": null,
+    "systemVersion": null,
+    "createdTime": null,
+    "modifiedTime": null,
+    "lastModifiedBy": null,
+    "exportSource": null
+  },
+  "_key": "!items!mqmDarkDevot2024"
+}

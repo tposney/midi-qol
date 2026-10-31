@@ -285,7 +285,7 @@ function cleanPackFolderNames(packSrcDir) {
  * Extract packs: packs/ -> pack-src/ (LevelDB to JSON)
  */
 exports.extractPacks = gulp.series(
-  pdel(["pack-src/sampleitems", "pack-src/activeeffects"]),
+  pdel(["pack-src/sampleitems", "pack-src/activeeffects", "pack-src/summons"]),
   async () => {
     if (!foundryvttCli) foundryvttCli = await import("@foundryvtt/foundryvtt-cli");
     await foundryvttCli.extractPack("packs/sampleitems", "pack-src/sampleitems", { folders: true });
@@ -295,6 +295,11 @@ exports.extractPacks = gulp.series(
       await foundryvttCli.extractPack("packs/activeeffects", "pack-src/activeeffects", { folders: true });
       cleanPackFolderNames("pack-src/activeeffects");
       plog("Extracted packs/activeeffects to pack-src/activeeffects");
+    }
+    if (fs.existsSync("packs/summons")) {
+      await foundryvttCli.extractPack("packs/summons", "pack-src/summons", { folders: true });
+      cleanPackFolderNames("pack-src/summons");
+      plog("Extracted packs/summons to pack-src/summons");
     }
   }
 );
@@ -338,7 +343,7 @@ function changedSinceRelease(packSrcDir) {
 async function ensurePackIds(packSrcDir, { documentType = "Item" } = {}) {
   let modified = 0;
   const midiVersion = PACKAGE.version;
-  const keyPrefix = documentType === "Item" ? "items" : "effects";
+  const keyPrefix = { Item: "items", ActiveEffect: "effects", Actor: "actors" }[documentType];
 
   const changedFiles = changedSinceRelease(packSrcDir);
 
@@ -536,7 +541,7 @@ function addCatAutomationData(doc) {
  * Compile packs: pack-src/ -> packs/ (JSON to LevelDB)
  */
 exports.compilePacks = gulp.series(
-  pdel(["packs/sampleitems", "packs/activeeffects"]),
+  pdel(["packs/sampleitems", "packs/activeeffects", "packs/summons"]),
   async () => {
     if (!foundryvttCli) foundryvttCli = await import("@foundryvtt/foundryvtt-cli");
 
@@ -547,6 +552,10 @@ exports.compilePacks = gulp.series(
     await ensurePackIds("pack-src/activeeffects", { documentType: "ActiveEffect" });
     await foundryvttCli.compilePack("pack-src/activeeffects", "packs/activeeffects", { recursive: true });
     plog("Compiled pack-src/activeeffects to packs/activeeffects");
+
+    await ensurePackIds("pack-src/summons", { documentType: "Actor" });
+    await foundryvttCli.compilePack("pack-src/summons", "packs/summons", { recursive: true });
+    plog("Compiled pack-src/summons to packs/summons");
   },
   pdel([DEV_DIST() + PACK + GLOB], { force: true }),
   outputPackFiles(DEV_DIST()),
