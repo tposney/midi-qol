@@ -147,7 +147,7 @@
   "midi-qol.ConfigTitle": "Configurações do Midi QOL",
   "midi-qol.WorkflowSettings": "Configurações de Workflow",
   "midi-qol.ActivitySheetTabs": {
-    "modConditions": "Condições",
+    "modConditions": "Usar",
     "workflowSettings": "Workflow",
     "activityManagement": "Atividades",
     "overtime": "OverTime",
@@ -264,14 +264,24 @@
   },
   "midi-qol.SaveSummaryStyle.Name": "Estilo do Resumo de Salvaguardas",
   "midi-qol.SaveSummaryStyle.Hint": "Com a opção \"Cartões de Chat Resumidos\" do D&D5e ativada, as salvaguardas de um cartão são exibidas no próprio cartão, em vez de aparecerem como mensagens separadas. Midi-QOL: a seção de salvaguardas do midi (CD, sucesso/falha e dano) é utilizada como resumo. D&D5e: são utilizados os resumos individuais de cada rolagem do D&D5e, enquanto a seção do Midi-QOL lista apenas as salvaguardas realizadas por outros módulos. Em ambos os casos, o que os jogadores podem visualizar depende da configuração \"Auto-Verificar Salvaguardas\". Com a opção \"Cartões de Chat Resumidos\" desativada, as salvaguardas são exibidas como mensagens separadas.",
-  "midi-qol.SaveDamageLine.Name": "Exibir Dano Após Cada Salvaguarda",
-  "midi-qol.SaveDamageLine.Hint": "Abaixo do resultado da salvaguarda de um alvo, quando ela reduz o dano sofrido, são exibidos o dano de cada tipo sofrido após a salvaguarda (antes das resistências) e a característica que modificou esse dano (ex: Evasão).",
+  "midi-qol.ChatCardSummaries.Name": "Resumos dos Cartões de Chat",
+  "midi-qol.ChatCardSummaries.Hint": "Define se as salvaguardas de um cartão são incorporadas a ele (na seção de Salvaguardas do Midi-QOL ou nos resumos do D&D5e) ou exibidas como mensagens separadas. A opção Escolha de Cada Usuário segue a configuração \"Cartões de Chat Resumidos\" do D&D5e de cada usuário. Sempre e Nunca definem o comportamento para todos (a escolha individual de cada usuário volta a ser aplicada quando a opção Escolha de Cada Usuário é selecionada).",
   "midi-qol.saveSummaryStyleOptions": {
     "midi": "Seção de Salvaguardas do Midi",
     "dnd5e": "Resumos do D&D5e",
     "expandedHints": {
       "midi": "A seção de salvaguardas do Midi-QOL é utilizada como resumo das salvaguardas do cartão. Os resumos individuais de cada rolagem do D&D5e não são exibidos.",
       "dnd5e": "Os resumos individuais de cada rolagem do D&D5e são exibidos; A seção de salvaguardas do Midi-QOL lista apenas as salvaguardas que não possuem um resumo próprio, como aquelas realizadas por outros módulos."
+    }
+  },
+  "midi-qol.chatCardSummariesOptions": {
+    "client": "Escolha de Cada Usuário",
+    "always": "Sempre",
+    "never": "Nunca",
+    "expandedHints": {
+      "client": "A configuração \"Cartões de Chat Resumidos\" do D&D5e de cada usuário determina o comportamento.",
+      "always": "As salvaguardas são incorporadas aos seus respectivos cartões para todos os usuários. As mensagens individuais de salvaguarda ficam ocultas no histórico do chat.",
+      "never": "As salvaguardas são exibidas como mensagens separadas para todos os usuários. A seção de salvaguardas do midi não é exibida."
     }
   },
   "midi-qol.autoCheckSavesOptions": {
@@ -545,6 +555,8 @@
   "midi-qol.RollOtherSpellDamage.Name": "Rolar dano de 'Outra Fórmula' para Magias",
   "midi-qol.RollOtherDamage.Hint": "<strong>Desativado</strong>: não rola automaticamente o dano de Outra Fórmula.<br><strong>Condição Verdadeira e Salvaguarda Presente</strong>: rola se a condição não estiver vazia e resultar em verdadeiro OU se o item possuir uma salvaguarda e a condição de ativação não for falsa.<br><strong>Condição</strong>: rola o dano de Outra Fórmula se sua condição estiver vazia ou resultar em verdadeiro.",
   "midi-qol.ApplyEffects": "Aplicar Efeitos Ativos",
+  "midi-qol.FollowUp.Unavailable": "{name} não possui usos restantes",
+  "midi-qol.FollowUp.Targets.default": "Alvos atingidos em caso de ataque. Do contrário, todos os alvos",
   "midi-qol.spell-damage": "Dano de Magia",
   "midi-qol.RemoveButtons.Name": "Remover Botões do Chat Após Rolagem",
   "midi-qol.ActiveConcentrationSpell.Title": "Magia de Concentração em Andamento",
@@ -595,7 +607,7 @@
   "midi-qol.AttackMacro.Hint": "Lista separada por vírgulas de macros a serem chamadas ao calcular a jogada de ataque que será aplicada ao verificar se o ataque atingiu os alvos.",
   "midi-qol.DAEMidiQOL": "Específico do DAE/Midi-QOL",
   "midi-qol.OptionalRules.Name": "Regras Opcionais de Jogo",
-  "midi-qol.OptionalRules.Hint": "Regras de Jogo de D&D5e que você talvez queira habilitar. Geralmente não funciona com o módulo Better Rolls.",
+  "midi-qol.OptionalRules.Hint": "Regras de Jogo que você talvez queira habilitar.",
   "midi-qol.InvisAdvantage.Name": "Tokens Não-Vistos ou Invisíveis têm Vantagem/Desvantagem em Ataques",
   "midi-qol.RAW2014Invisible.Hint": "<strong>RAW (2014)</strong>: a condição Invisível sempre concede vantagem/desvantagem. Outros sentidos (Percepção às Cegas, Sentido Sísmico) anulam a vantagem/desvantagem decorrente de não ser visto.",
   "midi-qol.RAW2024Invisible.Hint": "<strong>RAW (2024)</strong>: Só concede vant/desv se a outra criatura não puder <em>ver</em> você. Percepção às Cegas/Visão Verdadeira negam, mas Sentido Sísmico não.",
@@ -606,12 +618,15 @@
     "vision": "Usar Visão do Token"
   },
   "midi-qol.InvisVision.Name": "Forçar Visão ao Verificar",
+  "midi-qol.ConditionRules.Name": "Aplicar Regras das Condições",
+  "midi-qol.ConditionRules.Hint": "Aplica as regras de condições que o D&D5e não implementa, às condições adicionadas após a ativação desta configuração, independentemente de como forem aplicadas: ataques realizados por uma criatura Amedrontada, Envenenada, Caída ou Contida (ou com 3 níveis de Exaustão, pelas regras de 2014) sofrem Desvantagem. Ataques contra uma criatura Paralisada, Petrificada, Contida, Atordoada ou Inconsciente recebem vantagem e, contra uma criatura Caída, recebem Vantagem a até 5 pés e sofrem Desvantagem além dessa distância. Acertos a até 5 pés contra uma criatura Paralisada ou Inconsciente são Críticos. Criaturas Paralisadas, Petrificadas, Atordoadas ou Inconscientes falham automaticamente em Salvaguardas de Força e Destreza. Criaturas Amedrontadas sofrem Desvantagem em Testes de Atributo. Criaturas Silenciadas não podem conjurar magias com componente Verbal. A condição Cego segue essas regras apenas quando as regras de criaturas que não podem enxergar estão desativadas. A condição Agarrado não está incluída.",
   "midi-qol.InvisVision.Hint": "<strong>Marcada</strong>: a verificação se comporta como se todos os tokens tivessem visão habilitada.<br><strong>Desmarcada</strong>: tokens sem visão conseguem ver tudo.",
   "midi-qol.HiddenAdvantage.Name": "Tokens Escondidos Possuem Vantagem/Desvantagem",
-  "midi-qol.HiddenAdvantage.Hint": "Tokens escondidos possuem vantagem em ataques. Desvantagem se o alvo estiver escondido.",
+  "midi-qol.HiddenAdvantage.Hint": "Como uma criatura com a condição Escondido (ação Esconder) é tratada. Por Observador: a criatura é considerada Invisível, tanto no mapa quanto nas regras de Atacantes e Alvos Não-Vistos, para cada criatura que não consiga percebê-la (ela própria, seus aliados, um token sem visão (a menos que a opção Forçar Visão ao Verificar esteja ativada), criaturas com Ver Invisibilidade, Visão Verdadeira, Percepção às Cegas ou Sentido Sísmico e, com a regra opcional da casa, criaturas cuja Percepção passiva seja igual ou superior à CD para se esconder conseguem percebê-la). Perceptive: o módulo Perceptive determina quais criaturas conseguem perceber umas às outras.",
   "midi-qol.HiddenAdvantageOptions": {
     "none": "Não Aplicar",
-    "effect": "Verificar Condição 'Escondido'",
+    "perObserver": "Escondido é Invisível para quem não percebê-la",
+    "perObserverPassive": "Como acima, e Percepção passiva igual ou superior à CD para se esconder conseguem percebê-la (regra da casa)",
     "perceptive": "Perceptive"
   },
   "midi-qol.CantSeeAdvantage.Hint": "<strong>Usar Visão do Token</strong>: Tokens Invisíveis têm vantagem contra alvos que não podem vê-los. Desvantagem se não puder ver o alvo.",
@@ -658,9 +673,24 @@
   "midi-qol.VisionTestHeight.Name": "Altura do Ponto do Teste de Visão",
   "midi-qol.VisionTestHeight.Hint": "Qual elevação usar para testar a visibilidade do token. Afeta tanto a renderização do Foundry quanto as verificações de visão do Midi-QOL.",
   "midi-qol.SurfaceOcclusion.Name": "Ocluir Superfícies de Andares Superiores",
-  "midi-qol.SurfaceOcclusion.Hint": "Em cenas com múltiplos níveis, torna transparentes as superfícies dos andares superiores ao visualizar de um andar inferior, mesmo que o token não esteja diretamente abaixo delas.",
-  "midi-qol.SurfaceVisionFog.Name": "Escurecer Andares Inferiores Através de Aberturas nas Superfícies",
-  "midi-qol.SurfaceVisionFog.Hint": "Em cenas com múltiplos níveis, escurece áreas visíveis através de aberturas nas superfícies do piso quando o ângulo de visão bloquear a linha de visão para o andar abaixo.",
+  "midi-qol.SurfaceOcclusion.Hint": "Em cenas com andares, torna transparentes as superfícies dos andares superiores ao visualizar de um andar inferior, mesmo que o token não esteja diretamente abaixo delas.",
+  "midi-qol.RulesAlwaysApplied.Name": "Regras Sempre Aplicadas",
+  "midi-qol.RulesAlwaysApplied.Hint": "Estas regras são aplicadas independentemente de as regras opcionais abaixo estarem ativadas.",
+  "midi-qol.ShowAttackRollDetails.Name": "Exibir Detalhes das Rolagens de Ataque",
+  "midi-qol.ShowAttackRollDetails.Hint": "Exibe ícones ao lado do resultado total de uma rolagem de ataque para indicar fatores especiais que a influenciaram (flanqueamento, bônus concedido por um alvo, bônus de um efeito e exaustão), além de uma dica sobre o resultado total que lista todos os termos da rolagem.",
+  "midi-qol.HiddenGroundCue.Name": "Marcar Andares Inferiores Onde as Criaturas Não Podem Ser Vistas",
+  "midi-qol.HiddenGroundCue.Hint": "Em cenas com andares, o andar inferior é exibido onde houver uma abertura que permita vê-lo, mas uma criatura posicionada nesse andar permanece oculta se a borda do piso ou uma parede bloquear a linha de visão a partir dos olhos do seu token. Marca esses quadrados utilizando o estilo selecionado abaixo.",
+  "midi-qol.HiddenGroundCue.Style.Name": "Estilo de Área Oculta",
+  "midi-qol.HiddenGroundCue.Style.Hint": "Define como são marcados os quadrados onde as criaturas não podem ser vistas.",
+  "midi-qol.HiddenGroundCue.Style.tint": "Colorização",
+  "midi-qol.HiddenGroundCue.Style.dim": "Escurecimento",
+  "midi-qol.HiddenGroundCue.Style.hatch": "Hachura",
+  "midi-qol.HiddenGroundCue.Style.outline": "Contorno",
+  "midi-qol.HiddenGroundCue.Style.hatchOutline": "Hachura e Contorno",
+  "midi-qol.HiddenGroundCue.Color.Name": "Cor das Áreas Ocultas",
+  "midi-qol.HiddenGroundCue.Color.Hint": "Cor utilizada na Colorização, Hachura e Contorno (Escurecimento é sempre preto).",
+  "midi-qol.HiddenGroundCue.Opacity.Name": "Opacidade das Áreas Ocultas",
+  "midi-qol.HiddenGroundCue.Opacity.Hint": "Define a intensidade da marcação dos quadrados.",
   "midi-qol.VisionTestHeightOptions": {
     "center": "Centro",
     "top": "Topo",
@@ -700,11 +730,10 @@
   "midi-qol.NearbyAllyRanged.Hint": "Ataques à distância com aliados próximos (5 pés) a alvos possuem desvantagem para alvos menores do que isso (largura * altura). Desabilitado em 0.",
   "midi-qol.Incapacitated.Name": "Se Ator Incapacitado Fizer Uma Ação, Midi QOL Deve:",
   "midi-qol.IncapacitatedOptions": {
-    "nothing": "Fazer Nada",
+    "nothing": "Permitir",
     "enforce": "Impor 'Sem Ações'",
     "warn": "Apenas Avisar"
   },
-  "midi-qol.RemoveHiddenInvis.Name": "Atacar Remove Escondido (usa CE/CV/CUB/specialStatus do Foundry)",
   "midi-qol.CriticalSaves.Name": "(Regra da Casa) Críticos/Falhas Críticas Sempre Resultam em Sucesso/Falha nas Salvaguardas",
   "midi-qol.MaxDRValue.Name": "(Regra da Casa) Apenas a maior Redução de Dano será aplicada. Desabilitar significa que ela acumula",
   "midi-qol.invisible": "Invisível",
@@ -901,6 +930,8 @@
   "midi-qol.AddDead.Hint1": "Controlado por Jogador",
   "midi-qol.AddDead.Hint2": "Controlado pelo Mestre",
   "midi-qol.markDefeated": "Marcar como Derrotado no Monitor de Combate",
+  "midi-qol.EnforceDeathSaves.Name": "Aplicar Salvaguardas Contra Morte",
+  "midi-qol.EnforceDeathSaves.Hint": "Um personagem com 0 pontos de vida que sofra dano, recebe uma falha na Salvaguarda Contra Morte, duas falhas se o dano vier de um acerto crítico e três falhas (morte) se o dano for igual ou superior aos seus pontos de vida máximos. Com três falhas ele é marcado como Morto, como ocorreria ao falhar em três Salvaguardas Contra Morte. Desfazer a aplicação do dano pelo cartão de dano restaura a contagem de falhas e o status anterior.",
   "midi-qol.AddDeadOptions": {
     "none": "Não Atualizar",
     "overlay": "Sobreposição",
@@ -1005,9 +1036,25 @@
     }
   },
   "midi-qol.Flanked": "Flanqueado",
+  "midi-qol.ActivityStatuses.Label": "Status Aplicados",
+  "midi-qol.ActivityStatuses.Hint": "Aplica os status diretamente aos alvos, da mesma forma que o HUD do Token os ativa ou desativa, juntamente com os efeitos da atividade: se a salvaguarda falhar ou independentemente do resultado da salvaguarda e no caso de um ataque, é aplicado apenas se o ataque acertar, em ambos os casos. Os status ficam vinculados à concentração, assim como os efeitos. Uma criatura que já possui o status o mantém.",
+  "midi-qol.ActivityStatuses.Add": "Adicionar Status",
+  "midi-qol.ActivityStatuses.Delete": "Remover Status",
+  "midi-qol.ActivityStatuses.Status": "Status",
+  "midi-qol.ActivityStatuses.SpecialDuration": "Também Termina Quando",
+  "midi-qol.ActivityStatuses.AddDuration": "Adicionar…",
+  "midi-qol.ActivityStatuses.DeleteDuration": "Remover",
+  "midi-qol.ActivityStatuses.OnSave": "Aplicar",
+  "midi-qol.ActivityStatuses.OnFailedSave": "Se a Salvaguarda Falhar",
+  "midi-qol.ActivityStatuses.WhateverTheSave": "Independente da Salvaguarda",
+  "midi-qol.InvisibleBrief": "Invisível (até realizar um ataque, conjurar uma magia ou causar dano)",
   "midi-qol.Flanking": "Flanqueando",
+  "midi-qol.AttackTerm.RollBonus": "Bônus de Rolagem",
+  "midi-qol.AttackTerm.Situational": "Situacional",
+  "midi-qol.AttackTerm.Bonus": "Bônus",
+  "midi-qol.AttackTerm.Other": "Outro",
   "midi-qol.FlankingBonus.Name": "Tipo de Bônus de Flanqueamento",
-  "midi-qol.FlankingBonus.Hint": "Quando um flanqueamento for detectado, conceda vantagem (padrão) ou reduza a CA efetiva do alvo em um valor fixo.",
+  "midi-qol.FlankingBonus.Hint": "Quando um flanqueamento for detectado, conceda vantagem (padrão) ou adiciona um bônus fixo à rolagem de ataque. O flanqueamento se aplica a ataques corpo a corpo contra um único alvo (com a opção Rolar Ataques Separados por Alvo, cada rolagem é considerada individualmente).",
   "midi-qol.SharpShooter": "Sharpshooter",
   "midi-qol.SpellSniper": "Spell Sniper",
   "midi-qol.FlankingRequiresVisibility.Name": "Flanquear exige que o alvo consiga perceber o flanqueador",
@@ -1022,12 +1069,12 @@
   "midi-qol.FlankingBonusOptions.5": "+5 para atingir",
   "midi-qol.FlankingLabel": "Flanqueando",
   "midi-qol.RollAlternate.Name": "Mover Fórmula de Rolagem para Dica",
-  "midi-qol.RollAlternate.Hint": "Usa uma exibição alternativa de rolagem no Cartão Mesclado, movendo a fórmula de rolagem para a dica e, opcionalmente, adiciona atribuição de vantagem.",
+  "midi-qol.RollAlternate.Hint": "Move a fórmula da rolagem para o detalhamento expandido da rolagem. As opções de identificação das fontes de vantagem também listam nesse detalhamento as origens da vantagem/desvantagem. Essas opções estão obsoletas, pois o ícone de informações ao lado do rótulo da rolagem já exibe essas informações.",
   "midi-qol.RollAlternateOptions": {
     "off": "Dica Padrão",
     "formula": "Fórmula -> Dica",
-    "adv": "Atribuição de Vantagem",
-    "formulaadv": "Fórmula -> Dica + Atribuição de Vantagem"
+    "adv": "Atribuição de Vantagem (Obsoleto)",
+    "formulaadv": "Fórmula -> Dica + Atribuição de Vantagem (Obsoleto)"
   },
   "midi-qol.OptionalCritRule.Name": "(Regra da Casa) Margem de Rolagem Crítica",
   "midi-qol.OptionalCritRule.Hint": "Rolagens de ataque na quantidade configurada acima da CA são críticos. Desabilitado em -1.",
@@ -1036,6 +1083,7 @@
   "midi-qol.ActorOnUseMacros": "Macro Ao Usar de Ator",
   "midi-qol.MacroPass": "Etapa da Macro",
   "midi-qol.MacroName": "Nome da Macro",
+  "midi-qol.MacroNameDefault": "Em Branco: macro deste item ou desta atividade",
   "midi-qol.DamageRolled": "Rolado",
   "midi-qol.DamageApplied": "Aplicado",
   "midi-qol.DamageDealt": "causado",
@@ -1117,6 +1165,9 @@
   },
   "midi-qol.cubNotSupported": "Combat Utility Belt não será migrado para a versão 11 do Foundry. Midi QOL irá remover o suporte ao CUB na versão 11.1.0 do Midi QOL",
   "midi-qol.ContestedRoll": "Rolagem Contestada",
+  "midi-qol.DamageRollFailed": "{item}: a rolagem de dano falhou e o uso foi interrompido ({error})",
+  "midi-qol.ContestWaiting": "Aguardando {name} ({roll})",
+  "midi-qol.ContestNoResult": "{flavor}: nenhum resultado, a rolagem não foi realizada",
   "midi-qol.versus": "versus",
   "midi-qol.Skipped": "Pulado",
   "midi-qol.ExportTroubleShooting": "Exportar Informações de Trouble Shooting",
@@ -1218,6 +1269,11 @@
     "DRSaveDr": "dm.midi/dnd5e.dm -> Salvaguardas/(Resistência/Vulnerabilidade/Imunidade) - RAW do D&D5e",
     "SaveDRDr": "Salvaguardas -> dm.midi/dnd5e.dm -> Resistência/Vulnerabilidade/Imunidade",
     "SaveDrDR": "Salvaguardas -> dm -> Resistência/Vulnerabilidade/Imunidade -> dm.midi"
+  },
+  "midi-qol.AmmunitionPerTargetOptions": {
+    "default": "Uma por Rolagem de Ataque",
+    "use": "Uma por Uso",
+    "target": "Uma por Alvo"
   },
   "midi-qol.ConfirmTargetOptions": {
     "default": "Configurações Midi",
@@ -1444,6 +1500,18 @@
           "label": "Mostrar Diálogo de Configuração",
           "hint": "Exibe a caixa de diálogo de configuração/consumo quando a Atividade Gatilho for executada."
         },
+        "followUp": {
+          "label": "Botão de Acompanhamento",
+          "hint": "Quando outra atividade deste item for utilizada, oferece esta atividade como um botão no cartão correspondente, executando-a contra os Alvos de Acompanhamento (um acerto crítico é tratado como crítico)."
+        },
+        "followUpTargets": {
+          "label": "Alvos de Acompanhamento",
+          "hint": "Define contra quem a atividade de acompanhamento será executada. O botão não será oferecido se não houver alvos elegíveis após um uso que envolveu alvos (como um ataque que errou ou uma salvaguarda em que ninguém falhou)."
+        },
+        "followUpCondition": {
+          "label": "Condição de Acompanhamento",
+          "hint": "Oferece o botão apenas quando esta condição for verdadeira (avaliada ao término do uso, considerando o primeiro dos Alvos de Acompanhamento como alvo)."
+        },
         "otherActivityCompatible": {
           "label": "Outra Atividade",
           "hint": "Pode ser usada como uma outra Atividade."
@@ -1587,7 +1655,11 @@
       },
       "attackRollPerTarget": {
         "label": "Rolagem de Ataque por Alvo",
-        "hint": "Faz uma jogada de ataque separada para cada alvo. Cria um cartão de chat para cada alvo."
+        "hint": "Realiza uma rolagem de ataque separada para cada alvo, cada uma com seu próprio cartão no chat. Primeiro, o uso da atividade posiciona seu modelo de área e confirma seus alvos e em seguida, realiza um ataque contra cada alvo, um de cada vez."
+      },
+      "ammunitionPerTarget": {
+        "label": "Munição",
+        "hint": "Munição consumida quando o ataque possui vários alvos: uma por rolagem de ataque, uma para todo o uso (por exemplo, uma espingarda) ou uma para cada alvo (por exemplo, uma saraivada de flechas)."
       },
       "fumbleThreshold": {
         "label": "Margem de Falha Crítica",
@@ -1648,6 +1720,7 @@
     }
   },
   "midi-qol.OVERTIME": {
+    "Trigger": "É executada no momento escolhido do turno de cada criatura que possua um efeito cuja alteração seja flags.midi-qol.ActivityOverTime = {identifier} (o identificador desta atividade ou seu UUID). Adicione essa alteração ao efeito aplicado pelo seu item.",
     "Title": {
       "one": "OverTime Midi",
       "other": "OverTimes Midi"
@@ -1731,7 +1804,11 @@
         "label": "Teleporte Midi",
         "movers": {
           "label": "Quem Será Teleportado",
-          "hint": "Conjurador e Alvos: o conjurador planeja seu deslocamento e você posiciona cada alvo a até 5 pés do destino do conjurador. Alvos: você posiciona cada alvo dentro da distância de teleporte do conjurador (utilize uma atividade de salvaguarda que acione esta atividade para mover apenas aqueles que falharem)."
+          "hint": "Conjurador e Alvos: o conjurador planeja seu movimento e você posiciona cada alvo a até 5 pés do destino do conjurador. Alvos: você posiciona cada alvo dentro da distância de teleporte do conjurador (utilize uma atividade de salvaguarda que acione esta atividade para mover apenas aqueles que falharem). Troca: o conjurador e o primeiro alvo, dentro da distância de teleporte, trocam de lugar"
+        },
+        "plan": {
+          "label": "Teleporte",
+          "hint": "Pelo botão do cartão ou durante o uso, após a aplicação dos efeitos e do dano (você planeja e posiciona o teleporte nesse momento e fechar a interface mantém o botão disponível)."
         },
         "blocked": {
           "label": "Destino Bloqueado",
@@ -1747,7 +1824,12 @@
       "default": "Tokens Controlados (D&D5e)",
       "caster": "Conjurador",
       "casterAndTargets": "Conjurador e Alvos",
-      "targets": "Alvos"
+      "targets": "Alvos",
+      "swap": "Trocar Conjurador e Alvo de Lugar"
+    },
+    "PlanModes": {
+      "button": "Pelo Botão do Cartão",
+      "auto": "Durante o Uso"
     },
     "BlockedModes": {
       "refuse": "Recusar",
@@ -1780,6 +1862,7 @@
   "midi-qol.NoAmmunition": "Existem 0 {name} no seu inventário",
   "midi-qol.NoAmmunitionAvailable": "Não há munição em seu inventário.",
   "midi-qol.NoAmmunitionSelected": "Você deve selecionar a munição a ser usada.",
+  "midi-qol.NotEnoughAmmunition": "O ataque precisa de {needed}x {name}. Você possui {quantity}x no inventário",
   "midi-qol.TwoHandedShieldWarning": "Não é possível usar ataque com as duas mãos ou com a mão secundária com um escudo equipado",
   "midi-qol.otherActivityConsumptionFailed": "{actorName}: {itemName} ({activityName}) - recursos insuficientes para outra atividade",
   "midi-qol.RefundOtherActivityResource": "Reembolsar Outro Recurso",
@@ -2036,8 +2119,6 @@
   "midi-qol.flagTemplate.grants.noAdvantage.tool.description": "Testes com {label} não terão vantagem.",
   "midi-qol.flagTemplate.grants.noDisadvantage.tool.name": "Conceder Sem Desvantagem ({label})",
   "midi-qol.flagTemplate.grants.noDisadvantage.tool.description": "Testes com {label} não terão desvantagem.",
-  "midi-qol.flagTemplate.DR.damageType.name": "Redução de Dano ({label})",
-  "midi-qol.flagTemplate.DR.damageType.description": "Redução de dano {label}.",
   "dae.1Miss": "1 Erro: Expira no próximo ataque {type} do personagem que não atingir nenhum alvo",
   "dae.isMissed": "Não Atingido: Expira se o personagem for alvo de um ataque armado ou mágico que não o atinja",
   "dae.MidiQOL.fieldData": {
@@ -2498,13 +2579,21 @@
   "midi-qol.REGION_BEHAVIOR.templateOrigin.top": "Topo do Conjurador",
   "midi-qol.REGION_BEHAVIOR.templateOrigin.eye": "Nível dos Olhos do Conjurador",
   "BEHAVIOR.TYPES.midi-qol.regionLight.label": "Luz de Região do Midi",
-  "BEHAVIOR.TYPES.midi-qol.regionLight.hint": "Cria uma luz ambiente no centro da região que acompanha a região.",
+  "BEHAVIOR.TYPES.midi-qol.regionLight.hint": "Uma fonte de luz ambiente ou de escuridão, posicionada no centro da região, limitada aos seus limites e que se move junto com ela.",
   "BEHAVIOR.TYPES.midi-qol.regionLight.FIELDS.dim.label": "Raio de Penumbra",
   "BEHAVIOR.TYPES.midi-qol.regionLight.FIELDS.bright.label": "Raio de Luz Plena",
   "BEHAVIOR.TYPES.midi-qol.regionLight.FIELDS.color.label": "Cor da Luz",
   "BEHAVIOR.TYPES.midi-qol.regionLight.FIELDS.alpha.label": "Opacidade da Luz",
   "BEHAVIOR.TYPES.midi-qol.regionLight.FIELDS.luminosity.label": "Luminosidade",
   "BEHAVIOR.TYPES.midi-qol.regionLight.FIELDS.animationType.label": "Tipo de Animação",
+  "BEHAVIOR.TYPES.midi-qol.regionLight.FIELDS.negative.label": "Escuridão",
+  "BEHAVIOR.TYPES.midi-qol.regionLight.FIELDS.negative.hint": "Uma fonte de escuridão em vez de luz: os raios definem a extensão da escuridão e a fonte utiliza as animações de escuridão.",
+  "BEHAVIOR.TYPES.midi-qol.regionLight.FIELDS.priority.label": "Prioridade",
+  "BEHAVIOR.TYPES.midi-qol.regionLight.FIELDS.priority.hint": "Quando fontes de luz e escuridão se sobrepõem, a fonte com maior prioridade prevalece.",
+  "BEHAVIOR.TYPES.midi-qol.regionLight.FIELDS.walls.label": "Limitada por Paredes",
+  "BEHAVIOR.TYPES.midi-qol.regionLight.FIELDS.fill.label": "Preencher Região",
+  "BEHAVIOR.TYPES.midi-qol.regionLight.FIELDS.fill.hint": "Ajusta o tamanho da fonte de luz para abranger toda a região (com Luz Plena em toda a área ou Penumbra se o Raio de Luz Plena for 0), em vez de utilizar os raios definidos acima.",
+  "BEHAVIOR.TYPES.midi-qol.regionLight.FIELDS.walls.hint": "As paredes bloqueiam a luz (ou a escuridão), assim como ocorre com uma fonte de luz ambiente. Quando desativada, a luz (ou escuridão) atravessa as paredes.",
   "BEHAVIOR.TYPES.midi-qol.regionLight.FIELDS.animationSpeed.label": "Velocidade da Animação",
   "BEHAVIOR.TYPES.midi-qol.regionLight.FIELDS.animationIntensity.label": "Intensidade da Animação",
   "BEHAVIOR.TYPES.midi-qol.regionLight.FIELDS.lightDocId.label": "ID do Documento de Luz",
@@ -2518,5 +2607,9 @@
   },
   "midi-qol.defaultOtherActivity.Name": "Padrão de Outra Atividade",
   "midi-qol.defaultOtherActivity.Hint": "O que <b>Padrão</b> significa no campo Outra Atividade de uma atividade. Muitos itens do D&D5e associam um ataque a uma salvaguarda - como veneno - sem vincular os dois.",
-  "midi-qol.TargetNotEvaluated": "Adicionado ao cartão após a rolagem: não foi verificado pelo midi."
+  "midi-qol.TargetNotEvaluated": "Adicionado ao cartão após a rolagem: não foi verificado pelo midi.",
+  "midi-qol.RegionMagic.Magical": "Mágica",
+  "midi-qol.RegionMagic.MagicalHint": "Detectar Magia identifica esta região. Regiões criadas por uma magia ou um item mágico são detectadas de qualquer forma.",
+  "midi-qol.RegionMagic.School": "Escola de Magia",
+  "midi-qol.RegionMagic.SchoolFromSpell": "A escola da magia que criou a região."
 }
