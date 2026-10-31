@@ -778,7 +778,7 @@ export function initHooks() {
     Hooks.on('tidy5e-sheet.getActivitiesForPlay', (parent, data) => {
       if (data.activities && data.activities instanceof Array) {
         // Filter out automationOnly activities and rider activities
-        // Also filter by canUse to preserve dnd5e visibility settings (level limits, etc.) - fixes #1548
+        // Also filter by canUse to preserve dnd5e visibility settings (level limits, etc.) - fixes https://gitlab.com/tposney/midi-qol/-/issues/1548
         data.activities = data.activities.filter(activity =>
           activity?.canUse !== false &&
           !activity?.midiProperties?.automationOnly &&
