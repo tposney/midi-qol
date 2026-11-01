@@ -1,3 +1,11 @@
+### 14.0.19 (unreleased)
+
+* Fixed: *Double Rolled Damage* critical damage never doubled the dice: dnd5e rolls its own die class, which didn't know midi's `mx` modifier, so `1d4mx2` was read as `1d4x2` (explode on 2) and the damage was normal.
+* Fixed: the *Secret Squirrel* quick setup recommended Anonymous, which has no Foundry 14 release; it recommends Hide NPC Names, and only when neither is active.
+* Fixed: the hints for *Hide NPC names* and *Auto apply item effects* named modules that don't run on Foundry 14 (Anonymous, times-up).
+* Fixed: activity condition fields (*Use Condition*, *Active Effect Condition*) showed Foundry's dice Formula Editor button (λ), which opens an untitled editor for dice formulas, not conditions. They are plain text fields again; midi's *Condition Editor* button edits them.
+* Changed: the *Full Automation* quick setting matches dnd5e 6's: GM damage rolls on a hit, players get a private save dialog, Unseen/Invisible uses RAW (2024), hidden attackers check the Hidden status, incapacitated actors are allowed to act, and settings added since February (Other Activity Default, Targets you can see, GM roll display and others) are included.
+
 ### 14.0.18
 
 * Changed: updates are served from GitLab Pages (https://tposney.gitlab.io/midi-qol/v14/module.json), so update checks no longer fail when GitLab rate-limits repository files. Changelog: https://tposney.gitlab.io/midi-qol/v14/changelog.html.
