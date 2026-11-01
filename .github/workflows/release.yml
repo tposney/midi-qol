@@ -1,0 +1,86 @@
+# On a release tag (v<version>): a release for that version with the committed package/module.json and zip, and the
+# line's fixed release (latest-<line>, which the manifest URL names) given that module.json. Then, after approval in the
+# "foundry" environment, the version is published to foundryvtt.com (never for the dnd6 line: foundryvtt.com offers one
+# version per core range, with no system check, so dnd5e 5.x worlds would be offered it).
+name: Release
+
+on:
+  push:
+    tags: ["v[0-9]+.[0-9]+.[0-9]+*"]
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    outputs:
+      id: ${{ steps.manifest.outputs.id }}
+      version: ${{ steps.manifest.outputs.version }}
+      line: ${{ steps.manifest.outputs.line }}
+      changelog: ${{ steps.manifest.outputs.changelog }}
+      compatibility: ${{ steps.manifest.outputs.compatibility }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check the manifest
+        id: manifest
+        run: |
+          set -euo pipefail
+          f=package/module.json
+          version=$(jq -r .version $f)
+          [ "v$version" = "$GITHUB_REF_NAME" ] || { echo "::error::tag $GITHUB_REF_NAME, but package/module.json is version $version"; exit 1; }
+          repo="https://github.com/$GITHUB_REPOSITORY"
+          manifest=$(jq -r .manifest $f)
+          line_tag=$(basename "$(dirname "$manifest")")
+          [ "$manifest" = "$repo/releases/download/$line_tag/module.json" ] && [ "${line_tag#latest-}" != "$line_tag" ] \
+            || { echo "::error::manifest $manifest is not $repo/releases/download/latest-<line>/module.json"; exit 1; }
+          download=$(jq -r .download $f)
+          zip=$(basename "$download")
+          [ "$download" = "$repo/releases/download/$GITHUB_REF_NAME/$zip" ] || { echo "::error::download $download is not this release's zip"; exit 1; }
+          [ -f "package/$zip" ] || { echo "::error::package/$zip is not committed"; exit 1; }
+          line=${line_tag#latest-}
+          {
+            echo "id=$(jq -r .id $f)"
+            echo "version=$version"
+            echo "line=$line"
+            echo "line_tag=$line_tag"
+            echo "zip=$zip"
+            echo "changelog=$(jq -r ".changelog // \"$repo/blob/$line/Changelog.md\"" $f)"
+            echo "compatibility=$(jq -c .compatibility $f)"
+          } >> "$GITHUB_OUTPUT"
+      - name: Version release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" package/module.json "package/${{ steps.manifest.outputs.zip }}" \
+            --verify-tag --title "$GITHUB_REF_NAME" --notes "Changelog: ${{ steps.manifest.outputs.changelog }}"
+      - name: Line release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          LINE_TAG: ${{ steps.manifest.outputs.line_tag }}
+        run: |
+          gh release view "$LINE_TAG" > /dev/null 2>&1 || gh release create "$LINE_TAG" --target "$GITHUB_SHA" --latest=false \
+            --title "${{ steps.manifest.outputs.line }} line (manifest)" \
+            --notes "Install or update with https://github.com/$GITHUB_REPOSITORY/releases/download/$LINE_TAG/module.json. This release's module.json is replaced by each ${{ steps.manifest.outputs.line }} release."
+          gh release upload "$LINE_TAG" package/module.json --clobber
+
+  foundry:
+    needs: release
+    if: needs.release.outputs.line != 'dnd6'
+    runs-on: ubuntu-latest
+    environment: foundry
+    steps:
+      - name: Publish to foundryvtt.com
+        env:
+          FOUNDRY_API_TOKEN: ${{ secrets.FOUNDRY_API_TOKEN }}
+        run: |
+          set -euo pipefail
+          [ -n "$FOUNDRY_API_TOKEN" ] || { echo "::notice::no FOUNDRY_API_TOKEN secret in this repository: not publishing"; exit 0; }
+          body=$(jq -n --arg id "${{ needs.release.outputs.id }}" --arg version "${{ needs.release.outputs.version }}" \
+            --arg manifest "https://github.com/$GITHUB_REPOSITORY/releases/download/$GITHUB_REF_NAME/module.json" \
+            --arg notes "${{ needs.release.outputs.changelog }}" --argjson compatibility '${{ needs.release.outputs.compatibility }}' \
+            '{id: $id, release: {version: $version, manifest: $manifest, notes: $notes, compatibility: $compatibility}}')
+          response=$(curl -sS -X POST -H "Content-Type: application/json" -H "Authorization: $FOUNDRY_API_TOKEN" \
+            https://foundryvtt.com/_api/packages/release_version/ -d "$body")
+          echo "$response"
+          [ "$(echo "$response" | jq -r .status)" = success ] || { echo "::error::foundryvtt.com refused the release"; exit 1; }
