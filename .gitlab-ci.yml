@@ -4,13 +4,11 @@ variables:
   PACKAGE_REGISTRY_URL: $CI_API_V4_URL/projects/$CI_PROJECT_ID/packages/generic/$PACKAGE_NAME
   PACKAGE_REGISTRY_URL_FULL: $PACKAGE_REGISTRY_URL/$CI_COMMIT_TAG
   PACKAGE_TYPE: module
-  FOUNDRY_RELEASE_URL: https://foundryvtt.com/_api/packages/release_version/
 
 stages:
   - prepare-release
   - release
   - publish
-  - foundry
 
 publish-artifacts:
   stage: prepare-release
@@ -41,79 +39,35 @@ release_job:
           url: "${PACKAGE_REGISTRY_URL_FULL}/${PACKAGE_TYPE}.json"
           filepath: '/$PACKAGE_TYPE.json'
 
-publish-foundry-manifest:
-  stage: foundry
-  needs: [pages]
-  when: manual
-  image: node:latest
-  before_script:
-    - apt-get -qq update
-    - apt-get install -y jq
-  script: |
-      RESPONSE=$(curl -X POST -H "Content-Type: application/json" -H "Authorization: $FOUNDRY_API_TOKEN" $FOUNDRY_RELEASE_URL -d \
-      "{
-        \"id\": \"$PACKAGE_NAME\",
-        \"release\": {
-          \"version\": \"${CI_COMMIT_TAG:1}\",
-          \"manifest\": \"$CI_PAGES_URL/versions/${CI_COMMIT_TAG:1}/$PACKAGE_TYPE.json\",
-          \"notes\": \"$CI_PROJECT_URL/-/releases/$CI_COMMIT_TAG\",
-          \"compatibility\": $(jq .compatibility package/$PACKAGE_TYPE.json)
-        }
-      }")
-      echo $RESPONSE
-  rules:
-    - if: $CI_COMMIT_TAG
-
-# Update files for Foundry, served from GitLab Pages (limited per visitor, not per file like raw repository files):
-# <pages url>/<line>/module.json, the zip it names and changelog.html, for each release line's branch head; and
-# versions/<version>/module.json with its zip for each release tag whose manifest is on Pages (foundryvtt.com's
-# version entries); plus an index page. GitLab replaces the whole site on each deployment, so everything is rebuilt.
-# Runs on a release tag, by hand (Run pipeline) or by trigger token.
+# The project moved to GitHub: each line's manifest and changelog on Pages redirect to GitHub (latest-<line> release,
+# Changelog.md on the line branch), so installs still pointing here update from there. versions/<version>/ stays as files
+# for the foundryvtt.com version entries that name it. GitLab replaces the whole site on each deployment.
+# Runs by hand (Run pipeline) or by trigger token.
 pages:
   stage: publish
   image: alpine:latest
   variables:
     GIT_DEPTH: 0
     RELEASE_LINES: "v13 v14 dnd6"
+    GITHUB_REPO: "https://github.com/tposney/midi-qol"
   rules:
-    - if: $CI_COMMIT_TAG
     - if: $CI_PIPELINE_SOURCE == "web"
     - if: $CI_PIPELINE_SOURCE == "trigger"
   script:
-    - apk add --no-cache git jq cmark
+    - apk add --no-cache git jq
     - |
       set -e
       mkdir -p public
+      prefix="/${CI_PAGES_URL#*://*/}"
+      : > public/_redirects
       lines_html=""
       for line in $RELEASE_LINES; do
-        git fetch --quiet origin "+refs/heads/$line:refs/remotes/origin/$line"
-        git show "origin/$line:package/$PACKAGE_TYPE.json" > manifest.json
-        version=$(jq -r .version manifest.json)
-        zip=$(basename "$(jq -r .download manifest.json)")
-        mkdir -p "public/$line"
-        git show "origin/$line:package/$zip" > "public/$line/$zip"
-        changelog=""
-        for f in Changelog.md CHANGELOG.md changelog.md; do
-          if git cat-file -e "origin/$line:$f" 2>/dev/null; then
-            {
-              printf '<!doctype html>\n<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">\n'
-              printf '<title>%s %s changelog</title>\n' "$PACKAGE_NAME" "$line"
-              printf '<style>:root{color-scheme:light dark}body{font:16px/1.5 system-ui,sans-serif;max-width:52rem;margin:2rem auto;padding:0 1rem}code{font-size:.9em}</style>\n'
-              printf '</head><body>\n'
-              git show "origin/$line:$f" | cmark
-              printf '</body></html>\n'
-            } > "public/$line/changelog.html"
-            changelog="$CI_PAGES_URL/$line/changelog.html"
-            break
-          fi
-        done
-        jq --arg manifest "$CI_PAGES_URL/$line/$PACKAGE_TYPE.json" --arg download "$CI_PAGES_URL/$line/$zip" --arg changelog "$changelog" \
-          '.manifest = $manifest | .download = $download | if $changelog != "" then .changelog = $changelog else . end' \
-          manifest.json > "public/$line/$PACKAGE_TYPE.json"
-        lines_html="$lines_html<li><strong>$line</strong> $version: <a href=\"$line/$PACKAGE_TYPE.json\">manifest</a>${changelog:+, <a href=\"$line/changelog.html\">changelog</a>}</li>"
-        echo "$line: $version $zip${changelog:+ (changelog)}"
+        # Files win over redirects, so nothing may be written under public/$line
+        echo "$prefix/$line/$PACKAGE_TYPE.json $GITHUB_REPO/releases/download/latest-$line/$PACKAGE_TYPE.json 302" >> public/_redirects
+        echo "$prefix/$line/changelog.html $GITHUB_REPO/blob/$line/Changelog.md 302" >> public/_redirects
+        lines_html="$lines_html<li><strong>$line</strong>: <a href=\"$GITHUB_REPO/releases/download/latest-$line/$PACKAGE_TYPE.json\">manifest</a></li>"
       done
-      # Each release whose manifest is on Pages also keeps its own manifest and zip, for foundryvtt.com's version entries
+      cat public/_redirects
       git fetch --quiet --tags origin
       versions_html=""
       for tag in $(git tag --list 'v*' --sort=-creatordate); do
@@ -134,7 +88,7 @@ pages:
       {
         printf '<!doctype html>\n<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">\n'
         printf '<title>%s</title><style>:root{color-scheme:light dark}body{font:16px/1.5 system-ui,sans-serif;max-width:52rem;margin:2rem auto;padding:0 1rem}</style>\n' "$PACKAGE_NAME"
-        printf '</head><body><h1>%s</h1><p>Install or update in Foundry with the manifest URL of your release line.</p><ul>%s</ul><h2>Versions</h2><p>Each release'"'"'s own manifest (for installing that version):</p><ul>%s</ul></body></html>\n' "$PACKAGE_NAME" "$lines_html" "$versions_html"
+        printf '</head><body><h1>%s</h1><p>%s has moved to <a href="%s">GitHub</a>. Install or update in Foundry with the manifest URL of your release line:</p><ul>%s</ul><h2>Older versions</h2><ul>%s</ul></body></html>\n' "$PACKAGE_NAME" "$PACKAGE_NAME" "$GITHUB_REPO" "$lines_html" "$versions_html"
       } > public/index.html
   artifacts:
     paths:
