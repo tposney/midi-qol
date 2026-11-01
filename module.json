@@ -59,6 +59,7 @@
       {
         "id": "dae",
         "type": "module",
+        "manifest": "https://github.com/tposney/dae/releases/download/latest-dnd6/module.json",
         "compatibility": {
           "minimum": "14.6.4"
         }
