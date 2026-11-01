@@ -3,7 +3,7 @@
 ![](https://img.shields.io/badge/Foundry-v14.369+-informational)
 ![](https://img.shields.io/badge/Dnd5e-v6.0.x-informational)
 ![](https://img.shields.io/badge/DAE-v14.6.4+-informational)
-![Latest release](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Ftposney.gitlab.io%2Fmidi-qol%2Fdnd6%2Fmodule.json&query=%24.version&label=Latest%20release&prefix=v&color=blue)
+![Latest release](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fgithub.com%2Ftposney%2Fmidi-qol%2Freleases%2Fdownload%2Flatest-dnd6%2Fmodule.json&query=%24.version&label=Latest%20release&prefix=v&color=blue)
 ![Forge Installs](https://img.shields.io/badge/dynamic/json?label=Forge%20Installs&query=package.installs&suffix=%25&url=https%3A%2F%2Fforge-vtt.com%2Fapi%2Fbazaar%2Fpackage%2Fmidi-qol&colorB=4aa94a)
 
 [![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/tposney)
@@ -137,9 +137,9 @@ If you prefer to configure settings manually, here's the recommended full automa
 | v11.4.48 | v12 | up to v3.2.x | - |
 | v11.6.x | v12 | v3.3.x | [manifest](https://gitlab.com/tposney/midi-qol/raw/v11.6/package/module.json) |
 | v12.4.27+ | v12 | v4.2+ | [manifest](https://gitlab.com/tposney/midi-qol/raw/v12dnd4/package/module.json) |
-| v13.0.52+ | v13 | v5.2.4+ / v5.3 | [manifest](https://tposney.gitlab.io/midi-qol/v13/module.json) |
-| v14.0.x | v14 (14.368+) | v5.3 | [manifest](https://tposney.gitlab.io/midi-qol/v14/module.json) |
-| v14.6.x | v14 (14.369+) | v6.0.x | [manifest](https://tposney.gitlab.io/midi-qol/dnd6/module.json) |
+| v13.0.52+ | v13 | v5.2.4+ / v5.3 | [manifest](https://github.com/tposney/midi-qol/releases/download/latest-v13/module.json) |
+| v14.0.x | v14 (14.368+) | v5.3 | [manifest](https://github.com/tposney/midi-qol/releases/download/latest-v14/module.json) |
+| v14.6.x | v14 (14.369+) | v6.0.x | [manifest](https://github.com/tposney/midi-qol/releases/download/latest-dnd6/module.json) |
 
 ## Required Modules
 
@@ -1421,7 +1421,7 @@ turn=end, saveDC=15, saveAbility=wis, failCount=2+, removeCondition=@attributes.
 # Changelog & Credits
 
 ## Changelog
-https://gitlab.com/tposney/midi-qol/-/blob/dnd6/Changelog.md
+https://github.com/tposney/midi-qol/blob/dnd6/Changelog.md
 
 ## Credits
 
