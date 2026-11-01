@@ -111,6 +111,12 @@
                 {{localize "midi-qol.OverTimeEditor.Consecutive"}}
             </label>
         </div>
+        {{#if onActor}}
+        <div class="form-group">
+            <label>{{localize "midi-qol.OverTimeEditor.SavesRemaining"}}</label>
+            <input type="number" name="savesRemaining" value="{{savesRemaining}}" min="1" class="overtime-count-input" />
+        </div>
+        {{/if}}
         <div class="form-group">
             <label>{{localize "midi-qol.OverTimeEditor.CountEffectSpec"}}</label>
             <input type="text" name="saveCountEffectSpec" value="{{saveCountEffectSpec}}" placeholder="{{localize "midi-qol.OverTimeEditor.CountEffectSpecHint"}}" />
@@ -133,6 +139,12 @@
                 {{localize "midi-qol.OverTimeEditor.Consecutive"}}
             </label>
         </div>
+        {{#if onActor}}
+        <div class="form-group">
+            <label>{{localize "midi-qol.OverTimeEditor.FailsRemaining"}}</label>
+            <input type="number" name="failsRemaining" value="{{failsRemaining}}" min="1" class="overtime-count-input" />
+        </div>
+        {{/if}}
         <div class="form-group">
             <label>{{localize "midi-qol.OverTimeEditor.CountEffectSpec"}}</label>
             <input type="text" name="failCountEffectSpec" value="{{failCountEffectSpec}}" placeholder="{{localize "midi-qol.OverTimeEditor.CountEffectSpecHint"}}" />

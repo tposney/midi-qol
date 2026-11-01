@@ -1,3 +1,14 @@
+### 14.6.7 (unreleased)
+
+* Fixed: *Double Rolled Damage* critical damage never doubled the dice: dnd5e rolls its own die class, which didn't know midi's `mx` modifier, so `1d4mx2` was read as `1d4x2` (explode on 2) and the damage was normal.
+* Fixed: the *Secret Squirrel* quick setup recommended Anonymous, which has no Foundry 14 release; it recommends Hide NPC Names, and only when neither is active.
+* Fixed: the hints for *Hide NPC names* and *Auto apply item effects* named modules that don't run on Foundry 14 (Anonymous, times-up).
+* Fixed: activity condition fields (*Use Condition*, *Active Effect Condition*) showed Foundry's dice Formula Editor button (λ), which opens an untitled editor for dice formulas, not conditions. They are plain text fields again; midi's *Condition Editor* button edits them.
+* Changed: the *Midi Condition Editor* (as its button and window are now named) no longer fills an empty condition with `true`, shows the flag key only for effect changes, and no longer offers Macro Autocomplete's visual block editor, which rewrote a condition as a statement (`true;`). CAT's quick conditions button sits between the condition and midi's editor button, with little space around either.
+* Added: for an over-time effect on an actor, the Over Time editor shows *Saves remaining* and *Fails remaining* (the progress of *Saves required* / *Fails required*) and lets a GM correct them. The configured counts are unchanged; consecutive counts still reset to them.
+* Fixed: Dice So Nice showed every midi roll with the rolling user's dice and no actor, so an actor's own dice appearance was ignored. midi now passes the actor, and with DSN's *Force character owner appearance* set to All, rolls for a player-owned actor use that player's dice, as DSN does for its own rolls.
+* Added: *Mounted creatures use their mount's space* (Mechanics, on by default): a rider's range and reach, and distances to it, are measured from its mount's space. A rider is a token with `flags.midi-qol.mount` set to its mount's token id, or a Rideable rider (familiars included; grappled tokens and riders moving within their mount keep their own space).
+
 ### 14.6.6
 
 * Changed: updates are served from GitLab Pages, so update checks no longer fail when GitLab rate-limits repository files. Installed copies move over with this update. Manifest URL: https://tposney.gitlab.io/midi-qol/dnd6/module.json. Changelog: https://tposney.gitlab.io/midi-qol/dnd6/changelog.html.

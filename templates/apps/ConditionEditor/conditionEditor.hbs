@@ -1,9 +1,11 @@
 <section class="midi-qol condition-editor">
   <div class="condition-editor-content">
+    {{#if showKey}}
     <div class="form-group condition-editor-key">
       <label>{{localize "midi-qol.ConditionEditor.Key"}}</label>
       <span class="condition-key-value">{{key}}</span>
     </div>
+    {{/if}}
     <div class="condition-editor-codemirror">
       <code-mirror language="javascript"></code-mirror>
     </div>

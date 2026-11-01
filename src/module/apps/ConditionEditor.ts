@@ -369,7 +369,7 @@ export class ConditionEditor extends HandlebarsApplicationMixin(ApplicationV2) {
 
   constructor(editorOptions: ConditionEditorOptions, appOptions?: Partial<foundry.applications.api.ApplicationV2.Configuration>) {
     super(appOptions);
-    this.originalValue = editorOptions.value;
+    this.originalValue = editorOptions.value ?? "";
     this.flagKey = editorOptions.key;
     this.effect = editorOptions.effect;
     this.label = editorOptions.label;
@@ -411,6 +411,8 @@ export class ConditionEditor extends HandlebarsApplicationMixin(ApplicationV2) {
     const context: Record<string, any> = await super._prepareContext(options);
     context.value = this.originalValue;
     context.key = this.flagKey;
+    // Activity fields pass their field name; only an effect change's key tells the user something
+    context.showKey = !!this.effect && !!this.flagKey;
     return context;
   }
 
@@ -421,7 +423,7 @@ export class ConditionEditor extends HandlebarsApplicationMixin(ApplicationV2) {
     if (!codeMirrorEl) return;
 
     // Set value programmatically — avoids HTML attribute escaping issues with quotes/special chars.
-    const editorValue = this.originalValue || "true";
+    const editorValue = this.originalValue;
     (codeMirrorEl as any).value = editorValue;
 
     // Inject contextual completions into the code-mirror element via macro-autocomplete API

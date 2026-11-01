@@ -937,7 +937,9 @@ function multiply(modifier: string) {
 
 export function addDiceTermModifiers() {
   const Die = foundry.dice.terms.Die;
-  Die.MODIFIERS["mx"] = "multiply";
+  // dnd5e's die class (CONFIG.Dice.terms.d) has its own modifier list
+  for (const cls of new Set([Die, ...Object.values(CONFIG.Dice.terms)]))
+    if (cls === Die || cls.prototype instanceof Die) (cls as typeof Die).MODIFIERS["mx"] = "multiply";
   foundry.utils.setProperty(Die.prototype, "multiply", multiply);
 }
 

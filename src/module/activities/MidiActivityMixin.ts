@@ -98,8 +98,8 @@ export class MidiConditionField extends globalThis.dnd5e.dataModels.fields.Formu
    * The button opens the ConditionEditor which provides autocomplete for condition expressions.
    */
   _toInput(config: any): HTMLElement {
-    // Get the standard text input from parent
-    const input = super._toInput(config) as HTMLInputElement;
+    // A plain text input: Foundry 14 draws formula fields with its dice Formula Editor (the λ button), not for conditions
+    const input = foundry.applications.fields.createTextInput(config) as HTMLInputElement;
 
     if (!configSettings.conditionEditorEnabled) return input;
 
@@ -118,7 +118,8 @@ export class MidiConditionField extends globalThis.dnd5e.dataModels.fields.Formu
     button.dataset.fieldName = fieldName;
     button.dataset.fieldLabel = fieldLabel;
     button.innerHTML = '<i class="fas fa-code" inert></i>';
-    button.title = i18n("midi-qol.ConditionEditor.Title");
+    button.dataset.tooltip = i18n("midi-qol.ConditionEditor.Tooltip");
+    button.ariaLabel = i18n("midi-qol.ConditionEditor.Tooltip");
 
     wrapper.appendChild(button);
     return wrapper;

@@ -1017,7 +1017,7 @@
         },
         "autoTargetAction": {
           "label": "Target on template draw",
-          "hint": "When placing a template (e.g. spell) target tokens inside the template. If 'Center + Levels' is set in ranged targeting Levels Volumetric Templates will be used (if installed)"
+          "hint": "When placing a template (e.g. spell) target tokens inside the template. If Levels Volumetric Templates is installed, it does the targeting."
         },
         "automationOnly": {
           "label": "Automation Only",

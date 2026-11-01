@@ -1746,21 +1746,34 @@ section.midi-qol.tab > .sheet-tabs [data-tab] label {
 /*  Condition Field Editor Button               */
 /* -------------------------------------------- */
 
+/* The wrapper's children join the field's row, so CAT's quick conditions (+) can sit between the text and the
+   editor button; little spacing, so the condition itself gets the room */
+.form-fields:has(> .midi-condition-field-wrapper) {
+  gap: 2px;
+}
+
 .midi-condition-field-wrapper {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  width: 100%;
+  display: contents;
 }
 
 .midi-condition-field-wrapper input {
   flex: 1;
+  min-width: 0;
+  order: 0;
+}
+
+.form-fields:has(> .midi-condition-field-wrapper) > i.cat-quick-conditions {
+  order: 1;
+  margin: 0;
+  padding: 0 2px;
 }
 
 .midi-condition-editor-btn {
+  order: 2;
   flex: 0 0 auto;
   width: 24px;
   height: 24px;
+  margin: 0;
   padding: 0;
   display: flex;
   align-items: center;
@@ -1775,6 +1788,12 @@ section.midi-qol.tab > .sheet-tabs [data-tab] label {
 .midi-condition-editor-btn:hover {
   background: var(--dnd5e-color-gold);
   color: var(--dnd5e-background-card);
+}
+
+/* Conditions are expressions; Macro Autocomplete's block editor rewrites them as statements.
+   !important: midi's CSS is in a cascade layer, Macro Autocomplete's toolbar rule is not. */
+.midi-qol.condition-editor .mac-editor-toolbar {
+  display: none !important;
 }
 
 /* Module Review Dialog */

@@ -723,7 +723,7 @@ let quickSettingsDetails: any = {
     codeChecks: (current, settings) => {
       if (current.autoCheckHit !== "none") settings.autoCheckHit = "whisper";
       if (current.autoCheckSaves !== "none") settings.autoCheckSaves = "whisper";
-      if (!installedModules.get("anonymous")) ui.notifications?.warn("'Anonymous' is recommended to hide creature names for normal dnd5e rolls");
+      if (!installedModules.get("anonymous") && !game.modules.get("hide-npc-names")?.active) ui.notifications?.warn("'Hide NPC Names' is recommended to hide creature names for normal dnd5e rolls");
       game.settings.set("dnd5e", "challengeVisibility", "none");
     }
   },

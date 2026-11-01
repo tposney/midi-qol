@@ -3440,7 +3440,35 @@ export function tokenSourceCenter(tokenRef: any): { x: number, y: number } {
 /** Elevation of a token at its committed position. */
 export const tokenSourceElevation = (tokenRef: any): number => tokenSourcePosition(tokenRef).elevation;
 
+/** The token whose space a token occupies: its mount's (followed to the outermost mount) under *Mounted creatures use their mount's space*. */
+export function spaceToken(token: any): any {
+  if (!configSettings.optionalRules.mountedUseMountSpace || !token?.document) return token;
+  const seen = new Set<any>([token]);
+  let current = token;
+  for (let mount = mountOf(current); mount && !seen.has(mount) && seen.size < 5; mount = mountOf(current)) {
+    seen.add(mount);
+    current = mount;
+  }
+  return current;
+}
+
+function mountOf(token: any): any {
+  const doc = token.document;
+  const scene = doc.parent;
+  const mountId = foundry.utils.getProperty(doc, `flags.${MODULE_ID}.mount`);
+  if (mountId) return scene?.tokens.get(mountId)?.object ?? null;
+  if (!game.modules?.get("Rideable")?.active) return null;
+  const riding = foundry.utils.getProperty(doc, "flags.Rideable") as { RidingFlag?: boolean, GrappledFlag?: boolean, FamiliarRidingFlag?: boolean } | undefined;
+  if (!riding?.RidingFlag || riding.GrappledFlag) return null;
+  const mount = scene?.tokens.find((t: TokenDocument.Implementation) => (foundry.utils.getProperty(t, "flags.Rideable.RidersFlag") as string[] | undefined)?.includes(doc.id));
+  // Rideable lets riders, but not familiars, move freely within a mount with inside movement
+  if (!mount || (foundry.utils.getProperty(mount, "flags.Rideable.InsideMovementFlag") && !riding.FamiliarRidingFlag)) return null;
+  return mount.object ?? null;
+}
+
 export function getDistance(t1: any, t2: any, options: DistanceOptions = {}): number {
+  t1 = spaceToken(getPlaceable(t1) ?? t1);
+  t2 = spaceToken(getPlaceable(t2) ?? t2);
   const { wallsBlock = false, includeCover = true, includeElevation = configSettings.optionalRules.distanceIncludesHeight } = options;
   const measurementMode = configSettings.optionalRules.distanceMeasurement ?? "center";
   const gridDistance = canvas?.dimensions?.distance ?? 5;
@@ -3573,6 +3601,8 @@ export function computeDistance(t1: any /*Token*/, t2: any /*Token*/, options: {
   if (!t1 || !t2) return -1;
   let { wallsBlock = false, includeCover = true, includeElevation = configSettings.optionalRules.distanceIncludesHeight } = options;
   const actor = t1.actor;
+  t1 = spaceToken(t1);
+  t2 = spaceToken(t2);
   const ignoreWallsFlag = foundry.utils.getProperty(actor, `flags.${MODULE_ID}.ignoreWalls`);
   if (ignoreWallsFlag) {
     wallsBlock = false;
@@ -8878,6 +8908,9 @@ export async function displayDSNForRoll(rolls?: Roll | Roll[], rollType?: string
     "all": "Entire Roll"
   },*/
   const promises: Promise<any>[] = [];
+  // The actor's dice appearance comes from the speaker; no message id, as DSN would then recompute visibility from it
+  const speaker = actor ? ChatMessage.getSpeaker({ actor, token: actor.token ?? undefined }) : null;
+  const diceUser = dsnDiceUser(actor);
 
   for (let roll of rolls) {
     if (dice3dEnabled()) {
@@ -8952,15 +8985,15 @@ export async function displayDSNForRoll(rolls?: Roll | Roll[], rollType?: string
           else term.options.flavor = displayRoll.options.type;
         });
         if (ghostRoll) {
-          promises.push(dice3d?.showForRoll(displayRoll, game.user, true, ChatMessage.getWhisperRecipients("GM"), !game.user?.isGM));
+          promises.push(dice3d?.showForRoll(displayRoll, diceUser, true, ChatMessage.getWhisperRecipients("GM"), !game.user?.isGM, null, speaker));
           //@ts-expect-error
           if (game.settings.get("dice-so-nice", "showGhostDice")) {
             // @ts-expect-error
             displayRoll.ghost = true;
-            promises.push(dice3d?.showForRoll(displayRoll, game.user, true, game.users?.players.map(u => (u as User).id), game.user?.isGM));
+            promises.push(dice3d?.showForRoll(displayRoll, diceUser, true, game.users?.players.map(u => (u as User).id), game.user?.isGM, null, speaker));
           }
         } else
-          promises.push(dice3d?.showForRoll(displayRoll, game.user, true, whisperUsers, rollMode === "blind" && !game.user?.isGM));
+          promises.push(dice3d?.showForRoll(displayRoll, diceUser, true, whisperUsers, rollMode === "blind" && !game.user?.isGM, null, speaker));
       }
     }
 
@@ -8968,6 +9001,20 @@ export async function displayDSNForRoll(rolls?: Roll | Roll[], rollType?: string
   if (promises.length) await Promise.all(promises);
   //mark all dice as shown - so that toMessage does not trigger additional display on other clients
   DSNMarkDiceDisplayed(rolls);
+}
+
+/**
+ * The user Dice So Nice shows a roll for: the roller, or with DSN's "Force character owner appearance" set to All, the
+ * player owning the actor (DSN's rule: whose character it is, else its only non-GM user), as DSN does for its own rolls.
+ */
+function dsnDiceUser(actor?: Actor.Implementation | null): User.Implementation | null {
+  if (!actor?.hasPlayerOwner || safeGetGameSetting("dice-so-nice", "forceCharacterOwnerAppearance") !== "2") return game.user;
+  let owner = game.users?.find(u => !u.isGM && u.character?.id === actor.id);
+  if (!owner && actor.ownership.default !== CONST.DOCUMENT_OWNERSHIP_LEVELS.OWNER) {
+    const users = Object.keys(actor.ownership).filter(id => id !== "default" && game.users?.get(id) && !game.users.get(id)?.isGM);
+    if (users.length === 1) owner = game.users?.get(users[0]);
+  }
+  return owner ?? game.user;
 }
 
 export function DSNMarkDiceDisplayed(rolls: Roll | Roll[]) {

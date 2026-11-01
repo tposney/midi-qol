@@ -23,12 +23,12 @@ Midi-qol exists to help you automate some or all of these steps. Before going th
 | ![midi-qol spider bite](GettingStartedPics/Auto%20Spider%20Bite.png)
 
 Here's what happened with that single click:
-  * The attack roll was made (24)
+  * The attack roll was made (16)
   * The attack was determined to have hit the goblin (AC 15)
-  * Because of that, damage was rolled: the bite (10 piercing) and, from the poison save activity, the poison (7). The attack runs the save activity after it because the attack's *Other Activity* is the poison save (see *Other Activity Default* below)
-  * A Constitution save was rolled for the goblin against DC 11, and the goblin succeeded (15)
-  * Damage was applied to the goblin accordingly (full piercing damage, as the goblin has no resistances, and half poison damage, as the goblin succeeded the save): 13 in all
-  * A damage card was displayed showing precisely what damage was done, and giving the option to reverse or revise it
+  * Because of that, damage was rolled: the bite (4 piercing) and, from the poison save activity, the poison (8). The attack runs the save activity after it because the attack's *Other Activity* is the poison save (see *Other Activity Default* below)
+  * A Constitution save was rolled for the goblin against DC 11, and the goblin succeeded (17)
+  * Damage was applied to the goblin accordingly (full piercing damage, as the goblin has no resistances, and half poison damage, as the goblin succeeded the save): 8 in all, which took the goblin from 7 HP to 0
+  * A damage card (below the attack card) was displayed showing precisely what damage was done, and giving the option to reverse or revise it
   * If there _had_ been an effect that should be applied only on a failed save, it would automatically have done so
 
 Importantly, while this was only a single click, it could be configured to be exactly as "automatic" as the table wants it to be. While it is possible to set up items with flags for advantage and disadvantage under certain circumstances, players may still want the normal attack popup, rather than "fast-forwarding" - this is configurable. Players may want to still click a button to roll their damage - this is configurable. Players likely _will_ object to their saves being automatically rolled for them - this is, of course, configurable! A GM may prefer the damage to _not_ be applied automatically, but rather simply calculated, leaving them the final option to click "apply damage" - this is configurable. With great configurability comes a great number of settings; all that configuration will be addressed further below. First: Troubleshooting.
@@ -49,7 +49,7 @@ Once you've done that come back and read through the rest of the configuration g
 
 ## Prerequisites (modules you must install)
 This version of midi-qol is for Foundry v14 (14.369 or later) with dnd5e 6.
-* Dynamic Active Effects (14.6.2 or later)
+* Dynamic Active Effects (14.6.4 or later)
 * libwrapper
 * socketlib
 
@@ -61,16 +61,20 @@ This version of midi-qol is for Foundry v14 (14.369 or later) with dnd5e 6.
 Before installing any of the modules below, check that the version you get supports Foundry v14 and dnd5e 6.
 
 ## Modules you really should install
+* **Coven's Automation Toolkit (CAT)** runs the automation behind many items: midi's sample items whose description ends *Automation requires Coven's Automation Toolkit (CAT)*, and the item automation modules below.
+
 * **Simple Calendar** and/or **Small Time** if you want time to advance in your world.
 
 ## Modules that are nice to have
+* **Item automation modules**: **Cauldron of Plentiful Resources (CPR)**, **Midi Item Showcase Community (MISC)** and **Gambit's Premades** provide ready-made automated spells, features and items (Gambit's handles awkward reactions such as Counterspell and Opportunity Attacks), so you don't have to build them yourself.
+
 * **Convenient Effects** provides status effects (blinded, charmed, etc.) pre-configured with midi-qol flags, which can be applied to targets as a result of using an item.
 
-* **Monks Token Bar**.
-When automating saving throws this module allows you to have players roll their own saving throws and midi-qol will interact with it to prompt for and record the saving throws.
+* **Monks Token Bar** or **Epic Rolls 5e**
+When automating saving throws these modules let players roll their own saving throws, and midi-qol prompts for and records them.
 
-* **Automated Animations** (and **D&D5e Animations**)
-This adds some nice animations to item/spell usage and is configured to work with midi-qol. Highly recommended.
+* **Automated Animations** (with **JB2A** and **D&D5e Animations**)
+This adds some nice animations to item/spell usage and is configured to work with midi-qol. Highly recommended. **Token Magic FX** adds visual effects (glow, distortion, fire and so on) to tokens and templates.
 
 * **Dice So Nice**
 If you like 3d dice rolled to the screen this is a must have. It is mostly compatible with midi-qol. Any oddities are the result of midi-qol.
@@ -84,8 +88,22 @@ Allows you run a macro when an effect is applied/created/toggled.
 * **Aura Effects**
 This allows effects to be applied to nearby tokens without having to trigger any items. Think Paladin's Aura of Protection.
 
-* **Anonymous**
-This module can help you hide the names of creatures that you don't want revealed to your players and is compatible with MidiQOL.
+* **Automated Conditions 5e**
+Automates how conditions (blinded, frightened, prone, restrained and so on) affect rolls.
+
+* **Cover**: **Simple Cover 5e**, **Alternative Token Cover** or **Simbul's Cover Calculator** work out cover, which midi adds to the target's AC (see *Calculate Cover*).
+
+* **Rideable**
+Lets tokens ride other tokens and moves riders with their mounts. With *Mounted creatures use their mount's space* (Mechanics tab) on, midi measures a rider's range and reach from its mount.
+
+* **Levels - Volumetric Templates**
+3D template targeting; midi leaves template targeting to it when it's installed.
+
+* **DDB-Importer**
+Imports characters, spells, items and monsters from D&D Beyond.
+
+* **Hide NPC Names**
+Hides the names of creatures that you don't want revealed to your players; midi's chat cards and damage tray use the name it gives them.
 
 ## Configuration Overview
 First enable combat automation in the midi-qol settings.
@@ -141,6 +159,7 @@ Alt and Ctrl work as they do in dnd5e: held when rolling, they give advantage or
 **Chat Card Display**
 
 - **Remove chat card buttons after roll**: Which buttons to remove from the chat card after the roll is done.
+- **Chat card summaries**: Whether a card's saving throws are folded into it (midi's saves section or dnd5e's summaries) or shown as separate messages. Options: *Each user's choice* (each user's dnd5e *Summarize chat cards* decides), *Always*, *Never*
 
 **GM Roll Hiding**
 
@@ -209,7 +228,6 @@ Midi can automate the process of requesting and adjudicating saves.
 - **DND5E Challenge Visibility**: Control what roll DCs are visible to the players and whether successes/failures are highlighted. Options: *Show all*, *Show only from other players*, *Hide all*
 - **Auto check Saves**: Automatically check saving throws when a saving throw is required. If disabled midi will assume that all targets failed their save. Options: *Off*, *Save - All see result only*, *Save - All see result + save total*, *Save - All see Result + Rolls*, *Save - only GM sees results + rolls*, *Save - only GM sees anything*
 - **Save summary style**: With dnd5e's *Summarize chat cards* on, a card's saves are shown on the card rather than as separate messages. *midi saves section* (DC, success/failure and damage) or *dnd5e summaries*
-- **Show damage after each save**: Under each target's save result, the damage of each type it takes after its save, and what changed it (e.g. Super Saver)
 - **Default saving throw multiplier**: If there are no other modifiers a saving throw will do this fraction of the damage of the original attack. Default 0.5 (half damage on save)
 - **Prompt Players to Roll Saves**: How players will be prompted when they need to roll saves. Options:
   - *None (private roll)* / *None (public roll)*: Midi rolls the save automatically
@@ -299,14 +317,14 @@ There are a lot of extra options that midi's got. The Misc tab covers chat card 
 - **Display Confirm Roll Button**: Pause after rolling attack/damage for the player/GM to confirm. Options: *No confirmation*, *Only GM can confirm*, *GM and Player can confirm*
 - **Autocomplete workflow if required**: Workflows will be marked as complete if rolled before completion, no extra rolls will be performed
 - **Colored Border Messages**: Each chat message has a border in the player character's color. Options: *None*, *Borders Only*, *Border + Name Text*, *Border + Name Background*
-- **Move roll formula to tooltip**: Use alternate roll display on merge card. Options: *default tooltip*, *Formula -> tooltip*, *Advantage Attribution*, *Formula -> tooltip + adv attribution*. Advantage Attribution displays _why_ an attack has advantage/disadvantage when the attack is clicked open
+- **Move roll formula to tooltip**: Move the roll formula into the roll's expanded breakdown. The *Advantage Attribution* options are deprecated: the info icon on the roll's label shows the sources of advantage/disadvantage
 - **Show Fast Forward**: Show Fast Forward indicator on attack and damage buttons
 
 **Token & Portrait Settings**
 ![MiscMisc](GettingStartedPics/MiscMisc.png)
 
 - **Chat cards use token name**: Chat card titles and target names use the token name rather than the actor name
-- **Hide NPC names**: The name players see for creatures with no player owner, on chat cards and the damage tray. Blank shows the real name. If Anonymous or Hide NPC Names is active, that module decides instead
+- **Hide NPC names**: The name players see for creatures with no player owner, on chat cards and the damage tray. Blank shows the real name. If Hide NPC Names is active, that module decides instead
 - **Use Actor portrait in chat cards**: For Actors of type character use the actor portrait instead of the token image in midi-qol chat cards
 
 **Custom Sounds**
@@ -319,21 +337,20 @@ For configuring gameplay mechanics:
 
 - **Add effect when hp falls below %**: Add a selected status when HP are less than or equal to a specified percentage of max. 0 disables. Choose the condition and whether to add it as an overlay or icon
 - **Add effect when HP = 0**: As above, but for 0hp. Separate settings for Player Controlled and GM Controlled tokens. Options: *Do Not Update*, *Add effect as overlay*, *Add effect as icon*. Also includes a "Mark defeated in combat tracker" checkbox
+- **Enforce death saves**: A character at 0 hit points that takes damage suffers a death saving throw failure, two from a critical hit, and three (death) if the damage equals or exceeds its hit point maximum. At three it is marked dead as for a failed death save; undo on the damage card restores the count and status
 - **Which ability checks / ability saves / skill checks are rolled blind**: Three settings choosing which rolls are always blind (death saves included)
 - **Blind roll display**: How those rolls appear to players: *Hidden* (players see nothing) or *Obscured* (the card is shown with the result as ??)
 - **Expire 1Hit/1Attack/1Action on roll**: Don't wait for damage roll before expiring attack/hit/action special duration effects
 - **Wait for damage application**: Wait for the GM client to apply damage before completing the workflow. Disabling gives a small performance improvement but may interfere with some 3rd party modules
-- **When an Incapacitated actor takes an action**: Options: *Do nothing*, *Enforce no actions*, *Post a warning only*
-- **Check weapon range when attacking**: Options: *Do not check range*, *target range > long range: fail*, *target range > long range: disadvantage*
-- **Targets you can see**: For activities whose targets must be creatures you can see. Options: *Do not check*, *Unseen targets can't be targeted*, *Post a warning only*
 - **Require no shield equipped for two-handed/off-hand attacks**: Prevents two-handed or off-hand attacks when a shield is equipped
 
 ![Mechanics2](GettingStartedPics/Mechanics2.png)
 
 - **Distance measurement method**: How to measure distance between tokens. Default uses Foundry's core measurement. Grid Square Centers uses closest grid square centers. Token Perimeters uses closest points on token edges (more accurate for large tokens)
 - **Gridless Grid**: If set, midi will use the square grid for all distance calculations in gridless scenes
-- **Fudge factor**: Subtract from measured distance when checking range (in grid scale units). Primarily useful for gridless play
+- **Fudge factor**: Subtracted from measured distances when checking range, on every grid type (in grid scale units). Edge-to-edge token distances never drop below one grid unit
 - **Include height difference in distance calculations**: As described
+- **Mounted creatures use their mount's space**: A rider's range and reach, and distances to it, are measured from its mount's space. Riders are marked by the Rideable module (familiars riding their master too; grappled tokens keep their own space), or by setting `flags.midi-qol.mount` on the rider's token to its mount's token id. Cover still comes from your cover module, which checks the rider's own token.
 - **Constrain Template Placement**: Constrains template placement — cone/ray templates with range Self/None are anchored to the caster's token border. All templates are clamped to stay within the activity's range during preview
 - **Template Grid Snapping**: Controls grid snapping when placing templates. *Full grid* snaps to grid intersections only. *Half grid* also snaps to grid square centers and side midpoints
 - **Show before and after optional bonus chat card**: Display a chat card with the before and after roll when an optional bonus is applied
@@ -347,7 +364,11 @@ For configuring optional game rules:
 
 ![Rules1](GettingStartedPics/Rules1.png)
 
-- **Optional Game Rules**: This checkbox unlocks the entire rest of the settings on this tab
+- **When an Incapacitated actor takes an action**: Options: *Do nothing*, *Enforce no actions*, *Post a warning only*
+- **Check weapon range when attacking**: Options: *Do not check range*, *target range > long range: fail*, *target range > long range: disadvantage*
+- **Targets you can see**: For activities whose targets must be creatures you can see. Options: *Do not check*, *Unseen targets can't be targeted*, *Post a warning only*
+- **Force vision when checking**: Checked behaves as if all tokens have vision enabled. Unchecked means tokens without vision can see everything
+- **Optional Game Rules**: This checkbox unlocks the optional rules below it. The *Rules always applied* box at the top of the tab (incapacitated actors, weapon range, targets you can see, force vision) applies whether or not it is ticked
 - **Check Flanking**: Flanking rules! Options (in order):
   - *none*: No flanking rules
   - *Advantage Only*: No effect applied — flanking actor is simply given advantage on attacks against flanked target
@@ -357,7 +378,7 @@ For configuring optional game rules:
   - *Midi Flanked effect*: Apply midi-qol's 'Flanked' effect to the target (all melee attackers benefit)
   - *Convenient Effects Flanked + no conga line*: As above, but Flanked tokens cannot flank other tokens
   - *Midi Flanked + no conga line*: As above, but Flanked tokens cannot flank other tokens
-- **Flanking Bonus Type**: When flanking is detected, grant advantage (default) or reduce the target's effective AC by a fixed amount (+1 to +5 to hit, or Advantage)
+- **Flanking Bonus Type**: When flanking is detected, grant advantage (default) or add a fixed bonus (+1 to +5) to the attack roll. Flanking applies to melee attacks against a single target
 - **Flanking requires target can sense flanker**: An ally only counts as a flanker if the target can sense them, so invisible or hidden allies don't help
 - **Show Flanking Positions**: Highlight grid cells where an ally would create flanking against your current target
 - **Unseen/Invisible attackers have advantage/disadvantage on attacks**: Options:
@@ -365,9 +386,8 @@ For configuring optional game rules:
   - *RAW (2014)*: Invisible condition always grants adv/disadv; other senses (blindsight, tremorsense) negate unseen adv/disadv
   - *RAW (2024)*: Only grants adv/disadv if the other creature cannot _see_ you — blindsight/truesight negate, but tremorsense does not
   - *Use Token Vision*: Invisible attackers have advantage on targets who can't see them
-- **Hidden attackers have adv/disadv on attacks**: Options: *Do not apply*, *Check 'Hidden' Status*, *Perceptive* (if installed)
-- **Force vision when checking**: Checked behaves as if all tokens have vision enabled. Unchecked means tokens without vision can see everything
-- **Attacking removes hidden**: Rolling an attack will remove any hidden condition
+- **Hidden attackers have adv/disadv on attacks**: How a creature with the Hiding condition (the Hide action) is treated. Options: *Do not apply*, *Hiding is Invisible to whoever doesn't perceive it* (it is Invisible, on the map and in the unseen attacker/target rules, to each creature that doesn't perceive it), *As above, and a passive Perception at least the hide's DC perceives it* (house rule), *Perceptive* (the Perceptive module decides who spots whom)
+- **Apply condition rules**: Applies the condition rules dnd5e doesn't: attacks by a frightened, poisoned, prone or restrained creature have disadvantage; attacks against a paralyzed, petrified, restrained, stunned or unconscious creature have advantage (prone: advantage within 5 ft, disadvantage beyond); hits within 5 ft on a paralyzed or unconscious creature are critical; paralyzed, petrified, stunned and unconscious creatures fail Strength and Dexterity saves; frightened creatures have disadvantage on ability checks; silenced creatures can't cast spells with a verbal component. Grappled is not included
 - **Ranged attacks when a foe is closer than this have disadvantage**: 0 disables
 - DR-related house rules (grouped in a box):
   - *Only most effective DR applies*: Enabling means only the most effective Damage Reduction will apply. Off means DR accumulates

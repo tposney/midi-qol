@@ -127,6 +127,7 @@
       "criticalSaves": false,
       "displayBonusRolls": true,
       "distanceIncludesHeight": true,
+      "mountedUseMountSpace": true,
       "distanceMeasurement": "center",
       "hiddenAdvantage": "perObserver",
       "incapacitated": "nothing",

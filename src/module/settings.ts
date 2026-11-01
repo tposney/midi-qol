@@ -252,6 +252,7 @@ class ConfigSettings {
     displayBonusRolls: true,
     distanceIncludesHeight: false,
     distanceMeasurement: "center", // "center" = grid square centers, "perimeter" = token perimeters
+    mountedUseMountSpace: true,
     hiddenAdvantage: "perObserver",
     incapacitated: "nothing",
     invisAdvantage: "RAW2024",

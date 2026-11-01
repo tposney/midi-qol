@@ -1,7 +1,9 @@
 # Midi-QOL
 
-![](https://img.shields.io/badge/Foundry-v14-informational)
-![](https://img.shields.io/badge/Dnd5e-v6-informational)
+![](https://img.shields.io/badge/Foundry-v14.369+-informational)
+![](https://img.shields.io/badge/Dnd5e-v6.0.x-informational)
+![](https://img.shields.io/badge/DAE-v14.6.4+-informational)
+![Latest release](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Ftposney.gitlab.io%2Fmidi-qol%2Fdnd6%2Fmodule.json&query=%24.version&label=Latest%20release&prefix=v&color=blue)
 ![Forge Installs](https://img.shields.io/badge/dynamic/json?label=Forge%20Installs&query=package.installs&suffix=%25&url=https%3A%2F%2Fforge-vtt.com%2Fapi%2Fbazaar%2Fpackage%2Fmidi-qol&colorB=4aa94a)
 
 [![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/tposney)
@@ -57,6 +59,8 @@ Midi-QOL is highly configurable with quick-start presets for common play styles,
 
 # Quick Start
 
+New to midi-qol? The [Getting Started](/Getting%20Started.md) guide walks through what midi does, which modules to install, and every settings tab, with screenshots of the recommended setup.
+
 ## Minimum Setup
 
 1. **Install required modules:**
@@ -100,17 +104,17 @@ Each preset lists the changes and asks before applying them.
 
 ## Manual Configuration
 
-If you prefer to configure settings manually, here's a recommended full automation setup:
+If you prefer to configure settings manually, here's the recommended full automation setup, the same as the *Full Automation* quick setting ([Getting Started](/Getting%20Started.md) describes every setting):
 
 | Setting | Tab | Value |
 |---------|-----|-------|
-| Auto target on template draw | Workflow | Walls Block |
+| Auto target on template draw | Workflow | Walls Block - Ignore Dead |
 | Auto roll attack | GM | Checked |
-| Auto roll damage | GM | Always |
-| Auto fast forward rolls | GM | Attack Rolls, Damage Rolls |
+| Auto roll damage | GM | Damage Roll Needed |
+| Auto fast forward rolls | GM | Attack Rolls, Damage Rolls, Ability Checks, Saving Throws, Skill Rolls, Tool Rolls |
 | Auto roll attack | Player | Checked |
 | Auto roll damage | Player | Damage Roll Needed |
-| Auto fast forward rolls | Player | Attack Rolls, Damage Rolls |
+| Auto fast forward rolls | Player | Attack Rolls, Damage Rolls, Ability Checks, Saving Throws, Skill Rolls, Tool Rolls |
 | Auto check if attack hits target | Workflow | Check - all see result |
 | Auto check Saves | Workflow | Save - All see result + save total |
 | Prompt Players to Roll Saves | Workflow | Auto roll and show roll dialog (private roll) |
@@ -133,15 +137,15 @@ If you prefer to configure settings manually, here's a recommended full automati
 | v11.4.48 | v12 | up to v3.2.x | - |
 | v11.6.x | v12 | v3.3.x | [manifest](https://gitlab.com/tposney/midi-qol/raw/v11.6/package/module.json) |
 | v12.4.27+ | v12 | v4.2+ | [manifest](https://gitlab.com/tposney/midi-qol/raw/v12dnd4/package/module.json) |
-| v13.0.52+ | v13 | v5.2.4+ / v5.3 | [manifest](https://gitlab.com/tposney/midi-qol/raw/v13/package/module.json) |
-| v14.0.x | v14 (14.368+) | v5.3 | [manifest](https://gitlab.com/tposney/midi-qol/raw/v14/package/module.json) |
-| v14.6.x | v14 (14.369+) | v6 | [manifest](https://gitlab.com/tposney/midi-qol/raw/dnd6/package/module.json) |
+| v13.0.52+ | v13 | v5.2.4+ / v5.3 | [manifest](https://tposney.gitlab.io/midi-qol/v13/module.json) |
+| v14.0.x | v14 (14.368+) | v5.3 | [manifest](https://tposney.gitlab.io/midi-qol/v14/module.json) |
+| v14.6.x | v14 (14.369+) | v6.0.x | [manifest](https://tposney.gitlab.io/midi-qol/dnd6/module.json) |
 
 ## Required Modules
 
 | Module | Notes |
 |--------|-------|
-| **DAE** | Dynamic Active Effects - required (14.6.2+) |
+| **DAE** | Dynamic Active Effects - required (14.6.4+) |
 | **libwrapper** | Required |
 | **socketlib** | Required |
 
@@ -155,7 +159,7 @@ If you prefer to configure settings manually, here's a recommended full automati
 |--------|-------------|
 | **Calendar Module** | Any module that advances game time (Simple Calendar, SmallTime, etc.) - recommended if you want effects to expire based on world time. |
 
-> **Note (v14):** Duration management (effect expiry, seconds/rounds conversion, combat start/end handling) has moved from Times-up into DAE. Times-up is no longer required for v14. DAE handles all duration management automatically.
+> **Note (v14):** Times-up is not supported on Foundry 14: disable or uninstall it. Duration management (effect expiry, seconds/rounds conversion, combat start/end handling) has moved from Times-up into DAE, which handles it automatically.
 
 ### Auras & Proximity Effects
 
@@ -199,13 +203,13 @@ If you prefer to configure settings manually, here's a recommended full automati
 
 | Module | Purpose |
 |--------|---------|
-| Active Token Lighting | Token light emission |
+| Active Token Effects | Effects that change a token's light, vision and so on |
 | DFreds Convenient Effects | Custom effects |
 | Dice So Nice | 3D dice rolling |
-| Levels | Height-based calculations |
-| Levels - Volumetric Templates | 3D template targeting |
+| Levels - Volumetric Templates | 3D template targeting (midi leaves template targeting to it when installed) |
 | Monks Token Bar | Save management |
 | Alternative Token Cover / Simbul's Cover Calculator / Simple Cover 5e | Cover calculation |
+| Hide NPC Names | Hides creature names from players; midi's chat cards and damage tray use the name it gives them |
 
 ## Known Incompatibilities
 
@@ -214,7 +218,6 @@ If you prefer to configure settings manually, here's a recommended full automati
 | Ready Set Roll | Not compatible |
 | Cautious GM | Breaks blind chats by hidden GM |
 | Chat Portraits | Overwrites midi-qol token name changes |
-| Warpgate | Should NOT be used with Foundry v12+ |
 
 ## Compatible Modules
 
@@ -223,8 +226,10 @@ If you prefer to configure settings manually, here's a recommended full automati
 | Dice So Nice | Works with merge card (complex interactions) |
 | Monks Token Bar | Use for save rolls; adv/dis now supported |
 | Convenient Effects | Matches effects by name; toggle per-item |
-| Levels | Uses wall collision for distance/LOS |
 | DDB Game Log | Triggers workflow from D&D Beyond rolls |
+| Epic Rolls 5e | Players and the GM can roll saves and checks through Epic Rolls: choose *Rippers Epic Rolls* in *Prompt Players to Roll Saves* or *Prompt GM to Roll Saves (Unlinked)* / *(Linked)* |
+| Hide NPC Names | midi's chat cards and damage tray show the name it gives a creature. Without it, midi's *Hide NPC names* setting names creatures with no player owner |
+| Rideable | Marks riders and moves them with their mounts. With *Mounted creatures use their mount's space* (Mechanics) on, midi measures a rider's range and reach, and distances to it, from its mount's space (familiars included; grappled tokens and riders moving within their mount keep their own space) |
 | Custom D&D 5e | Mostly compatible. Some of its options clash with midi (its Conditions config, average/mob damage, custom dice); midi reports the clashing settings on a GM card and in the TroubleShooter (Auto Fix) |
 
 ---
@@ -435,7 +440,7 @@ With dnd5e concentration tracking disabled the tab shows only a notice; midi's c
 | Move roll formula to tooltip | default tooltip/Formula -> tooltip/Advantage Attribution/Formula -> tooltip + adv attribution |
 | Show Fast Forward | Show fast-forward indicator on attack/damage buttons |
 | Chat cards use token name | Chat card titles and target names use token name not actor name |
-| Hide NPC names | Name players see for creatures with no player owner, on chat cards and the damage tray. Blank shows the real name. Anonymous or Hide NPC Names, when active, decide instead |
+| Hide NPC names | Name players see for creatures with no player owner, on chat cards and the damage tray. Blank shows the real name. Hide NPC Names, when active, decides instead |
 | Use Actor portrait in chat cards | Use actor portrait instead of token image for characters |
 | Enable midi-qol custom sounds | Override system sounds; configure them with "Configure Midi Custom Sounds" (see [Custom Sounds](#custom-sounds)) |
 
@@ -459,6 +464,7 @@ Roll statistics (Keep Roll Statistics, Save statistics Every, Player statistics 
 | Gridless Grid | Use the square grid for all distance calculations in gridless scenes |
 | Fudge factor | Subtracted from measured distances when checking range, on every grid type. Edge-to-edge token distances never drop below one grid unit. In grid units (ft/m) |
 | Include height difference in distance calculations | Include height difference in distance calculations |
+| Mounted creatures use their mount's space | On by default. A rider's range and reach, and distances to it, are measured from its mount's space, with every distance measurement method. Riders are marked by Rideable (familiars included; grappled tokens and riders of a mount that lets them move within it keep their own space) or by `flags.midi-qol.mount` on the rider's token (the mount's token id). Cover is unchanged: a cover module checks the rider's own token (Simple Cover 5e gives no cover from the rider's own mount) |
 | Constrain Template Placement | Anchor cone/ray templates with range Self/None to the caster's token border, and keep all templates within the activity's range during preview. (Renamed from "Anchor Ray/Cone Templates" in 13.0.45) |
 | Template Grid Snapping | Full Grid (default) snaps to grid vertices only; Half Grid to centres, vertices, corners and side midpoints. (Added in 13.0.47) |
 | Show before and after optional bonus chat card | Show the roll before and after an optional bonus. For a roll made for a use card (attack, damage, a target's save or check, AC) it is a one-line note beside that roll naming the bonus and the totals (click a total for its dice); a save's shows each viewer as much as that target's save row (expandable totals, plain totals, the bonus's name alone, or nothing). Otherwise a chat message with both rolls |
@@ -972,7 +978,7 @@ Targeting rules that don't need it: with *Calculate Cover* set, a target with to
 | Enable Challenge Mode Armor Class | See below |
 | (House Rule) Vitality Item | Damage at 0 HP reduces the Vitality Item's uses |
 
-"When an Incapacitated actor takes an action, MidiQOL should", "Check weapon range when attacking" and "Targets you can see" (Rules tab › Rules always applied) and "Include height difference in distance calculations" (Mechanics tab) apply whether or not optional rules are on.
+"When an Incapacitated actor takes an action, MidiQOL should", "Check weapon range when attacking" and "Targets you can see" (Rules tab › Rules always applied) and "Include height difference in distance calculations" and "Mounted creatures use their mount's space" (Mechanics tab) apply whether or not optional rules are on.
 
 ## Condition Rules
 
@@ -1013,7 +1019,7 @@ Alternative AC system with Evasion Class (EC) and Armor Resistance (AR):
 
 - Chat message visibility is a *message mode*: core's `ChatMessage.create`/`Roll#toMessage` take `messageMode` (`public`, `gm`, `blind`, `self`). dnd5e keeps its `rollMode` field, but its values are message modes too; legacy names (`gmroll` etc.) are converted.
 - `Roll#evaluateSync` can't roll dice on Foundry 14. `MidiQOL.addRollTo` is for dice-free rolls only; use `MidiQOL.addRollToAsync` for rolls with dice.
-- Times-up isn't needed: DAE manages effect durations and special durations.
+- Times-up is not supported on Foundry 14 (disable or uninstall it): DAE manages effect durations and special durations.
 - Boolean midi-qol flags use DAE's `BooleanFormulaField`: several effects on one flag combine with `||` (ADD/UPGRADE) and `&&` (MULTIPLY/DOWNGRADE).
 
 ## dnd5e 6 (midi-qol 14.6)
