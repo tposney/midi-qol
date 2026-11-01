@@ -1,4 +1,15 @@
 {
+  "midi-qol.DamageAbsorption": "Absorção de Dano",
+  "midi-qol.RollField.all": "Todos",
+  "midi-qol.RollField.skills": "Todas as Perícias",
+  "midi-qol.RollField.tools": "Todas as Ferramentas",
+  "midi-qol.RollField.death": "Salvaguarda Contra Morte",
+  "midi-qol.RollField.concentration": "Concentração",
+  "midi-qol.RollField.init": "Iniciativa",
+  "midi-qol.RollField.fail.label": "Falha Automática",
+  "midi-qol.RollField.fail.hint": "Midi QOL: uma condição que, quando verdadeira, faz com que a rolagem falhe automaticamente (ex: 1 ou target.statuses.has(\"prone\")).",
+  "midi-qol.RollField.success.label": "Sucesso Automático",
+  "midi-qol.RollField.success.hint": "Midi QOL: uma condição que, quando verdadeira, faz com que a rolagem seja automaticamente bem-sucedida.",
   "midi-qol.ResetDefaults.Name": "Redefinir Todas as Configurações",
   "midi-qol.ResetDefaults.Title": "Redefinir Configurações ao Padrão",
   "midi-qol.ResetDefaults.Content": "Isso redefinirá TODAS as configurações do Midi QOL para os valores padrão. Isso inclui ConfigSettings e todas as configurações do jogo. Esta ação não pode ser desfeita. Tem certeza de que deseja continuar?",
@@ -6,10 +17,10 @@
   "midi-qol.ResetDefaults.Button": "Redefinir Configurações ao Padrão",
   "midi-qol.ResetDefaults.Hint": "Redefina todas as configurações do midi-qol para seus valores padrão.",
   "midi-qol.DamageImmunities.Name": "Aplicar Imunidades de Dano",
-  "midi-qol.DamageImmunities.Hint": "Quando usar o botões de dano do Midi QOL ou aplicar dano automaticamente, leva em consideração as imunidades/vulnerabilidades/resistências do alvo. Todos os tipos de dano são verificados.",
-  "midi-qol.WorldKeyMappings.Name": "Configurações Geral vs Local",
-  "midi-qol.WorldKeyMappings.Blurb1": "Os mapeamentos principais são definidos por cliente. Cada jogador pode ter chaves mapeadas diferentes. Para forçar todos os clientes a terem as mesmas chaves mapeadas, use um dos módulos disponíveis para forçar as configurações comuns.",
-  "midi-qol.WorldKeyMappings.Blurb2": "Eu testei 'Forçar Controles de Cliente' com sucesso",
+  "midi-qol.DamageImmunities.Hint": "Ao usar os botões de dano do Midi-QOL ou aplicar dano automaticamente, aplica as imunidades, vulnerabilidades e resistências do alvo. Todos os tipos de dano são verificados.",
+  "midi-qol.WorldKeyMappings.Name": "Configuração de Atalhos: Mundo e Cliente",
+  "midi-qol.WorldKeyMappings.Blurb1": "Os atalhos de teclado são definidos por cliente. Cada jogador pode ter atalhos diferentes. Para que todos os clientes usem os mesmos atalhos, utilize um dos módulos disponíveis para impor configurações comuns.",
+  "midi-qol.WorldKeyMappings.Blurb2": "Testei o módulo Force Client Controls com sucesso",
   "midi-qol.SpeedAbilityRolls.Name": "Habilitar Rolagens de Avanço Rápido (salvaguarda/teste/perícia)",
   "midi-qol.ShowItemDetails.Name": "Mostrar Detalhes no Chat",
   "midi-qol.ShowItemDetails.Hint": "Se ativado, os detalhes do item serão exibidos no cartão do chat ao serem rolados. Você pode usar a configuração do D&D5e para esconder automaticamente a descrição.",
@@ -18,7 +29,7 @@
   "midi-qol.AutoFastForward.Name": "Rolagens Automáticas de Avanço Rápido",
   "midi-qol.AutoFastForward.Hint": "Quando rolar um ataque ou dano, sempre use Avanço Rápido. Também se aplica ao clicar nos botões de ataque/dano.",
   "midi-qol.AutoCheckHit.Name": "Verificação de Acerto",
-  "midi-qol.AutoCheckHit.Hint": "Verifica se uma rolagem de ataque atinge os tokens marcados. O dano é rolado caso um ou mais tokens sejam atingidos e a rolagem automática de dano é ativada. Se desabilitado, Midi QOL irá assumir que o ataque acertou e continuará a rolagem.",
+  "midi-qol.AutoCheckHit.Hint": "Verifica se uma jogada de ataque acerta os alvos marcados. O dano é rolado se pelo menos um alvo for atingido e a rolagem automática de dano estiver habilitada. Se esta opção estiver desabilitada, o Midi-QOL presume que o ataque acertou e continua a rolagem.",
   "midi-qol.RequiresTargets.Name": "Tokens Devem ser Marcados",
   "midi-qol.RequiresTargets.Hint": "Requer que tokens sejam marcados antes das rolagens. 'Nunca' significa que nunca é necessário selecionar alvos. 'Em Combate' significa que alvos sejam selecionados apenas durante o combate. 'Sempre' significa que sempre se deve selecionar os alvos ao rolar um item, caso o item necessite de um alvo.",
   "midi-qol.requiresTargetsOptions": {
@@ -35,10 +46,10 @@
   "midi-qol.ItemRollButtons.Name": "Adicionar Botões de Ataque/Dano ao Inventário",
   "midi-qol.ItemRollButtons.Hint": "Adiciona botões de rolagem na descrição do item. Esses botões aceitam ctrl/alt/shift para pular o diálogo.",
   "midi-qol.AddChatDamageButtons.Name": "Adicionar Botões de Dano no Chat",
-  "midi-qol.AddChatDamageButtons.Hint": "Adiciona botões de dano em qualquer rolagem de dano no chat. Clicar aplica o dano a todos os tokens selecionados (NÃO MARCADOS) (o mesmo que o menu suspenso).",
+  "midi-qol.AddChatDamageButtons.Hint": "Habilita o painel de dano do sistema D&D5e nas mensagens do chat.",
   "midi-qol.AutoRollDamage.Name": "Rolar Dano Automaticamente",
-  "midi-qol.AutoRollDamage.Hint": "Role o dano automaticamente quando um ataque é feito. Se 'Rolar Dano Automaticamente' estiver configurado para acertos, o dano será rolado mesmo que nenhum token seja selecionado, se o ataque atingir (veja 'Verificação de Acerto') ou se acertos não forem verificados.",
-  "midi-qol.AutoCheckSaves.Name": "Verificar Salvaguardas",
+  "midi-qol.AutoRollDamage.Hint": "Role o dano automaticamente quando um ataque é feito. Se 'Rolar Dano Automaticamente' estiver configurado para acertos, o dano será rolado mesmo que nenhum alvo esteja marcado, se o ataque atingir (veja 'Verificação de Acerto') ou se acertos não forem verificados.",
+  "midi-qol.AutoCheckSaves.Name": "Auto-Verificar Salvaguardas",
   "midi-qol.AutoCheckSaves.Hint": "Verifica automaticamente resultado de salvaguardas, quando uma salvaguarda é requisitada. Se desabilitado, Midi QOL assumirá que todos os alvos falharam em suas salvaguardas.",
   "midi-qol.DisplaySaveDC.Name": "Exibir CD de Salvaguarda",
   "midi-qol.DisplaySaveDC.Hint": "Se desativado, esconde a CD da salvaguarda dos jogadores (Apenas para 'Cartão Mesclado')",
@@ -59,7 +70,7 @@
   "midi-qol.criticals": "acertou um crítico",
   "midi-qol.fumbles": "errou feio",
   "midi-qol.hits": "atingiu",
-  "midi-qol.hitsEC": " EC hits",
+  "midi-qol.hitsEC": " atingiu a CE",
   "midi-qol.misses": "errou",
   "midi-qol.save-success": " foi bem-sucedido",
   "midi-qol.save-failure": " falhou",
@@ -67,8 +78,8 @@
   "midi-qol.damage-applied": "Pontos de Vida Atualizados",
   "midi-qol.noItemNamed": "Seu token selecionado não tem um item com o nome",
   "midi-qol.noTokens": "Não é possível aplicar o efeito. Nenhum token marcado",
-  "midi-qol.HideNPCNames.Name": "Esconder Nome dos Tokens",
-  "midi-qol.HideNPCNames.Hint": "Esconde o nome dos tokens nas mensagens de acerto/salvaguarda do chat.",
+  "midi-qol.HideNPCNames.Name": "Esconder Nome dos PNJs",
+  "midi-qol.HideNPCNames.Hint": "O nome que os jogadores veem para criaturas que não possuem um jogador como proprietário, nos cartões de chat e no painel de dano. Deixar em branco exibe o nome real. Quando habilitados, os módulos Anonymous ou Hide NPC Names têm prioridade sobre esta configuração.",
   "midi-qol.noTemplateSeen": "Modelo não foi posicionado",
   "midi-qol.AutoTarget.Name": "Marcar ao Posicionar Modelo",
   "midi-qol.AutoTarget.Hint": "Quando posicionar um modelo (como de uma magia), marca automaticamente os tokens dentro do modelo. Se 'Centro + Levels' estiver configurado em alvos à distância, Levels Volumetric Templates será usado (se instalado).",
@@ -78,11 +89,11 @@
   "midi-qol.showGM.Name": "Mestre Vê Todos os Sussurros",
   "midi-qol.showGM.Hint": "O Mestre consegue ver todas as mensagens sussurradas, mesmo que a configuração do jogo diga que o Mestre não consegue vê-las.",
   "midi-qol.PreferredGM.Name": "Mestre Principal",
-  "midi-qol.PreferredGM.Hint": "Mestre preferido para chamadas de rolagens. Se escolhido 'Nenhum', o primeiro Mestre na cena atual será usado.",
+  "midi-qol.PreferredGM.Hint": "Mestre preferencial para chamadas de comunicação entre clientes (socket). Se a opção for 'Nenhum', será usado o primeiro Mestre na cena atual.",
   "midi-qol.ColoredBorders.Name": "Borda Colorida de Mensagens",
   "midi-qol.ColoredBorders.Hint": "Cada cartão no chat passa a ter uma borda de acordo com a cor escolhida pelo jogador.",
   "midi-qol.AutoEffects.Name": "Aplicar Efeito de Itens",
-  "midi-qol.AutoEffects.Hint": "Aplica automaticamente os efeitos ativos aos alvos quanto eles são atingidos, falharem em uma salvaguarda ou não houver uma salvaguarda. Funciona melhor com os módulos About Time e/ou Times Up.",
+  "midi-qol.AutoEffects.Hint": "Aplica automaticamente os efeitos ativos aos alvos quando eles forem atingidos, falharem em uma salvaguarda ou não houver uma salvaguarda. Funciona melhor com os módulos About Time e/ou Times Up.",
   "midi-qol.AutoEffectsOptions": {
     "off": "Não Aplicar",
     "applyNoButton": "Aplicar e Não Mostrar Botão",
@@ -96,39 +107,39 @@
   "midi-qol.rollNPCSaves.Name": "Avisar Mestre para Rolar Salvaguardas (Desvinculado)",
   "midi-qol.rollNPCLinkedSaves.Name": "Avisar Mestre para Rolar Salvaguardas (Vinculado)",
   "midi-qol.rollNPCSaves.Hint": "'Automático' significa que o Midi QOL irá rolar a salvaguarda para o ator. Do contrário, o Mestre será solicitado de acordo com a configuração.",
-  "midi-qol.PlayerSaveTimeout.Name": "Atrasar Rolagem para Jogadores",
-  "midi-qol.PlayerSaveTimeout.Hint": "Quanto tempo o Mestre deve esperar para rolar a salvaguarda no lugar do jogador (em segundos).",
+  "midi-qol.PlayerSaveTimeout.Name": "Prazo para Rolar no Lugar dos Jogadores",
+  "midi-qol.PlayerSaveTimeout.Hint": "Tempo de espera, em segundos, antes de o Midi-QOL rolar a salvaguarda no lugar do jogador.",
   "midi-qol.MagicResistant": "magic-resistant",
   "midi-qol.MagicResistanceFeat": "Resistência Mágica",
   "midi-qol.PreRollChecks.Name": "Experimental: Aplicar verificação antes de fazer uma rolagem de Avanço Rápido/Macro",
-  "midi-qol.PreRollChecks.Hint": "Experimental: Verificar antes de realizar uma rolagem de item; Atualmente à distância e o autor deve ter mais de 0 PV",
+  "midi-qol.PreRollChecks.Hint": "Experimental: verifica condições antes de usar um item. Atualmente, se o alvo está no alcance e quem realiza a rolagem tem mais de 0 PV.",
   "midi-qol.noTargets": "Você tem que marcar um token antes de rolar o ataque",
-  "midi-qol.wrongNumberTargets": "Você tem que marcar ao menos {allowedTargets} token(s) antes de rolar o ataque",
+  "midi-qol.wrongNumberTargets": "Você deve marcar no máximo {allowedTargets} token(s) antes de rolar o ataque",
   "midi-qol.noSaveTargets": "Sem alvos para a salvaguarda",
   "midi-qol.UseTokenNames.Name": "Cartões de Chat Usam Nome do Token",
   "midi-qol.UseTokenNames.Hint": "Títulos dos cartões de chat e nome dos alvos usam o nome do token ao invés do nome do ator.",
   "midi-qol.CriticalDamage.Name": "Escolha o Crítico para Jogadores",
-  "midi-qol.CriticalDamage.Hint": "Apenas Configurações do D&D5e: rolagem padrão de crítico | Dano Normal Máximo: apenas dano base da arma (sem dado crítico), mas todos maximizados | Dado Crítico Máximo: dado crítico maximizado | Todos os Dados Máximos: item + dado crítico maximizados | Dobrar Valor dos Dados: resultado dos dados x2 | Explodir Dado Crítico: rola o crítico normal, explodindo todos os dados críticos | Apenas Crítico Extra da Arma: o único bônus de dano para crítico será o do campo 'Dano Extra de Acerto Crítico', no item | Vantagem Rolagem de Dano: rola os dados de dano duas vezes e fica com o maior",
+  "midi-qol.CriticalDamage.Hint": "Apenas Configurações do D&D5e: usa o crítico padrão do sistema. Dano Normal Máximo: maximiza apenas os dados básicos da arma, sem dados de crítico. Dados Críticos Máximos: maximiza os dados de crítico. Todos os Dados Máximos: maximiza os dados do item e de crítico. Dobrar Dano Rolado: dobra o resultado dos dados. Explodir Dados Críticos: realiza a rolagem de crítico normal, com explosão dos dados de crítico. Apenas Crítico Extra da Arma: usa somente o bônus do campo de crítico extra do item. Base Máxima + Dados de Crítico Rolados: usa o dano básico máximo e rola os dados de crítico normalmente.",
   "midi-qol.CriticalDamageGM.Name": "Escolha o Crítico para Mestre",
   "midi-qol.CriticalDamageGM.Hint": "",
   "midi-qol.CriticalDamageChoices": {
     "default": "Apenas Configurações do D&D5e",
     "maxDamage": "Dano Normal Máximo",
-    "maxCrit": "Dado Crítico Máximo (número inteiro)",
-    "maxCritRoll": "Número Inteiro (rolar o dado)",
+    "maxCrit": "Dados Críticos Máximos (Valor Fixo)",
+    "maxCritRoll": "Dados Críticos Máximos (Rolar Dados)",
     "maxAll": "Todos os Dados Máximos",
-    "doubleDice": "Dobrar Valor dos Dados",
-    "explode": "Explodir Dado Crítico",
-    "maxDamageExplode": "Dano Normal Máximo e Explodir Dado Crítico",
-    "explodeCharacter": "Explodir Dado Crítico de PJ",
-    "explodeNPC": "Explodir Dado Crítico de PNJ",
-    "baseDamage": "Dano Extra de Acerto Crítico",
-    "maxBaseRollCrit": "Crítico Base Máximo",
+    "doubleDice": "Dobrar Dano Rolado",
+    "explode": "Explodir Dados Críticos",
+    "maxDamageExplode": "Dano Normal Máximo e Explodir Dados Críticos",
+    "explodeCharacter": "Explodir Dados Críticos de PJ",
+    "explodeNPC": "Explodir Dados Críticos de PNJ",
+    "baseDamage": "Apenas Crítico Extra da Arma",
+    "maxBaseRollCrit": "Base Máxima + Dados de Crítico Rolados",
     "bestOfTwo": "Vantagem Rolagem de Dano"
   },
   "midi-qol.MergeCardCondensed.Name": "Condensar Rolagens de Ataque/Dano",
   "midi-qol.MergeCardCondensed.Hint": "Conserva um pouco de espaço no log de chat fazendo as rolagens de ataque e dano menores.",
-  "midi-qol.AddSheetButtons.Name": "Adicionar Butões de Item/Atividade",
+  "midi-qol.AddSheetButtons.Name": "Adicionar Botões de Item/Atividade",
   "midi-qol.AddSheetButtons.Hint": "Adiciona botões de rolagem rápida (Info, Ataque, Dano) a itens e atividades nas fichas de personagem.",
   "midi-qol.DisplayItemProperties.Name": "Exibir Propriedades de Itens",
   "midi-qol.DisplayItemProperties.Hint": "Mostra as propriedades do item no cartão de chat. Desabilitar economiza espaço no cartão de chat.",
@@ -136,14 +147,14 @@
   "midi-qol.ConfigTitle": "Configurações do Midi QOL",
   "midi-qol.WorkflowSettings": "Configurações de Workflow",
   "midi-qol.ActivitySheetTabs": {
-    "modConditions": "Condições",
+    "modConditions": "Usar",
     "workflowSettings": "Workflow",
     "activityManagement": "Atividades",
     "overtime": "OverTime",
     "activityMacro": "Macro"
   },
   "midi-qol.CheckSaveText.Name": "Procurar Descrição",
-  "midi-qol.CheckSaveText.Hint": "Procura descrições no item para salvaguardas do tipo 'metade do dano' e se estiver presente, a magia causa metade do dano em salvaguardas. Se desativado, Midi QOL assumirá que salvaguardas causam o modificador de dano padrão.",
+  "midi-qol.CheckSaveText.Hint": "Procura na descrição do item o texto que indica metade do dano em uma salvaguarda bem-sucedida. Se encontrar essa indicação, a magia causa metade do dano em caso de sucesso. Se esta opção estiver desmarcada, usa o multiplicador de dano padrão para salvaguardas bem-sucedidas.",
   "midi-qol.Save": "Salvar Configurações",
   "midi-qol.saving-throws": "Salvaguardas",
   "midi-qol.saving-throw": "Salvaguarda",
@@ -176,6 +187,8 @@
   "midi-qol.FriendlyAutoFail": "Auto-Falha Aliado",
   "midi-qol.FriendlyAutoSuccess": "Auto-Sucesso Aliado",
   "midi-qol.KeyPress": "Pressionar Tecla",
+  "midi-qol.Dnd5eRollMode.Actor": "Modo de Rolagem do D&D5e (Ator)",
+  "midi-qol.Dnd5eRollMode.Effect": "{name} (Modo de Rolagem do D&D5e)",
   "midi-qol.ForcedKeyPress": "Forçar Pressionar Tecla",
   "midi-qol.RollOptions": "Opções de Rolagem",
   "midi-qol.WorkflowOptions": "Opções de Workflow",
@@ -191,7 +204,7 @@
   "midi-qol.AutoFastForwardAbilityRolls.Name": "Avanço Rápido em Rolagens de Atributo",
   "midi-qol.AutoFastForwardAbilityRolls.Hint": "Clicar em um atributo ou perícia começa uma rolagem automática de Avanço Rápido de teste/salvaguarda.",
   "midi-qol.UseCustomSounds.Name": "Habilitar Sons do Midi QOL",
-  "midi-qol.UseCustomSounds.Hint": "Se configurado, irá subscrever o som do sistema. Configure sons à partir da opção 'Configurar Sons do Midi Qol'.",
+  "midi-qol.UseCustomSounds.Hint": "Se habilitado, substitui os sons do sistema. Configure os sons em 'Configurar Sons do Midi QOL'.",
   "midi-qol:Debug.Name": "Habilitar Debug",
   "midi-qol:Debug.Hint": "'Avisos' dá uma visão geral da atividade. 'Debug' adiciona mais informações. 'Todos' também ativa CONFIG.debug.hooks.",
   "midi-qol.DebugOptions": {
@@ -209,7 +222,7 @@
     "none": "Nenhum",
     "all": "Verificar (todos veem o resultado)",
     "whisper": "Verificar (apenas Mestre vê o resultado)",
-    "gmOnly": "Verificar (apenas Mestre vê qualquer resultado)",
+    "gmOnly": "Verificar (apenas Mestre vê rolagem e resultado)",
     "expandedHints": {
       "none": "Não há verificação automática de acertos. Os acertos devem ser julgados manualmente pelo Mestre.",
       "all": "O Midi QOL verifica automaticamente as jogadas de ataque contra a CA do alvo. Todos os jogadores veem os resultados de acerto/erro.",
@@ -249,11 +262,33 @@
       "walledtemplates": "Delega a marcação para o módulo Walled Templates, que remodela a área do modelo em torno de paredes. Requer o módulo Walled Templates."
     }
   },
+  "midi-qol.SaveSummaryStyle.Name": "Estilo do Resumo de Salvaguardas",
+  "midi-qol.SaveSummaryStyle.Hint": "Com a opção \"Cartões de Chat Resumidos\" do D&D5e ativada, as salvaguardas de um cartão são exibidas no próprio cartão, em vez de aparecerem como mensagens separadas. Midi-QOL: a seção de salvaguardas do midi (CD, sucesso/falha e dano) é utilizada como resumo. D&D5e: são utilizados os resumos individuais de cada rolagem do D&D5e, enquanto a seção do Midi-QOL lista apenas as salvaguardas realizadas por outros módulos. Em ambos os casos, o que os jogadores podem visualizar depende da configuração \"Auto-Verificar Salvaguardas\". Com a opção \"Cartões de Chat Resumidos\" desativada, as salvaguardas são exibidas como mensagens separadas.",
+  "midi-qol.ChatCardSummaries.Name": "Resumos dos Cartões de Chat",
+  "midi-qol.ChatCardSummaries.Hint": "Define se as salvaguardas de um cartão são incorporadas a ele (na seção de Salvaguardas do Midi-QOL ou nos resumos do D&D5e) ou exibidas como mensagens separadas. A opção Escolha de Cada Usuário segue a configuração \"Cartões de Chat Resumidos\" do D&D5e de cada usuário. Sempre e Nunca definem o comportamento para todos (a escolha individual de cada usuário volta a ser aplicada quando a opção Escolha de Cada Usuário é selecionada).",
+  "midi-qol.saveSummaryStyleOptions": {
+    "midi": "Seção de Salvaguardas do Midi",
+    "dnd5e": "Resumos do D&D5e",
+    "expandedHints": {
+      "midi": "A seção de salvaguardas do Midi-QOL é utilizada como resumo das salvaguardas do cartão. Os resumos individuais de cada rolagem do D&D5e não são exibidos.",
+      "dnd5e": "Os resumos individuais de cada rolagem do D&D5e são exibidos; A seção de salvaguardas do Midi-QOL lista apenas as salvaguardas que não possuem um resumo próprio, como aquelas realizadas por outros módulos."
+    }
+  },
+  "midi-qol.chatCardSummariesOptions": {
+    "client": "Escolha de Cada Usuário",
+    "always": "Sempre",
+    "never": "Nunca",
+    "expandedHints": {
+      "client": "A configuração \"Cartões de Chat Resumidos\" do D&D5e de cada usuário determina o comportamento.",
+      "always": "As salvaguardas são incorporadas aos seus respectivos cartões para todos os usuários. As mensagens individuais de salvaguarda ficam ocultas no histórico do chat.",
+      "never": "As salvaguardas são exibidas como mensagens separadas para todos os usuários. A seção de salvaguardas do midi não é exibida."
+    }
+  },
   "midi-qol.autoCheckSavesOptions": {
     "none": "Desativado",
     "allNoRoll": "Salvaguarda (todos veem resultado)",
     "all": "Salvaguarda (todos veem resultado + total salvaguarda)",
-    "whisper": "Salvaguarda (apenas Mestre vê)",
+    "whisper": "Salvaguarda (apenas Mestre vê resultados e rolagens)",
     "allShow": "Salvaguarda (todos veem resultado + rolagens)",
     "gmOnly": "Salvaguarda (apenas Mestre vê qualquer resultado)",
     "expandedHints": {
@@ -327,11 +362,11 @@
       "autoDialog": "Salvaguardas são roladas automaticamente, mas a caixa de diálogo de configuração da rolagem é exibida primeiro, permitindo modificações.",
       "mtb": "Salvaguardas são realizadas através da interface do Monk's Token Bar. Requer o módulo Monk's Token Bar.",
       "ftb": "Salvaguardas são realizadas através da pop-up do Flash Token Bar. Requer o módulo Flash Rolls 5e.",
-      "rer": "Salvaguardas são realizadas através da interface do Ripper's Epic Rolls. Requer o módulo Epic Rolls."
+      "rer": "Salvaguardas são realizadas através da interface do Ripper's Epic Rolls. Requer o módulo Epic Rolls 5e."
     }
   },
   "midi-qol.playerRollSavesOptions": {
-    "none": "Nenhum",
+    "none": "Nenhum (Rolagem Privada)",
     "nonePublic": "Nenhum (Rolagem Pública)",
     "noneDialogPublic": "Rolar e Mostrar o Diálogo de Rolagem (Rolagem Pública)",
     "noneDialogPrivate": "Rolar e Mostrar o Diálogo de Rolagem (Rolagem Privada)",
@@ -351,7 +386,7 @@
       "chat": "Os jogadores são solicitados a realizar salvaguardas por um botão de mensagem no chat.",
       "mtb": "Os jogadores rolam salvaguardas através da interface do Monk's Token Bar. Requer o módulo Monk's Token Bar.",
       "ftb": "Os jogadores rolam salvaguardas através da pop-up do Flash Token Bar. Requer o módulo Flash Rolls 5e.",
-      "rer": "Os jogadores rolam salvaguardas através da interface do Ripper's Epic Rolls. Requer o módulo Epic Rolls."
+      "rer": "Os jogadores rolam salvaguardas através da interface do Ripper's Epic Rolls. Requer o módulo Epic Rolls 5e."
     }
   },
   "midi-qol.playerRollSavesOptionsReduced": {
@@ -360,8 +395,8 @@
   },
   "midi-qol.AutoRemoveTargetsOptions": {
     "none": "Nunca",
-    "dead": "Desmarcar Morto Após Rolagem",
-    "allGM": "Desmarcar Morto e Todos Mestre",
+    "dead": "Desmarcar Mortos Após Rolagem",
+    "allGM": "Desmarcar Mortos. Para Mestre, Desmarcar Todos",
     "all": "Desmarcar Todos no Fim do Turno"
   },
   "midi-qol.ColoredBordersOptions": {
@@ -372,13 +407,13 @@
   },
   "midi-qol.hideRollDetailsOptions": {
     "none": "Nenhum",
-    "detailsDSN": "Rolar Fórmula Mas Mostrar Rolagem DSN",
-    "details": "Rolar Fórmula",
+    "detailsDSN": "Fórmula da Rolagem Mas Mostrar Rolagem DSN",
+    "details": "Fórmula da Rolagem",
     "d20Only": "Exibir Ataque d20 + Dano Total",
     "hitDamage": "Exibir Acerto/Erro + Dano Total",
     "hitCriticalDamage": "Exibir Acerto/Erro/Acerto Crítico/Falha Crítica + Dano Total",
-    "attackTotalOnly": "Exibir Apenas Total da Rolagem",
-    "d20AttackOnly": "Exibir Apenas Ataques D20",
+    "attackTotalOnly": "Exibir Apenas o Total do Ataque",
+    "d20AttackOnly": "Exibir Apenas d20 do Ataque",
     "all": "Toda a Rolagem",
     "expandedHints": {
       "none": "Não esconde nada. Os jogadores veem todos os detalhes da rolagem.",
@@ -386,7 +421,7 @@
       "details": "Esconde a fórmula de rolagem e não mostra os dados do DSN.",
       "d20Only": "Exibe somente a rolagem de ataque d20 e o dano total.",
       "hitDamage": "Exibe Acerto/Erro mais o dano total.",
-      "hitCriticalDamage": "Exibe Acertos/Erros/Críticos/Erros Críticos e o dano total.",
+      "hitCriticalDamage": "Exibe Acerto/Erro/Acerto Crítico/Falha Crítica e o dano total.",
       "attackTotalOnly": "Exibe somente o total da rolagem de ataque.",
       "d20AttackOnly": "Exibe somente dados de ataques d20.",
       "all": "Esconde dos jogadores todos os detalhes da rolagem."
@@ -438,6 +473,16 @@
       "none": "Nenhuma animação de dados DSN é exibida aos jogadores."
     }
   },
+  "midi-qol.BlindRollDisplay.Name": "Exibição de Rolagem Cega",
+  "midi-qol.BlindRollDisplay.Hint": "Como as rolagens cegas forçadas (pelas configurações acima) aparecem para os jogadores. Oculta mantém o comportamento atual (os jogadores não veem nada). Obscurecida exibe o cartão da rolagem, mas substitui o resultado por ?? para os jogadores.",
+  "midi-qol.blindRollDisplayOptions": {
+    "hidden": "Oculta",
+    "obscured": "Obscurecida",
+    "expandedHints": {
+      "hidden": "A rolagem é sussurrada apenas ao Mestre. Os jogadores não veem nenhuma mensagem.",
+      "obscured": "O cartão da rolagem é exibido para os jogadores, mas o resultado é mostrado como ?? (e os dados 3D permanecem privados). O Mestre vê o resultado real. Observação: o valor fica oculto na tela, mas ainda está presente nos dados da mensagem, portanto um jogador que inspecione o console poderá lê-lo."
+    }
+  },
   "midi-qol.RollOtherDamageOptions": {
     "none": "Nenhum",
     "always": "Sempre Rolar",
@@ -446,8 +491,8 @@
   },
   "midi-qol.potion": "Poção",
   "midi-qol.GMRollHiding": "Ocultando Rolagem do Mestre",
-  "midi-qol.HideRollDetails.Name": "Ocultar Detalhes de Rolagens de Mestre",
-  "midi-qol.HideRollDetails.Hint": "Escolha quais rolagens de Mestre serão escondidas/exibidas aos jogadores.",
+  "midi-qol.HideRollDetails.Name": "Ocultar Detalhes de Rolagens do Mestre (Legado)",
+  "midi-qol.HideRollDetails.Hint": "Opção obsoleta. Use as configurações específicas abaixo.",
   "midi-qol.DiceRolled": "<div>Rolado</div>",
   "midi-qol.ForceHideRoll.Name": "Realmente Esconder Rolagens Privadas/Cegas/Pessoais",
   "midi-qol.ForceHideRoll.Hint": "Não exibe nada para não-destinatários para rolagens privadas/cegas/pessoais. Agradecimentos ao felix.mueller.86@web.de.",
@@ -457,7 +502,7 @@
   "midi-qol.playerControlsInvisibleTokens.Hint": "Experimental. Talvez funcione",
   "midi-qol.Debug.Name": "Habilitar Debug",
   "midi-qol.Debug.Hint": "Configure para 'Nenhum' a menos que você queira alimentar o log do console. 'Todos' habilita o CONFIG.hooks.debug.",
-  "midi-qol.AllowUseMacro.Name": "Adicionar 'Macro Ao Usar' em Items",
+  "midi-qol.AllowUseMacro.Name": "Adicionar 'Macro Ao Usar' em Itens",
   "midi-qol.AllowActorUseMacro.Name": "Adicionar 'Macro Ao Usar' em Atores",
   "midi-qol.AllowUseMacro.Hint": "Quando habilitado, adiciona uma opção com o nome da macro que será chamada ao utilizar. Veja o Readme para mais detalhes.",
   "midi-qol.onUseMacroLabel": "Macro Ao Usar",
@@ -488,6 +533,8 @@
     "isSaveFailure": "Alvo Falhou em Salvaguarda",
     "preTargetDamageApplication": "Alvo Irá Sofrer Dano de Item",
     "postTargetEffectApplication": "Alvo Tem Efeito Aplicado Por Rolagem de Item",
+    "preTeleport": "Antes de Teleporte (pode cancelar ou alterar quem será teleportado)",
+    "postTeleport": "Depois de Teleporte",
     "isDamaged": "Alvo Sofreu Dano de Ataque",
     "all": "Todos"
   },
@@ -501,24 +548,26 @@
   "midi-qol.noType": "Sem Tipo",
   "midi-qol.vitalityDamage": "Vitalidade",
   "midi-qol.vitalityHealing": "Vitalidade",
-  "midi-qol.ItemList": "Escolha items que exibirão detalhes em cartões de itens",
+  "midi-qol.ItemList": "Escolha itens que exibirão detalhes em cartões de itens",
   "midi-qol.DisplayItems": "Mostrar Detalhes",
-  "midi-qol.fastForward": "(fast)",
+  "midi-qol.fastForward": "(rápido)",
   "midi-qol.RollOtherDamage.Name": "Rolar dano de 'Outra Fórmula' para RWAK/MWAK",
   "midi-qol.RollOtherSpellDamage.Name": "Rolar dano de 'Outra Fórmula' para Magias",
-  "midi-qol.RollOtherDamage.Hint": "Desativado: Não rolar dano de Outra Fórmula automaticamente. ifSave = only roll the Other damage if the item has a save and the activation condition is not false. Condition = roll the Other damage if the other damage condition is empty or evaluates to true",
+  "midi-qol.RollOtherDamage.Hint": "<strong>Desativado</strong>: não rola automaticamente o dano de Outra Fórmula.<br><strong>Condição Verdadeira e Salvaguarda Presente</strong>: rola se a condição não estiver vazia e resultar em verdadeiro OU se o item possuir uma salvaguarda e a condição de ativação não for falsa.<br><strong>Condição</strong>: rola o dano de Outra Fórmula se sua condição estiver vazia ou resultar em verdadeiro.",
   "midi-qol.ApplyEffects": "Aplicar Efeitos Ativos",
+  "midi-qol.FollowUp.Unavailable": "{name} não possui usos restantes",
+  "midi-qol.FollowUp.Targets.default": "Alvos atingidos em caso de ataque. Do contrário, todos os alvos",
   "midi-qol.spell-damage": "Dano de Magia",
   "midi-qol.RemoveButtons.Name": "Remover Botões do Chat Após Rolagem",
-  "midi-qol.ActiveConcentrationSpell.Title": "Ativar Concentração de Magia",
+  "midi-qol.ActiveConcentrationSpell.Title": "Magia de Concentração em Andamento",
   "midi-qol.ActiveConcentrationSpell.ContentNamed": "<p>Você já está se concentrando em <em>@NAME@</em>. Encerrar concentração e continuar?</p>",
   "midi-qol.ActiveConcentrationSpell.ContentGeneric": "<p>Você já está se concentrando. Encerrar concentração e continuar?</p>",
-  "midi-qol.ConcentrationAutomation.Name": "Habilitar Automação de Concentração",
-  "midi-qol.ConcentrationAutomation.Hint": "Se ativado, Midi QOL cuidará do gerenciamento de concentração. Requer que 'Verificar Salvaguardas' esteja ativado. Desativará o gerenciamento de concentração do módulo CUB.",
+  "midi-qol.ConcentrationAutomation.Name": "Habilitar Automação de Concentração do Midi-QOL",
+  "midi-qol.ConcentrationAutomation.Hint": "Se habilitada, a automação do Midi-QOL gerencia a concentração, e você deve desabilitar o monitoramento de concentração do <strong>D&D5e</strong>.<br>Se o monitoramento do <strong>D&D5e</strong> permanecer habilitado, esta opção será desmarcada automaticamente.<br> Recomenda-se usar a concentração do <strong>D&D5e</strong>, já que as demais configurações também funcionam com ela.",
   "midi-qol.SingleConcentrationRoll.Name": "Verificação Única de Concentração",
   "midi-qol.SingleConcentrationRoll.Hint": "Se ativado e o ataque rolar o dano normal + uma salvaguarda + dano outro/versátil, role apenas uma salvaguarda de concentração para o dano combinado.",
   "midi-qol.TempHPDamageConcentrationCheck.Name": "Verificação de Concentração com PV Temporário",
-  "midi-qol.TempHPDamageConcentrationCheck.Hint": "Se ativado, perder pontos de vida temporários irá ativar o gatilho da verificação de concentração.",
+  "midi-qol.TempHPDamageConcentrationCheck.Hint": "Se habilitada, a perda de pontos de vida temporários provoca uma salvaguarda de concentração.<br><strong>Desabilitar esta opção é uma regra da casa. Pelas regras escritas de D&D5e, sofrer dano absorvido por PV temporário também provoca uma salvaguarda de concentração</strong>.",
   "midi-qol.RemoveConcentrationEffects.Name": "Remover Concentração ao Remover Efeito",
   "midi-qol.RemoveConcentrationEffects.Hint": "Verifica quando efeitos (efeitos e modelos) são removidos. Se todos os efeitos e modelos da magia/característica de concentração forem removidos, remove a concentração.",
   "midi-qol.RemoveConcentrationEffectsOptions": {
@@ -556,11 +605,11 @@
   "midi-qol.DamageMacro.Hint": "Lista separada por vírgulas de macros a serem chamadas ao calcular o dano que será aplicado ao calcular o dano aos alvos.",
   "midi-qol.AttackMacro.Name": "Macros de Ataque Bônus",
   "midi-qol.AttackMacro.Hint": "Lista separada por vírgulas de macros a serem chamadas ao calcular a jogada de ataque que será aplicada ao verificar se o ataque atingiu os alvos.",
-  "midi-qol.DAEMidiQOL": "Especificações DAE/Midi QOL",
+  "midi-qol.DAEMidiQOL": "Específico do DAE/Midi-QOL",
   "midi-qol.OptionalRules.Name": "Regras Opcionais de Jogo",
-  "midi-qol.OptionalRules.Hint": "Regras de Jogo de D&D5e que você talvez queira habilitar. Geralmente não funciona com o módulo Better Rolls.",
+  "midi-qol.OptionalRules.Hint": "Regras de Jogo que você talvez queira habilitar.",
   "midi-qol.InvisAdvantage.Name": "Tokens Não-Vistos ou Invisíveis têm Vantagem/Desvantagem em Ataques",
-  "midi-qol.RAW2014Invisible.Hint": "<strong>RAW (2014)</strong>: A condição Invisível sempre concede vant/desv. Outros sentidos (Percepção às Cegas, Sentido Sísmico) negam a vant/desv da invisibilidade.",
+  "midi-qol.RAW2014Invisible.Hint": "<strong>RAW (2014)</strong>: a condição Invisível sempre concede vantagem/desvantagem. Outros sentidos (Percepção às Cegas, Sentido Sísmico) anulam a vantagem/desvantagem decorrente de não ser visto.",
   "midi-qol.RAW2024Invisible.Hint": "<strong>RAW (2024)</strong>: Só concede vant/desv se a outra criatura não puder <em>ver</em> você. Percepção às Cegas/Visão Verdadeira negam, mas Sentido Sísmico não.",
   "midi-qol.InvisAdvantageOptions": {
     "none": "Não Aplicar",
@@ -569,22 +618,40 @@
     "vision": "Usar Visão do Token"
   },
   "midi-qol.InvisVision.Name": "Forçar Visão ao Verificar",
-  "midi-qol.InvisVision.Hint": "A verificação considera que todos os tokens possuem visão habilitada. Se desabilitado, tokens sem visão podem ver tudo.",
+  "midi-qol.ConditionRules.Name": "Aplicar Regras das Condições",
+  "midi-qol.ConditionRules.Hint": "Aplica as regras de condições que o D&D5e não implementa, às condições adicionadas após a ativação desta configuração, independentemente de como forem aplicadas: ataques realizados por uma criatura Amedrontada, Envenenada, Caída ou Contida (ou com 3 níveis de Exaustão, pelas regras de 2014) sofrem Desvantagem. Ataques contra uma criatura Paralisada, Petrificada, Contida, Atordoada ou Inconsciente recebem vantagem e, contra uma criatura Caída, recebem Vantagem a até 5 pés e sofrem Desvantagem além dessa distância. Acertos a até 5 pés contra uma criatura Paralisada ou Inconsciente são Críticos. Criaturas Paralisadas, Petrificadas, Atordoadas ou Inconscientes falham automaticamente em Salvaguardas de Força e Destreza. Criaturas Amedrontadas sofrem Desvantagem em Testes de Atributo. Criaturas Silenciadas não podem conjurar magias com componente Verbal. A condição Cego segue essas regras apenas quando as regras de criaturas que não podem enxergar estão desativadas. A condição Agarrado não está incluída.",
+  "midi-qol.InvisVision.Hint": "<strong>Marcada</strong>: a verificação se comporta como se todos os tokens tivessem visão habilitada.<br><strong>Desmarcada</strong>: tokens sem visão conseguem ver tudo.",
   "midi-qol.HiddenAdvantage.Name": "Tokens Escondidos Possuem Vantagem/Desvantagem",
-  "midi-qol.HiddenAdvantage.Hint": "Tokens escondidos possuem vantagem em ataques. Desvantagem se o alvo estiver escondido.",
+  "midi-qol.HiddenAdvantage.Hint": "Como uma criatura com a condição Escondido (ação Esconder) é tratada. Por Observador: a criatura é considerada Invisível, tanto no mapa quanto nas regras de Atacantes e Alvos Não-Vistos, para cada criatura que não consiga percebê-la (ela própria, seus aliados, um token sem visão (a menos que a opção Forçar Visão ao Verificar esteja ativada), criaturas com Ver Invisibilidade, Visão Verdadeira, Percepção às Cegas ou Sentido Sísmico e, com a regra opcional da casa, criaturas cuja Percepção passiva seja igual ou superior à CD para se esconder conseguem percebê-la). Perceptive: o módulo Perceptive determina quais criaturas conseguem perceber umas às outras.",
   "midi-qol.HiddenAdvantageOptions": {
     "none": "Não Aplicar",
-    "effect": "Verificar Condição 'Escondido'",
+    "perObserver": "Escondido é Invisível para quem não percebê-la",
+    "perObserverPassive": "Como acima, e Percepção passiva igual ou superior à CD para se esconder conseguem percebê-la (regra da casa)",
     "perceptive": "Perceptive"
   },
   "midi-qol.CantSeeAdvantage.Hint": "<strong>Usar Visão do Token</strong>: Tokens Invisíveis têm vantagem contra alvos que não podem vê-los. Desvantagem se não puder ver o alvo.",
+  "midi-qol.TargetMustBeSeen.Name": "Alvos que Você Pode Ver",
+  "midi-qol.TargetMustBeSeen.Hint": "Aplica-se a atividades que exigem alvos que você possa ver. Usa a configuração Forçar Visão ao Verificar.",
+  "midi-qol.TargetMustBeSeenOptions": {
+    "nothing": "Não Verificar",
+    "enforce": "Alvos Não Visíveis Não Podem Ser Selecionados",
+    "warn": "Exibir Apenas um Aviso",
+    "expandedHints": {
+      "nothing": "Atividades que exigem alvos visíveis não são verificadas.",
+      "enforce": "Uma atividade que exige alvos visíveis não pode ser utilizada contra um alvo que o token não consegue ver.",
+      "warn": "Utilizar uma atividade que exige alvos visíveis contra um alvo que o token não consegue ver exibe um aviso, mas permite que a atividade prossiga."
+    }
+  },
+  "midi-qol.TargetNotSeen": "{name} exige alvos que você possa ver: você não consegue ver {targets}",
+  "midi-qol.TargetingHeader": "Seleção de Alvos do Midi",
   "midi-qol.CheckRange.Name": "Verificar Alcance da Arma ao Atacar",
   "midi-qol.CheckRangeOptions": {
     "none": "Não Verificar",
     "longfail": "Distância Alvo > Alcance Longo: Falha",
     "longdisadv": "Distância Alvo > Alcance Longo: Desvantagem"
   },
-  "midi-qol.NearbyFoe.Name": "Ataques à distância possuem desvantagem caso inimigo esteja a essa distância. Desabilitado em 0",
+  "midi-qol.NearbyFoe.Name": "Ataques à distância têm desvantagem se um inimigo estiver mais perto que esta distância. 0 desabilita",
+  "midi-qol.TargetTotalCover": "O alvo de {name} possui Cobertura Total",
   "midi-qol.WallsBlockRange.Name": "Paredes Bloqueiam Ataques à Distância",
   "midi-qol.WallsBlockRange.Hint": "Se um módulo de cobertura determinar Cobertura Total, o ataque será bloqueado.",
   "midi-qol.WallsBlockRangeOptionsNew": {
@@ -595,8 +662,8 @@
     "tokencover": "Alternative Token Cover",
     "simplecover5e": "Simple Cover 5e",
     "expandedHints": {
-      "none": "Paredes não bloqueiam verificação de alcance.",
-      "center": "Verifica a linha de visão do centro do token até o centro do alvo. Se uma parede bloquear a linha, o ataque será bloqueado.",
+      "none": "Paredes não bloqueiam a verificação de ataques à distância.",
+      "center": "Verifica a linha do centro do token até o centro do alvo. Se uma parede que bloqueia o movimento cruzar essa linha (cobertura total), o ataque será bloqueado, mas a escuridão e as paredes que bloqueiam apenas a visão não impedem o ataque. Linhas entre elevações diferentes também são verificadas em relação às superfícies das Regiões.",
       "levelsautocover": "Use o módulo Levels Auto Cover para calcular a cobertura. A Cobertura Total bloqueia o ataque. Requer o módulo Levels Auto Cover.",
       "simbuls-cover-calculator": "Use o módulo Simbul's Cover Calculator para calcular a cobertura. A Cobertura Total bloqueia o ataque. Requer o módulo Simbul's Cover Calculator.",
       "tokencover": "Use o módulo Alternative Token Cover para calcular a cobertura. A Cobertura Total bloqueia o ataque. Requer o módulo Alternative Token Cover.",
@@ -606,7 +673,24 @@
   "midi-qol.VisionTestHeight.Name": "Altura do Ponto do Teste de Visão",
   "midi-qol.VisionTestHeight.Hint": "Qual elevação usar para testar a visibilidade do token. Afeta tanto a renderização do Foundry quanto as verificações de visão do Midi-QOL.",
   "midi-qol.SurfaceOcclusion.Name": "Ocluir Superfícies de Andares Superiores",
-  "midi-qol.SurfaceOcclusion.Hint": "Em cenas com múltiplos níveis, torna transparentes as superfícies dos andares superiores ao visualizar de um andar inferior, mesmo que o token não esteja diretamente abaixo delas.",
+  "midi-qol.SurfaceOcclusion.Hint": "Em cenas com andares, torna transparentes as superfícies dos andares superiores ao visualizar de um andar inferior, mesmo que o token não esteja diretamente abaixo delas.",
+  "midi-qol.RulesAlwaysApplied.Name": "Regras Sempre Aplicadas",
+  "midi-qol.RulesAlwaysApplied.Hint": "Estas regras são aplicadas independentemente de as regras opcionais abaixo estarem ativadas.",
+  "midi-qol.ShowAttackRollDetails.Name": "Exibir Detalhes das Rolagens de Ataque",
+  "midi-qol.ShowAttackRollDetails.Hint": "Exibe ícones ao lado do resultado total de uma rolagem de ataque para indicar fatores especiais que a influenciaram (flanqueamento, bônus concedido por um alvo, bônus de um efeito e exaustão), além de uma dica sobre o resultado total que lista todos os termos da rolagem.",
+  "midi-qol.HiddenGroundCue.Name": "Marcar Andares Inferiores Onde as Criaturas Não Podem Ser Vistas",
+  "midi-qol.HiddenGroundCue.Hint": "Em cenas com andares, o andar inferior é exibido onde houver uma abertura que permita vê-lo, mas uma criatura posicionada nesse andar permanece oculta se a borda do piso ou uma parede bloquear a linha de visão a partir dos olhos do seu token. Marca esses quadrados utilizando o estilo selecionado abaixo.",
+  "midi-qol.HiddenGroundCue.Style.Name": "Estilo de Área Oculta",
+  "midi-qol.HiddenGroundCue.Style.Hint": "Define como são marcados os quadrados onde as criaturas não podem ser vistas.",
+  "midi-qol.HiddenGroundCue.Style.tint": "Colorização",
+  "midi-qol.HiddenGroundCue.Style.dim": "Escurecimento",
+  "midi-qol.HiddenGroundCue.Style.hatch": "Hachura",
+  "midi-qol.HiddenGroundCue.Style.outline": "Contorno",
+  "midi-qol.HiddenGroundCue.Style.hatchOutline": "Hachura e Contorno",
+  "midi-qol.HiddenGroundCue.Color.Name": "Cor das Áreas Ocultas",
+  "midi-qol.HiddenGroundCue.Color.Hint": "Cor utilizada na Colorização, Hachura e Contorno (Escurecimento é sempre preto).",
+  "midi-qol.HiddenGroundCue.Opacity.Name": "Opacidade das Áreas Ocultas",
+  "midi-qol.HiddenGroundCue.Opacity.Hint": "Define a intensidade da marcação dos quadrados.",
   "midi-qol.VisionTestHeightOptions": {
     "center": "Centro",
     "top": "Topo",
@@ -615,15 +699,29 @@
       "top": "Testa a visibilidade no topo do token (elevação + profundidade). Afeta tanto a origem da visão do token de origem quanto os pontos de teste do alvo. Útil para cenas com múltiplos níveis, onde tokens próximos às bordas do piso devem ficar mais visíveis."
     }
   },
+  "midi-qol.TemplateOriginHeight.Name": "Altura de Origem do Modelo",
+  "midi-qol.TemplateOriginHeight.Hint": "A altura do conjurador a partir da qual os modelos de área das atividades são medidos: uma esfera é centralizada nessa altura, enquanto um cilindro, cubo ou linha tem sua base nela. Uma atividade pode substituir essa configuração nas suas configurações de Região.",
+  "midi-qol.TemplateOriginHeightOptions": {
+    "base": "Base do Conjurador",
+    "top": "Topo do Conjurador",
+    "eye": "Nível dos Olhos do Conjurador",
+    "expandedHints": {
+      "base": "Elevação do token do conjurador.",
+      "top": "A elevação do token do conjurador mais sua altura.",
+      "eye": "A altura de visão do conjurador, utilizada para sua linha de visão (Altura do Teste de Visão ou altura da fonte de visão do token)."
+    }
+  },
   "midi-qol.NearbyAllyRanged.Name": "(Regra da Casa) Ataques à distância contra inimigos próximos de aliados têm desvantagem",
   "midi-qol.WallsBlockRangeOptions": {
     "none": "Não",
     "center": "Verificação de Centro"
   },
   "midi-qol.CoverCalculation.Name": "Calcular Cobertura",
-  "midi-qol.CoverCalculation.Hint": "Calcula o bônus de CA para alvos em cobertura. Configurações retiradas do módulo selecionado.",
+  "midi-qol.CoverCalculation.Hint": "Calcula o bônus de CA para alvos sob cobertura, utilizando as configurações do módulo selecionado. A menos que a opção Nenhum esteja selecionada, um alvo com cobertura total (seja pelo status Cobertura Total ou pelo módulo) não poderá ser selecionado como alvo.",
+  "midi-qol.TargetsTotalCover": "{name}: {targets} possui Cobertura Total e não pode ser selecionado como alvo",
   "midi-qol.CoverCalculationOptions": {
     "none": "Nenhum",
+    "dnd5eStatus": "Apenas o Status de Cobertura do D&D5e",
     "simbuls-cover-calculator": "Simbul's Cover Calculator",
     "simplecover5e": "Simple Cover 5e",
     "levelsautocover": "Levels Auto Cover",
@@ -632,25 +730,28 @@
   "midi-qol.NearbyAllyRanged.Hint": "Ataques à distância com aliados próximos (5 pés) a alvos possuem desvantagem para alvos menores do que isso (largura * altura). Desabilitado em 0.",
   "midi-qol.Incapacitated.Name": "Se Ator Incapacitado Fizer Uma Ação, Midi QOL Deve:",
   "midi-qol.IncapacitatedOptions": {
-    "nothing": "Fazer Nada",
-    "enforce": "Impôr 'Sem Ações'",
+    "nothing": "Permitir",
+    "enforce": "Impor 'Sem Ações'",
     "warn": "Apenas Avisar"
   },
-  "midi-qol.CriticalSaves.Name": "(Regra da Casa) Acerto/Erro Crítico Sempre em Sucesso/Falha para Salvaguardas",
+  "midi-qol.CriticalSaves.Name": "(Regra da Casa) Críticos/Falhas Críticas Sempre Resultam em Sucesso/Falha nas Salvaguardas",
   "midi-qol.MaxDRValue.Name": "(Regra da Casa) Apenas a maior Redução de Dano será aplicada. Desabilitar significa que ela acumula",
   "midi-qol.invisible": "Invisível",
   "midi-qol.hidden": "Escondido",
   "midi-qol.nevertarget": "Nunca Marcar",
   "midi-qol.DamageCardMultHeader": "Mult",
   "midi-qol.DamageCardUndoHeader": "Desfazer",
+  "midi-qol.DamageCardViewAsPlayer": "Visualizar como Jogador",
+  "midi-qol.DamageCardPlayerView": "Visão do Jogador",
+  "midi-qol.DamageCardPlayerViewHidden": "Visão do Jogador (Não Exibida aos Jogadores)",
   "midi-qol.DamageCardApplyHeader": "Aplicar",
   "midi-qol.DamageCardCalc": "Calc",
   "midi-qol.DamageCardHeal": "Curar",
   "midi-qol.DamageCardAll": "Todos",
   "midi-qol.StatsTitle": "Estatísticas de Rolagem",
-  "midi-qol.RollStats": "Estatíticas",
+  "midi-qol.RollStats": "Estatísticas",
   "midi-qol.RollStatsConfig": "Configuração de Estatísticas",
-  "midi-qol.RemoveStats": "Remover Todas as Condições de",
+  "midi-qol.RemoveStats": "Remover Todas as Estatísticas de",
   "midi-qol.ClearStats": "Limpar Todas as Estatísticas",
   "midi-qol.EndSession": "Limpar Estatísticas de Sessão",
   "midi-qol.KeepRollStats.Name": "Manter Estatísticas de Rolagem",
@@ -658,13 +759,13 @@
   "midi-qol.SaveStatsEvery.Name": "Salvar Estatísticas a Cada",
   "midi-qol.SaveStatsEvery.Hint": "Salva estatísticas a cada N rolagens. Cada ataque e dano conta como uma rolagem. É sugerido 10-20 ou maior.",
   "midi-qol.PlayerStatsOnly.Name": "Apenas Estatísticas de Jogadores",
-  "midi-qol.PlayerStatsOnly.Hint": "Mantém apenas estatísticas de atores de controlados por jogadores.",
+  "midi-qol.PlayerStatsOnly.Hint": "Mantém apenas estatísticas de atores controlados por jogadores.",
   "midi-qol.ShowStats": "Mostrar Estatísticas de Rolagens",
   "midi-qol.stats.Attacks": "Ataques",
   "midi-qol.stats.Damage": "Dano",
   "midi-qol.stats.Saves": "Salvaguardas",
   "midi-qol.stats.Session": "Sessão",
-  "midi-qol.stats.Lifetime": "Tempo de Vida",
+  "midi-qol.stats.Lifetime": "Acumulado",
   "midi-qol.stats.rolls": "rolagens",
   "midi-qol.stats.crits": "críticos",
   "midi-qol.stats.fumbles": "falhas críticas",
@@ -706,11 +807,11 @@
   "midi-qol.DefaultSaveMult.Name": "Multiplicador Padrão de Salvaguarda",
   "midi-qol.DefaultSaveMult.Hint": "Se não houver outros modificadores, a salvaguarda causará esta fração do dano do ataque original. Padrão: 0.5 (metade do dano em sucesso). Você só deve mudar isso se souber como funcionam os multiplicadores.",
   "midi-qol.RequireMagical.Name": "Requer Propriedade 'Mágico'",
-  "midi-qol.RequireMagical.Hint": "Propriedade Mágica é a propriedade 'Mágico' da arma ou a propriedade 'Dano Mágico' do Midi QOL. Se habilitado, o item aplica dano mágico. Nenhum: itens além das armas causam dano mágico por padrão e armas causam dano mágico se o item possuir a propriedade 'Mágico'. Além de Magias: apenas magias causam dano mágico por padrão. Todos: nenhum item causa dano mágico por padrão.",
+  "midi-qol.RequireMagical.Hint": "A propriedade Mágico pode ser a propriedade <strong>Mágico</strong> do D&D5e ou <strong>Dano Mágico</strong> do Midi-QOL. Quando definida, o item causa dano mágico. <br><strong>Desativado</strong>: itens que não sejam armas causam dano mágico por padrão, já armas precisam da propriedade Mágico.<br><strong>Exceto Magias</strong>: somente magias causam dano mágico por padrão.<br><strong>Todos os Itens</strong>: nenhum item causa dano mágico por padrão.",
   "midi-qol.RequireMagicalOptions": {
-    "off": "Todos",
-    "nonspell": "Além de Magias",
-    "allitems": "Todos"
+    "off": "Desativado",
+    "nonspell": "Exceto Magias",
+    "allitems": "Todos os Itens"
   },
   "midi-qol.DoConcentrationCheck.Name": "Forçar Salvaguarda ao Sofrer Dano",
   "midi-qol.DoConcentrationCheckOptions": {
@@ -722,11 +823,11 @@
   "midi-qol.DoConcentrationCheck.Hint": "<strong>Apenas Mensagem no Chat</strong>: Exibe uma mensagem no chat com um botão (comportamento padrão do D&D5e e requer a Concentração do D&D5e).<br><strong>Mensagem no Chat + Rolagem Automática</strong>: exibe uma mensagem no chat e rola a salvaguarda automaticamente (requer a Concentração do D&D5e).<br><strong>Rolar Item de Concentração</strong>: rola um item de teste de Concentração (comportamento padrão do Midi QOL).",
   "midi-qol.RemoveConcentration.Name": "Remover Concentração ao Falhar na Salvaguarda de Concentração",
   "midi-qol.UsePlayerPortrait.Name": "Usar Imagem do Ator no Cartão de Chat",
-  "midi-qol.UsePlayerPortrait.Hint": "Para atores de Jogadores, usar a imagem ao invés do token nos cartões de chat do Midi QOL.",
+  "midi-qol.UsePlayerPortrait.Hint": "Para atores do tipo Personagem, usa o retrato do ator em vez da imagem do token nos cartões de chat do Midi-QOL.",
   "midi-qol.DistanceIncludesHeight.Name": "Incluir Diferença de Altura em Cálculos de Alcance",
   "midi-qol.DistanceMeasurement.Name": "Método de Medição de Distância",
   "midi-qol.DistanceMeasurement.Hint": "Como medir a distância entre tokens. 'Padrão' usa a medição principal do Foundry (centro a centro via measurePath). 'Centro dos Quadrados da Grade' usa os centros dos quadrados da grade mais próximos com processamento midi-qol. 'Perímetros do Token' usa os pontos mais próximos nas bordas do token (mais preciso para tokens grandes).",
-  "midi-qol.DistanceMeasurementOptions.default": "Padrão (Principal do Foundry)",
+  "midi-qol.DistanceMeasurementOptions.default": "Padrão (Núcleo do Foundry)",
   "midi-qol.DistanceMeasurementOptions.center": "Centro dos Quadrados da Grade",
   "midi-qol.DistanceMeasurementOptions.perimeter": "Perímetros do Token",
   "midi-qol.NoSocketLib": "Midi QOL requer o módulo socketlib instalado e habilitado",
@@ -737,16 +838,16 @@
   "midi-qol.ExportJSon": "Exportar Estatísticas de Rolagem para Um Arquivo Json",
   "midi-qol.ExportCSV": "Exportar Estatísticas de Rolagem para Um Arquivo CSV",
   "midi-qol.AutoCEEffectsOptions": {
-    "none": "Não aplicar",
-    "itempri": "Aplicar efeito do item. Se ausente, aplicar CE",
-    "cepri": "Aplicar CE. Se ausente, aplicar efeito do item",
-    "both": "Aplicar CE e efeito do item"
+    "none": "Apenas Efeitos da Atividade",
+    "itempri": "Aplicar Efeitos da Atividade. Se Ausente, Aplicar CE",
+    "cepri": "Aplicar CE. Se Ausente, Aplicar Efeitos da Atividade",
+    "both": "Aplicar CE e Efeito da Atividade"
   },
   "midi-qol.AutoCEEffects.Name": "Aplicar Convenient Effects",
-  "midi-qol.AutoCEEffects.Hint": "Aplicar efeitos do módulo Convenient Effects que corresponde ao nome do item quando o item é usado. Requer 'Aplicar Efeitos Ativos' habilitado.",
+  "midi-qol.AutoCEEffects.Hint": "Ao usar um item, aplica os Convenient Effects que correspondam ao nome da atividade. Se não houver correspondência, procura pelo nome do item. Requer que a aplicação automática de efeitos ativos também esteja habilitada.",
   "midi-qol.BonusACCover": "Cobertura de CA",
-  "midi-qol.NoChangelogs": "Midi QOL suporta e recomenda os módulos ChangeLogs ou Module Manager+ para mostrar quaisquer alterações desde a última atualização",
-  "midi-qol.ActiveDefenceString": "Active Defence",
+  "midi-qol.NoChangelogs": "Midi-QOL suporta e recomenda os módulos ChangeLogs ou Module Manager+ para mostrar quaisquer alterações desde a última atualização",
+  "midi-qol.ActiveDefenceString": "Defesa Ativa",
   "midi-qol.ActiveDefence.Name": "Defesa Ativa",
   "midi-qol.ActiveDefenceModifier.Name": "Modificador de Defesa Ativa",
   "midi-qol.ActiveDefenceModifier.Hint": "A CD da Defesa Ativa será 'bônus de ataque + este modificador' e a rolagem de Defesa Ativa será '1d20 + CA - (22 - modificador)'. <br>O valor não importa, apenas escolha o que faz as rolagens parecerem boas para você. <br> Os valores sugeridos são <strong>12</strong>, 10 ou 0.",
@@ -755,7 +856,7 @@
   "midi-qol.ActiveDefenceDC.Hint": "Se habilitado, a CD da Defesa Ativa será mostrada no cartão de chat.",
   "midi-qol.ActiveDefenceShow.Name": "Exibição Padrão para Rolagens de Defesa Ativa",
   "midi-qol.ActiveDefenceShow.Hint": "Se definido para 'Rolagem Pessoal', a rolagem será escondida do Mestre, independente de outras configurações.",
-  "midi-qol.GMHide3dDice.Name": "Esconder Rolagens de Dados 3D do Mestre. Subscreve outras configurações (apenas Cartão Mesclado)",
+  "midi-qol.GMHide3dDice.Name": "Esconder Dados 3D do Mestre em Ataques, Dano e Salvaguardas. Substitui Outras Configurações (Apenas Cartão Mesclado)",
   "midi-qol.GhostRolls.Name": "Exibir 'Dados Fantasma do Dice So Nice' ao Invés de Esconder (apenas Cartão Mesclado)",
   "midi-qol.convenientEffectsOn": "Aplicar Convenient Effect",
   "midi-qol.convenientEffectsOff": "Não Aplicar Convenient Effect",
@@ -786,21 +887,21 @@
   "midi-qol.SpellDamage": "Dano de Magia",
   "midi-qol.NonSpellDamage": "Dano de Não-Magia",
   "midi-qol.ConditionHeader": "Condições de Ativação",
-  "midi-qol.ItemActivationCondition.Name": "Uso de Itens",
-  "midi-qol.ReactionActivationCondition.Name": "Reação",
-  "midi-qol.OtherActivationCondition.Name": "Outro Dano",
+  "midi-qol.ItemActivationCondition.Name": "Permitir Uso do Item se Verdadeiro (Obsoleto)",
+  "midi-qol.ReactionActivationCondition.Name": "Acionar Reação se Verdadeiro (Obsoleto)",
+  "midi-qol.OtherActivationCondition.Name": "Rolar Outra Fórmula se Verdadeiro (Obsoleto)",
   "midi-qol.HPUpdated": "PV Atualizado",
-  "midi-qol.HPNPCUpdated": "PV de PJ Atualizado",
+  "midi-qol.HPNPCUpdated": "PV de PNJ Atualizado",
   "midi-qol.HPNotUpdated": "PV Não Atualizado",
   "midi-qol.reactionDamaged": "Sofrer Dano",
   "midi-qol.reactionManual": "Manual",
-  "midi-qol.reactionPreAttack": "Alvo de Ataque",
+  "midi-qol.reactionPreAttack": "Antes da Jogada de Ataque",
   "midi-qol.ddbGL.Name": "Habilitar suporte a ddb-game-log",
   "midi-qol.ddbGL.Hint": "Aceitar ataque/dano/salvaguardas do ddb-game-log para iniciar Workflows do Midi QOL no Foundry.",
   "midi-qol.ShowReactionChatMessage.Name": "Exibir Cartão de Chat para Reações",
   "midi-qol.reactionFlavorHit": "{actorName} foi atingido por {itemName} e pode usar sua reação",
   "midi-qol.reactionFlavorTargeted":"{actorName} foi alvo de {itemName} e pode usar sua reação",
-  "midi-qol.reactionFlavorMiss":  "{actorName} foi errado por {itemName} e pode usar sua reação",
+  "midi-qol.reactionFlavorMiss":  "{actorName} não foi atingido por {itemName} e pode usar sua reação",
   "midi-qol.reactionFlavorCrit":  "{actorName} sofreu um acerto crítico de {itemName} e pode usar sua reação",
   "midi-qol.reactionFlavorFumble":  "{actorName} foi atacado por {itemName} com uma falha crítica e pode usar sua reação",
   "midi-qol.reactionFlavorHeal":  "{actorName} foi curado por {itemName} e pode usar sua reação",
@@ -810,11 +911,11 @@
   "midi-qol.reactionFlavorSave": "{actorName} deve realizar uma salvaguarda por causa de {itemName} e pode usar sua reação",
   "midi-qol.reactionFlavorSaveFail":  "{actorName} falhou em uma salvaguarda de {itemName} e pode usar sua reação",
   "midi-qol.reactionFlavorSaveSuccess":  "{actorName} foi bem-sucedido em uma salvaguarda de {itemName} e pode usar sua reação",
-  "midi-qol.reactionFlavorMoved": "isMoved",
+  "midi-qol.reactionFlavorMoved": "Ocorreu um Movimento",
   "midi-qol.reactionUsed": "Reação Usada",
   "midi-qol.bonusActionUsed": "Ação Bônus Usada",
-  "midi-qol.AccelKeysOverride.Name": "Chaves de Velocidade do Midi QOL Subscreve Outras",
-  "midi-qol.AccelKeysOverride.Hint": "Se ativado, Midi QOL vai sempre usar o mapeamento de velocidade de chaves para vantagem/desvantagem ao invés de, por exemplo, repassar para o módulo Better Rolls",
+  "midi-qol.AccelKeysOverride.Name": "Atalhos de Rolagem do Midi-QOL Têm Prioridade sobre Outros",
+  "midi-qol.AccelKeysOverride.Hint": "Se habilitada, esta opção faz o Midi-QOL sempre usar seus próprios atalhos de vantagem/desvantagem, em vez de delegar a outros módulos, como Better Rolls.",
   "midi-qol.NoWorkflow": "Sem Workflow para o item {itemName}",
   "midi-qol._comment for translators_DeferText": "The text below is searched for by midi in the onUseMacro field in item data. If you change it every item with an onUseMacro will need to be changed to match",
   "midi-qol.DeferText": "[Defer]",
@@ -823,12 +924,14 @@
   "midi-qol.TargetConfirmationConfig.Name": "Confirmação de Alvo",
   "midi-qol.TargetConfirmationConfig.Hint": "Ao rolar um item, confirme os alvos antes de completar.",
   "midi-qol.TargetConfirmation.Name": "Confirmação de Alvo",
-  "midi-qol.TargetConfirmation.Blurb": "Selecione até {targetCount} {targetType}. Shift-Clique para selecionar múltiplos alvos.",
-  "midi-qol.TargetConfirmation.BlurbAny": "Selecione os alvos. Shift-Click para selecionar múltiplos alvos.",
+  "midi-qol.TargetConfirmation.Blurb": "Selecione até {targetCount} {targetType}. <br>Use Shift + clique em um token para adicioná-lo à lista de alvos.<br>Clique com o botão direito na lista para remover um alvo.",
+  "midi-qol.TargetConfirmation.BlurbAny": "Selecione qualquer quantidade de alvos.<br>Use Shift + clique em um token para adicioná-lo à lista de alvos.<br>Clique com o botão direito na lista para remover um alvo.",
   "midi-qol.AddDead.Name": "Adicionar Efeito de 0 PV",
-  "midi-qol.AddDead.Hint1": "Jogador Controlado",
-  "midi-qol.AddDead.Hint2": "Mestre Controlado",
+  "midi-qol.AddDead.Hint1": "Controlado por Jogador",
+  "midi-qol.AddDead.Hint2": "Controlado pelo Mestre",
   "midi-qol.markDefeated": "Marcar como Derrotado no Monitor de Combate",
+  "midi-qol.EnforceDeathSaves.Name": "Aplicar Salvaguardas Contra Morte",
+  "midi-qol.EnforceDeathSaves.Hint": "Um personagem com 0 pontos de vida que sofra dano, recebe uma falha na Salvaguarda Contra Morte, duas falhas se o dano vier de um acerto crítico e três falhas (morte) se o dano for igual ou superior aos seus pontos de vida máximos. Com três falhas ele é marcado como Morto, como ocorreria ao falhar em três Salvaguardas Contra Morte. Desfazer a aplicação do dano pelo cartão de dano restaura a contagem de falhas e o status anterior.",
   "midi-qol.AddDeadOptions": {
     "none": "Não Atualizar",
     "overlay": "Sobreposição",
@@ -838,23 +941,23 @@
   "midi-qol.AddWounded.Name": "Adicionar Efeito se PV Abaixo de %",
   "midi-qol.AddWounded.Hint": "Adiciona a condição selecionada quando o PV for menor ou igual à porcentagem especificada do máximo. 0 desativa.",
   "midi-qol.debugCallTiming.Name": "Log do Tempo de Execução",
-  "midi-qol.debugCallTiming.Hint": "Forneçe algumas informações de log sobre quanto tempo as coisas demoram.",
+  "midi-qol.debugCallTiming.Hint": "Fornece algumas informações de log sobre quanto tempo as coisas demoram.",
   "midi-qol.autoFailFriendly": "Falha Automática Aliado",
   "midi-qol.FailFriendly": "Aliado Falha",
   "midi-qol.SaveFriendly": "Aliado Sucesso",
-  "midi-qol.OffHandWeapon": "Duas Armas",
-  "midi-qol.RollToggle.Hint": "Alterna configurações de rolagens de Avanço Rápido/Automático para ataque/dano/testes de atributo.",
+  "midi-qol.OffHandWeapon": "Arma Secundária",
+  "midi-qol.RollToggle.Hint": "Enquanto a tecla estiver pressionada, alterna as configurações de avanço rápido/rolagem automática para ataques, dano e testes de atributo.",
   "midi-qol.RollToggle.Name": "Alternar Rolagem",
-  "midi-qol.FastForward.Hint": "Avanço Rápido na próxima rolagem",
+  "midi-qol.FastForward.Hint": "Usa Avanço Rápido em todas as rolagens enquanto a tecla estiver pressionada.",
   "midi-qol.FastForward.Name": "Avanço Rápido",
-  "midi-qol.KeysAdvantage.Hint": "Rolar com vantagem",
-  "midi-qol.KeysDisadvantage.Hint": "Rolar com desvantagem",
-  "midi-qol.KeysCritical.Hint": "Rolar dano crítico (apenas do cartão de chat)",
-  "midi-qol.KeysVersatile.Hint": "Rolar dano Versátil",
-  "midi-qol.KeysOther.Hint": "Rolar Outra Fórmula como dano",
-  "midi-qol.FixStickyKeys.Name": "Corrijir alt/ctrl/shift Travado",
-  "midi-qol.FixStickyKeys.Hint": "Se ativado, Midi QOL tentará resolver alt/ctrl/shift travado em 'Ativado'",
-  "midi-qol.QuickSettingsBlurb": "Configurações Rápidas permite definir uma combinação de configurações de uma só vez.<br>Quando um dos botões abaixo é pressionado, as alterações são feitas imediatamente nas suas configurações.<br>Uma lista de alterações é exibida quando as configurações são concluídas.<br>Sugestões de melhorias são bem-vindas.",
+  "midi-qol.KeysAdvantage.Hint": "Rolar com vantagem.",
+  "midi-qol.KeysDisadvantage.Hint": "Rolar com desvantagem.",
+  "midi-qol.KeysCritical.Hint": "Rolar dano crítico (apenas do cartão de chat).",
+  "midi-qol.KeysVersatile.Hint": "Rolar dano Versátil.",
+  "midi-qol.KeysOther.Hint": "Rolar Outra Fórmula como dano.",
+  "midi-qol.FixStickyKeys.Name": "Corrigir alt/ctrl/shift Travado",
+  "midi-qol.FixStickyKeys.Hint": "Se ativado, Midi QOL tentará resolver alt/ctrl/shift travado em 'Ativado'.",
+  "midi-qol.QuickSettingsBlurb": "Configurações Rápidas permitem definir uma combinação de configurações de uma só vez.<br>Quando um dos botões abaixo é pressionado, as alterações são feitas imediatamente nas suas configurações.<br>Uma lista de alterações é exibida quando as configurações são concluídas.<br>Sugestões de melhorias são bem-vindas.",
   "midi-qol.Reaction.Title": "Processo de Reação",
   "midi-qol.GMDoReactionsOptions": {
     "all": "Ativado",
@@ -870,13 +973,13 @@
   "midi-qol.ShowReactionAttackRollOptions": {
     "none": "Ataque Atinge",
     "d20": "Rolagens de d20",
-    "all": "Rolagem de Ataque Completa",
-    "allCrit": "Rolagem de Ataque Completa + Crítico"
+    "all": "Total da Jogada de Ataque",
+    "allCrit": "Total da Jogada de Ataque + Crítico"
   },
   "midi-qol.Reactions": "Avisar Para Reações",
   "midi-qol.DoReactions.Name": "Verificar Reações de Jogador",
-  "midi-qol.DoReactions.Hint": "Dá a um ator atacado a opção de usar sua reação antes de completar a rolagem. Reações ao atingir exigem a opção 'Verificação de Acerto' habilitada. Reações de dano se aplicar dano.",
-  "midi-qol.GMDoReactions.Name": "Verificar Reações de PJ/Mestre",
+  "midi-qol.DoReactions.Hint": "Oferece ao ator atacado a opção de usar uma reação antes de resolver a jogada. Reações ao ser atingido exigem a Verificação de Acerto habilitada. Reações a dano são verificadas ao aplicar o dano.",
+  "midi-qol.GMDoReactions.Name": "Verificar Reações de PNJ/Mestre",
   "midi-qol.ReactionTimeout.Name": "Tempo de Reação",
   "midi-qol.ReactionTimeout.Hint": "Quanto tempo esperar antes de assumir que nenhuma reação foi tomada.",
   "midi-qol.NoOptionalRules.Name": "Sem Regras Opcionais",
@@ -885,17 +988,17 @@
   "midi-qol.RecordAOO.Hint": "Quando um ator realizar um ataque e não for o turno dele no combate, marque sua reação como usada.",
   "midi-qol.RecordAOOOptions": {
     "none": "Não Registrar",
-    "character": "Apenas Jogadores",
+    "character": "Apenas Personagens",
     "all": "Todos Atores"
   },
-  "midi-qol.EnforceReactions.Name": "Forçar Reações",
+  "midi-qol.EnforceReactions.Name": "Controlar Uso de Reações",
   "midi-qol.EnforceReactions.Hint": "Avisar ao usar itens de reação se uma reação já tiver sido usada nesta rodada.",
-  "midi-qol.EnforceBonusActions.Name": "Forçar Ações Bônus",
+  "midi-qol.EnforceBonusActions.Name": "Controlar Uso de Ações Bônus",
   "midi-qol.EnforceBonusActions.Hint": "Avisar ao usar itens de ação bônus se uma ação bônus já tiver sido usada nesta rodada.",
   "midi-qol.EnforceReactionsOptions": {
     "none": "Não Forçar",
     "displayOnly": "Exibir Ícone de Condição",
-    "character": "Jogadores: Avisar se Usado",
+    "character": "Personagens: Avisar se Usado",
     "all": "Todos Atores: Avisar se Usado"
   },
   "midi-qol.EnforceReactions.Title": "Reação Usada",
@@ -911,7 +1014,7 @@
   "midi-qol.SoundSettingsBlurb": "Começando...<br>Escolha 'Criar Playlist de Amostra' para criar a playlist 'Midi Item Sounds' com alguns sons.<br>Escolha 'Configurações Básicas' e mexa nela.<br>As outras configurações de criação adicionam mais detalhes/complexidade.",
   "midi-qol.AddRow": "Adicionar Linha",
   "midi-qol.CheckFlanking.Name": "Verificar Flanco",
-  "midi-qol.CheckFlanking.Hint": "Verifica se você e seus aliados estão flanqueando o oponente. Dá vantagem a quem ataca e/ou aplica a condição 'CE flanking' a quem ataca OU aplica a condição 'CE Flanked' ao alvo.",
+  "midi-qol.CheckFlanking.Hint": "Verifica se você e seus aliados flanqueiam o oponente. Concede vantagem ao atacante, aplica a condição <strong>Flanqueando</strong> ao atacante ou aplica <strong>Flanqueado</strong> ao <em>alvo</em>. Ao mudar para uma das opções do Midi, é necessário reiniciar/recarregar a sessão.",
   "midi-qol.CheckFlankingOptions": {
     "off": "Não",
     "advonly": "Apenas Vantagem",
@@ -933,9 +1036,25 @@
     }
   },
   "midi-qol.Flanked": "Flanqueado",
+  "midi-qol.ActivityStatuses.Label": "Status Aplicados",
+  "midi-qol.ActivityStatuses.Hint": "Aplica os status diretamente aos alvos, da mesma forma que o HUD do Token os ativa ou desativa, juntamente com os efeitos da atividade: se a salvaguarda falhar ou independentemente do resultado da salvaguarda e no caso de um ataque, é aplicado apenas se o ataque acertar, em ambos os casos. Os status ficam vinculados à concentração, assim como os efeitos. Uma criatura que já possui o status o mantém.",
+  "midi-qol.ActivityStatuses.Add": "Adicionar Status",
+  "midi-qol.ActivityStatuses.Delete": "Remover Status",
+  "midi-qol.ActivityStatuses.Status": "Status",
+  "midi-qol.ActivityStatuses.SpecialDuration": "Também Termina Quando",
+  "midi-qol.ActivityStatuses.AddDuration": "Adicionar…",
+  "midi-qol.ActivityStatuses.DeleteDuration": "Remover",
+  "midi-qol.ActivityStatuses.OnSave": "Aplicar",
+  "midi-qol.ActivityStatuses.OnFailedSave": "Se a Salvaguarda Falhar",
+  "midi-qol.ActivityStatuses.WhateverTheSave": "Independente da Salvaguarda",
+  "midi-qol.InvisibleBrief": "Invisível (até realizar um ataque, conjurar uma magia ou causar dano)",
   "midi-qol.Flanking": "Flanqueando",
+  "midi-qol.AttackTerm.RollBonus": "Bônus de Rolagem",
+  "midi-qol.AttackTerm.Situational": "Situacional",
+  "midi-qol.AttackTerm.Bonus": "Bônus",
+  "midi-qol.AttackTerm.Other": "Outro",
   "midi-qol.FlankingBonus.Name": "Tipo de Bônus de Flanqueamento",
-  "midi-qol.FlankingBonus.Hint": "Quando um flanqueamento for detectado, conceda vantagem (padrão) ou reduza a CA efetiva do alvo em um valor fixo.",
+  "midi-qol.FlankingBonus.Hint": "Quando um flanqueamento for detectado, conceda vantagem (padrão) ou adiciona um bônus fixo à rolagem de ataque. O flanqueamento se aplica a ataques corpo a corpo contra um único alvo (com a opção Rolar Ataques Separados por Alvo, cada rolagem é considerada individualmente).",
   "midi-qol.SharpShooter": "Sharpshooter",
   "midi-qol.SpellSniper": "Spell Sniper",
   "midi-qol.FlankingRequiresVisibility.Name": "Flanquear exige que o alvo consiga perceber o flanqueador",
@@ -950,20 +1069,21 @@
   "midi-qol.FlankingBonusOptions.5": "+5 para atingir",
   "midi-qol.FlankingLabel": "Flanqueando",
   "midi-qol.RollAlternate.Name": "Mover Fórmula de Rolagem para Dica",
-  "midi-qol.RollAlternate.Hint": "Usa uma exibição alternativa de rolagem no Cartão Mesclado, movendo a fórmula de rolagem para a dica e, opcionalmente, adiciona atribuição de vantagem.",
+  "midi-qol.RollAlternate.Hint": "Move a fórmula da rolagem para o detalhamento expandido da rolagem. As opções de identificação das fontes de vantagem também listam nesse detalhamento as origens da vantagem/desvantagem. Essas opções estão obsoletas, pois o ícone de informações ao lado do rótulo da rolagem já exibe essas informações.",
   "midi-qol.RollAlternateOptions": {
     "off": "Dica Padrão",
     "formula": "Fórmula -> Dica",
-    "adv": "Atribuição de Vantagem",
-    "formulaadv": "Fórmula -> Dica + Atribuição de Vantagem"
+    "adv": "Atribuição de Vantagem (Obsoleto)",
+    "formulaadv": "Fórmula -> Dica + Atribuição de Vantagem (Obsoleto)"
   },
   "midi-qol.OptionalCritRule.Name": "(Regra da Casa) Margem de Rolagem Crítica",
   "midi-qol.OptionalCritRule.Hint": "Rolagens de ataque na quantidade configurada acima da CA são críticos. Desabilitado em -1.",
   "midi-qol.CriticalNat20.Name": "(Regra da Casa) Permitir Críticos Normais",
-  "midi-qol.CriticalNat20.Hint": "Uma rolagem acima da margem crítica é considerado um crítico, mesmo que ela não preencha os requisitos da margem crítica.",
+  "midi-qol.CriticalNat20.Hint": "Um resultado que conte como crítico pelas regras normais continua sendo crítico mesmo sem cumprir a margem acima da CA exigida pela regra opcional.",
   "midi-qol.ActorOnUseMacros": "Macro Ao Usar de Ator",
-  "midi-qol.MacroPass": "Macro Pass",
+  "midi-qol.MacroPass": "Etapa da Macro",
   "midi-qol.MacroName": "Nome da Macro",
+  "midi-qol.MacroNameDefault": "Em Branco: macro deste item ou desta atividade",
   "midi-qol.DamageRolled": "Rolado",
   "midi-qol.DamageApplied": "Aplicado",
   "midi-qol.DamageDealt": "causado",
@@ -976,26 +1096,24 @@
   "midi-qol.IgnoreSpellReactionRestriction.Name": "Permitir Uso de Qualquer Magia de Reação",
   "midi-qol.IgnoreSpellReactionRestriction.Hint": "Não exige espaços de magia disponíveis ou preparação ao escolher magias de reação.",
   "midi-qol.DamageVulnerabilityMultiplier.Name": "Vulnerabilidade multiplica dano por",
-  "midi-qol.DamageResistanceMultiplier.Name": "Resistência reduz dano por",
+  "midi-qol.DamageResistanceMultiplier.Name": "Resistência Reduz o Dano para",
   "midi-qol.DamageImmunityMultiplier.Name": "Imunidade reduz dano a",
   "midi-qol.ShowFastForward.Name": "Mostrar Avanço Rápido",
   "midi-qol.ShowFastForward.Hint": "Mostrar indicador de Avanço Rápido nos botões de ataque e dano.",
   "midi-qol.MeasuredTemplate": "Modelo",
   "midi-qol.AutoRemoveTemplate.Name": "Remover Modelos de Magias Expiradas",
-  "midi-qol.AutoRemoveSummonedCreature.Name": "Remover Criaturas Invocadas de Itens Expirados (para itens de invocação do D&D5e)",
+  "midi-qol.AutoRemoveSummonedCreature.Name": "Remover Criaturas Invocadas Automaticamente ao Expirar o Item ou Encerrar a Concentração (Invocações do D&D5e)",
   "midi-qol.AutoUndoTransformations.Name": "Desfazer Transformações Automaticamente",
   "midi-qol.AutoUndoTransformations.Hint": "Ao transformar um alvo, adicione um efeito/concentração ao conjurador, que rastreia as transformações e reverte automaticamente o alvo à sua forma original ao expirar/remover o efeito/concentração.",
   "midi-qol.AttackPerTarget.Name": "Rolar Ataques Separados por Alvo",
-  "midi-qol.SkillAbilityCheckAdvantage.Name": "Vantagem em Testes de Atributo dá Vantagem em Perícias",
-  "midi-qol.SkillAbilityCheckAdvantage.Hint": "Se um ator possuir vantagem/desvantagem em testes de atributo, perícias baseadas naquele atributo também possuem vantagem/desvantagem.",
-  "midi-qol.ignoreTotalCover": "Sem Cobertura Completa",
+  "midi-qol.ignoreTotalCover": "Sem Cobertura Total (Obsoleto)",
   "midi-qol.InitPromptTitle": "Rolagem de Iniciativa",
   "midi-qol.HighlightSuccess.Name": "Exibir Cores para Acerto/Erro/Salvaguarda",
   "midi-qol.HighlightSuccess.Hint": "Ao exibir acertos/erros, acertos/sucessos estarão em verde e erros/falhas estarão em vermelho.",
   "midi-qol.HighLightCriticalAttackOnly.Name": "Destaque Apenas para Acertos/Erros Críticos",
   "midi-qol.HighLightCriticalAttackOnly.Hint": "Substitui o destaque de acertos e erros do D&D5e, destacando apenas jogadas de acertos/erros críticos",
-  "midi-qol.OptionalRuleVitality.Name": "(Regra da Casa) Vitalidade",
-  "midi-qol.OptionalRuleVitality.Hint": "Quando configurado a um recurso, dano aplicado a um alvo com 0 PV aplica dano ao recurso de vitalidade. Se o recurso chegar a 0, o alvo morre.",
+  "midi-qol.OptionalRuleVitality.Name": "(Regra da Casa) Item de Vitalidade",
+  "midi-qol.OptionalRuleVitality.Hint": "Informe o nome exato de um item com usos, respeitando maiúsculas e minúsculas (ex: 'Pontos de Vitalidade'). O dano aplicado a um alvo com 0 PV reduz os usos desse item. Quando seus usos chegarem a 0, o alvo morre.",
   "midi-qol.OptionalRuleVitalityCondition.Name": "Condição com Vitalidade Esgotada",
   "midi-qol.OptionalRuleVitalityCondition.Hint": "A condição a ser aplicada quando a vitalidade chega a 0. O padrão é 'Morto'.",
   "midi-qol.OptionalRuleVitalityDeathRequires.Name": "Exigências Morte com Vitalidade",
@@ -1003,23 +1121,53 @@
   "midi-qol.VitalityDeathRequires.VitalityOnly": "0 de Vitalidade",
   "midi-qol.VitalityDeathRequires.VitalityAndHP": "0 de Vitalidade e 0 de PV",
   "midi-qol.AutoRerollInitiative.Name": "Re-rolar Iniciativa",
-  "midi-qol.AutoRerollInitiative.Hint": "Re-rola automaticamente a iniciativa de todos os combatentes no início de uma nova rodada. Aviso: pode quebrar efeitos de rodada/turno.",
+  "midi-qol.AutoRerollInitiative.Hint": "Rola novamente a iniciativa de todos os combatentes no início de uma nova rodada. Aviso: isso pode interferir na expiração de efeitos por rodada/turno.",
+  "midi-qol.Overlaps.Title": "Midi-QOL: possíveis conflitos de configurações",
+  "midi-qol.Overlaps.Intro": "Estas configurações podem entrar em conflito.",
+  "midi-qol.Overlaps.OpenTroubleShooter": "Abrir TroubleShooter",
+  "midi-qol.Overlaps.Dismiss": "Não me lembrar",
+  "midi-qol.Overlaps.Dismissed": "Midi-QOL: estes conflitos não serão relatados novamente, a menos que os sistemas envolvidos sejam alterados.",
+  "midi-qol.Overlaps.Acknowledged": "dispensado",
+  "midi-qol.Overlaps.wounded.Feature": "Marcador de Ferido/Ensanguentado",
+  "midi-qol.Overlaps.wounded.Advice": "Uma criatura ferida recebe um marcador de cada sistema. Desative todos, exceto um.",
+  "midi-qol.Overlaps.dead.Feature": "Marcador de Inconsciente/Morto",
+  "midi-qol.Overlaps.dead.Advice": "Cada sistema marca uma criatura com 0 PV, e os marcadores podem entrar em conflito (por exemplo, Morto e Inconsciente). Desative todos, exceto um.",
+  "midi-qol.Overlaps.deadStatusMissing.Feature": "Status para PV = 0 indisponível",
+  "midi-qol.Overlaps.deadStatusMissing.Advice": "A configuração Adicionar Efeito quando PV = 0 do Midi-QOL está definida para usar um status que não existe mais (por exemplo, ocultado na configuração de Condições do Custom D&D 5e). Por isso, nenhum efeito é adicionado quando os PV chegam a 0. Exiba o status novamente ou escolha um disponível nas configurações de Mecânicas do Midi-QOL.",
+  "midi-qol.Overlaps.Settings.statusMissing": "Status Morto/Inconsciente Oculto ou Removido",
+  "midi-qol.Overlaps.StatusEffects": "Efeitos de Status",
+  "midi-qol.Overlaps.initiative.Feature": "Iniciativa rolada novamente a cada rodada",
+  "midi-qol.Overlaps.initiative.Advice": "A iniciativa é rolada duas vezes a cada rodada. Desative uma das opções. A Correção Automática do TroubleShooter desativa a nova rolagem automática de iniciativa do midi, que também pode interferir na expiração de efeitos por rodada ou turno.",
+  "midi-qol.Overlaps.averageDamage.Feature": "Dano Médio",
+  "midi-qol.Overlaps.averageDamage.Advice": "A configuração Dano Médio do Custom D&D 5e substitui a rolagem de dano, fazendo com que o midi não aplique nenhum dano. Em vez disso, use a configuração 'Todas as rolagens de dano/crítico usam resultados médios' do midi (com as mesmas opções) e defina a configuração do Custom D&D 5e como Nenhum. A Correção Automática do TroubleShooter realiza ambos os ajustes.",
+  "midi-qol.Overlaps.Settings.customAverageDamage": "Dano Médio",
+  "midi-qol.Overlaps.damageReplaced.Feature": "Dano rolado fora do Midi-QOL",
+  "midi-qol.Overlaps.damageReplaced.Advice": "As configurações de dano por Grupo e Probabilístico do Custom D&D 5e substituem as rolagens de ataque e dano, fazendo com que o midi não aplique nenhum dano nesses usos. Desative essas opções para manter a aplicação de dano pelo midi. A Correção Automática do TroubleShooter desativa ambas.",
+  "midi-qol.Overlaps.Settings.customApplyBloodied": "Ensanguentado: aplicar status",
+  "midi-qol.Overlaps.Settings.customApplyDead": "Aplicar Morto/Aplicar Inconsciente",
+  "midi-qol.Overlaps.Settings.monksAutoDefeated": "Derrotado Automaticamente",
+  "midi-qol.Overlaps.Settings.customRerollInitiative": "Rolar iniciativa novamente a cada rodada / Iniciativa por Fator de Velocidade",
+  "midi-qol.Overlaps.Settings.midiDamage": "aplicação de dano",
+  "midi-qol.Overlaps.Settings.customDamage": "Dano por Grupo/Dano Probabilístico",
   "midi-qol.RollChecksBlind.Name" : "Testes de Atributo às Cegas de Jogador",
   "midi-qol.RollSavesBlind.Name" : "Salvaguardas às Cegas de Jogador",
   "midi-qol.RollSkillsBlind.Name" : "Testes de Perícia às Cegas de Jogador",
   "midi-qol.UndoWorkflow" : {
     "Name": "Desfazer Rolagens de Itens",
-    "Hint": "Se habilitado, Midi QOL armazenará informações de desfazer para todas as rolagens. Não é adequado para tempo de jogo. Desfazer via MidiQOL.undoMostRecentWorkflow()",
+    "Hint": "Se habilitado, o Midi-QOL armazena dados para desfazer todas as rolagens de itens/atividades. Para desfazer, use MidiQOL.undoMostRecentWorkflow().",
     "title": "Desfazer Workflow",
     "actorName": "Nome do Ator",
     "itemName": "Nome do Item",
     "targetName": "Nome do Alvo",
-    "removeFirstWorkflow": "Remover Top/Mais Recentes Workflows da Lista (CUIDADO)",
-    "undoFirstWorkflow": "Desfazer Top/Mais Recentes Workflows da Lista",
+    "removeFirstWorkflow": "Remover da Lista o Fluxo Mais Recente (ATENÇÃO)",
+    "undoFirstWorkflow": "Desfazer o Fluxo Mais Recente da Lista",
     "GMOnly": "Apenas Mestre pode desfazer Workflows"
   },
   "midi-qol.cubNotSupported": "Combat Utility Belt não será migrado para a versão 11 do Foundry. Midi QOL irá remover o suporte ao CUB na versão 11.1.0 do Midi QOL",
   "midi-qol.ContestedRoll": "Rolagem Contestada",
+  "midi-qol.DamageRollFailed": "{item}: a rolagem de dano falhou e o uso foi interrompido ({error})",
+  "midi-qol.ContestWaiting": "Aguardando {name} ({roll})",
+  "midi-qol.ContestNoResult": "{flavor}: nenhum resultado, a rolagem não foi realizada",
   "midi-qol.versus": "versus",
   "midi-qol.Skipped": "Pulado",
   "midi-qol.ExportTroubleShooting": "Exportar Informações de Trouble Shooting",
@@ -1044,7 +1192,7 @@
     "DeleteParent": "Excluir este documento pai",
     "DeleteDependent": "Excluir este documento dependente",
     "ConfirmDelete": "Confirmar Exclusão",
-    "ConfirmDeleteParent": "Tem certeza de que deseja excluir {name} ({type})? Isso também excluirá todas as suas dependências.",
+    "ConfirmDeleteParent": "Tem certeza de que deseja excluir {name} ({type})? Isso também excluirá todos os documentos que dependem dele.",
     "ConfirmDeleteDependent": "Tem certeza de que deseja excluir {name} ({type})?",
     "ConfirmDeleteItemEffect": "Tem certeza de que deseja excluir o efeito {name}? Isso removerá permanentemente o efeito do item.",
     "Delete": "Excluir",
@@ -1064,7 +1212,7 @@
       "errors": "Erros",
       "modules": "Todos os Módulos"
     },
-    "ClearErrors": "Limpar Errors",
+    "ClearErrors": "Limpar Erros",
     "Overwrite": "Substituir Config. Midi",
     "ReviewModules": "Revisar Módulos",
     "NoModuleData": "Nenhum dado do módulo disponível."
@@ -1095,10 +1243,10 @@
     "all": "Todas as rolagens de dano"
   },
   "midi-qol.GriddedGridless.Name": "Grade sem Grade",
-  "midi-qol.GridlessFudge.Name": "Fator de Fraude",
-  "midi-qol.GridlessFudge.Hint": "Subtrai o fator de fraude da medida de distância ao verificar alcance. Especificado em unidades de escala de grade (pés/metros, por exemplo).",
-  "midi-qol.GriddedGridless.Hint": "Se ativado, Midi QOL vai usar a grade quadrada para todos os cálculos de distância em cenas sem grade.",
-  "midi-qol.targetConfirmationPosition": "Confirmação da Posição do Alvo",
+  "midi-qol.GridlessFudge.Name": "Margem de Ajuste da Distância",
+  "midi-qol.GridlessFudge.Hint": "Valor subtraído das distâncias medidas ao verificar o alcance, em todos os tipos de grade. As distâncias entre as bordas dos tokens nunca ficam abaixo de uma unidade de grade, já as distâncias entre centros e ao longo de trajetos podem chegar a 0. O valor é especificado nas unidades de escala da grade, ou seja, pés/metros.",
+  "midi-qol.GriddedGridless.Hint": "Se ativado, Midi-QOL vai usar a grade quadrada para todos os cálculos de distância em cenas sem grade.",
+  "midi-qol.targetConfirmationPosition": "Posição da Confirmação de Alvos",
   "midi-qol.TargetConfirmationEnabled": "Habilitar Confirmação de Alvo",
   "midi-qol.TargetConfirmationAll": "Sempre confirmar alvos",
   "midi-qol.TargetConfirmationNoneTargeted": "Confirmar alvos se nenhum for selecionado",
@@ -1113,12 +1261,19 @@
   "midi-qol.TargetConfirmationAllies": "Confirmar alvos se qualquer alvo for um aliado",
   "midi-qol.OutOfRange": "Fora de Alcance",
   "midi-qol.TemplateOutOfRange": "O posicionamento do modelo está fora do alcance",
-  "midi-qol.SaveDROrder.Name": "Ordem de Redução de Dano",
-  "midi-qol.SaveDROrder.Hint": "Ordem em que a redução de dano será aplicada.",
+  "midi-qol.SingleDamageCalculation.Name": "Cálculo Único de Dano",
+  "midi-qol.SingleDamageCalculation.Hint": "Calcule o dano base, outros danos e dano bônus em uma única etapa. A Modificação de Dano (dm) e a Redução de Dano do Midi são recursos compartilhados entre todo o dano de uma atividade, em vez de serem aplicados uma vez para cada categoria de dano. Desative para restaurar o comportamento por categoria.",
+  "midi-qol.SaveDROrder.Name": "Ordem de Aplicação de Redução de Dano e Salvaguardas",
+  "midi-qol.SaveDROrder.Hint": "Ordem de aplicação da redução de dano.<br>dm.midi é a redução de dano específica do Midi-QOL.<br>dm é a redução de dano do sistema D&D5e.",
   "midi-qol.SaveDROrderOptions": {
-    "DRSaveDr": "Mod. Dano (dm.midi/dnd5e.dm) -> Salv./Red. Dano (dr/dv/di)",
-    "SaveDRDr": "Salv. -> Mod. Dano (dm.midi/dnd5e.dm) -> Red. Dano (dr/dv/di)",
-    "SaveDrDR": "Salv. -> Mod. Dano -> Red. Dano (dr/dv/di) -> Mod. Dano (dm.midi)"
+    "DRSaveDr": "dm.midi/dnd5e.dm -> Salvaguardas/(Resistência/Vulnerabilidade/Imunidade) - RAW do D&D5e",
+    "SaveDRDr": "Salvaguardas -> dm.midi/dnd5e.dm -> Resistência/Vulnerabilidade/Imunidade",
+    "SaveDrDR": "Salvaguardas -> dm -> Resistência/Vulnerabilidade/Imunidade -> dm.midi"
+  },
+  "midi-qol.AmmunitionPerTargetOptions": {
+    "default": "Uma por Rolagem de Ataque",
+    "use": "Uma por Uso",
+    "target": "Uma por Alvo"
   },
   "midi-qol.ConfirmTargetOptions": {
     "default": "Configurações Midi",
@@ -1150,8 +1305,8 @@
   "midi-qol.AddFakeDice.Name": "Adicionar Dados Falsos do Dice So Nice às Rolagens do Mestre",
   "midi-qol.AddFakeDice.Hint": "Adiciona dados extras aleatórios à animação do DSN para que os jogadores não possam contar dados para deduzir modificadores.",
   "midi-qol.MidiFieldsTab.Name": "Exibir os campos do Midi QOL em uma aba separada",
-  "midi-qol.UndoChatColor.Name": "Desfazer a Cor dos Cartões de Chat",
-  "midi-qol.UndoChatColor.Hint": "'Deletar' significa remover o cartão de chat ou desfazer. Do contrário, os cartões desfeitos são coloridos novamente.",
+  "midi-qol.UndoChatColor.Name": "Cor dos Cartões de Chat Desfeitos",
+  "midi-qol.UndoChatColor.Hint": "Excluir remove o cartão de chat ao desfazer a ação. Nas demais opções, os cartões correspondentes às ações desfeitas recebem outra cor.",
   "midi-qol.WaitForDamageApplication.Name": "Esperar Aplicação do Dano",
   "midi-qol.WaitForDamageApplication.Hint": "Aguarde até que o cliente do Mestre aplique o dano antes de concluir o Workflow. Desabilitar proporcionará uma pequena melhoria no desempenho, mas pode interferir em alguns módulos de terceiros.",
   "DND5E.DamageApplication.Change.Absorption": "Absorção a {type}",
@@ -1161,18 +1316,18 @@
   "DND5E.DamageApplication.Change.Saved": "Bem-Sucedido",
   "DND5E.DamageApplication.Change.SuperSaver": "Super Salvaguarda",
   "DND5E.DamageApplication.Change.SemiSuperSaver": "Semi-Super Salvaguarda",
-  "DND5E.DamageApplication.Change.UncannyDodge": "{type} Esquiva Sobrenatural",
+  "DND5E.DamageApplication.Change.UncannyDodge": "Esquiva Sobrenatural ({type})",
   "DND5E.DamageApplication.Change.DR": "DR",
   "midi-qol.SettingsSearch": "Pesquisa",
   "midi-qol.MidiPropertiesTab.Name": "Permissão Mínima para Propriedades de Itens",
-  "midi-qol.MidiPropertiesTab.Hint": "Permissão mínima que um usuário deve ter para acessar a aba de propriedades de itens do Midi QOL. <strong>Necessário reiniciar o mundo para aplicar</strong>.",
-  "midi-qol.CollapsibleTargets.Name": "Alvos Colapsáveis",
+  "midi-qol.MidiPropertiesTab.Hint": "Menor nível de permissão de usuário que pode acessar a aba de propriedades do Midi-QOL de um item. <strong>Requer recarregar a página após alterar a configuração</strong>.",
+  "midi-qol.CollapsibleTargets.Name": "Alvos Recolhíveis",
   "midi-qol.CollapsibleTargets.Hint": "A exibição de Acerto/Erro do alvo no cartão do chat é recolhível.",
   "midi-qol.AutoRemoveInstantaneousTemplate.Name": "Remover Modelos Instantâneos",
   "midi-qol.AutoRemoveInstantaneousTemplate.Hint": "Modelos colocados por um item com duração 'Instantânea' são removidos no final da rolagem do item.",
   "midi-qol.ReplaceDefaultActivities.Name": "Substituir Atividades D&D5e por Midi QOL",
   "midi-qol.ReplaceDefaultActivities.Hint": "Quaisquer atividades existentes, Ataque, Dano, Salvaguarda, Teste e Utilidade usarão as versões do Midi QOL. Isso é necessário para automatizar itens do SRD. Do contrário, você precisará configurar manualmente cada item para automação do Midi QOL.",
-  "midi-qol.AutoMergeActivityOther.Name": "Auto-Mesclar Outras Atividades para Atividades de Ataque Midi QOL (necessário reiniciar)",
+  "midi-qol.AutoMergeActivityOther.Name": "Mesclar Automaticamente Outra Atividade às Atividades de Ataque do Midi-QOL (Requer Recarregar a Página)",
   "midi-qol.AutoMergeActivityOther.Hint": "Se um item tiver apenas uma atividade de ataque e um único Dano, Salvaguarda, Teste ou Utilidade, ele será mesclado com a atividade de ataque.",
   "midi-qol.ConfirmAmmunition.Name": "Confirmar Munição ao Rolar Ataque",
   "midi-qol.ActivityNamePrefix.Name": "Prefixo de Atividade",
@@ -1206,7 +1361,7 @@
     "self": "Alvo Dono do Item",
     "targets": "Mesmos Alvos",
     "hitTargets": "Alvos Atingidos",
-    "missedTargets": "Alvos Errados",
+    "missedTargets": "Alvos Não Atingidos",
     "failedSaves": "Alvos Falha Salv.",
     "saveTargets": "Alvos Sucesso Salv.",
     "retarget": "Gerar Novos Alvos"
@@ -1215,7 +1370,7 @@
     "self": "Dono do Item",
     "firstTarget": "Primeiro Alvo",
     "firstHitTarget": "Primeiro Alvo Atingido",
-    "firstMissedTarget": "Primeiro Alvo Errado",
+    "firstMissedTarget": "Primeiro Alvo Não Atingido",
     "firstSaveTarget": "Primeiro Alvo Sucesso Salv.",
     "firstFailedSaveTarget": "Primeiro Alvo Falha Salv."
   },
@@ -1226,10 +1381,10 @@
     "chat": "Padrão D&D5e",
     "auto": "Apenas Si Mesmo"
   },
-  "midi-qol.dummyCards.Name": "Exibir Ataque/Dano em Cartão Mesclado Oculto",
-  "midi-qol.dummyCards.Hint": "(Experimental) Para jogadas do Mestre (pessoal, privado, cego), exibe um cartão da jogada de ataque/dano que acionará um cartão 'o Mestre rolou alguns dados' nos chats dos jogadores. Somente para o caso de você querer que os jogadores saibam que você rolou algo, mas não o que foi",
-  "midi-qol.dnd5eConcentrationTrackingDisabled": "<br><strong><center>Monitoramento de Concentração do D&D5e Desabilitado</strong><br></center><br><center>O Monitoramento de Concentração está desabilitado nas configurações do sistema D&D5e.</center><center>Habilite nas configurações do D&D5e para habilitar as configurações de concentração do Midi QOL</center><br>",
-  "midi-qol.ItemSheetMidiTab": "Midi QoL",
+  "midi-qol.dummyCards.Name": "Exibir aos Jogadores Quando o Mestre Rolar em Particular",
+  "midi-qol.dummyCards.Hint": "Quando o Mestre realizar uma rolagem nos modos Privado, Somente para Si ou Às Cegas, os outros jogadores veem um cartão indicando que alguns dados foram rolados, em vez de não verem nada. Assim, sabem que uma rolagem foi realizada, mas não seu resultado ou finalidade. A opção \"Realmente Esconder Rolagens Privadas/Cegas/Pessoais\" continua ocultando esse cartão.",
+  "midi-qol.dnd5eConcentrationTrackingDisabled": "<br><center><strong>Monitoramento de Concentração do D&D5e Desabilitado</strong><br></center><br><center>O Monitoramento de Concentração está desabilitado nas configurações do sistema D&D5e.</center><center>Habilite nas configurações do D&D5e para habilitar as configurações de concentração do Midi QOL.</center><br>",
+  "midi-qol.ItemSheetMidiTab": "Midi-QoL",
   "midi-qol.AddOnUseMacro": "Adicionar Macro Ao Usar",
   "midi-qol.CustomMacro": "Macro Personalizada",
   "midi-qol.SHARED": {
@@ -1237,7 +1392,7 @@
       "header": "Condições do Midi QOL"
     },
     "ignore": {
-      "header": "Ignorar Traços"
+      "header": "Ignorar Traços de Dano"
     },
     "FIELDS": {
       "useConditionText": {
@@ -1245,12 +1400,12 @@
         "hint": "Condição para permitir o uso."
       },
       "useConditionReason": {
-        "label": "Usar Motivo da Condição",
+        "label": "Motivo da Condição de Uso",
         "hint": "Mensagem a ser exibida se a condição de uso for falsa."
       },
       "effectConditionText": {
         "label": "Condição de Efeito Ativo",
-        "hint": "Condição para aplicar efeito ativo."
+        "hint": "Verificada para cada alvo. Seus efeitos, incluindo aqueles definidos como Sempre Aplicar, são aplicados apenas quando a condição for verdadeira."
       },
       "otherActivityId": {
         "label": "Usar Outra Atividade",
@@ -1272,6 +1427,10 @@
         "ignoreFullCover": {
           "label": "Ignorar Cobertura Total",
           "hint": "Ignora Cobertura Total em jogadas de dano/salvaguardas."
+        },
+        "targetMustBeSeen": {
+          "label": "Alvos que Você Pode Ver",
+          "hint": "Apenas alvos que você consegue ver podem ser selecionados (ex: \"uma criatura que você possa ver dentro do alcance\"). Essa restrição é aplicada pela configuração \"Alvos que Você Pode Ver\"."
         },
         "chooseEffects": {
           "label": "Escolher Efeitos",
@@ -1318,12 +1477,12 @@
           "hint": "Um identificador para a Atividade."
         },
         "triggeredActivityId": {
-          "label": "Atividade Gatilho",
+          "label": "Atividade a Acionar",
           "hint": "Atividade para executar."
         },
         "triggeredActivityConditionText": {
           "label": "Condição Gatilho",
-          "hint": "Condiçao para ativar a Atividade Gatilho."
+          "hint": "Condição para ativar a Atividade Gatilho."
         },
         "triggeredActivityTargets": {
           "label": "Alvos Gatilho",
@@ -1341,13 +1500,25 @@
           "label": "Mostrar Diálogo de Configuração",
           "hint": "Exibe a caixa de diálogo de configuração/consumo quando a Atividade Gatilho for executada."
         },
+        "followUp": {
+          "label": "Botão de Acompanhamento",
+          "hint": "Quando outra atividade deste item for utilizada, oferece esta atividade como um botão no cartão correspondente, executando-a contra os Alvos de Acompanhamento (um acerto crítico é tratado como crítico)."
+        },
+        "followUpTargets": {
+          "label": "Alvos de Acompanhamento",
+          "hint": "Define contra quem a atividade de acompanhamento será executada. O botão não será oferecido se não houver alvos elegíveis após um uso que envolveu alvos (como um ataque que errou ou uma salvaguarda em que ninguém falhou)."
+        },
+        "followUpCondition": {
+          "label": "Condição de Acompanhamento",
+          "hint": "Oferece o botão apenas quando esta condição for verdadeira (avaliada ao término do uso, considerando o primeiro dos Alvos de Acompanhamento como alvo)."
+        },
         "otherActivityCompatible": {
           "label": "Outra Atividade",
           "hint": "Pode ser usada como uma outra Atividade."
         },
         "toggleEffect": {
           "label": "Alternar Efeitos",
-          "hint": "Desabilitar um efeito irá alternar entra ativado e desativado ao invés de removê-lo."
+          "hint": "Desabilitar um efeito irá alternar entre ativado e desativado ao invés de removê-lo."
         },
         "magicEffect": {
           "label": "Efeito Mágico",
@@ -1391,6 +1562,11 @@
             "label": "Modificação",
             "short": "Ignorar Modificação",
             "hint": "Ignora Modificação de danos ao aplicar o dano."
+          },
+          "ddi": {
+            "label": "Reduzir Imunidade",
+            "short": "Reduzir Imunidade",
+            "hint": "Tratar imunidade a dano como resistência (metade do dano), em vez de ignorá-la. Ignorar uma imunidade faz com que o alvo sofra dano total."
           }
         },
         "autoCEEffects": {
@@ -1479,7 +1655,11 @@
       },
       "attackRollPerTarget": {
         "label": "Rolagem de Ataque por Alvo",
-        "hint": "Faz uma jogada de ataque separada para cada alvo. Cria um cartão de chat para cada alvo."
+        "hint": "Realiza uma rolagem de ataque separada para cada alvo, cada uma com seu próprio cartão no chat. Primeiro, o uso da atividade posiciona seu modelo de área e confirma seus alvos e em seguida, realiza um ataque contra cada alvo, um de cada vez."
+      },
+      "ammunitionPerTarget": {
+        "label": "Munição",
+        "hint": "Munição consumida quando o ataque possui vários alvos: uma por rolagem de ataque, uma para todo o uso (por exemplo, uma espingarda) ou uma para cada alvo (por exemplo, uma saraivada de flechas)."
       },
       "fumbleThreshold": {
         "label": "Margem de Falha Crítica",
@@ -1506,7 +1686,7 @@
     },
     "FIELDS": {
       "damage": {
-        "label": "Dano Salvaguarda",
+        "label": "Dano",
         "critical": {
           "label": "Dano Crítico",
           "allow": {
@@ -1523,14 +1703,14 @@
   },
   "midi-qol.ENCHANT": {
     "Title": {
-      "one": "Encanto Midi",
-      "other": "Encantos Midi"
+      "one": "Encantamento Midi",
+      "other": "Encantamentos Midi"
     }
   },
   "midi-qol.FORWARD": {
     "Title": {
-      "one": "Avanço Midi",
-      "other": "Avanços Midi"
+      "one": "Encaminhamento Midi",
+      "other": "Encaminhamentos Midi"
     }
   },
   "midi-qol.HEAL": {
@@ -1540,6 +1720,7 @@
     }
   },
   "midi-qol.OVERTIME": {
+    "Trigger": "É executada no momento escolhido do turno de cada criatura que possua um efeito cuja alteração seja flags.midi-qol.ActivityOverTime = {identifier} (o identificador desta atividade ou seu UUID). Adicione essa alteração ao efeito aplicado pelo seu item.",
     "Title": {
       "one": "OverTime Midi",
       "other": "OverTimes Midi"
@@ -1559,7 +1740,7 @@
         "hint": "Remove o efeito em uma salvaguarda bem-sucedida."
       },
       "rollAs": {
-        "label": "Colar Como",
+        "label": "Rolar Como",
         "hint": "Quem rola a atividade de OverTime",
         "target": "Token com Efeito",
         "source": "Token de Origem"
@@ -1613,8 +1794,60 @@
     },
     "AlreadyTransformed": "{name} já está Transformado"
   },
+  "midi-qol.TELEPORT": {
+    "Title": {
+      "one": "Teleporte Midi",
+      "other": "Teleportes Midi"
+    },
+    "FIELDS": {
+      "midiTeleport": {
+        "label": "Teleporte Midi",
+        "movers": {
+          "label": "Quem Será Teleportado",
+          "hint": "Conjurador e Alvos: o conjurador planeja seu movimento e você posiciona cada alvo a até 5 pés do destino do conjurador. Alvos: você posiciona cada alvo dentro da distância de teleporte do conjurador (utilize uma atividade de salvaguarda que acione esta atividade para mover apenas aqueles que falharem). Troca: o conjurador e o primeiro alvo, dentro da distância de teleporte, trocam de lugar"
+        },
+        "plan": {
+          "label": "Teleporte",
+          "hint": "Pelo botão do cartão ou durante o uso, após a aplicação dos efeitos e do dano (você planeja e posiciona o teleporte nesse momento e fechar a interface mantém o botão disponível)."
+        },
+        "blocked": {
+          "label": "Destino Bloqueado",
+          "hint": "Recusar: um espaço ocupado, uma parede ou (se exigido) um espaço que o conjurador não consegue ver é rejeitado, permitindo que você escolha outro destino. Falhar: o teleporte falha para todos e a atividade de dano do item é aplicada aos viajantes (Porta Dimensional)."
+        },
+        "requireSight": {
+          "label": "Destino Deve Estar Visível",
+          "hint": "O conjurador deve conseguir ver o destino (Passo Nebuloso: \"um espaço que você possa ver\")."
+        }
+      }
+    },
+    "Movers": {
+      "default": "Tokens Controlados (D&D5e)",
+      "caster": "Conjurador",
+      "casterAndTargets": "Conjurador e Alvos",
+      "targets": "Alvos",
+      "swap": "Trocar Conjurador e Alvo de Lugar"
+    },
+    "PlanModes": {
+      "button": "Pelo Botão do Cartão",
+      "auto": "Durante o Uso"
+    },
+    "BlockedModes": {
+      "refuse": "Recusar",
+      "fail": "Falhar"
+    },
+    "Blocked": "{name} não pode se teleportar para esse local: {reason}.",
+    "Occupied": "o espaço está ocupado",
+    "InWall": "o espaço está dentro de uma parede",
+    "BehindWall": "há uma parede no caminho",
+    "NotSeen": "o conjurador não consegue ver o destino",
+    "OutsideScene": "o destino está fora da cena",
+    "TooFar": "o destino está muito distante",
+    "NoSpace": "Não há espaço livre para {name} próximo ao destino. Ele permanece onde está.",
+    "NoGM": "{name} não foi movido: um Mestre precisa estar online para mover um token que não pertence a você.",
+    "Failed": "O teleporte falha: o destino está ocupado ou bloqueado."
+  },
   "midi-qol.fields": {
-    "use-condition-header": "Atividade Midi Permite Condição de Uso",
+    "use-condition-header": "Condição para Permitir o Uso da Atividade Midi",
     "attack-extras": "Campos de Ataque Midi",
     "effects-conditon": "Condição de Aplicação do Efeito Midi",
     "force-dialog": "Forçar Diálogo de Configuração",
@@ -1624,11 +1857,12 @@
   "midi-qol.BaseHealingFlavor": "Cura",
   "midi-qol.OtherDamageFlavor": "Outro",
   "midi-qol.OtherHealingFlavor": "Outra Cura",
-  "midi-qol.RequireAmmunition.Name": "Exigir Munição Disponível Se Usada",
-  "midi-qol.CheckTwoHanded.Name": "Não Requer Escudo em Ataques com Duas Mãos/Ambidestro",
+  "midi-qol.RequireAmmunition.Name": "Exigir Munição Disponível para Rolar o Ataque",
+  "midi-qol.CheckTwoHanded.Name": "Exigir que Não Haja Escudo Equipado em Ataques com Duas Mãos/Ambidestro",
   "midi-qol.NoAmmunition": "Existem 0 {name} no seu inventário",
   "midi-qol.NoAmmunitionAvailable": "Não há munição em seu inventário.",
   "midi-qol.NoAmmunitionSelected": "Você deve selecionar a munição a ser usada.",
+  "midi-qol.NotEnoughAmmunition": "O ataque precisa de {needed}x {name}. Você possui {quantity}x no inventário",
   "midi-qol.TwoHandedShieldWarning": "Não é possível usar ataque com as duas mãos ou com a mão secundária com um escudo equipado",
   "midi-qol.otherActivityConsumptionFailed": "{actorName}: {itemName} ({activityName}) - recursos insuficientes para outra atividade",
   "midi-qol.RefundOtherActivityResource": "Reembolsar Outro Recurso",
@@ -1665,23 +1899,23 @@
   "midi-qol.flagTemplate.fumble.description": "Falha crítica em jogadas de {label}.",
   "midi-qol.flagTemplate.noFumble.name": "Sem Falha Crítica ({label})",
   "midi-qol.flagTemplate.noFumble.description": "Não pode ter uma falha crítica em jogadas de {label}.",
-  "midi-qol.flagTemplate.fail.critical.name": "Falhar em Crítico ({label})",
+  "midi-qol.flagTemplate.fail.critical.name": "Impedir Acerto Crítico ({label})",
   "midi-qol.flagTemplate.fail.critical.description": "Não pode ter um acerto crítico em jogadas de {label}.",
   "midi-qol.flagTemplate.grants.advantage.name": "Conceder Vantagem ({label})",
-  "midi-qol.flagTemplate.grants.advantage.description": "Concede vantagem em jogadas de {label} que tenha este personagem como alvo.",
+  "midi-qol.flagTemplate.grants.advantage.description": "Concede vantagem em jogadas de {label} que tenham este personagem como alvo.",
   "midi-qol.flagTemplate.grants.advantage.attack.name": "Conceder Vantagem Ataque ({label})",
-  "midi-qol.flagTemplate.grants.advantage.attack.description": "Concede vantagem em jogadas de ataque {label} que tenha este personagem como alvo.",
+  "midi-qol.flagTemplate.grants.advantage.attack.description": "Concede vantagem em jogadas de ataque {label} que tenham este personagem como alvo.",
   "midi-qol.flagTemplate.grants.disadvantage.name": "Conceder Desvantagem ({label})",
-  "midi-qol.flagTemplate.grants.disadvantage.description": "Concede desvantagem em jogadas de {label} que tenha este personagem como alvo.",
+  "midi-qol.flagTemplate.grants.disadvantage.description": "Concede desvantagem em jogadas de {label} que tenham este personagem como alvo.",
   "midi-qol.flagTemplate.grants.disadvantage.attack.name": "Conceder Desvantagem Ataque ({label})",
-  "midi-qol.flagTemplate.grants.disadvantage.attack.description": "Concede desvantagem em jogadas de ataque {label} que tenha este personagem como alvo.",
+  "midi-qol.flagTemplate.grants.disadvantage.attack.description": "Concede desvantagem em jogadas de ataque {label} que tenham este personagem como alvo.",
   "midi-qol.flagTemplate.grants.noAdvantage.name": "Conceder Sem Vantagem ({label})",
   "midi-qol.flagTemplate.grants.noAdvantage.description": "Jogadas de {label} contra o alvo não terão vantagem.",
   "midi-qol.flagTemplate.grants.noAdvantage.attack.name": "Conceder Sem Vantagem Ataque ({label})",
   "midi-qol.flagTemplate.grants.noAdvantage.attack.description": "Jogadas de ataque {label} contra o alvo não terão vantagem.",
   "midi-qol.flagTemplate.grants.noDisadvantage.name": "Conceder Sem Desvantagem ({label})",
   "midi-qol.flagTemplate.grants.noDisadvantage.description": "Jogadas de {label} contra o alvo não terão desvantagem.",
-  "midi-qol.flagTemplate.grants.noDisadvantage.attack.name": "Conceder Sem Vantagem Ataque ({label})",
+  "midi-qol.flagTemplate.grants.noDisadvantage.attack.name": "Conceder Sem Desvantagem Ataque ({label})",
   "midi-qol.flagTemplate.grants.noDisadvantage.attack.description": "Jogadas de ataque {label} contra o alvo não terão desvantagem.",
   "midi-qol.flagTemplate.grants.critical.name": "Conceder Acerto Crítico ({label})",
   "midi-qol.flagTemplate.grants.critical.description": "Concede acerto crítico em jogadas de {label} contra este personagem.",
@@ -1764,9 +1998,9 @@
   "midi-qol.flagTemplate.grants.disadvantage.attack.school.name": "Conceder Desvantagem (Ataques com Magias de {label})",
   "midi-qol.flagTemplate.grants.disadvantage.attack.school.description": "Alvos têm desvantagem em jogadas de ataque contra este ator com magias de {label}.",
   "midi-qol.flagTemplate.grants.noAdvantage.attack.school.name": "Conceder Sem Vantagem (Ataques com Magias de {label})",
-  "midi-qol.flagTemplate.grants.noAdvantage.attack.school.description": "Jogadas de ataque com magias de {label} contra este ator, não terão vantagem.",
+  "midi-qol.flagTemplate.grants.noAdvantage.attack.school.description": "Jogadas de ataque com magias de {label} contra este ator não terão vantagem.",
   "midi-qol.flagTemplate.grants.noDisadvantage.attack.school.name": "Conceder Sem Desvantagem (Ataques com Magias de {label})",
-  "midi-qol.flagTemplate.grants.noDisadvantage.attack.school.description": "Jogadas de ataque com magias de {label} contra este ator, não terão desvantagem.",
+  "midi-qol.flagTemplate.grants.noDisadvantage.attack.school.description": "Jogadas de ataque com magias de {label} contra este ator não terão desvantagem.",
   "midi-qol.flagTemplate.noAdvantage.check.name": "Sem Vantagem (Testes de {label})",
   "midi-qol.flagTemplate.noAdvantage.check.description": "Vantagem não pode ser aplicada em testes de {label}.",
   "midi-qol.flagTemplate.noAdvantage.save.name": "Sem Vantagem (Salv. de {label})",
@@ -1782,7 +2016,7 @@
   "midi-qol.flagTemplate.success.ability.check.name": "Sucesso (Testes de {label})",
   "midi-qol.flagTemplate.success.ability.check.description": "Testes de {label} são automaticamente bem-sucedidos.",
   "midi-qol.flagTemplate.success.ability.save.name": "Sucesso (Salv. de {label})",
-  "midi-qol.flagTemplate.success.ability.save.description": "Salvaguardas de {label} são automaticamente bem-sucedidos.",
+  "midi-qol.flagTemplate.success.ability.save.description": "Salvaguardas de {label} são automaticamente bem-sucedidas.",
   "midi-qol.flagTemplate.superSaver.name": "Super Salv. ({label})",
   "midi-qol.flagTemplate.superSaver.description": "Sem dano em caso de sucesso, metade do dano em caso de falha.",
   "midi-qol.flagTemplate.semiSuperSaver.name": "Semi Super Salv. ({label})",
@@ -1823,22 +2057,22 @@
   "midi-qol.flagTemplate.grants.noAdvantage.check.description": "Testes de {label} forçados por este ator não terão vantagem.",
   "midi-qol.flagTemplate.grants.noDisadvantage.check.name": "Conceder Sem Desvantagem (Testes de {label})",
   "midi-qol.flagTemplate.grants.noDisadvantage.check.description": "Testes de {label} forçados por este ator não terão desvantagem.",
-  "midi-qol.flagTemplate.advantage.abilitySkill.name": "Vantagem (Perícia {label})",
+  "midi-qol.flagTemplate.advantage.abilitySkill.name": "Vantagem (Perícias de {label})",
   "midi-qol.flagTemplate.advantage.abilitySkill.description": "Vantagem em testes de perícia de {label}.",
-  "midi-qol.flagTemplate.disadvantage.abilitySkill.name": "Desvantagem (Perícia {label})",
+  "midi-qol.flagTemplate.disadvantage.abilitySkill.name": "Desvantagem (Perícias de {label})",
   "midi-qol.flagTemplate.disadvantage.abilitySkill.description": "Desvantagem em testes de perícia de {label}.",
-  "midi-qol.flagTemplate.noAdvantage.abilitySkill.name": "Sem Vantagem (Perícia {label})",
+  "midi-qol.flagTemplate.noAdvantage.abilitySkill.name": "Sem Vantagem (Perícias de {label})",
   "midi-qol.flagTemplate.noAdvantage.abilitySkill.description": "Vantagem não pode ser aplicada em testes de perícia de {label}.",
-  "midi-qol.flagTemplate.noDisadvantage.abilitySkill.name": "Sem Desvantagem (Perícia {label})",
+  "midi-qol.flagTemplate.noDisadvantage.abilitySkill.name": "Sem Desvantagem (Perícias de {label})",
   "midi-qol.flagTemplate.noDisadvantage.abilitySkill.description": "Desvantagem não pode ser aplicada em testes de perícia de {label}.",
-  "midi-qol.flagTemplate.grants.advantage.abilitySkill.name": "Conceder Vantagem (Perícia {label})",
+  "midi-qol.flagTemplate.grants.advantage.abilitySkill.name": "Conceder Vantagem (Perícias de {label})",
   "midi-qol.flagTemplate.grants.advantage.abilitySkill.description": "Concede vantagem em testes de perícia de {label}.",
-  "midi-qol.flagTemplate.grants.disadvantage.abilitySkill.name": "Conceder Desvantagem (Perícia {label})",
+  "midi-qol.flagTemplate.grants.disadvantage.abilitySkill.name": "Conceder Desvantagem (Perícias de {label})",
   "midi-qol.flagTemplate.grants.disadvantage.abilitySkill.description": "Concede desvantagem em testes de perícia de {label}.",
-  "midi-qol.flagTemplate.grants.noAdvantage.abilitySkill.name": "Conceder Sem Vantagem (Perícia {label})",
-  "midi-qol.flagTemplate.grants.noAdvantage.abilitySkill.description": "Testes de {label} forçados por este ator não terão vantagem.",
-  "midi-qol.flagTemplate.grants.noDisadvantage.abilitySkill.name": "Conceder Sem Desvantagem ({label} Skills)",
-  "midi-qol.flagTemplate.grants.noDisadvantage.abilitySkill.description": "Testes de {label} forçados por este ator não terão desvantagem.",
+  "midi-qol.flagTemplate.grants.noAdvantage.abilitySkill.name": "Conceder Sem Vantagem (Perícias de {label})",
+  "midi-qol.flagTemplate.grants.noAdvantage.abilitySkill.description": "Testes de perícias de {label} forçados por este ator não terão vantagem.",
+  "midi-qol.flagTemplate.grants.noDisadvantage.abilitySkill.name": "Conceder Sem Desvantagem (Perícias de {label})",
+  "midi-qol.flagTemplate.grants.noDisadvantage.abilitySkill.description": "Testes de perícias de {label} forçados por este ator não terão desvantagem.",
   "midi-qol.flagTemplate.advantage.skill.name": "Vantagem ({label})",
   "midi-qol.flagTemplate.advantage.skill.description": "Vantagem em testes de {label}.",
   "midi-qol.flagTemplate.disadvantage.skill.name": "Desvantagem ({label})",
@@ -1885,8 +2119,8 @@
   "midi-qol.flagTemplate.grants.noAdvantage.tool.description": "Testes com {label} não terão vantagem.",
   "midi-qol.flagTemplate.grants.noDisadvantage.tool.name": "Conceder Sem Desvantagem ({label})",
   "midi-qol.flagTemplate.grants.noDisadvantage.tool.description": "Testes com {label} não terão desvantagem.",
-  "midi-qol.flagTemplate.DR.damageType.name": "Redução  de Dano ({label})",
-  "midi-qol.flagTemplate.DR.damageType.description": "Redução de dano {label}.",
+  "dae.1Miss": "1 Erro: Expira no próximo ataque {type} do personagem que não atingir nenhum alvo",
+  "dae.isMissed": "Não Atingido: Expira se o personagem for alvo de um ataque armado ou mágico que não o atinja",
   "dae.MidiQOL.fieldData": {
     "flags.midi-qol.advantage.ability.all": {
       "name": "Vantagem Atributo (Todos)",
@@ -1945,7 +2179,7 @@
       "description": "Ao invés de usar este, use os campos de system.traits.dm com valores negativos." 
     },
     "flags.midi-qol.DR.temphp": {
-      "name": "(Obsoleto) Redução de Dano (Cura Temporária)",
+      "name": "(Obsoleto) Redução de Dano (PV Temporário)",
       "description": "Ao invés de usar este, use os campos de system.traits.dm com valores negativos." 
     },
     "flags.midi-qol.OverTime": {
@@ -1982,14 +2216,14 @@
     },
     "flags.midi-qol.disadvantage.all": {
       "name": "Desvantagem Todos Dados",
-      "description": "Desvantagem em todas as rolagens de d20" 
+      "description": "Desvantagem em todas as rolagens de d20." 
     },
     "flags.midi-qol.noAdvantage.all": {
       "name": "Sem Vantagem (Todos)",
       "description": "Previne Vantagem em todas as jogadas."
     },
     "flags.midi-qol.noDisadvantage.all": {
-      "name": "Sem Desvantagem Ataque (Todos)",
+      "name": "Sem Desvantagem (Todos)",
       "description": "Previne Desvantagem em todas as jogadas."
     },
     "flags.midi-qol.noAdvantage.concentration": {
@@ -2041,7 +2275,7 @@
       "description": "" 
     },
     "flags.midi-qol.fail.spell.vocal": {
-      "name": "Falha (Componente Vocal)",
+      "name": "Falha (Componente Verbal)",
       "description": "" 
     },
     "flags.midi-qol.fail.deathSave": {
@@ -2057,15 +2291,15 @@
       "description": "" 
     },
     "flags.midi-qol.bloodsense": {
-      "name": "Blood Sense (Alcance)",
-      "description": "Percepção às Cegas dentro deste alcance para criaturas feridas (sem qualquer ponto de vida). Anula vantagem de não poder detectar o alvo se ele estiver dentro do alcance especificado. Não afeta a visão real do token."
+      "name": "Percepção de Sangue (Alcance)",
+      "description": "Percepção às Cegas dentro deste alcance para criaturas feridas (com PV atuais abaixo do máximo). Anula a vantagem decorrente de não conseguir detectar o alvo quando ele está dentro do alcance especificado. Não afeta a visão real do token."
     },
     "flags.midi-qol.ignoreNearbyFoes": {
       "name": "Ignorar Inimigos Próximos",
       "description": "Ignora Desvantagem em jogadas de Ataque à Distância por conta de inimigos adjacentes." 
     },
     "flags.midi-qol.inMotion": {
-      "name": "In Motion",
+      "name": "Em Movimento",
       "description": "" 
     },
     "flags.dnd5e.initiativeAdv": {
@@ -2089,16 +2323,16 @@
       "description": "" 
     },
     "flags.midi-qol.max.ability.save.concentration": {
-      "name": "Salvaguarda Máximo (Concentração)",
-      "description": "Número máximo jogado no d20 principal para todas as salvaguardas de Concentração." 
+      "name": "Máximo do d20 (Concentração)",
+      "description": "Número máximo que pode ser obtido no d20 principal para todas as salvaguardas de Concentração." 
     },
     "flags.midi-qol.max.skill.all": {
       "name": "Perícia Máxima (Todos)",
-      "description": "Número máximo jogado no d20 principal para todos os testes de Perícia." 
+      "description": "Número máximo que pode ser obtido no d20 principal para todos os testes de Perícia." 
     },
     "flags.midi-qol.min.ability.save.concentration": {
-      "name": "Salvaguarda Mínimo (Concentração)",
-      "description": "Número mínimo jogado no d20 principal para todas as salvaguardas de Concentração." 
+      "name": "Mínimo do d20 (Concentração)",
+      "description": "Número mínimo que pode ser obtido no d20 principal para todas as salvaguardas de Concentração." 
     },
     "flags.midi-qol.neverTarget": {
       "name": "Inalvejável",
@@ -2142,7 +2376,7 @@
     },
     "flags.midi-qol.optional.NAME.skill.fail.all": {
       "name": "Bônus Opcional Falha Perícia (Todas)",
-      "description": "Bônus adicionado após jogada falha de teste de qualquer Perícia." 
+      "description": "Solicita o uso do bônus opcional apenas após uma falha em um teste de Perícia." 
     },
     "flags.midi-qol.potentCantrip": {
       "name": "Truque Potente",
@@ -2162,10 +2396,10 @@
     },
     "flags.midi-qol.success.ability.all": {
       "name": "Sucesso Atributo (Todos)",
-      "description": "Todos os testes de atributo e salvaguardas feitas por este ator são automaticamente bem-sucedidas."
+      "description": "Todos os testes de atributo e todas as salvaguardas realizados por este ator são automaticamente bem-sucedidos."
     },
     "flags.midi-qol.success.deathSave": {
-      "name": "Sucesso (Salvaguarda Contra Morto)",
+      "name": "Sucesso (Salvaguarda Contra Morte)",
       "description": "Salvaguardas Contra Morte realizadas por este ator são automaticamente bem-sucedidas."
     },
     "flags.midi-qol.uncanny-dodge": {
@@ -2177,7 +2411,7 @@
       "description": "Sobrescreve de onde este token enxerga (0=pés, 50=centro, 100=topo). Não definido usa a configuração Altura do Teste de Visão do Midi-QoL."
     },
     "token.flags.midi-qol.visionTargetHeight": {
-      "name": "% da Altura da Visão do Alvo",
+      "name": "Altura para Testar a Visibilidade do Alvo (%)",
       "description": "Sobrescreve onde este token é testado para visibilidade (0=pés, 50=centro, 100=topo). Não definido usa a configuração Altura do Teste de Visão do Midi-QoL."
     }
   },
@@ -2199,11 +2433,11 @@
   "midi-qol.OverTimeEditor.RollTypeCheck": "Teste de Atributo",
   "midi-qol.OverTimeEditor.RollTypeSkill": "Teste de Perícia",
   "midi-qol.OverTimeEditor.RollTypeDamage": "Apenas Dano",
-  "midi-qol.OverTimeEditor.SaveAbility": "Atributo",
+  "midi-qol.OverTimeEditor.SaveAbility": "Atributos da Salvaguarda",
   "midi-qol.OverTimeEditor.CheckAbility": "Atributo",
   "midi-qol.OverTimeEditor.SkillSelect": "Perícias",
   "midi-qol.OverTimeEditor.SaveDC": "CD",
-  "midi-qol.OverTimeEditor.SaveDCHint": "Número ou expressão @-expressão (ex: @attributes.spell.dc)",
+  "midi-qol.OverTimeEditor.SaveDCHint": "Número ou expressão com @ (ex: @attributes.spell.dc)",
   "midi-qol.OverTimeEditor.SaveMagic": "Salvaguarda Mágica",
   "midi-qol.OverTimeEditor.DamageSection": "Dano",
   "midi-qol.OverTimeEditor.DamageRoll": "Jogada de Dano",
@@ -2223,14 +2457,14 @@
   "midi-qol.OverTimeEditor.CountPermanent": "Tornar Permanente",
   "midi-qol.OverTimeEditor.CountEffectSpec": "Efeito/Status no Limite",
   "midi-qol.OverTimeEditor.CountEffectSpecHint": "ex: petrified, prone|overlay, UUID",
-  "midi-qol.OverTimeEditor.ActionSaveSection": "Ação de Salv.",
-  "midi-qol.OverTimeEditor.ActionSave": "Modo de Ação de Salv.",
+  "midi-qol.OverTimeEditor.ActionSaveSection": "Salv. com Uso de Ação",
+  "midi-qol.OverTimeEditor.ActionSave": "Modo da Salv. com Uso de Ação",
   "midi-qol.OverTimeEditor.ActionSaveNone": "Nenhum",
   "midi-qol.OverTimeEditor.ActionSaveDialog": "Diálogo de Aviso",
   "midi-qol.OverTimeEditor.ActionSaveRoll": "Cartão de Requisição de Rolagem",
   "midi-qol.OverTimeEditor.ConditionsSection": "Condições",
-  "midi-qol.OverTimeEditor.ApplyCondition": "Aplicar Condição",
-  "midi-qol.OverTimeEditor.RemoveCondition": "Remover Condição",
+  "midi-qol.OverTimeEditor.ApplyCondition": "Condição para Aplicar",
+  "midi-qol.OverTimeEditor.RemoveCondition": "Condição para Remover",
   "midi-qol.OverTimeEditor.AdvancedSection": "Avançado",
   "midi-qol.OverTimeEditor.ItemName": "Nome/UUID do Item",
   "midi-qol.OverTimeEditor.Macro": "Macro",
@@ -2252,7 +2486,7 @@
   "midi-qol.OverTimeEditor.UnsavedTitle": "Alterações Não-Salvas",
   "midi-qol.OverTimeEditor.UnsavedContent": "Você tem alterações não salvas. Fechar sem salvar?",
   "midi-qol.OverTimeEditor.CloseWithoutSaving": "Descartar Alterações",
-  "midi-qol.OverTimeEditor.RuntimeSection": "Estado Runtime",
+  "midi-qol.OverTimeEditor.RuntimeSection": "Estado em Execução",
   "midi-qol.OverTimeEditor.Permanent": "Marcado como Permanente",
   "midi-qol.OverTimeEditor.PermanentHint": "Quando habilitado, nenhuma outra salvaguarda será processada. Definido por saveCount/failCount quando a contagem chegar a zero com o modo '+'.",
   "midi-qol.ModuleReview.Title": "Revisão do Módulo — Configurações Importadas",
@@ -2260,7 +2494,7 @@
   "midi-qol.ModuleReview.MissingWarning": "Alguns módulos das configurações salvas não estão instalados e não podem ser ativados.",
   "midi-qol.ModuleReview.SelectAll": "Selecionar Todos",
   "midi-qol.ModuleReview.DeselectAll": "Desmarcar Todos",
-  "midi-qol.ModuleReview.Apply": "Ativar Selecionado & Recarregar",
+  "midi-qol.ModuleReview.Apply": "Ativar Selecionados e Recarregar",
   "midi-qol.ModuleReview.Active": "Ativo",
   "midi-qol.ModuleReview.Installed": "Instalado",
   "midi-qol.ModuleReview.NotInstalled": "Não Instalado",
@@ -2281,6 +2515,11 @@
   "BEHAVIOR.TYPES.midi-qol.regionActivity.FIELDS.castLevel.label": "Nível de Conjuração",
   "BEHAVIOR.TYPES.midi-qol.regionActivity.FIELDS.excludeSource.label": "Excluir Token de Origem",
   "BEHAVIOR.TYPES.midi-qol.regionActivity.FIELDS.oncePerTurn.label": "Uma Vez por Turno",
+  "BEHAVIOR.TYPES.midi-qol.regionActivity.FIELDS.activationEntry.label": "Considerar Entrada ao Ativar",
+  "BEHAVIOR.TYPES.midi-qol.regionActivity.FIELDS.activationEntry.hint": "Tokens que já estiverem dentro da Região serão considerados como entrando nela quando o comportamento for criado ou ativado. Desative se a atividade de conjuração já os tiver afetado.",
+  "BEHAVIOR.TYPES.midi-qol.regionActivity.FIELDS.moveDistance.label": "Mover a Cada Turno",
+  "BEHAVIOR.TYPES.midi-qol.regionActivity.FIELDS.moveDirection.label": "Direção do Movimento",
+  "BEHAVIOR.TYPES.midi-qol.regionActivity.FIELDS.moveTiming.label": "Mover Em",
   "BEHAVIOR.TYPES.midi-qol.regionActivity.FIELDS.wallRestriction.label": "Restrição de Parede",
   "BEHAVIOR.TYPES.midi-qol.regionActivity.FIELDS.wallRestriction.hint": "Define o tipo de restrição das bordas da região. Paredes do tipo selecionado bloquearão o limite da região.",
   "midi-qol.REGION_BEHAVIOR.header": "Comportamento de Região",
@@ -2305,11 +2544,21 @@
   "midi-qol.REGION_BEHAVIOR.config.addRule": "Adicionar Regra",
   "midi-qol.REGION_BEHAVIOR.config.deleteRule": "Excluir Regra",
   "midi-qol.SHARED.FIELDS.regionBehavior.enabled.label": "Ativar Comportamento de Região",
-  "midi-qol.SHARED.FIELDS.regionBehavior.enabled.hint": "Anexa uma atividade de comportamento do Midi-QoL à região criada pelo modelo desta atividade.",
+  "midi-qol.SHARED.FIELDS.regionBehavior.enabled.hint": "Adiciona um comportamento de atividade do Midi-QOL à região criada pelo modelo desta atividade.",
   "midi-qol.SHARED.FIELDS.regionBehavior.dispositionFilter.label": "Filtro de Disposição",
   "midi-qol.SHARED.FIELDS.regionBehavior.excludeSource.label": "Excluir Token de Origem",
   "midi-qol.SHARED.FIELDS.regionBehavior.oncePerTurn.label": "Uma Vez por Turno",
   "midi-qol.SHARED.FIELDS.regionBehavior.oncePerTurn.hint": "Cada atividade é acionada no máximo uma vez por turno para cada criatura (ex: Spirit Guardians).",
+  "midi-qol.SHARED.FIELDS.regionBehavior.moveDistance.label": "Mover a Cada Turno",
+  "midi-qol.SHARED.FIELDS.regionBehavior.moveDistance.hint": "Em combate, a Região se desloca essa distância (0: nunca) no início ou no fim do turno do conjurador: afastando-se dele ou em uma direção escolhida pelo proprietário do conjurador (por exemplo, Nuvem Mortal, Nuvem Incendiária). Criaturas pelas quais a Região passar serão consideradas como entrando nela.",
+  "midi-qol.REGION_BEHAVIOR.moveDirection.away": "Para Longe do Conjurador",
+  "midi-qol.REGION_BEHAVIOR.moveDirection.choose": "Conjurador Escolhe",
+  "midi-qol.REGION_BEHAVIOR.moveTiming.start": "Início do Turno do Conjurador",
+  "midi-qol.REGION_BEHAVIOR.moveTiming.end": "Fim do Turno do Conjurador",
+  "midi-qol.REGION_BEHAVIOR.move.prompt": "Mover {distance}:",
+  "midi-qol.REGION_BEHAVIOR.move.away": "Afastar",
+  "midi-qol.REGION_BEHAVIOR.move.stay": "Não Mover",
+  "midi-qol.REGION_BEHAVIOR.move.noDirection": "{name} está centralizado em seu conjurador, portanto não há uma direção para se afastar. Não foi movido.",
   "midi-qol.SHARED.FIELDS.regionBehavior.wallRestriction.label": "Restrição de Parede",
   "midi-qol.SHARED.FIELDS.regionBehavior.wallRestriction.hint": "Define o tipo de restrição das bordas da região. Paredes do tipo selecionado bloquearão o limite da região.",
   "midi-qol.REGION_BEHAVIOR.wallRestriction.none": "Nenhum",
@@ -2323,15 +2572,44 @@
   "midi-qol.REGION_BEHAVIOR.attachToken.pickerTitle": "Escolher Alvo de Vinculação",
   "midi-qol.REGION_BEHAVIOR.attachToken.pickerHint": "Selecione o token alvo que a região deverá seguir.",
   "midi-qol.REGION_BEHAVIOR.attachToken.noTarget": "A vinculação da Região está definida como 'Alvo', mas nenhum alvo foi selecionado. A Região não seguirá nenhum token.",
+  "midi-qol.SHARED.FIELDS.regionBehavior.templateOrigin.label": "Altura de Origem do Modelo",
+  "midi-qol.SHARED.FIELDS.regionBehavior.templateOrigin.hint": "A altura do conjurador a partir da qual o modelo de área desta atividade é medido. 'Padrão' segue a configuração de Altura de Origem do Modelo.",
+  "midi-qol.REGION_BEHAVIOR.templateOrigin.default": "Padrão",
+  "midi-qol.REGION_BEHAVIOR.templateOrigin.base": "Base do Conjurador",
+  "midi-qol.REGION_BEHAVIOR.templateOrigin.top": "Topo do Conjurador",
+  "midi-qol.REGION_BEHAVIOR.templateOrigin.eye": "Nível dos Olhos do Conjurador",
   "BEHAVIOR.TYPES.midi-qol.regionLight.label": "Luz de Região do Midi",
-  "BEHAVIOR.TYPES.midi-qol.regionLight.hint": "Cria uma luz ambiente no centro da região que acompanha a região.",
+  "BEHAVIOR.TYPES.midi-qol.regionLight.hint": "Uma fonte de luz ambiente ou de escuridão, posicionada no centro da região, limitada aos seus limites e que se move junto com ela.",
   "BEHAVIOR.TYPES.midi-qol.regionLight.FIELDS.dim.label": "Raio de Penumbra",
   "BEHAVIOR.TYPES.midi-qol.regionLight.FIELDS.bright.label": "Raio de Luz Plena",
   "BEHAVIOR.TYPES.midi-qol.regionLight.FIELDS.color.label": "Cor da Luz",
-  "BEHAVIOR.TYPES.midi-qol.regionLight.FIELDS.alpha.label": "Alfa da Luz",
+  "BEHAVIOR.TYPES.midi-qol.regionLight.FIELDS.alpha.label": "Opacidade da Luz",
   "BEHAVIOR.TYPES.midi-qol.regionLight.FIELDS.luminosity.label": "Luminosidade",
   "BEHAVIOR.TYPES.midi-qol.regionLight.FIELDS.animationType.label": "Tipo de Animação",
+  "BEHAVIOR.TYPES.midi-qol.regionLight.FIELDS.negative.label": "Escuridão",
+  "BEHAVIOR.TYPES.midi-qol.regionLight.FIELDS.negative.hint": "Uma fonte de escuridão em vez de luz: os raios definem a extensão da escuridão e a fonte utiliza as animações de escuridão.",
+  "BEHAVIOR.TYPES.midi-qol.regionLight.FIELDS.priority.label": "Prioridade",
+  "BEHAVIOR.TYPES.midi-qol.regionLight.FIELDS.priority.hint": "Quando fontes de luz e escuridão se sobrepõem, a fonte com maior prioridade prevalece.",
+  "BEHAVIOR.TYPES.midi-qol.regionLight.FIELDS.walls.label": "Limitada por Paredes",
+  "BEHAVIOR.TYPES.midi-qol.regionLight.FIELDS.fill.label": "Preencher Região",
+  "BEHAVIOR.TYPES.midi-qol.regionLight.FIELDS.fill.hint": "Ajusta o tamanho da fonte de luz para abranger toda a região (com Luz Plena em toda a área ou Penumbra se o Raio de Luz Plena for 0), em vez de utilizar os raios definidos acima.",
+  "BEHAVIOR.TYPES.midi-qol.regionLight.FIELDS.walls.hint": "As paredes bloqueiam a luz (ou a escuridão), assim como ocorre com uma fonte de luz ambiente. Quando desativada, a luz (ou escuridão) atravessa as paredes.",
   "BEHAVIOR.TYPES.midi-qol.regionLight.FIELDS.animationSpeed.label": "Velocidade da Animação",
   "BEHAVIOR.TYPES.midi-qol.regionLight.FIELDS.animationIntensity.label": "Intensidade da Animação",
-  "BEHAVIOR.TYPES.midi-qol.regionLight.FIELDS.lightDocId.label": "ID do Documento de Luz"
+  "BEHAVIOR.TYPES.midi-qol.regionLight.FIELDS.lightDocId.label": "ID do Documento de Luz",
+  "midi-qol.DefaultOtherActivityOptions": {
+    "auto": "Auto - rolar uma única atividade correspondente",
+    "none": "Nenhum - não rolar nada"
+  },
+  "midi-qol.DefaultOtherActivityOptions.expandedHints": {
+    "auto": "Um ataque com exatamente uma atividade compatível a rola como sua outra atividade.",
+    "none": "Nada é rolado, a menos que a atividade especifique outra atividade."
+  },
+  "midi-qol.defaultOtherActivity.Name": "Padrão de Outra Atividade",
+  "midi-qol.defaultOtherActivity.Hint": "O que <b>Padrão</b> significa no campo Outra Atividade de uma atividade. Muitos itens do D&D5e associam um ataque a uma salvaguarda - como veneno - sem vincular os dois.",
+  "midi-qol.TargetNotEvaluated": "Adicionado ao cartão após a rolagem: não foi verificado pelo midi.",
+  "midi-qol.RegionMagic.Magical": "Mágica",
+  "midi-qol.RegionMagic.MagicalHint": "Detectar Magia identifica esta região. Regiões criadas por uma magia ou um item mágico são detectadas de qualquer forma.",
+  "midi-qol.RegionMagic.School": "Escola de Magia",
+  "midi-qol.RegionMagic.SchoolFromSpell": "A escola da magia que criou a região."
 }
