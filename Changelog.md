@@ -1,4 +1,4 @@
-### 14.0.19 (unreleased)
+### 14.0.19
 
 * Fixed: *Double Rolled Damage* critical damage never doubled the dice: dnd5e rolls its own die class, which didn't know midi's `mx` modifier, so `1d4mx2` was read as `1d4x2` (explode on 2) and the damage was normal.
 * Fixed: the *Secret Squirrel* quick setup recommended Anonymous, which has no Foundry 14 release; it recommends Hide NPC Names, and only when neither is active.
