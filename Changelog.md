@@ -1,3 +1,6 @@
+### 13.0.72 (unreleased)
+* Fixed: *Double Rolled Damage* critical damage never doubled the dice: dnd5e rolls its own die class, which didn't know midi's `mx` modifier, so `1d4mx2` was read as `1d4x2` (explode on 2) and the damage was normal.
+
 ### 13.0.71
 * Changed: updates are served from GitLab Pages (https://tposney.gitlab.io/midi-qol/v13/module.json), so update checks no longer fail when GitLab rate-limits repository files. Changelog: https://tposney.gitlab.io/midi-qol/v13/changelog.html.
 
