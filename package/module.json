@@ -2,16 +2,16 @@
   "id": "midi-qol",
   "title": "Midi QOL",
   "description": "Automates rolling weapon/spell attacks and applying damage amongst other things",
-  "version": "14.0.19",
+  "version": "14.0.20",
   "authors": [
     {
       "name": "Tim Posney",
-      "url": "https://gitlab.com/tposney",
+      "url": "https://github.com/tposney",
       "discord": "tposney#1462",
       "twitter": "",
       "patreon": "",
       "gitlab": "tposney",
-      "github": "",
+      "github": "tposney",
       "ko-fi": "tposney",
       "reddit": "",
       "email": ""
@@ -160,12 +160,12 @@
     "verified": "14.368",
     "maximum": "14.999"
   },
-  "bugs": "https://gitlab.com/tposney/midi-qol/-/issues",
+  "bugs": "https://github.com/tposney/midi-qol/issues",
   "flags": {
     "allowBugReporter": true
   },
-  "url": "https://gitlab.com/tposney/midi-qol",
-  "manifest": "https://tposney.gitlab.io/midi-qol/v14/module.json",
-  "download": "https://tposney.gitlab.io/midi-qol/versions/14.0.19/midi-qol-v14.0.19.zip",
-  "changelog": "https://tposney.gitlab.io/midi-qol/v14/changelog.html"
+  "url": "https://github.com/tposney/midi-qol",
+  "manifest": "https://github.com/tposney/midi-qol/releases/download/latest-v14/module.json",
+  "download": "https://github.com/tposney/midi-qol/releases/download/v14.0.20/midi-qol-v14.0.20.zip",
+  "changelog": "https://github.com/tposney/midi-qol/blob/v14/Changelog.md"
 }
