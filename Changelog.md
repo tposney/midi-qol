@@ -1,3 +1,9 @@
+### 14.6.8
+
+* Changed: midi-qol has moved to GitHub (https://github.com/tposney/midi-qol): updates and downloads come from its releases, and issues are reported there. Installed copies move over with this update. Manifest URL: https://github.com/tposney/midi-qol/releases/download/latest-dnd6/module.json.
+* Changed: installing midi-qol installs DAE for dnd5e 6 (its GitHub dnd6 release) rather than DAE for dnd5e 5.x from foundryvtt.com.
+* Changed: Brazilian Portuguese (pt-BR) translation updated (MR [!442](https://gitlab.com/tposney/midi-qol/-/merge_requests/442), thanks @Kharmans).
+
 ### 14.6.7
 
 * Fixed: *Double Rolled Damage* critical damage never doubled the dice: dnd5e rolls its own die class, which didn't know midi's `mx` modifier, so `1d4mx2` was read as `1d4x2` (explode on 2) and the damage was normal.

@@ -2,16 +2,16 @@
   "id": "midi-qol",
   "title": "Midi QOL",
   "description": "Automates rolling weapon/spell attacks and applying damage amongst other things",
-  "version": "14.6.7",
+  "version": "14.6.8",
   "authors": [
     {
       "name": "Tim Posney",
-      "url": "https://gitlab.com/tposney",
+      "url": "https://github.com/tposney",
       "discord": "tposney#1462",
       "twitter": "",
       "patreon": "",
       "gitlab": "tposney",
-      "github": "",
+      "github": "tposney",
       "ko-fi": "tposney",
       "reddit": "",
       "email": ""
@@ -59,6 +59,7 @@
       {
         "id": "dae",
         "type": "module",
+        "manifest": "https://github.com/tposney/dae/releases/download/latest-dnd6/module.json",
         "compatibility": {
           "minimum": "14.6.4"
         }
@@ -171,12 +172,12 @@
     "verified": "14.369",
     "maximum": "14.999"
   },
-  "bugs": "https://gitlab.com/tposney/midi-qol/-/issues",
+  "bugs": "https://github.com/tposney/midi-qol/issues",
   "flags": {
     "allowBugReporter": true
   },
-  "url": "https://gitlab.com/tposney/midi-qol",
-  "manifest": "https://tposney.gitlab.io/midi-qol/dnd6/module.json",
-  "download": "https://tposney.gitlab.io/midi-qol/versions/14.6.7/midi-qol-v14.6.7.zip",
-  "changelog": "https://tposney.gitlab.io/midi-qol/dnd6/changelog.html"
+  "url": "https://github.com/tposney/midi-qol",
+  "manifest": "https://github.com/tposney/midi-qol/releases/download/latest-dnd6/module.json",
+  "download": "https://github.com/tposney/midi-qol/releases/download/v14.6.8/midi-qol-v14.6.8.zip",
+  "changelog": "https://github.com/tposney/midi-qol/blob/dnd6/Changelog.md"
 }
