@@ -335,6 +335,10 @@ export function defineChatMessageMidiClass(baseClass: ChatMessage.Implementation
     }
 
     _enrichDamageTooltip(rolls: Roll[], html: HTMLElement) {
+      // Before/after optional bonus cards already contain two independently
+      // rendered rolls. Letting dnd5e enrich their DamageRolls removes both
+      // entries and replaces them with a single aggregate of before + after.
+      if (this.flags?.[MODULE_ID]?.optionalBonusBeforeAfter) return;
       if (this.flags?.dnd5e?.roll?.type !== undefined || !this.flags?.[MODULE_ID])
         // @ts-expect-error no dnd5e-types
         return super._enrichDamageTooltip(rolls, html);
