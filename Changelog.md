@@ -1,3 +1,6 @@
+### 13.0.73
+* Changed: midi-qol has moved to GitHub (https://github.com/tposney/midi-qol): updates and downloads come from its releases, and issues are reported there. Installed copies move over with this update.
+
 ### 13.0.72
 * Fixed: *Double Rolled Damage* critical damage never doubled the dice: dnd5e rolls its own die class, which didn't know midi's `mx` modifier, so `1d4mx2` was read as `1d4x2` (explode on 2) and the damage was normal.
 
