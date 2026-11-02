@@ -1,8 +1,8 @@
 > [!tip] Navigation
 > [Go to Readme](/README.md#table-of-contents) <br>
 > [Go to Macro Guide](/MACROS.md#table-of-contents) <br>
-> [Go to Flowchart (v12.4.64 to v13.0.22)](docs/flowchart.md) <br>
-> [Go to Flowchart (v13.0.23+)](docs/flowchart_save-before-dmg.md)
+> [Go to Flowchart (Default - Damage Before Saves)](/docs/flowchart.md) <br>
+> [Go to Flowchart (Saves Before Damage)](/docs/flowchart_save-before-dmg.md)
 
 # Workflow Fields
 
@@ -11,9 +11,10 @@
 > *(as of v13.0.42)*
 
 This page provides information on when each field of `workflow` is given data:
- - The **first** pass in which a field is available is shown in the *"Field Added"* column. The field may be null, undefined, or empty if the *"Field Given Data"* column shows a different pass. 
- - The **first** pass in which a field contains data is shown in the *"Field Given Data"* column.
- - A few fields are reset **after** a certain pass. Booleans are toggled back to their default value, sets are cleared out, etc. These are marked in the *"Field Reset"* column.
+
+- The **first** pass in which a field is available is shown in the *"Field Added"* column. The field may be null, undefined, or empty if the *"Field Given Data"* column shows a different pass.
+- The **first** pass in which a field contains data is shown in the *"Field Given Data"* column.
+- A few fields are reset **after** a certain pass. Booleans are toggled back to their default value, sets are cleared out, etc. These are marked in the *"Field Reset"* column.
 
 >>> [!note]
 `workflow` fields are not updated before optional bonus passes. They will contain the data available to the previous pass. For example, `workflow.macroPass` will be `"isPreAttacked"` on a `flags.midi-qol.optional.NAME.attack.*` pass. Instead, use `args[0].macroPass` and `args[0].tag === 'optional'` to check whether the current pass is an optional bonus.
@@ -39,6 +40,7 @@ This page provides information on when each field of `workflow` is given data:
 | targetsCanSense                 | Set                  | contains rolling Token                                                   | `preTargeting` (empty)                                                                | targeted before starting workflow: `postNoAction`<br><br>targeted after starting workflow: `postAoETargetConfirmation`                                                                        |                                                                                                    |
 | tokenCanSee                     | Set                  | contains targeted Token                                                  | `preTargeting` (empty)                                                                | targeted before starting workflow: `postNoAction`<br><br>targeted after starting workflow: `postAoETargetConfirmation`                                                                        |                                                                                                    |
 | tokenCanSense                   | Set                  | contains targeted Token                                                  | `preTargeting` (empty)                                                                | targeted before starting workflow: `postNoAction`<br><br>targeted after starting workflow: `postAoETargetConfirmation`                                                                        |                                                                                                    |
+| dnd5eFlags                      | object               | copy of `workflow.chatCard.flags.dnd5e`, contains useful info - particularly `dnd5eFlags.use.consumed` | `preTargeting` (undefined)                                                            | `postNoAction`                                                                                                                                                                                |                                                                                                    |
 | templateUuid                    | string               | undefined if no template                                                 | `preTargeting` (undefined)                                                            | `postNoAction`                                                                                                                                                                                |                                                                                                    |
 | placeTemplateHookId             | int                  | null if no template                                                      | `preTargeting`                                                                        | `preTargeting`                                                                                                                                                                                |                                                                                                    |
 | summonedCreatures               | Array                | contains TokenDocument5e, undefined if no summons                        | `preTargeting` (undefined)                                                            | `postNoAction`                                                                                                                                                                                |                                                                                                    |
@@ -167,6 +169,7 @@ This page provides information on when each field of `workflow` is given data:
 | otherEffectTargetsOnSave        | Set                  | contains Token                                                           | `preActiveEffects`                                                                    | `preActiveEffects`                                                                                                                                                                            |                                                                                                    |
 
 **Incomplete**: could not determine when these are given data
+
 - event
 - isTurn *(was not affected by being in combat)*
 - hitTargetsEC
@@ -189,6 +192,7 @@ This page provides information on when each field of `workflow` is given data:
 > [!tip] [Jump to Top](#workflow-fields)
 
 ## Optional Save Bonus
+
 The `flags.midi-qol.optional.NAME.save.*` passes are given their own separate workflow. All except the following fields are undefined, empty, or not present:
 
 | **Field**                 | **Type** | **Value**                         |
