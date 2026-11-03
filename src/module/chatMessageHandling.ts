@@ -264,8 +264,7 @@ export function processCreateDDBGLMessages(message: ChatMessage.Implementation, 
     workflow.attackRollHTML = message.content;
     workflow.attackRolled = true;
     if (workflow.currentAction === workflow.WorkflowState_WaitForAttackRoll) {
-      if (workflow.suspended) workflow.unSuspend({ attackRoll: workflow.attackRoll })
-      // TODO NW workflow.performState(workflow.WorkflowState_WaitForAttackRoll,{attackRoll: workflow.attackRoll});
+      if (workflow.suspended) workflow.resume(workflow.attackRoll ? "attackRolled" : undefined);
     }
   }
 
@@ -283,8 +282,7 @@ export function processCreateDDBGLMessages(message: ChatMessage.Implementation, 
       workflow.needsOtherDamage = false;
     }
     if (workflow.currentAction === workflow.WorkflowState_WaitForDamageRoll) {
-      if (workflow.suspended) workflow.unSuspend({ damageRoll: workflow.damageRoll })
-      // TODO NW workflow.performState(workflow.WorkflowState_WaitForDamageRoll);
+      if (workflow.suspended) workflow.resume(workflow.damageRoll ? "damageRolled" : undefined);
     }
   }
 }

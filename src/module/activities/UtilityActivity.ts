@@ -125,7 +125,7 @@ let defineMidiUtilityActivityClass = <T extends Activity>(ActivityClass: T) => {
       if (config.midiOptions.updateWorkflow !== false && workflow) {
         if (result) await workflow.setUtilityRolls(result);
         if (workflow.suspended)
-          workflow.unSuspend.bind(workflow)({ utilityRolls: result });
+          workflow.resume(result ? "utilityRolled" : undefined);
       }
       return result;
     }

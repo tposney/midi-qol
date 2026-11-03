@@ -646,7 +646,7 @@ let defineMidiAttackActivityClass = <T extends Activity>(ActivityClass: T) => {
           warn("AttackActivity | rollAttack | setAttackRolls completed ", rolls);
           warn(`Attack Activity | workflow is suspended ${workflow?.suspended}`);
         }
-        if (workflow?.suspended) workflow.unSuspend.bind(workflow)({ attackRoll: rolls[0] })
+        if (workflow?.suspended) workflow.resume(rolls[0] ? "attackRolled" : undefined);
       } catch (err) {
         error("AttackActivity | rollAttack | Error configuring dialog", err);
       } finally {

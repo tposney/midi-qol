@@ -871,7 +871,6 @@ export let MidiActivityMixin = Base => {
         usage.workflow.item = usage.workflow!.activity?.item;
         activity = usage.workflow!.activity! as MidiActivityMixin;
         Workflow.addWorkflow(usage.workflow);
-        // Template cleanup is now handled by setupTemplateCleanup in unSuspend
         if (await activity.postChatCardChecks(usage, dialog, message) !== true) return;
         await activity.setupCanSeeSense(usage)
         // if (autoCreateTemplate || emanationNoTemplate) if (!await activity.setupTargets(usage, dialog, message)) return;
@@ -906,7 +905,7 @@ export let MidiActivityMixin = Base => {
           };
         }
         // Scaling is now handled by the workflow's activity getter (reads from chat card flags).
-        await usage.workflow.performState((usage.workflow as Workflow).WorkflowState_Start, {});
+        await usage.workflow.performState((usage.workflow as Workflow).WorkflowState_Start);
         return useResults;
       } finally {
         if (preUseActivityHookId) Hooks.off("dnd5e.preUseActivity", preUseActivityHookId);
@@ -1100,7 +1099,7 @@ export let MidiActivityMixin = Base => {
           // Use noDamage flag to indicate no damage was available to roll
           // (as opposed to the user cancelling the roll).
           const noDamage = !result?.[0] && !otherResult?.[0] && !(this.hasDamage || this.hasHealing);
-          config.workflow.unSuspend.bind(config.workflow)({ damageRoll: result?.[0], otherDamageRoll: otherResult?.[0], noDamage });
+          config.workflow.resume(result?.[0] || otherResult?.[0] ? "damageRolled" : noDamage ? "noDamage" : undefined);
         }
       } catch (err) {
         const message = "doDamageRoll error";

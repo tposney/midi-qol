@@ -241,7 +241,6 @@ async function confirmDamageRollComplete(data: { workflowId: string, activityUui
     return confirmDamageRollCompleteMiss(data);
   }
 
-  // TODO NW if (workflow.suspended) workflow.unSuspend({rollConfirmed: true});
   return workflow.performState(workflow.WorkflowState_RollConfirmed)
 }
 
