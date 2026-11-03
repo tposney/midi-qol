@@ -1574,7 +1574,6 @@ export class Workflow {
       this.rawDamageDetail = [];
       this.rawOtherDamageDetail = [];
       this.effectsAlreadyExpired = [];
-      this.workflowOptions = options?.workflowOptions ?? {};
       if (this.speaker.scene) this.speaker.scene = canvas.scene?.id ?? "";
     }
 
@@ -1598,17 +1597,7 @@ export class Workflow {
     this.kickStart = false;
     this.throttleChatMessageUpdates = getThrottlingFunction();
     if (!restoring) {
-      // Assigned once complete: the card stores what is assigned, not later changes made in place
-      const workflowOptions: WorkflowOptions = foundry.utils.mergeObject(defaultRollOptions, {
-        autoRollAttack: getAutoRollAttack(this),
-        autoRollDamage: getAutoRollDamage(this),
-        fastForwardAttack: isAutoFastForward("attack", { workflow: this }),
-        fastForwardDamage: isAutoFastForward("damage", { workflow: this })
-      }, { inplace: false });
-      if (options.workflowOptions)
-        foundry.utils.mergeObject(workflowOptions, options.workflowOptions, { overwrite: true });
-      if (this.activity.midiProperties?.noConcentrationCheck) workflowOptions.noConcentrationCheck = true;
-      this.workflowOptions = workflowOptions;
+      this.#mergeWorkflowOptions(options.workflowOptions ?? {});
       if (this.workflowOptions.templateUuid) this.templateUuid = this.workflowOptions.templateUuid;
     }
 
@@ -1634,6 +1623,25 @@ export class Workflow {
   }
 
   /**
+   * The use's options: the caller's over midi's defaults and the roller's settings. The card stores only the caller's
+   * (later changes made in place are not stored), and a rebuilt workflow merges them again.
+   */
+  #mergeWorkflowOptions(callerOptions: WorkflowOptions): void {
+    const stored = () => encodeWorkflowOptions(callerOptions);
+    // The auto-roll settings give way to the caller's options, read from the workflow
+    this.#persisted.setScalar("workflowOptions", callerOptions, stored);
+    const merged: WorkflowOptions = foundry.utils.mergeObject(defaultRollOptions, {
+      autoRollAttack: getAutoRollAttack(this),
+      autoRollDamage: getAutoRollDamage(this),
+      fastForwardAttack: isAutoFastForward("attack", { workflow: this }),
+      fastForwardDamage: isAutoFastForward("damage", { workflow: this })
+    }, { inplace: false });
+    foundry.utils.mergeObject(merged, callerOptions, { overwrite: true });
+    if (this.activity.midiProperties?.noConcentrationCheck) merged.noConcentrationCheck = true;
+    this.#persisted.setScalar("workflowOptions", merged, stored);
+  }
+
+  /**
    * Targets selected before the use: UUIDs captured early in use(), before template targeting. Sculpt Spells and
    * Careful Spells read them at the saves.
    */
@@ -1652,9 +1660,7 @@ export class Workflow {
     this.itemUseComplete = true;
     this.noOptionalRules = !configSettings.optionalRulesEnabled;
     this.templateUuids = [...this.#persisted.scalar<string[]>("templateUuids", [])];
-    const options: Record<string, unknown> = { ...this.workflowOptions };
-    for (const [key, value] of Object.entries(defaultRollOptions)) if (value !== undefined) options[key] ??= value;
-    this.workflowOptions = options;
+    this.#mergeWorkflowOptions(this.workflowOptions);
     if (this.workflowOptions.preSelectedTargetUuids?.length) this.preSelectedTargets = this.#preSelectedTargets();
     const speaker = this.chatCard?.speaker;
     const speakerToken = speaker?.token ? game.scenes?.get(speaker.scene ?? "")?.tokens.get(speaker.token)?.object : undefined;
