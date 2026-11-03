@@ -40,6 +40,7 @@
     "concentrationAutomation": false,
     "concentrationIncapacitatedConditionCheck": true,
     "conditionEditorEnabled": true,
+    "rulesTextFill": true,
     "confirmAmmunition": false,
     "confirmAttackDamage": "none",
     "constrainTemplatePlacement": false,

@@ -46,9 +46,11 @@ export function midiButtonVisibility(message: Dnd5eChatMessage | undefined, acti
   // Attacks handed to one use per target: those cards attack, damage and apply effects.
   const split = !!progress.attacksSplit;
 
-  // Rolled and the policy removes its control; also governs dnd5e's buttons where midi draws none.
-  const attackSpent = attackRolled && !confirmPending && (removeAll || getRemoveAttackButtons(activity));
-  const damageSpent = damageRolled && !confirmPending && (removeAll || getRemoveDamageButtons(activity));
+  // Rolled (or the workflow finished without the roll) and the policy removes its control; also governs dnd5e's
+  // buttons where midi draws none.
+  const finished = !!progress.finished;
+  const attackSpent = (attackRolled || finished) && !confirmPending && (removeAll || getRemoveAttackButtons(activity));
+  const damageSpent = (damageRolled || finished) && !confirmPending && (removeAll || getRemoveDamageButtons(activity));
 
   return {
     attack: !done && !split && !!midi.hasAttack && !attackSpent,
@@ -160,6 +162,8 @@ export function setupUsageCardMessage() {
             attacksSplit: new BooleanField({ initial: false }),
             confirmed: new BooleanField({ initial: false }),
             effectsApplied: new BooleanField({ initial: false }),
+            // The workflow ran to completion: no roll can advance it now (e.g. every target missed)
+            finished: new BooleanField({ initial: false }),
             savesResolved: new BooleanField({ initial: false }),
             teleported: new BooleanField({ initial: false }),
             templatesPlaced: new BooleanField({ initial: false })

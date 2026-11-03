@@ -159,6 +159,7 @@ declare module "fvtt-types/configuration" {
     "midi-qol.EnableWorkflow": boolean;
     "midi-qol.hiddenGroundCue": boolean;
     "midi-qol.ownChatCardSummary": string;
+    "midi-qol.rulesTextCompendium": string;
     "midi-qol.hiddenGroundCueStyle": string;
     "midi-qol.hiddenGroundCueColor": foundry.data.fields.ColorField<{ nullable: boolean; initial: string }>;
     "midi-qol.hiddenGroundCueOpacity": number;
@@ -1100,6 +1101,8 @@ declare global {
         mastery?: boolean;
       }>
       weaponMasteries: Record<string, { label: string, reference?: string }>;
+      /** Source book codes to names (dnd5e and content modules add to it) */
+      sourceBooks: Record<string, string>;
       weaponTypes: Record<string, string>;
     }
   }

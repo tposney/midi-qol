@@ -2615,5 +2615,20 @@
   "midi-qol.RegionMagic.Magical": "Magical",
   "midi-qol.RegionMagic.MagicalHint": "Detect Magic senses this region. Regions made by a spell or a magic item are sensed anyway.",
   "midi-qol.RegionMagic.School": "Magic School",
-  "midi-qol.RegionMagic.SchoolFromSpell": "The school of the spell that made it"
+  "midi-qol.RegionMagic.SchoolFromSpell": "The school of the spell that made it",
+  "midi-qol.RulesText.Setting.Name": "Fill in missing rules text",
+  "midi-qol.RulesText.Setting.Hint": "midi-qol's sample items for content outside the SRD have no rules text. When one is added to an actor, copy the text from the world's own content: the official D&D modules (Player's Handbook, Tasha's...), then the dnd5e SRD, then the rules text compendium (module settings). Turn this off if another module fills it in. The item sheet button and the TroubleShooter's Auto Fix still work.",
+  "midi-qol.RulesText.Compendium.Name": "Rules text compendium",
+  "midi-qol.RulesText.Compendium.Hint": "An item compendium of your own to take missing rules text from when the official modules and the SRD don't have it. Items are matched by type and identifier, then by name.",
+  "midi-qol.RulesText.Compendium.None": "None",
+  "midi-qol.RulesText.Fill": "Fill in rules text",
+  "midi-qol.RulesText.From": "Rules text: {book} ({link}).",
+  "midi-qol.RulesText.FromOtherRules": "Rules text: {book} ({link}), the {rules} rules version; this automation follows the rules named in its source.",
+  "midi-qol.RulesText.FromName": "Rules text: {book} ({link}), matched by name.",
+  "midi-qol.RulesText.Filled": "{name}: rules text copied from {book}.",
+  "midi-qol.RulesText.NotFound": "{name}: no rules text found in the official modules, the SRD or the rules text compendium.",
+  "midi-qol.RulesText.Problem": "{count} items have no rules text (midi-qol sample items for content outside the SRD).",
+  "midi-qol.RulesText.Fixer": "Auto Fix copies the text from the official modules, the SRD or the rules text compendium where they have it.",
+  "midi-qol.RulesText.GMOnly": "Only a GM can fill in rules text for the whole world.",
+  "midi-qol.RulesText.FilledAll": "Rules text filled in for {filled} items; {missing} not found (listed in the console)."
 }

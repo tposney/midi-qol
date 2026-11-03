@@ -301,6 +301,7 @@ There are a lot of extra options that midi's got. The Misc tab covers chat card 
 **Item Sheet & Activity Settings**
 - **Activity Prefix**: Prefix midi-qol activity names with "Midi". Change requires reload
 - **Condition Editor**: Show condition editor button on condition fields in activity sheets
+- **Fill in missing rules text**: midi's sample items for content outside the SRD come without rules text. When one is added to an actor, midi copies the text from your official D&D modules (Player's Handbook, Tasha's…), the SRD, or a compendium of your own (*Rules text compendium* in the module settings)
 - **Lowest User role for Item's properties**: Limits who can access the midi-qol properties based on user role
 - **Add actor on use macro to sheet**: Enables midi's ability to have macros run at specified stages of a workflow attached to a specific actor
 - **Add item on use macro to sheet**: Same but for items

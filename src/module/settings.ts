@@ -1,5 +1,6 @@
 import { registerHiddenGroundCueSetting } from "./lib/hiddenGroundCue.js";
 import { applyChatCardSummaries, registerChatCardSummariesSetting } from "./lib/chatCardSummaries.js";
+import { registerRulesTextSettings } from "./lib/rulesText.js";
 import { debug, setDebugLevel, i18n, debugEnabled, gameStats, updateFlankingStatusEffects } from "../midi-qol.js";
 import { ConfigPanel } from "./apps/ConfigPanel.js"
 import { DependentsExplorer } from "./apps/DependentsExplorer.js";
@@ -111,6 +112,7 @@ class ConfigSettings {
   addWoundedStyle: string = "none";
   activityNamePrefix: boolean = true;
   conditionEditorEnabled: boolean = true;
+  rulesTextFill: boolean = true;
   activationAutomation: string = "chat";
   midiWoundedCondition: string = "none";
   midiDeadCondition: string = "none";
@@ -666,6 +668,7 @@ export let fetchParams = () => {
   configSettings.rollSkillsBlind = configSettings.rollSkillsBlind.filter((item) => item !== "none");
   migrateGmRollHiding(configSettings);
   if (configSettings.addFakeDice === undefined) configSettings.addFakeDice = false;
+  if (configSettings.rulesTextFill === undefined) configSettings.rulesTextFill = true;
   if (typeof configSettings.gmConsumeResource !== "string") configSettings.gmConsumeResource = "none";
   if (typeof configSettings.consumeResource !== "string") configSettings.consumeResource = "none";
   // The panel's checkbox used to write optionalRules.enableddbGL, which nothing read
@@ -1749,6 +1752,7 @@ export const registerSettings = function () {
 
   registerHiddenGroundCueSetting();
   registerChatCardSummariesSetting();
+  registerRulesTextSettings();
 
   game.settings.register("midi-qol", "EnableWorkflow", {
     name: i18n("midi-qol.EnableWorkflow.Name"),

@@ -425,6 +425,7 @@ With dnd5e concentration tracking disabled the tab shows only a notice; midi's c
 | Export/Import midi-qol settings to/from json file | Buttons to save or load all midi-qol settings |
 | Activity Prefix | Prefix midi-qol activity names with Midi. Requires reload |
 | Condition Editor | Show condition editor button on condition fields in activity sheets (default on) |
+| Fill in missing rules text | When a midi sample item for content outside the SRD (no rules text of its own) is added to an actor, copy its text from the world's official D&D modules (Player's Handbook, Tasha's…), then the SRD, then the *Rules text compendium* module setting; the item notes where the text came from (default on). The item sheet's *Fill in rules text* button and the TroubleShooter's Auto Fix (every item in the world) work whatever this is set to |
 | Lowest User role for Item's properties | Lowest user role that can access an item's midi-qol properties tab. Requires reload |
 | Add actor on use macro to sheet | Add actor on use macro field to sheet |
 | Add item on use macro to sheet | Add item on use macro field to sheet |

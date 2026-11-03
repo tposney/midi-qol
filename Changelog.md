@@ -1,3 +1,8 @@
+### 14.6.9
+
+* Fixed: when an attack missed every target and the workflow completed (*Auto complete workflow*), the card kept its damage buttons; they now go as *Remove chat card buttons after roll* says. A workflow still waiting for a damage roll keeps them.
+* Added: rules text for midi's sample items of content outside the SRD (Toll the Dead, Metamagic Adept, Arcane Ward, …), which ship without it. When one is added to an actor, midi copies the text from the world's official D&D modules (Player's Handbook, Tasha's…), then the dnd5e SRD, then a compendium of your own (*Rules text compendium*), matching type and identifier in the item's rules version, then in the other (noted), then the name; the item's notes say where the text came from. On/off: *Fill in missing rules text* (Misc tab, default on). The item sheet's *Fill in rules text* button and a TroubleShooter Auto Fix (every item in the world) fill items added before; `MidiQOL.fillRulesText(item)` for macros.
+
 ### 14.6.8
 
 * Changed: midi-qol has moved to GitHub (https://github.com/tposney/midi-qol): updates and downloads come from its releases, and issues are reported there. Installed copies move over with this update. Manifest URL: https://github.com/tposney/midi-qol/releases/download/latest-dnd6/module.json.

@@ -1,8 +1,9 @@
-import { i18n, systemConcentrationId } from "../../midi-qol.js";
+import { i18n, i18nFormat, systemConcentrationId } from "../../midi-qol.js";
 import { ModuleReviewDialog } from "./ModuleReviewDialog.js";
 import { autoApplyDamageOptions, autoCEEffectsOptions, autoCheckHitOptions, autoCheckSavesOptions, autoEffectsOptions, autoTargetOptions, CheckedAuthorsList, checkedModuleList, checkMechanic, collectModuleData, collectSettingData, configSettings, coverCalculationOptions, enableWorkflow, exportSettingsToJSON, fetchParams, importSettingsFromJSON, rangeTargetOptions, safeGetGameSetting } from "../settings.js";
 import { USEFUL_MODULE_VERSIONS, getModuleVersion, installedModules } from "../setupModules.js";
 import { featureOverlapProblems } from "../featureOverlaps.js";
+import { fillAllRulesText, itemsLackingRulesText } from "../lib/rulesText.js";
 const { ApplicationV2, DialogV2, HandlebarsApplicationMixin } = foundry.applications.api;
 
 const minimumMidiVersion = "11.0.7";
@@ -1005,6 +1006,31 @@ export class TroubleShooter extends HandlebarsApplicationMixin(ApplicationV2) {
     this.checkNoActorTokens(data);
     this.checkConcentrationStatusEffects(data);
     this.checkVolumetricTemplates(data);
+    this.checkRulesText(data);
+  }
+
+  public static checkRulesText(data: TroubleShooterData) {
+    const items = itemsLackingRulesText();
+    if (!items.length) return;
+    data.problems.push({
+      moduleId: "midi-qol",
+      severity: "Warn",
+      problemSummary: i18nFormat("midi-qol.RulesText.Problem", { count: items.length }),
+      problemDetail: items.slice(0, 20).map(item => item.parent ? `${item.parent.name}: ${item.name}` : item.name),
+      fixer: i18n("midi-qol.RulesText.Fixer"),
+      fixerFunc: async (app: TroubleShooter) => {
+        if (!game.user?.isGM) {
+          ui.notifications?.error(i18n("midi-qol.RulesText.GMOnly"));
+          return;
+        }
+        const { filled, notFound } = await fillAllRulesText();
+        ui.notifications?.info(i18nFormat("midi-qol.RulesText.FilledAll", { filled, missing: notFound.length }));
+        if (notFound.length) console.warn("midi-qol | rules text not found for", notFound);
+        TroubleShooter.data = TroubleShooter.collectTroubleShooterData();
+        app.render({ force: true });
+      },
+      fixerId: -1
+    });
   }
 
   public static checkAutoAnimations(data: TroubleShooterData) {

@@ -1654,7 +1654,7 @@ export class Workflow {
       workflow?.throttleChatMessageUpdates, false);
   }
 
-  static async removeItemCardButtons(itemCardUuid: string | undefined, { removeAllButtons = false, removeAttackButtons = true, removeDamageButtons = false, removeDnD5eButtons = false, removeConfirmButtons = false, removeAllDnd5eButtons = false, removeDnd5eSaveButtons = false, removeDnd5eTemplateButtons = false } = {}) {
+  static async removeItemCardButtons(itemCardUuid: string | undefined, { removeAllButtons = false, removeAttackButtons = true, removeDamageButtons = false, removeDnD5eButtons = false, removeConfirmButtons = false, removeAllDnd5eButtons = false, removeDnd5eSaveButtons = false, removeDnd5eTemplateButtons = false, finished = false } = {}) {
     try {
       const workflow = Workflow.getWorkflow(itemCardUuid);
       const chatMessage = workflow?.chatCard;
@@ -1676,6 +1676,7 @@ export class Workflow {
         if (removeConfirmButtons) progress.confirmed = true;
         if (removeDnd5eSaveButtons || removeAllDnd5eButtons) progress.savesResolved = true;
         if (removeDnd5eTemplateButtons) progress.templatesPlaced = true;
+        if (finished) progress.finished = true;
         if (foundry.utils.isEmpty(progress)) return;
         return await throttledUpdate(chatMessage,
           { "system.midi.progress": progress } as ChatMessage.UpdateData,
@@ -3111,7 +3112,7 @@ export class Workflow {
         damageListData.forEach((di => delete di.damageDetails))
         addUpdatesCacheFlags(this.id, { [WorkflowDataFlags.damageList]: damageListData }, "midi-qol");
       }
-      await Workflow.removeItemCardButtons(this.itemCardUuid, { removeAllButtons: getRemoveAllButtons(this.activity), removeAttackButtons: getRemoveAttackButtons(this.activity), removeDamageButtons: getRemoveDamageButtons(this.activity), removeDnD5eButtons: getRemoveAllButtons(this.activity) && configSettings.autoCheckSaves !== "none", removeDnd5eSaveButtons: configSettings.autoCheckSaves !== "none" });
+      await Workflow.removeItemCardButtons(this.itemCardUuid, { removeAllButtons: getRemoveAllButtons(this.activity), removeAttackButtons: getRemoveAttackButtons(this.activity), removeDamageButtons: getRemoveDamageButtons(this.activity), removeDnD5eButtons: getRemoveAllButtons(this.activity) && configSettings.autoCheckSaves !== "none", removeDnd5eSaveButtons: configSettings.autoCheckSaves !== "none", finished: true });
     }
     if (context.attackRoll) return this.WorkflowState_AttackRollComplete;
     if (context.damageRoll) return this.WorkflowState_ConfirmRoll;
