@@ -62,6 +62,7 @@ import {
   getTokenName,
   tokenPortrait,
   setRollOperatorEvaluated,
+  evalAllConditions,
   evalAllConditionsAsync,
   getAppliedEffects,
   CEAddEffectWith,
@@ -1456,8 +1457,14 @@ export class Workflow {
   maxTransitionCount: number = 250;
   selfTargeted: boolean | undefined;
   workflowStartTime: number | undefined;
-  rangeTargeting: boolean | undefined;
-  tempTargetConfirmation: boolean | undefined;
+  /** Targets from an emanation with no template */
+  get rangeTargeting(): boolean {
+    return activityHasEmanationNoTemplate(this.activity);
+  }
+  /** Targets from a template that auto-targets */
+  get tempTargetConfirmation(): boolean {
+    return getActivityAutoTargetAction(this.activity) !== "none" && activityHasAreaTarget(this.activity);
+  }
   whisperAttackCard: boolean | undefined;
   effectTargets: Set<Token.Implementation> | undefined;
   // Deferred other activity damage rolling - stored when consumption needs to be checked first
@@ -1675,7 +1682,8 @@ export class Workflow {
    * Careful Spells read them at the saves.
    */
   #preSelectedTargets(): Set<Token.Implementation> {
-    if (this.workflowOptions?.preSelectedTargetUuids?.length) {
+    // An empty snapshot is a choice of none; only a use with no snapshot (not started by use()) reads the user's targets
+    if (this.workflowOptions?.preSelectedTargetUuids !== undefined) {
       return new Set(this.workflowOptions.preSelectedTargetUuids
         .map(uuid => (fromUuidSync(uuid) as TokenDocument | null)?.object)
         .filter((t): t is Token.Implementation => !!t));
@@ -2134,13 +2142,11 @@ export class Workflow {
     if (!this.selfTargeted) {
       clearTargetSave();
     }
-    this.rangeTargeting = activityHasEmanationNoTemplate(this.activity);
     if (this.rangeTargeting) {
       // Targets have already been set in activity.use
       return this.WorkflowState_AoETargetConfirmation;
     }
 
-    this.tempTargetConfirmation = getActivityAutoTargetAction(this.activity) !== "none" && activityHasAreaTarget(this.activity);
     if (debugEnabled > 1) debug("WORKFLOW NONE", getActivityAutoTargetAction(this.activity), activityHasAreaTarget(this.activity));
     if (this.tempTargetConfirmation) {
       return this.WorkflowState_AwaitTemplate;
@@ -5427,26 +5433,35 @@ export class Workflow {
    * @param target The target token to check
    * @returns true if target should auto-succeed, false otherwise
    */
-  protected checkSculptOrCarefulSpells(target: Token): boolean {
-    // Sculpt Spells: Evocation spells auto-succeed for pre-selected targets (adds to superSavers)
+  /**
+   * Sculpt Spells and Careful Spell (2024): an area use's creatures targeted before casting are the caster's choice.
+   * They succeed on the save and take no damage where a save halves it.
+   */
+  protected checkSculptOrCarefulSpells(target: Token.Implementation): boolean {
+    if (!(this.rangeTargeting || this.tempTargetConfirmation) || !this.preSelectedTargets.has(target)) return false;
+    const conditionData = createConditionData({ workflow: this, target });
     // @ts-expect-error no dnd5e-types - accessing .school property
-    const isEvocationSpell = this.activity.item?.system.school === "evo";
-    if (this.actor.flags?.[MODULE_ID]?.sculptSpells &&
-      (this.rangeTargeting || this.tempTargetConfirmation) &&
-      isEvocationSpell &&
-      this.preSelectedTargets.has(target)) {
-      this.superSavers = this.superSavers.add(target);
-      return true;
-    }
+    const sculpted = this.activity.item?.system.school === "evo" && evalAllConditions(this.actor, `flags.${MODULE_ID}.sculptSpells`, conditionData);
+    // @ts-expect-error no dnd5e-types
+    const isSpell = this.item.type === "spell";
+    const careful = !sculpted && isSpell && this.#carefulTargets().has(target)
+      && evalAllConditions(this.actor, `flags.${MODULE_ID}.carefulSpells`, conditionData);
+    if (!sculpted && !careful) return false;
+    this.superSavers = this.superSavers.add(target);
+    return true;
+  }
 
-    // Careful Spells: Pre-selected targets auto-succeed
-    if (this.actor.flags?.[MODULE_ID]?.carefulSpells &&
-      (this.rangeTargeting || this.tempTargetConfirmation) &&
-      this.preSelectedTargets.has(target)) {
-      return true;
-    }
-
-    return false;
+  #carefulProtected: Set<Token.Implementation> | undefined;
+  /** Careful Spell's creatures: the first pre-selected targets, up to the caster's Charisma modifier (minimum 1) */
+  #carefulTargets(): Set<Token.Implementation> {
+    if (this.#carefulProtected) return this.#carefulProtected;
+    const chosen = [...this.preSelectedTargets].filter(token => this.targets.has(token));
+    // @ts-expect-error no dnd5e-types
+    const max = Math.max(1, Number(this.actor.system.abilities?.cha?.mod) || 0);
+    this.#carefulProtected = new Set(chosen.slice(0, max));
+    if (chosen.length > max && evalAllConditions(this.actor, `flags.${MODULE_ID}.carefulSpells`, createConditionData({ workflow: this })))
+      ui.notifications?.warn(i18nFormat("midi-qol.CarefulSpellTooMany", { max, names: [...this.#carefulProtected].map(token => getTokenName(token)).join(", ") }));
+    return this.#carefulProtected;
   }
 
   /**

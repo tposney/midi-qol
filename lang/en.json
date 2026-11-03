@@ -115,6 +115,7 @@
   "midi-qol.PreRollChecks.Hint": "Experimental: Checks before doing an item roll; currently in range and roller has > 0 HP",
   "midi-qol.noTargets": "You must target a token before rolling the attack",
   "midi-qol.wrongNumberTargets": "You must target at most {allowedTargets} token(s) before rolling the attack",
+  "midi-qol.CarefulSpellTooMany": "Careful Spell protects at most {max} creature(s): only {names} protected",
   "midi-qol.noSaveTargets": "No targets to save",
   "midi-qol.UseTokenNames.Name": "Chat cards use token name",
   "midi-qol.UseTokenNames.Hint": "Chat card titles and target names use the token name rather than the actor name",
