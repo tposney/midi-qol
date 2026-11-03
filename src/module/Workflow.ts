@@ -1,7 +1,7 @@
 import { warn, debug, log, i18n, i18nFormat, busyWait, MESSAGE_TYPES, error, debugEnabled, MQItemMacroLabel, GameSystemConfig, MODULE_ID, MQActivityMacroLabel, gameStats } from "../midi-qol.js";
 import { MidiTeleportActivity, TeleportOption } from "./activities/TeleportActivity.js";
 import { decodeWorkflowOptions, encodeWorkflowOptions, inheritableWorkflowOptions } from "./lib/workflowOptionsCodec.js";
-import { CardRecord, RecordSet, SaveFacts, STATE_FIELDS, StateKey, attributionMap, attributionTriples } from "./lib/cardState.js";
+import { CardRecord, RECORD_SETS, RecordSet, SaveFacts, STATE_FIELDS, StateKey, attributionMap, attributionTriples } from "./lib/cardState.js";
 import { preferredActiveGM, socketlibSocket, timedAwaitExecuteAsGM, timedExecuteAsGM, unTimedExecuteAsGM } from "./GMAction.js";
 import { installedModules } from "./setupModules.js";
 import { offerFollowUps } from "./followUps.js";
@@ -209,26 +209,18 @@ export type WorkflowEvent = "attackRolled" | "damageRolled" | "noDamage" | "util
 export type WorkflowOutcome = "ok" | "allMissed" | "invalid" | "split" | "manualSaves" | "cancelled" | "aborted";
 
 /**
- * Write-through cache in front of the workflow's state on its card (lib/cardState.ts). Getters fall back to the stored
- * value (then the default) until the field is first written; writing undefined clears the cache so the getter falls
- * back to the stored value again.
+ * The workflow's stored fields: kept in memory, written to its card (lib/cardState.ts) through the card's update cache.
+ * The card is read only when the workflow is rebuilt from it (load). Writing undefined forgets the value.
  */
 class CardStateStore {
   #cache = new Map<string, unknown>();
-  #card: () => ChatMessage.Implementation | undefined;
   #write: (updates: Record<string, unknown>) => void;
   #persistRolls: () => void;
 
-  /** `card`: the workflow's own card as stored (not with its pending updates); `write`: updates by path */
-  constructor(card: () => ChatMessage.Implementation | undefined, write: (updates: Record<string, unknown>) => void, persistRolls: () => void) {
-    this.#card = card;
+  /** `write`: updates by path, queued with the card's next update; `persistRolls`: the card's rolls */
+  constructor(write: (updates: Record<string, unknown>) => void, persistRolls: () => void) {
     this.#write = write;
     this.#persistRolls = persistRolls;
-  }
-
-  #midi(): { state?: Record<string, any>, records?: Record<string, CardRecord>, [key: string]: any } | undefined {
-    // @ts-expect-error no dnd5e-types
-    return this.#card()?.system?.midi;
   }
 
   // The roll counts are the card's own (its buttons show them), not workflow state
@@ -236,19 +228,44 @@ class CardStateStore {
     return ["attackRollCount", "damageRollCount"].includes(key) ? `system.midi.${key}` : `system.midi.state.${key}`;
   }
 
-  scalar<T>(key: StateKey | "attackRollCount" | "damageRollCount", dflt: T, restore?: (stored: T) => T): T {
-    if (this.#cache.has(key)) return this.#cache.get(key) as T;
-    const midi = this.#midi();
-    const stored = ((key in STATE_FIELDS ? midi?.state?.[key] : midi?.[key]) ?? dflt) as T;
-    if (!restore) return stored;
-    // Cached so in-place changes to the restored copy are kept
-    const restored = restore(stored);
-    this.#cache.set(key, restored);
-    return restored;
+  /** What the card holds, for a workflow rebuilt from it: its state, its records' token sets and its rolls */
+  load(card: ChatMessage.Implementation, decodeOptions: (options: WorkflowOptions) => WorkflowOptions): void {
+    // @ts-expect-error no dnd5e-types
+    const midi: { state?: Record<string, any>, records?: Record<string, CardRecord>, attackRollCount?: number, damageRollCount?: number } = card.system?.midi ?? {};
+    const state = midi.state ?? {};
+    if (state.workflowClass) this.#cache.set("action", [state.workflowClass, state.action ?? ""]);
+    for (const key of Object.keys(STATE_FIELDS)) {
+      const value = state[key];
+      if (value === undefined || value === null) continue;
+      if (key === "workflowOptions") this.#cache.set(key, decodeOptions(foundry.utils.deepClone(value)));
+      else if (key.endsWith("DamageDetail") || key === "damageDetail") this.#cache.set(key, damageDetailsFromObject(value));
+      else this.#cache.set(key, foundry.utils.deepClone(value));
+    }
+    for (const key of ["attackRollCount", "damageRollCount"] as const) if (midi[key] !== undefined) this.#cache.set(key, midi[key]);
+    const records = Object.values(midi.records ?? {});
+    for (const field of Object.keys(RECORD_SETS) as RecordSet[]) {
+      const tokens = records.filter(record => record[field])
+        .map(record => (fromUuidSync(record.uuid) as TokenDocument.Implementation | undefined)?.object).filter((t): t is Token.Implementation => !!t);
+      if (tokens.length) this.#cache.set(field, new Set(tokens));
+    }
+    const attribution = Object.fromEntries(records.filter(record => record.saveAttribution?.length)
+      .map(record => [record.uuid, attributionMap(record.saveAttribution) as AttributionMap]));
+    if (!foundry.utils.isEmpty(attribution)) this.#cache.set("saveAttribution", attribution);
+    // Rolls by the type midi tags them with
+    const rollKeys: Record<string, string> = { attack: "attackRoll", defaultDamage: "damageRolls", bonusDamage: "bonusDamageRolls", otherDamage: "otherDamageRolls", utility: "utilityRolls" };
+    for (const roll of (card.rolls ?? []) as Roll[]) {
+      const key = rollKeys[String(foundry.utils.getProperty(roll, `options.${MODULE_ID}.rollType`))];
+      if (!key) continue;
+      if (key === "attackRoll") { if (!this.#cache.has(key)) this.#cache.set(key, roll); }
+      else this.#cache.set(key, [...((this.#cache.get(key) as Roll[] | undefined) ?? []), roll]);
+    }
+  }
+
+  scalar<T>(key: StateKey | "attackRollCount" | "damageRollCount", dflt: T): T {
+    return (this.#cache.has(key) ? this.#cache.get(key) : dflt) as T;
   }
 
   setScalar<T>(key: StateKey | "attackRollCount" | "damageRollCount", value: T, storeAs?: (value: T) => unknown): void {
-    // Clearing leaves the stored value, as the flags did
     if (value === undefined) {
       this.#cache.delete(key);
       return;
@@ -257,15 +274,9 @@ class CardStateStore {
     this.#write({ [CardStateStore.#path(key)]: storeAs ? storeAs(value) : value });
   }
 
-  /** The workflow's tokens in set `field`, as canvas placeables. An empty one is not cached, so a later write is seen. */
+  /** The workflow's tokens in set `field`. An empty one is not kept, so changing it in place is not seen: assign it. */
   tokenSet(field: RecordSet): Set<Token.Implementation> {
-    if (this.#cache.has(field)) return this.#cache.get(field) as Set<Token.Implementation>;
-    const members = Object.values(this.#midi()?.records ?? {}).filter(record => record[field]);
-    if (!members.length) return new Set();
-    const tokens = new Set(members.map(record => (fromUuidSync(record.uuid) as TokenDocument.Implementation | undefined)?.object)
-      .filter((t): t is Token.Implementation => !!t));
-    this.#cache.set(field, tokens);
-    return tokens;
+    return (this.#cache.get(field) as Set<Token.Implementation> | undefined) ?? new Set();
   }
 
   setTokenSet(field: RecordSet, tokens: Set<TokenOrDocument> | undefined): void {
@@ -286,17 +297,16 @@ class CardStateStore {
 
   /** The recorded workflow class and state name */
   storedAction(): [string, string] | undefined {
-    const state = this.#midi()?.state;
-    return state?.workflowClass ? [state.workflowClass, state.action ?? ""] : undefined;
+    return this.#cache.get("action") as [string, string] | undefined;
   }
 
   /** The records' save attribution, keyed by token uuid as the workflow uses it */
   saveAttribution(): Record<string, AttributionMap> {
-    return Object.fromEntries(Object.values(this.#midi()?.records ?? {}).filter(record => record.saveAttribution?.length)
-      .map(record => [record.uuid, attributionMap(record.saveAttribution) as AttributionMap]));
+    return (this.#cache.get("saveAttribution") as Record<string, AttributionMap> | undefined) ?? {};
   }
 
   setSaveAttribution(attribution: Record<string, AttributionMap>): void {
+    this.#cache.set("saveAttribution", attribution);
     for (const [uuid, map] of Object.entries(attribution)) {
       const document = fromUuidSync(uuid);
       if (document instanceof TokenDocument) this.setSaveFacts(document, { saveAttribution: attributionTriples(map) });
@@ -312,24 +322,9 @@ class CardStateStore {
     this.#write(leaves);
   }
 
-  // Rolls not yet prepared as Roll instances are rebuilt with Roll.fromData, which redirects to the stored subclass via
-  // data.class. Falls back to the raw data if the class is no longer registered.
-  #rollFromData(data: any): Roll {
-    if (data instanceof Roll) return data;
-    try {
-      return Roll.fromData(data) as Roll;
-    } catch (err) {
-      TroubleShooter.recordError(err, `CardStateStore | could not rehydrate roll ${data?.class}`);
-      return data;
-    }
-  }
-
-  /** Rolls are the card's `message.rolls`, which ChatMessageMidi puts on its flags in memory */
+  /** Rolls are written as the card's `message.rolls` */
   roll(key: string): Roll | undefined {
-    if (this.#cache.has(key)) return this.#cache.get(key) as Roll;
-    const roll = this.#card()?.flags?.[MODULE_ID]?.[key] as Roll | undefined;
-    if (roll) this.#cache.set(key, roll);
-    return roll;
+    return this.#cache.get(key) as Roll | undefined;
   }
 
   setRoll(key: string, roll: Roll | undefined): void {
@@ -339,12 +334,7 @@ class CardStateStore {
   }
 
   rolls(key: string): Roll[] | undefined {
-    if (this.#cache.has(key)) return this.#cache.get(key) as Roll[];
-    const data = this.#card()?.flags?.[MODULE_ID]?.[key];
-    if (!data?.length) return undefined;
-    const rolls = data.map((r: any) => this.#rollFromData(r));
-    this.#cache.set(key, rolls);
-    return rolls;
+    return this.#cache.get(key) as Roll[] | undefined;
   }
 
   setRolls(key: string, rolls: Roll[] | undefined): void {
@@ -354,14 +344,7 @@ class CardStateStore {
   }
 
   damageDetail(key: StateKey): DamageDescription[] {
-    if (this.#cache.has(key)) return this.#cache.get(key) as DamageDescription[];
-    const data = this.#midi()?.state?.[key];
-    if (data?.length) {
-      const detail = damageDetailsFromObject(data as unknown as DamageDescriptionObject[]);
-      this.#cache.set(key, detail);
-      return detail;
-    }
-    return [];
+    return (this.#cache.get(key) as DamageDescription[] | undefined) ?? [];
   }
 
   setDamageDetail(key: StateKey, detail: DamageDescription[]): void {
@@ -575,7 +558,7 @@ export class Workflow {
     if (this.itemCardUuid) addUpdatesCache(this.id, { rolls: this.chatRolls });
   }
 
-  #persisted = new CardStateStore(() => this.#ownCard(), updates => this.persistFields(updates), () => this.persistRolls());
+  #persisted = new CardStateStore(updates => this.persistFields(updates), () => this.persistRolls());
 
   get useActiveDefence() { return false; }
   get actor(): Actor.Implementation {
@@ -596,7 +579,7 @@ export class Workflow {
   }
 
   get workflowOptions(): WorkflowOptions {
-    return this.#persisted.scalar<WorkflowOptions>("workflowOptions", {}, decodeWorkflowOptions);
+    return this.#persisted.scalar<WorkflowOptions>("workflowOptions", {});
   }
   // Stored without midi's defaults, which are merged back when rebuilt
   set workflowOptions(workflowOptions: WorkflowOptions) {
@@ -1541,6 +1524,8 @@ export class Workflow {
     if (restoring) {
       this.itemCardUuid = options.chatCardUuid;
       this.id = options.chatCardUuid!;
+      const card = this.#ownCard();
+      if (card) this.#persisted.load(card, decodeWorkflowOptions);
       this.workflowName = `${this.constructor.name} ${this.item?.name ?? "no item"} restored`;
     } else {
       // In this case, `actor`, `activity`, and `speaker` are mandatory
