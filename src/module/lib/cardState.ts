@@ -38,13 +38,22 @@ export const RECORD_SETS = {
 } as const;
 export type RecordSet = keyof typeof RECORD_SETS;
 
-export type CardRecord = { uuid: string, saveAttribution?: Record<string, unknown> } & Partial<Record<RecordSet, boolean>>;
+/** What a save row shows that the roll and the token do not: the result as midi decided it */
+export type SaveFacts = {
+  saveTotal?: number | null,
+  // Cover at the save; total cover from a module makes it automatic
+  saveCover?: "half" | "threeQuarters" | "total", saveCoverAuto?: boolean,
+  // Advantage mode, and why: [type, source, name]
+  saveMode?: number, saveAttribution?: string[][]
+};
+export type CardRecord = { uuid: string } & Partial<Record<RecordSet, boolean>> & SaveFacts;
 
 export function cardStateSchema() {
-  const { ArrayField, BooleanField, ObjectField, SchemaField, StringField, TypedObjectField } = foundry.data.fields;
+  const { ArrayField, BooleanField, NumberField, ObjectField, SchemaField, StringField, TypedObjectField } = foundry.data.fields;
   // Unset fields are left out of the card, not stored as defaults
   const unset = { required: false, initial: undefined };
   const bool = () => new BooleanField(unset);
+  const num = () => new NumberField({ ...unset, nullable: true });
   const str = () => new StringField({ ...unset, blank: true });
   const details = () => new ArrayField(new ObjectField(), unset);
   return {
@@ -62,7 +71,8 @@ export function cardStateSchema() {
     records: new TypedObjectField(new SchemaField({
       uuid: new StringField({ required: true, blank: false }),
       ...Object.fromEntries(Object.keys(RECORD_SETS).map(key => [key, bool()])),
-      saveAttribution: new ObjectField(unset)
+      saveTotal: num(), saveCover: new StringField({ ...unset, choices: ["half", "threeQuarters", "total"] }), saveCoverAuto: bool(), saveMode: num(),
+      saveAttribution: new ArrayField(new ArrayField(new StringField()), unset)
     }), { required: false })
   };
 }
@@ -85,8 +95,19 @@ export function legacyCardFlags(midi: { state?: Record<string, any>, records?: R
       ? members.map(({ uuid }) => ({ uuid, name: (fromUuidSync(uuid) as { name?: string } | null)?.name ?? "" }))
       : members.map(record => record.uuid);
   }
-  const attribution = Object.fromEntries(records.filter(record => record.saveAttribution && !foundry.utils.isEmpty(record.saveAttribution))
-    .map(record => [record.uuid, record.saveAttribution]));
+  const attribution = Object.fromEntries(records.filter(record => record.saveAttribution?.length)
+    .map(record => [record.uuid, attributionMap(record.saveAttribution!)]));
   if (!foundry.utils.isEmpty(attribution)) flags.saveAttribution = attribution;
   return flags;
+}
+
+/** Attribution as [type, source, name] triples (a source can contain dots, which an update would split) */
+export function attributionTriples(map: Record<string, Record<string, string>> | undefined): string[][] {
+  return Object.entries(map ?? {}).flatMap(([type, sources]) => Object.entries(sources ?? {}).map(([source, name]) => [type, source, String(name)]));
+}
+
+export function attributionMap(triples: string[][] | undefined): Record<string, Record<string, string>> {
+  const map: Record<string, Record<string, string>> = {};
+  for (const [type, source, name] of triples ?? []) (map[type] ??= {})[source] = name;
+  return map;
 }

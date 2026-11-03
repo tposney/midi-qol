@@ -9146,6 +9146,18 @@ export function getLinkText(entity?: TokenOrDocument | Actor.Implementation | It
   return `@UUID[${uuid}]{${name?.slice(0, MaxNameLength - 5)}}`;
 }
 
+const videoThumbnails = new Map<string, Promise<string>>();
+
+/** A token's image on midi's target lists: its actor's portrait for a character with Use Player Portrait; a video as a still */
+export async function tokenPortrait(document: TokenDocument.Implementation): Promise<string> {
+  let img = document.texture.src ?? document.actor?.img ?? "";
+  // @ts-expect-error no dnd5e-types
+  if (configSettings.usePlayerPortrait && document.actor?.type === "character") img = document.actor.img ?? document.texture.src ?? "";
+  if (!foundry.helpers.media.VideoHelper.hasVideoExtension(img)) return img;
+  if (!videoThumbnails.has(img)) videoThumbnails.set(img, game.video?.createThumbnail(img, { width: 100, height: 100 }).then(thumb => thumb ?? "") ?? Promise.resolve(""));
+  return videoThumbnails.get(img)!;
+}
+
 export function getTokenName(entity?: TokenOrDocument | null): string {
   const token = getToken(entity);
   if (!token) return "<unknown>";

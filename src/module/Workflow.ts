@@ -1,7 +1,7 @@
 import { warn, debug, log, i18n, i18nFormat, busyWait, MESSAGE_TYPES, error, debugEnabled, MQItemMacroLabel, GameSystemConfig, MODULE_ID, MQActivityMacroLabel, gameStats } from "../midi-qol.js";
 import { MidiTeleportActivity, TeleportOption } from "./activities/TeleportActivity.js";
 import { decodeWorkflowOptions, encodeWorkflowOptions, inheritableWorkflowOptions } from "./lib/workflowOptionsCodec.js";
-import { CardRecord, RecordSet, STATE_FIELDS, StateKey } from "./lib/cardState.js";
+import { CardRecord, RecordSet, SaveFacts, STATE_FIELDS, StateKey, attributionMap, attributionTriples } from "./lib/cardState.js";
 import { preferredActiveGM, socketlibSocket, timedAwaitExecuteAsGM, timedExecuteAsGM, unTimedExecuteAsGM } from "./GMAction.js";
 import { installedModules } from "./setupModules.js";
 import { offerFollowUps } from "./followUps.js";
@@ -60,6 +60,7 @@ import {
   clearUpdatesCache,
   getDamageType,
   getTokenName,
+  tokenPortrait,
   setRollOperatorEvaluated,
   evalAllConditionsAsync,
   getAppliedEffects,
@@ -112,7 +113,7 @@ import { bonusCheck, collectBonusFlags, defaultRollOptions, buildPreComputedAdva
 import { PreComputedAdvantage } from "./apps/MidiRollChoiceDialog.js";
 import { saveTargetsUndoData, saveUndoData } from "./undo.js";
 import { TroubleShooter } from "./apps/TroubleShooter.js";
-import { SAVE_TEMPLATE_FIELDS, USAGE_MESSAGE_TYPE, type MidiCardSection, type SectionName } from "./ChatClasses/UsageCardMessage.js";
+import { USAGE_MESSAGE_TYPE, cardSaveRoll, type MidiCardSection, type SectionName } from "./ChatClasses/UsageCardMessage.js";
 import { MidiSummonActivity } from "./activities/SummonActivity.js";
 import { activityHasScaledTargetCount, computeActivityTemplateTargets, createActivityTemplateRegions, postTemplateConfirmTargets, regionShapeOrigin, setDamageRollMinTerms } from "./activities/activityHelpers.js";
 import { Activity, Dnd5eChatMessage, ActivitySave, ActivityCheck, ActivityUseConfiguration, DamageDescription, DamageListEntry, TokenOrDocument, DND5ETargetDescriptor, CombinedTargetDescriptor, ActivityEffectData, QueueSaveRollOptions, SaveDetails, ProcessTargetSaveContext, ModuleIntegrationFlags, ModuleIntegrationRequests, MonksTokenBarRequest, FlashRollsRequest, EpicRollsRequest, RollProcessConfig, RollDialogConfig } from "../globals.js";
@@ -289,21 +290,25 @@ class CardStateStore {
     return state?.workflowClass ? [state.workflowClass, state.action ?? ""] : undefined;
   }
 
-  /** A record's save attribution, keyed by token uuid as the workflow uses it */
+  /** The records' save attribution, keyed by token uuid as the workflow uses it */
   saveAttribution(): Record<string, AttributionMap> {
-    return Object.fromEntries(Object.values(this.#midi()?.records ?? {})
-      .filter(record => record.saveAttribution && !foundry.utils.isEmpty(record.saveAttribution))
-      .map(record => [record.uuid, record.saveAttribution as AttributionMap]));
+    return Object.fromEntries(Object.values(this.#midi()?.records ?? {}).filter(record => record.saveAttribution?.length)
+      .map(record => [record.uuid, attributionMap(record.saveAttribution) as AttributionMap]));
   }
 
   setSaveAttribution(attribution: Record<string, AttributionMap>): void {
-    const leaves: Record<string, unknown> = {};
     for (const [uuid, map] of Object.entries(attribution)) {
-      const document = fromUuidSync(uuid) as TokenDocument.Implementation | undefined;
-      if (!(document instanceof TokenDocument) || !document.id) continue;
-      const at = `system.midi.records.${document.id}`;
-      Object.assign(leaves, { [`${at}.uuid`]: document.uuid, [`${at}.saveAttribution`]: map });
+      const document = fromUuidSync(uuid);
+      if (document instanceof TokenDocument) this.setSaveFacts(document, { saveAttribution: attributionTriples(map) });
     }
+  }
+
+  /** What the card's save row for this token shows besides its roll (UsageCardMessage) */
+  setSaveFacts(document: TokenDocument.Implementation, facts: SaveFacts): void {
+    if (!document.id) return;
+    const at = `system.midi.records.${document.id}`;
+    const leaves: Record<string, unknown> = { [`${at}.uuid`]: document.uuid };
+    for (const [key, value] of Object.entries(facts)) if (value !== undefined) leaves[`${at}.${key}`] = value;
     this.#write(leaves);
   }
 
@@ -1478,8 +1483,10 @@ export class Workflow {
   targetSaveDetails: Record<string, SaveDetails> | undefined;  // Per-target SaveDetails for attribution tracking
 
   /** Get save rolls keyed by target UUID - derived from targetSaveDetails */
+  // A rebuilt workflow's save rolls, from its card (#restoreFromCard), until it processes saves of its own
+  #restoredSaves: Record<string, Roll> | undefined;
   get tokenSaves(): Record<string, Roll> | undefined {
-    if (!this.targetSaveDetails) return undefined;
+    if (!this.targetSaveDetails) return this.#restoredSaves;
     const result: Record<string, Roll> = {};
     for (const [uuid, details] of Object.entries(this.targetSaveDetails)) {
       if (details.saveRoll) result[uuid] = details.saveRoll;
@@ -1674,6 +1681,8 @@ export class Workflow {
     if (this.bonusDamageRolls?.length) this.deriveBonusDamage();
     if (this.otherDamageRolls?.length) this.deriveOtherDamage();
     void this.activity?.setupCanSeeSense?.({ workflow: this });
+    const saves = [...this.targets].map(t => [t.document.uuid, cardSaveRoll(this.chatCard, t.document.uuid)] as const).filter(([, roll]) => !!roll);
+    if (saves.length) this.#restoredSaves = Object.fromEntries(saves) as Record<string, Roll>;
   }
 
   public someEventKeySet() {
@@ -4930,24 +4939,10 @@ export class Workflow {
     return this.#sectionsUpdate(section ? { [name]: section } : {}, extras);
   }
 
-  /**
-   * The saves section's render data, with the live Tokens projected away.
-   *
-   * `saves.html` needs only `target.id` and `target.document.uuid` from each entry, so keeping the
-   * placeable would serialise a canvas object into the card. Only the fields the template actually
-   * reads are kept — a live entry also carries `modifierTracker` (409 B on a measured card),
-   * `rollDetail`, `id` and `adv`, none of which the markup touches. The item id moves into the data
-   * because the wrapper it used to sit on is now part of the template.
-   */
+  /** The saves section's own data: its rows are drawn from the records and the save rolls (UsageCardMessage) */
   #saveSectionData(templateData: Record<string, any>): Record<string, unknown> {
-    const saves = (templateData.saves ?? []).map((save: any) => {
-      const projected: Record<string, unknown> = {
-        target: { id: save?.target?.id ?? "", document: { uuid: save?.target?.document?.uuid ?? "" } }
-      };
-      for (const field of SAVE_TEMPLATE_FIELDS) projected[field] = save?.[field];
-      return projected;
-    });
-    return { ...templateData, saves, itemId: this.item.id };
+    const { saves, ...data } = templateData;
+    return { ...data, itemId: this.item.id, dc: this.saveActivity?.save?.dc.value ?? this.saveActivity?.check?.dc.value ?? null };
   }
 
   /** As `#sectionUpdate`, for a display method that fills more than one slot in a single update. */
@@ -5344,13 +5339,23 @@ export class Workflow {
     if (this.bonusDamageRolls) messageRolls.push(...this.bonusDamageRolls);
     if (this.otherDamageRolls) messageRolls.push(...this.otherDamageRolls);
     /*
-     * Saves go last so `rolls[0]` keeps meaning what it did to anything still indexing it, and are
-     * carried at all because a save roll is worth having on the card in its own right — macros,
-     * Dice So Nice and dnd5e's `getAssociatedRolls` all read `message.rolls`, and until now the
-     * saves existed only as rendered markup inside midi's own section.
+     * Saves go last so `rolls[0]` keeps meaning what it did to anything still indexing it. Only those the card's own
+     * save and check messages don't hold: another module's, or one midi changed.
      */
-    for (const roll of Object.values(this.tokenSaves ?? {})) messageRolls.push(roll);
+    for (const roll of Object.values(this.tokenSaves ?? {})) if (this.#keepsSaveRoll(roll)) messageRolls.push(roll);
     return messageRolls;
+  }
+
+  /**
+   * A save roll goes on the card unless the card's linked save or check message for its token has it (dnd5e's own
+   * save rolls, midi's or from the card's buttons). Other modules' are kept: their messages may not last.
+   */
+  #keepsSaveRoll(roll: Roll): boolean {
+    if (foundry.utils.getProperty(roll, `options.${MODULE_ID}.external`)) return true;
+    const tokenId = String(foundry.utils.getProperty(roll, `options.${MODULE_ID}.targetUuid`) ?? "").split(".").pop();
+    const card = this.itemCardUuid ? fromUuidSync(this.itemCardUuid) as Dnd5eChatMessage | null : null;
+    return !(card?.getAssociatedRolls?.() ?? []).some(message => ["save", "check"].includes(message.type as string)
+      && message.speaker?.token === tokenId && message.rolls?.[0]?.total === roll.total);
   }
 
   /**
@@ -5388,19 +5393,7 @@ export class Workflow {
    * @returns Promise resolving to the image URL string
    */
   protected async getTargetPortraitImage(target: Token): Promise<string> {
-    const targetDocument = target.document;
-    let img = targetDocument.texture.src ?? target.actor?.img ?? "";
-
-    // @ts-expect-error no dnd5e-types
-    if (configSettings.usePlayerPortrait && target.actor?.type === "character") {
-      img = target.actor.img ?? targetDocument.texture.src ?? "";
-    }
-
-    if (foundry.helpers.media.VideoHelper.hasVideoExtension(img)) {
-      img = await game.video?.createThumbnail(img, { width: 100, height: 100 }) ?? "";
-    }
-
-    return img;
+    return tokenPortrait(target.document);
   }
 
   /**
@@ -5543,6 +5536,14 @@ export class Workflow {
     if (totalSaveCover >= TOTAL_COVER) coverLabel = "systems/dnd5e/icons/svg/statuses/cover-total.svg";
     else if (totalSaveCover >= THREE_QUARTERS_COVER) coverLabel = "systems/dnd5e/icons/svg/statuses/cover-three-quarters.svg";
     else if (totalSaveCover >= HALF_COVER) coverLabel = "systems/dnd5e/icons/svg/statuses/cover-half.svg";
+    const targetDocument = getTokenDocument(target);
+    if (targetDocument) this.#persisted.setSaveFacts(targetDocument, {
+      saveTotal: isFinite(saveRollTotal) ? saveRollTotal : null,
+      saveCover: totalSaveCover >= TOTAL_COVER ? "total" : totalSaveCover >= THREE_QUARTERS_COVER ? "threeQuarters" : totalSaveCover >= HALF_COVER ? "half" : undefined,
+      saveCoverAuto: coverSaveBonus >= TOTAL_COVER || undefined,
+      saveMode: mode,
+      saveAttribution: advMode?.attribution && !foundry.utils.isEmpty(advMode.attribution) ? attributionTriples(advMode.attribution) : undefined
+    });
 
     // Build save tooltip showing breakdown: "15 = 1d20(12) + 3 vs DC 14"
     let saveTooltip: string | undefined;
@@ -6975,6 +6976,8 @@ export class Workflow {
     const func = this.saveRequests[requestId];
     delete this.saveRequests[requestId];
     if (debugEnabled > 0) debug(`flashSavingCheck | Resolving save for ${requestId} with roll total ${data.total}`);
+    // Kept on the card: Flash Rolls may delete its save messages once rolled
+    foundry.utils.setProperty(data.roll, `options.${MODULE_ID}.external`, "flash-rolls-5e");
     func(data.roll);
   }
 

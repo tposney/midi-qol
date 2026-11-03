@@ -1,5 +1,4 @@
 import { warn, error, debug, i18n, debugEnabled, overTimeEffectsToDelete, savedOverTimeEffectsToDelete, log, gameStats, GameSystemConfig, MODULE_ID, getStaticID, MIDI_IMPLYING_STATUSES } from "../midi-qol.js";
-import { registerCardSaveRecording } from "./ChatClasses/cardSaves.js";
 import { excludeRegionSourceEffect, moveRegionsOnTurnChange } from "./regionBehaviors/MidiRegionActivityBehaviorType.js";
 import { colorChatMessageHandler, nsaMessageHandler, hideStuffHandler, hideRollUpdate, hideRollRender, processCreateDDBGLMessages, ddbglPendingHook, checkOverTimeSaves } from "./chatMessageHandling.js";
 import { preferredActiveGM, processUndoDamageCard } from "./GMAction.js";
@@ -386,7 +385,6 @@ export function initHooks() {
     processCreateDDBGLMessages(message, options, user);
     return true;
   });
-  registerCardSaveRecording();
 
   Hooks.on("updateChatMessage", (message, update, options, user) => {
     hideRollUpdate(message, update, options, user);

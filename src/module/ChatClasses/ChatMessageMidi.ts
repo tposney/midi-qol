@@ -5,6 +5,7 @@ import { configSettings, forceHideRoll, safeGetGameSetting } from "../settings.j
 import { displayTokenName, getToken, isDnd5eRollMessage } from "../utils.js";
 import { renameMarkedTokens } from "../lib/tokenNames.js";
 import { legacyCardFlags } from "../lib/cardState.js";
+import { cardSaveRoll } from "./UsageCardMessage.js";
 import { canSeePlayerOutcome, canSeeSaveResult, cardActor, challengeVisible, saveDetail, saveDisplayMode } from "../lib/saveVisibility.js";
 
 // Damage is auto-applied by midi when autoApplyDamage is one of the "yes*" modes.
@@ -312,11 +313,9 @@ export function defineChatMessageMidiClass(baseClass: ChatMessage.Implementation
       const pairs: [Roll, Element | null | undefined, boolean][] = [];
       const attack = attackRollOf(this);
       if (attack) pairs.push([attack, html.querySelector(".midi-attack-roll .dice-total"), true]);
-      for (const roll of this.rolls) {
-        if (foundry.utils.getProperty(roll, `options.${MODULE_ID}.rollType`) !== "save") continue;
-        const uuid = foundry.utils.getProperty(roll, `options.${MODULE_ID}.targetUuid`);
-        const row = html.querySelector(`.midi-qol-save-name[data-uuid="${uuid}"]`)?.closest("li");
-        pairs.push([roll, row?.querySelector(".midi-qol-save-tooltip .dice-total"), false]);
+      for (const name of Array.from(html.querySelectorAll<HTMLElement>(".midi-qol-saves-display .midi-qol-save-name[data-uuid]"))) {
+        const roll = cardSaveRoll(this, name.dataset.uuid ?? "");
+        if (roll) pairs.push([roll, name.closest("li")?.querySelector(".midi-qol-save-tooltip .dice-total"), false]);
       }
       for (const [d20Roll, total, canCrit] of pairs) {
         if (!total) continue;

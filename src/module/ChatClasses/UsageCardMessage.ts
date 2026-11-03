@@ -5,14 +5,16 @@
 
 import { error } from "../../midi-qol.js";
 import { Activity, ChatMessageRenderOptions, Dnd5eChatMessage } from "../../globals.js";
-import { configSettings, safeGetGameSetting } from "../settings.js";
+import { checkRule, configSettings, safeGetGameSetting } from "../settings.js";
 import { getRemoveAllButtons, getRemoveAttackButtons, getRemoveDamageButtons, midiRenderAttackRoll,
-  midiRenderDamageRolls, midiRenderOtherDamageRolls, midiRenderBonusDamageRolls, midiRenderFormulaRoll, renderRollAttributionIcon, renderSaveRollHTML } from "../utils.js";
+  midiRenderDamageRolls, midiRenderOtherDamageRolls, midiRenderBonusDamageRolls, midiRenderFormulaRoll, renderRollAttributionIcon, renderSaveRollHTML,
+  getAdvantageModeTitle, getTokenName, renderAttributionTooltip, tokenPortrait } from "../utils.js";
+import { saveDisplayMode } from "../lib/saveVisibility.js";
 import { MODULE_ID } from "../../midi-qol.js";
 import { Workflow } from "../Workflow.js";
 import { followUpButtons } from "../followUps.js";
 import { NOTE_MESSAGE_TYPE, noteCard, notesOf } from "./CardNoteMessage.js";
-import { cardStateSchema } from "../lib/cardState.js";
+import { attributionMap, cardStateSchema, type CardRecord } from "../lib/cardState.js";
 
 /** Renderer per roll-backed section; damage renderers aggregate the section's rolls into one block. */
 const SECTION_ROLL_RENDERERS: Record<string, (rolls: Roll[]) => Promise<string> | string> = {
@@ -83,11 +85,64 @@ export const SECTION_NAMES = [
 
 export type SectionName = typeof SECTION_NAMES[number];
 
-/** The per-target fields `saves.html` reads. Anything else on a save entry is not worth storing. */
-export const SAVE_TEMPLATE_FIELDS = [
-  "attributionTooltip", "coverLabel", "gmName", "hasAttribution", "img",
-  "rollTotal", "saveClass", "saveSymbol", "saveTooltip", "saveToolTipClass", "saveTotalClass", "targetClass"
-] as const;
+const COVER_ICONS: Record<string, string> = {
+  half: "systems/dnd5e/icons/svg/statuses/cover-half.svg",
+  threeQuarters: "systems/dnd5e/icons/svg/statuses/cover-three-quarters.svg",
+  total: "systems/dnd5e/icons/svg/statuses/cover-total.svg"
+};
+
+/**
+ * A token's save (or check) roll for a usage card: one kept on the card (another module's, or one midi changed), else
+ * the card's latest linked save or check message for the token; the one with midi's result when midi recorded one.
+ */
+export function cardSaveRoll(card: ChatMessage.Implementation | null | undefined, tokenUuid: string): Roll | undefined {
+  if (!card) return undefined;
+  const kept = (card.rolls ?? []).find(roll => foundry.utils.getProperty(roll, `options.${MODULE_ID}.rollType`) === "save"
+    && foundry.utils.getProperty(roll, `options.${MODULE_ID}.targetUuid`) === tokenUuid);
+  if (kept) return kept as Roll;
+  const tokenId = tokenUuid.split(".").pop();
+  const record = (card.system as { midi?: { records?: Record<string, CardRecord> } } | undefined)?.midi?.records?.[tokenId ?? ""];
+  const linked = ((card as Dnd5eChatMessage).getAssociatedRolls?.() ?? [])
+    .filter(message => ["save", "check"].includes(message.type as string) && message.speaker?.token === tokenId)
+    .sort((a, b) => (a.timestamp ?? 0) - (b.timestamp ?? 0));
+  const message = typeof record?.saveTotal === "number"
+    ? linked.filter(m => m.rolls?.[0]?.total === record.saveTotal).at(-1) : linked.at(-1);
+  return message?.rolls?.[0] as Roll | undefined;
+}
+
+/** A row of the saves section (saves.html): a token, and its result if it has one */
+async function saveRow(uuid: string, result?: { roll?: Roll, total?: number | null, saved: boolean, dc?: number, record?: CardRecord }) {
+  const document = fromUuidSync(uuid) as TokenDocument.Implementation | null;
+  if (!(document instanceof TokenDocument)) return undefined;
+  const npc = !document.actor?.hasPlayerOwner;
+  const row: Record<string, unknown> = {
+    target: { id: document.id, document: { uuid } },
+    gmName: getTokenName(document),
+    img: await tokenPortrait(document),
+    targetClass: npc ? "midi-qol-npc-target" : "midi-qol-player-target",
+    saveTotalClass: npc ? "midi-qol-npc-save-total" : "",
+    saveToolTipClass: npc ? "midi-qol-npc-save-tooltip" : "",
+    saveSymbol: "", saveClass: "", rollTotal: "", rollHTML: ""
+  };
+  const total = result?.total;
+  if (!result || total === undefined || total === null) return row;
+  const { roll, saved, dc, record } = result;
+  row.rollTotal = isFinite(total) ? String(total) : "∞";
+  row.rollHTML = roll ? await renderSaveRollHTML(roll) : "";
+  if (dc !== undefined) {
+    row.saveSymbol = `${npc ? "midi-qol-npc-save-symbol" : ""} midi-qol-save-symbol ${saved ? "fa-check" : "fa-xmark"}`;
+    row.saveClass = saved ? "success" : "failure";
+    const detail = roll?.result && roll.result !== String(total) && isFinite(total) ? ` = ${roll.result}` : "";
+    row.saveTooltip = `${isFinite(total) ? total : "∞"}${detail} vs DC ${dc}`;
+  }
+  if (record) {
+    const attribution = attributionMap(record.saveAttribution);
+    row.attributionTooltip = foundry.utils.escapeHTML(await renderAttributionTooltip(attribution, getAdvantageModeTitle(record.saveMode)));
+    row.hasAttribution = !foundry.utils.isEmpty(attribution);
+    row.coverLabel = record.saveCover ? COVER_ICONS[record.saveCover] : undefined;
+  }
+  return row;
+}
 
 /** A roll section: a roll type rendered from `message.rolls`, a template with data, or stored markup. */
 export type MidiCardSection = { label: string, rollType?: string, template?: string, data?: Record<string, unknown>, html?: string };
@@ -233,7 +288,8 @@ export function setupUsageCardMessage() {
 
       // Notes, and messages a note owns, are drawn by the notes.
       context.summaries = (context.summaries ?? []).filter((summary: any) => !drawnSeparately(game.messages?.get(summary.id)));
-      const sections = await this.#renderSections(this.#applySaveSummaries(context));
+      const saveRows = await this.#saveRows();
+      const sections = await this.#renderSections(this.#applySaveSummaries(context, saveRows), saveRows);
       context.midi = {
         ...(this.midi ?? {}),
         sections,
@@ -271,7 +327,7 @@ export function setupUsageCardMessage() {
      * other modules' saves reach midi without a linked message.
      * With the setting off neither is drawn and the messages show in the log. Returns the save targets to omit.
      */
-    #applySaveSummaries(context: Record<string, any>): Set<string> | "all" {
+    #applySaveSummaries(context: Record<string, any>, saveRows: any[]): Set<string> | "all" {
       if (!this.midi) return new Set();
       if (safeGetGameSetting("dnd5e", "chatCardSummary") === false) {
         context.summaries = [];
@@ -279,8 +335,8 @@ export function setupUsageCardMessage() {
       }
       if (configSettings.saveSummaryStyle !== "dnd5e") {
         // midi's section stands in for the summaries of the saves and checks it shows a result for (a save rolled from the
-        // card's button is recorded in it, cardSaves.ts); any other summary is dnd5e's to show.
-        const shown = new Set((this.midi?.sections?.saves?.data?.saves ?? [])
+        // card's button among them, #saveRows); any other summary is dnd5e's to show.
+        const shown = new Set(saveRows
           .filter((save: any) => save?.saveClass || (save?.rollTotal != null && save.rollTotal !== ""))
           .map((save: any) => save?.target?.document?.uuid).filter(Boolean));
         context.summaries = (context.summaries ?? []).filter((summary: any) =>
@@ -315,23 +371,50 @@ export function setupUsageCardMessage() {
       }
     }
 
-    /** Each save entry's roll markup, rendered from the card's save roll tagged with its target uuid. */
-    async #withSaveRolls(saves: any[]): Promise<any[]> {
-      const byTarget = new Map<string, Roll>();
-      for (const roll of this.parent.rolls ?? []) {
-        if (foundry.utils.getProperty(roll, `options.${MODULE_ID}.rollType`) !== "save") continue;
-        const uuid = foundry.utils.getProperty(roll, `options.${MODULE_ID}.targetUuid`);
-        if (typeof uuid === "string") byTarget.set(uuid, roll);
+    /**
+     * The saves section's rows: midi's targets from the records, each with its result and roll, a roll kept on the card
+     * (another module's, or one midi changed) or else the card's linked save or check message for the token. With
+     * Auto Check Saves off a save rolled from the card's button gives its token's row, or a row for a creature that
+     * wasn't a target (Save summary style: midi). Older cards stored their rows.
+     */
+    async #saveRows(): Promise<any[]> {
+      const data = this.midi?.sections?.saves?.data;
+      if (!data) return [];
+      const parent = this.parent as Dnd5eChatMessage;
+      const dc: number | undefined = Number.isFinite(data.dc) ? data.dc : undefined;
+      if (Array.isArray(data.saves)) return Promise.all(data.saves.map(async (save: any) =>
+        ({ ...save, rollHTML: save.rollHTML || await renderSaveRollHTML(cardSaveRoll(parent, save?.target?.document?.uuid ?? "")) })));
+      const fromButtons = saveDisplayMode() === "none" && configSettings.saveSummaryStyle !== "dnd5e";
+      // A save rolled from the card's button, judged against its own DC as dnd5e does
+      const buttonRow = (uuid: string) => {
+        const roll = cardSaveRoll(parent, uuid) as (Roll & { isCritical?: boolean, isFumble?: boolean, options: { target?: number } }) | undefined;
+        if (!roll) return saveRow(uuid);
+        const total = roll.total ?? 0;
+        const rollDC = Number.isFinite(roll.options.target) ? roll.options.target : dc;
+        let saved = rollDC !== undefined && total >= rollDC;
+        if (rollDC !== undefined && checkRule("criticalSaves")) saved = (!!roll.isCritical || total >= rollDC) && !roll.isFumble;
+        return saveRow(uuid, { roll, total, saved, dc: rollDC });
+      };
+      const records = (Object.entries(this.midi?.records ?? {}) as [string, CardRecord][]).filter(([, record]) => record.targets);
+      const rows: unknown[] = [];
+      for (const [, record] of records) {
+        if (record.saveTotal !== undefined || record.saveCoverAuto) {
+          rows.push(await saveRow(record.uuid, { roll: cardSaveRoll(parent, record.uuid), total: record.saveCoverAuto ? Infinity : record.saveTotal,
+            saved: !!record.saved, dc, record }));
+        } else rows.push(await (fromButtons ? buttonRow(record.uuid) : saveRow(record.uuid)));
       }
-      return Promise.all(saves.map(async (save: any) => ({
-        ...save,
-        // Older cards stored the markup.
-        rollHTML: save.rollHTML || await renderSaveRollHTML(byTarget.get(save?.target?.document?.uuid ?? ""))
-      })));
+      // Creatures that weren't targets, saving from the card's button
+      if (fromButtons) {
+        const listed = new Set(records.map(([id]) => id));
+        const others = new Set((parent.getAssociatedRolls?.() ?? []).filter(m => ["save", "check"].includes(m.type as string) && m.speaker?.token
+          && !listed.has(m.speaker.token)).map(m => game.scenes?.get(m.speaker.scene ?? "")?.tokens.get(m.speaker.token ?? "")?.uuid).filter(Boolean) as string[]);
+        for (const uuid of others) rows.push(await buttonRow(uuid));
+      }
+      return rows.filter(Boolean);
     }
 
     /** The sections for rendering: roll-backed ones from `message.rolls`, template ones per viewer, `html` as stored. */
-    async #renderSections(omitSaves: Set<string> | "all" = new Set()): Promise<Record<string, unknown>> {
+    async #renderSections(omitSaves: Set<string> | "all", saveRows: any[]): Promise<Record<string, unknown>> {
       const stored: Record<string, any> = this.midi?.sections ?? {};
       const out: Record<string, unknown> = {};
       for (const name of SECTION_NAMES) {
@@ -339,10 +422,10 @@ export function setupUsageCardMessage() {
         // Targets added to an attack card after its roll (e.g. by another module's buttons) get a hits list to show in.
         if (name === "hits" && !section && stored.attack && this.#recordedTargets().length)
           section = { label: "", template: "modules/midi-qol/templates/hits.html", data: { hits: [] } };
-        if (name === "saves" && section?.data?.saves) {
+        if (name === "saves" && section?.data) {
           // The heading (DC, damage on save) stays when dnd5e's summaries replace the rows; it has no DC of its own.
-          section = (omitSaves === "all" || !section.data.saves.length) ? null : { ...section, data: { ...section.data,
-            saves: section.data.saves.filter((save: any) => !omitSaves.has(save?.target?.document?.uuid ?? "")) } };
+          section = (omitSaves === "all" || !saveRows.length) ? null : { ...section, data: { ...section.data,
+            saves: saveRows.filter((save: any) => !omitSaves.has(save?.target?.document?.uuid ?? "")) } };
         }
         if (!section) { out[name] = null; continue; }
         if (section.template) {
@@ -350,9 +433,8 @@ export function setupUsageCardMessage() {
             ...section,
             html: await foundry.applications.handlebars.renderTemplate(section.template, {
               ...(section.data ?? {}),
-              ...(section.data?.saves ? { saves: await this.#withSaveRolls(section.data.saves) } : {}),
               // Against everything midi evaluated, not just the rows left once dnd5e's summaries replace some.
-              unevaluated: this.#unevaluatedTargets(name, stored[name]?.data ?? section.data),
+              unevaluated: this.#unevaluatedTargets(name, name === "saves" ? { saves: saveRows } : stored[name]?.data ?? section.data),
               // Resolved per viewer, not per roller.
               oneCard: true,
               collapsibleTargets: configSettings.collapsibleTargets,
