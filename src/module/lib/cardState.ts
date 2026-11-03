@@ -60,9 +60,8 @@ export function cardStateSchema() {
   const str = () => new StringField({ ...unset, blank: true });
   return {
     state: new SchemaField({
-      // Workflow class and state name: a card with none recorded is never rebuilt
+      // Workflow class: a card with none recorded is never rebuilt. Where it waits is worked out (Workflow.cardResumePoint)
       workflowClass: str(),
-      action: str(),
       isCritical: bool(), isFumble: bool(),
       templateUuids: new ArrayField(new StringField(), unset),
       workflowOptions: new ObjectField(unset),
@@ -146,7 +145,6 @@ export function legacyCardFlags(midi: { state?: Record<string, any>, records?: R
     if (value !== null && value !== undefined && value !== "") flags[flag] = value;
   }
   flags.templateUuid = state.templateUuids?.[0] ?? "";
-  flags.currentAction = [state.workflowClass, state.action];
   const records = Object.values(midi?.records ?? {});
   for (const [key, flag] of Object.entries(RECORD_SETS)) {
     const members = records.filter(record => record[key as RecordSet]);

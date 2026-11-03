@@ -3,7 +3,7 @@ import { TroubleShooter } from "../apps/TroubleShooter.js";
 import { Dnd5eSystem } from "../../globals.js";
 import { configSettings, forceHideRoll, safeGetGameSetting } from "../settings.js";
 import { createDamageDetail, displayTokenName, getToken, isDnd5eRollMessage } from "../utils.js";
-import { damageDetailToObject } from "../Workflow.js";
+import { damageDetailToObject, Workflow } from "../Workflow.js";
 import { renameMarkedTokens } from "../lib/tokenNames.js";
 import { cardMidiState, defineLegacyCardFlags, legacyCardFlags, storedMidiFlag } from "../lib/cardState.js";
 import { cardSaveRoll } from "./UsageCardMessage.js";
@@ -122,7 +122,8 @@ export function defineChatMessageMidiClass(baseClass: ChatMessage.Implementation
           return rolls.length ? damageDetailToObject(createDamageDetail({ roll: rolls, activity: this.getAssociatedActivity?.() ?? null })) : undefined;
         };
         defineLegacyCardFlags((this.flags[MODULE_ID] ??= {}) as Record<string, unknown>, cardMidi,
-          { damageDetail: detailOf("defaultDamage"), otherDamageDetail: detailOf("otherDamage"), bonusDamageDetail: detailOf("bonusDamage") });
+          { damageDetail: detailOf("defaultDamage"), otherDamageDetail: detailOf("otherDamage"), bonusDamageDetail: detailOf("bonusDamage"),
+            currentAction: () => [cardMidi.state?.workflowClass, Workflow.cardResumePoint(this) ?? ""] });
       }
 
       // Deserialize roll flags in-place from JSON to Roll instances (same pattern as Foundry core's ChatMessage.rolls)

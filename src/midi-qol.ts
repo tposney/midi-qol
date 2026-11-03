@@ -200,6 +200,7 @@ globalThis.MidiQOL ??= {};
 Object.assign(globalThis.MidiQOL, {
   fillRulesText,
   cardSaveRoll,
+  cardResumePoint: (card: ChatMessage.Implementation | undefined) => Workflow.cardResumePoint(card),
   activityHasEmanationNoTemplate,
   addDependent,
   addConcentrationDependent,

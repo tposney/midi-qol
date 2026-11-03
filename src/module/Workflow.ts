@@ -233,7 +233,7 @@ class CardStateStore {
     // @ts-expect-error no dnd5e-types
     const midi: { state?: Record<string, any>, records?: Record<string, CardRecord>, attackRollCount?: number, damageRollCount?: number } = card.system?.midi ?? {};
     const state = midi.state ?? {};
-    if (state.workflowClass) this.#cache.set("action", [state.workflowClass, state.action ?? ""]);
+    if (state.workflowClass) this.#cache.set("workflowClass", state.workflowClass);
     for (const key of Object.keys(STATE_FIELDS)) {
       const value = state[key];
       if (value === undefined || value === null) continue;
@@ -296,9 +296,15 @@ class CardStateStore {
     this.#write(leaves);
   }
 
-  /** The recorded workflow class and state name */
-  storedAction(): [string, string] | undefined {
-    return this.#cache.get("action") as [string, string] | undefined;
+  /** The recorded workflow class: a card with none is never rebuilt */
+  storedClass(): string | undefined {
+    return this.#cache.get("workflowClass") as string | undefined;
+  }
+
+  setClass(name: string): void {
+    if (this.#cache.get("workflowClass") === name) return;
+    this.#cache.set("workflowClass", name);
+    this.#write({ "system.midi.state.workflowClass": name });
   }
 
   /** The records' save attribution, keyed by token uuid as the workflow uses it */
@@ -733,9 +739,9 @@ export class Workflow {
   get currentAction() {
     if (this.#currentAction) return this.#currentAction;
     if (this.itemCardUuid) {
-
-      const [className, currentActionName] = this.#persisted.storedAction() ?? ["none", "none"];
-      if (className !== "none") {
+      const className = this.#persisted.storedClass();
+      const currentActionName = Workflow.cardResumePoint(this.#ownCard()) ?? "";
+      if (className) {
         const actionClass = WorkflowRegistry[className];
         if (actionClass && (actionClass === Workflow || actionClass.prototype instanceof Workflow)) {
           const action = actionClass?.prototype[currentActionName];
@@ -751,7 +757,30 @@ export class Workflow {
   }
   set currentAction(currentAction: WorkflowState) {
     this.#currentAction = currentAction;
-    this.persistFields({ "system.midi.state.workflowClass": this.constructor.name, "system.midi.state.action": currentAction?.name ?? "" });
+    // The state is not stored: a rebuilt workflow works out where it waits from its card (cardResumePoint)
+    this.#persisted.setClass(this.constructor.name);
+  }
+
+  /**
+   * The state a workflow rebuilt from `card` waits in, worked out from the card: what has been placed, rolled and
+   * confirmed. Undefined for a card with no workflow.
+   */
+  static cardResumePoint(card: ChatMessage.Implementation | undefined): string | undefined {
+    const midi = (card?.system as { midi?: { state?: { workflowClass?: string, templateUuids?: string[] }, progress?: Record<string, boolean>, confirmAttackDamage?: boolean } } | undefined)?.midi;
+    if (!card || !midi?.state?.workflowClass) return undefined;
+    const progress = midi.progress ?? {};
+    if (progress.finished || progress.attacksSplit) return "WorkflowState_Completed";
+    const activity = (card as Dnd5eChatMessage).getAssociatedActivity?.() as Activity | undefined;
+    const rolled = new Set(card.rolls.map(roll => foundry.utils.getProperty(roll, `options.${MODULE_ID}.rollType`)));
+    const templates = activity && activityHasAreaTarget(activity) && !activityHasAutoPlaceTemplate(activity) ? Number(activity.target?.template?.count) || 1 : 0;
+    if ((midi.state.templateUuids?.length ?? 0) < templates) return "WorkflowState_AwaitTemplate";
+    if (activity?.roll?.formula && !rolled.has("utility")) return "WorkflowState_WaitForUtilityRoll";
+    if (activity?.attack && !rolled.has("attack")) return "WorkflowState_WaitForAttackRoll";
+    const other = activity?.otherActivity;
+    const damages = activity?.hasDamage || other?.hasDamage || activity?.hasHealing || other?.hasHealing;
+    if (damages && !["defaultDamage", "otherDamage", "bonusDamage"].some(type => rolled.has(type))) return "WorkflowState_WaitForDamageRoll";
+    if (midi.confirmAttackDamage && !progress.confirmed) return "WorkflowState_ConfirmRoll";
+    return "WorkflowState_Completed";
   }
 
   #isCriticalRestored: boolean = false;
