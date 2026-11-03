@@ -169,7 +169,6 @@ declare module "fvtt-types/configuration" {
     "midi-qol.Debug": string;
     "midi-qol.ReplaceDefaultActivities": boolean;
     "midi-qol.UseWeakReferences": boolean;
-    "midi-qol.SaveToChatCard": boolean;
     "midi-qol.PreferredGM": string;
     "midi-qol.MidiSoundSettings-backup": Record<string, any>;
     "midi-qol.splashWarnings": boolean;

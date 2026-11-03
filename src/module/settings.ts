@@ -84,7 +84,6 @@ export let playerControlsInvisibleTokens: boolean = false;
 export let replaceDefaultActivities: boolean = true;
 export let saveRequests = {};
 export let saveTimeouts = {};
-export let saveToChatCard: boolean = false;
 export let targetConfirmation: typeof defaultTargetConfirmationSettings;
 export let useWeakReferences: boolean = false;
 
@@ -314,7 +313,6 @@ export async function resetConfigSettingsToDefaults(): Promise<void> {
   await game.settings.set("midi-qol", "playerControlsInvisibleTokens", false);
   await game.settings.set("midi-qol", "DebounceInterval", 0);
   await game.settings.set("midi-qol", "Debug", "None");
-  await game.settings.set("midi-qol", "SaveToChatCard", false);
   await game.settings.set("midi-qol", "UseWeakReferences", false);
   await game.settings.set("midi-qol", "splashWarnings", true);
   // last-run-version, instanceId are intentionally not reset - tracking data
@@ -383,7 +381,6 @@ export function collectSettingData() {
     enableWorkflow,
     forceHideRoll,
     nsaFlag,
-    saveToChatCard,
     playerControlsInvisibleTokens,
     replaceDefaultActivities,
     targetConfirmation,
@@ -592,7 +589,6 @@ export async function importSettingsFromJSON(json) {
     if (game.settings.get("midi-qol", "ReplaceDefaultActivities") !== json.replaceDefaultActivities) requiresReload = true;
     await game.settings.set("midi-qol", "ReplaceDefaultActivities", removeOldValues(json.replaceDefaultActivities));
   }
-  await game.settings.set("midi-qol", "SaveToChatCard", removeOldValues(json.saveToChatCard));
   await game.settings.set("midi-qol", "showGM", removeOldValues(json.nsaFlag));
   await game.settings.set("midi-qol", "UseWeakReferences", removeOldValues(json.useWeakReferences));
   if (json.playerControlsInvisibleTokens !== undefined) {
@@ -973,7 +969,6 @@ export let fetchParams = () => {
   const oldWeakReferences = useWeakReferences;
   useWeakReferences = game.settings.get("midi-qol", "UseWeakReferences") ?? false;
   if (useWeakReferences !== oldWeakReferences) Workflow.clearWorkflows();
-  saveToChatCard = game.settings.get("midi-qol", "SaveToChatCard");
   targetConfirmation = game.settings.get("midi-qol", "TargetConfirmation");
   if (configSettings.griddedGridless === undefined) configSettings.griddedGridless = false;
   if (configSettings.gridlessFudge === undefined) configSettings.gridlessFudge = 0;
@@ -1958,18 +1953,9 @@ export const registerSettings = function () {
     onChange: fetchParams
   });
 
-  game.settings.register("midi-qol", "SaveToChatCard", {
-    name: "Save to Chat Card",
-    hint: "save the workflow state to the chat card - so that it can be restored on reload",
-    scope: "world",
-    default: false,
-    type: Boolean,
-    config: true,
-    onChange: fetchParams
-  });
   game.settings.register("midi-qol", "UseWeakReferences", {
     name: "Use Weak References for Workflows",
-    hint: "Only enable if Save to Chat Card is enabled. This will use WeakReferences to store workflows - should save some memory.",
+    hint: "Use WeakReferences to store workflows - should save some memory. A workflow that is dropped is rebuilt from its chat card when needed.",
     scope: "world",
     default: false,
     type: Boolean,

@@ -1,10 +1,10 @@
 import { warn, debug, log, i18n, i18nFormat, busyWait, MESSAGE_TYPES, error, debugEnabled, MQItemMacroLabel, GameSystemConfig, MODULE_ID, MQActivityMacroLabel, gameStats } from "../midi-qol.js";
 import { MidiTeleportActivity, TeleportOption } from "./activities/TeleportActivity.js";
 import { decodeWorkflowOptions, encodeWorkflowOptions, inheritableWorkflowOptions } from "./lib/workflowOptionsCodec.js";
-import { preferredActiveGM, prepareDamageListToJSON, socketlibSocket, timedAwaitExecuteAsGM, timedExecuteAsGM, unTimedExecuteAsGM } from "./GMAction.js";
+import { preferredActiveGM, socketlibSocket, timedAwaitExecuteAsGM, timedExecuteAsGM, unTimedExecuteAsGM } from "./GMAction.js";
 import { installedModules } from "./setupModules.js";
 import { offerFollowUps } from "./followUps.js";
-import { configSettings, autoRemoveTargets, checkRule, checkMechanic, safeGetGameSetting, useWeakReferences, saveToChatCard, onUseMacroOptions } from "./settings.js";
+import { configSettings, autoRemoveTargets, checkRule, checkMechanic, safeGetGameSetting, useWeakReferences, onUseMacroOptions } from "./settings.js";
 import { challengeVisibleToPlayers, saveDisplayMode } from "./lib/saveVisibility.js";
 import {
   createDamageDetail,
@@ -216,13 +216,11 @@ class PersistedFieldStore {
   #cache = new Map<string, unknown>();
   #getFlags: () => Record<string, any> | undefined;
   #persist: (updates: Record<string, unknown>) => void;
-  #forcePersist: (updates: Record<string, unknown>) => void;
   #persistRolls: () => void;
 
-  constructor(getFlags: () => Record<string, any> | undefined, persist: (updates: Record<string, unknown>) => void, forcePersist: (updates: Record<string, unknown>) => void, persistRolls: () => void) {
+  constructor(getFlags: () => Record<string, any> | undefined, persist: (updates: Record<string, unknown>) => void, persistRolls: () => void) {
     this.#getFlags = getFlags;
     this.#persist = persist;
-    this.#forcePersist = forcePersist;
     this.#persistRolls = persistRolls;
   }
 
@@ -299,7 +297,7 @@ class PersistedFieldStore {
     if (roll === undefined) this.#cache.delete(key);
     else this.#cache.set(key, roll);
     if (derived) this.#persistRolls();
-    else this.#forcePersist({ [key]: roll?.toJSON() ?? null });
+    else this.#persist({ [key]: roll?.toJSON() ?? null });
   }
 
   rolls(key: string): Roll[] | undefined {
@@ -317,7 +315,7 @@ class PersistedFieldStore {
     if (rolls === undefined) this.#cache.delete(key);
     else this.#cache.set(key, rolls);
     if (derived) this.#persistRolls();
-    else this.#forcePersist({ [key]: rolls?.map(r => r.toJSON()) ?? [] });
+    else this.#persist({ [key]: rolls?.map(r => r.toJSON()) ?? [] });
   }
 
   damageDetail(key: string): DamageDescription[] {
@@ -420,12 +418,13 @@ export class Workflow {
       return workflow.deref();
     } else if (workflow) return workflow;
     const chatCard = fromUuidSync(id);
-    if (chatCard instanceof ChatMessage && saveToChatCard) {
+    if (chatCard instanceof ChatMessage) {
       workflow = Workflow.fromChatCardUuid(id);
-      if (workflow) Workflow.workflows.set(id, workflow);
-      return workflow;
+      if (workflow) {
+        Workflow.workflows.set(id, workflow);
+        return workflow;
+      }
     }
-    // TODO see if the ChatMessage exists and reconstruct the workflow from that.
     // try fetching via ActivityUuid
     return this.getWorkflowByActivityUuid(id);
   }
@@ -451,8 +450,23 @@ export class Workflow {
     Workflow.workflows.delete(id);
   }
 
+  /**
+   * The workflow of a card, rebuilt from it after a reload. Only on the card's author's client, where the workflow ran:
+   * elsewhere it would be a second copy of one still running. Only workflow classes built like Workflow itself.
+   */
   static fromChatCardUuid(chatCardUuid: string): Workflow | undefined {
-    return new Workflow(null, null, null, null, { chatCardUuid });
+    const card = fromUuidSync(chatCardUuid);
+    if (!(card instanceof ChatMessage) || card.author !== game.user) return undefined;
+    const [className] = (card.getFlag(MODULE_ID, WorkflowDataFlags.currentAction) as [string, string] | undefined) ?? [];
+    const restorable: Record<string, typeof Workflow> = { Workflow, SavesFirstWorkflow, ActiveDefenceWorkflow, UserWorkflow };
+    const WorkflowClass = className ? restorable[className] : undefined;
+    if (!WorkflowClass) return undefined;
+    try {
+      return new WorkflowClass(null, null, null, null, { chatCardUuid });
+    } catch (err) {
+      TroubleShooter.recordError(err, `fromChatCardUuid | could not restore the workflow of ${chatCardUuid}`);
+      return undefined;
+    }
   }
 
   async performThrottledUpdate(chatCard: ChatMessage.Implementation, updates: ChatMessage.UpdateData, immediate = false) {
@@ -480,35 +494,47 @@ export class Workflow {
     }) as ChatMessage.UpdateData);
   }
 
-  itemCardUuid: string | undefined;
+  #itemCardUuid: string | undefined;
+  get itemCardUuid(): string | undefined { return this.#itemCardUuid; }
+  set itemCardUuid(uuid: string | undefined) {
+    this.#itemCardUuid = uuid;
+    this.#storeUnstored();
+  }
 
   private get midiFlags(): Record<string, any> | undefined {
     return this.chatCard?.flags?.[MODULE_ID];
   }
 
-  private persistFields(updates: Record<string, unknown>): void {
-    if (this.itemCardUuid && saveToChatCard) {
-      addUpdatesCacheFlags(this.id, updates, "midi-qol");
-    }
+  /** A workflow keeps its state on its own card, the one it is registered under; never on another workflow's card */
+  private get ownsCard(): boolean {
+    return !!this.itemCardUuid && this.itemCardUuid === this.id;
   }
 
-  private forcePersistFields(updates: Record<string, unknown>): void {
-    if (this.itemCardUuid) {
-      addUpdatesCacheFlags(this.id, updates, "midi-qol");
-    }
+  // Written before the workflow has its card; stored when it gets it
+  #unstored: Record<string, unknown> = {};
+
+  /** Queued in the card's update cache: written with its next (throttled) update, never on its own */
+  private persistFields(updates: Record<string, unknown>): void {
+    if (this.ownsCard) addUpdatesCacheFlags(this.id, updates, "midi-qol");
+    else Object.assign(this.#unstored, updates);
+  }
+
+  #storeUnstored() {
+    if (!this.ownsCard || foundry.utils.isEmpty(this.#unstored)) return;
+    addUpdatesCacheFlags(this.id, this.#unstored, "midi-qol");
+    this.#unstored = {};
   }
 
   /**
    * Rolls persist to `message.rolls`, never to the flags — ChatMessageMidi.prepareDerivedData puts
    * them back on the flags when the message is prepared. Written unconditionally, like the flags
-   * they replace, so `workflow.attackRoll` survives a reload with saveToChatCard off.
+   * they replace.
    */
   private persistRolls(): void {
     if (this.itemCardUuid) addUpdatesCache(this.id, { rolls: this.chatRolls });
   }
 
-  #persisted = new PersistedFieldStore(() => this.midiFlags, updates => this.persistFields(updates),
-    updates => this.forcePersistFields(updates), () => this.persistRolls());
+  #persisted = new PersistedFieldStore(() => this.midiFlags, updates => this.persistFields(updates), () => this.persistRolls());
 
   get useActiveDefence() { return false; }
   get actor(): Actor.Implementation {
@@ -575,7 +601,7 @@ export class Workflow {
   #item: Item.Implementation | undefined;
   get item(): Item.Implementation {
     if (this.#item) return this.#item;
-    if (this.itemCardUuid && saveToChatCard) {
+    if (this.itemCardUuid) {
       this.#item = (this.chatCard as Dnd5eChatMessage | undefined)?.getAssociatedItem?.();
       if (!this.#item) {
         const message = `get item() | Could not find item for workflow ${this.id}`;
@@ -594,7 +620,7 @@ export class Workflow {
   #speaker: ChatMessage.SpeakerData | undefined = undefined;
   get speaker(): ChatMessage.SpeakerData {
     if (this.#speaker) return this.#speaker;
-    if (this.itemCardUuid && saveToChatCard) {
+    if (this.itemCardUuid) {
       this.#speaker = this.chatCard.speaker;
     }
     return this.#speaker!;
@@ -602,7 +628,7 @@ export class Workflow {
   set speaker(speaker: ChatMessage.SpeakerData) {
     // TODO do an equals check on the stored and passed speaker
     this.#speaker = speaker;
-    if (this.itemCardUuid && saveToChatCard) {
+    if (this.itemCardUuid) {
       addUpdatesCache(this.id, { speaker });
     }
   }
@@ -671,26 +697,20 @@ export class Workflow {
 
   #damageList: DamageListEntry[] | undefined;
   get damageList() {
-    if (this.#damageList) return this.#damageList;
-    // See below
-    // if (this.itemCardUuid && SaveToChatCard) {
-    //   this.#damageList = this.chatCard?.getFlag(MODULE_ID, WorkflowDataFlags.damageList);
-    // }
     return this.#damageList ?? [];
   }
   set damageList(damageList: DamageListEntry[]) {
     this.#damageList = damageList;
-    // This is just too big to store in the chat message - see if there can be a cut down version stored
-    // if (this.itemCardUuid && SaveToChatCard) {
-    //   addUpdatesCacheFlags(this.id, { [chatCardFlags.damageList]: damageList }, "midi-qol");
-    // }
   }
 
   saveDisplayFlavor: string | undefined;
 
   #id: string = "";
   get id() { return this.#id }
-  set id(id: string) { this.#id = id }
+  set id(id: string) {
+    this.#id = id;
+    this.#storeUnstored();
+  }
 
   get uuid() {
     if (debugEnabled > 0) warn(`workflow.uuid is deprecated. Use workflow.id to reference the workflow and workflow.itemUuid to reference the item instead.
@@ -704,7 +724,7 @@ export class Workflow {
   #currentAction: WorkflowState;
   get currentAction() {
     if (this.#currentAction) return this.#currentAction;
-    if (this.itemCardUuid && saveToChatCard) {
+    if (this.itemCardUuid) {
 
       const [className, currentActionName] = this.chatCard?.getFlag(MODULE_ID, WorkflowDataFlags.currentAction) ?? ["none", "none"];
       if (className !== "none") {
@@ -723,15 +743,13 @@ export class Workflow {
   }
   set currentAction(currentAction: WorkflowState) {
     this.#currentAction = currentAction;
-    if (this.itemCardUuid && saveToChatCard) {
-      addUpdatesCacheFlags(this.id, { [WorkflowDataFlags.currentAction]: [this.constructor.name, currentAction?.name] }, "midi-qol");
-    }
+    this.persistFields({ [WorkflowDataFlags.currentAction]: [this.constructor.name, currentAction?.name] });
   }
 
   #isCriticalRestored: boolean = false;
   get isCritical(): boolean {
     // Restore from store on first access
-    if (!this.#isCriticalRestored && this.itemCardUuid && saveToChatCard) {
+    if (!this.#isCriticalRestored && this.itemCardUuid) {
       if (this.midiFlags?.isCritical) {
         this.attackRollModifierTracker.critical.setOverride(true, "restored", "Restored from chat card");
       }
@@ -748,7 +766,7 @@ export class Workflow {
   #isFumbleRestored: boolean = false;
   get isFumble(): boolean {
     // Restore from store on first access
-    if (!this.#isFumbleRestored && this.itemCardUuid && saveToChatCard) {
+    if (!this.#isFumbleRestored && this.itemCardUuid) {
       if (this.midiFlags?.isFumble) {
         this.attackRollModifierTracker.fumble.setOverride(true, "restored", "Restored from chat card");
       }
@@ -809,7 +827,7 @@ export class Workflow {
     this.#otherDamageMatches = matches;
     const uuids = matches ? Array.from(matches).map(t => getTokenDocument(t)?.uuid).filter((u): u is string => !!u) : [];
     // Always stored: the damage tray and save damage line read it.
-    this.forcePersistFields({ otherDamageMatchUuids: uuids });
+    this.persistFields({ otherDamageMatchUuids: uuids });
   }
 
   /** The targets the ammunition's damage applies to: hit targets passing its own use condition. */
@@ -826,7 +844,7 @@ export class Workflow {
     this.#ammunitionDamageMatches = matches;
     const uuids = matches ? Array.from(matches).map(t => getTokenDocument(t)?.uuid).filter((u): u is string => !!u) : [];
     // Always stored: the damage tray and save damage line read it.
-    this.forcePersistFields({ ammunitionDamageMatchUuids: uuids });
+    this.persistFields({ ammunitionDamageMatchUuids: uuids });
   }
 
   /**
@@ -888,7 +906,7 @@ export class Workflow {
   #attackRollModifierTracker: RollModifierTracker = new RollModifierTracker();
   #attackRollModifierTrackerRestored = false;
   get attackRollModifierTracker(): RollModifierTracker {
-    if (!this.#attackRollModifierTrackerRestored && this.itemCardUuid && saveToChatCard) {
+    if (!this.#attackRollModifierTrackerRestored && this.itemCardUuid) {
       const data = this.midiFlags?.attackRollModifierTrackerData;
       if (data) {
         this.#attackRollModifierTracker.restore(data);
@@ -1120,7 +1138,7 @@ export class Workflow {
   #rolls: Roll[] | undefined;
   get rolls(): Roll[] {
     if (this.#rolls) return this.#rolls;
-    if (this.itemCardUuid && saveToChatCard) {
+    if (this.itemCardUuid) {
       this.#rolls = this.chatCard.rolls as Roll[];
     }
     return this.#rolls ?? [];
@@ -1240,9 +1258,6 @@ export class Workflow {
   }
   set ammunitionOnUseMacros(ammunitionOnUseMacros: OnUseMacros | undefined) {
     this.#ammunitionOnUseMacros = ammunitionOnUseMacros;
-    if (this.itemCardUuid && saveToChatCard) {
-      addUpdatesCacheFlags(this.id, { [WorkflowDataFlags.ammunitionOnUseMacros]: ammunitionOnUseMacros }, "midi-qol");
-    }
   }
 
   // Legacy Set - delegates to RollModifierTracker
@@ -1264,16 +1279,14 @@ export class Workflow {
   #saveAttribution: Record<string, AttributionMap> | undefined;
   get saveAttribution(): Record<string, AttributionMap> {
     if (this.#saveAttribution) return this.#saveAttribution;
-    if (this.itemCardUuid && saveToChatCard) {
+    if (this.itemCardUuid) {
       this.#saveAttribution = this.chatCard?.getFlag(MODULE_ID, WorkflowDataFlags.saveAttribution) as Record<string, AttributionMap> | undefined;
     }
     return this.#saveAttribution ?? {};
   }
   set saveAttribution(saveAttribution: Record<string, AttributionMap>) {
     this.#saveAttribution = saveAttribution;
-    if (this.itemCardUuid && saveToChatCard) {
-      addUpdatesCacheFlags(this.id, { [WorkflowDataFlags.saveAttribution]: saveAttribution }, "midi-qol");
-    }
+    this.persistFields({ [WorkflowDataFlags.saveAttribution]: saveAttribution });
   }
 
   addSaveAttribution(targetUuid: string, type: AttributionType, source: string, displayName: string): void {
@@ -1533,9 +1546,12 @@ export class Workflow {
     options: WorkflowConstructorOptions = { chatCardUuid: undefined, storeWorkflow: true, item: undefined }
   ) {
     this.workflowStartTime = Date.now();
-    if (options.chatCardUuid && saveToChatCard) {
+    // Rebuilt from its card (fromChatCardUuid): the stored state stays as it is
+    const restoring = !!options.chatCardUuid;
+    if (restoring) {
       this.itemCardUuid = options.chatCardUuid;
-      this.id = options.chatCardUuid;
+      this.id = options.chatCardUuid!;
+      this.workflowName = `${this.constructor.name} ${this.item?.name ?? "no item"} restored`;
     } else {
       // In this case, `actor`, `activity`, and `speaker` are mandatory
       if (!actor || !activity || !speaker) {
@@ -1596,6 +1612,18 @@ export class Workflow {
     else this.rollOptions = {};
     if (options.event) this.rollOptions.event = options.event;
     else if (options.workflowOptions?.event) this.rollOptions.event = options.workflowOptions.event;
+    if (activityHasAreaTarget(this.activity) && !activityHasAutoPlaceTemplate(this.activity)) {
+      this.expectedTemplateCount = Number(this.activity?.target?.template?.count) || 1;
+    } else {
+      this.expectedTemplateCount = 0;
+    }
+    this.kickStart = false;
+    this.throttleChatMessageUpdates = getThrottlingFunction();
+    if (restoring) {
+      this.templateUuids = this.midiFlags?.templateUuids ?? [];
+      this.preSelectedTargets = new Set();
+      return;
+    }
     this.workflowOptions = foundry.utils.mergeObject(defaultRollOptions, {
       autoRollAttack: getAutoRollAttack(this),
       autoRollDamage: getAutoRollDamage(this),
@@ -1622,11 +1650,6 @@ export class Workflow {
     } else {
       this.preSelectedTargets = canvas?.scene ? new Set(game.user?.targets ?? []) : new Set();
     }
-    if (activityHasAreaTarget(this.activity) && !activityHasAutoPlaceTemplate(this.activity)) {
-      this.expectedTemplateCount = Number(this.activity?.target?.template?.count) || 1;
-    } else {
-      this.expectedTemplateCount = 0;
-    }
     this.templateUuids = [];
     if (this.activity instanceof MidiSummonActivity && configSettings.autoRemoveSummonedCreature) {
       // Hooks.on + uuid filter rather than Hooks.once: concurrent summon workflows must not consume each other's hook
@@ -1636,8 +1659,6 @@ export class Workflow {
       })
     }
     this.itemUseComplete = false;
-    this.kickStart = false;
-    this.throttleChatMessageUpdates = getThrottlingFunction();
   }
 
   public someEventKeySet() {
@@ -3209,15 +3230,9 @@ export class Workflow {
     return this.WorkflowState_Suspend;
   }
 
-  /** The card's damage list kept for undo, and its buttons removed as the workflow is finished */
+  /** The card's buttons removed as the workflow is finished */
   async completeCard() {
     if (this.itemCardUuid && this.chatCard) {
-      if (this.damageList && saveToChatCard && this.itemCardUuid) {
-        const damageListData = prepareDamageListToJSON(this.damageList);
-        // @ts-expect-error deleting something that is "required" in other contexts
-        damageListData.forEach((di => delete di.damageDetails))
-        addUpdatesCacheFlags(this.id, { [WorkflowDataFlags.damageList]: damageListData }, "midi-qol");
-      }
       await Workflow.removeItemCardButtons(this.itemCardUuid, { removeAllButtons: getRemoveAllButtons(this.activity), removeAttackButtons: getRemoveAttackButtons(this.activity), removeDamageButtons: getRemoveDamageButtons(this.activity), removeDnD5eButtons: getRemoveAllButtons(this.activity) && configSettings.autoCheckSaves !== "none", removeDnd5eSaveButtons: configSettings.autoCheckSaves !== "none", finished: true });
     }
   }
@@ -6947,6 +6962,8 @@ export class Workflow {
     // Re-post the card with the damage figures dropped, leaving the rest of it intact.
     // Destructured rather than deleted: the new card must not carry the old one's id.
     const { _id, ...data } = chatMessage.toObject();
+    // A copy of the card, not the workflow's own: it is never rebuilt as a second workflow
+    delete (data.flags?.[MODULE_ID] as Record<string, unknown> | undefined)?.[WorkflowDataFlags.currentAction];
     for (const name of ["damage", "otherDamage", "bonusDamage"]) {
       foundry.utils.setProperty(data, `system.midi.sections.${name}`, null);
     }

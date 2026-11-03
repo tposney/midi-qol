@@ -9523,6 +9523,7 @@ async function _updateAction(document: foundry.abstract.Document.Any, updates: C
     delete updates.rolls;
     delete (updatesCache[baseDocument.uuid] ?? {}).rolls;
   }
+  withoutEmptyObjects(updates);
   if (foundry.utils.isEmpty(updates)) {
     if (debugEnabled > 1) warn(`_updateAction | nothing left to write for ${document.uuid}`);
     return document;
@@ -9565,13 +9566,39 @@ function pendingUpdates(sent: object, cache: object): object {
   const sentFlat = foundry.utils.flattenObject(sent);
   const pending = Object.entries(foundry.utils.flattenObject(cache))
     .filter(([key, value]) => !(key in sentFlat) || JSON.stringify(sentFlat[key]) !== JSON.stringify(value));
-  return foundry.utils.expandObject(Object.fromEntries(pending));
+  return withoutEmptyObjects(foundry.utils.expandObject(Object.fromEntries(pending)));
+}
+
+/** Empty objects removed, in place: an update merges `{}` as nothing, but it would still make a write */
+function withoutEmptyObjects<T extends object>(updates: T): T {
+  for (const [key, value] of Object.entries(updates)) {
+    if (foundry.utils.getType(value) !== "Object") continue;
+    withoutEmptyObjects(value);
+    if (foundry.utils.isEmpty(value)) delete (updates as Record<string, unknown>)[key];
+  }
+  return updates;
+}
+
+/**
+ * What `updates` changes: values the card already has are dropped, unless they override a queued value (the card would
+ * otherwise get the queued one).
+ */
+function changedUpdates(uuid: string, updates: object): object {
+  const card = fromUuidSync(uuid) as ChatMessage.Implementation | null;
+  if (!card) return updates;
+  const queued = updatesCache[uuid] ?? {};
+  const changed = foundry.utils.diffObject(card._source, updates) as object;
+  return foundry.utils.mergeObject(changed, foundry.utils.diffObject(queued, updates, { inner: true }), { inplace: true });
 }
 
 export async function throttledUpdate(document: ChatMessage.Implementation, updates: ChatMessage.UpdateData, throttlingFunc: undefined | ((document: ChatMessage.Implementation, updates: ChatMessage.UpdateData) => Promise<void>) = undefined, immediate = false) {
   if (!document) return; // ChatCard was removed already?;
   updates = foundry.utils.expandObject(updates) as typeof updates;
   if (typeof updates.content === "string") updates.content = compactCardContent(updates.content);
+  // Rolls are compared when written (rollsMatch): the card stores them as strings, so a diff never matches
+  const { rolls, ...rest } = updates as ChatMessage.UpdateData & { rolls?: unknown };
+  updates = changedUpdates(document.uuid, rest) as typeof updates;
+  if (rolls !== undefined) (updates as { rolls?: unknown }).rolls = rolls;
   updates = foundry.utils.mergeObject((updatesCache[document.uuid] ?? {}), updates, { inplace: false, overwrite: true })
   updatesCache[document.uuid] = updates;
   if (!debounceInterval || immediate || !throttlingFunc) {
@@ -9588,12 +9615,16 @@ export function getUpdatesCache(uuid: string | undefined | null) {
 export function addUpdatesCacheFlags(uuid: string | undefined | null, updates: any, prepend = MODULE_ID) {
   if (!uuid) return;
   if (prepend) updates = { [prepend]: updates };
-  updates = foundry.utils.expandObject({ flags: updates });
+  updates = changedUpdates(uuid, foundry.utils.expandObject({ flags: updates }));
   updatesCache[uuid] = foundry.utils.mergeObject(updatesCache[uuid] ?? {}, updates, { insertKeys: true, insertValue: true });
 }
 
 export function addUpdatesCache(uuid: string | undefined | null, updates: any) {
   if (!uuid) return;
+  const { rolls, ...rest } = foundry.utils.expandObject(updates) as Record<string, unknown>;
+  const changed = changedUpdates(uuid, rest) as Record<string, unknown>;
+  if (rolls !== undefined) changed.rolls = rolls;
+  updates = changed;
   updatesCache[uuid] = foundry.utils.mergeObject(updatesCache[uuid] ?? {}, updates, { insertKeys: true, insertValue: true });
 }
 

@@ -674,11 +674,14 @@ let defineMidiAttackActivityClass = <T extends Activity>(ActivityClass: T) => {
             await Workflow.removeItemCardButtons(workflow.itemCardUuid, { removeConfirmButtons: true });
           }
           if (workflow.damageRollCount > 0) { // re-rolling damage counts as new damage
+            const flags = foundry.utils.deepClone(workflow.chatCard.flags);
+            // A copy of the card, not the workflow's own: it is never rebuilt as a second workflow
+            delete (flags[MODULE_ID] as Record<string, unknown> | undefined)?.[Workflow.WorkflowDataFlags.currentAction];
             const messageConfig = foundry.utils.mergeObject({
               create: true,
               data: { system: { effects: this.applicableEffects?.map(e => e.relativeUUID) } },
               hasConsumption: false
-            }, { flags: workflow.chatCard.flags })
+            }, { flags })
             // @ts-expect-error
             const itemCard = await this._createUsageMessage(messageConfig);
             // const itemCard = await this.displayCard(foundry.utils.mergeObject(config, { systemCard: false, workflowId: workflow.id, minimalCard: false, createMessage: true }));

@@ -1,7 +1,7 @@
 import { MESSAGE_TYPES, MODULE_ID, MQDamageRollTypes, debugEnabled, error, i18n, log } from "../../midi-qol.js";
 import { TroubleShooter } from "../apps/TroubleShooter.js";
 import { Dnd5eSystem } from "../../globals.js";
-import { configSettings, forceHideRoll, safeGetGameSetting, saveToChatCard } from "../settings.js";
+import { configSettings, forceHideRoll, safeGetGameSetting } from "../settings.js";
 import { displayTokenName, getToken, isDnd5eRollMessage } from "../utils.js";
 import { renameMarkedTokens } from "../lib/tokenNames.js";
 import { canSeePlayerOutcome, canSeeSaveResult, cardActor, challengeVisible, saveDetail, saveDisplayMode } from "../lib/saveVisibility.js";
@@ -518,9 +518,6 @@ export function defineChatMessageMidiClass(baseClass: ChatMessage.Implementation
 
     applyChatVisibility(html: HTMLElement) {
       if (html.style.display === "none") return; // Already hidden by hideStuffHandler (blind/gmHide)
-      const messageActor = (fromUuidSync(this.flags?.[MODULE_ID]?.["sourceActorUuid"]) as Actor.Implementation ?? this.speakerActor);
-      const messageActorOwner = messageActor?.isOwner;
-
       // Re-enable save/check buttons
       if (foundry.utils.getProperty(this, "flags.midi-qol.type") === MESSAGE_TYPES.SAVES) {
         html.querySelectorAll<HTMLButtonElement>('[data-action="rollSave"]').forEach(el => el.disabled = false);
@@ -528,7 +525,7 @@ export function defineChatMessageMidiClass(baseClass: ChatMessage.Implementation
       }
 
       // Hide attack/damage buttons for non-authors
-      if (!this.isAuthor && !(messageActorOwner && saveToChatCard)) {
+      if (!this.isAuthor) {
         hideAll(html, ".midi-qol-attack-buttons");
         hideAll(html, ".midi-qol-damage-buttons");
         hideAll(html, ".midi-qol-otherDamage-button");
