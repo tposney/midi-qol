@@ -183,7 +183,7 @@ export enum WorkflowDataFlags {
 export interface DamageDescriptionObject extends Omit<DamageDescription, 'properties'> {
   properties: string[];
 };
-function damageDetailToObject(damageDetail?: DamageDescription[]): DamageDescriptionObject[] {
+export function damageDetailToObject(damageDetail?: DamageDescription[]): DamageDescriptionObject[] {
   return (damageDetail ?? []).map(d => ({
     ...d,
     properties: Array.from(d.properties ?? [])
@@ -238,7 +238,6 @@ class CardStateStore {
       const value = state[key];
       if (value === undefined || value === null) continue;
       if (key === "workflowOptions") this.#cache.set(key, decodeOptions(foundry.utils.deepClone(value)));
-      else if (key.endsWith("DamageDetail") || key === "damageDetail") this.#cache.set(key, damageDetailsFromObject(value));
       else this.#cache.set(key, foundry.utils.deepClone(value));
     }
     for (const key of ["attackRollCount", "damageRollCount"] as const) if (midi[key] !== undefined) this.#cache.set(key, midi[key]);
@@ -248,6 +247,8 @@ class CardStateStore {
         .map(record => (fromUuidSync(record.uuid) as TokenDocument.Implementation | undefined)?.object).filter((t): t is Token.Implementation => !!t);
       if (tokens.length) this.#cache.set(field, new Set(tokens));
     }
+    const hitRows = records.filter(record => typeof record.hitClass === "string").map(record => record.uuid);
+    if (hitRows.length) this.#cache.set("hitRows", new Set(hitRows));
     const attribution = Object.fromEntries(records.filter(record => record.saveAttribution?.length)
       .map(record => [record.uuid, attributionMap(record.saveAttribution) as AttributionMap]));
     if (!foundry.utils.isEmpty(attribution)) this.#cache.set("saveAttribution", attribution);
@@ -313,7 +314,21 @@ class CardStateStore {
     }
   }
 
-  /** What the card's save row for this token shows besides its roll (UsageCardMessage) */
+  /** The hits rows: each token's row facts; a token whose row went (a re-rolled attack) has its row cleared */
+  setHitRows(rows: [TokenDocument.Implementation, SaveFacts][]): void {
+    const shown = new Set(rows.map(([document]) => document.uuid));
+    const before = (this.#cache.get("hitRows") as Set<string> | undefined) ?? new Set();
+    for (const uuid of before) {
+      const document = fromUuidSync(uuid);
+      if (!shown.has(uuid) && document instanceof TokenDocument) this.setSaveFacts(document, { hitClass: null });
+    }
+    // A null clears a value a previous row had; a new row needs none
+    for (const [document, facts] of rows)
+      this.setSaveFacts(document, before.has(document.uuid) ? facts : Object.fromEntries(Object.entries(facts).filter(([, v]) => v !== null)));
+    this.#cache.set("hitRows", shown);
+  }
+
+  /** A token's facts on the card besides its sets: its save row (UsageCardMessage), the damage tray's detail */
   setSaveFacts(document: TokenDocument.Implementation, facts: SaveFacts): void {
     if (!document.id) return;
     const at = `system.midi.records.${document.id}`;
@@ -341,16 +356,6 @@ class CardStateStore {
     if (rolls === undefined) this.#cache.delete(key);
     else this.#cache.set(key, rolls);
     this.#persistRolls();
-  }
-
-  damageDetail(key: StateKey): DamageDescription[] {
-    return (this.#cache.get(key) as DamageDescription[] | undefined) ?? [];
-  }
-
-  setDamageDetail(key: StateKey, detail: DamageDescription[]): void {
-    if (detail === undefined) this.#cache.delete(key);
-    else this.#cache.set(key, detail);
-    this.#write({ [`system.midi.state.${key}`]: damageDetailToObject(detail) });
   }
 }
 
@@ -1145,13 +1150,11 @@ export class Workflow {
   rawOtherDamageDetail: DamageDescription[] = [];
   rawBonusDamageDetail: DamageDescription[] = [];
 
-  get damageDetail(): DamageDescription[] { return this.#persisted.damageDetail("damageDetail"); }
-  set damageDetail(damageDetail: DamageDescription[]) { this.#persisted.setDamageDetail("damageDetail", damageDetail); }
-  get otherDamageDetail(): DamageDescription[] { return this.#persisted.damageDetail("otherDamageDetail"); }
-  set otherDamageDetail(otherDamageDetail: DamageDescription[]) { this.#persisted.setDamageDetail("otherDamageDetail", otherDamageDetail); }
+  // The damage detail as applied; a rebuilt workflow works it out from its rolls (#restoreFromCard)
+  damageDetail: DamageDescription[] = [];
+  otherDamageDetail: DamageDescription[] = [];
 
-  get bonusDamageDetail(): DamageDescription[] { return this.#persisted.damageDetail("bonusDamageDetail"); }
-  set bonusDamageDetail(bonusDamageDetail: DamageDescription[]) { this.#persisted.setDamageDetail("bonusDamageDetail", bonusDamageDetail); }
+  bonusDamageDetail: DamageDescription[] = [];
 
   damageRollHTML: HTMLElement | string | undefined;
 
@@ -1665,6 +1668,11 @@ export class Workflow {
     if (this.damageRolls?.length) this.deriveDamage();
     if (this.bonusDamageRolls?.length) this.deriveBonusDamage();
     if (this.otherDamageRolls?.length) this.deriveOtherDamage();
+    this.damageDetail = foundry.utils.deepClone(this.rawDamageDetail);
+    this.bonusDamageDetail = foundry.utils.deepClone(this.rawBonusDamageDetail);
+    this.otherDamageDetail = foundry.utils.deepClone(this.rawOtherDamageDetail);
+    // The other activity's use declined: its damage dropped, the ammunition's kept
+    if (this.chatCard?.getFlag(MODULE_ID, "use.consumed") === false) this.dropOtherActivityDamage();
     void this.activity?.setupCanSeeSense?.({ workflow: this });
     const saves = [...this.targets].map(t => [t.document.uuid, cardSaveRoll(this.chatCard, t.document.uuid)] as const).filter(([, roll]) => !!roll);
     if (saves.length) this.#restoredSaves = Object.fromEntries(saves) as Record<string, Roll>;
@@ -5056,12 +5064,18 @@ export class Workflow {
        * `foundry.utils.expandObject`, and an actor uuid contains dots — so the map was exploded into
        * `{ Scene: { <id>: { Token: { <id>: … } } } }` and the template rendered nothing.
        */
-      const hits = Object.entries(this.hitDisplayData ?? {}).map(([actorUuid, hit]: [string, any]) =>
+      const entries = Object.entries(this.hitDisplayData ?? {});
+      // Its own card draws the rows from the records (UsageCardMessage); another's stores them
+      if (this.ownsCard) this.#persisted.setHitRows(entries.map(([, hit]: [string, any]) => [getTokenDocument(hit?.target), {
+        hitClass: hit?.hitClass ?? "", hitSymbol: hit?.hitSymbol || null, hitShowAC: hit?.showAC || null,
+        acDisplay: hit?.acDisplay || null, acTooltip: hit?.acTooltip || null, acIcons: hit?.acIcons?.length ? hit.acIcons : null
+      }] as [TokenDocument.Implementation | undefined, SaveFacts]).filter((e): e is [TokenDocument.Implementation, SaveFacts] => !!e[0]));
+      const hits = this.ownsCard ? undefined : entries.map(([actorUuid, hit]: [string, any]) =>
         ({ ...hit, actorUuid, target: { id: hit?.target?.id ?? hit?.target?.document?.id ?? "" } }));
       const section = {
         label: "",
         template: "modules/midi-qol/templates/hits.html",
-        data: { attackType: templateData.attackType, attackTotal: templateData.attackTotal, showHits, hits }
+        data: { attackType: templateData.attackType, attackTotal: templateData.attackTotal, showHits, ...(hits ? { hits } : {}) }
       };
       await this.performThrottledUpdate(chatMessage, this.#sectionUpdate("hits", section, {
         ...this.#targetsUpdate(),
@@ -5243,15 +5257,24 @@ export class Workflow {
     if (!tokens.length) return {};
     // dnd5e's descriptors, with midi's per-target detail merged onto the matching entry. The extra
     // keys are part of the schema because MidiUsageMessageData extends the targets field.
+    // dnd5e's descriptors. midi's own detail for the damage tray goes in the card's state and records (cardTargetDetail),
+    // or on the descriptors of a card the workflow does not own (a damage-only workflow's)
     const descriptors = TargetsField.getDescriptors(tokens) as Record<string, unknown>[];
-    const midiByToken = new Map(this.buildMidiTargetDescriptors(
-      tokens.map(t => getTokenDocument(t)).filter(Boolean) as TokenDocument.Implementation[])
-      .map(d => [d.token, d]));
-    for (const descriptor of descriptors) {
-      const detail = midiByToken.get(descriptor.token as string);
-      if (!detail) continue;
-      const { saved, superSaver, semiSuperSaver, saveMults, itemType, uncannyDodge, uncannyDodgeIcon } = detail;
-      Object.assign(descriptor, { saved, superSaver, semiSuperSaver, saveMults, itemType, uncannyDodge, uncannyDodgeIcon });
+    const details = this.buildMidiTargetDescriptors(tokens.map(t => getTokenDocument(t)).filter(Boolean) as TokenDocument.Implementation[]);
+    if (!this.ownsCard) {
+      const byToken = new Map(details.map(d => [d.token, d]));
+      for (const descriptor of descriptors) {
+        const detail = byToken.get(descriptor.token as string);
+        if (!detail) continue;
+        const { saved, superSaver, semiSuperSaver, saveMults, itemType, uncannyDodge, uncannyDodgeIcon } = detail;
+        Object.assign(descriptor, { saved, superSaver, semiSuperSaver, saveMults, itemType, uncannyDodge, uncannyDodgeIcon });
+      }
+      return { "system.targets": descriptors };
+    }
+    if (details[0]?.saveMults) this.#persisted.setScalar("saveMults", details[0].saveMults);
+    for (const detail of details) {
+      const document = fromUuidSync(detail.token) as TokenDocument.Implementation | null;
+      if (document) this.#persisted.setSaveFacts(document, { uncannyDodge: detail.uncannyDodge || undefined, uncannyDodgeIcon: detail.uncannyDodgeIcon || undefined });
     }
     return { "system.targets": descriptors };
   }

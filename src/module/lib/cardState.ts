@@ -13,10 +13,8 @@ export const STATE_FIELDS = {
   isFumble: "isFumble",
   templateUuids: "templateUuids",
   workflowOptions: "workflowOptions",
-  // As macros left them: worked out again they could lose a macro's change
-  damageDetail: "damageDetail",
-  otherDamageDetail: "otherDamageDetail",
-  bonusDamageDetail: "bonusDamageDetail",
+  // What a successful save does to each damage type, for the damage tray
+  saveMults: "saveMults",
   // Null until worked out; empty when no target matched (the damage tray tells the two apart)
   otherDamageMatchUuids: "otherDamageMatchUuids",
   ammunitionDamageMatchUuids: "ammunitionDamageMatchUuids"
@@ -44,7 +42,12 @@ export type SaveFacts = {
   // Cover at the save; total cover from a module makes it automatic
   saveCover?: "half" | "threeQuarters" | "total", saveCoverAuto?: boolean,
   // Advantage mode, and why: [type, source, name]
-  saveMode?: number, saveAttribution?: string[][]
+  saveMode?: number, saveAttribution?: string[][],
+  // For the damage tray: the damage calculation's Uncanny Dodge
+  uncannyDodge?: boolean, uncannyDodgeIcon?: string,
+  // The hits row (hits.html) as the attack left it: AC and its modifiers at the time. Null clears the row.
+  hitClass?: string | null, hitSymbol?: string | null, hitShowAC?: boolean | null, acDisplay?: string | null, acTooltip?: string | null,
+  acIcons?: { img?: string, icon?: string, tooltip?: string, cssClass?: string, useDnd5eIcon?: boolean }[] | null
 };
 export type CardRecord = { uuid: string } & Partial<Record<RecordSet, boolean>> & SaveFacts;
 
@@ -55,7 +58,6 @@ export function cardStateSchema() {
   const bool = () => new BooleanField(unset);
   const num = () => new NumberField({ ...unset, nullable: true });
   const str = () => new StringField({ ...unset, blank: true });
-  const details = () => new ArrayField(new ObjectField(), unset);
   return {
     state: new SchemaField({
       // Workflow class and state name: a card with none recorded is never rebuilt
@@ -64,7 +66,7 @@ export function cardStateSchema() {
       isCritical: bool(), isFumble: bool(),
       templateUuids: new ArrayField(new StringField(), unset),
       workflowOptions: new ObjectField(unset),
-      damageDetail: details(), otherDamageDetail: details(), bonusDamageDetail: details(),
+      saveMults: new ObjectField(unset),
       otherDamageMatchUuids: new ArrayField(new StringField(), { ...unset, nullable: true }),
       ammunitionDamageMatchUuids: new ArrayField(new StringField(), { ...unset, nullable: true })
     }, { required: false }),
@@ -72,19 +74,25 @@ export function cardStateSchema() {
       uuid: new StringField({ required: true, blank: false }),
       ...Object.fromEntries(Object.keys(RECORD_SETS).map(key => [key, bool()])),
       saveTotal: num(), saveCover: new StringField({ ...unset, choices: ["half", "threeQuarters", "total"] }), saveCoverAuto: bool(), saveMode: num(),
-      saveAttribution: new ArrayField(new ArrayField(new StringField()), unset)
+      saveAttribution: new ArrayField(new ArrayField(new StringField()), unset),
+      uncannyDodge: bool(), uncannyDodgeIcon: str(),
+      ...Object.fromEntries(["hitClass", "hitSymbol", "acDisplay", "acTooltip"].map(key => [key, new StringField({ ...unset, blank: true, nullable: true })])),
+      hitShowAC: new BooleanField({ ...unset, nullable: true }),
+      acIcons: new ArrayField(new ObjectField(), { ...unset, nullable: true })
     }), { required: false })
   };
 }
 
 /** The old `flags.midi-qol` keys the state and records replace */
-export const LEGACY_CARD_FLAG_KEYS = [...Object.values(STATE_FIELDS), ...Object.values(RECORD_SETS), "templateUuid", "currentAction", "saveAttribution"];
+export const LEGACY_CARD_FLAG_KEYS = [...Object.values(STATE_FIELDS).filter(key => key !== "saveMults"), ...Object.values(RECORD_SETS), "templateUuid", "currentAction", "saveAttribution",
+  "damageDetail", "otherDamageDetail", "bonusDamageDetail"];
 
 /**
  * The old keys on a card's in-memory flags, as getters computing their value from the state and records when read,
  * each read warning that it is deprecated. Only keys the card does not really have (older cards keep theirs).
  */
-export function defineLegacyCardFlags(flags: Record<string, unknown>, midi: Parameters<typeof legacyCardFlags>[0]): void {
+export function defineLegacyCardFlags(flags: Record<string, unknown>, midi: Parameters<typeof legacyCardFlags>[0],
+  derived: Record<string, () => unknown> = {}): void {
   if (!midi?.state?.workflowClass) return;
   let legacy: Record<string, unknown> | undefined;
   for (const key of LEGACY_CARD_FLAG_KEYS) {
@@ -94,7 +102,7 @@ export function defineLegacyCardFlags(flags: Record<string, unknown>, midi: Para
       get() {
         foundry.utils.logCompatibilityWarning(`midi-qol | a usage card's flags.midi-qol.${key} is deprecated: read its system.midi.state and system.midi.records instead (MidiQOL.cardSaveRoll for a save roll).`,
           { since: "14.6.9", until: "14.8.0", once: true });
-        return (legacy ??= legacyCardFlags(midi))[key];
+        return key in derived ? derived[key]() : (legacy ??= legacyCardFlags(midi))[key];
       }
     });
   }
@@ -104,6 +112,22 @@ export function defineLegacyCardFlags(flags: Record<string, unknown>, midi: Para
 export function cardMidiState(message: ChatMessage.Implementation | undefined): { state: Record<string, any>, records: Record<string, CardRecord> } | undefined {
   const midi = (message?.system as { midi?: { state?: Record<string, any>, records?: Record<string, CardRecord> } } | undefined)?.midi;
   return midi?.state?.workflowClass ? { state: midi.state, records: midi.records ?? {} } : undefined;
+}
+
+/**
+ * midi's per-target detail for the damage tray's calculation (options.midi), from the card's records and state; older
+ * cards held it on dnd5e's `system.targets` entries.
+ */
+export function cardTargetDetail(message: ChatMessage.Implementation | undefined, tokenUuid: string, descriptor: Record<string, any> = {}): Record<string, unknown> {
+  const card = cardMidiState(message);
+  if (!card || descriptor.saveMults) return descriptor;
+  const record = card.records[tokenUuid.split(".").pop() ?? ""];
+  // @ts-expect-error no dnd5e-types
+  const itemType = message?.getAssociatedItem?.()?.type;
+  return {
+    ...descriptor, saved: !!record?.saved, superSaver: !!record?.superSaver, semiSuperSaver: !!record?.semiSuperSaver,
+    saveMults: card.state.saveMults, itemType, uncannyDodge: !!record?.uncannyDodge, uncannyDodgeIcon: record?.uncannyDodgeIcon
+  };
 }
 
 /** A flag the card really has, not one of the deprecated getters */

@@ -4,7 +4,7 @@ import { TroubleShooter } from "../apps/TroubleShooter.js";
 import { displayTokenName, setupDamageDetails } from "../utils.js";
 import { prepareDamageListToJSON, timedAwaitExecuteAsGM } from "../GMAction.js";
 import { Workflow } from "../Workflow.js";
-import { cardMidiState, storedMidiFlag } from "../lib/cardState.js";
+import { cardMidiState, cardTargetDetail, storedMidiFlag } from "../lib/cardState.js";
 import { CombinedTargetDescriptor, DamageApplicationOptions, DamageDescription, DamageListEntry, Dnd5eSystem } from "../../globals.js";
 
 // SVG Icons for midi-qol custom change sources (using dnd5e SVGs for consistent styling)
@@ -330,8 +330,9 @@ export class DamageApplicationElementMidi extends globalThis.dnd5e.applications.
         // `system.targets`, which MidiUsageMessageData extends with midi's per-target detail. 6.0
         // passes a token uuid here; an actor uuid covers targets recorded without a token.
         const targets = (foundry.utils.getProperty(this.chatMessage, "system.targets") ?? []) as Array<CombinedTargetDescriptor>;
-        targetDetails = targets.find(target => target.token === uuid || target.actor === uuid);
-        if (!targetDetails) return options;
+        const descriptor = targets.find(target => target.token === uuid || target.actor === uuid);
+        if (!descriptor) return options;
+        targetDetails = cardTargetDetail(this.chatMessage, descriptor.token ?? uuid, foundry.utils.duplicate(descriptor)) as CombinedTargetDescriptor;
         options.midi = foundry.utils.duplicate(targetDetails);
         // What a successful save does to this tray's damage; the calculation adds Super Saver per damage entry.
         const saveMultiplier = targetDetails.saveMults?.[this.damageType as "defaultDamage" | "otherDamage" | "bonusDamage"];

@@ -166,17 +166,19 @@ export function setupUsageCardMessage() {
     /** Rendering decisions settled at creation, since they depend on a workflow that is gone by render time. */
     static defineSchema() {
       const schema = super.defineSchema();
-      // midi's per-target detail extends dnd5e's own targets list; its element schema is not frozen.
+      // midi's per-target detail on dnd5e's own targets list: older cards, and a card a damage-only workflow shows
+      // (cardTargetDetail). Unset unless written, so dnd5e's own descriptors compare equal and aren't rewritten.
       const targets = schema.targets as { element?: { fields?: Record<string, unknown> } } | undefined;
       if (targets?.element?.fields) {
+        const unset = { required: false, initial: undefined };
         Object.assign(targets.element.fields, {
-          uncannyDodge: new BooleanField({ required: false }),
-          uncannyDodgeIcon: new StringField({ required: false, blank: true }),
-          saved: new BooleanField({ required: false }),
-          superSaver: new BooleanField({ required: false }),
-          semiSuperSaver: new BooleanField({ required: false }),
-          saveMults: new ObjectField({ required: false }),
-          itemType: new StringField({ required: false, blank: true })
+          uncannyDodge: new BooleanField(unset),
+          uncannyDodgeIcon: new StringField({ ...unset, blank: true }),
+          saved: new BooleanField(unset),
+          superSaver: new BooleanField(unset),
+          semiSuperSaver: new BooleanField(unset),
+          saveMults: new ObjectField(unset),
+          itemType: new StringField({ ...unset, blank: true })
         });
       }
       return {
@@ -422,6 +424,8 @@ export function setupUsageCardMessage() {
         // Targets added to an attack card after its roll (e.g. by another module's buttons) get a hits list to show in.
         if (name === "hits" && !section && stored.attack && this.#recordedTargets().length)
           section = { label: "", template: "modules/midi-qol/templates/hits.html", data: { hits: [] } };
+        // Rows drawn from the records; older cards (and a card shown by a workflow that does not own it) stored them
+        if (name === "hits" && section?.data && !Array.isArray(section.data.hits)) section = { ...section, data: { ...section.data, hits: await this.#hitRows() } };
         if (name === "saves" && section?.data) {
           // The heading (DC, damage on save) stays when dnd5e's summaries replace the rows; it has no DC of its own.
           section = (omitSaves === "all" || !saveRows.length) ? null : { ...section, data: { ...section.data,
@@ -434,7 +438,7 @@ export function setupUsageCardMessage() {
             html: await foundry.applications.handlebars.renderTemplate(section.template, {
               ...(section.data ?? {}),
               // Against everything midi evaluated, not just the rows left once dnd5e's summaries replace some.
-              unevaluated: this.#unevaluatedTargets(name, name === "saves" ? { saves: saveRows } : stored[name]?.data ?? section.data),
+              unevaluated: this.#unevaluatedTargets(name, name === "saves" ? { saves: saveRows } : section.data),
               // Resolved per viewer, not per roller.
               oneCard: true,
               collapsibleTargets: configSettings.collapsibleTargets,
@@ -455,6 +459,24 @@ export function setupUsageCardMessage() {
         out[name] = { ...section, label, html };
       }
       return out;
+    }
+
+    /** The hits rows, from the records: each attacked token's result, and its AC and modifiers at the attack */
+    async #hitRows(): Promise<Record<string, unknown>[]> {
+      const rows: Record<string, unknown>[] = [];
+      for (const record of Object.values(this.midi?.records ?? {}) as CardRecord[]) {
+        if (typeof record.hitClass !== "string") continue;
+        const document = fromUuidSync(record.uuid);
+        if (!(document instanceof TokenDocument)) continue;
+        const npc = !document.actor?.hasPlayerOwner;
+        rows.push({
+          actorUuid: record.uuid, target: { id: document.id }, hitClass: record.hitClass, hitSymbol: record.hitSymbol ?? "",
+          img: await tokenPortrait(document), gmName: getTokenName(document), targetClass: npc ? "midi-qol-npc-target" : "midi-qol-player-target",
+          showAC: !!record.hitShowAC, acClass: npc ? "midi-qol-npc-ac" : "", acDisplay: record.acDisplay ?? "",
+          acTooltip: record.acTooltip ?? undefined, acIcons: record.acIcons ?? []
+        });
+      }
+      return rows;
     }
 
     #recordedTargets(): { name?: string, img?: string, token?: string }[] {

@@ -2,7 +2,8 @@ import { MESSAGE_TYPES, MODULE_ID, MQDamageRollTypes, debugEnabled, error, i18n,
 import { TroubleShooter } from "../apps/TroubleShooter.js";
 import { Dnd5eSystem } from "../../globals.js";
 import { configSettings, forceHideRoll, safeGetGameSetting } from "../settings.js";
-import { displayTokenName, getToken, isDnd5eRollMessage } from "../utils.js";
+import { createDamageDetail, displayTokenName, getToken, isDnd5eRollMessage } from "../utils.js";
+import { damageDetailToObject } from "../Workflow.js";
 import { renameMarkedTokens } from "../lib/tokenNames.js";
 import { cardMidiState, defineLegacyCardFlags, legacyCardFlags, storedMidiFlag } from "../lib/cardState.js";
 import { cardSaveRoll } from "./UsageCardMessage.js";
@@ -113,7 +114,16 @@ export function defineChatMessageMidiClass(baseClass: ChatMessage.Implementation
 
       // The workflow's state under its old flag names, deprecated: worked out when read (in memory only)
       const cardMidi = (this.system as { midi?: Parameters<typeof legacyCardFlags>[0] } | undefined)?.midi;
-      if (cardMidi?.state?.workflowClass) defineLegacyCardFlags((this.flags[MODULE_ID] ??= {}) as Record<string, unknown>, cardMidi);
+      if (cardMidi?.state?.workflowClass) {
+        // The damage detail as the card's damage lines show it, from its rolls
+        const detailOf = (rollType: string) => () => {
+          const rolls = this.rolls.filter(r => foundry.utils.getProperty(r, `options.${MODULE_ID}.rollType`) === rollType) as Roll[];
+          // @ts-expect-error no dnd5e-types
+          return rolls.length ? damageDetailToObject(createDamageDetail({ roll: rolls, activity: this.getAssociatedActivity?.() ?? null })) : undefined;
+        };
+        defineLegacyCardFlags((this.flags[MODULE_ID] ??= {}) as Record<string, unknown>, cardMidi,
+          { damageDetail: detailOf("defaultDamage"), otherDamageDetail: detailOf("otherDamage"), bonusDamageDetail: detailOf("bonusDamage") });
+      }
 
       // Deserialize roll flags in-place from JSON to Roll instances (same pattern as Foundry core's ChatMessage.rolls)
       const midiFlags = this.flags?.[MODULE_ID];
@@ -217,8 +227,9 @@ export function defineChatMessageMidiClass(baseClass: ChatMessage.Implementation
     }
 
     get canApplyDamage() {
-      const damageDetail: unknown[] | undefined = storedMidiFlag(this, "damageDetail") ?? cardMidiState(this)?.state.damageDetail;
-      if ((damageDetail?.length ?? 0) > 0 && this.isContentVisible && !!canvas.tokens?.controlled.length) return true;
+      const damageRolled = (storedMidiFlag(this, "damageDetail")?.length ?? 0) > 0
+        || this.rolls.some(r => ["defaultDamage", "otherDamage", "bonusDamage"].includes(String(foundry.utils.getProperty(r, `options.${MODULE_ID}.rollType`))));
+      if (damageRolled && this.isContentVisible && !!canvas.tokens?.controlled.length) return true;
       // @ts-expect-error no dnd5e-types
       return super.canApplyDamage;
     }

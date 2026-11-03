@@ -9596,8 +9596,25 @@ function changedUpdates(uuid: string, updates: object): object {
   const card = fromUuidSync(uuid) as ChatMessage.Implementation | null;
   if (!card) return updates;
   const queued = updatesCache[uuid] ?? {};
-  const changed = foundry.utils.diffObject(card._source, updates) as object;
+  const changed = withoutStoredArrays(foundry.utils.diffObject(card._source, updates) as Record<string, unknown>, card._source);
   return foundry.utils.mergeObject(changed, foundry.utils.diffObject(queued, updates, { inner: true }), { inplace: true });
+}
+
+/**
+ * An array the document already has, as stored (JSON), is not a change: diffObject compares arrays of objects by key
+ * count, and a stored entry keeps keys whose value is undefined (fields with no initial value) that JSON drops.
+ */
+function withoutStoredArrays(diff: Record<string, unknown>, source: Record<string, any> | undefined): Record<string, unknown> {
+  for (const [key, value] of Object.entries(diff)) {
+    const stored = source?.[key];
+    if (Array.isArray(value)) {
+      if (Array.isArray(stored) && JSON.stringify(value) === JSON.stringify(stored)) delete diff[key];
+    } else if (foundry.utils.getType(value) === "Object") {
+      withoutStoredArrays(value as Record<string, unknown>, stored);
+      if (foundry.utils.isEmpty(value)) delete diff[key];
+    }
+  }
+  return diff;
 }
 
 export async function throttledUpdate(document: ChatMessage.Implementation, updates: ChatMessage.UpdateData, throttlingFunc: undefined | ((document: ChatMessage.Implementation, updates: ChatMessage.UpdateData) => Promise<void>) = undefined, immediate = false) {
