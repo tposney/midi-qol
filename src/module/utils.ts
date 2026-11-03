@@ -9596,25 +9596,41 @@ function changedUpdates(uuid: string, updates: object): object {
   const card = fromUuidSync(uuid) as ChatMessage.Implementation | null;
   if (!card) return updates;
   const queued = updatesCache[uuid] ?? {};
-  const changed = withoutStoredArrays(foundry.utils.diffObject(card._source, updates) as Record<string, unknown>, card._source);
+  const changed = withoutStored(foundry.utils.diffObject(card._source, updates) as Record<string, unknown>, card._source, card);
   return foundry.utils.mergeObject(changed, foundry.utils.diffObject(queued, updates, { inner: true }), { inplace: true });
 }
 
 /**
- * An array the document already has, as stored (JSON), is not a change: diffObject compares arrays of objects by key
- * count, and a stored entry keeps keys whose value is undefined (fields with no initial value) that JSON drops.
+ * What the document already has, or means by leaving out, is not a change: an array stored as is (JSON: diffObject
+ * compares arrays of objects by key count, and a stored entry keeps keys whose value is undefined, which JSON drops), and
+ * false or null for a system field the document has no value for (declared with no initial value: absent reads as
+ * false/none; an undeclared key, e.g. in workflowOptions, can mean something else absent).
  */
-function withoutStoredArrays(diff: Record<string, unknown>, source: Record<string, any> | undefined): Record<string, unknown> {
+function withoutStored(diff: Record<string, unknown>, source: Record<string, any> | undefined, card: ChatMessage.Implementation, path = ""): Record<string, unknown> {
   for (const [key, value] of Object.entries(diff)) {
     const stored = source?.[key];
+    const at = path ? `${path}.${key}` : key;
     if (Array.isArray(value)) {
       if (Array.isArray(stored) && JSON.stringify(value) === JSON.stringify(stored)) delete diff[key];
     } else if (foundry.utils.getType(value) === "Object") {
-      withoutStoredArrays(value as Record<string, unknown>, stored);
+      withoutStored(value as Record<string, unknown>, stored, card, at);
       if (foundry.utils.isEmpty(value)) delete diff[key];
-    }
+    } else if ((value === false || value === null) && stored === undefined && at.startsWith("system.")
+      && declaredField(card.system as foundry.abstract.DataModel.Any | undefined, at.slice(7))) delete diff[key];
   }
   return diff;
+}
+
+/** The schema field a model declares at `path`, through its schema and typed-object fields (keyed by any id) */
+function declaredField(model: foundry.abstract.DataModel.Any | undefined, path: string): foundry.data.fields.DataField.Any | undefined {
+  const { SchemaField, TypedObjectField } = foundry.data.fields;
+  let field: foundry.data.fields.DataField.Any | undefined = model?.schema;
+  for (const part of path.split(".")) {
+    if (field instanceof SchemaField) field = field.fields[part];
+    else if (field instanceof TypedObjectField) field = field.element;
+    else return undefined;
+  }
+  return field;
 }
 
 export async function throttledUpdate(document: ChatMessage.Implementation, updates: ChatMessage.UpdateData, throttlingFunc: undefined | ((document: ChatMessage.Implementation, updates: ChatMessage.UpdateData) => Promise<void>) = undefined, immediate = false) {

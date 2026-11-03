@@ -2313,19 +2313,12 @@ export let MidiActivityMixin = Base => {
     async _createUsageMessage(message: RollMessageConfig = {}) {
       try {
         const context: MidiUsageChatContext = await this._midiUsageContext(message);
-        const midi = {
-          hasButtons: !!context.hasButtons,
-          hasAttack: !!context.hasAttack,
-          hasAttackRoll: !!context.hasAttackRoll,
-          hasDamage: !!context.hasDamage,
-          hasEffects: !!context.hasEffects,
-          condensed: !!context.condensed,
-          mergeCardMulti: !!context.mergeCardMulti,
-          confirmAttackDamage: !!context.confirmAttackDamage,
-          hideItemDetails: !!context.hideItemDetails,
-          displayProperties: !!context.displayProperties,
-          dmgBtnText: context.dmgBtnText ?? ""
-        };
+        // Only what is set: the schema reads an absent flag as false, absent displayProperties as true
+        const flags = ["hasButtons", "hasAttack", "hasAttackRoll", "hasDamage", "hasEffects", "condensed", "mergeCardMulti",
+          "confirmAttackDamage", "hideItemDetails"] as const;
+        const midi: Record<string, unknown> = Object.fromEntries(flags.filter(key => context[key]).map(key => [key, true]));
+        if (!context.displayProperties) midi.displayProperties = false;
+        if (context.dmgBtnText) midi.dmgBtnText = context.dmgBtnText;
         // A use started from inside another of the actor's workflows is linked to its card, as dnd5e links saves.
         const origin = this.actor ? Workflow.executingCardFor(this.actor)?.id ?? null : null;
         message = foundry.utils.mergeObject({ data: { system: { midi, ...(origin ? { origin } : {}) } } }, message ?? {},

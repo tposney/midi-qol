@@ -186,16 +186,11 @@ export function setupUsageCardMessage() {
         // The card of the workflow this use was started from (Workflow.executingCardFor); deleted with it.
         origin: new ForeignDocumentField(foundry.documents.BaseChatMessage),
         midi: new SchemaField({
-          hasButtons: new BooleanField({ initial: false }),
-          hasAttack: new BooleanField({ initial: false }),
-          hasAttackRoll: new BooleanField({ initial: false }),
-          hasDamage: new BooleanField({ initial: false }),
-          hasEffects: new BooleanField({ initial: false }),
-          condensed: new BooleanField({ initial: false }),
-          mergeCardMulti: new BooleanField({ initial: false }),
-          confirmAttackDamage: new BooleanField({ initial: false }),
-          hideItemDetails: new BooleanField({ initial: false }),
-          displayProperties: new BooleanField({ initial: true }),
+          // Stored only when set (MidiActivityMixin._createUsageMessage): absent is false
+          ...Object.fromEntries(["hasButtons", "hasAttack", "hasAttackRoll", "hasDamage", "hasEffects", "condensed", "mergeCardMulti",
+            "confirmAttackDamage", "hideItemDetails"].map(key => [key, new BooleanField({ required: false, initial: undefined })])),
+          // Absent is true
+          displayProperties: new BooleanField({ required: false, initial: undefined }),
           dmgBtnText: new StringField({ required: false, blank: true }),
           // Set while the workflow waits for a manual attack roll: the advantage state it will use.
           attackBtnText: new StringField({ required: false, blank: true }),
@@ -210,21 +205,21 @@ export function setupUsageCardMessage() {
           }), { required: false }),
 
           // Shown as a `[n]` button prefix after the first roll.
-          attackRollCount: new NumberField({ required: false, integer: true, initial: 0 }),
-          damageRollCount: new NumberField({ required: false, integer: true, initial: 0 }),
+          attackRollCount: new NumberField({ required: false, nullable: true, integer: true, initial: undefined }),
+          damageRollCount: new NumberField({ required: false, nullable: true, integer: true, initial: undefined }),
 
           // Only events that leave no other trace; the rest is derived (see midiButtonVisibility).
           progress: new SchemaField({
-            allRemoved: new BooleanField({ initial: false }),
+            allRemoved: new BooleanField({ required: false, initial: undefined }),
             // The use's attacks were handed to one use per target; their cards carry the rolls.
-            attacksSplit: new BooleanField({ initial: false }),
-            confirmed: new BooleanField({ initial: false }),
-            effectsApplied: new BooleanField({ initial: false }),
+            attacksSplit: new BooleanField({ required: false, initial: undefined }),
+            confirmed: new BooleanField({ required: false, initial: undefined }),
+            effectsApplied: new BooleanField({ required: false, initial: undefined }),
             // The workflow ran to completion: no roll can advance it now (e.g. every target missed)
-            finished: new BooleanField({ initial: false }),
-            savesResolved: new BooleanField({ initial: false }),
-            teleported: new BooleanField({ initial: false }),
-            templatesPlaced: new BooleanField({ initial: false })
+            finished: new BooleanField({ required: false, initial: undefined }),
+            savesResolved: new BooleanField({ required: false, initial: undefined }),
+            teleported: new BooleanField({ required: false, initial: undefined }),
+            templatesPlaced: new BooleanField({ required: false, initial: undefined })
           }, { required: false }),
 
           // The card's roll sections, written as the workflow produces them.
@@ -237,7 +232,7 @@ export function setupUsageCardMessage() {
               template: new StringField({ required: false, blank: true }),
               data: new ObjectField({ required: false }),
               html: new StringField({ required: false, blank: true })
-            }, { required: false, nullable: true, initial: null })
+            }, { required: false, nullable: true })
           ])), { required: false }),
 
           // The workflow's state: resumed from here after a reload (lib/cardState.ts)

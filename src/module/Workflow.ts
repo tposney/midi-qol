@@ -240,7 +240,7 @@ class CardStateStore {
       if (key === "workflowOptions") this.#cache.set(key, decodeOptions(foundry.utils.deepClone(value)));
       else this.#cache.set(key, foundry.utils.deepClone(value));
     }
-    for (const key of ["attackRollCount", "damageRollCount"] as const) if (midi[key] !== undefined) this.#cache.set(key, midi[key]);
+    for (const key of ["attackRollCount", "damageRollCount"] as const) if (midi[key] != null) this.#cache.set(key, midi[key]);
     const records = Object.values(midi.records ?? {});
     for (const field of Object.keys(RECORD_SETS) as RecordSet[]) {
       const tokens = records.filter(record => record[field])
@@ -894,7 +894,7 @@ export class Workflow {
   attackRollHTML: HTMLElement | string | undefined;
 
   get attackRollCount() { return this.#persisted.scalar("attackRollCount", 0); }
-  set attackRollCount(attackRollCount: number) { this.#persisted.setScalar("attackRollCount", attackRollCount); }
+  set attackRollCount(attackRollCount: number) { this.#persisted.setScalar("attackRollCount", attackRollCount, count => count || null); }
 
   // Not stored: a rebuilt workflow keeps only its critical and fumble (isCritical/isFumble)
   #attackRollModifierTracker: RollModifierTracker = new RollModifierTracker();
@@ -1159,7 +1159,7 @@ export class Workflow {
   damageRollHTML: HTMLElement | string | undefined;
 
   get damageRollCount(): number { return this.#persisted.scalar("damageRollCount", 0); }
-  set damageRollCount(damageRollCount: number) { this.#persisted.setScalar("damageRollCount", damageRollCount); }
+  set damageRollCount(damageRollCount: number) { this.#persisted.setScalar("damageRollCount", damageRollCount, count => count || null); }
 
   defaultDamageType: string = "";
 
@@ -5271,7 +5271,8 @@ export class Workflow {
       }
       return { "system.targets": descriptors };
     }
-    if (details[0]?.saveMults) this.#persisted.setScalar("saveMults", details[0].saveMults);
+    // Only a save, or Evasion on a failed one, uses them
+    if (details[0]?.saveMults && details.some(d => d.saved || d.superSaver || d.semiSuperSaver)) this.#persisted.setScalar("saveMults", details[0].saveMults);
     for (const detail of details) {
       const document = fromUuidSync(detail.token) as TokenDocument.Implementation | null;
       if (document) this.#persisted.setSaveFacts(document, { uncannyDodge: detail.uncannyDodge || undefined, uncannyDodgeIcon: detail.uncannyDodgeIcon || undefined });
@@ -5529,7 +5530,7 @@ export class Workflow {
       saveTotal: isFinite(saveRollTotal) ? saveRollTotal : null,
       saveCover: totalSaveCover >= TOTAL_COVER ? "total" : totalSaveCover >= THREE_QUARTERS_COVER ? "threeQuarters" : totalSaveCover >= HALF_COVER ? "half" : undefined,
       saveCoverAuto: coverSaveBonus >= TOTAL_COVER || undefined,
-      saveMode: mode,
+      saveMode: mode || null,
       saveAttribution: advMode?.attribution && !foundry.utils.isEmpty(advMode.attribution) ? attributionTriples(advMode.attribution) : undefined
     });
 
@@ -6978,9 +6979,8 @@ export class Workflow {
     // A copy of the card, not the workflow's own: it is never rebuilt as a second workflow
     const copied = foundry.utils.getProperty(data, "system.midi") as Record<string, unknown> | undefined;
     if (copied) { delete copied.state; delete copied.records; }
-    for (const name of ["damage", "otherDamage", "bonusDamage"]) {
-      foundry.utils.setProperty(data, `system.midi.sections.${name}`, null);
-    }
+    const sections = foundry.utils.getProperty(data, "system.midi.sections") as Record<string, unknown> | undefined;
+    for (const name of ["damage", "otherDamage", "bonusDamage"]) delete sections?.[name];
     if (installedModules.get("ready-set-roll-5e")) return;
     if (this.currentAction === this.WorkflowState_Completed) {
       if (this.itemCardUuid) {

@@ -42,7 +42,7 @@ export type SaveFacts = {
   // Cover at the save; total cover from a module makes it automatic
   saveCover?: "half" | "threeQuarters" | "total", saveCoverAuto?: boolean,
   // Advantage mode, and why: [type, source, name]
-  saveMode?: number, saveAttribution?: string[][],
+  saveMode?: number | null, saveAttribution?: string[][],
   // For the damage tray: the damage calculation's Uncanny Dodge
   uncannyDodge?: boolean, uncannyDodgeIcon?: string,
   // The hits row (hits.html) as the attack left it: AC and its modifiers at the time. Null clears the row.
