@@ -12,6 +12,7 @@ import { MODULE_ID } from "../../midi-qol.js";
 import { Workflow } from "../Workflow.js";
 import { followUpButtons } from "../followUps.js";
 import { NOTE_MESSAGE_TYPE, noteCard, notesOf } from "./CardNoteMessage.js";
+import { cardStateSchema } from "../lib/cardState.js";
 
 /** Renderer per roll-backed section; damage renderers aggregate the section's rolls into one block. */
 const SECTION_ROLL_RENDERERS: Record<string, (rolls: Roll[]) => Promise<string> | string> = {
@@ -180,7 +181,10 @@ export function setupUsageCardMessage() {
               data: new ObjectField({ required: false }),
               html: new StringField({ required: false, blank: true })
             }, { required: false, nullable: true, initial: null })
-          ])), { required: false })
+          ])), { required: false }),
+
+          // The workflow's state: resumed from here after a reload (lib/cardState.ts)
+          ...cardStateSchema()
         }, { required: false })
       };
     }

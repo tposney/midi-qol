@@ -4,6 +4,7 @@ import { Dnd5eSystem } from "../../globals.js";
 import { configSettings, forceHideRoll, safeGetGameSetting } from "../settings.js";
 import { displayTokenName, getToken, isDnd5eRollMessage } from "../utils.js";
 import { renameMarkedTokens } from "../lib/tokenNames.js";
+import { legacyCardFlags } from "../lib/cardState.js";
 import { canSeePlayerOutcome, canSeeSaveResult, cardActor, challengeVisible, saveDetail, saveDisplayMode } from "../lib/saveVisibility.js";
 
 // Damage is auto-applied by midi when autoApplyDamage is one of the "yes*" modes.
@@ -28,7 +29,8 @@ const MIDI_ROLL_FLAGS: Record<string, string> = {
   attack: "attackRoll",
   defaultDamage: "damageRolls",
   bonusDamage: "bonusDamageRolls",
-  otherDamage: "otherDamageRolls"
+  otherDamage: "otherDamageRolls",
+  utility: "utilityRolls"
 };
 
 import Token = foundry.canvas.placeables.Token;
@@ -107,6 +109,13 @@ export function defineChatMessageMidiClass(baseClass: ChatMessage.Implementation
 
     prepareDerivedData() {
       super.prepareDerivedData();
+
+      // The workflow's state under its old flag names, for anything still reading those (in memory only)
+      const legacy = legacyCardFlags((this.system as { midi?: Parameters<typeof legacyCardFlags>[0] } | undefined)?.midi);
+      if (!foundry.utils.isEmpty(legacy)) {
+        const flags = (this.flags[MODULE_ID] ??= {}) as Record<string, unknown>;
+        for (const [key, value] of Object.entries(legacy)) flags[key] ??= value;
+      }
 
       // Deserialize roll flags in-place from JSON to Roll instances (same pattern as Foundry core's ChatMessage.rolls)
       const midiFlags = this.flags?.[MODULE_ID];
