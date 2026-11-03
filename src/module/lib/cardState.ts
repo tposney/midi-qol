@@ -14,10 +14,7 @@ export const STATE_FIELDS = {
   templateUuids: "templateUuids",
   workflowOptions: "workflowOptions",
   // What a successful save does to each damage type, for the damage tray
-  saveMults: "saveMults",
-  // Null until worked out; empty when no target matched (the damage tray tells the two apart)
-  otherDamageMatchUuids: "otherDamageMatchUuids",
-  ammunitionDamageMatchUuids: "ammunitionDamageMatchUuids"
+  saveMults: "saveMults"
 } as const;
 export type StateKey = keyof typeof STATE_FIELDS;
 
@@ -45,6 +42,10 @@ export type SaveFacts = {
   saveMode?: number | null, saveAttribution?: string[][],
   // For the damage tray: the damage calculation's Uncanny Dodge
   uncannyDodge?: boolean, uncannyDodgeIcon?: string,
+  // For the damage tray: the other activity's and the ammunition's damage apply to this token (state.otherDamageMatched...)
+  otherDamage?: boolean, ammunitionDamage?: boolean,
+  // Targeted before the use (workflowOptions.preSelectedTargetUuids), by position
+  preSelected?: number | null,
   // The hits row (hits.html) as the attack left it: AC and its modifiers at the time. Null clears the row.
   hitClass?: string | null, hitSymbol?: string | null, hitShowAC?: boolean | null, acDisplay?: string | null, acTooltip?: string | null,
   acIcons?: { img?: string, icon?: string, tooltip?: string, cssClass?: string, useDnd5eIcon?: boolean }[] | null
@@ -66,8 +67,8 @@ export function cardStateSchema() {
       templateUuids: new ArrayField(new StringField(), unset),
       workflowOptions: new ObjectField(unset),
       saveMults: new ObjectField(unset),
-      otherDamageMatchUuids: new ArrayField(new StringField(), { ...unset, nullable: true }),
-      ammunitionDamageMatchUuids: new ArrayField(new StringField(), { ...unset, nullable: true })
+      // The damage tray's matches have been worked out (the records say which tokens): absent, they apply to every target
+      otherDamageMatched: bool(), ammunitionDamageMatched: bool()
     }, { required: false }),
     records: new TypedObjectField(new SchemaField({
       uuid: new StringField({ required: true, blank: false }),
@@ -75,6 +76,7 @@ export function cardStateSchema() {
       saveTotal: num(), saveCover: new StringField({ ...unset, choices: ["half", "threeQuarters", "total"] }), saveCoverAuto: bool(), saveMode: num(),
       saveAttribution: new ArrayField(new ArrayField(new StringField()), unset),
       uncannyDodge: bool(), uncannyDodgeIcon: str(),
+      otherDamage: bool(), ammunitionDamage: bool(), preSelected: num(),
       ...Object.fromEntries(["hitClass", "hitSymbol", "acDisplay", "acTooltip"].map(key => [key, new StringField({ ...unset, blank: true, nullable: true })])),
       hitShowAC: new BooleanField({ ...unset, nullable: true }),
       acIcons: new ArrayField(new ObjectField(), { ...unset, nullable: true })
@@ -84,7 +86,19 @@ export function cardStateSchema() {
 
 /** The old `flags.midi-qol` keys the state and records replace */
 export const LEGACY_CARD_FLAG_KEYS = [...Object.values(STATE_FIELDS).filter(key => key !== "saveMults"), ...Object.values(RECORD_SETS), "templateUuid", "currentAction", "saveAttribution",
-  "damageDetail", "otherDamageDetail", "bonusDamageDetail"];
+  "damageDetail", "otherDamageDetail", "bonusDamageDetail", "otherDamageMatchUuids", "ammunitionDamageMatchUuids"];
+
+/** The damage tray's matches: token uuids the other activity's (or the ammunition's) damage applies to; undefined until worked out */
+export function cardDamageMatches(midi: { state?: Record<string, any>, records?: Record<string, CardRecord> } | undefined,
+  kind: "otherDamage" | "ammunitionDamage"): string[] | undefined {
+  if (!midi?.state?.[`${kind}Matched`]) return undefined;
+  return Object.values(midi.records ?? {}).filter(record => record[kind]).map(record => record.uuid);
+}
+
+/** The tokens targeted before the use, in order */
+export function cardPreSelected(records: Record<string, CardRecord> | undefined): string[] {
+  return Object.values(records ?? {}).filter(record => record.preSelected).sort((a, b) => a.preSelected! - b.preSelected!).map(record => record.uuid);
+}
 
 /**
  * The old keys on a card's in-memory flags, as getters computing their value from the state and records when read,
@@ -145,6 +159,11 @@ export function legacyCardFlags(midi: { state?: Record<string, any>, records?: R
     if (value !== null && value !== undefined && value !== "") flags[flag] = value;
   }
   flags.templateUuid = state.templateUuids?.[0] ?? "";
+  if (flags.workflowOptions) flags.workflowOptions = { ...(flags.workflowOptions as object), preSelectedTargetUuids: cardPreSelected(midi?.records) };
+  for (const kind of ["otherDamage", "ammunitionDamage"] as const) {
+    const matches = cardDamageMatches(midi, kind);
+    if (matches) flags[`${kind}MatchUuids`] = matches;
+  }
   const records = Object.values(midi?.records ?? {});
   for (const [key, flag] of Object.entries(RECORD_SETS)) {
     const members = records.filter(record => record[key as RecordSet]);

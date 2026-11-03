@@ -4,7 +4,7 @@ import { TroubleShooter } from "../apps/TroubleShooter.js";
 import { displayTokenName, setupDamageDetails } from "../utils.js";
 import { prepareDamageListToJSON, timedAwaitExecuteAsGM } from "../GMAction.js";
 import { Workflow } from "../Workflow.js";
-import { cardMidiState, cardTargetDetail, storedMidiFlag } from "../lib/cardState.js";
+import { cardMidiState, cardTargetDetail, storedMidiFlag, cardDamageMatches } from "../lib/cardState.js";
 import { CombinedTargetDescriptor, DamageApplicationOptions, DamageDescription, DamageListEntry, Dnd5eSystem } from "../../globals.js";
 
 // SVG Icons for midi-qol custom change sources (using dnd5e SVGs for consistent styling)
@@ -340,9 +340,9 @@ export class DamageApplicationElementMidi extends globalThis.dnd5e.applications.
           foundry.utils.setProperty(options, "midi.saveMultiplier", saveMultiplier ?? configSettings.defaultSaveMult);
         if (this.damageType === "otherDamage") {
           // Null until worked out: the damage then applies to every target
-          const state = cardMidiState(this.chatMessage)?.state;
-          const otherMatches: string[] | undefined = state ? state.otherDamageMatchUuids ?? undefined : storedMidiFlag(this.chatMessage, "otherDamageMatchUuids");
-          const ammunitionMatches: string[] | undefined = state ? state.ammunitionDamageMatchUuids ?? undefined : storedMidiFlag(this.chatMessage, "ammunitionDamageMatchUuids");
+          const midi = cardMidiState(this.chatMessage);
+          const otherMatches: string[] | undefined = midi ? cardDamageMatches(midi, "otherDamage") : storedMidiFlag(this.chatMessage, "otherDamageMatchUuids");
+          const ammunitionMatches: string[] | undefined = midi ? cardDamageMatches(midi, "ammunitionDamage") : storedMidiFlag(this.chatMessage, "ammunitionDamageMatchUuids");
           const token = targetDetails.token ?? uuid;
           if (otherMatches) foundry.utils.setProperty(options, "midi.otherApplies", otherMatches.includes(token));
           if (ammunitionMatches) foundry.utils.setProperty(options, "midi.ammunitionApplies", ammunitionMatches.includes(token));

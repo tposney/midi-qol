@@ -1,7 +1,7 @@
 import { warn, debug, log, i18n, i18nFormat, busyWait, MESSAGE_TYPES, error, debugEnabled, MQItemMacroLabel, GameSystemConfig, MODULE_ID, MQActivityMacroLabel, gameStats } from "../midi-qol.js";
 import { MidiTeleportActivity, TeleportOption } from "./activities/TeleportActivity.js";
 import { decodeWorkflowOptions, encodeWorkflowOptions, inheritableWorkflowOptions } from "./lib/workflowOptionsCodec.js";
-import { CardRecord, RECORD_SETS, RecordSet, SaveFacts, STATE_FIELDS, StateKey, attributionMap, attributionTriples } from "./lib/cardState.js";
+import { CardRecord, RECORD_SETS, RecordSet, SaveFacts, STATE_FIELDS, StateKey, attributionMap, attributionTriples, cardPreSelected } from "./lib/cardState.js";
 import { preferredActiveGM, socketlibSocket, timedAwaitExecuteAsGM, timedExecuteAsGM, unTimedExecuteAsGM } from "./GMAction.js";
 import { installedModules } from "./setupModules.js";
 import { offerFollowUps } from "./followUps.js";
@@ -213,6 +213,8 @@ export type WorkflowOutcome = "ok" | "allMissed" | "invalid" | "split" | "manual
  * The workflow's stored fields: kept in memory, written to its card (lib/cardState.ts) through the card's update cache.
  * The card is read only when the workflow is rebuilt from it (load). Writing undefined forgets the value.
  */
+const RECORD_VALUES = ["otherDamage", "ammunitionDamage", "preSelected"] as const;
+
 class CardStateStore {
   #cache = new Map<string, unknown>();
   #write: (updates: Record<string, unknown>) => void;
@@ -242,7 +244,13 @@ class CardStateStore {
       else this.#cache.set(key, foundry.utils.deepClone(value));
     }
     for (const key of ["attackRollCount", "damageRollCount"] as const) if (midi[key] != null) this.#cache.set(key, midi[key]);
+    // Pre-selected targets are kept in the records, not the stored options
+    if (state.workflowClass) this.#cache.set("workflowOptions", { ...((this.#cache.get("workflowOptions") as WorkflowOptions | undefined) ?? {}), preSelectedTargetUuids: cardPreSelected(midi.records) });
     const records = Object.values(midi.records ?? {});
+    for (const field of RECORD_VALUES) {
+      const uuids = records.filter(record => record[field]).map(record => record.uuid);
+      if (uuids.length) this.#cache.set(`recordValues.${field}`, new Set(uuids));
+    }
     for (const field of Object.keys(RECORD_SETS) as RecordSet[]) {
       const tokens = records.filter(record => record[field])
         .map(record => (fromUuidSync(record.uuid) as TokenDocument.Implementation | undefined)?.object).filter((t): t is Token.Implementation => !!t);
@@ -333,6 +341,37 @@ class CardStateStore {
     for (const [document, facts] of rows)
       this.setSaveFacts(document, before.has(document.uuid) ? facts : Object.fromEntries(Object.entries(facts).filter(([, v]) => v !== null)));
     this.#cache.set("hitRows", shown);
+  }
+
+  /** A per-token value on the records for the tokens given, cleared from tokens that had one */
+  setRecordValues(field: typeof RECORD_VALUES[number], values: Map<TokenDocument.Implementation, true | number>): void {
+    const key = `recordValues.${field}`;
+    const before = (this.#cache.get(key) as Set<string> | undefined) ?? new Set();
+    const now = new Set<string>();
+    for (const [document, value] of values) {
+      now.add(document.uuid);
+      this.setSaveFacts(document, { [field]: value });
+    }
+    for (const uuid of before) {
+      const document = fromUuidSync(uuid);
+      if (!now.has(uuid) && document instanceof TokenDocument) this.setSaveFacts(document, { [field]: field === "preSelected" ? null : false });
+    }
+    this.#cache.set(key, now);
+  }
+
+  /** The damage tray's matches: the matched tokens flagged in the records, and the state marked as worked out */
+  setDamageMatches(kind: "otherDamage" | "ammunitionDamage", matches: Set<Token.Implementation> | undefined): void {
+    this.#write({ [`system.midi.state.${kind}Matched`]: matches ? true : null });
+    const documents = [...(matches ?? [])].map(token => getTokenDocument(token)).filter((d): d is TokenDocument.Implementation => !!d);
+    this.setRecordValues(kind, new Map(documents.map(document => [document, true as const])));
+  }
+
+  /** The workflow's options, stored as `stored` gives them; the pre-selected targets go in the records */
+  setWorkflowOptions(options: WorkflowOptions, stored: (options: WorkflowOptions) => WorkflowOptions): void {
+    const { preSelectedTargetUuids, ...rest } = stored(options) as WorkflowOptions & { preSelectedTargetUuids?: string[] };
+    this.setScalar("workflowOptions", options, () => rest);
+    const documents = (preSelectedTargetUuids ?? []).map(uuid => fromUuidSync(uuid)).filter((d): d is TokenDocument.Implementation => d instanceof TokenDocument);
+    this.setRecordValues("preSelected", new Map(documents.map((document, index) => [document, index + 1])));
   }
 
   /** A token's facts on the card besides its sets: its save row (UsageCardMessage), the damage tray's detail */
@@ -595,7 +634,7 @@ export class Workflow {
   }
   // Stored without midi's defaults, which are merged back when rebuilt
   set workflowOptions(workflowOptions: WorkflowOptions) {
-    this.#persisted.setScalar("workflowOptions", workflowOptions, options => encodeWorkflowOptions(foundry.utils.diffObject(defaultRollOptions, options)));
+    this.#persisted.setWorkflowOptions(workflowOptions, options => encodeWorkflowOptions(foundry.utils.diffObject(defaultRollOptions, options)));
   }
 
   get needItemCard(): boolean { return !!this.itemCardUuid };
@@ -856,9 +895,8 @@ export class Workflow {
   }
   set otherDamageMatches(matches: Set<Token.Implementation> | undefined) {
     this.#otherDamageMatches = matches;
-    const uuids = matches ? Array.from(matches).map(t => getTokenDocument(t)?.uuid).filter((u): u is string => !!u) : null;
-    // The damage tray and save damage line read it
-    this.#persisted.setScalar("otherDamageMatchUuids", uuids);
+    // For the damage tray, which has other damage only from the other activity
+    if (this.otherActivity) this.#persisted.setDamageMatches("otherDamage", matches);
   }
 
   /** The targets the ammunition's damage applies to: hit targets passing its own use condition. */
@@ -868,9 +906,8 @@ export class Workflow {
   }
   set ammunitionDamageMatches(matches: Set<Token.Implementation> | undefined) {
     this.#ammunitionDamageMatches = matches;
-    const uuids = matches ? Array.from(matches).map(t => getTokenDocument(t)?.uuid).filter((u): u is string => !!u) : null;
     // The damage tray reads it
-    this.#persisted.setScalar("ammunitionDamageMatchUuids", uuids);
+    this.#persisted.setDamageMatches("ammunitionDamage", matches);
   }
 
   /**
@@ -1665,7 +1702,7 @@ export class Workflow {
   #mergeWorkflowOptions(callerOptions: WorkflowOptions): void {
     const stored = () => encodeWorkflowOptions(callerOptions);
     // The auto-roll settings give way to the caller's options, read from the workflow
-    this.#persisted.setScalar("workflowOptions", callerOptions, stored);
+    this.#persisted.setWorkflowOptions(callerOptions, stored);
     const merged: WorkflowOptions = foundry.utils.mergeObject(defaultRollOptions, {
       autoRollAttack: getAutoRollAttack(this),
       autoRollDamage: getAutoRollDamage(this),
@@ -1674,7 +1711,7 @@ export class Workflow {
     }, { inplace: false });
     foundry.utils.mergeObject(merged, callerOptions, { overwrite: true });
     if (this.activity.midiProperties?.noConcentrationCheck) merged.noConcentrationCheck = true;
-    this.#persisted.setScalar("workflowOptions", merged, stored);
+    this.#persisted.setWorkflowOptions(merged, stored);
   }
 
   /**
