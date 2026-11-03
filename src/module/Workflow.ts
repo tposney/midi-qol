@@ -255,6 +255,7 @@ class CardStateStore {
       const tokens = records.filter(record => record[field])
         .map(record => (fromUuidSync(record.uuid) as TokenDocument.Implementation | undefined)?.object).filter((t): t is Token.Implementation => !!t);
       if (tokens.length) this.#cache.set(field, new Set(tokens));
+      this.#cache.set(`written.${field}`, new Set(records.filter(record => record[field]).map(record => record.uuid)));
     }
     const hitRows = records.filter(record => typeof record.hitClass === "string").map(record => record.uuid);
     if (hitRows.length) this.#cache.set("hitRows", new Set(hitRows));
@@ -290,10 +291,12 @@ class CardStateStore {
   }
 
   setTokenSet(field: RecordSet, tokens: Set<TokenOrDocument> | undefined): void {
-    const before = this.tokenSet(field);
     if (tokens === undefined) this.#cache.delete(field);
     else this.#cache.set(field, new Set(Array.from(tokens).map(t => t instanceof TokenDocument ? t.object : t).filter(t => !!t)));
     const members = new Set(Array.from(tokens ?? []).map(t => getTokenDocument(t)).filter((t): t is TokenDocument.Implementation => !!t));
+    // Compared with what was last written, not the cached set: callers change that in place before assigning it
+    const written = `written.${field}`;
+    const before = (this.#cache.get(written) as Set<string> | undefined) ?? new Set<string>();
     const leaves: Record<string, unknown> = {};
     const mark = (document: TokenDocument.Implementation, value: boolean) => {
       const at = `system.midi.records.${document.id}`;
@@ -301,7 +304,11 @@ class CardStateStore {
       Object.assign(leaves, { [`${at}.uuid`]: document.uuid, [`${at}.${field}`]: value });
     };
     for (const document of members) mark(document, true);
-    for (const token of before) if (token.document && !members.has(token.document)) mark(token.document, false);
+    for (const uuid of before) {
+      const document = fromUuidSync(uuid);
+      if (document instanceof TokenDocument && !members.has(document)) mark(document, false);
+    }
+    this.#cache.set(written, new Set([...members].map(document => document.uuid)));
     this.#write(leaves);
   }
 
