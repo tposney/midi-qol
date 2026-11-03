@@ -12,7 +12,7 @@ import { setupRegionMagic } from './module/regionMagic.js';
 import { setupMagicSight, drawnMagicSight } from './module/magicSight.js';
 import { SaferSocket, initGMActionSetup, setupSocket, socketlibSocket, unTimedExecuteAsGM } from './module/GMAction.js';
 import { setupSheetQol } from './module/sheetQOL.js';
-import { TrapWorkflow, DamageOnlyWorkflow, Workflow, DummyWorkflow, DDBGameLogWorkflow, UserWorkflow } from './module/Workflow.js';
+import { TrapWorkflow, DamageOnlyWorkflow, Workflow, DummyWorkflow, UserWorkflow } from './module/Workflow.js';
 import { addConcentrationDependent, addRollTo, addRollToAsync, applyTokenDamage, applyTokenDamageMany, canSee, canSense, canSenseModes, checkDistance, checkIncapacitated, checkNearby, chooseEffect, completeItemUse, computeCoverBonus, getCoverBonus, tokenAtPosition, createConditionData, throttledUpdate, displayDSNForRoll, doConcentrationCheck, doOverTimeEffect, evalAllConditions, evalCondition, findNearby, findNearbyCount, getCachedDocument, getChanges, getConcentrationEffect, getTokenDocument, getOrCreateTokenForActor, getOrCreateTokenForActorAsSet, getTokenPlayerName, getTokenPlayerNameForUser, getTraitMult, hasCondition, hasUsedBonusAction, hasUsedReaction, isValidTarget, midiRenderAttackRoll, midiRenderBonusDamageRoll, midiRenderDamageRoll, midiRenderOtherDamageRoll, midiRenderRoll, fromActorUuid, playerFor, playerForActor, raceOrType, reactionDialog, removeHiddenCondition, removeInvisibleCondition, removeReactionUsed, setActionUsed, setBonusActionUsed, setReactionUsed, hasUsedAction, tokenForActor, typeOrRace, validRollAbility, actorFromUuid, removeActionUsed, removeBonusActionUsed, getCheckRollModeFor, getSaveRollModeFor, completeActivityUse, checkActivityRange, unseenTargets, totalCoverTargets, modifyDamageBy, computeDistance, convertDuration, splitOvertimeSpec, isRangeCheckable, activityRanges, getDistance, getItemFromEffectOrigin, addDependent, cleanCPRFlanked, updatesCache, createDamageDetail, activityHasEmanationNoTemplate, getVitalityItem, getVitalityValue, getVitalityMax, hasVitalitySystem, resolveItemMacro, resolveActivityMacro, setupMidiFlagTypes, initCoverConstants, ReactionDialog, RollModifyDialog, sizeNumeric, restoreWorkflowTokenSets, setupMarkerChecks, setupCheckVision, toggleStatus } from './module/utils.js';
 import { addFollowUp } from './module/followUps.js';
 import { highlightTokens } from './module/lib/tokenHighlight.js';
@@ -250,7 +250,6 @@ Object.assign(globalThis.MidiQOL, {
   encodeWorkflowOptions,
   createEffects,
   DamageOnlyWorkflow,
-  DDBGameLogWorkflow,
   debug,
   displayDSNForRoll,
   doConcentrationCheck,
@@ -332,7 +331,7 @@ Object.assign(globalThis.MidiQOL, {
   warn,
   Workflow,
   workflowClass: Workflow,
-  Workflows: { "Workflow": Workflow, "DamageOnlyWorkflow": DamageOnlyWorkflow, "TrapWorkflow": TrapWorkflow, "DummyWorkflow": DummyWorkflow, "DDBGameLogWorkflow": DDBGameLogWorkflow },
+  Workflows: { "Workflow": Workflow, "DamageOnlyWorkflow": DamageOnlyWorkflow, "TrapWorkflow": TrapWorkflow, "DummyWorkflow": DummyWorkflow },
   ChatClasses: {
     ChatMessageMidi,
     DamageApplicationElementMidi

@@ -2,7 +2,6 @@ import { checkRule, configSettings } from "./settings.js";
 import { withWorkflowOptionsCodec } from "./lib/workflowOptionsCodec.js";
 import { i18n, log, warn, gameStats, getCanvas, error, debugEnabled, debug, GameSystemConfig, MODULE_ID } from "../midi-qol.js";
 import { _pauseReactionTimer, calculateDamageAmounts, hpChangeFromDetail, getToken, getTokenDocument, gmOverTimeEffect, fromActorUuid, promptReactions, hasUsedAction, hasUsedBonusAction, removeActionUsed, removeBonusActionUsed, removeReactionUsed, ReactionItemReference, isEffectExpired, expireEffects, deleteAppliedEffects, getAppliedEffects, CERemoveEffect, CEAddEffectWith, getActor, completeItemUse, completeActivityUse, localActivityOverTimeEffect, isValidTarget, hasUsedAnyReaction, getVitalityItem, MidiOptions, tokenSourceCenter, toggleStatus } from "./utils.js";
-import { ddbglPendingFired } from "./chatMessageHandling.js";
 import { DAMAGE_MESSAGE_TYPE } from "./ChatClasses/DamageCardMessage.js";
 import { DamageDescriptionObject, Workflow } from "./Workflow.js";
 import { applyFailedDeathSaves, bonusCheck, revertFailedDeathSaves } from "./patching.js";
@@ -38,7 +37,6 @@ export let setupSocket = () => {
   socketlibSocket.register("createEffects", createEffects);
   socketlibSocket.register("createReverseDamageCard", createReverseDamageCard);
   socketlibSocket.register("D20Roll", _D20Roll);
-  socketlibSocket.register("ddbglPendingFired", ddbglPendingFired);
   socketlibSocket.register("deleteEffects", deleteEffects);
   socketlibSocket.register("deleteEffectsByUuid", deleteEffectsByUuid);
   socketlibSocket.register("deleteItemEffects", deleteItemEffects);
@@ -143,7 +141,6 @@ export class SaferSocket {
         return true; // TODO change this to false in the future.
 
 
-      case "ddbglPendingFired":
       case "gmOverTimeEffect":
       case "queueUndoData":
       case "queueUndoDataDirect":

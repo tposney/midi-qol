@@ -511,7 +511,6 @@ The tab starts with *Rules always applied*, which apply whether or not *Optional
 | (House Rule) Vitality Item | Name of a feature item on the actor to track vitality (overflow damage at 0 HP reduces vitality). Item uses.max = max vitality, uses.spent = vitality lost |
 | Vitality Exhausted Condition | Condition to apply when vitality reaches 0 (default: Dead) |
 | Vitality Death Requires | When actor is dead: "Vitality of 0" or "Vitality of 0 AND HP of 0" |
-| Enable ddb-game-log support | Accept rolls from ddb-game-log to trigger midi workflows |
 
 ## Custom Sounds
 

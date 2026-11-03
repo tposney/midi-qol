@@ -898,8 +898,6 @@
   "midi-qol.reactionDamaged": "Damaged",
   "midi-qol.reactionManual": "Manual",
   "midi-qol.reactionPreAttack": "Pre Attack Roll",
-  "midi-qol.ddbGL.Name": "Enable ddb-game-log support",
-  "midi-qol.ddbGL.Hint": "Accept attack/damage/saving throws from ddb-game-log to trigger midi workflows in foundry",
   "midi-qol.ShowReactionChatMessage.Name": "Show Chat prompt for reactions",
   "midi-qol.reactionFlavorHit": "{actorName} is hit by {itemName} and can use a reaction",
   "midi-qol.reactionFlavorTargeted": "{actorName} is targeted by {itemName} and can use a reaction",

@@ -896,8 +896,6 @@
   "midi-qol.reactionDamaged": "Sofrer Dano",
   "midi-qol.reactionManual": "Manual",
   "midi-qol.reactionPreAttack": "Antes da Jogada de Ataque",
-  "midi-qol.ddbGL.Name": "Habilitar suporte a ddb-game-log",
-  "midi-qol.ddbGL.Hint": "Aceitar ataque/dano/salvaguardas do ddb-game-log para iniciar Workflows do Midi QOL no Foundry.",
   "midi-qol.ShowReactionChatMessage.Name": "Exibir Cartão de Chat para Reações",
   "midi-qol.reactionFlavorHit": "{actorName} foi atingido por {itemName} e pode usar sua reação",
   "midi-qol.reactionFlavorTargeted":"{actorName} foi alvo de {itemName} e pode usar sua reação",

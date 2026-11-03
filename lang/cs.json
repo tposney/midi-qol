@@ -583,8 +583,6 @@
   "midi-qol.reactionDamaged": "Zraněný",
   "midi-qol.reactionManual": "Manuální",
   "midi-qol.reactionPreAttack": "Před hodem na útok",
-  "midi-qol.ddbGL.Name": "Povolit podporu ddb-game-log?",
-  "midi-qol.ddbGL.Hint": "Po zaškrtnutí budou akceptovány útoky/zásahy/záchranné hody z ddb-game-log ke spuštění pracovního procesu Midi ve Foundry.",
   "midi-qol.ShowReactionChatMessage.Name": "Zobrazovat výzvy reakce v chatu?",
   "midi-qol.reactionFlavorHit": "{actorName} je zasažen {itemName} a může použít reakci",
   "midi-qol.reactionFlavorTargeted": "{actorName} je cílen {itemName} a může použít reakci",

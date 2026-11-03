@@ -726,8 +726,6 @@
     "midi-qol.reactionDamaged": "受傷時",
     "midi-qol.reactionManual": "手動",
     "midi-qol.reactionPreAttack": "攻擊擲骰前",
-    "midi-qol.ddbGL.Name": "啟用 ddb-game-log 支援",
-    "midi-qol.ddbGL.Hint": "接受來自 ddb-game-log 的擲骰以觸發 midi 工作流(Workflow)。",
     "midi-qol.ShowReactionChatMessage.Name": "為反應(Reaction)顯示聊天提示",
     "midi-qol.reactionFlavorHit": "{actorName} 被 {itemName} 命中，可以使用反應(Reaction)",
     "midi-qol.reactionFlavorTargeted": "{actorName} 被 {itemName} 選為目標，可以使用反應(Reaction)",

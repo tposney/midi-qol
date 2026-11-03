@@ -460,8 +460,6 @@
     "midi-qol.reactionDamaged": "피해를 입",
     "midi-qol._comment for translaters_reactionAttacked": "아이템 활성화 상태를 위해 midi가 하단의 텍스트를 검색한다.",
     "midi-qol.reactionAttacked": "공격 당",
-    "midi-qol.ddbGL.Name": "ddb-game-log 지원 활성화",
-    "midi-qol.ddbGL.Hint": "ddb-game-log의 공격/피해/내성 굴림을 입력받아 파운드리 내 midi 워크플로우를 작동시킨다.",
     "midi-qol.ShowReactionChatMessage.Name": "반응 행동에 대한 채팅 프롬프트 표시",
     "midi-qol.reactionFlavorAttack": "{actorName} 액터가 {itemName}에 명중 당했으며 반응 행동을 사용할 수 있습니다.",
     "midi-qol.reactionFlavorDamage": "{actorName} 액터가 {itemName}에 피해를 입었으며 반응 행동을 사용할 수 있습니다.",

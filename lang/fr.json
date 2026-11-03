@@ -518,8 +518,6 @@
   "midi-qol.HPNotUpdated": "PV non mis à jour",
   "midi-qol.reactionDamaged": "Endommagé",
   "midi-qol.reactionManual": "Manuel",
-  "midi-qol.ddbGL.Name": "Activer le support ddb-game-log",
-  "midi-qol.ddbGL.Hint": "Accepter les jets d'attaque/dommages/sauvetage de ddb-game-log pour déclencher des flux de midi dans foundry",
   "midi-qol.ShowReactionChatMessage.Name": "Montrer l'invite de tchat pour les réactions",
   "midi-qol.reactionFlavorAttack": "{actorName} est touché par {itemName} et peut utiliser une réaction",
   "midi-qol.reactionFlavorDamage": "{actorName} est endommagé par {itemName} et peut utiliser une réaction",

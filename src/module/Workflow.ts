@@ -4876,7 +4876,6 @@ export class Workflow {
           isHitEC: this.hitTargetsEC.size > 0,
           // roll: this.attackRoll,
           type: MESSAGE_TYPES.ATTACK,
-          ...this.cardFlagCopies(["d20AttackRoll", "hitTargetUuids", "hitECTargetUuids", "isCritical", "isFumble", "targets"])
         },
 
       }
@@ -4885,24 +4884,6 @@ export class Workflow {
     await this.performThrottledUpdate(chatMessage, this.#sectionUpdate("attack", section,
       { flags: newFlags, rolls: this.chatRolls, "system.midi.attackRollCount": this.attackRollCount,
         "system.midi.dmgBtnText": this.#damageButtonText() }));
-  }
-
-  /**
-   * The workflow's state under its old flag names, for a card it shows but does not own. Its own card has the state
-   * itself, offered under those names in memory (legacyCardFlags).
-   */
-  cardFlagCopies(keys: string[]): Record<string, unknown> {
-    if (this.ownsCard) return {};
-    const uuids = (tokens: Set<TokenOrDocument>) => Array.from(tokens).map(t => getTokenDocument(t)?.uuid).filter(u => !!u);
-    const values: Record<string, () => unknown> = {
-      d20AttackRoll: () => this.d20AttackRoll, isCritical: () => this.isCritical, isFumble: () => this.isFumble,
-      targets: () => Array.from(this.targets).map(t => ({ uuid: getTokenDocument(t)?.uuid, name: getTokenDocument(t)?.name })),
-      hitTargetUuids: () => uuids(this.hitTargets), hitECTargetUuids: () => uuids(this.hitTargetsEC),
-      saveUuids: () => uuids(this.saves), failedSaveUuids: () => uuids(this.failedSaves), superSaverUuids: () => uuids(this.superSavers),
-      semiSuperSaverUuids: () => uuids(this.semiSuperSavers), criticalSaveUuids: () => uuids(this.criticalSaves),
-      fumbleSaveUuids: () => uuids(this.fumbleSaves), advantageSaveUuids: () => uuids(this.advantageSaves)
-    };
-    return Object.fromEntries(keys.map(key => [key, values[key]()]));
   }
 
   #damageButtonText(): string {
@@ -5232,7 +5213,6 @@ export class Workflow {
           flags: {
             "midi-qol": {
               type: MESSAGE_TYPES.SAVES,
-              ...this.cardFlagCopies(["saveUuids", "failedSaveUuids", "superSaverUuids", "semiSuperSaverUuids", "criticalSaveUuids", "fumbleSaveUuids", "advantageSaveUuids"]),
               sourceActorUuid: this.actor.uuid,
             },
           },
@@ -7050,12 +7030,9 @@ export class Workflow {
 
   processSaveRoll(message: ChatMessage.Implementation, _html: HTMLElement | ChatMessage.Database.CreateOptions, _dataOrUserId: ChatMessage.MessageData | string) {
     if (!this.saveRequests) return {};
-    const ddbglFlags = message.flags && message.flags["ddb-game-log"];
-    const isDDBGL = ddbglFlags?.cls === "save" && !ddbglFlags?.pending;
     // An initiative roll by the same token is not the save being waited for
     const isRoll = isDnd5eRollMessage(message) && dnd5eRollType(message) !== "initiative";
-    let requestId = message?.speaker?.token;
-    if (!requestId && isDDBGL) requestId = message?.speaker?.actor;
+    const requestId = message?.speaker?.token;
     if (debugEnabled > 0) warn("processSaveRoll |", requestId, this.saveRequests)
     if (!requestId) return true;
 
@@ -8487,7 +8464,6 @@ export class ActiveDefenceWorkflow extends Workflow {
       {
         isHit: this.hitTargets.size > 0,
         isHitEC: this.hitTargetsEC.size > 0,
-        ...this.cardFlagCopies(["isCritical", "isFumble", "targets", "hitTargetUuids", "hitECTargetUuids"])
       }
     };
     await this.setCardSection("attack", section, { flags: newFlags, rolls: this.chatRolls });
@@ -8868,131 +8844,6 @@ export class TrapWorkflow extends Workflow {
   }
 }
 
-export class DDBGameLogWorkflow extends Workflow {
-  DDBGameLogHookId: number | undefined;
-  needsDamage: boolean;
-  needsOtherDamage: boolean | undefined;
-  static get forceCreate() { return false }
-  static get(id: string): DDBGameLogWorkflow | undefined {
-    return Workflow.getWorkflow(id) as DDBGameLogWorkflow | undefined;
-  }
-
-  constructor(actor: Actor.Implementation, activity: Activity, speaker: ChatMessage.SpeakerData, targets: Token.Implementation[], options: any) {
-    super(actor, activity, speaker, targets, options);
-    this.expectedTemplateCount = activityHasAreaTarget(this.activity) ? 1 : 0;
-    this.templateUuids = [];
-    // this.needItemCard = false; TODO see where this is used
-    this.needsDamage = !!this.activity.hasDamage;
-    this.attackRolled = !activity.hasAttack;
-    // @ts-expect-error TODO: this
-    if (configSettings.undoWorkflow) this.undoData = { actorUuid: actor?.uuid, itemUuid: this.item.uuid, targets: Array.from(targets).map(t => t.id), options: options };
-    this.kickStart = true;
-    this.flagTags = { "ddb-game-log": { "midi-generated": true } };
-    if (configSettings.undoWorkflow) saveUndoData(this);
-  }
-
-  async complete() {
-    if (this.chatCard) {
-      await this.chatCard.update({
-        flags: { "midi-qol": { type: MESSAGE_TYPES.HITS } },
-      });
-    }
-  }
-  async WorkflowState_PreambleComplete(): Promise<WorkflowState> {
-    return super.WorkflowState_PreambleComplete();
-  }
-
-  override stateAfter(event: WorkflowEvent): WorkflowState {
-    const waiting = this.currentAction;
-    if (waiting === this.WorkflowState_WaitForAttackRoll && event === "attackRolled") return this.WorkflowState_AttackRollComplete;
-    if (waiting === this.WorkflowState_WaitForDamageRoll) {
-      const awaitingDamage = (this.needsDamage && this.activity.hasDamage) || this.needsOtherDamage;
-      return event === "attackRolled" && !awaitingDamage ? this.WorkflowState_AttackRollComplete : waiting;
-    }
-    return super.stateAfter(event);
-  }
-
-  async WorkflowState_WaitForAttackRoll(): Promise<WorkflowState> {
-    if (!this.activity.attack) {
-      return this.WorkflowState_AttackRollComplete;
-    }
-    if (!this.attackRolled) return this.WorkflowState_Suspend;
-    return this.WorkflowState_AttackRollComplete;
-  }
-  async WorkflowState_AttackRollComplete(): Promise<WorkflowState> {
-    this.effectsAlreadyExpired = [];
-    await this.callMidiHooks("midi-qol.preCheckHits");
-
-    if (debugEnabled > 1) debug(this.attackRollHTML)
-    if (configSettings.autoCheckHit !== "none" && this.activity.attack) {
-      this.recordTargetACModifiers(); // Not sure this is relevant
-      await this.checkHits(this.workflowOptions);
-      await this.displayHits(configSettings.autoCheckHit === "whisper");
-    }
-    await this.callMidiHooks("midi-qol.AttackRollComplete");
-    if (this.aborted) return this.WorkflowState_Abort;
-    return this.WorkflowState_WaitForDamageRoll;
-  }
-
-  async WorkflowState_AwaitTemplate(): Promise<WorkflowState> {
-    if (!activityHasAreaTarget(this.activity)) return super.WorkflowState_AwaitTemplate;
-    // `TemplatePlacement.fromActivity` runs the placement UI and creates the Regions; record them as
-    // the place-template button does.
-    try {
-      const created = await globalThis.dnd5e.canvas.TemplatePlacement.fromActivity(this.activity);
-      if (created?.length) await this.processPlacedTemplates(created as unknown as MeasuredTemplateDocument[], this.activity);
-    } catch (err) {
-      // Placement cancelled: the base state handles the missing template.
-    }
-    return super.WorkflowState_AwaitTemplate;
-  }
-  async WorkflowState_WaitForDamageRoll(): Promise<WorkflowState> {
-    if (this.needsDamage && this.activity.hasDamage) return this.WorkflowState_Suspend;
-    if (this.needsOtherDamage) return this.WorkflowState_Suspend;
-    const allHitTargets = new Set([...this.hitTargets, ...this.hitTargetsEC]);
-    this.failedSaves = new Set(allHitTargets);
-    if (!this.activity.hasDamage && !this.activity.hasHealing) return this.WorkflowState_WaitForSaves;
-    return this.WorkflowState_DamageRollComplete;
-  }
-  async WorkflowState_DamageRollComplete(): Promise<WorkflowState> {
-    this.defaultDamageType = getActivityDefaultDamageType(this) ?? this.defaultDamageType ?? MidiQOL.MQdefaultDamageType;
-    if (this.activity.actionType === "heal" && !Object.keys(GameSystemConfig.healingTypes).includes(this.defaultDamageType ?? "")) this.defaultDamageType = "healing";
-
-    this.rawDamageDetail = createDamageDetail({ roll: this.damageRolls, activity: this.activity, defaultType: this.defaultDamageType });
-
-    await this.rollAllBonusDamage();
-    this.rawOtherDamageDetail = [];
-    if (this.bonusDamageRolls) {
-      const messageData = {
-        flavor: this.bonusDamageFlavor,
-        speaker: this.speaker
-      }
-      // foundry.utils.setProperty(messageData, `flags.${game.system?.id}.roll.type`, "midi");
-      this.bonusDamageRoll?.toMessage(messageData); // see if this can deal with an array of rolls
-    }
-    expireMyEffects.bind(this)(["1Attack", "1Action", "1Spell"]);
-
-    if (getActivityAutoTargetAction(this.activity) === "none" && activityHasAreaTarget(this.activity) && !this.activity.attack) {
-      // we are not auto targeting so for area effect attacks, without hits (e.g. fireball)
-      this.targets = validTargetTokens(new Set(game.user?.targets));
-      this.hitTargets = validTargetTokens(new Set(game.user?.targets));
-      this.hitTargetsEC = new Set();
-    }
-    // apply damage to targets plus saves plus immunities
-    if (this.isFumble) { //TODO: Is this right?
-      return this.WorkflowState_RollFinished;
-    }
-    if (this.activity.save) return this.WorkflowState_WaitForSaves
-    return this.WorkflowState_AllRollsComplete;
-  }
-
-  async WorkflowState_RollFinished(): Promise<WorkflowState> {
-    if (this.postSummonHookId) Hooks.off("dnd5e.postSummon", this.postSummonHookId);
-    await super.WorkflowState_RollFinished();
-    return this.WorkflowState_Suspend;
-  }
-}
-
 export class DummyWorkflow extends Workflow {
   static get forceCreate() { return false }
   expectedAttackRoll: number | undefined;
@@ -9074,7 +8925,6 @@ export const WorkflowRegistry: Record<string, new (...args: any[]) => Workflow> 
   UserWorkflow,
   DamageOnlyWorkflow,
   TrapWorkflow,
-  DDBGameLogWorkflow,
   DummyWorkflow,
 };
 

@@ -5,6 +5,7 @@
 * Fixed: when an attack missed every target and the workflow completed (*Auto complete workflow*), the card kept its damage buttons; they now go as *Remove chat card buttons after roll* says. A workflow still waiting for a damage roll keeps them.
 * Fixed: re-rolling a utility formula on a completed card kept the old result on the card.
 * Changed: a workflow's state is always kept on its chat card, and *Save to Chat Card* is removed: after a reload the card's buttons carry on the same use (for its author) instead of starting a new one.
+* Removed: ddb-game-log support (the module has no Foundry 14 release); `MidiQOL.DDBGameLogWorkflow` is gone.
 * Changed: midi's save rows are drawn from the card's records, and a save roll that is in the card's linked save message is no longer copied onto the card (other modules' saves still are); `MidiQOL.cardSaveRoll(card, tokenUuid)` returns a token's save roll either way.
 * Changed: a usage card keeps its workflow's state in `system.midi.state` and one record per token in `system.midi.records`. The old `flags.midi-qol` keys (`hitTargetUuids`, `saveUuids`, `targets`, `damageDetail`, …) still read the same on new cards but are deprecated, warning once when read; they go in 14.8.0.
 * Changed: `Workflow#unSuspend(context)` is deprecated; macros resuming a workflow call `workflow.resume(event)`, event `"attackRolled"`, `"damageRolled"`, `"noDamage"` or `"utilityRolled"`.

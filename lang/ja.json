@@ -590,8 +590,6 @@
   "midi-qol.reactionDamaged": "ダメージ",
   "midi-qol.reactionManual": "マニュアル",
   "midi-qol.reactionPreAttack": "攻撃ロール前",
-  "midi-qol.ddbGL.Name": "ddb-game-logサポートの有効化",
-  "midi-qol.ddbGL.Hint": "ddb-game-logからの攻撃/ダメージ/セーヴロールを受け入れ、Midi-QOLのワークフローに渡します。",
   "midi-qol.ShowReactionChatMessage.Name": "確認メッセージをチャットに出力",
   "midi-qol.reactionFlavorHit": "{itemName} のヒットに対する {actorName} のリアクションを待っています。",
   "midi-qol.reactionFlavorTargeted": "{itemName} の目標選択に対する {actorName} のリアクションを待っています。",

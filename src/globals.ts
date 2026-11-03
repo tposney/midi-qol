@@ -12,7 +12,7 @@ import { TargetConfirmationConfig } from "./module/apps/TargetConfirmationConfig
 import { UndoWorkflow } from "./module/apps/UndoWorkflow";
 import { OverTimeEditor } from "./module/apps/OverTimeEditor";
 import { ConditionEditor } from "./module/apps/ConditionEditor";
-import { AttributionMap, AugmentedEvent, DamageDescriptionObject, DamageOnlyWorkflow, DDBGameLogWorkflow, DummyWorkflow, TrapWorkflow, UndoData, UserWorkflow, Workflow, WorkflowOptions, WorkflowRollOptions } from "./module/Workflow";
+import { AttributionMap, AugmentedEvent, DamageDescriptionObject, DamageOnlyWorkflow, DummyWorkflow, TrapWorkflow, UndoData, UserWorkflow, Workflow, WorkflowOptions, WorkflowRollOptions } from "./module/Workflow";
 import { MidiOptions } from "./module/utils";
 import * as utils from "./module/utils";
 import * as cardNotes from "./module/lib/cardNotes";
@@ -982,7 +982,6 @@ declare global {
       DamageOnlyWorkflow: typeof DamageOnlyWorkflow;
       TrapWorkflow: typeof TrapWorkflow;
       DummyWorkflow: typeof DummyWorkflow;
-      DDBGameLogWorkflow: typeof DDBGameLogWorkflow;
     };
     ChatClasses: {
       ChatMessageMidi: typeof ChatMessageMidi,

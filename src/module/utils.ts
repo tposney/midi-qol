@@ -6014,9 +6014,6 @@ export async function doReactions(targetRef: TokenOrDocument | string, triggerTo
     const workflow: Workflow | undefined = options.workflow ?? Workflow.getWorkflow(options?.activity?.uuid);
 
     if (configSettings.showReactionChatMessage) {
-      if (configSettings.enableDDBGL && installedModules.get("ddb-game-log")) {
-        if (workflow?.flagTags) chatData.flags = workflow.flagTags;
-      }
       chatMessage = await ChatMessage.create(chatData) as ChatMessage.Implementation;
     }
     const rollOptions = showReactionAttackRollOptions;

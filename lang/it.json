@@ -587,8 +587,6 @@
 "midi-qol.reactionDamaged": "Danneggiato",
 "midi-qol.reactionManual": "Manuale",
 "midi-qol.reactionPreAttack": "Tiro Pre Attacco",
-"midi-qol.ddbGL.Name": "Abilita il supporto ddb-game-log",
-"midi-qol.ddbGL.Hint": "Accetta attacchi/danni/tiri salvezza da ddb-game-log per attivare i flussi di lavoro midi in Foundry",
 "midi-qol.ShowReactionChatMessage.Name": "Mostra il prompt della chat per le reazioni",
 "midi-qol.reactionFlavorHit": "{actorName} è colpito da {itemName} e può usare la reazione",
 "midi-qol.reactionFlavorTargeted":"{actorName} è bersagliato da {itemName} e può usare la reazione",

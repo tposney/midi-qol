@@ -584,8 +584,6 @@ export class TroubleShooter extends HandlebarsApplicationMixin(ApplicationV2) {
         case "dae":
           foundry.utils.setProperty(data.modules[moduleId], "settings", TroubleShooter.getDetailedSettings(moduleId));
           break;
-        case "ddb-game-log":
-          break;
         case "dfreds-convenient-effects":
           foundry.utils.setProperty(data.modules[moduleId], "settings", TroubleShooter.getDetailedSettings(moduleId));
 

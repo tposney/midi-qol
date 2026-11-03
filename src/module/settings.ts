@@ -161,7 +161,6 @@ class ConfigSettings {
   griddedGridless: boolean = false;
   gridlessFudge: number | undefined = 0;
   doReactions: string = "all";
-  enableDDBGL: boolean = false;
   enforceReactions = "none";
   enforceBonusActions = "none";
   enforceSingleWeaponTarget: boolean = false;
@@ -334,7 +333,6 @@ export const checkedModuleList = [
   "condition-lab-triggler",
   "dae",
   "ddb-importer",
-  "ddb-game-log",
   "dice-so-nice",
   "effectmacro",
   "gambits-premades",
@@ -667,10 +665,9 @@ export let fetchParams = () => {
   if (configSettings.rulesTextFill === undefined) configSettings.rulesTextFill = true;
   if (typeof configSettings.gmConsumeResource !== "string") configSettings.gmConsumeResource = "none";
   if (typeof configSettings.consumeResource !== "string") configSettings.consumeResource = "none";
-  // The panel's checkbox used to write optionalRules.enableddbGL, which nothing read
-  if (configSettings.optionalRules && Reflect.get(configSettings.optionalRules, "enableddbGL")) configSettings.enableDDBGL = true;
+  // ddb-game-log support is gone
   if (configSettings.optionalRules) Reflect.deleteProperty(configSettings.optionalRules, "enableddbGL");
-  if (!configSettings.enableDDBGL) configSettings.enableDDBGL = false;
+  Reflect.deleteProperty(configSettings, "enableDDBGL");
   if (!configSettings.showReactionChatMessage) configSettings.showReactionChatMessage = false;
   //@ts-expect-error legacy boolean value
   if (configSettings.autoCEEffects === true) configSettings.autoCEEffects = "both";

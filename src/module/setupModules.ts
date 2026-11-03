@@ -12,7 +12,6 @@ export const USEFUL_MODULE_VERSIONS = {
   "chris-premades": "2.0.0",
   "condition-lab-triggler": "1.4",
   "dae": DAE_REQUIRED_VERSION,
-  "ddb-game-log": "0.0.0",
   "dfreds-convenient-effects": "5.0.4",
   "dice-so-nice": "4.1.1",
   "epic-rolls-5e": "3.1.1",

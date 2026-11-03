@@ -1,6 +1,6 @@
 import { warn, error, debug, i18n, debugEnabled, overTimeEffectsToDelete, savedOverTimeEffectsToDelete, log, gameStats, GameSystemConfig, MODULE_ID, getStaticID, MIDI_IMPLYING_STATUSES } from "../midi-qol.js";
 import { excludeRegionSourceEffect, moveRegionsOnTurnChange } from "./regionBehaviors/MidiRegionActivityBehaviorType.js";
-import { colorChatMessageHandler, nsaMessageHandler, hideStuffHandler, hideRollUpdate, hideRollRender, processCreateDDBGLMessages, ddbglPendingHook, checkOverTimeSaves } from "./chatMessageHandling.js";
+import { colorChatMessageHandler, nsaMessageHandler, hideStuffHandler, hideRollUpdate, hideRollRender, checkOverTimeSaves } from "./chatMessageHandling.js";
 import { preferredActiveGM, processUndoDamageCard } from "./GMAction.js";
 import { addViewAsPlayerOption } from "./ChatClasses/DamageCardMessage.js";
 import { untargetDeadTokens, untargetAllTokens, midiCustomEffect, removeReactionUsed, removeBonusActionUsed, chackFlanking as checkFlanking, expireRollEffect, removeActionUsed, expirePerTurnBonusActions, getUpdatesCache, clearUpdatesCache, expireEffects, processConcentrationRequestMessage, doConcentrationCheck, completeActivityUse, isAutoFastForward, areMidiKeysPressed, throttledScrollBottom, getVitalityItem, tokenForActor, resolveItemMacro, resolveActivityMacro, doSyncRoll, getTokenPerimeterPolygon, closestPointOnPerimeter, measurePointDistance, updateFlankingHighlight, onUserManualTarget, toggleStatus } from "./utils.js";
@@ -40,16 +40,6 @@ export let readyHooks = async () => {
   Hooks.on("controlToken", debouncedFlankingHighlight);
   Hooks.on("targetToken", debouncedFlankingHighlight);
   Hooks.on("refreshToken", debouncedFlankingHighlight);
-
-  //@ts-expect-error
-  Hooks.on("ddb-game-log.pendingRoll", (data) => {
-    ddbglPendingHook(data);
-  });
-
-  //@ts-expect-error
-  Hooks.on("ddb-game-log.fulfilledRoll", (data) => {
-    ddbglPendingHook(data);
-  });
 
   Hooks.on("preUpdateChatMessage", (message, update, options, user) => {
     try {
@@ -382,7 +372,6 @@ export function initHooks() {
 
   Hooks.on("createChatMessage", (message, options, user) => {
     if (debugEnabled > 1) debug("Create Chat Message ", message.id, message, options, user)
-    processCreateDDBGLMessages(message, options, user);
     return true;
   });
 
