@@ -77,6 +77,41 @@ export function cardStateSchema() {
   };
 }
 
+/** The old `flags.midi-qol` keys the state and records replace */
+export const LEGACY_CARD_FLAG_KEYS = [...Object.values(STATE_FIELDS), ...Object.values(RECORD_SETS), "templateUuid", "currentAction", "saveAttribution"];
+
+/**
+ * The old keys on a card's in-memory flags, as getters computing their value from the state and records when read,
+ * each read warning that it is deprecated. Only keys the card does not really have (older cards keep theirs).
+ */
+export function defineLegacyCardFlags(flags: Record<string, unknown>, midi: Parameters<typeof legacyCardFlags>[0]): void {
+  if (!midi?.state?.workflowClass) return;
+  let legacy: Record<string, unknown> | undefined;
+  for (const key of LEGACY_CARD_FLAG_KEYS) {
+    if (Object.prototype.hasOwnProperty.call(flags, key)) continue;
+    Object.defineProperty(flags, key, {
+      configurable: true, enumerable: false,
+      get() {
+        foundry.utils.logCompatibilityWarning(`midi-qol | a usage card's flags.midi-qol.${key} is deprecated: read its system.midi.state and system.midi.records instead (MidiQOL.cardSaveRoll for a save roll).`,
+          { since: "14.6.9", until: "14.8.0", once: true });
+        return (legacy ??= legacyCardFlags(midi))[key];
+      }
+    });
+  }
+}
+
+/** A card's stored workflow state and records, if it has any */
+export function cardMidiState(message: ChatMessage.Implementation | undefined): { state: Record<string, any>, records: Record<string, CardRecord> } | undefined {
+  const midi = (message?.system as { midi?: { state?: Record<string, any>, records?: Record<string, CardRecord> } } | undefined)?.midi;
+  return midi?.state?.workflowClass ? { state: midi.state, records: midi.records ?? {} } : undefined;
+}
+
+/** A flag the card really has, not one of the deprecated getters */
+export function storedMidiFlag(message: ChatMessage.Implementation | undefined, key: string): any {
+  const flags = message?.flags?.["midi-qol"] as Record<string, unknown> | undefined;
+  return flags ? Object.getOwnPropertyDescriptor(flags, key)?.value : undefined;
+}
+
 /** The old `flags.midi-qol` keys, from a card's state and records */
 export function legacyCardFlags(midi: { state?: Record<string, any>, records?: Record<string, CardRecord> } | undefined): Record<string, unknown> {
   const state = midi?.state;

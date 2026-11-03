@@ -675,8 +675,6 @@ let defineMidiAttackActivityClass = <T extends Activity>(ActivityClass: T) => {
           }
           if (workflow.damageRollCount > 0) { // re-rolling damage counts as new damage
             const flags = foundry.utils.deepClone(workflow.chatCard.flags);
-            // A copy of the card, not the workflow's own: it is never rebuilt as a second workflow
-            delete (flags[MODULE_ID] as Record<string, unknown> | undefined)?.[Workflow.WorkflowDataFlags.currentAction];
             const messageConfig = foundry.utils.mergeObject({
               create: true,
               data: { system: { effects: this.applicableEffects?.map(e => e.relativeUUID) } },

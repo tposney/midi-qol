@@ -4,7 +4,7 @@ import { Dnd5eSystem } from "../../globals.js";
 import { configSettings, forceHideRoll, safeGetGameSetting } from "../settings.js";
 import { displayTokenName, getToken, isDnd5eRollMessage } from "../utils.js";
 import { renameMarkedTokens } from "../lib/tokenNames.js";
-import { legacyCardFlags } from "../lib/cardState.js";
+import { cardMidiState, defineLegacyCardFlags, legacyCardFlags, storedMidiFlag } from "../lib/cardState.js";
 import { cardSaveRoll } from "./UsageCardMessage.js";
 import { canSeePlayerOutcome, canSeeSaveResult, cardActor, challengeVisible, saveDetail, saveDisplayMode } from "../lib/saveVisibility.js";
 
@@ -111,12 +111,9 @@ export function defineChatMessageMidiClass(baseClass: ChatMessage.Implementation
     prepareDerivedData() {
       super.prepareDerivedData();
 
-      // The workflow's state under its old flag names, for anything still reading those (in memory only)
-      const legacy = legacyCardFlags((this.system as { midi?: Parameters<typeof legacyCardFlags>[0] } | undefined)?.midi);
-      if (!foundry.utils.isEmpty(legacy)) {
-        const flags = (this.flags[MODULE_ID] ??= {}) as Record<string, unknown>;
-        for (const [key, value] of Object.entries(legacy)) flags[key] ??= value;
-      }
+      // The workflow's state under its old flag names, deprecated: worked out when read (in memory only)
+      const cardMidi = (this.system as { midi?: Parameters<typeof legacyCardFlags>[0] } | undefined)?.midi;
+      if (cardMidi?.state?.workflowClass) defineLegacyCardFlags((this.flags[MODULE_ID] ??= {}) as Record<string, unknown>, cardMidi);
 
       // Deserialize roll flags in-place from JSON to Roll instances (same pattern as Foundry core's ChatMessage.rolls)
       const midiFlags = this.flags?.[MODULE_ID];
@@ -220,7 +217,8 @@ export function defineChatMessageMidiClass(baseClass: ChatMessage.Implementation
     }
 
     get canApplyDamage() {
-      if ((this.flags?.[MODULE_ID]?.damageDetail?.length ?? 0) > 0 && this.isContentVisible && !!canvas.tokens?.controlled.length) return true;
+      const damageDetail: unknown[] | undefined = storedMidiFlag(this, "damageDetail") ?? cardMidiState(this)?.state.damageDetail;
+      if ((damageDetail?.length ?? 0) > 0 && this.isContentVisible && !!canvas.tokens?.controlled.length) return true;
       // @ts-expect-error no dnd5e-types
       return super.canApplyDamage;
     }
@@ -230,9 +228,10 @@ export function defineChatMessageMidiClass(baseClass: ChatMessage.Implementation
       if (!canvas?.ready) return;
       // @ts-expect-error no dnd5e-types
       if (!this.flags?.[MODULE_ID]) return super.selectTargets(type);
-      const targetData = this.getFlag(MODULE_ID, "targets") || [];
-      const targetUuids: string[] = targetData.map(t => t.uuid);
-      let hitTargetUuids: string[] = this.getFlag(MODULE_ID, "hitTargetUuids") || [];
+      const records = Object.values(cardMidiState(this)?.records ?? {});
+      const targetUuids: string[] = records.length ? records.filter(r => r.targets).map(r => r.uuid)
+        : (storedMidiFlag(this, "targets") ?? []).map((t: { uuid: string }) => t.uuid);
+      const hitTargetUuids: string[] = records.length ? records.filter(r => r.hit).map(r => r.uuid) : storedMidiFlag(this, "hitTargetUuids") ?? [];
       let uuids: string[];
       if (type === "hit") uuids = hitTargetUuids
       else uuids = targetUuids.filter(uuid => !hitTargetUuids.includes(uuid));
@@ -462,8 +461,9 @@ export function defineChatMessageMidiClass(baseClass: ChatMessage.Implementation
       if (!this.author?.isGM || game.user?.isGM) return;
       const hitFlag = this.flags?.[MODULE_ID]?.isHit;
       const hitString = hitFlag === undefined ? "" : hitFlag ? i18n("midi-qol.hits") : i18n("midi-qol.misses");
-      const isCritical = this.flags?.[MODULE_ID]?.isCritical;
-      const isFumble = this.flags?.[MODULE_ID]?.isFumble;
+      const state = cardMidiState(this)?.state;
+      const isCritical = state ? !!state.isCritical : storedMidiFlag(this, "isCritical");
+      const isFumble = state ? !!state.isFumble : storedMidiFlag(this, "isFumble");
       const attackDisplay = configSettings.gmAttackDisplay ?? "full";
       const damageDisplay = configSettings.gmDamageDisplay ?? "full";
 
