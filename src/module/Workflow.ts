@@ -1805,7 +1805,7 @@ export class Workflow {
         if (waiting === this.WorkflowState_WaitForDamageRoll) return this.WorkflowState_WaitForSaves;
         break;
       case "utilityRolled":
-        if (waiting === this.WorkflowState_WaitForUtilityRoll) return this.WorkflowState_UtilityRollComplete;
+        if (waiting === this.WorkflowState_WaitForUtilityRoll || waiting === this.WorkflowState_Completed) return this.WorkflowState_UtilityRollComplete;
         break;
     }
     return waiting;
