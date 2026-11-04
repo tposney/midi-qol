@@ -5891,6 +5891,10 @@ export function reactionTriggerLabelFor(triggerType: string): string {
   return "reactionHit";
 }
 
+/** The optional AC bonus key a reaction phase offers: `ac` when attacked, `acOnHit` once the attack hits */
+const optionalACKey = (triggerType: string): "ac" | "acOnHit" | undefined =>
+  triggerType === "reactionattacked" ? "ac" : triggerType === "reaction" ? "acOnHit" : undefined;
+
 export async function doReactions(targetRef: TokenOrDocument | string, triggerTokenUuid: string | undefined, triggeringRoll: Roll | null | undefined, triggerType: string, options: any = {}): Promise<{ name?: string, uuid?: string, ac?: number, itemName?: string }> {
   const target = getToken(targetRef);
   try {
@@ -5997,7 +6001,8 @@ export async function doReactions(targetRef: TokenOrDocument | string, triggerTo
       const midiFlags = target.actor.flags[MODULE_ID];
       reactionCount = reactionCount + Object.keys(midiFlags?.optional ?? [])
         .filter(flag => {
-          if (!(triggerType === "reactionattacked" && midiFlags?.optional?.[flag].ac)) return false;
+          const acKey = optionalACKey(triggerType);
+          if (!(acKey && midiFlags?.optional?.[flag][acKey])) return false;
           if (!midiFlags?.optional[flag].count) return true;
           return getOptionalCountRemainingShortFlag(target.actor!, flag) > 0;
         }).length
@@ -6211,13 +6216,14 @@ export async function promptReactions(
     }
     if (usedReaction) return { name: "None" };
     if (!midiFlags) return { name: "None" };
+    const acKey = optionalACKey(triggerType);
     const validFlags = Object.keys(midiFlags?.optional ?? {})
       .filter(flag => {
-        if (!midiFlags.optional[flag].ac) return false;
+        if (!acKey || !midiFlags.optional[flag][acKey]) return false;
         if (!midiFlags.optional[flag].count) return true;
         return getOptionalCountRemainingShortFlag(actor, flag) > 0;
       }).map(flag => `flags.${MODULE_ID}.optional.${flag}`);
-    if (validFlags.length > 0 && triggerType === "reactionattacked") {
+    if (validFlags.length > 0 && acKey) {
       // @ts-expect-error no dnd5e-types
       let acRoll = await new Roll(`${actor.system.attributes.ac.value}`).roll();
       const data = {
@@ -6232,7 +6238,7 @@ export async function promptReactions(
       let displayBonusRolls: boolean | undefined = validFlags.reduce((acc: boolean | undefined, flag: string) => (acc || (foundry.utils.getProperty(actor ?? {}, `${flag}.displayBonusRolls`) as boolean)), undefined);
       if (!displayBonusRolls) displayBonusRolls = checkMechanic("displayBonusRolls") as boolean;
       // @ts-expect-error no dnd5e-types
-      const newAC = await bonusDialog.bind(data)(validFlags, "ac", displayBonusRolls !== false, `${actor.name} - ${i18n("DND5E.AC")} ${actor.system.attributes.ac.value}`, acRoll, "roll", { card: options.itemCardUuid, anchor: "hits" });
+      const newAC = await bonusDialog.bind(data)(validFlags, acKey, displayBonusRolls !== false, `${actor.name} - ${i18n("DND5E.AC")} ${actor.system.attributes.ac.value}`, acRoll, "roll", { card: options.itemCardUuid, anchor: "hits" });
       const endTime = Date.now();
       if (debugEnabled > 0) warn("promptReactions | returned via bonus dialog ", endTime - startTime)
       // Only return the AC result if the user actually used an optional bonus (AC changed)

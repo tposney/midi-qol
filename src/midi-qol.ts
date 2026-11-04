@@ -1686,6 +1686,8 @@ function setupMidiFlags() {
   daeFieldBrowserFields.push(`flags.${MODULE_ID}.optional.NAME.countAlt`);
   untyped(`flags.${MODULE_ID}.optional.NAME.ac`);
   daeFieldBrowserFields.push(`flags.${MODULE_ID}.optional.NAME.ac`);
+  untyped(`flags.${MODULE_ID}.optional.NAME.acOnHit`);
+  daeFieldBrowserFields.push(`flags.${MODULE_ID}.optional.NAME.acOnHit`);
   untyped(`flags.${MODULE_ID}.optional.NAME.criticalDamage`);
   daeFieldBrowserFields.push(`flags.${MODULE_ID}.optional.NAME.criticalDamage`);
   untyped(`flags.${MODULE_ID}.optional.NAME.activation`);

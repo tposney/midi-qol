@@ -7751,6 +7751,8 @@ export class Workflow {
         hitResultNumeric = this.isCritical ? "++" : !isFinite(targetAC) ? `${attackTotal}/∞` : `${attackTotal}/${Math.abs(attackTotal - targetAC)}`;
       }
 
+      // An auto success or failure decides the hit whatever the AC
+      let forcedResult = false;
       {
         const conditionData = createConditionData({ workflow: this, target: targetToken, actor: this.actor });
         const actionType = this.activity.actionType;
@@ -7766,12 +7768,14 @@ export class Workflow {
         if (failFlag) {
           isHit = false;
           isHitEC = false;
+          forcedResult = true;
           this.attackRollModifierTracker.critical.setOverride(false, failFlag, getFlagDisplayName(failFlag));
         }
         const successFlag = await firstMatch("success");
         if (successFlag) {
           isHit = true;
           isHitEC = false;
+          forcedResult = true;
           this.attackRollModifierTracker.fumble.setOverride(false, successFlag, getFlagDisplayName(successFlag));
         }
       }
@@ -7790,6 +7794,7 @@ export class Workflow {
         if (grantsSuccessFlag) {
           isHit = true;
           isHitEC = false;
+          forcedResult = true;
           this.attackRollModifierTracker.fumble.setOverride(false, grantsSuccessFlag, getFlagDisplayName(grantsSuccessFlag));
         }
         let grantsFailFlag: string | undefined;
@@ -7800,6 +7805,7 @@ export class Workflow {
         if (grantsFailFlag) {
           isHit = false;
           isHitEC = false;
+          forcedResult = true;
           this.attackRollModifierTracker.critical.setOverride(false, grantsFailFlag, getFlagDisplayName(grantsFailFlag));
         }
       }
@@ -7810,7 +7816,26 @@ export class Workflow {
       if (!this.challengeModeScale) this.challengeModeScale = {};
       this.challengeModeScale[targetToken.actor?.uuid ?? "dummy"] = hitScale;
       if (this.isCritical && isFinite(targetAC)) isHit = true;
-      if (isHit || (this.isCritical && isFinite(targetAC))) this.hitTargets = this.hitTargets.add(targetToken);
+      // Premades decide last (midi-qol.premades.checkHitTarget): a changed AC or critical is tested again, unless an auto
+      // success or failure decided the hit; a changed result (isHit, isHitEC) is kept as set
+      const acBefore = targetAC;
+      const criticalBefore = this.isCritical;
+      const hitCheck = { workflow: this, target: targetToken, attackTotal: attackTotal + attackBonus, targetAC, isHit, isHitEC, isCritical: this.isCritical, isFumble: this.isFumble };
+      await asyncHooksCallAll("midi-qol.premades.checkHitTarget", hitCheck);
+      if (hitCheck.isCritical !== this.isCritical) this.attackRollModifierTracker.critical.setOverride(!!hitCheck.isCritical, "checkHitTarget", "midi-qol.premades.checkHitTarget");
+      if (hitCheck.isFumble !== this.isFumble) this.attackRollModifierTracker.fumble.setOverride(!!hitCheck.isFumble, "checkHitTarget", "midi-qol.premades.checkHitTarget");
+      if (typeof hitCheck.targetAC === "number" && !Number.isNaN(hitCheck.targetAC)) targetAC = hitCheck.targetAC;
+      const retest = targetAC !== acBefore || this.isCritical !== criticalBefore;
+      if (hitCheck.isHit !== isHit || hitCheck.isHitEC !== isHitEC) {
+        isHit = !!hitCheck.isHit;
+        isHitEC = !!hitCheck.isHitEC;
+      } else if (retest && !forcedResult) {
+        isHit = isFinite(targetAC) && (attackTotal + attackBonus >= targetAC || this.isCritical);
+        if (challengeModeArmorSet) isHit = isFinite(targetAC) && (this.attackTotal > targetAC || this.isCritical);
+        if (targetEC) isHitEC = challengeModeArmorSet && this.attackTotal <= targetAC && this.attackTotal >= targetEC && isFinite(targetAC);
+      }
+      if (retest) hitResultNumeric = this.isCritical ? "++" : !isFinite(targetAC) ? `${attackTotal}/∞` : `${attackTotal}/${Math.abs(attackTotal - targetAC)}`;
+      if (isHit) this.hitTargets = this.hitTargets.add(targetToken);
       if (isHitEC) this.hitTargetsEC = this.hitTargetsEC.add(targetToken);
       if (isHit || isHitEC) await this.processCriticalFlags();
       // acBonus flag is no longer set by computeCoverBonus — nothing to clear.

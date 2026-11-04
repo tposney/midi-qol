@@ -2353,7 +2353,11 @@
     },
     "flags.midi-qol.optional.NAME.ac": {
       "name": "Optional AC",
-      "description": ""
+      "description": "AC bonus offered when the creature is attacked, before the hit is known."
+    },
+    "flags.midi-qol.optional.NAME.acOnHit": {
+      "name": "Optional AC On Hit",
+      "description": "AC bonus offered when an attack hits the creature; the attack is tested again against the new AC."
     },
     "flags.midi-qol.optional.NAME.activation": {
       "name": "Optional Activation",

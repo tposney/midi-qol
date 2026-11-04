@@ -63,6 +63,9 @@ declare module "fvtt-types/configuration" {
       "dnd5e.postTeleport": (activity: Activity, results: { token: Token.Implementation, plan: unknown, moved: boolean }[]) => void;
       "dnd5e.activityConsumption": (activity: Activity, usageConfig: ActivityUseConfiguration, messageConfig: RollMessageConfig, updates: unknown) => boolean | void;
       "dnd5e.applyDamage": (actor: Actor.Implementation, amount: number, options: DamageApplicationOptions) => void;
+      // One target's hit result in checkHits, last: change targetAC (tested again) or the result (kept as set). A fumble
+      // loses every hit later in the workflow, so making a hit of a fumble also clears isFumble.
+      "midi-qol.premades.checkHitTarget": (hitCheck: { workflow: unknown, target: Token.Implementation, attackTotal: number, targetAC: number, isHit: boolean, isHitEC: boolean, isCritical: boolean, isFumble: boolean }) => Promise<void> | void;
       "dnd5e.calculateDamage": (actor: Actor.Implementation, damages: DamageDescription[], options: DamageApplicationOptions) => boolean | void;
       "dnd5e.postAbilityCheckRollConfiguration": (rolls: Roll[], config: RollProcessConfig, dialog: RollDialogConfig, message: RollMessageConfig) => boolean | void;
       "dnd5e.postAttackRollConfiguration": (rolls: Roll[], config: RollProcessConfig, dialog: RollDialogConfig, message: RollMessageConfig) => boolean | void;
