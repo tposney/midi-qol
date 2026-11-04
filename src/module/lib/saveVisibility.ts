@@ -1,3 +1,4 @@
+import { cardSourceActor } from "./cardState.js";
 import { MODULE_ID } from "../../midi-qol.js";
 import { configSettings, safeGetGameSetting } from "../settings.js";
 
@@ -17,9 +18,7 @@ export function saveDisplayMode(): string {
 /** The actor whose challenge a card is: the one that used the activity. */
 export function cardActor(card: ChatMessage.Implementation | null | undefined): Actor.Implementation | undefined {
   if (!card) return undefined;
-  const uuid = card.flags?.[MODULE_ID]?.sourceActorUuid as string | undefined;
-  const actor = uuid ? fromUuidSync(uuid, { strict: false }) : undefined;
-  return actor instanceof Actor ? actor : card.speakerActor ?? undefined;
+  return cardSourceActor(card) ?? card.speakerActor ?? undefined;
 }
 
 /** Whether `user` sees the challenge of a card used by `caster`. */

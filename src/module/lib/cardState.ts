@@ -86,7 +86,8 @@ export function cardStateSchema() {
 
 /** The old `flags.midi-qol` keys the state and records replace */
 export const LEGACY_CARD_FLAG_KEYS = [...Object.values(STATE_FIELDS).filter(key => key !== "saveMults"), ...Object.values(RECORD_SETS), "templateUuid", "currentAction", "saveAttribution",
-  "damageDetail", "otherDamageDetail", "bonusDamageDetail", "otherDamageMatchUuids", "ammunitionDamageMatchUuids"];
+  "damageDetail", "otherDamageDetail", "bonusDamageDetail", "otherDamageMatchUuids", "ammunitionDamageMatchUuids",
+  "isHit", "isHitEC", "otherDamageTotal", "bonusDamageTotal"];
 
 /** The damage tray's matches: token uuids the other activity's (or the ammunition's) damage applies to; undefined until worked out */
 export function cardDamageMatches(midi: { state?: Record<string, any>, records?: Record<string, CardRecord> } | undefined,
@@ -141,6 +142,28 @@ export function cardTargetDetail(message: ChatMessage.Implementation | undefined
     ...descriptor, saved: !!record?.saved, superSaver: !!record?.superSaver, semiSuperSaver: !!record?.semiSuperSaver,
     saveMults: card.state.saveMults, itemType, uncannyDodge: !!record?.uncannyDodge, uncannyDodgeIcon: record?.uncannyDodgeIcon
   };
+}
+
+/**
+ * Whether the attack on a card hit (the result players see on a masked card): with hits checked, any target hit;
+ * otherwise the attack roll's own result against its target. Older cards stored it as `flags.midi-qol.isHit`.
+ */
+export function cardHitResult(message: ChatMessage.Implementation | undefined): boolean | undefined {
+  const stored = storedMidiFlag(message, "isHit");
+  if (stored !== undefined) return stored;
+  const records = Object.values(cardMidiState(message)?.records ?? {});
+  if (records.some(record => typeof record.hitClass === "string")) return records.some(record => record.hit || record.hitEC);
+  const attack = (message?.rolls ?? []).find(roll => foundry.utils.getProperty(roll, "options.midi-qol.rollType") === "attack") as { isSuccess?: boolean } | undefined;
+  return attack?.isSuccess;
+}
+
+/** The actor that used a card's activity: its own actor (dnd5e's), or the one a card stored (a damage-only workflow's) */
+export function cardSourceActor(message: ChatMessage.Implementation | undefined): Actor.Implementation | undefined {
+  const uuid = storedMidiFlag(message, "sourceActorUuid") as string | undefined;
+  const stored = uuid ? fromUuidSync(uuid, { strict: false }) : undefined;
+  if (stored instanceof Actor) return stored;
+  const own = (message as { getAssociatedActor?: () => Actor.Implementation | null } | undefined)?.getAssociatedActor?.();
+  return own ?? undefined;
 }
 
 /** A flag the card really has, not one of the deprecated getters */

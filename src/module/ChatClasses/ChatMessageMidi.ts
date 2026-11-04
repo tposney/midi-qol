@@ -5,7 +5,7 @@ import { configSettings, forceHideRoll, safeGetGameSetting } from "../settings.j
 import { createDamageDetail, displayTokenName, getToken, isDnd5eRollMessage } from "../utils.js";
 import { damageDetailToObject, Workflow } from "../Workflow.js";
 import { renameMarkedTokens } from "../lib/tokenNames.js";
-import { cardMidiState, defineLegacyCardFlags, legacyCardFlags, storedMidiFlag } from "../lib/cardState.js";
+import { cardHitResult, cardMidiState, cardSourceActor, defineLegacyCardFlags, legacyCardFlags, storedMidiFlag } from "../lib/cardState.js";
 import { cardSaveRoll } from "./UsageCardMessage.js";
 import { canSeePlayerOutcome, canSeeSaveResult, cardActor, challengeVisible, saveDetail, saveDisplayMode } from "../lib/saveVisibility.js";
 
@@ -121,9 +121,18 @@ export function defineChatMessageMidiClass(baseClass: ChatMessage.Implementation
           // @ts-expect-error no dnd5e-types
           return rolls.length ? damageDetailToObject(createDamageDetail({ roll: rolls, activity: this.getAssociatedActivity?.() ?? null })) : undefined;
         };
+        const totalOf = (rollType: string) => this.rolls.filter(r => foundry.utils.getProperty(r, `options.${MODULE_ID}.rollType`) === rollType)
+          .reduce((total, roll) => total + (roll.total ?? 0), 0) || undefined;
         defineLegacyCardFlags((this.flags[MODULE_ID] ??= {}) as Record<string, unknown>, cardMidi,
           { damageDetail: detailOf("defaultDamage"), otherDamageDetail: detailOf("otherDamage"), bonusDamageDetail: detailOf("bonusDamage"),
-            currentAction: () => [cardMidi.state?.workflowClass, Workflow.cardResumePoint(this) ?? ""] });
+            currentAction: () => [cardMidi.state?.workflowClass, Workflow.cardResumePoint(this) ?? ""],
+            isHit: () => cardHitResult(this),
+            isHitEC: () => Object.values(cardMidi.records ?? {}).some((record: { hitEC?: boolean }) => record.hitEC),
+            otherDamageTotal: () => totalOf("otherDamage"), bonusDamageTotal: () => totalOf("bonusDamage") });
+        // The card's own actor, for readers of the old flag (CAT's manual rolls); not a deprecated name, so no warning
+        const flags = this.flags[MODULE_ID] as Record<string, unknown>;
+        if (!Object.prototype.hasOwnProperty.call(flags, "sourceActorUuid"))
+          Object.defineProperty(flags, "sourceActorUuid", { configurable: true, enumerable: false, get: () => cardSourceActor(this)?.uuid });
       }
 
       // Deserialize roll flags in-place from JSON to Roll instances (same pattern as Foundry core's ChatMessage.rolls)
@@ -471,7 +480,7 @@ export function defineChatMessageMidiClass(baseClass: ChatMessage.Implementation
 
     maskAttackRolls(html: HTMLElement) {
       if (!this.author?.isGM || game.user?.isGM) return;
-      const hitFlag = this.flags?.[MODULE_ID]?.isHit;
+      const hitFlag = cardHitResult(this);
       const hitString = hitFlag === undefined ? "" : hitFlag ? i18n("midi-qol.hits") : i18n("midi-qol.misses");
       const state = cardMidiState(this)?.state;
       const isCritical = state ? !!state.isCritical : storedMidiFlag(this, "isCritical");
@@ -539,7 +548,7 @@ export function defineChatMessageMidiClass(baseClass: ChatMessage.Implementation
     applyChatVisibility(html: HTMLElement) {
       if (html.style.display === "none") return; // Already hidden by hideStuffHandler (blind/gmHide)
       // Re-enable save/check buttons
-      if (foundry.utils.getProperty(this, "flags.midi-qol.type") === MESSAGE_TYPES.SAVES) {
+      if ((this.system as { midi?: { sections?: { saves?: unknown } } })?.midi?.sections?.saves || storedMidiFlag(this, "type") === MESSAGE_TYPES.SAVES) {
         html.querySelectorAll<HTMLButtonElement>('[data-action="rollSave"]').forEach(el => el.disabled = false);
         html.querySelectorAll<HTMLButtonElement>('[data-action="rollCheck"]').forEach(el => el.disabled = false);
       }

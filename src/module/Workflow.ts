@@ -2252,7 +2252,6 @@ export class Workflow {
     const templatesPlaced = this.placedTemplateCount >= (Number(this.activity?.target?.template?.count) || 1);
     await this.performThrottledUpdate(chatMessage, {
       "system.midi.progress": { templatesPlaced },
-      flags: { "midi-qol": { type: MESSAGE_TYPES.ITEM } },
       style: CONST.CHAT_MESSAGE_STYLES.OTHER
     } as ChatMessage.UpdateData);
     return this.WorkflowState_AoETargetConfirmation;
@@ -4920,7 +4919,6 @@ export class Workflow {
   }
   async displayUtilityRolls() {
     const chatMessage = this.chatCard;
-    let newFlags = {};
     let section: MidiCardSection | undefined;
     if (chatMessage) { // display the utility roll
       const utilityRoll = this.utilityRoll; // will concat as needed
@@ -4928,25 +4926,18 @@ export class Workflow {
       const rollString = this.activity?.roll?.name || i18n("DND5E.UTILITY.Title");
       section = { label: rollString, rollType: "utility" };
       if (debugEnabled > 0) warn("displayUtilityRoll |", this.utilityRoll)
-      newFlags = {
-        "midi-qol":
-        {
-          type: MESSAGE_TYPES.OTHER,
-          // roll: utilityRoll?.roll,
-        }
-      }
     }
     // chatRolls, not just this roll: message.rolls is where the rolls are stored now, so a partial
     // array here would drop the ones already made.
     await this.performThrottledUpdate(chatMessage,
-      this.#sectionUpdate("utility", section, { flags: newFlags, rolls: this.chatRolls }));
+      this.#sectionUpdate("utility", section, { rolls: this.chatRolls }));
   }
 
-  async displayAttackRoll(displayOptions: { GMOnlyAttackRoll?: boolean } = {}) {
+  // `_displayOptions.GMOnlyAttackRoll` is no longer used: the card's hit result is worked out from its records
+  async displayAttackRoll(_displayOptions: { GMOnlyAttackRoll?: boolean } = {}) {
     // @ts-expect-error CONFIG.Dice.D20Roll not typed
     const ADV_MODE: { DISADVANTAGE: number, NORMAL: number, ADVANTAGE: number } = CONFIG.Dice.D20Roll.ADV_MODE;
     const chatMessage = this.chatCard;
-    let newFlags = {};
     let section: MidiCardSection | undefined;
     if (chatMessage) { // display the attack roll
       // Determine attack label based on attackRollModifierTracker.advantageMode
@@ -4971,21 +4962,10 @@ export class Workflow {
       const d20 = this.attackRoll ? Workflow.d20Of(this.attackRoll) : undefined;
       if (d20 !== undefined) this.d20AttackRoll = d20;
       if (debugEnabled > 0) warn("displayAttackRoll |", this.attackRoll)
-      newFlags = {
-        "midi-qol": {
-          GMOnlyAttackRoll: displayOptions.GMOnlyAttackRoll ?? false,
-          //@ts-expect-error no dnd5e types
-          isHit: configSettings.autoCheckHit === "none" ? (this.attackRoll?.isSuccess ?? false) : this.hitTargets.size > 0,
-          isHitEC: this.hitTargetsEC.size > 0,
-          // roll: this.attackRoll,
-          type: MESSAGE_TYPES.ATTACK,
-        },
-
-      }
     }
     // The damage button is already showing, so it takes its label with the roll that decides a critical.
     await this.performThrottledUpdate(chatMessage, this.#sectionUpdate("attack", section,
-      { flags: newFlags, rolls: this.chatRolls, "system.midi.attackRollCount": this.attackRollCount,
+      { rolls: this.chatRolls, "system.midi.attackRollCount": this.attackRollCount,
         "system.midi.dmgBtnText": this.#damageButtonText() }));
   }
 
@@ -5057,16 +5037,14 @@ export class Workflow {
         }
       }
 
-      newFlags = foundry.utils.mergeObject(newFlags, {
+      // Its own card has these in its rolls, its actor and its state; a card it doesn't own (a damage-only workflow's) gets them
+      if (!this.ownsCard) newFlags = foundry.utils.mergeObject(newFlags, {
         "midi-qol": {
           type: MESSAGE_TYPES.DAMAGE,
-          // Its own card has these in its state
-          ...(this.ownsCard ? {} : {
-            damageDetail: this.useOther ? undefined : damageDetailToObject(this.rawDamageDetail),
-            otherDamageDetail: this.useOther ? damageDetailToObject(this.rawDamageDetail) : damageDetailToObject(this.rawOtherDamageDetail),
-            bonusDamageDetail: damageDetailToObject(this.rawBonusDamageDetail),
-            damageTotal: this.useOther ? undefined : this.damageTotal
-          }),
+          damageDetail: this.useOther ? undefined : damageDetailToObject(this.rawDamageDetail),
+          otherDamageDetail: this.useOther ? damageDetailToObject(this.rawDamageDetail) : damageDetailToObject(this.rawOtherDamageDetail),
+          bonusDamageDetail: damageDetailToObject(this.rawBonusDamageDetail),
+          damageTotal: this.useOther ? undefined : this.damageTotal,
           sourceActorUuid: this.actor.uuid,
           [WorkflowDataFlags.otherDamageTotal]: this.useOther ? this.damageTotal : this.otherDamageTotal,
           [WorkflowDataFlags.bonusDamageTotal]: this.bonusDamageTotal,
@@ -5175,7 +5153,6 @@ export class Workflow {
       };
       await this.performThrottledUpdate(chatMessage, this.#sectionUpdate("hits", section, {
         ...this.#targetsUpdate(),
-        flags: { "midi-qol": { type: MESSAGE_TYPES.HITS } },
         // TODO: May not be required
         style: CONST.CHAT_MESSAGE_STYLES.OTHER
       }));
@@ -5299,7 +5276,7 @@ export class Workflow {
     const section = { label: "", template: "modules/midi-qol/templates/saves.html",
       data: this.#saveSectionData(templateData) };
     await this.performThrottledUpdate(chatMessage,
-      this.#sectionUpdate("saves", section, { flags: { "midi-qol": { type: MESSAGE_TYPES.SAVES } } }));
+      this.#sectionUpdate("saves", section));
   }
   async displaySaves(_whisper: boolean = false) {
     let { fullDamageText, halfDamageText, noDamageText } = this.computeSaveFlavors();
@@ -8613,18 +8590,10 @@ export class ActiveDefenceWorkflow extends Workflow {
   }
 
   async displayAttackRoll() {
-    let newFlags = {};
     const DCString = i18n("DND5E.AbbreviationDC") ?? "DC";
     const attackString = `<label class="midi-qol-active-defence-dc">${DCString} ${this.activeDefenceDC}</label> ${i18n("midi-qol.ActiveDefenceString")}`;
     const section = { label: attackString, html: "" };
-    newFlags = {
-      "midi-qol":
-      {
-        isHit: this.hitTargets.size > 0,
-        isHitEC: this.hitTargetsEC.size > 0,
-      }
-    };
-    await this.setCardSection("attack", section, { flags: newFlags, rolls: this.chatRolls });
+    await this.setCardSection("attack", section, { rolls: this.chatRolls });
   }
 }
 export class UserWorkflow extends Workflow {
