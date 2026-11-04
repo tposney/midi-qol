@@ -2111,12 +2111,16 @@ async function midiTemplatePlace(this: any, wrapped: () => Promise<any>) {
   const sourceToken = activity?.actor ? tokenForActor(activity.actor) : undefined;
   const maxRange = configSettings.constrainTemplatePlacement ? this.config?.midiMaxRange : undefined;
   const anchorToToken = this.config?.midiAnchorToToken;
+  const cubeAgainstToken = this.config?.midiCubeAgainstToken;
 
   const onMove = ({ shape, position, snap }: any) => {
     // dnd5e places emanations with attachToToken; handling the move here would stop core attaching them.
     if (shape.type === "emanation") return;
     const place = (point: { x: number, y: number }) => snap ? snapTemplatePosition(point) : point;
-    if (anchorToToken && sourceToken) {
+    if (cubeAgainstToken && sourceToken && shape.type === "rectangle") {
+      if (shape.rotation) shape.rotate(-shape.rotation);
+      shape.move(cubeBesideToken(sourceToken, position, shape.width, shape.height, snap), { snap: false });
+    } else if (anchorToToken && sourceToken) {
       const border = getTokenBorderPoint(sourceToken, position.x, position.y);
       shape.move(place(border), { snap: false });
       const direction = Math.toDegrees(Math.atan2(position.y - border.y, position.x - border.x));
@@ -2141,6 +2145,24 @@ async function midiTemplatePlace(this: any, wrapped: () => Promise<any>) {
     if (hadOwn) regions.placeRegions = placeRegions;
     else delete (regions as Partial<typeof regions>).placeRegions;
   }
+}
+
+/**
+ * The top-left corner of a `width` x `height` cube against the side of the token's space nearest `position`, slid along
+ * that side to follow the pointer while touching the space by at least a grid square (snapped to the grid if `snap`).
+ */
+function cubeBesideToken(token: Token.Implementation, position: { x: number, y: number }, width: number, height: number, snap: boolean): { x: number, y: number } {
+  const { x: left, y: top, width: w, height: h } = token.bounds;
+  const dx = position.x - (left + w / 2);
+  const dy = position.y - (top + h / 2);
+  const cell = canvas?.grid && !canvas.grid.isGridless ? canvas.grid.size : 1;
+  const along = (pointer: number, size: number, start: number, length: number) => {
+    let value = Math.min(Math.max(pointer - size / 2, start - size + cell), start + length - cell);
+    if (snap && cell > 1) value = start + Math.round((value - start) / cell) * cell;
+    return value;
+  };
+  if (Math.abs(dx) * h >= Math.abs(dy) * w) return { x: dx >= 0 ? left + w : left - width, y: along(position.y, height, top, h) };
+  return { x: along(position.x, width, left, w), y: dy >= 0 ? top + h : top - height };
 }
 
 /**

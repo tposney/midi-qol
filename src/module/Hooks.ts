@@ -1769,13 +1769,13 @@ Hooks.on("dnd5e.preCreateMeasuredTemplate", (activity, placementConfig: Record<s
   if (!configSettings.constrainTemplatePlacement) return true;
   // Cones and rays with no meaningful range originate from the caster's own border.
   const shapeType = GameSystemConfig.areaTargetTypes?.[activity.target?.template?.type]?.template;
-  if (shapeType === "cone" || shapeType === "ray") {
-    const range = activity.range;
-    const units = range?.units;
-    const isSelfRange = units === "self" || units === "none"
-      || (!range?.value && !range?.long && units !== "touch");
-    if (isSelfRange) placementConfig.midiAnchorToToken = true;
-  }
+  const range = activity.range;
+  const units = range?.units;
+  const isSelfRange = units === "self" || units === "none"
+    || (!range?.value && !range?.long && units !== "touch");
+  if (isSelfRange && (shapeType === "cone" || shapeType === "ray")) placementConfig.midiAnchorToToken = true;
+  // A cube originating from the caster has a face against the caster's space (Thunderwave)
+  if (isSelfRange && shapeType === "rect") placementConfig.midiCubeAgainstToken = true;
   return true;
 });
 
