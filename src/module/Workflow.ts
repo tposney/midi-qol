@@ -1,7 +1,7 @@
 import { warn, debug, log, i18n, i18nFormat, busyWait, MESSAGE_TYPES, error, debugEnabled, MQItemMacroLabel, GameSystemConfig, MODULE_ID, MQActivityMacroLabel, gameStats } from "../midi-qol.js";
 import { MidiTeleportActivity, TeleportOption } from "./activities/TeleportActivity.js";
 import { decodeWorkflowOptions, encodeWorkflowOptions, inheritableWorkflowOptions } from "./lib/workflowOptionsCodec.js";
-import { CardRecord, RECORD_SETS, RecordSet, SaveFacts, STATE_FIELDS, StateKey, attributionMap, attributionTriples, cardPreSelected } from "./lib/cardState.js";
+import { CardRecord, RECORD_SETS, RecordSet, SaveFacts, SECTION_TEMPLATES, STATE_FIELDS, StateKey, attributionMap, attributionTriples, cardPreSelected } from "./lib/cardState.js";
 import { preferredActiveGM, socketlibSocket, timedAwaitExecuteAsGM, timedExecuteAsGM, unTimedExecuteAsGM } from "./GMAction.js";
 import { installedModules } from "./setupModules.js";
 import { offerFollowUps } from "./followUps.js";
@@ -5000,8 +5000,24 @@ export class Workflow {
     extras: Record<string, unknown> = {}
   ): ChatMessage.UpdateData {
     const updates: Record<string, unknown> = { ...extras };
-    for (const [name, section] of Object.entries(sections)) updates[`system.midi.sections.${name}`] = section;
+    for (const [name, section] of Object.entries(sections)) updates[`system.midi.sections.${name}`] = this.#storedSection(name, section);
     return this.#withRollMessageFlags(updates) as ChatMessage.UpdateData;
+  }
+
+  /**
+   * A section as its own card stores it: a roll section's label and a section's usual template are worked out when it is
+   * drawn (UsageCardMessage). A card it doesn't own (a damage-only workflow's) keeps them.
+   */
+  #storedSection(name: string, section: MidiCardSection | undefined): MidiCardSection | undefined {
+    if (!section || !this.ownsCard) return section;
+    const { label, template, ...rest } = section;
+    const stored: MidiCardSection = rest;
+    if (template && template !== SECTION_TEMPLATES[name]) stored.template = template;
+    if (!section.rollType && label) stored.label = label;
+    // An empty section is not stored at all: the hits section (rows from the records) is kept by its empty label
+    const data = (stored as { data?: object }).data;
+    if (!Object.keys(stored).some(key => key !== "data" || (data && !foundry.utils.isEmpty(data)))) stored.label = label ?? "";
+    return stored;
   }
 
   async displayDamageRolls() {

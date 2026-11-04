@@ -18,6 +18,12 @@ export const STATE_FIELDS = {
 } as const;
 export type StateKey = keyof typeof STATE_FIELDS;
 
+/** The template a card section is drawn with when it stores none */
+export const SECTION_TEMPLATES: Record<string, string> = {
+  hits: "modules/midi-qol/templates/hits.html",
+  saves: "modules/midi-qol/templates/saves.html"
+};
+
 /** Workflow token sets: record field, and its old flag name (a uuid array). Macros change them, so they are stored. */
 export const RECORD_SETS = {
   targets: "targets",

@@ -14,7 +14,7 @@ import { MODULE_ID } from "../../midi-qol.js";
 import { Workflow } from "../Workflow.js";
 import { followUpButtons } from "../followUps.js";
 import { NOTE_MESSAGE_TYPE, noteCard, notesOf } from "./CardNoteMessage.js";
-import { attributionMap, cardStateSchema, type CardRecord } from "../lib/cardState.js";
+import { attributionMap, cardStateSchema, SECTION_TEMPLATES, type CardRecord } from "../lib/cardState.js";
 
 /** Renderer per roll-backed section; damage renderers aggregate the section's rolls into one block. */
 const SECTION_ROLL_RENDERERS: Record<string, (rolls: Roll[]) => Promise<string> | string> = {
@@ -145,7 +145,8 @@ async function saveRow(uuid: string, result?: { roll?: Roll, total?: number | nu
 }
 
 /** A roll section: a roll type rendered from `message.rolls`, a template with data, or stored markup. */
-export type MidiCardSection = { label: string, rollType?: string, template?: string, data?: Record<string, unknown>, html?: string };
+// A roll section stored without a label, or a section without its usual template, gets them when drawn
+export type MidiCardSection = { label?: string, rollType?: string, template?: string, data?: Record<string, unknown>, html?: string };
 
 export function setupUsageCardMessage() {
   // Must run at init, subclassing the current occupant so another module's model is kept. Untyped: fvtt-types
@@ -427,6 +428,8 @@ export function setupUsageCardMessage() {
             saves: saveRows.filter((save: any) => !omitSaves.has(save?.target?.document?.uuid ?? "")) } };
         }
         if (!section) { out[name] = null; continue; }
+        if (!section.template && SECTION_TEMPLATES[name]) section = { ...section, template: SECTION_TEMPLATES[name] };
+        if (section.label === undefined && section.rollType) section = { ...section, label: this.#sectionLabel(section.rollType) };
         if (section.template) {
           out[name] = {
             ...section,
@@ -454,6 +457,31 @@ export function setupUsageCardMessage() {
         out[name] = { ...section, label, html };
       }
       return out;
+    }
+
+    /** A roll section's heading, worked out for the viewer from the activity and the rolls (older cards stored it) */
+    #sectionLabel(rollType: string): string {
+      const activity = (this.parent as Dnd5eChatMessage).getAssociatedActivity?.() as Activity | undefined;
+      const rolls = (this.parent.rolls ?? []).filter(r => foundry.utils.getProperty(r, `options.${MODULE_ID}.rollType`) === rollType);
+      const localize = (key: string) => game.i18n?.localize(key) ?? key;
+      switch (rollType) {
+        case "attack": {
+          // @ts-expect-error CONFIG.Dice.D20Roll not typed
+          const ADV_MODE: { DISADVANTAGE: number, ADVANTAGE: number } = CONFIG.Dice.D20Roll.ADV_MODE;
+          // With fake dice a second d20 is always rolled: naming the mode would give it away
+          const mode = configSettings.addFakeDice ? undefined : foundry.utils.getProperty(rolls[0] ?? {}, "options.advantageMode");
+          return localize(mode === ADV_MODE.ADVANTAGE ? "DND5E.Advantage" : mode === ADV_MODE.DISADVANTAGE ? "DND5E.Disadvantage" : "DND5E.Attack");
+        }
+        case "defaultDamage": return localize(activity?.type === "heal" ? "midi-qol.BaseHealingFlavor" : "midi-qol.BaseDamageFlavor");
+        case "otherDamage": {
+          const other = activity?.otherActivity;
+          if (other?.type === "heal") return localize("midi-qol.OtherHealIngFlavor");
+          return other?.midiProperties?.displayActivityName ? localize(other.name ?? "") : localize("midi-qol.OtherDamageFlavor");
+        }
+        case "bonusDamage": return `(${rolls.map(r => foundry.utils.getProperty(r, "options.flavor") ?? foundry.utils.getProperty(r, "options.type"))})`;
+        case "utility": return activity?.roll?.name || localize("DND5E.UTILITY.Title");
+        default: return "";
+      }
     }
 
     /** The hits rows, from the records: each attacked token's result, and its AC and modifiers at the attack */
