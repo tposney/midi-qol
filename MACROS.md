@@ -10,6 +10,7 @@
 - [Hooks Reference](#hooks-reference)
 - [Workflow Types](#workflow-types)
 - [OnUse Macros](#onuse-macros)
+- [Workflows and Chat Cards](#workflows-and-chat-cards)
 - [Damage Bonus Macros](#damage-bonus-macros)
 - [Macro Data Reference](#macro-data-reference)
 - [Adding to Chat Cards (Card Notes)](#adding-to-chat-cards-card-notes)
@@ -714,6 +715,8 @@ console.log(workflow.damageTotal);
 workflow.someProperty = value;
 ```
 
+A property you add to the workflow lives only in the memory of the client running it. To keep data with the use, see [Workflows and Chat Cards](#workflows-and-chat-cards).
+
 ### Changing Damage Roll
 
 ```js
@@ -723,6 +726,106 @@ await workflow.setDamageRolls([damageRoll]);
 ```
 
 To change the damage a target takes, use `MidiQOL.modifyDamageBy` (in an `isDamaged` or `preTargetDamageApplication` macro) rather than editing the damage list.
+
+---
+
+## Workflows and Chat Cards
+
+A workflow keeps its state on its usage card, so it can be rebuilt after a reload and read on other clients. Most of what a macro needs is on the workflow; read the card directly only when there is no workflow to hand.
+
+### What the card stores
+
+| Where | What |
+|---|---|
+| `card.system.midi.state` | The workflow's class, `isCritical`, `isFumble`, `templateUuids`, `workflowOptions`, and what a successful save does to each damage type |
+| `card.system.midi.records` | One record per token: whether it is a target, hit, saved, failed, super saver, …, its save total, cover and advantage (with the reasons), and its row in the hits list |
+| `card.rolls` | Every roll midi made for the use, tagged with `options.midi-qol.rollType` (`attack`, `defaultDamage`, `otherDamage`, `bonusDamage`, `utility`, `save`) |
+| `card.system.midi.sections` | The card's roll sections (`attack`, `hits`, `damage`, `otherDamage`, `bonusDamage`, `utility`, `saves`) as drawn |
+| `card.flags.<module>` | Other modules' data ([below](#storing-data-on-the-card)) |
+
+Everything else is worked out again when a workflow is rebuilt: totals, damage detail, `d20AttackRoll`, `isHit`, the item and activity (from the card), the token (from its speaker). `system.midi` is midi's internal format and may change: read it through the workflow, or with `MidiQOL.cardSaveRoll(card, tokenUuid)` for a token's save roll.
+
+### When the card is written
+
+midi queues the workflow's changes to its card and writes them together. The *Chat card updates* setting (Configure Settings → midi-qol) sets when:
+
+- *At milestones* (default): when the attack is resolved, when saves are requested and resolved, when the rolls are complete, before a reaction is offered, and whenever the workflow waits (for a roll, a button, a player) or finishes.
+- *At every step*: after each workflow step that changes the card.
+
+Between writes the card in the database is behind the workflow. `workflow.chatCard` includes the queued changes; `fromUuidSync(workflow.itemCardUuid)` and other clients see the last write.
+
+### After a reload
+
+A workflow is only in the memory of the client that ran it. After a reload, the card's buttons (roll damage, confirm, …) and `getWorkflow(cardUuid)` rebuild it for the card's author from the card, and it carries on from where it waited (`MidiQOL.cardResumePoint(card)` names that state). A rebuilt workflow has what the card stores; anything a macro kept only on the workflow is gone.
+
+A macro that rolls for a waiting workflow sets the roll and resumes it:
+
+```js
+await workflow.setDamageRolls([damageRoll]);
+await workflow.resume("damageRolled"); // "attackRolled", "damageRolled", "noDamage" or "utilityRolled"
+```
+
+`workflow.unSuspend(context)` is deprecated.
+
+### Finding a workflow
+
+`MidiQOL.Workflow.getWorkflow(cardUuid)` returns the workflow of a usage card, or `undefined`:
+
+- For the card's author, the live workflow. If it is no longer in memory (after a reload) it is rebuilt from the card.
+- For any other user, a read-only copy rebuilt from the card (`workflow.readOnly` is `true`). It has what the card stores: targets, hits, saves, rolls, damage detail, critical and fumble, templates, and what is worked out from them. It does not run or write the card. Properties only kept in memory (anything a macro added) are empty.
+- `getWorkflow(cardUuid, false)` gives another user a live rebuild instead. **Caveat emptor:** it runs and writes the card as the author's would, and nothing keeps it in step with the author's workflow: two live workflows for one card overwrite each other's changes, roll twice and apply damage and effects twice. midi warns in the console when it makes one. Use it only when you know the author's workflow is not running (its user is offline).
+
+A read-only copy is a snapshot of the card when it was made, and a copy you hold is never updated. When the card changes midi discards its copy, so the next `getWorkflow` call builds one from the card as it is then. Call `getWorkflow` again after an `await` rather than keeping a copy. `MidiQOL.Workflow.workflows` is midi's internal index; its entries may be a `WeakRef`, so use `getWorkflow`.
+
+### Storing data on the card
+
+Data that should survive a reload, or be seen on other clients, goes in your module's flags scope on the usage card, not on the workflow:
+
+```js
+// During the use (dnd5e.preUseActivity, dnd5e.preCreateUsageMessage): created with the card, no extra update
+foundry.utils.setProperty(messageConfig, "data.flags.my-module.key", value);
+
+// After the card exists (the card itself: workflow.chatCard is a copy while midi has changes queued)
+await fromUuidSync(workflow.itemCardUuid).setFlag("my-module", "key", value);
+
+// Any client
+fromUuidSync(cardUuid)?.getFlag("my-module", "key");
+```
+
+Flags another module puts on the message config of a roll midi makes (attack, damage) are merged into the usage card's flags with its next update, except the `midi-qol`, `dnd5e` and `core` scopes, which describe the roll message. Don't write to the `midi-qol` scope: it is midi's card state.
+
+### Old card flags
+
+Before 14.6.9 a card kept the workflow's state as `flags.midi-qol` keys. They still read the same on any card (each warns once that it is deprecated) and are removed in 14.8.0. With `const workflow = MidiQOL.Workflow.getWorkflow(card.uuid)`; token sets are Sets of Tokens, not uuids:
+
+| Old (deprecated) | Use |
+|---|---|
+| `card.flags.midi-qol.targets` | `workflow.targets` |
+| `card.flags.midi-qol.hitTargetUuids` | `workflow.hitTargets` |
+| `card.flags.midi-qol.hitECTargetUuids` | `workflow.hitTargetsEC` |
+| `card.flags.midi-qol.isHit` | `workflow.isHit` |
+| `card.flags.midi-qol.isHitEC` | `workflow.isHitEC` |
+| `card.flags.midi-qol.saveUuids` | `workflow.saves` |
+| `card.flags.midi-qol.failedSaveUuids` | `workflow.failedSaves` |
+| `card.flags.midi-qol.superSaverUuids` | `workflow.superSavers` |
+| `card.flags.midi-qol.semiSuperSaverUuids` | `workflow.semiSuperSavers` |
+| `card.flags.midi-qol.criticalSaveUuids` | `workflow.criticalSaves` |
+| `card.flags.midi-qol.fumbleSaveUuids` | `workflow.fumbleSaves` |
+| `card.flags.midi-qol.advantageSaveUuids` | `workflow.advantageSaves` |
+| `card.flags.midi-qol.damageDetail` | `workflow.damageDetail` |
+| `card.flags.midi-qol.otherDamageDetail` | `workflow.otherDamageDetail` |
+| `card.flags.midi-qol.bonusDamageDetail` | `workflow.bonusDamageDetail` |
+| `card.flags.midi-qol.otherDamageTotal` | `workflow.otherDamageTotal` |
+| `card.flags.midi-qol.bonusDamageTotal` | `workflow.bonusDamageTotal` |
+| `card.flags.midi-qol.otherDamageMatchUuids` | `workflow.otherDamageMatches` |
+| `card.flags.midi-qol.ammunitionDamageMatchUuids` | `workflow.ammunitionDamageMatches` |
+| `card.flags.midi-qol.isCritical` | `workflow.isCritical` |
+| `card.flags.midi-qol.isFumble` | `workflow.isFumble` |
+| `card.flags.midi-qol.workflowOptions` | `workflow.workflowOptions` |
+| `card.flags.midi-qol.currentAction` | `workflow.currentAction` |
+| `card.flags.midi-qol.saveAttribution` | `workflow.saveAttribution` |
+| `card.flags.midi-qol.templateUuids` | `workflow.templateUuids` |
+| `card.flags.midi-qol.templateUuid` | `workflow.templateUuids[0]` |
 
 ---
 

@@ -84,13 +84,13 @@ let defineMidiSaveActivityClass = <T extends Activity>(ActivityClass: T) => {
     }
 
     static #rollDamage(this: Activity, event: PointerEvent, target: HTMLElement, message: ChatMessage.Implementation) {
-      const workflow = Workflow.getWorkflow(message?.uuid);
+      const workflow = Workflow.findWorkflow(message?.uuid);
       if (workflow) workflow.activity = this;
       return this.rollDamage({ event, workflow }, {}, {});
     }
 
     static async #rollSave(this: Activity, event: PointerEvent, target: HTMLElement, message: ChatMessage.Implementation) {
-      const workflow = Workflow.getWorkflow(message?.uuid);
+      const workflow = Workflow.findWorkflow(message?.uuid);
       if (workflow) workflow.activity = this;
       // return ActivityClass.#rollSave.bind(this)(event, target, message);
       // Can't call ActivityClass.#rollSave.bind(this)(event, target, message) as it's private

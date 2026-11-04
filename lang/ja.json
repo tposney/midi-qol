@@ -3156,7 +3156,7 @@
       "name": "",
       "description": ""
     },
-    "flags.midi-qol.optional.NAME.ac": {
+    "flags.midi-qol.optional.NAME.acOnAttack": {
       "name": "オプションAC",
       "description": ""
     },

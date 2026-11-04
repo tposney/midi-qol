@@ -1450,7 +1450,7 @@ This allows effects to reference their source item's macro without hardcoding UU
 **Examples:**
 - `flags.midi-qol.optional.lucky.attack.all CUSTOM reroll-kh` - Lucky feat reroll, keep highest
 - `flags.midi-qol.optional.bless.save.all CUSTOM 1d4` - Bless adds 1d4 to saves
-- `flags.midi-qol.optional.shield.ac CUSTOM +5` - Shield spell adds +5 AC
+- `flags.midi-qol.optional.shield.acOnAttack CUSTOM +5` - Shield spell adds +5 AC
 
 ### Attack Bonuses
 
@@ -1534,7 +1534,8 @@ Only prompt when save fails.
 
 | Flag | Access | Description |
 |------|--------|-------------|
-| `flags.midi-qol.optional.NAME.ac` | Evaluated | Optional AC bonus (reaction) |
+| `flags.midi-qol.optional.NAME.acOnAttack` | Evaluated | Optional AC bonus offered when the creature is attacked, before the hit is known (was `optional.NAME.ac`, which still works, deprecated) |
+| `flags.midi-qol.optional.NAME.acOnHit` | Evaluated | Optional AC bonus offered when an attack hits the creature; the attack is tested again against the new AC |
 | `flags.midi-qol.optional.NAME.criticalDamage` | Direct | Switch (truthy): the `NAME.damage` bonus is rolled as critical damage, so dnd5e applies critical dice. Not a bonus value |
 | `flags.midi-qol.optional.NAME.displayBonusRolls` | Direct | Override display setting for this bonus (true/false) |
 | `flags.midi-qol.optional.NAME.rollMode` | Direct | Message mode for this bonus: `public`, `gm`, `blind`, `self` (legacy `publicroll`, `gmroll`, `blindroll`, `selfroll` are converted). The original roll's mode takes precedence |

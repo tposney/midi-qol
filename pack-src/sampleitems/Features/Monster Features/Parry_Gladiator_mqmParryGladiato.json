@@ -216,7 +216,7 @@
             "replacement": ""
           },
           {
-            "key": "flags.midi-qol.optional.parry.ac",
+            "key": "flags.midi-qol.optional.parry.acOnHit",
             "type": "custom",
             "value": "+3",
             "priority": 20,
@@ -270,7 +270,7 @@
     },
     "cat": {
       "automation": {
-        "version": "14.6.5",
+        "version": "14.6.8",
         "monsterIdentifier": "gladiator"
       }
     }

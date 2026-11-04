@@ -452,7 +452,7 @@ export let MidiActivityMixin = Base => {
 
     /** A save or check button for another activity's save, on this activity's card: that activity rolls it. */
     static async #rollOtherSave(this: MidiActivityMixin, event: PointerEvent, target: HTMLElement, message: ChatMessage.Implementation) {
-      const workflow = Workflow.getWorkflow(message.uuid);
+      const workflow = Workflow.findWorkflow(message.uuid);
       const source = workflow?.otherSaveActivity ?? this.otherSaveSource;
       // @ts-expect-error no dnd5e-types
       const action = target.dataset.action ?? message.system.getButton(target)?.action;
@@ -472,7 +472,7 @@ export let MidiActivityMixin = Base => {
       if (Number.isInteger(index)) await runFollowUp(message, index);
     }
     static async #applyEffects(this: MidiActivityMixin, event: PointerEvent, target: HTMLElement, message: ChatMessage.Implementation) {
-      const workflow = Workflow.getWorkflow(message.uuid);
+      const workflow = Workflow.findWorkflow(message.uuid);
       if (workflow) workflow.activity = this;
       if (!workflow) {
         const errMessage = "MidiQOL | MidiActivity | applyEffects | No workflow found";
@@ -509,7 +509,7 @@ export let MidiActivityMixin = Base => {
         return;
       }
       /* TODO Since workflows are available locally we can use them to cancel the workflow without a socket call
-        const workflow = Workflow.getWorkflow(workflowId);
+        const workflow = Workflow.findWorkflow(workflowId);
         if (workflow) cancelWorkflow(workflowId);
       */
       const user = game.users?.get(authorId);
@@ -618,7 +618,7 @@ export let MidiActivityMixin = Base => {
       }
 
       // Find workflow and process (handles count validation, deletion if incomplete)
-      const workflow = Workflow.getWorkflow(message.uuid);
+      const workflow = Workflow.findWorkflow(message.uuid);
       if (!workflow) {
         warn("MidiActivityMixin | #placeTemplate | No workflow found for message", message.uuid);
         return;
@@ -629,19 +629,19 @@ export let MidiActivityMixin = Base => {
     }
 
     static #rollDamage(this: Activity, event, target, message) {
-      const workflow = Workflow.getWorkflow(message?.uuid);
+      const workflow = Workflow.findWorkflow(message?.uuid);
       if (workflow) workflow.activity = this;
       return this.rollDamage({ event, workflow, midiOptions: { isCritical: workflow?.workflowOptions?.isCritical || workflow?.isCritical } }, {}, message);
     }
 
     static #rollDamageNoCritical(this: Activity, event, target, message) {
-      const workflow = Workflow.getWorkflow(message?.uuid);
+      const workflow = Workflow.findWorkflow(message?.uuid);
       if (workflow) workflow.activity = this;
       return this.rollDamage({ event, workflow, critical: { allow: false }, midiOptions: { isCritical: false } }, {}, message);
     }
 
     static #rollDamageCritical(this: Activity, event, target, message) {
-      const workflow = Workflow.getWorkflow(message?.uuid);
+      const workflow = Workflow.findWorkflow(message?.uuid);
       if (workflow) workflow.activity = this;
       return this.rollDamage({ event, workflow, critical: { allow: true }, midiOptions: { isCritical: true } }, {}, message);
     }
@@ -671,7 +671,7 @@ export let MidiActivityMixin = Base => {
       const activity = this.workflow?.activity ?? existingItem.system.activities.get(this.id);
       const action = target.dataset.action ?? "";
       let handler = activity?.metadata.usage?.actions?.[action];
-      const workflow = Workflow.getWorkflow(message.uuid);
+      const workflow = Workflow.findWorkflow(message.uuid);
       if (!handler && workflow) {
         if (activity) handler = activity?.metadata.usage?.actions?.[action];
       }

@@ -627,6 +627,7 @@ Hooks.on("dae.addFieldMappings", (fieldMappings) => {
   fieldMappings[`flags.${MODULE_ID}.min.ability.save.concentration`] = `system.attributes.concentration.roll.min`;
   Object.assign(fieldMappings, rollFieldMappings(Object.keys(GameSystemConfig.abilities), Object.keys(GameSystemConfig.skills ?? {}), Object.keys(GameSystemConfig.tools ?? {})));
   fieldMappings[`flags.${MODULE_ID}.sharpShooter`] = `flags.dnd5e.sharpShooter`;
+  fieldMappings[`flags.${MODULE_ID}.optional.*.ac`] = `flags.${MODULE_ID}.optional.*.acOnAttack`;
   fieldMappings[`flags.${MODULE_ID}.grants.fail.advantage.attack.all`] = `flags.${MODULE_ID}.grants.noAdvantage.attack.all`;
   fieldMappings[`flags.${MODULE_ID}.grants.fail.disadvantage.attack.all`] = `flags.${MODULE_ID}.grants.noDisadvantage.attack.all`;
 
@@ -1684,8 +1685,8 @@ function setupMidiFlags() {
   daeFieldBrowserFields.push(`flags.${MODULE_ID}.optional.NAME.count`);
   untyped(`flags.${MODULE_ID}.optional.NAME.countAlt`);
   daeFieldBrowserFields.push(`flags.${MODULE_ID}.optional.NAME.countAlt`);
-  untyped(`flags.${MODULE_ID}.optional.NAME.ac`);
-  daeFieldBrowserFields.push(`flags.${MODULE_ID}.optional.NAME.ac`);
+  untyped(`flags.${MODULE_ID}.optional.NAME.acOnAttack`);
+  daeFieldBrowserFields.push(`flags.${MODULE_ID}.optional.NAME.acOnAttack`);
   untyped(`flags.${MODULE_ID}.optional.NAME.acOnHit`);
   daeFieldBrowserFields.push(`flags.${MODULE_ID}.optional.NAME.acOnHit`);
   untyped(`flags.${MODULE_ID}.optional.NAME.criticalDamage`);

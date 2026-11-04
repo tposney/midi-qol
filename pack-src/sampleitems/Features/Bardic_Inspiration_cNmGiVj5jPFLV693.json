@@ -65,7 +65,7 @@
             "type": "override"
           },
           {
-            "key": "flags.midi-qol.optional.BardicInsiration.save.all",
+            "key": "flags.midi-qol.optional.BardicInspiration.save.all",
             "value": "1@scale.bard.inspiration",
             "priority": 20,
             "type": "override"
@@ -212,7 +212,7 @@
     },
     "cat": {
       "automation": {
-        "version": "14.6.2"
+        "version": "14.6.8"
       }
     }
   },

@@ -1378,7 +1378,7 @@ async function doD20Roll(this: Actor.Implementation, wrapped, kind: D20RollKind,
       if (hasPreComputedAdvantage && isAutoFastForward(kind.rollType)) config.midiOptions.fastForward = true;
     }
     if (!config.midiOptions.workflow && config.midiOptions.workflowId) {
-      config.midiOptions.workflow = Workflow.getWorkflow(config.midiOptions.workflowId);
+      config.midiOptions.workflow = Workflow.findWorkflow(config.midiOptions.workflowId);
     }
     if (dialog.configure === undefined && config.midiOptions.fastForward) dialog.configure = false;
 

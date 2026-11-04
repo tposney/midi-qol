@@ -2344,7 +2344,7 @@
       "name": "",
       "description": "" 
     },
-    "flags.midi-qol.optional.NAME.ac": {
+    "flags.midi-qol.optional.NAME.acOnAttack": {
       "name": "Bônus Opcional (CA)",
       "description": "Bônus para aplicar na CA do alvo." 
     },

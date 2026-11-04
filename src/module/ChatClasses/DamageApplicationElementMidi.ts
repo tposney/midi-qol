@@ -89,7 +89,7 @@ export class DamageApplicationElementMidi extends globalThis.dnd5e.applications.
   async _onApplyDamage(event: Event) {
     event.preventDefault();
     const message = this.chatMessage as ChatMessage.Implementation | undefined;
-    const workflow = message ? Workflow.getWorkflow(message.uuid) : undefined;
+    const workflow = message ? Workflow.findWorkflow(message.uuid) : undefined;
     const damageList: DamageListEntry[] = [];
     for (const option of Array.from<HTMLOptionElement>(this.targetList.querySelectorAll("option"))) {
       const token = fromUuidSync(option.value) as TokenDocument.Implementation | null;
@@ -125,7 +125,6 @@ export class DamageApplicationElementMidi extends globalThis.dnd5e.applications.
       charName: workflow?.token?.name ?? workflow?.actor?.name ?? game.user?.name,
       damageList: prepareDamageListToJSON(damageList),
       chatCardUuid: message?.uuid,
-      flagTags: workflow?.flagTags,
       updateOptions: { awaitDamageApplication: true },
       forceApply: true,
     });

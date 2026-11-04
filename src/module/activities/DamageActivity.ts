@@ -45,7 +45,7 @@ let defineMidiDamageActivityClass = <T extends Activity>(ActivityClass: T) => {
       }, { inplace: false, insertKeys: true, insertValues: true });
 
     static #rollDamage(this: Activity, event: PointerEvent, target: HTMLElement, message: ChatMessage.Implementation) {
-      const workflow = Workflow.getWorkflow(message?.uuid);
+      const workflow = Workflow.findWorkflow(message?.uuid);
       if (workflow) workflow.activity = this;
       this.rollDamage({ event, workflow }, {}, {});
     }

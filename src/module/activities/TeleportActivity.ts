@@ -185,7 +185,7 @@ let defineMidiTeleportActivityClass = <T extends Activity>(ActivityClass: T) => 
      */
     async planTeleport({ message, workflow, listed }: { message?: ChatMessage.Implementation, workflow?: Workflow, listed?: Token.Implementation[] } = {}): Promise<TeleportResult[] | null | undefined> {
       if (!this.canPlanTeleport) return null;
-      workflow ??= Workflow.getWorkflow(message?.uuid);
+      workflow ??= Workflow.findWorkflow(message?.uuid);
       message ??= workflow?.chatCard;
       const targets = listed ?? this.#workflowTargets(workflow, message);
       const movers = this.teleportMovers(targets, listed);

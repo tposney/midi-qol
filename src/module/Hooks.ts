@@ -376,6 +376,7 @@ export function initHooks() {
   });
 
   Hooks.on("updateChatMessage", (message, update, options, user) => {
+    Workflow.dropReadOnlyCopy(message.uuid);
     hideRollUpdate(message, update, options, user);
     if (!update.content) return;
     const updateChatMessageStart = Date.now();
@@ -426,6 +427,7 @@ export function initHooks() {
 
   Hooks.on("deleteChatMessage", (message, options, user) => {
     Workflow.deleteWorkflow(message.uuid);
+    Workflow.dropReadOnlyCopy(message.uuid);
     clearUpdatesCache(message.uuid);
   });
 

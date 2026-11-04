@@ -126,7 +126,9 @@ export function defineChatMessageMidiClass(baseClass: ChatMessage.Implementation
         defineLegacyCardFlags((this.flags[MODULE_ID] ??= {}) as Record<string, unknown>, cardMidi,
           { damageDetail: detailOf("defaultDamage"), otherDamageDetail: detailOf("otherDamage"), bonusDamageDetail: detailOf("bonusDamage"),
             currentAction: () => [cardMidi.state?.workflowClass, Workflow.cardResumePoint(this) ?? ""],
-            isHit: () => cardHitResult(this),
+            isHit: () => configSettings.autoCheckHit === "none"
+              ? !!(this.rolls.find(r => foundry.utils.getProperty(r, `options.${MODULE_ID}.rollType`) === "attack") as { isSuccess?: boolean } | undefined)?.isSuccess
+              : Object.values(cardMidi.records ?? {}).some((record: { hit?: boolean }) => record.hit),
             isHitEC: () => Object.values(cardMidi.records ?? {}).some((record: { hitEC?: boolean }) => record.hitEC),
             otherDamageTotal: () => totalOf("otherDamage"), bonusDamageTotal: () => totalOf("bonusDamage") });
         // The card's own actor, for readers of the old flag (CAT's manual rolls); not a deprecated name, so no warning

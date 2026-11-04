@@ -84,7 +84,7 @@ let defineMidiCheckActivityClass = <T extends Activity>(ActivityClass: T) => {
     }
 
     static async #rollCheck(this: Activity, event: PointerEvent, target: HTMLElement, message: ChatMessage.Implementation) {
-      let workflow = message ? Workflow.getWorkflow(message.uuid) : null;
+      let workflow = message ? Workflow.findWorkflow(message.uuid) : null;
       if (workflow) workflow.activity = this;
       // return ActivityClass.#rollCheck return ActivityClass.#rollCheck.bind(this)(event, target);
       // Can't do this as it's private

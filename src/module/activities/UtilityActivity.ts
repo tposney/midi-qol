@@ -64,7 +64,7 @@ let defineMidiUtilityActivityClass = <T extends Activity>(ActivityClass: T) => {
         return schema;
       }
     static #rollFormula(this: Activity, event: PointerEvent, target: HTMLElement, message: ChatMessage.Implementation) {
-      const workflow = Workflow.getWorkflow(message?.uuid);
+      const workflow = Workflow.findWorkflow(message?.uuid);
       if (workflow) workflow.activity = this;
 
       return this.rollFormula?.({ event, workflow }, {}, {});

@@ -206,7 +206,7 @@ let defineMidiAttackActivityClass = <T extends Activity>(ActivityClass: T) => {
       }, { inplace: false, insertKeys: true, insertValues: true })
 
     static #rollAttack(this: Activity, event: PointerEvent, target: HTMLElement, message: ChatMessage.Implementation) {
-      const workflow = Workflow.getWorkflow(message?.uuid);
+      const workflow = Workflow.findWorkflow(message?.uuid);
 
       if (!message || !workflow || (workflow.currentAction && [workflow.WorkflowState_Abort, workflow.WorkflowState_Completed].includes(workflow.currentAction))) {
         if (workflow?.itemCardUuid) Workflow.removeItemCardButtons(workflow.itemCardUuid, { removeAllButtons: true });
@@ -241,7 +241,7 @@ let defineMidiAttackActivityClass = <T extends Activity>(ActivityClass: T) => {
     }
 
     static #rollAttackAdvantage(this: Activity, event: PointerEvent, target: HTMLElement, message: ChatMessage.Implementation) {
-      const workflow = Workflow.getWorkflow(message?.uuid);
+      const workflow = Workflow.findWorkflow(message?.uuid);
       if (!message || !workflow || (workflow.currentAction && [workflow.WorkflowState_Abort, workflow.WorkflowState_Completed].includes(workflow.currentAction))) {
         if (workflow?.itemCardUuid) Workflow.removeItemCardButtons(workflow.itemCardUuid, { removeAllButtons: true });
         const attackConfig: any = { event, workflow };
@@ -273,7 +273,7 @@ let defineMidiAttackActivityClass = <T extends Activity>(ActivityClass: T) => {
     }
 
     static #rollAttackDisadvantage(this: Activity, event: PointerEvent, target: HTMLElement, message: ChatMessage.Implementation) {
-      const workflow = Workflow.getWorkflow(message?.uuid);
+      const workflow = Workflow.findWorkflow(message?.uuid);
       if (!message || !workflow || (workflow.currentAction && [workflow.WorkflowState_Abort, workflow.WorkflowState_Completed].includes(workflow.currentAction))) {
         if (workflow?.itemCardUuid) Workflow.removeItemCardButtons(workflow.itemCardUuid, { removeAllButtons: true });
         const attackConfig: ActivityUseConfiguration = { event, workflow };
@@ -305,21 +305,21 @@ let defineMidiAttackActivityClass = <T extends Activity>(ActivityClass: T) => {
     }
 
     static #rollDamage(this: Activity, event: PointerEvent, target: HTMLElement, message: ChatMessage.Implementation) {
-      const workflow = Workflow.getWorkflow(message?.uuid);
+      const workflow = Workflow.findWorkflow(message?.uuid);
       if (workflow) workflow.activity = this;
       // @ts-expect-error
       return this.rollDamage({ event, workflow, midiOptions: { isCritical: workflow?.workflowOptions?.isCritical || workflow?.isCritical } }, {}, message);
     }
 
     static #rollDamageNoCritical(this: Activity, event: PointerEvent, target: HTMLElement, message: ChatMessage.Implementation) {
-      const workflow = Workflow.getWorkflow(message?.uuid);
+      const workflow = Workflow.findWorkflow(message?.uuid);
       if (workflow) workflow.activity = this;
       // @ts-expect-error
       return this.rollDamage({ event, workflow, critical: { allow: false }, midiOptions: { isCritical: false } }, {}, message);
     }
 
     static #rollDamageCritical(this: Activity, event: PointerEvent, target: HTMLElement, message: ChatMessage.Implementation) {
-      const workflow = Workflow.getWorkflow(message?.uuid);
+      const workflow = Workflow.findWorkflow(message?.uuid);
       if (workflow) workflow.activity = this;
       // @ts-expect-error
       return this.rollDamage({ event, workflow, midiOptions: { isCritical: true } }, {}, message);
@@ -679,7 +679,7 @@ let defineMidiAttackActivityClass = <T extends Activity>(ActivityClass: T) => {
               create: true,
               data: { system: { effects: this.applicableEffects?.map(e => e.relativeUUID) } },
               hasConsumption: false
-            }, { flags })
+            }, { data: { flags } })
             // @ts-expect-error
             const itemCard = await this._createUsageMessage(messageConfig);
             // const itemCard = await this.displayCard(foundry.utils.mergeObject(config, { systemCard: false, workflowId: workflow.id, minimalCard: false, createMessage: true }));

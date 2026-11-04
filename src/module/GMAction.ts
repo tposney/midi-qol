@@ -210,7 +210,7 @@ async function _removeCEEffect(data: { effectName: string, uuid: string }) {
 }
 
 export async function cancelWorkflow(data: { workflowId: string, itemCardUuid: string }) {
-  const workflow = Workflow.getWorkflow(data.workflowId);
+  const workflow = Workflow.findWorkflow(data.workflowId);
   if (workflow?.itemCardUuid !== data.itemCardUuid) {
     const itemCard = await fromUuid(data.itemCardUuid as `ChatMessage.${string}`);
     if (itemCard) itemCard.delete();
@@ -221,7 +221,7 @@ export async function cancelWorkflow(data: { workflowId: string, itemCardUuid: s
 }
 
 async function confirmDamageRollComplete(data: { workflowId: string, activityUuid: string, itemCardUuid: string }) {
-  const workflow = Workflow.getWorkflow(data.workflowId);
+  const workflow = Workflow.findWorkflow(data.workflowId);
   const activity = workflow?.activity;
   if (!workflow || workflow.itemCardUuid !== data.itemCardUuid) {
     // Confirm this needs to be awaited
@@ -242,7 +242,7 @@ async function confirmDamageRollComplete(data: { workflowId: string, activityUui
 }
 
 async function confirmDamageRollCompleteHit(data: { workflowId: string, activityUuid: string, itemCardUuid: string }) {
-  const workflow = Workflow.getWorkflow(data.workflowId);
+  const workflow = Workflow.findWorkflow(data.workflowId);
   const activity = workflow?.activity;
   if (!workflow || workflow.itemCardUuid !== data.itemCardUuid) {
     Workflow.removeItemCardButtons(data.itemCardUuid, { removeAttackButtons: true, removeDamageButtons: true, removeConfirmButtons: true });
@@ -273,7 +273,7 @@ async function confirmDamageRollCompleteHit(data: { workflowId: string, activity
 }
 
 async function confirmDamageRollCompleteMiss(data: { workflowId: string, activityUuid: string, itemCardUuid: string }) {
-  const workflow = Workflow.getWorkflow(data.workflowId);
+  const workflow = Workflow.findWorkflow(data.workflowId);
   if (!workflow || workflow.itemCardUuid !== data.itemCardUuid) {
     /* Confirm this needs to be awaited
     */
@@ -477,7 +477,7 @@ async function _bonusCheck(data: { actorUuid: string, result: string, rollType: 
 async function _applyEffects(data: { workflowId: string, targets: string[] }) {
   let result;
   try {
-    const workflow = Workflow.getWorkflow(data.workflowId);
+    const workflow = Workflow.findWorkflow(data.workflowId);
     if (!workflow) throw new Error(`_applyEffects | workflowId: ${data.workflowId} - workflow not found`);
     workflow.forceApplyEffects = true;
     const targets: Set<foundry.canvas.placeables.Token.Implementation> = new Set();
@@ -1059,7 +1059,6 @@ async function createReverseDamageCard(data: {
   damageList: SerializedDamageListEntry[];
   autoApplyDamage: string;
   chatCardUuid?: string,
-  flagTags: any,
   charName: string,
   actorId: string,
   actorUuid?: string,
@@ -1383,7 +1382,6 @@ async function prepareDamageListItems(
   data: {
     damageList: DamageListEntry[];
     autoApplyDamage: string;
-    flagTags: any;
     forceApply: boolean;
     updateOptions: any;
   },
@@ -1664,7 +1662,6 @@ async function createDamageCard(
     damageList: DamageListEntry[];
     autoApplyDamage: string;
     chatCardUuid?: string,
-    flagTags: any,
     forceApply: boolean,
     updateOptions: any,
     actorUuid?: string,
@@ -1706,7 +1703,6 @@ async function createDamageCard(
       flags: { [MODULE_ID]: { "undoDamage": prepareDamageListForFlag(tokenDataList), actorUuid: data.actorUuid } }
     };
     chatData.style = CONST.CHAT_MESSAGE_STYLES.OTHER;
-    if (data.flagTags) chatData.flags = foundry.utils.mergeObject(chatData.flags ?? {}, data.flagTags);
     chatCardUuid = (await ChatMessage.create(chatData))?.uuid;
   }
   return chatCardUuid;
@@ -2589,7 +2585,7 @@ export async function buildDamageCardContext(
   };
   // createPromises false: this builds the display only, it must never re-apply damage
   await prepareDamageListItems(
-    { damageList, autoApplyDamage: card.autoApplyDamage, flagTags: null, forceApply: card.forceApply, updateOptions: {} },
+    { damageList, autoApplyDamage: card.autoApplyDamage, forceApply: card.forceApply, updateOptions: {} },
     templateData, [], false, templateData.showNPC, card.doHits, true);
   if (asPlayer) templateData.playerButtons = !!card.playerButtons && templateData.damageList.some(listItem => listItem.isCharacter);
   return templateData;

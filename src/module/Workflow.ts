@@ -461,6 +461,14 @@ export class Workflow {
   // Workflows ended this session (removeWorkflow): never rebuilt from their cards
   static #ended = new Set<string>();
 
+  /**
+   * File a finished workflow weakly: an unfinished one is held, so what macros keep on it between passes survives; a
+   * finished one is rarely looked up again and is rebuilt from its card if it has been collected (getWorkflow).
+   */
+  static #fileFinished(workflow: Workflow) {
+    if (Workflow.workflows.get(workflow.id) === workflow) Workflow.workflows.set(workflow.id, new WeakRef(workflow));
+  }
+
   static addWorkflow(workflow: Workflow) {
     Workflow.#ended.delete(workflow.id);
     if (Workflow.workflows.has(workflow.id)) console.warn("midi-qol | addWorkflow | Workflow already exists", workflow.id);
@@ -507,14 +515,43 @@ export class Workflow {
     }
   }
 
-  static getWorkflow(id?: string): Workflow | undefined {
+  // Read-only copies of other users' workflows (getWorkflow), dropped when their card changes
+  static #readOnlyCopies = new Map<string, WeakRef<Workflow>>();
+  static dropReadOnlyCopy(id: string) {
+    Workflow.#readOnlyCopies.delete(id);
+  }
+
+  /**
+   * The workflow of a card (or of an activity until it has its card). For the card's author the live workflow, rebuilt
+   * from the card if it is not in memory. For another user a read-only copy rebuilt from the card: it does not run or
+   * write, and is never updated: when the card changes it is discarded, and the next call builds a new one. With `readOnly`
+   * false another user gets a live rebuild, which runs and writes the card alongside the author's (warned).
+   */
+  static getWorkflow(id?: string, readOnly = true): Workflow | undefined {
+    const workflow = Workflow.findWorkflow(id);
+    if (workflow || !id) return workflow;
+    const card = fromUuidSync(id);
+    if (!(card instanceof ChatMessage) || card.author === game.user) return undefined;
+    if (!readOnly) {
+      const live = Workflow.#rebuild(id, { anyAuthor: true });
+      if (live) console.warn(`midi-qol | getWorkflow | ${live.workflowName}: a live copy of ${card.author?.name ?? "another user"}'s workflow. It runs and writes the card as the author's does; if theirs is running too, both apply their changes, rolls, damage and effects. Use getWorkflow(uuid) for a read-only copy.`);
+      return live;
+    }
+    const held = Workflow.#readOnlyCopies.get(id)?.deref();
+    if (held) return held;
+    const copy = Workflow.fromChatCardUuid(id, { readOnly: true });
+    if (copy) Workflow.#readOnlyCopies.set(id, new WeakRef(copy));
+    return copy;
+  }
+
+  /** midi's own lookup: the workflow in memory, or rebuilt from its card for the card's author; never a read-only copy */
+  static findWorkflow(id?: string): Workflow | undefined {
     if (debugEnabled > 0) warn("Get workflow ", id, Workflow.workflows, Workflow.workflows.get(id ?? ""))
     if (debugEnabled > 1) debug("Get workflow ", id, Workflow.workflows, Workflow.workflows.get(id ?? ""))
     if (!id) return;
     let workflow = Workflow.workflows.get(id);
     if (workflow instanceof WeakRef) {
       if (!workflow?.deref()) {
-        console.warn("Weak Reference to workflow is not dereferenced", id);
         const _workflow = Workflow.fromChatCardUuid(id);
         if (_workflow) {
           workflow = new WeakRef(_workflow);
@@ -525,16 +562,20 @@ export class Workflow {
       return workflow.deref();
     } else if (workflow) return workflow;
     // Rebuilt from its card once: filed under the card (weakly with Use Weak References), so later calls find it
-    const chatCard = fromUuidSync(id);
-    if (chatCard instanceof ChatMessage) {
-      const rebuilt = Workflow.fromChatCardUuid(id);
-      if (rebuilt) {
-        Workflow.addWorkflow(rebuilt);
-        return rebuilt;
-      }
+    if (fromUuidSync(id) instanceof ChatMessage) {
+      const rebuilt = Workflow.#rebuild(id);
+      if (rebuilt) return rebuilt;
     }
     // try fetching via ActivityUuid
     return this.getWorkflowByActivityUuid(id);
+  }
+
+  static #rebuild(id: string, options: { anyAuthor?: boolean } = {}): Workflow | undefined {
+    const rebuilt = Workflow.fromChatCardUuid(id, options);
+    if (!rebuilt) return undefined;
+    Workflow.addWorkflow(rebuilt);
+    if (rebuilt.currentAction === rebuilt.WorkflowState_Completed) Workflow.#fileFinished(rebuilt);
+    return rebuilt;
   }
 
   static getWorkflowByActivityUuid(activityUuid?: string): Workflow | undefined {
@@ -542,8 +583,8 @@ export class Workflow {
     // Direct map lookup — the workflow is keyed by activity.uuid until the chat card is
     // created, at which point the activity.uuid entry is deleted and replaced by the
     // chatMessage.uuid entry. A direct get() avoids finding stale re-keyed workflows.
-    // Use workflows.get() directly (not getWorkflow()) to avoid infinite recursion,
-    // since getWorkflow() falls back to getWorkflowByActivityUuid().
+    // Use workflows.get() directly (not findWorkflow()) to avoid infinite recursion,
+    // since findWorkflow() falls back to getWorkflowByActivityUuid().
     const entry = Workflow.workflows.get(activityUuid);
     let returnValue: Workflow | undefined;
     if (entry instanceof WeakRef) {
@@ -559,20 +600,22 @@ export class Workflow {
   }
 
   /**
-   * The workflow of a card, rebuilt from it after a reload. Only on the card's author's client, where the workflow ran:
-   * elsewhere it would be a second copy of one still running; never one removed this session. Only workflow classes
-   * built like Workflow itself.
+   * The workflow of a card, rebuilt from it after a reload. Only for the card's author, whose client ran the workflow
+   * (elsewhere it would be a second copy of one still running), unless `readOnly` (a copy that does not run or write) or
+   * `anyAuthor` (a live second copy: getWorkflow warns). Never one removed this session. Only workflow classes built like
+   * Workflow itself.
    */
-  static fromChatCardUuid(chatCardUuid: string): Workflow | undefined {
+  static fromChatCardUuid(chatCardUuid: string, options: { readOnly?: boolean, anyAuthor?: boolean } = {}): Workflow | undefined {
     const card = fromUuidSync(chatCardUuid);
-    if (!(card instanceof ChatMessage) || card.author !== game.user || Workflow.#ended.has(chatCardUuid)) return undefined;
+    const author = card instanceof ChatMessage && (card.author === game.user || options.readOnly || options.anyAuthor);
+    if (!author || Workflow.#ended.has(chatCardUuid)) return undefined;
     // @ts-expect-error no dnd5e-types
     const className: string | undefined = card.system?.midi?.state?.workflowClass;
     const restorable: Record<string, typeof Workflow> = { Workflow, SavesFirstWorkflow, ActiveDefenceWorkflow, UserWorkflow };
     const WorkflowClass = className ? restorable[className] : undefined;
     if (!WorkflowClass) return undefined;
     try {
-      return new WorkflowClass(null, null, null, null, { chatCardUuid });
+      return new WorkflowClass(null, null, null, null, { chatCardUuid, readOnly: options.readOnly });
     } catch (err) {
       TroubleShooter.recordError(err, `fromChatCardUuid | could not restore the workflow of ${chatCardUuid}`);
       return undefined;
@@ -588,6 +631,7 @@ export class Workflow {
   #displayQueued = false;
 
   async performThrottledUpdate(chatCard: ChatMessage.Implementation, updates: ChatMessage.UpdateData, immediate = false) {
+    if (this.readOnly) return;
     if (this.#queueingWrites && !immediate && chatCard?.uuid === this.itemCardUuid) {
       this.#displayQueued = true;
       return queueUpdate(chatCard, updates);
@@ -597,6 +641,7 @@ export class Workflow {
 
   /** Write the card's queued changes: `displayOnly` when a state ends (only if it changed what the card shows) */
   async flushCardWrites(displayOnly = false): Promise<void> {
+    if (this.readOnly) return;
     if (displayOnly && !this.#displayQueued) return;
     this.#displayQueued = false;
     this.#persisted.syncTokenSets();
@@ -633,6 +678,9 @@ export class Workflow {
   }
 
   /** A workflow keeps its state on its own card, the one it is registered under; never on another workflow's card */
+  /** A copy of another user's workflow (getWorkflow): it does not run or write the card */
+  readOnly = false;
+
   get ownsCard(): boolean {
     return !!this.itemCardUuid && this.itemCardUuid === this.id;
   }
@@ -642,13 +690,13 @@ export class Workflow {
 
   /** By path; queued in the card's update cache: written with its next (throttled) update, never on its own */
   private persistFields(updates: Record<string, unknown>): void {
-    if (this.ownsCard) addUpdatesCache(this.id, updates);
+    if (this.ownsCard) this.#cacheCardUpdates(updates);
     else Object.assign(this.#unstored, updates);
   }
 
   #storeUnstored() {
     if (!this.ownsCard || foundry.utils.isEmpty(this.#unstored)) return;
-    addUpdatesCache(this.id, this.#unstored);
+    this.#cacheCardUpdates(this.#unstored);
     this.#unstored = {};
   }
 
@@ -662,7 +710,12 @@ export class Workflow {
    * message is prepared.
    */
   private persistRolls(): void {
-    if (this.itemCardUuid) addUpdatesCache(this.id, { rolls: this.chatRolls });
+    if (this.itemCardUuid) this.#cacheCardUpdates({ rolls: this.chatRolls });
+  }
+
+  /** Queued for the card's next write; a read-only copy queues nothing (the queue is the card's, not the workflow's) */
+  #cacheCardUpdates(updates: Record<string, unknown>) {
+    if (!this.readOnly) addUpdatesCache(this.id, updates);
   }
 
   #persisted = new CardStateStore(updates => this.persistFields(updates), () => this.persistRolls());
@@ -726,7 +779,7 @@ export class Workflow {
     // TODO do an equals check on the stored and passed speaker
     this.#speaker = speaker;
     if (this.itemCardUuid) {
-      addUpdatesCache(this.id, { speaker });
+      this.#cacheCardUpdates({ speaker });
     }
   }
 
@@ -859,6 +912,15 @@ export class Workflow {
   set isFumble(isFumble: boolean) {
     this.attackRollModifierTracker.fumble.setOverride(isFumble, "direct", "Direct assignment");
     this.#persisted.setScalar("isFumble", isFumble);
+  }
+
+  /** Whether the attack hit: a target hit, or with hits not checked the attack roll's own result */
+  get isHit(): boolean {
+    return configSettings.autoCheckHit === "none" ? !!(this.attackRoll as { isSuccess?: boolean } | undefined)?.isSuccess : this.hitTargets.size > 0;
+  }
+  /** Whether the attack hit a target only by an expanded critical */
+  get isHitEC(): boolean {
+    return this.hitTargetsEC.size > 0;
   }
 
   /**
@@ -1053,7 +1115,7 @@ export class Workflow {
   }
   set targetDescriptors(targetDescriptors: Array<DND5ETargetDescriptor>) {
     if (this.chatCard)
-      addUpdatesCache(this.id, { "system.targets": targetDescriptors });
+      this.#cacheCardUpdates({ "system.targets": targetDescriptors });
   }
   noAutoAttack: boolean | undefined; // override attack roll for standard care
 
@@ -1265,8 +1327,6 @@ export class Workflow {
   saveTimeouts: Record<string, NodeJS.Timeout>;
   defenceRequests: Record<string, (value: any) => void>;
   defenceTimeouts: Record<string, NodeJS.Timeout>;
-
-  flagTags: AnyMutableObject | undefined;
 
   #onUseMacros: OnUseMacros | undefined;
   get onUseMacros() {
@@ -1593,6 +1653,7 @@ export class Workflow {
     this.workflowStartTime = Date.now();
     // Rebuilt from its card (fromChatCardUuid): the stored state stays as it is
     const restoring = !!options.chatCardUuid;
+    this.readOnly = !!options.readOnly;
     if (restoring) {
       this.itemCardUuid = options.chatCardUuid;
       this.id = options.chatCardUuid!;
@@ -1658,7 +1719,6 @@ export class Workflow {
     this.forceApplyEffects = false;
     this.onUseCalled = false;
     this.attackRolled = false;
-    this.flagTags = undefined;
     if (options.rollOptions) this.rollOptions = options.rollOptions;
     else this.rollOptions = {};
     if (options.event) this.rollOptions.event = options.event;
@@ -1675,7 +1735,7 @@ export class Workflow {
     }
 
     this.defaultDamageType = getActivityDefaultDamageType(this) ?? MidiQOL.MQdefaultDamageType;
-    MidiQOL.MQdefaultDamageType = this.defaultDamageType; // Set the default damage type for the module.
+    if (!this.readOnly) MidiQOL.MQdefaultDamageType = this.defaultDamageType; // Set the default damage type for the module.
     if (this.activity.actionType === "heal" && !Object.keys(GameSystemConfig.healingTypes).includes(this.defaultDamageType ?? "")) this.defaultDamageType = "healing";
     if (restoring) {
       this.preSelectedTargets = new Set();
@@ -1780,7 +1840,7 @@ export class Workflow {
 
   static async removeItemCardConfirmRollButton(itemCardUuid: string) {
     const chatMessage = getCachedDocument(itemCardUuid) as ChatMessage.Implementation;
-    const workflow = Workflow.getWorkflow(itemCardUuid);
+    const workflow = Workflow.findWorkflow(itemCardUuid);
     if (!chatMessage) return;
     const update = { "system.midi.progress": { confirmed: true } } as ChatMessage.UpdateData;
     return workflow ? await workflow.performThrottledUpdate(chatMessage, update) : await throttledUpdate(chatMessage, update);
@@ -1788,7 +1848,7 @@ export class Workflow {
 
   static async removeItemCardButtons(itemCardUuid: string | undefined, { removeAllButtons = false, removeAttackButtons = true, removeDamageButtons = false, removeDnD5eButtons = false, removeConfirmButtons = false, removeAllDnd5eButtons = false, removeDnd5eSaveButtons = false, removeDnd5eTemplateButtons = false, finished = false } = {}) {
     try {
-      const workflow = Workflow.getWorkflow(itemCardUuid);
+      const workflow = Workflow.findWorkflow(itemCardUuid);
       const chatMessage = workflow?.chatCard;
       if (!chatMessage) return;
       let allowRemoveAll = !(workflow && workflow.activity?.target.affects.type === "" && workflow.targets.size === 0)
@@ -1834,7 +1894,7 @@ export class Workflow {
       return;
     }
     if (workflow.postSummonHookId) Hooks.off("dnd5e.postSummon", workflow.postSummonHookId);
-    if (debugEnabled > 0) warn(`removeWorkflow deleting ${id}`, Workflow.workflows.get(id));
+    if (debugEnabled > 0) warn(`removeWorkflow deleting ${id}`, workflow);
     Workflow.workflows.delete(id);
     // Remove buttons
     if (workflow.itemCardUuid) {
@@ -2092,6 +2152,10 @@ export class Workflow {
   }
 
   public async performState(newState: WorkflowState) {
+    if (this.readOnly) {
+      console.warn(`midi-qol | ${this.workflowName} is a read-only copy of another user's workflow: it does not run`);
+      return;
+    }
     if (this.stateTransitionCount === undefined) this.stateTransitionCount = 0;
     let isAborting = this.aborted;
     this.executingStates += 1;
@@ -3342,6 +3406,7 @@ export class Workflow {
 
     await offerFollowUps(this);
     await this.runTriggeredActivity();
+    Workflow.#fileFinished(this);
     return this.WorkflowState_Suspend;
   }
 
@@ -7697,7 +7762,7 @@ export class Workflow {
           if (!this.item.flags?.[MODULE_ID]?.noProvokeReaction && !this.workflowOptions.noProvokeReaction) {
             result = await doReactions(targetToken, this.tokenUuid, this.attackRoll, "reaction", { activity: this.activity, item: this.item, workflow: this, workflowOptions });
           }
-          if (!Workflow.getWorkflow(this.id)) // workflow has been removed - bail out
+          if (!Workflow.findWorkflow(this.id)) // workflow has been removed - bail out
             return;
           // targetAC already has cover, flanking, and targetACMod from computeTargetAC (via acResult.effectiveAC)
           // Only update if the hit reaction returned a new AC total
@@ -9075,6 +9140,7 @@ export const WorkflowRegistry: Record<string, new (...args: any[]) => Workflow> 
 // `options` arg for Workflow
 type WorkflowConstructorOptions = InexactPartial<{
   chatCardUuid: string;
+  readOnly: boolean;
   event: MouseEvent | KeyboardEvent;
   item: Item.Implementation;
   noOptionalRules: boolean;

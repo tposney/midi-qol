@@ -271,7 +271,7 @@ export async function applyTokenDamage(
   let allDamages: Record<string, DamageListEntry> = {};
   damageDetail = damageDetail.map(de => ({ ...de, value: (de.value ?? de.damage) }))
   let workflow: Workflow | undefined = options.workflow;
-  if (item && !options.workflow) workflow = Workflow.getWorkflow(item.uuid);
+  if (item && !options.workflow) workflow = Workflow.findWorkflow(item.uuid);
   // What a successful save does to the damage; applySaves adds Super Saver and Semi Super Saver.
   const saveMultiplier = getSaveMultiplierForItem(item, "defaultDamage");
 
@@ -339,7 +339,6 @@ export async function applyTokenDamage(
     charName: workflow?.token?.name ?? workflow?.actor?.name ?? game.user?.name,
     damageList: prepareDamageListToJSON(Object.values(allDamages)),
     chatCardUuid: workflow?.itemCardUuid,
-    flagTags: workflow?.flagTags,
     updateOptions: options.updateOptions,
     forceApply: options.forceApply,
   });
@@ -364,7 +363,7 @@ export async function applyTokenDamageMany(
 ): Promise<any[]> {
   let allDamages: Record<string, DamageListEntry> = {};
   let workflow: Workflow | undefined = options.workflow;
-  if (item && !options.workflow) workflow = Workflow.getWorkflow(item.uuid);
+  if (item && !options.workflow) workflow = Workflow.findWorkflow(item.uuid);
 
   for (const entry of targetDamages) {
     const actor = entry.token.actor;
@@ -425,7 +424,6 @@ export async function applyTokenDamageMany(
     charName: workflow?.token?.name ?? workflow?.actor?.name ?? game.user?.name,
     damageList: prepareDamageListToJSON(Object.values(allDamages)),
     chatCardUuid: workflow?.itemCardUuid,
-    flagTags: workflow?.flagTags,
     updateOptions: options.updateOptions,
     forceApply: options.forceApply,
   });
@@ -806,7 +804,6 @@ export async function processDamageRoll(workflow: Workflow, defaultDamageType: s
       charName: workflow.token?.name ?? workflow.actor.name ?? game.user?.name,
       damageList: prepareDamageListToJSON(workflow.damageList),
       chatCardUuid: workflow.itemCardUuid,
-      flagTags: workflow.flagTags,
       updateOptions: { noConcentrationCheck: workflow?.workflowOptions?.noConcentrationCheck ?? false, awaitDamageApplication: configSettings.waitForDamageApplication },
       forceApply: false
     });
@@ -993,7 +990,6 @@ export function requestPCSave(ability: string, rollType: string | undefined, pla
       content,
       whisper: [player]
     }
-    // think about how to do this if (workflow?.flagTags) chatData.flags = foundry.utils.mergeObject(chatData.flags ?? "", workflow.flagTags);
     return ChatMessage.create(chatData);
   } catch (err) {
     const message = `midi-qol | request PC save`;
@@ -5271,6 +5267,8 @@ async function displayBeforeAfterRolls(data: {
   return await ChatMessage.create(chatData);
 }
 
+/** The optional AC bonus keys: added to the target's AC, `acOnAttack` when attacked, `acOnHit` once the attack hits */
+const OPTIONAL_AC_KEYS = ["acOnAttack", "acOnHit"];
 export async function bonusDialog(
   bonusFlags: string[],
   flagSelector: string,
@@ -5462,7 +5460,7 @@ export async function bonusDialog(
           setRollOperatorEvaluated(tempRoll);
           if (showDiceSoNice) await displayDSNForRoll(tempRoll, rollType, rollMode, undefined, this.actor);
           newRoll = addRollTo(roll!, tempRoll);
-        } else if (flagSelector === "ac") {
+        } else if (OPTIONAL_AC_KEYS.includes(flagSelector)) {
           let rollOptions = foundry.utils.duplicate(roll!.options);
           //@ts-expect-error
           rollOptions.configured = false;
@@ -5772,10 +5770,16 @@ export async function removeEffectGranting(actor: Actor.Implementation, changeKe
   if (!count) {
     return expireEffects(actor, [effect], { "expiry-reason": "midi-qol:optionalConsumed" })
   }
+  // The other count's reaction or bonus action is used even when this use ends the effect
+  const useActions = async () => {
+    if (count.value === "reaction" || countAlt?.value === "reaction") await setReactionUsed(actor);
+    if (count.value === "bonusAction" || countAlt?.value === "bonusAction") await setBonusActionUsed(actor);
+  };
   if (Number.isNumeric(count.value) || Number.isNumeric(countAlt?.value)) {
-    if (Number(count.value) <= 1 || Number(countAlt?.value) <= 1)
-      return expireEffects(actor, [effect], { "expiry-reason": "midi-qol:optionalConsumed" })
-    else if (Number.isNumeric(count.value)) {
+    if (Number(count.value) <= 1 || Number(countAlt?.value) <= 1) {
+      await expireEffects(actor, [effect], { "expiry-reason": "midi-qol:optionalConsumed" });
+      return useActions();
+    } else if (Number.isNumeric(count.value)) {
       count.value = `${Number(count.value) - 1}`; // must be a string
     } else if (Number.isNumeric(countAlt?.value)) {
       countAlt!.value = `${Number(countAlt!.value) - 1}`; // must be a string
@@ -5829,13 +5833,7 @@ export async function removeEffectGranting(actor: Actor.Implementation, changeKe
   }
   if (!foundry.utils.isEmpty(actorUpdates)) await actor.update(actorUpdates);
 
-  if (count.value === "reaction" || countAlt?.value === "reaction") {
-    await setReactionUsed(actor);
-  }
-
-  if (count.value === "bonusAction" || countAlt?.value === "bonusAction") {
-    await setBonusActionUsed(actor);
-  }
+  await useActions();
 }
 
 export function hasEffectGranting(actor: Actor.Implementation, key: string, selector: string, owner?: any) {
@@ -5891,9 +5889,9 @@ export function reactionTriggerLabelFor(triggerType: string): string {
   return "reactionHit";
 }
 
-/** The optional AC bonus key a reaction phase offers: `ac` when attacked, `acOnHit` once the attack hits */
-const optionalACKey = (triggerType: string): "ac" | "acOnHit" | undefined =>
-  triggerType === "reactionattacked" ? "ac" : triggerType === "reaction" ? "acOnHit" : undefined;
+/** The optional AC bonus key a reaction phase offers */
+const optionalACKey = (triggerType: string): "acOnAttack" | "acOnHit" | undefined =>
+  triggerType === "reactionattacked" ? "acOnAttack" : triggerType === "reaction" ? "acOnHit" : undefined;
 
 export async function doReactions(targetRef: TokenOrDocument | string, triggerTokenUuid: string | undefined, triggeringRoll: Roll | null | undefined, triggerType: string, options: any = {}): Promise<{ name?: string, uuid?: string, ac?: number, itemName?: string }> {
   const target = getToken(targetRef);
@@ -6018,7 +6016,7 @@ export async function doReactions(targetRef: TokenOrDocument | string, triggerTo
       content: reactionFlavor,
       whisper: [player.id]
     };
-    const workflow: Workflow | undefined = options.workflow ?? Workflow.getWorkflow(options?.activity?.uuid);
+    const workflow: Workflow | undefined = options.workflow ?? Workflow.findWorkflow(options?.activity?.uuid);
 
     if (configSettings.showReactionChatMessage) {
       chatMessage = await ChatMessage.create(chatData) as ChatMessage.Implementation;

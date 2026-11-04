@@ -1,10 +1,11 @@
 ### 14.6.9
 
 **Chat cards**
-* Changed: a small set of midi data is stored on the chat card, and when a workflow is rebuilt from its card most of the workflow is worked out again from the card's rolls and activity. Cards are about 20% smaller for a single attack and 60% for a three-target save, written about half as often. A card can always rebuild its workflow, so after a reload its buttons carry on the same use (for its author), and *Save to Chat Card* is removed.
+* Changed: a small set of midi data is stored on the chat card, and when a workflow is rebuilt from its card most of the workflow is worked out again from the card's rolls and activity. Cards are about 20% smaller for a single attack and 60% for a three-target save, written about half as often. A card can always rebuild its workflow, so after a reload its buttons carry on the same use (for its author), and the config setting *Save to Chat Card* is removed.
 * Changed: *Chat Message Cache Time* is removed. *Chat card updates* (module settings) sets when a workflow's card is updated for everyone: *At milestones* (default: attack resolved, saves requested and resolved, rolls complete, before a reaction or prompt, when waiting or finished) or *At every step*.
 * Fixed: when an attack missed every target and the workflow completed (*Auto complete workflow*), the card kept its damage buttons; they now go as *Remove chat card buttons after roll* says. A workflow still waiting for a damage roll keeps them.
 * Fixed: re-rolling a utility formula on a completed card kept the old result on the card.
+* Fixed: re-rolling the attack of a completed use made a new card without the old card's flags (other modules' and midi's).
 * Fixed: a damage card's Apply button (after Reverse, or when damage is not auto-applied) gave the `dnd5e.preApplyDamage` / `dnd5e.applyDamage` hooks the damage as a negative amount, as if healing.
 
 **Features**
@@ -12,21 +13,28 @@
 * Fixed: an attack that missed every target with *Auto complete workflow* on skipped the effects stage, so *apply to self always* effects never applied. The effects stage now runs on a miss (damage and saves are still skipped), with its `preActiveEffects`/`postActiveEffects` hooks and macro passes.
 * Fixed: self effects of an item's other activity (the save of an attack-and-save item) were chosen the wrong way round: with targets hit only *apply to self always* effects applied, with none hit *apply to self* effects applied too.
 * Changed: `flags.midi-qol.carefulSpells` follows the 2024 Careful Spell: spells only, the first max(1, Charisma modifier) creatures targeted before the use (a warning names them when more were), and no damage where a save halves it. `carefulSpells` and `sculptSpells` are evaluated as conditions.
-* Added: `flags.midi-qol.optional.NAME.acOnHit`, an optional AC bonus offered when an attack hits (2024 features that trigger on a hit), the attack then tested against the new AC; `optional.NAME.ac` is still offered when attacked.
+* Added: `flags.midi-qol.optional.NAME.acOnHit`, an optional AC bonus offered when an attack hits (2024 features that trigger on a hit), the attack is tested against the new AC.
+* Changed: `flags.midi-qol.optional.NAME.ac` (offered when attacked, before the hit is known) is renamed `flags.midi-qol.optional.NAME.acOnAttack`; the old key still works, with a deprecation warning (requires DAE 14.6.7).
+* Fixed: an optional bonus whose numeric `count` or `countAlt` ran out ended without using the reaction or bonus action its other count named (`count: reaction` with `countAlt: 1`).
 * Removed: ddb-game-log support (the module has no Foundry 14 release); `MidiQOL.DDBGameLogWorkflow` is gone.
 
 **Macros**
-* Changed: a card's workflow state is in `system.midi.state` and one record per token in `system.midi.records`; `MidiQOL.cardSaveRoll(card, tokenUuid)` returns a token's save roll. The old `flags.midi-qol` keys still read the same but are deprecated (each warns once, naming its replacement) and go in 14.8.0. Read them from the card's workflow, `MidiQOL.Workflow.getWorkflow(card.uuid)` (rebuilt from the card for its author); token sets are Sets of Tokens, not uuids:
-  * `targets`, `hitTargetUuids`, `hitECTargetUuids` → `targets`, `hitTargets`, `hitTargetsEC`; `isHit`, `isHitEC` → `hitTargets.size > 0`, `hitTargetsEC.size > 0`
-  * `saveUuids`, `failedSaveUuids`, `superSaverUuids`, `semiSuperSaverUuids`, `criticalSaveUuids`, `fumbleSaveUuids`, `advantageSaveUuids` → `saves`, `failedSaves`, `superSavers`, `semiSuperSavers`, `criticalSaves`, `fumbleSaves`, `advantageSaves`
-  * `damageDetail`, `otherDamageDetail`, `bonusDamageDetail`, `otherDamageTotal`, `bonusDamageTotal` → the same names
-  * `otherDamageMatchUuids`, `ammunitionDamageMatchUuids` → `otherDamageMatches`, `ammunitionDamageMatches`
-  * `isCritical`, `isFumble`, `workflowOptions`, `currentAction`, `saveAttribution`, `templateUuids` → the same names; `templateUuid` → `templateUuids[0]`
+* Changed: a card's workflow state is in `system.midi.state` and one record per token in `system.midi.records`; `MidiQOL.cardSaveRoll(card, tokenUuid)` returns a token's save roll. The old `flags.midi-qol` keys still read the same but are deprecated (each warns once, naming its replacement) and go in 14.8.0. Read them from the card's workflow, `const workflow = MidiQOL.Workflow.getWorkflow(card.uuid)`: `card.flags.midi-qol.X` → `workflow.X`, except that the token lists are Sets of Tokens (`targets` rather than `{uuid, name}` objects, the others uuids) and those named `…Uuids` drop it:
+  * `hitTargetUuids`, `hitECTargetUuids` → `workflow.hitTargets`, `workflow.hitTargetsEC`
+  * `saveUuids`, `failedSaveUuids`, `superSaverUuids`, `semiSuperSaverUuids`, `criticalSaveUuids`, `fumbleSaveUuids`, `advantageSaveUuids` → `workflow.saves`, `workflow.failedSaves`, `workflow.superSavers`, `workflow.semiSuperSavers`, `workflow.criticalSaves`, `workflow.fumbleSaves`, `workflow.advantageSaves`
+  * `otherDamageMatchUuids`, `ammunitionDamageMatchUuids` → `workflow.otherDamageMatches`, `workflow.ammunitionDamageMatches`
+  * `templateUuid` → `workflow.templateUuids[0]`
+  * `isHit`, `isHitEC` → `workflow.isHit`, `workflow.isHitEC` (new)
 * Changed: `Workflow#unSuspend(context)` is deprecated; macros resuming a workflow call `workflow.resume(event)`, event `"attackRolled"`, `"damageRolled"`, `"noDamage"` or `"utilityRolled"`, after setting the roll (`setAttackRoll`, `setDamageRolls`, `setUtilityRolls`).
+* Changed: for a user other than the card's author, `MidiQOL.Workflow.getWorkflow(cardUuid)` returns a read-only copy rebuilt from the card (`workflow.readOnly`); a copy is never updated, so fetch it again after the card changes; `getWorkflow(cardUuid, false)` returns a live one, which runs and writes the card alongside the author's (use at your own risk, with a console warning).
+* Removed: `workflow.flagTags` (never set by midi or any known module).
 * Added: hook `midi-qol.premades.checkHitTarget(hitCheck)`, called for each target in the hit check after cover, AC bonuses, reactions, auto success/failure and criticals, before the result is recorded or shown. `hitCheck` holds `workflow, target, attackTotal, targetAC, isHit, isHitEC, isCritical, isFumble`: a changed `targetAC` (or critical) is tested again unless an auto success or failure decided the hit; a changed `isHit`/`isHitEC` is kept as set.
 
 **Sample items**
 * Added: *Infernal Glaive* (2024 Bearded Devil) and *Infernal Tail* (2024 Horned Devil), automated with CAT. A failed save gives an infernal wound (one at a time) that loses hit points at the start of each turn. It closes after 1 minute, when a spell restores hit points, or on a Medicine check by the wounded creature or one within 5 ft targeting it (a Medicine roll, or *Stabilize*). The save, hit point loss, duration and Medicine DC are Cat Kit configuration options.
+* Changed: *Parry* (the seven 2024 creatures) is offered when a melee attack hits (`optional.parry.acOnHit`), not when attacked.
+* Changed: *Bardic Inspiration (Valour)* follows the 2024 rules: the die is offered when the creature fails a D20 Test, for the damage of an attack that hits, and, using its reaction, as AC when an attack hits it; it lasts an hour and is used up when rolled.
+* Fixed: *Bardic Inspiration* gave its saving throw bonus under a misspelt name, without a label.
 * Added: rules text for sample items outside the SRD (Toll the Dead, Metamagic Adept, Arcane Ward, …), which ship without a description.
   * When such an item is added to an actor, midi copies the description from your official D&D modules (Player's Handbook, Tasha's, …), then the dnd5e SRD, then a compendium you choose (*Rules text compendium*).
   * It matches the item by type and identifier, falling back to its name; the item's notes say where the text came from.

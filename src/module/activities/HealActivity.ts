@@ -44,7 +44,7 @@ let defineMidiHealActivityClass = <T extends Activity>(ActivityClass: T) => {
       }, { inplace: false, insertKeys: true, insertValues: true })
 
     static #rollHealing(this: Activity, event: PointerEvent, target: HTMLElement, message: ChatMessage.Implementation) {
-      const workflow = Workflow.getWorkflow(message?.uuid);
+      const workflow = Workflow.findWorkflow(message?.uuid);
       if (workflow) workflow.activity = this;
       return this.rollDamage({event, workflow}, {}, {});
     }

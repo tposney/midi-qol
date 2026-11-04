@@ -2351,8 +2351,8 @@
       "name": "",
       "description": ""
     },
-    "flags.midi-qol.optional.NAME.ac": {
-      "name": "Optional AC",
+    "flags.midi-qol.optional.NAME.acOnAttack": {
+      "name": "Optional AC On Attack",
       "description": "AC bonus offered when the creature is attacked, before the hit is known."
     },
     "flags.midi-qol.optional.NAME.acOnHit": {
