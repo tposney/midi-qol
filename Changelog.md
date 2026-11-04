@@ -16,13 +16,18 @@
 * Removed: ddb-game-log support (the module has no Foundry 14 release); `MidiQOL.DDBGameLogWorkflow` is gone.
 
 **Macros**
-* Changed: a card's workflow state is in `system.midi.state` and one record per token in `system.midi.records`; `MidiQOL.cardSaveRoll(card, tokenUuid)` returns a token's save roll. The old `flags.midi-qol` keys (`hitTargetUuids`, `saveUuids`, `targets`, `damageDetail`, `isHit`, …) still read the same but are deprecated, warning once when read; they go in 14.8.0.
+* Changed: a card's workflow state is in `system.midi.state` and one record per token in `system.midi.records`; `MidiQOL.cardSaveRoll(card, tokenUuid)` returns a token's save roll. The old `flags.midi-qol` keys still read the same but are deprecated (each warns once, naming its replacement) and go in 14.8.0. Read them from the card's workflow, `MidiQOL.Workflow.getWorkflow(card.uuid)` (rebuilt from the card for its author); token sets are Sets of Tokens, not uuids:
+  * `targets`, `hitTargetUuids`, `hitECTargetUuids` → `targets`, `hitTargets`, `hitTargetsEC`; `isHit`, `isHitEC` → `hitTargets.size > 0`, `hitTargetsEC.size > 0`
+  * `saveUuids`, `failedSaveUuids`, `superSaverUuids`, `semiSuperSaverUuids`, `criticalSaveUuids`, `fumbleSaveUuids`, `advantageSaveUuids` → `saves`, `failedSaves`, `superSavers`, `semiSuperSavers`, `criticalSaves`, `fumbleSaves`, `advantageSaves`
+  * `damageDetail`, `otherDamageDetail`, `bonusDamageDetail`, `otherDamageTotal`, `bonusDamageTotal` → the same names
+  * `otherDamageMatchUuids`, `ammunitionDamageMatchUuids` → `otherDamageMatches`, `ammunitionDamageMatches`
+  * `isCritical`, `isFumble`, `workflowOptions`, `currentAction`, `saveAttribution`, `templateUuids` → the same names; `templateUuid` → `templateUuids[0]`
 * Changed: `Workflow#unSuspend(context)` is deprecated; macros resuming a workflow call `workflow.resume(event)`, event `"attackRolled"`, `"damageRolled"`, `"noDamage"` or `"utilityRolled"`, after setting the roll (`setAttackRoll`, `setDamageRolls`, `setUtilityRolls`).
 * Added: hook `midi-qol.premades.checkHitTarget(hitCheck)`, called for each target in the hit check after cover, AC bonuses, reactions, auto success/failure and criticals, before the result is recorded or shown. `hitCheck` holds `workflow, target, attackTotal, targetAC, isHit, isHitEC, isCritical, isFumble`: a changed `targetAC` (or critical) is tested again unless an auto success or failure decided the hit; a changed `isHit`/`isHitEC` is kept as set.
 
 **Sample items**
 * Added: *Infernal Glaive* (2024 Bearded Devil) and *Infernal Tail* (2024 Horned Devil), automated with CAT. A failed save gives an infernal wound (one at a time) that loses hit points at the start of each turn. It closes after 1 minute, when a spell restores hit points, or on a Medicine check by the wounded creature or one within 5 ft targeting it (a Medicine roll, or *Stabilize*). The save, hit point loss, duration and Medicine DC are Cat Kit configuration options.
-* Added: rules text for sample items of content outside the SRD (Toll the Dead, Metamagic Adept, Arcane Ward, …), which ship without a description.
+* Added: rules text for sample items outside the SRD (Toll the Dead, Metamagic Adept, Arcane Ward, …), which ship without a description.
   * When such an item is added to an actor, midi copies the description from your official D&D modules (Player's Handbook, Tasha's, …), then the dnd5e SRD, then a compendium you choose (*Rules text compendium*).
   * It matches the item by type and identifier, falling back to its name; the item's notes say where the text came from.
   * *Fill in missing rules text* (Misc tab, on by default) turns it on or off. For items added earlier, use the item sheet's *Fill in rules text* button, or the TroubleShooter's Auto Fix for every item in the world. Macros: `MidiQOL.fillRulesText(item)`.

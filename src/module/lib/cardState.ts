@@ -95,6 +95,18 @@ export const LEGACY_CARD_FLAG_KEYS = [...Object.values(STATE_FIELDS).filter(key 
   "damageDetail", "otherDamageDetail", "bonusDamageDetail", "otherDamageMatchUuids", "ammunitionDamageMatchUuids",
   "isHit", "isHitEC", "otherDamageTotal", "bonusDamageTotal"];
 
+/** What a deprecated card flag is on the card's workflow (`MidiQOL.Workflow.getWorkflow(card.uuid)`): token sets are Sets of Tokens */
+export const LEGACY_WORKFLOW_NAMES: Record<string, string> = {
+  targets: "targets", hitTargetUuids: "hitTargets", hitECTargetUuids: "hitTargetsEC", saveUuids: "saves",
+  superSaverUuids: "superSavers", semiSuperSaverUuids: "semiSuperSavers", failedSaveUuids: "failedSaves",
+  fumbleSaveUuids: "fumbleSaves", criticalSaveUuids: "criticalSaves", advantageSaveUuids: "advantageSaves",
+  isCritical: "isCritical", isFumble: "isFumble", templateUuids: "templateUuids", templateUuid: "templateUuids[0]",
+  workflowOptions: "workflowOptions", currentAction: "currentAction", saveAttribution: "saveAttribution",
+  damageDetail: "damageDetail", otherDamageDetail: "otherDamageDetail", bonusDamageDetail: "bonusDamageDetail",
+  otherDamageMatchUuids: "otherDamageMatches", ammunitionDamageMatchUuids: "ammunitionDamageMatches",
+  isHit: "hitTargets.size > 0", isHitEC: "hitTargetsEC.size > 0", otherDamageTotal: "otherDamageTotal", bonusDamageTotal: "bonusDamageTotal"
+};
+
 /** The damage tray's matches: token uuids the other activity's (or the ammunition's) damage applies to; undefined until worked out */
 export function cardDamageMatches(midi: { state?: Record<string, any>, records?: Record<string, CardRecord> } | undefined,
   kind: "otherDamage" | "ammunitionDamage"): string[] | undefined {
@@ -120,7 +132,7 @@ export function defineLegacyCardFlags(flags: Record<string, unknown>, midi: Para
     Object.defineProperty(flags, key, {
       configurable: true, enumerable: false,
       get() {
-        foundry.utils.logCompatibilityWarning(`midi-qol | a usage card's flags.midi-qol.${key} is deprecated: read its system.midi.state and system.midi.records instead (MidiQOL.cardSaveRoll for a save roll).`,
+        foundry.utils.logCompatibilityWarning(`midi-qol | a usage card's flags.midi-qol.${key} is deprecated: use MidiQOL.Workflow.getWorkflow(card.uuid).${LEGACY_WORKFLOW_NAMES[key] ?? key} (the card's author), or read the card's system.midi.state and system.midi.records (MidiQOL.cardSaveRoll for a save roll).`,
           { since: "14.6.9", until: "14.8.0", once: true });
         return key in derived ? derived[key]() : (legacy ??= legacyCardFlags(midi))[key];
       }
