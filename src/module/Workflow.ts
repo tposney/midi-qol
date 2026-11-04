@@ -298,7 +298,11 @@ class CardStateStore {
   setTokenSet(field: RecordSet, tokens: Set<TokenOrDocument> | undefined, store = true): void {
     if (tokens === undefined) this.#cache.delete(field);
     else this.#cache.set(field, new Set(Array.from(tokens).map(t => t instanceof TokenDocument ? t.object : t).filter(t => !!t)));
-    if (!store) return;
+    if (!store) {
+      this.#unstoredSets.add(field);
+      return;
+    }
+    this.#unstoredSets.delete(field);
     const members = new Set(Array.from(tokens ?? []).map(t => getTokenDocument(t)).filter((t): t is TokenDocument.Implementation => !!t));
     // Compared with what was last written, not the cached set: callers change that in place before assigning it
     const written = `written.${field}`;
@@ -316,6 +320,23 @@ class CardStateStore {
     }
     this.#cache.set(written, new Set([...members].map(document => document.uuid)));
     this.#write(leaves);
+  }
+
+  // Sets last assigned as not stored (failed saves of a use with no save)
+  #unstoredSets = new Set<RecordSet>();
+
+  /**
+   * The sets as they are now, written where they differ from what was last written: macros change them in place
+   * (`workflow.saves.add(token)`), which no setter sees. Before each card write (Workflow#flushCardWrites).
+   */
+  syncTokenSets(): void {
+    for (const field of Object.keys(RECORD_SETS) as RecordSet[]) {
+      if (this.#unstoredSets.has(field)) continue;
+      const current = this.#cache.get(field) as Set<Token.Implementation> | undefined;
+      const now = new Set([...(current ?? [])].map(token => token.document?.uuid).filter((uuid): uuid is string => !!uuid));
+      const written = (this.#cache.get(`written.${field}`) as Set<string> | undefined) ?? new Set<string>();
+      if (now.size !== written.size || [...now].some(uuid => !written.has(uuid))) this.setTokenSet(field, current);
+    }
   }
 
   /** The recorded workflow class: a card with none is never rebuilt */
@@ -577,6 +598,7 @@ export class Workflow {
   async flushCardWrites(displayOnly = false): Promise<void> {
     if (displayOnly && !this.#displayQueued) return;
     this.#displayQueued = false;
+    this.#persisted.syncTokenSets();
     const card = this.itemCardUuid ? fromUuidSync(this.itemCardUuid) as ChatMessage.Implementation | null : null;
     if (card && !foundry.utils.isEmpty(getUpdatesCache(card.uuid))) await throttledUpdate(card, {});
   }
