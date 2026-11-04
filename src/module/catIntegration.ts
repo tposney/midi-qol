@@ -1,6 +1,7 @@
 import { MODULE_ID } from "../midi-qol.js";
 import { addNotes } from "./catMacros/automationNotes.mjs";
 import { registerCATMacros } from "./catMacros/macros.mjs";
+import { infernalWoundConfig } from "./catMacros/features/infernalWound.mjs";
 
 /** The last CAT whose medkit can update an item that an earlier update in the same run deleted. */
 const CAT_MEDKIT_FIX_MAX = "0.1.3";
@@ -65,11 +66,15 @@ function setupCATCastActivityFix() {
  * Monster features (`flags.cat.automation.npc`, or a `monsterIdentifier`: that creature's copy) are for NPCs only: their
  * source type never matches a player's class feature.
  */
+// Automations with configuration options (the Cat Kit's Configuration), by item identifier
+const AUTOMATION_CONFIG: Record<string, object> = { ...infernalWoundConfig };
+
 function automationInfo(entry): object {
   const automation = entry.flags?.cat?.automation;
   if (!automation?.version) return { type: "midi-qol-sample" };
   // The item's notes block as plain text (compilePacks), shown in the medkit.
-  const notes = automation.notes ? { notes: automation.notes } : {};
+  const config = AUTOMATION_CONFIG[entry.system?.identifier];
+  const notes = { ...(automation.notes ? { notes: automation.notes } : {}), ...(config ? { config } : {}) };
   if (automation.monsterIdentifier) return { ...notes, monsterIdentifier: automation.monsterIdentifier, sourceType: "midi-qol:npc" };
   return automation.npc ? { ...notes, sourceType: "midi-qol:npc" } : notes;
 }

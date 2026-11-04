@@ -1,0 +1,346 @@
+{
+  "_id": "mqsInfernalTail0",
+  "name": "Infernal Tail",
+  "type": "feat",
+  "system": {
+    "type": {
+      "value": "monster",
+      "subtype": ""
+    },
+    "activities": {
+      "tJYeyUk3iPYJq9xM": {
+        "type": "save",
+        "_id": "tJYeyUk3iPYJq9xM",
+        "sort": 0,
+        "activation": {
+          "type": "action",
+          "value": null,
+          "override": false,
+          "condition": ""
+        },
+        "consumption": {
+          "scaling": {
+            "allowed": false
+          },
+          "spellSlot": true,
+          "targets": []
+        },
+        "description": {
+          "chatFlavor": ""
+        },
+        "duration": {
+          "units": "minute",
+          "concentration": false,
+          "override": false,
+          "value": "1"
+        },
+        "effects": [
+          {
+            "_id": "mqsInfernalWndTl",
+            "onSave": false
+          }
+        ],
+        "range": {
+          "override": false,
+          "units": "ft",
+          "special": "",
+          "value": "10"
+        },
+        "target": {
+          "template": {
+            "contiguous": false,
+            "units": "ft",
+            "type": ""
+          },
+          "affects": {
+            "choice": false,
+            "type": "creature",
+            "count": "1",
+            "special": ""
+          },
+          "override": false,
+          "prompt": true
+        },
+        "uses": {
+          "spent": 0,
+          "recovery": [],
+          "max": ""
+        },
+        "damage": {
+          "parts": [
+            {
+              "custom": {
+                "enabled": false,
+                "formula": ""
+              },
+              "number": 1,
+              "denomination": "8",
+              "bonus": "@mod",
+              "types": [
+                "necrotic"
+              ]
+            }
+          ],
+          "onSave": "none"
+        },
+        "save": {
+          "ability": [
+            "dex"
+          ],
+          "dc": {
+            "calculation": "str",
+            "formula": "8 + @mod + @prof"
+          }
+        },
+        "name": "Save",
+        "img": "",
+        "appliedEffects": []
+      },
+      "zZfCQ0IeJZCjPLzE": {
+        "type": "damage",
+        "_id": "zZfCQ0IeJZCjPLzE",
+        "sort": 0,
+        "activation": {
+          "type": "",
+          "value": null,
+          "override": false,
+          "condition": ""
+        },
+        "consumption": {
+          "scaling": {
+            "allowed": false
+          },
+          "spellSlot": true,
+          "targets": []
+        },
+        "description": {
+          "chatFlavor": ""
+        },
+        "duration": {
+          "units": "inst",
+          "concentration": false,
+          "override": false
+        },
+        "effects": [],
+        "range": {
+          "override": false,
+          "units": "self",
+          "special": ""
+        },
+        "target": {
+          "template": {
+            "contiguous": false,
+            "units": "ft",
+            "type": ""
+          },
+          "affects": {
+            "choice": false,
+            "type": ""
+          },
+          "override": false,
+          "prompt": true
+        },
+        "uses": {
+          "spent": 0,
+          "recovery": [],
+          "max": ""
+        },
+        "damage": {
+          "critical": {
+            "allow": false
+          },
+          "parts": [
+            {
+              "custom": {
+                "enabled": false,
+                "formula": ""
+              },
+              "number": 3,
+              "denomination": 6,
+              "bonus": "",
+              "types": [],
+              "scaling": {
+                "number": 1
+              }
+            }
+          ]
+        },
+        "name": "Target: HP Loss",
+        "img": "",
+        "appliedEffects": [],
+        "midiProperties": {
+          "automationOnly": true,
+          "otherActivityCompatible": false
+        }
+      },
+      "Y1gjsHGtpvAX7J6J": {
+        "type": "check",
+        "_id": "Y1gjsHGtpvAX7J6J",
+        "sort": 0,
+        "activation": {
+          "type": "",
+          "value": null,
+          "override": false,
+          "condition": ""
+        },
+        "consumption": {
+          "scaling": {
+            "allowed": false
+          },
+          "spellSlot": true,
+          "targets": []
+        },
+        "description": {
+          "chatFlavor": ""
+        },
+        "duration": {
+          "units": "inst",
+          "concentration": false,
+          "override": false
+        },
+        "effects": [],
+        "range": {
+          "override": false,
+          "units": "self",
+          "special": ""
+        },
+        "target": {
+          "template": {
+            "contiguous": false,
+            "units": "ft",
+            "type": ""
+          },
+          "affects": {
+            "choice": false,
+            "type": ""
+          },
+          "override": false,
+          "prompt": true
+        },
+        "uses": {
+          "spent": 0,
+          "recovery": [],
+          "max": ""
+        },
+        "check": {
+          "associated": [
+            "med"
+          ],
+          "dc": {
+            "calculation": "",
+            "formula": "8 + @mod + @prof"
+          },
+          "ability": ""
+        },
+        "name": "Stanch Wound Check",
+        "img": "",
+        "appliedEffects": [],
+        "midiProperties": {
+          "automationOnly": true,
+          "otherActivityCompatible": false
+        }
+      }
+    },
+    "uses": {
+      "spent": 0,
+      "recovery": [],
+      "max": ""
+    },
+    "description": {
+      "value": "<p class=\"feature\"><em>Dexterity Saving Throw:</em> DC [[lookup @save.dc.value activity=tJYeyUk3iPYJq9xM]], one [[lookup @target.affects.type activity=tJYeyUk3iPYJq9xM]] the [[lookup @name lowercase]] can see within [[lookup @range.value activity=tJYeyUk3iPYJq9xM]] [[lookup @range.units activity=tJYeyUk3iPYJq9xM]].</p><p class=\"feature\"><em>Failure:</em> [[/damage average activity=tJYeyUk3iPYJq9xM]] damage, and the target receives an infernal wound if it doesn't have one. While wounded, the target loses [[/damage average activity=zZfCQ0IeJZCjPLzE]] Hit Points at the start of each of its turns. The wound closes after [[lookup @duration.value activity=tJYeyUk3iPYJq9xM]] [[lookup @duration.units activity=tJYeyUk3iPYJq9xM]], after a spell restores Hit Points to the target, or after the target or a creature within 5 feet of it takes an action to stanch the wound, doing so by succeeding on a [[/check dc=17 ability=wis skill=med format=long]].</p><div class=\"cat-description\"><p><em>midi-qol: A creature that fails the save takes the damage and, if it has no infernal wound, is wounded: it loses 3d6 hit points at the start of each of its turns. The wound closes after 1 minute, when a spell restores hit points to it, or when it or a creature within 5 feet succeeds on a Medicine check against DC 17 (a Medicine roll with the creature targeted, or the Stabilize action). The hit point loss, duration and Medicine DC are Cat Kit configuration options; the save is the activity's own.</em></p><p><em>Automation requires Coven's Automation Toolkit (CAT).</em></p></div>",
+      "chat": ""
+    },
+    "identifier": "infernal-tail",
+    "source": {
+      "custom": "midi-qol sample",
+      "rules": "2024",
+      "book": "SRD 5.2",
+      "license": "CC-BY-4.0"
+    },
+    "enchant": {},
+    "prerequisites": {
+      "level": null
+    },
+    "properties": [],
+    "requirements": ""
+  },
+  "folder": "MonsterFeatFldr0",
+  "img": "icons/creatures/abilities/tail-strike-bone-orange.webp",
+  "effects": [
+    {
+      "_id": "mqsInfernalWndTl",
+      "name": "Infernal Wound",
+      "img": "icons/skills/wounds/blood-spurt-spray-red.webp",
+      "type": "base",
+      "system": {
+        "changes": []
+      },
+      "disabled": false,
+      "transfer": false,
+      "statuses": [],
+      "sort": 0,
+      "tint": "#ffffff",
+      "description": "<p>Loses hit points at the start of each of its turns. The wound closes after its duration, when a spell restores hit points to the creature, or when it or a creature within 5 feet succeeds on a Wisdom (Medicine) check (an action) against the wound's DC.</p>",
+      "duration": {
+        "value": 10,
+        "units": "rounds"
+      },
+      "flags": {
+        "midi-qol": {
+          "infernalWound": {
+            "wound": true
+          }
+        },
+        "cat": {
+          "macros": {
+            "effect": [
+              {
+                "source": "midi-qol",
+                "rules": "2024",
+                "identifier": "infernal-wound"
+              }
+            ],
+            "combat": [
+              {
+                "source": "midi-qol",
+                "rules": "2024",
+                "identifier": "infernal-wound"
+              }
+            ]
+          }
+        }
+      },
+      "_key": "!items.effects!mqsInfernalTail0.mqsInfernalWndTl"
+    }
+  ],
+  "flags": {
+    "dnd5e": {
+      "riders": {
+        "activity": [],
+        "effect": []
+      }
+    },
+    "cat": {
+      "automation": {
+        "version": "14.6.8",
+        "npc": true
+      }
+    }
+  },
+  "_stats": {
+    "compendiumSource": null,
+    "duplicateSource": null,
+    "coreVersion": null,
+    "systemId": null,
+    "systemVersion": null,
+    "createdTime": null,
+    "modifiedTime": null,
+    "lastModifiedBy": null,
+    "exportSource": null
+  },
+  "sort": 0,
+  "ownership": {
+    "default": 0
+  },
+  "_key": "!items!mqsInfernalTail0"
+}
