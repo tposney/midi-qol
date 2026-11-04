@@ -5,7 +5,7 @@ import { CardRecord, RECORD_SETS, RecordSet, SaveFacts, STATE_FIELDS, StateKey, 
 import { preferredActiveGM, socketlibSocket, timedAwaitExecuteAsGM, timedExecuteAsGM, unTimedExecuteAsGM } from "./GMAction.js";
 import { installedModules } from "./setupModules.js";
 import { offerFollowUps } from "./followUps.js";
-import { configSettings, autoRemoveTargets, checkRule, checkMechanic, safeGetGameSetting, useWeakReferences, onUseMacroOptions } from "./settings.js";
+import { configSettings, autoRemoveTargets, checkRule, checkMechanic, safeGetGameSetting, useWeakReferences, onUseMacroOptions, chatCardUpdates } from "./settings.js";
 import { challengeVisibleToPlayers, saveDisplayMode } from "./lib/saveVisibility.js";
 import {
   createDamageDetail,
@@ -57,6 +57,7 @@ import {
   midiRenderFormulaRoll,
   throttledUpdate,
   getCachedDocument,
+  getUpdatesCache,
   clearUpdatesCache,
   getDamageType,
   getTokenName,
@@ -91,7 +92,7 @@ import {
   getOptionalCountRemainingShortFlag,
   bonusDialog,
   getTargetDescriptor,
-  getThrottlingFunction,
+  queueUpdate,
   addAttribution,
   renderAttributionTooltip,
   getAdvantageModeTitle,
@@ -213,6 +214,10 @@ export type WorkflowOutcome = "ok" | "allMissed" | "invalid" | "split" | "manual
  * The workflow's stored fields: kept in memory, written to its card (lib/cardState.ts) through the card's update cache.
  * The card is read only when the workflow is rebuilt from it (load). Writing undefined forgets the value.
  */
+// The states whose end is a chat card milestone (Workflow#performState). Cleanup's end is the use's completion
+// (postCleanup, which completeActivityUse waits for): callers then read a written card.
+const MILESTONE_STATES = new Set(["WorkflowState_AttackRollComplete", "WorkflowState_WaitForSaves", "WorkflowState_AllRollsComplete", "WorkflowState_Cleanup"]);
+
 const RECORD_VALUES = ["otherDamage", "ammunitionDamage", "preSelected"] as const;
 
 class CardStateStore {
@@ -552,8 +557,28 @@ export class Workflow {
     }
   }
 
+  // While a state runs its card changes are queued, and written at milestones: the attack resolved, saves requested and
+  // resolved, the rolls complete, a reaction about to be offered, the use complete, and whenever the workflow waits or
+  // its run ends
+  // (Chat card updates "At every step": after each step that changed what the card shows). `workflow.chatCard`
+  // includes queued changes, so macros and hooks see them.
+  #queueingWrites = 0;
+  #displayQueued = false;
+
   async performThrottledUpdate(chatCard: ChatMessage.Implementation, updates: ChatMessage.UpdateData, immediate = false) {
-    return await throttledUpdate(chatCard, updates, this.throttleChatMessageUpdates, immediate);
+    if (this.#queueingWrites && !immediate && chatCard?.uuid === this.itemCardUuid) {
+      this.#displayQueued = true;
+      return queueUpdate(chatCard, updates);
+    }
+    return await throttledUpdate(chatCard, updates);
+  }
+
+  /** Write the card's queued changes: `displayOnly` when a state ends (only if it changed what the card shows) */
+  async flushCardWrites(displayOnly = false): Promise<void> {
+    if (displayOnly && !this.#displayQueued) return;
+    this.#displayQueued = false;
+    const card = this.itemCardUuid ? fromUuidSync(this.itemCardUuid) as ChatMessage.Implementation | null : null;
+    if (card && !foundry.utils.isEmpty(getUpdatesCache(card.uuid))) await throttledUpdate(card, {});
   }
 
 
@@ -1534,7 +1559,6 @@ export class Workflow {
     castLevel?: number;
   } | undefined;
 
-  throttleChatMessageUpdates: undefined | ((document: foundry.abstract.Document.Any, updates: ChatMessage.UpdateData) => Promise<void>);
   // TODO: type options
   constructor(
     actor: Actor.Implementation | null /* Actor5e*/,
@@ -1622,7 +1646,6 @@ export class Workflow {
       this.expectedTemplateCount = 0;
     }
     this.kickStart = false;
-    this.throttleChatMessageUpdates = getThrottlingFunction();
     if (!restoring) {
       this.#mergeWorkflowOptions(options.workflowOptions ?? {});
       if (this.workflowOptions.templateUuid) this.templateUuid = this.workflowOptions.templateUuid;
@@ -1736,9 +1759,8 @@ export class Workflow {
     const chatMessage = getCachedDocument(itemCardUuid) as ChatMessage.Implementation;
     const workflow = Workflow.getWorkflow(itemCardUuid);
     if (!chatMessage) return;
-    return await throttledUpdate(chatMessage,
-      { "system.midi.progress": { confirmed: true } } as ChatMessage.UpdateData,
-      workflow?.throttleChatMessageUpdates, false);
+    const update = { "system.midi.progress": { confirmed: true } } as ChatMessage.UpdateData;
+    return workflow ? await workflow.performThrottledUpdate(chatMessage, update) : await throttledUpdate(chatMessage, update);
   }
 
   static async removeItemCardButtons(itemCardUuid: string | undefined, { removeAllButtons = false, removeAttackButtons = true, removeDamageButtons = false, removeDnD5eButtons = false, removeConfirmButtons = false, removeAllDnd5eButtons = false, removeDnd5eSaveButtons = false, removeDnd5eTemplateButtons = false, finished = false } = {}) {
@@ -1765,9 +1787,8 @@ export class Workflow {
         if (removeDnd5eTemplateButtons) progress.templatesPlaced = true;
         if (finished) progress.finished = true;
         if (foundry.utils.isEmpty(progress)) return;
-        return await throttledUpdate(chatMessage,
-          { "system.midi.progress": progress } as ChatMessage.UpdateData,
-          workflow?.throttleChatMessageUpdates, false);
+        const update = { "system.midi.progress": progress } as ChatMessage.UpdateData;
+        return workflow ? await workflow.performThrottledUpdate(chatMessage, update) : await throttledUpdate(chatMessage, update);
 
     } catch (err) {
       const message = `removeItemCardButtons`;
@@ -2099,11 +2120,18 @@ export class Workflow {
           }
           this.currentAction = newState;
         }
-        let nextState = await this.currentAction.bind(this)();
+        let nextState: WorkflowState;
+        this.#queueingWrites += 1;
+        try {
+          nextState = await this.currentAction.bind(this)();
+        } finally {
+          this.#queueingWrites -= 1;
+        }
+        if (nextState === this.WorkflowState_Suspend || MILESTONE_STATES.has(this.currentAction?.name ?? "")) await this.flushCardWrites();
+        else if (chatCardUpdates === "everyStep") await this.flushCardWrites(true);
 
         if (nextState === this.WorkflowState_Suspend) {
           this.suspended = true;
-          this.performThrottledUpdate(this.chatCard, {}, false);
           // this.currentAction = this.WorkflowState_Suspend;
           if (debugEnabled > 0) warn(`${this.workflowName} ${this.nameForState(this.currentAction)} -> suspended Workflow ${this.id}`);
           // await this.performDebouncedUpdate(this.chatCard, { ["flags.midi-qol." + WorkflowDataFlags.suspended]: true });
@@ -2122,6 +2150,8 @@ export class Workflow {
       error(message, err);
       TroubleShooter.recordError(err, message);
     } finally {
+      // The run ended (finished, aborted, or an error): nothing stays queued
+      if (this.executingStates === 1) await this.flushCardWrites();
       this.executingStates -= 1;
     }
   }
@@ -2646,6 +2676,7 @@ export class Workflow {
     }) as ActivityUseConfiguration;
 
     if (shouldShowDialog) {
+      await this.flushCardWrites(); // a person decides next
       try {
         // @ts-expect-error no dnd5e-types
         const DialogClass = this.otherActivity.metadata?.usage?.dialog ?? game.dnd5e.applications.activity.ActivityUsageDialog;
@@ -6739,6 +6770,7 @@ export class Workflow {
    */
 
   async checkSaves(whisper = false, simulate = false) {
+    if (!simulate) await this.flushCardWrites();
     this.initSaveResults();
     this.targetSaveDetails = {};
     if (debugEnabled > 1) debug(`checkSaves: whisper ${whisper}  hit targets ${this.hitTargets}`)
@@ -7430,6 +7462,7 @@ export class Workflow {
     if (bonusFlags.length > 0) {
       const displayBonusRolls: boolean | undefined = bonusFlags.reduce((acc: boolean | undefined, flag) => (acc || (foundry.utils.getProperty(flagOwners[flag] ?? this.actor ?? {}, `${flag}.displayBonusRolls`) as boolean)), undefined)
         ?? checkMechanic("displayBonusRolls") as boolean;
+      await this.flushCardWrites(); // a person decides next
       const newRoll = await bonusDialog.bind(this)(bonusFlags, attackBonus, displayBonusRolls, `${this.actor.name} - ${i18n("DND5E.Attack")} ${i18n("DND5E.Roll")}`, this.attackRoll!, "attackRoll", { flagOwners })
       if (newRoll) this.setAttackRoll(newRoll);
     }
@@ -7460,6 +7493,7 @@ export class Workflow {
         if (bonusFlags.length > 0) {
           const displayBonusRolls: boolean | undefined = bonusFlags.reduce((acc: boolean | undefined, flag: string) => (acc || (foundry.utils.getProperty(flagOwners[flag] ?? this.actor ?? {}, `${flag}.displayBonusRolls`) as boolean)), undefined)
             ?? checkMechanic("displayBonusRolls") as boolean;
+          await this.flushCardWrites(); // a person decides next
           const newRoll = await bonusDialog.bind(this)(bonusFlags, attackBonus, displayBonusRolls, `${this.actor.name} - ${i18n("DND5E.Attack")} ${i18n("DND5E.Roll")}`, this.attackRoll, "attackRoll", { flagOwners });
           if (newRoll) this.setAttackRoll(newRoll);
         }
@@ -7490,6 +7524,7 @@ export class Workflow {
       // TODO dnd3 work out what this means for multiple rolls
       const displayBonusRolls: boolean | undefined = bonusFlags.reduce((acc: boolean | undefined, flag: string) => (acc || (foundry.utils.getProperty(flagOwners[flag] ?? this.actor ?? {}, `${flag}.displayBonusRolls`) as boolean)), undefined)
         ?? checkMechanic("displayBonusRolls") as boolean;
+      await this.flushCardWrites(); // a person decides next
       let newRoll = await bonusDialog.bind(this)(bonusFlags, damageBonus, displayBonusRolls === true, `${this.actor.name} - ${i18n("DND5E.Damage")} ${i18n("DND5E.Roll")}`, damageRolls[0], "damageRoll", { hideDSN, damageRolls, flagOwners })
       if (newRoll) damageRolls[0] = newRoll;
     }
@@ -8123,6 +8158,7 @@ export class Workflow {
         warn(`chooseEffect | no effects found for ${this.item.name}`);
       return [];
     }
+    await this.flushCardWrites(); // a person decides next
     const { DialogV2 } = foundry.applications.api;
     const buttons = effects.map(effect => ({
       action: effect.uuid,

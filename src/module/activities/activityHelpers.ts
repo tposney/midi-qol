@@ -267,6 +267,7 @@ export async function postTemplateConfirmTargets(activity: Activity, options: Mi
   // (i.e. it has a template or scaled target count). Otherwise preTemplateTargets
   // already handled confirmation and we just need to sync targets.
   if (activityRequiresPostTemplateConfirmation(activity) && requiresTargetConfirmation(activity, options)) {
+    await workflow.flushCardWrites(); // a person decides next
     const result = await resolveTargetConfirmation(activity, options);
     if (result && game.user?.targets) {
       await updateTargets();

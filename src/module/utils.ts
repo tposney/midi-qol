@@ -1,7 +1,7 @@
 import type { AttackModifier } from "./Workflow.js";
 import { rollBonusLabel } from "./activities/AttackActivity.js";
 import { debug, i18n, error, warn, busyWait, allAttackTypes, debugEnabled, overTimeEffectsToDelete, getStaticID, savedOverTimeEffectsToDelete, GameSystemConfig, systemConcentrationId, MQItemMacroLabel, MODULE_ID, midiReactionEffect, midiBonusActionEffect, MQActivityMacroLabel, ceInterface, i18nFormat } from "../midi-qol.js";
-import { configSettings, autoRemoveTargets, checkRule, criticalDamage, criticalDamageGM, checkMechanic, safeGetGameSetting, debounceInterval, autoRollDamageOptions, showReactionAttackRollOptions, shouldDisplaySaveDC, DOWNGRADE_IMMUNITY_KEY, ALL_DAMAGE_KEY } from "./settings.js";
+import { configSettings, autoRemoveTargets, checkRule, criticalDamage, criticalDamageGM, checkMechanic, safeGetGameSetting, autoRollDamageOptions, showReactionAttackRollOptions, shouldDisplaySaveDC, DOWNGRADE_IMMUNITY_KEY, ALL_DAMAGE_KEY } from "./settings.js";
 import { log } from "../midi-qol.js";
 import { AttributionEntry, AttributionMap, AttributionType, AugmentedEvent, DummyWorkflow, Workflow, WorkflowOptions, WorkflowRollOptions } from "./Workflow.js";
 import { preferredActiveGM, prepareDamageListToJSON, socketlibSocket, timedAwaitExecuteAsGM, unTimedExecuteAsGM } from "./GMAction.js";
@@ -6004,6 +6004,8 @@ export async function doReactions(targetRef: TokenOrDocument | string, triggerTo
     }
 
     if (reactionCount <= 0) return noResult;
+    // The reacting player sees the card as it is now
+    await options.workflow?.flushCardWrites?.();
 
     let chatMessage: ChatMessage.Implementation;
     const reactionFlavor = game.i18n?.format(reactionPromptFor(triggerType), { itemName: (options.item?.name ?? "unknown"), actorName: target.name });
@@ -9476,20 +9478,7 @@ export function sumRolls(rolls: Array<Roll> | undefined = [], countHealing?: "ig
   }, 0);
 }
 
-/* Looks like this is not needed
-const updateSemaphore = new foundry.utils.Semaphore(1);
-async function _updateActionS(document: foundry.abstract.Document.Any) {
-  await updateSemaphore.add(_updateActionS, document);
-}
-export async function asyncGetCachedDocument(uuid: string | undefined | null): Promise<ChatMessage.Implementation | undefined> {
-  if (!uuid) return undefined;
-  if (DebounceInterval) return updateSemaphore.add(getCachedDocument, uuid);
-}
-*/
 
-export function getThrottlingFunction(): (document: foundry.abstract.Document.Any, updates: ChatMessage.UpdateData) => Promise<void> {
-  return foundry.utils.throttle(_updateAction, debounceInterval) as (document: foundry.abstract.Document.Any, updates: ChatMessage.UpdateData) => Promise<void>;
-}
 export const updatesCache = {};
 /** Whether two roll arrays are the same rolls, by serialised form. */
 function rollsMatch(current: readonly unknown[] | undefined, incoming: readonly unknown[]): boolean {
@@ -9633,22 +9622,35 @@ function declaredField(model: foundry.abstract.DataModel.Any | undefined, path: 
   return field;
 }
 
-export async function throttledUpdate(document: ChatMessage.Implementation, updates: ChatMessage.UpdateData, throttlingFunc: undefined | ((document: ChatMessage.Implementation, updates: ChatMessage.UpdateData) => Promise<void>) = undefined, immediate = false) {
-  if (!document) return; // ChatCard was removed already?;
+/** Queue changes for a card's next write: only what changes the card or its queued changes */
+export function queueUpdate(document: ChatMessage.Implementation, updates: ChatMessage.UpdateData): void {
+  if (!document) return;
   updates = foundry.utils.expandObject(updates) as typeof updates;
   if (typeof updates.content === "string") updates.content = compactCardContent(updates.content);
   // Rolls are compared when written (rollsMatch): the card stores them as strings, so a diff never matches
   const { rolls, ...rest } = updates as ChatMessage.UpdateData & { rolls?: unknown };
   updates = changedUpdates(document.uuid, rest) as typeof updates;
   if (rolls !== undefined) (updates as { rolls?: unknown }).rolls = rolls;
-  updates = foundry.utils.mergeObject((updatesCache[document.uuid] ?? {}), updates, { inplace: false, overwrite: true })
-  updatesCache[document.uuid] = updates;
-  if (!debounceInterval || immediate || !throttlingFunc) {
-    if (debugEnabled > 0) warn(`throttledU[date] | immediate update for ${document.uuid}`, updates);
-    return await _updateAction(document, foundry.utils.duplicate(updates) as ChatMessage.UpdateData);
-  }
-  return await throttlingFunc(document, foundry.utils.duplicate(updates) as ChatMessage.UpdateData);
+  updatesCache[document.uuid] = foundry.utils.mergeObject((updatesCache[document.uuid] ?? {}), updates, { inplace: false, overwrite: true });
 }
+
+/**
+ * Write `updates` and the card's queued changes. A workflow queues its card's changes while a state runs and writes them
+ * once (Workflow#performThrottledUpdate); the two trailing arguments are unused.
+ */
+export async function throttledUpdate(document: ChatMessage.Implementation, updates: ChatMessage.UpdateData, _throttlingFunc?: unknown, _immediate = false) {
+  if (!document) return; // ChatCard was removed already?;
+  queueUpdate(document, updates);
+  // One write per card at a time: a write waits for the one in flight, then sends what is still queued
+  const uuid = document.uuid;
+  const write = (cardWrites.get(uuid) ?? Promise.resolve())
+    .then(() => _updateAction(document, foundry.utils.duplicate(updatesCache[uuid] ?? {}) as ChatMessage.UpdateData));
+  const settled = write.catch(() => undefined);
+  cardWrites.set(uuid, settled);
+  settled.then(() => { if (cardWrites.get(uuid) === settled) cardWrites.delete(uuid); });
+  return await write;
+}
+const cardWrites = new Map<string, Promise<unknown>>();
 export function getUpdatesCache(uuid: string | undefined | null) {
   if (!uuid) return {};
   return updatesCache[uuid] ?? {};

@@ -539,6 +539,10 @@
     "isDamaged": "Target is damaged by an attack",
     "all": "All"
   },
+  "midi-qol.ChatCardUpdates.Name": "Chat card updates",
+  "midi-qol.ChatCardUpdates.Hint": "When a workflow's chat card is updated for everyone. At milestones: when the attack is resolved, when saves are requested and resolved, when the rolls are complete, before a reaction is offered, and whenever the workflow waits or finishes (fewest database writes). At every step: after each workflow step that changes the card.",
+  "midi-qol.ChatCardUpdates.milestones": "At milestones",
+  "midi-qol.ChatCardUpdates.everyStep": "At every step",
   "midi-qol.DragDropTarget.Name": "Drag and Drop Targeting",
   "midi-qol.DragDropTarget.Hint": "Allow dragging an item onto a token to attack it",
   "midi-qol.AutoAttack.Name": "Auto roll attack",

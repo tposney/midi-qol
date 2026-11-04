@@ -164,7 +164,7 @@ declare module "fvtt-types/configuration" {
     "midi-qol.hiddenGroundCueColor": foundry.data.fields.ColorField<{ nullable: boolean; initial: string }>;
     "midi-qol.hiddenGroundCueOpacity": number;
     "midi-qol.DragDropTarget": boolean;
-    "midi-qol.DebounceInterval": number;
+    "midi-qol.ChatCardUpdates": string;
     "midi-qol.TargetConfirmation": typeof targetConfirmation;
     "midi-qol.Debug": string;
     "midi-qol.ReplaceDefaultActivities": boolean;

@@ -72,7 +72,7 @@ export let autoRemoveTargets: string;
 export let coloredBorders: string;
 export let criticalDamage: string;
 export let criticalDamageGM: string;
-export let debounceInterval: number;
+export let chatCardUpdates: string;
 export let dragDropTargeting: boolean;
 export let enableWorkflow: boolean;
 export let forceHideRoll: boolean;
@@ -310,7 +310,7 @@ export async function resetConfigSettingsToDefaults(): Promise<void> {
   await game.settings.set("midi-qol", "AutoRemoveTargets", "dead");
   await game.settings.set("midi-qol", "TargetConfirmation", defaultTargetConfirmationSettings);
   await game.settings.set("midi-qol", "playerControlsInvisibleTokens", false);
-  await game.settings.set("midi-qol", "DebounceInterval", 0);
+  await game.settings.set("midi-qol", "ChatCardUpdates", "milestones");
   await game.settings.set("midi-qol", "Debug", "None");
   await game.settings.set("midi-qol", "UseWeakReferences", false);
   await game.settings.set("midi-qol", "splashWarnings", true);
@@ -374,7 +374,7 @@ export function collectSettingData() {
     coloredBorders,
     criticalDamage,
     criticalDamageGM,
-    debounceInterval,
+    chatCardUpdates,
     dragDropTargeting,
     enableWorkflow,
     forceHideRoll,
@@ -576,7 +576,7 @@ export async function importSettingsFromJSON(json) {
   if (json.criticalDamage !== undefined || json.criticalDamageGM !== undefined) {
     await game.settings.set("midi-qol", "ConfigSettings", importedConfigSettings);
   }
-  await game.settings.set("midi-qol", "DebounceInterval", removeOldValues(json.debounceInterval));
+  if (json.chatCardUpdates !== undefined) await game.settings.set("midi-qol", "ChatCardUpdates", removeOldValues(json.chatCardUpdates));
   await game.settings.set("midi-qol", "DragDropTarget", removeOldValues(json.dragDropTargeting));
   await game.settings.set("midi-qol", "EnableWorkflow", removeOldValues(json.enableWorkflow));
   if (json.forceHideRoll !== undefined) {
@@ -961,7 +961,7 @@ export let fetchParams = () => {
   let debugText: string = game.settings.get("midi-qol", "Debug");
   forceHideRoll = game.settings.get("midi-qol", "ForceHideRoll");
   dragDropTargeting = game.settings.get("midi-qol", "DragDropTarget");
-  debounceInterval = game.settings.get("midi-qol", "DebounceInterval");
+  chatCardUpdates = game.settings.get("midi-qol", "ChatCardUpdates");
   replaceDefaultActivities = game.settings.get("midi-qol", "ReplaceDefaultActivities");
   const oldWeakReferences = useWeakReferences;
   useWeakReferences = game.settings.get("midi-qol", "UseWeakReferences") ?? false;
@@ -1929,15 +1929,17 @@ export const registerSettings = function () {
     requiresReload: true
   });
 
-  game.settings.register("midi-qol", "DebounceInterval", {
-    name: "Chat Message Cache Time (ms)",
-    hint: "Chat message updates will only happen this often",
+  game.settings.register("midi-qol", "ChatCardUpdates", {
+    name: i18n("midi-qol.ChatCardUpdates.Name"),
+    hint: i18n("midi-qol.ChatCardUpdates.Hint"),
     scope: "world",
-    default: 0,
-    type: Number,
-    config: true,
-    onChange: () => {debounceInterval = game.settings.get("midi-qol", "DebounceInterval");}
+    default: "milestones",
+    type: String,
+    choices: { milestones: i18n("midi-qol.ChatCardUpdates.milestones"), everyStep: i18n("midi-qol.ChatCardUpdates.everyStep") },
+    onChange: fetchParams,
+    config: true
   });
+
 
   game.settings.register("midi-qol", "Debug", {
     name: "midi-qol.Debug.Name",
