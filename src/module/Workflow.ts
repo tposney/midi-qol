@@ -290,9 +290,10 @@ class CardStateStore {
     return (this.#cache.get(field) as Set<Token.Implementation> | undefined) ?? new Set();
   }
 
-  setTokenSet(field: RecordSet, tokens: Set<TokenOrDocument> | undefined): void {
+  setTokenSet(field: RecordSet, tokens: Set<TokenOrDocument> | undefined, store = true): void {
     if (tokens === undefined) this.#cache.delete(field);
     else this.#cache.set(field, new Set(Array.from(tokens).map(t => t instanceof TokenDocument ? t.object : t).filter(t => !!t)));
+    if (!store) return;
     const members = new Set(Array.from(tokens ?? []).map(t => getTokenDocument(t)).filter((t): t is TokenDocument.Implementation => !!t));
     // Compared with what was last written, not the cached set: callers change that in place before assigning it
     const written = `written.${field}`;
@@ -1259,7 +1260,8 @@ export class Workflow {
   set semiSuperSavers(semiSuperSavers: Set<TokenOrDocument> | undefined) { this.#persisted.setTokenSet("semiSuperSaver", semiSuperSavers); }
 
   get failedSaves(): Set<Token.Implementation> { return this.#persisted.tokenSet("failedSave"); }
-  set failedSaves(failedSaves: Set<TokenOrDocument> | undefined) { this.#persisted.setTokenSet("failedSave", failedSaves); }
+  // With no save they are the attacked (hit) targets, worked out again when rebuilt (#restoreFromCard): not stored
+  set failedSaves(failedSaves: Set<TokenOrDocument> | undefined) { this.#persisted.setTokenSet("failedSave", failedSaves, this.hasSave); }
 
   get fumbleSaves(): Set<Token.Implementation> { return this.#persisted.tokenSet("fumbleSave"); }
   set fumbleSaves(fumbleSaves: Set<TokenOrDocument> | undefined) { this.#persisted.setTokenSet("fumbleSave", fumbleSaves); }
@@ -1743,6 +1745,7 @@ export class Workflow {
     this.templateUuids = [...this.#persisted.scalar<string[]>("templateUuids", [])];
     this.#mergeWorkflowOptions(this.workflowOptions);
     if (this.workflowOptions.preSelectedTargetUuids?.length) this.preSelectedTargets = this.#preSelectedTargets();
+    if (!this.hasSave) this.failedSaves = this.activity.attack ? new Set([...this.hitTargets, ...this.hitTargetsEC]) : new Set(this.targets);
     const speaker = this.chatCard?.speaker;
     const speakerToken = speaker?.token ? game.scenes?.get(speaker.scene ?? "")?.tokens.get(speaker.token)?.object : undefined;
     this.token = speakerToken ?? getOrCreateTokenForActor(this.actor) ?? undefined;
@@ -5160,7 +5163,8 @@ export class Workflow {
       const section = {
         label: "",
         template: "modules/midi-qol/templates/hits.html",
-        data: { attackType: templateData.attackType, attackTotal: templateData.attackTotal, showHits, ...(hits ? { hits } : {}) }
+        // hits.html shows only the rows: the attack's name and total are the card's own
+        data: hits ? { hits } : {}
       };
       await this.performThrottledUpdate(chatMessage, this.#sectionUpdate("hits", section, {
         ...this.#targetsUpdate(),

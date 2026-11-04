@@ -420,7 +420,7 @@ export function setupUsageCardMessage() {
         if (name === "hits" && !section && stored.attack && this.#recordedTargets().length)
           section = { label: "", template: "modules/midi-qol/templates/hits.html", data: { hits: [] } };
         // Rows drawn from the records; older cards (and a card shown by a workflow that does not own it) stored them
-        if (name === "hits" && section?.data && !Array.isArray(section.data.hits)) section = { ...section, data: { ...section.data, hits: await this.#hitRows() } };
+        if (name === "hits" && section && !Array.isArray(section.data?.hits)) section = { ...section, data: { ...(section.data ?? {}), hits: await this.#hitRows() } };
         if (name === "saves" && section?.data) {
           // The heading (DC, damage on save) stays when dnd5e's summaries replace the rows; it has no DC of its own.
           section = (omitSaves === "all" || !saveRows.length) ? null : { ...section, data: { ...section.data,
