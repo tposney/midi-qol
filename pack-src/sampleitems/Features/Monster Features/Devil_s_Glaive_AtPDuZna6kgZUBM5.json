@@ -113,67 +113,7 @@
     },
     "dae": {
       "activeEquipped": false,
-      "alwaysActive": false,
-      "macro": {
-        "name": "Devil's Glaive 10.0.10",
-        "img": "icons/weapons/polearms/glaive-simple.webp",
-        "type": "script",
-        "scope": "global",
-        "command": "const version = \"10.0.10\";\ntry {\n    const lastArg = args[args.length-1];\n    if (args[0] === \"on\") {\n      let target = canvas.tokens.get(args[3]);\n      let flag = DAE.getFlag(target, \"infernal-wounds\") || {hookId: 0, woundCount: 0};\n      flag.woundCount = flag.woundCount + 1;\n      if (!flag.hookId) {\n        flag.hookId = Hooks.on(\"deleteActiveEffect\", (actor, effectId) => {\n          if (effectId === lastArg.effectId)\n            DAE.unsetFlag(tactor, \"infernal-wounds\");\n        })\n      }\n      DAE.setFlag(target, \"infernal-wounds\", flag);\n    \n    } else if (args[0] === \"each\") {\n      let tactor;\n      let ttoken = canvas.tokens.get(lastArg.tokenId);\n      if (ttoken) tactor = ttoken.actor;\n      else tactor = game.actors.get(lastArg.actorId);\n      let damageItem = Item.createOwned(game.items.getName(\"Infernal Wound\"), tactor);\n      let saveTargets = game.user.targets;\n      game.user.targets = new Set([ttoken]);\n      let hookId = Hooks.once(\"midi-qol.RollComplete\", (workflow) => {\n        if (workflow.saves.has(ttoken)) {\n          tactor.deleteEmbeddedEntity(\"ActiveEffect\", lastArg.efData._id);\n        }\n      })\n     try {\n      damageItem.roll();\n      let flag = DAE.getFlag(ttoken, \"infernal-wounds\") || {hookId: 0, woundCount: 1};\n      } finally {\n       game.user.targets = saveTargets;\n      }\n    } else if (args[0] === \"off\") {\n    // do any clean up\n    }\n} catch (err)  {\n    console.error(`${args[0].itemData.name} - Devil's Glaive ${version}`, err);\n}",
-        "author": "STcmc1QZ0hx024Tl",
-        "ownership": {
-          "default": 3
-        },
-        "_id": null,
-        "folder": null,
-        "sort": 0,
-        "flags": {},
-        "_stats": {
-          "systemId": null,
-          "systemVersion": null,
-          "coreVersion": null,
-          "createdTime": null,
-          "modifiedTime": null,
-          "lastModifiedBy": null
-        }
-      }
-    },
-    "itemacro": {
-      "macro": {
-        "data": {
-          "_id": null,
-          "name": "Devil's Glaive MQ0.8.51",
-          "type": "script",
-          "author": "devnIbfBHb74U9Zv",
-          "img": "icons/svg/dice-target.svg",
-          "scope": "global",
-          "command": "const version = \"0.9.52\";\ntry {\n    const lastArg = args[args.length-1];\n    if (args[0] === \"on\") {\n      let target = canvas.tokens.get(args[3]);\n      let flag = DAE.getFlag(target, \"infernal-wounds\") || {hookId: 0, woundCount: 0};\n    console.error(\"fetching flag \", target.id, flag);\n      flag.woundCount = flag.woundCount + 1;\n      if (!flag.hookId) {\n        console.error(\"hookId not set\");\n        flag.hookId = Hooks.on(\"deleteActiveEffect\", (actor, effectId) => {\n          console.error(\"Resetting wound count\");\n          if (effectId === lastArg.effectId)\n            DAE.unsetFlag(tactor, \"infernal-wounds\");\n        })\n      }\n      DAE.setFlag(target, \"infernal-wounds\", flag);\n    \n    } else if (args[0] === \"each\") {\n      let tactor;\n      let ttoken = canvas.tokens.get(lastArg.tokenId);\n      if (ttoken) tactor = ttoken.actor;\n      else tactor = game.actors.get(lastArg.actorId);\n      let damageItem = Item.createOwned(game.items.getName(\"Infernal Wound\"), tactor);\n      let saveTargets = game.user.targets;\n      game.user.targets = new Set([ttoken]);\n      let hookId = Hooks.once(\"midi-qol.RollComplete\", (workflow) => {\n        if (workflow.saves.has(ttoken)) {\n          tactor.deleteEmbeddedEntity(\"ActiveEffect\", lastArg.efData._id);\n        }\n      })\n     try {\n      damageItem.roll();\n      let flag = DAE.getFlag(ttoken, \"infernal-wounds\") || {hookId: 0, woundCount: 1};\n      } finally {\n       game.user.targets = saveTargets;\n      }\n    } else if (args[0] === \"off\") {\n    // do any clean up\n    }\n} catch (err)  {\n    console.error(`${args[0].itemData.name} - Devil's Glaive ${version}`, err);\n}",
-          "folder": null,
-          "sort": 0,
-          "permission": {
-            "default": 0
-          },
-          "flags": {}
-        },
-        "name": "Devil's Glaive 10.0.10",
-        "type": "script",
-        "img": "icons/svg/dice-target.svg",
-        "scope": "global",
-        "command": "const version = \"10.0.10\";\ntry {\n    const lastArg = args[args.length-1];\n    if (args[0] === \"on\") {\n      let target = canvas.tokens.get(args[3]);\n      let flag = DAE.getFlag(target, \"infernal-wounds\") || {hookId: 0, woundCount: 0};\n    console.error(\"fetching flag \", target.id, flag);\n      flag.woundCount = flag.woundCount + 1;\n      if (!flag.hookId) {\n        console.error(\"hookId not set\");\n        flag.hookId = Hooks.on(\"deleteActiveEffect\", (actor, effectId) => {\n          console.error(\"Resetting wound count\");\n          if (effectId === lastArg.effectId)\n            DAE.unsetFlag(tactor, \"infernal-wounds\");\n        })\n      }\n      DAE.setFlag(target, \"infernal-wounds\", flag);\n    \n    } else if (args[0] === \"each\") {\n      let tactor;\n      let ttoken = canvas.tokens.get(lastArg.tokenId);\n      if (ttoken) tactor = ttoken.actor;\n      else tactor = game.actors.get(lastArg.actorId);\n      let damageItem = Item.createOwned(game.items.getName(\"Infernal Wound\"), tactor);\n      let saveTargets = game.user.targets;\n      game.user.targets = new Set([ttoken]);\n      let hookId = Hooks.once(\"midi-qol.RollComplete\", (workflow) => {\n        if (workflow.saves.has(ttoken)) {\n          tactor.deleteEmbeddedEntity(\"ActiveEffect\", lastArg.efData._id);\n        }\n      })\n     try {\n      damageItem.roll();\n      let flag = DAE.getFlag(ttoken, \"infernal-wounds\") || {hookId: 0, woundCount: 1};\n      } finally {\n       game.user.targets = saveTargets;\n      }\n    } else if (args[0] === \"off\") {\n    // do any clean up\n    }\n} catch (err)  {\n    console.error(`${args[0].itemData.name} - Devil's Glaive ${version}`, err);\n}",
-        "sort": 0,
-        "ownership": {
-          "default": 0
-        },
-        "flags": {},
-        "_stats": {
-          "systemId": null,
-          "systemVersion": null,
-          "coreVersion": null,
-          "createdTime": null,
-          "modifiedTime": null,
-          "lastModifiedBy": null
-        }
-      }
+      "alwaysActive": false
     },
     "core": {},
     "enhancedcombathud": {
