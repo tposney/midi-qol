@@ -649,12 +649,6 @@ export class Workflow {
 
   #activity: Activity | undefined;
   get activity(): Activity {
-    if (this.#activity) return this.#activity;
-
-    if (this.chatCard) {
-      this.#activity = (this.chatCard as Dnd5eChatMessage).getAssociatedActivity?.({ scaled: true });
-    }
-
     if (!this.#activity) {
       const message = `midi-qol | get activity() | Could not find activity for workflow ${this.id}`;
       TroubleShooter.recordError(new Error(message));
@@ -668,15 +662,6 @@ export class Workflow {
 
   #item: Item.Implementation | undefined;
   get item(): Item.Implementation {
-    if (this.#item) return this.#item;
-    if (this.itemCardUuid) {
-      this.#item = (this.chatCard as Dnd5eChatMessage | undefined)?.getAssociatedItem?.();
-      if (!this.#item) {
-        const message = `get item() | Could not find item for workflow ${this.id}`;
-        TroubleShooter.recordError(new Error(message));
-        error(message);
-      }
-    }
     return this.#item!;
   }
   set item(item: Item.Implementation) {
@@ -684,13 +669,9 @@ export class Workflow {
   }
 
 
-  // This value is not stored in flags
+  // A rebuilt workflow's is its card's
   #speaker: ChatMessage.SpeakerData | undefined = undefined;
   get speaker(): ChatMessage.SpeakerData {
-    if (this.#speaker) return this.#speaker;
-    if (this.itemCardUuid) {
-      this.#speaker = this.chatCard.speaker;
-    }
     return this.#speaker!;
   }
   set speaker(speaker: ChatMessage.SpeakerData) {
@@ -785,22 +766,6 @@ export class Workflow {
 
   #currentAction: WorkflowState;
   get currentAction() {
-    if (this.#currentAction) return this.#currentAction;
-    if (this.itemCardUuid) {
-      const className = this.#persisted.storedClass();
-      const currentActionName = Workflow.cardResumePoint(this.#ownCard()) ?? "";
-      if (className) {
-        const actionClass = WorkflowRegistry[className];
-        if (actionClass && (actionClass === Workflow || actionClass.prototype instanceof Workflow)) {
-          const action = actionClass?.prototype[currentActionName];
-          if (action) {
-            this.#currentAction = action;
-          } else {
-            error(`get currentAction() | Could not find action ${currentActionName} in class ${className}`);
-          }
-        } else error(`get currentAction() | Class ${className} is not a subclass of Workflow`);
-      }
-    }
     return this.#currentAction;
   }
   set currentAction(currentAction: WorkflowState) {
@@ -831,37 +796,20 @@ export class Workflow {
     return "WorkflowState_Completed";
   }
 
-  #isCriticalRestored: boolean = false;
+  // The tracker decides; a rebuilt workflow gets the stored decision back as an override (#restoreFromCard)
   get isCritical(): boolean {
-    // Restore from store on first access
-    if (!this.#isCriticalRestored && this.itemCardUuid) {
-      if (this.#persisted.scalar("isCritical", false)) {
-        this.attackRollModifierTracker.critical.setOverride(true, "restored", "Restored from chat card");
-      }
-      this.#isCriticalRestored = true;
-    }
     return this.attackRollModifierTracker.isCritical;
   }
   set isCritical(isCritical: boolean) {
     this.attackRollModifierTracker.critical.setOverride(isCritical, "direct", "Direct assignment");
-    this.#isCriticalRestored = true;
     this.#persisted.setScalar("isCritical", isCritical);
   }
 
-  #isFumbleRestored: boolean = false;
   get isFumble(): boolean {
-    // Restore from store on first access
-    if (!this.#isFumbleRestored && this.itemCardUuid) {
-      if (this.#persisted.scalar("isFumble", false)) {
-        this.attackRollModifierTracker.fumble.setOverride(true, "restored", "Restored from chat card");
-      }
-      this.#isFumbleRestored = true;
-    }
     return this.attackRollModifierTracker.isFumble;
   }
   set isFumble(isFumble: boolean) {
     this.attackRollModifierTracker.fumble.setOverride(isFumble, "direct", "Direct assignment");
-    this.#isFumbleRestored = true;
     this.#persisted.setScalar("isFumble", isFumble);
   }
 
@@ -1194,13 +1142,9 @@ export class Workflow {
     return this.saveActivity?.item ?? this.activity.item;
   }
 
-  #rolls: Roll[] | undefined;
+  /** The card's rolls */
   get rolls(): Roll[] {
-    if (this.#rolls) return this.#rolls;
-    if (this.itemCardUuid) {
-      this.#rolls = this.chatCard.rolls as Roll[];
-    }
-    return this.#rolls ?? [];
+    return (this.chatCard?.rolls ?? []) as Roll[];
   }
 
   get damageRolls(): Roll[] { return this.#persisted.rolls("damageRolls") ?? []; }
@@ -1329,10 +1273,6 @@ export class Workflow {
   // Uses AttributionMap per target for O(1) lookups
   #saveAttribution: Record<string, AttributionMap> | undefined;
   get saveAttribution(): Record<string, AttributionMap> {
-    if (this.#saveAttribution) return this.#saveAttribution;
-    if (this.itemCardUuid) {
-      this.#saveAttribution = this.#persisted.saveAttribution();
-    }
     return this.#saveAttribution ?? {};
   }
   set saveAttribution(saveAttribution: Record<string, AttributionMap>) {
@@ -1610,7 +1550,12 @@ export class Workflow {
       this.itemCardUuid = options.chatCardUuid;
       this.id = options.chatCardUuid!;
       const card = this.#ownCard();
-      if (card) this.#persisted.load(card, decodeWorkflowOptions);
+      if (card) {
+        this.#persisted.load(card, decodeWorkflowOptions);
+        this.#activity = (card as Dnd5eChatMessage).getAssociatedActivity?.({ scaled: true });
+        this.#item = (card as Dnd5eChatMessage).getAssociatedItem?.();
+        this.#speaker = card.speaker;
+      }
       this.workflowName = `${this.constructor.name} ${this.item?.name ?? "no item"} restored`;
     } else {
       // In this case, `actor`, `activity`, and `speaker` are mandatory
@@ -1743,6 +1688,15 @@ export class Workflow {
     this.itemUseComplete = true;
     this.noOptionalRules = !configSettings.optionalRulesEnabled;
     this.templateUuids = [...this.#persisted.scalar<string[]>("templateUuids", [])];
+    if (this.#persisted.scalar("isCritical", false)) this.attackRollModifierTracker.critical.setOverride(true, "restored", "Restored from chat card");
+    if (this.#persisted.scalar("isFumble", false)) this.attackRollModifierTracker.fumble.setOverride(true, "restored", "Restored from chat card");
+    this.#saveAttribution = this.#persisted.saveAttribution();
+    // Where it waits, worked out from the card
+    const resumePoint = Workflow.cardResumePoint(this.#ownCard()) ?? "";
+    const action = WorkflowRegistry[this.constructor.name]?.prototype[resumePoint];
+    if (typeof action === "function") this.#currentAction = action;
+    else error(`${this.workflowName} | no state ${resumePoint} to resume in`);
+    if (!this.#item) error(`${this.workflowName} | could not find the item of card ${this.itemCardUuid}`);
     this.#mergeWorkflowOptions(this.workflowOptions);
     if (this.workflowOptions.preSelectedTargetUuids?.length) this.preSelectedTargets = this.#preSelectedTargets();
     if (!this.hasSave) this.failedSaves = this.activity.attack ? new Set([...this.hitTargets, ...this.hitTargetsEC]) : new Set(this.targets);
