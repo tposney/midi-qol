@@ -524,12 +524,13 @@ export class Workflow {
       }
       return workflow.deref();
     } else if (workflow) return workflow;
+    // Rebuilt from its card once: filed under the card (weakly with Use Weak References), so later calls find it
     const chatCard = fromUuidSync(id);
     if (chatCard instanceof ChatMessage) {
-      workflow = Workflow.fromChatCardUuid(id);
-      if (workflow) {
-        Workflow.workflows.set(id, workflow);
-        return workflow;
+      const rebuilt = Workflow.fromChatCardUuid(id);
+      if (rebuilt) {
+        Workflow.addWorkflow(rebuilt);
+        return rebuilt;
       }
     }
     // try fetching via ActivityUuid
