@@ -1789,7 +1789,8 @@ export let processUndoDamageCard = (message: ChatMessage.Implementation, html: H
         const update = { "system.attributes.hp.temp": newTempHP ?? 0, "system.attributes.hp.value": newHP ?? 0 } as Actor.UpdateData;
         if (newTempMax! - oldTempMax!) update["system.attributes.hp.tempmax"] = newTempMax;
         if (newDeathFailures !== undefined) update["system.attributes.death.failure"] = newDeathFailures;
-        const amount = (newHP ?? 0) - (oldHP ?? 0);
+        // dnd5e's amount is the damage applied: the HP lost going from oldHP to newHP
+        const amount = (oldHP ?? 0) - (newHP ?? 0);
         // Handle vitality apply - only if actor still has a vitality item
         const applyItem = undoDamageData.find(d => d.actorUuid === actorUuid);
         const vitalityItem = getVitalityItem(actor);
@@ -1801,7 +1802,8 @@ export let processUndoDamageCard = (message: ChatMessage.Implementation, html: H
         }
         // Set midiVitalityUpdatePending if vitality was updated to prevent double checkWounded calls
         const options = foundry.utils.mergeObject(calcDamageOptions ?? {}, updateOptions ?? {}, { inplace: false }) as any;
-        if (vitalityUpdated) options.midiVitalityUpdatePending = true;
+        // The card's vitality is set here: the vitality overflow handling must not add to it
+        if (vitalityUpdated) options.midiVitalityUpdatePending = options.midiVitalityHandled = true;
         if (actor?.isOwner && Hooks.call("dnd5e.preApplyDamage", actor, amount, update, withDamageOrigin(options as DamageApplicationOptions)) !== false) {
           await actor.update(update, options).then(updatedActor => {
             Hooks.callAll("dnd5e.applyDamage", actor, amount, withDamageOrigin(options));
@@ -1888,8 +1890,9 @@ export let processUndoDamageCard = (message: ChatMessage.Implementation, html: H
       (async () => {
         let actor = fromActorUuid(actorUuid);
         if (multiplierString === "calc") {
-          // For "=" case, directly apply the stored HP values (like reverse does with old values)
-          const amount = (newHP ?? 0) - (oldHP ?? 0);
+          // For "=" case, directly apply the stored HP values (like reverse does with old values).
+          // dnd5e's amount is the damage applied: the HP lost going from oldHP to newHP
+          const amount = (oldHP ?? 0) - (newHP ?? 0);
           const updates: Actor.UpdateData = {
             //@ts-expect-error no dnd5e-types
             "system.attributes.hp.temp": newTempHP ?? 0,
@@ -1907,8 +1910,9 @@ export let processUndoDamageCard = (message: ChatMessage.Implementation, html: H
           }
           // Set midiVitalityUpdatePending if vitality was updated to prevent double checkWounded calls
           const options = foundry.utils.mergeObject(calcDamageOptions ?? {}, updateOptions ?? {}, { inplace: false }) as any;
-          if (vitalityUpdated) options.midiVitalityUpdatePending = true;
-          if (actor?.isOwner && Hooks.call("dnd5e.preApplyDamage", actor, amount, updates, withDamageOrigin(calcDamageOptions as DamageApplicationOptions)) !== false) {
+          // The card's vitality is set here: the vitality overflow handling must not add to it
+          if (vitalityUpdated) options.midiVitalityUpdatePending = options.midiVitalityHandled = true;
+          if (actor?.isOwner && Hooks.call("dnd5e.preApplyDamage", actor, amount, updates, withDamageOrigin(options as DamageApplicationOptions)) !== false) {
             await actor.update(updates, options).then(updatedActor => {
               Hooks.callAll("dnd5e.applyDamage", actor, amount, withDamageOrigin(calcDamageOptions as DamageApplicationOptions));
               // Update display to show what undo would do (undo mode)

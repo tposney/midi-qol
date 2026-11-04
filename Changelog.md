@@ -4,6 +4,7 @@
 * Fixed: self effects of an item's other activity (the save of an attack-and-save item) were chosen the wrong way round: with targets hit only *apply to self always* effects applied, with none hit *apply to self* effects applied too.
 * Fixed: when an attack missed every target and the workflow completed (*Auto complete workflow*), the card kept its damage buttons; they now go as *Remove chat card buttons after roll* says. A workflow still waiting for a damage roll keeps them.
 * Fixed: re-rolling a utility formula on a completed card kept the old result on the card.
+* Fixed: a damage card's Apply button (after Reverse, or when damage is not auto-applied) gave the `dnd5e.preApplyDamage` / `dnd5e.applyDamage` hooks the damage as a negative amount, as if healing.
 * Changed: a workflow's state is always kept on its chat card, and *Save to Chat Card* is removed: after a reload the card's buttons carry on the same use (for its author) instead of starting a new one.
 * Removed: ddb-game-log support (the module has no Foundry 14 release); `MidiQOL.DDBGameLogWorkflow` is gone.
 * Changed: midi's save rows are drawn from the card's records, and a save roll that is in the card's linked save message is no longer copied onto the card (other modules' saves still are); `MidiQOL.cardSaveRoll(card, tokenUuid)` returns a token's save roll either way.
