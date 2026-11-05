@@ -21,7 +21,6 @@ import {preserveLife} from './features/preserveLife.mjs';
 import {regeneration} from './features/regeneration.mjs';
 import {registerSwallowHooks, swallow} from './features/swallow.mjs';
 import {targetRestriction} from './features/targetRestriction.mjs';
-import {weaponMastery} from './features/weaponMastery.mjs';
 import {lightSource} from './items/lightSource.mjs';
 import {command} from './spells/command.mjs';
 import {detectMagic} from './spells/detectMagic.mjs';
@@ -70,7 +69,6 @@ const catMacros = {
     'metamagic-careful': metamagicCareful,
     'metamagic-heightened': metamagicHeightened,
     'preserve-life': preserveLife,
-    'weapon-mastery': weaponMastery,
     'light-source': lightSource,
     'command': command,
     'detect-magic': detectMagic,

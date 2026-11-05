@@ -1,5 +1,5 @@
-2026/11/05-15:26:39.934262 79c2411f86c0 Delete type=3 #1
-2026/11/05-15:26:39.934763 79c1ef3ff6c0 Level-0 table #5: started
-2026/11/05-15:26:39.935488 79c1ef3ff6c0 Level-0 table #5: 8043 bytes OK
-2026/11/05-15:26:39.936194 79c1ef3ff6c0 Delete type=0 #3
-2026/11/05-15:26:39.936232 79c1ef3ff6c0 Manual compaction at level-0 from '!actors!mqaFlamingSphere' @ 72057594037927935 : 1 .. '!actors.items!mqaFlamingSphere.phbftFlamingSphe' @ 0 : 0; will stop at (end)
+2026/11/05-16:07:36.961765 76ac8ffff6c0 Delete type=3 #1
+2026/11/05-16:07:36.962358 76ac8ebff6c0 Level-0 table #5: started
+2026/11/05-16:07:36.962994 76ac8ebff6c0 Level-0 table #5: 8043 bytes OK
+2026/11/05-16:07:36.963746 76ac8ebff6c0 Delete type=0 #3
+2026/11/05-16:07:36.963770 76ac8ebff6c0 Manual compaction at level-0 from '!actors!mqaFlamingSphere' @ 72057594037927935 : 1 .. '!actors.items!mqaFlamingSphere.phbftFlamingSphe' @ 0 : 0; will stop at (end)

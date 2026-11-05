@@ -222,7 +222,7 @@ export function defineChatMessageMidiClass(baseClass: ChatMessage.Implementation
         <a class="content-link" draggable="true" data-link data-uuid="${masteryConfig.reference}"
            data-tooltip="${mastery}" style="text-wrap: auto;">${mastery}</a>
       `;
-      p.innerHTML = `<string>${i18n("DND5E.WEAPON.Mastery.Flavor")}</string> ${mastery}`;
+      p.innerHTML = `<strong>${i18n("DND5E.WEAPON.Mastery.Flavor")}</strong> ${mastery}`;
       const condensedSection = html.querySelector(".midi-results > .flexrow");
       if (condensedSection) {
         condensedSection.after(p);

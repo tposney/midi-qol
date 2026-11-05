@@ -53,6 +53,7 @@
 * Changed: *Parry* (the seven 2024 creatures) is offered when a melee attack hits (`optional.parry.acOnHit`), not when attacked.
 * Changed: *Bardic Inspiration (Valour)* follows the 2024 rules: the die is offered when the creature fails a D20 Test, for the damage of an attack that hits, and, using its reaction, as AC when an attack hits it; it lasts an hour and is used up when rolled.
 * Fixed: *Bardic Inspiration* gave its saving throw bonus under a misspelt name, without a label.
+* Removed: *Weapon Mastery* (class feature automation): CAT automates weapon masteries itself (CAT's *Weapon Mastery* setting, on for player characters by default); with both, Graze and the others applied twice. Use CAT's version instead.
 * Added: rules text for sample items outside the SRD (Toll the Dead, Metamagic Adept, Arcane Ward, …), which ship without a description.
   * When such an item is added to an actor, midi copies the description from your official D&D modules (Player's Handbook, Tasha's, …), then the dnd5e SRD, then a compendium you choose (*Rules text compendium*).
   * It matches the item by type and identifier, falling back to its name; the item's notes say where the text came from.
