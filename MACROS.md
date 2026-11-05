@@ -743,7 +743,7 @@ A workflow keeps its state on its usage card, so it can be rebuilt after a reloa
 | `card.system.midi.sections` | The card's roll sections (`attack`, `hits`, `damage`, `otherDamage`, `bonusDamage`, `utility`, `saves`) as drawn |
 | `card.flags.<module>` | Other modules' data ([below](#storing-data-on-the-card)) |
 
-Everything else is worked out again when a workflow is rebuilt: totals, damage detail, `d20AttackRoll`, `isHit`, the item and activity (from the card), the token (from its speaker). `system.midi` is midi's internal format and may change: read it through the workflow, or with `MidiQOL.cardSaveRoll(card, tokenUuid)` for a token's save roll.
+Everything else is worked out again when a workflow is rebuilt: totals, damage detail, `d20AttackRoll`, `isHit`, the item and activity (from the card), the token (from its speaker). `system.midi` is midi's internal format and may change: read it through the workflow. A target's save roll is `workflow.saveRoll(token)` (a Token, TokenDocument or token uuid; `undefined` until it has rolled), and `workflow.tokenSaves` has them all by token uuid.
 
 ### When the card is written
 
@@ -756,7 +756,7 @@ Between writes the card in the database is behind the workflow. `workflow.chatCa
 
 ### After a reload
 
-A workflow is only in the memory of the client that ran it. After a reload, the card's buttons (roll damage, confirm, …) and `getWorkflow(cardUuid)` rebuild it for the card's author from the card, and it carries on from where it waited (`MidiQOL.cardResumePoint(card)` names that state). A rebuilt workflow has what the card stores; anything a macro kept only on the workflow is gone.
+A workflow is only in the memory of the client that ran it. After a reload, the card's buttons (roll damage, confirm, …) and `getWorkflow(cardUuid)` rebuild it for the card's author from the card, and it carries on from where it waited (`workflow.currentAction`). A rebuilt workflow has what the card stores; anything a macro kept only on the workflow is gone.
 
 A macro that rolls for a waiting workflow sets the roll and resumes it:
 

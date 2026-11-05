@@ -1609,6 +1609,11 @@ export class Workflow {
     }
     return Object.keys(result).length > 0 ? result : undefined;
   }
+  /** A target's save roll (a Token, TokenDocument or token uuid); undefined until it has rolled */
+  saveRoll(token: TokenOrDocument | string): Roll | undefined {
+    const uuid = typeof token === "string" ? token : getTokenDocument(token)?.uuid;
+    return uuid ? this.tokenSaves?.[uuid] : undefined;
+  }
   saveDC: number | undefined;
   saveDetails: SaveDetails | undefined;
   damageItem: DamageListEntry | undefined;

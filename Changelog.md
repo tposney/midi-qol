@@ -19,12 +19,15 @@
 * Removed: ddb-game-log support (the module has no Foundry 14 release); `MidiQOL.DDBGameLogWorkflow` is gone.
 
 **Macros**
-* Changed: a card's workflow state is in `system.midi.state` and one record per token in `system.midi.records`; `MidiQOL.cardSaveRoll(card, tokenUuid)` returns a token's save roll. The old `flags.midi-qol` keys still read the same but are deprecated (each warns once, naming its replacement) and go in 14.8.0. Read them from the card's workflow, `const workflow = MidiQOL.Workflow.getWorkflow(card.uuid)`: `card.flags.midi-qol.X` → `workflow.X`, except that the token lists are Sets of Tokens (`targets` rather than `{uuid, name}` objects, the others uuids) and those named `…Uuids` drop it:
+* Midi now always stores enough information to reconstruct a workflow from its chat card. The information stored versus reconstructed has been aggressively pruned resulting in noticeably smaller chat cards. Card flags (flags.midi-qol.xxx) which used to be available to read workflow state/results are now deprecated. Use will generate a deprecation warning and they will be removed in 14.8.0.
+* A card's workflow state is in `system.midi.state` and one record per token in `system.midi.records`; 
+* To read them from the card's workflow, `const workflow = MidiQOL.Workflow.getWorkflow(card.uuid)`: `card.flags.midi-qol.X` → `workflow.X`, except that the token lists are Sets of Tokens (`targets` rather than `{uuid, name}` objects, the others uuids) and those named `…Uuids` drop it:
   * `hitTargetUuids`, `hitECTargetUuids` → `workflow.hitTargets`, `workflow.hitTargetsEC`
   * `saveUuids`, `failedSaveUuids`, `superSaverUuids`, `semiSuperSaverUuids`, `criticalSaveUuids`, `fumbleSaveUuids`, `advantageSaveUuids` → `workflow.saves`, `workflow.failedSaves`, `workflow.superSavers`, `workflow.semiSuperSavers`, `workflow.criticalSaves`, `workflow.fumbleSaves`, `workflow.advantageSaves`
   * `otherDamageMatchUuids`, `ammunitionDamageMatchUuids` → `workflow.otherDamageMatches`, `workflow.ammunitionDamageMatches`
   * `templateUuid` → `workflow.templateUuids[0]`
   * `isHit`, `isHitEC` → `workflow.isHit`, `workflow.isHitEC` (new)
+* Added: `workflow.saveRoll(token)`, a target's save roll (a Token, TokenDocument or token uuid), also on a workflow rebuilt from its card.
 * Changed: `Workflow#unSuspend(context)` is deprecated; macros resuming a workflow call `workflow.resume(event)`, event `"attackRolled"`, `"damageRolled"`, `"noDamage"` or `"utilityRolled"`, after setting the roll (`setAttackRoll`, `setDamageRolls`, `setUtilityRolls`).
 * Changed: for a user other than the card's author, `MidiQOL.Workflow.getWorkflow(cardUuid)` returns a read-only copy rebuilt from the card (`workflow.readOnly`); a copy is never updated, so fetch it again after the card changes; `getWorkflow(cardUuid, false)` returns a live one, which runs and writes the card alongside the author's (use at your own risk, with a console warning).
 * Removed: `workflow.flagTags` (never set by midi or any known module).

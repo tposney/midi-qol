@@ -199,8 +199,6 @@ Hooks.once("init", () => {
 globalThis.MidiQOL ??= {};
 Object.assign(globalThis.MidiQOL, {
   fillRulesText,
-  cardSaveRoll,
-  cardResumePoint: (card: ChatMessage.Implementation | undefined) => Workflow.cardResumePoint(card),
   activityHasEmanationNoTemplate,
   addDependent,
   addConcentrationDependent,
@@ -965,7 +963,6 @@ import { MidiCombat5e } from './module/MidiCombat5e.js';
 import { MoveTokenOptions, TeleportTokenDestination, TokenOrDocument, SelectOptionValue } from './globals.js';
 import { DamageApplicationElementMidi } from './module/ChatClasses/DamageApplicationElementMidi.js';
 import { fillRulesText } from "./module/lib/rulesText.js";
-import { cardSaveRoll } from "./module/ChatClasses/UsageCardMessage.js";
 
 // Add any additional hooks if necessary
 // Phase 2: setup hook — properties that depend on CONFIG, settings, i18n, or game state
