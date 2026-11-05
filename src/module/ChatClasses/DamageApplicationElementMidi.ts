@@ -89,7 +89,9 @@ export class DamageApplicationElementMidi extends globalThis.dnd5e.applications.
   async _onApplyDamage(event: Event) {
     event.preventDefault();
     const message = this.chatMessage as ChatMessage.Implementation | undefined;
+    // The card's workflow runs the damage hooks; another user's card only names the attacker (a read-only copy)
     const workflow = message ? Workflow.findWorkflow(message.uuid) : undefined;
+    const source = workflow ?? (message ? Workflow.cardView(message.uuid) : undefined);
     const damageList: DamageListEntry[] = [];
     for (const option of Array.from<HTMLOptionElement>(this.targetList.querySelectorAll("option"))) {
       const token = fromUuidSync(option.value) as TokenDocument.Implementation | null;
@@ -120,9 +122,9 @@ export class DamageApplicationElementMidi extends globalThis.dnd5e.applications.
     }
     if (damageList.length) await timedAwaitExecuteAsGM("createReverseDamageCard", {
       autoApplyDamage: "yesCard",
-      actorId: workflow?.actor?.id,
-      actorUuid: workflow?.actor?.uuid,
-      charName: workflow?.token?.name ?? workflow?.actor?.name ?? game.user?.name,
+      actorId: source?.actor?.id,
+      actorUuid: source?.actor?.uuid,
+      charName: source?.token?.name ?? source?.actor?.name ?? game.user?.name,
       damageList: prepareDamageListToJSON(damageList),
       chatCardUuid: message?.uuid,
       updateOptions: { awaitDamageApplication: true },

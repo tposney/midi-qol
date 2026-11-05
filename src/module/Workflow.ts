@@ -256,11 +256,12 @@ class CardStateStore {
       const uuids = records.filter(record => record[field]).map(record => record.uuid);
       if (uuids.length) this.#cache.set(`recordValues.${field}`, new Set(uuids));
     }
+    // Only tokens on the canvas are loaded; a set is compared with those, so records of tokens elsewhere are left alone
     for (const field of Object.keys(RECORD_SETS) as RecordSet[]) {
       const tokens = records.filter(record => record[field])
         .map(record => (fromUuidSync(record.uuid) as TokenDocument.Implementation | undefined)?.object).filter((t): t is Token.Implementation => !!t);
-      if (tokens.length) this.#cache.set(field, new Set(tokens));
-      this.#cache.set(`written.${field}`, new Set(records.filter(record => record[field]).map(record => record.uuid)));
+      this.#cache.set(field, new Set(tokens));
+      this.#cache.set(`written.${field}`, new Set(tokens.map(token => token.document.uuid)));
     }
     const hitRows = records.filter(record => typeof record.hitClass === "string").map(record => record.uuid);
     if (hitRows.length) this.#cache.set("hitRows", new Set(hitRows));
@@ -290,14 +291,17 @@ class CardStateStore {
     this.#write({ [CardStateStore.#path(key)]: storeAs ? storeAs(value) : value });
   }
 
-  /** The workflow's tokens in set `field`. An empty one is not kept, so changing it in place is not seen: assign it. */
+  /** The workflow's tokens in set `field`: the same Set each time, so changes made in place are written (syncTokenSets) */
   tokenSet(field: RecordSet): Set<Token.Implementation> {
-    return (this.#cache.get(field) as Set<Token.Implementation> | undefined) ?? new Set();
+    let tokens = this.#cache.get(field) as Set<Token.Implementation> | undefined;
+    if (!tokens) this.#cache.set(field, tokens = new Set());
+    return tokens;
   }
 
   setTokenSet(field: RecordSet, tokens: Set<TokenOrDocument> | undefined, store = true): void {
     if (tokens === undefined) this.#cache.delete(field);
-    else this.#cache.set(field, new Set(Array.from(tokens).map(t => t instanceof TokenDocument ? t.object : t).filter(t => !!t)));
+    // syncTokenSets passes the cached Set itself: kept, so references to it stay the workflow's
+    else if (tokens !== this.#cache.get(field)) this.#cache.set(field, new Set(Array.from(tokens).map(t => t instanceof TokenDocument ? t.object : t).filter(t => !!t)));
     if (!store) {
       this.#unstoredSets.add(field);
       return;
@@ -476,9 +480,15 @@ export class Workflow {
   }
 
   static addWorkflow(workflow: Workflow) {
+    // A collected entry is just replaced; another live workflow under the id is removed first
+    const entry = Workflow.workflows.get(workflow.id);
+    const existing = entry instanceof WeakRef ? entry.deref() : entry;
+    if (existing && existing !== workflow) {
+      console.warn("midi-qol | addWorkflow | Workflow already exists", workflow.id);
+      Workflow.removeWorkflow(workflow.id);
+    }
+    // After the removal, which ends the id
     Workflow.#ended.delete(workflow.id);
-    if (Workflow.workflows.has(workflow.id)) console.warn("midi-qol | addWorkflow | Workflow already exists", workflow.id);
-    if (Workflow.workflows.has(workflow.id)) Workflow.removeWorkflow(workflow.id);
     if (useWeakReferences) Workflow.workflows.set(workflow.id, new WeakRef(workflow));
     else Workflow.workflows.set(workflow.id, workflow);
   }
@@ -613,25 +623,12 @@ export class Workflow {
     if (debugEnabled > 0) warn("Get workflow ", id, Workflow.workflows, Workflow.workflows.get(id ?? ""))
     if (debugEnabled > 1) debug("Get workflow ", id, Workflow.workflows, Workflow.workflows.get(id ?? ""))
     if (!id) return;
-    let workflow = Workflow.workflows.get(id);
-    if (workflow instanceof WeakRef) {
-      if (!workflow?.deref()) {
-        const _workflow = Workflow.fromChatCardUuid(id);
-        if (_workflow) {
-          workflow = new WeakRef(_workflow);
-          Workflow.workflows.set(id, workflow);
-        }
-        return _workflow;
-      }
-      return workflow.deref();
-    } else if (workflow) return workflow;
-    // Rebuilt from its card once: filed under the card (weakly with Use Weak References), so later calls find it
-    if (fromUuidSync(id) instanceof ChatMessage) {
-      const rebuilt = Workflow.#rebuild(id);
-      if (rebuilt) return rebuilt;
-    }
-    // try fetching via ActivityUuid
-    return this.getWorkflowByActivityUuid(id);
+    const entry = Workflow.workflows.get(id);
+    const live = entry instanceof WeakRef ? entry.deref() : entry;
+    if (live) return live;
+    // Rebuilt from its card once, also after its weak entry was collected: filed under the card, so later calls find it
+    if (fromUuidSync(id) instanceof ChatMessage) return Workflow.#rebuild(id);
+    return entry ? undefined : this.getWorkflowByActivityUuid(id);
   }
 
   static #rebuild(id: string, options: { anyAuthor?: boolean } = {}): Workflow | undefined {
@@ -774,7 +771,7 @@ export class Workflow {
    * message is prepared.
    */
   private persistRolls(): void {
-    if (this.itemCardUuid) this.#cacheCardUpdates({ rolls: this.chatRolls });
+    if (this.ownsCard) this.#cacheCardUpdates({ rolls: this.chatRolls });
   }
 
   /** Queued for the card's next write; a read-only copy queues nothing (the queue is the card's, not the workflow's) */
@@ -842,9 +839,7 @@ export class Workflow {
   set speaker(speaker: ChatMessage.SpeakerData) {
     // TODO do an equals check on the stored and passed speaker
     this.#speaker = speaker;
-    if (this.itemCardUuid) {
-      this.#cacheCardUpdates({ speaker });
-    }
+    if (this.ownsCard) this.#cacheCardUpdates({ speaker });
   }
 
   get attackingToken() {
@@ -1182,8 +1177,7 @@ export class Workflow {
     return this.chatCard?.system.targets;
   }
   set targetDescriptors(targetDescriptors: Array<DND5ETargetDescriptor>) {
-    if (this.chatCard)
-      this.#cacheCardUpdates({ "system.targets": targetDescriptors });
+    if (this.ownsCard) this.#cacheCardUpdates({ "system.targets": targetDescriptors });
   }
   noAutoAttack: boolean | undefined; // override attack roll for standard care
 
@@ -1363,7 +1357,14 @@ export class Workflow {
   // Not stored: once expired an effect is gone, so a rebuilt workflow finds nothing to expire again
   effectsAlreadyExpired: string[] = [];
 
-  noAutoDamage: boolean | undefined; // override damage roll for damage rolls
+  /** @deprecated since 14.6.9: has no effect (use workflowOptions.autoRollDamage, or return false from preDamageRollConfig) */
+  get noAutoDamage(): undefined {
+    foundry.utils.logCompatibilityWarning("midi-qol | Workflow#noAutoDamage is deprecated and has no effect: set workflowOptions.autoRollDamage to \"none\", or return false from a preDamageRollConfig macro.", { since: "14.6.9", until: "14.8.0", once: true });
+    return undefined;
+  }
+  set noAutoDamage(_value: boolean | undefined) {
+    foundry.utils.logCompatibilityWarning("midi-qol | Workflow#noAutoDamage is deprecated and has no effect: set workflowOptions.autoRollDamage to \"none\", or return false from a preDamageRollConfig macro.", { since: "14.6.9", until: "14.8.0", once: true });
+  }
 
   #consumptionRefunded = false;
 
@@ -1466,7 +1467,14 @@ export class Workflow {
     this.#attackRollModifierTracker.reset();
   }
 
-  noOptionalRules: boolean = false;
+  /** @deprecated since 14.6.9: has no effect (optional rules follow the Optional rules setting) */
+  get noOptionalRules(): boolean {
+    foundry.utils.logCompatibilityWarning("midi-qol | Workflow#noOptionalRules is deprecated and has no effect: optional rules follow the Optional rules setting.", { since: "14.6.9", until: "14.8.0", once: true });
+    return !configSettings.optionalRulesEnabled;
+  }
+  set noOptionalRules(_value: boolean) {
+    foundry.utils.logCompatibilityWarning("midi-qol | Workflow#noOptionalRules is deprecated and has no effect: optional rules follow the Optional rules setting.", { since: "14.6.9", until: "14.8.0", once: true });
+  }
   undoData: UndoData | undefined; // Way too big to store. Undos are blanked on reload
 
   get bonusDamageFlavor() {
@@ -1765,7 +1773,7 @@ export class Workflow {
         this.workflowName = `${this.constructor.name} ${workflowName} ${foundry.utils.randomID()}`;
         if (options.storeWorkflow) Workflow.addWorkflow(this);
       }
-      this.noOptionalRules = options?.noOptionalRules ?? !configSettings.optionalRulesEnabled;
+      if (options?.noOptionalRules !== undefined) this.noOptionalRules = options.noOptionalRules;
       this.attackRollCount = 0;
       this.damageRollCount = 0;
       this.advantage = undefined;
@@ -1812,7 +1820,6 @@ export class Workflow {
     }
 
     this.preSelectedTargets = this.#preSelectedTargets();
-    this.templateUuids = [];
     if (this.activity instanceof MidiSummonActivity && configSettings.autoRemoveSummonedCreature) {
       // Hooks.on + uuid filter rather than Hooks.once: concurrent summon workflows must not consume each other's hook
       this.postSummonHookId = Hooks.on("dnd5e.postSummon", (activity, profile, createdTokens, options) => {
@@ -1860,7 +1867,6 @@ export class Workflow {
   #restoreFromCard() {
     this.suspended = true;
     this.itemUseComplete = true;
-    this.noOptionalRules = !configSettings.optionalRulesEnabled;
     this.templateUuids = [...this.#persisted.scalar<string[]>("templateUuids", [])];
     if (this.#persisted.scalar("isCritical", false)) this.attackRollModifierTracker.critical.setOverride(true, "restored", "Restored from chat card");
     if (this.#persisted.scalar("isFumble", false)) this.attackRollModifierTracker.fumble.setOverride(true, "restored", "Restored from chat card");
@@ -2601,7 +2607,7 @@ export class Workflow {
   async WorkflowState_WaitForDamageRoll(): Promise<WorkflowState> {
     const hasDamageRoll = this.activity.hasDamage || this.otherActivity?.hasDamage || this.activity.hasHealing || this.otherActivity?.hasHealing;
     if (!hasDamageRoll) return this.WorkflowState_WaitForSaves;
-    if (debugEnabled > 1) debug(`wait for damage roll has damage roll ${hasDamageRoll} isFumble ${this.isFumble} no auto damage ${this.noAutoDamage}`);
+    if (debugEnabled > 1) debug(`wait for damage roll has damage roll ${hasDamageRoll} isFumble ${this.isFumble}`);
 
     if (checkMechanic("actionSpecialDurationImmediate"))
       expireMyEffects.bind(this)(["1Attack", "1Action", "1Spell"]);
@@ -9198,6 +9204,7 @@ type WorkflowConstructorOptions = InexactPartial<{
   readOnly: boolean;
   event: MouseEvent | KeyboardEvent;
   item: Item.Implementation;
+  /** @deprecated since 14.6.9: has no effect */
   noOptionalRules: boolean;
   noTemplateHook: boolean;
   rollOptions: WorkflowRollOptions

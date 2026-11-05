@@ -762,8 +762,7 @@ export let fetchParams = () => {
   }
   const itemList = Object.keys(CONFIG.Item.typeLabels);
   if (!configSettings.itemTypeList && itemList.length > 0) {
-    configSettings.itemTypeList = itemList;
-    configSettings.itemTypeList.filter((type) => !["base", "backpack"].includes(type));
+    configSettings.itemTypeList = itemList.filter((type) => !["base", "backpack"].includes(type));
   }
   if (configSettings.itemTypeList === undefined) configSettings.itemTypeList = Object.keys(CONFIG.Item.typeLabels);
   if (configSettings.defaultSaveMult === undefined) configSettings.defaultSaveMult = 0.5;

@@ -76,7 +76,7 @@ This page provides information on when each field of `workflow` is given data:
 | damageRollCount | int |  | `preTargeting` (0) | `flags.midi-qol.optional.NAME.damage.*`<br><br>or `preDamageRollConfig` if called a second time by an other damage activity<br><br>`postWaitForDamageRoll` if no optional |  |
 | defaultDamageType | string |  | `preTargeting` | `preTargeting` |  |
 | effectsAlreadyExpired | Array | contains string | `postPreambleComplete` (empty) | `postDamageRoll` (special durations expired on the roll); `preDamageRoll` with the *Expire 1Hit/1Attack/1Action on roll* mechanic |  |
-| noAutoDamage |  | never set by midi; a macro can set it to stop the auto damage roll | `preTargeting` |  |  |
+| noAutoDamage |  | **deprecated** (warns, no effect): set `workflowOptions.autoRollDamage` to `"none"`, or return false from `preDamageRollConfig` | `preTargeting` |  |  |
 | saves | Set | contains Token | `preTargeting` (empty) | `isSaveSuccess` / `isSaveFailure` *(contains successes)* |  |
 | superSavers | Set | contains Token | `preTargeting` (undefined) | `preItemRoll` (empty)<br><br>`postWaitForSaves` (any targets with flag) |  |
 | semiSuperSavers | Set | contains Token | `preTargeting` (undefined) | `preItemRoll` (empty)<br><br>`postWaitForSaves` (any targets with flag) |  |
@@ -89,7 +89,6 @@ This page provides information on when each field of `workflow` is given data:
 | saveDisplayData | Array | contains object (includes `modifierTracker` and `attributionTooltip`) | `preTargeting` (empty) | per target, after that target's `isSave`/`isSaveSuccess`/`isSaveFailure`; complete from `postWaitForSaves` |  |
 | saveAttribution | Record | restored from the card only; no longer filled by midi | `preTargeting` (empty) | `isSaveSuccess` / `isSaveFailure` |  |
 | targetSaveDetails | Record | target token uuid → SaveDetails (per-target save tracking with modifierTracker) | `preTargeting` (undefined) | per target, before that target's `preTargetSave` |  |
-| flagTags |  | never set by midi; a macro can set flags here to add them to the damage card | `preTargeting` |  |  |
 | onUseMacros | OnUseMacros (object) | contains one property "items", an array of OnUseMacro objects | `preTargeting` | `preTargeting` |  |
 | ammunitionOnUseMacros | OnUseMacros (object) | contains one property "items", an array of OnUseMacro objects | `preTargeting` (undefined) | `flags.midi-qol.optional.NAME.attack.*`<br><br>`postWaitForAttackRoll` if no optional |  |
 | attackRollModifierTracker | RollModifierTracker | centralized tracker for advantage/disadvantage/critical/fumble/modifiers | `preTargeting` | `preAttackRollConfig` (fully populated after `checkAttackAdvantage`) |  |
@@ -97,7 +96,7 @@ This page provides information on when each field of `workflow` is given data:
 | attackAttribution | AttributionMap | structured map: type → source → displayName | `preTargeting` (empty) | `preAttackRollConfig` (delegates to `attackRollModifierTracker.attribution`) |  |
 | attackAdvAttribution | Set | **deprecated** — use `attackAttribution`. Legacy `"${type}:${source}"` format | `preTargeting` (empty) | `preAttackRollConfig` (delegates to `attackRollModifierTracker.legacyAttribution`) |  |
 | advReminderAttackAdvAttribution | Set | **deprecated** — use `attackAttribution`. For adv-reminder compat | `preTargeting` (empty) | `preAttackRollConfig` (delegates to `attackRollModifierTracker.advReminderAttribution`) |  |
-| noOptionalRules | bool | false *(dependent on settings)* | `preTargeting` | `preTargeting` |  |
+| noOptionalRules | bool | **deprecated** (warns, no effect): optional rules follow the *Optional rules* setting | `preTargeting` | `preTargeting` |  |
 | undoData |  | set with *Support undoing item rolls* on | `preTargeting` | `postNoAction` |  |
 | needTemplate | bool | getter: true while templates remain to be placed | `preTargeting` (false) | `preTargeting` |  |
 | disadvantageSaves | Set | contains Token | `preTargeting` (empty) | per target, before that target's `preTargetSave` | cleared when saves start (`postWaitForSaves` / save checks), after `preSave` |
@@ -190,7 +189,7 @@ This page provides information on when each field of `workflow` is given data:
 | executingStates | number | while running | above 0 while the workflow is running |
 | nameForState(state) | method | — | a state's name, e.g. `workflow.nameForState(workflow.currentAction)` → `"WaitForSaves"` |
 
-**Not set by midi**: `isTurn`, `noAutoAttack`, `noAutoDamage`, `flagTags`, `onUseCalled`, `otherDamageList` (declared, always undefined). Macros may set `noAutoAttack`, `noAutoDamage` and `flagTags`.
+**Not set by midi**: `isTurn`, `noAutoAttack`, `onUseCalled`, `otherDamageList` (declared, always undefined). Macros may set `noAutoAttack`.
 
 **Not verified**: `saveRequests`, `saveTimeouts`, `defenceRequests`, `defenceTimeouts` (active defence), the vision resets of `advantage`/`disadvantage`, and the Optional Save Bonus table below.
 
@@ -212,7 +211,6 @@ The `flags.midi-qol.optional.NAME.save.*` passes are given their own separate wo
 | isCritical                | bool     | true/false                        |
 | isFumble                  | bool     | true/false                        |
 | defaultDamageType         | string   |                                   |
-| noOptionalRules           | bool     | false                             |
 | suspended                 | bool     | true if optional dialog           |
 | aborted                   | bool     | false                             |
 | workflowName              | string   | "workflow < workflow ID >"        |

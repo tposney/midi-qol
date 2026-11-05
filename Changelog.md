@@ -18,6 +18,9 @@
 * Fixed: an optional bonus whose numeric `count` or `countAlt` ran out ended without using the reaction or bonus action its other count named (`count: reaction` with `countAlt: 1`).
 * Changed: rolling damage again for a completed use is a damage roll of its own, as in dnd5e: a new card with the use's hits and saves, the damage applied and its own undo; nothing is consumed and no effects are applied. It used to start the whole use again (attack, consumption, templates).
 * Fixed: a card's damage button pressed while its workflow is still resolving is refused; it replaced the rolls under the running workflow.
+* Fixed: a template passed in `workflowOptions.templateUuid` was dropped by the workflow.
+* Fixed: applying damage from another user's card (e.g. the GM applying a player's) named the applier, not the attacker, on the damage card.
+* Fixed: the *Item details* type list for a new world included the base and backpack types.
 * Removed: ddb-game-log support (the module has no Foundry 14 release); `MidiQOL.DDBGameLogWorkflow` is gone.
 
 **Macros**
@@ -30,10 +33,12 @@
   * `templateUuid` → `workflow.templateUuids[0]`
   * `isHit`, `isHitEC` → `workflow.isHit`, `workflow.isHitEC` (new)
 * Added: `workflow.saveRoll(token)`, a target's save roll (a Token, TokenDocument or token uuid), also on a workflow rebuilt from its card.
+* Fixed: changing one of a workflow's empty token sets in place (`workflow.superSavers.add(token)`) was lost; a reference to a token set now stays the workflow's after its card is written.
 * Changed: `DamageOnlyWorkflow` applies damage only: it no longer fires `midi-qol.postActiveEffects` or marks the actor's action as used.
 * Changed: `Workflow#unSuspend(context)` is deprecated; macros resuming a workflow call `workflow.resume(event)`, event `"attackRolled"`, `"damageRolled"`, `"noDamage"` or `"utilityRolled"`, after setting the roll (`setAttackRoll`, `setDamageRolls`, `setUtilityRolls`).
 * Changed: for a user other than the card's author, `MidiQOL.Workflow.getWorkflow(cardUuid)` returns a read-only copy rebuilt from the card (`workflow.readOnly`); a copy is never updated, so fetch it again after the card changes; `getWorkflow(cardUuid, false)` returns a live one, which runs and writes the card alongside the author's (use at your own risk, with a console warning).
 * Removed: `workflow.flagTags` (never set by midi or any known module).
+* Deprecated: `workflow.noAutoDamage` and `workflow.noOptionalRules` (and the `noOptionalRules` workflow option): they never had an effect and warn when used; use `workflowOptions.autoRollDamage: "none"` (or return false from `preDamageRollConfig`); optional rules follow the *Optional rules* setting.
 
 
 **Sample items**
