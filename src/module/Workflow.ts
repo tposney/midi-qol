@@ -1,6 +1,7 @@
 import { warn, debug, log, i18n, i18nFormat, busyWait, MESSAGE_TYPES, error, debugEnabled, MQItemMacroLabel, GameSystemConfig, MODULE_ID, MQActivityMacroLabel, gameStats } from "../midi-qol.js";
 import { MidiTeleportActivity, TeleportOption } from "./activities/TeleportActivity.js";
 import { decodeWorkflowOptions, encodeWorkflowOptions, inheritableWorkflowOptions } from "./lib/workflowOptionsCodec.js";
+import { TokenSet } from "./lib/tokenSet.js";
 import { CardRecord, RECORD_SETS, RecordSet, SaveFacts, SECTION_TEMPLATES, STATE_FIELDS, StateKey, attributionMap, attributionTriples, cardPreSelected } from "./lib/cardState.js";
 import { preferredActiveGM, socketlibSocket, timedAwaitExecuteAsGM, timedExecuteAsGM, unTimedExecuteAsGM } from "./GMAction.js";
 import { installedModules } from "./setupModules.js";
@@ -256,12 +257,11 @@ class CardStateStore {
       const uuids = records.filter(record => record[field]).map(record => record.uuid);
       if (uuids.length) this.#cache.set(`recordValues.${field}`, new Set(uuids));
     }
-    // Only tokens on the canvas are loaded; a set is compared with those, so records of tokens elsewhere are left alone
+    // Every member, drawn or not (TokenSet); a record whose token no longer exists is left alone
     for (const field of Object.keys(RECORD_SETS) as RecordSet[]) {
-      const tokens = records.filter(record => record[field])
-        .map(record => (fromUuidSync(record.uuid) as TokenDocument.Implementation | undefined)?.object).filter((t): t is Token.Implementation => !!t);
-      this.#cache.set(field, new Set(tokens));
-      this.#cache.set(`written.${field}`, new Set(tokens.map(token => token.document.uuid)));
+      const tokens = new TokenSet(records.filter(record => record[field]).map(record => record.uuid));
+      this.#cache.set(field, tokens);
+      this.#cache.set(`written.${field}`, new Set(tokens.uuids));
     }
     const hitRows = records.filter(record => typeof record.hitClass === "string").map(record => record.uuid);
     if (hitRows.length) this.#cache.set("hitRows", new Set(hitRows));
@@ -291,23 +291,24 @@ class CardStateStore {
     this.#write({ [CardStateStore.#path(key)]: storeAs ? storeAs(value) : value });
   }
 
-  /** The workflow's tokens in set `field`: the same Set each time, so changes made in place are written (syncTokenSets) */
-  tokenSet(field: RecordSet): Set<Token.Implementation> {
-    let tokens = this.#cache.get(field) as Set<Token.Implementation> | undefined;
-    if (!tokens) this.#cache.set(field, tokens = new Set());
+  /** The workflow's tokens in set `field`: the same TokenSet each time, so changes made in place are written (syncTokenSets) */
+  tokenSet(field: RecordSet): TokenSet {
+    let tokens = this.#cache.get(field) as TokenSet | undefined;
+    if (!tokens) this.#cache.set(field, tokens = new TokenSet());
     return tokens;
   }
 
   setTokenSet(field: RecordSet, tokens: Set<TokenOrDocument> | undefined, store = true): void {
     if (tokens === undefined) this.#cache.delete(field);
-    // syncTokenSets passes the cached Set itself: kept, so references to it stay the workflow's
-    else if (tokens !== this.#cache.get(field)) this.#cache.set(field, new Set(Array.from(tokens).map(t => t instanceof TokenDocument ? t.object : t).filter(t => !!t)));
+    // syncTokenSets passes the cached set itself: kept, so references to it stay the workflow's; another TokenSet is
+    // copied with its members not drawn
+    else if (tokens !== this.#cache.get(field)) this.#cache.set(field, new TokenSet(tokens as Iterable<Token.Implementation | TokenDocument.Implementation>));
     if (!store) {
       this.#unstoredSets.add(field);
       return;
     }
     this.#unstoredSets.delete(field);
-    const members = new Set(Array.from(tokens ?? []).map(t => getTokenDocument(t)).filter((t): t is TokenDocument.Implementation => !!t));
+    const members = new Set(this.tokenSet(field).documents);
     // Compared with what was last written, not the cached set: callers change that in place before assigning it
     const written = `written.${field}`;
     const before = (this.#cache.get(written) as Set<string> | undefined) ?? new Set<string>();
@@ -336,8 +337,8 @@ class CardStateStore {
   syncTokenSets(): void {
     for (const field of Object.keys(RECORD_SETS) as RecordSet[]) {
       if (this.#unstoredSets.has(field)) continue;
-      const current = this.#cache.get(field) as Set<Token.Implementation> | undefined;
-      const now = new Set([...(current ?? [])].map(token => token.document?.uuid).filter((uuid): uuid is string => !!uuid));
+      const current = this.#cache.get(field) as TokenSet | undefined;
+      const now = new Set(current?.uuids ?? []);
       const written = (this.#cache.get(`written.${field}`) as Set<string> | undefined) ?? new Set<string>();
       if (now.size !== written.size || [...now].some(uuid => !written.has(uuid))) this.setTokenSet(field, current);
     }
@@ -850,7 +851,7 @@ export class Workflow {
     return this.token?.document.uuid;
   }
 
-  get targets(): Set<Token.Implementation> { return this.#persisted.tokenSet("targets"); }
+  get targets(): TokenSet { return this.#persisted.tokenSet("targets"); }
   set targets(targets: Set<TokenOrDocument>) { this.#persisted.setTokenSet("targets", targets ?? new Set()); }
 
   // Worked out again when the workflow is rebuilt (setupCanSeeSense)
@@ -1015,10 +1016,10 @@ export class Workflow {
   // These from the attack roll, worked out again when the workflow is rebuilt (#restoreFromCard)
   d20AttackRoll: number = -1;
 
-  get hitTargets(): Set<Token.Implementation> { return this.#persisted.tokenSet("hit"); }
+  get hitTargets(): TokenSet { return this.#persisted.tokenSet("hit"); }
   set hitTargets(hitTargets: Set<TokenOrDocument> | undefined) { this.#persisted.setTokenSet("hit", hitTargets); }
 
-  get hitTargetsEC(): Set<Token.Implementation> { return this.#persisted.tokenSet("hitEC"); }
+  get hitTargetsEC(): TokenSet { return this.#persisted.tokenSet("hitEC"); }
   set hitTargetsEC(hitTargetsEC: Set<TokenOrDocument> | undefined) { this.#persisted.setTokenSet("hitEC", hitTargetsEC); }
 
   #otherDamageMatches: Set<Token.Implementation> | undefined;
@@ -1378,23 +1379,23 @@ export class Workflow {
    */
   deferredConcentration: { scaling?: number, end?: string } | undefined;
 
-  get saves(): Set<Token.Implementation> { return this.#persisted.tokenSet("saved"); }
+  get saves(): TokenSet { return this.#persisted.tokenSet("saved"); }
   set saves(saves: Set<TokenOrDocument> | undefined) { this.#persisted.setTokenSet("saved", saves); }
 
-  get superSavers(): Set<Token.Implementation> { return this.#persisted.tokenSet("superSaver"); }
+  get superSavers(): TokenSet { return this.#persisted.tokenSet("superSaver"); }
   set superSavers(superSavers: Set<TokenOrDocument> | undefined) { this.#persisted.setTokenSet("superSaver", superSavers); }
-  get semiSuperSavers(): Set<Token.Implementation> { return this.#persisted.tokenSet("semiSuperSaver"); }
+  get semiSuperSavers(): TokenSet { return this.#persisted.tokenSet("semiSuperSaver"); }
   set semiSuperSavers(semiSuperSavers: Set<TokenOrDocument> | undefined) { this.#persisted.setTokenSet("semiSuperSaver", semiSuperSavers); }
 
-  get failedSaves(): Set<Token.Implementation> { return this.#persisted.tokenSet("failedSave"); }
+  get failedSaves(): TokenSet { return this.#persisted.tokenSet("failedSave"); }
   // With no save they are the attacked (hit) targets, worked out again when rebuilt (#restoreFromCard): not stored
   set failedSaves(failedSaves: Set<TokenOrDocument> | undefined) { this.#persisted.setTokenSet("failedSave", failedSaves, this.hasSave); }
 
-  get fumbleSaves(): Set<Token.Implementation> { return this.#persisted.tokenSet("fumbleSave"); }
+  get fumbleSaves(): TokenSet { return this.#persisted.tokenSet("fumbleSave"); }
   set fumbleSaves(fumbleSaves: Set<TokenOrDocument> | undefined) { this.#persisted.setTokenSet("fumbleSave", fumbleSaves); }
-  get criticalSaves(): Set<Token.Implementation> { return this.#persisted.tokenSet("criticalSave"); }
+  get criticalSaves(): TokenSet { return this.#persisted.tokenSet("criticalSave"); }
   set criticalSaves(criticalSaves: Set<TokenOrDocument> | undefined) { this.#persisted.setTokenSet("criticalSave", criticalSaves); }
-  get advantageSaves(): Set<Token.Implementation> { return this.#persisted.tokenSet("advantageSave"); }
+  get advantageSaves(): TokenSet { return this.#persisted.tokenSet("advantageSave"); }
   set advantageSaves(advantageSaves: Set<TokenOrDocument> | undefined) { this.#persisted.setTokenSet("advantageSave", advantageSaves); }
   saveRequests: Record<string, (value: any) => void>;
   saveTimeouts: Record<string, NodeJS.Timeout>;
@@ -3019,7 +3020,7 @@ export class Workflow {
     this.otherActivationMatches = new Set();
     this.activationFails = new Set();
     this.otherActivationFails = new Set();
-    let targetsToUse = this.targets;
+    let targetsToUse: Set<Token.Implementation> = this.targets;
     // Special case for target affects not specified an no targets selected when rolled - assume user has selected new targets so use those
     if (this.activity.target?.affects?.type === "" && this.targets.size == 0)
       targetsToUse = new Set(game.user?.targets);
