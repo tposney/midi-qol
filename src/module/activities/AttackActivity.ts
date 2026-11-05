@@ -205,23 +205,27 @@ let defineMidiAttackActivityClass = <T extends Activity>(ActivityClass: T) => {
         },
       }, { inplace: false, insertKeys: true, insertValues: true })
 
+    /**
+     * A finished use's attack rolled again (its card's Attack button, or a macro's rollAttack) is a new use at its
+     * targets, on a new card; the finished card loses its buttons. The new workflow is left on `usage.workflow`.
+     */
+    static async attackAgain(activity: Activity, workflow: Workflow | undefined, event?: Event): Promise<ActivityUseConfiguration> {
+      if (workflow?.itemCardUuid) Workflow.removeItemCardButtons(workflow.itemCardUuid, { removeAllButtons: true });
+      const usage: ActivityUseConfiguration = { event, workflow };
+      usage.midiOptions = workflow?.rollOptions ?? {};
+      usage.midiOptions.workflowOptions ??= {};
+      usage.midiOptions.targets = new Set(workflow?.targets);
+      if (workflow) usage.midiOptions.workflowOptions.autoRollAttack = true;
+      // @ts-expect-error
+      await activity.use(usage, {}, {});
+      return usage;
+    }
+
     static #rollAttack(this: Activity, event: PointerEvent, target: HTMLElement, message: ChatMessage.Implementation) {
       const workflow = Workflow.findWorkflow(message?.uuid);
 
       if (!message || !workflow || (workflow.currentAction && [workflow.WorkflowState_Abort, workflow.WorkflowState_Completed].includes(workflow.currentAction))) {
-        if (workflow?.itemCardUuid) Workflow.removeItemCardButtons(workflow.itemCardUuid, { removeAllButtons: true });
-        const attackConfig: ActivityUseConfiguration = { event, workflow };
-        attackConfig.midiOptions = workflow?.rollOptions ?? {};
-        attackConfig.midiOptions.workflowOptions ??= {};
-        attackConfig.midiOptions.targets = new Set(workflow?.targets);
-        attackConfig.workflow = workflow;
-        if (workflow) {
-          attackConfig.midiOptions.workflowOptions ??= {};
-          attackConfig.midiOptions.workflowOptions.autoRollAttack = true;
-        }
-        attackConfig.event = event;
-        // @ts-expect-error
-        this.use(attackConfig, {}, {});
+        MidiAttackActivity.attackAgain(this, workflow, event);
       } else {
         const attackConfig: ActivityUseConfiguration = { workflow };
         attackConfig.midiOptions = workflow?.rollOptions ?? {};
@@ -412,6 +416,11 @@ let defineMidiAttackActivityClass = <T extends Activity>(ActivityClass: T) => {
     async rollAttack(config: RollProcessConfig = {}, dialog: RollDialogConfig = {}, message: RollMessageConfig = {}): Promise<Roll[] | null> {
       const workflow = config.workflow;
       if (!workflow) return this._midiRollAttack(config, dialog, message);
+      if (workflow.currentAction === workflow.WorkflowState_Completed || workflow.currentAction === workflow.WorkflowState_Abort) {
+        const usage = await MidiAttackActivity.attackAgain(this, workflow, config.event);
+        config.workflow = usage.workflow;
+        return usage.workflow?.attackRoll ? [usage.workflow.attackRoll] : null;
+      }
       return workflow.whileExecuting(() => this._midiRollAttack(config, dialog, message));
     }
 
@@ -668,31 +677,6 @@ let defineMidiAttackActivityClass = <T extends Activity>(ActivityClass: T) => {
       config.midiOptions ??= {};
 
       if (debugEnabled > 1) debug("Entering configure attack roll", config.event, workflow, config.rollOptions);
-      if (workflow.workflowType === "BaseWorkflow") {
-        if (workflow.attackRoll && workflow.currentAction === workflow.WorkflowState_Completed) {
-          // This should not happen anymore
-          // we are re-rolling the attack.
-          await workflow.setDamageRolls(undefined)
-          if (workflow.itemCardUuid) {
-            await Workflow.removeItemCardButtons(workflow.itemCardUuid, { removeConfirmButtons: true });
-          }
-          if (workflow.damageRollCount > 0) { // re-rolling damage counts as new damage
-            const flags = foundry.utils.deepClone(workflow.chatCard._source.flags);
-            const messageConfig = foundry.utils.mergeObject({
-              create: true,
-              data: { system: { effects: this.applicableEffects?.map(e => e.relativeUUID) } },
-              hasConsumption: false
-            }, { data: { flags } })
-            // @ts-expect-error
-            const itemCard = await this._createUsageMessage(messageConfig);
-            // const itemCard = await this.displayCard(foundry.utils.mergeObject(config, { systemCard: false, workflowId: workflow.id, minimalCard: false, createMessage: true }));
-            workflow.itemCardUuid = itemCard.uuid;
-            // A new card, not linked to the first: record it for undo.
-            if (configSettings.undoWorkflow && workflow.undoData) unTimedExecuteAsGM("addUndoChatCards", { id: workflow.undoData.id, chatCardUuids: [itemCard.uuid] });
-          }
-        }
-      }
-
       if (workflow.workflowType === "TrapWorkflow") workflow.workflowOptions.fastForward = true;
 
       await doActivityReactions(this, workflow);
