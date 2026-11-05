@@ -5,7 +5,7 @@ import { configSettings, forceHideRoll, safeGetGameSetting } from "../settings.j
 import { createDamageDetail, displayTokenName, getToken, isDnd5eRollMessage } from "../utils.js";
 import { damageDetailToObject, Workflow } from "../Workflow.js";
 import { renameMarkedTokens } from "../lib/tokenNames.js";
-import { cardHitResult, cardMidiState, cardSourceActor, storedMidiFlag } from "../lib/cardState.js";
+import { cardHitResult, cardMidiState, cardSourceActor, recordList, storedMidiFlag } from "../lib/cardState.js";
 import { cardSaveRoll } from "./UsageCardMessage.js";
 import { canSeePlayerOutcome, canSeeSaveResult, cardActor, challengeVisible, saveDetail, saveDisplayMode } from "../lib/saveVisibility.js";
 
@@ -258,7 +258,7 @@ export function defineChatMessageMidiClass(baseClass: ChatMessage.Implementation
       if (!canvas?.ready) return;
       // @ts-expect-error no dnd5e-types
       if (!this.flags?.[MODULE_ID]) return super.selectTargets(type);
-      const records = Object.values(cardMidiState(this)?.records ?? {});
+      const records = recordList(cardMidiState(this)?.records);
       const targetUuids: string[] = records.length ? records.filter(r => r.targets).map(r => r.uuid)
         : (storedMidiFlag(this, "targets") ?? []).map((t: { uuid: string }) => t.uuid);
       const hitTargetUuids: string[] = records.length ? records.filter(r => r.hit).map(r => r.uuid) : storedMidiFlag(this, "hitTargetUuids") ?? [];

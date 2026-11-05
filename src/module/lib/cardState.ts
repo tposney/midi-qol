@@ -1,6 +1,7 @@
 /**
  * The workflow's state on its usage card: `system.midi.state` (scalars) and `system.midi.records` (one record per
- * token, keyed by token id; a token set is the records with its field set). Read back when a workflow is rebuilt from
+ * token, keyed by scene id then token id, as a duplicated scene keeps its token ids; a token set is the records with its
+ * field set). Read back when a workflow is rebuilt from
  * its card.
  */
 
@@ -79,7 +80,7 @@ export function cardStateSchema() {
       // A damage roll on its own (Workflow#damageOnly)
       damageOnly: bool()
     }, { required: false }),
-    records: new TypedObjectField(new SchemaField({
+    records: new TypedObjectField(new TypedObjectField(new SchemaField({
       uuid: new StringField({ required: true, blank: false }),
       ...Object.fromEntries(Object.keys(RECORD_SETS).map(key => [key, bool()])),
       saveTotal: num(), saveCover: new StringField({ ...unset, choices: ["half", "threeQuarters", "total"] }), saveCoverAuto: bool(), saveMode: num(),
@@ -89,25 +90,44 @@ export function cardStateSchema() {
       ...Object.fromEntries(["hitClass", "hitSymbol", "acDisplay", "acTooltip"].map(key => [key, new StringField({ ...unset, blank: true, nullable: true })])),
       hitShowAC: new BooleanField({ ...unset, nullable: true }),
       acIcons: new ArrayField(new ObjectField(), { ...unset, nullable: true })
-    }), { required: false })
+    })), { required: false })
   };
 }
 
+/** A card's records: by scene id, then token id */
+export type CardRecords = Record<string, Record<string, CardRecord>>;
+
+/** Where a token's record is written: `system.midi.records.<sceneId>.<tokenId>` */
+export function recordPath(document: TokenDocument.Implementation): string | undefined {
+  const sceneId = document.parent?.id;
+  return sceneId && document.id ? `system.midi.records.${sceneId}.${document.id}` : undefined;
+}
+
+/** Every record on a card */
+export function recordList(records: CardRecords | undefined): CardRecord[] {
+  return Object.values(records ?? {}).flatMap(scene => Object.values(scene ?? {}));
+}
+
+/** The record of the token with this uuid */
+export function recordFor(records: CardRecords | undefined, tokenUuid: string): CardRecord | undefined {
+  return recordList(records).find(record => record.uuid === tokenUuid);
+}
+
 /** The damage tray's matches: token uuids the other activity's (or the ammunition's) damage applies to; undefined until worked out */
-export function cardDamageMatches(midi: { state?: Record<string, any>, records?: Record<string, CardRecord> } | undefined,
+export function cardDamageMatches(midi: { state?: Record<string, any>, records?: CardRecords } | undefined,
   kind: "otherDamage" | "ammunitionDamage"): string[] | undefined {
   if (!midi?.state?.[`${kind}Matched`]) return undefined;
-  return Object.values(midi.records ?? {}).filter(record => record[kind]).map(record => record.uuid);
+  return recordList(midi.records).filter(record => record[kind]).map(record => record.uuid);
 }
 
 /** The tokens targeted before the use, in order */
-export function cardPreSelected(records: Record<string, CardRecord> | undefined): string[] {
-  return Object.values(records ?? {}).filter(record => record.preSelected).sort((a, b) => a.preSelected! - b.preSelected!).map(record => record.uuid);
+export function cardPreSelected(records: CardRecords | undefined): string[] {
+  return recordList(records).filter(record => record.preSelected).sort((a, b) => a.preSelected! - b.preSelected!).map(record => record.uuid);
 }
 
 /** A card's stored workflow state and records, if it has any */
-export function cardMidiState(message: ChatMessage.Implementation | undefined): { state: Record<string, any>, records: Record<string, CardRecord> } | undefined {
-  const midi = (message?.system as { midi?: { state?: Record<string, any>, records?: Record<string, CardRecord> } } | undefined)?.midi;
+export function cardMidiState(message: ChatMessage.Implementation | undefined): { state: Record<string, any>, records: CardRecords } | undefined {
+  const midi = (message?.system as { midi?: { state?: Record<string, any>, records?: CardRecords } } | undefined)?.midi;
   return midi?.state?.workflowClass ? { state: midi.state, records: midi.records ?? {} } : undefined;
 }
 
@@ -118,7 +138,7 @@ export function cardMidiState(message: ChatMessage.Implementation | undefined): 
 export function cardTargetDetail(message: ChatMessage.Implementation | undefined, tokenUuid: string, descriptor: Record<string, any> = {}): Record<string, unknown> {
   const card = cardMidiState(message);
   if (!card || descriptor.saveMults) return descriptor;
-  const record = card.records[tokenUuid.split(".").pop() ?? ""];
+  const record = recordFor(card.records, tokenUuid);
   // @ts-expect-error no dnd5e-types
   const itemType = message?.getAssociatedItem?.()?.type;
   return {
@@ -134,7 +154,7 @@ export function cardTargetDetail(message: ChatMessage.Implementation | undefined
 export function cardHitResult(message: ChatMessage.Implementation | undefined): boolean | undefined {
   const stored = storedMidiFlag(message, "isHit");
   if (stored !== undefined) return stored;
-  const records = Object.values(cardMidiState(message)?.records ?? {});
+  const records = recordList(cardMidiState(message)?.records);
   if (records.some(record => typeof record.hitClass === "string")) return records.some(record => record.hit || record.hitEC);
   const attack = (message?.rolls ?? []).find(roll => foundry.utils.getProperty(roll, "options.midi-qol.rollType") === "attack") as { isSuccess?: boolean } | undefined;
   return attack?.isSuccess;

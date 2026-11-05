@@ -2,7 +2,7 @@ import { warn, debug, log, i18n, i18nFormat, busyWait, MESSAGE_TYPES, error, deb
 import { MidiTeleportActivity, TeleportOption } from "./activities/TeleportActivity.js";
 import { decodeWorkflowOptions, encodeWorkflowOptions, inheritableWorkflowOptions } from "./lib/workflowOptionsCodec.js";
 import { TokenSet } from "./lib/tokenSet.js";
-import { CardRecord, RECORD_SETS, RecordSet, SaveFacts, SECTION_TEMPLATES, STATE_FIELDS, StateKey, attributionMap, attributionTriples, cardPreSelected } from "./lib/cardState.js";
+import { CardRecords, RECORD_SETS, RecordSet, SaveFacts, SECTION_TEMPLATES, STATE_FIELDS, StateKey, attributionMap, attributionTriples, cardPreSelected, recordList, recordPath } from "./lib/cardState.js";
 import { preferredActiveGM, socketlibSocket, timedAwaitExecuteAsGM, timedExecuteAsGM, unTimedExecuteAsGM } from "./GMAction.js";
 import { installedModules } from "./setupModules.js";
 import { offerFollowUps } from "./followUps.js";
@@ -240,7 +240,7 @@ class CardStateStore {
   /** What the card holds, for a workflow rebuilt from it: its state, its records' token sets and its rolls */
   load(card: ChatMessage.Implementation, decodeOptions: (options: WorkflowOptions) => WorkflowOptions): void {
     // @ts-expect-error no dnd5e-types
-    const midi: { state?: Record<string, any>, records?: Record<string, CardRecord>, attackRollCount?: number, damageRollCount?: number } = card.system?.midi ?? {};
+    const midi: { state?: Record<string, any>, records?: CardRecords, attackRollCount?: number, damageRollCount?: number } = card.system?.midi ?? {};
     const state = midi.state ?? {};
     if (state.workflowClass) this.#cache.set("workflowClass", state.workflowClass);
     for (const key of Object.keys(STATE_FIELDS)) {
@@ -252,7 +252,7 @@ class CardStateStore {
     for (const key of ["attackRollCount", "damageRollCount"] as const) if (midi[key] != null) this.#cache.set(key, midi[key]);
     // Pre-selected targets are kept in the records, not the stored options
     if (state.workflowClass) this.#cache.set("workflowOptions", { ...((this.#cache.get("workflowOptions") as WorkflowOptions | undefined) ?? {}), preSelectedTargetUuids: cardPreSelected(midi.records) });
-    const records = Object.values(midi.records ?? {});
+    const records = recordList(midi.records);
     for (const field of RECORD_VALUES) {
       const uuids = records.filter(record => record[field]).map(record => record.uuid);
       if (uuids.length) this.#cache.set(`recordValues.${field}`, new Set(uuids));
@@ -314,7 +314,8 @@ class CardStateStore {
     const before = (this.#cache.get(written) as Set<string> | undefined) ?? new Set<string>();
     const leaves: Record<string, unknown> = {};
     const mark = (document: TokenDocument.Implementation, value: boolean) => {
-      const at = `system.midi.records.${document.id}`;
+      const at = recordPath(document);
+      if (!at) return;
       // A record is created whole, so it always gets its uuid
       Object.assign(leaves, { [`${at}.uuid`]: document.uuid, [`${at}.${field}`]: value });
     };
@@ -423,7 +424,8 @@ class CardStateStore {
       else delete attribution[document.uuid];
       this.#cache.set("saveAttribution", attribution);
     }
-    const at = `system.midi.records.${document.id}`;
+    const at = recordPath(document);
+    if (!at) return;
     const leaves: Record<string, unknown> = { [`${at}.uuid`]: document.uuid };
     for (const [key, value] of Object.entries(facts)) if (value !== undefined) leaves[`${at}.${key}`] = value;
     this.#write(leaves);

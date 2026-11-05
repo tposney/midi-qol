@@ -14,7 +14,7 @@ import { MODULE_ID } from "../../midi-qol.js";
 import { Workflow } from "../Workflow.js";
 import { followUpButtons } from "../followUps.js";
 import { NOTE_MESSAGE_TYPE, noteCard, notesOf } from "./CardNoteMessage.js";
-import { attributionMap, cardStateSchema, SECTION_TEMPLATES, type CardRecord } from "../lib/cardState.js";
+import { attributionMap, cardStateSchema, recordFor, recordList, SECTION_TEMPLATES, type CardRecord, type CardRecords } from "../lib/cardState.js";
 
 /** Renderer per roll-backed section; damage renderers aggregate the section's rolls into one block. */
 const SECTION_ROLL_RENDERERS: Record<string, (rolls: Roll[]) => Promise<string> | string> = {
@@ -100,10 +100,12 @@ export function cardSaveRoll(card: ChatMessage.Implementation | null | undefined
   const kept = (card.rolls ?? []).find(roll => foundry.utils.getProperty(roll, `options.${MODULE_ID}.rollType`) === "save"
     && foundry.utils.getProperty(roll, `options.${MODULE_ID}.targetUuid`) === tokenUuid);
   if (kept) return kept as Roll;
-  const tokenId = tokenUuid.split(".").pop();
-  const record = (card.system as { midi?: { records?: Record<string, CardRecord> } } | undefined)?.midi?.records?.[tokenId ?? ""];
+  // Scene.<sceneId>.Token.<tokenId>: a duplicated scene keeps its token ids
+  const [sceneId, , tokenId] = tokenUuid.split(".").slice(-3);
+  const record = recordFor((card.system as { midi?: { records?: CardRecords } } | undefined)?.midi?.records, tokenUuid);
   const linked = ((card as Dnd5eChatMessage).getAssociatedRolls?.() ?? [])
-    .filter(message => ["save", "check"].includes(message.type as string) && message.speaker?.token === tokenId)
+    .filter(message => ["save", "check"].includes(message.type as string) && message.speaker?.token === tokenId
+      && (!message.speaker.scene || message.speaker.scene === sceneId))
     .sort((a, b) => (a.timestamp ?? 0) - (b.timestamp ?? 0));
   const message = typeof record?.saveTotal === "number"
     ? linked.filter(m => m.rolls?.[0]?.total === record.saveTotal).at(-1) : linked.at(-1);
@@ -393,9 +395,9 @@ export function setupUsageCardMessage() {
         if (rollDC !== undefined && checkRule("criticalSaves")) saved = (!!roll.isCritical || total >= rollDC) && !roll.isFumble;
         return saveRow(uuid, { roll, total, saved, dc: rollDC });
       };
-      const records = (Object.entries(this.midi?.records ?? {}) as [string, CardRecord][]).filter(([, record]) => record.targets);
+      const records = recordList(this.midi?.records).filter(record => record.targets);
       const rows: unknown[] = [];
-      for (const [, record] of records) {
+      for (const record of records) {
         if (record.saveTotal !== undefined || record.saveCoverAuto) {
           rows.push(await saveRow(record.uuid, { roll: cardSaveRoll(parent, record.uuid), total: record.saveCoverAuto ? Infinity : record.saveTotal,
             saved: !!record.saved, dc, record }));
@@ -403,9 +405,9 @@ export function setupUsageCardMessage() {
       }
       // Creatures that weren't targets, saving from the card's button
       if (fromButtons) {
-        const listed = new Set(records.map(([id]) => id));
-        const others = new Set((parent.getAssociatedRolls?.() ?? []).filter(m => ["save", "check"].includes(m.type as string) && m.speaker?.token
-          && !listed.has(m.speaker.token)).map(m => game.scenes?.get(m.speaker.scene ?? "")?.tokens.get(m.speaker.token ?? "")?.uuid).filter(Boolean) as string[]);
+        const listed = new Set(records.map(record => record.uuid));
+        const others = new Set((parent.getAssociatedRolls?.() ?? []).filter(m => ["save", "check"].includes(m.type as string) && m.speaker?.token)
+          .map(m => game.scenes?.get(m.speaker.scene ?? "")?.tokens.get(m.speaker.token ?? "")?.uuid).filter(uuid => uuid && !listed.has(uuid)) as string[]);
         for (const uuid of others) rows.push(await buttonRow(uuid));
       }
       return rows.filter(Boolean);
@@ -487,7 +489,7 @@ export function setupUsageCardMessage() {
     /** The hits rows, from the records: each attacked token's result, and its AC and modifiers at the attack */
     async #hitRows(): Promise<Record<string, unknown>[]> {
       const rows: Record<string, unknown>[] = [];
-      for (const record of Object.values(this.midi?.records ?? {}) as CardRecord[]) {
+      for (const record of recordList(this.midi?.records)) {
         if (typeof record.hitClass !== "string") continue;
         const document = fromUuidSync(record.uuid);
         if (!(document instanceof TokenDocument)) continue;
