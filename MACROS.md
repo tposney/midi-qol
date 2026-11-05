@@ -789,7 +789,13 @@ workflow.hitTargets.has(tokenDocument); // a Token, TokenDocument or uuid
 workflow.saves.add(token);              // changes the workflow's set
 ```
 
-Use `documents` for anything that works on the actor (damage, effects, HP), and the Tokens for anything on the canvas (distance, sight, cover). Copy a set with `new MidiQOL.TokenSet(set)` to keep the members not drawn; `new Set(set)` keeps only the drawn Tokens.
+Use `documents` for anything that works on the actor (damage, effects, HP), and the Tokens for anything on the canvas (distance, sight, cover). `documents` is a new array on each read: change the set itself (`add`, `delete`). Copy a set with `new MidiQOL.TokenSet(set)` to keep the members not drawn; `new Set(set)`, spreading and `filter` keep only the drawn Tokens. Set algebra is over every member and gives a token set, the other set's members matched as Tokens, TokenDocuments or uuids:
+
+```js
+const unsaved = workflow.hitTargets.difference(workflow.saves); // a token set
+unsaved.documents;                                             // every hit target that didn't save, drawn or not
+workflow.saves.isSubsetOf(workflow.targets);                   // over every member
+```
 
 ### Storing data on the card
 

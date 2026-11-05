@@ -17,7 +17,8 @@ function memberDocument(member: TokenMember | undefined | null): TokenDocument.I
  * A workflow's token set: TokenDocuments inside, the tokens drawn on the canvas outside. Reading it (iteration, `size`,
  * `first()`) gives the members' Tokens as drawn now, so a member on another scene or level is skipped and a canvas
  * redraw never leaves a destroyed Token; `documents` and `uuids` give every member. Members are added, removed and
- * tested as a Token, a TokenDocument or a uuid. Copy one with `new TokenSet(set)` to keep the members not drawn.
+ * tested as a Token, a TokenDocument or a uuid. Copy one with `new TokenSet(set)` to keep the members not drawn; set
+ * algebra (`difference`, `union`, `isSubsetOf`, `equals`…) is over every member and gives a TokenSet.
  */
 export class TokenSet extends Set<Token.Implementation> {
   #members = new Map<string, TokenDocument.Implementation>();
@@ -86,36 +87,55 @@ export class TokenSet extends Set<Token.Implementation> {
     for (const token of this.values()) callback.call(thisArg, token, token, this);
   }
 
-  // Native set algebra reads a Set's internal storage, which this never fills: work on the drawn Tokens instead
-  #drawn(): Set<Token.Implementation> {
-    return new Set(this.values());
+  // Set algebra is over every member, drawn or not, and gives a TokenSet (native methods would read a Set's internal
+  // storage, which this never fills). The other set's members are matched by document: Tokens, TokenDocuments or uuids.
+  static #documentsOf(other: ReadonlySetLike<unknown> | Iterable<unknown>): TokenDocument.Implementation[] {
+    if (other instanceof TokenSet) return other.documents;
+    const members: Iterable<unknown> = Symbol.iterator in other ? other as Iterable<unknown> : { [Symbol.iterator]: () => (other as ReadonlySetLike<unknown>).keys() };
+    return [...members].map(member => memberDocument(member as TokenMember)).filter((document): document is TokenDocument.Implementation => !!document);
   }
 
-  override union<U>(other: ReadonlySetLike<U>): Set<Token.Implementation | U> {
-    return this.#drawn().union(other);
+  override union(other: ReadonlySetLike<TokenMember>): TokenSet;
+  override union<U>(other: ReadonlySetLike<U>): Set<Token.Implementation | U>;
+  override union(other: ReadonlySetLike<unknown>): TokenSet {
+    return new TokenSet([...this.documents, ...TokenSet.#documentsOf(other)]);
   }
 
-  override intersection<U>(other: ReadonlySetLike<U>): Set<Token.Implementation & U> {
-    return this.#drawn().intersection(other);
+  override intersection<U>(other: ReadonlySetLike<U>): TokenSet {
+    const theirs = new TokenSet(TokenSet.#documentsOf(other));
+    return new TokenSet(this.documents.filter(document => theirs.has(document)));
   }
 
-  override difference<U>(other: ReadonlySetLike<U>): Set<Token.Implementation> {
-    return this.#drawn().difference(other);
+  override difference<U>(other: ReadonlySetLike<U>): TokenSet {
+    const theirs = new TokenSet(TokenSet.#documentsOf(other));
+    return new TokenSet(this.documents.filter(document => !theirs.has(document)));
   }
 
-  override symmetricDifference<U>(other: ReadonlySetLike<U>): Set<Token.Implementation | U> {
-    return this.#drawn().symmetricDifference(other);
+  override symmetricDifference(other: ReadonlySetLike<TokenMember>): TokenSet;
+  override symmetricDifference<U>(other: ReadonlySetLike<U>): Set<Token.Implementation | U>;
+  override symmetricDifference(other: ReadonlySetLike<unknown>): TokenSet {
+    const theirs = TokenSet.#documentsOf(other);
+    const theirSet = new TokenSet(theirs);
+    return new TokenSet([...this.documents.filter(document => !theirSet.has(document)), ...theirs.filter(document => !this.has(document))]);
   }
 
   override isSubsetOf(other: ReadonlySetLike<unknown>): boolean {
-    return this.#drawn().isSubsetOf(other);
+    const theirs = new TokenSet(TokenSet.#documentsOf(other));
+    return this.documents.every(document => theirs.has(document));
   }
 
   override isSupersetOf(other: ReadonlySetLike<unknown>): boolean {
-    return this.#drawn().isSupersetOf(other);
+    return TokenSet.#documentsOf(other).every(document => this.has(document));
   }
 
   override isDisjointFrom(other: ReadonlySetLike<unknown>): boolean {
-    return this.#drawn().isDisjointFrom(other);
+    return !TokenSet.#documentsOf(other).some(document => this.has(document));
+  }
+
+  /** Foundry's Set#equals, over every member */
+  equals(other: unknown): boolean {
+    if (!(other instanceof Set)) return false;
+    const theirs = TokenSet.#documentsOf(other);
+    return theirs.length === this.documents.length && theirs.every(document => this.has(document));
   }
 }
