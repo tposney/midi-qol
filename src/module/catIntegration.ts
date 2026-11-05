@@ -3,42 +3,11 @@ import { addNotes } from "./catMacros/automationNotes.mjs";
 import { registerCATMacros } from "./catMacros/macros.mjs";
 import { infernalWoundConfig } from "./catMacros/features/infernalWound.mjs";
 
-/** The last CAT whose medkit can update an item that an earlier update in the same run deleted. */
-const CAT_MEDKIT_FIX_MAX = "0.1.3";
+/** The last CAT whose getOriginActivitySync reads `effects` on a cast activity, which has none on dnd5e 6. */
+const CAT_CAST_ACTIVITY_FIX_MAX = "0.1.7";
 
 /**
- * An item the medkit listed that is gone or going: deleted, or a cast activity's cached spell that dnd5e is replacing
- * because the activity now casts a different spell (its delete may not have landed yet).
- */
-function isGone(item: Item.Implementation): boolean {
-  const actor = item.parent;
-  if (!(actor instanceof Actor)) return false;
-  if (!actor.items.has(item.id ?? "")) return true;
-  const cachedFor = item.getFlag("dnd5e", "cachedFor");
-  if (typeof cachedFor !== "string") return false;
-  const activity = fromUuidSync(cachedFor, { relative: actor, strict: false });
-  // @ts-expect-error no dnd5e-types
-  return activity?.spell?.uuid !== item._stats.compendiumSource;
-}
-
-/**
- * Temporary, while CAT <= CAT_MEDKIT_FIX_MAX is active: the medkit lists an actor's items before updating them, and
- * replacing an item with a cast activity can make dnd5e delete and recreate the activity's cached spell, so a listed
- * item may be gone when its turn comes. Updating it threw and stopped the run.
- */
-function setupCATMedkitFix() {
-  const module = game.modules.get("cat");
-  const automationUtils = globalThis.cat?.utils.automationUtils;
-  if (!module?.active || !automationUtils || foundry.utils.isNewerVersion(module.version ?? "0", CAT_MEDKIT_FIX_MAX)) return;
-  const updateItem = automationUtils.updateItem;
-  automationUtils.updateItem = async (item, options) => {
-    if (isGone(item)) return;
-    return updateItem.call(automationUtils, item, options);
-  };
-}
-
-/**
- * Temporary, while CAT <= CAT_MEDKIT_FIX_MAX is active: CAT's getOriginActivitySync looks for the activity holding an
+ * Temporary, while CAT <= CAT_CAST_ACTIVITY_FIX_MAX is active: CAT's getOriginActivitySync looks for the activity holding an
  * effect's origin effect with `activity.effects.some(...)`, but a cast activity has no effects (dnd5e 6), so an item
  * with one (the Jewel of Three Prayers) made every effect pointing at it (its aura's copies) throw in CAT's
  * preCreateActiveEffect hook, thousands of times with Aura Effects.
@@ -46,7 +15,7 @@ function setupCATMedkitFix() {
 function setupCATCastActivityFix() {
   const module = game.modules.get("cat");
   const effectUtils = globalThis.cat?.utils.effectUtils;
-  if (!module?.active || !effectUtils || foundry.utils.isNewerVersion(module.version ?? "0", CAT_MEDKIT_FIX_MAX)) return;
+  if (!module?.active || !effectUtils || foundry.utils.isNewerVersion(module.version ?? "0", CAT_CAST_ACTIVITY_FIX_MAX)) return;
   const getOriginActivitySync = effectUtils.getOriginActivitySync;
   effectUtils.getOriginActivitySync = (effect) => {
     try {
@@ -96,7 +65,6 @@ function setupActorlessNotes() {
 
 export function setupCATIntegration() {
   Hooks.once("catReady", async () => {
-    setupCATMedkitFix();
     setupCATCastActivityFix();
     setupActorlessNotes();
     registerCATMacros(MODULE_ID);

@@ -298,36 +298,7 @@ function userInitiatedTargetWrapper(this: any, wrapped: Function, ...args: any[]
   }
 }
 
-/** The last CAT whose actor roll wrappers do not hand group actors to dnd5e (its rollSkill wrapper throws for them). */
-const CAT_GROUP_ROLL_FIX_MAX = "0.1.2";
-
-/**
- * Temporary, while CAT <= CAT_GROUP_ROLL_FIX_MAX is active: a group actor's skill checks and saves go straight to dnd5e's
- * hand-off (its system data posts a request card for the members), as `Actor5e#rollSkill`/`#rollSavingThrow` do. Set on
- * each such actor, which libWrapper leaves alone, so CAT's wrappers (and midi's) never run for them.
- */
-function setupCATGroupRollFix() {
-  const cat = game.modules.get("cat");
-  if (!cat?.active || foundry.utils.isNewerVersion(cat.version ?? "0", CAT_GROUP_ROLL_FIX_MAX)) return;
-  const patch = (actor: Actor.Implementation) => {
-    const system = actor.system as Record<string, unknown>;
-    for (const method of ["rollSkill", "rollSavingThrow"]) {
-      if (typeof system?.[method] !== "function") continue;
-      Object.defineProperty(actor, method, {
-        configurable: true, writable: true,
-        value: async (config = {}, dialog = {}, message = {}) => {
-          await (system[method] as (...args: object[]) => Promise<unknown>).call(system, config, dialog, message);
-          return null;
-        }
-      });
-    }
-  };
-  game.actors?.forEach(patch);
-  Hooks.on("createActor", patch);
-}
-
 export function readyPatching() {
-  setupCATGroupRollFix();
   // Constrain template placement to range / anchor cones to the caster while dragging. Only the
   // interactive step is wrapped; dnd5e still builds and creates the template regions.
   libWrapper.register(MODULE_ID, "game.dnd5e.canvas.TemplatePlacement.prototype._place", midiTemplatePlace, "MIXED");

@@ -34,12 +34,19 @@
   * `isHit`, `isHitEC` → `workflow.isHit`, `workflow.isHitEC` (new)
 * Added: `workflow.saveRoll(token)`, a target's save roll (a Token, TokenDocument or token uuid), also on a workflow rebuilt from its card.
 * Fixed: changing one of a workflow's empty token sets in place (`workflow.superSavers.add(token)`) was lost; a reference to a token set now stays the workflow's after its card is written.
+* Fixed: `DamageOnlyWorkflow`'s `useOther` option (ignored since 12.4.6) makes the damage the workflow's other damage again.
+* Fixed: a `DamageOnlyWorkflow` given another workflow's card replaced that card's rolls, hits and targets; its damage is now added to the card.
+* Changed: a `DamageOnlyWorkflow`'s own card stores its workflow like a use's card, so it is rebuilt after a reload.
 * Changed: `DamageOnlyWorkflow` applies damage only: it no longer fires `midi-qol.postActiveEffects` or marks the actor's action as used.
 * Changed: `Workflow#unSuspend(context)` is deprecated; macros resuming a workflow call `workflow.resume(event)`, event `"attackRolled"`, `"damageRolled"`, `"noDamage"` or `"utilityRolled"`, after setting the roll (`setAttackRoll`, `setDamageRolls`, `setUtilityRolls`).
 * Changed: for a user other than the card's author, `MidiQOL.Workflow.getWorkflow(cardUuid)` returns a read-only copy rebuilt from the card (`workflow.readOnly`); a copy is never updated, so fetch it again after the card changes; `getWorkflow(cardUuid, false)` returns a live one, which runs and writes the card alongside the author's (use at your own risk, with a console warning).
 * Removed: `workflow.flagTags` (never set by midi or any known module).
 * Deprecated: `workflow.noAutoDamage` and `workflow.noOptionalRules` (and the `noOptionalRules` workflow option): they never had an effect and warn when used; use `workflowOptions.autoRollDamage: "none"` (or return false from `preDamageRollConfig`); optional rules follow the *Optional rules* setting.
 
+
+**Modules**
+* Removed: midi's workarounds for CAT's group actor rolls (fixed in CAT 0.1.3) and for its medkit updating an item already replaced in the same run (fixed in CAT 0.1.4).
+* Changed: the workaround for CAT's effect origin lookup on items with a cast activity (Jewel of Three Prayers' aura) now applies up to CAT 0.1.7, which still has the bug.
 
 **Sample items**
 * Added: *Infernal Glaive* (2024 Bearded Devil) and *Infernal Tail* (2024 Horned Devil), automated with CAT. A failed save gives an infernal wound (one at a time) that loses hit points at the start of each turn. It closes after 1 minute, when a spell restores hit points, or on a Medicine check by the wounded creature or one within 5 ft targeting it (a Medicine roll, or *Stabilize*). The save, hit point loss, duration and Medicine DC are Cat Kit configuration options.

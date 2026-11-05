@@ -672,7 +672,8 @@ export class Workflow {
     if (!author || (!options.readOnly && Workflow.#ended.has(chatCardUuid))) return undefined;
     // @ts-expect-error no dnd5e-types
     const className: string | undefined = card.system?.midi?.state?.workflowClass;
-    const restorable: Record<string, typeof Workflow> = { Workflow, SavesFirstWorkflow, ActiveDefenceWorkflow, UserWorkflow };
+    // A damage-only workflow's card is rebuilt as a Workflow: its state says it is damage-only
+    const restorable: Record<string, typeof Workflow> = { Workflow, SavesFirstWorkflow, ActiveDefenceWorkflow, UserWorkflow, DamageOnlyWorkflow: Workflow };
     const WorkflowClass = className ? restorable[className] : undefined;
     if (!WorkflowClass) return undefined;
     try {
@@ -981,6 +982,9 @@ export class Workflow {
   get isHitEC(): boolean {
     return this.hitTargetsEC.size > 0;
   }
+
+  /** A damage-only workflow's damage is its other damage (shown and stored as other damage), not its main damage */
+  useOther = false;
 
   /** A damage roll on its own (rerollDamage, DamageOnlyWorkflow): targets, hits and saves given; no effects or use-level passes */
   get damageOnly(): boolean { return this.#persisted.scalar("damageOnly", false); }
@@ -1662,7 +1666,6 @@ export class Workflow {
   tag: string | undefined;
   activeDefenceDC: number | undefined;
   utilityRollHTML: string | undefined;
-  useOther: boolean | undefined;
   otherDamageRollHTML: string | undefined;
   saveTargetsDisplayed: boolean | undefined;
   /** What midi's damage calculation actually applied, per target uuid. Set by `processDamageRoll`. */
@@ -2811,7 +2814,7 @@ export class Workflow {
 
     if (this.rawDamageDetail && (this.rawDamageDetail?.length || this.rawOtherDamageDetail?.length)) await processDamageRoll(this, this.rawDamageDetail[0]?.type ?? this.defaultDamageType)
     // Now that the damage calculation has run, the card can report what it applied.
-    if (this.chatCard && this.midiTargetDetail) {
+    if (this.ownsCard && this.chatCard && this.midiTargetDetail) {
       await this.performThrottledUpdate(this.chatCard, this.#targetsUpdate() as ChatMessage.UpdateData);
     }
     this.recordDamageStats();
@@ -5174,55 +5177,28 @@ export class Workflow {
       TroubleShooter.recordError(new Error(message), message);
       return;
     }
-    let newFlags = {};
-    // Which slot each roll lands in depends on `useOther`.
     const sections: Partial<Record<SectionName, MidiCardSection>> = {};
-    if (chatMessage) {
-      if (this.damageRollHTML) {
-        if (!this.useOther) {
-          sections.damage = { label: this.damageFlavor ?? "", rollType: "defaultDamage" };
-        } else {
-          sections.otherDamage = { label: this.damageFlavor ?? "", rollType: "defaultDamage" };
-        }
-        if (this.otherDamageRollHTML) {
-          sections.otherDamage = { label: this.otherDamageFlavor ?? "", rollType: "otherDamage" };
-        }
-        if (this.bonusDamageRolls) {
-          sections.bonusDamage = { label: this.bonusDamageFlavor ?? "", rollType: "bonusDamage" };
-        }
-      } else {
-        if (this.otherDamageRollHTML) {
-          sections.damage = { label: this.otherDamageFlavor ?? "", rollType: "otherDamage" };
-        }
-        if (this.bonusDamageRolls) {
-          sections.bonusDamage = { label: this.bonusDamageFlavor ?? "", rollType: "bonusDamage" };
-        }
-      }
+    if (this.damageRollHTML) {
+      sections.damage = { label: this.damageFlavor ?? "", rollType: "defaultDamage" };
+      if (this.otherDamageRollHTML) sections.otherDamage = { label: this.otherDamageFlavor ?? "", rollType: "otherDamage" };
+    } else if (this.otherDamageRollHTML) {
+      sections[this.useOther ? "otherDamage" : "damage"] = { label: this.otherDamageFlavor ?? "", rollType: "otherDamage" };
+    }
+    if (this.bonusDamageRolls) sections.bonusDamage = { label: this.bonusDamageFlavor ?? "", rollType: "bonusDamage" };
 
-      // Its own card has these in its rolls, its actor and its state; a card it doesn't own (a damage-only workflow's) gets them
-      if (!this.ownsCard) newFlags = foundry.utils.mergeObject(newFlags, {
-        "midi-qol": {
-          type: MESSAGE_TYPES.DAMAGE,
-          damageDetail: this.useOther ? undefined : damageDetailToObject(this.rawDamageDetail),
-          otherDamageDetail: this.useOther ? damageDetailToObject(this.rawDamageDetail) : damageDetailToObject(this.rawOtherDamageDetail),
-          bonusDamageDetail: damageDetailToObject(this.rawBonusDamageDetail),
-          damageTotal: this.useOther ? undefined : this.damageTotal,
-          sourceActorUuid: this.actor.uuid,
-          [WorkflowDataFlags.otherDamageTotal]: this.useOther ? this.damageTotal : this.otherDamageTotal,
-          [WorkflowDataFlags.bonusDamageTotal]: this.bonusDamageTotal,
-        }
-      }, { overwrite: true, inplace: false });
+    if (!this.ownsCard) {
+      // Another card (a damage-only workflow's macro gave it): its rolls stay and these are added. Its targets, counts and
+      // flags are its own workflow's.
+      const ownRoll = (roll: Roll) => foundry.utils.getProperty(roll, `options.${MODULE_ID}.addedBy`) === this.id;
+      const existing = (chatMessage.rolls as Roll[]).filter(roll => !ownRoll(roll));
+      const added = this.chatRolls.map(roll => { foundry.utils.setProperty(roll, `options.${MODULE_ID}.addedBy`, this.id); return roll; });
+      return await this.performThrottledUpdate(chatMessage, this.#sectionsUpdate(sections, { rolls: [...existing, ...added] }), false);
     }
 
     return await this.performThrottledUpdate(chatMessage,
       this.#sectionsUpdate(sections, {
-        flags: newFlags, rolls: this.chatRolls, "system.midi.damageRollCount": this.damageRollCount,
-        /*
-         * Refreshed here as well as at `displayHits`, because reactions resolve in between. Uncanny
-         * dodge is the case that shows it: the target uses it as a reaction after being hit, so the
-         * descriptor written with the hits still says `uncannyDodge: false`. midi's own card
-         * calculates at damage time and sees the flag, which is why the two disagreed.
-         */
+        rolls: this.chatRolls, "system.midi.damageRollCount": this.damageRollCount,
+        // Refreshed as well as at displayHits: reactions resolve in between (Uncanny Dodge after the hit)
         ...this.#targetsUpdate()
       }), false);
   }
@@ -8756,7 +8732,8 @@ export class DamageOnlyWorkflow extends Workflow {
       itemCardId: string,
       itemCardUuid: string,
       damageList: DamageListEntry[],
-      useOther: boolean,
+      /** The damage is the workflow's other damage */
+      useOther?: boolean,
       itemData: Item.Source,
       isCritical: boolean,
       item?: Item,
@@ -8852,8 +8829,9 @@ export class DamageOnlyWorkflow extends Workflow {
       const message = game.messages?.get(options.itemCardId);
       if (message) this.itemCardUuid = message?.uuid;
     }
-    this.ready = this.setDamageRolls([damageRoll]).then(async () => {
-      this.damageTotal = damageTotal;
+    this.useOther = options.useOther ?? false;
+    this.ready = (this.useOther ? this.setOtherDamageRolls([damageRoll]) : this.setDamageRolls([damageRoll])).then(async () => {
+      if (!this.useOther) this.damageTotal = damageTotal;
       this.isCritical = options.isCritical ?? false;
       this.kickStart = false;
       this.suspended = false;
@@ -8862,6 +8840,9 @@ export class DamageOnlyWorkflow extends Workflow {
     return this;
   }
   static get forceCreate() { return false; }
+  get otherDamageFlavor() {
+    return this.useOther && this.flavor ? this.flavor : super.otherDamageFlavor;
+  }
   async WorkflowState_Start(): Promise<WorkflowState> {
     this.effectsAlreadyExpired = [];
 
@@ -8872,18 +8853,25 @@ export class DamageOnlyWorkflow extends Workflow {
         data: {
           system: { effects: this.activity?.applicableEffects?.map(e => e.relativeUUID) },
           rolls: this.damageRolls,
+          // The synthetic item is on no actor: the card keeps it (getAssociatedItem), so the workflow can be rebuilt
+          flags: { [MODULE_ID]: { itemData: this.item?.toObject() } }
         },
         hasConsumption: false
       }, message);
       // @ts-expect-error no dnd5e-types
       this.itemCard = await this.activity._createUsageMessage(messageConfig);
-      this.itemCardUuid = this.itemCard?.uuid;
+      // Its own card: filed under it, its state and records stored there
+      if (this.itemCard) {
+        this.id = this.itemCard.uuid;
+        this.itemCardUuid = this.itemCard.uuid;
+        Workflow.addWorkflow(this);
+      }
     }
     const whisperCard = configSettings.autoCheckHit === "whisper" || safeGetGameSetting("core", "messageMode") === "blind";
     if (this.actor) { // Hacky process bonus flags
       // TODO come back and fix this for dnd3
-      const newRolls = await this.processDamageRollBonusFlags(this.damageRolls);
-      await this.setDamageRolls(newRolls);
+      if (this.useOther) await this.setOtherDamageRolls(await this.processDamageRollBonusFlags(this.otherDamageRolls ?? []));
+      else await this.setDamageRolls(await this.processDamageRollBonusFlags(this.damageRolls));
     }
 
     if (this.itemCardUuid) {
@@ -8892,7 +8880,8 @@ export class DamageOnlyWorkflow extends Workflow {
       this.recordTargetACModifiers();
       await this.checkHits(this.workflowOptions);
       this.hitTargets = new Set(this.targets);
-      await this.displayHits(whisperCard, false);
+      // Another workflow's card keeps its hits and targets: only the damage is added
+      if (this.ownsCard) await this.displayHits(whisperCard, false);
       await this.displayDamageRolls();
     } else {
       await this.damageRoll?.toMessage({ flavor: this.flavor });

@@ -51,3 +51,24 @@ DAE currently applies field evaluation (e.g., `@abilities.str.mod`, roll data re
 - This would allow enchantment effects to use dynamic references like actor effects do
 
 ---
+
+---
+
+## Replace socketlib with Foundry's `user.query` (dnd6)
+
+Foundry 13+ has built-in request/response messaging: `CONFIG.queries[name] = handler` registers a handler, and
+`user.query(name, data, { timeout })` runs it on that user's client and returns its result. Gambit's Premades 3.x has
+moved to it (with a `userConnected` hook so a disconnect ends the wait); DAS uses it too.
+
+Examine dropping socketlib for it:
+- midi registers ~59 socketlib handlers (`GMAction.ts` `socketlibSocket.register`, plus `executeAsUser` / `executeAsGM`
+  / `executeForEveryone` call sites); map each to a query (or a plain `game.socket` broadcast for the
+  "for everyone" ones, which queries don't cover).
+- GM routing: midi's preferred-GM / GM-on-scene choice (`GMAction.ts` around line 420) would pick the `User` to query.
+- Requester checks: a query handler isn't told who sent it, so handlers that should only act for an owner must take the
+  requesting user's id in the data and check it against the document.
+- Timeouts and disconnects: `user.query` takes a timeout; add a `userConnected` hook so a wait ends when the player drops
+  (see the player-wait panel).
+- Macros and other modules call `MidiQOL.socket()` (socketlib's `executeAsGM` etc.): keep a compatibility wrapper, with a
+  deprecation warning.
+- socketlib would then no longer be a required module.
