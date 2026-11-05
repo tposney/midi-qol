@@ -36,9 +36,8 @@ const actorWoundedSemaphores = new Map<string, foundry.utils.Semaphore>();
 /** A workflow is waiting on a save or check from this actor (its requests are keyed by the token's id or the actor's uuid). */
 function awaitedByWorkflow(actor: Actor.Implementation): boolean {
   const tokenIds = actor.getActiveTokens(false, true).map(t => t.id);
-  for (const ref of Workflow.workflows.values()) {
-    const workflow = ref instanceof WeakRef ? ref.deref() : ref;
-    const requests = workflow?.saveRequests;
+  for (const workflow of Workflow.workflows.values()) {
+    const requests = workflow.saveRequests;
     if (requests && (requests[actor.uuid] || tokenIds.some(id => id && requests[id]))) return true;
   }
   return false;

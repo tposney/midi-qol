@@ -775,11 +775,11 @@ await workflow.resume("damageRolled"); // "attackRolled", "damageRolled", "noDam
 - For any other user, a read-only copy rebuilt from the card (`workflow.readOnly` is `true`). It has what the card stores: targets, hits, saves, rolls, damage detail, critical and fumble, templates, and what is worked out from them. It does not run or write the card. Properties only kept in memory (anything a macro added) are empty.
 - `getWorkflow(cardUuid, false)` gives another user a live rebuild instead. **Caveat emptor:** it runs and writes the card as the author's would, and nothing keeps it in step with the author's workflow: two live workflows for one card overwrite each other's changes, roll twice and apply damage and effects twice. midi warns in the console when it makes one. Use it only when you know the author's workflow is not running (its user is offline).
 
-A read-only copy is a snapshot of the card when it was made, and a copy you hold is never updated. When the card changes midi discards its copy, so the next `getWorkflow` call builds one from the card as it is then. Call `getWorkflow` again after an `await` rather than keeping a copy. `MidiQOL.Workflow.workflows` is midi's internal index; its entries may be a `WeakRef`, so use `getWorkflow`.
+A read-only copy is a snapshot of the card when it was made, and a copy you hold is never updated. When the card changes midi discards its copy, so the next `getWorkflow` call builds one from the card as it is then. Call `getWorkflow` again after an `await` rather than keeping a copy. `MidiQOL.Workflow.workflows` is a new `Map` of the workflows in memory (by id) on each read, for searching them (by activity, actor, …); a finished workflow may have been collected and be missing from it, so look one up by its card with `getWorkflow`.
 
 ### Token sets
 
-A workflow's token sets (`targets`, `hitTargets`, `hitTargetsEC`, `saves`, `failedSaves`, `superSavers`, `semiSuperSavers`, `criticalSaves`, `fumbleSaves`, `advantageSaves`) are Sets of the Tokens drawn on the canvas now. A member on another scene, or on a level not shown, is skipped by iteration and `size`, but is still a member:
+A workflow's token sets (`targets`, `hitTargets`, `hitTargetsEC`, `saves`, `failedSaves`, `superSavers`, `semiSuperSavers`, `criticalSaves`, `fumbleSaves`, `advantageSaves`) are Sets of Tokens: each member's Token as drawn now, or for an actor with no token on the scene the one midi made for it. A member on another scene, or on a level not shown, has no Token: it is skipped by iteration and `size`, but is still a member:
 
 ```js
 workflow.hitTargets.size;               // hit targets drawn now

@@ -538,7 +538,7 @@ function uncannyDodgeSourceIcon(actor: Actor.Implementation): string | undefined
 export async function processDamageRoll(workflow: Workflow, defaultDamageType: string) {
   if (debugEnabled > 0) warn("processDamageRoll |", workflow)
   // Every target, drawn on the canvas or not: damage goes by the token's document and actor
-  const hitTargets = new TokenSet([...workflow.hitTargets.documents, ...workflow.hitTargetsEC.documents]);
+  const hitTargets = workflow.hitTargets.union(workflow.hitTargetsEC);
   const theTargets = workflow.targets.documents;
   // TODO becomes activity.target.affects.type === "self"
   // if (activity.target.affects.type === "self") theTargets = await getOrCreateTokenForActorAsSet(actor) || theTargets;
@@ -565,8 +565,8 @@ export async function processDamageRoll(workflow: Workflow, defaultDamageType: s
   if (workflow.rawBonusDamageDetail) totalDamage += workflow.rawBonusDamageDetail.reduce((acc, di) => acc + (di.type === "temphp" ? 0 : di.value), 0) ?? 0;
   const defaultSaveMultiplier = getSaveMultiplierForActivity(workflow.activity);
   for (const tokenDocument of theTargets) {
-    // The Token only when drawn: reactions need the canvas
-    const token = tokenDocument.object as Token.Implementation | null;
+    // Reactions need a Token: drawn, or midi's for an actor with none on the scene
+    const token = workflow.targets.placeableOf(tokenDocument);
     const actor = tokenDocument.actor;
     if (!actor) continue;
     let challengeModeScale = 1;
@@ -797,8 +797,8 @@ export async function processDamageRoll(workflow: Workflow, defaultDamageType: s
       if (damageDetails) {
         damageDetails.damageDetails[selector] = damageDetails.damageDetail;
         workflow.damageList.push(damageDetails);
-        // Target macros are given a drawn Token
-        const token = tokenDocument.object as Token.Implementation | null;
+        // Target macros are given a Token: drawn, or midi's for an actor with none on the scene
+        const token = workflow.targets.placeableOf(tokenDocument);
         if (token) await workflow?.callDamageHooksAndMacros(damageDetails, token);
       }
     }

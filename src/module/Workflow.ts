@@ -461,16 +461,26 @@ export class Workflow {
 
   static get forceCreate(): boolean { return true };
 
+  // Finished workflows (and all of them with Use Weak References) are filed as WeakRefs
   static #workflows: Map<string, WeakRef<Workflow> | Workflow> = new Map();
-  static get workflows() {
-    return Workflow.#workflows
+
+  /** The workflows in memory, by id: a new Map on each read (one that has been collected is rebuilt by getWorkflow) */
+  static get workflows(): Map<string, Workflow> {
+    const live = new Map<string, Workflow>();
+    for (const [id, entry] of Workflow.#workflows) {
+      const workflow = entry instanceof WeakRef ? entry.deref() : entry;
+      if (workflow) live.set(id, workflow);
+    }
+    return live;
   }
-  static set workflows(workflows: Map<string, WeakRef<Workflow> | Workflow>) {
-    Workflow.#workflows = workflows;
+
+  /** Whether a workflow is filed weakly (finished, or Use Weak References), for tests */
+  static heldWeakly(id: string): boolean {
+    return Workflow.#workflows.get(id) instanceof WeakRef;
   }
 
   static clearWorkflows() {
-    Workflow.workflows = new Map();
+    Workflow.#workflows = new Map();
   }
   // Workflows ended this session (removeWorkflow): never rebuilt from their cards
   static #ended = new Set<string>();
@@ -480,12 +490,12 @@ export class Workflow {
    * finished one is rarely looked up again and is rebuilt from its card if it has been collected (getWorkflow).
    */
   static #fileFinished(workflow: Workflow) {
-    if (Workflow.workflows.get(workflow.id) === workflow) Workflow.workflows.set(workflow.id, new WeakRef(workflow));
+    if (Workflow.#workflows.get(workflow.id) === workflow) Workflow.#workflows.set(workflow.id, new WeakRef(workflow));
   }
 
   static addWorkflow(workflow: Workflow) {
     // A collected entry is just replaced; another live workflow under the id is removed first
-    const entry = Workflow.workflows.get(workflow.id);
+    const entry = Workflow.#workflows.get(workflow.id);
     const existing = entry instanceof WeakRef ? entry.deref() : entry;
     if (existing && existing !== workflow) {
       console.warn("midi-qol | addWorkflow | Workflow already exists", workflow.id);
@@ -493,8 +503,8 @@ export class Workflow {
     }
     // After the removal, which ends the id
     Workflow.#ended.delete(workflow.id);
-    if (useWeakReferences) Workflow.workflows.set(workflow.id, new WeakRef(workflow));
-    else Workflow.workflows.set(workflow.id, workflow);
+    if (useWeakReferences) Workflow.#workflows.set(workflow.id, new WeakRef(workflow));
+    else Workflow.#workflows.set(workflow.id, workflow);
   }
   /**
    * The usage card of the actor's workflow that is executing now, if any: an item use started from inside it (a macro
@@ -502,7 +512,7 @@ export class Workflow {
    */
   static executingCardFor(actor: Actor.Implementation): ChatMessage.Implementation | undefined {
     let parent: Workflow | undefined;
-    for (const entry of Workflow.workflows.values()) {
+    for (const entry of Workflow.#workflows.values()) {
       const workflow = entry instanceof WeakRef ? entry.deref() : entry;
       if (!workflow?.executingStates || workflow.suspended || !workflow.itemCardUuid) continue;
       if (workflow.actor?.uuid === actor.uuid) parent = workflow;
@@ -562,7 +572,7 @@ export class Workflow {
 
   /** A card's workflow to read: the one in memory, else a read-only copy (whoever the author, ended or not) */
   static cardView(id: string): Workflow | undefined {
-    const entry = Workflow.workflows.get(id);
+    const entry = Workflow.#workflows.get(id);
     const live = entry instanceof WeakRef ? entry.deref() : entry;
     if (live) return live;
     const held = Workflow.#readOnlyCopies.get(id)?.deref();
@@ -624,10 +634,10 @@ export class Workflow {
 
   /** midi's own lookup: the workflow in memory, or rebuilt from its card for the card's author; never a read-only copy */
   static findWorkflow(id?: string): Workflow | undefined {
-    if (debugEnabled > 0) warn("Get workflow ", id, Workflow.workflows, Workflow.workflows.get(id ?? ""))
-    if (debugEnabled > 1) debug("Get workflow ", id, Workflow.workflows, Workflow.workflows.get(id ?? ""))
+    if (debugEnabled > 0) warn("Get workflow ", id, Workflow.#workflows.get(id ?? ""))
+    if (debugEnabled > 1) debug("Get workflow ", id, Workflow.#workflows.get(id ?? ""))
     if (!id) return;
-    const entry = Workflow.workflows.get(id);
+    const entry = Workflow.#workflows.get(id);
     const live = entry instanceof WeakRef ? entry.deref() : entry;
     if (live) return live;
     // Rebuilt from its card once, also after its weak entry was collected: filed under the card, so later calls find it
@@ -650,7 +660,7 @@ export class Workflow {
     // chatMessage.uuid entry. A direct get() avoids finding stale re-keyed workflows.
     // Use workflows.get() directly (not findWorkflow()) to avoid infinite recursion,
     // since findWorkflow() falls back to getWorkflowByActivityUuid().
-    const entry = Workflow.workflows.get(activityUuid);
+    const entry = Workflow.#workflows.get(activityUuid);
     let returnValue: Workflow | undefined;
     if (entry instanceof WeakRef) {
       returnValue = entry.deref();
@@ -661,7 +671,7 @@ export class Workflow {
     return returnValue;
   }
   static deleteWorkflow(id: string) {
-    Workflow.workflows.delete(id);
+    Workflow.#workflows.delete(id);
   }
 
   /**
@@ -1881,7 +1891,7 @@ export class Workflow {
     if (!this.#item) error(`${this.workflowName} | could not find the item of card ${this.itemCardUuid}`);
     this.#mergeWorkflowOptions(this.workflowOptions);
     if (this.workflowOptions.preSelectedTargetUuids?.length) this.preSelectedTargets = this.#preSelectedTargets();
-    if (!this.hasSave) this.failedSaves = this.activity.attack ? new TokenSet([...this.hitTargets.documents, ...this.hitTargetsEC.documents]) : new TokenSet(this.targets);
+    if (!this.hasSave) this.failedSaves = this.activity.attack ? this.hitTargets.union(this.hitTargetsEC) : new TokenSet(this.targets);
     const speaker = this.chatCard?.speaker;
     const speakerToken = speaker?.token ? game.scenes?.get(speaker.scene ?? "")?.tokens.get(speaker.token)?.object : undefined;
     this.token = speakerToken ?? getOrCreateTokenForActor(this.actor) ?? undefined;
@@ -1963,7 +1973,7 @@ export class Workflow {
     }
     // Only one in memory: an ended or forgotten workflow is not rebuilt to be removed
     Workflow.#ended.add(id);
-    const entry = Workflow.workflows.get(id);
+    const entry = Workflow.#workflows.get(id);
     const workflow = entry instanceof WeakRef ? entry.deref() : entry;
     if (!workflow) {
       if (debugEnabled > 0) warn("removeWorkflow | No such workflow ", id);
@@ -1971,7 +1981,7 @@ export class Workflow {
     }
     if (workflow.postSummonHookId) Hooks.off("dnd5e.postSummon", workflow.postSummonHookId);
     if (debugEnabled > 0) warn(`removeWorkflow deleting ${id}`, workflow);
-    Workflow.workflows.delete(id);
+    Workflow.#workflows.delete(id);
     // Remove buttons
     if (workflow.itemCardUuid) {
       if (workflow.currentAction === workflow.WorkflowState_ConfirmRoll) {
@@ -2905,13 +2915,13 @@ export class Workflow {
 
   /** The targets the other activity's and the ammunition's damage apply to, each by its own use condition. */
   async buildOtherDamageMatches(): Promise<void> {
-    const targets = this.activity.attack ? [...this.hitTargets.documents, ...this.hitTargetsEC.documents] : this.targets.documents;
-    // A condition is evaluated against a drawn Token; without one every target matches, drawn or not
+    const targets = this.activity.attack ? this.hitTargets.union(this.hitTargetsEC) : this.targets;
+    // A condition is evaluated against the target's Token; without one every target matches, with a Token or not
     const matching = async (condition: string | undefined) => {
       const matches = new TokenSet();
-      for (const document of targets) {
-        const token = document.object as Token.Implementation | null;
-        if (!condition || (token && await evalActivationCondition(this, condition, token, { async: true, errorReturn: false }))) matches.add(document);
+      for (const document of targets.documents) {
+        const token = targets.placeableOf(document);
+        if (!condition || (token && await evalActivationCondition(this, condition, token, { async: true, errorReturn: false }))) matches.add(token ?? document);
       }
       return matches;
     };
@@ -3055,7 +3065,7 @@ export class Workflow {
     const { ammunitionEffectCondition, ammunitionHasSave, ammunitionActivationMatches } = ammo;
     // By document, so targets not drawn (another scene or level) get their effects too
     const within = (set: TokenSet, keep: TokenSet) => new TokenSet(set.documents.filter(document => keep.has(document)));
-    const allHits = new TokenSet([...this.hitTargets.documents, ...this.hitTargetsEC.documents]);
+    const allHits = this.hitTargets.union(this.hitTargetsEC);
     this.effectTargets = new TokenSet();
     this.otherEffectTargets = new TokenSet();
     this.allOtherEffectTargets = new TokenSet(this.targets);
@@ -5206,8 +5216,8 @@ export class Workflow {
   /** Attack per target: one target's hit or miss, from its own use, on this use's card */
   async addSplitAttackResult(split: Workflow) {
     this.hitDisplayData = { ...(this.hitDisplayData ?? {}), ...(split.hitDisplayData ?? {}) };
-    this.hitTargets = new TokenSet([...this.hitTargets.documents, ...split.hitTargets.documents]);
-    this.hitTargetsEC = new TokenSet([...this.hitTargetsEC.documents, ...split.hitTargetsEC.documents]);
+    this.hitTargets = this.hitTargets.union(split.hitTargets);
+    this.hitTargetsEC = this.hitTargetsEC.union(split.hitTargetsEC);
     if (configSettings.autoCheckHit !== "none") await this.displayHits(this.whisperAttackCard);
   }
 
@@ -5388,7 +5398,7 @@ export class Workflow {
         gmName: getTokenName(target),
         img,
         targetClass: isPlayerOwned ? "midi-qol-player-target" : "midi-qol-npc-target",
-        target: target.object ?? target,
+        target: this.targets.placeableOf(target) ?? target,
         saveSymbol: "",
         saveTotalClass: "",
         rollTotal: "",
@@ -6919,8 +6929,9 @@ export class Workflow {
     }
 
     if (!this.saveActivity) return;
-    // Every hit target rolls, drawn or not: only cover, reactions, hooks and target macros need its Token
-    const allHitTargets = new TokenSet([...this.hitTargets.documents, ...this.hitTargetsEC.documents]).documents;
+    // Every hit target rolls, drawn or not, as its Token when it has one: cover, reactions, hooks and target macros need it
+    const hitSet = this.hitTargets.union(this.hitTargetsEC);
+    const allHitTargets: TokenOrDocument[] = hitSet.documents.map(document => hitSet.placeableOf(document) ?? document);
     if (allHitTargets.length === 0) return;
     let rollDC = this.saveActivity?.save?.dc.value ?? this.saveActivity?.check?.dc.value;
     //@ts-expect-error
@@ -6978,9 +6989,10 @@ export class Workflow {
 
         this.saveDetails = saveDetails;
         // Store per-target saveDetails for later retrieval during result processing
-        if (this.targetSaveDetails) this.targetSaveDetails[target.uuid] = saveDetails;
+        const targetUuid = getTokenDocument(target)?.uuid;
+        if (targetUuid && this.targetSaveDetails) this.targetSaveDetails[targetUuid] = saveDetails;
         // Call preTargetSave hook - allows external modules to modify saveDetails/tracker before the roll
-        const token = target.object;
+        const token = getToken(target);
         if (token) {
           await asyncHooksCallAll("midi-qol.preTargetSave", token, this, saveDetails);
           if (configSettings.allowUseMacro && this.workflowOptions.noTargetOnUseMacro !== true) await this.triggerTargetMacros(["preTargetSave"], new Set([token]));
@@ -7115,7 +7127,7 @@ export class Workflow {
 
   async computeSaveDisplayFlavor(rollDC: number | undefined, rollType: string, options: { rollAbilities: string[], rollSkills: string[], rollTools: string[] }): Promise<string> {
     let { rollAbilities, rollSkills, rollTools } = options;
-    const allHitTargets = new TokenSet([...this.hitTargets.documents, ...this.hitTargetsEC.documents]).documents;
+    const allHitTargets = this.hitTargets.union(this.hitTargetsEC).documents;
     let DCString = i18n("DND5E.AbbreviationDC") ?? "DC";
     if (DCString === "DND5E.AbbreviationDC") DCString = "DC";
     DCString = `${DCString} ${rollDC}`;
@@ -9025,7 +9037,7 @@ export class TrapWorkflow extends Workflow {
   async WorkflowState_WaitForSaves(): Promise<WorkflowState> {
     if (!this.activityHasSave) {
       this.saves = new Set(); // no saving throw, so no-one saves
-      this.failedSaves = new TokenSet([...this.hitTargets.documents, ...this.hitTargetsEC.documents]);
+      this.failedSaves = this.hitTargets.union(this.hitTargetsEC);
       return this.WorkflowState_WaitForDamageRoll;
     }
     let hookId = Hooks.on("createChatMessage", this.processSaveRoll.bind(this));
