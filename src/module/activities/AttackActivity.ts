@@ -305,22 +305,25 @@ let defineMidiAttackActivityClass = <T extends Activity>(ActivityClass: T) => {
     }
 
     static #rollDamage(this: Activity, event: PointerEvent, target: HTMLElement, message: ChatMessage.Implementation) {
-      const workflow = Workflow.findWorkflow(message?.uuid);
-      if (workflow) workflow.activity = this;
+      const workflow = Workflow.forDamageButton(message);
+      if (workflow === false) return;
+      if (workflow && !workflow.readOnly) workflow.activity = this;
       // @ts-expect-error
       return this.rollDamage({ event, workflow, midiOptions: { isCritical: workflow?.workflowOptions?.isCritical || workflow?.isCritical } }, {}, message);
     }
 
     static #rollDamageNoCritical(this: Activity, event: PointerEvent, target: HTMLElement, message: ChatMessage.Implementation) {
-      const workflow = Workflow.findWorkflow(message?.uuid);
-      if (workflow) workflow.activity = this;
+      const workflow = Workflow.forDamageButton(message);
+      if (workflow === false) return;
+      if (workflow && !workflow.readOnly) workflow.activity = this;
       // @ts-expect-error
       return this.rollDamage({ event, workflow, critical: { allow: false }, midiOptions: { isCritical: false } }, {}, message);
     }
 
     static #rollDamageCritical(this: Activity, event: PointerEvent, target: HTMLElement, message: ChatMessage.Implementation) {
-      const workflow = Workflow.findWorkflow(message?.uuid);
-      if (workflow) workflow.activity = this;
+      const workflow = Workflow.forDamageButton(message);
+      if (workflow === false) return;
+      if (workflow && !workflow.readOnly) workflow.activity = this;
       // @ts-expect-error
       return this.rollDamage({ event, workflow, midiOptions: { isCritical: true } }, {}, message);
     }

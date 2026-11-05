@@ -14,7 +14,8 @@ export const STATE_FIELDS = {
   templateUuids: "templateUuids",
   workflowOptions: "workflowOptions",
   // What a successful save does to each damage type, for the damage tray
-  saveMults: "saveMults"
+  saveMults: "saveMults",
+  damageOnly: "damageOnly"
 } as const;
 export type StateKey = keyof typeof STATE_FIELDS;
 
@@ -74,7 +75,9 @@ export function cardStateSchema() {
       workflowOptions: new ObjectField(unset),
       saveMults: new ObjectField(unset),
       // The damage tray's matches have been worked out (the records say which tokens): absent, they apply to every target
-      otherDamageMatched: bool(), ammunitionDamageMatched: bool()
+      otherDamageMatched: bool(), ammunitionDamageMatched: bool(),
+      // A damage roll on its own (Workflow#damageOnly)
+      damageOnly: bool()
     }, { required: false }),
     records: new TypedObjectField(new SchemaField({
       uuid: new StringField({ required: true, blank: false }),

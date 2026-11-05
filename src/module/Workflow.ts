@@ -558,6 +558,56 @@ export class Workflow {
     return copy;
   }
 
+  /**
+   * The workflow a card's damage button rolls for: the one in memory, else for a completed use a read-only copy (its
+   * re-roll reads it). False while that workflow is running, after saying so.
+   */
+  static forDamageButton(message: ChatMessage.Implementation | undefined): Workflow | undefined | false {
+    if (!message) return undefined;
+    const workflow = Workflow.findWorkflow(message.uuid)
+      ?? (Workflow.cardResumePoint(message) === "WorkflowState_Completed" ? Workflow.cardView(message.uuid) : undefined);
+    if (workflow && !workflow.readOnly && !workflow.suspended) {
+      ui.notifications?.warn(i18nFormat("midi-qol.WorkflowRunning", { name: workflow.item?.name ?? "" }));
+      return false;
+    }
+    return workflow;
+  }
+
+  /**
+   * Damage rolled again for a completed use, as dnd5e rolls another damage message: a damage-only workflow on its own
+   * card, with the use's targets, hits and saves, and its own undo; the use and its card are left as they are.
+   */
+  static async rerollDamage(first: Workflow, activity: Activity, config: Record<string, any>, dialog: Record<string, any>, message: Record<string, any>) {
+    const source = first.chatCard?.toObject() as Record<string, any> | undefined;
+    if (!source) return;
+    // The card as the use made it (its buttons, sources and other modules' flags), without the use's results; the roller's
+    const { _id, timestamp, _stats, author, ...data } = source;
+    data.rolls = [];
+    const midi = data.system?.midi ?? {};
+    for (const key of ["state", "records", "sections", "progress", "attackRollCount", "damageRollCount"]) delete midi[key];
+    const workflow = new Workflow(first.actor, activity, first.speaker, new Set(first.targets),
+      { workflowOptions: { ...first.workflowOptions }, event: config.event, storeWorkflow: false });
+    const card = await CONFIG.ChatMessage.documentClass.create(data as ChatMessage.CreateData);
+    if (!card) return;
+    workflow.id = card.uuid;
+    workflow.itemCardUuid = card.uuid;
+    workflow.damageOnly = true;
+    workflow.hitTargets = new Set(first.hitTargets);
+    workflow.hitTargetsEC = new Set(first.hitTargetsEC);
+    workflow.saves = new Set(first.saves);
+    workflow.failedSaves = new Set(first.failedSaves);
+    workflow.superSavers = new Set(first.superSavers);
+    workflow.semiSuperSavers = new Set(first.semiSuperSavers);
+    workflow.criticalSaves = new Set(first.criticalSaves);
+    workflow.fumbleSaves = new Set(first.fumbleSaves);
+    workflow.isCritical = first.isCritical;
+    Workflow.addWorkflow(workflow);
+    if (configSettings.undoWorkflow) await saveUndoData(workflow);
+    workflow.currentAction = workflow.WorkflowState_WaitForDamageRoll;
+    workflow.suspended = true;
+    return activity.rollDamage({ ...config, workflow }, dialog, message);
+  }
+
   /** midi's own lookup: the workflow in memory, or rebuilt from its card for the card's author; never a read-only copy */
   static findWorkflow(id?: string): Workflow | undefined {
     if (debugEnabled > 0) warn("Get workflow ", id, Workflow.workflows, Workflow.workflows.get(id ?? ""))
@@ -936,6 +986,10 @@ export class Workflow {
   get isHitEC(): boolean {
     return this.hitTargetsEC.size > 0;
   }
+
+  /** A damage roll on its own (rerollDamage, DamageOnlyWorkflow): targets, hits and saves given; no effects or use-level passes */
+  get damageOnly(): boolean { return this.#persisted.scalar("damageOnly", false); }
+  set damageOnly(damageOnly: boolean) { this.#persisted.setScalar("damageOnly", damageOnly, value => value || null); }
 
   /**
    * @deprecated Use workflow.attackRollModifierTracker.critical.isForced instead
@@ -1986,6 +2040,8 @@ export class Workflow {
   /** Wake a suspended workflow; without an event it re-runs the state it waits in */
   public async resume(event?: WorkflowEvent) {
     if (!this.suspended) return;
+    // New damage while saves are awaited is shown, and the saves keep waiting
+    if (event === "damageRolled" && this.currentAction === this.WorkflowState_WaitForSaves) return this.displayDamageRolls();
     this.suspended = false;
     return this.performState(event ? this.stateAfter(event) : this.currentAction);
   }
@@ -2588,7 +2644,7 @@ export class Workflow {
     if (this.itemCardUuid) {
       await Workflow.removeItemCardButtons(this.itemCardUuid, { removeAllButtons: false, removeAttackButtons: getRemoveAttackButtons(this.activity), removeDamageButtons: getRemoveDamageButtons(this.activity), removeConfirmButtons: true });
     }
-    if (getActivityAutoTargetAction(this.activity) === "none" && activityHasAreaTarget(this.activity) && !this.activity.attack) {
+    if (!this.damageOnly && getActivityAutoTargetAction(this.activity) === "none" && activityHasAreaTarget(this.activity) && !this.activity.attack) {
       this.targets = validTargetTokens(new Set(game.user?.targets));
       this.hitTargets = validTargetTokens(new Set(game.user?.targets));
       this.hitTargetsEC = new Set();
@@ -2644,6 +2700,7 @@ export class Workflow {
     return this.WorkflowState_Suspend;
   }
   async WorkflowState_WaitForSaves(): Promise<WorkflowState> {
+    if (this.damageOnly) return this.WorkflowState_AllRollsComplete;
     // If the save is from the other activity, check consumption first
     // If consumption fails or is cancelled, skip the save entirely
     if (this.saveActivity === this.otherActivity && this.otherActivity) {
@@ -2739,7 +2796,7 @@ export class Workflow {
     } else {
       // Process consumption for other activity if it will be applied
       await this.buildOtherDamageMatches();
-      if (this.otherDamageMatches!.size > 0) {
+      if (this.otherDamageMatches!.size > 0 && !this.damageOnly) {
         await this.checkOtherActivityConsumption();
       }
     }
@@ -2927,7 +2984,7 @@ export class Workflow {
       "isHit"
     ];
     await this.expireTargetEffects(specialExpiries);
-    if (!await this.effectsMayApply()) return this.WorkflowState_RollFinished;
+    if (this.damageOnly || !await this.effectsMayApply()) return this.WorkflowState_RollFinished;
     // no item, not auto effects or not module skip
     if (!this.activity.item) return this.WorkflowState_RollFinished;
     const fx = await this.effectsResolve(ammo.ammunition, ammoTargets.ammunitionEffectTargets);
@@ -3417,8 +3474,10 @@ export class Workflow {
     if (debugEnabled > 0) warn("Workflow complete ", this.id, "elapsed time", Date.now() - (this.workflowStartTime ?? 0));
     warn("Workflow complete ", this.id, "elapsed time", Date.now() - (this.workflowStartTime ?? 0));
 
-    await offerFollowUps(this);
-    await this.runTriggeredActivity();
+    if (!this.damageOnly) {
+      await offerFollowUps(this);
+      await this.runTriggeredActivity();
+    }
     Workflow.#fileFinished(this);
     return this.WorkflowState_Suspend;
   }
@@ -3626,7 +3685,7 @@ export class Workflow {
       TroubleShooter.recordError(new Error(message), message);
     }
     // A teleport planned with the workflow: after its effects and damage, before RollComplete
-    if (!this.aborted && MidiTeleportActivity && this.activity instanceof MidiTeleportActivity) await this.activity.autoTeleport(this);
+    if (!this.aborted && !this.damageOnly && MidiTeleportActivity && this.activity instanceof MidiTeleportActivity) await this.activity.autoTeleport(this);
     const specialExpiries = [
       "isDamaged",
       "isHealed",
@@ -3638,17 +3697,19 @@ export class Workflow {
     await this.finishCardProgress();
     await this.finishSummonedCreatures(selfTarget);
     await this.finishTransformations(selfTarget);
-    await this.callMidiHooks("midi-qol.postActiveEffects");
-    // Call onUseMacro if not already called
-    if (configSettings.allowUseMacro && this.workflowOptions.noOnUseMacro !== true) {
-      await this.callMacros(this.item, this.onUseMacros?.getMacros("postActiveEffects"), "OnUse", "postActiveEffects");
-      if (this.ammunition) await this.callMacros(this.ammunition, this.ammunitionOnUseMacros?.getMacros("postActiveEffects"), "OnUse", "postActiveEffects");
+    if (!this.damageOnly) {
+      await this.callMidiHooks("midi-qol.postActiveEffects");
+      // Call onUseMacro if not already called
+      if (configSettings.allowUseMacro && this.workflowOptions.noOnUseMacro !== true) {
+        await this.callMacros(this.item, this.onUseMacros?.getMacros("postActiveEffects"), "OnUse", "postActiveEffects");
+        if (this.ammunition) await this.callMacros(this.ammunition, this.ammunitionOnUseMacros?.getMacros("postActiveEffects"), "OnUse", "postActiveEffects");
+      }
+      if (this.aborted) return this.WorkflowState_Abort;  // TODO This is wrong
     }
-    if (this.aborted) return this.WorkflowState_Abort;  // TODO This is wrong
 
     await this.callMidiHooks("midi-qol.RollComplete");
     if (this.aborted) return this.WorkflowState_Abort;  // TODO This is wrong
-    await this.finishTurnBookkeeping();
+    if (!this.damageOnly) await this.finishTurnBookkeeping();
     return this.WorkflowState_Cleanup;
   }
 
@@ -7148,27 +7209,6 @@ export class Workflow {
     func(data.roll);
   }
 
-  async displayChatCardWithoutDamageDetail() {
-    const chatMessage = getCachedDocument(this.itemCardUuid) as ChatMessage.Implementation | undefined;
-    if (!chatMessage) return;
-    // Re-post the card with the damage figures dropped, leaving the rest of it intact.
-    // Destructured rather than deleted: the new card must not carry the old one's id.
-    const { _id, ...data } = chatMessage.toObject();
-    // A copy of the card, not the workflow's own: it is never rebuilt as a second workflow
-    const copied = foundry.utils.getProperty(data, "system.midi") as Record<string, unknown> | undefined;
-    if (copied) { delete copied.state; delete copied.records; }
-    const sections = foundry.utils.getProperty(data, "system.midi.sections") as Record<string, unknown> | undefined;
-    for (const name of ["damage", "otherDamage", "bonusDamage"]) delete sections?.[name];
-    if (installedModules.get("ready-set-roll-5e")) return;
-    if (this.currentAction === this.WorkflowState_Completed) {
-      if (this.itemCardUuid) {
-        await Workflow.removeItemCardButtons(this.itemCardUuid, { removeAllButtons: true });
-      }
-      const itemCard = await CONFIG.ChatMessage.documentClass.create(data);
-      this.itemCardUuid = itemCard?.uuid;
-    }
-  }
-
   async callDamageHooksAndMacros(damages: DamageListEntry, token: Token.Implementation) {
     this.damageItem = damages;
     if (configSettings.allowUseMacro && !this.workflowOptions?.noTargetOnUseMacro && this.item.flags) {
@@ -8787,6 +8827,8 @@ export class DamageOnlyWorkflow extends Workflow {
     theItem.prepareFinalAttributes();
     // @ts-expect-error no dnd5e-types
     super(actor, theItem.system.activities.contents[0], ChatMessage.getSpeaker({ token, actor }), new Set(theTargets), { event: shiftOnlyEvent as KeyboardEvent, workflowOptions: { noOnUseMacro: true } });
+    this.damageOnly = true;
+    if (configSettings.undoWorkflow) saveUndoData(this);
     // Do the supplied damageRoll
     this.flavor = options.flavor;
     this.defaultDamageType = GameSystemConfig.damageTypes[damageType]?.label ?? damageType;

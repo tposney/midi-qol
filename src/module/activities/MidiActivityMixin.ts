@@ -629,20 +629,23 @@ export let MidiActivityMixin = Base => {
     }
 
     static #rollDamage(this: Activity, event, target, message) {
-      const workflow = Workflow.findWorkflow(message?.uuid);
-      if (workflow) workflow.activity = this;
+      const workflow = Workflow.forDamageButton(message);
+      if (workflow === false) return;
+      if (workflow && !workflow.readOnly) workflow.activity = this;
       return this.rollDamage({ event, workflow, midiOptions: { isCritical: workflow?.workflowOptions?.isCritical || workflow?.isCritical } }, {}, message);
     }
 
     static #rollDamageNoCritical(this: Activity, event, target, message) {
-      const workflow = Workflow.findWorkflow(message?.uuid);
-      if (workflow) workflow.activity = this;
+      const workflow = Workflow.forDamageButton(message);
+      if (workflow === false) return;
+      if (workflow && !workflow.readOnly) workflow.activity = this;
       return this.rollDamage({ event, workflow, critical: { allow: false }, midiOptions: { isCritical: false } }, {}, message);
     }
 
     static #rollDamageCritical(this: Activity, event, target, message) {
-      const workflow = Workflow.findWorkflow(message?.uuid);
-      if (workflow) workflow.activity = this;
+      const workflow = Workflow.forDamageButton(message);
+      if (workflow === false) return;
+      if (workflow && !workflow.readOnly) workflow.activity = this;
       return this.rollDamage({ event, workflow, critical: { allow: true }, midiOptions: { isCritical: true } }, {}, message);
     }
 
@@ -987,8 +990,10 @@ export let MidiActivityMixin = Base => {
       if (!config?.workflow) {
         return super.rollDamage(config, dialog, message);
       }
-      if (config.workflow.currentAction === config.workflow.WorkflowState_Abort || config.workflow.currentAction === config.workflow.WorkflowState_Completed)
-        return this.use(config, dialog, {});
+      if (config.workflow.currentAction === config.workflow.WorkflowState_Abort) return this.use(config, dialog, {});
+      // Damage again for a completed use: a damage roll of its own, as dnd5e's
+      if (config.workflow.readOnly || config.workflow.currentAction === config.workflow.WorkflowState_Completed)
+        return Workflow.rerollDamage(config.workflow, this, config, dialog, message);
       // TODO: This is odd. `midiOptions` should have `workflowOptions` _in_ it, not be assigned it
       config.midiOptions ??= config.workflow.workflowOptions ?? {};
       if (debugEnabled > 0) {
@@ -1273,11 +1278,6 @@ export let MidiActivityMixin = Base => {
           else if (workflow.currentAction === workflow.WorkflowState_WaitForAttackRoll)
             return ui.notifications?.warn(i18n("midi-qol.noAttackRoll")) as void;
         }
-
-        // TODO revisit this to see if it is still possible to just re-roll the damage
-        if (workflow && (workflow.damageRollCount ?? 0) > 0) { // we are re-rolling the damage. redisplay the item card but remove the damage if the roll was finished
-          workflow.displayChatCardWithoutDamageDetail();
-        };
 
         // Allow overrides from the caller
         if (debugEnabled > 0) warn("rolling damage  ", this.name, this);
