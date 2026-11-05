@@ -411,6 +411,12 @@ class CardStateStore {
   /** A token's facts on the card besides its sets: its save row (UsageCardMessage), the damage tray's detail */
   setSaveFacts(document: TokenDocument.Implementation, facts: SaveFacts): void {
     if (!document.id) return;
+    if ("saveAttribution" in facts) {
+      const attribution = { ...this.saveAttribution() };
+      if (facts.saveAttribution?.length) attribution[document.uuid] = attributionMap(facts.saveAttribution) as AttributionMap;
+      else delete attribution[document.uuid];
+      this.#cache.set("saveAttribution", attribution);
+    }
     const at = `system.midi.records.${document.id}`;
     const leaves: Record<string, unknown> = { [`${at}.uuid`]: document.uuid };
     for (const [key, value] of Object.entries(facts)) if (value !== undefined) leaves[`${at}.${key}`] = value;
@@ -537,6 +543,14 @@ export class Workflow {
       if (live) console.warn(`midi-qol | getWorkflow | ${live.workflowName}: a live copy of ${card.author?.name ?? "another user"}'s workflow. It runs and writes the card as the author's does; if theirs is running too, both apply their changes, rolls, damage and effects. Use getWorkflow(uuid) for a read-only copy.`);
       return live;
     }
+    return Workflow.cardView(id);
+  }
+
+  /** A card's workflow to read: the one in memory, else a read-only copy (whoever the author, ended or not) */
+  static cardView(id: string): Workflow | undefined {
+    const entry = Workflow.workflows.get(id);
+    const live = entry instanceof WeakRef ? entry.deref() : entry;
+    if (live) return live;
     const held = Workflow.#readOnlyCopies.get(id)?.deref();
     if (held) return held;
     const copy = Workflow.fromChatCardUuid(id, { readOnly: true });
@@ -608,7 +622,7 @@ export class Workflow {
   static fromChatCardUuid(chatCardUuid: string, options: { readOnly?: boolean, anyAuthor?: boolean } = {}): Workflow | undefined {
     const card = fromUuidSync(chatCardUuid);
     const author = card instanceof ChatMessage && (card.author === game.user || options.readOnly || options.anyAuthor);
-    if (!author || Workflow.#ended.has(chatCardUuid)) return undefined;
+    if (!author || (!options.readOnly && Workflow.#ended.has(chatCardUuid))) return undefined;
     // @ts-expect-error no dnd5e-types
     const className: string | undefined = card.system?.midi?.state?.workflowClass;
     const restorable: Record<string, typeof Workflow> = { Workflow, SavesFirstWorkflow, ActiveDefenceWorkflow, UserWorkflow };
@@ -1377,22 +1391,17 @@ export class Workflow {
     return this.#attackRollModifierTracker.attribution as AttributionMap;
   }
 
-  // Structured save attribution - keyed by target UUID
-  // Uses AttributionMap per target for O(1) lookups
-  #saveAttribution: Record<string, AttributionMap> | undefined;
+  /** Why each target's save had advantage or disadvantage, by token uuid */
   get saveAttribution(): Record<string, AttributionMap> {
-    return this.#saveAttribution ?? {};
+    return this.#persisted.saveAttribution();
   }
   set saveAttribution(saveAttribution: Record<string, AttributionMap>) {
-    this.#saveAttribution = saveAttribution;
     this.#persisted.setSaveAttribution(saveAttribution);
   }
 
   addSaveAttribution(targetUuid: string, type: AttributionType, source: string, displayName: string): void {
-    const current = this.#saveAttribution ?? {};
-    current[targetUuid] ??= {};
-    current[targetUuid][type] ??= {};
-    current[targetUuid][type]![source] = displayName;
+    const current = foundry.utils.deepClone(this.saveAttribution);
+    ((current[targetUuid] ??= {})[type] ??= {})[source] = displayName;
     this.saveAttribution = current;
   }
 
@@ -1801,7 +1810,6 @@ export class Workflow {
     this.templateUuids = [...this.#persisted.scalar<string[]>("templateUuids", [])];
     if (this.#persisted.scalar("isCritical", false)) this.attackRollModifierTracker.critical.setOverride(true, "restored", "Restored from chat card");
     if (this.#persisted.scalar("isFumble", false)) this.attackRollModifierTracker.fumble.setOverride(true, "restored", "Restored from chat card");
-    this.#saveAttribution = this.#persisted.saveAttribution();
     // Where it waits, worked out from the card
     const resumePoint = Workflow.cardResumePoint(this.#ownCard()) ?? "";
     const action = WorkflowRegistry[this.constructor.name]?.prototype[resumePoint];

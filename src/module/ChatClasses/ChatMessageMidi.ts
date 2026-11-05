@@ -5,7 +5,7 @@ import { configSettings, forceHideRoll, safeGetGameSetting } from "../settings.j
 import { createDamageDetail, displayTokenName, getToken, isDnd5eRollMessage } from "../utils.js";
 import { damageDetailToObject, Workflow } from "../Workflow.js";
 import { renameMarkedTokens } from "../lib/tokenNames.js";
-import { cardHitResult, cardMidiState, cardSourceActor, defineLegacyCardFlags, legacyCardFlags, storedMidiFlag } from "../lib/cardState.js";
+import { cardHitResult, cardMidiState, cardSourceActor, storedMidiFlag } from "../lib/cardState.js";
 import { cardSaveRoll } from "./UsageCardMessage.js";
 import { canSeePlayerOutcome, canSeeSaveResult, cardActor, challengeVisible, saveDetail, saveDisplayMode } from "../lib/saveVisibility.js";
 
@@ -20,20 +20,71 @@ const stripHighlight = (html: HTMLElement, sel: string) => html.querySelectorAll
   el => el.classList.remove("success", "failure", "critical", "fumble")
 );
 
-/** rollType tag -> the flag it is rebuilt into. utilityRolls is absent: chatRolls merges them. */
 /** The attack roll on a card, located by its tag rather than by position. */
 function attackRollOf(message: { rolls?: readonly Roll[] }): Roll | undefined {
   return (message.rolls ?? []).find(r =>
     foundry.utils.getProperty(r, `options.${MODULE_ID}.rollType`) === "attack");
 }
 
-const MIDI_ROLL_FLAGS: Record<string, string> = {
-  attack: "attackRoll",
-  defaultDamage: "damageRolls",
-  bonusDamage: "bonusDamageRolls",
-  otherDamage: "otherDamageRolls",
-  utility: "utilityRolls"
+const tokenUuids = (tokens: Set<Token.Implementation> | undefined) => [...(tokens ?? [])].map(token => token.document.uuid);
+/** The old `flags.midi-qol` keys of a usage card: the workflow property to use instead, and how the flag read it */
+const LEGACY_CARD_FLAGS: Record<string, [string, (workflow: Workflow) => unknown]> = {
+  targets: ["targets", w => [...w.targets].map(token => ({ uuid: token.document.uuid, name: token.document.name }))],
+  hitTargetUuids: ["hitTargets", w => tokenUuids(w.hitTargets)],
+  hitECTargetUuids: ["hitTargetsEC", w => tokenUuids(w.hitTargetsEC)],
+  saveUuids: ["saves", w => tokenUuids(w.saves)],
+  failedSaveUuids: ["failedSaves", w => tokenUuids(w.failedSaves)],
+  superSaverUuids: ["superSavers", w => tokenUuids(w.superSavers)],
+  semiSuperSaverUuids: ["semiSuperSavers", w => tokenUuids(w.semiSuperSavers)],
+  criticalSaveUuids: ["criticalSaves", w => tokenUuids(w.criticalSaves)],
+  fumbleSaveUuids: ["fumbleSaves", w => tokenUuids(w.fumbleSaves)],
+  advantageSaveUuids: ["advantageSaves", w => tokenUuids(w.advantageSaves)],
+  otherDamageMatchUuids: ["otherDamageMatches", w => w.otherDamageMatches && tokenUuids(w.otherDamageMatches)],
+  ammunitionDamageMatchUuids: ["ammunitionDamageMatches", w => w.ammunitionDamageMatches && tokenUuids(w.ammunitionDamageMatches)],
+  isHit: ["isHit", w => w.isHit],
+  isHitEC: ["isHitEC", w => w.isHitEC],
+  isCritical: ["isCritical", w => w.isCritical],
+  isFumble: ["isFumble", w => w.isFumble],
+  templateUuids: ["templateUuids", w => w.templateUuids],
+  templateUuid: ["templateUuids[0]", w => w.templateUuids[0] ?? ""],
+  workflowOptions: ["workflowOptions", w => w.workflowOptions],
+  currentAction: ["currentAction", w => [w.constructor.name, w.currentAction?.name]],
+  saveAttribution: ["saveAttribution", w => w.saveAttribution],
+  damageDetail: ["damageDetail", w => damageDetailToObject(w.damageDetail)],
+  otherDamageDetail: ["otherDamageDetail", w => damageDetailToObject(w.otherDamageDetail)],
+  bonusDamageDetail: ["bonusDamageDetail", w => damageDetailToObject(w.bonusDamageDetail)],
+  otherDamageTotal: ["otherDamageTotal", w => w.otherDamageTotal || undefined],
+  bonusDamageTotal: ["bonusDamageTotal", w => w.bonusDamageTotal || undefined],
+  attackRoll: ["attackRoll", w => w.attackRoll],
+  damageRolls: ["damageRolls", w => w.damageRolls],
+  bonusDamageRolls: ["bonusDamageRolls", w => w.bonusDamageRolls],
+  otherDamageRolls: ["otherDamageRolls", w => w.otherDamageRolls],
+  utilityRolls: ["utilityRolls", w => w.utilityRolls]
 };
+// A workflow built for a getter must not read the flags it is building
+let readingLegacyFlag = false;
+
+/** The old keys as getters reading the card's workflow (Workflow.cardView), each read warning that it is deprecated */
+function defineLegacyCardFlags(flags: Record<string, unknown>, cardUuid: string) {
+  for (const [key, [name, read]] of Object.entries(LEGACY_CARD_FLAGS)) {
+    if (Object.prototype.hasOwnProperty.call(flags, key)) continue;
+    Object.defineProperty(flags, key, {
+      configurable: true, enumerable: false,
+      get() {
+        foundry.utils.logCompatibilityWarning(`midi-qol | a usage card's flags.midi-qol.${key} is deprecated: use MidiQOL.Workflow.getWorkflow(card.uuid).${name} (read-only for users other than the card's author).`,
+          { since: "14.6.9", until: "14.8.0", once: true });
+        if (readingLegacyFlag) return undefined;
+        readingLegacyFlag = true;
+        try {
+          const workflow = Workflow.cardView(cardUuid);
+          return workflow ? read(workflow) : undefined;
+        } finally {
+          readingLegacyFlag = false;
+        }
+      }
+    });
+  }
+}
 
 import Token = foundry.canvas.placeables.Token;
 let _highlighted: Token.Implementation | null = null;
@@ -112,68 +163,24 @@ export function defineChatMessageMidiClass(baseClass: ChatMessage.Implementation
     prepareDerivedData() {
       super.prepareDerivedData();
 
-      // The workflow's state under its old flag names, deprecated: worked out when read (in memory only)
-      const cardMidi = (this.system as { midi?: Parameters<typeof legacyCardFlags>[0] } | undefined)?.midi;
-      if (cardMidi?.state?.workflowClass) {
-        // The damage detail as the card's damage lines show it, from its rolls
-        const detailOf = (rollType: string) => () => {
-          const rolls = this.rolls.filter(r => foundry.utils.getProperty(r, `options.${MODULE_ID}.rollType`) === rollType) as Roll[];
-          // @ts-expect-error no dnd5e-types
-          return rolls.length ? damageDetailToObject(createDamageDetail({ roll: rolls, activity: this.getAssociatedActivity?.() ?? null })) : undefined;
-        };
-        const totalOf = (rollType: string) => this.rolls.filter(r => foundry.utils.getProperty(r, `options.${MODULE_ID}.rollType`) === rollType)
-          .reduce((total, roll) => total + (roll.total ?? 0), 0) || undefined;
-        defineLegacyCardFlags((this.flags[MODULE_ID] ??= {}) as Record<string, unknown>, cardMidi,
-          { damageDetail: detailOf("defaultDamage"), otherDamageDetail: detailOf("otherDamage"), bonusDamageDetail: detailOf("bonusDamage"),
-            currentAction: () => [cardMidi.state?.workflowClass, Workflow.cardResumePoint(this) ?? ""],
-            isHit: () => configSettings.autoCheckHit === "none"
-              ? !!(this.rolls.find(r => foundry.utils.getProperty(r, `options.${MODULE_ID}.rollType`) === "attack") as { isSuccess?: boolean } | undefined)?.isSuccess
-              : Object.values(cardMidi.records ?? {}).some((record: { hit?: boolean }) => record.hit),
-            isHitEC: () => Object.values(cardMidi.records ?? {}).some((record: { hitEC?: boolean }) => record.hitEC),
-            otherDamageTotal: () => totalOf("otherDamage"), bonusDamageTotal: () => totalOf("bonusDamage") });
+      // The workflow's state under its old flag names, deprecated: read from the card's workflow
+      const cardMidi = cardMidiState(this);
+      if (cardMidi) {
+        defineLegacyCardFlags((this.flags[MODULE_ID] ??= {}) as Record<string, unknown>, this.uuid);
         // The card's own actor, for readers of the old flag (CAT's manual rolls); not a deprecated name, so no warning
         const flags = this.flags[MODULE_ID] as Record<string, unknown>;
         if (!Object.prototype.hasOwnProperty.call(flags, "sourceActorUuid"))
           Object.defineProperty(flags, "sourceActorUuid", { configurable: true, enumerable: false, get: () => cardSourceActor(this)?.uuid });
       }
 
-      // Deserialize roll flags in-place from JSON to Roll instances (same pattern as Foundry core's ChatMessage.rolls)
+      // Older cards stored copies of their rolls in the flags: made Rolls again (not the getters above)
       const midiFlags = this.flags?.[MODULE_ID];
       if (!midiFlags) return;
-
-      const attackData = midiFlags.attackRoll;
-      if (attackData && !(attackData instanceof Roll)) {
-        midiFlags.attackRoll = Roll.fromData(attackData) as Roll;
-      }
-
-      for (const field of ["damageRolls", "bonusDamageRolls", "otherDamageRolls",
-        "utilityRolls"] as const) {
-        const data = midiFlags[field];
-        if (data?.length) {
-          midiFlags[field] = data.map((r: any) => r instanceof Roll ? r : Roll.fromData(r));
-        }
-      }
-      this.deriveRollFlags(midiFlags);
-    }
-
-    /**
-     * Put the rolls back on the flags from `this.rolls`.
-     *
-     * They are no longer stored there - a roll on the flags was a second copy of one already in
-     * `message.rolls`, tagged with its `options["midi-qol"].rollType`. `flags` is a deep clone of
-     * the source (ObjectField#initialize), so nothing written here reaches the database.
-     * Only fills what is absent, leaving messages written before the change on their stored copies.
-     */
-    deriveRollFlags(midiFlags: Record<string, any>) {
-      if (!midiFlags.messageType) return;
-      const derived: Record<string, Roll[]> = {};
-      for (const roll of this.rolls) {
-        const field = MIDI_ROLL_FLAGS[foundry.utils.getProperty(roll, `options.${MODULE_ID}.rollType`) as string];
-        if (field) (derived[field] ??= []).push(roll);
-      }
-      for (const [field, rolls] of Object.entries(derived)) {
-        if (field === "attackRoll") midiFlags.attackRoll ??= rolls[0];
-        else if (!midiFlags[field]?.length) midiFlags[field] = rolls;
+      const attackData = storedMidiFlag(this, "attackRoll");
+      if (attackData && !(attackData instanceof Roll)) midiFlags.attackRoll = Roll.fromData(attackData) as Roll;
+      for (const field of ["damageRolls", "bonusDamageRolls", "otherDamageRolls", "utilityRolls"] as const) {
+        const data = storedMidiFlag(this, field);
+        if (data?.length) midiFlags[field] = data.map((r: any) => r instanceof Roll ? r : Roll.fromData(r));
       }
     }
 

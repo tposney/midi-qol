@@ -1,7 +1,7 @@
 /**
  * The workflow's state on its usage card: `system.midi.state` (scalars) and `system.midi.records` (one record per
  * token, keyed by token id; a token set is the records with its field set). Read back when a workflow is rebuilt from
- * its card, and offered under the old `flags.midi-qol` names to anything that still reads those (legacyCardFlags).
+ * its card.
  */
 
 /**
@@ -90,23 +90,6 @@ export function cardStateSchema() {
   };
 }
 
-/** The old `flags.midi-qol` keys the state and records replace */
-export const LEGACY_CARD_FLAG_KEYS = [...Object.values(STATE_FIELDS).filter(key => key !== "saveMults"), ...Object.values(RECORD_SETS), "templateUuid", "currentAction", "saveAttribution",
-  "damageDetail", "otherDamageDetail", "bonusDamageDetail", "otherDamageMatchUuids", "ammunitionDamageMatchUuids",
-  "isHit", "isHitEC", "otherDamageTotal", "bonusDamageTotal"];
-
-/** What a deprecated card flag is on the card's workflow (`MidiQOL.Workflow.getWorkflow(card.uuid)`): token sets are Sets of Tokens */
-export const LEGACY_WORKFLOW_NAMES: Record<string, string> = {
-  targets: "targets", hitTargetUuids: "hitTargets", hitECTargetUuids: "hitTargetsEC", saveUuids: "saves",
-  superSaverUuids: "superSavers", semiSuperSaverUuids: "semiSuperSavers", failedSaveUuids: "failedSaves",
-  fumbleSaveUuids: "fumbleSaves", criticalSaveUuids: "criticalSaves", advantageSaveUuids: "advantageSaves",
-  isCritical: "isCritical", isFumble: "isFumble", templateUuids: "templateUuids", templateUuid: "templateUuids[0]",
-  workflowOptions: "workflowOptions", currentAction: "currentAction", saveAttribution: "saveAttribution",
-  damageDetail: "damageDetail", otherDamageDetail: "otherDamageDetail", bonusDamageDetail: "bonusDamageDetail",
-  otherDamageMatchUuids: "otherDamageMatches", ammunitionDamageMatchUuids: "ammunitionDamageMatches",
-  isHit: "isHit", isHitEC: "isHitEC", otherDamageTotal: "otherDamageTotal", bonusDamageTotal: "bonusDamageTotal"
-};
-
 /** The damage tray's matches: token uuids the other activity's (or the ammunition's) damage applies to; undefined until worked out */
 export function cardDamageMatches(midi: { state?: Record<string, any>, records?: Record<string, CardRecord> } | undefined,
   kind: "otherDamage" | "ammunitionDamage"): string[] | undefined {
@@ -117,27 +100,6 @@ export function cardDamageMatches(midi: { state?: Record<string, any>, records?:
 /** The tokens targeted before the use, in order */
 export function cardPreSelected(records: Record<string, CardRecord> | undefined): string[] {
   return Object.values(records ?? {}).filter(record => record.preSelected).sort((a, b) => a.preSelected! - b.preSelected!).map(record => record.uuid);
-}
-
-/**
- * The old keys on a card's in-memory flags, as getters computing their value from the state and records when read,
- * each read warning that it is deprecated. Only keys the card does not really have (older cards keep theirs).
- */
-export function defineLegacyCardFlags(flags: Record<string, unknown>, midi: Parameters<typeof legacyCardFlags>[0],
-  derived: Record<string, () => unknown> = {}): void {
-  if (!midi?.state?.workflowClass) return;
-  let legacy: Record<string, unknown> | undefined;
-  for (const key of LEGACY_CARD_FLAG_KEYS) {
-    if (Object.prototype.hasOwnProperty.call(flags, key)) continue;
-    Object.defineProperty(flags, key, {
-      configurable: true, enumerable: false,
-      get() {
-        foundry.utils.logCompatibilityWarning(`midi-qol | a usage card's flags.midi-qol.${key} is deprecated: use MidiQOL.Workflow.getWorkflow(card.uuid).${LEGACY_WORKFLOW_NAMES[key] ?? key} (read-only for users other than the card's author).`,
-          { since: "14.6.9", until: "14.8.0", once: true });
-        return key in derived ? derived[key]() : (legacy ??= legacyCardFlags(midi))[key];
-      }
-    });
-  }
 }
 
 /** A card's stored workflow state and records, if it has any */
@@ -188,34 +150,6 @@ export function cardSourceActor(message: ChatMessage.Implementation | undefined)
 export function storedMidiFlag(message: ChatMessage.Implementation | undefined, key: string): any {
   const flags = message?.flags?.["midi-qol"] as Record<string, unknown> | undefined;
   return flags ? Object.getOwnPropertyDescriptor(flags, key)?.value : undefined;
-}
-
-/** The old `flags.midi-qol` keys, from a card's state and records */
-export function legacyCardFlags(midi: { state?: Record<string, any>, records?: Record<string, CardRecord> } | undefined): Record<string, unknown> {
-  const state = midi?.state;
-  if (!state?.workflowClass) return {};
-  const flags: Record<string, unknown> = {};
-  for (const [key, flag] of Object.entries(STATE_FIELDS)) {
-    const value = state[key];
-    if (value !== null && value !== undefined && value !== "") flags[flag] = value;
-  }
-  flags.templateUuid = state.templateUuids?.[0] ?? "";
-  if (flags.workflowOptions) flags.workflowOptions = { ...(flags.workflowOptions as object), preSelectedTargetUuids: cardPreSelected(midi?.records) };
-  for (const kind of ["otherDamage", "ammunitionDamage"] as const) {
-    const matches = cardDamageMatches(midi, kind);
-    if (matches) flags[`${kind}MatchUuids`] = matches;
-  }
-  const records = Object.values(midi?.records ?? {});
-  for (const [key, flag] of Object.entries(RECORD_SETS)) {
-    const members = records.filter(record => record[key as RecordSet]);
-    flags[flag] = key === "targets"
-      ? members.map(({ uuid }) => ({ uuid, name: (fromUuidSync(uuid) as { name?: string } | null)?.name ?? "" }))
-      : members.map(record => record.uuid);
-  }
-  const attribution = Object.fromEntries(records.filter(record => record.saveAttribution?.length)
-    .map(record => [record.uuid, attributionMap(record.saveAttribution!)]));
-  if (!foundry.utils.isEmpty(attribution)) flags.saveAttribution = attribution;
-  return flags;
 }
 
 /** Attribution as [type, source, name] triples (a source can contain dots, which an update would split) */

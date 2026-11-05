@@ -674,7 +674,7 @@ let defineMidiAttackActivityClass = <T extends Activity>(ActivityClass: T) => {
             await Workflow.removeItemCardButtons(workflow.itemCardUuid, { removeConfirmButtons: true });
           }
           if (workflow.damageRollCount > 0) { // re-rolling damage counts as new damage
-            const flags = foundry.utils.deepClone(workflow.chatCard.flags);
+            const flags = foundry.utils.deepClone(workflow.chatCard._source.flags);
             const messageConfig = foundry.utils.mergeObject({
               create: true,
               data: { system: { effects: this.applicableEffects?.map(e => e.relativeUUID) } },
