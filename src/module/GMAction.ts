@@ -6,6 +6,7 @@ import { DAMAGE_MESSAGE_TYPE } from "./ChatClasses/DamageCardMessage.js";
 import { DamageDescriptionObject, Workflow } from "./Workflow.js";
 import { applyFailedDeathSaves, bonusCheck, revertFailedDeathSaves } from "./patching.js";
 import { RollModifierTracker } from "./lib/RollModifierTracker.js";
+import { TokenSet } from "./lib/tokenSet.js";
 import { actorEmbeddedByPath, repointCopiedDependentsSource } from "./lib/MidiDependentsRegistry.js";
 import { queueUndoData, startUndoWorkflow, _removeMostRecentWorkflow, _undoMostRecentWorkflow, undoTillWorkflow, _queueUndoDataDirect, addUndoChatCards } from "./undo.js";
 import { TroubleShooter } from "./apps/TroubleShooter.js";
@@ -258,7 +259,7 @@ async function confirmDamageRollCompleteHit(data: { workflowId: string, activity
     // TODO confirm this needs to be awaited
 
   }
-  workflow.hitTargets = new Set(workflow.targets);
+  workflow.hitTargets = new TokenSet(workflow.targets);
   workflow.hitTargetsEC = new Set();
   workflow.isFumble = false;
   for (let hitDataKey in workflow.hitDisplayData) {

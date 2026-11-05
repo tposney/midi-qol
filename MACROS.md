@@ -777,6 +777,20 @@ await workflow.resume("damageRolled"); // "attackRolled", "damageRolled", "noDam
 
 A read-only copy is a snapshot of the card when it was made, and a copy you hold is never updated. When the card changes midi discards its copy, so the next `getWorkflow` call builds one from the card as it is then. Call `getWorkflow` again after an `await` rather than keeping a copy. `MidiQOL.Workflow.workflows` is midi's internal index; its entries may be a `WeakRef`, so use `getWorkflow`.
 
+### Token sets
+
+A workflow's token sets (`targets`, `hitTargets`, `hitTargetsEC`, `saves`, `failedSaves`, `superSavers`, `semiSuperSavers`, `criticalSaves`, `fumbleSaves`, `advantageSaves`) are Sets of the Tokens drawn on the canvas now. A member on another scene, or on a level not shown, is skipped by iteration and `size`, but is still a member:
+
+```js
+workflow.hitTargets.size;               // hit targets drawn now
+workflow.hitTargets.documents;          // every hit target's TokenDocument, drawn or not
+workflow.hitTargets.uuids;              // their uuids
+workflow.hitTargets.has(tokenDocument); // a Token, TokenDocument or uuid
+workflow.saves.add(token);              // changes the workflow's set
+```
+
+Use `documents` for anything that works on the actor (damage, effects, HP), and the Tokens for anything on the canvas (distance, sight, cover). Copy a set with `new MidiQOL.TokenSet(set)` to keep the members not drawn; `new Set(set)` keeps only the drawn Tokens.
+
 ### Storing data on the card
 
 Data that should survive a reload, or be seen on other clients, goes in your module's flags scope on the usage card, not on the workflow:
@@ -796,7 +810,7 @@ Flags another module puts on the message config of a roll midi makes (attack, da
 
 ### Old card flags
 
-Before 14.6.9 a card kept the workflow's state as `flags.midi-qol` keys. They still read the same on any card (each warns once that it is deprecated) and are removed in 14.8.0. With `const workflow = MidiQOL.Workflow.getWorkflow(card.uuid)`; token sets are Sets of Tokens, not uuids:
+Before 14.6.9 a card kept the workflow's state as `flags.midi-qol` keys. They still read the same on any card (each warns once that it is deprecated) and are removed in 14.8.0. With `const workflow = MidiQOL.Workflow.getWorkflow(card.uuid)`; token sets are Sets of Tokens, and a set's `uuids` replaces an old `…Uuids` flag (`workflow.hitTargets.uuids`):
 
 | Old (deprecated) | Use |
 |---|---|

@@ -29,6 +29,7 @@ import { TargetConfirmationDialog } from './module/apps/TargetConfirmation.js';
 import { TargetConfirmationConfig } from './module/apps/TargetConfirmationConfig.js';
 import { MidiAttackActivity, setupAttackActivity } from './module/activities/AttackActivity.js';
 import { RollModifierTracker } from './module/lib/RollModifierTracker.js';
+import { TokenSet } from './module/lib/tokenSet.js';
 import { injectMidiCompletions } from './module/lib/midiCompletions.js';
 import { OverTimeEditor } from './module/apps/OverTimeEditor.js';
 import { ConditionEditor } from './module/apps/ConditionEditor.js';
@@ -321,6 +322,7 @@ Object.assign(globalThis.MidiQOL, {
   teleportToken,
   testfunc,
   tokenForActor,
+  TokenSet,
   TrapWorkflow,
   typeOrRace,
   undoMostRecentWorkflow,

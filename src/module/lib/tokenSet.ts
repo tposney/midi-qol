@@ -85,4 +85,37 @@ export class TokenSet extends Set<Token.Implementation> {
   override forEach(callback: (value: Token.Implementation, key: Token.Implementation, set: Set<Token.Implementation>) => void, thisArg?: unknown): void {
     for (const token of this.values()) callback.call(thisArg, token, token, this);
   }
+
+  // Native set algebra reads a Set's internal storage, which this never fills: work on the drawn Tokens instead
+  #drawn(): Set<Token.Implementation> {
+    return new Set(this.values());
+  }
+
+  override union<U>(other: ReadonlySetLike<U>): Set<Token.Implementation | U> {
+    return this.#drawn().union(other);
+  }
+
+  override intersection<U>(other: ReadonlySetLike<U>): Set<Token.Implementation & U> {
+    return this.#drawn().intersection(other);
+  }
+
+  override difference<U>(other: ReadonlySetLike<U>): Set<Token.Implementation> {
+    return this.#drawn().difference(other);
+  }
+
+  override symmetricDifference<U>(other: ReadonlySetLike<U>): Set<Token.Implementation | U> {
+    return this.#drawn().symmetricDifference(other);
+  }
+
+  override isSubsetOf(other: ReadonlySetLike<unknown>): boolean {
+    return this.#drawn().isSubsetOf(other);
+  }
+
+  override isSupersetOf(other: ReadonlySetLike<unknown>): boolean {
+    return this.#drawn().isSupersetOf(other);
+  }
+
+  override isDisjointFrom(other: ReadonlySetLike<unknown>): boolean {
+    return this.#drawn().isDisjointFrom(other);
+  }
 }

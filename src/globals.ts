@@ -38,6 +38,7 @@ import { ChatMessageMidi } from "./module/ChatClasses/ChatMessageMidi";
 import { DamageApplicationElementMidi } from "./module/ChatClasses/DamageApplicationElementMidi";
 import { MidiDependentsRegistry, RegistryChangeEvent } from "./module/lib/MidiDependentsRegistry";
 import { RollModifierTracker } from "./module/lib/RollModifierTracker";
+import { TokenSet } from "./module/lib/tokenSet";
 
 declare module "fvtt-types/configuration" {
   interface AssumeHookRan {
@@ -828,6 +829,7 @@ declare global {
     addRollToAsync: typeof utils.addRollToAsync;
     addUndoChatMessage: typeof undo.addUndoChatMessage;
     RollModifierTracker: typeof RollModifierTracker;
+    TokenSet: typeof TokenSet;
     applyTokenDamage: typeof utils.applyTokenDamage;
     canSee: typeof utils.canSee;
     canSense: typeof utils.canSense;
@@ -1943,7 +1945,7 @@ export type ProcessTargetSaveContext = {
 };
 
 export type QueueSaveRollOptions = {
-  target: Token;
+  target: TokenOrDocument;
   saveDetails: SaveDetails;
   rollInfo: SaveRollInfo;
   isMagicSave: boolean;

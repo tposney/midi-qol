@@ -1,4 +1,5 @@
 import { heldKeys } from "../lib/rollKeys.js";
+import { TokenSet } from "../lib/tokenSet.js";
 import { Activity, ActivityEffectData, ActivityUseConfiguration, RollDialogConfig, DND5ETargetDescriptor, RollMessageConfig, RollProcessConfig, MidiUsageChatContext, Dnd5eSystem, EmanationShapeData } from "../../globals.js";
 import { GameSystemConfig, MODULE_ID, debugEnabled, error, i18n, i18nFormat, warn, busyWait, specialDurationChoices } from "../../midi-qol.js";
 import { socketlibSocket, timedAwaitExecuteAsGM } from "../GMAction.js";
@@ -497,7 +498,7 @@ export let MidiActivityMixin = Base => {
         });
       } else {
         workflow.forceApplyEffects = true; // don't overwrite the application targets
-        workflow.effectTargets = new Set(game.user?.targets);
+        workflow.effectTargets = new TokenSet(game.user?.targets);
         if (workflow.effectTargets.size > 0) await workflow.performState(workflow.WorkflowState_ApplyDynamicEffects)
       }
     }

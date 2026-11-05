@@ -2512,7 +2512,7 @@ const WORKFLOW_TOKEN_SETS = {
 
 /**
  * Workflow macro data that crossed a socket carries its token sets as uuid arrays; give it back the workflow's
- * Sets of tokens (targets, hitTargets, failedSaves, ...). Other values pass through.
+ * token sets (targets, hitTargets, failedSaves, ...). Other values pass through.
  */
 export function restoreWorkflowTokenSets<T>(data: T): T {
   if (foundry.utils.getType(data) !== "Object") return data;
@@ -2520,7 +2520,7 @@ export function restoreWorkflowTokenSets<T>(data: T): T {
   for (const [field, uuidField] of Object.entries(WORKFLOW_TOKEN_SETS)) {
     const uuids = record[uuidField];
     if (!Array.isArray(uuids)) continue;
-    record[field] = new Set(uuids.map(uuid => (fromUuidSync(uuid) as TokenDocument.Implementation | null)?.object).filter(token => !!token));
+    record[field] = new TokenSet(uuids);
   }
   return data;
 }

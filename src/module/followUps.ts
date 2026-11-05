@@ -10,6 +10,7 @@ import { MODULE_ID, debug } from "../midi-qol.js";
 import { Activity } from "../globals.js";
 import { completeActivityUse, evalActivationCondition } from "./utils.js";
 import type { Workflow } from "./Workflow.js";
+import { TokenSet } from "./lib/tokenSet.js";
 
 /** Update key for the card's follow-ups; a string, as the system fields are untyped. */
 const FOLLOW_UPS: string = "system.midi.followUps";
@@ -20,15 +21,15 @@ export const followUpTargetModes = ["default", "self", "targets", "hitTargets", 
 export type FollowUpTargetMode = typeof followUpTargetModes[number];
 
 /** Who a follow-up runs at. Default: the creatures hit by an attack, else all the targets. */
-export function followUpTargets(workflow: Workflow, mode: FollowUpTargetMode | string = "default"): Set<Token.Implementation> {
+export function followUpTargets(workflow: Workflow, mode: FollowUpTargetMode | string = "default"): TokenSet {
   switch (mode) {
-    case "self": return workflow.token ? new Set([workflow.token]) : new Set();
-    case "targets": return new Set(workflow.targets);
-    case "hitTargets": return new Set(workflow.hitTargets);
-    case "missedTargets": return workflow.targets.difference(workflow.hitTargets);
-    case "failedSaves": return new Set(workflow.failedSaves);
-    case "saveTargets": return new Set(workflow.saves);
-    default: return new Set(workflow.activity?.attack ? workflow.hitTargets : workflow.targets);
+    case "self": return new TokenSet(workflow.token ? [workflow.token] : []);
+    case "targets": return new TokenSet(workflow.targets);
+    case "hitTargets": return new TokenSet(workflow.hitTargets);
+    case "missedTargets": return new TokenSet(workflow.targets.documents.filter(document => !workflow.hitTargets.has(document)));
+    case "failedSaves": return new TokenSet(workflow.failedSaves);
+    case "saveTargets": return new TokenSet(workflow.saves);
+    default: return new TokenSet(workflow.activity?.attack ? workflow.hitTargets : workflow.targets);
   }
 }
 
@@ -43,13 +44,13 @@ function followUpsOf(message: ChatMessage.Implementation | undefined): FollowUpE
 export async function addFollowUp(workflow: Workflow, activity: Activity, options: { label?: string, targets?: Iterable<Token.Implementation> } = {}): Promise<boolean> {
   const message = workflow.chatCard as ChatMessage.Implementation | undefined;
   if (!message || !activity?.uuid) return false;
-  const targets = Array.from(options.targets ?? followUpTargets(workflow));
+  const targets = new TokenSet(options.targets ?? followUpTargets(workflow));
   const followUps = followUpsOf(message);
   if (followUps.some(entry => entry.activityUuid === activity.uuid)) return false;
   followUps.push({
     activityUuid: activity.uuid,
     label: options.label ?? activity.name ?? "",
-    targetUuids: targets.map(token => token.document.uuid),
+    targetUuids: targets.uuids,
     critical: !!workflow.isCritical,
     used: false
   });
@@ -68,9 +69,9 @@ export async function offerFollowUps(workflow: Workflow): Promise<void> {
   for (const activity of activities) {
     if (activity === workflow.activity || !activity.midiProperties?.followUp) continue;
     const targets = followUpTargets(workflow, activity.midiProperties.followUpTargets);
-    if (!targets.size && workflow.targets.size && activity.midiProperties.followUpTargets !== "self") continue;
+    if (!targets.documents.length && workflow.targets.documents.length && activity.midiProperties.followUpTargets !== "self") continue;
     const condition = activity.midiProperties.followUpCondition;
-    if (condition && !await evalActivationCondition(workflow, condition, targets.first(), { errorReturn: false, item: workflow.item })) continue;
+    if (condition && !await evalActivationCondition(workflow, condition, targets.documents[0], { errorReturn: false, item: workflow.item })) continue;
     await addFollowUp(workflow, activity, { targets });
   }
 }
