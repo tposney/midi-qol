@@ -279,7 +279,8 @@ export async function postTemplateConfirmTargets(activity: Activity, options: Mi
   // tokens inside the template. For non-template activities, targets were already set
   // in setupTargets and must not be overwritten from game.user.targets (which may have
   // been changed by concurrent effects during the async workflow state transitions).
-  if (activityRequiresPostTemplateConfirmation(activity) && game.user?.targets) {
+  // A use given its targets (workflowOptions.ignoreUserTargets) keeps them: the user's targets may be anyone's by now
+  if (activityRequiresPostTemplateConfirmation(activity) && game.user?.targets && !workflow.workflowOptions?.ignoreUserTargets) {
     await updateTargets();
   }
   return true;

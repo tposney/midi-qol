@@ -1,4 +1,5 @@
 import type { AttackModifier } from "./Workflow.js";
+import { TokenSet } from "./lib/tokenSet.js";
 import { rollBonusLabel } from "./activities/AttackActivity.js";
 import { debug, i18n, error, warn, busyWait, allAttackTypes, debugEnabled, overTimeEffectsToDelete, getStaticID, savedOverTimeEffectsToDelete, GameSystemConfig, systemConcentrationId, MQItemMacroLabel, MODULE_ID, midiReactionEffect, midiBonusActionEffect, MQActivityMacroLabel, ceInterface, i18nFormat } from "../midi-qol.js";
 import { configSettings, autoRemoveTargets, checkRule, criticalDamage, criticalDamageGM, checkMechanic, safeGetGameSetting, autoRollDamageOptions, showReactionAttackRollOptions, shouldDisplaySaveDC, DOWNGRADE_IMMUNITY_KEY, ALL_DAMAGE_KEY } from "./settings.js";
@@ -536,8 +537,9 @@ function uncannyDodgeSourceIcon(actor: Actor.Implementation): string | undefined
 
 export async function processDamageRoll(workflow: Workflow, defaultDamageType: string) {
   if (debugEnabled > 0) warn("processDamageRoll |", workflow)
-  let hitTargets = new Set([...(workflow.hitTargets ?? []), ...(workflow.hitTargetsEC ?? [])]);
-  let theTargets = new Set(workflow.targets);
+  // Every target, drawn on the canvas or not: damage goes by the token's document and actor
+  const hitTargets = new TokenSet([...workflow.hitTargets.documents, ...workflow.hitTargetsEC.documents]);
+  const theTargets = workflow.targets.documents;
   // TODO becomes activity.target.affects.type === "self"
   // if (activity.target.affects.type === "self") theTargets = await getOrCreateTokenForActorAsSet(actor) || theTargets;
   let effectsToExpire: string[] = [];
@@ -562,24 +564,25 @@ export async function processDamageRoll(workflow: Workflow, defaultDamageType: s
   if (workflow.rawOtherDamageDetail) totalDamage += workflow.rawOtherDamageDetail.reduce((acc, di) => acc + (di.type === "temphp" ? 0 : di.value), 0) ?? 0;
   if (workflow.rawBonusDamageDetail) totalDamage += workflow.rawBonusDamageDetail.reduce((acc, di) => acc + (di.type === "temphp" ? 0 : di.value), 0) ?? 0;
   const defaultSaveMultiplier = getSaveMultiplierForActivity(workflow.activity);
-  for (let token of theTargets) {
-    const actor = token.actor;
+  for (const tokenDocument of theTargets) {
+    // The Token only when drawn: reactions need the canvas
+    const token = tokenDocument.object as Token.Implementation | null;
+    const actor = tokenDocument.actor;
     if (!actor) continue;
-    const tokenDocument = token.document;
     let challengeModeScale = 1;
     let challengeModeAR = 0;
-    if (["scale", "scaleNoAR"].includes(checkRule("challengeModeArmor") as string) && workflow.attackRoll && workflow.hitTargetsEC?.has(token)) {
+    if (["scale", "scaleNoAR"].includes(checkRule("challengeModeArmor") as string) && workflow.attackRoll && workflow.hitTargetsEC?.has(tokenDocument)) {
       //scale the damage detail for a glancing blow - only for the first damage list? or all?
       const scale = workflow.challengeModeScale?.[tokenDocument?.uuid ?? "dummy"] ?? 1;
       challengeModeScale = scale;
-    } else if (checkRule("challengeModeArmor") === "challenge" && workflow.hitTargetsEC?.has(token)) {
+    } else if (checkRule("challengeModeArmor") === "challenge" && workflow.hitTargetsEC?.has(tokenDocument)) {
       //@ts-expect-error no dnd5e-types
-      challengeModeAR = token.actor?.system.attributes.ac.AR ?? 0;
+      challengeModeAR = actor.system.attributes.ac.AR ?? 0;
     }
 
-    const semiSuperSaver = workflow.semiSuperSavers.has(token);
-    const superSaver = workflow.superSavers.has(token);
-    const hasSaved = workflow.saves.has(token);
+    const semiSuperSaver = workflow.semiSuperSavers.has(tokenDocument);
+    const superSaver = workflow.superSavers.has(tokenDocument);
+    const hasSaved = workflow.saves.has(tokenDocument);
     // What a successful save does to base damage; applySaves adds Super Saver per damage entry.
     const saveMultiplier = defaultSaveMultiplier;
     damagePerActor[actor.uuid] = {
@@ -590,17 +593,17 @@ export async function processDamageRoll(workflow: Workflow, defaultDamageType: s
       critical: workflow.isCritical,
       damageDetail: [],
       damageDetails: { combinedDamage: [], rawcombinedDamage: [], defaultDamage: [], rawdefaultDamage: workflow.rawDamageDetail ?? [], otherDamage: [], rawotherDamage: workflow.rawOtherDamageDetail ?? [], bonusDamage: [], rawbonusDamage: workflow.rawBonusDamageDetail ?? [], calcDamageOptions: {} },
-      isHit: hitTargets.has(token),
+      isHit: hitTargets.has(tokenDocument),
       rawDamageDetail: [],
       saved: hasSaved,
-      sceneId: canvas.scene?.id ?? "",
+      sceneId: tokenDocument.parent?.id ?? "",
       semiSuperSaver,
       superSaver,
       totalDamage,
       targetUuid: tokenDocument?.uuid,
     };
     if (!foundry.utils.getProperty(workflow.activity.item, `flags.${MODULE_ID}.noProvokeReaction`) && !workflow?.workflowOptions?.noProvokeReaction) {
-      if (totalDamage !== 0 && (workflow.hitTargets.has(token) || workflow.hitTargetsEC.has(token) || workflow.hasSave)) {
+      if (token && totalDamage !== 0 && (workflow.hitTargets.has(tokenDocument) || workflow.hitTargetsEC.has(tokenDocument) || workflow.hasSave)) {
         const isHealing = ("heal" === workflow.activity.actionType) || totalDamage < 0;
         await doReactions(token, workflow.tokenUuid, workflow.damageRoll ?? workflow.bonusDamageRoll ?? workflow.otherDamageRoll ?? new Roll("0"), !isHealing ? "reactiondamage" : "reactionheal", { activity: workflow.activity, item: workflow.item, workflow, workflowOptions: { damageDetail: workflow.rawDamageDetail, damageTotal: totalDamage, sourceActorUuid: workflow.actor.uuid, sourceItemUuid: workflow.item.uuid, sourceAmmoUuid: workflow.ammunition?.uuid } });
       }
@@ -611,7 +614,7 @@ export async function processDamageRoll(workflow: Workflow, defaultDamageType: s
 
     const damageBuckets: [DamageDescription[], "defaultDamage" | "otherDamage" | "bonusDamage"][] = [
       [workflow.damageDetail ?? [], "defaultDamage"],
-      [workflow.otherDamageFor(token), "otherDamage"],
+      [workflow.otherDamageFor(tokenDocument), "otherDamage"],
       [workflow.bonusDamageDetail ?? [], "bonusDamage"]
     ];
 
@@ -630,11 +633,11 @@ export async function processDamageRoll(workflow: Workflow, defaultDamageType: s
         midi: {
           challengeModeAR,
           applyDamage: true,
-          criticalSave: workflow.criticalSaves.has(token),
-          fumbleSave: workflow.fumbleSaves.has(token),
+          criticalSave: workflow.criticalSaves.has(tokenDocument),
+          fumbleSave: workflow.fumbleSaves.has(tokenDocument),
           isCritical: workflow.isCritical,
           isFumble: workflow.isFumble,
-          isHit: hitTargets.has(token),
+          isHit: hitTargets.has(tokenDocument),
           itemType: workflow.item.type,
           save: hasSaved,
           saved: hasSaved,
@@ -643,7 +646,7 @@ export async function processDamageRoll(workflow: Workflow, defaultDamageType: s
           sourceActorUuid: workflow.actor.uuid,
           itemCardUuid: workflow.itemCardUuid,
           superSaver,
-          targetUuid: token.document.uuid,
+          targetUuid: tokenDocument.uuid,
           // @ts-expect-error no dnd5e-types
           uncannyDodge: actor.flags?.[MODULE_ID]?.["uncanny-dodge"] && workflow.item?.hasAttack,
           uncannyDodgeIcon: uncannyDodgeSourceIcon(actor)
@@ -731,7 +734,7 @@ export async function processDamageRoll(workflow: Workflow, defaultDamageType: s
       }
 
       //@ts-expect-error no dnd5e-types
-      const calculated: DamageDescription[] = token.actor.calculateDamage(allDamage, calcDamageOptions) ?? [];
+      const calculated: DamageDescription[] = actor.calculateDamage(allDamage, calcDamageOptions) ?? [];
 
       // Partition by tag, never by index: midi's DR pass pushes an aggregate entry and splices out
       // midi-none entries, so the returned array is neither the same length nor order as the input.
@@ -752,7 +755,7 @@ export async function processDamageRoll(workflow: Workflow, defaultDamageType: s
         const calcDamageOptions = buildCalcDamageOptions();
 
         //@ts-expect-error no dnd5e-types
-        let returnDamages = token.actor.calculateDamage(damages, calcDamageOptions);
+        let returnDamages = actor.calculateDamage(damages, calcDamageOptions);
         damageDetails[type] = returnDamages;
         damageDetails[`raw${type}`] = damages;
         damageDetails.calcDamageOptions[type] = calcDamageOptions;
@@ -786,15 +789,17 @@ export async function processDamageRoll(workflow: Workflow, defaultDamageType: s
       // damageEntry.calcDamageOptions = damageEntry.damageDetails[`calcDamageOptions.${selector}`] ?? damageEntry.calcDamageOptions;
     });
 
-    for (let token of theTargets) {
-      const actor = token.actor;
+    for (const tokenDocument of theTargets) {
+      const actor = tokenDocument.actor;
       if (!actor) continue;
       const preDamageDetails = damagePerActor[actor.uuid];
       const damageDetails = setupDamageDetails(preDamageDetails, selector, actor);
       if (damageDetails) {
         damageDetails.damageDetails[selector] = damageDetails.damageDetail;
         workflow.damageList.push(damageDetails);
-        await workflow?.callDamageHooksAndMacros(damageDetails, token);
+        // Target macros are given a drawn Token
+        const token = tokenDocument.object as Token.Implementation | null;
+        if (token) await workflow?.callDamageHooksAndMacros(damageDetails, token);
       }
     }
     await timedAwaitExecuteAsGM("createReverseDamageCard", {

@@ -401,7 +401,8 @@ class CardStateStore {
   /** The damage tray's matches: the matched tokens flagged in the records, and the state marked as worked out */
   setDamageMatches(kind: "otherDamage" | "ammunitionDamage", matches: Set<Token.Implementation> | undefined): void {
     this.#write({ [`system.midi.state.${kind}Matched`]: matches ? true : null });
-    const documents = [...(matches ?? [])].map(token => getTokenDocument(token)).filter((d): d is TokenDocument.Implementation => !!d);
+    const documents = matches instanceof TokenSet ? matches.documents
+      : [...(matches ?? [])].map(token => getTokenDocument(token)).filter((d): d is TokenDocument.Implementation => !!d);
     this.setRecordValues(kind, new Map(documents.map(document => [document, true as const])));
   }
 
@@ -1022,24 +1023,24 @@ export class Workflow {
   get hitTargetsEC(): TokenSet { return this.#persisted.tokenSet("hitEC"); }
   set hitTargetsEC(hitTargetsEC: Set<TokenOrDocument> | undefined) { this.#persisted.setTokenSet("hitEC", hitTargetsEC); }
 
-  #otherDamageMatches: Set<Token.Implementation> | undefined;
+  #otherDamageMatches: TokenSet | undefined;
   // Written for the damage tray; the workflow works them out before it uses them (buildOtherDamageMatches)
-  get otherDamageMatches(): Set<Token.Implementation> | undefined {
+  get otherDamageMatches(): TokenSet | undefined {
     return this.#otherDamageMatches;
   }
   set otherDamageMatches(matches: Set<Token.Implementation> | undefined) {
-    this.#otherDamageMatches = matches;
+    this.#otherDamageMatches = matches && new TokenSet(matches);
     // For the damage tray, which has other damage only from the other activity
     if (this.otherActivity) this.#persisted.setDamageMatches("otherDamage", matches);
   }
 
   /** The targets the ammunition's damage applies to: hit targets passing its own use condition. */
-  #ammunitionDamageMatches: Set<Token.Implementation> | undefined;
-  get ammunitionDamageMatches(): Set<Token.Implementation> | undefined {
+  #ammunitionDamageMatches: TokenSet | undefined;
+  get ammunitionDamageMatches(): TokenSet | undefined {
     return this.#ammunitionDamageMatches;
   }
   set ammunitionDamageMatches(matches: Set<Token.Implementation> | undefined) {
-    this.#ammunitionDamageMatches = matches;
+    this.#ammunitionDamageMatches = matches && new TokenSet(matches);
     // The damage tray reads it
     this.#persisted.setDamageMatches("ammunitionDamage", matches);
   }
@@ -1067,7 +1068,7 @@ export class Workflow {
    * A target's other damage: the other activity's where its condition matched the target, the ammunition's where the
    * ammunition's did, each with its own save multiplier.
    */
-  otherDamageFor(token: Token.Implementation): DamageDescription[] {
+  otherDamageFor(token: TokenOrDocument): DamageDescription[] {
     const multipliers = this.damageSaveMultipliers();
     const otherApplies = this.otherDamageMatches?.has(token) ?? true;
     const ammunitionApplies = this.ammunitionDamageMatches?.has(token) ?? true;
@@ -2906,13 +2907,13 @@ export class Workflow {
 
   /** The targets the other activity's and the ammunition's damage apply to, each by its own use condition. */
   async buildOtherDamageMatches(): Promise<void> {
-    const targets = this.activity.attack
-      ? new Set([...this.hitTargets, ...this.hitTargetsEC])
-      : this.targets;
+    const targets = this.activity.attack ? [...this.hitTargets.documents, ...this.hitTargetsEC.documents] : this.targets.documents;
+    // A condition is evaluated against a drawn Token; without one every target matches, drawn or not
     const matching = async (condition: string | undefined) => {
-      const matches = new Set<Token.Implementation>();
-      for (const token of targets) {
-        if (!condition || await evalActivationCondition(this, condition, token, { async: true, errorReturn: false })) matches.add(token);
+      const matches = new TokenSet();
+      for (const document of targets) {
+        const token = document.object as Token.Implementation | null;
+        if (!condition || (token && await evalActivationCondition(this, condition, token, { async: true, errorReturn: false }))) matches.add(document);
       }
       return matches;
     };
