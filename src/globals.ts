@@ -185,6 +185,12 @@ declare module "fvtt-types/configuration" {
       "midi-qol"?: {
         magical?: boolean;
         magicSchool?: string;
+        /** A use's template region (midiTemplateFlags): its use and caster, and how far from the caster it may be placed */
+        activityTemplate?: boolean;
+        itemUuid?: string;
+        actorUuid?: string;
+        sourceTokenUuid?: string;
+        maxRange?: number;
       }
     };
     ActiveEffect: {
@@ -511,86 +517,65 @@ declare module "fvtt-types/configuration" {
         "transform.profile"?: string;
       };
       "midi-qol"?: {
-        activityUuid?: string;
+        /** A synthetic item's data, on its usage card */
         itemData?: Item.CreateData;
+        /** Damage card: the attacker */
         actorUuid?: string;
-        sourceActorUuid?: string;
-        advantageSaveUuids?: string[];
-        ammunitionOnUseMacros?: OnUseMacros;
-        AoO?: boolean;
-        attackTotal?: number;
-        attackRoll?: Roll.Data | Roll;
-        attackRollCount?: number;
+        /** Damage card: what was applied, for its undo; messages predating the prune carry the full socket shape */
+        undoDamage?: (PersistedUndoEntry | SerializedDamageListEntry)[];
         /** The workflow was undone: the card is drawn with the undo colour */
         undone?: boolean;
         /** One of a card note's messages (MidiQOL.cardNoteMessageData): its role, for the note's renderer */
         cardNote?: { role?: string };
-        bonusDamageDetail?: DamageDescriptionObject[];
-        bonusDamageRolls?: Roll.Data[] | Roll[];
-        bonusDamageTotal?: number;
+        /** A concentration check request has been rolled */
         concentrationRolled?: boolean;
-        criticalSaveUuids?: string[];
-        currentAction?: [string, string];
-        d20AttackRoll?: number;
-        damageDetail?: DamageDescriptionObject[];
-        damageList?: DamageListEntry[];
-        damageRollCount?: number;
-        damageRolls?: Roll.Data[] | Roll[];
-        damageTotal?: number;
-        defaultDamageType?: string;
-        diceRoll?: number;
-        effectsAlreadyExpired?: string[];
-        failedSaveUuids?: string[];
-        fumbleSaveUuids?: string[];
-        hitTargetUuids?: string[];
-        hitECTargetUuids?: string[];
-        inCombat?: boolean;
-        isCritical?: boolean;
-        isFumble?: boolean;
-        itemUseComplete?: boolean;
-        expectedTemplateCount?: number;
-        noOptionalRules?: boolean;
-        OnUseMacros?: OnUseMacros;
-        otherDamageDetail: DamageDescriptionObject[];
-        otherDamageRolls?: Roll.Data[] | Roll[];
-        otherDamageTotal?: number;
-        rawBonusDamageDetail?: DamageDescriptionObject[];
-        rawDamageDetail?: DamageDescriptionObject[];
-        rawOtherDamageDetail?: DamageDescriptionObject[];
-        saveDisplayData?: unknown;
-        saveUuids?: string[];
-        /** Structured save attribution map: targetUuid -> type -> source -> displayName */
-        saveAttribution?: Record<string, AttributionMap>;
-        semiSuperSaverUuids?: string[];
-        superSaverUuids?: string[];
-        suspended?: boolean;
-        targets?: { uuid: string; name: string }[];
-        targetsCanSeeUuids?: string[];
-        targetsCanSenseUuids?: string[];
-        transformedActors: string[];
-        tokenCanSeeUuids?: string[];
-        tokenCanSenseUuids?: string[];
-        attackingTokenUuid?: string;
-        templateUuid?: string;
-        templateUuids?: string[];
-        workflowOptions?: WorkflowOptions;
-        // written as PersistedUndoEntry; messages predating the prune carry the full socket shape
-        undoDamage?: (PersistedUndoEntry | SerializedDamageListEntry)[];
-        utilityRolls?: Roll.Data[] | Roll[];
-        "use.consumed"?: any;
-        "use.otherScaling"?: number | false;
-        aborted?: boolean;
-        type?: number;
+        /** An over-time roll request: the actor it is for, and the message mode it asks for */
         overtimeActorUuid?: string;
-        /** The roll mode an over-time roll request asks for */
         overtimeRollMode?: string;
         messageType?: string;
-        roll?: unknown[];
-        syntheticItem?: boolean;
-        isHit?: boolean;
-        otherActivityConsumed?: object;
-        /** The card this message goes with: deleting that card deletes this message (e.g. a sample action's result) */
-        origin?: string;
+        /** A roll hidden from players (its result and dice) */
+        obscureRoll?: boolean;
+        forcedBlind?: boolean;
+        isConcentrationCheck?: boolean;
+        /** The actor that used the card's activity: read with cardSourceActor (CAT reads the flag) */
+        sourceActorUuid?: string;
+        // Read only from cards made before 14.6.9 (the deprecated getters, until 14.8.0): the card's workflow has them now
+        /** @deprecated read the card's workflow */ targets?: { uuid: string; name: string }[];
+        /** @deprecated */ hitTargetUuids?: string[];
+        /** @deprecated */ hitECTargetUuids?: string[];
+        /** @deprecated */ saveUuids?: string[];
+        /** @deprecated */ failedSaveUuids?: string[];
+        /** @deprecated */ superSaverUuids?: string[];
+        /** @deprecated */ semiSuperSaverUuids?: string[];
+        /** @deprecated */ criticalSaveUuids?: string[];
+        /** @deprecated */ fumbleSaveUuids?: string[];
+        /** @deprecated */ advantageSaveUuids?: string[];
+        /** @deprecated */ otherDamageMatchUuids?: string[];
+        /** @deprecated */ ammunitionDamageMatchUuids?: string[];
+        /** @deprecated */ isHit?: boolean;
+        /** @deprecated */ isHitEC?: boolean;
+        /** @deprecated */ isCritical?: boolean;
+        /** @deprecated */ isFumble?: boolean;
+        /** @deprecated */ templateUuid?: string;
+        /** @deprecated */ templateUuids?: string[];
+        /** @deprecated */ workflowOptions?: WorkflowOptions;
+        /** @deprecated */ currentAction?: [string, string];
+        /** @deprecated Structured save attribution map: targetUuid -> type -> source -> displayName */ saveAttribution?: Record<string, AttributionMap>;
+        /** @deprecated */ damageDetail?: DamageDescriptionObject[];
+        /** @deprecated */ otherDamageDetail?: DamageDescriptionObject[];
+        /** @deprecated */ bonusDamageDetail?: DamageDescriptionObject[];
+        /** @deprecated */ otherDamageTotal?: number;
+        /** @deprecated */ bonusDamageTotal?: number;
+        /** @deprecated */ attackRoll?: Roll.Data | Roll;
+        /** @deprecated */ damageRolls?: Roll.Data[] | Roll[];
+        /** @deprecated */ bonusDamageRolls?: Roll.Data[] | Roll[];
+        /** @deprecated */ otherDamageRolls?: Roll.Data[] | Roll[];
+        /** @deprecated */ utilityRolls?: Roll.Data[] | Roll[];
+        /** @deprecated what the use consumed, and the other activity's scaling */ use?: { consumed?: object | false; otherScaling?: number | false };
+        /** @deprecated */ ammunitionData?: object;
+        /** @deprecated */ type?: number;
+        /** @deprecated */ playerDamageCard?: boolean;
+        /** @deprecated */ gmHide?: boolean;
       };
     };
     Item: {
@@ -612,6 +597,8 @@ declare module "fvtt-types/configuration" {
         onUseMacroName?: string;
         noProvokeReaction?: boolean;
         isConcentrationCheck?: boolean;
+        /** An item midi made for a use (an actor without the item, an over-time activity), never stored on the actor */
+        syntheticItem?: boolean;
         // Optional bonus flags applied to the item (e.g. via enchantment effects), checked
         // alongside the actor's optional flags when the item is used.
         optional?: Record<string, any>;
@@ -631,24 +618,11 @@ declare module "fvtt-types/configuration" {
         origin?: string;
         dependentOn?: string;
       };
-      "midi-qol"?: {
-        itemUuid?: string;
-        actorUuid?: string;
-        activityUuid?: string;
-        workflowId?: string;
-        itemCardUuid?: string;
-        dependentOn?: string; // UUID of parent document (Actor/Item) for midi-qol dependent tracking
-        anchorToToken?: boolean; // Whether cone/ray template origin is anchored to caster's token border
-      };
     };
     MeasuredTemplateDocument: {
       dnd5e?: {
         origin?: string;
         dependentOn?: ActiveEffect.Implementation | null;
-      };
-      "midi-qol"?: {
-        dependentOn?: string; // UUID of parent document (Actor/Item) for midi-qol dependent tracking
-        anchorToToken?: boolean; // Whether cone/ray template origin is anchored to caster's token border
       };
     }
     TokenDocument: {
@@ -1203,7 +1177,6 @@ export type CalcDamageOptions = DamageApplicationOptions & {
   multiplier: number;
   midi: {
     challengeModeAR?: number;
-    applyDamage?: boolean; // is this used?
     criticalSave: boolean;
     fumbleSave: boolean;
     isCritical: boolean;

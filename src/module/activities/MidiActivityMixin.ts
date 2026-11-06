@@ -558,7 +558,8 @@ export let MidiActivityMixin = Base => {
       await otherActivity.refund(consumed);
       // Nothing consumed now: the refund button goes (shouldHideChatButton)
       await message.update({ "system.midi.state.otherConsumed": null } as ChatMessage.UpdateData);
-      if (message.getFlag(MODULE_ID, "use.consumed") !== undefined) await message.unsetFlag(MODULE_ID, "use.consumed");
+      // A card made before 14.6.9 kept it in its flags
+      if (message.flags[MODULE_ID]?.use?.consumed) await message.update({ [`flags.${MODULE_ID}.use.consumed`]: null } as ChatMessage.UpdateData);
     }
 
     static async #consumeOtherActivity(this: MidiActivityMixin, event: PointerEvent, target: HTMLElement, message: ChatMessage.Implementation) {

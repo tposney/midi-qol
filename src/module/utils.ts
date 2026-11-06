@@ -634,7 +634,6 @@ export async function processDamageRoll(workflow: Workflow, defaultDamageType: s
         },
         midi: {
           challengeModeAR,
-          applyDamage: true,
           criticalSave: workflow.criticalSaves.has(tokenDocument),
           fumbleSave: workflow.fumbleSaves.has(tokenDocument),
           isCritical: workflow.isCritical,
