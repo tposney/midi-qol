@@ -9163,14 +9163,14 @@ export async function tokenPortrait(document: TokenDocument.Implementation): Pro
 }
 
 export function getTokenName(entity?: TokenOrDocument | null): string {
-  const token = getToken(entity);
+  // Not drawn (another scene or level): named from its document
+  const token = getToken(entity) ?? getTokenDocument(entity);
   if (!token) return "<unknown>";
-  return getTokenNameExact(token) ?? "<unkown>";
+  return getTokenNameExact(token) ?? "<unknown>";
 }
 
-export function getTokenNameExact(entity?: Token.Implementation): string | undefined {
-  // Somehow?
-  if (!(entity instanceof foundry.canvas.placeables.Token)) return undefined;
+export function getTokenNameExact(entity?: TokenOrDocument): string | undefined {
+  if (!(entity instanceof foundry.canvas.placeables.Token) && !(entity instanceof TokenDocument)) return undefined;
   let name: string;
   if (configSettings.useTokenNames) name = entity.name ?? entity.actor?.name ?? "<unknown>";
   else name = entity.actor?.name ?? entity.name ?? "<unknown>";

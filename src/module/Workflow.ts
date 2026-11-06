@@ -1195,7 +1195,7 @@ export class Workflow {
     isHit: boolean;
     targetClass: string;
     showAC: boolean;
-    target: Token.Implementation;
+    target: TokenOrDocument;
     uuid: string;
   }> | undefined;
 
@@ -3712,18 +3712,18 @@ export class Workflow {
   /** For an activity with effects, every target shown as affected on the card */
   async finishHitDisplay() {
     let chatMessage = this.chatCard;
-    if (this.needsHitTargetsDisplayed && this.targets?.size > 0 && chatMessage && (this.activity.effects?.length || this.otherActivity?.effects?.length)) {
+    if (this.needsHitTargetsDisplayed && this.targets.documents.length > 0 && chatMessage && (this.activity.effects?.length || this.otherActivity?.effects?.length)) {
       this.hitDisplayData = {};
       // Always show all targets in the display, not just effectTargets (failed saves)
-      const theTargets = this.targets;
-      for (let targetToken of theTargets) {
+      for (const targetDocument of this.targets.documents) {
+        const targetToken: TokenOrDocument = this.targets.placeableOf(targetDocument) ?? targetDocument;
         if (!targetToken.actor) continue;
         const targetTokenUuid = targetToken.actor?.uuid;
         if (!targetTokenUuid) continue;
-        let img: string | null | undefined = targetToken.document?.texture.src ?? targetToken.actor.img;
+        let img: string | null | undefined = targetDocument.texture.src ?? targetToken.actor.img;
         // @ts-expect-error no dnd5e-types
         if (configSettings.usePlayerPortrait && targetToken.actor.type === "character") {
-          img = targetToken.actor.img ?? targetToken.document?.texture.src;
+          img = targetToken.actor.img ?? targetDocument.texture.src;
         }
         if (foundry.helpers.media.VideoHelper.hasVideoExtension(img ?? "")) {
           img = await game.video?.createThumbnail(img ?? "", { width: 100, height: 100 });
@@ -3735,7 +3735,7 @@ export class Workflow {
           acClass: "",
           img: img ?? "",
           gmName: getTokenName(targetToken),
-          uuid: targetToken.document.uuid,
+          uuid: targetDocument.uuid,
           showAC: false,
           isHit: true
         };
@@ -7636,7 +7636,10 @@ export class Workflow {
 
     this.hitDisplayData = {};
     const challengeModeArmorSet = !([undefined, false, "none"].includes((checkRule("challengeModeArmor") as string | boolean | undefined)));
-    for (let targetToken of this.targets) {
+    for (const targetDocument of this.targets.documents) {
+      // Not drawn (another scene or level): its actor's AC, with no cover or reactions
+      const drawnToken = this.targets.placeableOf(targetDocument);
+      const targetToken: TokenOrDocument = drawnToken ?? targetDocument;
       let targetName = configSettings.useTokenNames && targetToken.name ? targetToken.name : targetToken.actor?.name;
       let targetActor = targetToken.actor;
       if (!targetActor) continue; // tokens without actors are an abomination and we refuse to deal with them.
@@ -7691,8 +7694,8 @@ export class Workflow {
       // Compute effective AC: reconciles status cover with module cover (status as minimum),
       // applies attack-specific reductions (ignoreFullCover, sharpShooter, spellSniper, ignoreCover),
       // and incorporates targetACMod.
-      let acResult = this.token
-        ? computeTargetAC(this.token, targetToken, this.activity, { ignoreCover, targetACMod })
+      let acResult = this.token && drawnToken
+        ? computeTargetAC(this.token, drawnToken, this.activity, { ignoreCover, targetACMod })
         : undefined;
 
       let targetAC = vehicleACOverride ?? acResult?.effectiveAC
@@ -7732,8 +7735,8 @@ export class Workflow {
             } else if (result?.uuid && isFinite(targetAC)) {
               // Spell reaction (e.g. Shield) was used but didn't return ac directly.
               // The actor's AC has been updated by the reaction workflow — recompute effective AC.
-              const postReactionACResult = this.token
-                ? computeTargetAC(this.token, targetToken, this.activity, { ignoreCover, targetACMod })
+              const postReactionACResult = this.token && drawnToken
+                ? computeTargetAC(this.token, drawnToken, this.activity, { ignoreCover, targetACMod })
                 : undefined;
               if (postReactionACResult && postReactionACResult.effectiveAC !== targetAC) {
                 // Show the reaction's contribution separately: restore pre-reaction baseAC and track the delta
@@ -7771,8 +7774,8 @@ export class Workflow {
             targetAC = result.ac + (acResult?.appliedCoverDelta ?? 0);
           } else if (result?.uuid) {
             // Spell reaction was used but didn't return ac directly — recompute effective AC.
-            const postReactionACResult = this.token
-              ? computeTargetAC(this.token, targetToken, this.activity, { ignoreCover, targetACMod })
+            const postReactionACResult = this.token && drawnToken
+              ? computeTargetAC(this.token, drawnToken, this.activity, { ignoreCover, targetACMod })
               : undefined;
             if (postReactionACResult && postReactionACResult.effectiveAC !== targetAC) {
               const preReactionBaseAC = acResult?.baseAC ?? postReactionACResult.baseAC;
@@ -7795,7 +7798,7 @@ export class Workflow {
           // TODO what else to do once rolled
         }
         const optionalCrits = checkRule("optionalCritRule") as number;
-        if (this.targets.size === 1 && configSettings.optionalRulesEnabled && optionalCrits > -1) {
+        if (this.targets.documents.length === 1 && configSettings.optionalRulesEnabled && optionalCrits > -1) {
           if (checkRule("criticalNat20") && this.isCritical) {
             // criticalNat20 rule: natural 20 always crits, so don't change
           } else {
@@ -7930,17 +7933,17 @@ export class Workflow {
       }
       let hitStyle = "";
 
-      let img = targetToken.document.texture.src || targetToken.actor?.img || "";
+      let img = targetDocument.texture.src || targetToken.actor?.img || "";
       // @ts-expect-error no dnd5e-types
       if (configSettings.usePlayerPortrait && targetToken.actor?.type === "character") {
-        img = targetToken.actor?.img || targetToken.document.texture.src || "";
+        img = targetToken.actor?.img || targetDocument.texture.src || "";
       }
       if (foundry.helpers.media.VideoHelper.hasVideoExtension(img ?? "")) {
         img = await game.video?.createThumbnail(img ?? "", { width: 100, height: 100 }) ?? "";
       }
 
       if (this.isFumble) hitResultNumeric = "--";
-      const targetUuid = targetToken.document.uuid;
+      const targetUuid = targetDocument.uuid;
 
       const effectiveAC = targetAC - attackBonus;
       const acDisplay = !isFinite(targetAC) ? "∞" : `${effectiveAC}`;
