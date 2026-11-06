@@ -1492,7 +1492,7 @@ export class Workflow {
   }
 
   get otherDamageFlavor() {
-    if (this.otherActivity?.type === "heal") return i18n("midi-qol.OtherHealIngFlavor");
+    if (this.otherActivity?.type === "heal") return i18n("midi-qol.OtherHealingFlavor");
     if (this.otherActivity?.midiProperties?.displayActivityName) {
       return i18n(this.otherActivity.name);
     }

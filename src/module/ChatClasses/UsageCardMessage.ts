@@ -487,7 +487,7 @@ export function setupUsageCardMessage() {
         case "defaultDamage": return localize(activity?.type === "heal" ? "midi-qol.BaseHealingFlavor" : "midi-qol.BaseDamageFlavor");
         case "otherDamage": {
           const other = activity?.otherActivity;
-          if (other?.type === "heal") return localize("midi-qol.OtherHealIngFlavor");
+          if (other?.type === "heal") return localize("midi-qol.OtherHealingFlavor");
           return other?.midiProperties?.displayActivityName ? localize(other.name ?? "") : localize("midi-qol.OtherDamageFlavor");
         }
         case "bonusDamage": return `(${rolls.map(r => foundry.utils.getProperty(r, "options.flavor") ?? foundry.utils.getProperty(r, "options.type"))})`;
