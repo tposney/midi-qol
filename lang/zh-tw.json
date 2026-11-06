@@ -7,16 +7,10 @@
     "midi-qol.ResetDefaults.Hint": "將所有 midi-qol 設定重置為預設值",
     "midi-qol.DamageImmunities.Name": "套用傷害免疫",
     "midi-qol.DamageImmunities.Hint": "當使用 midi-qol 傷害按鈕或自動套用傷害時，將計算目標的傷害免疫/易傷/抗性。所有傷害類型都會被檢查。",
-    "midi-qol.WorldKeyMappings.Name": "世界 vs 客戶端按鍵配置",
-    "midi-qol.WorldKeyMappings.Blurb1": "按鍵映射是根據每個客戶端定義的。每位玩家可以有不同的按鍵映射。若要強制所有客戶端使用相同的映射，請使用現有的模組來強制執行通用設定。",
-    "midi-qol.WorldKeyMappings.Blurb2": "我已成功測試過「Force Client Controls」。",
-    "midi-qol.SpeedAbilityRolls.Name": "啟用快速能力（豁免/檢定/技能）擲骰",
     "midi-qol.ShowItemDetails.Name": "在聊天卡片中顯示物品詳情",
     "midi-qol.ShowItemDetails.Hint": "若設定，物品詳情將顯示在聊天卡片中。你可以使用 DND5E 系統設定來自動隱藏描述。",
     "midi-qol.AutoRollAttack.Name": "擲骰物品時，若有攻擊項則自動擲骰",
-    "midi-qol.AutoRollAttack.Hint": "自動擲出攻擊時，會使用「自動快速擲骰」設定來決定運作方式。",
     "midi-qol.AutoFastForward.Name": "自動快速擲骰",
-    "midi-qol.AutoFastForward.Hint": "在擲出攻擊或傷害時一律快速擲骰，也適用於點擊攻擊/傷害按鈕時。",
     "midi-qol.AutoCheckHit.Name": "自動檢查攻擊是否命中目標",
     "midi-qol.AutoCheckHit.Hint": "檢查攻擊擲骰是否命中選定的目標。若命中一個以上目標且啟用了自動傷害擲骰，則會擲出傷害。若禁用，midi-qol 會假設攻擊命中並繼續擲骰。",
     "midi-qol.RequiresTargets.Name": "需要選取目標",
@@ -28,52 +22,33 @@
         "always": "總是"
     },
     "midi-qol.AutoApplyDamage.Name": "自動對目標套用傷害",
-    "midi-qol.AutoApplyDamage.Hint": "自動對命中的目標（若啟用了自動命中檢查）或使用者選定的目標套用傷害。",
     "midi-qol.PlayerDamageCard.Name": "顯示玩家的傷害卡片",
     "midi-qol.PlayerDamageCard.Hint": "較精簡版的傷害卡片。僅在顯示 GM 卡片時才顯示。此卡片不會對 GM 顯示。",
     "midi-qol.PlayerCardDamageDifferent.Name": "若擲出的傷害與套用於目標的傷害不符，則顯示玩家傷害卡片",
-    "midi-qol.ItemRollButtons.Name": "在物品清單中加入攻擊/傷害按鈕",
-    "midi-qol.ItemRollButtons.Hint": "在物品描述中加入擲骰按鈕 — 這些按鈕支援 ctrl/alt/shift 來跳過對話框。",
     "midi-qol.AddChatDamageButtons.Name": "在聊天訊息中加入傷害按鈕",
-    "midi-qol.AddChatDamageButtons.Hint": "在聊天訊息中啟用 dnd5e 傷害托盤。",
     "midi-qol.AutoRollDamage.Name": "自動擲出傷害",
-    "midi-qol.AutoRollDamage.Hint": "進行攻擊擲骰時自動擲出傷害。若設定為「攻擊命中」，則在未選取目標、攻擊命中（詳見自動命中檢查）或未檢查命中時擲出傷害。",
     "midi-qol.AutoCheckSaves.Name": "自動檢查豁免檢定",
     "midi-qol.AutoCheckSaves.Hint": "當需要豁免檢定時自動檢查。若禁用，midi 將假設所有目標均豁免失敗。",
-    "midi-qol.DisplaySaveDC.Name": "顯示豁免檢定難度等級(DC)",
-    "midi-qol.DisplaySaveDC.Hint": "若為 false，則對玩家隱藏豁免檢定難度等級(DC)（僅限合併卡片模式）。",
     "midi-qol.AutoRemoveTargets.Name": "回合結束時取消目標選取",
     "midi-qol.AutoRemoveTargets.Hint": "在你的回合結束時，選擇哪些目標要自動取消選取。",
     "midi-qol.buttons.roll": "標準擲骰",
     "midi-qol.buttons.attack": "攻擊",
     "midi-qol.buttons.damage": "傷害",
-    "midi-qol.buttons.altDamage": "備用傷害",
-    "midi-qol.buttons.extraDamage": "額外傷害",
     "midi-qol.buttons.versatileDamage": "雙手傷害",
-    "midi-qol.buttons.versatileAttack": "雙手攻擊",
-    "midi-qol.buttons.info": "資訊",
     "midi-qol.buttons.showChatInfo": "顯示聊天資訊",
     "midi-qol.buttons.itemUse": "使用",
-    "midi-qol.reallyDelete": "確定要刪除此物品嗎？",
-    "midi-qol.sure": "你確定嗎？",
     "midi-qol.criticals": "達成重擊",
     "midi-qol.fumbles": "嚴重失誤",
     "midi-qol.hits": "命中",
-    "midi-qol.hitsEC": " EC 命中",
     "midi-qol.misses": "未命中",
     "midi-qol.save-success": " 成功",
     "midi-qol.save-failure": " 失敗",
     "midi-qol.save-drawn": "平手(drawn)",
-    "midi-qol.damage-applied": "生命值(HP)已更新",
-    "midi-qol.noItemNamed": "你選取的 Token 沒有名為此名稱的物品：",
-    "midi-qol.noTokens": "無法套用效果 — 未選取目標 Token",
     "midi-qol.HideNPCNames.Name": "隱藏 Token 名稱",
     "midi-qol.HideNPCNames.Hint": "在命中/豁免聊天訊息中隱藏 Token 名稱",
     "midi-qol.noTemplateSeen": "尚未放置模板",
     "midi-qol.AutoTarget.Name": "繪製模板時自動選取目標",
     "midi-qol.AutoTarget.Hint": "放置模板（如法術）時，自動選取模板內的 Token。若在遠程目標選取中設定了「中心 + 高度」，則會使用 Levels Volumetric Templates（若有安裝）。",
-    "midi-qol.undoDamageFrom": "撤銷已套用的傷害，來源於 ",
-    "midi-qol.noGM": "無 GM 連線，無法套用效果/更新生命值(HP)",
     "midi-qol.noSelection": "未選取 Token/角色(Actor)",
     "midi-qol.showGM.Name": "GM 可看見所有私聊訊息",
     "midi-qol.showGM.Hint": "即使遊戲設定為 GM 無法看見，GM 仍可看見所有發送的私聊訊息。",
@@ -100,8 +75,6 @@
     "midi-qol.PlayerSaveTimeout.Hint": "在接手替玩家擲骰前要等待多少秒",
     "midi-qol.MagicResistant": "具有魔法抗性(magic-resistant)",
     "midi-qol.MagicResistanceFeat": "魔法抗性(Magic Resistance)",
-    "midi-qol.PreRollChecks.Name": "實驗性：執行快速/Macro 擲骰前進行檢查",
-    "midi-qol.PreRollChecks.Hint": "實驗性：擲骰前檢查物品；目前檢查是否在射程內且擲骰者生命值(HP) > 0",
     "midi-qol.noTargets": "在擲出攻擊前，你必須先選取一個目標 Token",
     "midi-qol.wrongNumberTargets": "在擲出攻擊前，你最多只能選取 {allowedTargets} 個目標 Token",
     "midi-qol.noSaveTargets": "沒有需要豁免的目標",
@@ -110,7 +83,6 @@
     "midi-qol.CriticalDamage.Name": "選擇玩家重擊傷害",
     "midi-qol.CriticalDamage.Hint": "僅 DND5e 設定 - 標準 dnd5e 重擊擲骰；基礎傷害最大化 - 僅基礎武器骰（無重擊骰）最大化；重擊骰最大化 - 重擊骰最大化；所有骰子最大化 - 物品骰 + 重擊骰最大化；骰子值翻倍 - 擲骰結果 x2；重擊骰爆骰 - 正常重擊擲骰並使重擊骰爆骰；僅物品額外重擊 - 唯一重擊加成來自物品額外重擊欄位；最大基礎重擊擲骰 - 使用最大化基礎傷害後正常擲出重擊骰。",
     "midi-qol.CriticalDamageGM.Name": "選擇 GM 重擊傷害",
-    "midi-qol.CriticalDamageGM.Hint": "",
     "midi-qol.CriticalDamageChoices": {
         "default": "僅 DND5e 設定",
         "maxDamage": "基礎傷害最大化",
@@ -134,8 +106,6 @@
     "midi-qol.DisplayItemProperties.Hint": "在聊天卡片中顯示物品內容。禁用可節省部分空間。",
     "midi-qol.ConfigTitle": "Midi-QOL 配置",
     "midi-qol.WorkflowSettings": "工作流(Workflow)設定",
-    "midi-qol.CheckSaveText.Name": "搜尋物品描述",
-    "midi-qol.CheckSaveText.Hint": "在物品描述中搜尋豁免類型 — 若存在「傷害減半」字樣，則法術在豁免成功時造成一半傷害。若未勾選，假設豁免成功造成預設修正傷害",
     "midi-qol.Save": "儲存設定",
     "midi-qol.saving-throws": "豁免檢定",
     "midi-qol.saving-throw": "豁免檢定",
@@ -148,8 +118,6 @@
     "midi-qol.noAttackRoll": "在擲出傷害前，你必須先進行攻擊擲骰",
     "midi-qol.config": "Midi QoL 配置",
     "midi-qol.Hint": "配置 midi-qol 的各項工作流(Workflow)設定。請注意，選項非常多",
-    "midi-qol.DiceSound.Name": "攻擊擲骰音效",
-    "midi-qol.AttackRoll": "攻擊擲骰",
     "midi-qol.CriticalSoundName": "重擊",
     "midi-qol.FumbleSoundName": "嚴重失誤",
     "midi-qol.AttribADV": "優勢(ADV)",
@@ -167,34 +135,17 @@
     "midi-qol.FriendlyAutoFail": "友方自動失敗",
     "midi-qol.FriendlyAutoSuccess": "友方自動成功",
     "midi-qol.KeyPress": "按鍵按下",
-    "midi-qol.ForcedKeyPress": "強制按鍵按下",
-    "midi-qol.RollOptions": "擲骰選項",
     "midi-qol.WorkflowOptions": "工作流(Workflow)選項",
     "midi-qol.ActivityUse": "活動(Activity)使用",
-    "midi-qol.DiceSounds.Hint": "不同類型擲骰的播放音效。僅適用於組合卡片",
-    "midi-qol.CustomSoundsPlaylist.Name": "音效播放清單",
-    "midi-qol.WeaponUseSound.Name": " 武器使用",
-    "midi-qol.WeaponUseSoundRanged.Name": " 武器使用（遠程）",
-    "midi-qol.SpellUseSound.Name": " 法術使用",
-    "midi-qol.PotionUseSound.Name": "藥水使用",
-    "midi-qol.SpellUseSoundRanged.Name": " 法術使用（遠程）",
-    "midi-qol.ItemUseSound.Name": "物品使用",
     "midi-qol.AutoFastForwardAbilityRolls.Name": "快速能力擲骰",
     "midi-qol.AutoFastForwardAbilityRolls.Hint": "點擊能力來開始檢定/豁免或技能擲骰時將自動快速擲骰",
     "midi-qol.UseCustomSounds.Name": "啟用 midi-qol 自定義音效",
     "midi-qol.UseCustomSounds.Hint": "若設定，將覆蓋系統音效。請從「配置 Midi 自定義音效」視窗進行設定",
-    "midi-qol:Debug.Name": "啟用除錯(Debug)",
-    "midi-qol:Debug.Hint": "「警告」提供活動概觀，「除錯(Debug)」加入更多資訊，「全部」也會開啟 CONFIG.debug.hooks",
     "midi-qol.DebugOptions": {
         "none": "無",
         "warn": "警告",
         "debug": "除錯(Debug)",
         "all": "全部"
-    },
-    "midi-qol.speedItemRollsOptions": {
-        "off": "關閉",
-        "on": "開啟",
-        "onCard": "開啟 + 顯示物品卡片"
     },
     "midi-qol.autoCheckHitOptions": {
         "none": "無",
@@ -207,12 +158,6 @@
             "whisper": "Midi-qol 自動檢查攻擊擲骰是否命中目標 AC。僅 GM 可看見命中/未命中結果。",
             "gmOnly": "Midi-qol 自動檢查攻擊擲骰是否命中目標 AC。僅 GM 可看見攻擊擲骰與結果。"
         }
-    },
-    "midi-qol.clickOptions": {
-        "off": "關閉",
-        "attack": "僅限攻擊擲骰(ATTACK ROLLS ONLY)",
-        "damage": "僅限傷害擲骰(DAMAGE ROLLS ONLY)",
-        "all": "攻擊與傷害(ATTACK AND DAMAGE)"
     },
     "midi-qol.fastForwardOptions.attack": "攻擊擲骰",
     "midi-qol.fastForwardOptions.damage": "傷害擲骰",
@@ -345,10 +290,6 @@
             "rer": "玩家透過 Ripper's Epic Rolls 介面擲骰。"
         }
     },
-    "midi-qol.playerRollSavesOptionsReduced": {
-        "none": "無",
-        "chat": "聊天訊息"
-    },
     "midi-qol.AutoRemoveTargetsOptions": {
         "none": "從不",
         "dead": "擲骰後取消死亡目標選取",
@@ -361,37 +302,6 @@
         "borderNamesText": "邊框 + 名稱文字",
         "borderNamesBackground": "邊框 + 名稱背景"
     },
-    "midi-qol.hideRollDetailsOptions": {
-        "none": "無",
-        "detailsDSN": "隱藏公式但顯示 DSN 動畫",
-        "details": "隱藏公式",
-        "d20Only": "顯示攻擊 D20 + 傷害總計",
-        "hitDamage": "顯示命中/未命中 + 傷害總計",
-        "hitCriticalDamage": "顯示命中/未命中/重擊/嚴重失誤 + 傷害總計",
-        "attackTotalOnly": "僅顯示攻擊擲骰總計",
-        "d20AttackOnly": "僅顯示攻擊 D20",
-        "all": "整個擲骰",
-        "expandedHints": {
-            "none": "不隱藏任何內容 — 玩家可見所有擲骰細節。",
-            "detailsDSN": "隱藏擲骰公式，但仍擲出 DSN 骰子讓玩家看見動畫。",
-            "details": "隱藏擲骰公式且不顯示 DSN 骰子。",
-            "d20Only": "僅顯示攻擊 d20 結果與傷害總值。",
-            "hitDamage": "顯示是否命中加上傷害總計。",
-            "hitCriticalDamage": "顯示命中狀態（含重擊/失誤）加上傷害總計。",
-            "attackTotalOnly": "僅顯示攻擊擲骰的最終總計數值。",
-            "d20AttackOnly": "僅顯示攻擊擲骰的 d20 骰面結果。",
-            "all": "對玩家隱藏所有擲骰細節。"
-        }
-    },
-    "midi-qol.RollOtherDamageOptions": {
-        "none": "關閉",
-        "always": "總是擲骰",
-        "condition": "「其他」條件為真",
-        "ifSave": "條件為真且存在豁免"
-    },
-    "midi-qol.potion": "藥水",
-    "midi-qol.HideRollDetails.Name": "GM 擲骰細節隱藏",
-    "midi-qol.HideRollDetails.Hint": "選擇要對玩家隱藏/顯示多少 GM 擲骰內容",
     "midi-qol.DiceRolled": "<div>已擲骰</div>",
     "midi-qol.ForceHideRoll.Name": "徹底隱藏私下/盲骰/給自己的擲骰",
     "midi-qol.ForceHideRoll.Hint": "對非收件者完全不顯示任何私下/盲骰/給自己的擲骰訊息。",
@@ -439,8 +349,6 @@
     "midi-qol.DragDropTarget.Hint": "允許將物品拖到 Token 上來攻擊它",
     "midi-qol.AutoAttack.Name": "自動擲出攻擊",
     "midi-qol.AutoDamage.Name": "自動擲出傷害",
-    "midi-qol.AutoFastForwardAttack.Name": "自動快速攻擊擲骰",
-    "midi-qol.AutoFastForwardDamage.Name": "自動快速傷害擲骰",
     "midi-qol.midi-none": "無傷害",
     "midi-qol.noType": "無類型",
     "midi-qol.vitalityDamage": "活力(Vitality)",
@@ -448,15 +356,9 @@
     "midi-qol.ItemList": "選擇在物品卡片上顯示詳情的物品",
     "midi-qol.DisplayItems": "顯示詳情",
     "midi-qol.fastForward": "(快速)",
-    "midi-qol.RollOtherDamage.Name": "為遠程/近戰武器攻擊擲出「其他」傷害公式",
-    "midi-qol.RollOtherSpellDamage.Name": "為法術擲出「其他」傷害公式",
-    "midi-qol.RollOtherDamage.Hint": "<strong>關閉</strong>：不自動擲出「其他」傷害。<br><strong>條件為真且存在豁免</strong>：若條件不為空且為真，或是物品有豁免且觸發條件不為假。<br><strong>條件</strong>：若「其他」傷害條件為空或為真，則擲出「其他」傷害",
     "midi-qol.ApplyEffects": "套用主動效果",
     "midi-qol.spell-damage": "法術傷害",
     "midi-qol.RemoveButtons.Name": "擲骰後移除聊天卡片按鈕",
-    "midi-qol.ActiveConcentrationSpell.Title": "目前專注中的法術",
-    "midi-qol.ActiveConcentrationSpell.ContentNamed": "<p>你已經在專注於 <em>@NAME@</em>。結束該專注並繼續嗎？</p>",
-    "midi-qol.ActiveConcentrationSpell.ContentGeneric": "<p>你已經在專注中。結束專注並繼續嗎？</p>",
     "midi-qol.ConcentrationAutomation.Name": "啟用 Midi-qol 專注自動化",
     "midi-qol.ConcentrationAutomation.Hint": "若啟用，midi 將處理專注管理，你必須禁用 <strong>DnD5e</strong> 的專注功能。<br>若未禁用 <strong>DnD5e</strong> 的專注，此設定將被強制取消勾選。<br>建議使用 <strong>DnD5e</strong> 專注，其餘設定仍會與其相容。",
     "midi-qol.SingleConcentrationRoll.Name": "單次專注檢定",
@@ -472,35 +374,15 @@
     },
     "midi-qol.Config": {
         "Tabs": {
-            "gm": "GM",
-            "player": "玩家",
-            "workflow": "工作流(Workflow)",
-            "concentration": "專注",
-            "reactions": "反應(Reactions)",
-            "misc": "雜項",
-            "mechanics": "機制",
-            "rules": "規則",
             "quick": "快速設定"
         }
     },
-    "midi-qol.SoundSettings.Tab": "音效",
     "midi-qol.Targeting": "目標選取",
     "midi-qol.Special": "特殊項目",
     "midi-qol.Hits": "命中",
     "midi-qol.Misses": "未命中",
     "midi-qol.Saves": "豁免檢定",
-    "midi-qol.SavesBase": "若目標豁免成功，物品造成：",
-    "midi-qol.SavesBonus": "若目標豁免成功，額外傷害 Macro 造成：",
-    "midi-qol.SavesOther": "若目標豁免成功，「其他」公式造成：",
     "midi-qol.Damage": "傷害",
-    "midi-qol.Concentrating": "專注中",
-    "midi-qol.concentrationCheckName": "專注",
-    "midi-qol.DamageMacro.Name": "額外傷害 Macro",
-    "midi-qol.concentrationActivationCondition": "專注",
-    "midi-qol.DamageMacro.Hint": "計算傷害時呼叫的 Macro 清單（以逗號分隔），將用於對目標套用傷害。",
-    "midi-qol.AttackMacro.Name": "攻擊加成 Macro",
-    "midi-qol.AttackMacro.Hint": "計算攻擊擲骰時呼叫的 Macro 清單（以逗號分隔），將用於檢查攻擊是否命中目標。",
-    "midi-qol.DAEMidiQOL": "DAE/Midi-QOL 專屬",
     "midi-qol.OptionalRules.Name": "選用遊戲規則",
     "midi-qol.OptionalRules.Hint": "你可能想要啟用的 DND5E 規則。通常與 better rolls 不相容。",
     "midi-qol.InvisAdvantage.Name": "看不見/隱形的攻擊者在攻擊時具有優劣勢",
@@ -548,10 +430,6 @@
         }
     },
     "midi-qol.NearbyAllyRanged.Name": "（房規）對靠近盟友的敵方進行遠程攻擊具有劣勢",
-    "midi-qol.WallsBlockRangeOptions": {
-        "none": "否",
-        "center": "中心檢查"
-    },
     "midi-qol.CoverCalculation.Name": "計算掩體",
     "midi-qol.CoverCalculation.Hint": "計算掩體內的目標 AC 加成 — 設定取自選定的模組",
     "midi-qol.CoverCalculationOptions": {
@@ -574,12 +452,8 @@
     "midi-qol.DRAllPerDamageDetail.Hint": "未勾選表示 DRALL 僅對總傷害套用一次",
     "midi-qol.invisible": "隱形(INVISIBLE)",
     "midi-qol.hidden": "躲藏(HIDDEN)",
-    "midi-qol.nevertarget": "從不選取目標",
-    "midi-qol.DamageCardMultHeader": "倍率",
     "midi-qol.DamageCardUndoHeader": "撤銷",
     "midi-qol.DamageCardApplyHeader": "套用",
-    "midi-qol.DamageCardCalc": "計算",
-    "midi-qol.DamageCardHeal": "治療",
     "midi-qol.DamageCardAll": "全部",
     "midi-qol.StatsTitle": "擲骰統計數據",
     "midi-qol.RollStats": "統計",
@@ -599,16 +473,9 @@
     "midi-qol.stats.Saves": "豁免",
     "midi-qol.stats.Session": "本場次",
     "midi-qol.stats.Lifetime": "生涯總計",
-    "midi-qol.stats.rolls": "擲骰數",
-    "midi-qol.stats.crits": "重擊數(CRITICALS)",
     "midi-qol.stats.fumbles": "嚴重失誤數(FUMBLES)",
-    "midi-qol.stats.hits": "命中數(HITS)",
     "midi-qol.stats.nat20s": "原生 20",
     "midi-qol.stats.Avg": "平均",
-    "midi-qol.stats.Applied": "已套用",
-    "midi-qol.stats.total": "總計",
-    "midi-qol.stats.pass": "通過",
-    "midi-qol.stats.fail": "失敗",
     "midi-qol.stats.ItemBreakdown": "物品分析",
     "midi-qol.stats.Item": "物品",
     "midi-qol.stats.Rolls": "擲骰",
@@ -626,8 +493,6 @@
     "midi-qol.stats.Taken": "受到傷害",
     "midi-qol.stats.conc": "專注",
     "midi-qol.stats.death": "死亡",
-    "midi-qol.stats.rolled": "已擲骰",
-    "midi-qol.stats.applied": "已套用",
     "midi-qol.stats.NoStats": "尚無統計記錄。",
     "midi-qol.stats.SettingsSection": "設定",
     "midi-qol.stats.ExportSection": "匯出",
@@ -661,10 +526,8 @@
     "midi-qol.DistanceMeasurementOptions.center": "網格正方形中心",
     "midi-qol.DistanceMeasurementOptions.perimeter": "Token 周長",
     "midi-qol.NoSocketLib": "Midi-qol 需要安裝並啟用 socketlib",
-    "midi-qol.confirm": "確認對話框",
     "midi-qol.ExportConfig": "匯出 midi-qol 設定為 json 檔案",
     "midi-qol.ImportConfig": "從 json 檔案匯入 midi-qol 設定",
-    "midi-qol.flags.midi-qol.bardicInspiration": "吟遊詩人激勵(Bardic Inspiration)",
     "midi-qol.ExportJSon": "匯出擲骰統計為 Json 檔案",
     "midi-qol.ExportCSV": "匯出擲骰統計為 CSV 檔案",
     "midi-qol.AutoCEEffectsOptions": {
@@ -675,8 +538,6 @@
     },
     "midi-qol.AutoCEEffects.Name": "套用 Convenient Effects (CE)",
     "midi-qol.AutoCEEffects.Hint": "物品使用時，套用名稱匹配的便利效果。需要同時開啟自動套用主動效果。",
-    "midi-qol.BonusACCover": "掩體 AC 加成",
-    "midi-qol.NoChangelogs": "建議安裝 ChangeLogs 模組以查看更新內容。",
     "midi-qol.ActiveDefenceString": "主動防禦",
     "midi-qol.ActiveDefence.Name": "主動防禦",
     "midi-qol.ActiveDefenceModifier.Name": "主動防禦修正值",
@@ -686,10 +547,6 @@
     "midi-qol.ActiveDefenceDC.Hint": "若設定，主動防禦 DC 將顯示在聊天卡片中。",
     "midi-qol.ActiveDefenceShow.Name": "主動防禦擲骰的預設顯示",
     "midi-qol.ActiveDefenceShow.Hint": "若設為「給自己擲骰」，則對 GM 隱藏。",
-    "midi-qol.GMHide3dDice.Name": "隱藏 GM 攻擊/傷害/豁免的 3D 骰子擲骰 — 覆蓋其他設定（僅限合併卡片）",
-    "midi-qol.GhostRolls.Name": "對攻擊/傷害使用「Dice So Nice 幽靈擲骰」而非隱藏（僅限合併卡片）",
-    "midi-qol.convenientEffectsOn": "套用 Convenient Effect",
-    "midi-qol.convenientEffectsOff": "不套用 Convenient Effect",
     "midi-qol.ConsumeResource.Name": "跳過資源消耗對話框",
     "midi-qol.ConsumeResource.Hint": "若設定，將跳過消耗資源/法術位對話框。除非法術位不足或按下了優勢/劣勢鍵。",
     "midi-qol.ConsumeResourceOptions": {
@@ -716,10 +573,6 @@
     "midi-qol.NonMagical": "非魔法傷害",
     "midi-qol.SpellDamage": "法術傷害",
     "midi-qol.NonSpellDamage": "非法術傷害",
-    "midi-qol.ConditionHeader": "觸發條件",
-    "midi-qol.ItemActivationCondition.Name": "若為真則允許物品使用（已過時）",
-    "midi-qol.ReactionActivationCondition.Name": "若為真則觸發反應(Reaction)（已過時）",
-    "midi-qol.OtherActivationCondition.Name": "若為真則擲出「其他」公式（已過時）",
     "midi-qol.HPUpdated": "生命值(HP)已更新",
     "midi-qol.HPNPCUpdated": "NPC 生命值(HP)已更新",
     "midi-qol.HPNotUpdated": "生命值(HP)未更新",
@@ -742,11 +595,7 @@
     "midi-qol.reactionFlavorMoved": "已移動",
     "midi-qol.reactionUsed": "反應(Reaction)已使用",
     "midi-qol.bonusActionUsed": "附贈動作已使用",
-    "midi-qol.AccelKeysOverride.Name": "Midi-qol 加速鍵覆蓋其他模組",
-    "midi-qol.AccelKeysOverride.Hint": "若設定，midi 將一律使用自己的優劣勢按鍵映射。",
-    "midi-qol.NoWorkflow": "物品 {itemName} 無工作流(Workflow)",
     "midi-qol._comment for translators_DeferText": "以下文字在物品數據的 onUseMacro 欄位中被搜尋。若更改，現有物品皆須同步修改。",
-    "midi-qol.DeferText": "[延遲]",
     "midi-qol._comment for translators_ItemMacroText": "搜尋欄位為 ItemMacro。",
     "midi-qol.ItemMacroText": "ItemMacro",
     "midi-qol.TargetConfirmationConfig.Name": "目標確認",
@@ -763,29 +612,14 @@
         "overlay": "加入效果為覆蓋層",
         "normal": "加入效果為圖示"
     },
-    "midi-qol.Wounded": "負傷(Wounded)",
     "midi-qol.AddWounded.Name": "當生命值(HP)低於 % 時加入效果",
     "midi-qol.AddWounded.Hint": "低於最大生命值指定百分比時加入狀態(Status)。0 表示禁用。",
-    "midi-qol.debugCallTiming.Name": "記錄執行耗時",
-    "midi-qol.debugCallTiming.Hint": "提供關於各項處理花費時間的記錄資訊。",
     "midi-qol.autoFailFriendly": "友方自動失敗",
-    "midi-qol.FailFriendly": "朋友失敗",
-    "midi-qol.SaveFriendly": "朋友豁免成功",
-    "midi-qol.OffHandWeapon": "副手",
     "midi-qol.RollToggle.Hint": "按住時切換攻擊/傷害/能力檢定的快速/自動擲骰設定。",
     "midi-qol.RollToggle.Name": "擲骰切換",
-    "midi-qol.FastForward.Hint": "按住時快速擲骰所有項目。",
-    "midi-qol.FastForward.Name": "快速擲骰",
-    "midi-qol.KeysAdvantage.Hint": "以優勢擲骰",
-    "midi-qol.KeysDisadvantage.Hint": "以劣勢擲骰",
-    "midi-qol.KeysCritical.Hint": "擲出重擊傷害（僅限從聊天卡片）",
     "midi-qol.KeysVersatile.Hint": "擲出雙手傷害",
-    "midi-qol.KeysOther.Hint": "將「其他」公式擲為傷害",
-    "midi-qol.FixStickyKeys.Name": "修復卡住的 alt/ctrl/shift",
-    "midi-qol.FixStickyKeys.Hint": "若設定，midi 會嘗試解決按鍵卡在「按下」狀態的問題。",
     "midi-qol.DisplaySaveAdvantage.Name": "顯示豁免是否有優勢/劣勢",
     "midi-qol.QuickSettingsBlurb": "快速設定讓你一次完成多項配置組合。<br>一旦按下按鈕，更改將立即生效並顯示列表。",
-    "midi-qol.Reaction.Title": "反應(Reaction)處理",
     "midi-qol.GMDoReactionsOptions": {
         "all": "開啟",
         "allMI": "開啟 + 魔法物品",
@@ -819,7 +653,6 @@
     "midi-qol.EnforceReactions.Name": "強制執行反應(Reaction)",
     "midi-qol.EnforceReactions.Hint": "若本輪已使用過反應(Reaction)，在使用反應項目時顯示提示。",
     "midi-qol.EnforceBonusActions.Name": "強制執行附贈動作",
-    "midi-qol.EnforceBonusActions.Hint": "若本輪已使用過附贈動作，顯示提示。",
     "midi-qol.EnforceReactionsOptions": {
         "none": "不檢查",
         "displayOnly": "僅顯示狀態圖示",
@@ -877,13 +710,8 @@
     "midi-qol.ActorOnUseMacros": "角色(Actor)使用時 Macro",
     "midi-qol.MacroPass": "Macro 通過(Pass)",
     "midi-qol.MacroName": "Macro 名稱",
-    "midi-qol.DamageRolled": "已擲骰傷害",
-    "midi-qol.DamageApplied": "已套用傷害",
     "midi-qol.DamageDealt": "造成傷害",
-    "midi-qol.HealingRolled": "已擲骰治療",
-    "midi-qol.HealingApplied": "已套用治療",
     "midi-qol.Healed": "已治療",
-    "midi-qol.FumbleThreshold": "嚴重失誤門檻",
     "midi-qol.ActionSpecialDurationImmediate.Name": "擲骰時立即結束 1命中/1攻擊/1行動 效果",
     "midi-qol.ActionSpecialDurationImmediate.Hint": "不等待傷害擲骰，擲骰後立即讓特殊持續時間的效果失效。",
     "midi-qol.IgnoreSpellReactionRestriction.Name": "允許使用任何反應(Reaction)法術",
@@ -901,8 +729,6 @@
     "midi-qol.AttackPerTarget.Name": "每個目標獨立擲出攻擊",
     "midi-qol.SkillAbilityCheckAdvantage.Name": "能力檢定優勢賦予技能優勢",
     "midi-qol.SkillAbilityCheckAdvantage.Hint": "若角色在能力檢定有優劣勢，基於該能力的技能也享同樣待遇。",
-    "midi-qol.ignoreTotalCover": "無視全面掩護（已過時）",
-    "midi-qol.InitPromptTitle": "先攻擲骰",
     "midi-qol.HighlightSuccess.Name": "以顏色區分命中/未命中/豁免",
     "midi-qol.HighlightSuccess.Hint": "命中/豁免成功顯示綠色，未命中/失敗顯示紅色。",
     "midi-qol.HighLightCriticalAttackOnly.Name": "僅高亮重擊/嚴重失誤",
@@ -924,18 +750,13 @@
         "Name": "支援撤銷物品擲骰",
         "Hint": "啟用後將儲存撤銷數據。透過指令撤銷工作流(Workflow)。",
         "title": "撤銷工作流(Workflow)",
-        "actorName": "角色名稱",
-        "itemName": "物品名稱",
-        "targetName": "目標名稱",
         "removeFirstWorkflow": "從清單中移除最頂端/最近的工作流(Workflow)（警告）",
         "undoFirstWorkflow": "撤銷最頂端/最近的工作流(Workflow)",
         "GMOnly": "僅限 GM 可撤銷工作流(Workflow)"
     },
-    "midi-qol.cubNotSupported": "Combat Utility Belt 不再支援版本 11。",
     "midi-qol.ContestedRoll": "對抗擲骰",
     "midi-qol.versus": "對決",
     "midi-qol.Skipped": "已跳過",
-    "midi-qol.ExportTroubleShooting": "匯出除錯數據",
     "midi-qol.DependentsExplorer": {
         "Title": "依賴關係探索器",
         "Name": "依賴關係探索器",
@@ -953,7 +774,6 @@
         "TypeScene": "場景",
         "TypeCombatant": "戰鬥員",
         "On": "於",
-        "Transfer": "傳遞效果",
         "DeleteParent": "刪除此母文件",
         "DeleteDependent": "刪除此子依賴文件",
         "ConfirmDelete": "確認刪除",
@@ -1038,12 +858,6 @@
         "always": "總是",
         "never": "從不"
     },
-    "midi-qol.SaveDamageOptions": {
-        "default": "Midi 設定",
-        "fulldam": "全額傷害",
-        "halfdam": "一半傷害",
-        "nodam": "無傷害"
-    },
     "midi-qol.MidiSettings": "Midi 設定",
     "midi-qol.ConcentrationIncapacitatedConditionCheck.Name": "套用失能狀態(Condition)時移除專注",
     "midi-qol.ConcentrationIncapacitatedConditionCheck.Hint": "失能、死亡、昏迷、石化、麻痺與震懾會移除專注。",
@@ -1057,7 +871,6 @@
     "midi-qol.emanationTemplate.counted.one": "放射無模板",
     "midi-qol.emanationTemplate.counted.other": "放射無模板",
     "midi-qol.AddFakeDice.Name": "為 GM 的 Dice So Nice 加入假骰子",
-    "midi-qol.MidiFieldsTab.Name": "在獨立分頁顯示 Midi 物品欄位",
     "midi-qol.UndoChatColor.Name": "撤銷聊天卡片顏色",
     "midi-qol.UndoChatColor.Hint": "「刪除」表示撤銷時移除卡片，否則僅改變顏色。",
     "midi-qol.WaitForDamageApplication.Name": "等待傷害套用",
@@ -1080,8 +893,6 @@
     "midi-qol.AutoRemoveInstantaneousTemplate.Hint": "持續時間為瞬間的模板在擲骰結束後自動移除。",
     "midi-qol.ReplaceDefaultActivities.Name": "將 dnd5e 活動替換為 midi-qol 等效項",
     "midi-qol.ReplaceDefaultActivities.Hint": "所有既存活動（攻擊、傷害、豁免等）將改用 midi 版本。這是自動化 SRD 物品的關鍵。",
-    "midi-qol.AutoMergeActivityOther.Name": "自動合併攻擊活動與「其他」活動（需重載）",
-    "midi-qol.AutoMergeActivityOther.Hint": "若物品僅有一個攻擊活動與單一傷害/豁免等，則自動合併。",
     "midi-qol.ConfirmAmmunition.Name": "攻擊時確認彈藥選擇 — 顯示攻擊配置",
     "midi-qol.ActivityNamePrefix.Name": "活動前綴",
     "midi-qol.ActivityNamePrefix.Hint": "在活動名稱前加上 Midi。需重載。",
@@ -1099,11 +910,6 @@
         "notFriendly": "非友方"
     },
     "midi-qol.ConfigDialogOptions": {
-        "default": "Midi 設定",
-        "always": "總是顯示",
-        "never": "從不顯示"
-    },
-    "midi-qol.ConsumeDialogOptions": {
         "default": "Midi 設定",
         "always": "總是顯示",
         "never": "從不顯示"
@@ -1135,13 +941,9 @@
     "midi-qol.dummyCards.Name": "為隱藏的合併卡片顯示虛假攻擊/傷害卡片",
     "midi-qol.dummyCards.Hint": "對玩家顯示「GM 擲骰中」但不顯示細節。",
     "midi-qol.dnd5eConcentrationTrackingDisabled": "<br><strong><center>DND5E 專注追蹤已禁用</strong></center><br>",
-    "midi-qol.ItemSheetMidiTab": "Midi QoL",
     "midi-qol.AddOnUseMacro": "新增使用時 Macro",
     "midi-qol.CustomMacro": "自定義 Macro",
     "midi-qol.SHARED": {
-        "use-condition": {
-            "header": "Midi 觸發條件"
-        },
         "ignore": {
             "header": "忽略傷害特性"
         },
@@ -1307,15 +1109,11 @@
             "overTimeProperties": {
                 "turnChoice": {
                     "label": "回合選擇",
-                    "hint": "回合開始或結束",
-                    "start": "回合開始",
-                    "end": "回合結束"
+                    "hint": "回合開始或結束"
                 },
                 "rollAs": {
                     "label": "擲骰身份",
-                    "hint": "誰負責擲骰",
-                    "target": "受影響的 Token",
-                    "source": "來源 Token"
+                    "hint": "誰負責擲骰"
                 },
                 "saveRemoves": {
                     "label": "豁免即移除",
@@ -1401,22 +1199,6 @@
         "Title": {
             "one": "Midi 傷害",
             "other": "Midi 傷害"
-        },
-        "FIELDS": {
-            "damage": {
-                "label": "傷害",
-                "critical": {
-                    "label": "重擊傷害",
-                    "allow": {
-                        "label": "允許重擊傷害",
-                        "hint": "是否套用重擊加成"
-                    },
-                    "bonus": {
-                        "label": "額外重擊傷害",
-                        "hint": "達成重擊時的額外傷害骰"
-                    }
-                }
-            }
         }
     },
     "midi-qol.ENCHANT": {
@@ -1439,36 +1221,16 @@
     },
     "midi-qol.OVERTIME": {
         "Title": {
-            "one": "Midi 持續(Overtime)",
             "other": "Midi 持續(Overtime)"
-        },
-        "extras": {
-            "header": "Midi 持續時間設定"
         },
         "FIELDS": {
             "turnChoice": {
-                "label": "回合選擇",
-                "hint": "回合開始或結束",
                 "start": "回合開始",
                 "end": "回合結束"
             },
-            "saveRemoves": {
-                "label": "豁免即移除",
-                "hint": "成功後移除效果"
-            },
             "rollAs": {
-                "label": "擲骰身份",
-                "hint": "誰負責擲骰",
                 "target": "受影響的 Token",
                 "source": "來源 Token"
-            },
-            "removeConditionBeforeActivity": {
-                "label": "擲骰前移除效果",
-                "hint": "若滿足移除條件，在擲骰前即先移除效果"
-            },
-            "removeConditionText": {
-                "label": "移除條件",
-                "hint": "移除效果所需滿足的條件"
             }
         }
     },
@@ -1510,13 +1272,6 @@
             "other": "Midi 轉化"
         },
         "AlreadyTransformed": "{name} 已經轉化"
-    },
-    "midi-qol.fields": {
-        "use-condition-header": "Midi 活動允許使用條件",
-        "attack-extras": "Midi 攻擊欄位",
-        "effects-conditon": "Midi 效果套用條件",
-        "force-dialog": "強制顯示配置對話框",
-        "midi-automation-only": "僅供 Midi 自動化使用"
     },
     "midi-qol.BaseDamageFlavor": "基礎傷害",
     "midi-qol.BaseHealingFlavor": "基礎治療",
@@ -1772,10 +1527,6 @@
             "name": "重甲潛行劣勢",
             "description": "因穿著重甲導致潛行檢定獲得劣勢。"
         },
-        "flags.midi-qol.": {
-            "name": "MIDI-QOL 標記",
-            "description": ""
-        },
         "flags.midi-qol.DR.non-adamant": {
             "name": "傷害減免 (非精金) (已過時)",
             "description": "請改用系統 system.traits.dm 欄位。"
@@ -1796,28 +1547,8 @@
             "name": "傷害減免 (非銀製) (已過時)",
             "description": ""
         },
-        "flags.midi-qol.DR.all": {
-            "name": "全傷害減免 (已過時)",
-            "description": ""
-        },
         "flags.midi-qol.DR.final": {
             "name": "最終傷害減免 (已過時)",
-            "description": ""
-        },
-        "flags.midi-qol.DR.healing": {
-            "name": "治療減免 (已過時)",
-            "description": ""
-        },
-        "flags.midi-qol.DR.midi-none": {
-            "name": "無傷害減免 (已過時)",
-            "description": ""
-        },
-        "flags.midi-qol.DR.none": {
-            "name": "不使用傷害減免 (已過時)",
-            "description": ""
-        },
-        "flags.midi-qol.DR.temphp": {
-            "name": "臨時生命值減免 (已過時)",
             "description": ""
         },
         "flags.midi-qol.OverTime": {
@@ -1835,10 +1566,6 @@
         "flags.midi-qol.carefulSpells": {
             "name": "小心法術(Careful Spells)",
             "description": "預選的法術豁免目標自動成功。"
-        },
-        "flags.midi-qol.concentrationSaveBonus": {
-            "name": "專注豁免加成",
-            "description": ""
         },
         "flags.midi-qol.damage.reroll-kh": {
             "name": "傷害重擲 (取高)",
@@ -1916,10 +1643,6 @@
             "name": "施法失敗 (言語構材)",
             "description": ""
         },
-        "flags.midi-qol.fail.deathSave": {
-            "name": "判定失敗 (死亡豁免)",
-            "description": "死亡豁免自動判定失敗。"
-        },
         "flags.midi-qol.grants.critical.range": {
             "name": "賦予重擊 (距離)",
             "description": "在此距離內的攻擊賦予重擊。"
@@ -1935,38 +1658,6 @@
         "flags.midi-qol.inMotion": {
             "name": "移動中(In Motion)",
             "description": ""
-        },
-        "flags.dnd5e.initiativeAdv": {
-            "name": "先攻優勢",
-            "description": "先攻擲骰具有優勢。"
-        },
-        "flags.dnd5e.initiativeDisadv": {
-            "name": "先攻劣勢",
-            "description": "先攻擲骰具有劣勢。"
-        },
-        "flags.midi-qol.magicResistance.check.all": {
-            "name": "魔法抗性 (檢定)",
-            "description": ""
-        },
-        "flags.midi-qol.magicResistance.save.all": {
-            "name": "魔法抗性 (豁免)",
-            "description": ""
-        },
-        "flags.midi-qol.magicResistance.skill.all": {
-            "name": "魔法抗性 (技能)",
-            "description": ""
-        },
-        "flags.midi-qol.max.ability.save.concentration": {
-            "name": "最大骰面 (專注)",
-            "description": "專注豁免的 D20 骰面最大值。"
-        },
-        "flags.midi-qol.max.skill.all": {
-            "name": "最大骰面 (全技能)",
-            "description": "所有技能檢定的 D20 骰面最大值。"
-        },
-        "flags.midi-qol.min.ability.save.concentration": {
-            "name": "最小骰面 (專注)",
-            "description": "專注豁免的 D20 骰面最小值。"
         },
         "flags.midi-qol.neverTarget": {
             "name": "從不選取目標",
@@ -2031,10 +1722,6 @@
         "flags.midi-qol.success.ability.all": {
             "name": "判定成功 (全能力)",
             "description": "所有能力檢定與豁免自動成功。"
-        },
-        "flags.midi-qol.success.deathSave": {
-            "name": "判定成功 (死亡豁免)",
-            "description": "死亡豁免自動判定成功。"
         },
         "flags.midi-qol.uncanny-dodge": {
             "name": "直覺閃避(Uncanny Dodge)",
