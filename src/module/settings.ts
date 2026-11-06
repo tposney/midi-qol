@@ -428,10 +428,15 @@ function removeOldValues(theObject: any) {
 
 /**
  * Migrate hideRollDetails + ghostRolls + gmHide3dDice → granular GM display settings.
- * Modifies the configSettings object in place. Only runs if gmAttackDisplay is undefined.
+ * Modifies the configSettings object in place; with gmAttackDisplay already set, only the old keys are dropped.
  */
 function migrateGmRollHiding(cs: any) {
-  if (cs.gmAttackDisplay !== undefined) return;
+  if (cs.gmAttackDisplay !== undefined) {
+    delete cs.hideRollDetails;
+    delete cs.ghostRolls;
+    delete cs.gmHide3dDice;
+    return;
+  }
   const old = cs.hideRollDetails ?? "none";
   const ghost = cs.ghostRolls ?? false;
   const migrationMap: Record<string, { attack: string; damage: string; attackDsn: string; damageDsn: string }> = {
