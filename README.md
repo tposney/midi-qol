@@ -1169,7 +1169,7 @@ Additional states: `AwaitTemplate`, `TemplatePlaced`, `AoETargetConfirmation`, `
 | `midi-qol.AttackRollComplete` | After attack roll complete | |
 | `midi-qol.DamageRollComplete` | After damage roll complete | |
 | `midi-qol.preCheckSaves` | Before save rolls | |
-| `midi-qol.preTargetSave` | Before each target's save; args `(target, workflow, saveDetails)` | `saveDetails` can be changed (advantage, tracker) |
+| `midi-qol.preTargetSave` | Before each target's save; args `(target, workflow, saveDetails)`: `target` is the Token, or the TokenDocument of a target not drawn (another scene or level) | `saveDetails` can be changed (advantage, tracker) |
 | `midi-qol.postCheckSaves` | After save rolls | |
 | `midi-qol.postActiveEffects` | After effects applied | |
 | `midi-qol.RollComplete` | Workflow fully complete | |

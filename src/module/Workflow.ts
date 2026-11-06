@@ -7012,12 +7012,11 @@ export class Workflow {
         // Store per-target saveDetails for later retrieval during result processing
         const targetUuid = getTokenDocument(target)?.uuid;
         if (targetUuid && this.targetSaveDetails) this.targetSaveDetails[targetUuid] = saveDetails;
-        // Call preTargetSave hook - allows external modules to modify saveDetails/tracker before the roll
+        // preTargetSave: modules may change saveDetails/tracker before the roll. Every target, as its Token, or its
+        // TokenDocument when it has none (another scene or level); target macros run for a Token only
         const token = getToken(target);
-        if (token) {
-          await asyncHooksCallAll("midi-qol.preTargetSave", token, this, saveDetails);
-          if (configSettings.allowUseMacro && this.workflowOptions.noTargetOnUseMacro !== true) await this.triggerTargetMacros(["preTargetSave"], new Set([token]));
-        }
+        await asyncHooksCallAll("midi-qol.preTargetSave", token ?? getTokenDocument(target), this, saveDetails);
+        if (token && configSettings.allowUseMacro && this.workflowOptions.noTargetOnUseMacro !== true) await this.triggerTargetMacros(["preTargetSave"], new Set([token]));
 
         // Queue the save roll using the appropriate handler
         const { promise, requestCard } = this.queueTargetSaveRoll({
