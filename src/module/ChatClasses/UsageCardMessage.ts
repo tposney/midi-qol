@@ -550,11 +550,11 @@ export function setupUsageCardMessage() {
 
   // A card whose item is deleted loses its buttons, but only when rendered again; redraw the ones on screen.
   Hooks.on("deleteItem", (item: Item.Implementation) => {
-    for (const message of game.messages ?? []) {
-      if (!(message.system instanceof MidiUsageMessageData)) continue;
+    for (const element of Array.from(ui.chat?.element?.querySelectorAll<HTMLElement>(".message[data-message-id]") ?? [])) {
+      const message = game.messages?.get(element.dataset.messageId ?? "");
+      if (!message || !(message.system instanceof MidiUsageMessageData)) continue;
       // @ts-expect-error no dnd5e-types
-      if (message.system.item?.uuid !== item.uuid) continue;
-      if (ui.chat?.element?.querySelector(`.message[data-message-id="${message.id}"]`)) ui.chat.updateMessage(message);
+      if (message.system.item?.uuid === item.uuid) ui.chat!.updateMessage(message);
     }
   });
 }

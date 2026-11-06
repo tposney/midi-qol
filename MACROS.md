@@ -1106,7 +1106,7 @@ midi's player-name rules (Anonymous, Hide NPC Names, *Hide NPC names*; the GM an
 
 ### Other messages deleted with a card
 
-A message you create with `flags.midi-qol.origin` set to a card's id is deleted when that card is deleted.
+Put a result on the card as a note (`MidiQOL.addCardNote`), and link a roll to a note with `MidiQOL.cardNoteMessageData(note, role)` as its message data: both are deleted with the card. A message whose `system.origin` is the card (one that has the field, such as a dnd5e roll) is linked to it as dnd5e links its own; dnd5e deletes it with the card only when it is drawn in the card's summary.
 
 ---
 

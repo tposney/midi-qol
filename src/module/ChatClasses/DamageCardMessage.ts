@@ -5,6 +5,7 @@ import { ChatMessageRenderOptions, ContextMenuEntryV14 } from "../../globals.js"
 import { buildDamageCardContext, DamageListContextEntry, processUndoDamageCard } from "../GMAction.js";
 import { USAGE_MESSAGE_TYPE } from "./UsageCardMessage.js";
 import { NOTE_MESSAGE_TYPE } from "./CardNoteMessage.js";
+import { messagesFrom } from "../lib/cardState.js";
 
 /** Registered at setup, once dnd5e's base class is on `game.dnd5e`. */
 export let MidiDamageMessageData: any;
@@ -99,16 +100,15 @@ export function setupDamageCardMessage() {
 }
 
 /**
- * midi's damage and usage cards and card notes go with the card they came from, as do other messages flagged with it
- * (`flags.midi-qol.origin`, e.g. a sample action's whispered result). dnd5e deletes only summarised messages with their
- * origin, and a player deleting their card can't delete the GM's damage cards, so the active GM does it.
+ * midi's damage and usage cards and card notes go with the card they came from. dnd5e deletes only summarised messages
+ * with their origin, and a player deleting their card can't delete the GM's damage cards, so the active GM does it.
  */
 function deleteLinkedDamageCards(message: ChatMessage.Implementation, options: object) {
     if (("deleteAll" in options && options.deleteAll) || !game.users?.activeGM?.isSelf) return;
     // A note's own messages (a contested roll's checks) go with it, as the note goes with its card.
-    const linked = () => (game.messages?.filter(m => (([DAMAGE_MESSAGE_TYPE, USAGE_MESSAGE_TYPE, NOTE_MESSAGE_TYPE].includes(m.type) || message.type === NOTE_MESSAGE_TYPE)
-        && (m._source.system as { origin?: string | null } | undefined)?.origin === message.id)
-        || m.getFlag("midi-qol", "origin") === message.id) ?? []).map(m => m.id!);
+    const linked = () => messagesFrom(message.id!)
+        .filter(m => [DAMAGE_MESSAGE_TYPE, USAGE_MESSAGE_TYPE, NOTE_MESSAGE_TYPE].includes(m.type) || message.type === NOTE_MESSAGE_TYPE)
+        .map(m => m.id!);
     if (!linked().length) return;
     // After the current delete operation, which may already include them.
     setTimeout(() => {

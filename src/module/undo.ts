@@ -4,6 +4,7 @@ import { socketlibSocket, unTimedExecuteAsGM } from "./GMAction.js";
 import { configSettings } from "./settings.js";
 import { getConcentrationEffect, getTokenDocument, isReactionItem } from "./utils.js";
 import { UndoData, Workflow } from "./Workflow.js";
+import { messagesFrom } from "./lib/cardState.js";
 
 export let undoDataQueue: UndoData[] = [];
 let startedUndoDataQueue: UndoData[] = [];
@@ -324,16 +325,14 @@ export async function _removeMostRecentWorkflow() {
   return;
 }
 
-/** A card and every message linked to it (`system.origin`, or `flags.midi-qol.origin`), recursively. */
+/** A card and every message linked to it (`system.origin`), recursively. */
 function linkedMessages(card: ChatMessage.Implementation): ChatMessage.Implementation[] {
   const found = new Map<string, ChatMessage.Implementation>([[card.id!, card]]);
   const pending = [card.id!];
   while (pending.length) {
-    const id = pending.shift();
-    for (const message of game.messages ?? []) {
+    const id = pending.shift()!;
+    for (const message of messagesFrom(id)) {
       if (found.has(message.id!)) continue;
-      const origin = (message._source.system as { origin?: string | null } | undefined)?.origin ?? message.getFlag(MODULE_ID, "origin");
-      if (origin !== id) continue;
       found.set(message.id!, message);
       pending.push(message.id!);
     }

@@ -1,5 +1,6 @@
 import {dialogUtils, documentUtils, effectUtils, tokenUtils} from '../proxy.mjs';
 import {applyStatusCondition} from '../../utils.js';
+import {addCardNote} from '../../lib/cardNotes.js';
 import {HIDING, hiddenDC, hiddenFrom, hidingCondition, hidingConditionId, passivePerception} from '../../lib/hiding.js';
 // 2024 Hide and Search. Hide is a DC 15 Stealth check; on a success the creature gets dnd5e's Hiding condition, carrying
 // the check's total as the DC to find it (flags.midi-qol.hidden.dc). midi treats Hiding as Invisible towards each creature
@@ -13,8 +14,12 @@ import {HIDING, hiddenDC, hiddenFrom, hidingCondition, hidingConditionId, passiv
 const MODULE = 'midi-qol';
 const gmWhisper = () => game.users.filter(u => u.isGM).map(u => u.id);
 const cprActive = () => !!game.modules.get('chris-premades')?.active;
-// Results go with the action's card: deleting it (or a Generic Actions card above it) deletes them.
-const post = (actor, content, origin, whisper) => ChatMessage.create({speaker: ChatMessage.getSpeaker({actor}), content, whisper, flags: origin ? {[MODULE]: {origin}} : {}});
+// Results are notes on the action's card (`origin`, its id), so deleting it (or a Generic Actions card above it) deletes them.
+const post = (actor, content, origin, whisper) => {
+    const card = origin && game.messages.get(origin);
+    if (card) return addCardNote(card, content, whisper ? {whisper} : {});
+    return ChatMessage.create({speaker: ChatMessage.getSpeaker({actor}), content, whisper});
+};
 const usesMacro = (activity, source) => activity?.flags?.cat?.macros?.roll?.some(m => m.source === source && m.identifier === 'hide');
 const configuredEffect = (activity, source) => activity.flags.cat?.genericConfig?.[source]?.hide?.effect;
 // The activity's midi Hide/Search option `key` (CAT generic config), else its default.
@@ -117,7 +122,7 @@ Hooks.on('dnd5e.postUseActivity', activity => {
 });
 export const hideAction = {
     name: 'Hide',
-    version: '1.5.0',
+    version: '1.6.0',
     rules: 'all',
     generic: true,
     documents: ['activity'],
@@ -128,7 +133,7 @@ export const hideAction = {
 };
 export const searchAction = {
     name: 'Search',
-    version: '1.1.0',
+    version: '1.2.0',
     rules: 'all',
     generic: true,
     documents: ['activity'],

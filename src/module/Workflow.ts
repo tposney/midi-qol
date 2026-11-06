@@ -2,7 +2,7 @@ import { warn, debug, log, i18n, i18nFormat, busyWait, MESSAGE_TYPES, error, deb
 import { MidiTeleportActivity, TeleportOption } from "./activities/TeleportActivity.js";
 import { decodeWorkflowOptions, encodeWorkflowOptions, inheritableWorkflowOptions } from "./lib/workflowOptionsCodec.js";
 import { TokenSet } from "./lib/tokenSet.js";
-import { CardRecords, RECORD_SETS, RecordSet, SaveFacts, SECTION_TEMPLATES, STATE_FIELDS, StateKey, attributionMap, attributionTriples, cardPreSelected, recordList, recordPath } from "./lib/cardState.js";
+import { CardRecords, RECORD_SETS, RecordSet, SaveFacts, SECTION_TEMPLATES, STATE_FIELDS, StateKey, attributionMap, attributionTriples, cardPreSelected, messagesFrom, recordList, recordPath } from "./lib/cardState.js";
 import { preferredActiveGM, socketlibSocket, timedAwaitExecuteAsGM, timedExecuteAsGM, unTimedExecuteAsGM } from "./GMAction.js";
 import { installedModules } from "./setupModules.js";
 import { offerFollowUps } from "./followUps.js";
@@ -528,8 +528,7 @@ export class Workflow {
   static async deleteAbortedCard(card: ChatMessage.Implementation | undefined): Promise<void> {
     if (!card) return;
     const origin = (card._source.system as { origin?: string | null } | undefined)?.origin ?? null;
-    const nested = game.messages?.filter(m => [USAGE_MESSAGE_TYPE].includes(m.type) && m.id !== card.id
-      && (m._source.system as { origin?: string | null } | undefined)?.origin === card.id && m.canUserModify(game.user!, "update")) ?? [];
+    const nested = messagesFrom(card.id!, USAGE_MESSAGE_TYPE).filter(m => m.id !== card.id && m.canUserModify(game.user!, "update"));
     const path: string = "system.origin";
     if (nested.length) await ChatMessage.updateDocuments(nested.map(m => ({ _id: m.id, [path]: origin })));
     await card.delete();

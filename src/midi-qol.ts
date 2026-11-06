@@ -188,6 +188,7 @@ Hooks.once("init", () => {
   setupUsageCardMessage();
   setupCardNoteMessage();
   setupContestNote();
+  setupInfluenceNote();
   setupCardContentGuard();
   //@ts-expect-error
   CONFIG.ChatMessage.documentClass = ChatMessageMidi;
@@ -946,6 +947,7 @@ import { setupDamageCardMessage } from './module/ChatClasses/DamageCardMessage.j
 import { setupUsageCardMessage } from './module/ChatClasses/UsageCardMessage.js';
 import { addCardNote, cardNoteMessageData, registerCardNoteRenderer, removeCardNote, renderLinkedMessage, setupCardContentGuard, visibleRollTotal } from './module/lib/cardNotes.js';
 import { contestedRoll, setupContestNote } from './module/lib/contestedRoll.js';
+import { setupInfluenceNote } from './module/lib/influenceNote.js';
 import { setupTokenNames, tokenName, tokenNameMarkup } from './module/lib/tokenNames.js';
 import { setupCardNoteMessage } from './module/ChatClasses/CardNoteMessage.js';
 import { MidiSaveActivity, setupSaveActivity } from './module/activities/SaveActivity.js';

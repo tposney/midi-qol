@@ -185,3 +185,13 @@ export function attributionMap(triples: string[][] | undefined): Record<string, 
   for (const [type, source, name] of triples ?? []) (map[type] ??= {})[source] = name;
   return map;
 }
+
+/**
+ * The messages linked to message `id` by their `system.origin` (of `type`, if given), from dnd5e's message registry.
+ * The registry keeps a message under an origin it was later moved from, so each one's origin is checked.
+ */
+export function messagesFrom(id: string, type?: string): ChatMessage.Implementation[] {
+  const registry = (globalThis as { dnd5e?: { registry?: { messages?: { get(origin: string, type?: string): ChatMessage.Implementation[] } } } }).dnd5e?.registry?.messages;
+  const candidates = registry ? registry.get(id, type) : (game.messages?.filter(m => !type || m.type === type) ?? []);
+  return candidates.filter(m => (m._source.system as { origin?: string | null } | undefined)?.origin === id);
+}
