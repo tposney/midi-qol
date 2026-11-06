@@ -971,7 +971,7 @@ export class Workflow {
   get isHit(): boolean {
     return configSettings.autoCheckHit === "none" ? !!(this.attackRoll as { isSuccess?: boolean } | undefined)?.isSuccess : this.hitTargets.size > 0;
   }
-  /** Whether the attack hit a target only by an expanded critical */
+  /** Whether the attack was a glancing blow on a target (Challenge Mode Armor: at least its EC, not above its AC) */
   get isHitEC(): boolean {
     return this.hitTargetsEC.size > 0;
   }
