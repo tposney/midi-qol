@@ -2056,9 +2056,26 @@ export class Workflow {
     return Workflow.nameForState(state);
   }
 
+  // A roll that finished while its waiting state was still on its way to suspending (writing the card): taken up then
+  #pendingEvent: { state: WorkflowState, event?: WorkflowEvent } | undefined;
+
+  /** The state that waits for `event`, if the workflow is in it */
+  #awaits(event: WorkflowEvent | undefined): boolean {
+    const waiting = this.currentAction;
+    switch (event) {
+      case "attackRolled": return waiting === this.WorkflowState_WaitForAttackRoll;
+      case "damageRolled": case "noDamage": return waiting === this.WorkflowState_WaitForDamageRoll;
+      case "utilityRolled": return waiting === this.WorkflowState_WaitForUtilityRoll;
+      default: return false;
+    }
+  }
+
   /** Wake a suspended workflow; without an event it re-runs the state it waits in */
   public async resume(event?: WorkflowEvent) {
-    if (!this.suspended) return;
+    if (!this.suspended) {
+      if (this.executingStates > 0 && this.#awaits(event)) this.#pendingEvent = { state: this.currentAction, event };
+      return;
+    }
     // New damage while saves are awaited is shown, and the saves keep waiting
     if (event === "damageRolled" && this.currentAction === this.WorkflowState_WaitForSaves) return this.displayDamageRolls();
     this.suspended = false;
@@ -2307,9 +2324,14 @@ export class Workflow {
 
         if (nextState === this.WorkflowState_Suspend) {
           this.suspended = true;
-          // this.currentAction = this.WorkflowState_Suspend;
           if (debugEnabled > 0) warn(`${this.workflowName} ${this.nameForState(this.currentAction)} -> suspended Workflow ${this.id}`);
-          // await this.performDebouncedUpdate(this.chatCard, { ["flags.midi-qol." + WorkflowDataFlags.suspended]: true });
+          const pending = this.#pendingEvent;
+          this.#pendingEvent = undefined;
+          if (pending?.state === this.currentAction) {
+            this.suspended = false;
+            newState = this.stateAfter(pending.event!);
+            continue;
+          }
           break;
         }
         newState = nextState;

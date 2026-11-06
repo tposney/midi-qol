@@ -658,7 +658,8 @@ let defineMidiAttackActivityClass = <T extends Activity>(ActivityClass: T) => {
           warn("AttackActivity | rollAttack | setAttackRolls completed ", rolls);
           warn(`Attack Activity | workflow is suspended ${workflow?.suspended}`);
         }
-        if (workflow?.suspended) workflow.resume(rolls[0] ? "attackRolled" : undefined);
+        // resume takes a roll that finished before the workflow suspended (it may still be writing its card)
+        workflow?.resume(rolls[0] ? "attackRolled" : undefined);
       } catch (err) {
         error("AttackActivity | rollAttack | Error configuring dialog", err);
       } finally {

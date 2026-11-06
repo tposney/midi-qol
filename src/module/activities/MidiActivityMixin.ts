@@ -1099,7 +1099,7 @@ export let MidiActivityMixin = Base => {
             otherResult = await this.rollOtherDamage(config, dialog);
           }
         }
-        if (config.midiOptions?.updateWorkflow !== false && config.workflow.suspended) {
+        if (config.midiOptions?.updateWorkflow !== false) {
           // If neither the activity nor the other activity produced damage rolls,
           // we still need to advance the workflow past WaitForDamageRoll.
           // Use noDamage flag to indicate no damage was available to roll
