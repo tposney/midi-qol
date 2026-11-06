@@ -408,7 +408,6 @@ For configuring optional game rules:
 - **Vitality Item**: Set to the exact name of an item with uses (case-sensitive). Damage applied to a target with 0 HP reduces the item's uses. When the item's uses reach 0 the target is dead. Sub-settings:
   - *Vitality Exhausted Condition*: The condition to apply when vitality reaches 0 (defaults to 'Dead')
   - *Vitality Death Requires*: Options: *Vitality of 0*, *Vitality of 0 AND HP of 0*
-- **Enable ddb-game-log support**: Accept attack/damage/saving throws from ddb-game-log to trigger midi workflows in foundry
 
 #### The "Quick Settings" Tab
 ![QuickSettings](GettingStartedPics/QuickSettings.png)

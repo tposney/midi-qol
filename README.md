@@ -226,7 +226,6 @@ If you prefer to configure settings manually, here's the recommended full automa
 | Dice So Nice | Works with merge card (complex interactions) |
 | Monks Token Bar | Use for save rolls; adv/dis now supported |
 | Convenient Effects | Matches effects by name; toggle per-item |
-| DDB Game Log | Triggers workflow from D&D Beyond rolls |
 | Epic Rolls 5e | Players and the GM can roll saves and checks through Epic Rolls: choose *Rippers Epic Rolls* in *Prompt Players to Roll Saves* or *Prompt GM to Roll Saves (Unlinked)* / *(Linked)* |
 | Hide NPC Names | midi's chat cards and damage tray show the name it gives a creature. Without it, midi's *Hide NPC names* setting names creatures with no player owner |
 | Rideable | Marks riders and moves them with their mounts. With *Mounted creatures use their mount's space* (Mechanics) on, midi measures a rider's range and reach, and distances to it, from its mount's space (familiars included; grappled tokens and riders moving within their mount keep their own space) |

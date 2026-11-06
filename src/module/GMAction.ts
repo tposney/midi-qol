@@ -487,9 +487,7 @@ async function _applyEffects(data: { workflowId: string, targets: string[] }) {
       if (maybeToken) targets.add(maybeToken);
     }
 
-    // TODO: Does this do anything, actually?
-    workflow.applicationTargets = targets;
-    if (workflow.applicationTargets.size > 0) result = await workflow.performState(workflow.WorkflowState_ApplyDynamicEffects);
+    if (targets.size > 0) result = await workflow.performState(workflow.WorkflowState_ApplyDynamicEffects);
     return result;
   } catch (err) {
     const message = `_applyEffects | remote apply effects error`;

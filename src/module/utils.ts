@@ -4422,12 +4422,6 @@ export function dnd5eRollType(source: any): string | undefined {
   }
 }
 
-/** The item a roll message came from. */
-export function dnd5eRollItemId(source: any): string | undefined {
-  const id = foundry.utils.getProperty(source, "system.item.id");
-  return typeof id === "string" ? id : undefined;
-}
-
 /** Whether a message is one of dnd5e's roll cards rather than an item/usage card. */
 export function isDnd5eRollMessage(source: any): boolean {
   return dnd5eRollType(source) !== undefined;
@@ -9499,35 +9493,15 @@ function rollsMatch(current: readonly unknown[] | undefined, incoming: readonly 
 }
 
 async function _updateAction(document: foundry.abstract.Document.Any, updates: ChatMessage.UpdateData) {
-  if (!updates) {
-    if (debugEnabled > 0) warn(`_updateAction | No updates found for ${document.uuid}`);
-    return document;
-  }
   const baseDocument = fromUuidSync(document.uuid) as ChatMessage.Implementation;
   if (!baseDocument) {
     console.warn(`midi-qol | _updateAction | baseDocument not found for ${document.uuid}`);
     return document;
   }
-  /* Simulate a slow machine
-     updates are passed to the update call - effectively copied at that point.
-     Then there are no changes to the chat card until the call returns.
-     This creates an opportunity for changes to cached updates which can then be lost if they are cleared
-     */
-  const updateDelay = 0;
   if (debugEnabled) warn("_updateAction | Starting for", Date.now(), updates)
   delete updates._id
 
-  /*
-   * Drop `rolls` when it matches what the card already has.
-   *
-   * Every display method passes `this.chatRolls` and `persistRolls` puts the same array in the
-   * cache, so one attack rewrote the whole roll array eight or nine times. Measured before this:
-   * 18,963 B written for a 9,862 B card, two of the ten writes carrying nothing but the repeat.
-   * The accumulated-cache trimming could not catch it because `diffObject` compares the array
-   * structurally against a freshly built one and always finds a difference.
-   *
-   * Comparing against the stored rolls is sufficient — rolls are only ever appended to.
-   */
+  // Every display passes all the rolls; rolls are only ever appended, so a match with the stored ones is no change
   if (Array.isArray(updates.rolls) && rollsMatch(baseDocument.rolls, updates.rolls)) {
     delete updates.rolls;
     // Replaced, not changed in place: getCachedDocument keeps a card's clone while its queue's object is the same
@@ -9541,14 +9515,7 @@ async function _updateAction(document: foundry.abstract.Document.Any, updates: C
     if (debugEnabled > 1) warn(`_updateAction | nothing left to write for ${document.uuid}`);
     return document;
   }
-  if (updateDelay) {
-    await busyWait(updateDelay); // let other stuff happen.
-  }
-  //console.warn("Doing chat update", foundry.utils.duplicate(updates));
-  await baseDocument?.update(updates);
-  if (updateDelay) {
-    await busyWait(updateDelay); // let other stuff happen.
-  }
+  await baseDocument.update(updates);
   const pending = pendingUpdates(updates, updatesCache[baseDocument.uuid] ?? {});
   if (foundry.utils.isEmpty(pending)) delete updatesCache[baseDocument.uuid];
   else updatesCache[baseDocument.uuid] = pending;
@@ -9653,9 +9620,9 @@ export function queueUpdate(document: ChatMessage.Implementation, updates: ChatM
 
 /**
  * Write `updates` and the card's queued changes. A workflow queues its card's changes while a state runs and writes them
- * once (Workflow#performThrottledUpdate); the two trailing arguments are unused.
+ * once (Workflow#performThrottledUpdate).
  */
-export async function throttledUpdate(document: ChatMessage.Implementation, updates: ChatMessage.UpdateData, _throttlingFunc?: unknown, _immediate = false) {
+export async function throttledUpdate(document: ChatMessage.Implementation, updates: ChatMessage.UpdateData) {
   if (!document) return; // ChatCard was removed already?;
   queueUpdate(document, updates);
   // One write per card at a time: a write waits for the one in flight, then sends what is still queued

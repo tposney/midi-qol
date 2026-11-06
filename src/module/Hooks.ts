@@ -41,30 +41,6 @@ export let readyHooks = async () => {
   Hooks.on("targetToken", debouncedFlankingHighlight);
   Hooks.on("refreshToken", debouncedFlankingHighlight);
 
-  Hooks.on("preUpdateChatMessage", (message, update, options, user) => {
-    try {
-      const cachedUpdates = foundry.utils.flattenObject(getUpdatesCache(message.uuid));
-      if (cachedUpdates) {
-        // console.error("preUpdateChatMessage cached updates for", message.uuid, update);
-        // clearUpdatesCache(message.uuid);
-        // hideStuffHandler(message, $(message.content), user);
-        if (!foundry.utils.isEmpty(cachedUpdates) && false) {
-          const insertedUpdates = {};
-          Object.keys(cachedUpdates).forEach(key => {
-            if (cachedUpdates[key] !== undefined && foundry.utils.getProperty(update, key) === undefined) {
-              if (debugEnabled) insertedUpdates[key] = cachedUpdates[key];
-              foundry.utils.setProperty(update, key, cachedUpdates[key])
-            }
-          });
-          if (debugEnabled && !foundry.utils.isEmpty(insertedUpdates)) warn("preUpdateChatMessage inserting updates", message.uuid, insertedUpdates);
-        }
-      }
-      return true;
-    } finally {
-      return true;
-    }
-  });
-
   // v14: deleteMeasuredTemplate hook does NOT fire — only deleteRegion fires.
   Hooks.on("deleteRegion", async (regionDoc, options, userId) => {
     if (!isTemplateRegion(regionDoc)) return;
@@ -367,11 +343,6 @@ export function initHooks() {
     if (debugEnabled > 1) debug("preCreateChatMessage entering", message, data, options, user)
     nsaMessageHandler(message, data, options, user);
     checkOverTimeSaves(message, data, options, user);
-    return true;
-  });
-
-  Hooks.on("createChatMessage", (message, options, user) => {
-    if (debugEnabled > 1) debug("Create Chat Message ", message.id, message, options, user)
     return true;
   });
 

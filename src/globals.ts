@@ -878,6 +878,7 @@ declare global {
     encodeWorkflowOptions: typeof workflowOptionsCodec.encodeWorkflowOptions;
     createEffects: typeof createEffects;
     DamageOnlyWorkflow: typeof DamageOnlyWorkflow;
+    /** @deprecated use ChatMessage#update */
     debouncedUpdate: typeof utils.throttledUpdate;
     debug: typeof debug;
     displayDSNForRoll: typeof utils.displayDSNForRoll;

@@ -1495,11 +1495,6 @@ export let MidiActivityMixin = Base => {
         }
       }
 
-      // Trigger setters to persist the mutated sets
-      workflow.targetsCanSense = workflow.targetsCanSense;
-      workflow.tokenCanSense = workflow.tokenCanSense;
-      workflow.targetsCanSee = workflow.targetsCanSee;
-      workflow.tokenCanSee = workflow.tokenCanSee;
     }
 
     async setupTargets(config: ActivityUseConfiguration, dialog: RollDialogConfig, message: RollMessageConfig): Promise<boolean> {

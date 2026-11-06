@@ -491,14 +491,12 @@ const MIDI_ARGS0: CompletionEntry = {
 
     // Bonus damage
     bonusDamageDetail: { type: "property", detail: "DamageDescription[]", info: "Bonus damage breakdown by type" },
-    bonusDamageHTML: { type: "property", detail: "string", info: "Bonus damage HTML display" },
     bonusDamageRoll: { type: "property", detail: "Roll", info: "The combined bonus damage roll" },
     bonusDamageRolls: { type: "property", detail: "Roll[]", info: "Individual bonus damage rolls" },
     bonusDamageTotal: { type: "property", detail: "number", info: "Total bonus damage" },
 
     // Other damage
     otherDamageDetail: { type: "property", detail: "DamageDescription[]", info: "Other damage breakdown by type" },
-    otherDamageList: { type: "property", detail: "DamageListEntry[]", info: "Other damage list entries" },
     otherDamageTotal: { type: "property", detail: "number", info: "Other damage total" },
 
     // Targets

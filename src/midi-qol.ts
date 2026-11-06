@@ -984,7 +984,10 @@ function setupMidiQOLApi() {
     collectSettingData,
     computeTargetsFromTemplates,
     configSettings: () => { return configSettings },
-    debouncedUpdate: throttledUpdate,
+    debouncedUpdate: (document: ChatMessage.Implementation, updates: ChatMessage.UpdateData) => {
+      foundry.utils.logCompatibilityWarning("midi-qol | MidiQOL.debouncedUpdate is deprecated and will be removed in 14.8.0: use ChatMessage#update.", { since: "14.6.9", until: "14.8.0", once: true });
+      return throttledUpdate(document, updates);
+    },
     enableWorkflow,
     exportSettingsToJSON,
     fetchParams,
