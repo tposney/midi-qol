@@ -4,7 +4,7 @@ import { TroubleShooter } from "../apps/TroubleShooter.js";
 import { displayTokenName, setupDamageDetails } from "../utils.js";
 import { prepareDamageListToJSON, timedAwaitExecuteAsGM } from "../GMAction.js";
 import { Workflow } from "../Workflow.js";
-import { cardMidiState, cardTargetDetail, storedMidiFlag, cardDamageMatches } from "../lib/cardState.js";
+import { cardMidiState, cardSourceActor, rollsOfType, cardTargetDetail, storedMidiFlag, cardDamageMatches } from "../lib/cardState.js";
 import { CombinedTargetDescriptor, DamageApplicationOptions, DamageDescription, DamageListEntry, Dnd5eSystem } from "../../globals.js";
 
 // SVG Icons for midi-qol custom change sources (using dnd5e SVGs for consistent styling)
@@ -35,8 +35,7 @@ export class DamageApplicationElementMidi extends globalThis.dnd5e.applications.
   connectedCallback() {
     this.damageType = this.dataset.damageType ?? "defaultDamage";
     super.connectedCallback();
-    const rolls: Roll[] = (this.chatMessage?.rolls ?? []).filter((r: Roll) =>
-      foundry.utils.getProperty(r, `options.${MODULE_ID}.rollType`) === this.damageType);
+    const rolls: Roll[] = rollsOfType(this.chatMessage?.rolls, this.damageType);
     // The ammunition's other damage is kept apart: it applies by its own condition and save.
     const isAmmunition = (r: Roll) => !!foundry.utils.getProperty(r, `options.${MODULE_ID}.ammunition`);
     const damagesOf = (group: Roll[], midiAmmunition: boolean) => (game.system as Dnd5eSystem).dice
@@ -325,16 +324,16 @@ export class DamageApplicationElementMidi extends globalThis.dnd5e.applications.
    */
   getTargetOptions(uuid: string): DamageApplicationOptions {
     const options = super.getTargetOptions(uuid) as DamageApplicationOptions;
-    let sourceActorUuid = foundry.utils.getProperty(this.chatMessage, "flags.midi-qol.sourceActorUuid");
+    const sourceActorUuid = cardSourceActor(this.chatMessage)?.uuid;
     try {
-      let targetDetails;
         // `system.targets`, which MidiUsageMessageData extends with midi's per-target detail. 6.0
         // passes a token uuid here; an actor uuid covers targets recorded without a token.
         const targets = (foundry.utils.getProperty(this.chatMessage, "system.targets") ?? []) as Array<CombinedTargetDescriptor>;
         const descriptor = targets.find(target => target.token === uuid || target.actor === uuid);
         if (!descriptor) return options;
-        targetDetails = cardTargetDetail(this.chatMessage, descriptor.token ?? uuid, foundry.utils.duplicate(descriptor)) as CombinedTargetDescriptor;
-        options.midi = foundry.utils.duplicate(targetDetails);
+        // A copy: the detail may be the card's own descriptor
+        const targetDetails = foundry.utils.duplicate(cardTargetDetail(this.chatMessage, descriptor.token ?? uuid, descriptor)) as CombinedTargetDescriptor;
+        options.midi = targetDetails;
         // What a successful save does to this tray's damage; the calculation adds Super Saver per damage entry.
         const saveMultiplier = targetDetails.saveMults?.[this.damageType as "defaultDamage" | "otherDamage" | "bonusDamage"];
         if (saveMultiplier !== undefined || targetDetails.saved)
@@ -352,10 +351,6 @@ export class DamageApplicationElementMidi extends globalThis.dnd5e.applications.
         }
         if (targetDetails.uncannyDodge) {
           foundry.utils.setProperty(options, "midi.uncannyDodge", true);
-        }
-        // Left in for backwards compatibility of previous midi versions
-        if (targetDetails.sourceActorUuid) {
-          sourceActorUuid = targetDetails.sourceActorUuid;
         }
     } catch (err) {
       const message = `midi-qol | _DAgetTargetOptions failed to get target options`;

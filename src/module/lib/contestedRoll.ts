@@ -130,7 +130,7 @@ export async function contestedRoll(data: {
 
   // With a card the contest is a card note: who it waits for, the two checks and the result, drawn on the card (or on
   // its own in the log for a card with stored markup).
-  const card = itemCardUuid ? (getCachedDocument(itemCardUuid) ?? fromUuidSync(itemCardUuid, { strict: false })) : undefined;
+  const card = itemCardUuid ? getCachedDocument(itemCardUuid) : undefined;
   const onCard = displayResults !== false && card instanceof ChatMessage;
   const rollLabel = (rollType: string, ability: string): string => rollType === "skill"
     ? GameSystemConfig.skills[ability]?.label ?? ability

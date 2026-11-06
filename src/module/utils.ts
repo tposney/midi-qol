@@ -6008,8 +6008,9 @@ export async function doReactions(targetRef: TokenOrDocument | string, triggerTo
     }
 
     if (reactionCount <= 0) return noResult;
+    const workflow: Workflow | undefined = options.workflow ?? Workflow.findWorkflow(options?.activity?.uuid);
     // The reacting player sees the card as it is now
-    await options.workflow?.flushCardWrites?.();
+    await workflow?.flushCardWrites();
 
     let chatMessage: ChatMessage.Implementation;
     const reactionFlavor = game.i18n?.format(reactionPromptFor(triggerType), { itemName: (options.item?.name ?? "unknown"), actorName: target.name });
@@ -6017,7 +6018,6 @@ export async function doReactions(targetRef: TokenOrDocument | string, triggerTo
       content: reactionFlavor,
       whisper: [player.id]
     };
-    const workflow: Workflow | undefined = options.workflow ?? Workflow.findWorkflow(options?.activity?.uuid);
 
     if (configSettings.showReactionChatMessage) {
       chatMessage = await ChatMessage.create(chatData) as ChatMessage.Implementation;
@@ -9150,16 +9150,17 @@ export function getLinkText(entity?: TokenOrDocument | Actor.Implementation | It
   return `@UUID[${uuid}]{${name?.slice(0, MaxNameLength - 5)}}`;
 }
 
-const videoThumbnails = new Map<string, Promise<string>>();
-
 /** A token's image on midi's target lists: its actor's portrait for a character with Use Player Portrait; a video as a still */
 export async function tokenPortrait(document: TokenDocument.Implementation): Promise<string> {
-  let img = document.texture.src ?? document.actor?.img ?? "";
+  let img = document.texture.src || document.actor?.img || "";
   // @ts-expect-error no dnd5e-types
-  if (configSettings.usePlayerPortrait && document.actor?.type === "character") img = document.actor.img ?? document.texture.src ?? "";
-  if (!foundry.helpers.media.VideoHelper.hasVideoExtension(img)) return img;
-  if (!videoThumbnails.has(img)) videoThumbnails.set(img, game.video?.createThumbnail(img, { width: 100, height: 100 }).then(thumb => thumb ?? "") ?? Promise.resolve(""));
-  return videoThumbnails.get(img)!;
+  if (configSettings.usePlayerPortrait && document.actor?.type === "character") img = document.actor.img || document.texture.src || "";
+  return foundry.helpers.media.VideoHelper.hasVideoExtension(img) ? videoThumbnail(img) : img;
+}
+
+/** A still of a video, from Foundry's cache of the thumbnails it made */
+export async function videoThumbnail(src: string): Promise<string> {
+  return game.video?.thumbs?.get(src) ?? await game.video?.createThumbnail(src, { width: 100, height: 100 }) ?? "";
 }
 
 export function getTokenName(entity?: TokenOrDocument | null): string {
@@ -9670,7 +9671,7 @@ let cardClonesHooked = false;
 /** A card as it will be once its queued changes are written: the stored card when none are queued */
 export function getCachedDocument(uuid: string | undefined | null) {
   if (!uuid) return undefined;
-  const document = fromUuidSync(uuid) as ChatMessage.Implementation;
+  const document = fromUuidSync(uuid, { strict: false }) as ChatMessage.Implementation;
   const updates = document?.uuid && updatesCache[document.uuid as string];
   if (foundry.utils.isEmpty(updates)) return document;
   if (!cardClonesHooked) {
@@ -9903,6 +9904,11 @@ export function getActivityDefaultDamageType(workflow: Workflow): string {
 
 export function activityHasAreaTarget(activity?: Activity): boolean {
   return (activity?.target?.template.type ?? "") in GameSystemConfig.areaTargetTypes
+}
+
+/** The templates a use of the activity places by hand: none when it has no area or places its own */
+export function expectedTemplateCount(activity?: Activity): number {
+  return activity && activityHasAreaTarget(activity) && !activityHasAutoPlaceTemplate(activity) ? Number(activity.target?.template?.count) || 1 : 0;
 }
 
 export interface ConvertedDuration {

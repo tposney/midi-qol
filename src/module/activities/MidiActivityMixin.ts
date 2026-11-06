@@ -1,4 +1,4 @@
-import { cardOtherConsumption } from "../lib/cardState.js";
+import { cardMidi, cardOtherConsumption } from "../lib/cardState.js";
 import { heldKeys } from "../lib/rollKeys.js";
 import { TokenSet } from "../lib/tokenSet.js";
 import { Activity, ActivityEffectData, ActivityUseConfiguration, RollDialogConfig, DND5ETargetDescriptor, RollMessageConfig, RollProcessConfig, MidiUsageChatContext, Dnd5eSystem, EmanationShapeData } from "../../globals.js";
@@ -1916,7 +1916,7 @@ export let MidiActivityMixin = Base => {
       // `||` not `??`: the button schema always defines `action`, so midi's own buttons — which
       // carry theirs on the dataset — arrive with it set to the empty string rather than absent.
       const action = ("action" in button ? button.action : undefined) || button.dataset?.action;
-      const midi = (message?.system as { midi?: { hasAttack?: boolean, hasDamage?: boolean } })?.midi;
+      const midi = cardMidi(message);
       // The same rule midi's own buttons are drawn by, so the two cannot disagree.
       const visible = midiButtonVisibility(message, this);
       if (visible.allRemoved) return true;

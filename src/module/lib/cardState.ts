@@ -1,3 +1,4 @@
+import type { MidiCardSection } from "../ChatClasses/UsageCardMessage.js";
 /**
  * The workflow's state on its usage card: `system.midi.state` (scalars) and `system.midi.records` (one record per
  * token, keyed by scene id then token id, as a duplicated scene keeps its token ids; a token set is the records with its
@@ -6,34 +7,28 @@
  */
 
 /**
- * Workflow scalar fields: state key, and its old flag name. Only what a rebuilt workflow cannot work out from its card
- * (rolls, activity) and the canvas, or what other readers need (the damage tray's matches).
+ * Workflow scalars stored in `system.midi.state`: only what a rebuilt workflow cannot work out from its card (rolls,
+ * activity) and the canvas, or what other readers need (the damage tray's matches).
  */
-export const STATE_FIELDS = {
-  isCritical: "isCritical",
-  isFumble: "isFumble",
-  templateUuids: "templateUuids",
-  workflowOptions: "workflowOptions",
+export const STATE_KEYS = [
+  "isCritical",
+  "isFumble",
+  "templateUuids",
+  "workflowOptions",
   // What a successful save does to each damage type, for the damage tray
-  saveMults: "saveMults",
-  damageOnly: "damageOnly",
+  "saveMults",
+  "damageOnly",
   // The other activity's consumption: what it consumed (for the card's refund), or declined/skipped; its scaling
-  otherConsumed: "otherConsumed",
-  otherDeclined: "otherDeclined",
-  otherScaling: "otherScaling",
+  "otherConsumed",
+  "otherDeclined",
+  "otherScaling",
   // The ammunition's data when its last piece was spent (autoDestroy): the use's damage still rolls with it
-  ammunitionData: "ammunitionData",
+  "ammunitionData",
   // When the use started: the actor in a combat, and on its turn
-  inCombat: "inCombat",
-  isTurn: "isTurn"
-} as const;
-export type StateKey = keyof typeof STATE_FIELDS;
-
-/** The template a card section is drawn with when it stores none */
-export const SECTION_TEMPLATES: Record<string, string> = {
-  hits: "modules/midi-qol/templates/hits.html",
-  saves: "modules/midi-qol/templates/saves.html"
-};
+  "inCombat",
+  "isTurn"
+] as const;
+export type StateKey = typeof STATE_KEYS[number];
 
 /** Workflow token sets: record field, and its old flag name (a uuid array). Macros change them, so they are stored. */
 export const RECORD_SETS = {
@@ -50,8 +45,8 @@ export const RECORD_SETS = {
 } as const;
 export type RecordSet = keyof typeof RECORD_SETS;
 
-/** What a save row shows that the roll and the token do not: the result as midi decided it */
-export type SaveFacts = {
+/** A token's facts on the card besides its sets: its save row, hits row and damage-tray matches, as midi decided them */
+export type RecordFacts = {
   saveTotal?: number | null,
   // Cover at the save; total cover from a module makes it automatic
   saveCover?: "half" | "threeQuarters" | "total", saveCoverAuto?: boolean,
@@ -67,7 +62,7 @@ export type SaveFacts = {
   hitClass?: string | null, hitSymbol?: string | null, hitShowAC?: boolean | null, acDisplay?: string | null, acTooltip?: string | null,
   acIcons?: { img?: string, icon?: string, tooltip?: string, cssClass?: string, useDnd5eIcon?: boolean }[] | null
 };
-export type CardRecord = { uuid: string } & Partial<Record<RecordSet, boolean>> & SaveFacts;
+export type CardRecord = { uuid: string } & Partial<Record<RecordSet, boolean>> & RecordFacts;
 
 export function cardStateSchema() {
   const { ArrayField, BooleanField, NumberField, ObjectField, SchemaField, StringField, TypedObjectField } = foundry.data.fields;
@@ -130,7 +125,7 @@ export function recordFor(records: CardRecords | undefined, tokenUuid: string): 
  * and the scaling it was used at. Cards before 14.6.9 kept them as `flags.midi-qol.use.consumed`/`use.otherScaling`.
  */
 export function cardOtherConsumption(message: ChatMessage.Implementation | undefined | null): { consumed?: object | false, scaling?: number } {
-  const state = (message?.system as { midi?: { state?: Record<string, any> } } | undefined)?.midi?.state;
+  const state = cardMidi(message).state;
   if (state?.otherDeclined) return { consumed: false };
   if (state?.otherConsumed) return { consumed: state.otherConsumed, scaling: state.otherScaling ?? undefined };
   const use = storedMidiFlag(message ?? undefined, "use") as { consumed?: object | false, otherScaling?: number | false } | undefined;
@@ -151,8 +146,39 @@ export function cardPreSelected(records: CardRecords | undefined): string[] {
 
 /** A card's stored workflow state and records, if it has any */
 export function cardMidiState(message: ChatMessage.Implementation | undefined): { state: Record<string, any>, records: CardRecords } | undefined {
-  const midi = (message?.system as { midi?: { state?: Record<string, any>, records?: CardRecords } } | undefined)?.midi;
-  return midi?.state?.workflowClass ? { state: midi.state, records: midi.records ?? {} } : undefined;
+  const midi = cardMidi(message);
+  return midi.state?.workflowClass ? { state: midi.state, records: midi.records ?? {} } : undefined;
+}
+
+/** The type midi tags a roll with (`options.midi-qol.rollType`): attack, defaultDamage, bonusDamage, otherDamage, utility, save */
+export function rollTypeOf(roll: unknown): string | undefined {
+  const type = foundry.utils.getProperty(roll as object, "options.midi-qol.rollType");
+  return typeof type === "string" ? type : undefined;
+}
+
+/** The rolls tagged with one of `types` */
+export function rollsOfType(rolls: readonly Roll[] | undefined, types: string | readonly string[]): Roll[] {
+  const wanted = typeof types === "string" ? [types] : types;
+  return (rolls ?? []).filter(roll => wanted.includes(rollTypeOf(roll) ?? ""));
+}
+
+/** A card's attack roll, found by its tag rather than by position */
+export function attackRollOf(message: { rolls?: readonly Roll[] } | undefined): Roll | undefined {
+  return rollsOfType(message?.rolls, "attack")[0];
+}
+
+/** midi's data on a usage card (`system.midi`, UsageCardMessage's schema): the workflow's state and records (cardStateSchema) */
+export type CardMidi = {
+  state?: Record<string, any>, records?: CardRecords, sections?: Record<string, MidiCardSection | null>, progress?: Record<string, boolean>,
+  hasAttack?: boolean, hasDamage?: boolean, hasEffects?: boolean, condensed?: boolean, mergeCardMulti?: boolean,
+  confirmAttackDamage?: boolean, hideItemDetails?: boolean, displayProperties?: boolean, dmgBtnText?: string, attackBtnText?: string,
+  followUps?: { activityUuid: string, label?: string, targetUuids: string[], critical: boolean, used: boolean }[],
+  attackRollCount?: number, damageRollCount?: number
+};
+
+/** A card's `system.midi`, empty for a message without it */
+export function cardMidi(message: ChatMessage.Implementation | null | undefined): CardMidi {
+  return (message?.system as { midi?: CardMidi } | undefined)?.midi ?? {};
 }
 
 /**
@@ -178,7 +204,7 @@ export function cardHitResult(message: ChatMessage.Implementation | undefined): 
   if (stored !== undefined) return stored;
   const records = recordList(cardMidiState(message)?.records);
   if (records.some(record => typeof record.hitClass === "string")) return records.some(record => record.hit || record.hitEC);
-  const attack = (message?.rolls ?? []).find(roll => foundry.utils.getProperty(roll, "options.midi-qol.rollType") === "attack") as { isSuccess?: boolean } | undefined;
+  const attack = attackRollOf(message) as { isSuccess?: boolean } | undefined;
   return attack?.isSuccess;
 }
 

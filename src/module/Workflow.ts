@@ -1,8 +1,8 @@
-import { warn, debug, log, i18n, i18nFormat, busyWait, MESSAGE_TYPES, error, debugEnabled, MQItemMacroLabel, GameSystemConfig, MODULE_ID, MQActivityMacroLabel, gameStats } from "../midi-qol.js";
+import { warn, debug, log, i18n, i18nFormat, busyWait, MESSAGE_TYPES, error, debugEnabled, MQItemMacroLabel, GameSystemConfig, MODULE_ID, MQActivityMacroLabel, gameStats, MQDamageRollTypes } from "../midi-qol.js";
 import { MidiTeleportActivity, TeleportOption } from "./activities/TeleportActivity.js";
 import { decodeWorkflowOptions, encodeWorkflowOptions, inheritableWorkflowOptions } from "./lib/workflowOptionsCodec.js";
 import { TokenSet } from "./lib/tokenSet.js";
-import { CardRecords, RECORD_SETS, RecordSet, SaveFacts, SECTION_TEMPLATES, STATE_FIELDS, StateKey, attributionMap, attributionTriples, cardOtherConsumption, cardPreSelected, messagesFrom, recordList, recordPath, storedMidiFlag } from "./lib/cardState.js";
+import { CardRecords, RECORD_SETS, RecordSet, RecordFacts, STATE_KEYS, StateKey, attributionMap, attributionTriples, cardMidi, rollTypeOf, cardOtherConsumption, cardPreSelected, messagesFrom, recordList, recordPath, storedMidiFlag } from "./lib/cardState.js";
 import { preferredActiveGM, socketlibSocket, timedAwaitExecuteAsGM, timedExecuteAsGM, unTimedExecuteAsGM } from "./GMAction.js";
 import { installedModules } from "./setupModules.js";
 import { offerFollowUps } from "./followUps.js";
@@ -74,6 +74,7 @@ import {
   CEToggleEffect,
   getActivityDefaultDamageType,
   activityHasAreaTarget,
+  expectedTemplateCount,
   getSaveMultiplierForActivity,
   checkActivityRange,
   isRangeCheckable,
@@ -115,7 +116,7 @@ import { OnUseMacros } from "./apps/Item.js";
 import { bonusCheck, collectBonusFlags, defaultRollOptions, buildPreComputedAdvantageMap, checkActivityAbilities } from "./patching.js";
 import { saveTargetsUndoData, saveUndoData } from "./undo.js";
 import { TroubleShooter } from "./apps/TroubleShooter.js";
-import { USAGE_MESSAGE_TYPE, cardSaveRoll, type MidiCardSection, type SectionName } from "./ChatClasses/UsageCardMessage.js";
+import { SECTION_TEMPLATES, USAGE_MESSAGE_TYPE, cardSaveRoll, type MidiCardSection, type SectionName } from "./ChatClasses/UsageCardMessage.js";
 import { MidiSummonActivity } from "./activities/SummonActivity.js";
 import { activityHasScaledTargetCount, computeActivityTemplateTargets, createActivityTemplateRegions, postTemplateConfirmTargets, regionShapeOrigin, setDamageRollMinTerms } from "./activities/activityHelpers.js";
 import { Activity, Dnd5eChatMessage, ActivitySave, ActivityCheck, ActivityUseConfiguration, DamageDescription, DamageListEntry, TokenOrDocument, DND5ETargetDescriptor, CombinedTargetDescriptor, ActivityEffectData, QueueSaveRollOptions, SaveDetails, ProcessTargetSaveContext, ModuleIntegrationFlags, ModuleIntegrationRequests, MonksTokenBarRequest, FlashRollsRequest, EpicRollsRequest, RollProcessConfig, RollDialogConfig } from "../globals.js";
@@ -212,20 +213,20 @@ class CardStateStore {
   }
 
   /** What the card holds, for a workflow rebuilt from it: its state, its records' token sets and its rolls */
-  load(card: ChatMessage.Implementation, decodeOptions: (options: WorkflowOptions) => WorkflowOptions): void {
-    // @ts-expect-error no dnd5e-types
-    const midi: { state?: Record<string, any>, records?: CardRecords, attackRollCount?: number, damageRollCount?: number } = card.system?.midi ?? {};
+  /** Only for a card with a workflow recorded (fromChatCardUuid) */
+  load(card: ChatMessage.Implementation): void {
+    const midi = cardMidi(card);
     const state = midi.state ?? {};
-    if (state.workflowClass) this.#cache.set("workflowClass", state.workflowClass);
-    for (const key of Object.keys(STATE_FIELDS)) {
+    this.#cache.set("workflowClass", state.workflowClass);
+    for (const key of STATE_KEYS) {
       const value = state[key];
       if (value === undefined || value === null) continue;
-      if (key === "workflowOptions") this.#cache.set(key, decodeOptions(foundry.utils.deepClone(value)));
+      if (key === "workflowOptions") this.#cache.set(key, decodeWorkflowOptions(foundry.utils.deepClone(value)));
       else this.#cache.set(key, foundry.utils.deepClone(value));
     }
     for (const key of ["attackRollCount", "damageRollCount"] as const) if (midi[key] != null) this.#cache.set(key, midi[key]);
     // Pre-selected targets are kept in the records, not the stored options
-    if (state.workflowClass) this.#cache.set("workflowOptions", { ...((this.#cache.get("workflowOptions") as WorkflowOptions | undefined) ?? {}), preSelectedTargetUuids: cardPreSelected(midi.records) });
+    this.#cache.set("workflowOptions", { ...((this.#cache.get("workflowOptions") as WorkflowOptions | undefined) ?? {}), preSelectedTargetUuids: cardPreSelected(midi.records) });
     const records = recordList(midi.records);
     for (const field of RECORD_VALUES) {
       const uuids = records.filter(record => record[field]).map(record => record.uuid);
@@ -245,7 +246,7 @@ class CardStateStore {
     // Rolls by the type midi tags them with
     const rollKeys: Record<string, string> = { attack: "attackRoll", defaultDamage: "damageRolls", bonusDamage: "bonusDamageRolls", otherDamage: "otherDamageRolls", utility: "utilityRolls" };
     for (const roll of (card.rolls ?? []) as Roll[]) {
-      const key = rollKeys[String(foundry.utils.getProperty(roll, `options.${MODULE_ID}.rollType`))];
+      const key = rollKeys[String(rollTypeOf(roll))];
       if (!key) continue;
       if (key === "attackRoll") { if (!this.#cache.has(key)) this.#cache.set(key, roll); }
       else this.#cache.set(key, [...((this.#cache.get(key) as Roll[] | undefined) ?? []), roll]);
@@ -334,21 +335,21 @@ class CardStateStore {
     this.#cache.set("saveAttribution", attribution);
     for (const [uuid, map] of Object.entries(attribution)) {
       const document = fromUuidSync(uuid);
-      if (document instanceof TokenDocument) this.setSaveFacts(document, { saveAttribution: attributionTriples(map) });
+      if (document instanceof TokenDocument) this.setRecordFacts(document, { saveAttribution: attributionTriples(map) });
     }
   }
 
   /** The hits rows: each token's row facts; a token whose row went (a re-rolled attack) has its row cleared */
-  setHitRows(rows: [TokenDocument.Implementation, SaveFacts][]): void {
+  setHitRows(rows: [TokenDocument.Implementation, RecordFacts][]): void {
     const shown = new Set(rows.map(([document]) => document.uuid));
     const before = (this.#cache.get("hitRows") as Set<string> | undefined) ?? new Set();
     for (const uuid of before) {
       const document = fromUuidSync(uuid);
-      if (!shown.has(uuid) && document instanceof TokenDocument) this.setSaveFacts(document, { hitClass: null });
+      if (!shown.has(uuid) && document instanceof TokenDocument) this.setRecordFacts(document, { hitClass: null });
     }
     // A null clears a value a previous row had; a new row needs none
     for (const [document, facts] of rows)
-      this.setSaveFacts(document, before.has(document.uuid) ? facts : Object.fromEntries(Object.entries(facts).filter(([, v]) => v !== null)));
+      this.setRecordFacts(document, before.has(document.uuid) ? facts : Object.fromEntries(Object.entries(facts).filter(([, v]) => v !== null)));
     this.#cache.set("hitRows", shown);
   }
 
@@ -359,11 +360,11 @@ class CardStateStore {
     const now = new Set<string>();
     for (const [document, value] of values) {
       now.add(document.uuid);
-      this.setSaveFacts(document, { [field]: value });
+      this.setRecordFacts(document, { [field]: value });
     }
     for (const uuid of before) {
       const document = fromUuidSync(uuid);
-      if (!now.has(uuid) && document instanceof TokenDocument) this.setSaveFacts(document, { [field]: field === "preSelected" ? null : false });
+      if (!now.has(uuid) && document instanceof TokenDocument) this.setRecordFacts(document, { [field]: field === "preSelected" ? null : false });
     }
     this.#cache.set(key, now);
   }
@@ -385,7 +386,7 @@ class CardStateStore {
   }
 
   /** A token's facts on the card besides its sets: its save row (UsageCardMessage), the damage tray's detail */
-  setSaveFacts(document: TokenDocument.Implementation, facts: SaveFacts): void {
+  setRecordFacts(document: TokenDocument.Implementation, facts: RecordFacts): void {
     if (!document.id) return;
     if ("saveAttribution" in facts) {
       const attribution = { ...this.saveAttribution() };
@@ -661,11 +662,8 @@ export class Workflow {
     const card = fromUuidSync(chatCardUuid);
     const author = card instanceof ChatMessage && (card.author === game.user || options.readOnly || options.anyAuthor);
     if (!author || (!options.readOnly && Workflow.#ended.has(chatCardUuid))) return undefined;
-    // @ts-expect-error no dnd5e-types
-    const className: string | undefined = card.system?.midi?.state?.workflowClass;
-    // A damage-only workflow's card is rebuilt as a Workflow: its state says it is damage-only
-    const restorable: Record<string, typeof Workflow> = { Workflow, SavesFirstWorkflow, ActiveDefenceWorkflow, UserWorkflow, DamageOnlyWorkflow: Workflow };
-    const WorkflowClass = className ? restorable[className] : undefined;
+    const className: string | undefined = cardMidi(card).state?.workflowClass;
+    const WorkflowClass = className ? RESTORABLE_WORKFLOWS[className] : undefined;
     if (!WorkflowClass) return undefined;
     try {
       return new WorkflowClass(null, null, null, null, { chatCardUuid, readOnly: options.readOnly });
@@ -717,10 +715,8 @@ export class Workflow {
   ): Promise<void> {
     const chatCard = this.chatCard;
     if (!chatCard) return;
-    await this.performThrottledUpdate(chatCard, this.#withRollMessageFlags({
-      [`system.midi.sections.${name}`]: section,
-      ...extraUpdates
-    }) as ChatMessage.UpdateData);
+    this.#persistRolls();
+    await this.performThrottledUpdate(chatCard, this.#sectionsUpdate({ [name]: section }, extraUpdates));
   }
 
   #itemCardUuid: string | undefined;
@@ -742,7 +738,7 @@ export class Workflow {
   #unstored: Record<string, unknown> = {};
 
   /** By path; queued in the card's update cache: written with its next (throttled) update, never on its own */
-  private persistFields(updates: Record<string, unknown>): void {
+  #persistFields(updates: Record<string, unknown>): void {
     if (this.ownsCard) this.#cacheCardUpdates(updates);
     else Object.assign(this.#unstored, updates);
   }
@@ -759,10 +755,10 @@ export class Workflow {
   }
 
   /**
-   * Rolls persist to `message.rolls` — ChatMessageMidi.prepareDerivedData puts them on the flags when the
-   * message is prepared.
+   * The card's `rolls`: every roll the workflow holds (chatRolls), the only writer of them. Called by the store when a roll
+   * is set and by each display, which also covers rolls changed in place (attribution) and save rolls.
    */
-  private persistRolls(): void {
+  #persistRolls(): void {
     if (this.ownsCard) this.#cacheCardUpdates({ rolls: this.chatRolls });
   }
 
@@ -771,7 +767,7 @@ export class Workflow {
     if (!this.readOnly) addUpdatesCache(this.id, updates);
   }
 
-  #persisted = new CardStateStore(updates => this.persistFields(updates), () => this.persistRolls());
+  #persisted = new CardStateStore(updates => this.#persistFields(updates), () => this.#persistRolls());
 
   get useActiveDefence() { return false; }
   get actor(): Actor.Implementation {
@@ -782,22 +778,22 @@ export class Workflow {
 
   itemUseComplete: boolean | undefined = false;
 
-  #token: Token.Implementation | undefined;
   // Not stored: a rebuilt workflow takes its card's speaker's token (#restoreFromCard)
-  get token(): Token.Implementation | undefined {
-    return this.#token;
-  }
-  set token(token: Token.Implementation | undefined) {
-    this.#token = token;
-  }
+  token: Token.Implementation | undefined;
 
   get workflowOptions(): WorkflowOptions {
     return this.#persisted.scalar<WorkflowOptions>("workflowOptions", {});
   }
-  // Stored without midi's defaults, which are merged back when rebuilt
+  // Stored as #mergeWorkflowOptions stores them: the caller's options, with what this assignment changes from the merged ones
   set workflowOptions(workflowOptions: WorkflowOptions) {
-    this.#persisted.setWorkflowOptions(workflowOptions, options => encodeWorkflowOptions(foundry.utils.diffObject(defaultRollOptions, options)));
+    this.#callerOptions = { ...this.#callerOptions, ...foundry.utils.diffObject(this.#mergedOptions, workflowOptions) };
+    this.#mergedOptions = foundry.utils.deepClone(workflowOptions);
+    const callerOptions = this.#callerOptions;
+    this.#persisted.setWorkflowOptions(workflowOptions, () => encodeWorkflowOptions(callerOptions));
   }
+  #callerOptions: WorkflowOptions = {};
+  // As last merged or assigned: a change made in place since is found by comparing with it
+  #mergedOptions: WorkflowOptions = {};
 
   get needItemCard(): boolean { return !!this.itemCardUuid };
 
@@ -814,6 +810,7 @@ export class Workflow {
     this.#activity = activity;
   }
 
+  // Undefined only while a card's workflow is rebuilt without its item (reported in #restoreFromCard)
   #item: Item.Implementation | undefined;
   get item(): Item.Implementation {
     return this.#item!;
@@ -850,7 +847,9 @@ export class Workflow {
   tokenCanSee: Set<Token.Implementation> = new Set();
   tokenCanSense: Set<Token.Implementation> = new Set();
 
-  templateUuids: string[] = [];
+  /** The use's templates (regions): replace the array to change it, a change in place isn't stored */
+  get templateUuids(): string[] { return this.#persisted.scalar<string[]>("templateUuids", []); }
+  set templateUuids(templateUuids: string[]) { this.#persisted.setScalar("templateUuids", [...templateUuids]); }
   expectedTemplateCount: number = 0;
   placedTemplateCount: number = 0;
 
@@ -860,11 +859,7 @@ export class Workflow {
     return "";
   }
   set templateUuid(templateUuid: string) {
-    // Backward compat: push to array if not already present
-    if (templateUuid && !this.templateUuids.includes(templateUuid)) {
-      this.templateUuids.push(templateUuid);
-    }
-    this.#persisted.setScalar("templateUuids", [...this.templateUuids]);
+    if (templateUuid && !this.templateUuids.includes(templateUuid)) this.templateUuids = [...this.templateUuids, templateUuid];
   }
 
   // v14: templates are backed by Regions — this may return either a MeasuredTemplateDocument or RegionDocument
@@ -892,13 +887,7 @@ export class Workflow {
   set isTurn(isTurn: boolean) { this.#persisted.setScalar("isTurn", isTurn, value => value || null); }
   AoO: boolean = false;
 
-  #damageList: DamageListEntry[] | undefined;
-  get damageList() {
-    return this.#damageList ?? [];
-  }
-  set damageList(damageList: DamageListEntry[]) {
-    this.#damageList = damageList;
-  }
+  damageList: DamageListEntry[] = [];
 
   saveDisplayFlavor: string | undefined;
 
@@ -933,19 +922,19 @@ export class Workflow {
    * confirmed. Undefined for a card with no workflow.
    */
   static cardResumePoint(card: ChatMessage.Implementation | undefined): string | undefined {
-    const midi = (card?.system as { midi?: { state?: { workflowClass?: string, templateUuids?: string[] }, progress?: Record<string, boolean>, confirmAttackDamage?: boolean } } | undefined)?.midi;
-    if (!card || !midi?.state?.workflowClass) return undefined;
+    const midi = cardMidi(card);
+    if (!card || !midi.state?.workflowClass) return undefined;
     const progress = midi.progress ?? {};
     if (progress.finished || progress.attacksSplit) return "WorkflowState_Completed";
     const activity = (card as Dnd5eChatMessage).getAssociatedActivity?.() as Activity | undefined;
-    const rolled = new Set(card.rolls.map(roll => foundry.utils.getProperty(roll, `options.${MODULE_ID}.rollType`)));
-    const templates = activity && activityHasAreaTarget(activity) && !activityHasAutoPlaceTemplate(activity) ? Number(activity.target?.template?.count) || 1 : 0;
+    const rolled = new Set(card.rolls.map(roll => rollTypeOf(roll)));
+    const templates = expectedTemplateCount(activity);
     if ((midi.state.templateUuids?.length ?? 0) < templates) return "WorkflowState_AwaitTemplate";
     if (activity?.roll?.formula && !rolled.has("utility")) return "WorkflowState_WaitForUtilityRoll";
     if (activity?.attack && !rolled.has("attack")) return "WorkflowState_WaitForAttackRoll";
     const other = activity?.otherActivity;
     const damages = activity?.hasDamage || other?.hasDamage || activity?.hasHealing || other?.hasHealing;
-    if (damages && !["defaultDamage", "otherDamage", "bonusDamage"].some(type => rolled.has(type))) return "WorkflowState_WaitForDamageRoll";
+    if (damages && !MQDamageRollTypes.some(type => rolled.has(type))) return "WorkflowState_WaitForDamageRoll";
     if (midi.confirmAttackDamage && !progress.confirmed) return "WorkflowState_ConfirmRoll";
     return "WorkflowState_Completed";
   }
@@ -956,7 +945,7 @@ export class Workflow {
   }
   set isCritical(isCritical: boolean) {
     this.attackRollModifierTracker.critical.setOverride(isCritical, "direct", "Direct assignment");
-    this.#persisted.setScalar("isCritical", isCritical);
+    this.#persistAttackTracker();
   }
 
   get isFumble(): boolean {
@@ -964,7 +953,7 @@ export class Workflow {
   }
   set isFumble(isFumble: boolean) {
     this.attackRollModifierTracker.fumble.setOverride(isFumble, "direct", "Direct assignment");
-    this.#persisted.setScalar("isFumble", isFumble);
+    this.#persistAttackTracker();
   }
 
   /** Whether the attack hit: a target hit, or with hits not checked the attack roll's own result */
@@ -1099,7 +1088,8 @@ export class Workflow {
     return this.attackRollModifierTracker;
   }
 
-  private persistAttackTracker(): void {
+  /** The tracker's critical/fumble decision, stored on the card: the only writer of both */
+  #persistAttackTracker(): void {
     this.#persisted.setScalar("isCritical", this.#attackRollModifierTracker.isCritical);
     this.#persisted.setScalar("isFumble", this.#attackRollModifierTracker.isFumble);
   }
@@ -1325,7 +1315,7 @@ export class Workflow {
   set otherDamageRolls(otherDamageRolls: Roll[] | undefined) { this.#persisted.setRolls("otherDamageRolls", otherDamageRolls); }
 
   // A rebuilt workflow gets the card's merged utility roll back as its one roll
-  get utilityRolls(): Roll[] | undefined { return this.#persisted.rolls("utilityRolls") ?? []; }
+  get utilityRolls(): Roll[] { return this.#persisted.rolls("utilityRolls") ?? []; }
   set utilityRolls(utilityRolls: Roll[] | undefined) {
     utilityRolls?.forEach(d => d.data = {});
     this.#persisted.setRolls("utilityRolls", utilityRolls);
@@ -1715,7 +1705,7 @@ export class Workflow {
       this.id = options.chatCardUuid!;
       const card = this.#ownCard();
       if (card) {
-        this.#persisted.load(card, decodeWorkflowOptions);
+        this.#persisted.load(card);
         this.#activity = (card as Dnd5eChatMessage).getAssociatedActivity?.({ scaled: true });
         this.#item = (card as Dnd5eChatMessage).getAssociatedItem?.();
         this.#speaker = card.speaker;
@@ -1777,11 +1767,7 @@ export class Workflow {
     else this.rollOptions = {};
     if (options.event) this.rollOptions.event = options.event;
     else if (options.workflowOptions?.event) this.rollOptions.event = options.workflowOptions.event;
-    if (activityHasAreaTarget(this.activity) && !activityHasAutoPlaceTemplate(this.activity)) {
-      this.expectedTemplateCount = Number(this.activity?.target?.template?.count) || 1;
-    } else {
-      this.expectedTemplateCount = 0;
-    }
+    this.expectedTemplateCount = expectedTemplateCount(this.activity);
     if (!restoring) {
       this.#mergeWorkflowOptions(options.workflowOptions ?? {});
       if (this.workflowOptions.templateUuid) this.templateUuid = this.workflowOptions.templateUuid;
@@ -1827,6 +1813,8 @@ export class Workflow {
     }, { inplace: false });
     foundry.utils.mergeObject(merged, callerOptions, { overwrite: true });
     if (this.activity.midiProperties?.noConcentrationCheck) merged.noConcentrationCheck = true;
+    this.#callerOptions = { ...callerOptions };
+    this.#mergedOptions = foundry.utils.deepClone(merged);
     this.#persisted.setWorkflowOptions(merged, stored);
   }
 
@@ -1844,13 +1832,13 @@ export class Workflow {
   #restoreFromCard() {
     this.suspended = true;
     this.itemUseComplete = true;
-    this.templateUuids = [...this.#persisted.scalar<string[]>("templateUuids", [])];
     if (this.#persisted.scalar("isCritical", false)) this.attackRollModifierTracker.critical.setOverride(true, "restored", "Restored from chat card");
     if (this.#persisted.scalar("isFumble", false)) this.attackRollModifierTracker.fumble.setOverride(true, "restored", "Restored from chat card");
     // Where it waits, worked out from the card
     const resumePoint = Workflow.cardResumePoint(this.#ownCard()) ?? "";
-    const action = WorkflowRegistry[this.constructor.name]?.prototype[resumePoint];
-    if (typeof action === "function") this.#currentAction = action;
+    const action: unknown = Reflect.get(this, resumePoint);
+    const isState = (value: unknown): value is WorkflowState => typeof value === "function";
+    if (isState(action)) this.#currentAction = action;
     else error(`${this.workflowName} | no state ${resumePoint} to resume in`);
     if (!this.#item) error(`${this.workflowName} | could not find the item of card ${this.itemCardUuid}`);
     this.#mergeWorkflowOptions(this.workflowOptions);
@@ -1911,8 +1899,7 @@ export class Workflow {
         if (removeDnd5eSaveButtons || removeAllDnd5eButtons) progress.savesResolved = true;
         if (finished) progress.finished = true;
         if (foundry.utils.isEmpty(progress)) return;
-        const update = { "system.midi.progress": progress } as ChatMessage.UpdateData;
-        return workflow ? await workflow.performThrottledUpdate(chatMessage, update) : await throttledUpdate(chatMessage, update);
+        return await workflow.performThrottledUpdate(chatMessage, { "system.midi.progress": progress } as ChatMessage.UpdateData);
 
     } catch (err) {
       const message = `removeItemCardButtons`;
@@ -2676,7 +2663,7 @@ export class Workflow {
   }
 
   async WorkflowState_UtilityRollComplete(): Promise<WorkflowState> {
-    if (this.itemCardUuid && this.utilityRolls) {
+    if (this.itemCardUuid) {
       this.displayUtilityRolls();
     }
     return this.WorkflowState_WaitForDamageRoll;
@@ -3727,14 +3714,7 @@ export class Workflow {
         if (!targetToken.actor) continue;
         const targetTokenUuid = targetToken.actor?.uuid;
         if (!targetTokenUuid) continue;
-        let img: string | null | undefined = targetDocument.texture.src ?? targetToken.actor.img;
-        // @ts-expect-error no dnd5e-types
-        if (configSettings.usePlayerPortrait && targetToken.actor.type === "character") {
-          img = targetToken.actor.img ?? targetDocument.texture.src;
-        }
-        if (foundry.helpers.media.VideoHelper.hasVideoExtension(img ?? "")) {
-          img = await game.video?.createThumbnail(img ?? "", { width: 100, height: 100 });
-        }
+        const img = await tokenPortrait(targetDocument);
         this.hitDisplayData[targetTokenUuid] = {
           targetClass: targetToken.actor.hasPlayerOwner ? "midi-qol-player-target" : "midi-qol-nonplayer-target",
           target: targetToken,
@@ -4161,9 +4141,7 @@ export class Workflow {
       }
     }
 
-    // Tracker computes isCritical from all sources (grants.critical added above)
-    // Persist to chat card if state changed
-    this.#persisted.setScalar("isCritical", this.isCritical);
+    this.#persistAttackTracker();
 
     // Update roll with attribution and regenerate HTML if crit/noCrit flags changed
     const criticalChanged = this.attackRollModifierTracker.critical.isForced !== trackerHadCritical;
@@ -5059,10 +5037,8 @@ export class Workflow {
       section = { label: rollString, rollType: "utility" };
       if (debugEnabled > 0) warn("displayUtilityRoll |", this.utilityRoll)
     }
-    // chatRolls, not just this roll: message.rolls is where the rolls are stored now, so a partial
-    // array here would drop the ones already made.
-    await this.performThrottledUpdate(chatMessage,
-      this.#sectionUpdate("utility", section, { rolls: this.chatRolls }));
+    this.#persistRolls();
+    await this.performThrottledUpdate(chatMessage, this.#sectionUpdate("utility", section, {}));
   }
 
   // `_displayOptions.GMOnlyAttackRoll` is no longer used: the card's hit result is worked out from its records
@@ -5096,9 +5072,9 @@ export class Workflow {
       if (debugEnabled > 0) warn("displayAttackRoll |", this.attackRoll)
     }
     // The damage button is already showing, so it takes its label with the roll that decides a critical.
+    this.#persistRolls();
     await this.performThrottledUpdate(chatMessage, this.#sectionUpdate("attack", section,
-      { rolls: this.chatRolls, "system.midi.attackRollCount": this.attackRollCount,
-        "system.midi.dmgBtnText": this.#damageButtonText() }));
+      { "system.midi.dmgBtnText": this.#damageButtonText() }));
   }
 
   #damageButtonText(): string {
@@ -5178,9 +5154,9 @@ export class Workflow {
       return await this.performThrottledUpdate(chatMessage, this.#sectionsUpdate(sections, { rolls: [...existing, ...added] }));
     }
 
+    this.#persistRolls();
     return await this.performThrottledUpdate(chatMessage,
       this.#sectionsUpdate(sections, {
-        rolls: this.chatRolls, "system.midi.damageRollCount": this.damageRollCount,
         // Refreshed as well as at displayHits: reactions resolve in between (Uncanny Dodge after the hit)
         ...this.#targetsUpdate()
       }));
@@ -5201,14 +5177,7 @@ export class Workflow {
     if (this.item.type === "feat" && ["ench", "class", undefined].includes(this.activity.actionType)) return;
     for (let target of this.targets) {
       if (!target) continue;
-      let img = target.document?.texture.src ?? target.actor?.img ?? "";
-      // @ts-expect-error no dnd5e-types
-      if (configSettings.usePlayerPortrait && target.actor?.type === "character") {
-        img = target.actor.img ?? target.document?.texture.src ?? "";
-      }
-      if (foundry.helpers.media.VideoHelper.hasVideoExtension(img ?? "")) {
-        img = (await game.video?.createThumbnail(img ?? "", { width: 100, height: 100 })) ?? "";
-      }
+      const img = await tokenPortrait(target.document);
       const tokenUuid = target.document.uuid;
       // @ts-expect-error no dnd5e-types
       const baseAc = target.actor?.system?.attributes?.ac?.value ?? 10;
@@ -5263,12 +5232,12 @@ export class Workflow {
       if (this.ownsCard) this.#persisted.setHitRows(entries.map(([, hit]: [string, any]) => [getTokenDocument(hit?.target), {
         hitClass: hit?.hitClass ?? "", hitSymbol: hit?.hitSymbol || null, hitShowAC: hit?.showAC || null,
         acDisplay: hit?.acDisplay || null, acTooltip: hit?.acTooltip || null, acIcons: hit?.acIcons?.length ? hit.acIcons : null
-      }] as [TokenDocument.Implementation | undefined, SaveFacts]).filter((e): e is [TokenDocument.Implementation, SaveFacts] => !!e[0]));
+      }] as [TokenDocument.Implementation | undefined, RecordFacts]).filter((e): e is [TokenDocument.Implementation, RecordFacts] => !!e[0]));
       const hits = this.ownsCard ? undefined : entries.map(([actorUuid, hit]: [string, any]) =>
         ({ ...hit, actorUuid, target: { id: hit?.target?.id ?? hit?.target?.document?.id ?? "" } }));
       const section = {
         label: "",
-        template: "modules/midi-qol/templates/hits.html",
+        template: SECTION_TEMPLATES.hits,
         // hits.html shows only the rows: the attack's name and total are the card's own
         data: hits ? { hits } : {}
       };
@@ -5351,15 +5320,7 @@ export class Workflow {
     }
     for (const target of this.targets.documents) {
       const targetDocument = target;
-      let img = targetDocument.texture.src ?? target.actor?.img ?? "";
-      // @ts-expect-error no dnd5e-types
-      if (configSettings.usePlayerPortrait && (target.actor as Actor).type === "character") {
-        img = target.actor?.img ?? targetDocument.texture.src ?? "";
-      }
-
-      if (foundry.helpers.media.VideoHelper.hasVideoExtension(img)) {
-        img = await game.video?.createThumbnail(img, { width: 100, height: 100 }) ?? "";
-      }
+      const img = await tokenPortrait(targetDocument);
 
       let isPlayerOwned = !!target.actor?.hasPlayerOwner;
       this.saveDisplayData.push({
@@ -5388,7 +5349,7 @@ export class Workflow {
     }
     const chatMessage = this.chatCard;
 
-    const section = { label: "", template: "modules/midi-qol/templates/saves.html",
+    const section = { label: "", template: SECTION_TEMPLATES.saves,
       data: this.#saveSectionData(templateData) };
     await this.performThrottledUpdate(chatMessage,
       this.#sectionUpdate("saves", section));
@@ -5407,10 +5368,10 @@ export class Workflow {
     if (chatMessage) {
       templateData.saveDisplayFlavor = this.saveDisplayFlavor;
       if (this.workflowType !== "DamageOnlyWorkflow") {
-        const section = { label: "", template: "modules/midi-qol/templates/saves.html",
+        const section = { label: "", template: SECTION_TEMPLATES.saves,
           data: this.#saveSectionData(templateData) };
-        const update = { rolls: this.chatRolls, ...this.#targetsUpdate() };
-        await this.performThrottledUpdate(chatMessage, this.#sectionUpdate("saves", section, update));
+        this.#persistRolls();
+        await this.performThrottledUpdate(chatMessage, this.#sectionUpdate("saves", section, this.#targetsUpdate()));
       }
     }
   }
@@ -5452,7 +5413,7 @@ export class Workflow {
     if (details[0]?.saveMults && details.some(d => d.saved || d.superSaver || d.semiSuperSaver)) this.#persisted.setScalar("saveMults", details[0].saveMults);
     for (const detail of details) {
       const document = fromUuidSync(detail.token) as TokenDocument.Implementation | null;
-      if (document) this.#persisted.setSaveFacts(document, { uncannyDodge: detail.uncannyDodge || undefined, uncannyDodgeIcon: detail.uncannyDodgeIcon || undefined });
+      if (document) this.#persisted.setRecordFacts(document, { uncannyDodge: detail.uncannyDodge || undefined, uncannyDodgeIcon: detail.uncannyDodgeIcon || undefined });
     }
     return { "system.targets": descriptors };
   }
@@ -5715,7 +5676,7 @@ export class Workflow {
     else if (totalSaveCover >= THREE_QUARTERS_COVER) coverLabel = "systems/dnd5e/icons/svg/statuses/cover-three-quarters.svg";
     else if (totalSaveCover >= HALF_COVER) coverLabel = "systems/dnd5e/icons/svg/statuses/cover-half.svg";
     const targetDocument = getTokenDocument(target);
-    if (targetDocument) this.#persisted.setSaveFacts(targetDocument, {
+    if (targetDocument) this.#persisted.setRecordFacts(targetDocument, {
       saveTotal: isFinite(saveRollTotal) ? saveRollTotal : null,
       saveCover: totalSaveCover >= TOTAL_COVER ? "total" : totalSaveCover >= THREE_QUARTERS_COVER ? "threeQuarters" : totalSaveCover >= HALF_COVER ? "half" : undefined,
       saveCoverAuto: coverSaveBonus >= TOTAL_COVER || undefined,
@@ -7412,14 +7373,8 @@ export class Workflow {
       }
     }
 
-    // Tracker now computes final isCritical/isFumble from:
-    // override > noCritical/noFumble > forceCritical/forceFumble > naturalCritical/naturalFumble
-    // Access tracker state via this.isCritical / this.isFumble getters
-
-    // Persist to chat card (triggers via setter which uses override, but we want to persist computed state)
-    this.#persisted.setScalar("isCritical", this.isCritical);
-    this.#persisted.setScalar("isFumble", this.isFumble);
-    this.persistAttackTracker();
+    // The tracker decides: override > noCritical/noFumble > forceCritical/forceFumble > natural
+    this.#persistAttackTracker();
 
     this.attackTotal = this.attackRoll.total ?? 0;
     if (debugEnabled > 1) debug("processAttackRoll: ", this.diceRoll, this.attackTotal, this.isCritical, this.isFumble);
@@ -7937,14 +7892,7 @@ export class Workflow {
       }
       let hitStyle = "";
 
-      let img = targetDocument.texture.src || targetToken.actor?.img || "";
-      // @ts-expect-error no dnd5e-types
-      if (configSettings.usePlayerPortrait && targetToken.actor?.type === "character") {
-        img = targetToken.actor?.img || targetDocument.texture.src || "";
-      }
-      if (foundry.helpers.media.VideoHelper.hasVideoExtension(img ?? "")) {
-        img = await game.video?.createThumbnail(img ?? "", { width: 100, height: 100 }) ?? "";
-      }
+      const img = await tokenPortrait(targetDocument);
 
       if (this.isFumble) hitResultNumeric = "--";
       const targetUuid = targetDocument.uuid;
@@ -8027,7 +7975,7 @@ export class Workflow {
     }
     if (configSettings.allowUseMacro && !options.noTargetOnUseMacro) await this.triggerTargetMacros(["isHit"], new Set([...this.hitTargets, ...this.hitTargetsEC]));
     if (configSettings.allowUseMacro && !options.noTargetOnUseMacro) await this.triggerTargetMacros(["isMissed"], this.targets.difference(this.hitTargets).difference(this.hitTargetsEC));
-    this.persistAttackTracker();
+    this.#persistAttackTracker();
   }
 
   /** Link a card roll to the card as dnd5e links the rolls it posts (Roll#getOriginatingMessage, options.rollType). */
@@ -8411,14 +8359,7 @@ export class ActiveDefenceWorkflow extends Workflow {
           }
           let hitStyle = "";
 
-          let img = targetTokenDocument.texture.src || targetTokenDocument.actor?.img;
-          // @ts-expect-error no dnd5e-types
-          if (configSettings.usePlayerPortrait && targetTokenDocument.actor?.type === "character") {
-            img = targetTokenDocument.actor?.img || targetTokenDocument.texture.src;
-          }
-          if (foundry.helpers.media.VideoHelper.hasVideoExtension(img ?? "")) {
-            img = await game.video?.createThumbnail(img ?? "", { width: 100, height: 100 }) ?? "";
-          }
+          const img = await tokenPortrait(targetTokenDocument);
           // Why?
           let acBonusString: string | undefined;
           const acDisplay = `${adRoll.total}${acBonusString ?? ""}`;
@@ -8655,7 +8596,7 @@ export class ActiveDefenceWorkflow extends Workflow {
     const DCString = i18n("DND5E.AbbreviationDC") ?? "DC";
     const attackString = `<label class="midi-qol-active-defence-dc">${DCString} ${this.activeDefenceDC}</label> ${i18n("midi-qol.ActiveDefenceString")}`;
     const section = { label: attackString, html: "" };
-    await this.setCardSection("attack", section, { rolls: this.chatRolls });
+    await this.setCardSection("attack", section);
   }
 }
 export class UserWorkflow extends Workflow {
@@ -9124,6 +9065,9 @@ export const WorkflowRegistry: Record<string, new (...args: any[]) => Workflow> 
   TrapWorkflow,
   DummyWorkflow,
 };
+
+// The classes a card's workflow is rebuilt as: a damage-only workflow's card as a Workflow (its state says damage-only)
+const RESTORABLE_WORKFLOWS: Record<string, typeof Workflow> = { Workflow, SavesFirstWorkflow, ActiveDefenceWorkflow, UserWorkflow, DamageOnlyWorkflow: Workflow };
 
 // `options` arg for Workflow
 type WorkflowConstructorOptions = InexactPartial<{

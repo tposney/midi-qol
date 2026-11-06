@@ -39,7 +39,7 @@ function resolveCard(target: CardTarget): ChatMessage.Implementation | undefined
   if (target instanceof ChatMessage) return target;
   const uuid = typeof target === "string" ? target : target.chatCard?.uuid ?? target.itemCardUuid;
   if (!uuid) return undefined;
-  const card = getCachedDocument(uuid) ?? fromUuidSync(uuid, { strict: false });
+  const card = getCachedDocument(uuid);
   return card instanceof ChatMessage ? card : undefined;
 }
 

@@ -10,11 +10,11 @@ import { getRemoveAllButtons, getRemoveAttackButtons, getRemoveDamageButtons, mi
   midiRenderDamageRolls, midiRenderOtherDamageRolls, midiRenderBonusDamageRolls, midiRenderFormulaRoll, renderRollAttributionIcon, renderSaveRollHTML,
   getAdvantageModeTitle, getTokenName, renderAttributionTooltip, tokenPortrait, activityHasAreaTarget } from "../utils.js";
 import { saveDisplayMode } from "../lib/saveVisibility.js";
-import { MODULE_ID } from "../../midi-qol.js";
+import { MODULE_ID, MQDamageRollTypes } from "../../midi-qol.js";
 import { Workflow } from "../Workflow.js";
 import { followUpButtons } from "../followUps.js";
 import { NOTE_MESSAGE_TYPE, noteCard, notesOf } from "./CardNoteMessage.js";
-import { attributionMap, cardStateSchema, recordFor, recordList, SECTION_TEMPLATES, type CardRecord, type CardRecords } from "../lib/cardState.js";
+import { attributionMap, cardMidi, rollTypeOf, rollsOfType, cardStateSchema, recordFor, recordList, type CardRecord, type CardRecords } from "../lib/cardState.js";
 
 /** Renderer per roll-backed section; damage renderers aggregate the section's rolls into one block. */
 const SECTION_ROLL_RENDERERS: Record<string, (rolls: Roll[]) => Promise<string> | string> = {
@@ -26,19 +26,17 @@ const SECTION_ROLL_RENDERERS: Record<string, (rolls: Roll[]) => Promise<string> 
 };
 
 /** Roll types midi tags damage rolls with; the presence of one means damage has been rolled. */
-const DAMAGE_ROLL_TYPES = ["defaultDamage", "otherDamage", "bonusDamage"];
 
 /**
  * Which of the card's buttons this user should see. Policy comes from the settings at render (GM and player
  * settings differ), progress mostly from `message.rolls`. Used for midi's buttons and dnd5e's.
  */
 export function midiButtonVisibility(message: Dnd5eChatMessage | undefined, activity?: Activity) {
-  const midi = (message?.system as { midi?: Record<string, any> } | undefined)?.midi ?? {};
+  const midi = cardMidi(message);
   const progress = midi.progress ?? {};
-  const rollTypeOf = (r: unknown) => foundry.utils.getProperty(r as object, "options.midi-qol.rollType");
   const rolls = message?.rolls ?? [];
   const attackRolled = rolls.some(r => rollTypeOf(r) === "attack");
-  const damageRolled = rolls.some(r => DAMAGE_ROLL_TYPES.includes(String(rollTypeOf(r))));
+  const damageRolled = rollsOfType(rolls, MQDamageRollTypes).length > 0;
 
   // Confirmation holds the buttons only while pending; `progress.confirmed` alone does not mean the card is finished.
   const confirmEnabled = !!midi.confirmAttackDamage;
@@ -99,12 +97,12 @@ const COVER_ICONS: Record<string, string> = {
  */
 export function cardSaveRoll(card: ChatMessage.Implementation | null | undefined, tokenUuid: string): Roll | undefined {
   if (!card) return undefined;
-  const kept = (card.rolls ?? []).find(roll => foundry.utils.getProperty(roll, `options.${MODULE_ID}.rollType`) === "save"
+  const kept = (card.rolls ?? []).find(roll => rollTypeOf(roll) === "save"
     && foundry.utils.getProperty(roll, `options.${MODULE_ID}.targetUuid`) === tokenUuid);
   if (kept) return kept as Roll;
   // Scene.<sceneId>.Token.<tokenId>: a duplicated scene keeps its token ids
   const [sceneId, , tokenId] = tokenUuid.split(".").slice(-3);
-  const record = recordFor((card.system as { midi?: { records?: CardRecords } } | undefined)?.midi?.records, tokenUuid);
+  const record = recordFor(cardMidi(card).records, tokenUuid);
   const associated = (type: string) => (card as Dnd5eChatMessage).getAssociatedRolls?.(type) ?? [];
   const linked = [...associated("save"), ...associated("check")]
     .filter(message => message.speaker?.token === tokenId
@@ -151,6 +149,12 @@ async function saveRow(uuid: string, result?: { roll?: Roll, total?: number | nu
 
 /** A roll section: a roll type rendered from `message.rolls`, a template with data, or stored markup. */
 // A roll section stored without a label, or a section without its usual template, gets them when drawn
+/** The template a card section is drawn with when it stores none */
+export const SECTION_TEMPLATES = {
+  hits: "modules/midi-qol/templates/hits.html",
+  saves: "modules/midi-qol/templates/saves.html"
+} as const satisfies Partial<Record<string, string>>;
+
 export type MidiCardSection = { label?: string, rollType?: string, template?: string, data?: Record<string, unknown>, html?: string };
 
 export function setupUsageCardMessage() {
@@ -297,8 +301,9 @@ export function setupUsageCardMessage() {
       // With dnd5e's summaries off the saves show in the log, so no rows are drawn
       const saveRows = safeGetGameSetting("dnd5e", "chatCardSummary") === false ? [] : await this.#saveRows();
       const sections = await this.#renderSections(this.#applySaveSummaries(context, saveRows), saveRows);
+      const { condensed, mergeCardMulti, attackRollCount, attackBtnText, dmgBtnText } = this.midi ?? {};
       context.midi = {
-        ...(this.midi ?? {}),
+        condensed, mergeCardMulti, attackRollCount, attackBtnText, dmgBtnText,
         sections,
         buttons: this.#visibility ?? midiButtonVisibility(this.parent, activity),
         // The damage roll about to be made; Handlebars has no arithmetic helper.
@@ -428,7 +433,7 @@ export function setupUsageCardMessage() {
         let section = stored[name];
         // Targets added to an attack card after its roll (e.g. by another module's buttons) get a hits list to show in.
         if (name === "hits" && !section && stored.attack && this.#recordedTargets().length)
-          section = { label: "", template: "modules/midi-qol/templates/hits.html", data: { hits: [] } };
+          section = { label: "", template: SECTION_TEMPLATES.hits, data: { hits: [] } };
         // Rows drawn from the records; older cards (and a card shown by a workflow that does not own it) stored them
         if (name === "hits" && section && !Array.isArray(section.data?.hits)) section = { ...section, data: { ...(section.data ?? {}), hits: await this.#hitRows() } };
         if (name === "saves" && section?.data) {
@@ -456,8 +461,7 @@ export function setupUsageCardMessage() {
         }
         if (!section.rollType) { out[name] = section; continue; }
         const renderer = SECTION_ROLL_RENDERERS[section.rollType];
-        const rolls = (this.parent.rolls ?? []).filter(r =>
-          foundry.utils.getProperty(r, `options.${MODULE_ID}.rollType`) === section.rollType);
+        const rolls = rollsOfType(this.parent.rolls, section.rollType);
         // No rolls to render from — a card mid-workflow, or one whose rolls were pruned.
         if (!renderer || !rolls.length) { out[name] = { ...section, html: section.html ?? "" }; continue; }
         const html = await renderer(rolls as Roll[]);
@@ -471,7 +475,7 @@ export function setupUsageCardMessage() {
     /** A roll section's heading, worked out for the viewer from the activity and the rolls (older cards stored it) */
     #sectionLabel(rollType: string): string {
       const activity = (this.parent as Dnd5eChatMessage).getAssociatedActivity?.() as Activity | undefined;
-      const rolls = (this.parent.rolls ?? []).filter(r => foundry.utils.getProperty(r, `options.${MODULE_ID}.rollType`) === rollType);
+      const rolls = rollsOfType(this.parent.rolls, rollType);
       const localize = (key: string) => game.i18n?.localize(key) ?? key;
       switch (rollType) {
         case "attack": {
@@ -536,8 +540,8 @@ export function setupUsageCardMessage() {
     #damageApplicationTypes(): string[] {
       const allowed = !!game.user?.isGM || !!safeGetGameSetting("dnd5e", "allowPlayerDamageTray");
       if (!allowed || !this.parent.isContentVisible) return [];
-      const present = new Set((this.parent.rolls ?? []).map(r => foundry.utils.getProperty(r, `options.${MODULE_ID}.rollType`)));
-      return DAMAGE_ROLL_TYPES.filter(type => present.has(type));
+      const present = new Set((this.parent.rolls ?? []).map(r => rollTypeOf(r)));
+      return MQDamageRollTypes.filter(type => present.has(type));
     }
   };
 

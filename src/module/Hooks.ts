@@ -3,7 +3,7 @@ import { excludeRegionSourceEffect, moveRegionsOnTurnChange } from "./regionBeha
 import { colorChatMessageHandler, nsaMessageHandler, hideStuffHandler, hideRollUpdate, hideRollRender, checkOverTimeSaves } from "./chatMessageHandling.js";
 import { preferredActiveGM, processUndoDamageCard } from "./GMAction.js";
 import { addViewAsPlayerOption } from "./ChatClasses/DamageCardMessage.js";
-import { untargetDeadTokens, untargetAllTokens, midiCustomEffect, removeReactionUsed, removeBonusActionUsed, chackFlanking as checkFlanking, expireRollEffect, removeActionUsed, expirePerTurnBonusActions, getUpdatesCache, clearUpdatesCache, expireEffects, processConcentrationRequestMessage, doConcentrationCheck, completeActivityUse, isAutoFastForward, areMidiKeysPressed, throttledScrollBottom, getVitalityItem, tokenForActor, resolveItemMacro, resolveActivityMacro, doSyncRoll, getTokenPerimeterPolygon, closestPointOnPerimeter, measurePointDistance, updateFlankingHighlight, onUserManualTarget, toggleStatus } from "./utils.js";
+import { untargetDeadTokens, untargetAllTokens, midiCustomEffect, removeReactionUsed, removeBonusActionUsed, chackFlanking as checkFlanking, expireRollEffect, removeActionUsed, expirePerTurnBonusActions, getUpdatesCache, clearUpdatesCache, expireEffects, processConcentrationRequestMessage, doConcentrationCheck, completeActivityUse, isAutoFastForward, areMidiKeysPressed, throttledScrollBottom, getVitalityItem, tokenForActor, resolveItemMacro, resolveActivityMacro, doSyncRoll, getTokenPerimeterPolygon, closestPointOnPerimeter, measurePointDistance, updateFlankingHighlight, onUserManualTarget, toggleStatus, videoThumbnail } from "./utils.js";
 import { releaseForcedNormalKeys } from "./lib/rollKeys.js";
 import { computeAdvantageFlagsSync } from "./lib/RollModifierTracker.js";
 import { checkRule, configSettings, dragDropTargeting } from "./settings.js";
@@ -387,7 +387,7 @@ export function initHooks() {
       const src = img.dataset.midiVideoSrc;
       if (!src) continue;
       try {
-        const thumb = game.video?.thumbs?.get(src) ?? await game.video?.createThumbnail(src, { width: 100, height: 100 });
+        const thumb = await videoThumbnail(src);
         if (thumb) img.src = thumb;
       } catch (err) {
         // the placeholder portrait already in the src is a fine outcome

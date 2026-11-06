@@ -5,7 +5,7 @@ import { configSettings, forceHideRoll, safeGetGameSetting } from "../settings.j
 import { createDamageDetail, displayTokenName, getToken, isDnd5eRollMessage } from "../utils.js";
 import { damageDetailToObject, Workflow } from "../Workflow.js";
 import { renameMarkedTokens } from "../lib/tokenNames.js";
-import { cardHitResult, cardMidiState, cardSourceActor, recordList, storedMidiFlag } from "../lib/cardState.js";
+import { attackRollOf, cardHitResult, cardMidi, rollsOfType, cardMidiState, cardSourceActor, recordList, storedMidiFlag } from "../lib/cardState.js";
 import { cardSaveRoll } from "./UsageCardMessage.js";
 import { canSeePlayerOutcome, canSeeSaveResult, cardActor, challengeVisible, saveDetail, saveDisplayMode } from "../lib/saveVisibility.js";
 
@@ -20,11 +20,6 @@ const stripHighlight = (html: HTMLElement, sel: string) => html.querySelectorAll
   el => el.classList.remove("success", "failure", "critical", "fumble")
 );
 
-/** The attack roll on a card, located by its tag rather than by position. */
-function attackRollOf(message: { rolls?: readonly Roll[] }): Roll | undefined {
-  return (message.rolls ?? []).find(r =>
-    foundry.utils.getProperty(r, `options.${MODULE_ID}.rollType`) === "attack");
-}
 
 const tokenUuids = (tokens: Set<Token.Implementation> | undefined) => [...(tokens ?? [])].map(token => token.document.uuid);
 /** The old `flags.midi-qol` keys of a usage card: the workflow property to use instead, and how the flag read it */
@@ -242,7 +237,7 @@ export function defineChatMessageMidiClass(baseClass: ChatMessage.Implementation
 
     get canApplyDamage() {
       const damageRolled = (storedMidiFlag(this, "damageDetail")?.length ?? 0) > 0
-        || this.rolls.some(r => ["defaultDamage", "otherDamage", "bonusDamage"].includes(String(foundry.utils.getProperty(r, `options.${MODULE_ID}.rollType`))));
+        || rollsOfType(this.rolls, MQDamageRollTypes).length > 0;
       if (damageRolled && this.isContentVisible && !!canvas.tokens?.controlled.length) return true;
       // @ts-expect-error no dnd5e-types
       return super.canApplyDamage;
@@ -282,7 +277,7 @@ export function defineChatMessageMidiClass(baseClass: ChatMessage.Implementation
       const type = isDnd5eRollMessage(this) ? "roll" : undefined;
       // @ts-expect-error no dnd5e-types
       if (type !== undefined || !this.flags?.[MODULE_ID]) return super.applyChatCardDamage(li, multiplier);
-      const rollsToCheck = this.rolls.filter(r => MQDamageRollTypes.includes(foundry.utils.getProperty(r, "options.midi-qol.rollType") as string));
+      const rollsToCheck = rollsOfType(this.rolls, MQDamageRollTypes);
       const damages = (game.system as Dnd5eSystem).dice.aggregateDamageRolls(rollsToCheck, { respectProperties: true }).map(roll => ({
         // @ts-expect-error no dnd5e-types
         value: Math.max(0, roll.total) * (roll.options.type in CONFIG.DND5E.healingTypes ? -1 : 1),
@@ -299,7 +294,7 @@ export function defineChatMessageMidiClass(baseClass: ChatMessage.Implementation
     
     applyChatCardTemp(li: HTMLElement) {
       if (!canvas.tokens) return;
-      const rollsToCheck = this.rolls.filter(r => MQDamageRollTypes.includes(foundry.utils.getProperty(r, "options.midi-qol.rollType") as string));
+      const rollsToCheck = rollsOfType(this.rolls, MQDamageRollTypes);
       const total = rollsToCheck.reduce((acc, roll) => acc + (roll.total ?? 0), 0);
 
       return Promise.all(canvas.tokens.controlled.map(t => {
@@ -552,7 +547,7 @@ export function defineChatMessageMidiClass(baseClass: ChatMessage.Implementation
     applyChatVisibility(html: HTMLElement) {
       if (html.style.display === "none") return; // Already hidden by hideStuffHandler (blind/gmHide)
       // Re-enable save/check buttons
-      if ((this.system as { midi?: { sections?: { saves?: unknown } } })?.midi?.sections?.saves || storedMidiFlag(this, "type") === MESSAGE_TYPES.SAVES) {
+      if (cardMidi(this).sections?.saves || storedMidiFlag(this, "type") === MESSAGE_TYPES.SAVES) {
         html.querySelectorAll<HTMLButtonElement>('[data-action="rollSave"]').forEach(el => el.disabled = false);
         html.querySelectorAll<HTMLButtonElement>('[data-action="rollCheck"]').forEach(el => el.disabled = false);
       }
