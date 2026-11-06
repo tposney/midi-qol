@@ -16,7 +16,13 @@ export const STATE_FIELDS = {
   workflowOptions: "workflowOptions",
   // What a successful save does to each damage type, for the damage tray
   saveMults: "saveMults",
-  damageOnly: "damageOnly"
+  damageOnly: "damageOnly",
+  // The other activity's consumption: what it consumed (for the card's refund), or declined/skipped; its scaling
+  otherConsumed: "otherConsumed",
+  otherDeclined: "otherDeclined",
+  otherScaling: "otherScaling",
+  // The ammunition's data when its last piece was spent (autoDestroy): the use's damage still rolls with it
+  ammunitionData: "ammunitionData"
 } as const;
 export type StateKey = keyof typeof STATE_FIELDS;
 
@@ -78,7 +84,9 @@ export function cardStateSchema() {
       // The damage tray's matches have been worked out (the records say which tokens): absent, they apply to every target
       otherDamageMatched: bool(), ammunitionDamageMatched: bool(),
       // A damage roll on its own (Workflow#damageOnly)
-      damageOnly: bool()
+      damageOnly: bool(),
+      otherConsumed: new ObjectField({ ...unset, nullable: true }), otherDeclined: bool(), otherScaling: num(),
+      ammunitionData: new ObjectField(unset)
     }, { required: false }),
     records: new TypedObjectField(new TypedObjectField(new SchemaField({
       uuid: new StringField({ required: true, blank: false }),
@@ -111,6 +119,18 @@ export function recordList(records: CardRecords | undefined): CardRecord[] {
 /** The record of the token with this uuid */
 export function recordFor(records: CardRecords | undefined, tokenUuid: string): CardRecord | undefined {
   return recordList(records).find(record => record.uuid === tokenUuid);
+}
+
+/**
+ * The other activity's consumption on a card: what it consumed, false when declined or skipped, undefined until settled;
+ * and the scaling it was used at. Cards before 14.6.9 kept them as `flags.midi-qol.use.consumed`/`use.otherScaling`.
+ */
+export function cardOtherConsumption(message: ChatMessage.Implementation | undefined | null): { consumed?: object | false, scaling?: number } {
+  const state = (message?.system as { midi?: { state?: Record<string, any> } } | undefined)?.midi?.state;
+  if (state?.otherDeclined) return { consumed: false };
+  if (state?.otherConsumed) return { consumed: state.otherConsumed, scaling: state.otherScaling ?? undefined };
+  const use = storedMidiFlag(message ?? undefined, "use") as { consumed?: object | false, otherScaling?: number | false } | undefined;
+  return { consumed: use?.consumed, scaling: use?.otherScaling || undefined };
 }
 
 /** The damage tray's matches: token uuids the other activity's (or the ammunition's) damage applies to; undefined until worked out */

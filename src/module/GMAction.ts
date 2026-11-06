@@ -226,7 +226,7 @@ async function confirmDamageRollComplete(data: { workflowId: string, activityUui
   const activity = workflow?.activity;
   if (!workflow || workflow.itemCardUuid !== data.itemCardUuid) {
     // Confirm this needs to be awaited
-    Workflow.removeItemCardButtons(data.itemCardUuid, { removeAttackButtons: true, removeDamageButtons: true, removeConfirmButtons: true });
+    Workflow.removeItemCardButtons(data.itemCardUuid, { removeConfirmButtons: true });
     return undefined;
   }
   const hasHits = workflow.hitTargets.size > 0 || workflow.hitTargetsEC.size > 0;
@@ -246,7 +246,7 @@ async function confirmDamageRollCompleteHit(data: { workflowId: string, activity
   const workflow = Workflow.findWorkflow(data.workflowId);
   const activity = workflow?.activity;
   if (!workflow || workflow.itemCardUuid !== data.itemCardUuid) {
-    Workflow.removeItemCardButtons(data.itemCardUuid, { removeAttackButtons: true, removeDamageButtons: true, removeConfirmButtons: true });
+    Workflow.removeItemCardButtons(data.itemCardUuid, { removeConfirmButtons: true });
     return undefined;
   }
   if ((activity?.hasDamage && !workflow.damageRoll) ||
@@ -278,7 +278,7 @@ async function confirmDamageRollCompleteMiss(data: { workflowId: string, activit
   if (!workflow || workflow.itemCardUuid !== data.itemCardUuid) {
     /* Confirm this needs to be awaited
     */
-    Workflow.removeItemCardButtons(data.itemCardUuid, { removeDamageButtons: true, removeAttackButtons: true, removeConfirmButtons: true });
+    Workflow.removeItemCardButtons(data.itemCardUuid, { removeConfirmButtons: true });
     return undefined;
   }
   if (workflow.hitTargets.size > 0 || workflow.hitTargetsEC.size > 0) {

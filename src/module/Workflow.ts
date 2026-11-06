@@ -2,7 +2,7 @@ import { warn, debug, log, i18n, i18nFormat, busyWait, MESSAGE_TYPES, error, deb
 import { MidiTeleportActivity, TeleportOption } from "./activities/TeleportActivity.js";
 import { decodeWorkflowOptions, encodeWorkflowOptions, inheritableWorkflowOptions } from "./lib/workflowOptionsCodec.js";
 import { TokenSet } from "./lib/tokenSet.js";
-import { CardRecords, RECORD_SETS, RecordSet, SaveFacts, SECTION_TEMPLATES, STATE_FIELDS, StateKey, attributionMap, attributionTriples, cardPreSelected, messagesFrom, recordList, recordPath } from "./lib/cardState.js";
+import { CardRecords, RECORD_SETS, RecordSet, SaveFacts, SECTION_TEMPLATES, STATE_FIELDS, StateKey, attributionMap, attributionTriples, cardOtherConsumption, cardPreSelected, messagesFrom, recordList, recordPath, storedMidiFlag } from "./lib/cardState.js";
 import { preferredActiveGM, socketlibSocket, timedAwaitExecuteAsGM, timedExecuteAsGM, unTimedExecuteAsGM } from "./GMAction.js";
 import { installedModules } from "./setupModules.js";
 import { offerFollowUps } from "./followUps.js";
@@ -1919,7 +1919,7 @@ export class Workflow {
     this.bonusDamageDetail = foundry.utils.deepClone(this.rawBonusDamageDetail);
     this.otherDamageDetail = foundry.utils.deepClone(this.rawOtherDamageDetail);
     // The other activity's use declined: its damage dropped, the ammunition's kept
-    if (this.chatCard?.getFlag(MODULE_ID, "use.consumed") === false) this.dropOtherActivityDamage();
+    if (this.otherConsumed === false) this.dropOtherActivityDamage();
     void this.activity?.setupCanSeeSense?.({ workflow: this });
     const saves = [...this.targets].map(t => [t.document.uuid, cardSaveRoll(this.chatCard, t.document.uuid)] as const).filter(([, roll]) => !!roll);
     if (saves.length) this.#restoredSaves = Object.fromEntries(saves) as Record<string, Roll>;
@@ -1943,28 +1943,19 @@ export class Workflow {
     return workflow ? await workflow.performThrottledUpdate(chatMessage, update) : await throttledUpdate(chatMessage, update);
   }
 
-  static async removeItemCardButtons(itemCardUuid: string | undefined, { removeAllButtons = false, removeAttackButtons = true, removeDamageButtons = false, removeDnD5eButtons = false, removeConfirmButtons = false, removeAllDnd5eButtons = false, removeDnd5eSaveButtons = false, removeDnd5eTemplateButtons = false, finished = false } = {}) {
+  static async removeItemCardButtons(itemCardUuid: string | undefined, { removeAllButtons = false, removeConfirmButtons = false, removeAllDnd5eButtons = false, removeDnd5eSaveButtons = false, finished = false } = {}) {
     try {
       const workflow = Workflow.findWorkflow(itemCardUuid);
       const chatMessage = workflow?.chatCard;
       if (!chatMessage) return;
       let allowRemoveAll = !(workflow && workflow.activity?.target.affects.type === "" && workflow.targets.size === 0)
 
-      /*
-       * A card rendered from the data model has no markup to cut buttons out of, and cutting them
-       * would not survive anyway — every message update re-renders the whole card from
-       * `_prepareContext`. Record what happened instead; `midiButtonVisibility` decides what to draw,
-       * per viewer, on each render.
-       *
-       * Only the events are recorded. `removeAttackButtons`/`removeDamageButtons` are the caller's
-       * evaluation of a removal policy the render re-evaluates for itself, so passing them on would
-       * freeze one user's answer onto everyone's card — the thing this replaces.
-       */
+      // The card is drawn from its data, so the events are recorded and `midiButtonVisibility` decides what each
+      // viewer sees; the removal policies are the viewer's settings, read at render
         const progress: Record<string, boolean> = {};
         if (removeAllButtons && allowRemoveAll) progress.allRemoved = true;
         if (removeConfirmButtons) progress.confirmed = true;
         if (removeDnd5eSaveButtons || removeAllDnd5eButtons) progress.savesResolved = true;
-        if (removeDnd5eTemplateButtons) progress.templatesPlaced = true;
         if (finished) progress.finished = true;
         if (foundry.utils.isEmpty(progress)) return;
         const update = { "system.midi.progress": progress } as ChatMessage.UpdateData;
@@ -2433,13 +2424,6 @@ export class Workflow {
     this.targets = validTargetTokens(this.targets);
     this.hitTargets = new Set()
     this.hitTargetsEC = new Set();
-    // The place-template button goes once every template has been placed; `shouldHideChatButton`
-    // reads this back.
-    const templatesPlaced = this.placedTemplateCount >= (Number(this.activity?.target?.template?.count) || 1);
-    await this.performThrottledUpdate(chatMessage, {
-      "system.midi.progress": { templatesPlaced },
-      style: CONST.CHAT_MESSAGE_STYLES.OTHER
-    } as ChatMessage.UpdateData);
     return this.WorkflowState_AoETargetConfirmation;
   }
 
@@ -2694,7 +2678,7 @@ export class Workflow {
   }
   async WorkflowState_DamageRollStarted(): Promise<WorkflowState> {
     if (this.itemCardUuid) {
-      await Workflow.removeItemCardButtons(this.itemCardUuid, { removeAllButtons: false, removeAttackButtons: getRemoveAttackButtons(this.activity), removeDamageButtons: getRemoveDamageButtons(this.activity), removeConfirmButtons: true });
+      await Workflow.removeItemCardButtons(this.itemCardUuid, { removeConfirmButtons: true });
     }
     if (!this.damageOnly && getActivityAutoTargetAction(this.activity) === "none" && activityHasAreaTarget(this.activity) && !this.activity.attack) {
       this.targets = validTargetTokens(new Set(game.user?.targets));
@@ -2723,7 +2707,6 @@ export class Workflow {
       this.hitTargetsEC = new Set();
       return this.WorkflowState_ApplyDynamicEffects;
     }
-    await Workflow.removeItemCardButtons(this.itemCardUuid, { removeAllButtons: false, removeAttackButtons: getRemoveAttackButtons(this.activity), removeDamageButtons: getRemoveDamageButtons(this.activity), removeDnD5eButtons: false, removeDnd5eSaveButtons: false });
     return this.WorkflowState_WaitForSaves;
   }
 
@@ -2758,7 +2741,7 @@ export class Workflow {
     if (this.saveActivity === this.otherActivity && this.otherActivity) {
       // For attacks, skip other activity if nothing was hit (don't consume resources for a miss)
       if (this.activity.attack && this.hitTargets.size === 0 && this.hitTargetsEC.size === 0) {
-        addUpdatesCacheFlags(this.id, { [WorkflowDataFlags.otherActivityConsumed]: false }, "midi-qol"); // Mark as skipped
+        this.#setOtherConsumption(false);
         this.rawOtherDamageDetail = [];
         this.initSaveResults();
         return this.WorkflowState_SavesComplete;
@@ -2812,7 +2795,7 @@ export class Workflow {
       await this.callMidiHooks("midi-qol.postCheckSaves");
       if (this.aborted) return this.WorkflowState_Abort;
       const saveDisplay = saveDisplayMode();
-      await Workflow.removeItemCardButtons(this.itemCardUuid as string, { removeDnd5eSaveButtons: configSettings.autoCheckSaves !== "none", removeDnd5eTemplateButtons: this.placedTemplateCount >= (Number(this.activity?.target?.template?.count) || 1) });
+      await Workflow.removeItemCardButtons(this.itemCardUuid as string, { removeDnd5eSaveButtons: configSettings.autoCheckSaves !== "none" });
       await this.displaySaves(saveDisplay === "whisper");
     } else {// has saves but we are not checking so do nothing with the damage
       this.effectTargets = this.failedSaves;
@@ -2841,8 +2824,7 @@ export class Workflow {
   async WorkflowState_AllRollsComplete(): Promise<WorkflowState> {
 
     // Skip other damage processing entirely if consumption was already declined
-    const consumedFlag = this.chatCard?.getFlag(MODULE_ID, "use.consumed");
-    if (consumedFlag === false) {
+    if (this.otherConsumed === false) {
       // Consumption was declined - the other activity's damage is dropped, the ammunition's kept
       this.dropOtherActivityDamage();
     } else {
@@ -2868,15 +2850,33 @@ export class Workflow {
     return this.WorkflowState_ApplyDynamicEffects;
   }
 
+  /** The ammunition as it was when its last piece was spent and deleted (on the card); cards before 14.6.9 kept a flag */
+  get spentAmmunitionData(): Item.CreateData | undefined {
+    return this.#persisted.scalar<Item.CreateData | undefined>("ammunitionData", undefined) ?? storedMidiFlag(this.chatCard, "ammunitionData");
+  }
+
+  set spentAmmunitionData(data: Item.CreateData | undefined) {
+    this.#persisted.setScalar("ammunitionData", data);
+  }
+
+  /** What the other activity's use consumed, false when declined or skipped, undefined until settled (on the card) */
+  get otherConsumed(): object | false | undefined {
+    return cardOtherConsumption(this.chatCard).consumed;
+  }
+
+  #setOtherConsumption(consumed: object | false, scaling?: number | false) {
+    if (consumed === false) return this.#persisted.setScalar("otherDeclined", true);
+    this.#persisted.setScalar("otherConsumed", consumed);
+    if (typeof scaling === "number") this.#persisted.setScalar("otherScaling", scaling);
+  }
+
   async checkOtherActivityConsumption(): Promise<boolean> {
     if (!this.otherActivity || !this.otherActivity.hasConsumption()) {
       return true;
     }
 
-    const existingFlag = this.chatCard?.getFlag(MODULE_ID, "use.consumed");
-    if (existingFlag !== undefined) {
-      return existingFlag !== false;
-    }
+    const existing = this.otherConsumed;
+    if (existing !== undefined) return existing !== false;
 
     const shouldShowDialog = !this.otherActivity.shouldAutoConsume(this);
     let otherUsageConfig: ActivityUseConfiguration = this.otherActivity._prepareUsageConfig({
@@ -2896,20 +2896,15 @@ export class Workflow {
         const consumeResult = await this.otherActivity.consume(otherUsageConfig, messageConfig);
         if (consumeResult === false) {
           this.dropOtherActivityDamage();
-          addUpdatesCacheFlags(this.id, { [WorkflowDataFlags.otherActivityConsumed]: false }, "midi-qol");
+          this.#setOtherConsumption(false);
           return false;
         }
         const consumed = getConsumptionData(messageConfig) ?? {};
         const scaling = otherUsageConfig.scaling;
-        if (this.itemCardUuid) {
-          addUpdatesCacheFlags(this.id, {
-            [WorkflowDataFlags.otherActivityConsumed]: consumed,
-            [WorkflowDataFlags.otherActivityScaling]: scaling
-          }, "midi-qol");
-        }
+        this.#setOtherConsumption(consumed, scaling);
       } catch (e) {
         this.dropOtherActivityDamage();
-        addUpdatesCacheFlags(this.id, { [WorkflowDataFlags.otherActivityConsumed]: false }, "midi-qol");
+        this.#setOtherConsumption(false);
         return false;
       }
     } else {
@@ -2921,7 +2916,7 @@ export class Workflow {
           activityName: this.activity?.name ?? "Unknown"
         }));
         this.dropOtherActivityDamage();
-        addUpdatesCacheFlags(this.id, { [WorkflowDataFlags.otherActivityConsumed]: false }, "midi-qol");
+        this.#setOtherConsumption(false);
         return false;
       }
 
@@ -2930,17 +2925,12 @@ export class Workflow {
       if (consumeResult === false) {
         // Consumption was cancelled by a hook
         this.dropOtherActivityDamage();
-        addUpdatesCacheFlags(this.id, { [WorkflowDataFlags.otherActivityConsumed]: false }, "midi-qol");
+        this.#setOtherConsumption(false);
         return false;
       }
       const consumed = getConsumptionData(messageConfig) ?? {};
       const scaling = otherUsageConfig.scaling;
-      if (this.itemCardUuid) {
-        addUpdatesCacheFlags(this.id, {
-          [WorkflowDataFlags.otherActivityConsumed]: consumed,
-          [WorkflowDataFlags.otherActivityScaling]: scaling
-        }, "midi-qol");
-      }
+      this.#setOtherConsumption(consumed, scaling);
     }
     await this.rollDeferredOtherDamage();
     return true;
@@ -3139,7 +3129,7 @@ export class Workflow {
     // Check consumption for other activity effects if not already checked
     // This handles the case where other activity has effects but no save and no damage
     if (this.otherActivity && this.otherEffectTargets.documents.length > 0) {
-      const otherConsumedFlag = this.chatCard?.getFlag(MODULE_ID, "use.consumed");
+      const otherConsumedFlag = this.otherConsumed;
       if (otherConsumedFlag === false) {
         // Consumption was already declined - skip other effects
         this.otherEffectTargets = new TokenSet();
@@ -3537,7 +3527,7 @@ export class Workflow {
   /** The card's buttons removed as the workflow is finished */
   async completeCard() {
     if (this.itemCardUuid && this.chatCard) {
-      await Workflow.removeItemCardButtons(this.itemCardUuid, { removeAllButtons: getRemoveAllButtons(this.activity), removeAttackButtons: getRemoveAttackButtons(this.activity), removeDamageButtons: getRemoveDamageButtons(this.activity), removeDnD5eButtons: getRemoveAllButtons(this.activity) && configSettings.autoCheckSaves !== "none", removeDnd5eSaveButtons: configSettings.autoCheckSaves !== "none", finished: true });
+      await Workflow.removeItemCardButtons(this.itemCardUuid, { removeAllButtons: getRemoveAllButtons(this.activity), removeDnd5eSaveButtons: configSettings.autoCheckSaves !== "none", finished: true });
     }
   }
 
@@ -3809,9 +3799,6 @@ export class Workflow {
       const progress: Record<string, boolean> = {};
       if (configSettings.autoItemEffects === "applyRemove"
         && (this.activity.target?.affects.type !== "" || this.targets.size !== 0)) progress.effectsApplied = true;
-      const isEmanation = activityHasAutoPlaceTemplate(this.activity) || activityHasEmanationNoTemplate(this.activity);
-      if (!isEmanation && activityHasAreaTarget(this.activity)
-        && this.placedTemplateCount >= (Number(this.activity?.target?.template?.count) || 1)) progress.templatesPlaced = true;
       if (!foundry.utils.isEmpty(progress)) {
         await this.performThrottledUpdate(this.chatCard!,
           { "system.midi.progress": progress } as ChatMessage.UpdateData);
@@ -5183,7 +5170,7 @@ export class Workflow {
   /** The saves section's own data: its rows are drawn from the records and the save rolls (UsageCardMessage) */
   #saveSectionData(templateData: Record<string, any>): Record<string, unknown> {
     const { saves, ...data } = templateData;
-    return { ...data, itemId: this.item.id, dc: this.saveActivity?.save?.dc.value ?? this.saveActivity?.check?.dc.value ?? null };
+    return { ...data, dc: this.saveActivity?.save?.dc.value ?? this.saveActivity?.check?.dc.value ?? null };
   }
 
   /** As `#sectionUpdate`, for a display method that fills more than one slot in a single update. */
@@ -5332,11 +5319,7 @@ export class Workflow {
         // hits.html shows only the rows: the attack's name and total are the card's own
         data: hits ? { hits } : {}
       };
-      await this.performThrottledUpdate(chatMessage, this.#sectionUpdate("hits", section, {
-        ...this.#targetsUpdate(),
-        // TODO: May not be required
-        style: CONST.CHAT_MESSAGE_STYLES.OTHER
-      }));
+      await this.performThrottledUpdate(chatMessage, this.#sectionUpdate("hits", section, this.#targetsUpdate()));
     }
   }
 
@@ -5447,7 +5430,6 @@ export class Workflow {
       fullDamageText,
       halfDamageText,
       noDamageText,
-      hasDamageText: !!(fullDamageText || halfDamageText || noDamageText),
       saveDisplayFlavor: await this.computeSaveDisplayFlavor(rollDC, rollType, { rollAbilities, rollSkills, rollTools }),
       saves: this.saveDisplayData,
       // TODO force roll damage
@@ -5465,7 +5447,6 @@ export class Workflow {
       fullDamageText,
       halfDamageText,
       noDamageText,
-      hasDamageText: !!(fullDamageText || halfDamageText || noDamageText),
       saveDisplayFlavor: this.saveDisplayFlavor,
       saves: this.saveDisplayData,
       // TODO force roll damage
@@ -5476,17 +5457,7 @@ export class Workflow {
       if (this.workflowType !== "DamageOnlyWorkflow") {
         const section = { label: "", template: "modules/midi-qol/templates/saves.html",
           data: this.#saveSectionData(templateData) };
-        const update = {
-          rolls: this.chatRolls,
-          flags: {
-            "midi-qol": {
-              type: MESSAGE_TYPES.SAVES,
-              sourceActorUuid: this.actor.uuid,
-            },
-          },
-          ...this.#targetsUpdate(),
-          style: CONST.CHAT_MESSAGE_STYLES.OTHER
-        };
+        const update = { rolls: this.chatRolls, ...this.#targetsUpdate() };
         await this.performThrottledUpdate(chatMessage, this.#sectionUpdate("saves", section, update));
       }
     }
@@ -5520,8 +5491,8 @@ export class Workflow {
       for (const descriptor of descriptors) {
         const detail = byToken.get(descriptor.token as string);
         if (!detail) continue;
-        const { saved, superSaver, semiSuperSaver, saveMults, itemType, uncannyDodge, uncannyDodgeIcon } = detail;
-        Object.assign(descriptor, { saved, superSaver, semiSuperSaver, saveMults, itemType, uncannyDodge, uncannyDodgeIcon });
+        const { saved, superSaver, semiSuperSaver, saveMults, uncannyDodge, uncannyDodgeIcon } = detail;
+        Object.assign(descriptor, { saved, superSaver, semiSuperSaver, saveMults, uncannyDodge, uncannyDodgeIcon });
       }
       return { "system.targets": descriptors };
     }
@@ -5567,7 +5538,6 @@ export class Workflow {
         semiSuperSaver: semiSuperSavers?.has(t.uuid),
         superSaver: superSavers?.has(t.uuid),
         saveMults,
-        itemType: this.item?.type,
         uncannyDodge,
         uncannyDodgeIcon
       } as CombinedTargetDescriptor;

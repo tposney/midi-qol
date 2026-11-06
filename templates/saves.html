@@ -1,8 +1,8 @@
-<div data-item-id="{{itemId}}">
+<div>
 <div class="midi-qol-save-heading">
   <strong>{{{saveDisplayFlavor}}}</strong>
 </div>
-{{#if hasDamageText}}
+{{#if (or fullDamageText halfDamageText noDamageText)}}
 <div class="midi-qol-save-heading">
   <strong>
     {{{fullDamageText}}} {{{halfDamageText}}} {{{noDamageText}}}

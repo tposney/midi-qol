@@ -336,10 +336,9 @@ let defineMidiAttackActivityClass = <T extends Activity>(ActivityClass: T) => {
       if (!config.ammunition) {
         let ammunition = this.ammunitionItem;
         if (!ammunition) ammunition = config.workflow?.ammunition;
-        if (!ammunition && config.workflow) {
-          const data = foundry.utils.getProperty(config.workflow.chatCard, "flags.midi-qol.ammunitionData") as any;
-          if (data) return new Item.implementation(data, { parent: this.actor });
-        }
+        // Spent and deleted: rolled with the data the use kept
+        const data = !ammunition ? config.workflow?.spentAmmunitionData : undefined;
+        if (data) ammunition = new Item.implementation(data, { parent: this.actor });
         config.ammunition = ammunition;
         this.ammunitionItem = ammunition;
       }
@@ -551,8 +550,7 @@ let defineMidiAttackActivityClass = <T extends Activity>(ActivityClass: T) => {
           }
           if (ammoUpdate?.destroy) {
             // @ts-expect-error no dnd5e-types
-            const data = this.actor.items.get(ammoUpdate.id).toObject();
-            addUpdatesCache(workflow.id, { "flags.midi-qol.ammunitionData": data });
+            if (workflow) workflow.spentAmmunitionData = this.actor.items.get(ammoUpdate.id).toObject();
           }
         });
         hookIds["dnd5e.postAttackRollConfiguration"] = Hooks.once("dnd5e.postAttackRollConfiguration", (rolls, config, dialog, message) => {
@@ -631,7 +629,7 @@ let defineMidiAttackActivityClass = <T extends Activity>(ActivityClass: T) => {
 
           workflow.attackMode = rolls[0].options.attackMode ?? config.attackMode;
           if (this.ammunition && !this.ammunitionItem) { // assume it was deleted
-            const storedData = foundry.utils.getProperty(workflow.chatCard, "flags.midi-qol.ammunitionData") as any;
+            const storedData = workflow.spentAmmunitionData;
             if (storedData) workflow.ammunition = new Item.implementation(storedData, { parent: this.actor })
           } else workflow.ammunition = this.ammunitionItem;
           /*

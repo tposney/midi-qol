@@ -8,7 +8,7 @@ import { Activity, ChatMessageRenderOptions, Dnd5eChatMessage } from "../../glob
 import { checkRule, configSettings, safeGetGameSetting } from "../settings.js";
 import { getRemoveAllButtons, getRemoveAttackButtons, getRemoveDamageButtons, midiRenderAttackRoll,
   midiRenderDamageRolls, midiRenderOtherDamageRolls, midiRenderBonusDamageRolls, midiRenderFormulaRoll, renderRollAttributionIcon, renderSaveRollHTML,
-  getAdvantageModeTitle, getTokenName, renderAttributionTooltip, tokenPortrait } from "../utils.js";
+  getAdvantageModeTitle, getTokenName, renderAttributionTooltip, tokenPortrait, activityHasAreaTarget } from "../utils.js";
 import { saveDisplayMode } from "../lib/saveVisibility.js";
 import { MODULE_ID } from "../../midi-qol.js";
 import { Workflow } from "../Workflow.js";
@@ -62,14 +62,16 @@ export function midiButtonVisibility(message: Dnd5eChatMessage | undefined, acti
     damageSpent: done || damageSpent,
     // An activity with no attack roll still confirms, with one button instead of hit/miss.
     confirm: !done && !split && confirmPending,
-    confirmHitMiss: !done && !split && confirmPending && !!midi.hasAttackRoll,
+    confirmHitMiss: !done && !split && confirmPending && !!midi.hasAttack,
     cancel: !done && !split && confirmPending && !!configSettings.undoWorkflow,
     effects: !done && !split && !!midi.hasEffects
       && !(progress.effectsApplied && configSettings.autoItemEffects === "applyRemove"),
     allRemoved: done,
     savesResolved: !!progress.savesResolved,
     teleported: !!progress.teleported,
-    templatesPlaced: !!progress.templatesPlaced
+    // Every template the use places is on the card (cards before 14.6.9 recorded it in progress)
+    templatesPlaced: !!progress.templatesPlaced || (activityHasAreaTarget(activity)
+      && (midi.state?.templateUuids?.length ?? 0) >= (Number(activity?.target?.template?.count) || 1))
   };
 }
 
@@ -181,8 +183,7 @@ export function setupUsageCardMessage() {
           saved: new BooleanField(unset),
           superSaver: new BooleanField(unset),
           semiSuperSaver: new BooleanField(unset),
-          saveMults: new ObjectField(unset),
-          itemType: new StringField({ ...unset, blank: true })
+          saveMults: new ObjectField(unset)
         });
       }
       return {
@@ -191,7 +192,7 @@ export function setupUsageCardMessage() {
         origin: new ForeignDocumentField(foundry.documents.BaseChatMessage),
         midi: new SchemaField({
           // Stored only when set (MidiActivityMixin._createUsageMessage): absent is false
-          ...Object.fromEntries(["hasButtons", "hasAttack", "hasAttackRoll", "hasDamage", "hasEffects", "condensed", "mergeCardMulti",
+          ...Object.fromEntries(["hasAttack", "hasDamage", "hasEffects", "condensed", "mergeCardMulti",
             "confirmAttackDamage", "hideItemDetails"].map(key => [key, new BooleanField({ required: false, initial: undefined })])),
           // Absent is true
           displayProperties: new BooleanField({ required: false, initial: undefined }),

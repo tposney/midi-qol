@@ -1,3 +1,4 @@
+import { cardOtherConsumption } from "../lib/cardState.js";
 import { heldKeys } from "../lib/rollKeys.js";
 import { TokenSet } from "../lib/tokenSet.js";
 import { Activity, ActivityEffectData, ActivityUseConfiguration, RollDialogConfig, DND5ETargetDescriptor, RollMessageConfig, RollProcessConfig, MidiUsageChatContext, Dnd5eSystem, EmanationShapeData } from "../../globals.js";
@@ -551,15 +552,13 @@ export let MidiActivityMixin = Base => {
       const otherActivity = activity?.otherActivity;
       if (!otherActivity) return;
 
-      // Get the consumed data from the chat message flag (mirrors dnd5e structure)
-      const consumed = message.getFlag(MODULE_ID, "use.consumed");
+      // What the other activity's use consumed (mirrors dnd5e's structure)
+      const { consumed } = cardOtherConsumption(message);
       if (!consumed || foundry.utils.isEmpty(consumed)) return;
-
-      // Call dnd5e's refund method
       await otherActivity.refund(consumed);
-
-      // Remove the consumed flag - button visibility is handled by shouldHideChatButton
-      await message.unsetFlag(MODULE_ID, "use.consumed");
+      // Nothing consumed now: the refund button goes (shouldHideChatButton)
+      await message.update({ "system.midi.state.otherConsumed": null } as ChatMessage.UpdateData);
+      if (message.getFlag(MODULE_ID, "use.consumed") !== undefined) await message.unsetFlag(MODULE_ID, "use.consumed");
     }
 
     static async #consumeOtherActivity(this: MidiActivityMixin, event: PointerEvent, target: HTMLElement, message: ChatMessage.Implementation) {
@@ -597,10 +596,8 @@ export let MidiActivityMixin = Base => {
       // Get consumed delta data from messageConfig (not return value)
       const consumed = getConsumptionData(messageConfig);
 
-      // Set the consumed flag - button visibility is handled by shouldHideChatButton
-      if (consumed) {
-        await message.setFlag(MODULE_ID, "use.consumed", consumed);
-      }
+      // Recorded on the card: the consume button goes and the refund button shows (shouldHideChatButton)
+      if (consumed) await message.update({ "system.midi.state.otherConsumed": consumed, "system.midi.state.otherDeclined": null } as ChatMessage.UpdateData);
     }
 
     /**
@@ -1215,7 +1212,7 @@ export let MidiActivityMixin = Base => {
     ): Promise<Roll[] | undefined> {
       let otherActivity = source;
       // Scaling of the item's own other activity, stored on the chat card by checkOtherActivityConsumption
-      const scaling = isAmmunition ? undefined : config.workflow?.chatCard?.getFlag(MODULE_ID, "use.otherScaling");
+      const scaling = isAmmunition ? undefined : cardOtherConsumption(config.workflow?.chatCard).scaling;
       if (scaling) {
         const item = otherActivity.item.clone({ flags: { dnd5e: { scaling } } }, { keepId: true });
         // @ts-expect-error no dnd5e-types
@@ -1917,7 +1914,7 @@ export let MidiActivityMixin = Base => {
       button: HTMLButtonElement | { action?: string, dataset?: Record<string, string> },
       message: ChatMessage.Implementation
     ): boolean {
-      const consumed = message.getFlag(MODULE_ID, "use.consumed");
+      const { consumed } = cardOtherConsumption(message);
       // dnd5e 6.0 calls this from `_prepareButtons` with the stored button descriptor, which carries
       // `action` at the top level; before that it was called with the rendered element, where the
       // action lives on the dataset. Accept either.
@@ -2264,7 +2261,6 @@ export let MidiActivityMixin = Base => {
       if (workflow?.workflowOptions?.fastForwardDamage && configSettings.showFastForward) dmgBtnText += ` ${i18n("midi-qol.fastForward")}`;
 
       const midiContextData: MidiUsageChatContext = {
-        hasButtons: true,
         labels: this.labels,
         //@ ts-expect-error TODO needed for abilities translation
         // config: game.system.config,
@@ -2273,7 +2269,6 @@ export let MidiActivityMixin = Base => {
         // @ts-expect-error no dnd5e-types
         isHealing: !minimalCard && this.item.isHealing && (systemCard || configSettings.autoRollDamage !== "always"),
         hasDamage: needDamageButton,
-        hasAttackRoll: !minimalCard && !!this.attack,
         configSettings,
         hideItemDetails,
         dmgBtnText,
@@ -2307,7 +2302,7 @@ export let MidiActivityMixin = Base => {
       try {
         const context: MidiUsageChatContext = await this._midiUsageContext(message);
         // Only what is set: the schema reads an absent flag as false, absent displayProperties as true
-        const flags = ["hasButtons", "hasAttack", "hasAttackRoll", "hasDamage", "hasEffects", "condensed", "mergeCardMulti",
+        const flags = ["hasAttack", "hasDamage", "hasEffects", "condensed", "mergeCardMulti",
           "confirmAttackDamage", "hideItemDetails"] as const;
         const midi: Record<string, unknown> = Object.fromEntries(flags.filter(key => context[key]).map(key => [key, true]));
         if (!context.displayProperties) midi.displayProperties = false;

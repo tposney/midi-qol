@@ -21,21 +21,8 @@
 {{> "dnd5e.card-face" }}
 
 {{!-- Notes on midi's buttons (after dnd5e's, which the card face draws): before them here; prepend and append inside
-  the button block, before the first and after the last; after them, ahead of the results. With no buttons, all here. --}}
+  the button block, before the first and after the last; after them, ahead of the results. --}}
 {{#each midi.notes.buttons.before}}{{{ this }}}{{/each}}
-{{#unless midi.hasButtons}}
-{{#each midi.notes.buttons.prepend}}{{{ this }}}{{/each}}
-{{#each midi.notes.buttons.append}}{{{ this }}}{{/each}}
-{{#each midi.notes.buttons.after}}{{{ this }}}{{/each}}
-{{/unless}}
-
-{{#unless midi.hasButtons}}
-{{#each summaries}}
-<div class="card-summary" data-message-id="{{ id }}" data-target-uuid="{{ token.uuid }}">{{{ html }}}</div>
-{{/each}}
-{{/unless}}
-
-{{#if midi.hasButtons}}
 <div class="card-buttons midi-buttons">
   {{#each midi.notes.buttons.prepend}}{{{ this }}}{{/each}}
 
@@ -140,7 +127,7 @@
 {{#each summaries}}
 <div class="card-summary" data-message-id="{{ id }}" data-target-uuid="{{ token.uuid }}">{{{ html }}}</div>
 {{/each}}
-{{/if}}
+
 
 {{!-- Follow-ups offered after the attack hit; ignoring them costs nothing. --}}
 {{#if midi.followUps.length}}

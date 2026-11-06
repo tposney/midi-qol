@@ -1728,9 +1728,7 @@ export type ChatMessageRenderOptions = AnyObject & {
  * they depend on a workflow that no longer exists by the time the card is re-rendered.
  */
 export type MidiUsageChatContext = AnyMutableObject & {
-  hasButtons?: boolean;
   hasAttack?: boolean;
-  hasAttackRoll?: boolean;
   hasDamage?: boolean;
   hasEffects?: boolean;
   condensed?: boolean;
@@ -1814,7 +1812,6 @@ export type MidiTargetDescriptor = {
     bonusDamage: number;
     ammunition?: number;
   };
-  itemType?: string;
   uncannyDodge?: boolean;
   uncannyDodgeIcon?: string;
 };

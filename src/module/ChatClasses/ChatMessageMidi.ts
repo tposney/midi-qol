@@ -197,13 +197,8 @@ export function defineChatMessageMidiClass(baseClass: ChatMessage.Implementation
      * cards" is on, as core shows a private roll; midi's isRoll is false, so core would hide it entirely.
      */
     get visible() {
-      if (this.flags?.[MODULE_ID]?.messageType && configSettings.gmAttackDamageCards && this.author?.isGM && this.hasRolls) return true;
+      if (this.flags?.[MODULE_ID]?.messageType && configSettings.gmAttackDamageCards && this.author?.isGM && super.isRoll) return true;
       return super.visible;
-    }
-
-    get hasRolls() {
-      if ((this.flags?.[MODULE_ID]?.roll?.length ?? 0) > 0) return true;
-      return super.isRoll;
     }
     /** The weapon mastery line dnd5e 6 renders on its own attack cards, added to midi's card. */
     #addMasteryLine(html: HTMLElement) {

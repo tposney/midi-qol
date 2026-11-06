@@ -1776,7 +1776,7 @@ async function handleActionSaveRollRequest(ctx: ActionSaveContext, changeTurnEnd
     flavor: `Action: ${label ?? effect.name} ${i18n(messageFlavor[details.rollType])}`,
     speaker: MessageClass.getSpeaker({ actor }),
     system: { broadcast: false, buttons },
-    flags: { [MODULE_ID]: { overtimeActorUuid: actor.uuid, overtimeRollMode: rollMode, actorUuid: actor.uuid } }
+    flags: { [MODULE_ID]: { overtimeActorUuid: actor.uuid, overtimeRollMode: rollMode } }
   });
   if (chatCard) chatCardUuids.push(chatCard.uuid);
 
