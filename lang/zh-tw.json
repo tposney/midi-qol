@@ -809,8 +809,6 @@
     "midi-qol.GMDoReactions.Name": "檢查「NPC/GM」反應(Reaction)",
     "midi-qol.ReactionTimeout.Name": "反應(Reaction)檢查逾時",
     "midi-qol.ReactionTimeout.Hint": "在假設不採取反應(Reaction)前要等待多久",
-    "midi-qol.NoOptionalRules.Name": "不使用選用規則",
-    "midi-qol.NoOptionalRules.Hint": "在此次擲骰中禁用選用規則",
     "midi-qol.RecordAOO.Name": "記錄機會攻擊(AOO)",
     "midi-qol.RecordAOO.Hint": "當角色進行非其回合的攻擊時，標記其反應(Reaction)已使用。",
     "midi-qol.RecordAOOOptions": {

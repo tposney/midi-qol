@@ -674,8 +674,6 @@
 "midi-qol.GMDoReactions.Name": "Verifica reazioni dei PNG/DM",
 "midi-qol.ReactionTimeout.Name": "Timeout della verifica delle reazioni",
 "midi-qol.ReactionTimeout.Hint": "Quanto tempo attendere prima di assumere che nessuna reazione sia stata fatta",
-"midi-qol.NoOptionalRules.Name": "Nessuna regola facoltativa",
-"midi-qol.NoOptionalRules.Hint": "Disattiva le regole facoltative per questo tiro",
 "midi-qol.RecordAOO.Name": "Registra gli Attacchi di Opportunità",
 "midi-qol.RecordAOO.Hint": "Quando un personaggio effettua un attacco e non è il suo turno nell'elenco del combattimento, segna la reazione usata",
 "midi-qol.RecordAOOOptions": {

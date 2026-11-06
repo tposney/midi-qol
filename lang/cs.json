@@ -670,8 +670,6 @@
   "midi-qol.GMDoReactions.Name": "Kontrola reakcí NP/PJ",
   "midi-qol.ReactionTimeout.Name": "Časový limit pro kontrolu reakce",
   "midi-qol.ReactionTimeout.Hint": "Jak dlouho po výzvě na provedení reakce čekat.",
-  "midi-qol.NoOptionalRules.Name": "Bez volitelných pravidel",
-  "midi-qol.NoOptionalRules.Hint": "Zakázat volitelná pravidla pro tento hod.",
   "midi-qol.RecordAOO.Name": "Zaznamenávání příležitostných útoků",
   "midi-qol.RecordAOO.Hint": "Po zaškrtnutí bude u aktérů, co provedou útok mimo svůj tah ve sledovači boje, označena reakce jako použitá.",
   "midi-qol.RecordAOOOptions": {

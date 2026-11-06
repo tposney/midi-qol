@@ -578,8 +578,6 @@
   "midi-qol.GMDoReactions.Name": "Vérifier les réactions des PNJ/MJ",
   "midi-qol.ReactionTimeout.Name": "Délai de vérification de la réaction",
   "midi-qol.ReactionTimeout.Hint": "Combien de temps faut-il attendre avant de supposer qu'aucune réaction n'a eu lieu",
-  "midi-qol.NoOptionalRules.Name": "Pas de règles optionnelles",
-  "midi-qol.NoOptionalRules.Hint": "Désactiver les règles optionnelles pour ce jet",
   "midi-qol.RecordAOO.Name": "Enregistrer les attaques d'opportunité",
   "midi-qol.RecordAOO.Hint": "Lorsqu'un acteur effectue une attaque et que ce n'est pas son tour dans le traceur de combat - marquez sa réaction utilisée",
   "midi-qol.RecordAOOOptions": {

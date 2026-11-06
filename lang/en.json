@@ -988,8 +988,6 @@
   "midi-qol.GMDoReactions.Name": "Check NPC/GM reactions",
   "midi-qol.ReactionTimeout.Name": "Reaction check timeout",
   "midi-qol.ReactionTimeout.Hint": "How long to wait before assuming no reaction has been taken",
-  "midi-qol.NoOptionalRules.Name": "No optional rules",
-  "midi-qol.NoOptionalRules.Hint": "Disable optional rules for this roll",
   "midi-qol.RecordAOO.Name": "Record Attacks of Opportunity",
   "midi-qol.RecordAOO.Hint": "When an actor makes an attack and it is not their turn in the combat tracker - mark their reaction used",
   "midi-qol.RecordAOOOptions": {

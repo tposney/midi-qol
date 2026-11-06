@@ -677,8 +677,6 @@
   "midi-qol.GMDoReactions.Name": "NPC/GMのリアクション確認",
   "midi-qol.ReactionTimeout.Name": "リアクション確認の待機時間",
   "midi-qol.ReactionTimeout.Hint": "リアクションを使用しないと判断するまでの待ち時間を設定します。",
-  "midi-qol.NoOptionalRules.Name": "選択ルールなし",
-  "midi-qol.NoOptionalRules.Hint": "このロールにおける選択ルールの適用を無効にします。",
   "midi-qol.RecordAOO.Name": "機会攻撃を管理する",
   "midi-qol.RecordAOO.Hint": "自身のターン外で攻撃を行ったとき、コマにリアクション使用済のConvenient Effectsを付与します。",
   "midi-qol.RecordAOOOptions": {

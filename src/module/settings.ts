@@ -221,7 +221,6 @@ class ConfigSettings {
   singleDamageCalculation: boolean = true;
   tempHPDamageConcentrationCheck: boolean = true;
   concentrationIncapacitatedConditionCheck: boolean = true;
-  toggleOptionalRules: boolean = false;
   useCustomSounds: boolean = true;
   usePlayerPortrait: boolean = false;
   useTokenNames: boolean = false;
@@ -274,15 +273,11 @@ class ConfigSettings {
 export let configSettings = new ConfigSettings();
 
 export function checkMechanic(mechanic: keyof (typeof configSettings.optionalRules)) {
-  if (configSettings.toggleOptionalRules) return false;
   return configSettings.optionalRules[mechanic];
 }
 
 export function checkRule(rule: keyof (typeof configSettings.optionalRules)) {
-  let rulesEnabled = configSettings.optionalRulesEnabled;
-  if (game.user?.isGM)
-    rulesEnabled = rulesEnabled ? !configSettings.toggleOptionalRules : configSettings.toggleOptionalRules;
-  return rulesEnabled && configSettings.optionalRules[rule];
+  return configSettings.optionalRulesEnabled && configSettings.optionalRules[rule];
 }
 
 /**
@@ -672,7 +667,7 @@ export let fetchParams = () => {
   //@ts-expect-error legacy boolean value
   if (configSettings.autoCEEffects === true) configSettings.autoCEEffects = "both";
   if (!configSettings.autoCEEffects) configSettings.autoCEEffects = "none";
-  configSettings.toggleOptionalRules = false;
+  Reflect.deleteProperty(configSettings, "toggleOptionalRules");
   if (!configSettings.recordAOO) configSettings.recordAOO = "none";
   if (!configSettings.enforceReactions) configSettings.enforceReactions = "none";
   if (!configSettings.enforceBonusActions) configSettings.enforceBonusActions = "none";

@@ -980,8 +980,6 @@
   "midi-qol.GMDoReactions.Name": "Verificar Reações de PNJ/Mestre",
   "midi-qol.ReactionTimeout.Name": "Tempo de Reação",
   "midi-qol.ReactionTimeout.Hint": "Quanto tempo esperar antes de assumir que nenhuma reação foi tomada.",
-  "midi-qol.NoOptionalRules.Name": "Sem Regras Opcionais",
-  "midi-qol.NoOptionalRules.Hint": "Desabilita regras opcionais para esta rolagem.",
   "midi-qol.RecordAOO.Name": "Registrar Ataques de Oportunidade",
   "midi-qol.RecordAOO.Hint": "Quando um ator realizar um ataque e não for o turno dele no combate, marque sua reação como usada.",
   "midi-qol.RecordAOOOptions": {

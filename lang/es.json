@@ -521,8 +521,6 @@
     "1": "Los ajustes rápidos te permiten configurar una serie de opciones al mismo tiempo."
   },
   "midi-qol.Reaction.Title": "Procesado de las Reacciones",
-  "midi-qol.NoOptionalRules.Name": "Sin reglas opcionales",
-  "midi-qol.NoOptionalRules.Hint": "Desactivar las reglas opcionales para esta tirada",
   "midi-qol.RecordAOO.Name": "Registrar ataques de oportunidad",
   "midi-qol.RecordAOO.Hint": "Cuando un actor realiza un ataque y no es su turno en el registro de combate - marca su reacción como utilizada",
   "midi-qol.RecordAOOOptions": {
