@@ -151,7 +151,6 @@ class ConfigSettings {
   consumeResource: string = "none";
   criticalDamage: string = "default";
   criticalDamageGM: string = "default";
-  customSoundsPlaylist: string = "none";
   damageImmunities: string = "none";
   damageImmunityMultiplier: number = 0.0;
   damageResistanceMultiplier: number = 0.5;
@@ -308,7 +307,6 @@ export async function resetConfigSettingsToDefaults(): Promise<void> {
   await game.settings.set("midi-qol", "ChatCardUpdates", "milestones");
   await game.settings.set("midi-qol", "Debug", "None");
   await game.settings.set("midi-qol", "UseWeakReferences", false);
-  await game.settings.set("midi-qol", "splashWarnings", true);
   // last-run-version, instanceId are intentionally not reset - tracking data
   // MidiSoundSettings is intentionally not reset - separate configuration
 
@@ -417,6 +415,7 @@ export function exportSettingsToJSON() {
   foundry.utils.saveDataToFile(JSON.stringify(data, null, 2), "text/json", filename);
 }
 
+/** An imported settings object with its entries as values: older exports stored a changed entry as { newValue } */
 function removeOldValues(theObject: any) {
   if (theObject == null || typeof theObject !== "object") return theObject;
   Object.keys(theObject).forEach(key => {
@@ -551,39 +550,39 @@ export async function importSettingsFromJSON(json) {
     }
     await game.settings.set("midi-qol", "ConfigSettings", cs);
   }
-  await game.settings.set("midi-qol", "AutoRemoveTargets", removeOldValues(json.autoRemoveTargets));
+  await game.settings.set("midi-qol", "AutoRemoveTargets", json.autoRemoveTargets);
   // Migrate old top-level coloredBorders into configSettings for backward-compatible imports
   if (json.coloredBorders !== undefined && !importedConfigSettings.coloredBorders) {
-    let cb = removeOldValues(json.coloredBorders);
+    let cb = json.coloredBorders;
     if (cb === "None") cb = "none"; // Normalize old default
     importedConfigSettings.coloredBorders = cb;
     await game.settings.set("midi-qol", "ConfigSettings", importedConfigSettings);
   }
   // Migrate old top-level criticalDamage/criticalDamageGM into configSettings for backward-compatible imports
   if (json.criticalDamage !== undefined && !importedConfigSettings.criticalDamage) {
-    importedConfigSettings.criticalDamage = removeOldValues(json.criticalDamage);
+    importedConfigSettings.criticalDamage = json.criticalDamage;
     if (importedConfigSettings.criticalDamage === "none") importedConfigSettings.criticalDamage = "default";
   }
   if (json.criticalDamageGM !== undefined && !importedConfigSettings.criticalDamageGM) {
-    importedConfigSettings.criticalDamageGM = removeOldValues(json.criticalDamageGM);
+    importedConfigSettings.criticalDamageGM = json.criticalDamageGM;
     if (importedConfigSettings.criticalDamageGM === "none") importedConfigSettings.criticalDamageGM = importedConfigSettings.criticalDamage ?? "default";
   }
   if (json.criticalDamage !== undefined || json.criticalDamageGM !== undefined) {
     await game.settings.set("midi-qol", "ConfigSettings", importedConfigSettings);
   }
-  if (json.chatCardUpdates !== undefined) await game.settings.set("midi-qol", "ChatCardUpdates", removeOldValues(json.chatCardUpdates));
-  await game.settings.set("midi-qol", "DragDropTarget", removeOldValues(json.dragDropTargeting));
-  await game.settings.set("midi-qol", "EnableWorkflow", removeOldValues(json.enableWorkflow));
+  if (json.chatCardUpdates !== undefined) await game.settings.set("midi-qol", "ChatCardUpdates", json.chatCardUpdates);
+  await game.settings.set("midi-qol", "DragDropTarget", json.dragDropTargeting);
+  await game.settings.set("midi-qol", "EnableWorkflow", json.enableWorkflow);
   if (json.forceHideRoll !== undefined) {
     if (game.settings.get("midi-qol", "ForceHideRoll") !== json.forceHideRoll) requiresReload = true;
-    await game.settings.set("midi-qol", "ForceHideRoll", removeOldValues(json.forceHideRoll));
+    await game.settings.set("midi-qol", "ForceHideRoll", json.forceHideRoll);
   }
   if (json.replaceDefaultActivities !== undefined) {
     if (game.settings.get("midi-qol", "ReplaceDefaultActivities") !== json.replaceDefaultActivities) requiresReload = true;
-    await game.settings.set("midi-qol", "ReplaceDefaultActivities", removeOldValues(json.replaceDefaultActivities));
+    await game.settings.set("midi-qol", "ReplaceDefaultActivities", json.replaceDefaultActivities);
   }
-  await game.settings.set("midi-qol", "showGM", removeOldValues(json.nsaFlag));
-  await game.settings.set("midi-qol", "UseWeakReferences", removeOldValues(json.useWeakReferences));
+  await game.settings.set("midi-qol", "showGM", json.nsaFlag);
+  await game.settings.set("midi-qol", "UseWeakReferences", json.useWeakReferences);
   if (json.playerControlsInvisibleTokens !== undefined) {
     if (game.settings.get("midi-qol", "playerControlsInvisibleTokens") !== json.playerControlsInvisibleTokens) requiresReload = true;
     await game.settings.set("midi-qol", "playerControlsInvisibleTokens", json.playerControlsInvisibleTokens);
@@ -668,6 +667,7 @@ export let fetchParams = () => {
   if (configSettings.autoCEEffects === true) configSettings.autoCEEffects = "both";
   if (!configSettings.autoCEEffects) configSettings.autoCEEffects = "none";
   Reflect.deleteProperty(configSettings, "toggleOptionalRules");
+  Reflect.deleteProperty(configSettings, "customSoundsPlaylist");
   if (!configSettings.recordAOO) configSettings.recordAOO = "none";
   if (!configSettings.enforceReactions) configSettings.enforceReactions = "none";
   if (!configSettings.enforceBonusActions) configSettings.enforceBonusActions = "none";
@@ -1100,13 +1100,6 @@ export const autoCheckHitOptions = keysToExtendedOptionsObj("autoCheckHitOptions
 ]);
 
 
-export const clickOptions = keysToExtendedOptionsObj("clickOptions", [
-  "off",
-  "attack",
-  "damage",
-  "all"
-]);
-
 export const autoTargetOptions = keysToExtendedOptionsObj("autoTargetOptions", [
   "none",
   "always",
@@ -1205,23 +1198,6 @@ export const playerRollSavesOptions = keysToExtendedOptionsObj("playerRollSavesO
   "rer"
 ]);
 
-export const playerRollSavesOptionsReduced = keysToExtendedOptionsObj("playerRollSavesOptionsReduced", [
-  "none",
-  "chat"
-]);
-
-export const hideRollDetailsOptions = keysToExtendedOptionsObj("hideRollDetailsOptions", [
-  "none",
-  "detailsDSN",
-  "details",
-  "d20Only",
-  "hitDamage",
-  "hitCriticalDamage",
-  "attackTotalOnly",
-  "d20AttackOnly",
-  "all"
-]);
-
 export const gmAttackDisplayOptions = keysToExtendedOptionsObj("gmAttackDisplayOptions", [
   "full",
   "hideFormula",
@@ -1247,13 +1223,6 @@ export const gmDsnDisplayOptions = keysToExtendedOptionsObj("gmDsnDisplayOptions
 export const blindRollDisplayOptions = keysToExtendedOptionsObj("blindRollDisplayOptions", [
   "hidden",
   "obscured"
-]);
-
-export const rollOtherDamageOptions = keysToExtendedOptionsObj("RollOtherDamageOptions", [
-  "none",
-  "always",
-  "condition",
-  "ifSave"
 ]);
 
 export const showReactionAttackRollOptions = keysToExtendedOptionsObj("ShowReactionAttackRollOptions", [
@@ -1709,13 +1678,6 @@ export const registerSettings = function () {
     default: defaultTargetConfirmationSettings,
     config: false,
     onChange: fetchParams
-  });
-
-  game.settings.register("midi-qol", "splashWarnings", {
-    scope: "world",
-    type: Boolean,
-    config: false,
-    default: true
   });
 
   game.settings.register("midi-qol", "last-run-version", {

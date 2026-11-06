@@ -175,7 +175,6 @@ declare module "fvtt-types/configuration" {
     "midi-qol.UseWeakReferences": boolean;
     "midi-qol.PreferredGM": string;
     "midi-qol.MidiSoundSettings-backup": Record<string, any>;
-    "midi-qol.splashWarnings": boolean;
     "midi-qol.last-run-version": string;
     "midi-qol.instanceId": string;
   }

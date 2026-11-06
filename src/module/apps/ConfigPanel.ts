@@ -1,4 +1,4 @@
-import { criticalDamage, criticalDamageChoices, nsaFlag, coloredBorders, coloredBordersOptions, importSettingsFromJSON, exportSettingsToJSON, enableWorkflow, wallsBlockRangeOptionsNew, visionTestHeightOptions, templateOriginHeightOptions, coverCalculationOptions, hiddenAdvantageOptions, addDeadOptions, rollNPCSavesOptions, playerRollSavesOptions, autoCheckHitOptions, autoTargetOptions, rangeTargetOptions, requiresTargetsOptions, autoCheckSavesOptions, saveSummaryStyleOptions, chatCardSummariesOptions, autoRollDamageOptions, removeButtonsOptions, autoApplyDamageOptions, playerDamageCardOptions, damageImmunitiesOptions, showItemDetailsOptions, doReactionsOptions, gmDoReactionsOptions, autoCEEffectsOptions, rollOtherDamageOptions, showReactionAttackRollOptions, recordAOOOptions, EnforceReactionsOptions, autoEffectsOptions, requireMagicalOptions, hideRollDetailsOptions, gmAttackDisplayOptions, gmDamageDisplayOptions, gmDsnDisplayOptions, blindRollDisplayOptions, checkFlankingOptions, flankingBonusOptions, rollAlternateOptions, consumeResourceOptions, averageDamageOptions, removeConcentrationEffectsOptions, incapacitatedOptions, checkRangeOptions, targetMustBeSeenOptions, invisAdvantageOptions, confirmAttackDamageOptions, challengeModeArmorOptions, saveDROrderOptions, defaultOtherActivityOptions, doConcentrationCheckOptions, activationAutomationOptions, safeGetGameSetting, distanceMeasurementOptions } from "../settings.js"
+import { criticalDamage, criticalDamageChoices, coloredBorders, coloredBordersOptions, importSettingsFromJSON, exportSettingsToJSON, enableWorkflow, wallsBlockRangeOptionsNew, visionTestHeightOptions, templateOriginHeightOptions, coverCalculationOptions, hiddenAdvantageOptions, addDeadOptions, rollNPCSavesOptions, playerRollSavesOptions, autoCheckHitOptions, autoTargetOptions, rangeTargetOptions, requiresTargetsOptions, autoCheckSavesOptions, saveSummaryStyleOptions, chatCardSummariesOptions, autoRollDamageOptions, removeButtonsOptions, autoApplyDamageOptions, playerDamageCardOptions, damageImmunitiesOptions, showItemDetailsOptions, doReactionsOptions, gmDoReactionsOptions, autoCEEffectsOptions, showReactionAttackRollOptions, recordAOOOptions, EnforceReactionsOptions, autoEffectsOptions, requireMagicalOptions, gmAttackDisplayOptions, gmDamageDisplayOptions, gmDsnDisplayOptions, blindRollDisplayOptions, checkFlankingOptions, flankingBonusOptions, rollAlternateOptions, consumeResourceOptions, averageDamageOptions, removeConcentrationEffectsOptions, incapacitatedOptions, checkRangeOptions, targetMustBeSeenOptions, invisAdvantageOptions, confirmAttackDamageOptions, challengeModeArmorOptions, saveDROrderOptions, defaultOtherActivityOptions, doConcentrationCheckOptions, activationAutomationOptions, safeGetGameSetting, distanceMeasurementOptions } from "../settings.js"
 import { configSettings } from "../settings.js"
 import { warn, i18n, error, debug, debugEnabled, log, GameSystemConfig, ceInterface } from "../../midi-qol.js";
 import { installedModules } from "../setupModules.js";
@@ -115,8 +115,6 @@ export class ConfigPanel extends HandlebarsApplicationMixin(ApplicationV2) {
     if (configSettings.addWounded > 0 && ["none", undefined].includes(configSettings.addWoundedStyle))
       configSettings.addWoundedStyle = "normal";
     */
-    const AddWoundedOptions = foundry.utils.duplicate(addDeadOptions);
-    delete AddWoundedOptions["none"];
     const rollNPCSavesOptionsLocalized: SelectOptions = foundry.utils.duplicate(rollNPCSavesOptions);
     for (let key of Object.keys(rollNPCSavesOptions)) {
       const notInstalled = game.i18n?.format("MODMANAGE.DepNotInstalled", { missing: "" }) ?? "";
@@ -207,7 +205,6 @@ export class ConfigPanel extends HandlebarsApplicationMixin(ApplicationV2) {
       templateOriginHeightOptions,
       gmDoReactionsOptions,
       AutoCEEffectsOptions: autoCEEffectsOptionsLocalized,
-      rollOtherDamageOptions,
       showReactionAttackRollOptions,
       CoverCalculationOptions,
       distanceMeasurementOptions,
@@ -215,28 +212,20 @@ export class ConfigPanel extends HandlebarsApplicationMixin(ApplicationV2) {
       EnforceReactionsOptions: EnforceReactionsOptions,
       AutoEffectsOptions: autoEffectsOptions,
       RequireMagicalOptions: requireMagicalOptions,
-      itemTypeLabels: Object.keys(CONFIG.Item.typeLabels).filter(key => !["backpack", "base"].includes(key)).reduce((acc, key) => { acc[key] = CONFIG.Item.typeLabels[key]; return acc }, {}),
       hasConvenientEffects: installedModules.get("dfreds-convenient-effects"),
-      hideRollDetailsOptions,
       gmAttackDisplayOptions,
       gmDamageDisplayOptions,
       gmDsnDisplayOptions,
       blindRollDisplayOptions,
       checkFlankingOptions: checkFlankingOptionsLocalized,
       flankingBonusOptions,
-      nsaFlag,
       coloredBorders,
       coloredBordersOptions,
       playerRollSavesOptions: playerRollSavesOptionsLocalized,
       rollNPCSavesOptions: rollNPCSavesOptionsLocalized,
-      customSoundsPlaylistOptions: game.playlists?.contents.reduce((acc, e) => { acc[e.id] = e.name; return acc }, {}) || {},
-      customSoundOptions: game.playlists?.get(configSettings.customSoundsPlaylist)?.sounds.reduce((acc, s) => { acc[s.id ?? ""] = s.name; return acc }, { "none": "" }),
-      rollSoundOptions: CONFIG.sounds,
-      isBetterRolls: installedModules.get("betterrolls5e"),
       rollAlternateOptions,
       ConsumeResourceOptions: consumeResourceOptions,
       AddDeadOptions: addDeadOptions,
-      AddWoundedOptions,
       AverageDamageOptions: averageDamageOptions,
       RemoveConcentrationEffectsOptions: removeConcentrationEffectsOptions,
       IncapacitatedOptions: incapacitatedOptions,
@@ -393,13 +382,6 @@ export class ConfigPanel extends HandlebarsApplicationMixin(ApplicationV2) {
     await super._preClose(options);
     if (this.configHookId) Hooks.off("midi-qol.ConfigSettingsChanged", this.configHookId);
   }
-
-  // async _playList(event) {
-  //   event.preventDefault();
-  //   configSettings.customSoundsPlaylist = `${$(event.currentTarget).children("option:selected").val()}`;
-  //   await this.submit({ preventClose: true });
-  //   this.render();
-  // }
 
   // onReset() {
   //   this.render(true);
