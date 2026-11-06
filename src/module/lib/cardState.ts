@@ -139,11 +139,9 @@ export function cardTargetDetail(message: ChatMessage.Implementation | undefined
   const card = cardMidiState(message);
   if (!card || descriptor.saveMults) return descriptor;
   const record = recordFor(card.records, tokenUuid);
-  // @ts-expect-error no dnd5e-types
-  const itemType = message?.getAssociatedItem?.()?.type;
   return {
     ...descriptor, saved: !!record?.saved, superSaver: !!record?.superSaver, semiSuperSaver: !!record?.semiSuperSaver,
-    saveMults: card.state.saveMults, itemType, uncannyDodge: !!record?.uncannyDodge, uncannyDodgeIcon: record?.uncannyDodgeIcon
+    saveMults: card.state.saveMults, uncannyDodge: !!record?.uncannyDodge, uncannyDodgeIcon: record?.uncannyDodgeIcon
   };
 }
 

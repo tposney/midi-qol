@@ -2239,7 +2239,6 @@ export let MidiActivityMixin = Base => {
         workflow?.setTargets(validTargetTokens(new Set(game.user?.targets)));
         foundry.utils.setProperty(message.data, "system.targets", globalThis.dnd5e.dataModels.chatMessage.fields.TargetsField.getDescriptors());
       }
-      const context = await super._usageChatContext(message);
       if (debugEnabled > 0) warn("show item card ", this, this.actor, this.actor?.token, systemCard, workflow);
       let needAttackButton = !getRemoveAttackButtons(this) || configSettings.mergeCardMulti
         || configSettings.confirmAttackDamage !== "none" ||
@@ -2264,40 +2263,33 @@ export let MidiActivityMixin = Base => {
       let dmgBtnText = (this.actionType === "heal") ? i18n("DND5E.HEAL.HealingButton") : i18n("DND5E.Damage");
       if (workflow?.workflowOptions?.fastForwardDamage && configSettings.showFastForward) dmgBtnText += ` ${i18n("midi-qol.fastForward")}`;
 
-      let midiContextData = {
+      const midiContextData: MidiUsageChatContext = {
         hasButtons: true,
         labels: this.labels,
         //@ ts-expect-error TODO needed for abilities translation
         // config: game.system.config,
         condensed: configSettings.mergeCardCondensed && !!this.attack,
-        hasAttack: this.attack && !minimalCard && (systemCard || needAttackButton || configSettings.confirmAttackDamage !== "none"),
+        hasAttack: !!this.attack && !minimalCard && (systemCard || needAttackButton || configSettings.confirmAttackDamage !== "none"),
         // @ts-expect-error no dnd5e-types
         isHealing: !minimalCard && this.item.isHealing && (systemCard || configSettings.autoRollDamage !== "always"),
         hasDamage: needDamageButton,
-        hasAttackRoll: !minimalCard && this.attack,
+        hasAttackRoll: !minimalCard && !!this.attack,
         configSettings,
         hideItemDetails,
         dmgBtnText,
         hasEffects,
         effects: this.item.effects,
         isMerge: true,
-        mergeCardMulti: configSettings.mergeCardMulti && (this.attack || this.hasDamage),
-        confirmAttackDamage: configSettings.confirmAttackDamage !== "none" && (this.attack || this.hasDamage),
+        mergeCardMulti: configSettings.mergeCardMulti && !!(this.attack || this.hasDamage),
+        confirmAttackDamage: configSettings.confirmAttackDamage !== "none" && !!(this.attack || this.hasDamage),
         RequiredMaterials: i18n("DND5E.RequiredMaterials"),
         Attack: i18n("DND5E.Attack"),
         OtherFormula: i18n("DND5E.OtherFormula"),
         displayProperties: configSettings.displayProperties,
         canCancel: configSettings.undoWorkflow, // TODO enable this when more testing done.
       };
-      if (!configSettings.displayProperties && context.supplements) {
-        const materialsLabel = i18n("DND5E.Materials");
-        context.supplements = context.supplements.filter(s => !s.includes(`>${materialsLabel}</`));
-      }
-      const showSaveButtons = savesRolledFromChat();
-      context.buttons = context.buttons?.filter(b => !["rollAttack", "rollDamage", "rollHealing"].includes(b.dataset?.action));
-      if (!showSaveButtons) context.buttons = context.buttons?.filter(b => !["rollSave", "rollCheck"].includes(b.dataset?.action));
-      if (configSettings.autoCheckSaves !== "none") context.buttons?.forEach(b => { b.isDisabled = ["rollSave", "rollCheck"].includes(b.dataset?.action) ? "disabled" : "" });
-      return foundry.utils.mergeObject(context, midiContextData)
+      // dnd5e 6 draws the card from its data (MidiUsageMessageData), so only these decisions are kept (_createUsageMessage)
+      return midiContextData;
     }
 
     /**

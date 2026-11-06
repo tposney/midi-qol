@@ -815,7 +815,7 @@ let defineMidiAttackActivityClass = <T extends Activity>(ActivityClass: T) => {
     async _midiUsageContext(message) {
       const context = await super._midiUsageContext(message);
 
-      context.hasAttack = this.attack; // && !minimalCard && (systemCard || needAttackButton || configSettings.confirmAttackDamage !== "none"),
+      context.hasAttack = !!this.attack; // && !minimalCard && (systemCard || needAttackButton || configSettings.confirmAttackDamage !== "none"),
       return context;
     }
   }

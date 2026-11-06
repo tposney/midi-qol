@@ -230,16 +230,19 @@ let defineMidiTeleportActivityClass = <T extends Activity>(ActivityClass: T) => 
       const results = await Promise.all(plans.map(async p => ({ token: p.token, plan: p.plan, moved: await this.#move(p) })));
       Hooks.callAll("dnd5e.postTeleport", this, results);
       if (workflow) workflow.teleportResults = results;
-      if (message && results.some(r => r.moved)) await this.#recordTeleported(message);
+      if (message && results.some(r => r.moved)) await this.#recordTeleported(message, workflow);
       await callActivityHooks(this, "midi-qol.postTeleport", workflow, results);
       if (workflow) await this.#callTeleportMacros(workflow, "postTeleport", { teleport: { ...config, results } });
       return results;
     }
 
     /** The card's Teleport button goes once the move is made. */
-    async #recordTeleported(message: ChatMessage.Implementation) {
+    async #recordTeleported(message: ChatMessage.Implementation, workflow: Workflow | undefined) {
       if (!message.isOwner || !foundry.utils.getProperty(message, "system.midi")) return;
-      await message.update({ "system.midi.progress.teleported": true } as ChatMessage.UpdateData).catch(() => undefined);
+      const update = { "system.midi.progress.teleported": true } as ChatMessage.UpdateData;
+      // With the run's next card write when the use's workflow is running, else at once
+      if (workflow && workflow.itemCardUuid === message.uuid) await workflow.performThrottledUpdate(message, update);
+      else await message.update(update).catch(() => undefined);
     }
 
     #workflowTargets(workflow: Workflow | undefined, message: ChatMessage.Implementation | undefined): Token.Implementation[] {

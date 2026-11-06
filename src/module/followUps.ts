@@ -54,7 +54,8 @@ export async function addFollowUp(workflow: Workflow, activity: Activity, option
     critical: !!workflow.isCritical,
     used: false
   });
-  await message.update({ [FOLLOW_UPS]: followUps });
+  // With the run's next card write when the workflow is running (offered as it ends), else at once
+  await workflow.performThrottledUpdate(message, { [FOLLOW_UPS]: followUps } as ChatMessage.UpdateData);
   return true;
 }
 

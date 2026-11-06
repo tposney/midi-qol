@@ -272,7 +272,8 @@ export async function applyTokenDamage(
   let allDamages: Record<string, DamageListEntry> = {};
   damageDetail = damageDetail.map(de => ({ ...de, value: (de.value ?? de.damage) }))
   let workflow: Workflow | undefined = options.workflow;
-  if (item && !options.workflow) workflow = Workflow.findWorkflow(item.uuid);
+  // A macro running inside the item's use: that use's card (an earlier, finished one would be a guess)
+  if (item && !options.workflow) workflow = Workflow.runningFor(item);
   // What a successful save does to the damage; applySaves adds Super Saver and Semi Super Saver.
   const saveMultiplier = getSaveMultiplierForItem(item, "defaultDamage");
 
@@ -335,9 +336,9 @@ export async function applyTokenDamage(
   }
   const cardIds: string[] = await timedAwaitExecuteAsGM("createReverseDamageCard", {
     autoApplyDamage: configSettings.autoApplyDamage,
-    actorId: workflow?.actor?.id,
-    actorUuid: workflow?.actor?.uuid,
-    charName: workflow?.token?.name ?? workflow?.actor?.name ?? game.user?.name,
+    actorId: (workflow?.actor ?? item?.actor)?.id,
+    actorUuid: (workflow?.actor ?? item?.actor)?.uuid,
+    charName: workflow?.token?.name ?? workflow?.actor?.name ?? (item?.actor ? tokenForActor(item.actor)?.name ?? item.actor.name : undefined) ?? game.user?.name,
     damageList: prepareDamageListToJSON(Object.values(allDamages)),
     chatCardUuid: workflow?.itemCardUuid,
     updateOptions: options.updateOptions,
@@ -364,7 +365,8 @@ export async function applyTokenDamageMany(
 ): Promise<any[]> {
   let allDamages: Record<string, DamageListEntry> = {};
   let workflow: Workflow | undefined = options.workflow;
-  if (item && !options.workflow) workflow = Workflow.findWorkflow(item.uuid);
+  // A macro running inside the item's use: that use's card (an earlier, finished one would be a guess)
+  if (item && !options.workflow) workflow = Workflow.runningFor(item);
 
   for (const entry of targetDamages) {
     const actor = entry.token.actor;
@@ -420,9 +422,9 @@ export async function applyTokenDamageMany(
   }
   const cardIds: string[] = await timedAwaitExecuteAsGM("createReverseDamageCard", {
     autoApplyDamage: configSettings.autoApplyDamage,
-    actorId: workflow?.actor?.id,
-    actorUuid: workflow?.actor?.uuid,
-    charName: workflow?.token?.name ?? workflow?.actor?.name ?? game.user?.name,
+    actorId: (workflow?.actor ?? item?.actor)?.id,
+    actorUuid: (workflow?.actor ?? item?.actor)?.uuid,
+    charName: workflow?.token?.name ?? workflow?.actor?.name ?? (item?.actor ? tokenForActor(item.actor)?.name ?? item.actor.name : undefined) ?? game.user?.name,
     damageList: prepareDamageListToJSON(Object.values(allDamages)),
     chatCardUuid: workflow?.itemCardUuid,
     updateOptions: options.updateOptions,
@@ -9528,7 +9530,11 @@ async function _updateAction(document: foundry.abstract.Document.Any, updates: C
    */
   if (Array.isArray(updates.rolls) && rollsMatch(baseDocument.rolls, updates.rolls)) {
     delete updates.rolls;
-    delete (updatesCache[baseDocument.uuid] ?? {}).rolls;
+    // Replaced, not changed in place: getCachedDocument keeps a card's clone while its queue's object is the same
+    if (updatesCache[baseDocument.uuid]) {
+      const { rolls: _rolls, ...rest } = updatesCache[baseDocument.uuid];
+      updatesCache[baseDocument.uuid] = rest;
+    }
   }
   withoutEmptyObjects(updates);
   if (foundry.utils.isEmpty(updates)) {
@@ -9543,7 +9549,9 @@ async function _updateAction(document: foundry.abstract.Document.Any, updates: C
   if (updateDelay) {
     await busyWait(updateDelay); // let other stuff happen.
   }
-  updatesCache[baseDocument.uuid] = pendingUpdates(updates, updatesCache[baseDocument.uuid] ?? {});
+  const pending = pendingUpdates(updates, updatesCache[baseDocument.uuid] ?? {});
+  if (foundry.utils.isEmpty(pending)) delete updatesCache[baseDocument.uuid];
+  else updatesCache[baseDocument.uuid] = pending;
   if (debugEnabled > 1 && updates.content && updatesCache[baseDocument.uuid]?.content)
     warn("_updateAction | queued content differences ", diffStringsFull(updates.content, updatesCache[baseDocument.uuid].content, { ignoreWhitespace: true, ignoreNewlines: true }));
   if (debugEnabled) warn("_updateAction | post update updatesCache", Date.now(), updates);
@@ -9669,7 +9677,7 @@ export function addUpdatesCacheFlags(uuid: string | undefined | null, updates: a
   if (!uuid) return;
   if (prepend) updates = { [prepend]: updates };
   updates = changedUpdates(uuid, foundry.utils.expandObject({ flags: updates }));
-  updatesCache[uuid] = foundry.utils.mergeObject(updatesCache[uuid] ?? {}, updates, { insertKeys: true, insertValue: true });
+  updatesCache[uuid] = foundry.utils.mergeObject(updatesCache[uuid] ?? {}, updates, { insertKeys: true, insertValues: true, inplace: false });
 }
 
 export function addUpdatesCache(uuid: string | undefined | null, updates: any) {
@@ -9678,7 +9686,7 @@ export function addUpdatesCache(uuid: string | undefined | null, updates: any) {
   const changed = changedUpdates(uuid, rest) as Record<string, unknown>;
   if (rolls !== undefined) changed.rolls = rolls;
   updates = changed;
-  updatesCache[uuid] = foundry.utils.mergeObject(updatesCache[uuid] ?? {}, updates, { insertKeys: true, insertValue: true });
+  updatesCache[uuid] = foundry.utils.mergeObject(updatesCache[uuid] ?? {}, updates, { insertKeys: true, insertValues: true, inplace: false });
 }
 
 export function clearUpdatesCache(uuid: string | undefined | null) {
@@ -9687,14 +9695,28 @@ export function clearUpdatesCache(uuid: string | undefined | null) {
 }
 
 
+// A card with its queued changes, kept until either changes: the queue's entry is replaced on every change (queueUpdate,
+// addUpdatesCache…) and the card's own update drops it
+const cardClones = new Map<string, { document: ChatMessage.Implementation, updates: object, clone: ChatMessage.Implementation }>();
+let cardClonesHooked = false;
+
+/** A card as it will be once its queued changes are written: the stored card when none are queued */
 export function getCachedDocument(uuid: string | undefined | null) {
   if (!uuid) return undefined;
-  let document = fromUuidSync(uuid) as ChatMessage.Implementation;
-  let updates = document?.uuid && updatesCache[document.uuid as string];
-  if (!foundry.utils.isEmpty(updates))
-    //@ts-expect-error no dnd5e-types - changes not in fvtt types
-    document = document.clone(updates, { changes: updates, keepId: true }) as ChatMessage.Implementation;
-  return document;
+  const document = fromUuidSync(uuid) as ChatMessage.Implementation;
+  const updates = document?.uuid && updatesCache[document.uuid as string];
+  if (foundry.utils.isEmpty(updates)) return document;
+  if (!cardClonesHooked) {
+    cardClonesHooked = true;
+    Hooks.on("updateChatMessage", (message: ChatMessage.Implementation) => { cardClones.delete(message.uuid); });
+    Hooks.on("deleteChatMessage", (message: ChatMessage.Implementation) => { cardClones.delete(message.uuid); });
+  }
+  const kept = cardClones.get(uuid);
+  if (kept && kept.document === document && kept.updates === updates) return kept.clone;
+  //@ts-expect-error no dnd5e-types - changes not in fvtt types
+  const clone = document.clone(updates, { changes: updates, keepId: true }) as ChatMessage.Implementation;
+  cardClones.set(uuid, { document, updates, clone });
+  return clone;
 }
 
 export function isEffectExpired(effect: ActiveEffect.Implementation): boolean {

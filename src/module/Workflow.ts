@@ -506,6 +506,16 @@ export class Workflow {
     if (useWeakReferences) Workflow.#workflows.set(workflow.id, new WeakRef(workflow));
     else Workflow.#workflows.set(workflow.id, workflow);
   }
+  /** The item's workflow that is executing now (a macro inside its use), the most recently filed if several */
+  static runningFor(item: Item.Implementation): Workflow | undefined {
+    let found: Workflow | undefined;
+    for (const entry of Workflow.#workflows.values()) {
+      const workflow = entry instanceof WeakRef ? entry.deref() : entry;
+      if (workflow?.executingStates && workflow.item?.uuid === item.uuid) found = workflow;
+    }
+    return found;
+  }
+
   /**
    * The usage card of the actor's workflow that is executing now, if any: an item use started from inside it (a macro
    * spending a resource item, a triggered activity) belongs to that card. The most recently added one wins.
@@ -1504,7 +1514,8 @@ export class Workflow {
   }
 
   get itemCardId() {
-    return this.chatCard?.id;
+    // The stored card's id: the card with its queued changes isn't needed for it
+    return this.itemCardUuid ? (fromUuidSync(this.itemCardUuid) as ChatMessage.Implementation | null)?.id ?? undefined : undefined;
   }
 
   get damageFlavor() {
@@ -1699,7 +1710,8 @@ export class Workflow {
   /** A target's save roll (a Token, TokenDocument or token uuid); undefined until it has rolled */
   saveRoll(token: TokenOrDocument | string): Roll | undefined {
     const uuid = typeof token === "string" ? token : getTokenDocument(token)?.uuid;
-    return uuid ? this.tokenSaves?.[uuid] : undefined;
+    if (!uuid) return undefined;
+    return this.targetSaveDetails ? this.targetSaveDetails[uuid]?.saveRoll : this.#restoredSaves?.[uuid];
   }
   saveDC: number | undefined;
   saveDetails: SaveDetails | undefined;
@@ -5534,6 +5546,7 @@ export class Workflow {
     const semiSuperSavers = new Set(this.semiSuperSavers.uuids);
     const superSavers = new Set(this.superSavers.uuids);
     const existing = this.targetDescriptors;
+    const saveMults = this.damageSaveMultipliers();
     return targets.map(t => {
       // What the damage calculation used, if it has run; the live flag is transient for reactions.
       const applied = this.midiTargetDetail?.[t.uuid];
@@ -5541,7 +5554,6 @@ export class Workflow {
         ? !!applied.uncannyDodge
         : !!(t.actor?.flags?.[MODULE_ID]?.["uncanny-dodge"] && this.activity?.attack);
       const uncannyDodgeIcon = applied?.uncannyDodgeIcon as string | undefined;
-      const saveMults = this.damageSaveMultipliers();
       // The card's entry keeps what was recorded at roll time; midi's own detail is always recomputed.
       const recorded = getTargetDescriptor(t.actor?.uuid ?? "", existing);
       return {
@@ -5573,7 +5585,12 @@ export class Workflow {
      * Saves go last so `rolls[0]` keeps meaning what it did to anything still indexing it. Only those the card's own
      * save and check messages don't hold: another module's, or one midi changed.
      */
-    for (const roll of Object.values(this.tokenSaves ?? {})) if (this.#keepsSaveRoll(roll)) messageRolls.push(roll);
+    const saves = Object.values(this.tokenSaves ?? {});
+    if (saves.length) {
+      const card = this.itemCardUuid ? fromUuidSync(this.itemCardUuid) as Dnd5eChatMessage | null : null;
+      const linked = [...(card?.getAssociatedRolls?.("save") ?? []), ...(card?.getAssociatedRolls?.("check") ?? [])];
+      for (const roll of saves) if (this.#keepsSaveRoll(roll, linked)) messageRolls.push(roll);
+    }
     return messageRolls;
   }
 
@@ -5581,12 +5598,10 @@ export class Workflow {
    * A save roll goes on the card unless the card's linked save or check message for its token has it (dnd5e's own
    * save rolls, midi's or from the card's buttons). Other modules' are kept: their messages may not last.
    */
-  #keepsSaveRoll(roll: Roll): boolean {
+  #keepsSaveRoll(roll: Roll, linked: ChatMessage.Implementation[]): boolean {
     if (foundry.utils.getProperty(roll, `options.${MODULE_ID}.external`)) return true;
     const tokenId = String(foundry.utils.getProperty(roll, `options.${MODULE_ID}.targetUuid`) ?? "").split(".").pop();
-    const card = this.itemCardUuid ? fromUuidSync(this.itemCardUuid) as Dnd5eChatMessage | null : null;
-    return !(card?.getAssociatedRolls?.() ?? []).some(message => ["save", "check"].includes(message.type as string)
-      && message.speaker?.token === tokenId && message.rolls?.[0]?.total === roll.total);
+    return !linked.some(message => message.speaker?.token === tokenId && message.rolls?.[0]?.total === roll.total);
   }
 
   /**

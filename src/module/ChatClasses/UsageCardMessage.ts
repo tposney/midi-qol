@@ -103,8 +103,9 @@ export function cardSaveRoll(card: ChatMessage.Implementation | null | undefined
   // Scene.<sceneId>.Token.<tokenId>: a duplicated scene keeps its token ids
   const [sceneId, , tokenId] = tokenUuid.split(".").slice(-3);
   const record = recordFor((card.system as { midi?: { records?: CardRecords } } | undefined)?.midi?.records, tokenUuid);
-  const linked = ((card as Dnd5eChatMessage).getAssociatedRolls?.() ?? [])
-    .filter(message => ["save", "check"].includes(message.type as string) && message.speaker?.token === tokenId
+  const associated = (type: string) => (card as Dnd5eChatMessage).getAssociatedRolls?.(type) ?? [];
+  const linked = [...associated("save"), ...associated("check")]
+    .filter(message => message.speaker?.token === tokenId
       && (!message.speaker.scene || message.speaker.scene === sceneId))
     .sort((a, b) => (a.timestamp ?? 0) - (b.timestamp ?? 0));
   const message = typeof record?.saveTotal === "number"
@@ -248,11 +249,14 @@ export function setupUsageCardMessage() {
       template: "modules/midi-qol/templates/chat/usage-card.hbs"
     }, { inplace: false }));
 
+    // The button state worked out for dnd5e's buttons, reused for midi's in the same render
+    #visibility: ReturnType<typeof midiButtonVisibility> | undefined;
+
     /** dnd5e skips `shouldHideChatButton` for buttons visible to all, so midi's removal is applied here. */
     _prepareButtons() {
       const buttons = super._prepareButtons() as { action: string, visibility: string, hidden: boolean }[];
       const parent = this.parent as Dnd5eChatMessage;
-      const visible = midiButtonVisibility(parent, parent.getAssociatedActivity?.());
+      const visible = this.#visibility = midiButtonVisibility(parent, parent.getAssociatedActivity?.());
       return buttons.map(button => {
         if (button.hidden || button.visibility !== "all") return button;
         const spent = visible.allRemoved || (visible.savesResolved && ["rollSave", "rollCheck"].includes(button.action))
@@ -263,6 +267,7 @@ export function setupUsageCardMessage() {
 
     /** dnd5e's context plus midi's keys; a message with `content` (older cards) renders it verbatim. */
     async _prepareContext(options: ChatMessageRenderOptions): Promise<Record<string, any>> {
+      this.#visibility = undefined;
       const context = await this.#prepareBaseContext(options);
       if (context?.content) return context;
 
@@ -288,12 +293,13 @@ export function setupUsageCardMessage() {
 
       // Notes, and messages a note owns, are drawn by the notes.
       context.summaries = (context.summaries ?? []).filter((summary: any) => !drawnSeparately(game.messages?.get(summary.id)));
-      const saveRows = await this.#saveRows();
+      // With dnd5e's summaries off the saves show in the log, so no rows are drawn
+      const saveRows = safeGetGameSetting("dnd5e", "chatCardSummary") === false ? [] : await this.#saveRows();
       const sections = await this.#renderSections(this.#applySaveSummaries(context, saveRows), saveRows);
       context.midi = {
         ...(this.midi ?? {}),
         sections,
-        buttons: midiButtonVisibility(this.parent, (this.parent as Dnd5eChatMessage).getAssociatedActivity?.()),
+        buttons: this.#visibility ?? midiButtonVisibility(this.parent, activity),
         // The damage roll about to be made; Handlebars has no arithmetic helper.
         nextDamageRollCount: (this.midi?.damageRollCount ?? 0) + 1,
         followUps: followUpButtons(this.parent),
