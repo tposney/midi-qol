@@ -190,6 +190,9 @@ declare module "fvtt-types/configuration" {
         actorUuid?: string;
         sourceTokenUuid?: string;
         maxRange?: number;
+        /** The use it was placed for: its workflow's id (its card's uuid) and card */
+        workflowId?: string;
+        itemCardUuid?: string;
       }
     };
     ActiveEffect: {

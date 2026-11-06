@@ -128,8 +128,6 @@ export class MidiConditionField extends globalThis.dnd5e.dataModels.fields.Formu
   }
 }
 
-/** Each use's workflow, keyed by dnd5e's copy of the activity for that use (it runs the rest of `use`). */
-const useWorkflows = new WeakMap<object, Workflow>();
 
 /**
  * Apply optional region update + region behavior creation. GMs run locally; non-GMs send
@@ -789,7 +787,7 @@ export let MidiActivityMixin = Base => {
           usageConfig.workflow = usage.workflow;
           // newActivity will be the scaled activity to use that instead of what we have
           usage.workflow!.activity = newActivity;
-          useWorkflows.set(newActivity, usage.workflow!);
+          Workflow.setUse(newActivity, usage.workflow!);
           return true;
         });
         let usageData: ActivityUseConfiguration | undefined;
@@ -2009,7 +2007,6 @@ export let MidiActivityMixin = Base => {
         }], {
           actorUuid: actor?.uuid,
           tokenId: tokenToUse.id,
-          workflowId: this.uuid,
           itemUuid: this.item?.uuid
         });
 
@@ -2214,7 +2211,7 @@ export let MidiActivityMixin = Base => {
 
     /** midi's additions to the usage context; not named `_usageChatContext`, which would keep dnd5e's legacy content path. */
     async _midiUsageContext(message) {
-      const workflow = useWorkflows.get(this);
+      const workflow = Workflow.useOf(this);
       let systemCard = message.systemCard ?? false;
       const minimalCard = false;
 
@@ -2311,7 +2308,17 @@ export let MidiActivityMixin = Base => {
         // A card that cannot describe itself is still better than no card at all.
         console.error(`${MODULE_ID} | could not record usage card state`, err);
       }
-      return super._createUsageMessage(message);
+      const card = await super._createUsageMessage(message);
+      if (card instanceof ChatMessage) {
+        // dnd5e places the use's templates next, before use() returns and the workflow takes the card's uuid
+        Workflow.setUseCard(this, card);
+        // An emanation midi placed while the card was drawn (_midiUsageContext) names the card now it exists
+        for (const region of this.templates ?? []) {
+          if (region?.flags?.[MODULE_ID]?.activityTemplate && !region.flags[MODULE_ID].itemCardUuid)
+            await region.update({ [`flags.${MODULE_ID}`]: { workflowId: card.uuid, itemCardUuid: card.uuid } });
+        }
+      }
+      return card;
     }
 
     get actionType() { // the default actionType method in dnd5e mixin returns this.metadata.data instead of this.metadata.type

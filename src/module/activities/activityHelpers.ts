@@ -420,6 +420,8 @@ export function midiTemplateFlags(activity: any): Record<string, unknown> {
   if (casterToken) flags.sourceTokenUuid = casterToken.document.uuid;
   if (activity?.item) flags.itemUuid = activity.item.uuid;
   if (activity?.actor) flags.actorUuid = activity.actor.uuid;
+  // The use it is placed for (13.0.42 and earlier wrote these too)
+  if (activity) for (const [key, value] of Object.entries(Workflow.templateWorkflowFlags(activity))) if (value) flags[key] = value;
   const range = activity?.range;
   const rangeUnits = range?.units;
   if (configSettings.constrainTemplatePlacement && rangeUnits && !["self", "none", "any"].includes(rangeUnits)) {

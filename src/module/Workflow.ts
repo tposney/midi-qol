@@ -476,6 +476,23 @@ export class Workflow {
     else Workflow.#workflows.set(workflow.id, workflow);
   }
   /** The item's workflow that is executing now (a macro inside its use), the most recently filed if several */
+  // Each use's workflow, keyed by dnd5e's copy of the activity for that use (it runs the rest of `use`), and its card once
+  // made: the workflow takes the card's uuid as its id only when dnd5e's use() returns
+  static #uses = new WeakMap<object, { workflow: Workflow, cardUuid?: string }>();
+  static setUse(activity: Activity, workflow: Workflow) { Workflow.#uses.set(activity, { workflow }); }
+  static useOf(activity: Activity): Workflow | undefined { return Workflow.#uses.get(activity)?.workflow; }
+  static setUseCard(activity: Activity, card: ChatMessage.Implementation | undefined) {
+    const use = Workflow.#uses.get(activity);
+    if (use && card?.uuid) use.cardUuid = card.uuid;
+  }
+  /** The use a template of `activity` is placed for: its card's uuid (the workflow's id) once the card exists */
+  static templateWorkflowFlags(activity: Activity): { workflowId?: string, itemCardUuid?: string } {
+    const use = Workflow.#uses.get(activity);
+    const workflow = use?.workflow ?? (activity.item ? Workflow.runningFor(activity.item) : undefined);
+    const itemCardUuid = use?.cardUuid ?? workflow?.itemCardUuid;
+    return { workflowId: itemCardUuid ?? workflow?.id, itemCardUuid };
+  }
+
   static runningFor(item: Item.Implementation): Workflow | undefined {
     let found: Workflow | undefined;
     for (const entry of Workflow.#workflows.values()) {
