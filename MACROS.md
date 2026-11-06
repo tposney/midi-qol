@@ -737,7 +737,7 @@ A workflow keeps its state on its usage card, so it can be rebuilt after a reloa
 
 | Where | What |
 |---|---|
-| `card.system.midi.state` | The workflow's class, `isCritical`, `isFumble`, `templateUuids`, `workflowOptions`, and what a successful save does to each damage type |
+| `card.system.midi.state` | The workflow's class, `isCritical`, `isFumble`, `templateUuids`, `workflowOptions`, `inCombat` and `isTurn` (when the use started), and what a successful save does to each damage type |
 | `card.system.midi.records` | One record per token, keyed by scene id then token id (`records[sceneId][tokenId]`; each record also holds the token's `uuid`): whether it is a target, hit, saved, failed, super saver, …, its save total, cover and advantage (with the reasons), and its row in the hits list |
 | `card.rolls` | Every roll midi made for the use, tagged with `options.midi-qol.rollType` (`attack`, `defaultDamage`, `otherDamage`, `bonusDamage`, `utility`, `save`) |
 | `card.system.midi.sections` | The card's roll sections (`attack`, `hits`, `damage`, `otherDamage`, `bonusDamage`, `utility`, `saves`) as drawn |

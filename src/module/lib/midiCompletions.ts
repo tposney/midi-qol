@@ -379,6 +379,8 @@ const MIDI_COMPLETIONS: CompletionNode = {
           inCombat: { type: "property", detail: "boolean", info: "Whether token is in combat" },
         }
       },
+      inCombat: { type: "property", detail: "boolean", info: "Whether the actor was in a combat when the use started" },
+      isTurn: { type: "property", detail: "boolean", info: "Whether it was the actor's turn when the use started" },
       isCritical: { type: "property", detail: "boolean", info: "Whether the attack is a critical hit" },
       isFumble: { type: "property", detail: "boolean", info: "Whether the attack is a fumble" },
       attackRoll: {

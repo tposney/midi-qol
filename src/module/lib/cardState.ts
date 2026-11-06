@@ -22,7 +22,10 @@ export const STATE_FIELDS = {
   otherDeclined: "otherDeclined",
   otherScaling: "otherScaling",
   // The ammunition's data when its last piece was spent (autoDestroy): the use's damage still rolls with it
-  ammunitionData: "ammunitionData"
+  ammunitionData: "ammunitionData",
+  // When the use started: the actor in a combat, and on its turn
+  inCombat: "inCombat",
+  isTurn: "isTurn"
 } as const;
 export type StateKey = keyof typeof STATE_FIELDS;
 
@@ -86,7 +89,8 @@ export function cardStateSchema() {
       // A damage roll on its own (Workflow#damageOnly)
       damageOnly: bool(),
       otherConsumed: new ObjectField({ ...unset, nullable: true }), otherDeclined: bool(), otherScaling: num(),
-      ammunitionData: new ObjectField(unset)
+      ammunitionData: new ObjectField(unset),
+      inCombat: bool(), isTurn: bool()
     }, { required: false }),
     records: new TypedObjectField(new TypedObjectField(new SchemaField({
       uuid: new StringField({ required: true, blank: false }),

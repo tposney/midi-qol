@@ -884,9 +884,12 @@ export class Workflow {
     return this.templateUuid.split(".").at(-1);
   }
 
-  get inCombat() {
-    return this.actor.inCombat
-  }
+  /** When the use started, the actor was a combatant (of any combat) */
+  get inCombat(): boolean { return this.#persisted.scalar("inCombat", false); }
+  set inCombat(inCombat: boolean) { this.#persisted.setScalar("inCombat", inCombat, value => value || null); }
+  /** When the use started, it was the actor's turn in a started combat */
+  get isTurn(): boolean { return this.#persisted.scalar("isTurn", false); }
+  set isTurn(isTurn: boolean) { this.#persisted.setScalar("isTurn", isTurn, value => value || null); }
   AoO: boolean = false;
 
   #damageList: DamageListEntry[] | undefined;
@@ -1782,6 +1785,10 @@ export class Workflow {
     if (!restoring) {
       this.#mergeWorkflowOptions(options.workflowOptions ?? {});
       if (this.workflowOptions.templateUuid) this.templateUuid = this.workflowOptions.templateUuid;
+      if (this.actor) {
+        this.inCombat = isInCombat(this.actor);
+        this.isTurn = !!game.combats?.some(combat => combat.started && combat.combatant?.actor?.uuid === this.actor.uuid);
+      }
     }
 
     this.defaultDamageType = getActivityDefaultDamageType(this) ?? MidiQOL.MQdefaultDamageType;
@@ -3909,10 +3916,7 @@ export class Workflow {
       const finishedTargets = new TokenSet(this.targets);
       setTimeout(() => untargetDeadTokens(finishedTargets), 500);
     }
-    const inCombat = this.actor && isInCombat(this.actor);
-    let activeCombatants = game.combats?.combats.map(combat => combat.combatant?.token?.id)
-    const isTurn = activeCombatants?.includes(this.token?.id);
-    if (inCombat && isTurn && this.activity.activation?.type === "action" && !this.AoO) {
+    if (this.inCombat && this.isTurn && this.activity.activation?.type === "action" && !this.AoO) {
       await setActionUsed(this.actor);
     }
   }
