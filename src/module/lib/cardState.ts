@@ -217,7 +217,7 @@ export function cardSourceActor(message: ChatMessage.Implementation | undefined)
   return own ?? undefined;
 }
 
-/** A flag the card really has, not one of the deprecated getters */
+/** A flag the card stores, read past the deprecated flag getters (which warn and read the workflow) */
 export function storedMidiFlag(message: ChatMessage.Implementation | undefined, key: string): any {
   const flags = message?.flags?.["midi-qol"] as Record<string, unknown> | undefined;
   return flags ? Object.getOwnPropertyDescriptor(flags, key)?.value : undefined;

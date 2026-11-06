@@ -90,11 +90,8 @@
   {{#each midi.notes.buttons.after}}{{{ this }}}{{/each}}
 
   {{!--
-    The roll sections, rendered from `system.midi.sections` rather than spliced into `content`.
-
-    `midi-section` keeps the class names and the `end-` sentinel divs the old markup had. They are no
-    longer load-bearing — nothing regex-matches them now — but midi's stylesheet, its DSN hooks and
-    third-party macros all select on them, so removing them would break more than it tidied.
+    The roll sections, from `system.midi.sections`. The class names and `end-` divs are kept: midi's stylesheet, its DSN
+    hooks and other modules' macros select on them.
   --}}
   <div class="midi-results">
     {{#each midi.notes.top.before}}{{{ this }}}{{/each}}

@@ -186,16 +186,16 @@ export type WorkflowState = undefined | (() => Promise<WorkflowState>);
 export type WorkflowEvent = "attackRolled" | "damageRolled" | "noDamage" | "utilityRolled";
 export type WorkflowOutcome = "ok" | "allMissed" | "invalid" | "split" | "manualSaves" | "cancelled" | "aborted";
 
-/**
- * The workflow's stored fields: kept in memory, written to its card (lib/cardState.ts) through the card's update cache.
- * The card is read only when the workflow is rebuilt from it (load). Writing undefined forgets the value.
- */
 // The states whose end is a chat card milestone (Workflow#performState). Cleanup's end is the use's completion
 // (postCleanup, which completeActivityUse waits for): callers then read a written card.
 const MILESTONE_STATES = new Set(["WorkflowState_AttackRollComplete", "WorkflowState_WaitForSaves", "WorkflowState_AllRollsComplete", "WorkflowState_Cleanup"]);
 
 const RECORD_VALUES = ["otherDamage", "ammunitionDamage", "preSelected"] as const;
 
+/**
+ * The workflow's stored fields: kept in memory, written to its card (lib/cardState.ts) through the card's update cache.
+ * The card is read only when the workflow is rebuilt from it (load). Writing undefined forgets the value.
+ */
 class CardStateStore {
   #cache = new Map<string, unknown>();
   #write: (updates: Record<string, unknown>) => void;
@@ -673,11 +673,9 @@ export class Workflow {
     }
   }
 
-  // While a state runs its card changes are queued, and written at milestones: the attack resolved, saves requested and
-  // resolved, the rolls complete, a reaction about to be offered, the use complete, and whenever the workflow waits or
-  // its run ends
-  // (Chat card updates "At every step": after each step that changed what the card shows). `workflow.chatCard`
-  // includes queued changes, so macros and hooks see them.
+  // While a state runs its card changes are queued and written at milestones (MILESTONE_STATES, a reaction prompt, a
+  // wait) or, with Chat card updates "At every step", after each step that changed the card. `workflow.chatCard`
+  // includes queued changes.
   #queueingWrites = 0;
   #displayQueued = false;
 
@@ -701,13 +699,7 @@ export class Workflow {
   }
 
 
-  /**
-   * Write one rendered roll section to the card.
-   *
-   * Replaces the regex splice each `display*` method used to do against `message.content`. The HTML
-   * is the same HTML; only its destination changed, from a match inside one long string to a named
-   * slot the template renders.
-   */
+  /** Write one section of the card (system.midi.sections), with the workflow's rolls */
   async setCardSection(
     name: SectionName,
     section: MidiCardSection,
@@ -726,10 +718,10 @@ export class Workflow {
     this.#storeUnstored();
   }
 
-  /** A workflow keeps its state on its own card, the one it is registered under; never on another workflow's card */
   /** A copy of another user's workflow (getWorkflow): it does not run or write the card */
   readOnly = false;
 
+  /** A workflow keeps its state on its own card, the one it is registered under; never on another workflow's card */
   get ownsCard(): boolean {
     return !!this.itemCardUuid && this.itemCardUuid === this.id;
   }
@@ -2393,18 +2385,7 @@ export class Workflow {
       if (this.aborted) return this.WorkflowState_Abort;
     }
 
-    // do pre roll checks
-    /*
-     * Thrown weapons are ranged attacks and the range rules apply to them — "hurl a handaxe" is the
-     * rules' own example of making one. A thrown weapon is a melee weapon carrying the property, so
-     * its activity is mwak and this gate was skipping it: no long-range disadvantage, and no
-     * out-of-range failure either. `checkActivityRange` was always written to cope with them (it
-     * clamps the long range away only for melee weapons *without* the property) and
-     * TargetConfirmation already calls it for mwak, so this caller was the odd one out.
-     *
-     * No guard is needed for one used in melee: with its normal range read correctly, a javelin
-     * thirty feet out is inside it and reports normal.
-     */
+    // Range: melee weapons too (a thrown weapon is mwak; checkActivityRange keeps the long range only for those)
     if (checkMechanic("checkRange") !== "none" && !this.AoO && isRangeCheckable(this.activity) && this.tokenUuid) {
       const { result, attackingToken } = checkActivityRange(this.activity, getToken(this.token) ?? "invalid", this.targets);
       switch (result) {
@@ -3149,13 +3130,7 @@ export class Workflow {
     const otherResolved = await resolveEffects(this.otherActivity);
     let otherActivityEffects = otherResolved.applied;
     let onSaveOtherActivityEffects = otherResolved.onSave;
-    /*
-     * Ammunition effects. The ammunition activity is resolved independently of otherActivity, so an
-     * item's own other activity and its ammunition can both contribute. They join the other-activity
-     * collections rather than getting a third application path: the targeting and consumption
-     * handling below is exactly what they need, and an activity can no longer be both, so nothing is
-     * collected twice.
-     */
+    // The ammunition's effects, applied with the other activity's (an item's other activity and its ammunition both can)
     const ammunitionResolved = await resolveEffects(ammunition);
     let ammunitionEffects = ammunitionResolved.applied;
     let onSaveAmmunitionEffects = ammunitionResolved.onSave;
@@ -3502,16 +3477,8 @@ export class Workflow {
         if (shouldTrigger) {
           let usage: { midiOptions: MidiOptions } = { midiOptions: {} };
           usage.midiOptions.event = this.rollOptions.event;
-          /*
-           * Inherit the triggering workflow's options, but not targetConfirmation. That one
-           * describes how a particular invocation was made, not the workflow: AttackActivity sets
-           * it to "never" for each iteration of the roll-attack-per-target loop, because the loop
-           * already knows its target. Passing it on suppressed confirmation for the triggered
-           * activity too, overriding that activity's own confirmTargets setting.
-           *
-           * rollAttackPerTarget leaks the same way and from the same loop: it says this attack is
-           * being rolled once per target, which has no bearing on the activity it triggers.
-           */
+          // The triggering workflow's options, but not how that one invocation was made (the attack-per-target loop's
+          // targetConfirmation "never" and rollAttackPerTarget): the triggered activity keeps its own confirmation
           const {
             targetConfirmation: _triggeringTargetConfirmation,
             rollAttackPerTarget: _triggeringRollAttackPerTarget,
@@ -3579,15 +3546,8 @@ export class Workflow {
   }
 
   /**
-   * Hand back whatever dnd5e consumed for this use.
-   *
-   * Aborting deletes the activity card, and the card is where dnd5e keeps the consumption deltas
-   * and its own "Refund Resource" button - so an abort that happens before the roll has to refund
-   * itself or the slot/uses are lost with no way to recover them. postChatCardChecks already does
-   * this for the checks it runs; the checks deferred to WorkflowState_AoETargetConfirmation (which
-   * is where a scaled target count such as Banishment's is first known) did not.
-   *
-   * Idempotent: a workflow can reach more than one abort path.
+   * Hand back what dnd5e consumed for this use: an abort deletes the card, where dnd5e keeps the consumption and its
+   * Refund button. Idempotent: a workflow can reach more than one abort path.
    */
   async refundConsumption(): Promise<void> {
     if (this.#consumptionRefunded) return;
@@ -5084,10 +5044,7 @@ export class Workflow {
     return text;
   }
 
-  /**
-   * Build the message update for a display method, routing the rendered section either to its named
-   * slot or, for a card still rendering from stored markup, to the spliced `content`.
-   */
+  /** The card update for one display method's section, with `extras` */
   #sectionUpdate(
     name: SectionName,
     section: MidiCardSection | undefined,
@@ -5214,19 +5171,8 @@ export class Workflow {
     const chatMessage = this.chatCard;
 
     if (chatMessage) {
-      /*
-       * The data, not the markup. `hits.html` needs only `target.id` from each entry, so the live
-       * Token is projected away — storing it would serialise a canvas placeable into the card.
-       *
-       * `oneCard`, `collapsibleTargets` and `isGM` are deliberately not stored: they are properties
-       * of the viewer and the current settings, and baking them in gave every client the roller's
-       * answer.
-       */
-      /*
-       * A list, not the uuid-keyed map the workflow holds. `throttledUpdate` runs the update through
-       * `foundry.utils.expandObject`, and an actor uuid contains dots — so the map was exploded into
-       * `{ Scene: { <id>: { Token: { <id>: … } } } }` and the template rendered nothing.
-       */
+      // The data, not the markup: a list (uuid keys have dots, which the update would split), the Token reduced to its id,
+      // and nothing per viewer (oneCard, collapsibleTargets, isGM are added when drawn)
       const entries = Object.entries(this.hitDisplayData ?? {});
       // Its own card draws the rows from the records (UsageCardMessage); another's stores them
       if (this.ownsCard) this.#persisted.setHitRows(entries.map(([, hit]: [string, any]) => [getTokenDocument(hit?.target), {
@@ -5377,26 +5323,16 @@ export class Workflow {
   }
 
   /**
-   * Record the workflow's targets on the card, in the field dnd5e reads.
-   *
-   * dnd5e captures `system.targets` from `game.user.targets` when the usage message is created.
-   * midi frequently settles its targets *after* that — a template is placed, target confirmation
-   * runs, an AoE recomputes — so the card kept whatever happened to be targeted at creation. That
-   * is what the damage tray and `<recorded-targets>` read, which is why a Fireball that hit four
-   * creatures listed one.
-   *
-   * `TargetsField.getDescriptors` is dnd5e's own serialiser, so the entries are exactly what it
-   * expects to resolve.
+   * The workflow's targets as dnd5e records them (`system.targets`, TargetsField's own descriptors): dnd5e takes them from
+   * the user's targets when the card is created, and midi settles its targets later (templates, confirmation).
    */
   #targetsUpdate(): Record<string, unknown> {
     const TargetsField = globalThis.dnd5e?.dataModels?.chatMessage?.fields?.TargetsField;
     if (!TargetsField?.getDescriptors) return {};
     const tokens = this.targets.documents;
     if (!tokens.length) return {};
-    // dnd5e's descriptors, with midi's per-target detail merged onto the matching entry. The extra
-    // keys are part of the schema because MidiUsageMessageData extends the targets field.
-    // dnd5e's descriptors. midi's own detail for the damage tray goes in the card's state and records (cardTargetDetail),
-    // or on the descriptors of a card the workflow does not own (a damage-only workflow's)
+    // midi's detail for the damage tray goes in the card's state and records (cardTargetDetail), or on the descriptors of
+    // a card the workflow does not own (a damage-only workflow's)
     const descriptors = TargetsField.getDescriptors(tokens) as Record<string, unknown>[];
     const details = this.buildMidiTargetDescriptors(tokens);
     if (!this.ownsCard) {
@@ -5419,11 +5355,8 @@ export class Workflow {
   }
 
   /**
-   * midi's per-target detail for the damage tray: save results, save multipliers, uncanny dodge.
-   *
-   * dnd5e's own `system.targets` cannot hold these — its `TargetsField` is name/img/ac/actor/token —
-   * so they go in midi's own flag and `DamageApplicationElementMidi.getTargetOptions` reads them
-   * back into `options.midi`, which is what makes the tray's numbers and icons match midi's card.
+   * Each target's descriptor with midi's detail for the damage tray (save results and multipliers, uncanny dodge), which
+   * DamageApplicationElementMidi.getTargetOptions reads back into `options.midi` (#targetsUpdate stores it)
    */
   buildMidiTargetDescriptors(targets: TokenDocument.Implementation[]): CombinedTargetDescriptor[] {
     const saves = new Set(this.saves.uuids);
@@ -5526,13 +5459,6 @@ export class Workflow {
     return document ? tokenPortrait(document) : target.actor?.img ?? "";
   }
 
-  /**
-   * Checks if target should auto-succeed due to Sculpt Spells or Careful Spells features
-   * Sculpt Spells: Evocation wizard feature - pre-selected targets auto-succeed on saves
-   * Careful Spells: Sorcerer metamagic - pre-selected targets auto-succeed on saves
-   * @param target The target token to check
-   * @returns true if target should auto-succeed, false otherwise
-   */
   /**
    * Sculpt Spells and Careful Spell (2024): an area use's creatures targeted before casting are the caster's choice.
    * They succeed on the save and take no damage where a save halves it.
@@ -7986,10 +7912,10 @@ export class Workflow {
   }
 
   /**
-   * Flags other modules put on a roll's message config. midi rolls attacks and damage without dnd5e's own messages,
-   * so they are kept on the card instead, merged into its next roll update; midi's, dnd5e's and core's are left out.
+   * Run one of dnd5e's rolls for `subject`, keeping the flags other modules put on its message config: midi rolls without
+   * dnd5e's messages, so they go on the card with its next roll update (midi's, dnd5e's and core's left out). dnd5e
+   * rolls on a copy of the message config.
    */
-  /** Run one of dnd5e's rolls for `subject`, keeping those flags; dnd5e rolls on a copy of the message config. */
   async keepRollMessageFlags<T>(subject: unknown, roll: () => Promise<T>): Promise<T> {
     const id = Hooks.on("dnd5e.postRollConfiguration", (_rolls, config, _dialog, message) => {
       if ((config as { subject?: unknown }).subject === subject) this.addRollMessageFlags(message as { data?: Record<string, unknown> });

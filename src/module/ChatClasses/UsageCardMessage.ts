@@ -147,14 +147,13 @@ async function saveRow(uuid: string, result?: { roll?: Roll, total?: number | nu
   return row;
 }
 
-/** A roll section: a roll type rendered from `message.rolls`, a template with data, or stored markup. */
-// A roll section stored without a label, or a section without its usual template, gets them when drawn
-/** The template a card section is drawn with when it stores none */
+/** The template a card section is drawn with when it stores none (a roll section stored without a label gets one too) */
 export const SECTION_TEMPLATES = {
   hits: "modules/midi-qol/templates/hits.html",
   saves: "modules/midi-qol/templates/saves.html"
 } as const satisfies Partial<Record<string, string>>;
 
+/** A card section: a roll type drawn from `message.rolls`, a template with data, or markup (older cards) */
 export type MidiCardSection = { label?: string, rollType?: string, template?: string, data?: Record<string, unknown>, html?: string };
 
 export function setupUsageCardMessage() {
@@ -163,7 +162,7 @@ export function setupUsageCardMessage() {
   const base: any = CONFIG.ChatMessage.dataModels?.[USAGE_MESSAGE_TYPE]
     ?? globalThis.dnd5e?.dataModels?.chatMessage?.UsageMessageData;
   if (!base) {
-    error("dnd5e does not expose a usage chat message model; usage cards keep their stored markup");
+    error("dnd5e exposes no usage chat message model to extend: midi cannot draw its usage cards");
     return;
   }
 
@@ -173,7 +172,7 @@ export function setupUsageCardMessage() {
     declare parent: ChatMessage.Implementation;
     declare midi: Record<string, any>;
 
-    /** Rendering decisions settled at creation, since they depend on a workflow that is gone by render time. */
+    /** dnd5e's usage card with midi's data (system.midi) and per-target detail */
     static defineSchema() {
       const schema = super.defineSchema();
       // midi's per-target detail on dnd5e's own targets list: older cards, and a card a damage-only workflow shows
@@ -465,7 +464,7 @@ export function setupUsageCardMessage() {
         // No rolls to render from — a card mid-workflow, or one whose rolls were pruned.
         if (!renderer || !rolls.length) { out[name] = { ...section, html: section.html ?? "" }; continue; }
         const html = await renderer(rolls as Roll[]);
-        // The attribution icon sits on the label, where the splice used to put it.
+        // The attribution icon goes on the label
         const label = `${section.label ?? ""}${await renderRollAttributionIcon(rolls[0])}`;
         out[name] = { ...section, label, html };
       }

@@ -9539,7 +9539,6 @@ export function compactCardContent(content: string): string {
   return compactHTML(content.slice(0, at)) + description + compactHTML(content.slice(at + description.length));
 }
 
-// NOTE: Typed as a ChatMessage since that's all we use it for
 /**
  * The cached updates still to write once `sent` has landed: those queued while it was in flight. Compared by value,
  * arrays included: `diffObject` always finds a rebuilt array different, so arrays (targets, the hits list) stayed

@@ -353,7 +353,7 @@ export class DamageApplicationElementMidi extends globalThis.dnd5e.applications.
           foundry.utils.setProperty(options, "midi.uncannyDodge", true);
         }
     } catch (err) {
-      const message = `midi-qol | _DAgetTargetOptions failed to get target options`;
+      const message = `midi-qol | damage tray: could not get the target options`;
       console.warn(message, err);
       TroubleShooter.recordError(err, message);
     }
