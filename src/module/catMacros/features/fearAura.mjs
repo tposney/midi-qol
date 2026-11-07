@@ -17,7 +17,7 @@ async function turnStart({document: item, token: starter}) {
     const data = activity.toObject();
     data.target = {...data.target, template: {...data.target?.template, type: '', size: ''}, affects: {...data.target?.affects, type: 'creature', count: '1'}};
     const workflow = await workflowUtils.syntheticActivityDataRoll(data, item, [starter], {consumeUsage: false, consumeResources: false});
-    if (!workflow || workflow.failedSaves.size) return;
+    if (!workflow || workflow.failedSaves.count) return;
     await effectUtils.createEffects(target, [{
         name: `${item.name}: immune (${holder.name})`,
         img: item.img,

@@ -79,7 +79,7 @@ export async function doActivityReactions(activity: Activity, workflow: Workflow
     ac?: number;
   }>[] = [];
   if (!foundry.utils.getProperty(activity, `flags.${MODULE_ID}.noProvokeReaction`) && !workflow?.workflowOptions.noProvokeReaction) {
-    for (let targetToken of workflow.targets) {
+    for (let targetToken of workflow.targets.tokens) {
       promises.push((async () => {
         const result = await doReactions(targetToken, workflow.tokenUuid, null, "reactionpreattack", { item: activity.item, workflow, workflowOptions: foundry.utils.mergeObject(workflow.workflowOptions, { sourceActorUuid: activity.actor?.uuid, sourceItemUuid: activity.item?.uuid }, { inplace: false, overwrite: true }) });
         if (result.name) {

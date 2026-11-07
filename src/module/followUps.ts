@@ -7,10 +7,10 @@
  */
 
 import { MODULE_ID, debug } from "../midi-qol.js";
-import { Activity } from "../globals.js";
+import { Activity, TokenOrDocument } from "../globals.js";
 import { completeActivityUse, evalActivationCondition } from "./utils.js";
 import type { Workflow } from "./Workflow.js";
-import { TokenSet } from "./lib/tokenSet.js";
+import { TokenDocumentSet } from "./lib/tokenDocumentSet.js";
 
 /** Update key for the card's follow-ups; a string, as the system fields are untyped. */
 const FOLLOW_UPS: string = "system.midi.followUps";
@@ -21,15 +21,15 @@ export const followUpTargetModes = ["default", "self", "targets", "hitTargets", 
 export type FollowUpTargetMode = typeof followUpTargetModes[number];
 
 /** Who a follow-up runs at. Default: the creatures hit by an attack, else all the targets. */
-export function followUpTargets(workflow: Workflow, mode: FollowUpTargetMode | string = "default"): TokenSet {
+export function followUpTargets(workflow: Workflow, mode: FollowUpTargetMode | string = "default"): TokenDocumentSet {
   switch (mode) {
-    case "self": return new TokenSet(workflow.token ? [workflow.token] : []);
-    case "targets": return new TokenSet(workflow.targets);
-    case "hitTargets": return new TokenSet(workflow.hitTargets);
-    case "missedTargets": return new TokenSet(workflow.targets.documents.filter(document => !workflow.hitTargets.has(document)));
-    case "failedSaves": return new TokenSet(workflow.failedSaves);
-    case "saveTargets": return new TokenSet(workflow.saves);
-    default: return new TokenSet(workflow.activity?.attack ? workflow.hitTargets : workflow.targets);
+    case "self": return new TokenDocumentSet(workflow.token ? [workflow.token] : []);
+    case "targets": return new TokenDocumentSet(workflow.targets);
+    case "hitTargets": return new TokenDocumentSet(workflow.hitTargets);
+    case "missedTargets": return new TokenDocumentSet(workflow.targets.documents.filter(document => !workflow.hitTargets.has(document)));
+    case "failedSaves": return new TokenDocumentSet(workflow.failedSaves);
+    case "saveTargets": return new TokenDocumentSet(workflow.saves);
+    default: return new TokenDocumentSet(workflow.activity?.attack ? workflow.hitTargets : workflow.targets);
   }
 }
 
@@ -41,10 +41,10 @@ function followUpsOf(message: ChatMessage.Implementation | undefined): FollowUpE
  * Offer an activity as a button on the workflow's card, run at `options.targets` (default: the creatures an attack hit,
  * else all the targets; none is allowed). Returns false if the card is missing or the activity is already offered.
  */
-export async function addFollowUp(workflow: Workflow, activity: Activity, options: { label?: string, targets?: Iterable<Token.Implementation> } = {}): Promise<boolean> {
+export async function addFollowUp(workflow: Workflow, activity: Activity, options: { label?: string, targets?: Iterable<TokenOrDocument | string> } = {}): Promise<boolean> {
   const message = workflow.chatCard as ChatMessage.Implementation | undefined;
   if (!message || !activity?.uuid) return false;
-  const targets = new TokenSet(options.targets ?? followUpTargets(workflow));
+  const targets = new TokenDocumentSet(options.targets ?? followUpTargets(workflow));
   const followUps = followUpsOf(message);
   if (followUps.some(entry => entry.activityUuid === activity.uuid)) return false;
   followUps.push({

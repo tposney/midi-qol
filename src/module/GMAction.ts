@@ -6,7 +6,7 @@ import { DAMAGE_MESSAGE_TYPE } from "./ChatClasses/DamageCardMessage.js";
 import { DamageDescriptionObject, Workflow } from "./Workflow.js";
 import { applyFailedDeathSaves, bonusCheck, revertFailedDeathSaves } from "./patching.js";
 import { RollModifierTracker } from "./lib/RollModifierTracker.js";
-import { TokenSet } from "./lib/tokenSet.js";
+import { TokenDocumentSet } from "./lib/tokenDocumentSet.js";
 import { actorEmbeddedByPath, repointCopiedDependentsSource } from "./lib/MidiDependentsRegistry.js";
 import { queueUndoData, startUndoWorkflow, _removeMostRecentWorkflow, _undoMostRecentWorkflow, undoTillWorkflow, _queueUndoDataDirect, addUndoChatCards } from "./undo.js";
 import { TroubleShooter } from "./apps/TroubleShooter.js";
@@ -229,12 +229,12 @@ async function confirmDamageRollComplete(data: { workflowId: string, activityUui
     Workflow.removeItemCardButtons(data.itemCardUuid, { removeConfirmButtons: true });
     return undefined;
   }
-  const hasHits = workflow.hitTargets.size > 0 || workflow.hitTargetsEC.size > 0;
+  const hasHits = workflow.hitTargets.count > 0 || workflow.hitTargetsEC.count > 0;
   if ((workflow.currentAction === workflow.WorkflowState_AttackRollComplete) || (hasHits &&
     activity?.hasDamage && (!workflow.damageRoll || workflow.currentAction !== workflow.WorkflowState_ConfirmRoll))) {
     return "midi-qol | You must roll damage before completing the roll - you can only confirm miss until then";
   }
-  if (workflow.hitTargets.size === 0 && workflow.hitTargetsEC.size === 0) {
+  if (workflow.hitTargets.count === 0 && workflow.hitTargetsEC.count === 0) {
     // TODO make sure this needs to be awaited
     return confirmDamageRollCompleteMiss(data);
   }
@@ -259,7 +259,7 @@ async function confirmDamageRollCompleteHit(data: { workflowId: string, activity
     // TODO confirm this needs to be awaited
 
   }
-  workflow.hitTargets = new TokenSet(workflow.targets);
+  workflow.hitTargets = new TokenDocumentSet(workflow.targets);
   workflow.hitTargetsEC = new Set();
   workflow.isFumble = false;
   for (let hitDataKey in workflow.hitDisplayData) {
@@ -281,7 +281,7 @@ async function confirmDamageRollCompleteMiss(data: { workflowId: string, activit
     Workflow.removeItemCardButtons(data.itemCardUuid, { removeConfirmButtons: true });
     return undefined;
   }
-  if (workflow.hitTargets.size > 0 || workflow.hitTargetsEC.size > 0) {
+  if (workflow.hitTargets.count > 0 || workflow.hitTargetsEC.count > 0) {
     workflow.hitTargets = new Set();
     workflow.hitTargetsEC = new Set();
     for (let hitDataKey in workflow.hitDisplayData) {

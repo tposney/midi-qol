@@ -27,7 +27,7 @@ const option = (activity, identifier, key, fallback) => activity?.flags.cat?.gen
 function hideTotal(workflow) {
     const token = workflow.token?.document ?? workflow.token;
     const total = workflow.tokenSaves?.[token?.uuid]?.total;
-    return Number.isFinite(total) && !workflow.failedSaves?.size ? total : undefined;
+    return Number.isFinite(total) && !workflow.failedSaves?.count ? total : undefined;
 }
 // The condition has a fixed id, so its uuid is known before it exists.
 const conditionUuid = actor => `${actor.uuid}.ActiveEffect.${hidingConditionId()}`;

@@ -56,10 +56,10 @@ async function run(item, owner, entry, targets) {
     data.target = {...data.target, template: {...data.target?.template, type: '', size: ''}, affects: {...data.target?.affects, type: 'creature', count: String(targets.length)}};
     const workflow = await workflowUtils.syntheticActivityDataRoll(data, item, targets, {consumeUsage: false, consumeResources: false,
         config: {create: {measuredTemplate: false}}, options: {workflowOptions: {targetConfirmation: 'none', allowIncapacitated: entry.when === 'death'}}});
-    if (!entry.immuneOnSave || !workflow?.saves?.size) return workflow;
+    if (!entry.immuneOnSave || !workflow?.saves?.count) return workflow;
     const key = immunityKey(item, owner, entry);
-    for (const saved of workflow.saves) {
-        const actor = (saved.document ?? saved).actor;
+    for (const saved of workflow.saves.documents) {
+        const actor = saved.actor;
         await effectUtils.createEffects(actor, [{
             name: `${item.name}: Immune`,
             img: item.img,

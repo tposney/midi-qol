@@ -22,17 +22,16 @@ async function biteCheck({document: item, workflow}) {
         return;
     }
     if (c.exclusive === false) return;
-    const target = [...workflow.targets][0]?.document;
+    const target = workflow.targets.documents[0];
     if (!held.length || !target || held.some(t => t.id === target.id)) return;
     ui.notifications.warn(`${item.name}: ${item.actor.name} is grappling ${held.map(t => t.name).join(', ')} and can't use it against another target.`);
     workflow.aborted = true;
 }
 async function bitten({document: item, workflow}) {
     const c = item.flags?.[MODULE]?.grappleOnHit;
-    if (!c || workflow.activity?.id !== c.activity || !workflow.hitTargets.size) return;
+    if (!c || workflow.activity?.id !== c.activity || !workflow.hitTargets.count) return;
     const source = sourceOf(workflow);
-    const target = [...workflow.hitTargets][0];
-    const targetDoc = target.document ?? target;
+    const targetDoc = workflow.hitTargets.documents[0];
     const held = source ? tokenUtils.getGrappled(source) : [];
     if (!source || held.some(t => t.id === targetDoc.id) || (c.exclusive !== false && held.length)) return;
     if (c.maxSize && SIZES.indexOf(targetDoc.actor?.system.traits.size) > SIZES.indexOf(c.maxSize)) return;

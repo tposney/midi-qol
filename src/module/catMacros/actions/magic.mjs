@@ -11,7 +11,7 @@ async function pick({workflow}, filter, prompt) {
     if (!items.length) return ui.notifications.info(`${workflow.actor.name} has nothing to use.`);
     const chosen = await dialogUtils.selectDocumentDialog(workflow.item.name, prompt, items, {sort: 'level', showSpellLevel: items.every(item => item.type === 'spell')});
     const item = Array.isArray(chosen) ? chosen[0] : chosen;
-    if (item) await completeItemUse(item, {midiOptions: {targetUuids: Array.from(workflow.targets, token => token.document.uuid)}}, {}, {});
+    if (item) await completeItemUse(item, {midiOptions: {targetUuids: workflow.targets.uuids}}, {}, {});
 }
 async function use(data) {
     const identifier = documentUtils.getIdentifier(data.workflow.activity);

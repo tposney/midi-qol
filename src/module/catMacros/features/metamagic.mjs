@@ -43,7 +43,7 @@ function chaMax(actor) {
     return Math.max(1, actor.system.abilities.cha?.mod ?? 0);
 }
 function targetsOf(workflow) {
-    return Array.from(workflow.targets, token => token.document ?? token);
+    return workflow.targets.documents;
 }
 function hasSave(spell) {
     return spell.system.activities.some(activity => activity.type === 'save' || activity.save?.ability?.size);
@@ -219,7 +219,7 @@ async function cast(spell, workflow, plan) {
             ? {atLevel: plan.atLevel, spellSlot: false}
             : {options: {configureDialog: true}, dialog: {configure: true}};
         const castWorkflow = await workflowUtils.syntheticItemDataRoll(data, actor, targets, options);
-        if (!castWorkflow || castWorkflow.aborted || (targets.length && !castWorkflow.targets?.size)) return false;
+        if (!castWorkflow || castWorkflow.aborted || (targets.length && !castWorkflow.targets?.count)) return false;
         if (plan.slot) await actorUtils.spendSpellSlots(actor, plan.slot);
         for (const step of plan.after) await step(actor, spell, workflow.item);
         return true;
@@ -256,7 +256,7 @@ async function use({document: item, workflow}) {
     if (!await cast(spell, workflow, plan)) await refund(receipt);
 }
 async function carefulPreamble({document: effect, workflow}) {
-    if (!workflow.targets.size || workflow.item?.type !== 'spell') return;
+    if (!workflow.targets.count || workflow.item?.type !== 'spell') return;
     const max = chaMax(workflow.actor);
     const protectedTargets = await pickTargets(effect, workflow, 'Careful Spell: protect up to ' + max + ' creature(s).', max);
     for (const target of protectedTargets) workflowUtils.grantRollModifier(workflow, 'succeed', target.id, 'careful-spell', effect.name);
@@ -265,17 +265,17 @@ async function carefulPreamble({document: effect, workflow}) {
 // A protected creature that takes half damage on a success takes none.
 async function carefulSaves({workflow}) {
     const uuids = workflowUtils.getWorkflowProperty(workflow, 'carefulTargets') ?? [];
-    for (const token of workflow.saves) {
-        if (uuids.includes((token.document ?? token).uuid)) workflow.superSavers = workflow.superSavers.add(token);
+    for (const token of workflow.saves.documents) {
+        if (uuids.includes(token.uuid)) workflow.superSavers = workflow.superSavers.add(token);
     }
 }
 async function heightenedPreamble({document: effect, workflow}) {
-    if (!workflow.targets.size || workflow.item?.type !== 'spell') return;
+    if (!workflow.targets.count || workflow.item?.type !== 'spell') return;
     const [target] = await pickTargets(effect, workflow, 'Heightened Spell: which target has Disadvantage on its save?', 1);
     if (target) workflowUtils.grantRollModifier(workflow, 'dis', target.id, 'heightened-spell', effect.name);
 }
 async function empowered({document: item, workflow}) {
-    if (workflow.item?.type !== 'spell' || !workflow.hitTargets.size || !workflow.damageRolls?.length) return;
+    if (workflow.item?.type !== 'spell' || !workflow.hitTargets.count || !workflow.damageRolls?.length) return;
     const cost = costOf(item);
     if (points(workflow.actor) < cost) return;
     const max = chaMax(workflow.actor);
@@ -306,9 +306,9 @@ async function empowered({document: item, workflow}) {
     await workflow.setDamageRolls(workflow.damageRolls);
 }
 async function seeking({document: item, workflow}) {
-    if (workflow.item?.type !== 'spell' || !workflow.attackRoll || !workflow.targets.size) return;
+    if (workflow.item?.type !== 'spell' || !workflow.attackRoll || !workflow.targets.count) return;
     const total = workflow.attackRoll.total;
-    if (Array.from(workflow.targets).every(target => (target.actor?.system.attributes.ac.value ?? Infinity) <= total)) return;
+    if (workflow.targets.documents.every(target => (target.actor?.system.attributes.ac.value ?? Infinity) <= total)) return;
     const cost = costOf(item);
     if (points(workflow.actor) < cost) return;
     if (!await dialogUtils.confirmUseForRollTotal(item, workflow.item.name, total)) return;

@@ -5,7 +5,7 @@ import {INFLUENCE_NOTE_KIND} from '../../lib/influenceNote.js';
 // Intelligence score, whichever is higher, with Advantage if Friendly and Disadvantage if Hostile.
 const SKILLS = ['dec', 'itm', 'prf', 'per', 'ani'];
 async function request({workflow}) {
-    const target = workflow.targets.first();
+    const target = workflow.targets.documents[0];
     if (!target?.actor) return ui.notifications.info('Influence: target the creature you want to influence.');
     const gm = game.users.activeGM ?? game.user;
     const attitude = await dialogUtils.buttonDialog(workflow.item.name, `How does ${target.name} respond to ${workflow.actor.name}'s request?`, [
@@ -20,7 +20,7 @@ async function request({workflow}) {
     const dc = Math.max(15, target.actor.system.abilities.int?.value ?? 0);
     const skillLabel = CONFIG.DND5E.skills[skill].label;
     const note = await addCardNote(workflow, `<p>${target.name} is ${attitude}: ${skillLabel} check, DC ${dc}.</p>`, {key: 'influence', kind: INFLUENCE_NOTE_KIND,
-        data: {target: {name: target.name, uuid: target.document.uuid}, attitude, skill: skillLabel, dc}});
+        data: {target: {name: target.name, uuid: target.uuid}, attitude, skill: skillLabel, dc}});
     if (!note) return;
     await workflow.actor.rollSkill({skill, target: dc, advantage: attitude === 'friendly', disadvantage: attitude === 'hostile'}, {}, {data: cardNoteMessageData(note, 'check')});
 }

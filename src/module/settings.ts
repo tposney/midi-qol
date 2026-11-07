@@ -1626,6 +1626,15 @@ export const consumeConfigOptions = keysToOptionsObj("ConfigDialogOptions", [
 ]);
 
 export const registerSettings = function () {
+  // Workflow token sets read as TokenDocuments (TokenDocumentSet document mode); read once at init, so a change needs a
+  // reload. For developers trying document mode: MidiQOL.setTokenDocumentSets(true). Revisit when this setting goes.
+  game.settings.register("midi-qol", "tokenDocumentSets", {
+    scope: "world",
+    type: Boolean,
+    config: false,
+    default: false,
+    requiresReload: true
+  });
 
   // ========================================
   // Hidden settings (config: false) - registered first
@@ -1988,4 +1997,11 @@ export function shouldDisplaySaveDC(actor?: Actor): boolean {
   if (visibility === "all") return true;
   // "player" - only show DC if actor is player-owned (or no actor specified for backwards compat)
   return !actor || (actor as any).hasPlayerOwner;
+}
+
+/** Turn workflow token sets' document mode on or off (a world setting: every client, after a reload) */
+export async function setTokenDocumentSets(enabled: boolean, { reload = true }: { reload?: boolean } = {}) {
+  await game.settings.set("midi-qol", "tokenDocumentSets", !!enabled);
+  //@ts-expect-error reloadConfirm not in fvtt-types
+  if (reload) await foundry.applications.settings.SettingsConfig.reloadConfirm({ world: true });
 }

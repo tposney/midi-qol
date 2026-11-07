@@ -3,7 +3,7 @@ import {dialogUtils, documentUtils, genericUtils} from '../proxy.mjs';
 // that comes from another effect (a spell, a poison) doesn't return with it.
 const CONDITIONS = ['blinded', 'deafened', 'paralyzed', 'poisoned'];
 async function use({document: item, workflow}) {
-    const target = workflow.targets.first();
+    const target = workflow.targets.documents[0];
     const actor = target?.actor;
     if (!actor) return;
     const present = CONDITIONS.filter(id => actor.statuses.has(id));

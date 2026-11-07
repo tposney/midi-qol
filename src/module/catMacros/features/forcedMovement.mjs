@@ -1,3 +1,4 @@
+import {getTokenDocument} from '../../utils.js';
 import {actorUtils, dialogUtils, effectUtils, tokenUtils} from '../proxy.mjs';
 // Pushes or pulls targets after an activity, from the item's flags.midi-qol.forcedMovement entries:
 // {activity, when: 'hit'|'failedSave'|'always', direction: 'push'|'pull', distance (ft; a pull without one ends adjacent),
@@ -20,9 +21,10 @@ function areaCentre(workflow) {
     return b ? {x: b.x + b.width / 2, y: b.y + b.height / 2} : null;
 }
 function targetsFor(workflow, when) {
-    if (when === 'hit') return [...workflow.hitTargets];
-    if (when === 'failedSave') return [...workflow.failedSaves];
-    return [...workflow.targets];
+    // Moved on the canvas: the drawn tokens
+    if (when === 'hit') return workflow.hitTargets.tokens;
+    if (when === 'failedSave') return workflow.failedSaves.tokens;
+    return workflow.targets.tokens;
 }
 async function moved({document: item, workflow}) {
     const entries = item.flags?.[MODULE]?.forcedMovement;
@@ -32,7 +34,7 @@ async function moved({document: item, workflow}) {
     const matches = e => !e.activity || e.activity === workflow.activity?.id || (e.when === 'failedSave' && e.activity === workflow.saveActivity?.id);
     for (const entry of entries.filter(matches)) {
         for (const target of targetsFor(workflow, entry.when)) {
-            const targetDoc = target.document ?? target;
+            const targetDoc = getTokenDocument(target);
             if (targetDoc === source || !targetDoc.actor) continue;
             if (entry.maxSize && actorUtils.getSize(targetDoc.actor) > SIZES.indexOf(entry.maxSize)) continue;
             if (entry.targetArmor === 'nonmagicalMetal' && !wearsNonmagicalMetal(targetDoc.actor)) continue;

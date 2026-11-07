@@ -1,7 +1,7 @@
 import {actorUtils, workflowUtils} from '../proxy.mjs';
 // A Large or larger creature has Advantage on the save; the Ensnared effect's OverTimes do the rest.
 async function preamble({workflow}) {
-    for (const token of workflow.targets) {
+    for (const token of workflow.targets.documents) {
         if (token.actor && actorUtils.getSize(token.actor) >= 3) workflowUtils.grantRollModifier(workflow, 'adv', token.id, 'ensnaring-strike', 'Large or larger');
     }
 }

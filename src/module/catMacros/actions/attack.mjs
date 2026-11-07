@@ -7,7 +7,7 @@ async function useWeapon({workflow}) {
     const chosen = weapons.length === 1 ? weapons[0] : await dialogUtils.selectDocumentDialog(workflow.item.name, 'Choose a weapon', weapons);
     const weapon = Array.isArray(chosen) ? chosen[0] : chosen;
     // midi's own call keeps the world's roll settings (CAT's turns automatic attack rolls off unless asked to be fast).
-    if (weapon) await completeItemUse(weapon, {midiOptions: {targetUuids: Array.from(workflow.targets, token => token.document.uuid)}}, {}, {});
+    if (weapon) await completeItemUse(weapon, {midiOptions: {targetUuids: workflow.targets.uuids}}, {}, {});
 }
 export const attack = {
     name: 'Attack',

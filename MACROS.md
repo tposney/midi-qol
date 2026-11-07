@@ -781,23 +781,25 @@ A read-only copy is a snapshot of the card when it was made, and a copy you hold
 
 ### Token sets
 
-A workflow's token sets (`targets`, `hitTargets`, `hitTargetsEC`, `saves`, `failedSaves`, `superSavers`, `semiSuperSavers`, `criticalSaves`, `fumbleSaves`, `advantageSaves`) are Sets of Tokens: each member's Token as drawn now, or for an actor with no token on the scene the one midi made for it. A member on another scene, or on a level not shown, has no Token: it is skipped by iteration and `size`, but is still a member:
+A workflow's token sets (`targets`, `hitTargets`, `hitTargetsEC`, `saves`, `failedSaves`, `superSavers`, `semiSuperSavers`, `criticalSaves`, `fumbleSaves`, `advantageSaves`, `effectTargets`) are `MidiQOL.TokenDocumentSet`s: they hold every member's TokenDocument, including tokens on another scene or on a level not shown. `has`, `add`, `delete`, assigning a set (`workflow.targets = new Set([...])`) and set algebra accept a Token, a TokenDocument or a uuid. These read the same in every mode:
 
 ```js
-workflow.hitTargets.size;               // hit targets drawn now
-workflow.hitTargets.documents;          // every hit target's TokenDocument, drawn or not
+workflow.hitTargets.documents;          // every hit target's TokenDocument (a new array each read)
+workflow.hitTargets.count;              // how many, drawn or not
+workflow.hitTargets.tokens;             // the drawn Tokens (for an actor with no token on the scene, the one midi made)
 workflow.hitTargets.uuids;              // their uuids
-workflow.hitTargets.has(tokenDocument); // a Token, TokenDocument or uuid
+workflow.hitTargets.has(token);         // a Token, TokenDocument or uuid
 workflow.saves.add(token);              // changes the workflow's set
+workflow.hitTargets.difference(workflow.saves).documents; // set algebra is over every member and gives a TokenDocumentSet
 ```
 
-Use `documents` for anything that works on the actor (damage, effects, HP), and the Tokens for anything on the canvas (distance, sight, cover). `documents` is a new array on each read: change the set itself (`add`, `delete`). Copy a set with `new MidiQOL.TokenSet(set)` to keep the members not drawn; `new Set(set)`, spreading and `filter` keep only the drawn Tokens. Set algebra is over every member and gives a token set, the other set's members matched as Tokens, TokenDocuments or uuids:
+Reading a set directly (iteration, `size`, `first()`, `map`/`filter`/`some`) gives the drawn Tokens by default. TokenDocuments will become the default; a GM can try it now with `MidiQOL.setTokenDocumentSets(true)` (the whole world, after a reload; `false` switches back, `MidiQOL.tokenDocumentSets()` says which is on). Then a set reads as every member's TokenDocument, `member.document` returns the member itself with a deprecation warning naming the calling line, and target hooks and target macros' `token` are TokenDocuments. `workflow.token` stays the caster's Token; `workflow.tokenDocument` is its TokenDocument.
 
-```js
-const unsaved = workflow.hitTargets.difference(workflow.saves); // a token set
-unsaved.documents;                                             // every hit target that didn't save, drawn or not
-workflow.saves.isSubsetOf(workflow.targets);                   // over every member
-```
+To work in both:
+- Every member (saves, damage, effects, HP): `set.documents` and `set.count`; a TokenDocument's `actor` is all they need.
+- The canvas (distance, sight, cover, `center`, moving tokens): `set.tokens`.
+- Replace `member.document` with the member; compare members with `workflow.tokenDocument`, not `workflow.token`, or use `set.has(token)`.
+- Copy with `new MidiQOL.TokenDocumentSet(set)`, which keeps every member; `new Set(set)` and spreading keep only what reading the set gives.
 
 ### Storing data on the card
 

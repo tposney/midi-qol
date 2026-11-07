@@ -1,6 +1,6 @@
 import { rollFieldLocalizations, rollFieldMappings } from "./module/rollFields.js";
 import "./module/damageAbsorption.js";
-import { registerSettings, fetchParams, configSettings, checkRule, enableWorkflow, fetchSoundSettings, midiSoundSettingsBackup, readySettingsSetup, collectSettingData, exportSettingsToJSON, importSettingsFromJSON, safeGetGameSetting, shouldDisplaySaveDC, triggeredActivityTargetOptions, triggeredActivityRollAsOptions, resetConfigSettingsToDefaults } from './module/settings.js';
+import { registerSettings, fetchParams, configSettings, checkRule, enableWorkflow, fetchSoundSettings, midiSoundSettingsBackup, readySettingsSetup, collectSettingData, exportSettingsToJSON, importSettingsFromJSON, safeGetGameSetting, shouldDisplaySaveDC, triggeredActivityTargetOptions, triggeredActivityRollAsOptions, resetConfigSettingsToDefaults, setTokenDocumentSets } from './module/settings.js';
 import { decodeWorkflowOptions, encodeWorkflowOptions, registerWorkflowOptionsSchema } from "./module/lib/workflowOptionsCodec.js";
 import { preloadTemplates } from './module/preloadTemplates.js';
 import { checkModules, setupModules } from './module/setupModules.js';
@@ -29,7 +29,7 @@ import { TargetConfirmationDialog } from './module/apps/TargetConfirmation.js';
 import { TargetConfirmationConfig } from './module/apps/TargetConfirmationConfig.js';
 import { MidiAttackActivity, setupAttackActivity } from './module/activities/AttackActivity.js';
 import { RollModifierTracker } from './module/lib/RollModifierTracker.js';
-import { TokenSet } from './module/lib/tokenSet.js';
+import { TokenDocumentSet, setupTokenSetMode, tokenSetDocumentMode } from './module/lib/tokenDocumentSet.js';
 import { injectMidiCompletions } from './module/lib/midiCompletions.js';
 import { OverTimeEditor } from './module/apps/OverTimeEditor.js';
 import { ConditionEditor } from './module/apps/ConditionEditor.js';
@@ -323,7 +323,9 @@ Object.assign(globalThis.MidiQOL, {
   teleportToken,
   testfunc,
   tokenForActor,
-  TokenSet,
+  TokenDocumentSet,
+  setTokenDocumentSets,
+  tokenDocumentSets: tokenSetDocumentMode,
   TrapWorkflow,
   typeOrRace,
   undoMostRecentWorkflow,
@@ -469,6 +471,7 @@ Hooks.once('init', async function () {
 
   // Register custom module settings
   registerSettings();
+  setupTokenSetMode(!!game.settings.get("midi-qol", "tokenDocumentSets"));
   fetchParams();
   fetchSoundSettings();
   // This seems to cause problems for localisation for the items compendium (at least for french)

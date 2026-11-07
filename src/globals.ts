@@ -38,7 +38,7 @@ import { ChatMessageMidi } from "./module/ChatClasses/ChatMessageMidi";
 import { DamageApplicationElementMidi } from "./module/ChatClasses/DamageApplicationElementMidi";
 import { MidiDependentsRegistry, RegistryChangeEvent } from "./module/lib/MidiDependentsRegistry";
 import { RollModifierTracker } from "./module/lib/RollModifierTracker";
-import { TokenSet } from "./module/lib/tokenSet";
+import { TokenDocumentSet } from "./module/lib/tokenDocumentSet";
 
 declare module "fvtt-types/configuration" {
   interface AssumeHookRan {
@@ -173,6 +173,7 @@ declare module "fvtt-types/configuration" {
     "midi-qol.Debug": string;
     "midi-qol.ReplaceDefaultActivities": boolean;
     "midi-qol.UseWeakReferences": boolean;
+    "midi-qol.tokenDocumentSets": boolean;
     "midi-qol.PreferredGM": string;
     "midi-qol.MidiSoundSettings-backup": Record<string, any>;
     "midi-qol.last-run-version": string;
@@ -805,7 +806,7 @@ declare global {
     addRollToAsync: typeof utils.addRollToAsync;
     addUndoChatMessage: typeof undo.addUndoChatMessage;
     RollModifierTracker: typeof RollModifierTracker;
-    TokenSet: typeof TokenSet;
+    TokenDocumentSet: typeof TokenDocumentSet;
     applyTokenDamage: typeof utils.applyTokenDamage;
     canSee: typeof utils.canSee;
     canSense: typeof utils.canSense;

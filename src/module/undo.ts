@@ -178,7 +178,7 @@ export function addUndoChatCards(data: { id?: string, chatCardUuids: string[] })
 export async function saveTargetsUndoData(workflow: Workflow) {
   if (!workflow.undoData) return;
   workflow.undoData.targets = [];
-  workflow.targets.forEach(t => {
+  workflow.targets.documents.forEach(t => {
     let tokenDoc = getTokenDocument(t);
     if (!tokenDoc) return;
     if ((tokenDoc?.actor)?.uuid === workflow.actor.uuid) return;

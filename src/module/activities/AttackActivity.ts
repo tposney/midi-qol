@@ -1,3 +1,4 @@
+import { TokenDocumentSet } from "../lib/tokenDocumentSet.js";
 import { debugEnabled, warn, error, busyWait, GameSystemConfig, debug, i18n, MODULE_ID, i18nFormat } from "../../midi-qol.js";
 import { unTimedExecuteAsGM } from "../GMAction.js";
 import { Workflow } from "../Workflow.js";
@@ -19,7 +20,7 @@ export let MidiAttackSheet: ReturnType<typeof defineMidiAttackSheetClass>;
  */
 function showAttackTargets(workflow: Workflow) {
   if (!canvas?.ready) return;
-  const tokens = [...(workflow.targets ?? [])].map(target => getToken(target))
+  const tokens = (workflow.targets?.tokens ?? []).map(target => getToken(target))
     .filter((token): token is Token.Implementation => !!token && token.scene === canvas.scene);
   if (!tokens.length) return;
   updateUserTargets(tokens.map(token => token.id));
@@ -214,7 +215,7 @@ let defineMidiAttackActivityClass = <T extends Activity>(ActivityClass: T) => {
       const usage: ActivityUseConfiguration = { event, workflow };
       usage.midiOptions = workflow?.rollOptions ?? {};
       usage.midiOptions.workflowOptions ??= {};
-      usage.midiOptions.targets = new Set(workflow?.targets);
+      usage.midiOptions.targets = new TokenDocumentSet(workflow?.targets);
       if (workflow) usage.midiOptions.workflowOptions.autoRollAttack = true;
       // @ts-expect-error
       await activity.use(usage, {}, {});
@@ -238,7 +239,7 @@ let defineMidiAttackActivityClass = <T extends Activity>(ActivityClass: T) => {
         // Update targets if user has selected new ones; preserve existing targets otherwise
         // (e.g. template-derived targets, programmatic targetsToUse, or no selection)
         const currentTargets = validTargetTokens(new Set(game.user?.targets));
-        if (currentTargets.size > 0) workflow.setTargets(currentTargets);
+        if (currentTargets.count > 0) workflow.setTargets(currentTargets);
         // @ts-expect-error
         return this.rollAttack({ workflow }, {}, {});
       }
@@ -270,7 +271,7 @@ let defineMidiAttackActivityClass = <T extends Activity>(ActivityClass: T) => {
         workflow.activity = this;
         // Update targets if user has selected new ones; preserve existing targets otherwise
         const currentTargets = validTargetTokens(new Set(game.user?.targets));
-        if (currentTargets.size > 0) workflow.setTargets(currentTargets);
+        if (currentTargets.count > 0) workflow.setTargets(currentTargets);
         //@ts-expect-error
         return this.rollAttack(attackConfig, {}, {});
       }
@@ -302,7 +303,7 @@ let defineMidiAttackActivityClass = <T extends Activity>(ActivityClass: T) => {
         workflow.activity = this;
         // Update targets if user has selected new ones; preserve existing targets otherwise
         const currentTargets = validTargetTokens(new Set(game.user?.targets));
-        if (currentTargets.size > 0) workflow.setTargets(currentTargets);
+        if (currentTargets.count > 0) workflow.setTargets(currentTargets);
         //@ts-expect-error
         return this.rollAttack(attackConfig, {}, {});
       }
@@ -803,7 +804,7 @@ let defineMidiAttackActivityClass = <T extends Activity>(ActivityClass: T) => {
       const mode = this.ammunitionPerTarget ?? "default";
       const split = workflow?.workflowOptions?.attackSplit;
       if (split) return mode === "use" && split.index > 0 ? 0 : 1;
-      if (mode === "target") return Math.max(1, workflow?.targets?.size ?? 1);
+      if (mode === "target") return Math.max(1, workflow?.targets?.count ?? 1);
       return 1;
     }
 
@@ -905,7 +906,7 @@ export async function computeAttackAdvantage(
   };
 
   // For attacks, the entity that grants advantage/disadvantage is the defender (target)
-  const targetToken = options.workflow?.targets?.first();
+  const targetToken = options.workflow?.targets?.documents[0];
   const targetActor = targetToken?.actor ?? undefined;
 
   await computeAdvantageFlags(actor, attackFlags, {

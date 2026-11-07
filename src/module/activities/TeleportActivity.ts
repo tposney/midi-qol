@@ -246,7 +246,7 @@ let defineMidiTeleportActivityClass = <T extends Activity>(ActivityClass: T) => 
     }
 
     #workflowTargets(workflow: Workflow | undefined, message: ChatMessage.Implementation | undefined): Token.Implementation[] {
-      if (workflow?.targets?.size) return Array.from(workflow.targets);
+      if (workflow?.targets?.tokens.length) return workflow.targets.tokens;
       // @ts-expect-error no dnd5e-types
       const descriptors: { token?: string }[] = message?.system?.targets ?? [];
       return descriptors.map(d => getToken(d.token)).filter((t): t is Token.Implementation => !!t);

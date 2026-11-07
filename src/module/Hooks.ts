@@ -538,8 +538,8 @@ export function initHooks() {
       let effect = fromUuidSync(effectData.uuid) as ActiveEffect.Implementation | undefined;
 
       if (effect) {
-        const saved = workflow.saves.size === 1;
-        const failed = workflow.failedSaves.size === 1;
+        const saved = workflow.saves.count === 1;
+        const failed = workflow.failedSaves.count === 1;
         const { saveCount, saveCountAction, saveConsecutive,
                 failCount, failCountAction, failConsecutive } = effectData;
         const actor = effect.parent as Actor.Implementation;

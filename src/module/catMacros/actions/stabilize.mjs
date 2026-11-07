@@ -4,7 +4,7 @@ import {woundsOf} from '../features/infernalWound.mjs';
 // A creature with an infernal wound gets the check at the wound's DC instead, which closes it (infernalWound's Medicine hook).
 async function tryStabilize({workflow}) {
     if (documentUtils.getIdentifier(workflow.activity) !== 'stabilize') return;
-    const target = workflow.targets.first();
+    const target = workflow.targets.documents[0];
     const wounds = woundsOf(target?.actor);
     if (wounds.length) return workflow.actor.rollSkill({skill: 'med', target: Math.min(...wounds.map(wound => wound.getFlag('midi-qol', 'infernalWound')?.stanchDC ?? 10))});
     const hp = target?.actor?.system.attributes.hp;
@@ -12,7 +12,7 @@ async function tryStabilize({workflow}) {
     const [roll] = await workflow.actor.rollSkill({skill: 'med', target: 10}) ?? [];
     if (!roll?.isSuccess) return;
     const stable = workflow.item.system.activities.find(activity => documentUtils.getIdentifier(activity) === 'stable');
-    if (stable) await workflowUtils.syntheticActivityRoll(stable, [target.document], {consumeUsage: false, consumeResources: false});
+    if (stable) await workflowUtils.syntheticActivityRoll(stable, [target], {consumeUsage: false, consumeResources: false});
 }
 export const stabilize = {
     name: 'Stabilize',

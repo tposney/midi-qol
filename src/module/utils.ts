@@ -1,5 +1,5 @@
 import type { AttackModifier } from "./Workflow.js";
-import { TokenSet } from "./lib/tokenSet.js";
+import { TokenDocumentSet } from "./lib/tokenDocumentSet.js";
 import { rollBonusLabel } from "./activities/AttackActivity.js";
 import { debug, i18n, error, warn, busyWait, allAttackTypes, debugEnabled, overTimeEffectsToDelete, getStaticID, savedOverTimeEffectsToDelete, GameSystemConfig, systemConcentrationId, MQItemMacroLabel, MODULE_ID, midiReactionEffect, midiBonusActionEffect, MQActivityMacroLabel, ceInterface, i18nFormat } from "../midi-qol.js";
 import { configSettings, autoRemoveTargets, checkRule, criticalDamage, criticalDamageGM, checkMechanic, safeGetGameSetting, autoRollDamageOptions, showReactionAttackRollOptions, shouldDisplaySaveDC, DOWNGRADE_IMMUNITY_KEY, ALL_DAMAGE_KEY } from "./settings.js";
@@ -255,9 +255,9 @@ export let getTraitMult = (actor: Actor.Implementation, dmgTypeString: string, i
 export async function applyTokenDamage(
   damageDetail: DamageDescription[],
   totalDamage: number,
-  theTargets: Set<Token.Implementation>,
+  theTargets: Set<TokenOrDocument>,
   item: Item.Implementation | null | undefined,
-  saves: Set<Token.Implementation>,
+  saves: Set<TokenOrDocument>,
   options: any = {
     label: "defaultDamage",
     existingDamage: [],
@@ -277,7 +277,8 @@ export async function applyTokenDamage(
   // What a successful save does to the damage; applySaves adds Super Saver and Semi Super Saver.
   const saveMultiplier = getSaveMultiplierForItem(item, "defaultDamage");
 
-  for (let token of theTargets) {
+  // A workflow's token set by every member: Tokens or TokenDocuments either way
+  for (let token of theTargets instanceof TokenDocumentSet ? theTargets.documents : theTargets) {
     const actor = token.actor;
     if (!actor) continue;
     const isHit = true;
@@ -299,7 +300,7 @@ export async function applyTokenDamage(
         uncannyDodge: foundry.utils.getProperty(actor, `flags.${MODULE_ID}.uncanny-dodge`) && item?.hasAttack,
         // some options for ripper's module
         save: saved,
-        targetUuid: token?.document.uuid,
+        targetUuid: getTokenDocument(token)?.uuid ?? "",
         fumbleSave: false,
         criticalSave: false,
         isCritical: false,
@@ -325,7 +326,7 @@ export async function applyTokenDamage(
       semiSuperSaver,
       superSaver,
       totalDamage,
-      targetUuid: token.document.uuid,
+      targetUuid: getTokenDocument(token)?.uuid ?? "",
     }, "combinedDamage", actor);
     if (fullDamage) allDamages[actor.uuid] = fullDamage;
   }
@@ -355,7 +356,7 @@ export async function applyTokenDamage(
  * @param options Same options as applyTokenDamage (workflow, forceApply, updateOptions, etc.)
  */
 export async function applyTokenDamageMany(
-  targetDamages: { token: Token.Implementation, damageDetail: DamageDescription[], totalDamage: number }[],
+  targetDamages: { token: TokenOrDocument, damageDetail: DamageDescription[], totalDamage: number }[],
   item: Item.Implementation | null | undefined,
   options: any = {
     workflow: undefined,
@@ -385,7 +386,7 @@ export async function applyTokenDamageMany(
         sourceActorUuid: actor?.uuid,
         uncannyDodge: false,
         save: false,
-        targetUuid: entry.token?.document.uuid,
+        targetUuid: getTokenDocument(entry.token)?.uuid ?? "",
         fumbleSave: false,
         criticalSave: false,
         isCritical: false,
@@ -411,7 +412,7 @@ export async function applyTokenDamageMany(
       semiSuperSaver: false,
       superSaver: false,
       totalDamage: entry.totalDamage,
-      targetUuid: entry.token.document.uuid,
+      targetUuid: getTokenDocument(entry.token)?.uuid ?? "",
     }, "combinedDamage", actor);
     if (fullDamage) allDamages[actor.uuid] = fullDamage;
   }
@@ -545,8 +546,8 @@ export async function processDamageRoll(workflow: Workflow, defaultDamageType: s
   // TODO becomes activity.target.affects.type === "self"
   // if (activity.target.affects.type === "self") theTargets = await getOrCreateTokenForActorAsSet(actor) || theTargets;
   let effectsToExpire: string[] = [];
-  if (hitTargets.size > 0 && workflow.activity.attack) effectsToExpire.push("1Hit");
-  if (hitTargets.size > 0 && workflow.activity.damage) effectsToExpire.push("DamageDealt");
+  if (hitTargets.count > 0 && workflow.activity.attack) effectsToExpire.push("1Hit");
+  if (hitTargets.count > 0 && workflow.activity.damage) effectsToExpire.push("DamageDealt");
   if (effectsToExpire.length > 0) {
     await expireMyEffects.bind(workflow)(effectsToExpire);
   }
@@ -1247,7 +1248,7 @@ export function midiCustomEffect(actor: Actor.Implementation, change: MidiChange
 // }
 
 /** Untargets the user's targets at 0 hit points; with `only`, just those of them (a finished workflow's targets). */
-export function untargetDeadTokens(only?: Set<Token.Implementation>) {
+export function untargetDeadTokens(only?: Set<TokenOrDocument>) {
   if (autoRemoveTargets !== "none") {
     game.user?.targets.forEach((t) => {
       if (only && !only.has(t)) return;
@@ -2452,7 +2453,7 @@ export async function completeActivityUse(activityRef: Activity | string | undef
         if (source && debugEnabled > 0) warn(`completeActivityUse ${source}: ${activity?.item?.name} ${completeHookName}`);
         // Put back the targets saved at the start only if the user's are still the ones this use left: another use
         // (or the player) may have targeted since, and restoring would take its targets away.
-        const own = new Set([...((result as Workflow | undefined)?.targets ?? targetsToUse)].map(t => t.id));
+        const own = new Set(((result as Workflow | undefined)?.targets.documents ?? [...targetsToUse]).map(t => t.id));
         const current = new Set([...(game.user?.targets ?? [])].map(t => t.id));
         if (current.size === own.size && [...current].every(id => own.has(id))) updateUserTargets(localSavedTargetIds);
         resolve(result);
@@ -2521,7 +2522,7 @@ export function restoreWorkflowTokenSets<T>(data: T): T {
   for (const [field, uuidField] of Object.entries(WORKFLOW_TOKEN_SETS)) {
     const uuids = record[uuidField];
     if (!Array.isArray(uuids)) continue;
-    record[field] = new TokenSet(uuids);
+    record[field] = new TokenDocumentSet(uuids);
   }
   return data;
 }
@@ -2575,10 +2576,10 @@ export type MidiOptions = {
   // For attacks: the defender (target). For saves/checks: the caster (workflow.actor).
   // Falls back to the actor themselves when there is no opposing entity.
   grantsActor?: Actor.Implementation;
-  grantsToken?: Token.Implementation;
+  grantsToken?: TokenOrDocument;
   spellLevel?: number;
   target?: number;
-  targets?: Set<foundry.canvas.placeables.Token.Implementation>;
+  targets?: Set<TokenOrDocument>;
   targetsToUse?: Set<foundry.canvas.placeables.Token.Implementation>;
   targetUuids?: string[];
   triggeredActivity?: boolean;
@@ -3421,7 +3422,7 @@ export interface DistanceOptions {
  * position at all: `token.x`/`token.y` read 0 there.
  */
 export function tokenSourcePosition(tokenRef: any): { x: number, y: number, elevation: number, width: number, height: number } {
-  const doc = tokenRef?.document ?? tokenRef;
+  const doc = getTokenDocument(tokenRef) ?? tokenRef;
   const source = doc?._source;
   const committed = (key: string, fallback: number): number =>
     Number.isFinite(source?.[key]) ? source[key] : (Number.isFinite(doc?.[key]) ? doc[key] : fallback);
@@ -3430,7 +3431,7 @@ export function tokenSourcePosition(tokenRef: any): { x: number, y: number, elev
 
 /** Centre of a token at its committed position. */
 export function tokenSourceCenter(tokenRef: any): { x: number, y: number } {
-  const doc = tokenRef?.document ?? tokenRef;
+  const doc = getTokenDocument(tokenRef) ?? tokenRef;
   const pos = tokenSourcePosition(doc);
   if (typeof doc?.getCenterPoint === "function") {
     try { return doc.getCenterPoint({ ...pos }); } catch { /* fall through */ }
@@ -4804,7 +4805,7 @@ export async function expireMyEffects(this: Workflow, effectsToExpire: string[])
   const expireAttack = effectsToExpire.includes("1Attack") && !this.effectsAlreadyExpired.includes("1Attack");
   // Judged with 1Attack: every path that expires it has settled the hits. A miss is an attack that hits no target.
   const expireMiss = expireAttack && !this.effectsAlreadyExpired.includes("1Miss");
-  const missed = !!this.activity?.hasAttack && this.targets.size > 0 && !this.hitTargets.size && !this.hitTargetsEC?.size;
+  const missed = !!this.activity?.hasAttack && this.targets.count > 0 && !this.hitTargets.count && !this.hitTargetsEC?.count;
   const expireDamage = effectsToExpire.includes("DamageDealt") && !this.effectsAlreadyExpired.includes("DamageDealt");
   const expireInitiative = effectsToExpire.includes("Initiative") && !this.effectsAlreadyExpired.includes("Initiative");
   //
@@ -4838,8 +4839,8 @@ export async function expireMyEffects(this: Workflow, effectsToExpire: string[])
       // @ts-expect-error no dnd5e-types
       (expireSpell && this.item?.type === "spell" && specialDuration.includes("1Spell")) ||
       (expireAttack && this.activity?.hasAttack && specialDuration.includes(`1Attack:${this.activity?.actionType}`)) ||
-      (expireHit && this.activity?.hasAttack && specialDuration.includes("1Hit") && this.hitTargets.size > 0) ||
-      (expireHit && this.activity?.hasAttack && specialDuration.includes(`1Hit:${this.activity?.actionType}`) && this.hitTargets.size > 0) ||
+      (expireHit && this.activity?.hasAttack && specialDuration.includes("1Hit") && this.hitTargets.count > 0) ||
+      (expireHit && this.activity?.hasAttack && specialDuration.includes(`1Hit:${this.activity?.actionType}`) && this.hitTargets.count > 0) ||
       (expireMiss && missed && specialDuration.includes("1Miss")) ||
       (expireMiss && missed && specialDuration.includes(`1Miss:${this.activity?.actionType}`)) ||
       (expireCritical && this.activity?.hasAttack && specialDuration.includes("1Critical") && this.isCritical) ||
@@ -4878,11 +4879,10 @@ export async function expireRollEffect(this: Actor.Implementation, rolltype: str
 }
 
 // This doesn't actually _need_ to be used anywhere as long as we're strict about things
-export function validTargetTokens(tokenSet?: Set<TokenOrDocument>): Set<Token.Implementation> {
-  if (!tokenSet) return new Set();
-  return tokenSet
-    .map(tk => tk instanceof TokenDocument ? tk.object! : tk)
-    .filter(tk => !!tk?.actor && isValidTarget(tk));
+/** The members that can be targets (with an actor, not a group…): every member of a token set, drawn or not */
+export function validTargetTokens(tokens?: Iterable<TokenOrDocument>): TokenDocumentSet {
+  const members = tokens instanceof TokenDocumentSet ? tokens.documents : [...(tokens ?? [])];
+  return new TokenDocumentSet(members.filter(token => !!token?.actor && isValidTarget(token)));
 }
 
 export function fromActorUuid(uuid?: string): Actor.Implementation | null {
@@ -9367,7 +9367,7 @@ export async function chooseEffect({ actor, token, item, workflow, options }: {
   }
   let targets = workflow.effectTargets;
   const concentrationUuid = workflow?.concentrationId ? workflow.actor.effects.get(workflow.concentrationId)?.uuid : undefined;
-  if (!targets || targets.size === 0) return;
+  if (!targets || targets.count === 0) return;
 
   const { DialogV2 } = foundry.applications.api;
   const timeout = options?.timeout ?? configSettings.reactionTimeout ?? defaultTimeout;
@@ -9376,7 +9376,7 @@ export async function chooseEffect({ actor, token, item, workflow, options }: {
   let timeoutId: NodeJS.Timeout;
 
   const titleBase = `${i18n('CONTROLS.CommonSelect')} ${i18n('DOCUMENT.ActiveEffect')}`;
-  const targetContent = `<p style="text-align:center"><b>${i18n('EFFECT.StatusTarget')}: [</b>${[...targets].map((t) => t.name)}<b>]</b></p>`;
+  const targetContent = `<p style="text-align:center"><b>${i18n('EFFECT.StatusTarget')}: [</b>${targets.documents.map((t) => t.name)}<b>]</b></p>`;
 
   const buttons = effects.map(effect => ({
     action: effect.uuid,

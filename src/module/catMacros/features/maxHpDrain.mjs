@@ -1,5 +1,5 @@
 import {workflowUtils} from '../proxy.mjs';
-import {toggleStatus} from '../../utils.js';
+import {toggleStatus, getTokenDocument} from '../../utils.js';
 // Life Drain style: a target's hit point maximum drops by a fraction of the damage it took, until a long rest (dnd5e
 // resets hp.tempmax then). Entries in flags.midi-qol.maxHpDrain:
 // {activity, fraction} - the activity's own failed saves (damage and save in one activity), or
@@ -10,7 +10,7 @@ import {toggleStatus} from '../../utils.js';
 // healSelf (the user regains the amount), drainMax: false (heal only, by the damage to the creatures hit by `activity`).
 const MODULE = 'midi-qol';
 function damageTaken(workflow, token, type) {
-    const doc = token.document ?? token;
+    const doc = getTokenDocument(token);
     return (workflow.damageList ?? []).filter(e => [e.tokenUuid, e.targetUuid].includes(doc.uuid) || e.actorUuid === doc.actor?.uuid)
         .reduce((total, e) => {
             const lost = Math.max(0, (e.oldHP ?? 0) - (e.newHP ?? 0)) + Math.max(0, (e.oldTempHP ?? 0) - (e.newTempHP ?? 0));
@@ -29,7 +29,7 @@ async function drain(actor, amount) {
 }
 async function apply(workflow, entry, target, amount) {
     if (amount <= 0) return;
-    if (entry.drainMax !== false) await drain((target.document ?? target).actor, amount);
+    if (entry.drainMax !== false) await drain(getTokenDocument(target)?.actor, amount);
     if (entry.healSelf && workflow.actor) {
         const hp = workflow.actor.system.attributes.hp;
         await workflow.actor.update({'system.attributes.hp.value': Math.min(hp.effectiveMax ?? hp.max, hp.value + amount)});
@@ -45,23 +45,23 @@ async function finished({document: item, workflow}) {
             // Heal by the damage done to the creatures hit (or every target, for an activity without an attack).
             const hit = workflow.activity?.attack ? workflow.hitTargets : workflow.targets;
             let total = 0;
-            for (const target of hit) total += amountFor(target);
+            for (const target of hit.documents) total += amountFor(target);
             await apply(workflow, entry, null, total);
         } else if (entry.when === 'hit' && !entry.saveActivity) {
-            for (const target of workflow.hitTargets) await apply(workflow, entry, target, amountFor(target));
+            for (const target of workflow.hitTargets.documents) await apply(workflow, entry, target, amountFor(target));
         } else if (entry.when === 'hit' && workflow.saveActivity?.id === entry.saveActivity) {
             // The attack's linked save already ran: drain the creatures that failed it.
-            for (const target of workflow.failedSaves) await apply(workflow, entry, target, amountFor(target));
+            for (const target of workflow.failedSaves.documents) await apply(workflow, entry, target, amountFor(target));
         } else if (entry.when === 'hit') {
             const save = item.system.activities.get(entry.saveActivity);
-            for (const target of workflow.hitTargets) {
+            for (const target of workflow.hitTargets.documents) {
                 const taken = damageTaken(workflow, target, entry.damageType);
                 if (!save || !taken) continue;
-                const saveWorkflow = await workflowUtils.syntheticActivityRoll(save, [target.document ?? target], {consumeUsage: false, consumeResources: false});
-                if (saveWorkflow?.failedSaves?.size) await apply(workflow, entry, target, Math.floor(taken * fraction));
+                const saveWorkflow = await workflowUtils.syntheticActivityRoll(save, [getTokenDocument(target)], {consumeUsage: false, consumeResources: false});
+                if (saveWorkflow?.failedSaves?.count) await apply(workflow, entry, target, Math.floor(taken * fraction));
             }
         } else {
-            for (const target of workflow.failedSaves) await apply(workflow, entry, target, amountFor(target));
+            for (const target of workflow.failedSaves.documents) await apply(workflow, entry, target, amountFor(target));
         }
     }
 }

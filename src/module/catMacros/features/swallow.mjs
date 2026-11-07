@@ -182,11 +182,11 @@ async function preItemRoll({document: item, workflow}) {
     const swallow = item.system.activities.get(c.activity);
     if (!swallow || workflow.activity?.id !== swallow.id) return;
     const holderDoc = workflow.token?.document ?? holderToken(item.actor);
-    const targetDoc = [...workflow.targets][0]?.document;
+    const targetDoc = workflow.targets.documents[0];
     const target = targetDoc?.actor;
     let reason;
     if (holderEffects(item).length >= c.capacity) reason = c.capacity === 1 ? `${item.actor.name} already has a creature swallowed.` : `${item.actor.name} already has ${c.capacity} creatures swallowed.`;
-    else if (!target || workflow.targets.size !== 1) reason = 'Target one creature.';
+    else if (!target || workflow.targets.count !== 1) reason = 'Target one creature.';
     else if (sizeLimit(swallow) !== null && (SIZE_KEYS[target.system.traits.size] ?? 2) > sizeLimit(swallow)) reason = `${targetDoc.name} is too large to swallow.`;
     else if (c.requireGrappled && !grappleEffects(target, item.actor, holderDoc).length) reason = `${targetDoc.name} is not grappled by ${item.actor.name}.`;
     if (!reason) return;
@@ -201,13 +201,13 @@ async function rollFinished({document: item, workflow}) {
     const swallow = item.system.activities.get(c.activity);
     if (!swallow || workflow.activity?.id !== swallow.id) return;
     const holderDoc = workflow.token?.document ?? holderToken(item.actor);
-    const targetDoc = [...workflow.targets][0]?.document;
+    const targetDoc = workflow.targets.documents[0];
     if (!holderDoc || !targetDoc) return;
     if (swallow.type === 'save') {
         // Only a creature small enough is swallowed (the Kraken's save also hurts a larger one).
         const limit = sizeLimit(swallow);
         if (limit !== null && (SIZE_KEYS[targetDoc.actor?.system.traits.size] ?? 2) > limit) return;
-        if ([...workflow.failedSaves].some(t => (t.document ?? t) === targetDoc)) await swallowTarget(item, holderDoc, targetDoc);
+        if (workflow.failedSaves.has(targetDoc)) await swallowTarget(item, holderDoc, targetDoc);
         return;
     }
     if (!c.attackItem) return swallowTarget(item, holderDoc, targetDoc);
@@ -215,7 +215,7 @@ async function rollFinished({document: item, workflow}) {
     const attack = item.actor.items.find(i => i.system.identifier === c.attackItem)?.system.activities.find(a => a.type === 'attack');
     if (!attack) return;
     const attackWorkflow = await workflowUtils.syntheticActivityRoll(attack, [targetDoc], {consumeUsage: false, consumeResources: false});
-    if ([...(attackWorkflow?.hitTargets ?? [])].some(t => (t.document ?? t) === targetDoc)) await swallowTarget(item, holderDoc, targetDoc);
+    if (attackWorkflow?.hitTargets?.has(targetDoc)) await swallowTarget(item, holderDoc, targetDoc);
 }
 async function turnStart({document: item}) {
     if (config(item).damageAt !== 'ownerStart') return;

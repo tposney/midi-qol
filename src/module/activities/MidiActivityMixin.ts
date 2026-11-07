@@ -1,6 +1,6 @@
 import { cardMidi, cardOtherConsumption } from "../lib/cardState.js";
 import { heldKeys } from "../lib/rollKeys.js";
-import { TokenSet } from "../lib/tokenSet.js";
+import { TokenDocumentSet } from "../lib/tokenDocumentSet.js";
 import { Activity, ActivityEffectData, ActivityUseConfiguration, RollDialogConfig, DND5ETargetDescriptor, RollMessageConfig, RollProcessConfig, MidiUsageChatContext, Dnd5eSystem, EmanationShapeData } from "../../globals.js";
 import { GameSystemConfig, MODULE_ID, debugEnabled, error, i18n, i18nFormat, warn, busyWait, specialDurationChoices } from "../../midi-qol.js";
 import { socketlibSocket, timedAwaitExecuteAsGM } from "../GMAction.js";
@@ -498,8 +498,8 @@ export let MidiActivityMixin = Base => {
         });
       } else {
         workflow.forceApplyEffects = true; // don't overwrite the application targets
-        workflow.effectTargets = new TokenSet(game.user?.targets);
-        if (workflow.effectTargets.size > 0) await workflow.performState(workflow.WorkflowState_ApplyDynamicEffects)
+        workflow.effectTargets = new TokenDocumentSet(game.user?.targets);
+        if (workflow.effectTargets.count > 0) await workflow.performState(workflow.WorkflowState_ApplyDynamicEffects)
       }
     }
     static async #confirmDamageRollCancel(this: MidiActivityMixin, event: PointerEvent, target: HTMLElement, message: ChatMessage.Implementation) {
@@ -1363,7 +1363,7 @@ export let MidiActivityMixin = Base => {
               averageDice(droll);
           })
         }
-        const firstTarget = config.workflow.hitTargets.first() ?? config.workflow.targets?.first();
+        const firstTarget = config.workflow.hitTargets.documents[0] ?? config.workflow.targets?.documents[0];
         const firstTargetActor = firstTarget?.actor;
         const targetMaxFlags = firstTargetActor?.flags?.[MODULE_ID]?.grants?.max?.damage ?? {};
         const maxFlags = config.workflow.actor.flags?.[MODULE_ID]?.max ?? {};
@@ -1452,7 +1452,8 @@ export let MidiActivityMixin = Base => {
     async setupCanSeeSense(usage: { workflow?: Workflow }) {
       const workflow = usage.workflow;
       if (!workflow) return;
-      for (let target of workflow.targets) {
+      // Sight between drawn tokens: a target not drawn is neither seen nor sensed
+      for (let target of workflow.targets.tokens) {
         // TODO: This is odd - if `!workflow.token` then `true`, but then we're adding `undefined` to `targetsCanSense`
         const tokenCanSense = workflow.token ? canSense(workflow.token, target, globalThis.MidiQOL.InvisibleDisadvantageVisionModes, { forceVision: true }) : true;
         const targetCanSense = workflow.token ? canSense(target, workflow.token, globalThis.MidiQOL.InvisibleDisadvantageVisionModes, { forceVision: true }) : false;
@@ -1472,7 +1473,7 @@ export let MidiActivityMixin = Base => {
       if (workflow.token?.actor) {
         const bloodsenseRange = Number(foundry.utils.getProperty(workflow.token.actor, `flags.${MODULE_ID}.bloodsense`) ?? 0);
         if (bloodsenseRange > 0) {
-          for (const target of workflow.targets) {
+          for (const target of workflow.targets.tokens) {
             if (workflow.tokenCanSense.has(target) && workflow.tokenCanSee.has(target)) continue;
             const targetToken = getToken(target);
             if (!targetToken?.actor) continue;
@@ -1546,7 +1547,7 @@ export let MidiActivityMixin = Base => {
       }
       // remove selection of un-targetable targets TODO
       if (canvas.scene) {
-        const tokensIdsToUse: Array<string> = Array.from(workflow.targets).filter(t => isValidTarget(t)).map(t => (t as Token).id);
+        const tokensIdsToUse: Array<string> = workflow.targets.tokens.filter(t => isValidTarget(t)).map(t => t.id);
         updateUserTargets(tokensIdsToUse);
       }
       return true;
@@ -1625,7 +1626,7 @@ export let MidiActivityMixin = Base => {
       }
 
       if (options.checkUse && this.useCondition && this.effectiveActivationType !== "reaction") { // reactions condition evaluation is handled elsewhere
-        if (!(await evalActivationCondition(workflow, this.useCondition, workflow.targets.first(), { async: true }))) {
+        if (!(await evalActivationCondition(workflow, this.useCondition, workflow.targets.documents[0], { async: true }))) {
           const message = `${this.useConditionReason} ${this.actor?.name} unable to use ${this.item.name}:${this.name}`;
           if (!(usage.midiOptions?.noUseWarning || usage.midiOptions?.workflowOptions?.noUseWarning))
             ui.notifications?.warn(message);
@@ -1768,7 +1769,7 @@ export let MidiActivityMixin = Base => {
         let speaker = getSpeaker(this.actor!);
 
         let shouldAllowRoll = !options.checkTargets || !requiresTargets // we don't care about targets
-          || (workflow.targets.size > 0) // there are some target selected
+          || (workflow.targets.count > 0) // there are some target selected
           || (this.target?.affects.type ?? "") === "" // no target required
           || selfTarget
           || isAoETargeting // area effect spell and we will auto target
@@ -1797,14 +1798,14 @@ export let MidiActivityMixin = Base => {
         // Check for no targets when creature-type targeting requires them
         const creatureTargetTypes = ["creature", "enemy", "ally", "willing"];
         if (options.checkTargets && requiresTargets && !isEmanationTargeting && !isAoETargeting
-            && creatureTargetTypes.includes(this.target?.affects?.type) && workflow.targets.size === 0) {
+            && creatureTargetTypes.includes(this.target?.affects?.type) && workflow.targets.count === 0) {
           ui.notifications?.warn(i18n("midi-qol.noTargets"));
           if (debugEnabled > 0) warn(`${game.user?.name} attempted to roll with no targets selected`);
           return removeWorkflow(workflow);
         }
 
         // Check for too many targets
-        if (options.checkTargets && requiresTargets && workflow.targets.size > allowedTargets) {
+        if (options.checkTargets && requiresTargets && workflow.targets.count > allowedTargets) {
           ui.notifications?.warn(i18nFormat("midi-qol.wrongNumberTargets", { allowedTargets }));
           if (debugEnabled > 0) warn(`${game.user?.name} ${i18nFormat(`midi-qol.${MODULE_ID}.wrongNumberTargets`, { allowedTargets })}`);
           return removeWorkflow(workflow);
@@ -1812,9 +1813,10 @@ export let MidiActivityMixin = Base => {
 
         let tokenToUse: foundry.canvas.placeables.Token.Implementation | undefined;
         if (speaker.token) tokenToUse = canvas.tokens?.get(speaker.token);
-        const rangeDetails = checkActivityRange(this, tokenToUse, workflow.targets, checkMechanic("checkRange") !== "none" && !isAoETargeting && !workflow.AoO)
+        // Range, cover and sight are measured to the drawn targets
+        const rangeDetails = checkActivityRange(this, tokenToUse, new Set(workflow.targets.tokens), checkMechanic("checkRange") !== "none" && !isAoETargeting && !workflow.AoO)
         if (checkMechanic("checkRange") !== "none" && !isAoETargeting && !isEmanationTargeting && !workflow.AoO && speaker.token) {
-          if (tokenToUse && workflow.targets.size > 0) {
+          if (tokenToUse && workflow.targets.tokens.length > 0) {
             if (rangeDetails.result === "fail")
               return removeWorkflow(workflow);
             else {
@@ -1825,9 +1827,9 @@ export let MidiActivityMixin = Base => {
 
 
         const targetsCreatures = !!this.attack || !["", "self"].includes(this.target?.affects?.type ?? "");
-        if (!isAoETargeting && !isEmanationTargeting && targetsCreatures && !checkTotalCover(this, tokenToUse, workflow.targets))
+        if (!isAoETargeting && !isEmanationTargeting && targetsCreatures && !checkTotalCover(this, tokenToUse, workflow.targets.tokens))
           return removeWorkflow(workflow);
-        if (!isAoETargeting && !isEmanationTargeting && !checkTargetsSeen(this, tokenToUse, workflow.targets))
+        if (!isAoETargeting && !isEmanationTargeting && !checkTargetsSeen(this, tokenToUse, workflow.targets.tokens))
           return removeWorkflow(workflow);
 
         if (!workflow) return false;
@@ -1951,9 +1953,7 @@ export let MidiActivityMixin = Base => {
 
     async _resolveAttachTokenId(workflow: Workflow | undefined, mode: "caster" | "target"): Promise<string | undefined> {
       if (mode === "caster") return (workflow?.token ?? getToken(this.actor))?.document.id ?? undefined;
-      const fromWorkflow = workflow?.targets && workflow.targets.size > 0
-        ? Array.from(workflow.targets) as Token.Implementation[]
-        : [];
+      const fromWorkflow = workflow?.targets.tokens ?? [];
       const targets = fromWorkflow.length > 0
         ? fromWorkflow
         : Array.from(game.user?.targets ?? []) as Token.Implementation[];
@@ -2242,7 +2242,7 @@ export let MidiActivityMixin = Base => {
         ? await Promise.all(((this.effects ?? []) as ActivityEffectData[]).map(profile => profile.getEffect())) : [];
       let hasEffects = effects.some(effect => effect && !effect.transfer && !effect.flags?.dae?.dontApply);
       // if target type is not blank or there are targets only set hasEffects if we are not going to remove the button later
-      if (this.target?.affects.type !== "" || workflow?.targets.size !== 0)
+      if (this.target?.affects.type !== "" || workflow?.targets.count !== 0)
         hasEffects &&= !["applyNoButton", "applyRemove"].includes(configSettings.autoItemEffects);
       let dmgBtnText = (this.actionType === "heal") ? i18n("DND5E.HEAL.HealingButton") : i18n("DND5E.Damage");
       if (workflow?.workflowOptions?.fastForwardDamage && configSettings.showFastForward) dmgBtnText += ` ${i18n("midi-qol.fastForward")}`;

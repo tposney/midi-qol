@@ -40,7 +40,7 @@ async function choose({workflow}) {
     const {MODIFIER_KEYS} = game.keyboard.constructor;
     const held = key => game.keyboard.isModifierActive(key);
     const event = new KeyboardEvent('keydown', {altKey: held(MODIFIER_KEYS.ALT), ctrlKey: held(MODIFIER_KEYS.CONTROL), shiftKey: held(MODIFIER_KEYS.SHIFT)});
-    await workflowUtils.syntheticItemDataRoll(withWorldOptions(item), workflow.actor, Array.from(workflow.targets, token => token.document), {userId: game.user.id, config: {event}});
+    await workflowUtils.syntheticItemDataRoll(withWorldOptions(item), workflow.actor, workflow.targets.documents, {userId: game.user.id, config: {event}});
 }
 export const genericActions = {
     name: 'Generic Actions',

@@ -18,6 +18,29 @@ interface CompletionEntry {
   constructorDetail?: string;
 }
 
+/** A workflow token set (TokenDocumentSet): members added, removed and tested as a Token, TokenDocument or uuid */
+function tokenSetEntry(info: string): CompletionEntry {
+  return {
+    type: "property", detail: "TokenDocumentSet",
+    info: `${info}. Read it with documents (every member), tokens (the drawn Tokens), uuids or count; plain iteration, size and first() give Tokens, or TokenDocuments in document mode`,
+    children: {
+      documents: { type: "property", detail: "TokenDocument5e[]", info: "Every member's TokenDocument, drawn or not" },
+      tokens: { type: "property", detail: "Token5e[]", info: "The members drawn on the canvas, as Tokens" },
+      uuids: { type: "property", detail: "string[]", info: "Every member's TokenDocument uuid" },
+      count: { type: "property", detail: "number", info: "How many members, drawn or not" },
+      has: { type: "method", detail: "(member) => boolean", info: "Whether a Token, TokenDocument or uuid is a member" },
+      add: { type: "method", detail: "(member) => TokenDocumentSet", info: "Add a Token, TokenDocument or uuid" },
+      delete: { type: "method", detail: "(member) => boolean", info: "Remove a Token, TokenDocument or uuid" },
+      clear: { type: "method", detail: "() => void", info: "Remove every member" },
+      difference: { type: "method", detail: "(other: Set) => TokenDocumentSet", info: "Members not in other (matched by document)" },
+      union: { type: "method", detail: "(other: Set) => TokenDocumentSet", info: "Members of either set" },
+      intersection: { type: "method", detail: "(other: Set) => TokenDocumentSet", info: "Members of both sets" },
+      size: { type: "property", detail: "number", info: "Drawn Tokens, or every member in document mode; count is the same in both" },
+      first: { type: "method", detail: "() => Token5e | TokenDocument5e | undefined", info: "The first drawn Token, or TokenDocument in document mode; documents[0] / tokens[0] are the same in both" },
+    }
+  };
+}
+
 interface CompletionNode {
   [key: string]: CompletionEntry;
 }
@@ -68,7 +91,7 @@ const MIDI_COMPLETIONS: CompletionNode = {
       chooseEffect: { type: "function", detail: "({actor, token?, item?, ...}) => Promise<ActiveEffect | false>", info: "Show dialog to choose which effect to apply from an item.\n- Fields: {actor, token, item, workflow, options}\n- options.chooseAll: auto-apply all without dialog\n- options.timeout: dialog timeout in ms\nReturns: selected ActiveEffect or false" },
 
       // Damage
-      applyTokenDamage: { type: "function", detail: "(damageDetail, totalDamage, targets, item, saves, options?) => Promise<string[]>", info: "Apply damage to a set of tokens, creating damage cards.\n- damageDetail: [{value, type, properties}] array\n- targets/saves: Set<Token>\n- options: {workflow, superSavers, semiSuperSavers, forceApply, noConcentrationCheck}\nReturns: array of damage card UUIDs" },
+      applyTokenDamage: { type: "function", detail: "(damageDetail, totalDamage, targets, item, saves, options?) => Promise<string[]>", info: "Apply damage to a set of tokens, creating damage cards.\n- damageDetail: [{value, type, properties}] array\n- targets/saves: Sets of Tokens or TokenDocuments (a workflow token set works)\n- options: {workflow, superSavers, semiSuperSavers, forceApply, noConcentrationCheck}\nReturns: array of damage card UUIDs" },
       applyTokenDamageMany: { type: "function", detail: "(targetDamages, item, options?) => Promise<string[]>", info: "Apply different damage/healing amounts to multiple targets, producing a single damage card.\n- targetDamages: [{token, damageDetail, totalDamage}] — each entry has its own damage detail and total\n- item: Item responsible for the damage (used for card display)\n- options: {workflow, forceApply, updateOptions}\nReturns: array of damage card UUIDs" },
       createDamageDetail: { type: "function", detail: "({roll, activity, defaultType?}) => DamageDescription[]", info: "Create damage detail from roll results.\n- roll: Roll or Roll[]\n- activity: Activity (for damage type info)\n- defaultType: fallback damage type\nReturns: [{value, type, formula, properties}]" },
       getTraitMult: { type: "function", detail: "(actor, damageType, item, props?) => number", info: "Get damage trait multiplier for an actor.\n- damageType: e.g. \"fire\", \"slashing\", \"healing\"\n- props: string[] of damage properties (e.g. \"mgc\")\nReturns: -1=healing, 0=immune, 0.5=resistant, 1=normal, 2=vulnerable" },
@@ -264,56 +287,10 @@ const MIDI_COMPLETIONS: CompletionNode = {
           reset: { type: "method", detail: "(options?)", info: "Reset all sub-trackers and attribution" },
         }
       },
-      targets: {
-        type: "property", detail: "Set<Token5e>", info: "The targeted tokens",
-        children: {
-          size: { type: "property", detail: "number", info: "Number of elements in the set" },
-          has: { type: "method", detail: "(value) => boolean", info: "Check if a value is in the set" },
-          add: { type: "method", detail: "(value) => Set", info: "Add a value to the set" },
-          delete: { type: "method", detail: "(value) => boolean", info: "Remove a value from the set" },
-          clear: { type: "method", detail: "() => void", info: "Remove all elements" },
-          forEach: { type: "method", detail: "(callback) => void", info: "Execute a function for each element" },
-          values: { type: "method", detail: "() => Iterator", info: "Returns an iterator of values" },
-          first: { type: "method", detail: "() => Token5e | undefined", info: "Get the first element (Foundry Set)" },
-        }
-      },
-      hitTargets: {
-        type: "property", detail: "Set<Token5e>", info: "Tokens that were hit",
-        children: {
-          size: { type: "property", detail: "number", info: "Number of elements in the set" },
-          has: { type: "method", detail: "(value) => boolean", info: "Check if a value is in the set" },
-          add: { type: "method", detail: "(value) => Set", info: "Add a value to the set" },
-          delete: { type: "method", detail: "(value) => boolean", info: "Remove a value from the set" },
-          clear: { type: "method", detail: "() => void", info: "Remove all elements" },
-          forEach: { type: "method", detail: "(callback) => void", info: "Execute a function for each element" },
-          values: { type: "method", detail: "() => Iterator", info: "Returns an iterator of values" },
-          first: { type: "method", detail: "() => Token5e | undefined", info: "Get the first element (Foundry Set)" },
-        }
-      },
-      failedSaves: {
-        type: "property", detail: "Set<Token5e>", info: "Tokens that failed saves",
-        children: {
-          size: { type: "property", detail: "number", info: "Number of elements in the set" },
-          has: { type: "method", detail: "(value) => boolean", info: "Check if a value is in the set" },
-          add: { type: "method", detail: "(value) => Set", info: "Add a value to the set" },
-          delete: { type: "method", detail: "(value) => boolean", info: "Remove a value from the set" },
-          forEach: { type: "method", detail: "(callback) => void", info: "Execute a function for each element" },
-          values: { type: "method", detail: "() => Iterator", info: "Returns an iterator of values" },
-          first: { type: "method", detail: "() => Token5e | undefined", info: "Get the first element (Foundry Set)" },
-        }
-      },
-      savedTargets: {
-        type: "property", detail: "Set<Token5e>", info: "Tokens that succeeded saves",
-        children: {
-          size: { type: "property", detail: "number", info: "Number of elements in the set" },
-          has: { type: "method", detail: "(value) => boolean", info: "Check if a value is in the set" },
-          add: { type: "method", detail: "(value) => Set", info: "Add a value to the set" },
-          delete: { type: "method", detail: "(value) => boolean", info: "Remove a value from the set" },
-          forEach: { type: "method", detail: "(callback) => void", info: "Execute a function for each element" },
-          values: { type: "method", detail: "() => Iterator", info: "Returns an iterator of values" },
-          first: { type: "method", detail: "() => Token5e | undefined", info: "Get the first element (Foundry Set)" },
-        }
-      },
+      targets: tokenSetEntry("The targeted tokens"),
+      hitTargets: tokenSetEntry("Tokens that were hit"),
+      failedSaves: tokenSetEntry("Tokens that failed their save"),
+      saves: tokenSetEntry("Tokens that saved"),
       actor: {
         type: "property", detail: "Actor5e", info: "The D&D 5e actor performing the action",
         children: {
@@ -380,6 +357,7 @@ const MIDI_COMPLETIONS: CompletionNode = {
           inCombat: { type: "property", detail: "boolean", info: "Whether token is in combat" },
         }
       },
+      tokenDocument: { type: "property", detail: "TokenDocument5e", info: "The TokenDocument of the token performing the action (workflow.token.document)" },
       inCombat: { type: "property", detail: "boolean", info: "Whether the actor was in a combat when the use started" },
       isTurn: { type: "property", detail: "boolean", info: "Whether it was the actor's turn when the use started" },
       isCritical: { type: "property", detail: "boolean", info: "Whether the attack is a critical hit" },

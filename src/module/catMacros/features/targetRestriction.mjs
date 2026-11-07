@@ -6,8 +6,7 @@ const MODULE = 'midi-qol';
 async function check({document: item, workflow}) {
     const c = item.flags?.[MODULE]?.restrictTarget;
     if (!c || workflow.activity?.id !== c.activity) return;
-    for (const token of workflow.targets) {
-        const doc = token.document ?? token;
+    for (const doc of workflow.targets.documents) {
         if ((c.statuses ?? []).some(s => doc.actor?.statuses.has(s))) continue;
         const willing = c.willing && await dialogUtils.confirm(item.name, `${doc.name} isn't ${(c.statuses ?? []).join(', ')}. Is it willing?`,
             {userId: (game.users.activeGM ?? game.user).id});

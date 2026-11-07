@@ -1,3 +1,4 @@
+import {getTokenDocument} from '../../utils.js';
 import {automationUtils, documentUtils, workflowUtils} from '../proxy.mjs';
 // Infernal wound (2024 Bearded Devil's Infernal Glaive, Horned Devil's Infernal Tail). A creature without a wound that
 // fails the save gets one: it loses hit points at the start of each of its turns, until the wound closes after its
@@ -36,12 +37,12 @@ function originItem(origin) {
 // The glaive: the creatures it hit with no wound yet make the wound save
 async function glaiveHit({document: item, workflow}) {
     if (workflow.activity?.type !== 'attack') return;
-    const targets = [...workflow.hitTargets].filter(token => token.actor && !woundsOf(token.actor).length);
+    const targets = workflow.hitTargets.documents.filter(token => token.actor && !woundsOf(token.actor).length);
     const save = item.system.activities.find(activity => activity.type === 'save');
     if (!targets.length || !save) return;
     const data = save.toObject();
     data.save = {...data.save, ability: [config(item, 'saveAbility')], dc: {calculation: '', formula: String(config(item, 'saveDC'))}};
-    await workflowUtils.syntheticActivityDataRoll(data, item, targets.map(token => token.document), {consumeUsage: false, consumeResources: false,
+    await workflowUtils.syntheticActivityDataRoll(data, item, targets, {consumeUsage: false, consumeResources: false,
         options: {workflowOptions: {targetConfirmation: 'none'}}});
 }
 // One wound at a time; a new one takes the item's configuration
@@ -57,7 +58,7 @@ async function turnStart({document: effect, actor, token}) {
     const wound = effect?.getFlag(MODULE, FLAG);
     if (!wound?.formula || !actor) return;
     const roll = await new Roll(wound.formula).evaluate();
-    await roll.toMessage({flavor: `${effect.name}: hit points lost`, speaker: ChatMessage.getSpeaker({actor, token: token?.document ?? token})});
+    await roll.toMessage({flavor: `${effect.name}: hit points lost`, speaker: ChatMessage.getSpeaker({actor, token: getTokenDocument(token)})});
     // Hit points lost, not damage: no type, so nothing reduces it
     await actor.applyDamage(roll.total);
 }

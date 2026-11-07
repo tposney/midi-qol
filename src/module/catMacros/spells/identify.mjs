@@ -2,7 +2,7 @@ import {dialogUtils} from '../proxy.mjs';
 // Casting picks an unidentified item carried by the caster or the touched creature, identifies it and whispers the
 // caster what it is, whether it needs attunement and how many charges it has.
 async function cast({workflow}) {
-    const holders = [workflow.actor, ...Array.from(workflow.targets).map(token => token.actor)].filter((actor, i, all) => actor && all.indexOf(actor) === i);
+    const holders = [workflow.actor, ...workflow.targets.documents.map(token => token.actor)].filter((actor, i, all) => actor && all.indexOf(actor) === i);
     const items = holders.flatMap(actor => actor.items.filter(item => item.system.identified === false));
     if (!items.length) {
         ui.notifications.info('Identify: no unidentified items on the caster or the target.');

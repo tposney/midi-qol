@@ -6,14 +6,14 @@ function isHarmful(activity) {
     return activity.item?.type === 'spell' && !!activity.damage?.parts?.length;
 }
 async function targeted({document: effect, workflow}) {
-    if (workflow.targets.size !== 1 || !workflow.token) return;
+    if (workflow.targets.count !== 1 || !workflow.token) return;
     if (!isHarmful(workflow.activity) || workflow.activity.target?.template?.type) return;
-    const target = workflow.targets.first();
-    if (target.document.disposition === workflow.token.document.disposition) return;
+    const target = workflow.targets.documents[0];
+    if (target.disposition === workflow.token.document.disposition) return;
     const saveActivity = effectUtils.getOriginActivitySync(effect)?.item?.system.activities.find(activity => activity.type === 'save');
     if (!saveActivity) return;
     const saveWorkflow = await workflowUtils.syntheticActivityRoll(saveActivity, [workflow.token.document]);
-    if (!saveWorkflow?.failedSaves?.size) return;
+    if (!saveWorkflow?.failedSaves?.count) return;
     await ChatMessage.create({
         speaker: ChatMessage.getSpeaker({token: workflow.token.document}),
         content: `${workflow.token.name} can't bring themselves to target ${target.name} (Sanctuary).`

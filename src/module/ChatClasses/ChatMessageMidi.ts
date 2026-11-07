@@ -1,3 +1,4 @@
+import type { TokenDocumentSet } from "../lib/tokenDocumentSet.js";
 import { MESSAGE_TYPES, MODULE_ID, MQDamageRollTypes, debugEnabled, error, i18n, log } from "../../midi-qol.js";
 import { TroubleShooter } from "../apps/TroubleShooter.js";
 import { Dnd5eSystem } from "../../globals.js";
@@ -21,10 +22,10 @@ const stripHighlight = (html: HTMLElement, sel: string) => html.querySelectorAll
 );
 
 
-const tokenUuids = (tokens: Set<Token.Implementation> | undefined) => [...(tokens ?? [])].map(token => token.document.uuid);
+const tokenUuids = (tokens: TokenDocumentSet | undefined) => tokens?.uuids ?? [];
 /** The old `flags.midi-qol` keys of a usage card: the workflow property to use instead, and how the flag read it */
 const LEGACY_CARD_FLAGS: Record<string, [string, (workflow: Workflow) => unknown]> = {
-  targets: ["targets", w => [...w.targets].map(token => ({ uuid: token.document.uuid, name: token.document.name }))],
+  targets: ["targets", w => w.targets.documents.map(document => ({ uuid: document.uuid, name: document.name }))],
   hitTargetUuids: ["hitTargets", w => tokenUuids(w.hitTargets)],
   hitECTargetUuids: ["hitTargetsEC", w => tokenUuids(w.hitTargetsEC)],
   saveUuids: ["saves", w => tokenUuids(w.saves)],

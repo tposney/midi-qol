@@ -4,7 +4,7 @@ import {addCardNote} from '../../lib/cardNotes.js';
 async function check({workflow}) {
     const token = workflow.token?.document;
     if (!token) return;
-    const others = workflow.targets.size ? Array.from(workflow.targets, target => target.document)
+    const others = workflow.targets.count ? workflow.targets.documents
         : token.parent.tokens.filter(other => other !== token && other.actor && tokenUtils.canSense(token, other));
     const lines = others.map(other => `<li>${other.name}: ${tokenUtils.checkCover(token, other, {displayName: true})} (${Math.round(tokenUtils.getDistance(token, other))} ft)</li>`);
     await addCardNote(workflow, `<p>Cover from ${token.name}:</p><ul>${lines.join('') || '<li>No creatures.</li>'}</ul>`,
