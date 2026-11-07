@@ -152,6 +152,11 @@
     "tidy5e-sheet": {
       "section": "",
       "actionSection": ""
+    },
+    "cat": {
+      "automation": {
+        "version": "14.6.8"
+      }
     }
   },
   "system": {
@@ -278,7 +283,7 @@
         }
       }
     },
-    "identifier": "auto-sneak-attack-10010",
+    "identifier": "auto-sneak-attack",
     "enchant": {},
     "prerequisites": {
       "level": null,

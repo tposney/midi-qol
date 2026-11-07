@@ -165,6 +165,11 @@
     "tidy5e-sheet": {
       "section": "",
       "actionSection": ""
+    },
+    "cat": {
+      "automation": {
+        "version": "14.6.8"
+      }
     }
   },
   "system": {
@@ -296,7 +301,7 @@
         }
       }
     },
-    "identifier": "gm-inspiration-10010",
+    "identifier": "gm-inspiration",
     "enchant": {},
     "prerequisites": {
       "level": null,

@@ -147,7 +147,7 @@
       "repeatable": false
     },
     "properties": [],
-    "identifier": "regeneration",
+    "identifier": "regeneration-activity-over-time",
     "advancement": [],
     "cover": null,
     "crewed": false
@@ -189,6 +189,11 @@
     "tidy5e-sheet": {
       "section": "",
       "actionSection": ""
+    },
+    "cat": {
+      "automation": {
+        "version": "14.6.8"
+      }
     }
   },
   "img": "icons/skills/wounds/anatomy-organ-heart-red.webp",

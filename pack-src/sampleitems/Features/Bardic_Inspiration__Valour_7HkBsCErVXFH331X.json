@@ -259,6 +259,11 @@
     "tidy5e-sheet": {
       "section": "",
       "actionSection": ""
+    },
+    "cat": {
+      "automation": {
+        "version": "14.6.8"
+      }
     }
   },
   "system": {
@@ -408,7 +413,7 @@
         }
       }
     },
-    "identifier": "bardic-inspiration-valour-dnd5e",
+    "identifier": "bardic-inspiration-valour",
     "enchant": {},
     "prerequisites": {
       "level": null,

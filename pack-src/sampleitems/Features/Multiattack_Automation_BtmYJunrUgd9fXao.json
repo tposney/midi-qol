@@ -130,7 +130,7 @@
         }
       }
     },
-    "identifier": "multiattack-automation-11423",
+    "identifier": "multiattack-automation",
     "enchant": {},
     "prerequisites": {
       "level": null,
@@ -324,6 +324,11 @@
     "tidy5e-sheet": {
       "section": "",
       "actionSection": ""
+    },
+    "cat": {
+      "automation": {
+        "version": "14.6.8"
+      }
     }
   },
   "_stats": {

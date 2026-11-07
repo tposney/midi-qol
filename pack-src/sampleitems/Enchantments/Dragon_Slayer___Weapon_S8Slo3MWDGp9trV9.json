@@ -234,7 +234,7 @@
       "value": "<p><em>Weapon (Any Simple or Martial), Rare</em></p><p>You gain a +1 bonus to attack rolls and damage rolls made with this magic weapon.</p><p>The weapon deals an extra 3d6 damage of the weapon’s type if the target is a Dragon.</p><p>Midi: To use the item drag the dragon slayer effect to any weapon and it will do a bonus 3d6 damage to dragons.</p><p>This is based on a idea from the new Dungeons Master's Guide foundry premium content which has lots of clever ideas in it.</p><p>Midi Version 12.4.16</p>",
       "chat": ""
     },
-    "identifier": "dragon-slayer",
+    "identifier": "dragon-slayer-weapon",
     "source": {
       "revision": 1,
       "rules": "2024",

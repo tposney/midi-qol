@@ -253,7 +253,7 @@
       "value": "",
       "chat": ""
     },
-    "identifier": "new-feature",
+    "identifier": "turn-into-frog",
     "source": {
       "revision": 1,
       "rules": "2024"
@@ -278,7 +278,12 @@
       "hash": "eea12f99da05df7024402aeb98b4db733f4e1f3a",
       "sourceId": "Actor.ZPvI3KQT4Y3yC7qJ.Item.9ptrRJuSD8tUvS8e"
     },
-    "dnd5e": {}
+    "dnd5e": {},
+    "cat": {
+      "automation": {
+        "version": "14.6.8"
+      }
+    }
   },
   "_stats": {
     "compendiumSource": null,

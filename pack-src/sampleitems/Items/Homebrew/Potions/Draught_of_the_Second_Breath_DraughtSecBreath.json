@@ -343,6 +343,11 @@
         "source": "midi-qol.midiqol-sample-items",
         "version": "13.0.69"
       }
+    },
+    "cat": {
+      "automation": {
+        "version": "14.6.8"
+      }
     }
   }
 }

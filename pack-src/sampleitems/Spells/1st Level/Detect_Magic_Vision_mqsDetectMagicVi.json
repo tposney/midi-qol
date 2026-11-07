@@ -361,7 +361,7 @@
         "otherActivityAsParentType": true
       }
     },
-    "identifier": "detect-magic",
+    "identifier": "detect-magic-vision",
     "method": "spell",
     "prepared": 0
   },
@@ -431,6 +431,9 @@
             "identifier": "detect-magic"
           }
         ]
+      },
+      "automation": {
+        "version": "14.6.8"
       }
     },
     "midi-qol": {

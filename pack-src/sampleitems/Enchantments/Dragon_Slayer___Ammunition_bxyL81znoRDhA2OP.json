@@ -257,7 +257,7 @@
       "value": "<p><em>Weapon (Any Simple or Martial), Rare</em></p><p>You gain a +1 bonus to attack rolls and damage rolls made with this magic weapon.</p><p>The weapon deals an extra 6d6 damage on a failed save or half as much on a save, of the weapon’s type if the target is a Dragon.</p><p>Midi: To use the item simply drag the dragon slayer effect to an ammunition item and it will do a bonus 6d6 damage to dragons, half as much on a save.</p><p>This is based on a idea from the new Dungeons Master's Guide foundry premium content which has lots of clever ideas in it.</p>",
       "chat": ""
     },
-    "identifier": "dragon-slayer",
+    "identifier": "dragon-slayer-ammunition",
     "source": {
       "revision": 1,
       "rules": "2024",
@@ -349,7 +349,7 @@
         "changes": [
           {
             "key": "name",
-            "value": "{} of Dragon SLaying",
+            "value": "{} of Dragon Slaying",
             "priority": 50,
             "type": "override"
           },

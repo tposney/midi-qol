@@ -161,6 +161,11 @@
       "riders": {
         "activity": []
       }
+    },
+    "cat": {
+      "automation": {
+        "version": "14.6.8"
+      }
     }
   },
   "system": {
