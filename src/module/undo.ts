@@ -62,7 +62,8 @@ export function _queueUndoDataDirect(undoDataDef: UndoDataDirect) {
 }
 // Called by workflow to start a new undoWorkflow entry
 export async function saveUndoData(workflow: Workflow): Promise<boolean> {
-  if (!configSettings.undoWorkflow) return true;
+  // Undo is by card: a use has its card by now
+  if (!configSettings.undoWorkflow || !workflow.id) return true;
   workflow.undoData = {
     id: workflow.id,
     userId: game.user?.id,

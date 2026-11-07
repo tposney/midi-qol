@@ -30,6 +30,7 @@ const MIDI_COMPLETIONS: CompletionNode = {
         type: "class", detail: "class", info: "Main workflow class",
         children: {
           getWorkflow: { type: "function", detail: "(uuid) => Workflow", info: "Get a workflow by its message UUID" },
+          workflowFor: { type: "function", detail: "(activity) => Workflow", info: "The workflow of the use an activity belongs to, before its card exists" },
         }
       },
       DamageOnlyWorkflow: { type: "class", detail: "class", info: "Workflow for damage-only rolls" },

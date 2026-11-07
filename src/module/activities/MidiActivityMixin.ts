@@ -195,9 +195,10 @@ function savesRolledFromChat(): boolean {
 export let MidiActivityMixin = Base => {
   interface MidiActivityMixin extends Activity { };
   class MidiActivityMixin extends Base {
+    /** @deprecated MidiQOL.Workflow.workflowFor(activity) */
     get workflow() {
-      warn("MidiActivityMixin | activity.workflow is deprecated. activities no long store workflow references");
-      return Workflow.getWorkflowByActivityUuid(this.uuid);
+      foundry.utils.logCompatibilityWarning("midi-qol | activity.workflow is deprecated and will be removed in 14.8.0: use MidiQOL.Workflow.workflowFor(activity).", { since: "14.6.9", until: "14.8.0", once: true });
+      return Workflow.workflowFor(this);
     }
     set workflow(value) {
       error("MidiActivityMixin | activity.workflow = is deprecated. activities no long store workflow references"); ``
@@ -665,17 +666,9 @@ export let MidiActivityMixin = Base => {
     }
 
     async _onChatAction(event: PointerEvent, target: HTMLElement, message: ChatMessage.Implementation) {
-      // dnd5e's #onChatAction already provides a scaled `this` — no need to clone here.
-      const existingItem = this.workflow?.item ?? this.item;
-      // @ts-expect-error no dnd5e-types
-      const activity = this.workflow?.activity ?? existingItem.system.activities.get(this.id);
-      const action = target.dataset.action ?? "";
-      let handler = activity?.metadata.usage?.actions?.[action];
-      const workflow = Workflow.findWorkflow(message.uuid);
-      if (!handler && workflow) {
-        if (activity) handler = activity?.metadata.usage?.actions?.[action];
-      }
-      if (handler) await handler.call(activity, event, target, message);
+      // `this` is dnd5e's activity from the card, scaled as it was used; the handlers find the workflow they need
+      const handler = this.metadata.usage?.actions?.[target.dataset.action ?? ""];
+      if (handler) await handler.call(this, event, target, message);
     }
 
     async useAs(actor: Actor.Implementation | null | undefined, usage: ActivityUseConfiguration = {}, dialog: RollDialogConfig = {}, message: RollMessageConfig = {}) {
@@ -736,6 +729,7 @@ export let MidiActivityMixin = Base => {
           usage.workflow = new SavesFirstWorkflow(activity.actor ?? null, activity, ChatMessage.getSpeaker({ actor: activity.item.actor }), null, { workflowOptions });
           else usage.workflow = new workflowClass(activity.actor ?? null, activity, ChatMessage.getSpeaker({ actor: activity.item.actor }), null, { workflowOptions });
         }
+        Workflow.setUse(activity, usage.workflow!);
         usage.workflow!.sequenceId = usage.sequenceId;
         usage.workflow!.systemCard = message.systemCard;
         if ((activity.midiProperties?.rollMode ?? "default") !== "default") message.rollMode = toMessageMode(activity.midiProperties!.rollMode) as keyof CONFIG.Dice.RollModes;
@@ -781,10 +775,10 @@ export let MidiActivityMixin = Base => {
 
         let useResults: any;
         preUseActivityHookId = Hooks.on("dnd5e.preUseActivity", (newActivity, usageConfig) => {
-          if (usage.workflow!.activity?.uuid !== newActivity.uuid) return true;
+          // Only this use's: dnd5e's copy of `usage` keeps its workflow (deepClone keeps class instances). Another use of the
+          // same activity running meanwhile has its own hook, which would otherwise take this use's activity and config.
+          if (usageConfig.workflow !== usage.workflow) return true;
           dnd5eUsageConfig = usageConfig;
-          // Not sure if required but set the workflow in the super.usageConfig.
-          usageConfig.workflow = usage.workflow;
           // newActivity will be the scaled activity to use that instead of what we have
           usage.workflow!.activity = newActivity;
           Workflow.setUse(newActivity, usage.workflow!);
@@ -804,7 +798,7 @@ export let MidiActivityMixin = Base => {
           && !safeGetGameSetting("dnd5e", "disableConcentration")
           && !(activity.type === "transform" && activity.transform?.mode === "form");
         activityConsumptionHookId = Hooks.on("dnd5e.activityConsumption", (newActivity, usageConfig, messageConfig) => {
-          if (usage.workflow!.activity?.uuid !== newActivity.uuid) return;
+          if (usageConfig.workflow !== usage.workflow) return;
           usageData = usageConfig;
           usageConfig.workflow!.activity = newActivity;
           usageConfig.activity = newActivity;
@@ -2211,7 +2205,7 @@ export let MidiActivityMixin = Base => {
 
     /** midi's additions to the usage context; not named `_usageChatContext`, which would keep dnd5e's legacy content path. */
     async _midiUsageContext(message) {
-      const workflow = Workflow.useOf(this);
+      const workflow = Workflow.workflowFor(this);
       let systemCard = message.systemCard ?? false;
       const minimalCard = false;
 
@@ -2309,9 +2303,13 @@ export let MidiActivityMixin = Base => {
         console.error(`${MODULE_ID} | could not record usage card state`, err);
       }
       const card = await super._createUsageMessage(message);
-      if (card instanceof ChatMessage) {
-        // dnd5e places the use's templates next, before use() returns and the workflow takes the card's uuid
-        Workflow.setUseCard(this, card);
+      const workflow = Workflow.workflowFor(this);
+      if (card instanceof ChatMessage && workflow && !workflow.itemCardUuid) {
+        // The use's workflow is its card's from now on: filed under the card's uuid before dnd5e places the use's
+        // templates and calls postUseActivity, not only when use() returns
+        workflow.itemCardUuid = card.uuid;
+        workflow.id = card.uuid;
+        Workflow.addWorkflow(workflow);
         // An emanation midi placed while the card was drawn (_midiUsageContext) names the card now it exists
         for (const region of this.templates ?? []) {
           if (region?.flags?.[MODULE_ID]?.activityTemplate && !region.flags[MODULE_ID].itemCardUuid)

@@ -775,6 +775,8 @@ await workflow.resume("damageRolled"); // "attackRolled", "damageRolled", "noDam
 - For any other user, a read-only copy rebuilt from the card (`workflow.readOnly` is `true`). It has what the card stores: targets, hits, saves, rolls, damage detail, critical and fumble, templates, and what is worked out from them. It does not run or write the card. Properties only kept in memory (anything a macro added) are empty.
 - `getWorkflow(cardUuid, false)` gives another user a live rebuild instead. **Caveat emptor:** it runs and writes the card as the author's would, and nothing keeps it in step with the author's workflow: two live workflows for one card overwrite each other's changes, roll twice and apply damage and effects twice. midi warns in the console when it makes one. Use it only when you know the author's workflow is not running (its user is offline).
 
+A use's workflow has no card before dnd5e creates it, so until then it has no id (`workflow.id` is `undefined`) and `getWorkflow` cannot find it. During that part of a use (midi's preTargeting and preItemRoll passes, dnd5e's preUseActivity, activityConsumption and preCreateUsageMessage hooks), on the client running it, `MidiQOL.Workflow.workflowFor(activity)` gives the use's workflow from the activity the hook or macro was given. Its id is the card's uuid from the moment the card is created, before dnd5e places the use's templates. Workflows are not found by activity uuid: two uses of one activity have the same one (`getWorkflowByActivityUuid` is deprecated and finds nothing).
+
 A read-only copy is a snapshot of the card when it was made, and a copy you hold is never updated. When the card changes midi discards its copy, so the next `getWorkflow` call builds one from the card as it is then. Call `getWorkflow` again after an `await` rather than keeping a copy. `MidiQOL.Workflow.workflows` is a new `Map` of the workflows in memory (by id) on each read, for searching them (by activity, actor, …); a finished workflow may have been collected and be missing from it, so look one up by its card with `getWorkflow`.
 
 ### Token sets
@@ -878,7 +880,7 @@ Data passed to OnUse and DamageBonus macros in `args[0]`:
 | `itemData` | Same as item |
 | `itemUuid` | Item UUID |
 | `workflow` | The workflow object |
-| `workflowId` | Workflow ID |
+| `workflowId` | Workflow ID: its card's uuid (`undefined` in the preTargeting and preItemRoll passes, before the card exists) |
 | `id` | Workflow ID |
 
 **Roll Data:**

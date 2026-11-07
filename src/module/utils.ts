@@ -6007,7 +6007,7 @@ export async function doReactions(targetRef: TokenOrDocument | string, triggerTo
     }
 
     if (reactionCount <= 0) return noResult;
-    const workflow: Workflow | undefined = options.workflow ?? Workflow.findWorkflow(options?.activity?.uuid);
+    const workflow: Workflow | undefined = options.workflow ?? Workflow.workflowFor(options?.activity);
     // The reacting player sees the card as it is now
     await workflow?.flushCardWrites();
 

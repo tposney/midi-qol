@@ -459,10 +459,12 @@ export class Workflow {
    * finished one is rarely looked up again and is rebuilt from its card if it has been collected (getWorkflow).
    */
   static #fileFinished(workflow: Workflow) {
-    if (Workflow.#workflows.get(workflow.id) === workflow) Workflow.#workflows.set(workflow.id, new WeakRef(workflow));
+    const id = workflow.id;
+    if (id && Workflow.#workflows.get(id) === workflow) Workflow.#workflows.set(id, new WeakRef(workflow));
   }
 
   static addWorkflow(workflow: Workflow) {
+    if (!workflow.id) return;
     // A collected entry is just replaced; another live workflow under the id is removed first
     const entry = Workflow.#workflows.get(workflow.id);
     const existing = entry instanceof WeakRef ? entry.deref() : entry;
@@ -476,21 +478,18 @@ export class Workflow {
     else Workflow.#workflows.set(workflow.id, workflow);
   }
   /** The item's workflow that is executing now (a macro inside its use), the most recently filed if several */
-  // Each use's workflow, keyed by dnd5e's copy of the activity for that use (it runs the rest of `use`), and its card once
-  // made: the workflow takes the card's uuid as its id only when dnd5e's use() returns
-  static #uses = new WeakMap<object, { workflow: Workflow, cardUuid?: string }>();
-  static setUse(activity: Activity, workflow: Workflow) { Workflow.#uses.set(activity, { workflow }); }
-  static useOf(activity: Activity): Workflow | undefined { return Workflow.#uses.get(activity)?.workflow; }
-  static setUseCard(activity: Activity, card: ChatMessage.Implementation | undefined) {
-    const use = Workflow.#uses.get(activity);
-    if (use && card?.uuid) use.cardUuid = card.uuid;
-  }
-  /** The use a template of `activity` is placed for: its card's uuid (the workflow's id) once the card exists */
+  // Each use's workflow by its activity: the copy midi's use() makes and dnd5e's scaled copy, both for that use alone
+  static #uses = new WeakMap<object, Workflow>();
+  static setUse(activity: Activity, workflow: Workflow) { Workflow.#uses.set(activity, workflow); }
+  /**
+   * The workflow of the use `activity` belongs to: the activity a use's hooks and macros are given (midi's or dnd5e's
+   * copy for that use). For a use before its card exists, on the client running it; after that, getWorkflow(cardUuid).
+   */
+  static workflowFor(activity: Activity | undefined | null): Workflow | undefined { return activity ? Workflow.#uses.get(activity) : undefined; }
+  /** The use a template of `activity` is placed for: its workflow's id (its card's uuid) and card */
   static templateWorkflowFlags(activity: Activity): { workflowId?: string, itemCardUuid?: string } {
-    const use = Workflow.#uses.get(activity);
-    const workflow = use?.workflow ?? (activity.item ? Workflow.runningFor(activity.item) : undefined);
-    const itemCardUuid = use?.cardUuid ?? workflow?.itemCardUuid;
-    return { workflowId: itemCardUuid ?? workflow?.id, itemCardUuid };
+    const workflow = Workflow.workflowFor(activity);
+    return { workflowId: workflow?.itemCardUuid ? workflow.id : undefined, itemCardUuid: workflow?.itemCardUuid };
   }
 
   static runningFor(item: Item.Implementation): Workflow | undefined {
@@ -637,7 +636,7 @@ export class Workflow {
     if (live) return live;
     // Rebuilt from its card once, also after its weak entry was collected: filed under the card, so later calls find it
     if (fromUuidSync(id) instanceof ChatMessage) return Workflow.#rebuild(id);
-    return entry ? undefined : this.getWorkflowByActivityUuid(id);
+    return undefined;
   }
 
   static #rebuild(id: string, options: { anyAuthor?: boolean } = {}): Workflow | undefined {
@@ -648,22 +647,10 @@ export class Workflow {
     return rebuilt;
   }
 
-  static getWorkflowByActivityUuid(activityUuid?: string): Workflow | undefined {
-    if (!activityUuid) return;
-    // Direct map lookup — the workflow is keyed by activity.uuid until the chat card is
-    // created, at which point the activity.uuid entry is deleted and replaced by the
-    // chatMessage.uuid entry. A direct get() avoids finding stale re-keyed workflows.
-    // Use workflows.get() directly (not findWorkflow()) to avoid infinite recursion,
-    // since findWorkflow() falls back to getWorkflowByActivityUuid().
-    const entry = Workflow.#workflows.get(activityUuid);
-    let returnValue: Workflow | undefined;
-    if (entry instanceof WeakRef) {
-      returnValue = entry.deref();
-    } else {
-      returnValue = entry;
-    }
-    if (debugEnabled > 0) warn(`Fetching workflow by activity uuid ${activityUuid} workflowId: ${returnValue?.id}`);
-    return returnValue;
+  /** @deprecated workflows are not found by activity uuid: Workflow.workflowFor(activity) during a use, getWorkflow(cardUuid) after */
+  static getWorkflowByActivityUuid(_activityUuid?: string): Workflow | undefined {
+    foundry.utils.logCompatibilityWarning("midi-qol | Workflow.getWorkflowByActivityUuid is deprecated and finds nothing: use MidiQOL.Workflow.workflowFor(activity) during a use, MidiQOL.Workflow.getWorkflow(cardUuid) once its card exists.", { since: "14.6.9", until: "14.8.0", once: true });
+    return undefined;
   }
   static deleteWorkflow(id: string) {
     Workflow.#workflows.delete(id);
@@ -900,9 +887,10 @@ export class Workflow {
 
   saveDisplayFlavor: string | undefined;
 
-  #id: string = "";
-  get id() { return this.#id }
-  set id(id: string) {
+  /** Its card's uuid, which it is filed under: undefined for a use until its card exists (a workflow with no card of its own has a generated id) */
+  #id: string | undefined;
+  get id(): string | undefined { return this.#id }
+  set id(id: string | undefined) {
     this.#id = id;
     this.#storeUnstored();
   }
@@ -1747,10 +1735,9 @@ export class Workflow {
         this.id = foundry.utils.randomID();
         this.workflowName = `workflow ${this.id}`;
       } else {
-        this.id = this.activity.uuid; // Temporary until the item card is created.
+        // No id until the use's card exists (its uuid): before then it is found by its activity (workflowFor)
         const workflowName = options.workflowOptions?.workflowName ?? this.item.name ?? "no item";
         this.workflowName = `${this.constructor.name} ${workflowName} ${foundry.utils.randomID()}`;
-        if (options.storeWorkflow) Workflow.addWorkflow(this);
       }
       if (options?.noOptionalRules !== undefined) this.noOptionalRules = options.noOptionalRules;
       this.attackRollCount = 0;
@@ -4378,12 +4365,12 @@ export class Workflow {
     if (await asyncHooksCall(hookName, this) === false) return false;
     if (this.item && await asyncHooksCall(`${hookName}.${this.item.uuid}`, this) === false) return false;
     if (this.activity && await asyncHooksCall(`${hookName}.${this.activity.uuid}`, this) === false) return false;
-    if (await asyncHooksCall(`${hookName}.${this.id}`, this) === false) return false;
+    if (this.id && await asyncHooksCall(`${hookName}.${this.id}`, this) === false) return false;
     const premadesHook = hookName.replace("midi-qol.", "midi-qol.premades.");
     if (await asyncHooksCall(premadesHook, this) === false) return false;
     if (this.item && await asyncHooksCall(`${premadesHook}.${this.item.uuid}`, this) === false) return false;
     if (this.activity && await asyncHooksCall(`${premadesHook}.${this.activity.uuid}`, this) === false) return false;
-    if (await asyncHooksCall(`${premadesHook}.${this.id}`, this) === false) return false;
+    if (this.id && await asyncHooksCall(`${premadesHook}.${this.id}`, this) === false) return false;
     return true;
   }
 
@@ -6689,7 +6676,7 @@ export class Workflow {
       rollDC: rollDC ?? 0,
       saveItemUuid: this.saveItem?.uuid ?? "",
       saveActivityUuid: this.saveActivity?.uuid,
-      workflowId: this.id,
+      workflowId: this.id ?? "",
       itemCardUuid: this.itemCardUuid ?? "",
       workflowOptions: this.workflowOptions,
       rollType: rollType ?? "save",
@@ -8644,7 +8631,6 @@ export class DamageOnlyWorkflow extends Workflow {
     // @ts-expect-error no dnd5e-types
     super(actor, theItem.system.activities.contents[0], ChatMessage.getSpeaker({ token, actor }), new Set(theTargets), { event: shiftOnlyEvent as KeyboardEvent, workflowOptions: { noOnUseMacro: true } });
     this.damageOnly = true;
-    if (configSettings.undoWorkflow) saveUndoData(this);
     // Do the supplied damageRoll
     this.flavor = options.flavor;
     this.defaultDamageType = GameSystemConfig.damageTypes[damageType]?.label ?? damageType;
@@ -8662,6 +8648,10 @@ export class DamageOnlyWorkflow extends Workflow {
       const message = game.messages?.get(options.itemCardId);
       if (message) this.itemCardUuid = message?.uuid;
     }
+    // On another workflow's card it has no card of its own: an id of its own tags the rolls it adds there (addedBy)
+    if (this.itemCardUuid && this.itemCardUuid !== "new") this.id = foundry.utils.randomID();
+    // Undo is kept by workflow id: one on its own card saves it once the card exists (WorkflowState_Start)
+    if (configSettings.undoWorkflow && this.id) saveUndoData(this);
     this.useOther = options.useOther ?? false;
     this.ready = (this.useOther ? this.setOtherDamageRolls([damageRoll]) : this.setDamageRolls([damageRoll])).then(async () => {
       if (!this.useOther) this.damageTotal = damageTotal;
@@ -8697,6 +8687,7 @@ export class DamageOnlyWorkflow extends Workflow {
         this.id = itemCard.uuid;
         this.itemCardUuid = itemCard.uuid;
         Workflow.addWorkflow(this);
+        if (configSettings.undoWorkflow) await saveUndoData(this);
       }
     }
     const whisperCard = configSettings.autoCheckHit === "whisper" || safeGetGameSetting("core", "messageMode") === "blind";
@@ -9193,7 +9184,8 @@ type MidiMacroData = {
   hitTargetsEC: TokenDocument.Implementation[];
   hitTargetUuids: string[];
   hitTargetUuidsEC: string[];
-  id: string;
+  /** The workflow's id (its card's uuid): undefined in a use's passes before its card exists */
+  id: string | undefined;
   isCritical?: boolean;
   isFumble: boolean;
   item: Item.Source & { uuid?: string };
@@ -9227,7 +9219,7 @@ type MidiMacroData = {
   utilityRolls?: Roll[];
   uuid?: string;
   workflow: Workflow;
-  workflowId: string;
+  workflowId: string | undefined;
   workflowOptions: WorkflowOptions;
 }
 
