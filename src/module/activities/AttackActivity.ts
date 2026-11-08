@@ -61,6 +61,21 @@ function workflowFinished(sequenceId: string, leadCardId: string | undefined): P
   return Object.assign(promise, { cancel: () => done() });
 }
 
+/** Resolves when the workflow's attack is rolled, or it ends or its card is deleted first. No timeout: it waits for the user. */
+function attackRolled(workflow: Workflow): Promise<void> {
+  return new Promise(resolve => {
+    const attackId = Hooks.on("midi-qol.AttackRollComplete", async (w: Workflow) => { if (w === workflow) done(); });
+    const cleanupId = Hooks.on("midi-qol.postCleanup", async (w: Workflow) => { if (w === workflow) done(); });
+    const deleteId = Hooks.on("deleteChatMessage", (message: ChatMessage.Implementation) => { if (message.uuid === workflow.itemCardUuid) done(); });
+    const done = () => {
+      Hooks.off("midi-qol.AttackRollComplete", attackId);
+      Hooks.off("midi-qol.postCleanup", cleanupId);
+      Hooks.off("deleteChatMessage", deleteId);
+      resolve();
+    };
+  });
+}
+
 export let MidiAttackActivity: ReturnType<typeof defineMidiAttackActivityClass>;
 // export let MidiAttackActivityData;
 
@@ -362,7 +377,8 @@ let defineMidiAttackActivityClass = <T extends Activity>(ActivityClass: T) => {
      * bonus action checks; ammunition is spent by their attack rolls as the activity's Ammunition setting says.
      */
     async attackEachTarget(workflow: Workflow): Promise<void> {
-      const targets = Array.from(workflow.targets);
+      // Every target, drawn or not: one on another level or scene is attacked too
+      const targets = workflow.targets.documents;
       const savedTargetIds = Array.from(game.user?.targets ?? []).map(t => t.id);
       let ammunition: string | undefined;
       for (const [index, target] of targets.entries()) {
@@ -385,7 +401,7 @@ let defineMidiAttackActivityClass = <T extends Activity>(ActivityClass: T) => {
           concentration: { begin: false, end: null },
           create: { measuredTemplate: false },
           midiOptions: {
-            targetsToUse: new Set([target]),
+            targetsToUse: new TokenDocumentSet([target]),
             ignoreUserTargets: true,
             spellLevel: workflow.spellLevel || undefined,
             proceedChecks: { checkReaction: false, checkBonusAction: false, checkAoO: true },
@@ -419,6 +435,8 @@ let defineMidiAttackActivityClass = <T extends Activity>(ActivityClass: T) => {
       if (workflow.currentAction === workflow.WorkflowState_Completed || workflow.currentAction === workflow.WorkflowState_Abort) {
         const usage = await MidiAttackActivity.attackAgain(this, workflow, config.event);
         config.workflow = usage.workflow;
+        // Not fast-forwarded, the new use waits at its attack button: its roll, once made
+        if (usage.workflow && !usage.workflow.attackRoll && !usage.workflow.aborted) await attackRolled(usage.workflow);
         return usage.workflow?.attackRoll ? [usage.workflow.attackRoll] : null;
       }
       return workflow.whileExecuting(() => this._midiRollAttack(config, dialog, message));

@@ -1,4 +1,4 @@
-import { error, warn, log, debugEnabled } from "../midi-qol.js";
+import { error, warn, log, debugEnabled, i18nFormat } from "../midi-qol.js";
 import { TroubleShooter } from "./apps/TroubleShooter.js";
 
 export const DAE_REQUIRED_VERSION = "14.6.2";
@@ -18,7 +18,7 @@ export const USEFUL_MODULE_VERSIONS = {
   "flash-rolls-5e": "1.13.1",
   "gambits-premades": "2.0.1",
   "levels": "6.0.0",
-  "levelsautocover": "1.4",
+  "levelsautocover": "5.0.1",
   "levelsvolumetrictemplates": "0.0.0",
   "lib-changelogs": "0.0.0",
   "lib-wrapper": "1.3.5",
@@ -58,6 +58,11 @@ export let setupModules = () => {
         const message = `midi-qol requires ${name} to be of version ${USEFUL_MODULE_VERSIONS[name]} or later, but it is version ${game.modules.get(name)?.version}`;
         error(message);
         TroubleShooter.recordError(new Error(message), message);
+        // midi doesn't use it, so say so where the GM sees it
+        const title = game.modules.get(name)?.title ?? name;
+        Hooks.once("ready", () => {
+          if (game.user?.isGM) ui.notifications?.warn(i18nFormat("midi-qol.ModuleTooOld", { title, version: game.modules.get(name)?.version ?? "?", required: USEFUL_MODULE_VERSIONS[name] }));
+        });
       } else warn(`optional module ${name} not active - some features disabled`)
     }
   }

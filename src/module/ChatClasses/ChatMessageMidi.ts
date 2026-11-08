@@ -6,7 +6,7 @@ import { configSettings, forceHideRoll, safeGetGameSetting } from "../settings.j
 import { createDamageDetail, displayTokenName, getToken, isDnd5eRollMessage } from "../utils.js";
 import { damageDetailToObject, Workflow } from "../Workflow.js";
 import { renameMarkedTokens } from "../lib/tokenNames.js";
-import { attackRollOf, cardHitResult, cardMidi, rollsOfType, cardMidiState, cardSourceActor, recordList, storedMidiFlag } from "../lib/cardState.js";
+import { attackRollOf, cardHitResult, cardHitsPending, cardMidi, rollsOfType, cardMidiState, cardSourceActor, recordList, storedMidiFlag } from "../lib/cardState.js";
 import { cardSaveRoll } from "./UsageCardMessage.js";
 import { canSeePlayerOutcome, canSeeSaveResult, cardActor, challengeVisible, saveDetail, saveDisplayMode } from "../lib/saveVisibility.js";
 
@@ -60,16 +60,21 @@ const LEGACY_CARD_FLAGS: Record<string, [string, (workflow: Workflow) => unknown
 // A workflow built for a getter must not read the flags it is building
 let readingLegacyFlag = false;
 
+const warnGMOnly = () => foundry.utils.logCompatibilityWarning("midi-qol | a usage card's flags.midi-qol.GMOnlyAttackRoll is deprecated: the attack is shown to the GM only while MidiQOL.Workflow.getWorkflow(card.uuid) checks hits.",
+  { since: "14.6.9", until: "15.0.0", once: true });
+
 /** The old keys as getters reading the card's workflow (Workflow.cardView), each read warning that it is deprecated */
 function defineLegacyCardFlags(flags: Record<string, unknown>, cardUuid: string) {
   for (const [key, [name, read]] of Object.entries(LEGACY_CARD_FLAGS)) {
     if (Object.prototype.hasOwnProperty.call(flags, key)) continue;
+    const warn = () => foundry.utils.logCompatibilityWarning(`midi-qol | a usage card's flags.midi-qol.${key} is deprecated: use MidiQOL.Workflow.getWorkflow(card.uuid).${name} (read-only for users other than the card's author).`,
+      { since: "14.6.9", until: "14.8.0", once: true });
     Object.defineProperty(flags, key, {
       configurable: true, enumerable: false,
       get() {
-        foundry.utils.logCompatibilityWarning(`midi-qol | a usage card's flags.midi-qol.${key} is deprecated: use MidiQOL.Workflow.getWorkflow(card.uuid).${name} (read-only for users other than the card's author).`,
-          { since: "14.6.9", until: "14.8.0", once: true });
+        // Read while building the workflow for another read: not a reader's
         if (readingLegacyFlag) return undefined;
+        warn();
         readingLegacyFlag = true;
         try {
           const workflow = Workflow.cardView(cardUuid);
@@ -77,6 +82,11 @@ function defineLegacyCardFlags(flags: Record<string, unknown>, cardUuid: string)
         } finally {
           readingLegacyFlag = false;
         }
+      },
+      // A write (a macro, setProperty, mergeObject) keeps its value here, as the flag did; midi doesn't read it
+      set(value) {
+        warn();
+        Object.defineProperty(flags, key, { configurable: true, enumerable: false, writable: true, value });
       }
     });
   }
@@ -167,6 +177,15 @@ export function defineChatMessageMidiClass(baseClass: ChatMessage.Implementation
         const flags = this.flags[MODULE_ID] as Record<string, unknown>;
         if (!Object.prototype.hasOwnProperty.call(flags, "sourceActorUuid"))
           Object.defineProperty(flags, "sourceActorUuid", { configurable: true, enumerable: false, get: () => cardSourceActor(this)?.uuid });
+        // Read by crlngn-ui to hide the attack from players until the hits are checked
+        if (!Object.prototype.hasOwnProperty.call(flags, "GMOnlyAttackRoll"))
+          Object.defineProperty(flags, "GMOnlyAttackRoll", { configurable: true, enumerable: false, get: () => {
+            warnGMOnly();
+            return cardHitsPending(this, configSettings.autoCheckHit);
+          }, set: (value: unknown) => {
+            warnGMOnly();
+            Object.defineProperty(flags, "GMOnlyAttackRoll", { configurable: true, enumerable: false, writable: true, value });
+          } });
       }
 
       // Older cards stored copies of their rolls in the flags: made Rolls again (not the getters above)
@@ -646,6 +665,9 @@ export function defineChatMessageMidiClass(baseClass: ChatMessage.Implementation
         if (!rollShown || !outcomeShown) {
           row.querySelectorAll(".midi-qol-save-symbol").forEach(el => el.remove());
           row.classList.remove("success", "failure", "critical", "fumble");
+          // The roll's total, if shown, without the outcome's colour and icon
+          stripHighlight(row, ".dice-total");
+          row.querySelectorAll(".dice-total .icons").forEach(el => el.remove());
         }
       });
       if (!showNPCRows) {
@@ -747,13 +769,14 @@ export function defineChatMessageMidiClass(baseClass: ChatMessage.Implementation
       this.maskAttackRolls(html); // This has to run first to stop errors when dnd5e enriches the damage rolls
 
       const enriched = this.#enrichSystemCard(html, options);
-      this.applyChatVisibility(html);
       // For usage-type messages, Foundry skips _highlightCriticalSuccessFailure.
-      // Add classes + icons directly for midi messages, then apply midi settings.
+      // Add classes + icons directly for midi messages, then apply midi settings. Before the visibility pass, which removes
+      // what this viewer may not see, highlighting included.
       if (this.flags?.[MODULE_ID]?.messageType) {
         this._highlightMidiRolls(html);
       }
       this._applyMidiHighlightSettings(html);
+      this.applyChatVisibility(html);
       this.#addAttackReasons(html);
       this.#addMasteryLine(html);
       this._addMarkerClasses(html);

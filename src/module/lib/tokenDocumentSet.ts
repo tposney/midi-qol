@@ -21,6 +21,8 @@ export function setupTokenSetMode(enabled: boolean) {
   Object.defineProperty(TokenDocument.prototype, "document", {
     configurable: true,
     get() {
+      // Only while warnings are shown: a stack on every read is slow
+      if (CONFIG.compatibility.mode === CONST.COMPATIBILITY_MODES.SILENT) return this;
       const caller = new Error().stack?.split("\n")[2] ?? "";
       if (!warned.has(caller)) {
         warned.add(caller);
@@ -43,35 +45,50 @@ function toDocument(member: unknown): TokenDocument.Implementation | undefined {
   }
   if (member instanceof TokenDocument) return member as TokenDocument.Implementation;
   if (member instanceof foundry.canvas.placeables.Token) {
-    const document = member.document as TokenDocument.Implementation | undefined;
-    if (document && !document.id) syntheticPlaceables.set(document, member as Token.Implementation);
-    return document;
+    rememberSyntheticToken(member as Token.Implementation);
+    return member.document as TokenDocument.Implementation | undefined;
   }
   return undefined;
 }
 
-/** A member's Token now: drawn, else midi's own for a token never created; none on another scene or level, or deleted */
-function tokenOf(document: TokenDocument.Implementation): Token.Implementation | undefined {
+/** Record midi's Token for a token never created (an actor with none on the scene), so its document finds it */
+export function rememberSyntheticToken(token: Token.Implementation) {
+  const document = token.document as TokenDocument.Implementation | undefined;
+  if (document && !document.id) syntheticPlaceables.set(document, token);
+}
+
+/**
+ * A member's Token now: drawn, else midi's own for a token never created; none on another scene or level, or deleted.
+ * A document with no id is midi's own: Foundry's lazy `object` would create another, undrawn Token for it.
+ */
+export function tokenOf(document: TokenDocument.Implementation): Token.Implementation | undefined {
+  if (!document.id) {
+    const synthetic = syntheticPlaceables.get(document);
+    return synthetic && !synthetic.destroyed ? synthetic : undefined;
+  }
   const drawn = document.object as Token.Implementation | null;
-  if (drawn && !drawn.destroyed) return drawn;
-  const synthetic = syntheticPlaceables.get(document);
-  return synthetic && !synthetic.destroyed ? synthetic : undefined;
+  return drawn && !drawn.destroyed ? drawn : undefined;
 }
 
 function documentsOf(other: ReadonlySetLike<unknown> | Iterable<unknown>): TokenDocument.Implementation[] {
   if (other instanceof TokenDocumentSet) return other.documents;
-  const members: Iterable<unknown> = Symbol.iterator in other ? other as Iterable<unknown> : { [Symbol.iterator]: () => (other as ReadonlySetLike<unknown>).keys() };
+  // A Map's members are its keys, not its entries; a set-like that can't be iterated gives its keys
+  const members: Iterable<unknown> = other instanceof Map ? other.keys()
+    : Symbol.iterator in other ? other as Iterable<unknown> : { [Symbol.iterator]: () => (other as ReadonlySetLike<unknown>).keys() };
   return [...members].map(toDocument).filter((document): document is TokenDocument.Implementation => !!document);
 }
 
 const setValues = Set.prototype.values;
 
 /**
- * A workflow's token set: a Set of TokenDocuments (every member, drawn or not; deleted tokens stay members). Members are
+ * A workflow's token set: a Set of TokenDocuments (every member, drawn or not; a deleted token stays a member while the workflow is in memory). Members are
  * added, removed and tested as a Token, a TokenDocument or a uuid. Reading it (iteration, `size`, `first()`) gives the
  * drawn Tokens, or in document mode every member's TokenDocument; `documents`, `count`, `tokens` and `uuids` are the
- * same in both modes, and midi itself reads only those. Copy one with `new TokenDocumentSet(set)`; set algebra
- * (`difference`, `union`, `isSubsetOf`, `equals`…) is over every member and gives a TokenDocumentSet.
+ * same in both modes, and midi itself reads only those. Iteration is over the members as it starts (members added
+ * meanwhile aren't visited). Copy one with `new TokenDocumentSet(set)`; set algebra (`difference`, `union`,
+ * `isSubsetOf`, `equals`…) is over every member and gives a TokenDocumentSet, but only called on the TokenDocumentSet:
+ * a plain Set's `plain.difference(set)` reads this set's mode-dependent `size` and `keys()`. Foundry's `filter`, `map`,
+ * `find`, `some`, `every` and `reduce` iterate as reading does; `filter` gives a TokenDocumentSet.
  */
 export class TokenDocumentSet extends Set<TokenSetMember> {
   constructor(members?: Iterable<TokenMember> | null) {
@@ -184,12 +201,22 @@ export class TokenDocumentSet extends Set<TokenSetMember> {
     return !documentsOf(other).some(document => this.has(document));
   }
 
+  /** Foundry's Set#filter over what reading gives (the mode's view), keeping the members that pass */
+  override filter(test: (value: TokenSetMember, index: number, set: TokenDocumentSet) => boolean): TokenDocumentSet {
+    return new TokenDocumentSet([...this.values()].filter((member, index) => test(member, index, this)));
+  }
+
   /** Foundry's Set#equals, over every member */
   equals(other: unknown): boolean {
     if (!(other instanceof Set)) return false;
     const theirs = new Set(documentsOf(other));
     return theirs.size === super.size && [...theirs].every(document => this.has(document));
   }
+}
+
+/** How many members a set has: every member of a TokenDocumentSet (drawn or not), else the Set's size */
+export function memberCount(set: ReadonlySetLike<unknown> | undefined | null): number {
+  return set instanceof TokenDocumentSet ? set.count : set?.size ?? 0;
 }
 
 /** What a hook or macro is given for a target: its TokenDocument in document mode, else its Token when drawn (else the document) */

@@ -586,10 +586,9 @@ Hooks.on("dae.modifyBaseValues", (specKey: string, baseValues, _characterSpec) =
 });
 //@ts-expect-error
 Hooks.on("dae.addFieldMappings", (fieldMappings) => {
+  // DAE asks during its own init, before midi's: the mappings come from CONFIG only, never midi's settings
   GameSystemConfig = CONFIG.DND5E;
   let allAttackTypes = ["rwak", "mwak", "rsak", "msak"];
-  registerSettings();
-  fetchParams();
   fieldMappings["system.traits.da.all"] = { key: "system.traits.da.value", value: "ALL", type: "add" };
   for (let key of Object.keys(GameSystemConfig.damageTypes ?? {})) {
     fieldMappings[`flags.${MODULE_ID}.DR.${key}`] = `system.traits.dm.amount.${key}`;
@@ -838,7 +837,6 @@ Hooks.once('ready', function () {
   // allDamageTypes.none.label = i18n("DND5E.None");
   // allDamageTypes[""] = allDamageTypes.none
   // allDamageTypes = foundry.utils.mergeObject(allDamageTypes, foundry.utils.mergeObject(GameSystemConfig.damageTypes, GameSystemConfig.healingTypes, { inplace: false }));
-  registerSettings();
   actorAbilityRollPatching();
   setupMidiStatusEffects();
 

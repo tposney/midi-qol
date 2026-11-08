@@ -1,9 +1,12 @@
 import {dialogUtils} from '../proxy.mjs';
 import {addCardNote, cardNoteMessageData} from '../../lib/cardNotes.js';
 import {INFLUENCE_NOTE_KIND} from '../../lib/influenceNote.js';
+import {shouldDisplaySaveDC} from '../../settings.js';
 // The GM chooses the target's attitude to the request; a hesitant creature needs a check against DC 15 or its
 // Intelligence score, whichever is higher, with Advantage if Friendly and Disadvantage if Hostile.
 const SKILLS = ['dec', 'itm', 'prf', 'per', 'ani'];
+// Renamed for each viewer (Hide NPC Names): the uuid, with the real name as fallback
+const nameOf = token => `@MidiTokenName[${token.uuid}]{${token.name}}`;
 async function request({workflow}) {
     const target = workflow.targets.documents[0];
     if (!target?.actor) return ui.notifications.info('Influence: target the creature you want to influence.');
@@ -13,13 +16,15 @@ async function request({workflow}) {
         ['Hostile: hesitant, check with Disadvantage', 'hostile'], ['Unwilling: it refuses', 'unwilling']], {userId: gm.id});
     if (!attitude) return;
     if (attitude === 'willing' || attitude === 'unwilling') {
-        return addCardNote(workflow, `<p>${target.name} ${attitude === 'willing' ? 'agrees' : 'refuses'}.</p>`, {key: 'influence'});
+        return addCardNote(workflow, `<p>${nameOf(target)} ${attitude === 'willing' ? 'agrees' : 'refuses'}.</p>`, {key: 'influence'});
     }
     const skill = await dialogUtils.buttonDialog(workflow.item.name, 'Which skill do you use?', SKILLS.map(id => [CONFIG.DND5E.skills[id].label, id]));
     if (!skill) return;
     const dc = Math.max(15, target.actor.system.abilities.int?.value ?? 0);
     const skillLabel = CONFIG.DND5E.skills[skill].label;
-    const note = await addCardNote(workflow, `<p>${target.name} is ${attitude}: ${skillLabel} check, DC ${dc}.</p>`, {key: 'influence', kind: INFLUENCE_NOTE_KIND,
+    // The note's own drawing (influenceNote.ts) shows each viewer what they may see; this text is its fallback
+    const dcText = shouldDisplaySaveDC(workflow.actor) ? `, DC ${dc}` : '';
+    const note = await addCardNote(workflow, `<p>${nameOf(target)} is ${attitude}: ${skillLabel} check${dcText}.</p>`, {key: 'influence', kind: INFLUENCE_NOTE_KIND,
         data: {target: {name: target.name, uuid: target.uuid}, attitude, skill: skillLabel, dc}});
     if (!note) return;
     await workflow.actor.rollSkill({skill, target: dc, advantage: attitude === 'friendly', disadvantage: attitude === 'hostile'}, {}, {data: cardNoteMessageData(note, 'check')});

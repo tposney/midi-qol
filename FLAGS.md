@@ -69,7 +69,7 @@ Flags marked as **BooleanFormula** in the sections below accept:
 
 All **Evaluated** flags in the advantage, disadvantage, noAdvantage, noDisadvantage, fail, success, critical, noCritical, fumble, noFumble, grants, magicResistance, and magicVulnerability categories are BooleanFormula fields.
 
-Additionally, the following special flags are BooleanFormula: `neverTarget`, `ignoreNearbyFoes`, `potentCantrip`, `sculptSpells`, `carefulSpells`, `sharpShooter`, `uncanny-dodge`, `inMotion`, `advantage.concentration`, `disadvantage.concentration`, `noAdvantage.concentration`, `noDisadvantage.concentration`, `fail.disadvantage.heavy`, and `canFlank`. Of these, only `ignoreNearbyFoes`, `canFlank`, `sharpShooter`, `fail.disadvantage.heavy` (and `ignoreCover`) are evaluated per use; `neverTarget`, `potentCantrip`, `sculptSpells`, `carefulSpells`, `uncanny-dodge`, `inMotion` and `ignoreWalls` are read as stored truthy values, so a condition expression there is evaluated at most once, when the actor is prepared.
+Additionally, the following special flags are BooleanFormula: `neverTarget`, `ignoreNearbyFoes`, `potentCantrip`, `sculptSpells`, `carefulSpells`, `sharpShooter`, `uncanny-dodge`, `inMotion`, `advantage.concentration`, `disadvantage.concentration`, `noAdvantage.concentration`, `noDisadvantage.concentration`, `fail.disadvantage.heavy`, and `canFlank`. Of these, only `ignoreNearbyFoes`, `canFlank`, `sharpShooter`, `fail.disadvantage.heavy`, `sculptSpells`, `carefulSpells` (and `ignoreCover`) are evaluated per use; `neverTarget`, `potentCantrip`, `uncanny-dodge`, `inMotion` and `ignoreWalls` are read as stored truthy values, so a condition expression there is evaluated at most once, when the actor is prepared.
 
 > [!note]
 > Initiative advantage/disadvantage flags use the `flags.dnd5e.*` namespace, not `flags.midi-qol.*`. Use `flags.dnd5e.initiativeAdv`, `flags.dnd5e.initiativeDisadv`, etc. They are registered in the DAE field browser under midi-qol for convenience, but the actual initiative code checks the dnd5e flag paths.
@@ -1566,8 +1566,8 @@ Flags marked **Truthy** are read as stored values, not evaluated per use: a CUST
 
 | Flag | Access | BooleanFormula | Description |
 |------|--------|:--------------:|-------------|
-| `flags.midi-qol.sculptSpells` | Truthy | Yes | Pre-selected targets of evocation save spells auto-succeed and receive super-saver status (range targeting or target confirmation only) |
-| `flags.midi-qol.carefulSpells` | Truthy | Yes | Pre-selected targets of save spells automatically succeed (range targeting or target confirmation only) |
+| `flags.midi-qol.sculptSpells` | Evaluated | Yes | Creatures targeted before casting an evocation spell succeed on its save and take no damage where a save halves it (super saver; range targeting or target confirmation only) |
+| `flags.midi-qol.carefulSpells` | Evaluated | Yes | Careful Spell (2024): of the creatures targeted before casting a spell, the first max(1, Charisma modifier) succeed on its save and take no damage where a save halves it; a warning names any beyond that (range targeting or target confirmation only) |
 
 ### Over Time Effects
 

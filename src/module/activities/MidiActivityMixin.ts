@@ -1,6 +1,6 @@
 import { cardMidi, cardOtherConsumption } from "../lib/cardState.js";
 import { heldKeys } from "../lib/rollKeys.js";
-import { TokenDocumentSet } from "../lib/tokenDocumentSet.js";
+import { TokenDocumentSet, memberCount } from "../lib/tokenDocumentSet.js";
 import { Activity, ActivityEffectData, ActivityUseConfiguration, RollDialogConfig, DND5ETargetDescriptor, RollMessageConfig, RollProcessConfig, MidiUsageChatContext, Dnd5eSystem, EmanationShapeData } from "../../globals.js";
 import { GameSystemConfig, MODULE_ID, debugEnabled, error, i18n, i18nFormat, warn, busyWait, specialDurationChoices } from "../../midi-qol.js";
 import { socketlibSocket, timedAwaitExecuteAsGM } from "../GMAction.js";
@@ -802,6 +802,9 @@ export let MidiActivityMixin = Base => {
           usageData = usageConfig;
           usageConfig.workflow!.activity = newActivity;
           usageConfig.activity = newActivity;
+          // Scaling (an upcast) rebuilds the item's activities: consumption and the card run on this new object, so
+          // Workflow.workflowFor needs it too (emanation placement, the early filing under the card, template flags)
+          Workflow.setUse(newActivity, usage.workflow!);
           if (deferConcentration && usageConfig.concentration?.begin) {
             usage.workflow!.deferredConcentration = { scaling: usageConfig.scaling || undefined, end: usageConfig.concentration.end ?? undefined };
             usageConfig.concentration.begin = false;
@@ -865,20 +868,34 @@ export let MidiActivityMixin = Base => {
         usage.workflow.item = usage.workflow!.activity?.item;
         activity = usage.workflow!.activity! as MidiActivityMixin;
         Workflow.addWorkflow(usage.workflow);
-        if (await activity.postChatCardChecks(usage, dialog, message) !== true) return;
-        await activity.setupCanSeeSense(usage)
-        // if (autoCreateTemplate || emanationNoTemplate) if (!await activity.setupTargets(usage, dialog, message)) return;
-        if (activity.templates) { // TODO find a better place to store this
-          useResults.templates = activity.templates;
-          delete activity.templates;
+        try {
+          if (await activity.postChatCardChecks(usage, dialog, message) !== true) return;
+          await activity.setupCanSeeSense(usage)
+          // if (autoCreateTemplate || emanationNoTemplate) if (!await activity.setupTargets(usage, dialog, message)) return;
+          if (activity.templates) { // TODO find a better place to store this
+            useResults.templates = activity.templates;
+            delete activity.templates;
+          }
+          // Process any templates placed (via dialog checkbox or emanation auto-placement)
+          // processPlacedTemplates handles validation, cleanup if incomplete, and workflow integration
+          const allTemplates = (useResults.templates ?? []).flat() as MeasuredTemplateDocument[];
+          if (allTemplates.length > 0) {
+            await usage.workflow.processPlacedTemplates(allTemplates, activity);
+          }
+          if (configSettings.undoWorkflow) await saveUndoData(usage.workflow);
+        } catch (err) {
+          // The card exists and the workflow waits for this use: stop it rather than leave it suspended
+          TroubleShooter.recordError(err, `${this.item?.name} use`);
+          error(`${this.item?.name} use failed`, err);
+          ui.notifications?.error(i18nFormat("midi-qol.UseFailed", { item: this.item?.name ?? "", error: (err as Error)?.message ?? String(err) }));
+          const concentration = usage.workflow.concentrationId ? this.actor?.effects.get(usage.workflow.concentrationId) : undefined;
+          if (!usage.workflow.aborted) {
+            usage.workflow.aborted = true;
+            await usage.workflow.performState(usage.workflow.WorkflowState_Abort);
+          }
+          await concentration?.delete();
+          return false;
         }
-        // Process any templates placed (via dialog checkbox or emanation auto-placement)
-        // processPlacedTemplates handles validation, cleanup if incomplete, and workflow integration
-        const allTemplates = (useResults.templates ?? []).flat() as MeasuredTemplateDocument[];
-        if (allTemplates.length > 0) {
-          await usage.workflow.processPlacedTemplates(allTemplates, activity);
-        }
-        if (configSettings.undoWorkflow) await saveUndoData(usage.workflow);
 
         usage.workflow.itemUseComplete = true;
 
@@ -1163,8 +1180,8 @@ export let MidiActivityMixin = Base => {
         !!activity && all.indexOf(activity) === index
         && !!(activity.hasDamage || activity.hasHealing || activity.roll?.formula)
         && (activity === this.ammunitionActivity
-          ? !activity.useCondition || !!workflow.ammunitionDamageMatches?.size
-          : !this.otherCondition || !!workflow.otherDamageMatches?.size)) as MidiActivityMixin[];
+          ? !activity.useCondition || !!workflow.ammunitionDamageMatches?.count
+          : !this.otherCondition || !!workflow.otherDamageMatches?.count)) as MidiActivityMixin[];
       if (!sources.length) return undefined;
 
       const otherConfig = {
@@ -1499,11 +1516,12 @@ export let MidiActivityMixin = Base => {
         return false;
       }
       const workflow = config.workflow;
-      const hasTargetsToUse = (config.midiOptions?.targetsToUse?.size ?? 0) > 0 && !activityHasAreaTarget(this);
+      const hasTargetsToUse = memberCount(config.midiOptions?.targetsToUse) > 0 && !activityHasAreaTarget(this);
       // If targetsToUse was provided (e.g. from completeActivityUse, OverTime effects),
       // pre-populate game.user.targets so any confirmation dialog shows the right selection.
       if (hasTargetsToUse) {
-        const tokenIds = Array.from(config.midiOptions!.targetsToUse!).map(t => (t as Token).id);
+        const given = config.midiOptions!.targetsToUse!;
+        const tokenIds = (given instanceof TokenDocumentSet ? given.documents : Array.from(given)).map(t => (t as Token | TokenDocument).id).filter((id): id is string => !!id);
         updateUserTargets(tokenIds);
       }
       const isSelfTargetActivity = this.target?.affects?.type === "self";
@@ -2051,7 +2069,7 @@ export let MidiActivityMixin = Base => {
       const behaviors: any[] = [];
       let regionUpdate: any | undefined;
       // A cast that rolls against the creatures in the area has dealt with those already inside.
-      const castAffectsTargets = ["attack", "damage", "save"].includes(this.type) && !!workflow?.targets?.size;
+      const castAffectsTargets = ["attack", "damage", "save"].includes(this.type) && !!workflow?.targets?.count;
       // Effects applied while a token is inside are dnd5e's apply-effect behaviour; midi's own behaviour runs activities.
       const effectBehavior = (effectUuids: string[], dispositionFilter: number, excludeSource: boolean) => {
         if (!effectUuids.length) return;

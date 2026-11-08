@@ -38,7 +38,7 @@
         "type": "script",
         "img": "icons/svg/dice-target.svg",
         "scope": "global",
-        "command": "const version = \"10.0.33\"\ntry {\n    const actor = args[0].options?.actor;\n    const token = args[0].options?.token;\n    const target = fromUuidSync(args[0].tokenUuid);\n    \n    if (!actor || !token || !target) return;\n    const roll = foundry.utils.getProperty(actor, \"flags.midi-qol.retributionDamage\")\n    const damageRoll = await new Roll(roll).roll({async: true});\n    await new MidiQOL.DamageOnlyWorkflow(actor, token, damageRoll.total, \"\", [target], damageRoll, {itemCardId: \"new\", itemData: actor.items.getName(\"Retribution\")});\n    // Could do a MidiQOL.completeItemUse with the fetched item instead\n} catch (err) {\n    console.error(`Retribution ${version}`, err);\n}",
+        "command": "const version = \"10.0.33\"\ntry {\n    const actor = args[0].options?.actor;\n    const token = args[0].options?.token;\n    const target = fromUuidSync(args[0].tokenUuid);\n    \n    if (!actor || !token || !target) return;\n    const roll = foundry.utils.getProperty(actor, \"flags.midi-qol.retributionDamage\")\n    const damageRoll = await new Roll(roll).roll({async: true});\n    await new MidiQOL.DamageOnlyWorkflow(actor, token, damageRoll.total, \"\", [target], damageRoll, {itemCardUuid: \"new\", itemData: actor.items.getName(\"Retribution\")});\n    // Could do a MidiQOL.completeItemUse with the fetched item instead\n} catch (err) {\n    console.error(`Retribution ${version}`, err);\n}",
         "sort": 0,
         "ownership": {
           "default": 0
@@ -134,7 +134,7 @@
     },
     "cat": {
       "automation": {
-        "version": "14.6.0"
+        "version": "14.6.8"
       }
     }
   },

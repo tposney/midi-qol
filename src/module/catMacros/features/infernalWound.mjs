@@ -1,4 +1,4 @@
-import {getTokenDocument} from '../../utils.js';
+import {computeDistance, getTokenDocument} from '../../utils.js';
 import {automationUtils, documentUtils, workflowUtils} from '../proxy.mjs';
 // Infernal wound (2024 Bearded Devil's Infernal Glaive, Horned Devil's Infernal Tail). A creature without a wound that
 // fails the save gets one: it loses hit points at the start of each of its turns, until the wound closes after its
@@ -66,7 +66,11 @@ async function turnStart({document: effect, actor, token}) {
 export async function stanchWounds(roller, target, total) {
     const wounds = woundsOf(target?.actor);
     if (!wounds.length) return false;
-    if (roller && roller !== target && canvas.grid.measurePath([roller.center, target.center]).distance > 5) return false;
+    // Between the creatures' spaces, as midi measures reach (a Large creature's centre is 10 feet from its neighbour's)
+    if (roller && roller !== target) {
+        const distance = computeDistance(roller, target, {wallsBlock: false, includeCover: false});
+        if (distance < 0 || distance > 5) return false;
+    }
     const closed = wounds.filter(wound => total >= (wound.getFlag(MODULE, FLAG)?.stanchDC ?? 10));
     for (const wound of closed) await documentUtils.deleteDocument(wound);
     if (closed.length) ui.notifications?.info(`${target.name}: ${closed[0].name} stanched`);

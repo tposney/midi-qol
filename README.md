@@ -209,6 +209,7 @@ If you prefer to configure settings manually, here's the recommended full automa
 | Levels - Volumetric Templates | 3D template targeting (midi leaves template targeting to it when installed) |
 | Monks Token Bar | Save management |
 | Alternative Token Cover / Simbul's Cover Calculator / Simple Cover 5e | Cover calculation |
+| AutoCover (levelsautocover) 5.0.1 or later | Cover calculation and walls blocking. A save against an area is covered from the template's origin. AutoCover's own *Apply effects* can also put dnd5e cover statuses on targets; midi uses the larger of the two bonuses, so nothing counts twice |
 | Hide NPC Names | Hides creature names from players; midi's chat cards and damage tray use the name it gives them |
 
 ## Known Incompatibilities
@@ -1164,17 +1165,18 @@ Additional states: `AwaitTemplate`, `TemplatePlaced`, `AoETargetConfirmation`, `
 |------|-------------|-------|
 | `midi-qol.targetingComplete` | After targets confirmed | Return `false` to abort |
 | `midi-qol.preCheckHits` | Before hit checking | |
+| `midi-qol.premades.checkHitTarget` | Each target in the hit check, after cover, AC bonuses, reactions, auto success/failure and criticals, before the result is recorded | Args `(hitCheck)`: `{workflow, target, attackTotal, targetAC, isHit, isHitEC, isCritical, isFumble}`; a changed `targetAC` or `isCritical` is tested again (unless an auto success/failure decided it), a changed `isHit`/`isHitEC` is kept |
 | `midi-qol.hitsChecked` | After hits determined | |
 | `midi-qol.AttackRollComplete` | After attack roll complete | |
 | `midi-qol.DamageRollComplete` | After damage roll complete | |
 | `midi-qol.preCheckSaves` | Before save rolls | |
-| `midi-qol.preTargetSave` | Before each target's save; args `(target, workflow, saveDetails)`: `target` is the Token, or the TokenDocument of a target not drawn (another scene or level) | `saveDetails` can be changed (advantage, tracker) |
+| `midi-qol.preTargetSave` | Before each target's save; args `(target, workflow, saveDetails)`: `target` is the Token, or the TokenDocument of a target not drawn (another scene or level), and always the TokenDocument in document mode | `saveDetails` can be changed (advantage, tracker) |
 | `midi-qol.postCheckSaves` | After save rolls | |
 | `midi-qol.postActiveEffects` | After effects applied | |
 | `midi-qol.RollComplete` | Workflow fully complete | |
-| `midi-qol.preTargetDamageApplication` | Before damage to target | Args: token, {item, workflow, damageItem} |
-| `midi-qol.isHealed` | After healing applied | Args: token, {item, workflow, damageItem, ditem} |
-| `midi-qol.isDamaged` | After damage applied | Args: token, {item, workflow, damageItem, ditem} |
+| `midi-qol.preTargetDamageApplication` | Before damage to target | Args: token, {item, workflow, damageItem}; `token` as for preTargetSave |
+| `midi-qol.isHealed` | After healing applied | Args: token, {item, workflow, damageItem, ditem}; `token` as for preTargetSave |
+| `midi-qol.isDamaged` | After damage applied | Args: token, {item, workflow, damageItem, ditem}; `token` as for preTargetSave |
 | `midi-qol.conditionData` | Condition data being built | Args: (conditionData, {workflow, actor, item, target}); add fields conditions can refer to |
 
 ### Teleport Hooks

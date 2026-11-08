@@ -3,7 +3,7 @@ import { Activity, ActivityUseConfiguration, RollDialogConfig, RollMessageConfig
 import { debugEnabled, warn, i18n, GameSystemConfig } from "../../midi-qol.js";
 import { Workflow } from "../Workflow.js";
 import { replaceDefaultActivities, configSettings, safeGetGameSetting } from "../settings.js";
-import { isAutoFastForward } from "../utils.js";
+import { getTokenDocument, isAutoFastForward } from "../utils.js";
 import { MidiActivityMixin, MidiActivityMixinSheet } from "./MidiActivityMixin.js";
 import { getSceneTargets } from "./activityHelpers.js";
 
@@ -113,6 +113,9 @@ let defineMidiSaveActivityClass = <T extends Activity>(ActivityClass: T) => {
         // if (!actor?.hasPlayerOwner && workflow) message.create = false - this breaks save checking from chat card
         if (token instanceof foundry.canvas.placeables.Token) foundry.utils.setProperty(message, "flags.midi-qol.requestId", token.document.uuid);
         else foundry.utils.setProperty(message, "flags.midi-qol.requestId", token?.uuid);
+        // Its row on the card, whoever the save message's speaker is (an actor with no token, another of its tokens)
+        const targetUuid = tokenDocument?.uuid ?? getTokenDocument(actor)?.uuid;
+        if (targetUuid) foundry.utils.setProperty(message, "data.flags.midi-qol.targetUuid", targetUuid);
         // v14 message-mode strings (CONFIG.ChatMessage.modes keys) so the value matches the roll dialog's options
         if (["none", "allShow"].includes(configSettings.autoCheckSaves) || actor?.hasPlayerOwner) message.rollMode = safeGetGameSetting("core", "messageMode");
         else message.rollMode = "gm";

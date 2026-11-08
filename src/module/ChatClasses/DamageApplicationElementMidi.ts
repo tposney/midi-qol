@@ -116,7 +116,7 @@ export class DamageApplicationElementMidi extends globalThis.dnd5e.applications.
         targetUuid: token.uuid,
       }, "combinedDamage", actor);
       if (!entry) continue;
-      if (workflow && token.object) await workflow.callDamageHooksAndMacros(entry, token.object);
+      if (workflow) await workflow.callDamageHooksAndMacros(entry, token);
       damageList.push(entry);
     }
     if (damageList.length) await timedAwaitExecuteAsGM("createReverseDamageCard", {

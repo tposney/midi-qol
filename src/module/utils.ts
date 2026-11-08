@@ -1,5 +1,5 @@
 import type { AttackModifier } from "./Workflow.js";
-import { TokenDocumentSet } from "./lib/tokenDocumentSet.js";
+import { TokenDocumentSet, hookTarget, memberCount, rememberSyntheticToken, tokenOf } from "./lib/tokenDocumentSet.js";
 import { rollBonusLabel } from "./activities/AttackActivity.js";
 import { debug, i18n, error, warn, busyWait, allAttackTypes, debugEnabled, overTimeEffectsToDelete, getStaticID, savedOverTimeEffectsToDelete, GameSystemConfig, systemConcentrationId, MQItemMacroLabel, MODULE_ID, midiReactionEffect, midiBonusActionEffect, MQActivityMacroLabel, ceInterface, i18nFormat } from "../midi-qol.js";
 import { configSettings, autoRemoveTargets, checkRule, criticalDamage, criticalDamageGM, checkMechanic, safeGetGameSetting, autoRollDamageOptions, showReactionAttackRollOptions, shouldDisplaySaveDC, DOWNGRADE_IMMUNITY_KEY, ALL_DAMAGE_KEY } from "./settings.js";
@@ -129,7 +129,9 @@ export function getOrCreateTokenForActor(actor?: Actor.Implementation) {
   const cls = globalThis.getDocumentClass("Token");
   // TODO check this - not sure if actor is set correctly
   const tokenDocument = new cls(tokenData, { parent: canvas.scene });
-  return new CONFIG.Token.objectClass(tokenDocument);
+  const synthetic = new CONFIG.Token.objectClass(tokenDocument);
+  rememberSyntheticToken(synthetic);
+  return synthetic;
 }
 
 export function getOrCreateTokenForActorAsSet(actor: Actor.Implementation): Set<Token.Implementation> {
@@ -277,14 +279,17 @@ export async function applyTokenDamage(
   // What a successful save does to the damage; applySaves adds Super Saver and Semi Super Saver.
   const saveMultiplier = getSaveMultiplierForItem(item, "defaultDamage");
 
-  // A workflow's token set by every member: Tokens or TokenDocuments either way
-  for (let token of theTargets instanceof TokenDocumentSet ? theTargets.documents : theTargets) {
+  // Every member, matched by document: a caller's sets may hold Tokens or TokenDocuments
+  const savers = new TokenDocumentSet(saves);
+  const superSavers = new TokenDocumentSet(options.superSavers);
+  const semiSuperSavers = new TokenDocumentSet(options.semiSuperSavers);
+  for (let token of new TokenDocumentSet(theTargets).documents) {
     const actor = token.actor;
     if (!actor) continue;
     const isHit = true;
-    const saved = !!saves?.has(token);
-    const superSaver = !!options.superSavers?.has(token);
-    const semiSuperSaver = !!options.semiSuperSavers?.has(token);
+    const saved = savers.has(token);
+    const superSaver = superSavers.has(token);
+    const semiSuperSaver = semiSuperSavers.has(token);
     const calcDamageOptions = {
       invertHealing: true,
       multiplier: 1,
@@ -799,9 +804,7 @@ export async function processDamageRoll(workflow: Workflow, defaultDamageType: s
       if (damageDetails) {
         damageDetails.damageDetails[selector] = damageDetails.damageDetail;
         workflow.damageList.push(damageDetails);
-        // Target macros are given a Token: drawn, or midi's for an actor with none on the scene
-        const token = workflow.targets.placeableOf(tokenDocument);
-        if (token) await workflow?.callDamageHooksAndMacros(damageDetails, token);
+        await workflow?.callDamageHooksAndMacros(damageDetails, tokenDocument);
       }
     }
     await timedAwaitExecuteAsGM("createReverseDamageCard", {
@@ -2414,7 +2417,7 @@ export async function completeActivityUse(activityRef: Activity | string | undef
       // Local save of current targets — restored on cleanup
       const localSavedTargetIds = Array.from(game.user?.targets ?? []).map(t => t.id);
       if (usage.midiOptions!.ignoreUserTargets) updateUserTargets([]);
-      if (game.user && targetsToUse.size === 0 && activity.target?.affects?.type === "self") {
+      if (game.user && memberCount(targetsToUse) === 0 && activity.target?.affects?.type === "self") {
         const selfTarget = getToken(activity.item.actor);
         if (selfTarget) {
           updateUserTargets([selfTarget.id]);
@@ -2422,7 +2425,7 @@ export async function completeActivityUse(activityRef: Activity | string | undef
         } else {
           updateUserTargets([]);
         }
-      } else if (targetsToUse.size === 0 && !usage.midiOptions!.ignoreUserTargets) {
+      } else if (memberCount(targetsToUse) === 0 && !usage.midiOptions!.ignoreUserTargets) {
         targetsToUse = new Set(game.user?.targets);
       }
 
@@ -2453,7 +2456,9 @@ export async function completeActivityUse(activityRef: Activity | string | undef
         if (source && debugEnabled > 0) warn(`completeActivityUse ${source}: ${activity?.item?.name} ${completeHookName}`);
         // Put back the targets saved at the start only if the user's are still the ones this use left: another use
         // (or the player) may have targeted since, and restoring would take its targets away.
-        const own = new Set(((result as Workflow | undefined)?.targets.documents ?? [...targetsToUse]).map(t => t.id));
+        // The drawn ones: the user's targets are Tokens
+        const ownTargets = (result as Workflow | undefined)?.targets ?? new TokenDocumentSet(targetsToUse);
+        const own = new Set(ownTargets.tokens.map(t => t.id));
         const current = new Set([...(game.user?.targets ?? [])].map(t => t.id));
         if (current.size === own.size && [...current].every(id => own.has(id))) updateUserTargets(localSavedTargetIds);
         resolve(result);
@@ -3150,13 +3155,11 @@ function computeWallBlockPreCheck(
   includeCover: boolean
 ): { blocked: boolean, coverVisible?: boolean | undefined } {
   const wallsBlockRange = configSettings.optionalRules.wallsBlockRange;
-  //@ts-expect-error
-  if (installedModules.get("levelsautocover") && game.settings.get("levelsautocover", "apiMode") && wallsBlock && wallsBlockRange === "levelsautocover" && includeCover) {
-    //@ts-expect-error
-    const levelsautocoverData = AutoCover.calculateCover(t1, t2, getLevelsAutoCoverOptions());
-    const coverVisible = levelsautocoverData.rawCover > 0;
-    const result = coverVisible ? { blocked: false, coverVisible: true } : { blocked: true };
-    return result;
+  if (wallsBlockRange === "levelsautocover" && wallsBlock && includeCover) {
+    const tier = autoCoverTier(t1, t2);
+    if (tier) return tier === "total" ? { blocked: true } : { blocked: false, coverVisible: true };
+    // AutoCover not in use or failed: midi's own wall check
+    return { blocked: false, coverVisible: undefined };
   } else if (globalThis.CoverCalculator && wallsBlockRange === "simbuls-cover-calculator" && includeCover) {
     if (t1 === t2) return { blocked: false, coverVisible: undefined };
     const coverData = globalThis.CoverCalculator.Cover(t1, t2);
@@ -3976,28 +3979,6 @@ export function checkActivityRange(activityIn: Activity, tokenRef: TokenOrDocume
   return { result: "fail", attackingToken, range, longRange };
 }
 
-function getLevelsAutoCoverOptions() {
-  const options: {
-    tokensProvideCover: boolean;
-    ignoreFriendly: boolean;
-    // Is this typo present in the actual module?
-    copsesProvideCover: boolean;
-    tokenCoverAA: unknown;
-    precision: unknown;
-  } = {
-    //@ts-expect-error
-    tokensProvideCover: game.settings.get("levelsautocover", "tokensProvideCover"),
-    //@ts-expect-error
-    ignoreFriendly: game.settings.get("levelsautocover", "ignoreFriendly"),
-    //@ts-expect-error
-    copsesProvideCover: game.settings.get("levelsautocover", "copsesProvideCover"),
-    //@ts-expect-error
-    tokenCoverAA: game.settings.get("levelsautocover", "tokenCoverAA"),
-    //@ts-expect-error
-    precision: game.settings.get("levelsautocover", "coverRestriction")
-  };
-  return options;
-}
 
 export const TOTAL_COVER = Infinity;
 // Initialized from CONFIG.DND5E.statusEffects in initCoverConstants(), fallback to dnd5e 2024 defaults
@@ -4136,8 +4117,45 @@ export function tokenAtPosition(token: Token.Implementation, position: CoverPosi
  * cover backend still supplies the answer, so a caller planning a move gets the same number the
  * attack will later be resolved with rather than a second opinion of its own.
  */
-export function computeCoverBonus(attackerIn: TokenOrDocument, targetIn: TokenOrDocument, activity?: Activity,
-  options: { position?: CoverPosition } = {}): number {
+type AutoCoverTier = "none" | "half" | "threeQuarters" | "total";
+let autoCoverFailed = false;
+
+/**
+ * AutoCover's (levelsautocover 5.0.1+) cover tier from the attacker, or from `origin` (a template's), to the target:
+ * undefined when AutoCover isn't in use or fails, so the caller carries on without it. A failure warns once.
+ */
+export function autoCoverTier(attacker: TokenOrDocument | undefined, target: TokenOrDocument, origin?: CoverPosition): AutoCoverTier | undefined {
+  if (!installedModules.get("levelsautocover")) return undefined;
+  const api = game.modules.get("levelsautocover")?.api;
+  const targetDocument = getTokenDocument(target);
+  const attackerDocument = getTokenDocument(attacker);
+  if (!api?.computeCover || !targetDocument?.parent) return undefined;
+  try {
+    // A point source sits above its floor as AutoCover's own area cover places it
+    const scene = targetDocument.parent;
+    const source = origin
+      ? api.area.pointSource(scene, { x: origin.x, y: origin.y,
+        elevation: (origin.elevation ?? attackerDocument?.elevation ?? 0) + scene.grid.distance * (api.area.POINT_HEIGHT ?? 0.5) }, attackerDocument ?? null)
+      : attackerDocument;
+    if (!source) return undefined;
+    const tier = api.computeCover(source, targetDocument)?.tier?.id;
+    return tier === "none" || tier === "half" || tier === "threeQuarters" || tier === "total" ? tier : undefined;
+  } catch (err) {
+    if (!autoCoverFailed) {
+      autoCoverFailed = true;
+      console.warn("midi-qol | AutoCover's cover check failed: midi carries on without AutoCover's cover", err);
+      TroubleShooter.recordError(err instanceof Error ? err : new Error(String(err)), "AutoCover cover check");
+    }
+    return undefined;
+  }
+}
+
+function autoCoverBonus(tier: AutoCoverTier): number {
+  return { none: 0, half: HALF_COVER, threeQuarters: THREE_QUARTERS_COVER, total: TOTAL_COVER }[tier];
+}
+
+export function computeCoverBonus(attackerIn: TokenOrDocument | undefined, targetIn: TokenOrDocument, activity?: Activity,
+  options: { position?: CoverPosition, origin?: CoverPosition } = {}): number {
   let attacker = attackerIn instanceof TokenDocument ? attackerIn.object : attackerIn;
   const target = targetIn instanceof TokenDocument ? targetIn.object : targetIn;
   if (attacker && options.position) attacker = tokenAtPosition(attacker, options.position);
@@ -4145,24 +4163,17 @@ export function computeCoverBonus(attackerIn: TokenOrDocument, targetIn: TokenOr
     activity = undefined;
     foundry.utils.logCompatibilityWarning("computeCoverBonus(attacker, target, item) is deprecated in favor of computeCoverBonus(attacker, target, activity)");
   }
-  if (!attacker || !target) return 0;
+  if (!target) return 0;
+  // AutoCover can measure from an origin (a template's) without an attacker
+  if (configSettings.optionalRules.coverCalculation === "levelsautocover") {
+    const tier = autoCoverTier(attacker ?? undefined, target, options.origin);
+    return tier ? autoCoverBonus(tier) : 0;
+  }
+  if (!attacker) return 0;
 
   let coverBonus = 0;
   try {
     switch (configSettings.optionalRules.coverCalculation) {
-      case "levelsautocover":
-        //@ts-expect-error
-        if (!installedModules.get("levelsautocover") || !game.settings.get("levelsautocover", "apiMode") || !AutoCover) return 0;
-        //@ts-expect-error
-        const coverData = AutoCover.calculateCover(attacker, target);
-        //@ts-expect-error
-        const coverDetail = AutoCover.getCoverData();
-        if (coverData.rawCover === 0) coverBonus = TOTAL_COVER;
-        else if (coverData.rawCover > coverDetail[1].percent) coverBonus = 0;
-        else if (coverData.rawCover < coverDetail[0].percent) coverBonus = THREE_QUARTERS_COVER;
-        else if (coverData.rawCover < coverDetail[1].percent) coverBonus = HALF_COVER;
-        if (coverData.obstructingToken) coverBonus = Math.max(2, coverBonus);
-        break;
 
       case "simbuls-cover-calculator":
         if (!installedModules.get("simbuls-cover-calculator")) return 0;
@@ -5542,7 +5553,7 @@ export async function bonusDialog(
       activity: this.activity,
       item: this.item,
       actor: this.actor,
-      target: this.targets?.first(),
+      target: this.targets?.documents[0] && hookTarget(this.targets.documents[0]),
       options
     };
   };
@@ -6847,7 +6858,8 @@ export function createConditionData(data: {
   rollData.worldTime = game.time?.worldTime;
   try {
     if (data.target) {
-      const theTarget = getToken(data.target);
+      // The target's document: an undrawn target has no Token
+      const theTarget = getToken(data.target)?.document ?? getTokenDocument(data.target);
       if (theTarget) {
         const theTargetActor = theTarget.actor as Actor;
 
@@ -6855,7 +6867,7 @@ export function createConditionData(data: {
           get system() { return theTargetActor?.system },
           ...theTargetActor?.getRollData()
         };
-        rollData.targetUuid = data.targetUuid ?? theTarget.document.uuid
+        rollData.targetUuid = data.targetUuid ?? theTarget.uuid
         rollData.targetId = theTarget.id;
         rollData.targetActorUuid = theTargetActor?.uuid;
         rollData.targetActorId = theTargetActor?.id;
@@ -6870,11 +6882,13 @@ export function createConditionData(data: {
         rollData.target.superSaver = data.workflow?.superSavers.has(theTarget);
         rollData.target.semiSuperSaver = data.workflow?.semiSuperSavers.has(theTarget);
         rollData.target.isHit = data.workflow?.hitTargets.has(theTarget);
-        rollData.target.isHitEC = data.workflow?.hitTargets.has(theTarget);
+        rollData.target.isHitEC = data.workflow?.hitTargetsEC.has(theTarget);
         rollData.target.canSense = data.workflow?.token && data.workflow.targetsCanSense.has(data.workflow.token);
         rollData.target.canSee = data.workflow?.token && data.workflow.targetsCanSee.has(data.workflow.token);
-        rollData.canSense = data.workflow?.tokenCanSense?.has(theTarget);
-        rollData.canSee = data.workflow?.tokenCanSee?.has(theTarget);
+        // Sight is between placeables
+        const drawnTarget = tokenOf(theTarget);
+        rollData.canSense = !!drawnTarget && data.workflow?.tokenCanSense?.has(drawnTarget);
+        rollData.canSee = !!drawnTarget && data.workflow?.tokenCanSee?.has(drawnTarget);
         if (theTarget) rollData.target.isCombatTurn = game.combat?.combatant?.tokenId === theTarget.id;
       }
     }
@@ -9096,7 +9110,7 @@ export function getToken(tokenRef?: Actor.Implementation | TokenOrDocument | str
   if (!tokenRef) return undefined;
   const entity = (typeof tokenRef === "string") ? fromUuidSync(tokenRef) : tokenRef;
   if (entity instanceof foundry.canvas.placeables.Token) return entity;
-  if (entity instanceof TokenDocument) return entity.object ?? undefined;
+  if (entity instanceof TokenDocument) return tokenOf(entity as TokenDocument.Implementation);
   if (entity instanceof Actor) return tokenForActor(entity);
   if (entity instanceof Item && entity.parent instanceof Actor) return tokenForActor(entity.parent);
   if (entity instanceof ActiveEffect && entity.parent instanceof Actor) return tokenForActor(entity.parent);
@@ -9112,7 +9126,7 @@ export function getPlaceable(tokenRef?: Actor.Implementation | TokenOrDocument |
   if (entity instanceof Item && entity.parent instanceof Actor) return tokenForActor(entity.parent);
   if (entity instanceof ActiveEffect && entity.parent instanceof Actor) return tokenForActor(entity.parent);
   if (entity instanceof ActiveEffect && entity.parent instanceof Item && entity.parent.parent instanceof Actor) return tokenForActor(entity.parent?.parent);
-  if (entity instanceof TokenDocument) return entity.object ?? undefined;
+  if (entity instanceof TokenDocument) return tokenOf(entity as TokenDocument.Implementation);
   return undefined;
 }
 
@@ -9513,9 +9527,19 @@ async function _updateAction(document: foundry.abstract.Document.Any, updates: C
   withoutEmptyObjects(updates);
   if (foundry.utils.isEmpty(updates)) {
     if (debugEnabled > 1) warn(`_updateAction | nothing left to write for ${document.uuid}`);
+    // What is left is empty objects: an emptied queue would still count as changes to write
+    if (updatesCache[baseDocument.uuid] && foundry.utils.isEmpty(withoutEmptyObjects(foundry.utils.deepClone(updatesCache[baseDocument.uuid])))) delete updatesCache[baseDocument.uuid];
     return document;
   }
-  await baseDocument.update(updates);
+  try {
+    await baseDocument.update(updates);
+  } catch (err) {
+    // A rejected write would be sent again with every later one: its changes are dropped
+    delete updatesCache[baseDocument.uuid];
+    TroubleShooter.recordError(err, `_updateAction | the card ${baseDocument.uuid} rejected an update; its queued changes were dropped`);
+    error(`_updateAction | ${baseDocument.uuid} rejected`, updates, err);
+    return document;
+  }
   const pending = pendingUpdates(updates, updatesCache[baseDocument.uuid] ?? {});
   if (foundry.utils.isEmpty(pending)) delete updatesCache[baseDocument.uuid];
   else updatesCache[baseDocument.uuid] = pending;

@@ -1,10 +1,11 @@
+import { TokenDocumentSet, memberCount } from "../lib/tokenDocumentSet.js";
 import { Activity, ActivityUseConfiguration, RollMessageConfig, TokenOrDocument } from "../../globals.js";
 import { MODULE_ID, debugEnabled, warn, i18n, GameSystemConfig } from "../../midi-qol.js";
 import { Workflow } from "../Workflow.js";
 import { TargetConfirmationDialog, TargetConfirmationOptions } from "../apps/TargetConfirmation.js";
 import { configSettings, targetConfirmation } from "../settings.js";
 import { installedModules } from "../setupModules.js";
-import { collisionLevel, getFlankingEffect, CERemoveEffect, sumRolls, computeTemplateShapeDistance, getToken, checkActivityRange, checkDefeated, checkIncapacitated, computeCoverBonus, hasWallBlockingCondition, isValidTarget, tokenForActor, activityHasAreaTarget, activityHasAutoPlaceTemplate, activityHasEmanationNoTemplate, getActivityAutoTargetAction, getAoETargetType, doReactions, updateUserTargets, rangeToSceneUnits, tokenSourcePosition, tokenSourceCenter, tokenSourceElevation, getTokenVisionElevation, MidiOptions } from "../utils.js";
+import { collisionLevel, getFlankingEffect, CERemoveEffect, sumRolls, computeTemplateShapeDistance, getToken, getTokenDocument, checkActivityRange, checkDefeated, checkIncapacitated, computeCoverBonus, hasWallBlockingCondition, isValidTarget, tokenForActor, activityHasAreaTarget, activityHasAutoPlaceTemplate, activityHasEmanationNoTemplate, getActivityAutoTargetAction, getAoETargetType, doReactions, updateUserTargets, rangeToSceneUnits, tokenSourcePosition, tokenSourceCenter, tokenSourceElevation, getTokenVisionElevation, MidiOptions } from "../utils.js";
 import { allAttackTypes } from "../../midi-qol.js";
 import Token = foundry.canvas.placeables.Token;
 
@@ -144,7 +145,11 @@ export function requiresTargetConfirmation(activity: Activity, options: MidiOpti
   if (["none", "never"].includes(options.workflowOptions?.targetConfirmation ?? "")) return false;
   if (options.workflowOptions?.targetConfirmation === "always") return true;
   // The targets this use will have: those it was given, else the user's (another use can change the user's meanwhile).
-  const targets: Set<foundry.canvas.placeables.Token.Implementation> = options.targetsToUse?.size ? options.targetsToUse : new Set(game.user?.targets ?? []);
+  const targets: Set<TokenOrDocument> = memberCount(options.targetsToUse) ? options.targetsToUse! : new Set(game.user?.targets ?? []);
+  // Every target as a document (drawn or not): what the checks read is the token's, not the canvas's
+  const targetDocuments = targets instanceof TokenDocumentSet ? targets.documents
+    : [...targets].map(target => getTokenDocument(target)).filter((document): document is TokenDocument.Implementation => !!document);
+  const targetCount = targetDocuments.length;
   if (["enchant", "summon"].includes(activity.type)) return false;
   /*
    * "Choose Targets" (target.affects.choice) means "when targeting an area, can the user choose who
@@ -159,9 +164,9 @@ export function requiresTargetConfirmation(activity: Activity, options: MidiOpti
   if (options.workflowOptions?.attackPerTarget === true) return false;
   if ((activity.forcedTargetConfirmation ?? activity.midiProperties?.confirmTargets) === "always") return true;
   if ((activity.forcedTargetConfirmation ?? activity.midiProperties?.confirmTargets) === "never") return false;
-  if (targetConfirmation.enabled && targetConfirmation.noneTargeted && ((activity.target?.affects.type ?? "") !== "" || activity.attack) && targets.size === 0)
+  if (targetConfirmation.enabled && targetConfirmation.noneTargeted && ((activity.target?.affects.type ?? "") !== "" || activity.attack) && targetCount === 0)
     return true;
-  let numTargets = targets.size;
+  let numTargets = targetCount;
   // @ts-expect-error no dnd5e-types
   if (numTargets === 0 && activity.item.type === "weapon" && shouldEnforceSingleTarget(activity))
     numTargets = 1;
@@ -184,7 +189,7 @@ export function requiresTargetConfirmation(activity: Activity, options: MidiOpti
       return true;
     }
     if (targetConfirmation.allies && token && numTargets > 0 && activity.target?.affects.type !== "self") {
-      if (targets.some(t => t.document.disposition == token.document.disposition)) {
+      if (targetDocuments.some(t => t.disposition == token.document.disposition)) {
         if (debugEnabled > 0) warn("target confirmation triggered from targetConfirmation.allies");
         return true;
       }
@@ -206,9 +211,7 @@ export function requiresTargetConfirmation(activity: Activity, options: MidiOpti
     }
     if (targetConfirmation.mixedDisposition && numTargets > 0) {
       const dispositions = new Set();
-      for (let target of targets) {
-        if (target) dispositions.add(target.document.disposition);
-      }
+      for (const target of targetDocuments) dispositions.add(target.disposition);
       if (dispositions.size > 1) {
         if (debugEnabled > 0) warn("target confirmation triggered from targetConfirmation.mixedDisposition");
         return true;
@@ -279,8 +282,10 @@ export async function postTemplateConfirmTargets(activity: Activity, options: Mi
   // tokens inside the template. For non-template activities, targets were already set
   // in setupTargets and must not be overwritten from game.user.targets (which may have
   // been changed by concurrent effects during the async workflow state transitions).
-  // A use given its targets (workflowOptions.ignoreUserTargets) keeps them: the user's targets may be anyone's by now
-  if (activityRequiresPostTemplateConfirmation(activity) && game.user?.targets && !workflow.workflowOptions?.ignoreUserTargets) {
+  // A use given its targets (workflowOptions.ignoreUserTargets) keeps them: the user's targets may be anyone's by now. An
+  // area's targets are the template's, whatever it was given
+  const keepGiven = !!workflow.workflowOptions?.ignoreUserTargets && !activityHasAreaTarget(activity);
+  if (activityRequiresPostTemplateConfirmation(activity) && game.user?.targets && !keepGiven) {
     await updateTargets();
   }
   return true;

@@ -254,7 +254,7 @@ async function confirmDamageRollCompleteHit(data: { workflowId: string, activity
     return "midi-qol | You must roll damage before completing the roll - you can only confirm miss until then";
   }
   // TODO make sure this needs to be awaited
-  if (workflow.hitTargets.size === workflow.targets.size) {
+  if (workflow.hitTargets.count === workflow.targets.count) {
     return workflow.performState(workflow.WorkflowState_RollConfirmed)
     // TODO confirm this needs to be awaited
 
@@ -480,14 +480,10 @@ async function _applyEffects(data: { workflowId: string, targets: string[] }) {
   try {
     const workflow = Workflow.findWorkflow(data.workflowId);
     if (!workflow) throw new Error(`_applyEffects | workflowId: ${data.workflowId} - workflow not found`);
+    // As the button does for the author: the requester's targets, which forceApplyEffects keeps
     workflow.forceApplyEffects = true;
-    const targets: Set<foundry.canvas.placeables.Token.Implementation> = new Set();
-    for (let targetUuid of data.targets) {
-      const maybeToken = (await fromUuid(targetUuid) as TokenDocument.Implementation)?.object
-      if (maybeToken) targets.add(maybeToken);
-    }
-
-    if (targets.size > 0) result = await workflow.performState(workflow.WorkflowState_ApplyDynamicEffects);
+    workflow.effectTargets = new TokenDocumentSet(data.targets);
+    if (workflow.effectTargets.count > 0) result = await workflow.performState(workflow.WorkflowState_ApplyDynamicEffects);
     return result;
   } catch (err) {
     const message = `_applyEffects | remote apply effects error`;

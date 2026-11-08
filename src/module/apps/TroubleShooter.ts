@@ -8,6 +8,18 @@ const { ApplicationV2, DialogV2, HandlebarsApplicationMixin } = foundry.applicat
 
 const minimumMidiVersion = "11.0.7";
 
+/** midi's chat message types (dnd5e's usage card carries midi's data model) */
+const MIDI_MESSAGE_TYPES = ["usage", "midi-qol.damage", "midi-qol.note"];
+
+/** The world's chat messages of midi's types that fail their data model */
+function invalidMidiMessages(): ChatMessage.Implementation[] {
+  const messages = game.messages;
+  if (!messages) return [];
+  return [...messages.invalidDocumentIds]
+    .map(id => messages.getInvalid(id, { strict: false }) as ChatMessage.Implementation | undefined)
+    .filter((message): message is ChatMessage.Implementation => !!message && MIDI_MESSAGE_TYPES.includes(message._source.type as string));
+}
+
 export class TroubleShooter extends HandlebarsApplicationMixin(ApplicationV2) {
   public static errors: { timestamp: number, timeString: string, error: any, message: string | undefined }[] = [];
   public static MAX_ERRORS = 10;
@@ -815,7 +827,7 @@ export class TroubleShooter extends HandlebarsApplicationMixin(ApplicationV2) {
           data.problems.push({
             moduleId: "levelsautocover",
             severity: "Error",
-            problemSummary: "You must enable the 'levelsautocover' module to use the 'Levels Auto Cover' option for 'Walls Block Range'",
+            problemSummary: "You must enable the 'levelsautocover' module to use the 'Levels Auto Cover' option for 'Calculate Cover'",
             problemDetail: undefined,
             fixer: "Enable the 'levelsautocover' module"
           });
@@ -826,7 +838,7 @@ export class TroubleShooter extends HandlebarsApplicationMixin(ApplicationV2) {
           data.problems.push({
             moduleId: "simbuls-cover-calculator",
             severity: "Error",
-            problemSummary: "You must enable the 'simbuls-cover-calculator' module to use the 'Simbul's Cover Calculator' option for 'Walls Block Range'",
+            problemSummary: "You must enable the 'simbuls-cover-calculator' module to use the 'Simbul's Cover Calculator' option for 'Calculate Cover'",
             problemDetail: undefined,
             fixer: "Enable the 'simbuls-cover-calculator' module"
           });
@@ -841,12 +853,23 @@ export class TroubleShooter extends HandlebarsApplicationMixin(ApplicationV2) {
           fixer: "Enable the 'tokencover' module and update 'Calculate Cover' to 'Token Cover' on the Mechanics tab"
         });
         break;
+      case "simplecover5e":
+        if (!(game.modules.get("simplecover5e")?.active)) {
+          data.problems.push({
+            moduleId: "simplecover5e",
+            severity: "Error",
+            problemSummary: "You must enable the 'simplecover5e' module to use the 'Simple Cover 5e' option for 'Calculate Cover'",
+            problemDetail: undefined,
+            fixer: "Enable the 'simplecover5e' module"
+          });
+        }
+        break;
       case "tokencover":
         if (!(game.modules.get("tokencover")?.active)) {
           data.problems.push({
             moduleId: "tokencover",
             severity: "Error",
-            problemSummary: "You must enable the 'tokencover' module to use the 'Token Cover' option for 'Walls Block Range'",
+            problemSummary: "You must enable the 'tokencover' module to use the 'Token Cover' option for 'Calculate Cover'",
             problemDetail: undefined,
             fixer: "Enable the 'tokencover' module"
           });
@@ -1005,6 +1028,35 @@ export class TroubleShooter extends HandlebarsApplicationMixin(ApplicationV2) {
     this.checkConcentrationStatusEffects(data);
     this.checkVolumetricTemplates(data);
     this.checkRulesText(data);
+    this.checkInvalidMidiMessages(data);
+  }
+
+  /**
+   * Chat messages of midi's types that fail their data model (a stored shape no longer valid): Foundry only logs them
+   * while the world loads and leaves them out of the chat log, and Clear Chat Log can't remove them.
+   */
+  public static checkInvalidMidiMessages(data: TroubleShooterData) {
+    const invalid = invalidMidiMessages();
+    if (!invalid.length) return;
+    data.problems.push({
+      moduleId: "midi-qol",
+      severity: "Warn",
+      problemSummary: i18nFormat("midi-qol.InvalidMessages.Problem", { count: invalid.length }),
+      problemDetail: invalid.slice(0, 10).map(message => `${message.id} (${message._source.type}, ${new Date(message._source.timestamp ?? 0).toLocaleString()})`),
+      fixer: i18n("midi-qol.InvalidMessages.Fixer"),
+      fixerFunc: async (app: TroubleShooter) => {
+        if (!game.user?.isGM) {
+          ui.notifications?.error(i18n("midi-qol.InvalidMessages.GMOnly"));
+          return;
+        }
+        const ids = invalidMidiMessages().map(message => message.id).filter((id): id is string => !!id);
+        await ChatMessage.implementation.deleteDocuments(ids);
+        ui.notifications?.info(i18nFormat("midi-qol.InvalidMessages.Deleted", { count: ids.length }));
+        TroubleShooter.data = TroubleShooter.collectTroubleShooterData();
+        app.render({ force: true });
+      },
+      fixerId: -1
+    });
   }
 
   public static checkRulesText(data: TroubleShooterData) {

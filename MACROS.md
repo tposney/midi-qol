@@ -771,8 +771,9 @@ await workflow.resume("damageRolled"); // "attackRolled", "damageRolled", "noDam
 
 `MidiQOL.Workflow.getWorkflow(cardUuid)` returns the workflow of a usage card, or `undefined`:
 
-- For the card's author, the live workflow. If it is no longer in memory (after a reload) it is rebuilt from the card.
-- For any other user, a read-only copy rebuilt from the card (`workflow.readOnly` is `true`). It has what the card stores: targets, hits, saves, rolls, damage detail, critical and fumble, templates, and what is worked out from them. It does not run or write the card. Properties only kept in memory (anything a macro added) are empty.
+- The workflow in memory on this client, for any user.
+- Otherwise, for the card's author, the workflow rebuilt from the card (after a reload), which carries on.
+- Otherwise, for any other user, a read-only copy rebuilt from the card (`workflow.readOnly` is `true`). It has what the card stores: targets, hits, saves, rolls, damage detail, critical and fumble, templates, and what is worked out from them. It does not run or write the card. Properties only kept in memory (anything a macro added) are empty.
 - `getWorkflow(cardUuid, false)` gives another user a live rebuild instead. **Caveat emptor:** it runs and writes the card as the author's would, and nothing keeps it in step with the author's workflow: two live workflows for one card overwrite each other's changes, roll twice and apply damage and effects twice. midi warns in the console when it makes one. Use it only when you know the author's workflow is not running (its user is offline).
 
 A use's workflow has no card before dnd5e creates it, so until then it has no id (`workflow.id` is `undefined`) and `getWorkflow` cannot find it. During that part of a use (midi's preTargeting and preItemRoll passes, dnd5e's preUseActivity, activityConsumption and preCreateUsageMessage hooks), on the client running it, `MidiQOL.Workflow.workflowFor(activity)` gives the use's workflow from the activity the hook or macro was given. Its id is the card's uuid from the moment the card is created, before dnd5e places the use's templates. Workflows are not found by activity uuid: two uses of one activity have the same one (`getWorkflowByActivityUuid` is deprecated and finds nothing).
@@ -781,7 +782,7 @@ A read-only copy is a snapshot of the card when it was made, and a copy you hold
 
 ### Token sets
 
-A workflow's token sets (`targets`, `hitTargets`, `hitTargetsEC`, `saves`, `failedSaves`, `superSavers`, `semiSuperSavers`, `criticalSaves`, `fumbleSaves`, `advantageSaves`, `effectTargets`) are `MidiQOL.TokenDocumentSet`s: they hold every member's TokenDocument, including tokens on another scene or on a level not shown. `has`, `add`, `delete`, assigning a set (`workflow.targets = new Set([...])`) and set algebra accept a Token, a TokenDocument or a uuid. These read the same in every mode:
+A workflow's token sets (`targets`, `hitTargets`, `hitTargetsEC`, `saves`, `failedSaves`, `superSavers`, `semiSuperSavers`, `criticalSaves`, `fumbleSaves`, `advantageSaves`, `otherDamageMatches`, `ammunitionDamageMatches`) are `MidiQOL.TokenDocumentSet`s: they hold every member's TokenDocument, including tokens on another scene or on a level not shown. Assigning any Set to one (`workflow.targets = new Set([...])`) makes it a TokenDocumentSet. `effectTargets` and `preSelectedTargets` are TokenDocumentSets midi sets, but plain fields: a Set assigned to them stays as it is. `has`, `add`, `delete` and set algebra accept a Token, a TokenDocument or a uuid. These read the same in every mode:
 
 ```js
 workflow.hitTargets.documents;          // every hit target's TokenDocument (a new array each read)
@@ -793,7 +794,7 @@ workflow.saves.add(token);              // changes the workflow's set
 workflow.hitTargets.difference(workflow.saves).documents; // set algebra is over every member and gives a TokenDocumentSet
 ```
 
-Reading a set directly (iteration, `size`, `first()`, `map`/`filter`/`some`) gives the drawn Tokens by default. TokenDocuments will become the default; a GM can try it now with `MidiQOL.setTokenDocumentSets(true)` (the whole world, after a reload; `false` switches back, `MidiQOL.tokenDocumentSets()` says which is on). Then a set reads as every member's TokenDocument, `member.document` returns the member itself with a deprecation warning naming the calling line, and target hooks and target macros' `token` are TokenDocuments. `workflow.token` stays the caster's Token; `workflow.tokenDocument` is its TokenDocument.
+Reading a set directly (iteration, `size`, `first()`, `map`/`filter`/`some`) gives the drawn Tokens by default; `filter` returns a TokenDocumentSet of the members that pass. Call set algebra on the TokenDocumentSet (`set.difference(plain)`, not `plain.difference(set)`, which reads the set as it iterates). A deleted token stays a member only while the workflow is in memory: a workflow rebuilt from its card has the tokens that still exist. TokenDocuments will become the default; a GM can try it now with `MidiQOL.setTokenDocumentSets(true)` (the whole world, after a reload; `false` switches back, `MidiQOL.tokenDocumentSets()` says which is on). Then a set reads as every member's TokenDocument, `member.document` returns the member itself with a deprecation warning naming the calling line, and target hooks and target macros' `token` are TokenDocuments. `workflow.token` stays the caster's Token; `workflow.tokenDocument` is its TokenDocument.
 
 To work in both:
 - Every member (saves, damage, effects, HP): `set.documents` and `set.count`; a TokenDocument's `actor` is all they need.
@@ -820,11 +821,11 @@ Flags another module puts on the message config of a roll midi makes (attack, da
 
 ### Old card flags
 
-Before 14.6.9 a card kept the workflow's state as `flags.midi-qol` keys. They still read the same on any card (each warns once that it is deprecated) and are removed in 14.8.0. With `const workflow = MidiQOL.Workflow.getWorkflow(card.uuid)`; token sets are Sets of Tokens, and a set's `uuids` replaces an old `…Uuids` flag (`workflow.hitTargets.uuids`):
+Before 14.6.9 a card kept the workflow's state as `flags.midi-qol` keys. On a card that stores a workflow they still read the same (each warns once that it is deprecated; a write keeps its value) and are removed in 14.8.0. With `const workflow = MidiQOL.Workflow.getWorkflow(card.uuid)`; token sets are TokenDocumentSets (above), and a set's `uuids` replaces an old `…Uuids` flag (`workflow.hitTargets.uuids`):
 
 | Old (deprecated) | Use |
 |---|---|
-| `card.flags.midi-qol.targets` | `workflow.targets` |
+| `card.flags.midi-qol.targets` (`{uuid, name}`) | `workflow.targets` |
 | `card.flags.midi-qol.hitTargetUuids` | `workflow.hitTargets` |
 | `card.flags.midi-qol.hitECTargetUuids` | `workflow.hitTargetsEC` |
 | `card.flags.midi-qol.isHit` | `workflow.isHit` |
@@ -848,6 +849,10 @@ Before 14.6.9 a card kept the workflow's state as `flags.midi-qol` keys. They st
 | `card.flags.midi-qol.workflowOptions` | `workflow.workflowOptions` |
 | `card.flags.midi-qol.currentAction` | `workflow.currentAction` |
 | `card.flags.midi-qol.saveAttribution` | `workflow.saveAttribution` |
+| `card.flags.midi-qol.templateUuid` / `templateUuids` | `workflow.templateUuids[0]` / `workflow.templateUuids` |
+| `card.flags.midi-qol.attackRoll` | `workflow.attackRoll` |
+| `card.flags.midi-qol.damageRolls`, `bonusDamageRolls`, `otherDamageRolls`, `utilityRolls` | the same names on the workflow |
+| `card.flags.midi-qol.GMOnlyAttackRoll` (removed in 15.0.0) | the attack is shown to the GM only until `workflow.hitTargets` are checked |
 | `card.flags.midi-qol.templateUuids` | `workflow.templateUuids` |
 | `card.flags.midi-qol.templateUuid` | `workflow.templateUuids[0]` |
 
@@ -903,12 +908,10 @@ Data passed to OnUse and DamageBonus macros in `args[0]`:
 | `damageList` | Array of DamageListEntry per target (see below) |
 | `otherDamageTotal` | Other Roll damage total |
 | `otherDamageDetail` | Other Roll damage detail, before resistances |
-| `otherDamageList` | DamageListEntry per target for the other damage |
 | `bonusDamageRoll` | Bonus damage roll |
 | `bonusDamageRolls` | Array of bonus damage rolls |
 | `bonusDamageTotal` | Bonus damage total |
 | `bonusDamageDetail` | Bonus damage detail, before resistances |
-| `bonusDamageHTML` | The bonus damage as shown on the card |
 | `utilityRoll` / `utilityRolls` | The utility (formula) roll(s) |
 
 The workflow itself also has `workflow.rawDamageDetail` etc.

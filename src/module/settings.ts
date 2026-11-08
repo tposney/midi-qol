@@ -1717,8 +1717,8 @@ export const registerSettings = function () {
   registerRulesTextSettings();
 
   game.settings.register("midi-qol", "EnableWorkflow", {
-    name: i18n("midi-qol.EnableWorkflow.Name"),
-    hint: i18n("midi-qol.EnableWorkflow.Hint"),
+    name: "midi-qol.EnableWorkflow.Name",
+    hint: "midi-qol.EnableWorkflow.Hint",
     scope: "client",
     default: true,
     config: true,
@@ -1728,8 +1728,8 @@ export const registerSettings = function () {
 
   // Deprecated: PreferredGM has moved to configSettings.preferredGM (shown on GM tab)
   game.settings.register("midi-qol", "PreferredGM", {
-    name: i18n("midi-qol.PreferredGM.Name"),
-    hint: i18n("midi-qol.PreferredGM.Hint"),
+    name: "midi-qol.PreferredGM.Name",
+    hint: "midi-qol.PreferredGM.Hint",
     scope: "world",
     default: "",
     config: false,
@@ -1737,8 +1737,8 @@ export const registerSettings = function () {
   });
 
   game.settings.register("midi-qol", "ReplaceDefaultActivities", {
-    name: i18n("midi-qol.ReplaceDefaultActivities.Name"),
-    hint: i18n("midi-qol.ReplaceDefaultActivities.Hint"),
+    name: "midi-qol.ReplaceDefaultActivities.Name",
+    hint: "midi-qol.ReplaceDefaultActivities.Hint",
     scope: "world",
     default: true,
     config: true,
@@ -1748,8 +1748,8 @@ export const registerSettings = function () {
 
   // Deprecated: kept for one version cycle to allow migration of old value into configSettings arrays
   game.settings.register("midi-qol", "AutoFastForwardAbilityRolls", {
-    name: i18n("midi-qol.AutoFastForwardAbilityRolls.Name"),
-    hint: i18n("midi-qol.AutoFastForwardAbilityRolls.Hint"),
+    name: "midi-qol.AutoFastForwardAbilityRolls.Name",
+    hint: "midi-qol.AutoFastForwardAbilityRolls.Hint",
     scope: "world",
     default: false,
     type: Boolean,
@@ -1757,8 +1757,8 @@ export const registerSettings = function () {
   });
 
   game.settings.register("midi-qol", "showGM", {
-    name: i18n("midi-qol.showGM.Name"),
-    hint: i18n("midi-qol.showGM.Hint"),
+    name: "midi-qol.showGM.Name",
+    hint: "midi-qol.showGM.Hint",
     scope: "world",
     default: false,
     type: Boolean,
@@ -1767,8 +1767,8 @@ export const registerSettings = function () {
   });
   
   game.settings.register("midi-qol", "ForceHideRoll", {
-    name: i18n("midi-qol.ForceHideRoll.Name"),
-    hint: i18n("midi-qol.ForceHideRoll.Hint"),
+    name: "midi-qol.ForceHideRoll.Name",
+    hint: "midi-qol.ForceHideRoll.Hint",
     scope: "client",
     default: true,
     type: Boolean,
@@ -1778,8 +1778,8 @@ export const registerSettings = function () {
   });
 
   game.settings.register("midi-qol", "DragDropTarget", {
-    name: i18n("midi-qol.DragDropTarget.Name"),
-    hint: i18n("midi-qol.DragDropTarget.Hint"),
+    name: "midi-qol.DragDropTarget.Name",
+    hint: "midi-qol.DragDropTarget.Hint",
     scope: "world",
     default: false,
     type: Boolean,
@@ -1833,18 +1833,18 @@ export const registerSettings = function () {
     onChange: fetchParams
   });
   game.settings.registerMenu("midi-qol", "midi-qol", {
-    name: i18n("midi-qol.config"),
+    name: "midi-qol.config",
     label: "midi-qol.WorkflowSettings",
-    hint: i18n("midi-qol.Hint"),
+    hint: "midi-qol.Hint",
     icon: "fas fa-dice-d20",
     type: ConfigPanel as any,
     restricted: true
   });
 
   game.settings.registerMenu("midi-qol", "resetSettings", {
-    name: i18n("midi-qol.ResetDefaults.Name"),
+    name: "midi-qol.ResetDefaults.Name",
     label: "midi-qol.ResetDefaults.Button",
-    hint: i18n("midi-qol.ResetDefaults.Hint"),
+    hint: "midi-qol.ResetDefaults.Hint",
     icon: "fas fa-triangle-exclamation",
     type: ResetSettingsSubmenu,
     restricted: true
@@ -1853,9 +1853,9 @@ export const registerSettings = function () {
   // Register wizard launcher if the wizard module is installed and active
   if (game.modules.get("midi-qol-setup-wizard")?.active) {
     game.settings.registerMenu("midi-qol", "launchSetupWizard", {
-      name: i18n("midi-qol.LaunchSetupWizard.Name"),
+      name: "midi-qol.LaunchSetupWizard.Name",
       label: "midi-qol.LaunchSetupWizard.Label",
-      hint: i18n("midi-qol.LaunchSetupWizard.Hint"),
+      hint: "midi-qol.LaunchSetupWizard.Hint",
       icon: "fas fa-magic",
       type: LaunchWizardSubmenu,
       restricted: true
@@ -1863,35 +1863,35 @@ export const registerSettings = function () {
   }
 
   game.settings.registerMenu("midi-qol", "TargetConfirmationConfig", {
-    name: i18n("midi-qol.TargetConfirmationConfig.Name"),
-    label: i18n("midi-qol.TargetConfirmationConfig.Name"),
-    hint: i18n("midi-qol.TargetConfirmationConfig.Hint"),
+    name: "midi-qol.TargetConfirmationConfig.Name",
+    label: "midi-qol.TargetConfirmationConfig.Name",
+    hint: "midi-qol.TargetConfirmationConfig.Hint",
     icon: "fas fa-dice-d20",
     type: TargetConfirmationConfig,
     restricted: false
   });
 
   game.settings.registerMenu("midi-qol", "midi-qol-sounds", {
-    name: i18n("midi-qol.SoundSettings.Name"),
+    name: "midi-qol.SoundSettings.Name",
     label: "midi-qol.SoundSettings.Label",
-    hint: i18n("midi-qol.SoundSettings.Hint"),
+    hint: "midi-qol.SoundSettings.Hint",
     icon: "fas fa-dice-d20",
     type: SoundConfigPanel,
     restricted: true
   });
 
   game.settings.registerMenu("midi-qol", "showRollStats", {
-    name: i18n("midi-qol.ShowStats"),
+    name: "midi-qol.ShowStats",
     label: "midi-qol.ShowStats",
-    hint: i18n("midi-qol.KeepRollStats.Hint"),
+    hint: "midi-qol.KeepRollStats.Hint",
     icon: "fas fa-chart-bar",
     type: RollStatsDisplay as any,
     restricted: false
   });
 
   game.settings.register("midi-qol", "playerControlsInvisibleTokens", {
-    name: i18n("midi-qol.playerControlsInvisibleTokens.Name"),
-    hint: i18n("midi-qol.playerControlsInvisibleTokens.Hint"),
+    name: "midi-qol.playerControlsInvisibleTokens.Name",
+    hint: "midi-qol.playerControlsInvisibleTokens.Hint",
     scope: "world",
     default: false,
     config: true,
@@ -1900,12 +1900,12 @@ export const registerSettings = function () {
   });
 
   game.settings.register("midi-qol", "ChatCardUpdates", {
-    name: i18n("midi-qol.ChatCardUpdates.Name"),
-    hint: i18n("midi-qol.ChatCardUpdates.Hint"),
+    name: "midi-qol.ChatCardUpdates.Name",
+    hint: "midi-qol.ChatCardUpdates.Hint",
     scope: "world",
     default: "milestones",
     type: String,
-    choices: { milestones: i18n("midi-qol.ChatCardUpdates.milestones"), everyStep: i18n("midi-qol.ChatCardUpdates.everyStep") },
+    choices: { milestones: "midi-qol.ChatCardUpdates.milestones", everyStep: "midi-qol.ChatCardUpdates.everyStep" },
     onChange: fetchParams,
     config: true
   });
@@ -1923,8 +1923,8 @@ export const registerSettings = function () {
   });
 
   game.settings.register("midi-qol", "UseWeakReferences", {
-    name: "Use Weak References for Workflows",
-    hint: "Use WeakReferences to store workflows - should save some memory. A workflow that is dropped is rebuilt from its chat card when needed.",
+    name: "midi-qol.UseWeakReferences.Name",
+    hint: "midi-qol.UseWeakReferences.Hint",
     scope: "world",
     default: false,
     type: Boolean,
@@ -1933,10 +1933,10 @@ export const registerSettings = function () {
   });
 
   game.settings.registerMenu("midi-qol", "dependentsExplorer", {
-    name: i18n("midi-qol.DependentsExplorer.Name"),
+    name: "midi-qol.DependentsExplorer.Name",
     label: "midi-qol.DependentsExplorer.Label",
     icon: "fas fa-sitemap",
-    hint: i18n("midi-qol.DependentsExplorer.Hint"),
+    hint: "midi-qol.DependentsExplorer.Hint",
     type: DependentsExplorer as any,
     restricted: true
   });
@@ -1956,10 +1956,10 @@ export const registerSettings = function () {
   });
 
   game.settings.registerMenu("midi-qol", "troubleShooter", {
-    name: i18n("midi-qol.TroubleShooter.Name"),
+    name: "midi-qol.TroubleShooter.Name",
     label: "midi-qol.TroubleShooter.Label",
     icon: "fas fa-wrench",
-    hint: i18n("midi-qol.TroubleShooter.Hint"),
+    hint: "midi-qol.TroubleShooter.Hint",
     // icon: "fas fa-dice-d20",
     type: TroubleShooter,
     restricted: false

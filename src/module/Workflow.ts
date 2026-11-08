@@ -1,6 +1,7 @@
 import { warn, debug, log, i18n, i18nFormat, busyWait, MESSAGE_TYPES, error, debugEnabled, MQItemMacroLabel, GameSystemConfig, MODULE_ID, MQActivityMacroLabel, gameStats, MQDamageRollTypes } from "../midi-qol.js";
 import { MidiTeleportActivity, TeleportOption } from "./activities/TeleportActivity.js";
 import { decodeWorkflowOptions, encodeWorkflowOptions, inheritableWorkflowOptions } from "./lib/workflowOptionsCodec.js";
+import { eventModifiers } from "./lib/rollKeys.js";
 import { TokenDocumentSet, hookTarget } from "./lib/tokenDocumentSet.js";
 import { CardRecords, RECORD_SETS, RecordSet, RecordFacts, STATE_KEYS, StateKey, attributionMap, attributionTriples, cardMidi, rollTypeOf, cardOtherConsumption, cardPreSelected, messagesFrom, recordList, recordPath, storedMidiFlag } from "./lib/cardState.js";
 import { preferredActiveGM, socketlibSocket, timedAwaitExecuteAsGM, timedExecuteAsGM, unTimedExecuteAsGM } from "./GMAction.js";
@@ -196,6 +197,35 @@ const RECORD_VALUES = ["otherDamage", "ammunitionDamage", "preSelected"] as cons
  * The workflow's stored fields: kept in memory, written to its card (lib/cardState.ts) through the card's update cache.
  * The card is read only when the workflow is rebuilt from it (load). Writing undefined forgets the value.
  */
+/** `value` with only what survives JSON (primitives, arrays and plain objects of them); undefined if nothing does */
+function jsonSafe(value: unknown): unknown {
+  if (value === null || ["string", "number", "boolean"].includes(typeof value)) return value;
+  if (Array.isArray(value)) return value.every(v => jsonSafe(v) === v) ? value : undefined;
+  // A plain object only: getType calls any class instance (an Event) "Object"
+  const prototype = typeof value === "object" ? Object.getPrototypeOf(value) : undefined;
+  if (prototype !== Object.prototype && prototype !== null) return undefined;
+  const kept = Object.entries(value as Record<string, unknown>).map(([key, v]) => [key, jsonSafe(v)] as const).filter(([, v]) => v !== undefined);
+  return kept.length ? Object.fromEntries(kept) : undefined;
+}
+
+/** A roll another workflow added to a card (addedBy) */
+function addedByOther(roll: Roll, workflowId: string): boolean {
+  const addedBy = foundry.utils.getProperty(roll, `options.${MODULE_ID}.addedBy`);
+  return !!addedBy && addedBy !== workflowId;
+}
+
+/** Workflow.workflows: a copy, so changing it changes nothing (warned) */
+class WorkflowsCopy extends Map<string, Workflow> {
+  #filled = false;
+  #warn() {
+    if (this.#filled) foundry.utils.logCompatibilityWarning("midi-qol | Workflow.workflows is a copy: changing it changes nothing. Use MidiQOL.Workflow.addWorkflow / removeWorkflow.", { since: "14.6.9", until: "15.0.0", once: true });
+  }
+  filled(): this { this.#filled = true; return this; }
+  override set(key: string, value: Workflow): this { this.#warn(); return super.set(key, value); }
+  override delete(key: string): boolean { this.#warn(); return super.delete(key); }
+  override clear(): void { this.#warn(); super.clear(); }
+}
+
 class CardStateStore {
   #cache = new Map<string, unknown>();
   #write: (updates: Record<string, unknown>) => void;
@@ -246,6 +276,8 @@ class CardStateStore {
     // Rolls by the type midi tags them with
     const rollKeys: Record<string, string> = { attack: "attackRoll", defaultDamage: "damageRolls", bonusDamage: "bonusDamageRolls", otherDamage: "otherDamageRolls", utility: "utilityRolls" };
     for (const roll of (card.rolls ?? []) as Roll[]) {
+      // Another workflow's: not this card's own rolls
+      if (foundry.utils.getProperty(roll, `options.${MODULE_ID}.addedBy`)) continue;
       const key = rollKeys[String(rollTypeOf(roll))];
       if (!key) continue;
       if (key === "attackRoll") { if (!this.#cache.has(key)) this.#cache.set(key, roll); }
@@ -260,10 +292,22 @@ class CardStateStore {
   setScalar<T>(key: StateKey | "attackRollCount" | "damageRollCount", value: T, storeAs?: (value: T) => unknown): void {
     if (value === undefined) {
       this.#cache.delete(key);
+      const cleared = CardStateStore.#cleared(key);
+      if (cleared !== undefined) this.#write({ [CardStateStore.#path(key)]: cleared });
       return;
     }
     this.#cache.set(key, value);
     this.#write({ [CardStateStore.#path(key)]: storeAs ? storeAs(value) : value });
+  }
+
+  /** What clears a stored value: false for a BooleanField, null for a nullable field (a non-nullable one drops null) */
+  static #cleared(key: string): false | null | undefined {
+    const path = CardStateStore.#path(key).replace(/^system\./, "");
+    const field = CONFIG.ChatMessage.dataModels?.usage?.schema?.getField(path);
+    if (field instanceof foundry.data.fields.BooleanField) return false;
+    if (field?.nullable) return null;
+    console.warn(`midi-qol | the card's ${path} can't be cleared`);
+    return undefined;
   }
 
   /** The workflow's tokens in set `field`: the same TokenDocumentSet each time, so changes made in place are written (syncTokenSets) */
@@ -299,7 +343,8 @@ class CardStateStore {
       const document = fromUuidSync(uuid);
       if (document instanceof TokenDocument && !members.has(document)) mark(document, false);
     }
-    this.#cache.set(written, new Set([...members].map(document => document.uuid)));
+    // As syncTokenSets compares (the set's uuids): midi's stand-in for an actor with no token has none and no record
+    this.#cache.set(written, new Set(this.tokenSet(field).uuids));
     this.#write(leaves);
   }
 
@@ -371,7 +416,7 @@ class CardStateStore {
 
   /** The damage tray's matches: the matched tokens flagged in the records, and the state marked as worked out */
   setDamageMatches(kind: "otherDamage" | "ammunitionDamage", matches: TokenDocumentSet | undefined): void {
-    this.#write({ [`system.midi.state.${kind}Matched`]: matches ? true : null });
+    this.#write({ [`system.midi.state.${kind}Matched`]: !!matches });
     const documents = matches?.documents ?? [];
     this.setRecordValues(kind, new Map(documents.map(document => [document, true as const])));
   }
@@ -379,7 +424,9 @@ class CardStateStore {
   /** The workflow's options, stored as `stored` gives them; the pre-selected targets go in the records */
   setWorkflowOptions(options: WorkflowOptions, stored: (options: WorkflowOptions) => WorkflowOptions): void {
     const { preSelectedTargetUuids, ...rest } = stored(options) as WorkflowOptions & { preSelectedTargetUuids?: string[] };
-    this.setScalar("workflowOptions", options, () => rest);
+    // What survives JSON: the use's event as the keys it held; documents and Sets are per-use state
+    const event = rest.event instanceof Event ? eventModifiers(rest.event) : rest.event;
+    this.setScalar("workflowOptions", options, () => jsonSafe({ ...rest, event }) ?? {});
     const documents = (preSelectedTargetUuids ?? []).map(uuid => fromUuidSync(uuid)).filter((d): d is TokenDocument.Implementation => d instanceof TokenDocument);
     this.setRecordValues("preSelected", new Map(documents.map((document, index) => [document, index + 1])));
   }
@@ -434,12 +481,12 @@ export class Workflow {
 
   /** The workflows in memory, by id: a new Map on each read (one that has been collected is rebuilt by getWorkflow) */
   static get workflows(): Map<string, Workflow> {
-    const live = new Map<string, Workflow>();
+    const live = new WorkflowsCopy();
     for (const [id, entry] of Workflow.#workflows) {
       const workflow = entry instanceof WeakRef ? entry.deref() : entry;
       if (workflow) live.set(id, workflow);
     }
-    return live;
+    return live.filled();
   }
 
   /** Whether a workflow is filed weakly (finished, or Use Weak References), for tests */
@@ -462,6 +509,12 @@ export class Workflow {
     if (id && Workflow.#workflows.get(id) === workflow) Workflow.#workflows.set(id, new WeakRef(workflow));
   }
 
+  /** A finished workflow running again (a re-roll): held until it finishes, unless every workflow is held weakly */
+  static #holdRunning(workflow: Workflow) {
+    const id = workflow.id;
+    if (!useWeakReferences && id && Workflow.#workflows.get(id) instanceof WeakRef) Workflow.#workflows.set(id, workflow);
+  }
+
   static addWorkflow(workflow: Workflow) {
     if (!workflow.id) return;
     // A collected entry is just replaced; another live workflow under the id is removed first
@@ -476,7 +529,6 @@ export class Workflow {
     if (useWeakReferences) Workflow.#workflows.set(workflow.id, new WeakRef(workflow));
     else Workflow.#workflows.set(workflow.id, workflow);
   }
-  /** The item's workflow that is executing now (a macro inside its use), the most recently filed if several */
   // Each use's workflow by its activity: the copy midi's use() makes and dnd5e's scaled copy, both for that use alone
   static #uses = new WeakMap<object, Workflow>();
   static setUse(activity: Activity, workflow: Workflow) { Workflow.#uses.set(activity, workflow); }
@@ -491,6 +543,7 @@ export class Workflow {
     return { workflowId: workflow?.itemCardUuid ? workflow.id : undefined, itemCardUuid: workflow?.itemCardUuid };
   }
 
+  /** The item's workflow that is executing now (a macro inside its use), the most recently filed if several */
   static runningFor(item: Item.Implementation): Workflow | undefined {
     let found: Workflow | undefined;
     for (const entry of Workflow.#workflows.values()) {
@@ -545,14 +598,19 @@ export class Workflow {
   }
 
   /**
-   * The workflow of a card (or of an activity until it has its card). For the card's author the live workflow, rebuilt
-   * from the card if it is not in memory. For another user a read-only copy rebuilt from the card: it does not run or
-   * write, and is never updated: when the card changes it is discarded, and the next call builds a new one. With `readOnly`
-   * false another user gets a live rebuild, which runs and writes the card alongside the author's (warned).
+   * The workflow of a card: the one in memory, for any user. Otherwise for the card's author the live workflow rebuilt
+   * from the card; for another user a read-only copy rebuilt from the card: it does not run or write, and is never
+   * updated: when the card changes it is discarded, and the next call builds a new one. With `readOnly` false another
+   * user gets a live rebuild, which runs and writes the card alongside the author's (warned). A use before its card
+   * exists: Workflow.workflowFor(activity).
    */
   static getWorkflow(id?: string, readOnly = true): Workflow | undefined {
     const workflow = Workflow.findWorkflow(id);
     if (workflow || !id) return workflow;
+    if (/\.Activity\.[^.]+$/.test(id)) {
+      foundry.utils.logCompatibilityWarning("midi-qol | Workflow.getWorkflow is given a card's uuid; an activity's finds nothing: use MidiQOL.Workflow.workflowFor(activity) during a use, MidiQOL.Workflow.getWorkflow(cardUuid) once its card exists.", { since: "14.6.9", until: "14.8.0", once: true });
+      return undefined;
+    }
     const card = fromUuidSync(id);
     if (!(card instanceof ChatMessage) || card.author === game.user) return undefined;
     if (!readOnly) {
@@ -601,7 +659,9 @@ export class Workflow {
     const { _id, timestamp, _stats, author, ...data } = source;
     data.rolls = [];
     const midi = data.system?.midi ?? {};
-    for (const key of ["state", "records", "sections", "progress", "attackRollCount", "damageRollCount"]) delete midi[key];
+    for (const key of ["state", "records", "sections", "progress", "attackRollCount", "damageRollCount", "followUps"]) delete midi[key];
+    // The use's consumption and concentration stay the use's: the re-roll's Refund would refund them again
+    if (data.system) for (const key of ["deltas", "concentration"]) delete data.system[key];
     const workflow = new Workflow(first.actor, activity, first.speaker, new TokenDocumentSet(first.targets),
       { workflowOptions: { ...first.workflowOptions }, event: config.event, storeWorkflow: false });
     const card = await CONFIG.ChatMessage.documentClass.create(data as ChatMessage.CreateData);
@@ -668,13 +728,18 @@ export class Workflow {
     const className: string | undefined = cardMidi(card).state?.workflowClass;
     const WorkflowClass = className ? RESTORABLE_WORKFLOWS[className] : undefined;
     if (!WorkflowClass) return undefined;
+    // A card that failed is retried only once it has changed
+    const modified = card._stats.modifiedTime ?? 0;
+    if (Workflow.#unrestorable.get(chatCardUuid) === modified) return undefined;
     try {
       return new WorkflowClass(null, null, null, null, { chatCardUuid, readOnly: options.readOnly });
     } catch (err) {
+      Workflow.#unrestorable.set(chatCardUuid, modified);
       TroubleShooter.recordError(err, `fromChatCardUuid | could not restore the workflow of ${chatCardUuid}`);
       return undefined;
     }
   }
+  static #unrestorable = new Map<string, number>();
 
   // While a state runs its card changes are queued and written at milestones (MILESTONE_STATES, a reaction prompt, a
   // wait) or, with Chat card updates "At every step", after each step that changed the card. `workflow.chatCard`
@@ -696,6 +761,7 @@ export class Workflow {
     if (this.readOnly) return;
     if (displayOnly && !this.#displayQueued) return;
     this.#displayQueued = false;
+    this.#syncWorkflowOptions();
     this.#persisted.syncTokenSets();
     const card = this.itemCardUuid ? fromUuidSync(this.itemCardUuid) as ChatMessage.Implementation | null : null;
     if (card && !foundry.utils.isEmpty(getUpdatesCache(card.uuid))) await throttledUpdate(card, {});
@@ -744,9 +810,9 @@ export class Workflow {
     this.#unstored = {};
   }
 
-  /** The workflow's own card as stored: what a rebuilt workflow reads its state from */
+  /** The workflow's own card with its queued changes: what a rebuilt workflow reads its state from */
   #ownCard(): ChatMessage.Implementation | undefined {
-    return this.ownsCard ? fromUuidSync(this.itemCardUuid!) as ChatMessage.Implementation | undefined : undefined;
+    return this.ownsCard ? getCachedDocument(this.itemCardUuid) : undefined;
   }
 
   /**
@@ -754,7 +820,10 @@ export class Workflow {
    * is set and by each display, which also covers rolls changed in place (attribution) and save rolls.
    */
   #persistRolls(): void {
-    if (this.ownsCard) this.#cacheCardUpdates({ rolls: this.chatRolls });
+    if (!this.ownsCard) return;
+    // Rolls another workflow added (a damage-only workflow's) stay theirs
+    const added = ((getCachedDocument(this.itemCardUuid)?.rolls ?? []) as Roll[]).filter(roll => addedByOther(roll, this.id ?? ""));
+    this.#cacheCardUpdates({ rolls: [...this.chatRolls, ...added] });
   }
 
   /** Queued for the card's next write; a read-only copy queues nothing (the queue is the card's, not the workflow's) */
@@ -787,6 +856,18 @@ export class Workflow {
     this.#persisted.setWorkflowOptions(workflowOptions, () => encodeWorkflowOptions(callerOptions));
   }
   #callerOptions: WorkflowOptions = {};
+  /**
+   * Changes made in place (midi's ignoreUserTargets, macros) added to what the card stores. Only values that survive JSON:
+   * the rest (CAT's activity, the use's event, Sets) is per-use state, never stored.
+   */
+  #syncWorkflowOptions() {
+    const changed = jsonSafe(foundry.utils.diffObject(this.#mergedOptions, this.workflowOptions)) as WorkflowOptions | undefined;
+    this.#mergedOptions = foundry.utils.deepClone(this.workflowOptions);
+    if (!changed || foundry.utils.isEmpty(changed)) return;
+    this.#callerOptions = foundry.utils.mergeObject(foundry.utils.deepClone(this.#callerOptions), changed) as WorkflowOptions;
+    const callerOptions = this.#callerOptions;
+    this.#persisted.setWorkflowOptions(this.workflowOptions, () => encodeWorkflowOptions(callerOptions));
+  }
   // As last merged or assigned: a change made in place since is found by comparing with it
   #mergedOptions: WorkflowOptions = {};
 
@@ -880,10 +961,10 @@ export class Workflow {
 
   /** When the use started, the actor was a combatant (of any combat) */
   get inCombat(): boolean { return this.#persisted.scalar("inCombat", false); }
-  set inCombat(inCombat: boolean) { this.#persisted.setScalar("inCombat", inCombat, value => value || null); }
+  set inCombat(inCombat: boolean) { this.#persisted.setScalar("inCombat", inCombat); }
   /** When the use started, it was the actor's turn in a started combat */
   get isTurn(): boolean { return this.#persisted.scalar("isTurn", false); }
-  set isTurn(isTurn: boolean) { this.#persisted.setScalar("isTurn", isTurn, value => value || null); }
+  set isTurn(isTurn: boolean) { this.#persisted.setScalar("isTurn", isTurn); }
   AoO: boolean = false;
 
   damageList: DamageListEntry[] = [];
@@ -970,7 +1051,7 @@ export class Workflow {
 
   /** A damage roll on its own (rerollDamage, DamageOnlyWorkflow): targets, hits and saves given; no effects or use-level passes */
   get damageOnly(): boolean { return this.#persisted.scalar("damageOnly", false); }
-  set damageOnly(damageOnly: boolean) { this.#persisted.setScalar("damageOnly", damageOnly, value => value || null); }
+  set damageOnly(damageOnly: boolean) { this.#persisted.setScalar("damageOnly", damageOnly); }
 
   /**
    * @deprecated Use workflow.attackRollModifierTracker.critical.isForced instead
@@ -1357,7 +1438,12 @@ export class Workflow {
    * Set when MidiActivityMixin suppressed dnd5e's concentration so it can be started after the
    * workflow's checks pass. Carries what Activity#use would have used. Cleared once begun.
    */
-  deferredConcentration: { scaling?: number, end?: string } | undefined;
+  get deferredConcentration(): { scaling?: number, end?: string } | undefined {
+    return this.#persisted.scalar<{ scaling?: number, end?: string } | null>("deferredConcentration", null) ?? undefined;
+  }
+  set deferredConcentration(deferred: { scaling?: number, end?: string } | undefined) {
+    this.#persisted.setScalar("deferredConcentration", deferred ?? null);
+  }
 
   get saves(): TokenDocumentSet { return this.#persisted.tokenSet("saved"); }
   set saves(saves: Set<TokenOrDocument> | undefined) { this.#persisted.setTokenSet("saved", saves); }
@@ -1710,6 +1796,8 @@ export class Workflow {
         this.#item = (card as Dnd5eChatMessage).getAssociatedItem?.();
         this.#speaker = card.speaker;
       }
+      // A card rendering with its item gone gives a stand-in activity (UsageCardMessage #prepareBaseContext)
+      if (!this.#activity?.item) throw new Error(`the card's activity can't be found (${options.chatCardUuid})`);
       this.workflowName = `${this.constructor.name} ${this.item?.name ?? "no item"} restored`;
     } else {
       // In this case, `actor`, `activity`, and `speaker` are mandatory
@@ -1724,7 +1812,9 @@ export class Workflow {
       if (!this.token) {
         this.token = getOrCreateTokenForActor(this.actor);
       }
-      if (targets && (targets instanceof Set ? targets.size : targets.length) !== 0) this.targets = new Set(targets ? targets : []);
+      // Kept as a token set: a plain copy would read as the drawn Tokens only
+      const given = targets ? new TokenDocumentSet(targets) : undefined;
+      if (given?.count) this.targets = given;
       if (speaker) this.speaker = speaker;
       this.hitTargets = new Set();
       this.hitTargetsEC = new Set();
@@ -1798,7 +1888,7 @@ export class Workflow {
 
   /**
    * The use's options: the caller's over midi's defaults and the roller's settings. The card stores only the caller's
-   * (later changes made in place are not stored), and a rebuilt workflow merges them again.
+   * and later changes (assigned, or made in place: #syncWorkflowOptions), and a rebuilt workflow merges them again.
    */
   #mergeWorkflowOptions(callerOptions: WorkflowOptions): void {
     const stored = () => encodeWorkflowOptions(callerOptions);
@@ -1860,7 +1950,8 @@ export class Workflow {
     this.otherDamageDetail = foundry.utils.deepClone(this.rawOtherDamageDetail);
     // The other activity's use declined: its damage dropped, the ammunition's kept
     if (this.otherConsumed === false) this.dropOtherActivityDamage();
-    void this.activity?.setupCanSeeSense?.({ workflow: this });
+    // A read-only copy is for reading the card: it doesn't recompute sight (asynchronous, so not there to read anyway)
+    if (!this.readOnly) void this.activity?.setupCanSeeSense?.({ workflow: this });
     const saves = this.targets.documents.map(t => [t.uuid, cardSaveRoll(this.chatCard, t.uuid)] as const).filter(([, roll]) => !!roll);
     if (saves.length) this.#restoredSaves = Object.fromEntries(saves) as Record<string, Roll>;
   }
@@ -1922,14 +2013,22 @@ export class Workflow {
     }
     if (workflow.postSummonHookId) Hooks.off("dnd5e.postSummon", workflow.postSummonHookId);
     if (debugEnabled > 0) warn(`removeWorkflow deleting ${id}`, workflow);
-    Workflow.#workflows.delete(id);
-    // Remove buttons
-    if (workflow.itemCardUuid) {
+    // Remove buttons while the workflow is still filed: removeItemCardButtons finds it by id, and an ended id is not rebuilt
+    try {
+      await Workflow.#removeCardButtons(workflow);
+    } finally {
+      Workflow.#workflows.delete(id);
+    }
+  }
+
+  static async #removeCardButtons(workflow: Workflow) {
+    if (workflow.ownsCard) {
       if (workflow.currentAction === workflow.WorkflowState_ConfirmRoll) {
         await Workflow.deleteAbortedCard(workflow.chatCard);
         clearUpdatesCache(workflow.itemCardUuid);
       } else {
         await Workflow.removeItemCardButtons(workflow.itemCardUuid, { removeAllButtons: true });
+        await workflow.flushCardWrites();
         setTimeout(() => {
           const chatMessageElt = document?.querySelector(`[data-message-id="${workflow.itemCardId ?? "XXX"}"]`);
           if (chatMessageElt) chatMessageElt.querySelectorAll(".collapsible").forEach(ce => { if (!ce.classList.contains("collapsed")) ce.classList.add("collapsed") });
@@ -2020,6 +2119,7 @@ export class Workflow {
     // New damage while saves are awaited is shown, and the saves keep waiting
     if (event === "damageRolled" && this.currentAction === this.WorkflowState_WaitForSaves) return this.displayDamageRolls();
     this.suspended = false;
+    Workflow.#holdRunning(this);
     return this.performState(event ? this.stateAfter(event) : this.currentAction);
   }
 
@@ -2289,8 +2389,11 @@ export class Workflow {
       TroubleShooter.recordError(err, message);
     } finally {
       // The run ended (finished, aborted, or an error): nothing stays queued
-      if (this.executingStates === 1) await this.flushCardWrites();
-      this.executingStates -= 1;
+      try {
+        if (this.executingStates === 1) await this.flushCardWrites();
+      } finally {
+        this.executingStates -= 1;
+      }
     }
   }
 
@@ -2569,7 +2672,7 @@ export class Workflow {
 
     if (checkMechanic("actionSpecialDurationImmediate"))
       expireMyEffects.bind(this)(["1Attack", "1Action", "1Spell"]);
-    if (checkMechanic("actionSpecialDurationImmediate") && this.hitTargets.size)
+    if (checkMechanic("actionSpecialDurationImmediate") && this.hitTargets.count)
       expireMyEffects.bind(this)(["1Hit"]);
     if (checkMechanic("actionSpecialDurationImmediate")) {
       expireMyEffects.bind(this)(["1Critical", "1Fumble"])
@@ -2605,7 +2708,7 @@ export class Workflow {
     return this.WorkflowState_DamageRollStarted;
   }
   async WorkflowState_DamageRollStarted(): Promise<WorkflowState> {
-    if (this.itemCardUuid) {
+    if (this.ownsCard) {
       await Workflow.removeItemCardButtons(this.itemCardUuid, { removeConfirmButtons: true });
     }
     if (!this.damageOnly && getActivityAutoTargetAction(this.activity) === "none" && activityHasAreaTarget(this.activity) && !this.activity.attack) {
@@ -2625,7 +2728,7 @@ export class Workflow {
     }
     await this.callMidiHooks("midi-qol.DamageRollComplete");
     if (this.aborted) return this.WorkflowState_Abort;
-    if (this.hitTargets?.size || this.hitTargetsEC?.size) expireMyEffects.bind(this)(["1Hit"]);
+    if (this.hitTargets?.count || this.hitTargetsEC?.count) expireMyEffects.bind(this)(["1Hit"]);
     expireMyEffects.bind(this)(["1Action", "1Attack", "1Spell", "1Critical", "1Fumble"]);
     await this.displayDamageRolls();
 
@@ -2723,7 +2826,7 @@ export class Workflow {
       await this.callMidiHooks("midi-qol.postCheckSaves");
       if (this.aborted) return this.WorkflowState_Abort;
       const saveDisplay = saveDisplayMode();
-      await Workflow.removeItemCardButtons(this.itemCardUuid as string, { removeDnd5eSaveButtons: configSettings.autoCheckSaves !== "none" });
+      if (this.ownsCard) await Workflow.removeItemCardButtons(this.itemCardUuid, { removeDnd5eSaveButtons: configSettings.autoCheckSaves !== "none" });
       await this.displaySaves(saveDisplay === "whisper");
     } else {// has saves but we are not checking so do nothing with the damage
       this.effectTargets = this.failedSaves;
@@ -3455,8 +3558,9 @@ export class Workflow {
   }
 
   /** The card's buttons removed as the workflow is finished */
+  /** Only the card's own workflow finishes it: a damage-only workflow adding to another use's card leaves that card alone */
   async completeCard() {
-    if (this.itemCardUuid && this.chatCard) {
+    if (this.ownsCard && this.chatCard) {
       await Workflow.removeItemCardButtons(this.itemCardUuid, { removeAllButtons: getRemoveAllButtons(this.activity), removeDnd5eSaveButtons: configSettings.autoCheckSaves !== "none", finished: true });
     }
   }
@@ -4232,12 +4336,13 @@ export class Workflow {
     }
   }
 
-  async triggerTargetMacros(triggerList: string[], targets: TokenDocumentSet | Set<Token.Implementation> = this.targets, options: { saved?: boolean } = {}) {
+  async triggerTargetMacros(triggerList: string[], targets: TokenDocumentSet | Set<TokenOrDocument> = this.targets, options: { saved?: boolean } = {}) {
     let results: Record<string, unknown[]> = {};
-    // Target macros run for the drawn targets: they are given the target's Token
-    for (let target of targets instanceof TokenDocumentSet ? targets.tokens : targets) {
-      results[target.document.uuid] = [];
-      let result = results[target.document.uuid];
+    // Every target, drawn or not: macros are given hookTarget's Token or TokenDocument
+    for (let target of targets instanceof TokenDocumentSet ? targets.documents : targets) {
+      const uuid = getTokenDocument(target)?.uuid ?? "";
+      results[uuid] = [];
+      let result = results[uuid];
       const actorOnUseMacros = target.actor?.flags?.[MODULE_ID]?.onUseMacroParts ?? new OnUseMacros();
       const wasAttacked = !!this.activity.attack;
       const wasHit = (this.activity ? wasAttacked : true) && (this.hitTargets?.has(target) || this.hitTargetsEC?.has(target));
@@ -5775,21 +5880,9 @@ export class Workflow {
       // Cover calculation from a point (coverOrigin, template center, etc.)
       if (configSettings.optionalRules.coverCalculation === "levelsautocover"
         && installedModules.get("levelsautocover")) {
-        moduleCoverBonus = computeCoverBonus({
-          center: position,
-          x: position.x,
-          y: position.y,
-          id: this.token?.id,
-          elevation: originElevation,
-          getCenterPoint() { return { x: position.x, y: position.y }; },
-          document: {
-            x: position.x,
-            y: position.y,
-            elevation: originElevation,
-            disposition: targetDocument?.disposition,
-            object: { id: this.token?.id },
-          }
-        } as unknown as Token, target, this.activity);
+        // From the template's origin, as a point (AutoCover's point source), the caster making it
+        moduleCoverBonus = computeCoverBonus(this.token, target, this.activity,
+          { origin: { x: position.x, y: position.y, elevation: originElevation } });
       } else if (configSettings.optionalRules.coverCalculation === "simbuls-cover-calculator"
         && installedModules.get("simbuls-cover-calculator") && getToken(target)) {
         const coverData = await globalThis.CoverCalculator.checkCoverViaCoordinates(
@@ -6697,7 +6790,7 @@ export class Workflow {
     // A creature rolling its own check or save (Hide, Search) rolls it with the keys held when it was used.
     const event = this.rollOptions.event as AugmentedEvent | undefined;
     if (event && target.actor?.uuid === this.actor?.uuid)
-      saveDetails.heldModifiers = { altKey: !!event.altKey, ctrlKey: !!event.ctrlKey, metaKey: !!event.metaKey, shiftKey: !!event.shiftKey };
+      saveDetails.heldModifiers = eventModifiers(event);
 
     // Trackers (advantage and roll modifiers) for each choice the roll offers: abilities for a save or plain check,
     // else the skills or tools, each rolled with its ability.
@@ -7062,7 +7155,7 @@ export class Workflow {
     func(data.roll);
   }
 
-  async callDamageHooksAndMacros(damages: DamageListEntry, token: Token.Implementation) {
+  async callDamageHooksAndMacros(damages: DamageListEntry, token: TokenOrDocument) {
     this.damageItem = damages;
     if (configSettings.allowUseMacro && !this.workflowOptions?.noTargetOnUseMacro && this.item.flags) {
       await this.triggerTargetMacros(["preTargetDamageApplication"], new Set([token]));
@@ -7073,14 +7166,14 @@ export class Workflow {
     const damagedAtZero = (damages.oldHP ?? 1) <= 0 && (damages.totalDamage ?? 0) > 0 && (damages.hpDamage ?? 0) >= 0;
     if ((damages.hpDamage !== 0 || damages.tempDamage > 0 || damagedAtZero) && (this.hitTargets.has(token) || this.hitTargetsEC.has(token) || this.otherActivity?.save || this.otherActivity?.check)) {
       let healedDamaged = damages.hpDamage < 0 ? "isHealed" : "isDamaged";
-      await asyncHooksCallAll(`midi-qol.${healedDamaged}`, token, { item: this.item, workflow: this, damageItem: damages, ditem: damages });
+      await asyncHooksCallAll(`midi-qol.${healedDamaged}`, hookTarget(token), { item: this.item, workflow: this, damageItem: damages, ditem: damages });
       const actorOnUseMacros = foundry.utils.getProperty(token.actor ?? {}, midiFlag(`onUseMacroParts`)) as OnUseMacros ?? new OnUseMacros();
       // It seems applyTokenDamageMany without a this gets through to here - so a silly guard in place TODO come back and fix this properly
       if (this.callMacros) await this.callMacros(this.item,
         actorOnUseMacros?.getMacros(healedDamaged),
         "TargetOnUse",
         healedDamaged,
-        { actor: token.actor, token: token });
+        { actor: token.actor, token: hookTarget(token) });
       healedDamaged = damages.hpDamage < 0 ? "isHealed" : "isDamaged";  //recalculate what the total damage and trigger the correct special duration expiration.
       const expiredEffects = getAppliedEffects(token?.actor, { includeEnchantments: true }).filter(ef => {
         const specialDuration = ef.flags?.dae?.specialDuration;
@@ -7157,10 +7250,6 @@ export class Workflow {
       if (flags[ability]) {
         const flagVal = await evalActivationCondition(this, flags[ability], token, { errorReturn: false });
         if (flagVal) return true;
-      }
-      // @ts-expect-error no dnd5e-types
-      if (this.actor.flags?.[MODULE_ID]?.sculptSpells && this.item.school === "evo" && this.preSelectedTargets.has(token)) {
-        return true;
       }
     }
     return false;

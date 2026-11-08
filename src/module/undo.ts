@@ -5,6 +5,7 @@ import { configSettings } from "./settings.js";
 import { getConcentrationEffect, getTokenDocument, isReactionItem } from "./utils.js";
 import { UndoData, Workflow } from "./Workflow.js";
 import { messagesFrom } from "./lib/cardState.js";
+import { TroubleShooter } from "./apps/TroubleShooter.js";
 
 export let undoDataQueue: UndoData[] = [];
 let startedUndoDataQueue: UndoData[] = [];
@@ -493,6 +494,31 @@ export async function removeChatCard(chatCard?: ChatMessage.Implementation) {
   if (chatCard) await removeChatCards([chatCard]);
 }
 
+/**
+ * dnd5e spends the slot, uses and resources inside Activity#use, before the card exists, so midi's snapshot already has
+ * them spent: refund what the card records as consumed, as its Refund button does. midi begins and ends concentration
+ * after the snapshot (deferredConcentration), which the restore undoes; a transform to a form begins it inside
+ * Activity#use, so the concentration the card records is ended here too.
+ */
+async function refundUse(card: ChatMessage.Implementation) {
+  // @ts-expect-error no dnd5e-types
+  const activity = card.getAssociatedActivity?.();
+  // @ts-expect-error no dnd5e-types
+  const { deltas, concentration } = card.system ?? {};
+  try {
+    if (deltas && activity?.refund) {
+      await activity.refund(deltas);
+      // An undo that marks the card (not deletes it) must not leave its Refund button able to refund again
+      // @ts-expect-error no dnd5e-types
+      await card.update({ "system.deltas": null });
+    }
+    if (concentration) await activity?.actor?.effects.get(concentration)?.delete();
+  } catch (err) {
+    TroubleShooter.recordError(err, "undo refund");
+    error("undo | refunding the use failed", err);
+  }
+}
+
 export async function undoWorkflow(undoData?: UndoData) {
   if (!undoData) return;
   log(`Undoing workflow for Player ${undoData.userName} Token: ${undoData.actorEntry?.actorData?.name} Item: ${undoData.itemName ?? ""}`)
@@ -505,10 +531,11 @@ export async function undoWorkflow(undoData?: UndoData) {
     await undoSingleTokenActor(undoEntry)
   };
   if (undoData.actorEntry) await undoSingleTokenActor(undoData.actorEntry);
+  const card = undoData.itemCardUuid ? fromUuidSync(undoData.itemCardUuid, { strict: false }) : undefined;
+  if (card instanceof ChatMessage) await refundUse(card);
   // The use's card and everything linked to it (saves, damage cards, notes, uses made from it), and anything recorded
   // that isn't linked.
   const messages = new Map<string, ChatMessage.Implementation>();
-  const card = undoData.itemCardUuid ? fromUuidSync(undoData.itemCardUuid, { strict: false }) : undefined;
   if (card instanceof ChatMessage) for (const message of linkedMessages(card)) messages.set(message.id!, message);
   for (const uuid of undoData.chatCardUuids ?? []) {
     const message = fromUuidSync(uuid, { strict: false });

@@ -18,6 +18,12 @@ export interface HeldKeys {
 
 const hasModifierKeys = (event: Event): event is AugmentedEvent => "shiftKey" in event;
 
+/** The modifier keys an event held, as plain data (stored, sent over a socket); `new KeyboardEvent("keydown", keys)` rebuilds one */
+export function eventModifiers(event: Event): { altKey: boolean, ctrlKey: boolean, metaKey: boolean, shiftKey: boolean } {
+  const keys = hasModifierKeys(event) ? event : undefined;
+  return { altKey: !!keys?.altKey, ctrlKey: !!keys?.ctrlKey, metaKey: !!keys?.metaKey, shiftKey: !!keys?.shiftKey };
+}
+
 export function heldKeys(eventOrNone: Event | null | undefined): HeldKeys {
   const event = eventOrNone && hasModifierKeys(eventOrNone) ? eventOrNone : undefined;
   return {

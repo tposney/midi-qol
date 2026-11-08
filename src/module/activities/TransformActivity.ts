@@ -1,3 +1,4 @@
+import { TokenDocumentSet } from "../lib/tokenDocumentSet.js";
 import { Activity } from "../../globals.js";
 import { debugEnabled, GameSystemConfig, i18nFormat, warn } from "../../midi-qol.js";
 import { replaceDefaultActivities, configSettings } from "../settings.js";
@@ -63,7 +64,9 @@ let defineMidiTransformActivityClass = <T extends Activity>(ActivityClass: T) =>
     }
 
     async transformActor(config: ActivityUseConfiguration, message: ChatMessage) {
-      const targets = Array.from(config.midiOptions?.targetsToUse ?? config.workflow?.targets ?? game.user?.targets ?? new Set());
+      // Every given target, drawn or not (only their actors are used)
+      const given = config.midiOptions?.targetsToUse ?? config.workflow?.targets ?? game.user?.targets ?? new Set();
+      const targets = given instanceof TokenDocumentSet ? given.documents : Array.from(given);
       if (!targets.length) {
         ui.notifications?.warn("DND5E.ActionWarningNoToken", { localize: true });
         return;

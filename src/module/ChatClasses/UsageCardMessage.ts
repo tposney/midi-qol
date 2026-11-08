@@ -41,8 +41,9 @@ export function midiButtonVisibility(message: Dnd5eChatMessage | undefined, acti
   // Confirmation holds the buttons only while pending; `progress.confirmed` alone does not mean the card is finished.
   const confirmEnabled = !!midi.confirmAttackDamage;
   const confirmPending = confirmEnabled && !progress.confirmed;
-  // midi's card actions dispatch through the activity: once its item is gone none of them can run.
-  const done = !!progress.allRemoved || !activity || !!message?.getFlag(MODULE_ID, "undone");
+  // midi's card actions dispatch through the activity: once its item is gone none of them can run (the stand-in
+  // #prepareBaseContext gives dnd5e for a deleted item has no item).
+  const done = !!progress.allRemoved || !activity?.item || !!message?.getFlag(MODULE_ID, "undone");
   const removeAll = done || getRemoveAllButtons(activity);
   // Attacks handed to one use per target: those cards attack, damage and apply effects.
   const split = !!progress.attacksSplit;
@@ -91,6 +92,11 @@ const COVER_ICONS: Record<string, string> = {
   total: "systems/dnd5e/icons/svg/statuses/cover-total.svg"
 };
 
+/** The token a save message was rolled for from the card's button (SaveActivity), whoever its speaker is */
+function saveMessageTarget(message: ChatMessage.Implementation): string | undefined {
+  return (message.getFlag(MODULE_ID, "targetUuid") as string | undefined) || undefined;
+}
+
 /**
  * A token's save (or check) roll for a usage card: one kept on the card (another module's, or one midi changed), else
  * the card's latest linked save or check message for the token; the one with midi's result when midi recorded one.
@@ -105,8 +111,8 @@ export function cardSaveRoll(card: ChatMessage.Implementation | null | undefined
   const record = recordFor(cardMidi(card).records, tokenUuid);
   const associated = (type: string) => (card as Dnd5eChatMessage).getAssociatedRolls?.(type) ?? [];
   const linked = [...associated("save"), ...associated("check")]
-    .filter(message => message.speaker?.token === tokenId
-      && (!message.speaker.scene || message.speaker.scene === sceneId))
+    .filter(message => saveMessageTarget(message) === tokenUuid || (!saveMessageTarget(message) && message.speaker?.token === tokenId
+      && (!message.speaker.scene || message.speaker.scene === sceneId)))
     .sort((a, b) => (a.timestamp ?? 0) - (b.timestamp ?? 0));
   const message = typeof record?.saveTotal === "number"
     ? linked.filter(m => m.rolls?.[0]?.total === record.saveTotal).at(-1) : linked.at(-1);
@@ -417,8 +423,8 @@ export function setupUsageCardMessage() {
       // Creatures that weren't targets, saving from the card's button
       if (fromButtons) {
         const listed = new Set(records.map(record => record.uuid));
-        const others = new Set((parent.getAssociatedRolls?.() ?? []).filter(m => ["save", "check"].includes(m.type as string) && m.speaker?.token)
-          .map(m => game.scenes?.get(m.speaker.scene ?? "")?.tokens.get(m.speaker.token ?? "")?.uuid).filter(uuid => uuid && !listed.has(uuid)) as string[]);
+        const others = new Set((parent.getAssociatedRolls?.() ?? []).filter(m => ["save", "check"].includes(m.type as string) && (saveMessageTarget(m) || m.speaker?.token))
+          .map(m => saveMessageTarget(m) ?? game.scenes?.get(m.speaker.scene ?? "")?.tokens.get(m.speaker.token ?? "")?.uuid).filter(uuid => uuid && !listed.has(uuid)) as string[]);
         for (const uuid of others) rows.push(await buttonRow(uuid));
       }
       return rows.filter(Boolean);

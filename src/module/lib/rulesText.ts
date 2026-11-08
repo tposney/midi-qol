@@ -15,18 +15,21 @@ const PLACEHOLDER = /No rules text \([\s\S]*?(?=<\/em>|<\/p>)/;
 type Match = "exact" | "otherRules" | "name";
 type IndexEntry = { _id: string; name: string; type: string; system?: { identifier?: string; source?: unknown } };
 
-const indexes = new Map<string, IndexEntry[] | null>();
+// Each pack's index, being read or read (concurrent fills share one read); a failed read isn't kept
+const indexes = new Map<string, Promise<IndexEntry[] | null>>();
+// Items being filled: one fill at a time per item, so concurrent triggers can't add the text twice
+const filling = new Set<string>();
 
 export function registerRulesTextSettings() {
   // Compendiums exist from setup on
   Hooks.once("setup", () => {
-    const choices: Record<string, string> = { "": i18n("midi-qol.RulesText.Compendium.None") };
+    const choices: Record<string, string> = { "": "midi-qol.RulesText.Compendium.None" };
     for (const pack of game.packs ?? []) {
       if (pack.documentName === "Item") choices[pack.collection] = `${pack.title} (${pack.collection})`;
     }
     game.settings.register(MODULE_ID, "rulesTextCompendium", {
-      name: i18n("midi-qol.RulesText.Compendium.Name"),
-      hint: i18n("midi-qol.RulesText.Compendium.Hint"),
+      name: "midi-qol.RulesText.Compendium.Name",
+      hint: "midi-qol.RulesText.Compendium.Hint",
       scope: "world",
       config: true,
       type: String,
@@ -61,7 +64,16 @@ export function lacksRulesText(item: Item.Implementation | undefined | null): bo
 
 /** Fill one item's rules text; returns the match found, or undefined (nothing changed). */
 export async function fillRulesText(item: Item.Implementation, { notify = false } = {}): Promise<Match | undefined> {
-  if (!lacksRulesText(item)) return;
+  if (!lacksRulesText(item) || filling.has(item.uuid)) return;
+  filling.add(item.uuid);
+  try {
+    return await fillFrom(item, notify);
+  } finally {
+    filling.delete(item.uuid);
+  }
+}
+
+async function fillFrom(item: Item.Implementation, notify: boolean): Promise<Match | undefined> {
   const found = await findRulesText(item);
   if (!found) {
     if (notify) ui.notifications?.warn(i18nFormat("midi-qol.RulesText.NotFound", { name: item.name }));
@@ -122,20 +134,26 @@ function sourcePacks(): CompendiumCollection<"Item">[] {
   return [...official, ...system, ...gm];
 }
 
-async function packIndex(pack: CompendiumCollection<"Item">): Promise<IndexEntry[] | null> {
-  if (indexes.has(pack.collection)) return indexes.get(pack.collection)!;
-  let entries: IndexEntry[] | null;
+function packIndex(pack: CompendiumCollection<"Item">): Promise<IndexEntry[] | null> {
+  let read = indexes.get(pack.collection);
+  if (!read) {
+    read = readIndex(pack);
+    indexes.set(pack.collection, read);
+    void read.then(entries => { if (!entries) indexes.delete(pack.collection); });
+  }
+  return read;
+}
+
+async function readIndex(pack: CompendiumCollection<"Item">): Promise<IndexEntry[] | null> {
   try {
     // system.source as a whole: a few packs store it as a number, which fails a system.source.rules index
     // @ts-expect-error no dnd5e-types
     const index = await pack.getIndex({ fields: ["system.identifier", "system.source"] });
-    entries = [...index.values()] as unknown as IndexEntry[];
+    return [...index.values()] as unknown as IndexEntry[];
   } catch (err) {
     console.warn(`midi-qol | rules text: could not index ${pack.collection}`, err);
-    entries = null;
+    return null;
   }
-  indexes.set(pack.collection, entries);
-  return entries;
 }
 
 async function findRulesText(item: Item.Implementation): Promise<{ doc: Item.Implementation; match: Match } | undefined> {

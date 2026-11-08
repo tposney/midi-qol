@@ -2,8 +2,7 @@ import type { MidiCardSection } from "../ChatClasses/UsageCardMessage.js";
 /**
  * The workflow's state on its usage card: `system.midi.state` (scalars) and `system.midi.records` (one record per
  * token, keyed by scene id then token id, as a duplicated scene keeps its token ids; a token set is the records with its
- * field set). Read back when a workflow is rebuilt from
- * its card.
+ * field set). Read back when a workflow is rebuilt from its card.
  */
 
 /**
@@ -26,11 +25,13 @@ export const STATE_KEYS = [
   "ammunitionData",
   // When the use started: the actor in a combat, and on its turn
   "inCombat",
-  "isTurn"
+  "isTurn",
+  // Concentration the use begins once it can no longer be cancelled (MidiActivityMixin)
+  "deferredConcentration"
 ] as const;
 export type StateKey = typeof STATE_KEYS[number];
 
-/** Workflow token sets: record field, and its old flag name (a uuid array). Macros change them, so they are stored. */
+/** Workflow token sets: record field, and its old flag name (a uuid array; `targets` was `{uuid, name}`). Macros change them, so they are stored. */
 export const RECORD_SETS = {
   targets: "targets",
   hit: "hitTargetUuids",
@@ -85,7 +86,8 @@ export function cardStateSchema() {
       damageOnly: bool(),
       otherConsumed: new ObjectField({ ...unset, nullable: true }), otherDeclined: bool(), otherScaling: num(),
       ammunitionData: new ObjectField(unset),
-      inCombat: bool(), isTurn: bool()
+      inCombat: bool(), isTurn: bool(),
+      deferredConcentration: new ObjectField({ ...unset, nullable: true })
     }, { required: false }),
     records: new TypedObjectField(new TypedObjectField(new SchemaField({
       uuid: new StringField({ required: true, blank: false }),
@@ -206,6 +208,12 @@ export function cardHitResult(message: ChatMessage.Implementation | undefined): 
   if (records.some(record => typeof record.hitClass === "string")) return records.some(record => record.hit || record.hitEC);
   const attack = attackRollOf(message) as { isSuccess?: boolean } | undefined;
   return attack?.isSuccess;
+}
+
+/** Its attack is rolled and the hits are checked but not yet worked out: the old flag GMOnlyAttackRoll (shown to the GM only meanwhile) */
+export function cardHitsPending(message: ChatMessage.Implementation | undefined, autoCheckHit: string): boolean {
+  if (autoCheckHit === "none" || !attackRollOf(message)) return false;
+  return !recordList(cardMidiState(message)?.records).some(record => typeof record.hitClass === "string");
 }
 
 /** The actor that used a card's activity: its own actor (dnd5e's), or the one a card stored (a damage-only workflow's) */

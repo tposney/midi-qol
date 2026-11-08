@@ -66,7 +66,7 @@ declare module "fvtt-types/configuration" {
       "dnd5e.applyDamage": (actor: Actor.Implementation, amount: number, options: DamageApplicationOptions) => void;
       // One target's hit result in checkHits, last: change targetAC (tested again) or the result (kept as set). A fumble
       // loses every hit later in the workflow, so making a hit of a fumble also clears isFumble.
-      "midi-qol.premades.checkHitTarget": (hitCheck: { workflow: unknown, target: Token.Implementation, attackTotal: number, targetAC: number, isHit: boolean, isHitEC: boolean, isCritical: boolean, isFumble: boolean }) => Promise<void> | void;
+      "midi-qol.premades.checkHitTarget": (hitCheck: { workflow: unknown, target: Token.Implementation | TokenDocument.Implementation, attackTotal: number, targetAC: number, isHit: boolean, isHitEC: boolean, isCritical: boolean, isFumble: boolean }) => Promise<void> | void;
       "dnd5e.calculateDamage": (actor: Actor.Implementation, damages: DamageDescription[], options: DamageApplicationOptions) => boolean | void;
       "dnd5e.postAbilityCheckRollConfiguration": (rolls: Roll[], config: RollProcessConfig, dialog: RollDialogConfig, message: RollMessageConfig) => boolean | void;
       "dnd5e.postAttackRollConfiguration": (rolls: Roll[], config: RollProcessConfig, dialog: RollDialogConfig, message: RollMessageConfig) => boolean | void;
@@ -141,6 +141,15 @@ declare module "fvtt-types/configuration" {
       "tidy5e-sheet.ready": (api: any) => void;
       "simplecover5eReady": () => void;
     }
+  }
+  interface ModuleConfig {
+    /** AutoCover 5.0.1+ (the parts midi uses) */
+    levelsautocover: {
+      api?: {
+        computeCover(attacker: TokenDocument.Implementation | object, target: TokenDocument.Implementation, options?: object): { percent: number, tier?: { id: string } };
+        area: { POINT_HEIGHT?: number, pointSource(scene: Scene.Implementation, point: { x: number, y: number, elevation: number }, caster?: TokenDocument.Implementation | null): object };
+      };
+    };
   }
   interface SettingConfig {
     "dnd5e.disableConcentration": boolean;
@@ -530,6 +539,8 @@ declare module "fvtt-types/configuration" {
         undone?: boolean;
         /** One of a card note's messages (MidiQOL.cardNoteMessageData): its role, for the note's renderer */
         cardNote?: { role?: string };
+        /** A save rolled from a usage card's button: the token it was rolled for */
+        targetUuid?: string;
         /** A concentration check request has been rolled */
         concentrationRolled?: boolean;
         /** An over-time roll request: the actor it is for, and the message mode it asks for */
