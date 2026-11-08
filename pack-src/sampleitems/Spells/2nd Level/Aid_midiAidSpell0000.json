@@ -272,7 +272,7 @@
   "img": "icons/magic/life/cross-flared-green.webp",
   "effects": [
     {
-      "name": "Level 2: +5 Max HP",
+      "name": "Aid",
       "img": "icons/magic/life/cross-flared-green.webp",
       "origin": "Compendium.dnd5e.spells24.Item.phbsplAid0000000",
       "transfer": false,
@@ -318,7 +318,8 @@
         "dae": {
           "raiseCurrentHp": [
             "RXk92d3oTLKt1lkW"
-          ]
+          ],
+          "stackable": "noneNameOnly"
         }
       },
       "_stats": {
@@ -338,7 +339,7 @@
       "_key": "!items.effects!midiAidSpell0000.XyGKCCrIhrFlixG8"
     },
     {
-      "name": "Level 3: +10 Max HP",
+      "name": "Aid",
       "img": "icons/magic/life/cross-flared-green.webp",
       "origin": "Compendium.dnd5e.spells24.Item.phbsplAid0000000",
       "transfer": false,
@@ -383,7 +384,8 @@
         "dae": {
           "raiseCurrentHp": [
             "eGPpbKj0BV1ZxHmN"
-          ]
+          ],
+          "stackable": "noneNameOnly"
         }
       },
       "_stats": {
@@ -404,7 +406,7 @@
       "_key": "!items.effects!midiAidSpell0000.cTNQ2KRJLj4CRpQJ"
     },
     {
-      "name": "Level 4: +15 Max HP",
+      "name": "Aid",
       "img": "icons/magic/life/cross-flared-green.webp",
       "origin": "Compendium.dnd5e.spells24.Item.phbsplAid0000000",
       "transfer": false,
@@ -449,7 +451,8 @@
         "dae": {
           "raiseCurrentHp": [
             "mA1X3j7mBAtLOu6T"
-          ]
+          ],
+          "stackable": "noneNameOnly"
         }
       },
       "_stats": {
@@ -470,7 +473,7 @@
       "_key": "!items.effects!midiAidSpell0000.6hOGzq87iQntkHE5"
     },
     {
-      "name": "Level 5: +20 Max HP",
+      "name": "Aid",
       "img": "icons/magic/life/cross-flared-green.webp",
       "origin": "Compendium.dnd5e.spells24.Item.phbsplAid0000000",
       "transfer": false,
@@ -515,7 +518,8 @@
         "dae": {
           "raiseCurrentHp": [
             "3kK8RQWBCPqAOMLI"
-          ]
+          ],
+          "stackable": "noneNameOnly"
         }
       },
       "_stats": {
@@ -536,7 +540,7 @@
       "_key": "!items.effects!midiAidSpell0000.Fs7zeTW4u9SvteWO"
     },
     {
-      "name": "Level 6: +25 Max HP",
+      "name": "Aid",
       "img": "icons/magic/life/cross-flared-green.webp",
       "origin": "Compendium.dnd5e.spells24.Item.phbsplAid0000000",
       "transfer": false,
@@ -581,7 +585,8 @@
         "dae": {
           "raiseCurrentHp": [
             "qZVw1I8q27THdBZ9"
-          ]
+          ],
+          "stackable": "noneNameOnly"
         }
       },
       "_stats": {
@@ -602,7 +607,7 @@
       "_key": "!items.effects!midiAidSpell0000.o1Gvp7nIrEHqdn3g"
     },
     {
-      "name": "Level 7: +30 Max HP",
+      "name": "Aid",
       "img": "icons/magic/life/cross-flared-green.webp",
       "origin": "Compendium.dnd5e.spells24.Item.phbsplAid0000000",
       "transfer": false,
@@ -647,7 +652,8 @@
         "dae": {
           "raiseCurrentHp": [
             "84YNUC4Kn5xrklcW"
-          ]
+          ],
+          "stackable": "noneNameOnly"
         }
       },
       "_stats": {
@@ -668,7 +674,7 @@
       "_key": "!items.effects!midiAidSpell0000.n4jjrd9bNOaDkos7"
     },
     {
-      "name": "Level 8: +35 Max HP",
+      "name": "Aid",
       "img": "icons/magic/life/cross-flared-green.webp",
       "origin": "Compendium.dnd5e.spells24.Item.phbsplAid0000000",
       "transfer": false,
@@ -713,7 +719,8 @@
         "dae": {
           "raiseCurrentHp": [
             "UVJPJfaGk6bxZOsA"
-          ]
+          ],
+          "stackable": "noneNameOnly"
         }
       },
       "_stats": {
@@ -734,7 +741,7 @@
       "_key": "!items.effects!midiAidSpell0000.EHMDA2J47jwUUTKu"
     },
     {
-      "name": "Level 9: +40 Max HP",
+      "name": "Aid",
       "img": "icons/magic/life/cross-flared-green.webp",
       "origin": "Compendium.dnd5e.spells24.Item.phbsplAid0000000",
       "transfer": false,
@@ -779,7 +786,8 @@
         "dae": {
           "raiseCurrentHp": [
             "cYNcQEtEfwX15OHi"
-          ]
+          ],
+          "stackable": "noneNameOnly"
         }
       },
       "_stats": {
@@ -808,7 +816,7 @@
   "flags": {
     "cat": {
       "automation": {
-        "version": "14.6.5"
+        "version": "14.6.9"
       }
     }
   },

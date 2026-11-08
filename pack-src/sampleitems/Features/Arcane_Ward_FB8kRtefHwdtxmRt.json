@@ -118,7 +118,7 @@
         "img": "icons/magic/control/debuff-chains-ropes-net-white.webp",
         "type": "script",
         "scope": "global",
-        "command": "const version = \"12.4.7\";\ntry {\n\tconst messageMode = \"gm\";\n\tasync function updateWardStrength(item, wardStrength) {\n\t\tactivity = item.system.activities?.contents[0];\n\t\treturn activity?.update({\"uses.spent\": activity.uses.max - wardStrength});\n\t}\n\n\tfunction getWardValue(item) {\n\t\tconst activity = macroItem.system?.activities.contents[0];\n\t\treturn {wardStrength: activity?.uses.value, wardStrengthMax: activity?.uses.max};\n\t}\n\n\tif (args[0] === \"on\") {\n\t\tlet wardStrengthMax = getWardValue(macroItem).wardStrengthMax;\n\t\tconst chatData = { content: `${macroItem.name} created ${wardStrengthMax}`, speaker};\n\t\tChatMessage.applyMode(chatData, messageMode);\n\t\tChatMessage.create(chatData);\n\t\treturn updateWardStrength(macroItem, wardStrengthMax);\n\t} else if (args[0] === \"off\") {\n\t\tconst chatData = { content: `${macroItem.name} dismissed`, speaker }\n\t\tChatMessage.applyMode(chatData, messageMode);\n\t\tChatMessage.create(chatData);\n\t\tawait updateWardStrength(macroItem, 0);\n\t} else if (\n\t\targs[0].macroPass === \"postActiveEffects\" &&\n\t\targs[0].itemData?.system.school === \"abj\" &&\n\t\targs[0].itemData?.system.level > 0) {\n\t\tlet { wardStrength, wardStrengthMax } = getWardValue(macroItem);\n\t\tlet newWardStrength = Math.min(wardStrength + args[0].spellLevel * 2, wardStrengthMax);\n\t\tconst speaker = ChatMessage.getSpeaker({ actor });\n\t\tconst chatData = {\n\t\t\tcontent: `${macroItem.name} gains ${args[0].spellLevel * 2} points to ${newWardStrength}/${wardStrengthMax}`,\n\t\t\tspeaker\n\t\t};\n\t\tChatMessage.applyMode(chatData, messageMode);\n\t\tChatMessage.create(chatData);\n\t\tif (wardStrength !== newWardStrength) {\n\t\t\tawait updateWardStrength(macroItem, newWardStrength);\n\t\t}\n\t} else if (args[0] === \"onUpdateActor\") {\n\t\tconst lastArg = args[args.length - 1];\n\t\tlet newHP = foundry.utils.getProperty(lastArg.updates, \"system.attributes.hp.value\");\n\t\tlet oldHP = lastArg.targetActor.system.attributes.hp.value;\n\n\t\tif (newHP && oldHP && newHP < oldHP) {\n\t\t\tconst damage = oldHP - newHP;\n\t\t\tlet { wardStrengthMax, wardStrength } = getWardValue(macroItem);\n\t\t\tconsole.error(\"ward strength\", wardStrengthMax, wardStrength)\n\t\t\tconst absorbed = Math.min(damage, wardStrength ?? 0);\n\t\t\tif (absorbed) {\n\t\t\t\tnewHP = newHP + absorbed;\n\t\t\t\tconst speaker = ChatMessage.getSpeaker({ actor: lastArg.targetActor });\n\t\t\t\tconst chatData = {\n\t\t\t\t\tcontent: `${lastArg.originItem.name} absorbs ${absorbed} of ${damage} points of damage.<br> Hp -> ${newHP}<br>Wardstrength -> ${wardStrength - absorbed}`,\n\t\t\t\t\tspeaker\n\t\t\t\t};\n\t\t\t\tChatMessage.applyMode(chatData, messageMode);\n\t\t\t\tChatMessage.create(chatData);\n\t\t\t\tlastArg.updates.system.attributes.hp.value = newHP;\n\t\t\t\tawait updateWardStrength(macroItem, wardStrength - absorbed);\n\t\t\t\t}\n\t\t\t}\n\t\treturn true;\n\t}\n} catch (err) {\n    console.error(`${macroItem.name} ${version}`, err);\n}",
+        "command": "const version = \"14.6.9\";\ntry {\n\tconst messageMode = \"gm\";\n\tasync function updateWardStrength(item, wardStrength) {\n\t\tactivity = item.system.activities?.contents[0];\n\t\treturn activity?.update({\"uses.spent\": activity.uses.max - wardStrength});\n\t}\n\n\tfunction getWardValue(item) {\n\t\tconst activity = macroItem.system?.activities.contents[0];\n\t\treturn {wardStrength: activity?.uses.value, wardStrengthMax: activity?.uses.max};\n\t}\n\n\tif (args[0] === \"on\") {\n\t\tlet wardStrengthMax = getWardValue(macroItem).wardStrengthMax;\n\t\tconst chatData = { content: `${macroItem.name} created ${wardStrengthMax}`, speaker};\n\t\tChatMessage.applyMode(chatData, messageMode);\n\t\tChatMessage.create(chatData);\n\t\treturn updateWardStrength(macroItem, wardStrengthMax);\n\t} else if (args[0] === \"off\") {\n\t\tconst chatData = { content: `${macroItem.name} dismissed`, speaker }\n\t\tChatMessage.applyMode(chatData, messageMode);\n\t\tChatMessage.create(chatData);\n\t\tawait updateWardStrength(macroItem, 0);\n\t} else if (args[0].macroPass === \"postActiveEffects\" && workflow.item?.uuid === macroItem.uuid && workflow.activity?.id === \"restoreWard00000\") {\n\t\t// Restore Ward: the spell slot spent, the base slot plus the levels it was raised by\n\t\tconst slotLevel = Number(workflow.activity.consumption?.targets?.[0]?.target || 1) + Number(workflow.chatCard?.system?.scaling ?? 0);\n\t\tlet { wardStrength, wardStrengthMax } = getWardValue(macroItem);\n\t\tconst newWardStrength = Math.min(wardStrength + slotLevel * 2, wardStrengthMax);\n\t\tconst chatData = { content: `${macroItem.name} gains ${slotLevel * 2} points to ${newWardStrength}/${wardStrengthMax}`, speaker: ChatMessage.getSpeaker({ actor }) };\n\t\tChatMessage.applyMode(chatData, messageMode);\n\t\tChatMessage.create(chatData);\n\t\tif (wardStrength !== newWardStrength) await updateWardStrength(macroItem, newWardStrength);\n\t} else if (\n\t\targs[0].macroPass === \"postActiveEffects\" &&\n\t\targs[0].itemData?.system.school === \"abj\" &&\n\t\targs[0].itemData?.system.level > 0) {\n\t\tlet { wardStrength, wardStrengthMax } = getWardValue(macroItem);\n\t\tlet newWardStrength = Math.min(wardStrength + args[0].spellLevel * 2, wardStrengthMax);\n\t\tconst speaker = ChatMessage.getSpeaker({ actor });\n\t\tconst chatData = {\n\t\t\tcontent: `${macroItem.name} gains ${args[0].spellLevel * 2} points to ${newWardStrength}/${wardStrengthMax}`,\n\t\t\tspeaker\n\t\t};\n\t\tChatMessage.applyMode(chatData, messageMode);\n\t\tChatMessage.create(chatData);\n\t\tif (wardStrength !== newWardStrength) {\n\t\t\tawait updateWardStrength(macroItem, newWardStrength);\n\t\t}\n\t} else if (args[0] === \"onUpdateActor\") {\n\t\tconst lastArg = args[args.length - 1];\n\t\tlet newHP = foundry.utils.getProperty(lastArg.updates, \"system.attributes.hp.value\");\n\t\tlet oldHP = lastArg.targetActor.system.attributes.hp.value;\n\n\t\tif (newHP && oldHP && newHP < oldHP) {\n\t\t\tconst damage = oldHP - newHP;\n\t\t\tlet { wardStrengthMax, wardStrength } = getWardValue(macroItem);\n\t\t\tconst absorbed = Math.min(damage, wardStrength ?? 0);\n\t\t\tif (absorbed) {\n\t\t\t\tnewHP = newHP + absorbed;\n\t\t\t\tconst speaker = ChatMessage.getSpeaker({ actor: lastArg.targetActor });\n\t\t\t\tconst chatData = {\n\t\t\t\t\tcontent: `${lastArg.originItem.name} absorbs ${absorbed} of ${damage} points of damage.<br> Hp -> ${newHP}<br>Wardstrength -> ${wardStrength - absorbed}`,\n\t\t\t\t\tspeaker\n\t\t\t\t};\n\t\t\t\tChatMessage.applyMode(chatData, messageMode);\n\t\t\t\tChatMessage.create(chatData);\n\t\t\t\tlastArg.updates.system.attributes.hp.value = newHP;\n\t\t\t\tawait updateWardStrength(macroItem, wardStrength - absorbed);\n\t\t\t\t}\n\t\t\t}\n\t\treturn true;\n\t}\n} catch (err) {\n    console.error(`${macroItem.name} ${version}`, err);\n}",
         "author": "Zl1BOUaPLwDEujaL",
         "ownership": {
           "default": 3
@@ -141,21 +141,21 @@
     },
     "cat": {
       "automation": {
-        "version": "14.6.5"
+        "version": "14.6.9"
       }
     }
   },
   "img": "icons/magic/control/debuff-chains-ropes-net-white.webp",
   "system": {
     "description": {
-      "value": "<div class=\"cat-description\"><p><em>midi-qol: Create Ward makes the ward, its hit points held as the activity's uses. Damage you take is absorbed by the ward first; casting an abjuration spell of 1st level or higher restores twice the spell's level. Its messages are whispered to the GM.</em></p><p><em>No rules text (not SRD; Player's Handbook (2014)): give the character your own copy and apply this automation to it with CAT's medkit, which keeps your copy's description.</em></p></div>",
+      "value": "<div class=\"cat-description\"><p><em>midi-qol: Create Ward makes the ward, its hit points held as the activity's uses. Damage you take is absorbed by the ward first; casting an Abjuration spell with a spell slot restores twice the spell's level, and Restore Ward (a bonus action) spends a spell slot to restore twice the slot's level. Its messages are whispered to the GM.</em></p><p><em>No rules text (not SRD; Player's Handbook): give the character your own copy and apply this automation to it with CAT's medkit, which keeps your copy's description.</em></p></div>",
       "chat": ""
     },
     "source": {
       "custom": "midi-qol sample",
       "revision": 1,
-      "rules": "2014",
-      "book": "Player's Handbook (2014)",
+      "rules": "2024",
+      "book": "Player's Handbook",
       "page": "",
       "license": ""
     },
@@ -251,6 +251,119 @@
         },
         "name": "Create Ward",
         "sort": 0,
+        "useConditionText": "",
+        "effectConditionText": "",
+        "macroData": {
+          "name": "",
+          "command": ""
+        },
+        "ignoreTraits": {
+          "idi": false,
+          "idr": false,
+          "idv": false,
+          "ida": false
+        },
+        "midiProperties": {
+          "forceDialog": false,
+          "confirmTargets": "default",
+          "automationOnly": false,
+          "identifier": "",
+          "ignoreTraits": [],
+          "triggeredActivityId": "none",
+          "triggeredActivityConditionText": "",
+          "triggeredActivityTargets": "targets",
+          "triggeredActivityRollAs": "self",
+          "autoTargetType": "any",
+          "autoTargetAction": "default",
+          "otherActivityCompatible": true,
+          "displayActivityName": false,
+          "rollMode": "default",
+          "chooseEffects": false
+        },
+        "useConditionReason": "",
+        "otherActivityId": "",
+        "isOverTimeFlag": false,
+        "overTimeProperties": {
+          "saveRemoves": true,
+          "preRemoveConditionText": "",
+          "postRemoveConditionText": ""
+        }
+      },
+      "restoreWard00000": {
+        "_id": "restoreWard00000",
+        "type": "utility",
+        "activation": {
+          "type": "bonus",
+          "value": 1,
+          "condition": "",
+          "override": false
+        },
+        "consumption": {
+          "targets": [
+            {
+              "type": "spellSlots",
+              "value": "1",
+              "target": "1",
+              "scaling": {
+                "mode": "level",
+                "formula": ""
+              }
+            }
+          ],
+          "scaling": {
+            "allowed": true,
+            "max": "9"
+          },
+          "spellSlot": true
+        },
+        "description": {
+          "chatFlavor": ""
+        },
+        "duration": {
+          "concentration": false,
+          "value": "",
+          "units": "disp",
+          "special": "",
+          "override": false
+        },
+        "effects": [],
+        "range": {
+          "units": "self",
+          "special": "",
+          "override": false
+        },
+        "target": {
+          "template": {
+            "count": "",
+            "contiguous": false,
+            "type": "",
+            "size": "",
+            "width": "",
+            "height": "",
+            "units": ""
+          },
+          "affects": {
+            "count": "",
+            "type": "self",
+            "choice": false,
+            "special": ""
+          },
+          "prompt": false,
+          "override": false
+        },
+        "uses": {
+          "spent": 0,
+          "max": "",
+          "recovery": []
+        },
+        "roll": {
+          "formula": "",
+          "name": "",
+          "prompt": false,
+          "visible": false
+        },
+        "name": "Restore Ward",
+        "sort": 100000,
         "useConditionText": "",
         "effectConditionText": "",
         "macroData": {

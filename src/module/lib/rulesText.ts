@@ -4,8 +4,8 @@ import { configSettings } from "../settings.js";
 /**
  * Rules text for midi's non-SRD sample items. Their description is midi's automation notes plus a "No rules text (not
  * SRD; <book>)" paragraph; the text is copied from the world's own content: official modules (PHB, DMG, Tasha's...),
- * then dnd5e's SRD, then a GM chosen compendium. A match is the same type and identifier in the same ruleset, then in
- * the other ruleset (noted), then the same type and name (noted).
+ * then dnd5e's SRD, then a GM chosen compendium. A match is the same type and identifier (a blank one is dnd5e's, made from
+ * the name) in the same ruleset, then in the other ruleset (noted), then the same type and name (noted).
  */
 
 // The "No rules text (not SRD; <book>)..." sentence, alone in its paragraph or after midi's notes
@@ -21,22 +21,6 @@ const indexes = new Map<string, Promise<IndexEntry[] | null>>();
 const filling = new Set<string>();
 
 export function registerRulesTextSettings() {
-  // Compendiums exist from setup on
-  Hooks.once("setup", () => {
-    const choices: Record<string, string> = { "": "midi-qol.RulesText.Compendium.None" };
-    for (const pack of game.packs ?? []) {
-      if (pack.documentName === "Item") choices[pack.collection] = `${pack.title} (${pack.collection})`;
-    }
-    game.settings.register(MODULE_ID, "rulesTextCompendium", {
-      name: "midi-qol.RulesText.Compendium.Name",
-      hint: "midi-qol.RulesText.Compendium.Hint",
-      scope: "world",
-      config: true,
-      type: String,
-      choices,
-      default: ""
-    });
-  });
   Hooks.on("createItem", (item: Item.Implementation, _options: unknown, userId: string) => {
     if (userId !== game.user?.id || !(item.parent instanceof Actor) || !lacksRulesText(item)) return;
     if (!configSettings.rulesTextFill) return;
@@ -53,6 +37,15 @@ export function registerRulesTextSettings() {
       onClick: () => fillRulesText(item, { notify: true })
     });
   });
+}
+
+/** The Item compendiums a GM can choose for missing rules text (Misc tab), with None first */
+export function rulesTextCompendiumChoices(): Record<string, string> {
+  const choices: Record<string, string> = { "": "midi-qol.RulesText.Compendium.None" };
+  for (const pack of game.packs ?? []) {
+    if (pack.documentName === "Item") choices[pack.collection] = `${pack.title} (${pack.collection})`;
+  }
+  return choices;
 }
 
 /** A midi sample item whose description says it has no rules text. */
@@ -129,7 +122,7 @@ function sourcePacks(): CompendiumCollection<"Item">[] {
   const items = [...(game.packs ?? [])].filter(pack => pack.documentName === "Item") as CompendiumCollection<"Item">[];
   const official = items.filter(pack => pack.metadata.packageType === "module" && pack.metadata.packageName.startsWith("dnd-"));
   const system = items.filter(pack => pack.metadata.packageType === "system");
-  const chosen = game.settings.settings.has(`${MODULE_ID}.rulesTextCompendium`) ? game.settings.get(MODULE_ID, "rulesTextCompendium") : "";
+  const chosen = configSettings.rulesTextCompendium ?? "";
   const gm = items.filter(pack => chosen && pack.collection === chosen);
   return [...official, ...system, ...gm];
 }
@@ -156,9 +149,14 @@ async function readIndex(pack: CompendiumCollection<"Item">): Promise<IndexEntry
   }
 }
 
+/** An item's identifier as dnd5e reads it: the one set, else the one dnd5e makes from its name (shown greyed on the sheet) */
+function identifierOf(stored: string | undefined, name: string): string {
+  return stored || globalThis.dnd5e.utils.formatIdentifier(name);
+}
+
 async function findRulesText(item: Item.Implementation): Promise<{ doc: Item.Implementation; match: Match } | undefined> {
   //@ts-expect-error no dnd5e types
-  const identifier: string | undefined = item.system.identifier;
+  const identifier = identifierOf(item.system.identifier, item.name);
   //@ts-expect-error no dnd5e types
   const rules: string | undefined = item.system.source?.rules;
   const name = item.name.toLowerCase();
@@ -166,8 +164,8 @@ async function findRulesText(item: Item.Implementation): Promise<{ doc: Item.Imp
   for (const pack of sourcePacks()) {
     for (const entry of await packIndex(pack) ?? []) {
       if (entry.type !== item.type) continue;
-      if (identifier && entry.system?.identifier === identifier) {
-        const source = entry.system.source;
+      if (identifier && identifierOf(entry.system?.identifier, entry.name) === identifier) {
+        const source = entry.system?.source;
         const entryRules = typeof source === "object" && source ? (source as { rules?: string }).rules : undefined;
         candidates[!rules || !entryRules || entryRules === rules ? "exact" : "otherRules"].push([pack, entry]);
       } else if (entry.name.toLowerCase() === name) candidates.name.push([pack, entry]);

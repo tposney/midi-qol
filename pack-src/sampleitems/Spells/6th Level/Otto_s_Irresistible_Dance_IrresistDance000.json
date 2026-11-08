@@ -1,10 +1,10 @@
 {
-  "name": "Irresistible Dance",
+  "name": "Otto's Irresistible Dance",
   "type": "spell",
   "img": "icons/magic/control/voodoo-doll-pain-damage-green.webp",
   "effects": [
     {
-      "name": "Irresistible Dance",
+      "name": "Otto's Irresistible Dance",
       "img": "icons/magic/control/voodoo-doll-pain-damage-green.webp",
       "origin": "Item.IrresistDance000",
       "transfer": false,
@@ -224,7 +224,7 @@
     },
     "cat": {
       "automation": {
-        "version": "14.6.5"
+        "version": "14.6.9"
       }
     }
   },

@@ -425,7 +425,8 @@ With dnd5e concentration tracking disabled the tab shows only a notice; midi's c
 | Export/Import midi-qol settings to/from json file | Buttons to save or load all midi-qol settings |
 | Activity Prefix | Prefix midi-qol activity names with Midi. Requires reload |
 | Condition Editor | Show condition editor button on condition fields in activity sheets (default on) |
-| Fill in missing rules text | When a midi sample item for content outside the SRD (no rules text of its own) is added to an actor, copy its text from the world's official D&D modules (Player's Handbook, Tasha's…), then the SRD, then the *Rules text compendium* module setting; the item notes where the text came from (default on). The item sheet's *Fill in rules text* button and the TroubleShooter's Auto Fix (every item in the world) work whatever this is set to |
+| Fill in missing rules text | When a midi sample item for content outside the SRD (no rules text of its own) is added to an actor, copy its text from the world's official D&D modules (Player's Handbook, Tasha's…), then the SRD, then the *Rules text compendium* (below); the item notes where the text came from (default on). The item sheet's *Fill in rules text* button and the TroubleShooter's Auto Fix (every item in the world) work whatever this is set to |
+| Rules text compendium | An Item compendium of your own to take missing rules text from when the official modules and the SRD don't have it (default None). Items are matched by type and identifier, then by name. See [Rules text for sample items](#rules-text-for-sample-items) |
 | Lowest User role for Item's properties | Lowest user role that can access an item's midi-qol properties tab. Requires reload |
 | Add actor on use macro to sheet | Add actor on use macro field to sheet |
 | Add item on use macro to sheet | Add item on use macro field to sheet |
@@ -446,6 +447,46 @@ With dnd5e concentration tracking disabled the tab shows only a notice; midi's c
 | Enable midi-qol custom sounds | Override system sounds; configure them with "Configure Midi Custom Sounds" (see [Custom Sounds](#custom-sounds)) |
 
 Roll statistics (Keep Roll Statistics, Save statistics Every, Player statistics only) are set in the **Show Roll Statistics** app (Configure Settings → midi-qol). (Revived and enhanced in 13.0.43)
+
+### Rules text for sample items
+
+Midi's sample items include automations for content that isn't in the SRD (Toll the Dead, Metamagic Adept, Arcane Ward, …). Midi can't ship their rules text, so their description holds only midi's automation notes and a line saying the rules text is missing. When such an item is added to an actor, midi fills the description in from content you already have in your world.
+
+**Where the text comes from**, in this order:
+1. Your official D&D modules: the Player's Handbook, Tasha's Cauldron of Everything and the others (modules whose id starts with `dnd-`).
+2. The dnd5e system's own compendiums (the SRD).
+3. The *Rules text compendium* you choose on the Misc tab, for anything the first two don't have.
+
+**How an item is matched:**
+- The same item type (spell, feat, …) and the same identifier (`system.identifier`, shown on the item sheet's details as *Identifier*, for example `toll-the-dead`; a blank identifier counts as the one dnd5e makes from the item's name). An item for the same rules version (2014 or 2024) is preferred; one for the other version is used if nothing else matches, and the item's notes say so.
+- Otherwise, the same item type and the same name, ignoring case; the notes say it was matched by name.
+
+The matching item's description replaces the placeholder, midi's automation notes are kept after it, and a line says which compendium the text came from (with a link to the entry).
+
+**Setting up a rules text compendium.** Use one when you own the rules text in some other form: your own homebrew copies, a purchased module that isn't one of the official D&D modules, or text you type in yourself.
+1. In the Compendium Packs sidebar, create a compendium of type **Item** (or use an existing Item compendium, in your world or in a module).
+2. Add an item for each sample item you want filled: drag it in from wherever you have it, or create it. Set its entries as in the table below.
+3. On midi's config panel, Misc tab, choose the compendium in *Rules text compendium*.
+
+What each entry in the compendium needs:
+
+| Field | Required | What to set |
+|---|---|---|
+| Item type | Yes | The same type as the midi sample item: Spell for Toll the Dead, Feature for Metamagic Adept, and so on. An entry of another type is never matched. |
+| Identifier (`system.identifier`, item sheet: Details tab, *Identifier*) | Yes | The same identifier as the midi sample item (for example `toll-the-dead`). Left blank, the field shows, greyed, the identifier dnd5e makes from the item's name, and midi matches on that: an entry named exactly like the sample item ("Toll the Dead") needs nothing typed here. dnd5e lowercases the name, drops brackets and punctuation and joins the words with hyphens, so "Detect Magic (Vision)" gives `detect-magic-vision`. Type one in when the names differ. |
+| Name | No | Any name, if the identifier is typed in. With a blank identifier, the name makes the identifier, so it must match the sample item's name. As a last resort an entry with the same name (case doesn't matter) is used even when the identifiers differ; the item's notes then say it was matched by name. |
+| Description (`system.description.value`, item sheet: Description tab) | Yes | The full rules text, as you want it shown on the item. An entry with an empty description is skipped. |
+| Rules version (`system.source.rules`, item sheet: Description tab, *Source*, the cog button (*Configure Source*) → *Rules*) | No | 2014 or 2024. When set on both, an entry for the sample item's version is preferred; one for the other version is still used if nothing else matches, and the notes say so. |
+
+Nothing else on the entry is used: only its description is copied. The sample item keeps its own activities, effects, macros and other data.
+
+**When it happens:**
+- Automatically, when a sample item without its rules text is added to an actor, while *Fill in missing rules text* (Misc tab, on by default) is on.
+- For an item already on an actor or in the Items directory: the *Fill in rules text* button in the item sheet's header.
+- For every item in the world at once: the TroubleShooter's Auto Fix, which also lists the items no source had text for.
+- From a macro: `await MidiQOL.fillRulesText(item)`.
+
+An item that already has its rules text is never changed. Turn *Fill in missing rules text* off if another module fills the text in; the button and the Auto Fix still work.
 
 ## Mechanics Tab
 

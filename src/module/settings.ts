@@ -112,6 +112,7 @@ class ConfigSettings {
   activityNamePrefix: boolean = true;
   conditionEditorEnabled: boolean = true;
   rulesTextFill: boolean = true;
+  rulesTextCompendium: string = "";
   activationAutomation: string = "chat";
   midiWoundedCondition: string = "none";
   midiDeadCondition: string = "none";

@@ -36,6 +36,13 @@
         configSettings.rulesTextFill}} />
         <div class="notes midi-qol-faint">{{{localize "midi-qol.RulesText.Setting.Hint"}}}</div>
     </div>
+    <div class="form-group rulesTextCompendium">
+        <label>{{localize "midi-qol.RulesText.Compendium.Name"}}</label>
+        <select name="rulesTextCompendium" data-dtype="String">
+            {{selectOptions rulesTextCompendiumOptions selected=configSettings.rulesTextCompendium localize=true}}
+        </select>
+        <div class="notes midi-qol-faint">{{{localize "midi-qol.RulesText.Compendium.Hint"}}}</div>
+    </div>
     <div class="form-group midiPropertiesTab">
         <label>{{localize "midi-qol.MidiPropertiesTab.Name"}}</label>
         <select name="midiPropertiesTabRole" data-dtype="String">

@@ -61,7 +61,7 @@ const LEGACY_CARD_FLAGS: Record<string, [string, (workflow: Workflow) => unknown
 let readingLegacyFlag = false;
 
 const warnGMOnly = () => foundry.utils.logCompatibilityWarning("midi-qol | a usage card's flags.midi-qol.GMOnlyAttackRoll is deprecated: the attack is shown to the GM only while MidiQOL.Workflow.getWorkflow(card.uuid) checks hits.",
-  { since: "14.6.9", until: "15.0.0", once: true });
+  { since: "14.6.9", until: "14.8.0", once: true });
 
 /** The old keys as getters reading the card's workflow (Workflow.cardView), each read warning that it is deprecated */
 function defineLegacyCardFlags(flags: Record<string, unknown>, cardUuid: string) {

@@ -94,15 +94,6 @@
       "type": "ActiveEffect",
       "system": "dnd5e",
       "lang": []
-    },
-    {
-      "name": "midiqol-sample-summons",
-      "label": "MidiQOL Sample Summons",
-      "path": "./packs/summons",
-      "module": "world",
-      "type": "Actor",
-      "system": "dnd5e",
-      "lang": []
     }
   ],
   "packFolders": [
@@ -110,8 +101,7 @@
       "name": "Midi Samples",
       "packs": [
         "midiqol-sample-items",
-        "midiqol-active-effects",
-        "midiqol-sample-summons"
+        "midiqol-active-effects"
       ]
     }
   ],

@@ -218,7 +218,7 @@ function addedByOther(roll: Roll, workflowId: string): boolean {
 class WorkflowsCopy extends Map<string, Workflow> {
   #filled = false;
   #warn() {
-    if (this.#filled) foundry.utils.logCompatibilityWarning("midi-qol | Workflow.workflows is a copy: changing it changes nothing. Use MidiQOL.Workflow.addWorkflow / removeWorkflow.", { since: "14.6.9", until: "15.0.0", once: true });
+    if (this.#filled) foundry.utils.logCompatibilityWarning("midi-qol | Workflow.workflows is a copy: changing it changes nothing. Use MidiQOL.Workflow.addWorkflow / removeWorkflow.", { since: "14.6.9", until: "14.8.0", once: true });
   }
   filled(): this { this.#filled = true; return this; }
   override set(key: string, value: Workflow): this { this.#warn(); return super.set(key, value); }

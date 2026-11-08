@@ -881,7 +881,10 @@
       "system": {
         "changes": []
       },
-      "duration": {},
+      "duration": {
+        "value": 1,
+        "units": "rounds"
+      },
       "flags": {
         "dae": {
           "specialDuration": [
@@ -912,7 +915,10 @@
       "system": {
         "changes": []
       },
-      "duration": {},
+      "duration": {
+        "value": 1,
+        "units": "rounds"
+      },
       "flags": {
         "dae": {
           "specialDuration": [
@@ -943,7 +949,10 @@
       "system": {
         "changes": []
       },
-      "duration": {},
+      "duration": {
+        "value": 1,
+        "units": "rounds"
+      },
       "flags": {
         "dae": {
           "specialDuration": [
@@ -974,7 +983,10 @@
       "system": {
         "changes": []
       },
-      "duration": {},
+      "duration": {
+        "value": 1,
+        "units": "rounds"
+      },
       "flags": {
         "dae": {
           "specialDuration": [
@@ -1005,7 +1017,10 @@
       "system": {
         "changes": []
       },
-      "duration": {},
+      "duration": {
+        "value": 1,
+        "units": "rounds"
+      },
       "flags": {
         "dae": {
           "specialDuration": [
@@ -1036,7 +1051,7 @@
     "dnd5e": {},
     "cat": {
       "automation": {
-        "version": "14.6.5"
+        "version": "14.6.9"
       }
     }
   },

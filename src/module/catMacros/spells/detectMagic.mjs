@@ -1,4 +1,4 @@
-import {effectUtils, tokenUtils} from '../proxy.mjs';
+import {automationUtils, documentUtils, effectUtils, tokenUtils} from '../proxy.mjs';
 // Casting whispers the caster whether it senses magic within 30 feet; the Sense Magic activity (identifier
 // sense-magic, the spell's Magic action) the specifics that walls blocking sight don't hide: each creature's magic
 // items by kind (a longsword, a potion: never the item's name), the magical effects on it (marked magical, or from a
@@ -6,12 +6,18 @@ import {effectUtils, tokenUtils} from '../proxy.mjs';
 // or a magic item, or marked flags.midi-qol.magical (flags.midi-qol.magicSchool for its school). A creature the caster
 // can't see (invisible, hidden) only as an unseen creature radiating magic; tokens the GM has hidden are not reported.
 // Detect Magic (Vision) (flags.midi-qol.detectMagic.vision): Sense Magic also gives the caster Magic Sight until the end
-// of the turn or 10 seconds: the GM and the caster's owners see rings around the visible creatures and the areas that
+// of the turn or after the seconds set in its CAT configuration (15 by default): the GM and the caster's owners see rings around the visible creatures and the areas that
 // bear magic, one per colour (a spell school, or magic items), brighter for higher spell levels and rarer items
 // (magicSight.ts draws them).
 const MODULE = 'midi-qol';
 const RANGE = 30;
-const SIGHT_MS = 10000;
+// CAT automation config by item identifier (catIntegration's automationInfo): how long Magic Sight lasts out of combat
+export const detectMagicConfig = {
+    'detect-magic-vision': {
+        sightSeconds: {default: 15, type: 'number', label: 'Magic Sight duration (seconds)', category: 'mechanics'}
+    }
+};
+const sightSeconds = item => Number(automationUtils.getConfigValue(item, 'sightSeconds') ?? detectMagicConfig[documentUtils.getIdentifier(item)]?.sightSeconds?.default ?? 15);
 const SCHOOL_COLORS = {abj: 0x4da6ff, con: 0xffd84d, div: 0xe8e8ff, enc: 0xff6ec7, evo: 0xff4d4d, ill: 0xb04dff, nec: 0x3cb371, trs: 0xff9f40};
 const ITEM_COLOR = 0x40e0d0;
 const OTHER_COLOR = 0xffffff;
@@ -112,9 +118,9 @@ async function magicSight(actor, item, {creatures, areas}) {
         img: item.img,
         origin: item.uuid,
         description: '<p>Auras around the visible creatures and areas that bear magic, coloured by school (turquoise for magic items) and brighter for greater magic.</p>',
-        // Core's turnEnd: the end of this turn (the creature's, in combat); magicSight.ts ends it after 10 seconds.
+        // Core's turnEnd: the end of this turn (the creature's, in combat); magicSight.ts ends it after the configured seconds.
         duration: {expiry: 'turnEnd'},
-        flags: {[MODULE]: {magicSight: {expires: Date.now() + SIGHT_MS, entries}}}
+        flags: {[MODULE]: {magicSight: {expires: Date.now() + sightSeconds(item) * 1000, entries}}}
     }]);
 }
 async function senseMagic({document: item, workflow}) {

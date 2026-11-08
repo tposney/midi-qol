@@ -11,7 +11,7 @@
       "book": "SRD 5.1",
       "page": "",
       "license": "CC-BY-4.0",
-      "rules": "2014",
+      "rules": "2024",
       "revision": 1
     },
     "uses": {
@@ -192,7 +192,7 @@
     },
     "cat": {
       "automation": {
-        "version": "14.6.8"
+        "version": "14.6.9"
       }
     }
   },

@@ -2,7 +2,7 @@
   "name": "Detect Magic (Vision)",
   "system": {
     "description": {
-      "value": "<p>For the duration, you sense the presence of magical effects within 30 feet of yourself. If you sense such effects, you can take the Magic action to see a faint aura around any visible creature or object in the area that bears the magic, and if an effect was created by a spell, you learn the spell's school of magic.</p><p>The spell is blocked by 1 foot of stone, dirt, or wood; 1 inch of metal; or a thin sheet of lead.</p><div class=\"cat-description\"><p><em>midi-qol: only you get the effect. Casting tells you whether you sense magic within 30 feet. The Sense Magic action (the spell's Magic action) whispers you the specifics and gives you Magic Sight until the end of the turn (or 10 seconds): you, and the GM, see rings around the visible creatures and the areas within 30 feet that bear magic, not behind walls that block sight. One ring per colour: a spell school's (abjuration blue, conjuration yellow, divination silver, enchantment pink, evocation red, illusion violet, necromancy green, transmutation orange) or turquoise for magic items; brighter and wider for higher spell levels and rarer items, the brightest innermost. A variant of the Detect Magic sample: add it from the compendium (CAT doesn't offer it in place of Detect Magic).</em></p><p><em>Automation requires Coven's Automation Toolkit (CAT).</em></p></div>",
+      "value": "<p>For the duration, you sense the presence of magical effects within 30 feet of yourself. If you sense such effects, you can take the Magic action to see a faint aura around any visible creature or object in the area that bears the magic, and if an effect was created by a spell, you learn the spell's school of magic.</p><p>The spell is blocked by 1 foot of stone, dirt, or wood; 1 inch of metal; or a thin sheet of lead.</p><div class=\"cat-description\"><p><em>midi-qol: only you get the effect. Casting tells you whether you sense magic within 30 feet. The Sense Magic action (the spell's Magic action) whispers you the specifics and gives you Magic Sight until the end of the turn (or 15 seconds (Duration in its CAT configuration)): you, and the GM, see rings around the visible creatures and the areas within 30 feet that bear magic, not behind walls that block sight. One ring per colour: a spell school's (abjuration blue, conjuration yellow, divination silver, enchantment pink, evocation red, illusion violet, necromancy green, transmutation orange) or turquoise for magic items; brighter and wider for higher spell levels and rarer items, the brightest innermost. A variant of the Detect Magic sample: add it from the compendium (CAT doesn't offer it in place of Detect Magic).</em></p><p><em>Automation requires Coven's Automation Toolkit (CAT).</em></p></div>",
       "chat": ""
     },
     "source": {
@@ -433,7 +433,7 @@
         ]
       },
       "automation": {
-        "version": "14.6.8"
+        "version": "14.6.9"
       }
     },
     "midi-qol": {

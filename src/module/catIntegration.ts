@@ -2,6 +2,7 @@ import { MODULE_ID } from "../midi-qol.js";
 import { addNotes } from "./catMacros/automationNotes.mjs";
 import { registerCATMacros } from "./catMacros/macros.mjs";
 import { infernalWoundConfig } from "./catMacros/features/infernalWound.mjs";
+import { detectMagicConfig } from "./catMacros/spells/detectMagic.mjs";
 
 /** The last CAT whose getOriginActivitySync reads `effects` on a cast activity, which has none on dnd5e 6. */
 const CAT_CAST_ACTIVITY_FIX_MAX = "0.1.7";
@@ -36,7 +37,7 @@ function setupCATCastActivityFix() {
  * source type never matches a player's class feature.
  */
 // Automations with configuration options (the Cat Kit's Configuration), by item identifier
-const AUTOMATION_CONFIG: Record<string, object> = { ...infernalWoundConfig };
+const AUTOMATION_CONFIG: Record<string, object> = { ...infernalWoundConfig, ...detectMagicConfig };
 
 function automationInfo(entry): object {
   const automation = entry.flags?.cat?.automation;

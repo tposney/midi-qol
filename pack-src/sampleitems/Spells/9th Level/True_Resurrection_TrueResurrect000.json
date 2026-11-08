@@ -65,18 +65,20 @@
     },
     "cat": {
       "automation": {
-        "version": "14.6.5"
+        "version": "14.6.9"
       }
     }
   },
   "system": {
     "description": {
-      "value": "<p>You touch a creature that has been dead for no longer than 200 years and that died for any reason except old age. If the creature's soul is free and willing, the creature is restored to life with all its hit points.</p>\n<p>This spell closes all wounds, neutralizes any poison, cures all diseases, and lifts any curses affecting the creature when it died. The spell replaces damaged or missing organs and limbs. If the creature was undead, it is restored to its non-undead form.</p>\n<p>The spell can even provide a new body if the original no longer exists, in which case you must speak the creature's name. The creature then appears in an unoccupied space you choose within 10 feet of you.</p><div class=\"cat-description\"><p><strong>midi-qol</strong>: Restores target to full HP, resets death saves, removes exhaustion, and clears all conditions (dead, unconscious, poisoned, diseased, cursed, blinded, deafened, paralyzed, stunned, petrified, prone) via <code>toggleStatusEffect</code>.</p></div>",
+      "value": "<p>You touch a creature that has been dead for no longer than 200 years and that died for any reason except old age. The creature is revived with all its Hit Points.</p><p>This spell closes all wounds, neutralizes any poison, cures all magical contagions, and lifts any curses affecting the creature when it died. The spell replaces damaged or missing organs and limbs. If the creature was Undead, it is restored to its non-Undead form.</p><p>The spell can provide a new body if the original no longer exists, in which case you must speak the creature's name. The creature then appears in an unoccupied space you choose within 10 feet of you.</p><div class=\"cat-description\"><p><strong>midi-qol</strong>: Restores target to full HP, resets death saves, removes exhaustion, and clears all conditions (dead, unconscious, poisoned, diseased, cursed, blinded, deafened, paralyzed, stunned, petrified, prone) via <code>toggleStatusEffect</code>.</p></div>",
       "chat": "<p>You touch a creature that has been dead for no longer than 200 years and that died for any reason except old age. If the creature's soul is free and willing, the creature is restored to life with all its hit points.</p>\n<p>This spell closes all wounds, neutralizes any poison, cures all diseases, and lifts any curses affecting the creature when it died. The spell replaces damaged or missing organs and limbs. If the creature was undead, it is restored to its non-undead form.</p>\n<p>The spell can even provide a new body if the original no longer exists, in which case you must speak the creature's name. The creature then appears in an unoccupied space you choose within 10 feet of you.</p>"
     },
     "source": {
       "custom": "midi-qol sample",
-      "rules": "2014"
+      "rules": "2024",
+      "book": "SRD 5.2",
+      "license": "CC-BY-4.0"
     },
     "activation": {
       "type": "hour",

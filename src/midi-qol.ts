@@ -322,6 +322,7 @@ Object.assign(globalThis.MidiQOL, {
   showUndoWorkflowApp,
   teleportToken,
   testfunc,
+  toggleStatus,
   tokenForActor,
   TokenDocumentSet,
   setTokenDocumentSets,

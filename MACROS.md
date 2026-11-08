@@ -782,7 +782,7 @@ A read-only copy is a snapshot of the card when it was made, and a copy you hold
 
 ### Token sets
 
-A workflow's token sets (`targets`, `hitTargets`, `hitTargetsEC`, `saves`, `failedSaves`, `superSavers`, `semiSuperSavers`, `criticalSaves`, `fumbleSaves`, `advantageSaves`, `otherDamageMatches`, `ammunitionDamageMatches`) are `MidiQOL.TokenDocumentSet`s: they hold every member's TokenDocument, including tokens on another scene or on a level not shown. Assigning any Set to one (`workflow.targets = new Set([...])`) makes it a TokenDocumentSet. `effectTargets` and `preSelectedTargets` are TokenDocumentSets midi sets, but plain fields: a Set assigned to them stays as it is. `has`, `add`, `delete` and set algebra accept a Token, a TokenDocument or a uuid. These read the same in every mode:
+A workflow's token sets (`targets`, `hitTargets`, `hitTargetsEC`, `saves`, `failedSaves`, `superSavers`, `semiSuperSavers`, `criticalSaves`, `fumbleSaves`, `advantageSaves`, `otherDamageMatches`, `ammunitionDamageMatches`) are `MidiQOL.TokenDocumentSet`s: they hold every member's TokenDocument, including tokens on another scene or on a level not shown. Assigning any Set to one (`workflow.targets = new Set([...])`) makes it a TokenDocumentSet. `effectTargets` and `preSelectedTargets` are TokenDocumentSets midi sets, but plain fields: a Set assigned to them stays as it is. `has`, `add`, `delete` and set algebra accept a Token, a TokenDocument or a uuid. These properties give the same result whichever way the set reads (drawn Tokens or TokenDocuments, below):
 
 ```js
 workflow.hitTargets.documents;          // every hit target's TokenDocument (a new array each read)
@@ -852,7 +852,7 @@ Before 14.6.9 a card kept the workflow's state as `flags.midi-qol` keys. On a ca
 | `card.flags.midi-qol.templateUuid` / `templateUuids` | `workflow.templateUuids[0]` / `workflow.templateUuids` |
 | `card.flags.midi-qol.attackRoll` | `workflow.attackRoll` |
 | `card.flags.midi-qol.damageRolls`, `bonusDamageRolls`, `otherDamageRolls`, `utilityRolls` | the same names on the workflow |
-| `card.flags.midi-qol.GMOnlyAttackRoll` (removed in 15.0.0) | the attack is shown to the GM only until `workflow.hitTargets` are checked |
+| `card.flags.midi-qol.GMOnlyAttackRoll` | the attack is shown to the GM only until `workflow.hitTargets` are checked |
 | `card.flags.midi-qol.templateUuids` | `workflow.templateUuids` |
 | `card.flags.midi-qol.templateUuid` | `workflow.templateUuids[0]` |
 

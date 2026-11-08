@@ -285,7 +285,7 @@ function cleanPackFolderNames(packSrcDir) {
  * Extract packs: packs/ -> pack-src/ (LevelDB to JSON)
  */
 exports.extractPacks = gulp.series(
-  pdel(["pack-src/sampleitems", "pack-src/activeeffects", "pack-src/summons"]),
+  pdel(["pack-src/sampleitems", "pack-src/activeeffects"]),
   async () => {
     if (!foundryvttCli) foundryvttCli = await import("@foundryvtt/foundryvtt-cli");
     await foundryvttCli.extractPack("packs/sampleitems", "pack-src/sampleitems", { folders: true });
@@ -553,9 +553,6 @@ exports.compilePacks = gulp.series(
     await foundryvttCli.compilePack("pack-src/activeeffects", "packs/activeeffects", { recursive: true });
     plog("Compiled pack-src/activeeffects to packs/activeeffects");
 
-    await ensurePackIds("pack-src/summons", { documentType: "Actor" });
-    await foundryvttCli.compilePack("pack-src/summons", "packs/summons", { recursive: true });
-    plog("Compiled pack-src/summons to packs/summons");
   },
   pdel([DEV_DIST() + PACK + GLOB], { force: true }),
   outputPackFiles(DEV_DIST()),

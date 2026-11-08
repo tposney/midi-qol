@@ -45,7 +45,7 @@
         "type": "script",
         "img": "icons/svg/dice-target.svg",
         "scope": "global",
-        "command": "// Shapechange — add at-will version of the spell to the polymorphed creature\n// so the caster can use their action to assume a different form during the duration.\nconst transformedActors = workflow.transformedActors ?? [];\nif (!transformedActors.length) return;\nconst spellData = item.toObject();\n// Set preparation to at-will so it doesn't consume spell slots\nspellData.system.preparation = { mode: \"atwill\", prepared: true };\n// Remove material cost requirement\nspellData.system.materials = { value: \"\", consumed: false, cost: 0, supply: 0 };\n// Remove concentration (the original caster maintains concentration)\nspellData.system.properties = spellData.system.properties.filter(p => p !== \"concentration\");\n// Disable spell slot consumption and concentration on all activities\nfor (const [id, act] of Object.entries(spellData.system.activities)) {\n  act.consumption = { targets: [], scaling: { allowed: false, max: \"\" }, spellSlot: false };\n  if (act.duration) act.duration.concentration = false;\n}\n// Generate a new ID to avoid conflicts\nspellData._id = foundry.utils.randomID();\n// Mark as at-will transform so it can be identified and cleaned up\nfoundry.utils.setProperty(spellData, \"flags.midi-qol.atWillTransform\", true);\nfor (const polyActor of transformedActors) {\n  await polyActor.createEmbeddedDocuments(\"Item\", [spellData]);\n}",
+        "command": "// Shapechange — add at-will version of the spell to the polymorphed creature\n// so the caster can use their action to assume a different form during the duration.\nconst transformedActors = workflow.transformedActors ?? [];\nif (!transformedActors.length) return;\nconst spellData = item.toObject();\n// Set preparation to at-will so it doesn't consume spell slots\nspellData.system.preparation = { mode: \"atwill\", prepared: true };\n// Remove material cost requirement\nspellData.system.materials = { value: \"\", consumed: false, cost: 0, supply: 0 };\n// Remove concentration (the original caster maintains concentration)\nspellData.system.properties = spellData.system.properties.filter(p => p !== \"concentration\");\n// Disable spell slot consumption and concentration on all activities\nfor (const [id, act] of Object.entries(spellData.system.activities)) {\n  act.consumption = { targets: [], scaling: { allowed: false, max: \"\" }, spellSlot: false };\n  if (act.duration) act.duration.concentration = false;\n  // Temporary hit points come from the first form only\n  if (act.settings) act.settings.tempFormula = \"\";\n}\n// Generate a new ID to avoid conflicts\nspellData._id = foundry.utils.randomID();\n// Mark as at-will transform so it can be identified and cleaned up\nfoundry.utils.setProperty(spellData, \"flags.midi-qol.atWillTransform\", true);\nfor (const polyActor of transformedActors) {\n  await polyActor.createEmbeddedDocuments(\"Item\", [spellData]);\n}",
         "sort": 0,
         "ownership": {
           "default": 3
@@ -65,18 +65,20 @@
     },
     "cat": {
       "automation": {
-        "version": "14.6.5"
+        "version": "14.6.9"
       }
     }
   },
   "system": {
     "description": {
-      "value": "<p>You assume the form of a different creature for the Duration. The new form can be of any creature with a Challenge rating equal to your level or lower. The creature can't be a construct or an Undead, and you must have seen the sort of creature at least once. You transform into an average example of that creature, one without any class levels or the Spellcasting trait.</p>\n<p>Your game statistics are replaced by the statistics of the chosen creature, though you retain your Alignment and Intelligence, Wisdom, and Charisma scores. You also retain all of your skill and saving throw proficiencies, in addition to gaining those of the creature. If the creature has the same proficiency as you and the bonus listed in its Statistics is higher than yours, use the creature's bonus in place of yours. You can't use any legendary Actions or Lair Actions of the new form.</p>\n<p>You assume the Hit Points and Hit Dice of the new form. When you revert to your normal form, you return to the number of Hit Points you had before you transformed. If you revert as a result of Dropping to 0 Hit Points, any excess damage carries over to your normal form. As long as the excess damage doesn't reduce your normal form to 0 Hit Points, you aren't knocked Unconscious.</p>\n<p>You retain the benefit of any features from your class, race, or other source and can use them, provided that your new form is physically capable of doing so. You can't use any Special Senses you have (for example, darkvision) unless your new form also has that sense. You can only speak if the creature can normally speak.</p>\n<p>When you transform, you choose whether your Equipment falls to the ground, merges into the new form, or is worn by it. Worn equipment functions as normal. The DM determines whether it is practical for the new form to wear a piece of equipment, based on the creature's shape and size. Your equipment doesn't change shape or size to match the new form, and any equipment that the new form can't wear must either fall to the ground or merge into your new form. Equipment that merges has no effect in that state.</p>\n<p>During this spell's Duration, you can use your action to assume a different form following the same restrictions and rules for the original form, with one exception: if your new form has more hit points than your current one, your hit points remain at their current value.</p><div class=\"cat-description\"><p><strong>midi-qol</strong>: Uses dnd5e's polymorph framework with the wildshape preset (keeps mental ability scores, HP, class features, proficiencies; merges saves and skills). Opens the compendium browser to select any creature. You can cast again during the duration to change forms.</p></div>",
+      "value": "<p>You shape-shift into another creature for the duration or until you take a Magic action to shape-shift into a different eligible form. The new form must be of a creature that has a Challenge Rating no higher than your level or Challenge Rating. You must have seen the sort of creature before, and it can't be a Construct or an Undead.</p><p>When you cast the spell, you gain a number of Temporary Hit Points equal to the Hit Points of the first form into which you shape-shift. These Temporary Hit Points vanish if any remain when the spell ends.</p><p>Your game statistics are replaced by the stat block of the chosen form, but you retain your creature type; alignment; personality; Intelligence, Wisdom, and Charisma scores; Hit Points; Hit Point Dice; proficiencies; and ability to communicate. If you have the Spellcasting feature, you retain it too.</p><p>Upon shape-shifting, you determine whether your equipment drops to the ground or changes in size and shape to fit the new form while you're in it.</p><div class=\"cat-description\"><p><strong>midi-qol</strong>: Uses dnd5e's transformation (choose the creature in the compendium browser). You keep your Intelligence, Wisdom and Charisma, proficiencies, languages, Spellcasting, alignment and personality, creature type and Hit Points, with your saves and skills merged with the form's, and gain temporary Hit Points equal to the first form's. The transformed actor gets an at-will copy of the spell to shape-shift into another form (no further temporary Hit Points).</p></div>",
       "chat": "<p>You assume the form of a different creature for the Duration. The new form can be of any creature with a Challenge rating equal to your level or lower. The creature can't be a construct or an Undead, and you must have seen the sort of creature at least once. You transform into an average example of that creature, one without any class levels or the Spellcasting trait.</p>\n<p>Your game statistics are replaced by the statistics of the chosen creature, though you retain your Alignment and Intelligence, Wisdom, and Charisma scores. You also retain all of your skill and saving throw proficiencies, in addition to gaining those of the creature. If the creature has the same proficiency as you and the bonus listed in its Statistics is higher than yours, use the creature's bonus in place of yours. You can't use any legendary Actions or Lair Actions of the new form.</p>\n<p>You assume the Hit Points and Hit Dice of the new form. When you revert to your normal form, you return to the number of Hit Points you had before you transformed. If you revert as a result of Dropping to 0 Hit Points, any excess damage carries over to your normal form. As long as the excess damage doesn't reduce your normal form to 0 Hit Points, you aren't knocked Unconscious.</p>\n<p>You retain the benefit of any features from your class, race, or other source and can use them, provided that your new form is physically capable of doing so. You can't use any Special Senses you have (for example, darkvision) unless your new form also has that sense. You can only speak if the creature can normally speak.</p>\n<p>When you transform, you choose whether your Equipment falls to the ground, merges into the new form, or is worn by it. Worn equipment functions as normal. The DM determines whether it is practical for the new form to wear a piece of equipment, based on the creature's shape and size. Your equipment doesn't change shape or size to match the new form, and any equipment that the new form can't wear must either fall to the ground or merge into your new form. Equipment that merges has no effect in that state.</p>\n<p>During this spell's Duration, you can use your action to assume a different form following the same restrictions and rules for the original form, with one exception: if your new form has more hit points than your current one, your hit points remain at their current value.</p>"
     },
     "source": {
       "custom": "midi-qol sample",
-      "rules": "2014"
+      "rules": "2024",
+      "book": "SRD 5.2",
+      "license": "CC-BY-4.0"
     },
     "activation": {
       "type": "action",
@@ -187,7 +189,36 @@
             "movement": []
           }
         ],
-        "settings": null,
+        "settings": {
+          "effects": [
+            "origin",
+            "otherOrigin",
+            "spell",
+            "feat",
+            "class",
+            "background"
+          ],
+          "keep": [
+            "mental",
+            "gearProf",
+            "languages",
+            "class",
+            "spells",
+            "bio",
+            "type",
+            "hp"
+          ],
+          "merge": [
+            "saves",
+            "skills"
+          ],
+          "minimumAC": "",
+          "other": [],
+          "preset": "wildshape",
+          "spellLists": [],
+          "tempFormula": "@source.attributes.hp.max",
+          "transformTokens": true
+        },
         "transform": {
           "customize": true,
           "mode": "cr",

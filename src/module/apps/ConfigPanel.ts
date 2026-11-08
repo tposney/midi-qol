@@ -1,3 +1,4 @@
+import { rulesTextCompendiumChoices } from "../lib/rulesText.js";
 import { criticalDamage, criticalDamageChoices, coloredBorders, coloredBordersOptions, importSettingsFromJSON, exportSettingsToJSON, enableWorkflow, wallsBlockRangeOptionsNew, visionTestHeightOptions, templateOriginHeightOptions, coverCalculationOptions, hiddenAdvantageOptions, addDeadOptions, rollNPCSavesOptions, playerRollSavesOptions, autoCheckHitOptions, autoTargetOptions, rangeTargetOptions, requiresTargetsOptions, autoCheckSavesOptions, saveSummaryStyleOptions, chatCardSummariesOptions, autoRollDamageOptions, removeButtonsOptions, autoApplyDamageOptions, playerDamageCardOptions, damageImmunitiesOptions, showItemDetailsOptions, doReactionsOptions, gmDoReactionsOptions, autoCEEffectsOptions, showReactionAttackRollOptions, recordAOOOptions, EnforceReactionsOptions, autoEffectsOptions, requireMagicalOptions, gmAttackDisplayOptions, gmDamageDisplayOptions, gmDsnDisplayOptions, blindRollDisplayOptions, checkFlankingOptions, flankingBonusOptions, rollAlternateOptions, consumeResourceOptions, averageDamageOptions, removeConcentrationEffectsOptions, incapacitatedOptions, checkRangeOptions, targetMustBeSeenOptions, invisAdvantageOptions, confirmAttackDamageOptions, challengeModeArmorOptions, saveDROrderOptions, defaultOtherActivityOptions, doConcentrationCheckOptions, activationAutomationOptions, safeGetGameSetting, distanceMeasurementOptions } from "../settings.js"
 import { configSettings } from "../settings.js"
 import { warn, i18n, error, debug, debugEnabled, log, GameSystemConfig, ceInterface } from "../../midi-qol.js";
@@ -239,6 +240,7 @@ export class ConfigPanel extends HandlebarsApplicationMixin(ApplicationV2) {
       RollSavesBlindOptions: foundry.utils.mergeObject({ "all": "All", "death": i18n("DND5E.DeathSave") }, Object.keys(GameSystemConfig.abilities).reduce((acc, s) => { acc[s] = GameSystemConfig.abilities[s].label; return acc }, {})),
       RollChecksBlindOptions: foundry.utils.mergeObject({ "all": "All" }, Object.keys(GameSystemConfig.abilities).reduce((acc, s) => { acc[s] = GameSystemConfig.abilities[s].label; return acc }, {})),
       midiPropertiesTabOptions: CONST.USER_ROLE_NAMES,
+      rulesTextCompendiumOptions: rulesTextCompendiumChoices(),
       templateSnappingOptions: {
         "full": i18n("midi-qol.TemplateSnapping.Full"),
         "half": i18n("midi-qol.TemplateSnapping.Half"),

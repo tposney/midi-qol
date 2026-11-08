@@ -5,7 +5,7 @@ import Token = foundry.canvas.placeables.Token;
  * Detect Magic (Vision)'s Magic Sight (flags.midi-qol.magicSight on the caster's effect): for the GM and the caster's
  * owners, concentric rings around each listed token and glowing bands along each listed region's outline, one per
  * colour (a spell school, or magic items), brighter and wider for a higher level (1-9). The rings follow their tokens
- * and fade when the effect ends (its turnEnd expiry, at the end of the turn), or when the active GM ends it after 10 seconds.
+ * and fade when the effect ends (its turnEnd expiry, at the end of the turn), or when the active GM ends it after its seconds (the item's CAT configuration, 15 by default).
  */
 type MagicSight = NonNullable<NonNullable<ActiveEffect.Implementation["flags"]["midi-qol"]>["magicSight"]>;
 type Ring = MagicSight["entries"][number]["rings"][number];

@@ -51,6 +51,12 @@
             "value": "5",
             "priority": 20,
             "type": "add"
+          },
+          {
+            "key": "flags.midi-qol.onUseMacroName",
+            "value": "ItemMacro, preTargetDamageApplication",
+            "priority": 20,
+            "type": "custom"
           }
         ]
       },
@@ -86,7 +92,6 @@
       "rollAttackPerTarget": "default",
       "itemCondition": "",
       "effectCondition": "",
-      "reactionCondition": "reaction === \"isHit\" || (reaction === \"isDamaged\" && workflow.item.name === \"Magic Missile\")",
       "otherCondition": "",
       "removeAttackDamageButtons": "default"
     },
@@ -97,13 +102,38 @@
     },
     "cat": {
       "automation": {
-        "version": "14.6.5"
+        "version": "14.6.9"
+      }
+    },
+    "dae": {
+      "macro": {
+        "name": "Shield",
+        "type": "script",
+        "img": "icons/svg/dice-target.svg",
+        "scope": "global",
+        "command": "// Immune to Magic Missile's damage while the spell lasts (preTargetDamageApplication)\nif (args[0].tag !== \"TargetOnUse\" || args[0].macroPass !== \"preTargetDamageApplication\") return;\nconst spell = workflow.item;\nif (spell?.system.identifier !== \"magic-missile\" && !spell?.name.includes(\"Magic Missile\")) return;\nconst di = workflow.damageItem;\nif (di?.totalDamage > 0) MidiQOL.modifyDamageBy({ damageItem: di, value: -di.totalDamage, reason: macroItem.name });",
+        "sort": 0,
+        "ownership": {
+          "default": 3
+        },
+        "flags": {},
+        "_stats": {
+          "systemId": null,
+          "systemVersion": null,
+          "coreVersion": null,
+          "createdTime": null,
+          "modifiedTime": null,
+          "lastModifiedBy": null
+        },
+        "author": "ffUVCzLexh57kZfU",
+        "_id": null,
+        "folder": null
       }
     }
   },
   "system": {
     "description": {
-      "value": "<p>An imperceptible barrier of magical force protects you. Until the start of your next turn, you have a +5 bonus to AC, including against the triggering attack, and you take no damage from <em>Magic Missile</em>.</p><div class=\"cat-description\"><p><strong>midi-qol</strong>: Reaction spell. The utility activity applies an Imperceptible Barrier effect that grants a +5 AC bonus. The effect lasts until the start of the caster's next turn via DAE specialDuration (<code>turnStartSource</code>). The Magic Missile immunity is not automated.</p></div>",
+      "value": "<p>An imperceptible barrier of magical force protects you. Until the start of your next turn, you have a +5 bonus to AC, including against the triggering attack, and you take no damage from <em>Magic Missile</em>.</p><div class=\"cat-description\"><p><strong>midi-qol</strong>: Reaction spell. The utility activity applies an Imperceptible Barrier effect that grants a +5 AC bonus. The effect lasts until the start of the caster's next turn via DAE specialDuration (<code>turnStartSource</code>). The Magic Missile immunity is not automated.</p><p><strong>midi-qol</strong>: also offered when you are targeted by Magic Missile, and you take no damage from Magic Missile while it lasts.</p></div>",
       "chat": "<p>An imperceptible barrier of magical force protects you. Until the start of your next turn, you have a +5 bonus to AC, including against the triggering attack, and you take no damage from <em>Magic Missile</em>.</p>"
     },
     "source": {
@@ -253,7 +283,8 @@
           "saveRemoves": true,
           "preRemoveConditionText": "",
           "postRemoveConditionText": ""
-        }
+        },
+        "useCondition": "reaction === \"isHit\" || (reaction === \"isTargeted\" && (workflow.item?.system?.identifier === \"magic-missile\" || workflow.item?.name?.includes(\"Magic Missile\")))"
       }
     },
     "identifier": "shield",

@@ -198,7 +198,7 @@
     },
     "cat": {
       "automation": {
-        "version": "14.6.8"
+        "version": "14.6.9"
       }
     }
   },
@@ -209,7 +209,7 @@
     },
     "source": {
       "custom": "midi-qol sample",
-      "rules": "2014",
+      "rules": "2024",
       "book": "",
       "page": "",
       "license": ""

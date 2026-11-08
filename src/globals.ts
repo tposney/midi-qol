@@ -172,7 +172,6 @@ declare module "fvtt-types/configuration" {
     "midi-qol.EnableWorkflow": boolean;
     "midi-qol.hiddenGroundCue": boolean;
     "midi-qol.ownChatCardSummary": string;
-    "midi-qol.rulesTextCompendium": string;
     "midi-qol.hiddenGroundCueStyle": string;
     "midi-qol.hiddenGroundCueColor": foundry.data.fields.ColorField<{ nullable: boolean; initial: string }>;
     "midi-qol.hiddenGroundCueOpacity": number;

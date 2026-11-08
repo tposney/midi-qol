@@ -1,61 +1,9 @@
 {
+  "_id": "WoFBqol13xSample",
   "name": "Wand of Fireballs",
-  "type": "consumable",
+  "type": "equipment",
   "img": "icons/weapons/staves/staff-obsidian.webp",
   "system": {
-    "description": {
-      "value": "<p><em>Wand, rare (requires attunement by a spellcaster)</em></p>\n<p>This wand has 7 charges. While holding it, you can use an action to expend 1 or more of its charges to cast the @UUID[Compendium.dnd5e.spells.Item.ztgcdrWPshKRpFd0]{Fireball} spell (save DC 15) from it. For 1 charge, you cast the 3rd-level version of the spell. You can increase the spell slot level by one for each additional charge you expend.</p>\n<p>The wand regains 1d6 + 1 expended charges daily at dawn. If you expend the wand's last charge, roll a d20. On a 1, the wand crumbles into ashes and is destroyed.</p><div class=\"cat-description\"><p><strong>midi-qol</strong>: Expend charges to cast Fireball. Scaling is configured so each extra charge adds 1d6 fire damage (upcasting). The \"destroy on empty\" behavior is not automated.</p></div>",
-      "chat": "<p><em>Wand, rare (requires attunement by a spellcaster)</em></p>\n<p>This wand has 7 charges. While holding it, you can use an action to expend 1 or more of its charges to cast the @UUID[Compendium.dnd5e.spells.Item.ztgcdrWPshKRpFd0]{Fireball} spell (save DC 15) from it. For 1 charge, you cast the 3rd-level version of the spell. You can increase the spell slot level by one for each additional charge you expend.</p>\n<p>The wand regains 1d6 + 1 expended charges daily at dawn. If you expend the wand's last charge, roll a d20. On a 1, the wand crumbles into ashes and is destroyed.</p>"
-    },
-    "source": {
-      "custom": "midi-qol sample",
-      "rules": "2014"
-    },
-    "quantity": 1,
-    "weight": {
-      "value": 1,
-      "units": "lb"
-    },
-    "price": {
-      "value": 32000,
-      "denomination": "gp"
-    },
-    "attunement": "required",
-    "rarity": "rare",
-    "identified": true,
-    "uses": {
-      "max": "7",
-      "spent": 0,
-      "recovery": [
-        {
-          "period": "day",
-          "formula": "1d6 + 1",
-          "type": ""
-        }
-      ],
-      "autoDestroy": false
-    },
-    "damage": {
-      "base": {
-        "number": null,
-        "denomination": null,
-        "types": [],
-        "custom": {
-          "enabled": false
-        },
-        "scaling": {
-          "number": 1
-        }
-      },
-      "replace": false
-    },
-    "unidentified": {
-      "description": ""
-    },
-    "type": {
-      "value": "wand",
-      "subtype": ""
-    },
     "activities": {
       "dnd5eactivity000": {
         "_id": "dnd5eactivity000",
@@ -80,7 +28,7 @@
           ],
           "scaling": {
             "allowed": true,
-            "max": "6"
+            "max": "2"
           },
           "spellSlot": false
         },
@@ -200,16 +148,75 @@
         }
       }
     },
+    "uses": {
+      "spent": 0,
+      "recovery": [
+        {
+          "period": "dawn",
+          "type": "formula",
+          "formula": "1d6 + 1"
+        }
+      ],
+      "max": "7"
+    },
+    "description": {
+      "value": "<p><em>Wand, Rare (Requires Attunement by a Spellcaster)</em></p><p>This wand has 7 charges. While holding it, you can expend no more than 3 charges to cast @UUID[Compendium.dnd5e.spells24.Item.phbsplFireball00]{Fireball} (save DC 15) from it. For 1 charge, you cast the level 3 version of the spell. You can increase the spell's level by 1 for each additional charge you expend.</p><p><em><strong>Regaining Charges.</strong></em> The wand regains 1d6 + 1 expended charges daily at dawn. If you expend the wand's last charge, roll [[/r 1d20]]. On a 1, the wand crumbles into ashes and is destroyed.</p><div class=\"cat-description\"><p><strong>midi-qol</strong>: Fireball as a Dexterity save (DC 15) in a 20-foot sphere: 8d6 fire damage, 1d6 more for each charge after the first (up to 3 charges), half on a success. The wand crumbling when its last charge is spent is not automated.</p></div>",
+      "chat": ""
+    },
     "identifier": "wand-of-fireballs",
+    "source": {
+      "custom": "midi-qol sample",
+      "rules": "2024",
+      "book": "SRD 5.2",
+      "license": "CC-BY-4.0",
+      "revision": 1
+    },
+    "identified": true,
+    "unidentified": {
+      "description": ""
+    },
     "container": null,
-    "magicalBonus": null,
+    "quantity": 1,
+    "weight": {
+      "value": 0,
+      "units": "lb"
+    },
+    "price": {
+      "value": 4000,
+      "denomination": "gp"
+    },
+    "attunement": "required",
+    "attuned": false,
+    "equipped": false,
+    "armor": {
+      "value": null,
+      "dex": null
+    },
+    "cover": null,
+    "hp": {
+      "value": null,
+      "max": null,
+      "dt": null,
+      "conditions": ""
+    },
+    "type": {
+      "value": "wand",
+      "baseItem": ""
+    },
     "properties": [
+      "foc",
       "mgc"
     ],
-    "attuned": false,
-    "equipped": false
+    "proficient": null,
+    "rarities": [
+      "rare"
+    ],
+    "crew": {
+      "value": []
+    },
+    "strength": null
   },
-  "effects": [],
+  "folder": "VRqAk9IU8eAxQqeI",
   "flags": {
     "midi-qol": {
       "rollAttackPerTarget": "default",
@@ -245,26 +252,14 @@
     },
     "cat": {
       "automation": {
-        "version": "14.6.5"
+        "version": "14.6.9"
       }
     }
   },
-  "_stats": {
-    "compendiumSource": null,
-    "duplicateSource": null,
-    "coreVersion": "13.346",
-    "systemId": "dnd5e",
-    "systemVersion": "4.3.6",
-    "createdTime": null,
-    "modifiedTime": null,
-    "lastModifiedBy": null,
-    "exportSource": null
-  },
-  "folder": "VRqAk9IU8eAxQqeI",
-  "_id": "WoFBqol13xSample",
   "sort": 0,
   "ownership": {
     "default": 0
   },
-  "_key": "!items!WoFBqol13xSample"
+  "_key": "!items!WoFBqol13xSample",
+  "effects": []
 }

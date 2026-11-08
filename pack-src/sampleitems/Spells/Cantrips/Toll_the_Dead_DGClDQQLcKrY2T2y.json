@@ -69,19 +69,19 @@
     },
     "cat": {
       "automation": {
-        "version": "14.6.5"
+        "version": "14.6.9"
       }
     }
   },
   "system": {
     "description": {
-      "value": "<div class=\"cat-description\"><p><em>midi-qol: The damage die is a d12 instead of a d8 when the target is missing any of its hit points.</em></p><p><em>No rules text (not SRD; Xanathar's Guide to Everything): give the character your own copy and apply this automation to it with CAT's medkit, which keeps your copy's description.</em></p></div>",
+      "value": "<div class=\"cat-description\"><p><em>midi-qol: The damage die is a d12 instead of a d8 when the target is missing any of its hit points.</em></p><p><em>No rules text (not SRD; Player's Handbook): give the character your own copy and apply this automation to it with CAT's medkit, which keeps your copy's description.</em></p></div>",
       "chat": ""
     },
     "source": {
       "custom": "midi-qol sample",
-      "rules": "2014",
-      "book": "Xanathar's Guide to Everything",
+      "rules": "2024",
+      "book": "Player's Handbook",
       "page": "",
       "license": ""
     },

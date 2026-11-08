@@ -26,7 +26,7 @@ export function setupTokenSetMode(enabled: boolean) {
       const caller = new Error().stack?.split("\n")[2] ?? "";
       if (!warned.has(caller)) {
         warned.add(caller);
-        foundry.utils.logCompatibilityWarning(`midi-qol | workflow token sets give TokenDocuments (tokenDocumentSets): use the member itself, not member.document, or set.tokens for the Tokens. ${caller.trim()}`, { since: "14.6.9", until: "15.0.0" });
+        foundry.utils.logCompatibilityWarning(`midi-qol | workflow token sets give TokenDocuments (tokenDocumentSets): use the member itself, not member.document, or set.tokens for the Tokens. ${caller.trim()}`, { since: "14.6.9", until: "14.8.0" });
       }
       return this;
     }
