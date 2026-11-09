@@ -1745,6 +1745,9 @@ async function handleActionSaveRollResponse(
 async function handleActionSaveRollRequest(ctx: ActionSaveContext, changeTurnEnd: boolean): Promise<string | null | undefined> {
   const { actor, effect, details, owner, messageFlavor } = ctx;
   const { saveAbility, saveDC, rollMode, label, rollTypeString } = details;
+  // A save just rolled from the last card may have ended the effect (handleActionSaveRollResponse): nothing to ask for
+  const ended = () => !effect.id || !effect.parent?.effects.has(effect.id) || endingEffects.has(effect.uuid);
+  if (ended()) return effect.id;
 
   const MessageClass = getDocumentClass("ChatMessage");
   let dataset;
@@ -1790,6 +1793,10 @@ async function handleActionSaveRollRequest(ctx: ActionSaveContext, changeTurnEnd
       chatCardUuids.push(chatCard.uuid);
       await chatCard?.setFlag(MODULE_ID, "actorUuid", actor.uuid);
     }
+  }
+  if (ended()) {
+    for (const uuid of chatCardUuids) await (fromUuidSync(uuid) as ChatMessage.Implementation | null)?.delete();
+    return effect.id;
   }
 
   foundry.utils.setProperty(effect, `flags.${MODULE_ID}.actionSaveSuccess`, undefined);
@@ -9108,20 +9115,28 @@ export async function expireEffects(actor: Actor.Implementation, effects: Active
     else if (effect.parent instanceof Item) // this should be enchantments
       effectsToDelete.push(effect);
   }
-  if (actorEffectsToDelete.length > 0) {
-    await actor.deleteEmbeddedDocuments("ActiveEffect", actorEffectsToDelete, options);
-  }
-  if (effectsToDisable.length > 0) {
-    for (let effect of effectsToDisable) {
-      await effect.update({ "disabled": true }, options)
+  const ending = effects.filter(effect => effect.id && fromUuidSync(effect.uuid)).map(effect => effect.uuid);
+  for (const uuid of ending) endingEffects.add(uuid);
+  try {
+    if (actorEffectsToDelete.length > 0) {
+      await actor.deleteEmbeddedDocuments("ActiveEffect", actorEffectsToDelete, options);
     }
-  }
-  if (effectsToDelete.length > 0) {
-    for (let effect of effectsToDelete)
-      await effect.delete(options);
+    if (effectsToDisable.length > 0) {
+      for (let effect of effectsToDisable) {
+        await effect.update({ "disabled": true }, options)
+      }
+    }
+    if (effectsToDelete.length > 0) {
+      for (let effect of effectsToDelete)
+        await effect.delete(options);
+    }
+  } finally {
+    for (const uuid of ending) endingEffects.delete(uuid);
   }
   return { deleted: actorEffectsToDelete, disabled: effectsToDisable, itemEffects: effectsToDelete };
 }
+// Effects being expired: still in their collection until the server's reply, so a change made to them meanwhile fails
+const endingEffects = new Set<string>();
 
 /** Concentration requests already claimed by this client: a new message renders twice (log and notification). */
 const concentrationRequestsHandled = new Set<string>();
