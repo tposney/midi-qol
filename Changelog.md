@@ -1,3 +1,7 @@
+### 13.0.74
+* Fixed: deleting several areas of one concentration spell at once showed "ActiveEffect … does not exist"; concentration ends once.
+* Fixed: advancing the turn just after a successful action save could post a new save card and show an error; the ended effect is left alone.
+
 ### 13.0.73
 * Changed: midi-qol has moved to GitHub (https://github.com/tposney/midi-qol): updates and downloads come from its releases, and issues are reported there. Installed copies move over with this update.
 
