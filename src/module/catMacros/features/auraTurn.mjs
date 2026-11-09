@@ -24,6 +24,8 @@ function qualifies(item, owner, target, entry, activity) {
     if (entry.when !== 'death' && (owner.actor?.statuses.has('incapacitated') || owner.actor?.statuses.has('dead'))) return false;
     const distance = entry.distance ?? activity.target?.template?.size ?? 5;
     if (tokenUtils.getDistance(owner, target) > distance) return false;
+    // As the emanation would: a creature with total cover from the owner is left out (as a target it would stop the use)
+    if (globalThis.MidiQOL?.totalCoverTargets?.(activity, owner, [target]).length) return false;
     if (entry.disposition === 'enemy' && !tokenUtils.isEnemy(owner, target)) return false;
     if (entry.disposition === 'ally' && tokenUtils.isEnemy(owner, target)) return false;
     if (entry.excludeSameName && target.actor.name === owner.actor?.name) return false;

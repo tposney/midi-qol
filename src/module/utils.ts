@@ -1759,6 +1759,9 @@ async function handleActionSaveRollResponse(
 async function handleActionSaveRollRequest(ctx: ActionSaveContext, changeTurnEnd: boolean): Promise<string | null | undefined> {
   const { actor, effect, details, owner, messageFlavor } = ctx;
   const { saveAbility, saveDC, rollMode, label, rollTypeString } = details;
+  // A save just rolled from the last card may have ended the effect (handleActionSaveRollResponse): nothing to ask for
+  const ended = () => !effect.id || !effect.parent?.effects.has(effect.id) || endingEffects.has(effect.uuid);
+  if (ended()) return effect.id;
 
   const MessageClass = getDocumentClass("ChatMessage");
   const chatCardUuids: string[] = [];
@@ -1782,6 +1785,10 @@ async function handleActionSaveRollRequest(ctx: ActionSaveContext, changeTurnEnd
     flags: { [MODULE_ID]: { overtimeActorUuid: actor.uuid, overtimeRollMode: rollMode } }
   });
   if (chatCard) chatCardUuids.push(chatCard.uuid);
+  if (ended()) {
+    await chatCard?.delete();
+    return effect.id;
+  }
 
   foundry.utils.setProperty(effect, `flags.${MODULE_ID}.actionSaveSuccess`, undefined);
   await effect.setFlag(MODULE_ID, "overtimeChatCardUuids", chatCardUuids);
@@ -9508,6 +9515,7 @@ function rollsMatch(current: readonly unknown[] | undefined, incoming: readonly 
 
 async function _updateAction(document: foundry.abstract.Document.Any, updates: ChatMessage.UpdateData) {
   const baseDocument = fromUuidSync(document.uuid) as ChatMessage.Implementation;
+  if (deletingCards.has(document.uuid)) return document;
   if (!baseDocument) {
     console.warn(`midi-qol | _updateAction | baseDocument not found for ${document.uuid}`);
     return document;
@@ -9658,6 +9666,20 @@ export async function throttledUpdate(document: ChatMessage.Implementation, upda
   return await write;
 }
 const cardWrites = new Map<string, Promise<unknown>>();
+// Cards being deleted: a write sent now would reach the server after the delete and be rejected
+const deletingCards = new Set<string>();
+
+/** Run `deleteCard` once the card's write in flight is done, with its queued writes dropped and no new ones sent */
+export async function deleteCardAfterWrites(uuid: string, deleteCard: () => Promise<unknown>): Promise<void> {
+  deletingCards.add(uuid);
+  delete updatesCache[uuid];
+  try {
+    await cardWrites.get(uuid);
+    await deleteCard();
+  } finally {
+    deletingCards.delete(uuid);
+  }
+}
 export function getUpdatesCache(uuid: string | undefined | null) {
   if (!uuid) return {};
   return updatesCache[uuid] ?? {};
@@ -9725,15 +9747,20 @@ export async function expireEffects(actor: Actor.Implementation, effects: Active
   for (const effect of effects) {
     // another expiry (e.g. a concurrent one for a different key) may have removed it
     if (!effect.id || !effect.parent?.effects.has(effect.id)) continue;
+    endingEffects.add(effect.uuid);
     try {
       await globalThis.DAE.expireEffect(effect, options);
       expired.push(effect.id);
     } catch (err) {
       console.warn(`midi-qol | expireEffects: ${effect.name} (${effect.uuid})`, err);
+    } finally {
+      endingEffects.delete(effect.uuid);
     }
   }
   return { expired };
 }
+// Effects being expired: still in their collection until the server's reply, so a change made to them meanwhile fails
+const endingEffects = new Set<string>();
 
 /** Remove effects: applied effects and enchantments are deleted, an item's own (transfer) effects disabled. */
 export async function deleteAppliedEffects(actor: Actor.Implementation, effects: ActiveEffect.Implementation[], options: Record<string, unknown> = {}): Promise<{ deleted: string[], disabled: ActiveEffect[], itemEffects: ActiveEffect[] }> {

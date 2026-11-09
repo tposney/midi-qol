@@ -391,6 +391,14 @@ function getChanges(newData?: Actor.Source | TokenDocument.Source, savedData?: A
   }
   return foundry.utils.mergeObject(changes, toDelete);
 }
+/**
+ * Waits for DAE's queued effect work (macros, expiry) started before now, so it can't change the actor after a restore.
+ * Undo's own operations run outside the queue: anything they wait on may use it without deadlocking.
+ */
+async function daeSettled() {
+  await globalThis.DAE?.actionQueue?.add(() => {});
+}
+
 async function undoSingleTokenActor({ tokenUuid, actorUuid, actorData, tokenData }: { tokenUuid?: string; actorUuid?: string; actorData?: Actor.Source, tokenData?: TokenDocument.Source}) {
   let actor = fromUuidSync(actorUuid ?? "") as Actor.Implementation | TokenDocument.Implementation | undefined | null;
   if (actor instanceof TokenDocument) actor = actor.actor;
@@ -400,52 +408,34 @@ async function undoSingleTokenActor({ tokenUuid, actorUuid, actorData, tokenData
   let tokenChanges: Partial<TokenDocument.Source> | undefined;
   if (debugEnabled > 0) warn("undoSingleTokenActor | starting for ", actor.name);
 
-  const removeItemsFunc = async () => {
-    const itemsToRemove = getRemoveUndoItems(actorData?.items ?? [], actor);
-    // @ts-expect-error extra option silliness
-    if (itemsToRemove?.length > 0) await actor.deleteEmbeddedDocuments("Item", itemsToRemove, { isUndo: true });
-    if (debugEnabled > 0) warn("undoSingleTokenActor | items to remove ", actor.name, itemsToRemove);
-    // await busyWait(100);
-  }
-  if (globalThis.DAE.actionQueue) await globalThis.DAE.actionQueue.add(removeItemsFunc)
-  else await removeItemsFunc();
-  if (debugEnabled > 0) warn("undoSingleTokenActor |  removeItemFunc completed")
+  await daeSettled();
+  const itemsToRemove = getRemoveUndoItems(actorData?.items ?? [], actor);
+  if (debugEnabled > 0) warn("undoSingleTokenActor | items to remove ", actor.name, itemsToRemove);
+  // @ts-expect-error extra option silliness
+  if (itemsToRemove?.length > 0) await actor.deleteEmbeddedDocuments("Item", itemsToRemove, { isUndo: true });
 
-  if (debugEnabled > 0) warn("undoSingleTokenActor | about to remove effects")
-  const removeEffectsFunc = async () => {
-    const effectsToRemove = getRemoveUndoEffects(actorData?.effects ?? [], actor);
-    if (debugEnabled > 0) warn("undoSingleTokenActor |", effectsToRemove);
-    // @ts-expect-error extra option silliness
-    if (effectsToRemove.length > 0) await actor.deleteEmbeddedDocuments("ActiveEffect", effectsToRemove, { noConcentrationCheck: true, isUndo: true });
-  }
-  if (globalThis.DAE?.actionQueue) await globalThis.DAE.actionQueue.add(removeEffectsFunc)
-  else await removeEffectsFunc();
-  if (debugEnabled > 0) warn("undoSingleTokenActor | remove effects completed")
+  await daeSettled();
+  const effectsToRemove = getRemoveUndoEffects(actorData?.effects ?? [], actor);
+  if (debugEnabled > 0) warn("undoSingleTokenActor | effects to remove ", actor.name, effectsToRemove);
+  // @ts-expect-error extra option silliness
+  if (effectsToRemove.length > 0) await actor.deleteEmbeddedDocuments("ActiveEffect", effectsToRemove, { noConcentrationCheck: true, isUndo: true });
 
-  const itemsToAdd = actorData?.items?.filter(itemData => /*!itemData.flags?.dae?.DAECreated && */ !actor.items.some(item => itemData._id === item.id));
+  await daeSettled();
+  const itemsToAdd = actorData?.items?.filter(itemData => !actor.items.some(item => itemData._id === item.id));
   if (debugEnabled > 0) warn("undoSingleTokenActor | Items to add ", actor.name, itemsToAdd)
   if ((itemsToAdd?.length ?? 0) > 0) {
     // @ts-expect-error extra option silliness
-    if (globalThis.DAE?.actionQueue) await globalThis.DAE.actionQueue.add(actor.createEmbeddedDocuments.bind(actor), "Item", foundry.utils.deepClone(itemsToAdd), { keepId: true, isUndo: true });
-    // @ts-expect-error extra option silliness
-    else await actor?.createEmbeddedDocuments("Item", foundry.utils.deepClone(itemsToAdd), { keepId: true, isUndo: true });
+    await actor.createEmbeddedDocuments("Item", foundry.utils.deepClone(itemsToAdd), { keepId: true, isUndo: true });
     await busyWait(100);
   }
-  let effectsToAdd = actorData?.effects?.filter(efData => !actor.effects.some(effect => efData._id === effect.id));
-  effectsToAdd = effectsToAdd?.filter(efData => !efData?.flags?.dae?.transfer) ?? [];
-  // revisit this for v11 and effects not transferred
 
+  await daeSettled();
+  // revisit this for v11 and effects not transferred
+  const effectsToAdd = (actorData?.effects ?? [])
+    .filter(efData => !efData?.flags?.dae?.transfer && !actor.effects.some(effect => efData._id === effect.id));
   if (debugEnabled > 0) warn("undoSingleTokenActor | Effects to add ", actor.name, effectsToAdd);
-  if (effectsToAdd?.length > 0) {
-    if (globalThis.DAE?.actionQueue) await globalThis.DAE.actionQueue.add(async () => {
-      effectsToAdd = effectsToAdd?.filter(eff => !actor.effects.some(effect => effect.id === eff._id!));
-      if (debugEnabled > 0) warn("undoSingleTokenActor | Effects to add are ", effectsToAdd, actor.name);
-      // @ts-expect-error extra option silliness
-      await actor.createEmbeddedDocuments("ActiveEffect", foundry.utils.deepClone(effectsToAdd), { keepId: true, isUndo: true })
-    });
-    // @ts-expect-error extra option silliness
-    else await actor.createEmbeddedDocuments("ActiveEffect", foundry.utils.deepClone(effectsToAdd), { keepId: true, isUndo: true });
-  }
+  // @ts-expect-error extra option silliness
+  if (effectsToAdd.length > 0) await actor.createEmbeddedDocuments("ActiveEffect", foundry.utils.deepClone(effectsToAdd), { keepId: true, isUndo: true });
 
   // Only the items and effects that changed since the snapshot, and only what changed in them.
   const changedSince = (collection: { get(id: string): { toObject(source: boolean): object } | undefined }, saved: { _id?: string | null }[] = []) =>
@@ -455,20 +445,14 @@ async function undoSingleTokenActor({ tokenUuid, actorUuid, actorData, tokenData
       const difference = foundry.utils.diffObject(current.toObject(true), source);
       return foundry.utils.isEmpty(difference) ? [] : [{ ...difference, _id: source._id }];
     });
+  await daeSettled();
   const itemUpdates = changedSince(actor.items, actorData?.items as Item.Source[] | undefined);
-  if (itemUpdates.length) {
-    // @ts-expect-error extra option silliness
-    if (globalThis.DAE?.actionQueue) await globalThis.DAE.actionQueue.add(actor.updateEmbeddedDocuments.bind(actor), "Item", itemUpdates, { keepId: true, isUndo: true });
-    // @ts-expect-error extra option silliness
-    else await actor.updateEmbeddedDocuments("Item", itemUpdates, { keepId: true, isUndo: true });
-  }
+  // @ts-expect-error extra option silliness
+  if (itemUpdates.length) await actor.updateEmbeddedDocuments("Item", itemUpdates, { keepId: true, isUndo: true });
+  await daeSettled();
   const effectUpdates = changedSince(actor.effects, actorData?.effects as ActiveEffect.Source[] | undefined);
-  if (effectUpdates.length) {
-    // @ts-expect-error extra option silliness
-    if (globalThis.DAE?.actionQueue) await globalThis.DAE.actionQueue.add(actor.updateEmbeddedDocuments.bind(actor), "ActiveEffect", effectUpdates, { keepId: true, isUndo: true });
-    // @ts-expect-error extra option silliness
-    else await actor.updateEmbeddedDocuments("ActiveEffect", effectUpdates, { keepId: true, isUndo: true });
-  }
+  // @ts-expect-error extra option silliness
+  if (effectUpdates.length) await actor.updateEmbeddedDocuments("ActiveEffect", effectUpdates, { keepId: true, isUndo: true });
 
   actorChanges = actorData ? getChanges(actor.toObject(true), actorData) : {};
   if (debugEnabled > 0) warn("undoSingleTokenActor | Actor data ", actor.name, actorData, actorChanges);

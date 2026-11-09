@@ -112,6 +112,7 @@ import {
   dnd5eRollType,
   tokenSourceElevation,
   applyStatusCondition,
+  deleteCardAfterWrites,
 } from "./utils.js"
 import { OnUseMacros } from "./apps/Item.js";
 import { bonusCheck, collectBonusFlags, defaultRollOptions, buildPreComputedAdvantageMap, checkActivityAbilities } from "./patching.js";
@@ -578,7 +579,7 @@ export class Workflow {
     const nested = messagesFrom(card.id!, USAGE_MESSAGE_TYPE).filter(m => m.id !== card.id && m.canUserModify(game.user!, "update"));
     const path: string = "system.origin";
     if (nested.length) await ChatMessage.updateDocuments(nested.map(m => ({ _id: m.id, [path]: origin })));
-    await card.delete();
+    await deleteCardAfterWrites(card.uuid, () => card.delete());
   }
 
   /** Count the workflow as executing while `fn` runs: a roll from a card button happens outside performState. */
@@ -1796,7 +1797,6 @@ export class Workflow {
         this.#item = (card as Dnd5eChatMessage).getAssociatedItem?.();
         this.#speaker = card.speaker;
       }
-      // A card rendering with its item gone gives a stand-in activity (UsageCardMessage #prepareBaseContext)
       if (!this.#activity?.item) throw new Error(`the card's activity can't be found (${options.chatCardUuid})`);
       this.workflowName = `${this.constructor.name} ${this.item?.name ?? "no item"} restored`;
     } else {

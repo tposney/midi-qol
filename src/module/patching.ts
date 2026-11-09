@@ -2582,13 +2582,20 @@ export async function checkDeleteTemplate(templateDocument: MeasuredTemplateDocu
   if (!dependentOn) return;
 
   const parentEffect = fromUuidSync(dependentOn);
-  if (parentEffect instanceof ActiveEffect) {
+  // Several of its areas deleted together each find it without dependents: it is deleted once
+  if (parentEffect instanceof ActiveEffect && !endingParents.has(parentEffect.uuid)) {
     // @ts-expect-error no dnd5e-types
     if (parentEffect.getDependents()?.length === 0) {
-      await parentEffect.delete();
+      endingParents.add(parentEffect.uuid);
+      try {
+        await parentEffect.delete();
+      } finally {
+        endingParents.delete(parentEffect.uuid);
+      }
     }
   }
 };
+const endingParents = new Set<string>();
 
 // This is done as a wrapper so that there is no race condition when hp reaches 0 also trying to remove condition
 // This version will always fire first, remove concentration if needed and complete before the hp update is processed.

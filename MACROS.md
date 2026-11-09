@@ -796,11 +796,25 @@ workflow.hitTargets.difference(workflow.saves).documents; // set algebra is over
 
 Reading a set directly (iteration, `size`, `first()`, `map`/`filter`/`some`) gives the drawn Tokens by default; `filter` returns a TokenDocumentSet of the members that pass. Call set algebra on the TokenDocumentSet (`set.difference(plain)`, not `plain.difference(set)`, which reads the set as it iterates). A deleted token stays a member only while the workflow is in memory: a workflow rebuilt from its card has the tokens that still exist. TokenDocuments will become the default; a GM can try it now with `MidiQOL.setTokenDocumentSets(true)` (the whole world, after a reload; `false` switches back, `MidiQOL.tokenDocumentSets()` says which is on). Then a set reads as every member's TokenDocument, `member.document` returns the member itself with a deprecation warning naming the calling line, and target hooks and target macros' `token` are TokenDocuments. `workflow.token` stays the caster's Token; `workflow.tokenDocument` is its TokenDocument.
 
-To work in both:
-- Every member (saves, damage, effects, HP): `set.documents` and `set.count`; a TokenDocument's `actor` is all they need.
-- The canvas (distance, sight, cover, `center`, moving tokens): `set.tokens`.
-- Replace `member.document` with the member; compare members with `workflow.tokenDocument`, not `workflow.token`, or use `set.has(token)`.
-- Copy with `new MidiQOL.TokenDocumentSet(set)`, which keeps every member; `new Set(set)` and spreading keep only what reading the set gives.
+#### Migrating macros and modules
+
+**Nothing has to change today.** By default a set reads as drawn Tokens, as before, so existing macros keep working, and they still skip targets that aren't drawn, as they always did. One thing is new in both modes: target hooks and target macros (`midi-qol.preTargetSave`, `preTargetDamageApplication`, `isDamaged`/`isHealed`, `TargetOnUse` macros) now also run for a target that isn't drawn, and get its TokenDocument. A handler that assumes a Token (`token.document.actor`, `token.center`) fails for that target, so make those handlers accept either (below).
+
+Document mode becomes the default later. To be ready, write code that works in both modes, then check it with `MidiQOL.setTokenDocumentSets(true)` (a GM, the whole world, after a reload). In document mode each `member.document` logs a deprecation warning naming the line to change.
+
+| Instead of | Use (works in both modes) |
+|---|---|
+| `for (const t of workflow.targets)` for saves, damage, effects, HP | `for (const t of workflow.targets.documents)`: every target, drawn or not |
+| `workflow.targets.size` | `workflow.targets.count` |
+| `workflow.targets.first()` | `workflow.targets.documents[0]` (or `.tokens[0]` for the canvas) |
+| `t.document.uuid`, `[...set].map(t => t.document.uuid)` | `set.uuids`; for one member, `doc.uuid` (below) |
+| `t.document` on a set member or hook target | `const doc = t instanceof TokenDocument ? t : t.document` (`x.document ?? x` also works but warns in document mode) |
+| `t.center`, `t.x`/`t.y` for distance, sight, cover, moving | `workflow.targets.tokens` (drawn targets only), or `doc.object` (null when not drawn) |
+| `t === workflow.token` | `workflow.targets.has(workflow.tokenDocument)`, or compare `doc` with `workflow.tokenDocument` |
+| `new Set(workflow.targets)`, `[...workflow.targets]` to copy | `new MidiQOL.TokenDocumentSet(workflow.targets)`: keeps every member |
+| `plainSet.difference(workflow.saves)` | `workflow.saves.difference(plainSet)`: call set algebra on the TokenDocumentSet |
+
+These work unchanged in both modes: `t.actor`, `t.id`, `t.name`, `set.has(x)`/`add(x)`/`delete(x)` with a Token, TokenDocument or uuid, and assigning a Set (`workflow.targets = new Set(tokensOrDocuments)`).
 
 ### Storing data on the card
 

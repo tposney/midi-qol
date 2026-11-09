@@ -1420,7 +1420,8 @@ export let MidiActivityMixin = Base => {
           flavor,
           speaker,
           type: "damage",
-          system: { item: { id: this.item.id, uuid: this.item.uuid } }
+          // As dnd5e's own damage messages: dnd5e renders one with an item from its activity
+          system: { ...this.messageSources }
         };
         if (needsMaxDamage) {
           for (let i = 0; i < result.length; i++) {

@@ -41,8 +41,7 @@ export function midiButtonVisibility(message: Dnd5eChatMessage | undefined, acti
   // Confirmation holds the buttons only while pending; `progress.confirmed` alone does not mean the card is finished.
   const confirmEnabled = !!midi.confirmAttackDamage;
   const confirmPending = confirmEnabled && !progress.confirmed;
-  // midi's card actions dispatch through the activity: once its item is gone none of them can run (the stand-in
-  // #prepareBaseContext gives dnd5e for a deleted item has no item).
+  // midi's card actions dispatch through the activity: once its item is gone none of them can run.
   const done = !!progress.allRemoved || !activity?.item || !!message?.getFlag(MODULE_ID, "undone");
   const removeAll = done || getRemoveAllButtons(activity);
   // Attacks handed to one use per target: those cards attack, damage and apply effects.
@@ -278,7 +277,7 @@ export function setupUsageCardMessage() {
     /** dnd5e's context plus midi's keys; a message with `content` (older cards) renders it verbatim. */
     async _prepareContext(options: ChatMessageRenderOptions): Promise<Record<string, any>> {
       this.#visibility = undefined;
-      const context = await this.#prepareBaseContext(options);
+      const context = await super._prepareContext(options);
       if (context?.content) return context;
 
       // A teleport that moves the controlled tokens opens its targets list on them (dnd5e's Selected view).
@@ -361,31 +360,6 @@ export function setupUsageCardMessage() {
         return new Set();
       }
       return new Set((context.summaries ?? []).map((summary: any) => summary.token?.uuid).filter(Boolean));
-    }
-
-    /** dnd5e's context with a stand-in activity when the item is gone; dnd5e's would throw and break the log batch. */
-    async #prepareBaseContext(options: ChatMessageRenderOptions): Promise<Record<string, any>> {
-      const parent = this.parent as Dnd5eChatMessage;
-      const resolve = parent.getAssociatedActivity;
-      if (typeof resolve !== "function" || resolve.call(parent)) return super._prepareContext(options);
-      Object.defineProperty(parent, "getAssociatedActivity", {
-        // dnd5e reads `activity?.target.affects.type`, so the stand-in needs the nested shape.
-        value: () => ({
-          metadata: {},
-          target: { affects: {}, template: {} },
-          shouldHideChatButton: () => true
-        }),
-        configurable: true, writable: true
-      });
-      try {
-        const context = await super._prepareContext(options);
-        // Buttons dispatch through the activity, so none without one.
-        delete context.buttons;
-        delete context.buttonGroups;
-        return context;
-      } finally {
-        delete (parent as unknown as Record<string, unknown>).getAssociatedActivity;
-      }
     }
 
     /**
