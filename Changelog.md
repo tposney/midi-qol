@@ -30,7 +30,7 @@ midi now shows in Foundry's player list which players it is waiting for, and the
 
 **Saves and reactions**
 * A save requested by chat card is answered only by the requested kind of roll (the save, or one of its abilities when there is a choice; the check, skill or tool), not by any roll by the token.
-* A timed-out save for another player's creature is rolled by a GM with the player's roll mode (private and self rolls are whispered to the player, blind ones aren't); with no GM connected, without bonus prompts.
+* A save, Active Defence or contested roll the GM makes for a player (taken over from the player list, or a timed-out save for another player's creature) uses the player's roll mode: private and self rolls are whispered to the player, blind ones aren't. With no GM connected a timed-out save is rolled without bonus prompts.
 * A GM using a reaction that targets another creature, places an area or teleports, on a scene they aren't viewing, is asked to view it first. Self-only reactions (Shield) work from any scene.
 * A GM using an item for a creature whose token is on a scene they aren't viewing is asked to view that scene first (targets are then confirmed there) or use it anyway: other modules' reactions (Gambit's Premades), animations and placement only work on the viewed scene.
 

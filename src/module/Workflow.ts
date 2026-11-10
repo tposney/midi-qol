@@ -6562,7 +6562,8 @@ export class Workflow {
     // The GM can answer for a player who hasn't rolled (the player list): rolled for them, or on the GM's screen
     const rollForThem = (fastForward: boolean, mode?: "advantage" | "disadvantage") => unTimedExecuteAsGM("rollAbility", {
       saveDetails: mode ? { ...saveDetails, advantage: mode === "advantage", disadvantage: mode === "disadvantage" } : saveDetails,
-      displayOptions: { fastForward, chatMessage: displayOptions.showRoll, rollMode: toMessageMode(this.activity.midiProperties?.rollMode), showTargetDC: true }
+      // As the player's own roll would have been shown (their roll mode; private and self whispered to them, blind not)
+      displayOptions: { fastForward, chatMessage: displayOptions.showRoll, rollMode: this.playerSaveMessageMode(), showTargetDC: true, forUserId: player.id }
     });
     const requestIds = [target.id, target.actor?.uuid].filter((id): id is string => !!id);
     const what = [...rollInfo.abilities, ...rollInfo.skills, ...rollInfo.tools].map(key => key.toUpperCase()).join("/");
@@ -8636,9 +8637,11 @@ export class ActiveDefenceWorkflow extends Workflow {
       if (debugEnabled > 0) warn(`checkSaves | Player ${player?.name} controls actor ${target.actor.name} - requesting DC ${this.activeDefenceDC} save`);
       if (player && player.active && !player.isGM && target.actor) {
         const requestId = target.actor.uuid ?? foundry.utils.randomID();
+        // As the player's own defence roll would have been shown (Active Defence roll display, whispered to them unless blind)
         const rollForThem = async () => {
           const result = await (new D20Roll(formula, {}, options)).evaluate();
-          result.toMessage({ flavor: `${this.item.name} ${i18n("midi-qol.ActiveDefenceString")}` });
+          result.toMessage({ flavor: `${this.item.name} ${i18n("midi-qol.ActiveDefenceString")}`, speaker: ChatMessage.getSpeaker({ actor: target.actor }),
+            flags: { [MODULE_ID]: { rollFor: player.id } } }, { messageMode: toMessageMode((checkRule("activeDefenceShow") as string) || "self") });
           return result;
         };
         promises.push(trackPlayerWait({

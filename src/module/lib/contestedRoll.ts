@@ -203,7 +203,8 @@ export async function contestedRoll(data: {
   const contestRoll = (user: User.Implementation, saveDetails: typeof sourceSaveDetails, rollOptions: typeof sourceRollOptions, actorUuid?: string, tokenUuid?: string) => {
     const roll = (asUser: string, fastForward: boolean | undefined, mode?: "advantage" | "disadvantage") => socketlibSocket.executeAsUser("rollAbility", asUser, {
       saveDetails: mode ? { ...saveDetails, advantage: mode === "advantage", disadvantage: mode === "disadvantage" } : saveDetails,
-      displayOptions: { chatMessage: true, fastForward, rollMode: rollModeToMessageMode(rollOptions.rollMode) }
+      // Rolled by a GM for the player: shown to them as their own roll would have been
+      displayOptions: { chatMessage: true, fastForward, rollMode: rollModeToMessageMode(rollOptions.rollMode), forUserId: asUser !== user.id ? user.id : undefined }
     });
     const gm = () => game.users?.activeGM?.id ?? user.id!;
     return trackPlayerWait({
