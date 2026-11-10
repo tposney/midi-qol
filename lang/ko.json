@@ -270,6 +270,14 @@
     "midi-qol.SingleConcentrationRoll.Hint": "활성화 시 공격이 정상적 피해 + 내성굴림 + 기타/다용도 피해를 굴리면 결합된 피해에 대한 단일 집중 검사만을 확인한다.",
     "midi-qol.Config": {
     "Tabs": {
+      "gm": "GM",
+      "player": "플레이어",
+      "workflow": "워크플로우",
+      "concentration": "집중",
+      "reactions": "Reactions",
+      "misc": "Misc",
+      "mechanics": "Mechanics",
+      "rules": "옵션",
       "quick": "Quick Settings"
     }
   },

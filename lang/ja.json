@@ -302,6 +302,14 @@
   },
   "midi-qol.Config": {
     "Tabs": {
+      "gm": "GM",
+      "player": "プレイヤー",
+      "workflow": "ワークフロー",
+      "concentration": "集中",
+      "reactions": "リアクション",
+      "misc": "そのほか",
+      "mechanics": "メカニクス",
+      "rules": "任意",
       "quick": "クイック設定"
     }
   },

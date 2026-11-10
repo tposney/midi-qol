@@ -374,6 +374,14 @@
     },
     "midi-qol.Config": {
         "Tabs": {
+            "gm": "GM",
+            "player": "玩家",
+            "workflow": "工作流(Workflow)",
+            "concentration": "專注",
+            "reactions": "反應(Reactions)",
+            "misc": "雜項",
+            "mechanics": "機制",
+            "rules": "規則",
             "quick": "快速設定"
         }
     },

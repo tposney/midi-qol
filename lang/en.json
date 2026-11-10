@@ -85,6 +85,9 @@
   "midi-qol.PlayerSaveTimeout.Name": "Timeout before rolling for players",
   "midi-qol.PlayerSaveTimeout.Hint": "How long to wait before taking over the player's save for them in seconds",
   "midi-qol.MagicResistant": "magic-resistant",
+  "midi-qol.MagicVulnerable": "Magic Vulnerable",
+  "midi-qol.ItemMacroText": "ItemMacro",
+  "midi-qol.ActivityMacroText": "ActivityMacro",
   "midi-qol.MagicResistanceFeat": "Magic Resistance",
   "midi-qol.noTargets": "You must target a token before rolling the attack",
   "midi-qol.WorkflowRunning": "{name} is still being resolved: roll again when it is waiting.",
@@ -483,6 +486,14 @@
   },
   "midi-qol.Config": {
     "Tabs": {
+      "gm": "GM",
+      "player": "Player",
+      "workflow": "Workflow",
+      "concentration": "Concentration",
+      "reactions": "Reactions",
+      "misc": "Misc",
+      "mechanics": "Mechanics",
+      "rules": "Rules",
       "quick": "Quick Settings"
     }
   },
@@ -746,6 +757,7 @@
   "midi-qol.NonAdamantinePhysical": "Non-Adamantine Physical",
   "midi-qol.NonMagicalPhysical": "Non-Magical Physical",
   "midi-qol.Physical": "Physical Damage",
+  "midi-qol.NonPhysical": "Non-Physical Damage",
   "midi-qol.Magical": "Magical Damage",
   "midi-qol.NonMagical": "Non-Magical Damage",
   "midi-qol.SpellDamage": "Spell Damage",
@@ -757,6 +769,7 @@
   "midi-qol.reactionManual": "Manual",
   "midi-qol.reactionPreAttack": "Pre Attack Roll",
   "midi-qol.ShowReactionChatMessage.Name": "Show Chat prompt for reactions",
+  "midi-qol.reactionFlavorAttack": "{actorName} is attacked by {itemName} and can use a reaction",
   "midi-qol.reactionFlavorHit": "{actorName} is hit by {itemName} and can use a reaction",
   "midi-qol.reactionFlavorTargeted": "{actorName} is targeted by {itemName} and can use a reaction",
   "midi-qol.reactionFlavorMiss": "{actorName} is missed by {itemName} and can use a reaction",

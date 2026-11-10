@@ -532,6 +532,14 @@
   },
   "midi-qol.Config": {
     "Tabs": {
+      "gm": "MJ",
+      "player": "Joueur",
+      "workflow": "Flux",
+      "concentration": "Concentration",
+      "reactions": "Réaction",
+      "misc": "Divers",
+      "mechanics": "Mécanique",
+      "rules": "Règles",
       "quick": "Paramètres rapides"
     }
   },

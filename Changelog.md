@@ -1,3 +1,6 @@
+### 14.6.10
+* Reinstated missing tab labels and language entries.
+
 ### 14.6.9
 
 **Chat cards**
