@@ -1,3 +1,45 @@
+### 14.6.11
+**Waiting on players**
+
+midi now shows in Foundry's player list which players it is waiting for, and the GM can answer for them.
+* A player midi is waiting on has a badge on their row: a lightning bolt counts reactions waiting, a d20 counts rolls waiting (saves, ability checks, Active Defence rolls, failed-roll bonuses, contested rolls, and their own attack, damage or other rolls not yet rolled). Hover over the badge to see what each is for and how long it has waited.
+* Click the badge to answer for the player with the choices their dialog offers: roll a save or check for them (normally, with advantage or with disadvantage) or on your own screen, roll their attack (normal, advantage, disadvantage) or damage (normal, critical), choose a reaction for them or decline it. Their dialog closes when you answer. Whoever answers first wins: if the player answers, or declines, before you, your answer is ignored, and vice versa. Right-click a player to answer everything they have waiting with the defaults.
+* If a player disconnects while midi is waiting on them, what they were asked stays on their row for you to answer, and the player list opens to show them. With *GM can answer for players* off, their save is rolled for them and their reaction declined at once.
+* A player sees a badge on their own row while midi is waiting on them. Clicking it brings their dialogs back to the front, for example when clicking their character sheet hid the dialog behind it.
+* Players also see the other players' badges, read-only: the kind of prompt (reaction, saving throw, attack roll...) and how long it has waited, but not what it is about.
+* With Gambit's Premades and its *Mirror 3rd Party Dialog for GMs* setting, Gambit's reaction prompts mirrored to the GM show on the player's row instead of on the GM's screen; *Show prompt* in the popover brings one up for the GM to answer.
+* Settings: *GM can answer for players*, *Players see who midi is waiting for* and *List Gambit's Premades prompts in the player list*, together on the GM tab, all on by default.
+* Macros and modules can show their own prompts the same way with `MidiQOL.playerWaits` (see MACROS.md, *Waiting on Players*).
+
+**Macros**
+* An item's own macro is no longer run automatically after active effects when its *On Use Macros* list is empty (added in 14.6.5). It ran macros a second time when the item's effects already called them, and showed an entry in the list that couldn't be deleted. To run an item's macro when the item is used, add an entry to its *On Use Macros* list; the macro name can be left blank to mean the item's own macro.
+* `MidiQOL.socket()` no longer refuses or warns about calls by the caller's role (checked only in the caller's own client, so it protected nothing); `executeForOtherGMs` works (it was `executeForOtherGMS`, which failed; the old name still works).
+
+**Countdowns**
+* Dialogs that answer themselves when time runs out (reactions, optional bonuses, choosing an effect, and a player's save or check when *Player save timeout* is set) show a bar under the title that drains from green to red, with the seconds left. A pause button stops the clock when a player needs more time; pausing a reaction also holds the attack waiting for it. When time runs out the dialog closes.
+
+**Dialogs**
+* The reaction dialog is titled with the reacting token's name ("Goblin Boss: Reaction"), shows each reaction with its item's picture, and has a *No reaction* button. Pressing Enter declines rather than using a reaction.
+* Fixed: the reaction prompt for a creature that moves showed "isMoved" instead of its text.
+* Fixed: confirming a reroll from an optional bonus kept the old roll when you pressed Enter. Enter now keeps the new roll, and the dialog shows the original roll above the new one.
+* Fixed: target confirmation showed a stray *Clear* button, did not roll when you pressed Enter, and with several targets could open partly off the bottom of the screen.
+* Fixed: a quick settings preset in the midi-qol configuration was saved and the window closed before you saw what it would change. It now shows the changes first, and *Don't apply* leaves your settings as they were.
+* Fixed: importing midi-qol settings or Trouble Shooter data hung when you closed the dialog or chose a file that wasn't a valid export; you now get a message instead.
+* Fixed: the Trouble Shooter, sound configuration and roll statistics windows jumped back to their first tab whenever they refreshed (the roll statistics *Config* tab could not be used during combat).
+* Fixed: the Trouble Shooter's problems table showed no module ids, and two of its tables had broken headings.
+
+**Saves and reactions**
+* A save requested by chat card is answered only by the requested kind of roll (the save, or one of its abilities when there is a choice; the check, skill or tool), not by any roll by the token.
+* A timed-out save for another player's creature is rolled by a GM with the player's roll mode (private and self rolls are whispered to the player, blind ones aren't); with no GM connected, without bonus prompts.
+* A GM using a reaction that targets another creature, places an area or teleports, on a scene they aren't viewing, is asked to view it first. Self-only reactions (Shield) work from any scene.
+* A GM using an item for a creature whose token is on a scene they aren't viewing is asked to view that scene first (targets are then confirmed there) or use it anyway: other modules' reactions (Gambit's Premades), animations and placement only work on the viewed scene.
+
+**Other modules**
+* Fixed: Monk's TokenBar roll cards cut off a two-digit total and half hid its pass/fail icons.
+* The outdated-module warning checks for DAE 14.6.7, the version midi requires.
+* Removed Ready Set Roll from midi's module lists and the Trouble Shooter (no Foundry 14 release).
+* Removed Simbul's Cover Calculator support (no Foundry 14 release): worlds using it switch to *None* for *Calculate Cover* and *Center Check* for *Walls block ranged attacks*.
+
 ### 14.6.10
 * Reinstated missing tab labels and language entries.
 

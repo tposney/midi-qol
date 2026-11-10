@@ -236,6 +236,7 @@ Object.assign(globalThis.MidiQOL, {
   splitOvertimeSpec,
   computeSkillAdvantage,
   computeToolAdvantage,
+  playerWaits: { begin: beginPlayerWait, track: trackPlayerWait, settle: settlePlayerWait, claim: claimPlayerWait, known: knownPlayerWaits },
   addCardNote,
   removeCardNote,
   registerCardNoteRenderer,
@@ -416,6 +417,9 @@ Hooks.once('init', async function () {
   window.customElements.define("midi-damage-application", DamageApplicationElementMidi as unknown as CustomElementConstructor);
   setupActivities();
   setupCATIntegration();
+  setupPlayerWaits();
+  setupPlayerWaitsUI();
+  setupDialogCountdowns();
   setupRegionMagic();
   setupMagicSight();
 
@@ -947,6 +951,9 @@ Hooks.once('ready', function () {
 import { setupChatMessageMidi, ChatMessageMidi } from './module/ChatClasses/ChatMessageMidi.js';
 import { setupDamageCardMessage } from './module/ChatClasses/DamageCardMessage.js';
 import { setupUsageCardMessage } from './module/ChatClasses/UsageCardMessage.js';
+import { setupPlayerWaits, beginPlayerWait, trackPlayerWait, settlePlayerWait, claimPlayerWait, knownPlayerWaits } from "./module/lib/playerWaits.js";
+import { setupPlayerWaitsUI } from "./module/lib/playerWaitsUI.js";
+import { setupDialogCountdowns } from "./module/lib/dialogCountdown.js";
 import { addCardNote, cardNoteMessageData, registerCardNoteRenderer, removeCardNote, renderLinkedMessage, setupCardContentGuard, visibleRollTotal } from './module/lib/cardNotes.js';
 import { contestedRoll, setupContestNote } from './module/lib/contestedRoll.js';
 import { setupInfluenceNote } from './module/lib/influenceNote.js';
@@ -1059,6 +1066,7 @@ function setupMidiQOLApi() {
     tokenAtPosition,
     computeDistance,
     getDistance,
+    playerWaits: { begin: beginPlayerWait, track: trackPlayerWait, settle: settlePlayerWait, claim: claimPlayerWait, known: knownPlayerWaits },
     addCardNote,
     removeCardNote,
     registerCardNoteRenderer,

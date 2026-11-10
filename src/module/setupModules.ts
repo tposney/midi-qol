@@ -1,7 +1,7 @@
 import { error, warn, log, debugEnabled, i18nFormat } from "../midi-qol.js";
 import { TroubleShooter } from "./apps/TroubleShooter.js";
 
-export const DAE_REQUIRED_VERSION = "14.6.2";
+export const DAE_REQUIRED_VERSION = "14.6.7";
 export const USEFUL_MODULE_VERSIONS = {
   "about-time": "0.0",
   "ActiveAuras": "0.4.13",
@@ -27,9 +27,7 @@ export const USEFUL_MODULE_VERSIONS = {
   "monks-tokenbar": "1.0.55",
   "multilevel-tokens": "13.0.0",
   "perceptive": "3.2.1",
-  "ready-set-roll-5e": "3.4.3",
   "seasons-and-stars": "0.11.0",
-  "simbuls-cover-calculator":  "1.0.2",
   "simplecover5e": "1.3.1",
   "socketlib": "0.0",
   "tokencover": "0.6.0",

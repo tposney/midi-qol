@@ -10,7 +10,7 @@
                     <th>Problem</th>
                     <th>Fix</th>
                     </tr>
-                    {{#each problems as |problem moudleId|}}
+                    {{#each problems as |problem moduleId|}}
                         <tr>
                         {{#if problem.critical}}
                             <td style="color: red"><strong>Critical {{problem.severity}}</strong></td>
@@ -51,7 +51,7 @@
         <div class="midi-qol-box">
             {{#if hasIncompatible}}
                 <table>
-                    <t style="text-align: center" colspan="2">Incompatible Modules Active</th>
+                    <tr><th style="text-align: center" colspan="2">Incompatible Modules Active</th></tr>
                     <tr>
                         <td>Module Id</td>
                         <td>Module Name</td>

@@ -295,7 +295,6 @@ export class MidiRegionActivityBehaviorType extends foundry.data.regionBehaviors
     if (asUser?.active && asUser.id === game.user?.id) {
       await MidiRegionActivityBehaviorType._executeTriggerActivity(triggerData);
     } else if (asUser?.active) {
-      // midiRegionTriggerActivity is in the canCall whitelist for any user.
       await socketlibSocket.executeAsUser("midiRegionTriggerActivity", asUser.id, triggerData);
     } else if (game.user?.isGM) {
       await MidiRegionActivityBehaviorType._executeTriggerActivity(triggerData);

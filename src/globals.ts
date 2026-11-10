@@ -16,6 +16,7 @@ import { AttributionMap, AugmentedEvent, DamageDescriptionObject, DamageOnlyWork
 import { MidiOptions } from "./module/utils";
 import * as utils from "./module/utils";
 import * as cardNotes from "./module/lib/cardNotes";
+import * as playerWaits from "./module/lib/playerWaits";
 import * as tokenNames from "./module/lib/tokenNames";
 import * as contestedRollModule from "./module/lib/contestedRoll";
 import * as tokenHighlight from "./module/lib/tokenHighlight";
@@ -67,6 +68,11 @@ declare module "fvtt-types/configuration" {
       // One target's hit result in checkHits, last: change targetAC (tested again) or the result (kept as set). A fumble
       // loses every hit later in the workflow, so making a hit of a fumble also clears isFumble.
       "midi-qol.premades.checkHitTarget": (hitCheck: { workflow: unknown, target: Token.Implementation | TokenDocument.Implementation, attackTotal: number, targetAC: number, isHit: boolean, isHitEC: boolean, isCritical: boolean, isFumble: boolean }) => Promise<void> | void;
+      "midi-qol.playerWaitStarted": (info: playerWaits.WaitInfo) => void;
+      "midi-qol.playerWaitEnded": (info: playerWaits.WaitInfo, result: { choice?: string, claimed?: boolean }) => void;
+      "midi-qol.playerWaitsChanged": (waits: playerWaits.WaitInfo[]) => void;
+      /** dnd5e's roll configuration dialogs (and midi's MidiRollChoiceDialog) when they render */
+      "renderRollConfigurationDialog": (app: foundry.applications.api.ApplicationV2, element: HTMLElement, context: unknown, options: unknown) => void;
       "dnd5e.calculateDamage": (actor: Actor.Implementation, damages: DamageDescription[], options: DamageApplicationOptions) => boolean | void;
       "dnd5e.postAbilityCheckRollConfiguration": (rolls: Roll[], config: RollProcessConfig, dialog: RollDialogConfig, message: RollMessageConfig) => boolean | void;
       "dnd5e.postAttackRollConfiguration": (rolls: Roll[], config: RollProcessConfig, dialog: RollDialogConfig, message: RollMessageConfig) => boolean | void;
@@ -775,6 +781,7 @@ declare global {
     tokenAtPosition: typeof utils.tokenAtPosition;
     computeDistance: typeof utils.computeDistance;
     getDistance: typeof utils.getDistance;
+    playerWaits: { begin: typeof playerWaits.beginPlayerWait, track: typeof playerWaits.trackPlayerWait, settle: typeof playerWaits.settlePlayerWait, claim: typeof playerWaits.claimPlayerWait, known: typeof playerWaits.knownPlayerWaits };
     addCardNote: typeof cardNotes.addCardNote;
     removeCardNote: typeof cardNotes.removeCardNote;
     registerCardNoteRenderer: typeof cardNotes.registerCardNoteRenderer;
@@ -850,6 +857,7 @@ declare global {
     computeToolAdvantage: typeof patching.computeToolAdvantage;
     ConfigPanel: typeof ConfigPanel;
     configSettings: () => typeof configSettings;
+    playerWaits: { begin: typeof playerWaits.beginPlayerWait, track: typeof playerWaits.trackPlayerWait, settle: typeof playerWaits.settlePlayerWait, claim: typeof playerWaits.claimPlayerWait, known: typeof playerWaits.knownPlayerWaits };
     addCardNote: typeof cardNotes.addCardNote;
     removeCardNote: typeof cardNotes.removeCardNote;
     registerCardNoteRenderer: typeof cardNotes.registerCardNoteRenderer;

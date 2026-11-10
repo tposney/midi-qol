@@ -51,6 +51,7 @@ import {
   getSpeaker,
   getToken,
   activityHasAutoPlaceTemplate,
+  confirmUseOffScene,
   hasUsedBonusAction,
   hasUsedReaction,
   autoConsumeResource,
@@ -700,6 +701,10 @@ export let MidiActivityMixin = Base => {
         ui.notifications?.error("DND5E.ACTIVITY.Warning.UsageNotAllowed", { localize: true });
         return;
       }
+      // A GM's own use (a click, not a macro, reaction or another module's call)
+      const interactive = !!usage.event && !usage.workflow && !usage.midiOptions?.workflowOptions?.forceCompletion;
+      const offScene = interactive ? await confirmUseOffScene(this.actor) : "here";
+      if (offScene === "cancel") return;
       let preUseActivityHookId: number | undefined;
       // dnd5e's copy of `usage`, which midi annotates.
       let dnd5eUsageConfig: ActivityUseConfiguration | undefined;
@@ -708,6 +713,10 @@ export let MidiActivityMixin = Base => {
         // Copies: a caller may reuse one options object across uses, and this snapshot belongs to this use alone.
         usage.midiOptions = { ...usage.midiOptions };
         usage.midiOptions.workflowOptions = { ...usage.midiOptions.workflowOptions };
+        // The view moved to the creature's scene, which clears the user's targets: an attack or creature targets (not an
+        // area or self) are confirmed there
+        const choosesCreatures = !this.target?.template?.type && (!!this.attack || !["", "self", undefined].includes(this.target?.affects?.type));
+        if (offScene === "viewed" && choosesCreatures) usage.midiOptions.workflowOptions.targetConfirmation ??= "always";
         // Capture current targets before template placement can replace them
         usage.midiOptions.workflowOptions.preSelectedTargetUuids ??= Array.from(game.user?.targets ?? []).map(t => t.document.uuid);
         if (debugEnabled > 0) warn("MidiQOL | MidiActivity | use | Called", usage, dialog, message);

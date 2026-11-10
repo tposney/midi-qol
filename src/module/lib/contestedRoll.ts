@@ -5,6 +5,7 @@
  * checks' current totals. On a card that can't draw notes (stored markup) the note is shown on its own in the log.
  */
 
+import { trackPlayerWait } from "./playerWaits.js";
 import { error, GameSystemConfig, i18n, i18nFormat, MODULE_ID } from "../../midi-qol.js";
 import { SaveDetails, TokenOrDocument } from "../../globals.js";
 import { CardNoteRenderContext } from "../ChatClasses/CardNoteMessage.js";
@@ -198,15 +199,27 @@ export async function contestedRoll(data: {
     targetRollOptions
   );
 
+  // The GM can roll for a player who hasn't (the player list): rolled for them, or on the GM's screen
+  const contestRoll = (user: User.Implementation, saveDetails: typeof sourceSaveDetails, rollOptions: typeof sourceRollOptions, actorUuid?: string, tokenUuid?: string) => {
+    const roll = (asUser: string, fastForward: boolean | undefined, mode?: "advantage" | "disadvantage") => socketlibSocket.executeAsUser("rollAbility", asUser, {
+      saveDetails: mode ? { ...saveDetails, advantage: mode === "advantage", disadvantage: mode === "disadvantage" } : saveDetails,
+      displayOptions: { chatMessage: true, fastForward, rollMode: rollModeToMessageMode(rollOptions.rollMode) }
+    });
+    const gm = () => game.users?.activeGM?.id ?? user.id!;
+    return trackPlayerWait({
+      kind: "contest", userId: user.id!, actorUuid, tokenUuid,
+      label: i18nFormat("midi-qol.PlayerWaits.ContestLabel", { flavor: flavor ?? i18n("midi-qol.ContestedRoll") }),
+      choices: {
+        roll: { label: "midi-qol.PlayerWaits.Choice.normal", value: () => roll(gm(), true) },
+        advantage: { label: "midi-qol.PlayerWaits.Choice.advantage", value: () => roll(gm(), true, "advantage") },
+        disadvantage: { label: "midi-qol.PlayerWaits.Choice.disadvantage", value: () => roll(gm(), true, "disadvantage") },
+        gmRoll: () => roll(gm(), false)
+      }
+    }, () => roll(user.id!, rollOptions.fastForward));
+  };
   const resultPromises = [
-    socketlibSocket.executeAsUser("rollAbility", player1.id, {
-      saveDetails: sourceSaveDetails,
-      displayOptions: { chatMessage: true, fastForward: sourceRollOptions.fastForward, rollMode: rollModeToMessageMode(sourceRollOptions.rollMode) }
-    }),
-    socketlibSocket.executeAsUser("rollAbility", player2.id, {
-      saveDetails: targetSaveDetails,
-      displayOptions: { chatMessage: true, fastForward: targetRollOptions.fastForward, rollMode: rollModeToMessageMode(targetRollOptions.rollMode) }
-    }),
+    contestRoll(player1, sourceSaveDetails, sourceRollOptions, sourceDocument?.actor?.uuid, sourceDocument?.uuid),
+    contestRoll(player2, targetSaveDetails, targetRollOptions, targetDocument?.actor?.uuid, targetDocument?.uuid)
   ];
 
   let results = await Promise.all(resultPromises);

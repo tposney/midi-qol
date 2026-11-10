@@ -1,3 +1,4 @@
+import { chooseJsonFile } from "../lib/fileDialogs.js";
 import { rulesTextCompendiumChoices } from "../lib/rulesText.js";
 import { criticalDamage, criticalDamageChoices, coloredBorders, coloredBordersOptions, importSettingsFromJSON, exportSettingsToJSON, enableWorkflow, wallsBlockRangeOptionsNew, visionTestHeightOptions, templateOriginHeightOptions, coverCalculationOptions, hiddenAdvantageOptions, addDeadOptions, rollNPCSavesOptions, playerRollSavesOptions, autoCheckHitOptions, autoTargetOptions, rangeTargetOptions, requiresTargetsOptions, autoCheckSavesOptions, saveSummaryStyleOptions, chatCardSummariesOptions, autoRollDamageOptions, removeButtonsOptions, autoApplyDamageOptions, playerDamageCardOptions, damageImmunitiesOptions, showItemDetailsOptions, doReactionsOptions, gmDoReactionsOptions, autoCEEffectsOptions, showReactionAttackRollOptions, recordAOOOptions, EnforceReactionsOptions, autoEffectsOptions, requireMagicalOptions, gmAttackDisplayOptions, gmDamageDisplayOptions, gmDsnDisplayOptions, blindRollDisplayOptions, checkFlankingOptions, flankingBonusOptions, rollAlternateOptions, consumeResourceOptions, averageDamageOptions, removeConcentrationEffectsOptions, incapacitatedOptions, checkRangeOptions, targetMustBeSeenOptions, invisAdvantageOptions, confirmAttackDamageOptions, challengeModeArmorOptions, saveDROrderOptions, defaultOtherActivityOptions, doConcentrationCheckOptions, activationAutomationOptions, safeGetGameSetting, distanceMeasurementOptions } from "../settings.js"
 import { configSettings } from "../settings.js"
@@ -88,7 +89,7 @@ export class ConfigPanel extends HandlebarsApplicationMixin(ApplicationV2) {
     }
     let wallsBlockRangeOptions: SelectOptions = foundry.utils.duplicate(wallsBlockRangeOptionsNew);
     let CoverCalculationOptions: SelectOptions = foundry.utils.duplicate(coverCalculationOptions);
-    [{ id: "levelsautocover", name: "'Levels Auto Cover'" }, { id: "simbuls-cover-calculator", name: "'Simbuls Cover Calculator'" }, { id: "simplecover5e", name: "'Simple Cover 5e'" }, { id: "tokencover", name: "'Alternative Token Cover'" }].forEach(module => {
+    [{ id: "levelsautocover", name: "'Levels Auto Cover'" }, { id: "simplecover5e", name: "'Simple Cover 5e'" }, { id: "tokencover", name: "'Alternative Token Cover'" }].forEach(module => {
       if (!installedModules.get(module.id)) {
         const notInstalled = game.i18n?.format("MODMANAGE.DepNotInstalled", { missing: "" }) ?? "";
         wallsBlockRangeOptions[module.id] = withOptionLabel(wallsBlockRangeOptions[module.id], `${i18n(wallsBlockRangeOptions[module.id])} - ${notInstalled}`);
@@ -423,52 +424,24 @@ export class ConfigPanel extends HandlebarsApplicationMixin(ApplicationV2) {
 }
 
 async function importFromJSONDialog() {
-  const content = await foundry.applications.handlebars.renderTemplate("templates/apps/import-data.hbs", { entity: "midi-qol", name: "settings" });
-  let dialog = new Promise((resolve, reject) => {
-    new DialogV2({
-      window: { title: `Import midi-qol settings` },
-      position: {
-        width: 400,
-        height: "auto"
-      },
-      content: content,
-      buttons: [
-        {
-          action: "import",
-          icon: "fa-solid fa-file-import",
-          label: 'Import',
-          default: true,
-          callback: event => {
-            const form = (event.currentTarget as HTMLElement | null)?.querySelector("form");
-            if (!form?.data.files.length) return ui.notifications?.error("You did not upload a data file!");
-            foundry.utils.readTextFromFile(form.data.files[0]).then(json => {
-              importSettingsFromJSON(json).then(() => resolve(true))
-            });
-          }
-        },
-        {
-          action: "no",
-          icon: "fa-solid fa-xmark",
-          label: 'Cancel',
-          callback: event => resolve(false)
-        }
-      ],
-    }).render({ force: true });
-  });
-  return await dialog;
+  const file = await chooseJsonFile(i18n("midi-qol.Import.SettingsTitle"));
+  if (!file) return false;
+  try {
+    await importSettingsFromJSON(file.text);
+    return true;
+  } catch (err) {
+    error("importing settings from", file.name, err);
+    ui.notifications?.error(i18n("midi-qol.Import.BadFile"));
+    return false;
+  }
 }
 
 async function fetchConfigFile(filename: string | undefined): Promise<string> {
   if (!filename) return "{}";
-  return new Promise((resolve, reject) => {
-    fetch(filename).then(response => response.text())
-      .then(data => {
-        resolve(data)
-      });
-  });
+  return (await fetch(filename)).text();
 }
 
-function showDiffs(current: any, changed: any, flavor: string = "", title: string = "") {
+function showDiffs(current: any, changed: any, flavor: string = "", title: string = ""): Promise<boolean> {
   const diffs = foundry.utils.diffObject(changed, current, { inner: true });
   const changes: string[] = [];
   for (let key of Object.keys(diffs)) {
@@ -486,37 +459,18 @@ function showDiffs(current: any, changed: any, flavor: string = "", title: strin
 
     changes.push(`${key.startsWith("gm") ? "GM " : ""}${longName} <strong>${currentVal} => ${changedVal}</strong>`)
   }
-  if (changes.length === 0) changes.push("No Changes");
-  const dialog = new Promise((resolve, reject) => {
-    let dialogTitle;
-    if (title !== "") dialogTitle = `${i18n("midi-qol.Config.Tabs.quick")} - ${title}`;
-    else dialogTitle = i18n("midi-qol.Config.Tabs.quick");
-    new DialogV2({
-      classes: ["midi-qol-quick-config"],
-      window: { title: dialogTitle },
-      position: {
-        height: "auto"
-      },
-      content: changes.join("<br>"),
-      buttons: [
-        {
-          action: "apply",
-          default: true,
-          icon: "fa-solid fa-check",
-          label: 'Apply',
-          callback: () => resolve(true)
-        },
-        {
-          action: "abort",
-          icon: "fa-solid fa-xmark",
-          label: 'Don\'t Apply',
-          callback: () => resolve(false)
-        }
-      ],
-    }).render({ force: true });
-    warn("Quick Settings ", changes.join("\n"));
-  })
-  return dialog;
+  if (changes.length === 0) changes.push(i18n("midi-qol.QuickSettings.NoChanges"));
+  warn("Quick Settings ", changes.join("\n"));
+  const dialogTitle = title !== "" ? `${i18n("midi-qol.Config.Tabs.quick")} - ${title}` : i18n("midi-qol.Config.Tabs.quick");
+  // Closing the dialog is "don't apply"
+  return foundry.applications.api.DialogV2.confirm({
+    classes: ["midi-qol-quick-config"],
+    window: { title: dialogTitle },
+    content: changes.join("<br>"),
+    rejectClose: false,
+    yes: { label: "midi-qol.QuickSettings.Apply", icon: "fa-solid fa-check", default: true },
+    no: { label: "midi-qol.QuickSettings.DontApply", icon: "fa-solid fa-xmark", default: false }
+  }).then(apply => apply === true);
 }
 
 let quickSettingsDetails: any = {
@@ -750,8 +704,8 @@ export async function applySettings(key: string) {
       if (await showDiffs(configSettings, configData.configSettings, "", config.shortDescription)) {
         await importSettingsFromJSON(jsonText);
         log(`Loaded ${config.fileName}`);
+        return true;
       }
-      return true;
     } catch (err) {
       error("could not load config file", config.fileName, err);
     }

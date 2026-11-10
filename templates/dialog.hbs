@@ -2,11 +2,12 @@
     <div>
         {{{content}}}
     </div>
-    <div class="dialog-buttons" style="flex-direction: column;">
+    <div class="dialog-buttons midi-qol-dialog-buttons">
         {{#each buttons}}
-            <button class="dialog-button {{cssClass}}" data-button="{{@key}}">
+            <button type="button" class="dialog-button {{cssClass}}" data-button="{{@key}}" {{#if default}}autofocus{{/if}}>
+                {{#if img}}<img class="midi-qol-dialog-button-img" src="{{img}}" alt="">{{/if}}
                 {{{icon}}}
-                {{{label}}}
+                {{#if name}}<span>{{name}}</span>{{else}}{{{label}}}{{/if}}
             </button>
         {{/each}}
     </div>

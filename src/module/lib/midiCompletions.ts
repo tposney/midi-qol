@@ -101,6 +101,16 @@ const MIDI_COMPLETIONS: CompletionNode = {
       addRollTo: { type: "function", detail: "(roll, bonusRoll) => Roll", info: "Add a bonus roll to another roll; rolls with dice must already be rolled" },
       addRollToAsync: { type: "function", detail: "async (roll, bonusRoll) => Roll", info: "Add a bonus roll to another roll, rolling either first if needed" },
       doConcentrationCheck: { type: "function", detail: "(actor, saveDC) => Promise<Roll>", info: "Perform a concentration check" },
+      playerWaits: {
+        type: "object", info: "Waits on players, shown to the GM in the player list with choices to answer for them (see MACROS.md, Waiting on Players).",
+        children: {
+          begin: { type: "function", detail: "(spec) => PlayerWait | undefined", info: "Register a wait on a player: spec { kind, userId, actorUuid?, label, source?, choices: { id: () => value | { label, value } }, onSettled?, keepDialogs? }. The first choice is the default; keepDialogs leaves the player's open roll dialog alone when the GM answers. Returns { id, ref, settled, end(), active }, or undefined for a GM. End it when the player answers." },
+          track: { type: "function", detail: "(spec, start: (ref) => Promise) => Promise", info: "begin + your request: start(ref) sends it; resolves with the player's answer or the value of the GM's choice, whichever comes first." },
+          claim: { type: "function", detail: "async (ref) => boolean", info: "On the player's client before acting on their answer: false if the GM has already answered for them." },
+          settle: { type: "function", detail: "async (id, choice) => boolean", info: "Answer a wait with one of its choices (as the GM's popover does)." },
+          known: { type: "function", detail: "() => WaitInfo[]", info: "On a GM: every pending wait." }
+        }
+      },
       addCardNote: { type: "function", detail: "async (card | uuid | workflow, html, options?) => Promise<ChatMessage | undefined>", info: "Add a note to a midi usage card: a message linked to the card, drawn by it and hidden in the log.\n- options.anchor: buttons, attack, hits, damage, otherDamage, bonusDamage, utility, saves, top, bottom (default bottom)\n- options.position: before, prepend, append, after (default append)\n- options.key: adding again with the same key replaces your earlier note\n- options.visibility: all, gm, owner; or options.whisper (user ids)\n- options.label, cssClass, sort\n- options.kind, options.data: drawn by the renderer registered for kind (registerCardNoteRenderer); html is the fallback\nhtml may hold links, inline rolls and enricher text." },
       removeCardNote: { type: "function", detail: "async (card | uuid | workflow, key) => Promise<number>", info: "Remove the notes with this key that you may delete" },
       registerCardNoteRenderer: { type: "function", detail: "(kind, renderer) => void", info: "Draw card notes of this kind with your function: renderer({ note, card, data, messages }) => html, called per viewer whenever the card is drawn. messages are the note's own (see cardNoteMessageData). Register on every client at load (a module or world script). A note whose renderer is not registered shows its html." },

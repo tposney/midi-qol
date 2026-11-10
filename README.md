@@ -208,7 +208,7 @@ If you prefer to configure settings manually, here's the recommended full automa
 | Dice So Nice | 3D dice rolling |
 | Levels - Volumetric Templates | 3D template targeting (midi leaves template targeting to it when installed) |
 | Monks Token Bar | Save management |
-| Alternative Token Cover / Simbul's Cover Calculator / Simple Cover 5e | Cover calculation |
+| Alternative Token Cover / Simple Cover 5e | Cover calculation |
 | AutoCover (levelsautocover) 5.0.1 or later | Cover calculation and walls blocking. A save against an area is covered from the template's origin. AutoCover's own *Apply effects* can also put dnd5e cover statuses on targets; midi uses the larger of the two bonuses, so nothing counts twice |
 | Hide NPC Names | Hides creature names from players; midi's chat cards and damage tray use the name it gives them |
 
@@ -216,7 +216,6 @@ If you prefer to configure settings manually, here's the recommended full automa
 
 | Module | Issue |
 |--------|-------|
-| Ready Set Roll | Not compatible |
 | Cautious GM | Breaks blind chats by hidden GM |
 | Chat Portraits | Overwrites midi-qol token name changes |
 
@@ -336,8 +335,8 @@ Target Confirmation displays a dialog before completing an item roll, allowing y
 | Only highlight critical/fumble hits | Only highlight critical/fumble attack rolls, not normal hits/misses |
 | Auto check if attack hits target | None/Check - all see result/Check - only GM sees results/Check - only GM sees anything. Damage rolls if one+ targets hit and auto roll damage enabled; if None, midi assumes the attack hits |
 | Roll a separate attack per target | Roll a separate attack per target (an attack activity's *Attack Roll Per Target* overrides it). The use places its template, chooses its targets and spends its cost; each target then gets its own use and card, linked to the first card, which shows each target's hit or miss as its attack resolves. An attack activity's *Ammunition* (weapons that use ammunition) sets what this spends: one per attack roll (default), one per use, or one per target (a single roll against several targets then needs and spends one each). Later targets use the ammunition chosen for the first. A target's attack that can't be made (not enough ammunition) waits at its attack button; cancelling it or deleting its card skips the remaining targets |
-| Walls block ranged attacks | No/Center Check/Levels Auto Cover/Simbul's Cover Calculator/Alternative Token Cover/Simple Cover 5e. Only walls that block movement (total cover) block the attack: darkness and sight-only walls (curtains) don't, a window does. With a cover module, its total cover blocks the attack |
-| Calculate Cover | None/dnd5e cover status only/Simbul's Cover Calculator/Simple Cover 5e/Levels Auto Cover/Alternative Token Cover. AC bonus for targets in cover. Unless None, a target with total cover (dnd5e's Total Cover status, or the module's) can't be targeted by an activity that targets creatures directly (not an area template or emanation); *dnd5e cover status only* uses the status alone. An activity's *Ignore total cover* skips this |
+| Walls block ranged attacks | No/Center Check/Levels Auto Cover/Alternative Token Cover/Simple Cover 5e. Only walls that block movement (total cover) block the attack: darkness and sight-only walls (curtains) don't, a window does. With a cover module, its total cover blocks the attack |
+| Calculate Cover | None/dnd5e cover status only/Simple Cover 5e/Levels Auto Cover/Alternative Token Cover. AC bonus for targets in cover. Unless None, a target with total cover (dnd5e's Total Cover status, or the module's) can't be targeted by an activity that targets creatures directly (not an area template or emanation); *dnd5e cover status only* uses the status alone. An activity's *Ignore total cover* skips this |
 | Vision test point height | Elevation tested for token visibility, for Foundry's rendering and midi's vision checks: Center (default) or Top |
 | Template Origin Height | Caster height activity templates are measured from: Caster's base (default)/Caster's top/Caster's eye level. An activity can override this in its Region settings |
 | Occlude upper floor surfaces | Multi-level scenes: upper floor surfaces are transparent when viewed from a lower floor, even if the token is not directly underneath (default on) |
@@ -1126,7 +1125,6 @@ No world information is exported. Module list helps with debugging.
 
 An onUse macro entry is `[pass]name` (item or actor *On Use Macros*), or `name, pass` in an effect change on `flags.midi-qol.onUseMacroName`. Besides `ItemMacro`, `ActivityMacro`, `function.…` and world macro names:
 - A **blank name** stands for the item's own macro: the macro of the activity being used if it has one, else the item macro. In an effect change it is the effect's activity macro, else the macro of the effect's item (its parent for a transfer effect, else its origin). With no such macro the entry does nothing.
-- An item that has a macro and no onUse macros runs that macro after active effects, as `[postActiveEffects]` with the name left blank. Macros shared with DAE (`macro.itemMacro` on/off) should check `args[0]`.
 - An effect change with no pass (`""`, `","`) is ignored and reported to the TroubleShooter.
 
 ## Roll Modifier Tracker (13.0.40+)

@@ -331,7 +331,6 @@
     "dnd5eHelpers": "dnd5e helpers",
     "dnd5eHelpersAC": "dnd5e helpers + AC",
     "levelsautocover": "Niveaux de couverture automatique",
-    "simbuls-cover-calculator": "Calculateur des couvertures \"Simbuls\"",
     "tokencover": "Couverture de token alternative"
   },
   "midi-qol.NearbyAllyRanged.Name": "(Règle maison) Les attaques à distance contre des ennemis proches d'alliés ont un désavantage.",
@@ -546,7 +545,6 @@
   "midi-qol.CoverCalculationOptions": {
     "none": "Personne",
     "levelsautocover": "Niveaux de couverture automatique",
-    "simbuls-cover-calculator": "Calculateur des couvertures \"Simbuls\"",
     "tokencover": "Couverture de token alternative"
   },
   "midi-qol.AddDeadOptions": {

@@ -1,3 +1,4 @@
+import { DialogCountdown } from "./lib/dialogCountdown.js";
 import type { AttackModifier } from "./Workflow.js";
 import { TokenDocumentSet, hookTarget, memberCount, rememberSyntheticToken, tokenOf } from "./lib/tokenDocumentSet.js";
 import { rollBonusLabel } from "./activities/AttackActivity.js";
@@ -6,6 +7,7 @@ import { configSettings, autoRemoveTargets, checkRule, criticalDamage, criticalD
 import { log } from "../midi-qol.js";
 import { AttributionEntry, AttributionMap, AttributionType, AugmentedEvent, DummyWorkflow, Workflow, WorkflowOptions, WorkflowRollOptions } from "./Workflow.js";
 import { preferredActiveGM, prepareDamageListToJSON, socketlibSocket, timedAwaitExecuteAsGM, unTimedExecuteAsGM } from "./GMAction.js";
+import { claimPlayerWait, trackPlayerWait } from "./lib/playerWaits.js";
 import { dice3dEnabled, installedModules } from "./setupModules.js";
 import { concentrationCheckItemDisplayName } from "./Hooks.js";
 
@@ -2541,6 +2543,8 @@ export function restoreWorkflowTokenSets<T>(data: T): T {
 
 export type MidiOptions = {
   activityId?: string;
+  /** Rolled for a player by someone who can't act for them (a player, with no GM connected): no optional-bonus prompts */
+  unattended?: boolean;
   cardNote?: SaveDetails["cardNote"];
   activityIdentifier?: string;
   advantage?: boolean;
@@ -2985,7 +2989,7 @@ export interface WallCollisionOptions {
   source?: any;
   /** The wallsBlockRange setting value */
   wallsBlockRange: string;
-  /** Pre-computed cover visibility (from external modules like simbuls, levelsautocover) */
+  /** Pre-computed cover visibility (from external modules like levelsautocover) */
   coverVisible?: boolean;
   /** Origin point elevation (for Levels API) */
   originElevation?: number;
@@ -3103,7 +3107,6 @@ export function checkWallCollision(
       return blocked;
 
     case "alternative":
-    case "simbuls-cover-calculator":
       if (coverVisible === undefined) {
         blocked = !!wallBlocksPath(origin, dest, source, level);
         if (!blocked) blocked = checkSurfaceCollision(origin, dest, options);
@@ -3150,7 +3153,7 @@ function shapesOverlap(poly1: PIXI.Polygon, poly2: PIXI.Polygon): boolean {
 }
 
 /**
- * Run module-level pre-checks (levelsautocover, simbuls, tokencover, simplecover5e)
+ * Run module-level pre-checks (levelsautocover, tokencover, simplecover5e)
  * to determine if a target is fully blocked before doing per-ray wall checks.
  * Returns { blocked: true } if the module says total cover,
  * or { coverVisible } to pass through to per-ray checks.
@@ -3167,12 +3170,6 @@ function computeWallBlockPreCheck(
     if (tier) return tier === "total" ? { blocked: true } : { blocked: false, coverVisible: true };
     // AutoCover not in use or failed: midi's own wall check
     return { blocked: false, coverVisible: undefined };
-  } else if (globalThis.CoverCalculator && wallsBlockRange === "simbuls-cover-calculator" && includeCover) {
-    if (t1 === t2) return { blocked: false, coverVisible: undefined };
-    const coverData = globalThis.CoverCalculator.Cover(t1, t2);
-    if (debugEnabled > 0) warn("wallBlockPreCheck | simbuls cover calculator ", t1.name, t2.name, coverData);
-    const result = (coverData?.data.results.cover === 3 && wallsBlock) ? { blocked: true } : { blocked: false, coverVisible: true };
-    return result;
   } else if (installedModules.get("tokencover") && wallsBlockRange === "tokencover" && includeCover) {
     const coverValue = calcTokenCover(t1, t2);
     const result = (coverValue === 3 && wallsBlock) ? { blocked: true } : { blocked: false, coverVisible: true };
@@ -3241,7 +3238,7 @@ export function computePerimeterDistance(
   if (wallsBlock) {
     const wallsBlockRange = configSettings.optionalRules.wallsBlockRange;
     if (wallsBlockRange !== "none") {
-      // Run module pre-checks (simplecover5e, levelsautocover, simbuls, tokencover)
+      // Run module pre-checks (simplecover5e, levelsautocover, tokencover)
       const preCheck = computeWallBlockPreCheck(token1 as Token, token2 as Token, wallsBlock, includeCover);
       if (preCheck.blocked) return -1;
 
@@ -4182,19 +4179,6 @@ export function computeCoverBonus(attackerIn: TokenOrDocument | undefined, targe
   try {
     switch (configSettings.optionalRules.coverCalculation) {
 
-      case "simbuls-cover-calculator":
-        if (!installedModules.get("simbuls-cover-calculator")) return 0;
-        if (globalThis.CoverCalculator) {
-          const coverData = globalThis.CoverCalculator.Cover(attacker, target);
-          if (attacker === target) {
-            coverBonus = 0;
-            break;
-          }
-          if (coverData?.data?.results.cover === 3) coverBonus = TOTAL_COVER;
-          else coverBonus = -coverData?.data?.results.value || 0;
-        }
-        break;
-        
       case "simplecover5e":
         //@ts-expect-error
         const simpleCoverApi = game.modules.get("simplecover5e")?.api;
@@ -4441,6 +4425,28 @@ export function dnd5eRollType(source: any): string | undefined {
 }
 
 /** Whether a message is one of dnd5e's roll cards rather than an item/usage card. */
+/** What a chat-card save request asks for: the roll that answers it */
+export type SaveRequestKind = { rollType: string, abilities: string[], skills: string[], tools: string[] };
+
+/**
+ * Whether a dnd5e roll message answers a save request: the right kind of roll, and one of the requested abilities, skills
+ * or tools (a choice allows any of them). A skill or tool is matched by itself: dnd5e lets it be rolled with another ability.
+ */
+export function rollAnswersRequest(message: ChatMessage.Implementation, kind: SaveRequestKind): boolean {
+  const rolled = dnd5eRollType(message);
+  const oneOf = (list: string[], field: string) => {
+    const id = foundry.utils.getProperty(message, `system.${field}`);
+    return !list.length || (typeof id === "string" && list.includes(id));
+  };
+  switch (kind.rollType) {
+    case "save": return rolled === "save" && oneOf(kind.abilities, "ability");
+    case "check": return rolled === "ability" && oneOf(kind.abilities, "ability");
+    case "skill": return rolled === "skill" && oneOf(kind.skills, "skill");
+    case "tool": return rolled === "tool" && oneOf(kind.tools, "tool");
+    default: return rolled !== undefined && rolled !== "initiative";
+  }
+}
+
 export function isDnd5eRollMessage(source: any): boolean {
   return dnd5eRollType(source) !== undefined;
 }
@@ -4926,8 +4932,7 @@ export function actorFromUuid(uuid?: string): any {
 export class RollModifyDialog extends HandlebarsApplicationMixin(ApplicationV2) {
   rollExpanded: boolean;
   timeRemaining: number;
-  timeoutId: NodeJS.Timeout | undefined;
-  secondTimeoutId: NodeJS.Timeout | undefined;
+  countdown: DialogCountdown;
   aborted: boolean = false;
 
   data: {
@@ -4957,12 +4962,7 @@ export class RollModifyDialog extends HandlebarsApplicationMixin(ApplicationV2) 
     this.timeRemaining = this.data.timeout;
     this.rollExpanded = false;
     if (!data.rollMode) data.rollMode = safeGetGameSetting("core", "messageMode");
-    this.timeoutId = setTimeout(() => {
-      if (this.secondTimeoutId) clearTimeout(this.secondTimeoutId);
-      this.timeoutId = undefined;
-      this.close();
-    }, this.data.timeout * 1000);
-    this.set1SecondTimeout();
+    this.countdown = new DialogCountdown({ seconds: this.data.timeout ?? 0, onExpire: () => this.close() });
   }
 
   static PARTS = {
@@ -4984,14 +4984,7 @@ export class RollModifyDialog extends HandlebarsApplicationMixin(ApplicationV2) 
   };
 
   get title() {
-    let maxPad = 1;
-    if (this.data.timeout < maxPad) maxPad = this.data.timeout
-    if (this.data.timeout) {
-      const padCount = Math.ceil(this.timeRemaining / (this.data.timeout ?? defaultTimeout) * maxPad);
-      const pad = "-".repeat(padCount);
-      return `${this.data.title ?? "Dialog"} ${pad} ${this.timeRemaining}`;
-    }
-    else return this.data.title ?? "Dialog";
+    return this.data.title ?? "Dialog";
   }
 
   async _onRender(context, options) {
@@ -5004,6 +4997,7 @@ export class RollModifyDialog extends HandlebarsApplicationMixin(ApplicationV2) 
     for (const diceRoll of Array.from(this.element.querySelectorAll<HTMLDivElement>(".dice-roll"))) {
       diceRoll.addEventListener("click", this._onDiceRollClick.bind(this));
     }
+    this.countdown.attach(this.element);
   }
 
   async _prepareContext(options) {
@@ -5118,21 +5112,6 @@ export class RollModifyDialog extends HandlebarsApplicationMixin(ApplicationV2) 
     }
   }
 
-  set1SecondTimeout() {
-    this.secondTimeoutId = setTimeout(() => {
-      clearTimeout(this.secondTimeoutId)
-      if (!this.timeoutId) return;
-      this.timeRemaining -= 1;
-      let color = "red";
-      if (this.timeRemaining >= this.data.timeout * 0.75) color = "chartreuse";
-      else if (this.timeRemaining >= this.data.timeout * 0.50) color = "yellow";
-      else if (this.timeRemaining >= this.data.timeout * 0.25) color = "orange";
-      this._updateFrame({ window: { title: this.title } });
-      const title = this.element?.querySelector(".window-title");
-      if (title) title.setAttribute("style", `color: ${color}`);
-      if (this.timeRemaining > 0 && title) this.set1SecondTimeout();
-    }, 1000)
-  }
 
   _onDiceRollClick(event: Event) {
     event.preventDefault();
@@ -5147,10 +5126,6 @@ export class RollModifyDialog extends HandlebarsApplicationMixin(ApplicationV2) 
   }
 
   _onClickButton(event: Event) {
-    if (this.secondTimeoutId) {
-      clearTimeout(this.secondTimeoutId);
-      this.secondTimeoutId = undefined;
-    }
     // @ts-expect-error I know better
     const id = event.currentTarget!.dataset?.button;
     const button = this.data.buttons[id];
@@ -5167,18 +5142,10 @@ export class RollModifyDialog extends HandlebarsApplicationMixin(ApplicationV2) 
   // }
 
   async submit(button) {
-    if (this.secondTimeoutId) {
-      clearTimeout(this.secondTimeoutId);
-    }
     try {
       if (button.callback) {
         await button.callback(this, button);
         // await this.getData({}; Render will do a get data, doing it twice breaks the button data?
-
-        if (this.secondTimeoutId) {
-          clearTimeout(this.secondTimeoutId);
-          this.secondTimeoutId = undefined;
-        }
         // this.render({force: true});
       }
       // this.close();
@@ -5191,10 +5158,7 @@ export class RollModifyDialog extends HandlebarsApplicationMixin(ApplicationV2) 
   }
 
   async close() {
-    if (this.timeoutId) clearTimeout(this.timeoutId);
-    this.timeoutId = undefined;
-    if (this.secondTimeoutId) clearTimeout(this.secondTimeoutId);
-    this.secondTimeoutId = undefined;
+    this.countdown.stop();
     if (this.data.close) this.data.close();
     $(document).off('keydown.chooseDefault');
     return super.close();
@@ -5297,7 +5261,6 @@ export async function bonusDialog(
   options: any = {}
 ): Promise<Roll | undefined> {
   const showDiceSoNice = !options.hideDSN && dice3dEnabled();
-  let timeoutId: NodeJS.Timeout | undefined;
   if (!roll) return undefined;
   if (this instanceof Workflow) options.card ??= this.itemCardUuid;
   options.anchor ??= rollType === "attackRoll" ? "attack" : rollType === "damageRoll" ? "damage" : "saves";
@@ -5318,10 +5281,6 @@ export async function bonusDialog(
   };
 
   const callback = async (dialog, button) => {
-    if (this.secondTimeoutId) {
-      clearTimeout(this.secondTimeoutId);
-    }
-
     let reRoll: Roll | undefined;
     let chatMessage: ChatMessage.Implementation | undefined;
     const undoId = foundry.utils.randomID();
@@ -5395,7 +5354,12 @@ export async function bonusDialog(
         reRoll = reRoll = await roll!.reroll();
         if (showDiceSoNice) await displayDSNForRoll(reRoll, rollType, rollMode, undefined, this.actor);
         const newRollHTML = await midiRenderRoll(reRoll);
-        if (await DialogV2.confirm({ window: { title: "Confirm reroll" }, content: `Replace ${rollHTML} with ${newRollHTML}`, defaultYes: true }))
+        if (await DialogV2.confirm({
+          window: { title: i18n("midi-qol.ConfirmReroll.Title") },
+          content: `<div class="midi-qol-confirm-reroll"><label>${i18n("midi-qol.ConfirmReroll.Original")}</label>${rollHTML}<label>${i18n("midi-qol.ConfirmReroll.New")}</label>${newRollHTML}</div>`,
+          yes: { default: true },
+          no: { default: false }
+        }))
           newRoll = reRoll
         else
           newRoll = roll!;
@@ -5604,7 +5568,6 @@ export async function bonusDialog(
   let timeout = options.timeout ?? configSettings.reactionTimeout ?? defaultTimeout;
   return new Promise((resolve, reject) => {
     async function onClose() {
-      if (timeoutId) clearTimeout(timeoutId);
       // The original roll is dsn displayed before the bonus dialog is called so mark it as displayed
       DSNMarkDiceDisplayed(originalRoll);
       // The new roll has had dsn display done for each bonus term/reroll so mark it as displayed
@@ -5616,11 +5579,6 @@ export async function bonusDialog(
         if (card?.uuid && this instanceof Workflow && configSettings.undoWorkflow) await unTimedExecuteAsGM("addUndoChatCards", { id: this.id, chatCardUuids: [card.uuid] });
       }
       resolve(newRoll)
-    }
-    if (options.timeout) {
-      timeoutId = setTimeout(() => {
-        resolve(newRoll);
-      }, timeout * 1000);
     }
 
     let content: string;
@@ -6063,17 +6021,31 @@ export async function doReactions(targetRef: TokenOrDocument | string, triggerTo
       }
     }
 
-    let result: any = await new Promise((resolve) => {
-      // set a timeout for taking over the roll; the reacting client pauses it while it waits on its user (placement)
-      const request = { id: foundry.utils.randomID(), userId: game.user!.id };
-      startReactionTimer(request.id, (configSettings.reactionTimeout ?? defaultTimeout) * 1000 * 2, () => resolve(noResult));
-      options.reactionRequest = request;
-
-      // Compiler does not realise player can't be undefined to get here
-      player && requestReactions(target, player, triggerTokenUuid, content ?? "", triggerType, reactionActivityList, resolve, chatMessage, options).then((result) => {
+    // set a timeout for taking over the roll; the reacting client pauses it while it waits on its user (placement)
+    const request = { id: foundry.utils.randomID(), userId: game.user!.id };
+    options.reactionRequest = request;
+    const reactingUser = player;
+    let result: any = await trackPlayerWait({
+      kind: "reaction", userId: reactingUser.id!, actorUuid: target.actor.uuid, tokenUuid: target.document.uuid, label: content ?? "",
+      choices: {
+        none: () => noResult,
+        // The GM picks the reaction on their own screen, as for a creature with no player
+        choose: async () => (await unTimedExecuteAsGM("chooseReactions", {
+          tokenUuid: target.document.uuid, reactionFlavor: content ?? "", triggerTokenUuid, triggerType, reactionActivityList,
+          options: { ...options, reactionWait: undefined }
+        })) ?? noResult
+      },
+      onSettled: () => {
         endReactionTimer(request.id);
-      })
-    });
+        if (options.reactionWait) socketlibSocket.executeAsUser("closeReactionDialog", reactingUser.id, { id: options.reactionWait.id })?.catch?.(() => { });
+      }
+    }, (wait) => new Promise((resolve) => {
+      startReactionTimer(request.id, (configSettings.reactionTimeout ?? defaultTimeout) * 1000 * 2, () => resolve(noResult));
+      options.reactionWait = wait;
+      requestReactions(target, reactingUser, triggerTokenUuid, content ?? "", triggerType, reactionActivityList, resolve, chatMessage, options).then(() => {
+        endReactionTimer(request.id);
+      });
+    }));
     if (result?.name) {
       let count = 100;
       do {
@@ -6225,7 +6197,7 @@ export async function promptReactions(
         console.warn("midi-qol | Reaction processing cancelled by Hook");
         return { name: "Filter" };
       }
-      result = await reactionDialog(actor, triggerTokenUuid, reactionActivities, reactionFlavor, triggerType, options);
+      result = await reactionDialog(actor, triggerTokenUuid, reactionActivities, reactionFlavor, triggerType, { ...options, tokenUuid });
       const endTime = Date.now();
       if (debugEnabled > 0) warn("promptReactions | reaction processing returned after ", endTime - startTime, result)
       if (result.uuid) return result; //TODO look at multiple choices here
@@ -6299,6 +6271,87 @@ export function playerForActor(actor?: Actor | null): User | undefined {
   return user;
 }
 
+/** The scene of the actor's token: its own for a token actor; for a linked actor, none when it has a token on the viewed
+ *  scene, else the active scene's, else any scene's. Undefined for an actor with no token placed. */
+function actorTokenScene(actor: Actor.Implementation): Scene.Implementation | undefined {
+  if (actor.isToken) return actor.token?.parent ?? undefined;
+  if (actor.getActiveTokens(false, true).length) return canvas?.scene ?? undefined;
+  const placed = (scene: Scene.Implementation | null | undefined) => !!scene?.tokens.some(t => t.actorLink && t.actorId === actor.id);
+  if (placed(game.scenes?.active)) return game.scenes!.active!;
+  return game.scenes?.find(scene => placed(scene));
+}
+
+/**
+ * A GM using an item for a creature whose token is on a scene they aren't viewing: other modules' reaction checks
+ * (Gambit's Premades), animations and placement only look at the scene being viewed. View that scene first ("viewed"),
+ * use it anyway ("use"), or don't ("cancel"); "here" when there is nothing to ask.
+ */
+export async function confirmUseOffScene(actor: Actor.Implementation | null | undefined): Promise<"here" | "viewed" | "use" | "cancel"> {
+  if (!game.user?.isGM || !actor || !canvas?.scene) return "here";
+  const scene = actorTokenScene(actor);
+  if (!scene || scene.id === canvas.scene.id) return "here";
+  const choice = await foundry.applications.api.DialogV2.wait({
+    window: { title: i18n("midi-qol.UseOffScene.Title") },
+    position: { width: 420 },
+    content: `<p>${i18nFormat("midi-qol.UseOffScene.Content", { actor: actor.name ?? "", scene: scene.name ?? "" })}</p>`,
+    buttons: [
+      { action: "view", label: i18n("midi-qol.UseOffScene.View"), default: true },
+      { action: "use", label: i18n("midi-qol.UseOffScene.Use") },
+      { action: "cancel", label: i18n("Cancel") }
+    ],
+    rejectClose: false
+  });
+  if (choice === "view") {
+    await scene.view();
+    return "viewed";
+  }
+  return choice === "use" ? "use" : "cancel";
+}
+
+/**
+ * A GM using a reaction for a token on a scene they aren't viewing: view that scene first (targeting, placement and
+ * animations need it), use the reaction anyway, or don't use it. The requesting client's timeout is held meanwhile.
+ */
+async function confirmReactionScene(tokenUuid: string | undefined, request?: { id: string, userId: string }): Promise<boolean> {
+  if (!game.user?.isGM || !tokenUuid) return true;
+  const token = fromUuidSync(tokenUuid) as TokenDocument.Implementation | null;
+  const scene = token?.parent;
+  if (!scene || scene.id === canvas?.scene?.id) return true;
+  if (request) pauseReactionTimeout(request, true);
+  try {
+    const choice = await foundry.applications.api.DialogV2.wait({
+      window: { title: i18n("midi-qol.ReactionScene.Title") },
+      position: { width: 420 },
+      content: `<p>${i18nFormat("midi-qol.ReactionScene.Content", { token: token.name ?? "", scene: scene.name ?? "" })}</p>`,
+      buttons: [
+        { action: "view", label: i18n("midi-qol.ReactionScene.View"), default: true },
+        { action: "run", label: i18n("midi-qol.ReactionScene.Run") },
+        { action: "skip", label: i18n("midi-qol.ReactionScene.Skip") }
+      ],
+      rejectClose: false
+    });
+    if (choice === "view") {
+      await scene.view();
+      return true;
+    }
+    return choice === "run";
+  } finally {
+    if (request) pauseReactionTimeout(request, false);
+  }
+}
+
+/** Reaction dialogs open on this client for a tracked wait, by wait id, so the GM answering can close them. */
+const openReactionDialogs = new Map<string, { close: () => unknown, closedForGM?: boolean }>();
+
+/** The GM answered for this player: close their reaction dialog, which then answers "no reaction" locally. */
+export function _closeReactionDialog({ id }: { id: string }) {
+  const dialog = openReactionDialogs.get(id);
+  openReactionDialogs.delete(id);
+  if (!dialog) return;
+  dialog.closedForGM = true;
+  dialog.close();
+}
+
 export async function reactionDialog(
   actor: Actor.Implementation,
   triggerTokenUuid: string | undefined,
@@ -6311,13 +6364,14 @@ export async function reactionDialog(
   try {
     let timeout = (options.timeout ?? configSettings.reactionTimeout ?? defaultTimeout);
     return new Promise((resolve, reject) => {
-      let timeoutId = setTimeout(() => {
-        dialog.close();
-        resolve({});
-      }, timeout * 1000);
       const callback = async function (dialog, button) {
-        clearTimeout(timeoutId);
+        if (options.reactionWait?.id) openReactionDialogs.delete(options.reactionWait.id);
         const activity = reactionActivities.find(i => i.uuid === button.key);
+        // The GM may have answered for this player already: their reaction is not used too
+        if (activity && !(await claimPlayerWait(options.reactionWait))) {
+          resolve(noResult);
+          return;
+        }
         if (activity) {
           dialog.close();
           // For Cast activities that don't override targeting, resolve the effective target type from the spell
@@ -6333,6 +6387,13 @@ export async function reactionDialog(
               const spellActivity = activityList.find((a: any) => a.canUse) ?? activityList[0];
               if (spellActivity?.target?.affects?.type) effectiveTargetType = spellActivity.target.affects.type;
             }
+          }
+          // Targeting another creature, placing an area or teleporting needs the reacting token's scene; a self-only
+          // reaction (Shield) is used from any scene
+          const needsScene = effectiveTargetType !== "self" || !!activity.target?.template?.type || activity.type === "teleport";
+          if (needsScene && !(await confirmReactionScene(options.tokenUuid, options.reactionRequest))) {
+            resolve(noResult);
+            return;
           }
           const itemRollOptions = foundry.utils.mergeObject({
             createWorkflow: true,
@@ -6362,21 +6423,28 @@ export async function reactionDialog(
         // actor.reset();
         resolve(noResult)
       };
-      const noReaction = async function (dialog, button) {
-        clearTimeout(timeoutId);
+      const noReaction = async function (closeInfo?: { closedForGM?: boolean }) {
+        if (options.reactionWait?.id) openReactionDialogs.delete(options.reactionWait.id);
+        // The player declined (button, close, timeout): their answer wins over the GM's, as a chosen reaction does.
+        // Closed because the GM took over: the GM's answer stands.
+        if (!closeInfo?.closedForGM) await claimPlayerWait(options.reactionWait);
         resolve(noResult);
       }
       const dialog = new ReactionDialog({
         actor,
+        tokenUuid: options.tokenUuid,
         targetObject: this,
-        title: `${actor.name}`,
+        title: i18n("midi-qol.ReactionDialog.Title"),
         activities: reactionActivities,
         content: rollFlavor,
         callback,
         close: noReaction,
-        timeout
+        timeout,
+        // Pausing the countdown also pauses the requesting client's timeout, which would otherwise give up on the reaction
+        onPause: (paused: boolean) => { if (options.reactionRequest) pauseReactionTimeout(options.reactionRequest, paused); }
       });
 
+      if (options.reactionWait?.id) openReactionDialogs.set(options.reactionWait.id, dialog);
       dialog.render({ force: true });
     });
   } catch (err) {
@@ -6386,15 +6454,18 @@ export async function reactionDialog(
   }
 }
 
-// TODO: Probably this
 export class ReactionDialog extends HandlebarsApplicationMixin(ApplicationV2) {
+  /** Closed because the GM answered for the player (not the player's own decline). */
+  closedForGM?: boolean;
   startTime: number;
   endTime: number;
-  timeoutId: any;
+  countdown: DialogCountdown;
   timeRemaining: number;
 
   data: {
     actor: Actor.Implementation,
+    /** The reacting token: its name titles the dialog */
+    tokenUuid?: string,
     activities: Activity[],
     title: string,
     content: HTMLElement,
@@ -6403,7 +6474,8 @@ export class ReactionDialog extends HandlebarsApplicationMixin(ApplicationV2) {
     buttons: any,
     completed: boolean,
     timeout: number,
-    timeRemaining: number
+    timeRemaining: number,
+    onPause?: (paused: boolean) => void
   }
 
   constructor(data) {
@@ -6412,7 +6484,7 @@ export class ReactionDialog extends HandlebarsApplicationMixin(ApplicationV2) {
     this.timeRemaining = this.data.timeout;
     this.startTime = this.endTime = Date.now();
     this.data.completed = false;
-    this.set1Secondtimeout();
+    this.countdown = new DialogCountdown({ seconds: this.data.timeout ?? 0, onExpire: () => this.close(), onPause: this.data.onPause });
   }
 
   static PARTS = {
@@ -6431,14 +6503,9 @@ export class ReactionDialog extends HandlebarsApplicationMixin(ApplicationV2) {
   };
 
   get title() {
-    let maxPad = 45;
-    if (this.data.timeout) {
-      if (this.data.timeout < maxPad) maxPad = this.data.timeout;
-      const padCount = Math.ceil(this.timeRemaining / (this.data.timeout ?? defaultTimeout) * maxPad);
-      const pad = "-".repeat(padCount);
-      return `${this.data.actor?.name} ${this.data.title ?? "Dialog"} ${pad} ${this.timeRemaining}`;
-    }
-    else return this.data.title ?? "Dialog";
+    const token = this.data.tokenUuid ? fromUuidSync(this.data.tokenUuid) as TokenDocument.Implementation | null : null;
+    const who = token?.name ?? this.data.actor?.name;
+    return who ? `${who}: ${this.data.title ?? "Dialog"}` : this.data.title ?? "Dialog";
   }
 
   async _onRender(context, options) {
@@ -6446,9 +6513,7 @@ export class ReactionDialog extends HandlebarsApplicationMixin(ApplicationV2) {
     for (const button of Array.from(this.element.querySelectorAll(".dialog-button"))) {
       button.addEventListener("click", this._onClickButton.bind(this));
     }
-    // Michael note: I don't think this was doing anything?
-    // document.addEventListener("keydown.chooseDefault", this._onKeyDown.bind(this));
-    // if ( this.data.render instanceof Function ) this.data.render(this.options.jQuery ? html : html[0]);
+    this.countdown.attach(this.element);
   }
 
   async _prepareContext(options) {
@@ -6462,14 +6527,16 @@ export class ReactionDialog extends HandlebarsApplicationMixin(ApplicationV2) {
         name = `${linked.item.name}: ${linked.name ?? linked.actionName}`;
       }
       acc[foundry.utils.randomID()] = {
-        // icon: `<image src=${item.img} width="30" height="30">`,
-        label: `<div style="display: flex; align-items: center; margin: 5px;"> <image src=${activity.item.img} width="40" height="40"> &nbsp ${name} </div>`,
+        img: activity.item.img,
+        name,
         value: activity.name ?? activity.actionName,
         key: activity.uuid,
         callback: this.data.callback,
       }
       return acc;
-    }, {})
+    }, {});
+    // Declining is the default, so Enter (or a stray click) never spends a reaction
+    this.data.buttons.none = { name: i18n("midi-qol.PlayerWaits.Choice.none"), decline: true, default: true, cssClass: "decline" };
     return {
       ...context,
       content: this.data.content,
@@ -6478,50 +6545,26 @@ export class ReactionDialog extends HandlebarsApplicationMixin(ApplicationV2) {
     }
   }
 
-  set1Secondtimeout() {
-    this.timeoutId = setTimeout(() => {
-      // Answered or closed while the second was running: there is no frame left to update.
-      if (!this.rendered) return;
-      this.timeRemaining -= 1;
-      let color = "red";
-      if (this.timeRemaining >= this.data.timeout * 0.75) color = "chartreuse";
-      else if (this.timeRemaining >= this.data.timeout * 0.50) color = "yellow";
-      else if (this.timeRemaining >= this.data.timeout * 0.25) color = "orange";
-      this._updateFrame({ window: { title: this.title } });
-      const title = this.element?.querySelector(".window-title");
-      if (title) title.setAttribute("style", `color: ${color}`);
-      if (this.timeRemaining > 0 && title) this.set1Secondtimeout();
-    }, 1000)
-  }
 
   _onClickButton(event: Event) {
     // @ts-expect-error I know more than you, machine
     const id = event.currentTarget!.dataset.button;
     const button = this.data.buttons[id];
     debug("Reaction dialog button clicked", id, button, Date.now() - this.startTime)
+    // No reaction: closing unanswered declines it
+    if (button?.decline) return this.close();
     this.submit(button);
   }
 
-  // _onKeyDown(event) {
-  //   // Close dialog
-  //   if (event.key === "Escape" || event.key === "Enter") {
-  //     debug("Reaction Dialog onKeyDown esc/enter pressed", event.key, Date.now() - this.startTime);
-  //     event.preventDefault();
-  //     event.stopPropagation();
-  //     this.data.completed = true;
-  //     if (this.data.close) this.data.close({ name: "keydown", uuid: undefined });
-  //     this.close();
-  //   }
-  // }
-
   async submit(button) {
     try {
-      clearTimeout(this.timeoutId);
+      this.countdown.stop();
       debug("ReactionDialog submit", Date.now() - this.startTime, button.callback)
       if (button.callback) {
         this.data.completed = true;
-        await button.callback(this, button)
-        this.close();
+        // The callback closes the dialog once it has the reaction
+        await button.callback(this, button);
+        if (this.rendered) this.close();
       }
     } catch (err: any) {
       const message = `Reaction dialog submit`;
@@ -6534,12 +6577,11 @@ export class ReactionDialog extends HandlebarsApplicationMixin(ApplicationV2) {
   }
 
   async close() {
-    clearTimeout(this.timeoutId);
+    this.countdown?.stop();
     debug("Reaction Dialog close ", Date.now() - this.startTime, this.data.completed)
     if (!this.data.completed && this.data.close) {
-      this.data.close({ name: "Close", uuid: undefined });
+      this.data.close({ name: "Close", uuid: undefined, closedForGM: this.closedForGM });
     }
-    $(document).off('keydown.chooseDefault');
     return super.close();
   }
 }
@@ -6571,10 +6613,12 @@ export function getConcentrationEffect(actor?: Actor.Implementation | null, item
 }
 
 async function confirm(title: string = "Are you sure", { content, defaultYes } = { content: "", defaultYes: true }): Promise<any> {
+  // Foundry 14's DialogV2.confirm has no defaultYes: the default button is set on the button
   return DialogV2.confirm({
     window: { title: title ?? "Confirm" },
     content,
-    defaultYes
+    yes: { default: defaultYes !== false },
+    no: { default: defaultYes === false }
   });
 }
 function buildEvalSandbox(sandbox: AnyMutableObject, asyncEval: boolean): AnyMutableObject {
@@ -9392,9 +9436,7 @@ export async function chooseEffect({ actor, token, item, workflow, options }: {
 
   const { DialogV2 } = foundry.applications.api;
   const timeout = options?.timeout ?? configSettings.reactionTimeout ?? defaultTimeout;
-  let timeRemaining = timeout;
-  let second1TimeoutId: NodeJS.Timeout;
-  let timeoutId: NodeJS.Timeout;
+  let countdown: DialogCountdown | undefined;
 
   const titleBase = `${i18n('CONTROLS.CommonSelect')} ${i18n('DOCUMENT.ActiveEffect')}`;
   const targetContent = `<p style="text-align:center"><b>${i18n('EFFECT.StatusTarget')}: [</b>${targets.documents.map((t) => t.name)}<b>]</b></p>`;
@@ -9406,7 +9448,7 @@ export async function chooseEffect({ actor, token, item, workflow, options }: {
   }));
 
   const chosenEffect = await DialogV2.wait({
-    window: { title: `${titleBase}: ${timeRemaining}s` },
+    window: { title: titleBase },
     classes: ["midi-qol-choose-effect"],
     position: { width: 220 },
     content: targetContent,
@@ -9421,26 +9463,11 @@ export async function chooseEffect({ actor, token, item, workflow, options }: {
         if (span) span.dataset.tooltip = eff.name;
         btn.prepend(img);
       });
-      // Start countdown timer
-      const titleEl = dialog.element.querySelector(".window-title");
-      const set1SecondTimeout = function () {
-        second1TimeoutId = setTimeout(() => {
-          if (!timeoutId) return;
-          timeRemaining -= 1;
-          if (titleEl) titleEl.textContent = `${titleBase}: ${timeRemaining}s`;
-          if (timeRemaining > 0) set1SecondTimeout();
-        }, 1000);
-      };
-      timeoutId = setTimeout(() => {
-        if (debugEnabled > 0) warn(`chooseEffect | timeout fired closing dialog`);
-        clearTimeout(second1TimeoutId);
-        dialog.close();
-      }, timeout * 1000);
-      set1SecondTimeout();
+      countdown ??= new DialogCountdown({ seconds: timeout, onExpire: () => dialog.close() });
+      countdown.attach(dialog.element);
     },
     close: () => {
-      clearTimeout(timeoutId);
-      clearTimeout(second1TimeoutId);
+      countdown?.stop();
     },
   });
 

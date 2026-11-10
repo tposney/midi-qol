@@ -546,14 +546,12 @@
     "none": "Não",
     "center": "Verificação de Centro",
     "levelsautocover": "Levels Auto Cover",
-    "simbuls-cover-calculator": "Simbul's Cover Calculator",
     "tokencover": "Alternative Token Cover",
     "simplecover5e": "Simple Cover 5e",
     "expandedHints": {
       "none": "Paredes não bloqueiam a verificação de ataques à distância.",
       "center": "Verifica a linha do centro do token até o centro do alvo. Se uma parede que bloqueia o movimento cruzar essa linha (cobertura total), o ataque será bloqueado, mas a escuridão e as paredes que bloqueiam apenas a visão não impedem o ataque. Linhas entre elevações diferentes também são verificadas em relação às superfícies das Regiões.",
       "levelsautocover": "Use o módulo Levels Auto Cover para calcular a cobertura. A Cobertura Total bloqueia o ataque. Requer o módulo Levels Auto Cover.",
-      "simbuls-cover-calculator": "Use o módulo Simbul's Cover Calculator para calcular a cobertura. A Cobertura Total bloqueia o ataque. Requer o módulo Simbul's Cover Calculator.",
       "tokencover": "Use o módulo Alternative Token Cover para calcular a cobertura. A Cobertura Total bloqueia o ataque. Requer o módulo Alternative Token Cover.",
       "simplecover5e": "Use o módulo Simple Cover 5e para calcular a cobertura. A Cobertura Total bloqueia o ataque. Requer o módulo Simple Cover 5e."
     }
@@ -606,7 +604,6 @@
   "midi-qol.CoverCalculationOptions": {
     "none": "Nenhum",
     "dnd5eStatus": "Apenas o Status de Cobertura do D&D5e",
-    "simbuls-cover-calculator": "Simbul's Cover Calculator",
     "simplecover5e": "Simple Cover 5e",
     "levelsautocover": "Levels Auto Cover",
     "tokencover": "Alternative Token Cover"

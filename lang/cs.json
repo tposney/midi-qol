@@ -350,7 +350,6 @@
     "none": "Neblokovat",
     "center": "Střed",
     "levelsautocover": "Levels Auto Cover",
-    "simbuls-cover-calculator": "Simbul's Cover Calculator",
     "tokencover": "Alternative Token Cover",
     "tokenvisibility": "Alternative Token Visibility (zastaralé)"
   },
@@ -359,7 +358,6 @@
   "midi-qol.CoverCalculation.Hint": "Zda se má výpočítávat bonus k OČ pro cíle v krytu a z jakého modulu převzít nastavení.",
   "midi-qol.CoverCalculationOptions": {
     "none": "Nepoužívat žádný modul",
-    "simbuls-cover-calculator": "Simbul's Cover Calculator",
     "levelsautocover": "Levels Auto Cover",
     "tokencover": "Alternative Token Cover",
     "tokenvisibility": "Alternative Token Visibility (zastaralé)"

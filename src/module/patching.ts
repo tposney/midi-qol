@@ -1428,7 +1428,7 @@ async function doD20Roll(this: Actor.Implementation, wrapped, kind: D20RollKind,
     foundry.utils.mergeObject(message.data, { "flags": config.flags ?? {} });
     // Set overtimeActorUuid AFTER message object is replaced by hook and merged
     if (overtimeActorUuid) foundry.utils.setProperty(message.data, "flags.midi-qol.overtimeActorUuid", overtimeActorUuid);
-    if (!config.midiOptions.simulate && !config.simulate) {
+    if (!config.midiOptions.simulate && !config.simulate && !config.midiOptions.unattended) {
       const bonus = kind.bonus(rollId, config);
       result[0] = await bonusCheck(this, result[0], bonus.category, bonus.detail, message.data);
       DSNMarkDiceDisplayed(result);
@@ -2386,9 +2386,6 @@ export function prepareOnUseMacroData(actorOrItem: Actor.Implementation | Item.I
   try {
     const macros = actorOrItem.flags?.[MODULE_ID]?.onUseMacroName;
     const parts = new OnUseMacros(macros ?? null);
-    // An item with a macro and no onUse macros runs its macro after active effects (a blank name; see OnUseMacros.withDefaults)
-    if (actorOrItem instanceof Item && parts.items.length === 0 && OnUseMacros.hasOwnMacro(actorOrItem))
-      parts.items.push(new OnUseMacro("[postActiveEffects]"));
     foundry.utils.setProperty(actorOrItem, "flags.midi-qol.onUseMacroParts", parts);
   } catch (err) {
     const message = `midi-qol | failed to prepare onUse macro data ${actorOrItem?.name}`;

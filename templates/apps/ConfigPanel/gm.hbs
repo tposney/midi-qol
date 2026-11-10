@@ -99,6 +99,25 @@
       <div class="notes midi-qol-faint">{{localize "midi-qol.AddFakeDice.Hint"}}</div>
     </div>
 
+    <div class="midi-qol-box">
+      <div class="midi-qol-settings heading">{{localize "midi-qol.PlayerWaits.Heading"}}</div>
+      <div class="form-group">
+        <label>{{localize "midi-qol.PlayerWaits.GM.Name"}}</label>
+        <input type="checkbox" name="playerWaitGM" data-dtype="Boolean" {{checked configSettings.playerWaitGM}} />
+        <div class="notes midi-qol-faint">{{localize "midi-qol.PlayerWaits.GM.Hint"}}</div>
+      </div>
+      <div class="form-group">
+        <label>{{localize "midi-qol.PlayerWaits.ShowPlayers.Name"}}</label>
+        <input type="checkbox" name="playerWaitShowPlayers" data-dtype="Boolean" {{checked configSettings.playerWaitShowPlayers}} />
+        <div class="notes midi-qol-faint">{{localize "midi-qol.PlayerWaits.ShowPlayers.Hint"}}</div>
+      </div>
+      <div class="form-group">
+        <label>{{localize "midi-qol.PlayerWaits.Gambit.Name"}}</label>
+        <input type="checkbox" name="playerWaitGambit" data-dtype="Boolean" {{checked configSettings.playerWaitGambit}} />
+        <div class="notes midi-qol-faint">{{localize "midi-qol.PlayerWaits.Gambit.Hint"}}</div>
+      </div>
+    </div>
+
     <div class="form-group">
       <label>{{localize "midi-qol.PreferredGM.Name"}}</label>
       <select name="preferredGM" data-dtype="String">

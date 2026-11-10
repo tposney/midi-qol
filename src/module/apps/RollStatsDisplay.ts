@@ -129,10 +129,15 @@ export class RollStatsDisplay extends HandlebarsApplicationMixin(ApplicationV2) 
   }
 
   #getTabs() {
-    const tabs = {
-      stats: {id: "stats", group: "sheet", label: i18n("midi-qol.RollStats"), active: true},
+    const tabs: Record<string, { id: string, group: string, label: string, active?: boolean, cssClass?: string }> = {
+      stats: {id: "stats", group: "sheet", label: i18n("midi-qol.RollStats")},
       config: {id: "config", group: "sheet", label: i18n("midi-qol.RollStatsConfig")}
     };
+    // The tab shown is the one Foundry remembers (tabGroups), so a re-render keeps it and the nav marks it
+    for (const tab of Object.values(tabs)) {
+      tab.active = this.tabGroups[tab.group] === tab.id;
+      tab.cssClass = tab.active ? "active" : "";
+    }
     return tabs;
   }
 

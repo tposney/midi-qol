@@ -355,7 +355,6 @@
     "none": "無効",
     "center": "中心点",
     "levelsautocover": "Levels Auto Cover",
-    "simbuls-cover-calculator": "Simbul's Cover Calculator",
     "tokencover": "Alternative Token Cover",
     "tokenvisibility": "Alternative Token Visibility（非推奨）"
   },
@@ -364,7 +363,6 @@
   "midi-qol.CoverCalculation.Hint": "選択したモジュールを用いて対象との遮蔽を判断し、ACボーナスを自動で適用します。",
   "midi-qol.CoverCalculationOptions": {
     "none": "無効",
-    "simbuls-cover-calculator": "Simbul's Cover Calculator",
     "levelsautocover": "Levels Auto Cover",
     "tokencover": "Alternative Token Cover",
     "tokenvisibility": "Alternative Token Visibility（非推奨）"

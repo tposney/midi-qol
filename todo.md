@@ -72,3 +72,7 @@ Examine dropping socketlib for it:
 - Macros and other modules call `MidiQOL.socket()` (socketlib's `executeAsGM` etc.): keep a compatibility wrapper, with a
   deprecation warning.
 - socketlib would then no longer be a required module.
+
+## Recheck on Monk's TokenBar update: roll card result CSS
+
+`css/styles.css` (end) keeps a two-digit total on one line in Monk's TokenBar roll cards (`.dice-result { flex: 1 0 auto; white-space: nowrap; }`), written for Monk's TokenBar 14.01. When Monk's TokenBar updates, roll a two-digit save through it with the rule removed; drop the rule and its 14.6.10 changelog line if Monk's shows it on one line.

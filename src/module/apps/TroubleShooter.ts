@@ -1,3 +1,4 @@
+import { chooseJsonFile } from "../lib/fileDialogs.js";
 import { i18n, i18nFormat, systemConcentrationId } from "../../midi-qol.js";
 import { ModuleReviewDialog } from "./ModuleReviewDialog.js";
 import { autoApplyDamageOptions, autoCEEffectsOptions, autoCheckHitOptions, autoCheckSavesOptions, autoEffectsOptions, autoTargetOptions, CheckedAuthorsList, checkedModuleList, checkMechanic, collectModuleData, collectSettingData, configSettings, coverCalculationOptions, enableWorkflow, exportSettingsToJSON, fetchParams, importSettingsFromJSON, rangeTargetOptions, safeGetGameSetting } from "../settings.js";
@@ -130,61 +131,34 @@ export class TroubleShooter extends HandlebarsApplicationMixin(ApplicationV2) {
     const filename = "fvtt-midi-qol-troubleshooter.json"
     foundry.utils.saveDataToFile(JSON.stringify(data, null, 2), "text/json", filename);
   }
-  public static async importTroubleShooterDataFromJSONDialog() {
-    const content = await foundry.applications.handlebars.renderTemplate("templates/apps/import-data.hbs",
-      { hint1: "Choose a Trouble Shooter JSON file to import" });
-    let dialog = new Promise((resolve, reject) => {
-      new DialogV2({
-        window: { title: `Import Trouble Shooter Data` },
-        classes: ["midi-qol-import-troubleshooter"],
-        content: content,
-        position: {
-          width: 400,
-          height: "auto"
-        },
-        buttons: [
-          {
-            action: "import",
-            icon: "fa-solid fa-file-import",
-            label: 'Import',
-            default: true,
-            callback: event => {
-              const form = (event.currentTarget as HTMLElement | null)?.querySelector("form");
-              if (!form?.data.files.length) return ui.notifications?.error("You did not upload a data file!");
-              foundry.utils.readTextFromFile(form.data.files[0]).then(json => {
-                const jsonData = JSON.parse(json);
-                if (foundry.utils.isNewerVersion(minimumMidiVersion, jsonData.midiVersion ?? "0.0.0")) {
-                  ui.notifications?.error("Trouble Shooter Data is too old to use");
-                  resolve(false);
-                  return;
-                }
-                jsonData.isLocal = false;
-                jsonData.fileName = form.data.files[0].name;
-                TroubleShooter.data = jsonData;
-                for (let error of TroubleShooter.data.errors) {
-                  error.timeString = `${new Date(error.timestamp).toLocaleDateString()} - ${new Date(error.timestamp).toLocaleTimeString()}`;
-
-                }
-                // Midi Settings Summary fields now all need to be a string. Older versions had booleans etc there so force them to string
-                const midiSummary = TroubleShooter.data.summary.midiSettings;
-                Object.keys(midiSummary).forEach(key => {
-                  if (typeof midiSummary[key] !== "string") midiSummary[key] = `${midiSummary[key]}`;
-                });
-                resolve(true);
-              });
-            }
-          },
-          {
-            action: "no",
-            icon: "fa-solid fa-xmark",
-            label: 'Cancel',
-            callback: event => resolve(false)
-          }
-        ],
-      }).render({force: true});
+  public static async importTroubleShooterDataFromJSONDialog(): Promise<boolean> {
+    const file = await chooseJsonFile(i18n("midi-qol.Import.TroubleShooterTitle"), i18n("midi-qol.Import.TroubleShooterHint"));
+    if (!file) return false;
+    let jsonData;
+    try {
+      jsonData = JSON.parse(file.text);
+    } catch (err) {
+      ui.notifications?.error(i18n("midi-qol.Import.BadFile"));
+      return false;
+    }
+    if (foundry.utils.isNewerVersion(minimumMidiVersion, jsonData.midiVersion ?? "0.0.0")) {
+      ui.notifications?.error(i18n("midi-qol.Import.TooOld"));
+      return false;
+    }
+    jsonData.isLocal = false;
+    jsonData.fileName = file.name;
+    TroubleShooter.data = jsonData;
+    for (let error of TroubleShooter.data.errors) {
+      error.timeString = `${new Date(error.timestamp).toLocaleDateString()} - ${new Date(error.timestamp).toLocaleTimeString()}`;
+    }
+    // Midi Settings Summary fields now all need to be a string. Older versions had booleans etc there so force them to string
+    const midiSummary = TroubleShooter.data.summary.midiSettings;
+    Object.keys(midiSummary).forEach(key => {
+      if (typeof midiSummary[key] !== "string") midiSummary[key] = `${midiSummary[key]}`;
     });
-    return await dialog;
+    return true;
   }
+
   public static getDetailedSettings(moduleId: string): any {
     const returnValue = {};
     let settings = Array.from(game.settings.settings ?? []).filter(i => i[0].includes(moduleId) && i[1].namespace === moduleId);
@@ -292,38 +266,18 @@ export class TroubleShooter extends HandlebarsApplicationMixin(ApplicationV2) {
       ui.notifications?.warn(`midi-qol | Cant set midi settings - you have not loaded external trouble shooter data`)
       return false;
     }
-    let dialog: Promise<boolean> = new Promise((resolve, reject) => {
-      new DialogV2({
-        window: { title: `Overwrite midi-qol settings from loaded file` },
-        content: `<p>This will <strong><em>permanently</em></strong> overwrite your midi settings</p>`,
-        position: {
-          width: 400,
-          height: "auto"
-        },
-        buttons: [
-          {
-            action: "overwrite",
-            icon: "fa-solid fa-file-import",
-            label: 'Overwrite',
-            callback: async (event) => {
-              await exportSettingsToJSON(); // Just a safety net saving of the settings
-              const settingsJSON = TroubleShooter.data.midiSettings;
-              importSettingsFromJSON(settingsJSON);
-              Hooks.callAll("midi-qol.ConfigSettingsChanged");
-              resolve(true);
-            }
-          },
-          {
-            action: "cancel",
-            default: true,
-            icon: "fa-solid fa-xmark",
-            label: 'Cancel',
-            callback: event => resolve(false)
-          }
-        ],
-      }).render({force: true});
+    const overwrite = await DialogV2.confirm({
+      window: { title: i18n("midi-qol.Import.OverwriteTitle") },
+      content: `<p>${i18n("midi-qol.Import.OverwriteWarning")}</p>`,
+      rejectClose: false,
+      yes: { label: "midi-qol.Import.Overwrite", icon: "fa-solid fa-file-import", default: false },
+      no: { label: "Cancel", icon: "fa-solid fa-xmark", default: true }
     });
-    return await dialog;
+    if (overwrite !== true) return false;
+    await exportSettingsToJSON(); // Just a safety net saving of the settings
+    await importSettingsFromJSON(TroubleShooter.data.midiSettings);
+    Hooks.callAll("midi-qol.ConfigSettingsChanged");
+    return true;
   }
 
   async _prepareContext(options) {
@@ -399,13 +353,18 @@ export class TroubleShooter extends HandlebarsApplicationMixin(ApplicationV2) {
 
   // V12-only:
   #getTabs() {
-    const tabs = {
-      summary: {id: "summary", group: "sheet", label: "midi-qol.TroubleShooter.Tabs.summary", active: true},
+    const tabs: Record<string, { id: string, group: string, label: string, active?: boolean, cssClass?: string }> = {
+      summary: {id: "summary", group: "sheet", label: "midi-qol.TroubleShooter.Tabs.summary"},
       common: {id: "common", group: "sheet", label: "midi-qol.TroubleShooter.Tabs.common"},
       problems: {id: "problems", group: "sheet", label: "midi-qol.TroubleShooter.Tabs.problems"},
       errors: {id: "errors", group: "sheet", label: "midi-qol.TroubleShooter.Tabs.errors"},
       modules: {id: "modules", group: "sheet", label: "midi-qol.TroubleShooter.Tabs.modules"}
     };
+    // The tab shown is the one Foundry remembers (tabGroups), so a re-render keeps it and the nav marks it
+    for (const tab of Object.values(tabs)) {
+      tab.active = this.tabGroups[tab.group] === tab.id;
+      tab.cssClass = tab.active ? "active" : "";
+    }
     return tabs;
   }
 
@@ -647,8 +606,6 @@ export class TroubleShooter extends HandlebarsApplicationMixin(ApplicationV2) {
           break;
         case "multilevel-tokens":
           break;
-        case "simbuls-cover-calculator":
-          break;
         case "socketlib":
           if (!(game.modules.get("socketlib")?.active)) {
             data.problems.push({
@@ -683,7 +640,6 @@ export class TroubleShooter extends HandlebarsApplicationMixin(ApplicationV2) {
         case "multiattack-5e":
         case "obsidian":
         case "quick-rolls":
-        case "ready-set-roll-5e":
         case "roll-tooltips-5e":
         case "retroactive-advantage-5e":
         case "rollgroups":
@@ -787,17 +743,6 @@ export class TroubleShooter extends HandlebarsApplicationMixin(ApplicationV2) {
           });
         }
         break;
-      case "simbuls-cover-calculator":
-        if (!(game.modules.get("simbuls-cover-calculator")?.active)) {
-          data.problems.push({
-            moduleId: "simbuls-cover-calculator",
-            severity: "Error",
-            problemSummary: "You must enable the 'simbuls-cover-calculator' module to use the 'Simbul's Cover Calculator' option for 'Walls Block Range'",
-            problemDetail: undefined,
-            fixer: "Enable the 'simbuls-cover-calculator' module"
-          });
-        }
-        break;
       case "tokenvisibility":
         data.problems.push({
           moduleId: "tokenvisibility",
@@ -830,17 +775,6 @@ export class TroubleShooter extends HandlebarsApplicationMixin(ApplicationV2) {
             problemSummary: "You must enable the 'levelsautocover' module to use the 'Levels Auto Cover' option for 'Calculate Cover'",
             problemDetail: undefined,
             fixer: "Enable the 'levelsautocover' module"
-          });
-        }
-        break;
-      case "simbuls-cover-calculator":
-        if (!(game.modules.get("simbuls-cover-calculator")?.active)) {
-          data.problems.push({
-            moduleId: "simbuls-cover-calculator",
-            severity: "Error",
-            problemSummary: "You must enable the 'simbuls-cover-calculator' module to use the 'Simbul's Cover Calculator' option for 'Calculate Cover'",
-            problemDetail: undefined,
-            fixer: "Enable the 'simbuls-cover-calculator' module"
           });
         }
         break;

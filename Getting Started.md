@@ -91,7 +91,7 @@ This allows effects to be applied to nearby tokens without having to trigger any
 * **Automated Conditions 5e**
 Automates how conditions (blinded, frightened, prone, restrained and so on) affect rolls.
 
-* **Cover**: **Simple Cover 5e**, **Alternative Token Cover** or **Simbul's Cover Calculator** work out cover, which midi adds to the target's AC (see *Calculate Cover*).
+* **Cover**: **AutoCover** (Levels Auto Cover), **Simple Cover 5e** or **Alternative Token Cover** work out cover, which midi adds to the target's AC (see *Calculate Cover*).
 
 * **Rideable**
 Lets tokens ride other tokens and moves riders with their mounts. With *Mounted creatures use their mount's space* (Mechanics tab) on, midi measures a rider's range and reach from its mount.
@@ -215,7 +215,7 @@ Often, an item will have an active effect on it which should be applied to the t
 - **Auto check if attack hits target**: Check if an attack roll hits selected targets. If disabled midi-qol will assume the attack hits and continue rolling. Options: *None*, *Check - all see result*, *Check - only GM sees results*, *Check - only GM sees anything*
 - **Roll a separate attack per target**: When targeting multiple creatures with an attack-rolling item, roll a separate attack for each
 **Walls, cover and vision**
-- **Walls block ranged attacks**: If a wall that blocks movement, or a cover module, gives total cover, the attack is blocked. Options: *No*, *Center Check*, *Levels Auto Cover*, *Simbul's Cover Calculator*, *Alternative Token Cover*, *Simple Cover 5e*
+- **Walls block ranged attacks**: If a wall that blocks movement, or a cover module, gives total cover, the attack is blocked. Options: *No*, *Center Check*, *Levels Auto Cover*, *Alternative Token Cover*, *Simple Cover 5e*
 - **Calculate Cover**: Calculate the AC bonus for targets in cover. Options: *None*, *dnd5e cover status only* (the target's Half/Three-Quarters/Total Cover status) or a compatible cover module
 - **Vision test point height**: Which elevation to test for token visibility. Options: *Center*, *Top*
 - **Template Origin Height**: The height of the caster that activity templates are measured from: a sphere is centred on it, a cylinder, cube or line stands on it. Options: *Caster's base*, *Caster's top*, *Caster's eye level*. An activity can override this in its Region settings

@@ -425,14 +425,12 @@
         "none": "否",
         "center": "中心檢查",
         "levelsautocover": "Levels Auto Cover",
-        "simbuls-cover-calculator": "Simbul's Cover Calculator",
         "tokencover": "Alternative Token Cover",
         "simplecover5e": "Simple Cover 5e",
         "expandedHints": {
             "none": "牆壁不會阻擋遠程攻擊檢查。",
             "center": "檢查 Token 中心到目標中心。若有牆壁阻擋，則攻擊失敗。",
             "levelsautocover": "使用 Levels Auto Cover 模組計算掩體。全面掩護會阻擋攻擊。",
-            "simbuls-cover-calculator": "使用 Simbul's Cover Calculator 模組計算掩體。",
             "tokencover": "使用 Alternative Token Cover 模組計算掩體。",
             "simplecover5e": "使用 Simple Cover 5e 模組計算掩體。"
         }
@@ -442,7 +440,6 @@
     "midi-qol.CoverCalculation.Hint": "計算掩體內的目標 AC 加成 — 設定取自選定的模組",
     "midi-qol.CoverCalculationOptions": {
         "none": "無",
-        "simbuls-cover-calculator": "Simbul's Cover Calculator",
         "simplecover5e": "Simple Cover 5e",
         "levelsautocover": "Levels Auto Cover",
         "tokencover": "Alternative Token Cover"

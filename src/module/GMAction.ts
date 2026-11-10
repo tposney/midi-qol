@@ -1,7 +1,9 @@
 import { checkRule, configSettings } from "./settings.js";
+import { _closePlayerRollDialogs, playerWaitHandlers } from "./lib/playerWaits.js";
+import { DialogCountdown, dialogCountdownOptions } from "./lib/dialogCountdown.js";
 import { withWorkflowOptionsCodec } from "./lib/workflowOptionsCodec.js";
 import { i18n, log, warn, gameStats, getCanvas, error, debugEnabled, debug, GameSystemConfig, MODULE_ID } from "../midi-qol.js";
-import { _pauseReactionTimer, calculateDamageAmounts, hpChangeFromDetail, getToken, getTokenDocument, gmOverTimeEffect, fromActorUuid, promptReactions, hasUsedAction, hasUsedBonusAction, removeActionUsed, removeBonusActionUsed, removeReactionUsed, ReactionItemReference, isEffectExpired, expireEffects, deleteAppliedEffects, getAppliedEffects, CERemoveEffect, CEAddEffectWith, getActor, completeItemUse, completeActivityUse, localActivityOverTimeEffect, isValidTarget, hasUsedAnyReaction, getVitalityItem, MidiOptions, tokenSourceCenter, toggleStatus } from "./utils.js";
+import { _pauseReactionTimer, _closeReactionDialog, calculateDamageAmounts, hpChangeFromDetail, getToken, getTokenDocument, gmOverTimeEffect, fromActorUuid, promptReactions, hasUsedAction, hasUsedBonusAction, removeActionUsed, removeBonusActionUsed, removeReactionUsed, ReactionItemReference, isEffectExpired, expireEffects, deleteAppliedEffects, getAppliedEffects, CERemoveEffect, CEAddEffectWith, getActor, completeItemUse, completeActivityUse, localActivityOverTimeEffect, isValidTarget, hasUsedAnyReaction, getVitalityItem, MidiOptions, tokenSourceCenter, toggleStatus } from "./utils.js";
 import { DAMAGE_MESSAGE_TYPE } from "./ChatClasses/DamageCardMessage.js";
 import { DamageDescriptionObject, Workflow } from "./Workflow.js";
 import { applyFailedDeathSaves, bonusCheck, revertFailedDeathSaves } from "./patching.js";
@@ -26,6 +28,8 @@ export let setupSocket = () => {
   socketlibSocket.register("bonusCheck", _bonusCheck);
   socketlibSocket.register("chooseReactions", localDoReactions);
   socketlibSocket.register("pauseReactionTimer", _pauseReactionTimer);
+  for (const [name, handler] of Object.entries(playerWaitHandlers)) socketlibSocket.register(name, handler);
+  socketlibSocket.register("closeReactionDialog", _closeReactionDialog);
   socketlibSocket.register("completeItemUse", _completeItemUse);
   socketlibSocket.register("completeItemUseV2", _completeItemUse);
   socketlibSocket.register("completeActivityUse", _completeActivityUse);
@@ -82,111 +86,40 @@ async function _removeWorkflow(workflowId: string) {
   return Workflow.removeWorkflow(workflowId);
 }
 
+/**
+ * midi's socket for other modules and macros (`MidiQOL.socket()`): socketlib's calls, with executeAsGM sent to midi's choice
+ * of GM (preferred GM, then a GM on the caller's scene). Nothing is checked here: a check in the caller's client can be
+ * bypassed, so any restriction belongs in the handler on the receiving side.
+ */
 export class SaferSocket {
-
-  #_socketlibSocket: any;
+  #socket: any;
   constructor(socketlibSocket) {
-    this.#_socketlibSocket = socketlibSocket;
+    this.#socket = socketlibSocket;
   }
-  canCall(handler) {
-    if (game.user?.isGM) return true;
-    switch (handler) {
-      case "addDependent":
-      case "applyEffects":
-      case "bonusCheck":
-      case "chooseReactions":
-      case "completeItemUse":
-      case "completeActivityUse":
-      case "confirmDamageRollComplete":
-      case "confirmDamageRollCompleteHit":
-      case "confirmDamageRollCompleteMiss":
-      case "cancelWorkflow":
-      case "createChatMessage":
-      case "createEffects":
-      case "D20Roll":
-      case "log":
-      case "monksTokenBarSaves":
-      case "flashTokenBarSaves":
-      case "moveToken":
-      case "moveTokenAwayFromPoint":
-      case "teleportToken":
-      case "removeWorkflow":
-      case "rollAbility":
-      case "rollAbilityV2":
-      case "rollConcentration":
-      case "removeEffect":
-      case "removeActionBonusReaction":
-      case "recordStats":
-      case "toggleStatusEffect":
-      case "toggleTokenHidden":
-      case "midiRegionTriggerActivity":
-      case "setupRegion":
-      case "advanceCombatRound":
-        return true;
-
-      case "addConvenientEffect":
-      case "createActor":
-      case "createReverseDamageCard":
-      case "deleteEffects":
-      case "deleteItemEffects":
-      case "deleteToken":
-      case "removeEffects":
-      case "removeEffectUuids":
-      case "updateActor":
-      case "updateEffects":
-      case "updateItems":
-      case "_gmSetFlag":
-      case "_gmUnsetFlag":
-        if (game.user?.isTrusted) return true;
-        ui.notifications?.warn(`midi-qol | user ${game.user?.name} must be a trusted player to call ${handler} and will be disabled in the future`);
-        return true; // TODO change this to false in the future.
-
-
-      case "gmOverTimeEffect":
-      case "queueUndoData":
-      case "queueUndoDataDirect":
-      case "removeStatsForActorId":
-      case "removeMostRecentWorkflow":
-      case "startUndoWorkflow":
-      case "undoMostRecentWorkflow":
-      case "undoTillWorkflow":
-      case "saveAllStats":
-      case "addUndoChatCards":
-      case "deleteEffectsByUuid":
-      default:
-        error(`Non-GMs are not allowed to call ${handler}`);
-        return false;
-    }
+  executeAsGM(handler, ...args) {
+    return unTimedExecuteAsGM(handler, ...args);
   }
-
-  async executeAsGM(handler, ...args) {
-    if (!this.canCall(handler)) return false;
-    return await unTimedExecuteAsGM(handler, ...args);
+  executeAsUser(handler, userId, ...args) {
+    return this.#socket.executeAsUser(handler, userId, ...args);
   }
-  async executeAsUser(handler, userId, ...args) {
-    if (!this.canCall(handler)) return false;
-    return await this.#_socketlibSocket.executeAsUser(handler, userId, ...args);
+  executeForAllGMs(handler, ...args) {
+    return this.#socket.executeForAllGMs(handler, ...args);
   }
-
-  async executeForAllGMs(handler, ...args) {
-    if (!this.canCall(handler)) return false;
-    return await this.#_socketlibSocket.executeForAllGMs(handler, ...args);
+  executeForOtherGMs(handler, ...args) {
+    return this.#socket.executeForOtherGMs(handler, ...args);
   }
-  async executeForOtherGMS(handler, ...args) {
-    if (!this.canCall(handler)) return false;
-    return await this.#_socketlibSocket.executeForOtherGMS(handler, ...args);
+  /** The name this method had (it called a method socketlib doesn't have) */
+  executeForOtherGMS(handler, ...args) {
+    return this.executeForOtherGMs(handler, ...args);
   }
-  async executeForEveryone(handler, ...args) {
-    if (!this.canCall(handler)) return false;
-    return await this.#_socketlibSocket.executeForEveryone(handler, ...args);
+  executeForEveryone(handler, ...args) {
+    return this.#socket.executeForEveryone(handler, ...args);
   }
-  async executeForOthers(handler, ...args) {
-    if (!this.canCall(handler)) return false;
-    return await this.#_socketlibSocket.executeForOthers(handler, ...args);
+  executeForOthers(handler, ...args) {
+    return this.#socket.executeForOthers(handler, ...args);
   }
-  async executeForUsers(handler, recipients, ...args) {
-    if (!this.canCall(handler)) return false;
-    return await this.#_socketlibSocket.executeForUsers(handler, recipients, ...args);
+  executeForUsers(handler, recipients, ...args) {
+    return this.#socket.executeForUsers(handler, recipients, ...args);
   }
 }
 
@@ -756,6 +689,16 @@ async function rollConcentration(data: { actorUuid: string, target: number, whis
   return actor.rollConcentration({ target: data.target, legacy: false }, {}, { create: data.create, whisper: data.whisper, rollMode: data.rollMode });
 }
 
+/**
+ * A roll made for a player by someone else (rollAbility's forUserId): the player sees it as they would have seen their own
+ * roll in that mode, so a private or self roll is whispered to them too; a blind or public one is left as it is.
+ */
+export function whisperRollToPlayer(message: ChatMessage.Implementation) {
+  const userId = foundry.utils.getProperty(message, `flags.${MODULE_ID}.rollFor`);
+  if (typeof userId !== "string" || !message.whisper.length || message.blind || message.whisper.includes(userId)) return;
+  message.updateSource({ whisper: [...message.whisper, userId] });
+}
+
 async function rollAbility(data: {
   saveDetails: SaveDetails;
   displayOptions?: {
@@ -763,6 +706,8 @@ async function rollAbility(data: {
     chatMessage?: boolean;
     rollMode?: string;
     showTargetDC?: boolean;
+    /** Rolled for this player by someone else: shown to them as their own roll would have been */
+    forUserId?: string;
   };
   // Legacy fields from pre-13.0.44 callers
   request?: string;
@@ -923,6 +868,7 @@ async function rollAbility(data: {
     }
   }
   if (rollMode) message.rollMode = rollMode as RollMessageConfig["rollMode"];
+  if (disp?.forUserId && disp.forUserId !== game.user?.id) foundry.utils.setProperty(message, `data.flags.${MODULE_ID}.rollFor`, disp.forUserId);
   const performRoll = async (): Promise<Roll[] | Roll | undefined> => {
     // @ts-expect-error no dnd5e-types
     if (normalizedRequest === "save") return actor.rollSavingThrow(config, dialog, message);
@@ -939,11 +885,13 @@ async function rollAbility(data: {
 
   return new Promise((resolve) => {
     let timeoutId: NodeJS.Timeout | undefined;
+    let countdown: DialogCountdown | undefined;
     let settled = false;
     const settle = (result?: Roll[] | Roll) => {
       if (settled) return;
       settled = true;
       if (timeoutId) clearTimeout(timeoutId);
+      countdown?.stop();
       resolve(result ?? {});
     };
     /*
@@ -958,11 +906,22 @@ async function rollAbility(data: {
       error(msg, err);
       settle();
     };
-    if (configSettings.playerSaveTimeout > 0) timeoutId = setTimeout(() => {
+    const onTimeout = () => {
       warn(`Roll request for ${actor.name} timed out. Doing roll`);
       dialog.configure = false; // assume player is asleep force roll without dialog
-      performRoll().then(settle).catch(fail);
-    }, configSettings.playerSaveTimeout * 1000);
+      // The player's roll dialog is no longer wanted: closed once this roll has settled the request
+      performRoll().then(result => {
+        settle(result);
+        _closePlayerRollDialogs({ actorUuid: actor.uuid });
+      }).catch(fail);
+    };
+    if (configSettings.playerSaveTimeout > 0) {
+      if (dialog.configure !== false) {
+        // The player sees the time left on the roll dialog, and can pause it
+        countdown = new DialogCountdown({ seconds: configSettings.playerSaveTimeout, onExpire: onTimeout });
+        dialog.options = { ...(dialog.options ?? {}), ...dialogCountdownOptions(countdown) };
+      } else timeoutId = setTimeout(onTimeout, configSettings.playerSaveTimeout * 1000);
+    }
     performRoll().then(settle).catch(fail);
   });
 }

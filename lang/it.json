@@ -352,7 +352,6 @@
   "none": "No",
   "center": "Controllo dal Centro",
   "levelsautocover": "Copertura Automatica Livelli",
-  "simbuls-cover-calculator": "Calcolatore di Copertura Simbuls",
   "tokencover": "Copertura Alternativa dei Token",
   "tokenvisibility": "Visibilità alternativa Token - deprecated"
 },
@@ -361,7 +360,6 @@
 "midi-qol.CoverCalculation.Hint": "Calcola il bonus CA per i bersagli sotto copertura - le impostazioni sono prese dal modulo selezionato",
 "midi-qol.CoverCalculationOptions": {
   "none": "Nessuna",
-  "simbuls-cover-calculator": "Calcolatore di Copertura di Simbul",
   "levelsautocover": "Copertura Automatica Livelli",
   "tokencover": "Copertura Alternativa dei Token",
   "tokenvisibility": "Visibilità alternativa Token - deprecated"

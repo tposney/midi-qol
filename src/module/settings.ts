@@ -12,58 +12,27 @@ import { TargetConfirmationConfig } from "./apps/TargetConfirmationConfig.js";
 import { Workflow } from "./Workflow.js";
 import type { SelectOptions } from "../globals.js";
 
-// Dummy FormApplication that launches the setup wizard via hook (can't be eliminated - fires a hook, not an app)
-class LaunchWizardSubmenu extends FormApplication {
-  constructor(object = {}, options = {}) {
-    super(object, options);
-  }
-  static get defaultOptions() {
-    return foundry.utils.mergeObject(super.defaultOptions, {
-      id: "midi-qol-launch-wizard",
-      classes: ["midi-qol"],
-      title: "Launch Setup Wizard",
-      width: 0,
-      height: 0
-    });
-  }
-  async _render(force?: boolean, options?: any) {
-    // Don't render anything - just trigger the wizard and close
+const { ApplicationV2 } = foundry.applications.api;
+
+// Settings menus that act instead of drawing a window: launch the setup wizard (a hook), confirm a reset
+class LaunchWizardSubmenu extends ApplicationV2 {
+  override async render(): Promise<this> {
     Hooks.call("midi-qol-setup-wizard.launch");
-    this.close();
+    return this;
   }
-  getData() { return {}; }
-  protected _updateObject(event: Event, formData?: object): Promise<unknown> { return Promise.resolve(); }
 }
 
-// Dummy FormApplication that shows reset confirmation dialog
-class ResetSettingsSubmenu extends FormApplication {
-  constructor(object = {}, options = {}) {
-    super(object, options);
-  }
-  static get defaultOptions() {
-    return foundry.utils.mergeObject(super.defaultOptions, {
-      id: "midi-qol-reset-settings",
-      classes: ["midi-qol"],
-      title: "Reset Settings",
-      width: 0,
-      height: 0
-    });
-  }
-  async _render(force?: boolean, options?: any) {
-    // Don't render anything - show confirmation dialog and close
+class ResetSettingsSubmenu extends ApplicationV2 {
+  override async render(): Promise<this> {
     const confirmed = await foundry.applications.api.DialogV2.confirm({
       window: { title: i18n("midi-qol.ResetDefaults.Title") },
       content: `<p>${i18n("midi-qol.ResetDefaults.Content")}</p>`,
       yes: { label: i18n("midi-qol.ResetDefaults.Confirm") },
       no: { label: i18n("Cancel") }
     });
-    if (confirmed) {
-      await resetConfigSettingsToDefaults();
-    }
-    this.close();
+    if (confirmed) await resetConfigSettingsToDefaults();
+    return this;
   }
-  getData() { return {}; }
-  protected _updateObject(event: Event, formData?: object): Promise<unknown> { return Promise.resolve(); }
 }
 
 let fastForwardMigrationDone = false;
@@ -169,6 +138,12 @@ class ConfigSettings {
   gmAttackDsn: string = "show";
   gmDamageDsn: string = "show";
   gmAttackDamageCards: boolean = false;
+  /** The GM sees who midi waits for in the player list and can answer for them; a disconnect leaves it to the GM */
+  playerWaitGM: boolean = true;
+  /** Players see, read-only, which players midi waits for and on what kind of prompt */
+  playerWaitShowPlayers: boolean = true;
+  /** Gambit's Premades reaction prompts mirrored to the GM are listed on their player's row, hidden until the GM shows one */
+  playerWaitGambit: boolean = true;
   gmAutoAttack: boolean = false;
   gmAutoDamage: string = "none";
   gmAutoFastForward: string[] = [];
@@ -335,9 +310,7 @@ export const checkedModuleList = [
   "lib-wrapper",
   "midi-item-showcase-community",
   "multilevel-tokens",
-  "ready-set-roll-5e",
   "sequencer",
-  "simbuls-cover-calculator",
   "socketlib",
   "tokenmagic",
   "vision-5e",
@@ -719,6 +692,9 @@ export let fetchParams = () => {
   if (!configSettings.optionalRules.wallsBlockRange) configSettings.optionalRules.wallsBlockRange = "center";
   // v14 Levels has no CONFIG.Levels.API/TemplateHandler; its sight wrapper is one "center" already uses.
   if (configSettings.optionalRules.wallsBlockRange === "centerLevels") configSettings.optionalRules.wallsBlockRange = "center";
+  // Simbul's Cover Calculator has no Foundry 14 release
+  if (String(configSettings.optionalRules.wallsBlockRange) === "simbuls-cover-calculator") configSettings.optionalRules.wallsBlockRange = "center";
+  if (String(configSettings.optionalRules.coverCalculation) === "simbuls-cover-calculator") configSettings.optionalRules.coverCalculation = "none";
   //@ts-expect-error legacy boolean value
   if (configSettings.optionalRules.checkFlanking === true) configSettings.optionalRules.checkFlanking = "ceadv";
   if (!configSettings.optionalRules.coverCalculation) configSettings.optionalRules.coverCalculation = "none";
@@ -1421,7 +1397,6 @@ export const wallsBlockRangeOptionsNew = keysToExtendedOptionsObj("WallsBlockRan
   "none",
   "center",
   "levelsautocover",
-  "simbuls-cover-calculator",
   "tokencover",
   "simplecover5e"
 ]);
@@ -1429,7 +1404,6 @@ export const wallsBlockRangeOptionsNew = keysToExtendedOptionsObj("WallsBlockRan
 export const coverCalculationOptions = keysToExtendedOptionsObj("CoverCalculationOptions", [
   "none",
   "dnd5eStatus",
-  "simbuls-cover-calculator",
   "simplecover5e",
   "levelsautocover",
   "tokencover"
@@ -1756,6 +1730,7 @@ export const registerSettings = function () {
     type: Boolean,
     config: false,
   });
+
 
   game.settings.register("midi-qol", "showGM", {
     name: "midi-qol.showGM.Name",

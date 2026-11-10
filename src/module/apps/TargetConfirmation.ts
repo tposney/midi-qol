@@ -218,6 +218,8 @@ export class TargetConfirmationDialog extends HandlebarsApplicationMixin(Applica
         icon?: string;
         label?: string;
         action?: string;
+        default?: boolean;
+        hidden?: boolean;
       }[]
       targets: (Token.Implementation | {
         name: string;
@@ -320,9 +322,9 @@ export class TargetConfirmationDialog extends HandlebarsApplicationMixin(Applica
       else context.blurb = i18n("midi-qol.TargetConfirmation.BlurbAny");
     }
     context.buttons = [
-      { type: "button", icon: "fa-solid fa-dice-d20", label: "DND5E.Roll", action: "roll" },
+      { type: "button", icon: "fa-solid fa-dice-d20", label: "DND5E.Roll", action: "roll", default: true },
       { type: "button", icon: "fa-solid fa-stop", label: "Cancel", action: "cancel" },
-      { type: "hidden", icon: "fa-solid fa-check", label: "Clear", action: "clearTargets" }
+      { type: "button", icon: "fa-solid fa-check", label: "midi-qol.TargetConfirmation.Clear", action: "clearTargets", hidden: true }
     ];
     return context;
   }
@@ -359,17 +361,6 @@ export class TargetConfirmationDialog extends HandlebarsApplicationMixin(Applica
     }
 
     if (canvas) {
-      // TODO: This doing anything? 
-      let targetNames = this.element.getElementsByClassName("content-link midi-qol");
-      for (let targetName of Array.from(targetNames)) {
-        targetName.addEventListener("click", async (event) => {
-          event.stopPropagation();
-          // @ts-expect-error
-          const doc = await fromUuid(event.currentTarget?.dataset.uuid) as Actor | null;
-          //@ts-expect-error render not updated for v2 parameters
-          return doc?.sheet?.render({ force: true });
-        });
-      }
       let imgs = this.element.getElementsByTagName("img");
       for (let i of Array.from(imgs)) {
         i.style.border = 'none';
@@ -400,6 +391,15 @@ export class TargetConfirmationDialog extends HandlebarsApplicationMixin(Applica
         });
       }
     }
+    this.#keepOnScreen();
+  }
+
+  /** The dialog grows with its targets: keep its bottom edge on screen (it opens near the bottom by default). */
+  #keepOnScreen() {
+    const height = this.element?.offsetHeight ?? 0;
+    const top = this.position.top ?? 0;
+    const maxTop = Math.max(0, window.innerHeight - height - 10);
+    if (height && top > maxTop) this.setPosition({ top: maxTop });
   }
 
   /** Hooks are added once shown and removed on any close, so a dialog that never renders leaves none behind. */

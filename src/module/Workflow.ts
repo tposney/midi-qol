@@ -5,6 +5,7 @@ import { eventModifiers } from "./lib/rollKeys.js";
 import { TokenDocumentSet, hookTarget } from "./lib/tokenDocumentSet.js";
 import { CardRecords, RECORD_SETS, RecordSet, RecordFacts, STATE_KEYS, StateKey, attributionMap, attributionTriples, cardMidi, rollTypeOf, cardOtherConsumption, cardPreSelected, messagesFrom, recordList, recordPath, storedMidiFlag } from "./lib/cardState.js";
 import { preferredActiveGM, socketlibSocket, timedAwaitExecuteAsGM, timedExecuteAsGM, unTimedExecuteAsGM } from "./GMAction.js";
+import { beginPlayerWait, rollDialogsFor, trackPlayerWait } from "./lib/playerWaits.js";
 import { installedModules } from "./setupModules.js";
 import { offerFollowUps } from "./followUps.js";
 import { configSettings, autoRemoveTargets, checkRule, checkMechanic, safeGetGameSetting, useWeakReferences, onUseMacroOptions, chatCardUpdates } from "./settings.js";
@@ -109,6 +110,8 @@ import {
   toMessageMode,
   toLegacyRollMode,
   isDnd5eRollMessage,
+  rollAnswersRequest,
+  type SaveRequestKind,
   dnd5eRollType,
   tokenSourceElevation,
   applyStatusCondition,
@@ -1465,6 +1468,8 @@ export class Workflow {
   get advantageSaves(): TokenDocumentSet { return this.#persisted.tokenSet("advantageSave"); }
   set advantageSaves(advantageSaves: Set<TokenOrDocument> | undefined) { this.#persisted.setTokenSet("advantageSave", advantageSaves); }
   saveRequests: Record<string, (value: any) => void>;
+  /** What each chat-card save request asks for, by its key in saveRequests */
+  saveRequestKinds: Record<string, SaveRequestKind>;
   saveTimeouts: Record<string, NodeJS.Timeout>;
   defenceRequests: Record<string, (value: any) => void>;
   defenceTimeouts: Record<string, NodeJS.Timeout>;
@@ -1848,6 +1853,7 @@ export class Workflow {
     }
 
     this.saveRequests = {};
+    this.saveRequestKinds = {};
     this.defenceRequests = {};
     this.saveTimeouts = {};
     this.defenceTimeouts = {}
@@ -2298,6 +2304,11 @@ export class Workflow {
   }
 
   public async performState(newState: WorkflowState) {
+    // The workflow moved on: a roll it waited on its player for is done
+    if (newState !== this.WorkflowState_Suspend && this.#rollWait) {
+      this.#rollWait.end();
+      this.#rollWait = undefined;
+    }
     if (this.readOnly) {
       console.warn(`midi-qol | ${this.workflowName} is a read-only copy of another user's workflow: it does not run`);
       return;
@@ -2537,6 +2548,49 @@ export class Workflow {
     return this.WorkflowState_WaitForDamageRoll
   }
 
+  /** A roll this player's workflow waits for them to make, shown to the GM (the player list) to roll for them. */
+  #rollWait: { end: () => void } | undefined;
+
+  /**
+   * The workflow waits for its player to roll (a card button, or the roll dialog auto-roll opened): let the GM roll for
+   * them, with the choices the roll dialog offers. Not for a GM's own use.
+   */
+  waitOnPlayerRoll(kind: "attack" | "damage" | "utility") {
+    this.#rollWait?.end();
+    this.#rollWait = undefined;
+    if (!game.user || game.user.isGM || !this.actor) return;
+    const choice = (mode: string) => ({ label: `midi-qol.PlayerWaits.Choice.${mode}`, value: () => this.rollForPlayer(kind, mode) });
+    const choices = kind === "attack" ? { normal: choice("normal"), advantage: choice("advantage"), disadvantage: choice("disadvantage") }
+      : kind === "damage" ? { normal: choice("normal"), critical: choice("critical") }
+      : { roll: { label: "midi-qol.PlayerWaits.Choice.roll", value: () => this.rollForPlayer(kind, "normal") } };
+    this.#rollWait = beginPlayerWait({
+      kind, userId: game.user.id!, actorUuid: this.actor.uuid, tokenUuid: this.tokenDocument?.uuid, keepDialogs: true,
+      label: i18nFormat(`midi-qol.PlayerWaits.${kind}Label`, { item: this.item?.name ?? "" }),
+      choices
+    });
+  }
+
+  /** Roll for the player as their roll dialog would: press its button when it is open, else roll without it. */
+  async rollForPlayer(kind: "attack" | "damage" | "utility", mode: string) {
+    const dialog = rollDialogsFor(this.actor.uuid)[0];
+    const button = dialog?.element?.querySelector<HTMLButtonElement>(`button[data-action="${mode}"]`)
+      ?? dialog?.element?.querySelector<HTMLButtonElement>(`button[data-action="normal"]`);
+    if (button) return button.click();
+    const midiOptions: Record<string, unknown> = { ...this.rollOptions, workflowOptions: this.workflowOptions };
+    if (kind === "attack") {
+      // As the card's Advantage/Disadvantage buttons: the attack's advantage check reads the workflow's options
+      this.workflowOptions.advantage = mode === "advantage";
+      this.workflowOptions.disadvantage = mode === "disadvantage";
+      Object.assign(midiOptions, { fastForwardAttack: true });
+      await this.activity.rollAttack!({ workflow: this, midiOptions }, { configure: false }, {});
+    } else if (kind === "damage") {
+      Object.assign(midiOptions, { fastForwardDamage: true, isCritical: mode === "critical" || this.isCritical });
+      await this.activity.rollDamage({ workflow: this, midiOptions }, { configure: false }, { create: false });
+    } else {
+      await this.activity.rollFormula!({ workflow: this, midiOptions }, { configure: false }, { create: false });
+    }
+  }
+
   async WorkflowState_WaitForAttackRoll(): Promise<WorkflowState> {
     // Attack per target: this use has its targets (template, confirmation) and its cost; each target gets its own use
     if (MidiAttackActivity && this.activity instanceof MidiAttackActivity && this.activity.attacksEachTarget
@@ -2581,6 +2635,7 @@ export class Workflow {
     }
 
     if (this.activity.roll?.formula) return this.WorkflowState_WaitForUtilityRoll;
+    if (!autoRollAttack || !isFastRoll) this.waitOnPlayerRoll("attack");
     if (autoRollAttack) {
       this.rollOptions.fastForwardAttack ||= isFastRoll;
       this.activity.rollAttack!({ event: this.rollOptions.event, workflow: this, midiOptions: { ...this.rollOptions, workflowOptions: this.workflowOptions } }, {}, {});
@@ -2687,9 +2742,11 @@ export class Workflow {
       if (debugEnabled > 0) warn("waitForDamageRoll | rolling damage ", this.rollOptions.event, configSettings.autoRollAttack, configSettings.autoFastForward)
       this.rollOptions.isCritical = this.isCritical;
       this.rollOptions.fastForwardDamage = isAutoFastForward("damage", { workflow: this });
+      if (!this.rollOptions.fastForwardDamage) this.waitOnPlayerRoll("damage");
       this.activity.rollDamage({ workflow: this, midiOptions: { ...this.rollOptions, workflowOptions: this.workflowOptions } }, {}, { create: false });
       return this.WorkflowState_Suspend;
     }
+    this.waitOnPlayerRoll("damage");
     const chatMessage = this.chatCard;
     if (chatMessage) {
       await this.performThrottledUpdate(chatMessage, { "system.midi.dmgBtnText": this.#damageButtonText() } as ChatMessage.UpdateData);
@@ -2743,6 +2800,7 @@ export class Workflow {
 
   async WorkflowState_WaitForUtilityRoll(): Promise<WorkflowState> {
     if (!this.activity.roll?.formula) return this.WorkflowState_UtilityRollComplete;
+    this.waitOnPlayerRoll("utility");
     if (getAutoRollDamage(this) !== "none") {
       const rolls = await this.activity.rollFormula!({ event: this.rollOptions.event, workflow: this, midiOptions: { ...this.rollOptions, workflowOptions: this.workflowOptions } }, {}, { create: false });
       if (!rolls || this.abort) {
@@ -5883,12 +5941,6 @@ export class Workflow {
         // From the template's origin, as a point (AutoCover's point source), the caster making it
         moduleCoverBonus = computeCoverBonus(this.token, target, this.activity,
           { origin: { x: position.x, y: position.y, elevation: originElevation } });
-      } else if (configSettings.optionalRules.coverCalculation === "simbuls-cover-calculator"
-        && installedModules.get("simbuls-cover-calculator") && getToken(target)) {
-        const coverData = await globalThis.CoverCalculator.checkCoverViaCoordinates(
-          position.x, position.y, false, 'AoE', false, getToken(target));
-        if (coverData?.data.results.cover === 3) moduleCoverBonus = TOTAL_COVER;
-        else moduleCoverBonus = -coverData.data.results.value;
       } else if (configSettings.optionalRules.coverCalculation === "tokencover" && installedModules.get("tokencover")) {
         if (this.token) moduleCoverBonus = computeCoverBonus(foundry.utils.deepClone(this.token, { center: position } as any), target, this.activity);
       } else if (configSettings.optionalRules.coverCalculation === "simplecover5e"
@@ -6332,6 +6384,7 @@ export class Workflow {
 
     const promise = new Promise<Roll[] | Roll | null>((resolve) => {
       this.saveRequests[requestId] = resolve;
+      this.saveRequestKinds[requestId] = { rollType, abilities: rollAbilities, skills: rollSkills, tools: rollTools };
 
       // Set a timeout for taking over the roll
       if (configSettings.playerSaveTimeout > 0) {
@@ -6343,16 +6396,18 @@ export class Workflow {
 
             // The DC goes on the roll so dnd5e can tell success from failure; who sees it is decided when the card is shown.
             const showTargetDC = true;
-            if (!game.user?.isGM && saveDisplay === "allShow") {
-              // Non-GM users don't have permission to create chat cards impersonating the GM
-              const rollMode = toMessageMode(this.activity.midiProperties?.rollMode);
+            // A player's client rolls only its own creatures: another player's save is made by a GM, as the player's
+            // roll would have been (its mode, its whispers); with no GM connected, here without prompts.
+            const owned = !!target.actor?.isOwner;
+            if (!game.user?.isGM && (saveDisplay === "allShow" || !owned) && preferredActiveGM()) {
               result = await timedAwaitExecuteAsGM("rollAbility", {
                 saveDetails,
                 displayOptions: {
                   fastForward: true,
                   chatMessage: showRoll,
-                  rollMode,
-                  showTargetDC
+                  rollMode: this.playerSaveMessageMode(),
+                  showTargetDC,
+                  forUserId: player.id
                 }
               });
             } else {
@@ -6373,6 +6428,8 @@ export class Workflow {
                   saveActivityUuid: this.saveActivity?.uuid,
                   isConcentrationCheck: saveDetails.isConcentrationCheck,
                   workflowOptions: saveDetails.workflowOptions,
+                  // Another player's creature, rolled here because no GM is connected: nobody here may answer its prompts
+                  unattended: !owned,
                   rollAbilities,
                   rollSkills,
                   rollTools,
@@ -6425,6 +6482,26 @@ export class Workflow {
     return { promise, requestCard };
   }
 
+  /** A save's message mode with no player rolling it: the activity's own, else by the save display */
+  defaultSaveMessageMode(): string {
+    if ((this.activity.midiProperties?.rollMode ?? "default") !== "default") return toMessageMode(this.activity.midiProperties!.rollMode);
+    return ["whisper", "gmOnly"].includes(saveDisplayMode()) ? "gm" : "public";
+  }
+
+  /** The message mode of a player's own save roll: the activity's own, else by Player roll saves */
+  playerSaveMessageMode(): string {
+    if ((this.activity.midiProperties?.rollMode ?? "default") !== "default") return this.defaultSaveMessageMode();
+    switch (configSettings.playerRollSaves) {
+      case "noneDialogPublic":
+      case "nonePublic": return "public";
+      case "noneDialogPrivate":
+      case "none": return "gm";
+      case "noneDialogSelf": return "self";
+      case "noneDialogBlind": return "blind";
+      default: return this.defaultSaveMessageMode();
+    }
+  }
+
   /**
    * Create a standard socketlib save roll
    */
@@ -6449,23 +6526,7 @@ export class Workflow {
     // Fall back to rolling as the current user
     if (!owner) owner = game.user;
 
-    let rollMode = ((this.activity.midiProperties?.rollMode ?? "default") !== "default")
-      ? toMessageMode(this.activity.midiProperties!.rollMode)
-      : ["whisper", "gmOnly"].includes(saveDisplayMode()) ? "gm" : "public";
-
-    if (!owner?.isGM) {
-      if ((this.activity.midiProperties?.rollMode ?? "default") === "default") {
-        if (["noneDialogPublic", "nonePublic"].includes(configSettings.playerRollSaves)) {
-          rollMode = "public";
-        } else if (["noneDialogPrivate", "none"].includes(configSettings.playerRollSaves)) {
-          rollMode = "gm";
-        } else if (configSettings.playerRollSaves === "noneDialogSelf") {
-          rollMode = "self";
-        } else if (configSettings.playerRollSaves === "noneDialogBlind") {
-          rollMode = "blind";
-        }
-      }
-    }
+    let rollMode = owner?.isGM ? this.defaultSaveMessageMode() : this.playerSaveMessageMode();
 
     // An NPC's save message is kept to the GM when players don't see this card's challenge, as its row in midi's saves
     // section isn't shown to them. Respect an explicit activity rollMode.
@@ -6494,6 +6555,43 @@ export class Workflow {
    * Returns the promise and optionally adds to module-specific request arrays
    */
   queueTargetSaveRoll(options: QueueSaveRollOptions): { promise: Promise<Roll[] | Roll | null> | null, requestCard: Promise<ChatMessage | undefined> | undefined } {
+    const queued = this.queueTargetSaveRollRequest(options);
+    const { target, saveDetails, rollInfo, displayOptions, playerInfo: { player } } = options;
+    const queuedPromise = queued.promise;
+    if (!queuedPromise || queued.friendly || !player || player.isGM) return { promise: queuedPromise, requestCard: queued.requestCard };
+    // The GM can answer for a player who hasn't rolled (the player list): rolled for them, or on the GM's screen
+    const rollForThem = (fastForward: boolean, mode?: "advantage" | "disadvantage") => unTimedExecuteAsGM("rollAbility", {
+      saveDetails: mode ? { ...saveDetails, advantage: mode === "advantage", disadvantage: mode === "disadvantage" } : saveDetails,
+      displayOptions: { fastForward, chatMessage: displayOptions.showRoll, rollMode: toMessageMode(this.activity.midiProperties?.rollMode), showTargetDC: true }
+    });
+    const requestIds = [target.id, target.actor?.uuid].filter((id): id is string => !!id);
+    const what = [...rollInfo.abilities, ...rollInfo.skills, ...rollInfo.tools].map(key => key.toUpperCase()).join("/");
+    const promise = trackPlayerWait<Roll[] | Roll | null>({
+      kind: rollInfo.type === "save" ? "save" : "check",
+      userId: player.id!,
+      actorUuid: target.actor?.uuid,
+      tokenUuid: getTokenDocument(target)?.uuid,
+      label: i18nFormat("midi-qol.PlayerWaits.SaveLabel", {
+        what, type: i18n(rollInfo.type === "save" ? "DND5E.SavingThrow" : "DND5E.AbilityCheck"), item: this.item?.name ?? ""
+      }),
+      choices: {
+        roll: { label: "midi-qol.PlayerWaits.Choice.normal", value: () => rollForThem(true) },
+        advantage: { label: "midi-qol.PlayerWaits.Choice.advantage", value: () => rollForThem(true, "advantage") },
+        disadvantage: { label: "midi-qol.PlayerWaits.Choice.disadvantage", value: () => rollForThem(true, "disadvantage") },
+        gmRoll: () => rollForThem(false)
+      },
+      onSettled: () => {
+        for (const id of requestIds) {
+          delete this.saveRequests[id];
+          clearTimeout(this.saveTimeouts[id]);
+          delete this.saveTimeouts[id];
+        }
+      }
+    }, () => queuedPromise);
+    return { promise, requestCard: queued.requestCard };
+  }
+
+  queueTargetSaveRollRequest(options: QueueSaveRollOptions): { promise: Promise<Roll[] | Roll | null> | null, requestCard: Promise<ChatMessage | undefined> | undefined, friendly?: boolean } {
     const { target, saveDetails, rollInfo, isMagicSave, displayOptions, playerInfo, moduleFlags, moduleRequests } = options;
     const { type: rollType, abilities: rollAbilities, skills: rollSkills, tools: rollTools, action: rollAction } = rollInfo;
     const { whisper, showRoll, showRollDialog, simulate } = displayOptions;
@@ -6502,7 +6600,7 @@ export class Workflow {
     // Check for friendly roll first
     const friendlyRoll = this.getFriendlyTargetRoll(saveDetails as { isFriendly: boolean });
     if (friendlyRoll) {
-      return { promise: friendlyRoll, requestCard: undefined };
+      return { promise: friendlyRoll, requestCard: undefined, friendly: true };
     }
 
     // Monks Token Bar
@@ -6702,12 +6800,17 @@ export class Workflow {
     if (owner?.isGM && game.user?.isGM) {
       newRoll = await bonusCheck(target.actor!, result[0], rollType, failAbilityFlagsLength ? `fail.${rollAbility}` : "fail.all", { system: { origin: this.itemCardId } });
     } else {
-      newRoll = await socketlibSocket.executeAsUser("bonusCheck", owner?.id, {
+      // The GM can answer for a player who hasn't decided (the player list): the roll stands
+      newRoll = await trackPlayerWait<Roll>({
+        kind: "bonus", userId: owner.id!, actorUuid: target.actor?.uuid, tokenUuid: getTokenDocument(target)?.uuid,
+        label: i18nFormat("midi-qol.PlayerWaits.BonusLabel", { item: this.item?.name ?? "" }),
+        choices: { skip: () => result[0] }
+      }, () => socketlibSocket.executeAsUser("bonusCheck", owner?.id, {
         actorUuid: (target.actor as Actor).uuid,
         result: JSON.stringify(result[0].toJSON()),
         rollType,
         selector: failFlagsLength ? "fail.all" : `fail.${rollAbility}`
-      });
+      }));
     }
 
     const updatedSaveRolls = [...saveRolls];
@@ -7223,13 +7326,16 @@ export class Workflow {
     if (debugEnabled > 0) warn("processSaveRoll |", requestId, this.saveRequests)
     if (!requestId) return true;
 
-    // TODO check the roll against the sort of roll we are waiting for.
     if (!this.saveRequests[requestId] || !isRoll) return true;
+    // Only the kind of roll asked for answers it: another roll by the same token (a different save, an attack) doesn't
+    const kind = this.saveRequestKinds[requestId];
+    if (kind && !rollAnswersRequest(message, kind)) return true;
 
     if (this.saveRequests[requestId]) {
       clearTimeout(this.saveTimeouts[requestId]);
       const handler = this.saveRequests[requestId]
       delete this.saveRequests[requestId];
+      delete this.saveRequestKinds[requestId];
       delete this.saveTimeouts[requestId];
       // A save another module rolled may not be linked to the card: record it for undo.
       if (configSettings.undoWorkflow && this.undoData) unTimedExecuteAsGM("addUndoChatCards", { id: this.undoData.id, chatCardUuids: [message.uuid] });
@@ -8529,8 +8635,22 @@ export class ActiveDefenceWorkflow extends Workflow {
       // if (!player || !player.active) player = ChatMessage.getWhisperRecipients("GM").find(u => u.active);
       if (debugEnabled > 0) warn(`checkSaves | Player ${player?.name} controls actor ${target.actor.name} - requesting DC ${this.activeDefenceDC} save`);
       if (player && player.active && !player.isGM && target.actor) {
-        promises.push(new Promise((resolve) => {
-          const requestId = target.actor?.uuid ?? foundry.utils.randomID();
+        const requestId = target.actor.uuid ?? foundry.utils.randomID();
+        const rollForThem = async () => {
+          const result = await (new D20Roll(formula, {}, options)).evaluate();
+          result.toMessage({ flavor: `${this.item.name} ${i18n("midi-qol.ActiveDefenceString")}` });
+          return result;
+        };
+        promises.push(trackPlayerWait({
+          kind: "defence", userId: player.id!, actorUuid: target.actor.uuid, tokenUuid: getTokenDocument(target)?.uuid,
+          label: i18nFormat("midi-qol.PlayerWaits.DefenceLabel", { item: this.item?.name ?? "" }),
+          choices: { roll: rollForThem },
+          onSettled: () => {
+            delete this.defenceRequests[requestId];
+            clearTimeout(this.defenceTimeouts[requestId]);
+            delete this.defenceTimeouts[requestId];
+          }
+        }, () => new Promise((resolve) => {
           this.defenceRequests[requestId] = resolve;
           if (player) requestPCActiveDefence(player, target.actor!, this.item.name, requestId, { formula, rollOptions: options, bonus: dcMod, coverBonus, workflow: this })
           // set a timeout for taking over the roll
@@ -8545,7 +8665,7 @@ export class ActiveDefenceWorkflow extends Workflow {
               }
             }, configSettings.playerSaveTimeout * 1000);
           }
-        }));
+        })));
       } else {  // must be a GM so can do the roll direct
         promises.push(
           new Promise(async (resolve) => {

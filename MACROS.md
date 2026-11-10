@@ -14,6 +14,7 @@
 - [Damage Bonus Macros](#damage-bonus-macros)
 - [Macro Data Reference](#macro-data-reference)
 - [Adding to Chat Cards (Card Notes)](#adding-to-chat-cards-card-notes)
+- [Waiting on Players (Player Waits)](#waiting-on-players-player-waits)
 - [DAE vs Midi-QOL Macros](#dae-vs-midi-qol-macros)
 - [Tips and Tricks](#tips-and-tricks)
 - [Sample Chat Logs](#sample-chat-logs)
@@ -589,7 +590,7 @@ Called during item workflow to customize behavior. Supports both item-based and 
 **On an item** (*On Use Macros* on the item sheet, `flags.midi-qol.onUseMacroName`): a comma-separated list of `[pass]name`, e.g. `[preAttackRoll]ItemMacro,[postActiveEffects]Macro.My Macro`.
 - An entry without `[pass]` runs at `postActiveEffects`.
 - A blank name is the item's own macro: the macro of the activity being used if it has one, else the item macro.
-- An item with a macro and no onUse macros runs that macro at `postActiveEffects`, so a macro used only by DAE must check `args[0]`.
+- An item's macro runs only from an onUse entry: with no entries it isn't run when the item is used.
 
 **On an actor**, through an active effect:
 ```
@@ -1128,6 +1129,78 @@ midi's player-name rules (Anonymous, Hide NPC Names, *Hide NPC names*; the GM an
 ### Other messages deleted with a card
 
 Put a result on the card as a note (`MidiQOL.addCardNote`), and link a roll to a note with `MidiQOL.cardNoteMessageData(note, role)` as its message data: both are deleted with the card. A message whose `system.origin` is the card (one that has the field, such as a dnd5e roll) is linked to it as dnd5e links its own; dnd5e deletes it with the card only when it is drawn in the card's summary.
+
+---
+
+## Waiting on Players (Player Waits)
+
+When a client waits for a player to answer something (a save, a reaction, a choice in your module's dialog), register
+the wait with midi. The GM then sees it in Foundry's player list: a badge on that player's row (a bolt and count for reactions, a d20 and count for rolls), and a popover
+with your choices to answer for them. A player who disconnects keeps the badge for the GM to answer (with *GM can answer for
+players* off, nothing is shown and the wait is settled at once with its first choice). midi registers its own saves, reactions, Active
+Defence, failed-roll bonuses, contested rolls and a player's own attack, damage and utility rolls the same way.
+The player always sees their own badge (clicking it brings their open prompts to the front). With *Players see who midi is
+waiting for* on, players see the other players' badges too, read-only: only the wait's `kind` (shown
+as e.g. "Reaction"; an unknown kind as "Prompt"), creature and time are sent to them, never its label or choices.
+
+A wait on a GM is never tracked: the GM answers on their own screen. Register the wait on the client that waits for the
+answer (the holder); the first answer wins.
+
+### MidiQOL.playerWaits.begin
+
+```js
+const wait = MidiQOL.playerWaits.begin({
+  kind: "my-module.blessing",          // anything; midi's are save, check, defence, reaction, bonus, contest
+  userId: player.id,                   // the player you are waiting for
+  actorUuid: actor.uuid,               // optional, shown with the label
+  tokenUuid: token.document.uuid,      // optional: the token's name is shown instead of the actor's
+  label: "Accept the blessing?",       // text or a localization key
+  source: "my-module",                 // optional
+  choices: {                           // the first is the default
+    decline: { label: "Decline", value: () => false },
+    accept: { label: "MYMODULE.Accept", value: () => true }
+  },
+  onSettled: choice => myDialog.close() // optional: the GM (or a disconnect) answered
+});
+// wait is undefined for a GM, or with no choices
+const answer = await Promise.race([askThePlayer(wait?.ref), wait?.settled.then(r => r.value) ?? new Promise(() => {})]);
+wait?.end();                            // the player answered, or the wait is no longer needed
+```
+
+- `wait.settled` resolves with `{ choice, value }` when the GM (or a disconnect) answers. It never resolves if the wait
+  ends otherwise.
+- `wait.ref` (`{ id, holderId }`) is what the player's client needs to claim the wait.
+- `choices` values can also be plain functions: `{ roll: () => roll }`. midi's own choice names (`roll`, `gmRoll`,
+  `choose`, `none`, `skip`, `normal`, `advantage`, `disadvantage`, `critical`) have built-in labels.
+- `keepDialogs: true` leaves the player's open roll dialog for the creature alone when the GM answers (by default it is
+  closed, as the roll is no longer wanted).
+
+### MidiQOL.playerWaits.track
+
+The same for a request that returns a promise: `start` sends the request (given the wait's `ref`, or `undefined` when the
+wait isn't tracked), and the result settles with the player's answer or the GM's, whichever comes first.
+
+```js
+const result = await MidiQOL.playerWaits.track(spec, ref => askThePlayer(ref));
+```
+
+### MidiQOL.playerWaits.claim
+
+On the player's client, before acting on their answer (spending a reaction, a resource):
+
+```js
+if (!(await MidiQOL.playerWaits.claim(ref))) return; // the GM has already answered for them
+```
+
+`claim` asks the holder; it is true when the wait is still open (and then nobody else can settle it) or was never
+tracked.
+
+### Other functions and hooks
+
+- `MidiQOL.playerWaits.settle(id, choice)` answers a wait from any client (as the GM's popover does).
+- `MidiQOL.playerWaits.known()` lists every pending wait, on a GM.
+- Hooks: `midi-qol.playerWaitStarted(info)` and `midi-qol.playerWaitEnded(info, { choice, claimed })` on the holder;
+  `midi-qol.playerWaitsChanged(waits)` on a GM whenever its list changes.
 
 ---
 
