@@ -86,6 +86,7 @@
   "midi-qol.PlayerSaveTimeout.Hint": "Tempo de espera, em segundos, antes de o Midi-QOL rolar a salvaguarda no lugar do jogador.",
   "midi-qol.MagicResistant": "magic-resistant",
   "midi-qol.MagicVulnerable": "Vulnerabilidade Mágica",
+  "midi-qol.ItemMacroText": "ItemMacro",
   "midi-qol.ActivityMacroText": "ActivityMacro",
   "midi-qol.MagicResistanceFeat": "Resistência Mágica",
   "midi-qol.noTargets": "Você tem que marcar um token antes de rolar o ataque",
