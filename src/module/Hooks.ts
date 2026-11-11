@@ -11,7 +11,7 @@ import { checkWounded, checkDeleteTemplate, preUpdateItemActorOnUseMacro, zeroHP
 import { TroubleShooter } from "./apps/TroubleShooter.js";
 import { Workflow } from "./Workflow.js";
 import { ActorOnUseMacrosConfig } from "./apps/ActorOnUseMacroConfig.js";
-import { preActivityConsumptionHook, activityConsumptionHook, midiTemplateFlags, isTemplateRegion, templateElevation } from "./activities/activityHelpers.js";
+import { preActivityConsumptionHook, activityConsumptionHook, midiTemplateFlags, isTemplateRegion, templateElevation, clampTemplateElevation, attachedRegionBand } from "./activities/activityHelpers.js";
 import { ItemOnUseMacrosConfig } from "./apps/ItemOnUseMacrosConfig.js";
 import { Activity, DamageApplicationOptions, DamageDescription } from "../globals.js";
 import { MidiDependentsRegistry, repointCopiedDependents, tokenHasDependents } from "./lib/MidiDependentsRegistry.js";
@@ -1757,10 +1757,32 @@ Hooks.on("dnd5e.createMeasuredTemplate", (activity, regionData: Record<string, a
   const flags = midiTemplateFlags(activity);
   for (const data of regionData) {
     for (const [key, value] of Object.entries(flags)) foundry.utils.setProperty(data, `flags.${MODULE_ID}.${key}`, value);
-    const elevation = templateElevation(activity, data.shapes?.[0]);
-    if (elevation && data.elevation?.bottom == null) data.elevation = { ...data.elevation, ...elevation };
+    if (Number.isFinite(data.elevation?.bottom)) {
+      // A height dnd5e (or the placement) gave the region stands: only kept within its level
+      data.elevation = clampTemplateElevation({ topInclusive: true, top: null, ...data.elevation }, data.levels?.[0]);
+      continue;
+    }
+    const placed = templateElevation(activity, data.shapes?.[0], data.levels?.[0], data.attachment?.token);
+    if (!placed) continue;
+    data.elevation = { ...data.elevation, ...placed.elevation };
+    foundry.utils.setProperty(data, `flags.${MODULE_ID}.band`, true);
+    if (placed.area) foundry.utils.setProperty(data, `flags.${MODULE_ID}.area`, placed.area);
+    foundry.utils.setProperty(data, `flags.${MODULE_ID}.reach`, placed.reach);
   }
   return true;
+});
+
+// A banded area that follows a token: core moves it with the token, shifting its band and changing its level. Measure it
+// again from the token and keep it within the new level (core's shift keeps a band clipped by the old floor or ceiling).
+Hooks.on("updateRegion", (region: RegionDocument.Implementation, changes: Record<string, unknown>) => {
+  if (!("elevation" in changes || "levels" in changes || "attachment" in changes)) return;
+  if (!preferredActiveGM()?.isSelf) return;
+  const placed = attachedRegionBand(region);
+  if (!placed) return;
+  const { bottom, top, topInclusive } = region._source.elevation as { bottom: number | null, top: number | null, topInclusive: boolean };
+  const wanted = placed.elevation;
+  if (bottom === wanted.bottom && top === wanted.top && topInclusive === wanted.topInclusive) return;
+  region.update({ elevation: wanted } as RegionDocument.UpdateData).catch(err => console.warn("midi-qol | attached area elevation", err));
 });
 
 Hooks.on("preCreateRegion", (regionDoc, regionData, options, userId) => {

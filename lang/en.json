@@ -665,7 +665,17 @@
     }
   },
   "midi-qol.TemplateOriginHeight.Name": "Template Origin Height",
-  "midi-qol.TemplateOriginHeight.Hint": "The height of the caster that activity templates are measured from: a sphere is centred on it, a cylinder, cube or line stands on it. An activity can override this in its Region settings.",
+  "midi-qol.TemplateOriginHeight.Hint": "The height of the caster that areas starting from the caster (a breath cone, a line, Thunderwave) are measured from, and areas placed at a point when Height of Areas Placed at a Point is Caster's height: a sphere is centred on it, a cylinder, cube or line stands on it. An activity can override this in its Region settings.",
+  "midi-qol.TemplatePlacedOrigin.Name": "Height of Areas Placed at a Point",
+  "midi-qol.TemplatePlacedOrigin.Hint": "Where an area placed at a point within range (Fireball, Moonbeam, Flame Strike, a wall) is measured from: the floor of the level it is placed on, or the caster's height (Template Origin Height). Areas that start from the caster (a breath cone, a line, Thunderwave) always use the caster's height. Every area stays between the floor and ceiling of its level. An activity can override this on its Region Behavior tab.",
+  "midi-qol.TemplatePlacedOriginOptions": {
+    "floor": "Floor of the level",
+    "caster": "Caster's height",
+    "expandedHints": {
+      "floor": "A sphere is centred on the floor, a cylinder or wall stands on it: an area aimed at the ground reaches creatures there whatever height the caster is at.",
+      "caster": "Measured from the caster as Template Origin Height says, for an area aimed at a point level with the caster (flying creatures)."
+    }
+  },
   "midi-qol.TemplateOriginHeightOptions": {
     "base": "Caster's base",
     "top": "Caster's top",
@@ -2354,8 +2364,9 @@
   "midi-qol.REGION_BEHAVIOR.attachToken.pickerHint": "Select the targeted token the region should follow.",
   "midi-qol.REGION_BEHAVIOR.attachToken.noTarget": "Region attachment set to 'target' but no target was selected. Region will not follow any token.",
   "midi-qol.SHARED.FIELDS.regionBehavior.templateOrigin.label": "Template Origin Height",
-  "midi-qol.SHARED.FIELDS.regionBehavior.templateOrigin.hint": "The height of the caster this activity's template is measured from. 'Default' follows the Template Origin Height setting.",
+  "midi-qol.SHARED.FIELDS.regionBehavior.templateOrigin.hint": "Where this activity's template is measured from: the floor of the level, or a height of the caster. 'Default' follows the Height of Areas Placed at a Point and Template Origin Height settings.",
   "midi-qol.REGION_BEHAVIOR.templateOrigin.default": "Default (setting)",
+  "midi-qol.REGION_BEHAVIOR.templateOrigin.floor": "Floor of the level",
   "midi-qol.REGION_BEHAVIOR.templateOrigin.base": "Caster's base",
   "midi-qol.REGION_BEHAVIOR.templateOrigin.top": "Caster's top",
   "midi-qol.REGION_BEHAVIOR.templateOrigin.eye": "Caster's eye level",

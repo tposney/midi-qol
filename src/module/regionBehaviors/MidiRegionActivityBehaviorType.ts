@@ -2,6 +2,7 @@ import { MODULE_ID, i18n, error } from "../../midi-qol.js";
 import { completeActivityUse, fromActorUuid, getToken, isValidTarget, playerForActor } from "../utils.js";
 import { preferredActiveGM, socketlibSocket } from "../GMAction.js";
 import { V14RegionDocument, Activity } from "../../globals.js";
+import { lineOfEffectClear, withinAreaReach } from "../activities/activityHelpers.js";
 
 const { ArrayField, BooleanField, NumberField, SchemaField, StringField } = foundry.data.fields;
 
@@ -210,6 +211,15 @@ export class MidiRegionActivityBehaviorType extends foundry.data.regionBehaviors
     queueMicrotask(() => this._activating = false);
   }
 
+  /**
+   * Core counts a token in the region's shape and band; a sphere or emanation also reaches only so far in 3D, and a floor
+   * between the area's origin and the token blocks it.
+   */
+  _inReach(token: TokenDocument.Implementation): boolean {
+    const region = (this as unknown as { region?: RegionDocument.Implementation }).region;
+    return region ? withinAreaReach(region, token) && lineOfEffectClear(region, token) : true;
+  }
+
   static async _onTokenEnter(this: MidiRegionActivityBehaviorType, event: any): Promise<void> {
     if (this._activating && !this.activationEntry) return;
     if (!event.user.isSelf) return;
@@ -220,6 +230,7 @@ export class MidiRegionActivityBehaviorType extends foundry.data.regionBehaviors
     if (this._isSourceToken(token)) return;
     if (!this._passesDispositionFilter(token)) return;
     if (!isValidTarget(token)) return;
+    if (!this._inReach(token)) return;
 
     const resumeMovement = movement ? token.pauseMovement() : undefined;
     try {
@@ -250,6 +261,7 @@ export class MidiRegionActivityBehaviorType extends foundry.data.regionBehaviors
     if (this._isSourceToken(token)) return;
     if (!this._passesDispositionFilter(token)) return;
     if (!isValidTarget(token)) return;
+    if (!this._inReach(token)) return;
 
     await this._executeRulesForTrigger(token, "turnStart", `${event.data.round}.${event.data.turn}`);
   }
@@ -263,6 +275,7 @@ export class MidiRegionActivityBehaviorType extends foundry.data.regionBehaviors
     if (this._isSourceToken(token)) return;
     if (!this._passesDispositionFilter(token)) return;
     if (!isValidTarget(token)) return;
+    if (!this._inReach(token)) return;
 
     await this._executeRulesForTrigger(token, "turnEnd", `${event.data.round}.${event.data.turn}`);
   }

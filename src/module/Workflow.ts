@@ -24,6 +24,7 @@ import {
   hasCondition,
   expireMyEffects,
   validTargetTokens,
+  userTargetsKeepingUndrawn,
   getOrCreateTokenForActorAsSet,
   doReactions,
   playerFor,
@@ -123,7 +124,7 @@ import { saveTargetsUndoData, saveUndoData } from "./undo.js";
 import { TroubleShooter } from "./apps/TroubleShooter.js";
 import { SECTION_TEMPLATES, USAGE_MESSAGE_TYPE, cardSaveRoll, type MidiCardSection, type SectionName } from "./ChatClasses/UsageCardMessage.js";
 import { MidiSummonActivity } from "./activities/SummonActivity.js";
-import { activityHasScaledTargetCount, computeActivityTemplateTargets, createActivityTemplateRegions, postTemplateConfirmTargets, regionShapeOrigin, setDamageRollMinTerms } from "./activities/activityHelpers.js";
+import { activityHasScaledTargetCount, computeActivityTemplateTargets, computeOffLevelTemplateTargets, createActivityTemplateRegions, postTemplateConfirmTargets, regionShapeOrigin, setDamageRollMinTerms } from "./activities/activityHelpers.js";
 import { Activity, Dnd5eChatMessage, ActivitySave, ActivityCheck, ActivityUseConfiguration, DamageDescription, DamageListEntry, TokenOrDocument, DND5ETargetDescriptor, CombinedTargetDescriptor, ActivityEffectData, QueueSaveRollOptions, SaveDetails, ProcessTargetSaveContext, ModuleIntegrationFlags, ModuleIntegrationRequests, MonksTokenBarRequest, FlashRollsRequest, EpicRollsRequest, RollProcessConfig, RollDialogConfig } from "../globals.js";
 import { AnyMutableObject, AnyObject, EmptyObject, InexactPartial } from "fvtt-types/utils";
 import Token = foundry.canvas.placeables.Token;
@@ -1653,7 +1654,8 @@ export class Workflow {
   get workflowType() { return "BaseWorkflow" };
 
   setTargets(targets: Set<TokenOrDocument>) {
-    this.targets = new Set(targets);
+    // A token set: a plain copy of one would be its drawn Tokens
+    this.targets = new TokenDocumentSet(targets);
     this.saves = new Set();
     this.failedSaves = new TokenDocumentSet(this.targets)
     this.hitTargets = new Set();
@@ -2204,7 +2206,9 @@ export class Workflow {
     const tokens = computeActivityTemplateTargets(activity ?? this.activity, this.templateUuids);
     if (!tokens) return;
     updateUserTargets(tokens.map(t => t.id).filter(Boolean) as string[]);
-    this.setTargets(new Set(game.user?.targets ?? []));
+    // Creatures on other levels reached through an opening aren't drawn, so they join the use's targets, not the user's
+    const offLevel = computeOffLevelTemplateTargets(activity ?? this.activity, this.templateUuids);
+    this.setTargets(new Set<TokenOrDocument>([...(game.user?.targets ?? []), ...offLevel]));
   }
 
   async setupTemplateCleanup(templateDocument: MeasuredTemplateDocument | RegionDocument.Implementation): Promise<boolean> {
@@ -2848,7 +2852,7 @@ export class Workflow {
       if (this.ammunition && this.workflowOptions.noOnUseMacro !== true) await this.callMacros(this.ammunition, this.ammunitionOnUseMacros?.getMacros("preSave"), "OnUse", "preSave");
     }
     if (this.workflowType === "BaseWorkflow" && !this.workflowOptions.ignoreUserTargets && !this.activity.attack && this.activity.target?.affects.type !== "self") { // Allow editing of targets if there is no attack that has already been processed.
-      this.targets = new Set(game.user?.targets);
+      this.targets = userTargetsKeepingUndrawn(this.targets);
       this.hitTargets = new TokenDocumentSet(this.targets);
     }
     this.failedSaves = new TokenDocumentSet(this.hitTargets);

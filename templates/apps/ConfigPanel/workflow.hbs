@@ -161,6 +161,13 @@
         <div class="notes midi-qol-faint">{{localize "midi-qol.TemplateOriginHeight.Hint"}}</div>
       </div>
       <div class="form-group">
+        <label>{{localize "midi-qol.TemplatePlacedOrigin.Name"}}</label>
+        <select name="optionalRules.templatePlacedOrigin" data-dtype="String">
+          {{midiSelectOptions templatePlacedOriginOptions selected=configSettings.optionalRules.templatePlacedOrigin localize=true}}
+        </select>
+        <div class="notes midi-qol-faint">{{localize "midi-qol.TemplatePlacedOrigin.Hint"}}</div>
+      </div>
+      <div class="form-group">
         <label>{{localize "midi-qol.SurfaceOcclusion.Name"}}</label>
         <input type="checkbox" name="optionalRules.surfaceOcclusion" data-dtype="Boolean" {{checked configSettings.optionalRules.surfaceOcclusion}} />
         <div class="notes midi-qol-faint">{{localize "midi-qol.SurfaceOcclusion.Hint"}}</div>

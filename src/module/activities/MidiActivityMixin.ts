@@ -64,6 +64,7 @@ import {
   sumRolls,
   getOrCreateTokenForActor,
   validTargetTokens,
+  userTargetsKeepingUndrawn,
   activityHasEmanationNoTemplate,
   getActivityAutoTargetAction,
   areMidiKeysPressed,
@@ -307,7 +308,7 @@ export let MidiActivityMixin = Base => {
           moveDirection: new StringField({ initial: "away", choices: ["away", "choose"] }),
           moveTiming: new StringField({ initial: "start", choices: ["start", "end"] }),
           // The caster's height a template is measured from; "default" follows the Template Origin Height setting.
-          templateOrigin: new StringField({ initial: "default", required: true, blank: false, choices: ["default", "base", "top", "eye"] }),
+          templateOrigin: new StringField({ initial: "default", required: true, blank: false, choices: ["default", "floor", "base", "top", "eye"] }),
           rules: new ArrayField(new SchemaField({
             trigger: new StringField({ required: true, blank: false, initial: "entry" }),
             action: new StringField({ required: true, blank: false, initial: "useActivity" }),
@@ -1539,8 +1540,8 @@ export let MidiActivityMixin = Base => {
         || configSettings.enforceSingleWeaponTarget)) {
         if (!(await preTemplateTargets(this, config.midiOptions ?? {})))
           return false;
-        // Confirmation was shown — read the user's final selection from game.user.targets.
-        workflow.setTargets(validTargetTokens(new Set(game.user?.targets)));
+        // Confirmation was shown: the user's final selection, keeping given targets that aren't drawn (it can't show them)
+        workflow.setTargets(validTargetTokens(hasTargetsToUse ? userTargetsKeepingUndrawn(config.midiOptions!.targetsToUse) : new Set(game.user?.targets)));
       } else if (hasTargetsToUse) {
         // No confirmation needed — set workflow targets directly from the provided Set
         // to avoid race conditions with game.user.targets being changed by concurrent effects.

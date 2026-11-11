@@ -33,9 +33,20 @@ midi now shows in Foundry's player list which players it is waiting for, and the
 * A save, Active Defence or contested roll the GM makes for a player (taken over from the player list, or a timed-out save for another player's creature) uses the player's roll mode: private and self rolls are whispered to the player, blind ones aren't. With no GM connected a timed-out save is rolled without bonus prompts.
 * A GM using a reaction that targets another creature, places an area or teleports, on a scene they aren't viewing, is asked to view it first. Self-only reactions (Shield) work from any scene.
 * A GM using an item for a creature whose token is on a scene they aren't viewing is asked to view that scene first (targets are then confirmed there) or use it anyway: other modules' reactions (Gambit's Premades), animations and placement only work on the viewed scene.
+* Fixed: a use given targets that aren't drawn (on another level or scene), by `completeActivityUse` or a macro, lost them, so they made no save and took no damage.
+* Fixed: `applyTokenDamage` gave a target that saved the default damage on a save, not the activity's (full, half or none), and warned that `getSaveMultiplierForItem` is deprecated each time.
+
+**Area heights**
+* An area placed at a point (Fireball, Moonbeam, Flame Strike, a wall) is measured from the floor of the level it is placed on: a sphere is centred on the floor, a cylinder or wall stands on it, so it reaches creatures on the ground whatever height the caster is at. The new optional rule *Height of Areas Placed at a Point* chooses the floor (default) or the caster's height (*Template Origin Height*), and an activity can choose *Floor of the level* on its Region Behavior tab. Areas that start from the caster (a breath cone, a line, Thunderwave) are measured from the caster as before.
+* Emanations (Spirit Guardians) reach their radius below the caster's feet and above its head, rather than to any height.
+* An area stays within its level: it doesn't reach a creature on the floor above or below, except through an opening in a floor (a gap in the scene's floor surfaces), where a straight line from the area's origin passes through it. A floor or ledge between the origin and a creature shields it, on the same level too. An area that follows a token (an emanation, or *Attach Region To*) is measured again when the token rises, falls or changes level.
+* An area cast when it is placed reaches creatures through openings; a lasting area's later triggers (a creature entering it, or starting its turn there) are only for creatures on the area's own level.
+* A sphere or emanation reaches only its true height away from its centre (a creature at the edge of a Fireball has to be lower than one under its centre).
+* Fixed: an area cast from the ground started below the floor, so Automated Animations drew its animation under the map, where it couldn't be seen.
 
 **Other modules**
 * Fixed: Monk's TokenBar roll cards cut off a two-digit total and half hid its pass/fail icons.
+* Hide with CPR 2.1.18 or later (CPR applies the Hiding condition itself): the GM is still told the hide's DC and who perceives it.
 * The outdated-module warning checks for DAE 14.6.7, the version midi requires.
 * Removed Ready Set Roll from midi's module lists and the Trouble Shooter (no Foundry 14 release).
 * Removed Simbul's Cover Calculator support (no Foundry 14 release): worlds using it switch to *None* for *Calculate Cover* and *Center Check* for *Walls block ranged attacks*.

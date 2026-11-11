@@ -279,7 +279,7 @@ export async function applyTokenDamage(
   // A macro running inside the item's use: that use's card (an earlier, finished one would be a guess)
   if (item && !options.workflow) workflow = Workflow.runningFor(item);
   // What a successful save does to the damage; applySaves adds Super Saver and Semi Super Saver.
-  const saveMultiplier = getSaveMultiplierForItem(item, "defaultDamage");
+  const saveMultiplier = workflow?.activity ? getSaveMultiplierForActivity(workflow.activity) : itemSaveMultiplier(item);
 
   // Every member, matched by document: a caller's sets may hold Tokens or TokenDocuments
   const savers = new TokenDocumentSet(saves);
@@ -849,8 +849,12 @@ export function getSaveMultiplierForActivity(activity: Activity) {
 }
 
 export let getSaveMultiplierForItem = (item?: Item.Implementation | null, itemDamageType?: string) => {
-  // There are no per items settings anymore so just return default saves
   console.warn("getSaveMultiplierForItem is deprecated, use getSaveMultiplierForActivity instead");
+  return itemSaveMultiplier(item);
+};
+
+// With no activity to ask: cantrips none (half with Potent Cantrip), anything else the default
+function itemSaveMultiplier(item?: Item.Implementation | null): number {
   if (!item) return 1;
   // @ts-expect-error no dnd5e-types
   if (item.actor && item.type === "spell" && item.system.level === 0) { // cantrip
@@ -859,7 +863,7 @@ export let getSaveMultiplierForItem = (item?: Item.Implementation | null, itemDa
     return 0;
   }
   return configSettings.defaultSaveMult;
-};
+}
 
 export interface pcSaveOptions {
   flavor: string,
@@ -2395,21 +2399,23 @@ export async function completeActivityUse(activityRef: Activity | string | undef
 ): Promise<Workflow | undefined> {
   activityRef = foundry.utils.deepClone(activityRef);
   usage.midiOptions ??= {};
-  let targetsToUse: Set<Token.Implementation> = new Set();
+  // The union of targetsToUse and targetUuids, by document: a token on another level or scene isn't drawn but is a target
+  let targetsToUse = new TokenDocumentSet();
+  const addTarget = (ref: unknown) => {
+    const entity = typeof ref === "string" ? fromUuidSync(ref, { strict: false }) : ref;
+    if (entity instanceof TokenDocument || entity instanceof foundry.canvas.placeables.Token) targetsToUse.add(entity as TokenOrDocument);
+    else {
+      const token = getToken(entity as Actor.Implementation | null);
+      if (token) targetsToUse.add(token);
+    }
+  };
   if (usage.midiOptions.targetsToUse && !(usage.midiOptions.targetsToUse instanceof Set)) {
     error("completeActivityUse | targetsToUse is not a Set");
   } else if (usage.midiOptions.targetsToUse) {
-    targetsToUse = (usage.midiOptions.targetsToUse).map(t => getToken(t)).filter(t => !!t);
+    const given = usage.midiOptions.targetsToUse;
+    for (const target of given instanceof TokenDocumentSet ? given.documents : given) addTarget(target);
   }
-  if (usage.midiOptions.targetUuids) {
-    for (let targetUuid of usage.midiOptions.targetUuids) {
-      const theTarget = getToken(targetUuid);
-      if (theTarget) {
-        targetsToUse.add(theTarget);
-      }
-    }
-  }
-  // Targets to use will be the union of usage.midiOptions.targetsToUse and usage.midiOptions.targetUuids
+  for (const targetUuid of usage.midiOptions.targetUuids ?? []) addTarget(targetUuid);
   const activity = (typeof activityRef === "string") ? fromUuidSync(activityRef) as Activity | undefined : activityRef;
   if (!activity) return;
   let asUser: User.Implementation | undefined | null = (typeof usage.midiOptions.asUser === "string") ? game.users?.get(usage.midiOptions.asUser) : usage.midiOptions.asUser;
@@ -2430,12 +2436,12 @@ export async function completeActivityUse(activityRef: Activity | string | undef
         const selfTarget = getToken(activity.item.actor);
         if (selfTarget) {
           updateUserTargets([selfTarget.id]);
-          targetsToUse = new Set([selfTarget]);
+          targetsToUse = new TokenDocumentSet([selfTarget]);
         } else {
           updateUserTargets([]);
         }
       } else if (memberCount(targetsToUse) === 0 && !usage.midiOptions!.ignoreUserTargets) {
-        targetsToUse = new Set(game.user?.targets);
+        targetsToUse = new TokenDocumentSet(game.user?.targets);
       }
 
       let abortHookName = `midi-qol.preAbort.${activity?.uuid}`;
@@ -2486,10 +2492,11 @@ export async function completeActivityUse(activityRef: Activity | string | undef
       timeoutId = setTimeout(() => {
         cleanupAndResolve(undefined, "timeout");
       }, maxWait * 1000);
-      usage.midiOptions!.targetsToUse = targetsToUse;
+      // Documents in a plain Set: the use's config is copied, and a token set copies as its drawn Tokens
+      usage.midiOptions!.targetsToUse = new Set(targetsToUse.documents);
       const isMidiActivity = !!(activity as { isMidiActivity?: boolean }).isMidiActivity;
       // Another module's activity reads the user's targets, not midi's options.
-      if (!isMidiActivity) updateUserTargets(Array.from(targetsToUse).map(t => t.id));
+      if (!isMidiActivity) updateUserTargets(targetsToUse.documents.map(t => t.id!));
       // @ts-expect-error no dnd5e-types
       activity.use(usage, dialog, message).then(result => {
         // An activity midi doesn't wrap (e.g. dnd5e's order) runs no workflow, so no hook will resolve it.
@@ -2504,7 +2511,7 @@ export async function completeActivityUse(activityRef: Activity | string | undef
   } else {
     const newUsage = foundry.utils.deepClone(usage) as unknown as { sequenceId?: string; workflow?: Workflow; midiOptions: SerializedMidiOptions };
     newUsage.midiOptions ??= {};
-    newUsage.midiOptions.targetsToUse = Array.from(targetsToUse).map(t => t.document.uuid);
+    newUsage.midiOptions.targetsToUse = targetsToUse.uuids;
     if (usage.midiOptions.rollAs) newUsage.midiOptions.rollAs = usage.midiOptions.rollAs.uuid;
     const data = {
       activityUuid: activity.uuid,
@@ -2596,7 +2603,7 @@ export type MidiOptions = {
   spellLevel?: number;
   target?: number;
   targets?: Set<TokenOrDocument>;
-  targetsToUse?: Set<foundry.canvas.placeables.Token.Implementation>;
+  targetsToUse?: Set<TokenOrDocument>;
   targetUuids?: string[];
   triggeredActivity?: boolean;
   addOptionalBonuses?: boolean;
@@ -4907,6 +4914,15 @@ export async function expireRollEffect(this: Actor.Implementation, rolltype: str
 export function validTargetTokens(tokens?: Iterable<TokenOrDocument>): TokenDocumentSet {
   const members = tokens instanceof TokenDocumentSet ? tokens.documents : [...(tokens ?? [])];
   return new TokenDocumentSet(members.filter(token => !!token?.actor && isValidTarget(token)));
+}
+
+/**
+ * The user's targets, keeping those of `current` that aren't drawn (on another level, reached through an opening in
+ * a floor): they can't be the user's targets, so re-reading the user's must not drop them.
+ */
+export function userTargetsKeepingUndrawn(current?: Iterable<TokenOrDocument>): Set<TokenOrDocument> {
+  const notDrawn = validTargetTokens(current).documents.filter(document => !canvas?.tokens?.get(document.id!));
+  return new Set<TokenOrDocument>([...(game.user?.targets ?? []), ...notDrawn]);
 }
 
 export function fromActorUuid(uuid?: string): Actor.Implementation | null {

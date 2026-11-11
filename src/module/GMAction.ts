@@ -3,7 +3,7 @@ import { _closePlayerRollDialogs, playerWaitHandlers } from "./lib/playerWaits.j
 import { DialogCountdown, dialogCountdownOptions } from "./lib/dialogCountdown.js";
 import { withWorkflowOptionsCodec } from "./lib/workflowOptionsCodec.js";
 import { i18n, log, warn, gameStats, getCanvas, error, debugEnabled, debug, GameSystemConfig, MODULE_ID } from "../midi-qol.js";
-import { _pauseReactionTimer, _closeReactionDialog, calculateDamageAmounts, hpChangeFromDetail, getToken, getTokenDocument, gmOverTimeEffect, fromActorUuid, promptReactions, hasUsedAction, hasUsedBonusAction, removeActionUsed, removeBonusActionUsed, removeReactionUsed, ReactionItemReference, isEffectExpired, expireEffects, deleteAppliedEffects, getAppliedEffects, CERemoveEffect, CEAddEffectWith, getActor, completeItemUse, completeActivityUse, localActivityOverTimeEffect, isValidTarget, hasUsedAnyReaction, getVitalityItem, MidiOptions, tokenSourceCenter, toggleStatus } from "./utils.js";
+import { _pauseReactionTimer, _closeReactionDialog, calculateDamageAmounts, hpChangeFromDetail, getToken, getTokenDocument, gmOverTimeEffect, fromActorUuid, promptReactions, hasUsedAction, hasUsedBonusAction, removeActionUsed, removeBonusActionUsed, removeReactionUsed, ReactionItemReference, isEffectExpired, expireEffects, deleteAppliedEffects, getAppliedEffects, CERemoveEffect, CEAddEffectWith, getActor, completeItemUse, completeActivityUse, localActivityOverTimeEffect, isValidTarget, validTargetTokens, hasUsedAnyReaction, getVitalityItem, MidiOptions, tokenSourceCenter, toggleStatus } from "./utils.js";
 import { DAMAGE_MESSAGE_TYPE } from "./ChatClasses/DamageCardMessage.js";
 import { DamageDescriptionObject, Workflow } from "./Workflow.js";
 import { applyFailedDeathSaves, bonusCheck, revertFailedDeathSaves } from "./patching.js";
@@ -435,8 +435,8 @@ async function _completeActivityUse(data: {
   if (actor?.actor) actor = actor.actor;
   if (!actor) return null;
   if (usage.midiOptions?.targetsToUse) {
-    const targets = usage.midiOptions.targetsToUse.map(t => (fromUuidSync(t) as TokenDocument.Implementation)?.object).filter(t => isValidTarget(t)) as foundry.canvas.placeables.Token.Implementation[];
-    usage.midiOptions.targetsToUse = new Set(targets);
+    // By document: a target the GM isn't viewing (another level or scene) isn't drawn on their client
+    usage.midiOptions.targetsToUse = new Set(validTargetTokens(new TokenDocumentSet(usage.midiOptions.targetsToUse as string[])).documents);
   }
   const workflow = await completeActivityUse(activityUuid, usage, dialog, message);
   if (workflow && data.usage.midiOptions?.workflowData) return workflow.getSafeMacroData();

@@ -1,19 +1,26 @@
 import {dialogUtils, documentUtils, effectUtils, tokenUtils} from '../proxy.mjs';
 import {applyStatusCondition} from '../../utils.js';
 import {addCardNote} from '../../lib/cardNotes.js';
+import {Workflow} from '../../Workflow.js';
 import {HIDING, hiddenDC, hiddenFrom, hidingCondition, hidingConditionId, passivePerception} from '../../lib/hiding.js';
 // 2024 Hide and Search. Hide is a DC 15 Stealth check; on a success the creature gets dnd5e's Hiding condition, carrying
 // the check's total as the DC to find it (flags.midi-qol.hidden.dc). midi treats Hiding as Invisible towards each creature
-// that doesn't perceive the hider (lib/hiding.ts). The activity's configured effect (with CPR active, applied by CPR's
-// generic hide macro for Supreme Sneak and its animation) carries no status: it times the hide (DAE 1Attack, ending it
+// that doesn't perceive the hider (lib/hiding.ts). The activity's configured effect (with CPR before 2.1.18 active,
+// applied by CPR's generic hide macro for its animation) carries no status: it times the hide (DAE 1Attack, ending it
 // on an attack roll). It and the condition are each other's dnd5e dependents, so either ending ends the hide: an attack,
-// a spell with a Verbal component (hook below), being found (Search) or the condition removed by hand. Noise and the
+// a spell with a Verbal component (hook below), being found (Search) or the condition removed by hand. CPR 2.1.18's
+// generic hide applies the condition itself (with the DC and 1Attack), and midi only tells the GM. Noise and the
 // cover/obscurement requirement are the GM's. Search (any Perception check activity can use it) compares the check's
 // total with each hidden enemy in the searcher's line of sight; those found (confirmed by the GM, Search option GM
 // Confirms) stop hiding.
 const MODULE = 'midi-qol';
 const gmWhisper = () => game.users.filter(u => u.isGM).map(u => u.id);
 const cprActive = () => !!game.modules.get('chris-premades')?.active;
+// From 2.1.18 CPR's generic hide applies the Hiding condition itself, with no configured Hidden effect.
+const cprAppliesCondition = () => {
+    const cpr = game.modules.get('chris-premades');
+    return !!cpr?.active && foundry.utils.isNewerVersion(cpr.version, '2.1.17');
+};
 // Results are notes on the action's card (`origin`, its id), so deleting it (or a Generic Actions card above it) deletes them.
 const post = (actor, content, origin, whisper) => {
     const card = origin && game.messages.get(origin);
@@ -47,16 +54,31 @@ async function markHidden(actor, effect, dc, origin) {
     if (old.length) await actor.deleteEmbeddedDocuments('ActiveEffect', old.map(e => e.id));
     await applyStatusCondition(actor, HIDING, {prepare: data => {
         foundry.utils.setProperty(data, `flags.${MODULE}.hidden.dc`, dc);
+        if (origin) foundry.utils.setProperty(data, `flags.${MODULE}.hidden.card`, origin);
         foundry.utils.setProperty(data, 'flags.dnd5e.dependents', [{uuid: effect.uuid}]);
     }});
+}
+// The card of the use that applied a condition without one recorded (CPR's): its item's running workflow on this client.
+function useCard(effect) {
+    const source = effect.origin ? fromUuidSync(effect.origin) : undefined;
+    const item = source instanceof Item ? source : source?.item ?? (source?.parent instanceof Item ? source.parent : undefined);
+    return item ? Workflow.runningFor(item)?.itemCardId : undefined;
+}
+// Tells the GM of a hide, whoever applied its condition (midi's Hide, CPR's): on the client that created it.
+Hooks.on('createActiveEffect', async (effect, options, userId) => {
+    if (userId !== game.user.id || effect.id !== hidingConditionId() || !(effect.parent instanceof Actor)) return;
+    const dc = effect.flags?.[MODULE]?.hidden?.dc;
+    if (dc === undefined) return;
+    const actor = effect.parent;
     const token = actor.getActiveTokens(false, true)[0];
     // Enemies the hide doesn't fool, with why: vision disabled (sees everything unless Force vision) or passive Perception
     const perceive = token ? token.parent.tokens.filter(t => t.actor && tokenUtils.isEnemy(token, t) && !hiddenFrom(token, t)) : [];
     const why = t => t.sight.enabled ? `passive ${passivePerception(t.actor)}` : 'vision disabled';
     const perceivers = perceive.length ? ` Perceived by: ${perceive.map(t => `${t.name} (${why(t)})`).join(', ')}.` : '';
-    await post(actor, `<p>${actor.name} is hidden: Perception DC ${dc} to find.${perceivers}</p>`, origin, gmWhisper());
-}
-// Whichever macro creates the Hide effect (CPR's, for Supreme Sneak and its animation, or midi's) does so after midi's
+    const card = effect.flags[MODULE].hidden.card ?? useCard(effect);
+    await post(actor, `<p>${actor.name} is hidden: Perception DC ${dc} to find.${perceivers}</p>`, card, gmWhisper());
+});
+// Whichever macro creates the Hide effect (CPR's before 2.1.18, for its animation, or midi's) does so after midi's
 // RollComplete, from its roll-finished pass: the total is kept until then, and the effect is recognised by its origin
 // (the activity's configured effect) as it is created.
 const cprHides = activity => cprActive() && usesMacro(activity, 'chris-premades');
@@ -68,6 +90,7 @@ const pendingFor = effect => {
 Hooks.on('midi-qol.RollComplete', workflow => {
     const activity = workflow.activity;
     if (!workflow.actor || !(usesMacro(activity, 'chris-premades') || usesMacro(activity, MODULE))) return;
+    if (cprHides(activity) && cprAppliesCondition()) return;
     const effectId = cprHides(activity) ? configuredEffect(activity, 'chris-premades') : configuredEffect(activity, MODULE) ?? configuredEffect(activity, 'chris-premades');
     const total = hideTotal(workflow);
     if (effectId && total !== undefined) pendingHide.set(workflow.actor.uuid, {origin: `${activity.item.uuid}.ActiveEffect.${effectId}`, total, card: workflow.itemCardId});
@@ -122,7 +145,7 @@ Hooks.on('dnd5e.postUseActivity', activity => {
 });
 export const hideAction = {
     name: 'Hide',
-    version: '1.6.0',
+    version: '1.6.1',
     rules: 'all',
     generic: true,
     documents: ['activity'],

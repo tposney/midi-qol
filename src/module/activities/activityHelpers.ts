@@ -5,7 +5,7 @@ import { Workflow } from "../Workflow.js";
 import { TargetConfirmationDialog, TargetConfirmationOptions } from "../apps/TargetConfirmation.js";
 import { configSettings, targetConfirmation } from "../settings.js";
 import { installedModules } from "../setupModules.js";
-import { collisionLevel, getFlankingEffect, CERemoveEffect, sumRolls, computeTemplateShapeDistance, getToken, getTokenDocument, checkActivityRange, checkDefeated, checkIncapacitated, computeCoverBonus, hasWallBlockingCondition, isValidTarget, tokenForActor, activityHasAreaTarget, activityHasAutoPlaceTemplate, activityHasEmanationNoTemplate, getActivityAutoTargetAction, getAoETargetType, doReactions, updateUserTargets, rangeToSceneUnits, tokenSourcePosition, tokenSourceCenter, tokenSourceElevation, getTokenVisionElevation, MidiOptions } from "../utils.js";
+import { collisionLevel, getFlankingEffect, CERemoveEffect, sumRolls, computeTemplateShapeDistance, getToken, getTokenDocument, checkActivityRange, checkDefeated, checkIncapacitated, computeCoverBonus, hasWallBlockingCondition, isValidTarget, tokenForActor, activityHasAreaTarget, activityHasAutoPlaceTemplate, activityHasEmanationNoTemplate, getActivityAutoTargetAction, getAoETargetType, doReactions, updateUserTargets, rangeToSceneUnits, tokenSourcePosition, tokenSourceCenter, tokenSourceElevation, getTokenVisionElevation, userTargetsKeepingUndrawn, MidiOptions } from "../utils.js";
 import { allAttackTypes } from "../../midi-qol.js";
 import Token = foundry.canvas.placeables.Token;
 
@@ -27,7 +27,7 @@ export function attachTokenOptions(selected: string) {
 }
 
 export function templateOriginOptions(selected: string) {
-  return ["default", "base", "top", "eye"].map(value => ({
+  return ["default", "floor", "base", "top", "eye"].map(value => ({
     value,
     label: i18n(`midi-qol.REGION_BEHAVIOR.templateOrigin.${value}`),
     selected: selected === value
@@ -263,7 +263,7 @@ export async function preTemplateTargets(activity: Activity, options: MidiOption
 export async function postTemplateConfirmTargets(activity: Activity, options: MidiOptions, workflow: Workflow): Promise<boolean> {
   const updateTargets = async () => {
     const needCanSeeSense = game.user?.targets && !workflow.targets.equals(new Set(game.user?.targets));
-    workflow.setTargets(new Set(game.user?.targets));
+    workflow.setTargets(userTargetsKeepingUndrawn(workflow.targets));
     if (needCanSeeSense) await workflow.activity.setupCanSeeSense({ workflow });
   }
   // Only show confirmation here if the activity deferred from pre-template
@@ -376,37 +376,38 @@ function isTokenInside(template: foundry.canvas.placeables.MeasuredTemplate.Impl
   }
   return false;
 }
-export function isAoETargetable(targetToken: Token.Implementation, options: { selfToken?: TokenOrDocument | string | null | undefined, ignoreSelf?: boolean, AoETargetType?: string, autoTarget?: string } = { ignoreSelf: false, AoETargetType: "any" }): boolean {
+export function isAoETargetable(targetToken: TokenOrDocument, options: { selfToken?: TokenOrDocument | string | null | undefined, ignoreSelf?: boolean, AoETargetType?: string, autoTarget?: string } = { ignoreSelf: false, AoETargetType: "any" }): boolean {
   if (!isValidTarget(targetToken)) return false;
+  const targetDocument = getTokenDocument(targetToken)!;
   const autoTarget = options.autoTarget ?? configSettings.autoTarget;
   const selfToken = getToken(options.selfToken);
   if (["wallsBlockIgnoreIncapacitated", "alwaysIgnoreIncapacitated"].includes(autoTarget) && checkIncapacitated(targetToken.actor, false, false)) return false;
   if (["wallsBlockIgnoreDefeated", "alwaysIgnoreDefeated"].includes(autoTarget) && checkDefeated(targetToken)) return false;
-  if (targetToken.document.uuid === selfToken?.document.uuid && options.ignoreSelf) return false;
+  if (targetDocument.uuid === selfToken?.document.uuid && options.ignoreSelf) return false;
   const selfDisposition = selfToken?.document.disposition ?? 1;
   switch (options.AoETargetType) {
     case "any":
       return true;
     case "ally":
-      return targetToken.document.disposition === selfDisposition;
+      return targetDocument.disposition === selfDisposition;
     case "notAlly":
-      return targetToken.document.disposition !== selfDisposition
+      return targetDocument.disposition !== selfDisposition
     case "enemy":
-      return targetToken.document.disposition === -selfDisposition || targetToken.document.disposition == CONST.TOKEN_DISPOSITIONS.SECRET;
+      return targetDocument.disposition === -selfDisposition || targetDocument.disposition == CONST.TOKEN_DISPOSITIONS.SECRET;
     case "notEnemy":
-      return targetToken.document.disposition !== -selfDisposition && targetToken.document.disposition !== CONST.TOKEN_DISPOSITIONS.SECRET;
+      return targetDocument.disposition !== -selfDisposition && targetDocument.disposition !== CONST.TOKEN_DISPOSITIONS.SECRET;
     case "neutral":
-      return targetToken.document.disposition === CONST.TOKEN_DISPOSITIONS.NEUTRAL;
+      return targetDocument.disposition === CONST.TOKEN_DISPOSITIONS.NEUTRAL;
     case "notNeutral":
-      return targetToken.document.disposition !== CONST.TOKEN_DISPOSITIONS.NEUTRAL;
+      return targetDocument.disposition !== CONST.TOKEN_DISPOSITIONS.NEUTRAL;
     case "friendly":
-      return targetToken.document.disposition === CONST.TOKEN_DISPOSITIONS.FRIENDLY;
+      return targetDocument.disposition === CONST.TOKEN_DISPOSITIONS.FRIENDLY;
     case "notFriendly":
-      return targetToken.document.disposition !== CONST.TOKEN_DISPOSITIONS.FRIENDLY;
+      return targetDocument.disposition !== CONST.TOKEN_DISPOSITIONS.FRIENDLY;
     case "hostile":
-      return targetToken.document.disposition === CONST.TOKEN_DISPOSITIONS.HOSTILE || targetToken.document.disposition == CONST.TOKEN_DISPOSITIONS.SECRET;
+      return targetDocument.disposition === CONST.TOKEN_DISPOSITIONS.HOSTILE || targetDocument.disposition == CONST.TOKEN_DISPOSITIONS.SECRET;
     case "notHostile":
-      return targetToken.document.disposition !== CONST.TOKEN_DISPOSITIONS.HOSTILE && targetToken.document.disposition !== CONST.TOKEN_DISPOSITIONS.SECRET;
+      return targetDocument.disposition !== CONST.TOKEN_DISPOSITIONS.HOSTILE && targetDocument.disposition !== CONST.TOKEN_DISPOSITIONS.SECRET;
     default:
       return true;
   }
@@ -439,50 +440,263 @@ export function midiTemplateFlags(activity: any): Record<string, unknown> {
   return flags;
 }
 
+type LevelElevation = { elevation: { bottom: number, top: number, base?: number } };
+type Band = { bottom: number, top: number | null, topInclusive: boolean };
+/** Foundry 14 fields fvtt-types (13.x) lacks: a region's attachment and levels, a scene's levels, a token's level. */
+type RegionV14 = { attachment?: { token?: TokenDocument.Implementation | null }, levels?: Set<string>, _source: { levels?: string[], elevation: Band } };
+type SceneV14 = {
+  levels?: Map<string, LevelElevation>,
+  getSurfaces?: (options: { type?: string, level?: string }) => readonly unknown[],
+  testSurfaceCollision?: (origin: ElevatedPoint, destination: ElevatedPoint, options: { type: string, mode: "any", level?: string }) => boolean,
+  grid: { size: number, distance: number }
+};
+type ElevatedPoint = { x: number, y: number, elevation: number };
+const tokenLevel = (token: TokenDocument.Implementation) => (token as unknown as { level?: string }).level;
 /**
- * The height a template is measured from: the caster's base, top (base plus its height) or eye level (midi's vision height),
- * per the activity's override or else the Template Origin Height setting.
+ * An area's band before it is kept within its level, and the height its lines of effect start from (flags.midi-qol.reach):
+ * what a creature on another level, or behind a floor inside the level, is measured against.
  */
-function templateOriginElevation(activity: any, casterToken: Token.Implementation): number {
-  const override: string | undefined = activity?.regionBehavior?.templateOrigin;
-  const origin = override && override !== "default" ? override : (configSettings.optionalRules.templateOriginHeight ?? "base");
-  if (origin === "eye") return getTokenVisionElevation(casterToken, "visionSourceHeight");
-  const base = tokenSourceElevation(casterToken);
-  if (origin === "top") return base + (casterToken.document.depth ?? 1) * (canvas?.scene?.grid.distance ?? 5);
-  return base;
+type Reach = { bottom: number, top: number | null, from: number };
+/** How far a sphere or emanation reaches, for the exact test inside its band (flags.midi-qol.area). */
+export type AreaReach = { kind: "sphere", radius: number, centre: number } | { kind: "emanation", radius: number, feet: number, head: number };
+
+/** An area that starts from its caster (range Self, Touch or none) rather than at a point placed within range. */
+function startsFromCaster(activity: any): boolean {
+  const range = activity?.range;
+  return ["self", "touch", "none"].includes(range?.units) || (!range?.value && !range?.long);
+}
+
+/** The floor of a level, if it has one. */
+function levelFloor(level: LevelElevation | undefined): number | undefined {
+  const floor = level?.elevation.base ?? level?.elevation.bottom;
+  return Number.isFinite(floor) ? floor : undefined;
+}
+
+/** A token's feet and head, from its document (drawn or not). */
+function tokenSpan(token: TokenDocument.Implementation): { feet: number, head: number } {
+  const feet = token.elevation ?? 0;
+  return { feet, head: feet + (token.depth ?? 1) * (token.parent?.grid.distance ?? 5) };
 }
 
 /**
- * The vertical extent of an activity's template region, by area type, around its caster's elevation `e`: a sphere is
- * centred on it, a cone is centred on its axis, and a cylinder, ring, cube or line stands on it. `e` is the origin height
- * (templateOriginElevation). dnd5e 6 leaves template
- * regions without an elevation, which core - and so dnd5e's region behaviours - reads as reaching from -Infinity to
- * Infinity; the flat circle and square areas are meant to, and emanations follow their token, so both are left alone.
+ * The height an area is measured from: the floor of its level, or its token's base, top (base plus its height) or eye
+ * level (midi's vision height). The activity's override decides; else an area placed at a point follows Height of Areas
+ * Placed at a Point (the floor, or the caster as Template Origin Height says), and one that starts from the caster or
+ * follows a token follows Template Origin Height.
  */
-export function templateElevation(activity: any, shape: any): { bottom: number, top: number | null, topInclusive: boolean } | undefined {
+function templateOriginElevation(activity: any, token: TokenDocument.Implementation, level: LevelElevation | undefined, attached: boolean): number {
+  const override: string | undefined = activity?.regionBehavior?.templateOrigin;
+  let origin = override && override !== "default" ? override : undefined;
+  if (!origin && !attached && !startsFromCaster(activity) && (configSettings.optionalRules.templatePlacedOrigin ?? "floor") === "floor") origin = "floor";
+  origin ??= configSettings.optionalRules.templateOriginHeight ?? "base";
+  if (origin === "floor" && !attached) {
+    const floor = levelFloor(level);
+    if (floor !== undefined) return floor;
+  }
+  const placeable = token.object as Token.Implementation | null;
+  if (origin === "eye" && placeable) return getTokenVisionElevation(placeable, "visionSourceHeight");
+  const { feet, head } = tokenSpan(token);
+  return origin === "top" ? head : feet;
+}
+
+/**
+ * Keep a band within a level: an area doesn't reach through its floor or ceiling (and an animation drawn at the region's
+ * bottom isn't hidden under the floor). The ceiling is the next level's floor, so a top clamped to it is exclusive: a
+ * creature standing on the floor above is outside.
+ */
+function clampToLevel(band: Band, level: LevelElevation | undefined): Band {
+  const levelBottom = level?.elevation.bottom, levelTop = level?.elevation.top;
+  const bottom = Number.isFinite(levelBottom) ? Math.max(band.bottom, levelBottom as number) : band.bottom;
+  if (Number.isFinite(levelTop) && (band.top === null || band.top >= (levelTop as number)))
+    return { bottom: Math.min(bottom, levelTop as number), top: levelTop as number, topInclusive: false };
+  return { ...band, bottom, top: band.top === null ? null : Math.max(band.top, bottom) };
+}
+
+function sceneLevel(levelId?: string | null): LevelElevation | undefined {
+  const scene = canvas?.scene as unknown as { levels?: Map<string, LevelElevation> } | undefined;
+  return (levelId ? scene?.levels?.get(levelId) : undefined) ?? (canvas as unknown as { level?: LevelElevation }).level;
+}
+
+/**
+ * The vertical extent of an activity's area, unclamped, measured from `token` (the caster, or the token the area
+ * follows): a sphere is centred on the origin height, a cone on its axis, a cylinder, ring, cube or line stands on it,
+ * and an emanation reaches its radius below the token's feet and above its head. Flat circles and squares have none.
+ */
+function templateBand(activity: any, shape: any, { level, token, attached = false }: { level?: LevelElevation, token?: TokenDocument.Implementation, attached?: boolean } = {})
+  : { band: Band, area?: AreaReach, reach: Reach } | undefined {
   const template = activity?.target?.template ?? {};
   const type: string | undefined = template.type;
-  if (!type || ["radius", "circle", "square"].includes(type) || shape?.type === "emanation") return undefined;
-  const casterToken = activity?.actor ? tokenForActor(activity.actor) : undefined;
-  if (!casterToken) return undefined;
-  const e = templateOriginElevation(activity, casterToken);
+  if (!type || ["circle", "square"].includes(type)) return undefined;
+  const source = token ?? (activity?.actor ? tokenForActor(activity.actor)?.document
+    ?? canvas?.scene?.tokens.find(t => t.actor === activity.actor) : undefined);
+  if (!source) return undefined;
   const sceneUnits = (value: unknown): number | undefined => {
     const size = Number(value);
     if (!Number.isFinite(size) || size <= 0) return undefined;
     const converted = globalThis.dnd5e?.utils?.convertLength?.(size, template.units, canvas?.scene?.grid.units, { strict: false });
     return typeof converted === "number" ? converted : size;
   };
-  // Inclusive, as midi's own band is: a creature level with the top is inside.
-  const band = (bottom: number, top: number | undefined) => ({ bottom, top: top ?? null, topInclusive: true });
+  const band = (bottom: number, top: number | undefined): Band => ({ bottom, top: top ?? null, topInclusive: true });
+  const { feet, head } = tokenSpan(source);
+  if (type === "radius" || shape?.type === "emanation") {
+    const radius = sceneUnits(template.size);
+    if (radius === undefined) return undefined;
+    const emanation = band(feet - radius, head + radius);
+    return { band: emanation, area: { kind: "emanation", radius, feet, head }, reach: { bottom: emanation.bottom, top: emanation.top, from: (feet + head) / 2 } };
+  }
+  const e = templateOriginElevation(activity, source, level, attached);
+  // Lines of effect start at the area's origin; from the caster, at the middle of its space (not its feet, on the floor)
+  const from = attached || startsFromCaster(activity) ? (feet + head) / 2 : e;
+  const withReach = (result: { band: Band, area?: AreaReach } | undefined) => result && { ...result, reach: { bottom: result.band.bottom, top: result.band.top, from } };
   const centred = (height: number | undefined) => height === undefined ? band(e, undefined) : band(e - height / 2, e + height / 2);
   switch (type) {
-    case "sphere": { const radius = sceneUnits(template.size); return radius === undefined ? undefined : band(e - radius, e + radius); }
-    case "cylinder": case "ring": case "wall": { const height = sceneUnits(template.height); return band(e, height === undefined ? undefined : e + height); }
-    case "cube": { const side = sceneUnits(template.size); return band(e, side === undefined ? undefined : e + side); }
-    case "line": return band(e, e + (sceneUnits(template.width) ?? canvas?.scene?.grid.distance ?? 5));
-    case "cone": return centred(regionShapeHeight(shape));
-    default: { const height = regionShapeHeight(shape); return band(e, height === undefined ? undefined : e + height); }
+    case "sphere": {
+      const radius = sceneUnits(template.size);
+      return radius === undefined ? undefined : withReach({ band: band(e - radius, e + radius), area: { kind: "sphere", radius, centre: e } });
+    }
+    case "cylinder": case "ring": case "wall": { const height = sceneUnits(template.height); return withReach({ band: band(e, height === undefined ? undefined : e + height) }); }
+    case "cube": { const side = sceneUnits(template.size); return withReach({ band: band(e, side === undefined ? undefined : e + side) }); }
+    case "line": return withReach({ band: band(e, e + (sceneUnits(template.width) ?? canvas?.scene?.grid.distance ?? 5)) });
+    case "cone": return withReach({ band: centred(regionShapeHeight(shape)) });
+    default: { const height = regionShapeHeight(shape); return withReach({ band: band(e, height === undefined ? undefined : e + height) }); }
   }
+}
+
+/**
+ * The elevation band (kept within the level) and reach of an activity's template region, for the region data; undefined
+ * for a flat area. `tokenId` is the token the area follows or emanates from, else its caster's.
+ */
+export function templateElevation(activity: any, shape: any, levelId?: string, tokenId?: string): { elevation: Band, area?: AreaReach, reach: Reach } | undefined {
+  const level = sceneLevel(levelId);
+  const token = tokenId ? canvas?.scene?.tokens.get(tokenId) : undefined;
+  const result = templateBand(activity, shape, { level, token, attached: !!tokenId });
+  return result && { elevation: clampToLevel(result.band, level), area: result.area, reach: result.reach };
+}
+
+/** An elevation another module gave a template region, kept within its level. */
+export function clampTemplateElevation(elevation: Band, levelId?: string): Band {
+  return clampToLevel(elevation, sceneLevel(levelId));
+}
+
+/** The band of a midi-banded region that follows a token, from the token as it is now, kept within its level. */
+export function attachedRegionBand(region: RegionDocument.Implementation): { elevation: Band, area?: AreaReach, reach: Reach } | undefined {
+  const token = (region as unknown as RegionV14).attachment?.token;
+  if (!token || !foundry.utils.getProperty(region, `flags.${MODULE_ID}.band`)) return undefined;
+  const activityUuid = foundry.utils.getProperty(region, "flags.dnd5e.activity") as string | undefined;
+  const activity = activityUuid ? fromUuidSync(activityUuid) : undefined;
+  if (!activity) return undefined;
+  const levelId = tokenLevel(token) ?? (region as unknown as RegionV14)._source.levels?.[0];
+  const level = levelId ? (region.parent as unknown as SceneV14 | null)?.levels?.get(levelId) : undefined;
+  const result = templateBand(activity, region.shapes[0], { level, token, attached: true });
+  return result && { elevation: clampToLevel(result.band, level), area: result.area, reach: result.reach };
+}
+
+/** An area's reach: from the token it follows as it is now, else as recorded when it was placed. */
+function regionReach(region: RegionDocument.Implementation): Reach | undefined {
+  return attachedRegionBand(region)?.reach ?? foundry.utils.getProperty(region, `flags.${MODULE_ID}.reach`) as Reach | undefined;
+}
+
+/** Whether a scene has floors that stop movement (defineSurface regions); without any, each level's floor is solid. */
+function hasMoveSurfaces(scene: SceneV14 | null | undefined): boolean {
+  return !!scene?.getSurfaces?.({ type: "move" }).length;
+}
+
+/**
+ * Line of effect through floors: the straight line from the area's origin to the middle of the token's space must not
+ * pass through a surface that stops movement (as walls count as total cover only when they stop movement), in the
+ * area's level or the token's. An opening in a floor lets it through. True when the scene has no such surfaces.
+ */
+export function lineOfEffectClear(region: RegionDocument.Implementation, token: TokenDocument.Implementation): boolean {
+  const scene = region.parent as unknown as SceneV14 | null;
+  if (!scene?.testSurfaceCollision || !hasMoveSurfaces(scene)) return true;
+  const reach = regionReach(region);
+  const from = regionShapeOrigin(region);
+  if (!reach || !from) return true;
+  const { feet, head } = tokenSpan(token);
+  const size = scene.grid.size;
+  const origin = { x: from.x, y: from.y, elevation: reach.from };
+  const target = { x: token.x + token.width * size / 2, y: token.y + token.height * size / 2, elevation: (feet + head) / 2 };
+  const levels = new Set([(region as unknown as RegionV14)._source.levels?.[0], tokenLevel(token)].filter((id): id is string => !!id));
+  for (const level of levels) if (scene.testSurfaceCollision(origin, target, { type: "move", mode: "any", level })) return false;
+  return true;
+}
+
+/**
+ * Whether an area reaches a token: within the area's band or, on another level, its reach (only where the scene's floors
+ * have openings), within a sphere's or emanation's true reach, and with a clear line of effect through any floors.
+ * The 2D shape and walls are tested separately.
+ */
+export function areaReachesToken(region: RegionDocument.Implementation, token: TokenOrDocument): boolean {
+  const document = getTokenDocument(token);
+  if (!document) return false;
+  let band: { bottom: number, top: number, topInclusive?: boolean };
+  if (onRegionLevel(region, token)) band = regionElevationBand(region);
+  else {
+    const reach = regionReach(region);
+    if (!reach || !hasMoveSurfaces(region.parent as unknown as SceneV14)) return false;
+    band = { bottom: reach.bottom, top: reach.top ?? Infinity, topInclusive: true };
+  }
+  return withinBand(band, token) && withinAreaReach(region, document) && lineOfEffectClear(region, document);
+}
+
+/**
+ * Creatures on other levels that an activity's areas reach through openings in the floors. Core doesn't draw tokens on
+ * a level other than the one viewed, so they can't be the user's targets: they are added to the workflow's.
+ */
+export function computeOffLevelTemplateTargets(activity: Activity | undefined, templates: (RegionDocument.Implementation | string)[]): TokenDocument.Implementation[] {
+  const autoTarget = getActivityAutoTargetAction(activity);
+  const scene = canvas?.scene;
+  if (autoTarget === "none" || !scene || !hasMoveSurfaces(scene as unknown as SceneV14)) return [];
+  const selfToken = getToken(activity?.actor);
+  const ignoreSelf = (activity?.target?.affects.special ?? "").split(";").includes("-self");
+  const AoETargetType = activity ? getAoETargetType(activity) : "any";
+  const wallsBlockTargeting = ["wallsBlock", "wallsBlockIgnoreDefeated", "wallsBlockIgnoreIncapacitated"].includes(autoTarget);
+  const drawn = new Set(canvas.tokens?.placeables.map(t => t.document) ?? []);
+  const reached = new Map<string, TokenDocument.Implementation>();
+  for (const ref of templates) {
+    const region = (typeof ref === "string" ? fromUuidSync(ref) : ref) as RegionDocument.Implementation | null;
+    if (!region || region.documentName !== "Region" || !foundry.utils.getProperty(region, `flags.${MODULE_ID}.reach`)) continue;
+    for (const document of scene.tokens) {
+      if (drawn.has(document) || !document.actor || onRegionLevel(region, document)) continue;
+      if (!isAoETargetable(document, { selfToken, ignoreSelf, AoETargetType, autoTarget })) continue;
+      if (isTokenInsideRegion(region, document, wallsBlockTargeting)) reached.set(document.id!, document);
+    }
+  }
+  return [...reached.values()];
+}
+
+const gap = (a0: number, a1: number, b0: number, b1: number) => Math.max(0, Math.max(a0, b0) - Math.min(a1, b1));
+
+/**
+ * Whether a token in an area's shape and band is within the area's reach in 3D: a sphere's from its centre, an
+ * emanation's from its token's space. Only height is limited: a token level with the centre is inside wherever the 2D
+ * shape includes it, so grid-based shapes keep their corner squares.
+ */
+export function withinAreaReach(region: RegionDocument.Implementation, token: TokenDocument.Implementation): boolean {
+  const stored = foundry.utils.getProperty(region, `flags.${MODULE_ID}.area`) as AreaReach | undefined;
+  if (!stored?.radius) return true;
+  const area = attachedRegionBand(region)?.area ?? stored;
+  const scene = region.parent;
+  const perPixel = (scene?.grid.distance ?? 5) / (scene?.grid.size ?? 100);
+  const size = scene?.grid.size ?? 100;
+  const box = { x0: token.x, y0: token.y, x1: token.x + token.width * size, y1: token.y + token.height * size };
+  const { feet, head } = tokenSpan(token);
+  const shape: any = region.shapes[0];
+  let horizontal: number, vertical: number;
+  if (area.kind === "emanation") {
+    const base = (region as unknown as RegionV14).attachment?.token ?? shape?.base;
+    if (!base) return true;
+    const from = { x0: base.x, y0: base.y, x1: base.x + base.width * size, y1: base.y + base.height * size };
+    horizontal = Math.hypot(gap(from.x0, from.x1, box.x0, box.x1), gap(from.y0, from.y1, box.y0, box.y1)) * perPixel;
+    vertical = gap(area.feet, area.head, feet, head);
+  } else {
+    const cx = shape?.x, cy = shape?.y;
+    if (!Number.isFinite(cx) || !Number.isFinite(cy)) return true;
+    horizontal = Math.hypot(gap(cx, cx, box.x0, box.x1), gap(cy, cy, box.y0, box.y1)) * perPixel;
+    vertical = gap(area.centre, area.centre, feet, head);
+  }
+  const reach = Math.sqrt(Math.max(0, area.radius ** 2 - Math.min(horizontal, area.radius) ** 2));
+  return vertical <= reach + 1e-6;
 }
 
 /**
@@ -549,13 +763,16 @@ export async function createActivityTemplateRegions(
   };
 
   const rollData = activity.getRollData?.() ?? {};
-  const elevation = shapeType === "emanation" ? undefined : templateElevation(activity, shapeFor(0, 0, 0));
-  const regionData = placements.map(({ x, y, direction, token }) => foundry.utils.mergeObject({
+  const levelId = (canvas as unknown as { level?: { id: string } }).level?.id;
+  const regionData = placements.map(({ x, y, direction, token }) => {
+    const shape = shapeFor(x, y, direction ?? 0, token);
+    const placed = templateElevation(activity, shape, levelId, shapeType === "emanation" ? token?.id ?? undefined : undefined);
+    return foundry.utils.mergeObject({
     name: `${activity.item?.name ?? "Template"} [${game.user?.name}]`,
     color: game.user?.color,
-    shapes: [shapeFor(x, y, direction ?? 0, token)],
-    elevation: elevation ?? { bottom: null, top: null },
-    levels: [(canvas as unknown as { level?: { id: string } }).level?.id],
+    shapes: [shape],
+    elevation: placed?.elevation ?? { bottom: null, top: null },
+    levels: [levelId],
     restriction: { enabled: true, type: "move" },
     visibility: CONST.REGION_VISIBILITY.ALWAYS,
     highlightMode: "coverage",
@@ -569,7 +786,8 @@ export async function createActivityTemplateRegions(
         spellLevel: rollData?.item?.level
       }
     }
-  }, { flags: { [MODULE_ID]: { ...midiTemplateFlags(activity), ...extraFlags } } }));
+  }, { flags: { [MODULE_ID]: { ...midiTemplateFlags(activity), ...extraFlags, ...(placed ? { band: true, area: placed.area ?? null, reach: placed.reach } : {}) } } });
+  });
 
   return await scene.createEmbeddedDocuments("Region", regionData as unknown as RegionDocument.CreateData[]) as unknown as RegionDocument.Implementation[];
 }
@@ -748,11 +966,12 @@ function regionShapeHeight(shape: any): number | undefined {
 }
 
 /** Region elevation band, deriving top from the shape when core leaves it null. */
-function regionElevationBand(regionDoc: RegionDocument.Implementation): { bottom: number, top: number } {
+function regionElevationBand(regionDoc: RegionDocument.Implementation): { bottom: number, top: number, topInclusive?: boolean } {
   const declaredBottom = regionDoc.elevation?.bottom;
   const bottom = Number.isFinite(declaredBottom) ? declaredBottom as number : -Infinity;
   const declaredTop = regionDoc.elevation?.top;
-  if (Number.isFinite(declaredTop)) return { bottom, top: declaredTop as number };
+  const topInclusive = (regionDoc.elevation as { topInclusive?: boolean } | undefined)?.topInclusive;
+  if (Number.isFinite(declaredTop)) return { bottom, top: declaredTop as number, topInclusive };
   const height = regionShapeHeight(regionDoc.shapes?.at?.(0));
   /*
    * A region with no declared bottom is unbounded below, and there is no base to measure a derived
@@ -776,9 +995,19 @@ function templateElevationBand(templateDoc: any): { bottom: number, top: number 
   return { bottom, top: height === undefined ? Infinity : bottom + height };
 }
 
-function withinBand(band: { bottom: number, top: number }, token: Token.Implementation): boolean {
+/** The token's feet are in the band, as core tests a region's elevation: an exclusive top leaves out a token standing on it. */
+function withinBand(band: { bottom: number, top: number, topInclusive?: boolean }, token: TokenOrDocument): boolean {
   const elev = tokenSourcePosition(token).elevation;
-  return band.bottom <= elev && elev <= band.top;
+  if (elev < band.bottom) return false;
+  if (elev === band.bottom) return true;
+  return band.topInclusive === false ? elev < band.top : elev <= band.top;
+}
+
+/** As core: a region contains only tokens on its levels. */
+function onRegionLevel(regionDoc: RegionDocument.Implementation, token: TokenOrDocument): boolean {
+  const region = regionDoc as unknown as { includedInLevel?: (level: string | undefined) => boolean };
+  const document = getTokenDocument(token);
+  return region.includedInLevel && document ? region.includedInLevel(tokenLevel(document)) : true;
 }
 
 /** The Region backing a template - same id on v14. */
@@ -869,8 +1098,10 @@ function computeTargetsFromRegion(
     const inside = lvtContainedIds(regionDoc, candidates);
     if (inside) {
       const band = regionElevationBand(regionDoc);
-      return candidates.filter(tk => tk.id && inside.includes(tk.id)
-        && withinBand(band, tk)
+      // LVT tests the region's own level; a creature on another level is reached only through an opening (midi's test)
+      return candidates.filter(tk => tk.id && (inside.includes(tk.id) && onRegionLevel(regionDoc, tk)
+        ? withinBand(band, tk) && withinAreaReach(regionDoc, tk.document) && lineOfEffectClear(regionDoc, tk.document)
+        : !onRegionLevel(regionDoc, tk) && isTokenInsideRegion(regionDoc, tk, wallsBlockTargeting))
         && !(wallsBlockTargeting && regionWallBlocked(regionDoc, tk)));
     }
   }
@@ -884,7 +1115,7 @@ function computeTargetsFromRegion(
  */
 function isTokenInsideRegion(
   regionDoc: RegionDocument.Implementation,
-  token: Token.Implementation,
+  token: TokenOrDocument,
   wallsBlockTargeting: boolean
 ): boolean {
   const grid = canvas.scene?.grid;
@@ -893,6 +1124,7 @@ function isTokenInsideRegion(
   if (configSettings.optionalRules.wallsBlockRange !== "none" && hasWallBlockingCondition(token))
     return false;
   if (!isValidTarget(token)) return false;
+  if (!areaReachesToken(regionDoc, token)) return false;
 
   const wallOrigin = regionShapeOrigin(regionDoc) ?? { x: 0, y: 0 };
 
@@ -909,9 +1141,8 @@ function isTokenInsideRegion(
       // but MeasuredTemplate.shape.contains was boundary-inclusive. Tolerance of 1px matches that behavior.
       // Note: Foundry v14's token.testInsideRegion() uses tolerance 0.75 — we intentionally use 1 here
       // to maintain parity with the legacy isTokenInside() boundary-inclusive behavior.
-      let contains = withinBand(regionElevationBand(regionDoc), token)
-        // @ts-expect-error polygonTree.testPoint accepts optional distance param not in type defs
-        && regionDoc.polygonTree.testPoint({ x: testX, y: testY }, 1);
+      // @ts-expect-error polygonTree.testPoint accepts optional distance param not in type defs
+      let contains = regionDoc.polygonTree.testPoint({ x: testX, y: testY }, 1);
 
       if (contains && wallsBlockTargeting) {
         // Always check - lvt does no wall checking on v14.
