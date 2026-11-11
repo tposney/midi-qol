@@ -46,8 +46,8 @@ let defineMidiHealActivityClass = <T extends Activity>(ActivityClass: T) => {
     static #rollHealing(this: Activity, event: PointerEvent, target: HTMLElement, message: ChatMessage.Implementation) {
       const workflow = Workflow.forDamageButton(message);
       if (workflow === false) return;
-      if (workflow && !workflow.readOnly) workflow.activity = this;
-      return this.rollDamage({event, workflow}, {}, {});
+      const activity = workflow && !workflow.readOnly ? workflow.activityFor(this) : this;
+      return activity.rollDamage({event, workflow}, {}, {});
     }
     get possibleOtherActivity() { 
       return true;

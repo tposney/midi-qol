@@ -4921,7 +4921,8 @@ export function validTargetTokens(tokens?: Iterable<TokenOrDocument>): TokenDocu
  * a floor): they can't be the user's targets, so re-reading the user's must not drop them.
  */
 export function userTargetsKeepingUndrawn(current?: Iterable<TokenOrDocument>): Set<TokenOrDocument> {
-  const notDrawn = validTargetTokens(current).documents.filter(document => !canvas?.tokens?.get(document.id!));
+  // By document: a token on another scene can share a drawn token's id (a copied scene)
+  const notDrawn = validTargetTokens(current).documents.filter(document => canvas?.tokens?.get(document.id!)?.document !== document);
   return new Set<TokenOrDocument>([...(game.user?.targets ?? []), ...notDrawn]);
 }
 

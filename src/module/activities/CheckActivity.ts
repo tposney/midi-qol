@@ -85,7 +85,7 @@ let defineMidiCheckActivityClass = <T extends Activity>(ActivityClass: T) => {
 
     static async #rollCheck(this: Activity, event: PointerEvent, target: HTMLElement, message: ChatMessage.Implementation) {
       let workflow = message ? Workflow.findWorkflow(message.uuid) : null;
-      if (workflow) workflow.activity = this;
+      const activity = workflow ? workflow.activityFor(this) : this;
       // return ActivityClass.#rollCheck return ActivityClass.#rollCheck.bind(this)(event, target);
       // Can't do this as it's private
       // As dnd5e 6: the card's targets (honouring its targeted/selected toggle) and the clicked button's data from
@@ -101,8 +101,8 @@ let defineMidiCheckActivityClass = <T extends Activity>(ActivityClass: T) => {
       const skill = button.skill as string | undefined;
       const tool = button.tool as string | undefined;
       const dc = (button.dc === undefined || button.dc === "") ? NaN : Number(button.dc);
-      const check = this.check;
-      const item = this.item;
+      const check = activity.check;
+      const item = activity.item;
       const rollData: AnyMutableObject = { event, target: Number.isFinite(dc) ? dc : check!.dc.value };
       if (ability && (ability in globalThis.dnd5e.config.abilities)) rollData.ability = ability;
 

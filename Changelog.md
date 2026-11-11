@@ -13,6 +13,9 @@ midi now shows in Foundry's player list which players it is waiting for, and the
 
 **Macros**
 * An item's own macro is no longer run automatically after active effects when its *On Use Macros* list is empty (added in 14.6.5). It ran macros a second time when the item's effects already called them, and showed an entry in the list that couldn't be deleted. To run an item's macro when the item is used, add an entry to its *On Use Macros* list; the macro name can be left blank to mean the item's own macro.
+* A workflow rebuilt from its card (after a reload, or a read-only copy) has the item and activity its use ended with: a modified copy a macro swapped in (`workflow.item`, `workflow.activity`) is kept on the card. A rebuilt upcast spell's item is at its cast level, and is its activity's item.
+* A card button (roll damage, attack, save, check, formula, apply effects) pressed after a macro swapped in a modified copy of the use's activity runs the copy, not the item's original.
+* New hook `midi-qol.workflowRebuilt` (workflow, card, { readOnly }) when a workflow is rebuilt from its card.
 * `MidiQOL.socket()` no longer refuses or warns about calls by the caller's role (checked only in the caller's own client, so it protected nothing); `executeForOtherGMs` works (it was `executeForOtherGMS`, which failed; the old name still works).
 
 **Countdowns**
@@ -33,7 +36,8 @@ midi now shows in Foundry's player list which players it is waiting for, and the
 * A save, Active Defence or contested roll the GM makes for a player (taken over from the player list, or a timed-out save for another player's creature) uses the player's roll mode: private and self rolls are whispered to the player, blind ones aren't. With no GM connected a timed-out save is rolled without bonus prompts.
 * A GM using a reaction that targets another creature, places an area or teleports, on a scene they aren't viewing, is asked to view it first. Self-only reactions (Shield) work from any scene.
 * A GM using an item for a creature whose token is on a scene they aren't viewing is asked to view that scene first (targets are then confirmed there) or use it anyway: other modules' reactions (Gambit's Premades), animations and placement only work on the viewed scene.
-* Fixed: a use given targets that aren't drawn (on another level or scene), by `completeActivityUse` or a macro, lost them, so they made no save and took no damage.
+* Fixed: a use given targets that aren't drawn (on another level or scene), by `completeActivityUse` or a macro, lost them, so they made no save and took no damage. This includes an area with auto-targeting off, and a target on another scene sharing a drawn token's id (a copied scene).
+* Fixed: damage with no type, in a use with nothing typed to take its type from (a macro's untyped roll, a damage-only workflow given no type), is midi's No Type: applied in full, with no resistance. It was an unknown type named after a missing language key (in some languages a word such as "Ninguno"), or the type of whatever use ran last, so the previous use's resistances could apply.
 * Fixed: `applyTokenDamage` gave a target that saved the default damage on a save, not the activity's (full, half or none), and warned that `getSaveMultiplierForItem` is deprecated each time.
 
 **Area heights**

@@ -47,8 +47,8 @@ let defineMidiDamageActivityClass = <T extends Activity>(ActivityClass: T) => {
     static #rollDamage(this: Activity, event: PointerEvent, target: HTMLElement, message: ChatMessage.Implementation) {
       const workflow = Workflow.forDamageButton(message);
       if (workflow === false) return;
-      if (workflow && !workflow.readOnly) workflow.activity = this;
-      this.rollDamage({ event, workflow }, {}, {});
+      const activity = workflow && !workflow.readOnly ? workflow.activityFor(this) : this;
+      activity.rollDamage({ event, workflow }, {}, {});
     }
 
     get possibleOtherActivity() {

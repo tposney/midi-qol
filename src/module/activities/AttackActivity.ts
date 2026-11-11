@@ -250,13 +250,13 @@ let defineMidiAttackActivityClass = <T extends Activity>(ActivityClass: T) => {
         workflow.disadvantage = undefined;
         attackConfig.midiOptions.advantage = undefined;
         attackConfig.midiOptions.disadvantage = undefined;
-        workflow.activity = this;
+        const activity = workflow.activityFor(this);
         // Update targets if user has selected new ones; preserve existing targets otherwise
         // (e.g. template-derived targets, programmatic targetsToUse, or no selection)
         const currentTargets = validTargetTokens(new Set(game.user?.targets));
         if (currentTargets.count > 0) workflow.setTargets(currentTargets);
         // @ts-expect-error
-        return this.rollAttack({ workflow }, {}, {});
+        return activity.rollAttack({ workflow }, {}, {});
       }
     }
 
@@ -283,12 +283,12 @@ let defineMidiAttackActivityClass = <T extends Activity>(ActivityClass: T) => {
         // User explicitly chose advantage — set workflowOptions so checkAttackAdvantage processes it
         attackConfig.midiOptions.workflowOptions.advantage = true;
         attackConfig.midiOptions.workflowOptions.disadvantage = false;
-        workflow.activity = this;
+        const activity = workflow.activityFor(this);
         // Update targets if user has selected new ones; preserve existing targets otherwise
         const currentTargets = validTargetTokens(new Set(game.user?.targets));
         if (currentTargets.count > 0) workflow.setTargets(currentTargets);
         //@ts-expect-error
-        return this.rollAttack(attackConfig, {}, {});
+        return activity.rollAttack(attackConfig, {}, {});
       }
     }
 
@@ -315,37 +315,37 @@ let defineMidiAttackActivityClass = <T extends Activity>(ActivityClass: T) => {
         // User explicitly chose disadvantage — set workflowOptions so checkAttackAdvantage processes it
         attackConfig.midiOptions.workflowOptions.advantage = false;
         attackConfig.midiOptions.workflowOptions.disadvantage = true;
-        workflow.activity = this;
+        const activity = workflow.activityFor(this);
         // Update targets if user has selected new ones; preserve existing targets otherwise
         const currentTargets = validTargetTokens(new Set(game.user?.targets));
         if (currentTargets.count > 0) workflow.setTargets(currentTargets);
         //@ts-expect-error
-        return this.rollAttack(attackConfig, {}, {});
+        return activity.rollAttack(attackConfig, {}, {});
       }
     }
 
     static #rollDamage(this: Activity, event: PointerEvent, target: HTMLElement, message: ChatMessage.Implementation) {
       const workflow = Workflow.forDamageButton(message);
       if (workflow === false) return;
-      if (workflow && !workflow.readOnly) workflow.activity = this;
+      const activity = workflow && !workflow.readOnly ? workflow.activityFor(this) : this;
       // @ts-expect-error
-      return this.rollDamage({ event, workflow, midiOptions: { isCritical: workflow?.workflowOptions?.isCritical || workflow?.isCritical } }, {}, message);
+      return activity.rollDamage({ event, workflow, midiOptions: { isCritical: workflow?.workflowOptions?.isCritical || workflow?.isCritical } }, {}, message);
     }
 
     static #rollDamageNoCritical(this: Activity, event: PointerEvent, target: HTMLElement, message: ChatMessage.Implementation) {
       const workflow = Workflow.forDamageButton(message);
       if (workflow === false) return;
-      if (workflow && !workflow.readOnly) workflow.activity = this;
+      const activity = workflow && !workflow.readOnly ? workflow.activityFor(this) : this;
       // @ts-expect-error
-      return this.rollDamage({ event, workflow, critical: { allow: false }, midiOptions: { isCritical: false } }, {}, message);
+      return activity.rollDamage({ event, workflow, critical: { allow: false }, midiOptions: { isCritical: false } }, {}, message);
     }
 
     static #rollDamageCritical(this: Activity, event: PointerEvent, target: HTMLElement, message: ChatMessage.Implementation) {
       const workflow = Workflow.forDamageButton(message);
       if (workflow === false) return;
-      if (workflow && !workflow.readOnly) workflow.activity = this;
+      const activity = workflow && !workflow.readOnly ? workflow.activityFor(this) : this;
       // @ts-expect-error
-      return this.rollDamage({ event, workflow, midiOptions: { isCritical: true } }, {}, message);
+      return activity.rollDamage({ event, workflow, midiOptions: { isCritical: true } }, {}, message);
     }
 
     async rollDamage(config: RollProcessConfig, dialog: RollDialogConfig, message: RollMessageConfig) {

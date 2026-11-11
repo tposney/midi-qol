@@ -65,9 +65,9 @@ let defineMidiUtilityActivityClass = <T extends Activity>(ActivityClass: T) => {
       }
     static #rollFormula(this: Activity, event: PointerEvent, target: HTMLElement, message: ChatMessage.Implementation) {
       const workflow = Workflow.findWorkflow(message?.uuid);
-      if (workflow) workflow.activity = this;
+      const activity = workflow ? workflow.activityFor(this) : this;
 
-      return this.rollFormula?.({ event, workflow }, {}, {});
+      return activity.rollFormula?.({ event, workflow }, {}, {});
     }
 
     get possibleOtherActivity() {

@@ -251,7 +251,6 @@
   "midi-qol.magicalProp": "Magique",
   "midi-qol.noDamageSaveProp": "JdS: 0-dgt",
   "midi-qol.fullDamageSaveProp": "JdS: plein-dgt",
-  "midi-qol.defaultDamageType": "Aucun",
   "midi-qol.halfDamageSaveProp": "JdS: 1/2-dgt",
   "midi-qol.rollOtherProp": "+ Autre jet",
   "midi-qol.otherCritProp": "Crit: +Autre jet",

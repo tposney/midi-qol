@@ -243,7 +243,6 @@
     "midi-qol.magicalProp": "마법적",
     "midi-qol.noDamageSaveProp": "무피해 내성굴림",
     "midi-qol.fullDamageSaveProp": "최대피해 내성굴림",
-    "midi-qol.defaultDamageType": "없음",
     "midi-qol.halfDamageSaveProp": "절반피해 내성굴림",
     "midi-qol.otherCritProp": "기타 굴림 크리티컬",
     "midi-qol.playerControlsInvisibleTokens.Name": "플레이어가 소유한 숨겨진 토큰 제어",

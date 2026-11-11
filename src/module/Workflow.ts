@@ -122,6 +122,7 @@ import { OnUseMacros } from "./apps/Item.js";
 import { bonusCheck, collectBonusFlags, defaultRollOptions, buildPreComputedAdvantageMap, checkActivityAbilities } from "./patching.js";
 import { saveTargetsUndoData, saveUndoData } from "./undo.js";
 import { TroubleShooter } from "./apps/TroubleShooter.js";
+import { restoredUse, useChangesJson } from "./lib/useChanges.js";
 import { SECTION_TEMPLATES, USAGE_MESSAGE_TYPE, cardSaveRoll, type MidiCardSection, type SectionName } from "./ChatClasses/UsageCardMessage.js";
 import { MidiSummonActivity } from "./activities/SummonActivity.js";
 import { activityHasScaledTargetCount, computeActivityTemplateTargets, computeOffLevelTemplateTargets, createActivityTemplateRegions, postTemplateConfirmTargets, regionShapeOrigin, setDamageRollMinTerms } from "./activities/activityHelpers.js";
@@ -737,7 +738,10 @@ export class Workflow {
     const modified = card._stats.modifiedTime ?? 0;
     if (Workflow.#unrestorable.get(chatCardUuid) === modified) return undefined;
     try {
-      return new WorkflowClass(null, null, null, null, { chatCardUuid, readOnly: options.readOnly });
+      const workflow = new WorkflowClass(null, null, null, null, { chatCardUuid, readOnly: options.readOnly });
+      // For what isn't item or activity data (the card keeps those): a module's own state, from its own flags
+      Hooks.callAll("midi-qol.workflowRebuilt", workflow, card, { readOnly: !!options.readOnly });
+      return workflow;
     } catch (err) {
       Workflow.#unrestorable.set(chatCardUuid, modified);
       TroubleShooter.recordError(err, `fromChatCardUuid | could not restore the workflow of ${chatCardUuid}`);
@@ -762,12 +766,21 @@ export class Workflow {
   }
 
   /** Write the card's queued changes: `displayOnly` when a state ends (only if it changed what the card shows) */
+  /** What the use changed in its item and activity (a macro's modified copy), on the card for a rebuilt workflow */
+  #syncUseChanges() {
+    const card = this.#ownCard();
+    if (!card || !this.#item || !this.#activity) return;
+    const json = useChangesJson(card, this.#item, this.#activity);
+    if (json !== this.#persisted.scalar<string | undefined>("useChanges", undefined)) this.#persisted.setScalar("useChanges", json);
+  }
+
   async flushCardWrites(displayOnly = false): Promise<void> {
     if (this.readOnly) return;
     if (displayOnly && !this.#displayQueued) return;
     this.#displayQueued = false;
     this.#syncWorkflowOptions();
     this.#persisted.syncTokenSets();
+    this.#syncUseChanges();
     const card = this.itemCardUuid ? fromUuidSync(this.itemCardUuid) as ChatMessage.Implementation | null : null;
     if (card && !foundry.utils.isEmpty(getUpdatesCache(card.uuid))) await throttledUpdate(card, {});
   }
@@ -889,6 +902,17 @@ export class Workflow {
   }
   set activity(activity: Activity) {
     this.#activity = activity;
+  }
+
+  /**
+   * The activity a card button runs for this use. A button runs the activity dnd5e finds from the card, the original:
+   * when it is the workflow's own activity (same uuid), the workflow's copy is kept and run (a macro's modified copy
+   * stays the use's); another activity becomes the workflow's.
+   */
+  activityFor<T extends Activity>(activity: T): T {
+    if (this.#activity && this.#activity.uuid === activity.uuid) return this.#activity as T;
+    this.activity = activity;
+    return activity;
   }
 
   // Undefined only while a card's workflow is rebuilt without its item (reported in #restoreFromCard)
@@ -1800,8 +1824,10 @@ export class Workflow {
       const card = this.#ownCard();
       if (card) {
         this.#persisted.load(card);
-        this.#activity = (card as Dnd5eChatMessage).getAssociatedActivity?.({ scaled: true });
-        this.#item = (card as Dnd5eChatMessage).getAssociatedItem?.();
+        // The use's item and activity, scaled, with what the use changed in them: the activity's item is the item
+        const use = restoredUse(card);
+        this.#activity = use.activity;
+        this.#item = use.item;
         this.#speaker = card.speaker;
       }
       if (!this.#activity?.item) throw new Error(`the card's activity can't be found (${options.chatCardUuid})`);
@@ -1875,7 +1901,6 @@ export class Workflow {
     }
 
     this.defaultDamageType = getActivityDefaultDamageType(this) ?? MidiQOL.MQdefaultDamageType;
-    if (!this.readOnly) MidiQOL.MQdefaultDamageType = this.defaultDamageType; // Set the default damage type for the module.
     if (this.activity.actionType === "heal" && !Object.keys(GameSystemConfig.healingTypes).includes(this.defaultDamageType ?? "")) this.defaultDamageType = "healing";
     if (restoring) {
       this.preSelectedTargets = new TokenDocumentSet();
@@ -2773,8 +2798,9 @@ export class Workflow {
       await Workflow.removeItemCardButtons(this.itemCardUuid, { removeConfirmButtons: true });
     }
     if (!this.damageOnly && getActivityAutoTargetAction(this.activity) === "none" && activityHasAreaTarget(this.activity) && !this.activity.attack) {
-      this.targets = validTargetTokens(new Set(game.user?.targets));
-      this.hitTargets = validTargetTokens(new Set(game.user?.targets));
+      // The user's targets, keeping the use's that aren't drawn (another level or scene; a macro's): they can't be the user's
+      this.targets = validTargetTokens(userTargetsKeepingUndrawn(this.targets));
+      this.hitTargets = new TokenDocumentSet(this.targets);
       this.hitTargetsEC = new Set();
       if (debugEnabled > 0) warn("damageRollStarted | for non auto target area effects spells", this)
     }

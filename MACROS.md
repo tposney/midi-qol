@@ -510,6 +510,7 @@ The passed workflow is "live" so changes will affect subsequent actions. `preAtt
 | `midi-qol.RollComplete` | void | After workflow completed |
 | `midi-qol.preAbort` | void | The workflow is being aborted |
 | `midi-qol.postCleanup` | void | The workflow has finished and cleaned up (what `completeActivityUse` waits for) |
+| `midi-qol.workflowRebuilt` | void | `(workflow, card, { readOnly })`: a workflow was rebuilt from its card (after a reload, or a read-only copy). For a module's own state kept in its card flags; the item and activity the use changed come back by themselves. |
 | `midi-qol.ReactionFilter` | async | `(reactions, options, triggerType, reactionActivityList)`: change the reactions offered; return false to offer none |
 
 **State Hooks:**
@@ -738,13 +739,13 @@ A workflow keeps its state on its usage card, so it can be rebuilt after a reloa
 
 | Where | What |
 |---|---|
-| `card.system.midi.state` | The workflow's class, `isCritical`, `isFumble`, `templateUuids`, `workflowOptions`, `inCombat` and `isTurn` (when the use started), and what a successful save does to each damage type |
+| `card.system.midi.state` | The workflow's class, `isCritical`, `isFumble`, `templateUuids`, `workflowOptions`, `inCombat` and `isTurn` (when the use started), what a successful save does to each damage type, and what the use changed in its item and activity (`useChanges`) |
 | `card.system.midi.records` | One record per token, keyed by scene id then token id (`records[sceneId][tokenId]`; each record also holds the token's `uuid`): whether it is a target, hit, saved, failed, super saver, …, its save total, cover and advantage (with the reasons), and its row in the hits list |
 | `card.rolls` | Every roll midi made for the use, tagged with `options.midi-qol.rollType` (`attack`, `defaultDamage`, `otherDamage`, `bonusDamage`, `utility`, `save`) |
 | `card.system.midi.sections` | The card's roll sections (`attack`, `hits`, `damage`, `otherDamage`, `bonusDamage`, `utility`, `saves`) as drawn |
 | `card.flags.<module>` | Other modules' data ([below](#storing-data-on-the-card)) |
 
-Everything else is worked out again when a workflow is rebuilt: totals, damage detail, `d20AttackRoll`, `isHit`, the item and activity (from the card), the token (from its speaker). `system.midi` is midi's internal format and may change: read it through the workflow. A target's save roll is `workflow.saveRoll(token)` (a Token, TokenDocument or token uuid; `undefined` until it has rolled), and `workflow.tokenSaves` has them all by token uuid.
+Everything else is worked out again when a workflow is rebuilt: totals, damage detail, `d20AttackRoll`, `isHit`, the item and activity (the card's, scaled to the use, with what the use changed), the token (from its speaker). `system.midi` is midi's internal format and may change: read it through the workflow. A target's save roll is `workflow.saveRoll(token)` (a Token, TokenDocument or token uuid; `undefined` until it has rolled), and `workflow.tokenSaves` has them all by token uuid.
 
 ### When the card is written
 
@@ -758,6 +759,8 @@ Between writes the card in the database is behind the workflow. `workflow.chatCa
 ### After a reload
 
 A workflow is only in the memory of the client that ran it. After a reload, the card's buttons (roll damage, confirm, …) and `getWorkflow(cardUuid)` rebuild it for the card's author from the card, and it carries on from where it waited (`workflow.currentAction`). A rebuilt workflow has what the card stores; anything a macro kept only on the workflow is gone.
+
+A macro may set `workflow.item` / `workflow.activity` to a modified copy for the rest of the use (a bigger damage die, a changed DC): change the copy's data (`item.clone({...changes}, { keepId: true })`, `activity.clone({...changes}, { parent: item.system })`), not its prepared values. The card keeps the copy's difference from the item, and a rebuilt workflow has the copy, with `workflow.activity.item === workflow.item`. The card's buttons run the copy. dnd5e's own lookups (`message.getAssociatedItem()` / `getAssociatedActivity()`, used by its trays and card parts) still give the original. Uses spent and quantity are the real item's. For anything else, keep it in your own card flags and restore it in `midi-qol.workflowRebuilt`.
 
 A macro that rolls for a waiting workflow sets the roll and resumes it:
 

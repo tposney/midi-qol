@@ -252,7 +252,6 @@
   "midi-qol.magicalProp": "Mágico",
   "midi-qol.noDamageSaveProp": "Sin daño al salvar",
   "midi-qol.fullDamageSaveProp": "Daño completo al salvar",
-  "midi-qol.defaultDamageType": "Ninguno",
   "midi-qol.halfDamageSaveProp": "Mitad de daño al salvar",
   "midi-qol.playerControlsInvisibleTokens.Name": "Los jugadores controlan los tokens ocultos que poseen",
   "midi-qol.playerControlsInvisibleTokens.Hint": "Experimental - debería funcionar",

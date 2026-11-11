@@ -27,7 +27,9 @@ export const STATE_KEYS = [
   "inCombat",
   "isTurn",
   // Concentration the use begins once it can no longer be cancelled (MidiActivityMixin)
-  "deferredConcentration"
+  "deferredConcentration",
+  // What the use changed in its item and activity, JSON (lib/useChanges.ts)
+  "useChanges"
 ] as const;
 export type StateKey = typeof STATE_KEYS[number];
 
@@ -87,7 +89,8 @@ export function cardStateSchema() {
       otherConsumed: new ObjectField({ ...unset, nullable: true }), otherDeclined: bool(), otherScaling: num(),
       ammunitionData: new ObjectField(unset),
       inCombat: bool(), isTurn: bool(),
-      deferredConcentration: new ObjectField({ ...unset, nullable: true })
+      deferredConcentration: new ObjectField({ ...unset, nullable: true }),
+      useChanges: new StringField({ ...unset, blank: true, nullable: true })
     }, { required: false }),
     records: new TypedObjectField(new TypedObjectField(new SchemaField({
       uuid: new StringField({ required: true, blank: false }),

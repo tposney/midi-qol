@@ -171,7 +171,6 @@
   "midi-qol.magicalProp": "Magical",
   "midi-qol.noDamageSaveProp": "No Dam Save",
   "midi-qol.fullDamageSaveProp": "Full Dam Save",
-  "midi-qol.defaultDamageType": "None",
   "midi-qol.playerControlsInvisibleTokens.Name": "Spieler kontrollieren eigene versteckte Tokens",
   "midi-qol.playerControlsInvisibleTokens.Hint": "Experimentell - könnte funktionieren",
   "midi-qol.Debug.Name": "Debuggen aktivieren",

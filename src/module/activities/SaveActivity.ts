@@ -86,13 +86,13 @@ let defineMidiSaveActivityClass = <T extends Activity>(ActivityClass: T) => {
     static #rollDamage(this: Activity, event: PointerEvent, target: HTMLElement, message: ChatMessage.Implementation) {
       const workflow = Workflow.forDamageButton(message);
       if (workflow === false) return;
-      if (workflow && !workflow.readOnly) workflow.activity = this;
-      return this.rollDamage({ event, workflow }, {}, {});
+      const activity = workflow && !workflow.readOnly ? workflow.activityFor(this) : this;
+      return activity.rollDamage({ event, workflow }, {}, {});
     }
 
     static async #rollSave(this: Activity, event: PointerEvent, target: HTMLElement, message: ChatMessage.Implementation) {
       const workflow = Workflow.findWorkflow(message?.uuid);
-      if (workflow) workflow.activity = this;
+      const activity = workflow ? workflow.activityFor(this) : this;
       // return ActivityClass.#rollSave.bind(this)(event, target, message);
       // Can't call ActivityClass.#rollSave.bind(this)(event, target, message) as it's private
       // As dnd5e 6: the card's targets (honouring its targeted/selected toggle) and the clicked button's data from
@@ -133,9 +133,9 @@ let defineMidiSaveActivityClass = <T extends Activity>(ActivityClass: T) => {
           event,
           workflow,
           //@ts-expect-error this has been bound to an activity
-          ability: button.ability ?? this.save.ability.first(),
+          ability: button.ability ?? activity.save.ability.first(),
           //@ts-expect-error this has been bound to an activity
-          target: configSettings.autoCheckSaves === "whisper" ? undefined : (Number.isFinite(dc) ? dc : this.save.dc.value)
+          target: configSettings.autoCheckSaves === "whisper" ? undefined : (Number.isFinite(dc) ? dc : activity.save.dc.value)
         }, {}, message);
       }
     }

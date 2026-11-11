@@ -122,6 +122,7 @@ declare module "fvtt-types/configuration" {
       "midi-qol.ConfigSettingsChanged": () => void;
       "midi-qol.RollComplete": (workflow: Workflow) => Promise<void>;
       "midi-qol.postCleanup": (workflow: Workflow) => Promise<void | boolean>;
+      "midi-qol.workflowRebuilt": (workflow: Workflow, card: ChatMessage.Implementation, options: { readOnly: boolean }) => void;
       "midi-qol.preAbort": (workflow: Workflow) => Promise<void | boolean>;
       "midi-qol.dnd5ePreCalculateDamage": (actor: Actor.Implementation, damages: DamageDescription[], options: DamageApplicationOptions) => boolean | void;
       "midi-qol.dnd5eCalculateDamage": (actor: Actor.Implementation, damages: DamageDescription[], options: DamageApplicationOptions) => void;
@@ -1490,7 +1491,10 @@ export interface Activity extends AnyMutableObject {
   hasDamage: boolean;
   hasHealing: boolean;
   actionType: string;
+  id: string;
   uuid: string;
+  /** The activity's data (DataModel#toObject) */
+  toObject(source?: boolean): AnyMutableObject;
   otherActivity?: Activity | null;
   type: string;
   useCondition: string;

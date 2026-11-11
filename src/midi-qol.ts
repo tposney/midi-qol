@@ -732,7 +732,8 @@ Hooks.once('setup', function () {
   visionPatching();
   initGMActionSetup();
   setupHooks();
-  MidiQOL.MQdefaultDamageType = i18n("midi-qol.defaultDamageType");
+  // An untyped damage roll in a use with nothing typed to take a type from: midi's No Type (applied, no resistance)
+  MidiQOL.MQdefaultDamageType = "none";
   MQItemMacroLabel = i18n("midi-qol.ItemMacroText") ?? "ItemMacro";
   MQActivityMacroLabel = i18n("midi-qol.ActivityMacroText") ?? "ActivityMacro";
   setupSheetQol();

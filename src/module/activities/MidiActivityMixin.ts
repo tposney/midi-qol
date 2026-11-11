@@ -476,7 +476,7 @@ export let MidiActivityMixin = Base => {
     }
     static async #applyEffects(this: MidiActivityMixin, event: PointerEvent, target: HTMLElement, message: ChatMessage.Implementation) {
       const workflow = Workflow.findWorkflow(message.uuid);
-      if (workflow) workflow.activity = this;
+      if (workflow) workflow.activityFor(this);
       if (!workflow) {
         const errMessage = "MidiQOL | MidiActivity | applyEffects | No workflow found";
         error(errMessage);
@@ -631,22 +631,22 @@ export let MidiActivityMixin = Base => {
     static #rollDamage(this: Activity, event, target, message) {
       const workflow = Workflow.forDamageButton(message);
       if (workflow === false) return;
-      if (workflow && !workflow.readOnly) workflow.activity = this;
-      return this.rollDamage({ event, workflow, midiOptions: { isCritical: workflow?.workflowOptions?.isCritical || workflow?.isCritical } }, {}, message);
+      const activity = workflow && !workflow.readOnly ? workflow.activityFor(this) : this;
+      return activity.rollDamage({ event, workflow, midiOptions: { isCritical: workflow?.workflowOptions?.isCritical || workflow?.isCritical } }, {}, message);
     }
 
     static #rollDamageNoCritical(this: Activity, event, target, message) {
       const workflow = Workflow.forDamageButton(message);
       if (workflow === false) return;
-      if (workflow && !workflow.readOnly) workflow.activity = this;
-      return this.rollDamage({ event, workflow, critical: { allow: false }, midiOptions: { isCritical: false } }, {}, message);
+      const activity = workflow && !workflow.readOnly ? workflow.activityFor(this) : this;
+      return activity.rollDamage({ event, workflow, critical: { allow: false }, midiOptions: { isCritical: false } }, {}, message);
     }
 
     static #rollDamageCritical(this: Activity, event, target, message) {
       const workflow = Workflow.forDamageButton(message);
       if (workflow === false) return;
-      if (workflow && !workflow.readOnly) workflow.activity = this;
-      return this.rollDamage({ event, workflow, critical: { allow: true }, midiOptions: { isCritical: true } }, {}, message);
+      const activity = workflow && !workflow.readOnly ? workflow.activityFor(this) : this;
+      return activity.rollDamage({ event, workflow, critical: { allow: true }, midiOptions: { isCritical: true } }, {}, message);
     }
 
     get identifier() {
