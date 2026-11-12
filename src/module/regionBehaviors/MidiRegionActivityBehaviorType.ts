@@ -290,6 +290,11 @@ export class MidiRegionActivityBehaviorType extends foundry.data.regionBehaviors
     const sourceActorUuid = self.sourceActorUuid as string;
 
     if (!activityUuid) return;
+    // dnd5e 6.1's antimagic status: a magical area does nothing to a creature inside an antimagic area
+    const sourceItem = (fromUuidSync(activityUuid) as { item?: Item.Implementation } | null)?.item;
+    // @ts-expect-error no dnd5e-types
+    const magical = sourceItem?.type === "spell" || !!sourceItem?.system.properties?.has?.("mgc");
+    if (magical && token.actor?.statuses.has("antimagic")) return;
 
     const triggerData = {
       activityUuid,
