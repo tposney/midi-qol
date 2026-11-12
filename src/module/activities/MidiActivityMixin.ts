@@ -1910,12 +1910,12 @@ export let MidiActivityMixin = Base => {
       if (this.otherActivity?.hasConsumption()) {
         buttons.push({
           action: "consumeOtherActivity",
-          label: { value: "midi-qol.ConsumeOtherActivityResource" },
+          label: { value: "midi-qol.ConsumeOtherActivityResource", short: "midi-qol.ConsumeOtherActivityResourceShort" },
           icon: "fa-solid fa-cubes-stacked",
           visibility: "creator"
         }, {
           action: "refundOtherActivity",
-          label: { value: "midi-qol.RefundOtherActivityResource" },
+          label: { value: "midi-qol.RefundOtherActivityResource", short: "midi-qol.RefundOtherActivityResourceShort" },
           icon: "fa-solid fa-clock-rotate-left",
           visibility: "creator"
         });

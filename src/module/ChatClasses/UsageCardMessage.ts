@@ -275,6 +275,19 @@ export function setupUsageCardMessage() {
       return false;
     }
 
+    /** dnd5e 6.1 draws consume, refund and place template in a row of their own: midi's other-activity ones join them */
+    _prepareButtonGroups(context: Record<string, any>) {
+      super._prepareButtonGroups(context);
+      if (!foundry.utils.isNewerVersion(game.system?.version ?? "0", "6.0.999")) return;
+      for (const action of ["consumeOtherActivity", "refundOtherActivity"]) {
+        const group = context.buttonGroups?.[action];
+        if (!group) continue;
+        (context.additionalButtons ??= {})[action] = group;
+        delete context.buttonGroups[action];
+      }
+      if (context.buttonGroups && foundry.utils.isEmpty(context.buttonGroups)) delete context.buttonGroups;
+    }
+
     /** dnd5e skips `shouldHideChatButton` for buttons visible to all, so midi's removal is applied here. */
     _prepareButtons() {
       const buttons = super._prepareButtons() as { action: string, visibility: string, hidden: boolean }[];

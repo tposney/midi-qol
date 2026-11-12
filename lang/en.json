@@ -1721,6 +1721,8 @@
   "midi-qol.otherActivityConsumptionFailed": "{actorName}: {itemName} ({activityName}) - insufficient resources for other activity",
   "midi-qol.RefundOtherActivityResource": "Refund Other Resource",
   "midi-qol.ConsumeOtherActivityResource": "Consume Other Resource",
+  "midi-qol.ConsumeOtherActivityResourceShort": "Consume Other",
+  "midi-qol.RefundOtherActivityResourceShort": "Refund Other",
   "midi-qol.flagTemplate.advantage.name": "Advantage ({label})",
   "midi-qol.flagTemplate.advantage.description": "Advantage on {label} rolls.",
   "midi-qol.flagTemplate.advantage.attack.name": "Advantage Attack ({label})",
