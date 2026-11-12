@@ -3,7 +3,7 @@ import { _closePlayerRollDialogs, playerWaitHandlers } from "./lib/playerWaits.j
 import { DialogCountdown, dialogCountdownOptions } from "./lib/dialogCountdown.js";
 import { withWorkflowOptionsCodec } from "./lib/workflowOptionsCodec.js";
 import { i18n, log, warn, gameStats, getCanvas, error, debugEnabled, debug, GameSystemConfig, MODULE_ID } from "../midi-qol.js";
-import { _pauseReactionTimer, _closeReactionDialog, calculateDamageAmounts, hpChangeFromDetail, getToken, getTokenDocument, gmOverTimeEffect, fromActorUuid, promptReactions, hasUsedAction, hasUsedBonusAction, removeActionUsed, removeBonusActionUsed, removeReactionUsed, ReactionItemReference, isEffectExpired, expireEffects, deleteAppliedEffects, getAppliedEffects, CERemoveEffect, CEAddEffectWith, getActor, completeItemUse, completeActivityUse, localActivityOverTimeEffect, isValidTarget, validTargetTokens, hasUsedAnyReaction, getVitalityItem, MidiOptions, tokenSourceCenter, toggleStatus } from "./utils.js";
+import { damageActiveHas, _pauseReactionTimer, _closeReactionDialog, calculateDamageAmounts, hpChangeFromDetail, getToken, getTokenDocument, gmOverTimeEffect, fromActorUuid, promptReactions, hasUsedAction, hasUsedBonusAction, removeActionUsed, removeBonusActionUsed, removeReactionUsed, ReactionItemReference, isEffectExpired, expireEffects, deleteAppliedEffects, getAppliedEffects, CERemoveEffect, CEAddEffectWith, getActor, completeItemUse, completeActivityUse, localActivityOverTimeEffect, isValidTarget, validTargetTokens, hasUsedAnyReaction, getVitalityItem, MidiOptions, tokenSourceCenter, toggleStatus } from "./utils.js";
 import { DAMAGE_MESSAGE_TYPE } from "./ChatClasses/DamageCardMessage.js";
 import { DamageDescriptionObject, Workflow } from "./Workflow.js";
 import { applyFailedDeathSaves, bonusCheck, revertFailedDeathSaves } from "./patching.js";
@@ -1290,7 +1290,7 @@ export function damageDetailMods(di: DamageDescription): string[] {
   let allMods: string[] = [];
   for (const cat of ["modification", "resistance", "vulnerability", "immunity",
     "absorption", "DR", "saved", "uncannyDodge", "spell", "magic", "nonmagic"]) {
-    if (di.active?.all?.[cat] || di.active?.type?.[cat]) allMods.push(cat);
+    if (damageActiveHas(di, cat)) allMods.push(cat);
   }
   if (di.active?.threshold) allMods.push("threshold");
   if ((di.allActives?.length ?? 0) > 0) allMods = allMods.concat(di.allActives!);

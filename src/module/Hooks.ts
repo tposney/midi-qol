@@ -3,7 +3,7 @@ import { excludeRegionSourceEffect, moveRegionsOnTurnChange } from "./regionBeha
 import { colorChatMessageHandler, nsaMessageHandler, hideStuffHandler, hideRollUpdate, hideRollRender, checkOverTimeSaves } from "./chatMessageHandling.js";
 import { preferredActiveGM, processUndoDamageCard, whisperRollToPlayer } from "./GMAction.js";
 import { addViewAsPlayerOption } from "./ChatClasses/DamageCardMessage.js";
-import { untargetDeadTokens, untargetAllTokens, midiCustomEffect, removeReactionUsed, removeBonusActionUsed, chackFlanking as checkFlanking, expireRollEffect, removeActionUsed, expirePerTurnBonusActions, getUpdatesCache, clearUpdatesCache, expireEffects, processConcentrationRequestMessage, doConcentrationCheck, completeActivityUse, isAutoFastForward, areMidiKeysPressed, throttledScrollBottom, getVitalityItem, tokenForActor, resolveItemMacro, resolveActivityMacro, doSyncRoll, getTokenPerimeterPolygon, closestPointOnPerimeter, measurePointDistance, updateFlankingHighlight, onUserManualTarget, toggleStatus, videoThumbnail } from "./utils.js";
+import { damageActiveHas, untargetDeadTokens, untargetAllTokens, midiCustomEffect, removeReactionUsed, removeBonusActionUsed, chackFlanking as checkFlanking, expireRollEffect, removeActionUsed, expirePerTurnBonusActions, getUpdatesCache, clearUpdatesCache, expireEffects, processConcentrationRequestMessage, doConcentrationCheck, completeActivityUse, isAutoFastForward, areMidiKeysPressed, throttledScrollBottom, getVitalityItem, tokenForActor, resolveItemMacro, resolveActivityMacro, doSyncRoll, getTokenPerimeterPolygon, closestPointOnPerimeter, measurePointDistance, updateFlankingHighlight, onUserManualTarget, toggleStatus, videoThumbnail } from "./utils.js";
 import { releaseForcedNormalKeys } from "./lib/rollKeys.js";
 import { computeAdvantageFlagsSync } from "./lib/RollModifierTracker.js";
 import { checkRule, configSettings, dragDropTargeting } from "./settings.js";
@@ -1012,7 +1012,7 @@ function setDamageActiveFlag(damage: DamageDescription, flag: string, scope: "ty
 }
 
 function getDamageActiveFlag(damage: DamageDescription, flag: string): boolean {
-  return !!(damage.active?.type?.[flag] || damage.active?.all?.[flag]);
+  return damageActiveHas(damage, flag);
 }
 
 function shouldDowngrade(options: DamageApplicationOptions, type: string): boolean {
@@ -1433,8 +1433,8 @@ function applyTraitMultipliers({ actor, damages, options }: DamageCalcParams): v
   const actorTraits = actor.system?.traits ?? {};
 
   for (const damage of damages) {
-    const hasResistance = damage.active?.type?.resistance || damage.active?.all?.resistance;
-    const hasVulnerability = damage.active?.type?.vulnerability || damage.active?.all?.vulnerability;
+    const hasResistance = damageActiveHas(damage, "resistance");
+    const hasVulnerability = damageActiveHas(damage, "vulnerability");
     if (hasResistance) {
       damage.value = damage.value * 2 * configSettings.damageResistanceMultiplier;
       damage.active ??= {};

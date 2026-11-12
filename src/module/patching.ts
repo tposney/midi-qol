@@ -103,7 +103,9 @@ export function initPatching() {
   libWrapper.register(MODULE_ID, "CONFIG.Actor.documentClass.prototype.prepareData", actorPrepareData, "WRAPPER");
   // I think this can be removed in v13 libWrapper.register(MODULE_ID, "KeyboardManager.prototype._onFocusIn", _onFocusIn, "OVERRIDE");
   libWrapper.register(MODULE_ID, "CONFIG.Actor.documentClass.prototype.getRollData", actorGetRollData, "WRAPPER");
-  libWrapper.register(MODULE_ID, "CONFIG.Actor.documentClass.prototype.calculateDamage", calculateDamageAllTraits, "WRAPPER");
+  // dnd5e 6.1 lets a per-type ignore or downgrade reach an All Damage trait itself (it also added damageResistanceTypes)
+  // @ts-expect-error no dnd5e-types
+  if (!CONFIG.DND5E.damageResistanceTypes) libWrapper.register(MODULE_ID, "CONFIG.Actor.documentClass.prototype.calculateDamage", calculateDamageAllTraits, "WRAPPER");
   libWrapper.register(MODULE_ID, "CONFIG.Actor.documentClass.prototype.toggleStatusEffect", toggleImpliedStatus, "MIXED");
   libWrapper.register(MODULE_ID, "CONFIG.Combat.documentClass.prototype._preUpdate", combatPreUpdate, "WRAPPER");
   Hooks.on("updateCombat", recoverRerolledInitiativeUses);

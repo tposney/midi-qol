@@ -875,6 +875,16 @@ export function convertLengthTo(value: number, from: string | undefined, to: str
   return convert(value, from, to, { strict: false }) ?? value;
 }
 
+/**
+ * Whether a calculated damage entry has an active change: on its type, on All Damage, or (dnd5e 6.1) on a
+ * resistance matched by a filter, such as falling (`active.special`).
+ */
+export function damageActiveHas(damage: DamageDescription, flag: string): boolean {
+  const active = damage.active;
+  if (active?.type?.[flag] || active?.all?.[flag]) return true;
+  return Object.values((active?.special ?? {}) as Record<string, Record<string, unknown>>).some(change => !!change?.[flag]);
+}
+
 export let getSaveMultiplierForItem = (item?: Item.Implementation | null, itemDamageType?: string) => {
   console.warn("getSaveMultiplierForItem is deprecated, use getSaveMultiplierForActivity instead");
   return itemSaveMultiplier(item);
