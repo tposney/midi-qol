@@ -25,6 +25,7 @@ import {
   expireMyEffects,
   validTargetTokens,
   userTargetsKeepingUndrawn,
+  healingButtonKey,
   getOrCreateTokenForActorAsSet,
   doReactions,
   playerFor,
@@ -5245,7 +5246,7 @@ export class Workflow {
 
   #damageButtonText(): string {
     let text = (this.rollOptions.isCritical || this.isCritical) ? i18n("DND5E.Critical")
-      : i18n(this.activity.actionType === "heal" ? "DND5E.HEAL.HealingButton" : "DND5E.Damage");
+      : i18n(this.activity.actionType === "heal" ? healingButtonKey() : "DND5E.Damage");
     if (this.rollOptions.fastForwardDamage && configSettings.showFastForward) text += ` ${i18n("midi-qol.fastForward")}`;
     return text;
   }

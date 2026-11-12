@@ -5,7 +5,7 @@ import { Workflow } from "../Workflow.js";
 import { TargetConfirmationDialog, TargetConfirmationOptions } from "../apps/TargetConfirmation.js";
 import { configSettings, targetConfirmation } from "../settings.js";
 import { installedModules } from "../setupModules.js";
-import { collisionLevel, getFlankingEffect, CERemoveEffect, sumRolls, computeTemplateShapeDistance, getToken, getTokenDocument, checkActivityRange, checkDefeated, checkIncapacitated, computeCoverBonus, hasWallBlockingCondition, isValidTarget, tokenForActor, activityHasAreaTarget, activityHasAutoPlaceTemplate, activityHasEmanationNoTemplate, getActivityAutoTargetAction, getAoETargetType, doReactions, updateUserTargets, rangeToSceneUnits, tokenSourcePosition, tokenSourceCenter, tokenSourceElevation, getTokenVisionElevation, userTargetsKeepingUndrawn, MidiOptions } from "../utils.js";
+import { collisionLevel, getFlankingEffect, CERemoveEffect, sumRolls, computeTemplateShapeDistance, getToken, getTokenDocument, checkActivityRange, checkDefeated, checkIncapacitated, computeCoverBonus, hasWallBlockingCondition, isValidTarget, tokenForActor, activityHasAreaTarget, activityHasAutoPlaceTemplate, activityHasEmanationNoTemplate, getActivityAutoTargetAction, getAoETargetType, doReactions, updateUserTargets, rangeToSceneUnits, tokenSourcePosition, tokenSourceCenter, tokenSourceElevation, getTokenVisionElevation, userTargetsKeepingUndrawn, convertLengthTo, MidiOptions } from "../utils.js";
 import { allAttackTypes } from "../../midi-qol.js";
 import Token = foundry.canvas.placeables.Token;
 
@@ -533,7 +533,7 @@ function templateBand(activity: any, shape: any, { level, token, attached = fals
   const sceneUnits = (value: unknown): number | undefined => {
     const size = Number(value);
     if (!Number.isFinite(size) || size <= 0) return undefined;
-    const converted = globalThis.dnd5e?.utils?.convertLength?.(size, template.units, canvas?.scene?.grid.units, { strict: false });
+    const converted = convertLengthTo(size, template.units, canvas?.scene?.grid.units);
     return typeof converted === "number" ? converted : size;
   };
   const band = (bottom: number, top: number | undefined): Band => ({ bottom, top: top ?? null, topInclusive: true });
@@ -734,7 +734,7 @@ export async function createActivityTemplateRegions(
 
   const convert = (value: number | undefined) => {
     if (!value) return 0;
-    const converted = globalThis.dnd5e?.utils?.convertLength?.(value, target.units, scene.grid.units, { strict: false });
+    const converted = convertLengthTo(value, target.units, scene.grid.units);
     return (typeof converted === "number" ? converted : value) * (scene.grid.size / scene.grid.distance);
   };
   const size = convert(target.size);

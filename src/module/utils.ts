@@ -158,10 +158,7 @@ export let getTraitMult = (actor: Actor.Implementation, dmgTypeString: string, i
 
   if (dmgTypeString !== "") {
     // if not checking all damage counts as magical
-    // @ts-expect-error no dnd5e-types
-    let magicalDamage = item.system.magicAvailable;
-    // @ts-expect-error no dnd5e-types
-    magicalDamage ??= item?.system.properties?.has("mgc");
+    let magicalDamage = itemMagicAvailable(item);
     // @ts-expect-error no dnd5e-types
     magicalDamage ||= (configSettings.requireMagical === "off" && (item?.system.magicalBonus > 0 || item?.system.attackBonus > 0));
     // @ts-expect-error no dnd5e-types
@@ -846,6 +843,36 @@ export function getSaveMultiplierForActivity(activity: Activity) {
     default:
       return configSettings.defaultSaveMult;
   }
+}
+
+/**
+ * Whether an item's own damage is magical: a physical item's `magicAvailable` (false while attunement is missing or,
+ * from dnd5e 6.1, under antimagic), anything else its Magical property. dnd5e 6.1 gives every item `magicAvailable`,
+ * true for spells and features, which would make all feature damage magical.
+ */
+export function itemMagicAvailable(item: Item.Implementation | null | undefined): boolean {
+  // @ts-expect-error no dnd5e-types
+  const system: { isPhysical?: boolean, quantity?: number, magicAvailable?: boolean, properties?: Set<string> } | undefined = item?.system;
+  // isPhysical is new in 6.1; physical items have a quantity on 6.0 too, spells and features none
+  const physical = system?.isPhysical ?? (!!system && "quantity" in system);
+  if (physical && system?.magicAvailable !== undefined) return system.magicAvailable;
+  return !!system?.properties?.has?.("mgc");
+}
+
+/** dnd5e's healing button label: 6.1 split it into Short/Full */
+export function healingButtonKey(): string {
+  return game.i18n?.has("DND5E.HEAL.HealingButton.Full") ? "DND5E.HEAL.HealingButton.Full" : "DND5E.HEAL.HealingButton";
+}
+
+/**
+ * dnd5e's convertLength in the form each version takes: 6.1 takes `{ to, legacy: false }` and returns `{ value, unit }`
+ * (the positional `to` is deprecated). No target unit keeps the value: 6.0 did, 6.1 would pick the largest unit that fits.
+ */
+export function convertLengthTo(value: number, from: string | undefined, to: string | undefined | null): number {
+  const convert = globalThis.dnd5e?.utils?.convertLength;
+  if (!convert || !to || !from) return value;
+  if (foundry.utils.isNewerVersion(game.system?.version ?? "0", "6.0.999")) return convert(value, from, { to, legacy: false, strict: false })?.value ?? value;
+  return convert(value, from, to, { strict: false }) ?? value;
 }
 
 export let getSaveMultiplierForItem = (item?: Item.Implementation | null, itemDamageType?: string) => {
@@ -3371,7 +3398,7 @@ export function rangeToSceneUnits(value: number | undefined | null, units: strin
   if (!value || !units) return value ?? 0;
   const sceneUnit = canvas?.scene?.grid?.units?.toLowerCase() ?? "";
   const sceneUnitDnd = SCENE_UNIT_TO_DND5E[sceneUnit] ?? sceneUnit;
-  return (globalThis as any).dnd5e?.utils?.convertLength?.(value, units, sceneUnitDnd, { strict: false }) ?? value;
+  return convertLengthTo(value, units, sceneUnitDnd);
 }
 
 /**
@@ -9120,8 +9147,8 @@ export function getCriticalDamage() {
 
 export function isValidTarget(target: TokenOrDocument): boolean {
   if (!target.actor) return false; // Tokens without actors are not valid targets
-  // @ts-expect-error no dnd5e-types
-  if (target.actor.type === "group") return false;
+  // Group and (dnd5e 6.1) faction actors are not creatures
+  if (["group", "faction"].includes(target.actor.type)) return false;
   if (target.actor.getFlag(MODULE_ID, "neverTarget")) return false;
   if (target instanceof TokenDocument) {
     if (target.isSecret) return false;

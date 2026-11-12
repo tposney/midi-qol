@@ -65,6 +65,8 @@ import {
   getOrCreateTokenForActor,
   validTargetTokens,
   userTargetsKeepingUndrawn,
+  itemMagicAvailable,
+  healingButtonKey,
   activityHasEmanationNoTemplate,
   getActivityAutoTargetAction,
   areMidiKeysPressed,
@@ -1369,10 +1371,7 @@ export let MidiActivityMixin = Base => {
       try {
         if (!config.workflow) return result;
 
-        // @ts-expect-error no dnd5e-types
-        let magicalDamage = this.item?.system.magicAvailable;
-        // @ts-expect-error no dnd5e-types
-        magicalDamage ??= this.item?.system.properties.has("mgc");
+        let magicalDamage = itemMagicAvailable(this.item);
         magicalDamage = magicalDamage || (configSettings.requireMagical === "off" && this.attackBonus > 0);
         //@ts-expect-error no dnd5e-types
         magicalDamage ||= configSettings.requireMagical === "off" && (config.ammunition?.system.magicalBonus ?? 0) > 0;
@@ -2273,7 +2272,7 @@ export let MidiActivityMixin = Base => {
       // if target type is not blank or there are targets only set hasEffects if we are not going to remove the button later
       if (this.target?.affects.type !== "" || workflow?.targets.count !== 0)
         hasEffects &&= !["applyNoButton", "applyRemove"].includes(configSettings.autoItemEffects);
-      let dmgBtnText = (this.actionType === "heal") ? i18n("DND5E.HEAL.HealingButton") : i18n("DND5E.Damage");
+      let dmgBtnText = (this.actionType === "heal") ? i18n(healingButtonKey()) : i18n("DND5E.Damage");
       if (workflow?.workflowOptions?.fastForwardDamage && configSettings.showFastForward) dmgBtnText += ` ${i18n("midi-qol.fastForward")}`;
 
       const midiContextData: MidiUsageChatContext = {

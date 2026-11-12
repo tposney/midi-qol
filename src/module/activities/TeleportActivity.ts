@@ -2,7 +2,7 @@ import { Activity, RollMessageConfig } from "../../globals.js";
 import { debugEnabled, GameSystemConfig, i18n, i18nFormat, warn, moveToken } from "../../midi-qol.js";
 import { replaceDefaultActivities, configSettings } from "../settings.js";
 import { Workflow } from "../Workflow.js";
-import { callActivityHooks, collisionLevel, completeActivityUse, getToken, pauseReactionTimeout } from "../utils.js";
+import { callActivityHooks, collisionLevel, completeActivityUse, convertLengthTo, getToken, pauseReactionTimeout } from "../utils.js";
 import { MidiActivityMixin, MidiActivityMixinSheet } from "./MidiActivityMixin.js";
 import { highlightTokens, TokenHighlight } from "../lib/tokenHighlight.js";
 
@@ -145,8 +145,7 @@ let defineMidiTeleportActivityClass = <T extends Activity>(ActivityClass: T) => 
       // @ts-expect-error no dnd5e-types
       const units = CONFIG.DND5E.movementUnits;
       if (!(teleport.units in units) || !(teleport.value > 0) || !((sceneUnits ?? "") in units)) return null;
-      // @ts-expect-error no dnd5e-types
-      return dnd5e.utils.convertLength(teleport.value, teleport.units, sceneUnits);
+      return convertLengthTo(teleport.value, teleport.units, sceneUnits);
     }
 
     get casterToken(): Token.Implementation | undefined {

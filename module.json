@@ -43,7 +43,7 @@
         "compatibility": {
           "minimum": "6.0.6",
           "verified": "6.0.6",
-          "maximum": "6.0.999"
+          "maximum": "6.1.999"
         }
       }
     ],
