@@ -8815,7 +8815,8 @@ export class DamageOnlyWorkflow extends Workflow {
     }) {
     if (options.storeWorkflow === undefined) options.storeWorkflow = true;
     if (!actor) actor = token.actor ?? targets[0]?.actor;
-    const theTargets = Array.from(targets).map(t => getToken(t)).filter(t => !!t);
+    // A target that isn't drawn (another level or scene) stays as its document
+    const theTargets = Array.from(targets).map(t => getToken(t) ?? getTokenDocument(t)).filter(t => !!t);
     let damageRoll = roll;
     if (!damageRoll) {
       // @ts-expect-error no dnd5e-types

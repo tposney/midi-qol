@@ -37,6 +37,7 @@ midi now shows in Foundry's player list which players it is waiting for, and the
 * A GM using a reaction that targets another creature, places an area or teleports, on a scene they aren't viewing, is asked to view it first. Self-only reactions (Shield) work from any scene.
 * A GM using an item for a creature whose token is on a scene they aren't viewing is asked to view that scene first (targets are then confirmed there) or use it anyway: other modules' reactions (Gambit's Premades), animations and placement only work on the viewed scene.
 * Fixed: a use given targets that aren't drawn (on another level or scene), by `completeActivityUse` or a macro, lost them, so they made no save and took no damage. This includes an area with auto-targeting off, and a target on another scene sharing a drawn token's id (a copied scene).
+* Fixed: `MidiQOL.DamageOnlyWorkflow` dropped targets that aren't drawn (on another level or scene), so they took no damage.
 * Fixed: damage with no type, in a use with nothing typed to take its type from (a macro's untyped roll, a damage-only workflow given no type), is midi's No Type: applied in full, with no resistance. It was an unknown type named after a missing language key (in some languages a word such as "Ninguno"), or the type of whatever use ran last, so the previous use's resistances could apply.
 * Fixed: `applyTokenDamage` gave a target that saved the default damage on a save, not the activity's (full, half or none), and warned that `getSaveMultiplierForItem` is deprecated each time.
 
