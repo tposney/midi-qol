@@ -1,3 +1,4 @@
+import { registerMidiActivityType } from "../utils.js";
 import { Activity, ActivityUseConfiguration, RollDialogConfig, RollMessageConfig } from "../../globals.js";
 import { debugEnabled, GameSystemConfig, warn } from "../../midi-qol.js";
 import { Workflow } from "../Workflow.js";
@@ -16,7 +17,7 @@ export function setupCastActivity() {
     // GameSystemConfig.activityTypes["dnd5eCast"] = GameSystemConfig.activityTypes.cast;
     GameSystemConfig.activityTypes.cast = { documentClass: MidiCastActivity };
   } else {
-    GameSystemConfig.activityTypes["midiCast"] = { documentClass: MidiCastActivity };
+    registerMidiActivityType("midiCast", MidiCastActivity, "cast");
   }
 }
 let defineMidiCastSheetClass = (baseClass: any) => {

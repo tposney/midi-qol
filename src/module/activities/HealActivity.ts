@@ -2,7 +2,7 @@ import { Activity, RollDialogConfig, RollMessageConfig, RollProcessConfig } from
 import { debugEnabled, GameSystemConfig, warn } from "../../midi-qol.js";
 import { Workflow } from "../Workflow.js";
 import { replaceDefaultActivities, configSettings } from "../settings.js";
-import { isAutoFastForward } from "../utils.js";
+import { isAutoFastForward, registerMidiActivityType } from "../utils.js";
 import { MidiActivityMixin, MidiActivityMixinSheet } from "./MidiActivityMixin.js";
 
 export let MidiHealActivity: ReturnType<typeof defineMidiHealActivityClass>;
@@ -17,7 +17,7 @@ export function setupHealActivity() {
     // GameSystemConfig.activityTypes["dnd5eHeal"] = GameSystemConfig.activityTypes.heal;
     GameSystemConfig.activityTypes.heal = { documentClass: MidiHealActivity };
   } else {
-    GameSystemConfig.activityTypes["midiHeal"] = { documentClass: MidiHealActivity };
+    registerMidiActivityType("midiHeal", MidiHealActivity, "heal");
   }
 }
 

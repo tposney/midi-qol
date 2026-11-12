@@ -885,6 +885,23 @@ export function damageActiveHas(damage: DamageDescription, flag: string): boolea
   return Object.values((active?.special ?? {}) as Record<string, Record<string, unknown>>).some(change => !!change?.[flag]);
 }
 
+/**
+ * Whether an activity is of a dnd5e activity type: that type, one dnd5e 6.1 treats as it (`metadata.like`), or
+ * midi's own registered beside dnd5e's (Replace Default Activities off: `midiAttack` for `attack`).
+ */
+export function isActivityType(activity: Activity | null | undefined, type: string): boolean {
+  if (!activity) return false;
+  if (activity.type === type) return true;
+  if ((activity.metadata as { like?: string } | undefined)?.like === type) return true;
+  return activity.type === `midi${type.charAt(0).toUpperCase()}${type.slice(1)}`;
+}
+
+/** Register midi's activity type beside dnd5e's (Replace Default Activities off): dnd5e 6.1 treats it as its base type */
+export function registerMidiActivityType(key: string, documentClass: Function & { metadata: Record<string, unknown> }, baseType: string): void {
+  documentClass.metadata = foundry.utils.mergeObject(documentClass.metadata, { like: baseType }, { inplace: false });
+  GameSystemConfig.activityTypes[key] = { documentClass };
+}
+
 export let getSaveMultiplierForItem = (item?: Item.Implementation | null, itemDamageType?: string) => {
   console.warn("getSaveMultiplierForItem is deprecated, use getSaveMultiplierForActivity instead");
   return itemSaveMultiplier(item);
@@ -2489,7 +2506,7 @@ export async function completeActivityUse(activityRef: Activity | string | undef
       usage.sequenceId = foundry.utils.randomID();
       let completeHookName = `midi-qol.postCleanup.${activity.uuid}`;
       // @ts-expect-error no clue
-      if (!activity || activity.activity?.id || activity.type === "cast") {
+      if (!activity || activity.activity?.id || isActivityType(activity, "cast")) {
         // Magic items create a pseudo item when doing the roll so have to hope we get the right completion
         // Forward activities and CastActivity won't fire postCleanup with the cast activity's UUID —
         // the spell workflow fires it with the spell activity's UUID instead.
@@ -5964,7 +5981,7 @@ export async function doReactions(targetRef: TokenOrDocument | string, triggerTo
           if (!item.system.attuned && item.system.attunement === "required") continue;
           let reactionCondition = activity.reactionCondition;
           // For cast activities, also check the spell's reaction condition from the activity that will be used
-          if (activity.type === "cast" && activity.cachedSpell) {
+          if (isActivityType(activity, "cast") && activity.cachedSpell) {
             const spell = activity.cachedSpell;
             // Get the first usable activity - this is what spell.use() will use
             const spellActivity = spell.system?.activities?.filter((a: any) => a.canUse)?.[0];
@@ -6432,7 +6449,7 @@ export async function reactionDialog(
           // For Cast activities that don't override targeting, resolve the effective target type from the spell
           let effectiveTargetType = activity.target?.affects?.type;
           // @ts-expect-error no dnd5e-types for _source.target.override
-          if (activity.type === "cast" && !activity._source?.target?.override) {
+          if (isActivityType(activity, "cast") && !activity._source?.target?.override) {
             // @ts-expect-error no dnd5e-types for CastActivity.cachedSpell / spell
             const spell: Item.Implementation | undefined = activity.cachedSpell ?? fromUuidSync(activity.spell?.uuid);
             if (spell) {
@@ -6445,7 +6462,7 @@ export async function reactionDialog(
           }
           // Targeting another creature, placing an area or teleporting needs the reacting token's scene; a self-only
           // reaction (Shield) is used from any scene
-          const needsScene = effectiveTargetType !== "self" || !!activity.target?.template?.type || activity.type === "teleport";
+          const needsScene = effectiveTargetType !== "self" || !!activity.target?.template?.type || isActivityType(activity, "teleport");
           if (needsScene && !(await confirmReactionScene(options.tokenUuid, options.reactionRequest))) {
             resolve(noResult);
             return;
@@ -6916,7 +6933,7 @@ function collectActivityDamageTypes(
     }
   }
 
-  if (activity.type === "heal") partTypes(activity.healing);
+  if (isActivityType(activity, "heal")) partTypes(activity.healing);
   else for (const part of activity.damage?.parts ?? []) partTypes(part);
   if (rollData) {
     rollData.damageTypes = returnDamageTypes;

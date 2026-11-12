@@ -26,6 +26,7 @@ import {
   validTargetTokens,
   userTargetsKeepingUndrawn,
   healingButtonKey,
+  isActivityType,
   getOrCreateTokenForActorAsSet,
   doReactions,
   playerFor,
@@ -1595,7 +1596,7 @@ export class Workflow {
   }
 
   get damageFlavor() {
-    if (this.activity.type === "heal") return i18n("midi-qol.BaseHealingFlavor");
+    if (isActivityType(this.activity, "heal")) return i18n("midi-qol.BaseHealingFlavor");
     return i18n("midi-qol.BaseDamageFlavor");
     // See what the reception to a simple header is
     // if (this.rawDamageDetail?.filter(d => d.damage !== 0).length === 0) return `(${allDamageTypes[this.defaultDamageType ?? "none"].label})`
@@ -1618,7 +1619,7 @@ export class Workflow {
   }
 
   get otherDamageFlavor() {
-    if (this.otherActivity?.type === "heal") return i18n("midi-qol.OtherHealingFlavor");
+    if (isActivityType(this.otherActivity, "heal")) return i18n("midi-qol.OtherHealingFlavor");
     if (this.otherActivity?.midiProperties?.displayActivityName) {
       return i18n(this.otherActivity.name);
     }
@@ -3312,7 +3313,7 @@ export class Workflow {
       if (!activity) return resolved;
       // A Select Form transform's effects are its forms; dnd5e applies the chosen one.
       // @ts-expect-error no dnd5e-types
-      if (activity.type === "transform" && activity.transform?.mode === "form") return resolved;
+      if (isActivityType(activity, "transform") && activity.transform?.mode === "form") return resolved;
       const level = activity.relevantLevel;
       for (const profile of (activity.effects ?? []) as ActivityEffectData[]) {
         if (((profile.level?.min ?? -Infinity) > level) || (level > (profile.level?.max ?? Infinity))) continue;
@@ -8148,7 +8149,7 @@ export class Workflow {
   /** Link a card roll to the card as dnd5e links the rolls it posts (Roll#getOriginatingMessage, options.rollType). */
   #linkRollToCard(roll: Roll, rollType: "attack" | "damage") {
     if (this.itemCardId) foundry.utils.setProperty(roll, "options.originatingMessage", this.itemCardId);
-    const type = rollType === "damage" && this.activity?.type === "heal" ? "healing" : rollType;
+    const type = rollType === "damage" && isActivityType(this.activity, "heal") ? "healing" : rollType;
     if (!foundry.utils.getProperty(roll, "options.rollType")) foundry.utils.setProperty(roll, "options.rollType", type);
   }
 

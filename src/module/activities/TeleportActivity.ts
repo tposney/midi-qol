@@ -2,7 +2,7 @@ import { Activity, RollMessageConfig } from "../../globals.js";
 import { debugEnabled, GameSystemConfig, i18n, i18nFormat, warn, moveToken } from "../../midi-qol.js";
 import { replaceDefaultActivities, configSettings } from "../settings.js";
 import { Workflow } from "../Workflow.js";
-import { callActivityHooks, collisionLevel, completeActivityUse, convertLengthTo, getToken, pauseReactionTimeout } from "../utils.js";
+import { callActivityHooks, collisionLevel, completeActivityUse, convertLengthTo, getToken, pauseReactionTimeout, registerMidiActivityType, isActivityType } from "../utils.js";
 import { MidiActivityMixin, MidiActivityMixinSheet } from "./MidiActivityMixin.js";
 import { highlightTokens, TokenHighlight } from "../lib/tokenHighlight.js";
 
@@ -19,7 +19,7 @@ export function setupTeleportActivity() {
   MidiTeleportSheet = defineMidiTeleportSheetClass(sheet);
   MidiTeleportActivity = defineMidiTeleportActivityClass(base as Activity);
   if (replaceDefaultActivities) GameSystemConfig.activityTypes.teleport = { documentClass: MidiTeleportActivity };
-  else GameSystemConfig.activityTypes["midiTeleport"] = { documentClass: MidiTeleportActivity };
+  else registerMidiActivityType("midiTeleport", MidiTeleportActivity, "teleport");
 }
 
 export const teleportMoverModes = ["default", "caster", "casterAndTargets", "targets", "swap"] as const;
@@ -584,7 +584,7 @@ let defineMidiTeleportActivityClass = <T extends Activity>(ActivityClass: T) => 
     async #failTeleport(travellers: Token.Implementation[]) {
       ui.notifications?.warn(i18n("midi-qol.TELEPORT.Failed"));
       // @ts-expect-error no dnd5e-types
-      const damage = this.item.system.activities.find(a => a.type === "damage" && a.id !== this.id);
+      const damage = this.item.system.activities.find(a => isActivityType(a, "damage") && a.id !== this.id);
       if (!damage) return;
       // The travellers are the targets: nothing to confirm.
       await completeActivityUse(damage, { midiOptions: { targetUuids: travellers.map(t => t.document.uuid), ignoreUserTargets: true,

@@ -1,3 +1,4 @@
+import { registerMidiActivityType } from "../utils.js";
 import { TokenDocumentSet } from "../lib/tokenDocumentSet.js";
 import { Activity } from "../../globals.js";
 import { debugEnabled, GameSystemConfig, i18nFormat, warn } from "../../midi-qol.js";
@@ -17,7 +18,7 @@ export function setupTransformActivity() {
     // GameSystemConfig.activityTypes["dnd5eTransform"] = GameSystemConfig.activityTypes.Transform;
     GameSystemConfig.activityTypes.transform = { documentClass: MidiTransformActivity };
   } else {
-    GameSystemConfig.activityTypes["midiTransform"] = { documentClass: MidiTransformActivity };
+    registerMidiActivityType("midiTransform", MidiTransformActivity, "transform");
   }
 }
 let defineMidiTransformSheetClass = (baseClass: any) => {

@@ -8,7 +8,7 @@ import { Activity, ChatMessageRenderOptions, DamageApplicationOptions, Dnd5eChat
 import { checkRule, configSettings, safeGetGameSetting } from "../settings.js";
 import { getRemoveAllButtons, getRemoveAttackButtons, getRemoveDamageButtons, midiRenderAttackRoll,
   midiRenderDamageRolls, midiRenderOtherDamageRolls, midiRenderBonusDamageRolls, midiRenderFormulaRoll, renderRollAttributionIcon, renderSaveRollHTML,
-  getAdvantageModeTitle, getTokenName, renderAttributionTooltip, tokenPortrait, activityHasAreaTarget } from "../utils.js";
+  getAdvantageModeTitle, getTokenName, renderAttributionTooltip, tokenPortrait, activityHasAreaTarget, isActivityType } from "../utils.js";
 import { saveDisplayMode } from "../lib/saveVisibility.js";
 import { MODULE_ID, MQDamageRollTypes } from "../../midi-qol.js";
 import { Workflow } from "../Workflow.js";
@@ -312,7 +312,7 @@ export function setupUsageCardMessage() {
       // @ts-expect-error no dnd5e-types
       const targetState = this.parent._targetState;
       const teleportMovers = (activity as { midiTeleport?: { movers?: string } } | undefined)?.midiTeleport?.movers;
-      if (activity?.type === "teleport" && teleportMovers === "default" && targetState && !targetState.mode) targetState.mode = "selected";
+      if (isActivityType(activity, "teleport") && teleportMovers === "default" && targetState && !targetState.mode) targetState.mode = "selected";
 
       // midi's display settings act on parts dnd5e's card face renders unconditionally.
       if (this.midi?.hideItemDetails) delete context.description;
@@ -491,7 +491,7 @@ export function setupUsageCardMessage() {
           const mode = configSettings.addFakeDice ? undefined : foundry.utils.getProperty(rolls[0] ?? {}, "options.advantageMode");
           return localize(mode === ADV_MODE.ADVANTAGE ? "DND5E.Advantage" : mode === ADV_MODE.DISADVANTAGE ? "DND5E.Disadvantage" : "DND5E.Attack");
         }
-        case "defaultDamage": return localize(activity?.type === "heal" ? "midi-qol.BaseHealingFlavor" : "midi-qol.BaseDamageFlavor");
+        case "defaultDamage": return localize(isActivityType(activity, "heal") ? "midi-qol.BaseHealingFlavor" : "midi-qol.BaseDamageFlavor");
         case "otherDamage": {
           const other = activity?.otherActivity;
           if (other?.type === "heal") return localize("midi-qol.OtherHealingFlavor");

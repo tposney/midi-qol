@@ -2,7 +2,7 @@ import { initHiding } from "./lib/hiding.js";
 import { log, i18n, error, i18nFormat, warn, debugEnabled, GameSystemConfig, MODULE_ID, gameStats, getStaticID, MIDI_IMPLYING_STATUSES } from "../midi-qol.js";
 import { saveDisplayMode } from "./lib/saveVisibility.js";
 import { configSettings, checkRule, checkMechanic, safeGetGameSetting, safeSetGameSetting, playerControlsInvisibleTokens } from "./settings.js";
-import { bonusDialog, createConditionData, displayDSNForRoll, expireRollEffect, getCriticalDamage, getDeadStatus, getOptionalCountRemainingShortFlag, getUnconsciousStatus, getVitalityDeadStatus, getWoundedStatus, hasUsedAction, hasUsedBonusAction, hasUsedReaction, midiRenderRoll, notificationNotify, removeActionUsed, removeBonusActionUsed, removeReactionUsed, tokenForActor, expireEffects, DSNMarkDiceDisplayed, evalAllConditionsAsync, hasCondition, areMidiKeysPressed, MidiOptions, getVitalityItem, checkMagicResistanceAndVulnerability, isAutoFastForward, FastForwardRollType, buildRollChoices, selectBestRollChoice, getTokenPerimeterPolygon, closestPointOnPerimeter, measurePointDistance, setUserInitiatedTarget, dnd5eRollType, updateUserTargets, isEffectExpired, processTurnOverTime, toggleStatus } from "./utils.js";
+import { bonusDialog, createConditionData, displayDSNForRoll, expireRollEffect, getCriticalDamage, getDeadStatus, getOptionalCountRemainingShortFlag, getUnconsciousStatus, getVitalityDeadStatus, getWoundedStatus, hasUsedAction, hasUsedBonusAction, hasUsedReaction, midiRenderRoll, notificationNotify, removeActionUsed, removeBonusActionUsed, removeReactionUsed, tokenForActor, expireEffects, DSNMarkDiceDisplayed, evalAllConditionsAsync, hasCondition, areMidiKeysPressed, MidiOptions, getVitalityItem, checkMagicResistanceAndVulnerability, isAutoFastForward, FastForwardRollType, buildRollChoices, selectBestRollChoice, getTokenPerimeterPolygon, closestPointOnPerimeter, measurePointDistance, setUserInitiatedTarget, dnd5eRollType, updateUserTargets, isEffectExpired, processTurnOverTime, toggleStatus, isActivityType } from "./utils.js";
 import { computeActivityTemplateTargets } from "./activities/activityHelpers.js";
 import { installedModules } from "./setupModules.js";
 import { OnUseMacro, OnUseMacros } from "./apps/Item.js";
@@ -2351,8 +2351,7 @@ function getAttackModifiers(roll: Roll /* D20Roll */): string[] {
 
 function _configureModifiers(this: Roll /*D20Roll*/, wrapped) {
   wrapped();
-  // @ts-expect-error no dnd5e-types
-  if (this.data?.activity?.type !== "attack") return;
+  if (!isActivityType(this.data?.activity, "attack")) return;
   // @ts-expect-error no dnd5e-types
   this.d20.modifiers = getAttackModifiers(this);
 }

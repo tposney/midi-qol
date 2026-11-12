@@ -4,7 +4,7 @@ import { unTimedExecuteAsGM } from "../GMAction.js";
 import { Workflow } from "../Workflow.js";
 import { decideRollDialog, dialogShown, heldKeys } from "../lib/rollKeys.js";
 import { RollModifierTracker, AdvantageFlags, computeAdvantageFlags, computeRollModifiers, applyRollModifiers, RollModifierFlags, applyTrackerAdvantage } from "../lib/RollModifierTracker.js";
-import { MidiOptions } from "../utils.js";
+import { MidiOptions, registerMidiActivityType } from "../utils.js";
 import { replaceDefaultActivities, configSettings, confirmTargetOptions, ammunitionPerTargetOptions } from "../settings.js";
 import { addAttribution, areMidiKeysPressed, callActivityHooks, addUpdatesCache, displayDSNForRoll, getSpeaker, isAutoFastForward, updateUserTargets, validTargetTokens, getToken, tokenSourceCenter } from "../utils.js";
 import { MidiActivityMixin, MidiActivityMixinSheet, findAmmunitionActivity } from "./MidiActivityMixin.js";
@@ -101,7 +101,7 @@ export function setupAttackActivity() {
     // GameSystemConfig.activityTypes["dnd5eAttack"] = GameSystemConfig.activityTypes.attack;
     GameSystemConfig.activityTypes.attack = { documentClass: MidiAttackActivity };
   } else {
-    GameSystemConfig.activityTypes["midiAttack"] = { documentClass: MidiAttackActivity };
+    registerMidiActivityType("midiAttack", MidiAttackActivity, "attack");
   }
 }
 

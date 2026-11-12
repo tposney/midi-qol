@@ -4,7 +4,7 @@ import { Workflow } from "../Workflow.js";
 import { TroubleShooter } from "../apps/TroubleShooter.js";
 import { replaceDefaultActivities, configSettings } from "../settings.js";
 import { heldKeys } from "../lib/rollKeys.js";
-import { areMidiKeysPressed, callActivityHooks, isAutoFastForward } from "../utils.js";
+import { areMidiKeysPressed, callActivityHooks, isAutoFastForward, registerMidiActivityType } from "../utils.js";
 import { MidiActivityMixin, MidiActivityMixinSheet } from "./MidiActivityMixin.js";
 import { displayDSNForRoll } from "../utils.js";
 
@@ -21,7 +21,7 @@ export function setupUtilityActivity() {
     // GameSystemConfig.activityTypes["dnd5eUtility"] = GameSystemConfig.activityTypes.utility;
     GameSystemConfig.activityTypes.utility = { documentClass: MidiUtilityActivity };
   } else {
-    GameSystemConfig.activityTypes["midiUtility"] = { documentClass: MidiUtilityActivity };
+    registerMidiActivityType("midiUtility", MidiUtilityActivity, "utility");
   }
 }
 

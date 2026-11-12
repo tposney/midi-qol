@@ -3,7 +3,7 @@ import { Activity, ActivityUseConfiguration, RollDialogConfig, RollMessageConfig
 import { debugEnabled, warn, i18n, GameSystemConfig } from "../../midi-qol.js";
 import { Workflow } from "../Workflow.js";
 import { replaceDefaultActivities, configSettings, safeGetGameSetting } from "../settings.js";
-import { getTokenDocument, isAutoFastForward } from "../utils.js";
+import { getTokenDocument, isAutoFastForward, registerMidiActivityType } from "../utils.js";
 import { MidiActivityMixin, MidiActivityMixinSheet } from "./MidiActivityMixin.js";
 import { getSceneTargets } from "./activityHelpers.js";
 
@@ -19,7 +19,7 @@ export function setupSaveActivity() {
     // GameSystemConfig.activityTypes["dnd5eSave"] = GameSystemConfig.activityTypes.save;
     GameSystemConfig.activityTypes.save = { documentClass: MidiSaveActivity };
   } else {
-    GameSystemConfig.activityTypes["midiSave"] = { documentClass: MidiSaveActivity };
+    registerMidiActivityType("midiSave", MidiSaveActivity, "save");
   }
   // Localization.localizeDataModel(MidiSaveActivity);
 }

@@ -1,3 +1,4 @@
+import { registerMidiActivityType } from "../utils.js";
 import { AnyMutableObject } from "fvtt-types/utils";
 import { Activity, RollDialogConfig, RollMessageConfig, RollProcessConfig } from "../../globals.js";
 import { debugEnabled, GameSystemConfig, i18n, warn } from "../../midi-qol.js";
@@ -19,7 +20,7 @@ export function setupCheckActivity() {
     // GameSystemConfig.activityTypes["dnd5eAttack"] = GameSystemConfig.activityTypes.attack;
     GameSystemConfig.activityTypes.check = { documentClass: MidiCheckActivity };
   } else {
-    GameSystemConfig.activityTypes["midiCheck"] = { documentClass: MidiCheckActivity };
+    registerMidiActivityType("midiCheck", MidiCheckActivity, "check");
   }
 }
 

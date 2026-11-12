@@ -1,3 +1,4 @@
+import { registerMidiActivityType } from "../utils.js";
 import { Activity, RollDialogConfig, RollMessageConfig, RollProcessConfig } from "../../globals.js";
 import { debugEnabled, GameSystemConfig, warn } from "../../midi-qol.js";
 import { replaceDefaultActivities, configSettings } from "../settings.js";
@@ -15,7 +16,7 @@ export function setupForwardActivity() {
     // GameSystemConfig.activityTypes["dnd5eForward"] = GameSystemConfig.activityTypes.forward;
     GameSystemConfig.activityTypes.forward = { documentClass: MidiForwardActivity };
   } else {
-    GameSystemConfig.activityTypes["midiForward"] = { documentClass: MidiForwardActivity };
+    registerMidiActivityType("midiForward", MidiForwardActivity, "forward");
   }
 }
 let defineMidiForwardSheetClass = (baseClass: any) => {

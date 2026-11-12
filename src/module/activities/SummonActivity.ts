@@ -1,7 +1,7 @@
 import { Activity } from "../../globals.js";
 import { debugEnabled, GameSystemConfig, warn } from "../../midi-qol.js";
 import { replaceDefaultActivities, configSettings } from "../settings.js";
-import { getTokenDocument } from "../utils.js";
+import { getTokenDocument, registerMidiActivityType } from "../utils.js";
 import { MidiActivityMixin, MidiActivityMixinSheet } from "./MidiActivityMixin.js";
 
 export let MidiSummonActivity: ReturnType<typeof defineMidiSummonActivityClass>;
@@ -16,7 +16,7 @@ export function setupSummonActivity() {
     // GameSystemConfig.activityTypes["dnd5eSummon"] = GameSystemConfig.activityTypes.summon;
     GameSystemConfig.activityTypes.summon = { documentClass: MidiSummonActivity };
   } else {
-    GameSystemConfig.activityTypes["midiSummon"] = { documentClass: MidiSummonActivity };
+    registerMidiActivityType("midiSummon", MidiSummonActivity, "summon");
   }
   //@ts-expect-error
   Hooks.on("dnd5e.summonToken", (activity, profile, tokenData, options) => {

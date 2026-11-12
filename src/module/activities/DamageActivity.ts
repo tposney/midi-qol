@@ -3,7 +3,7 @@ import { Activity } from "../../globals.js";
 import { debugEnabled, GameSystemConfig, warn } from "../../midi-qol.js";
 import { Workflow } from "../Workflow.js";
 import { replaceDefaultActivities, configSettings } from "../settings.js";
-import { isAutoFastForward } from "../utils.js";
+import { isAutoFastForward, registerMidiActivityType } from "../utils.js";
 import { MidiActivityMixin, MidiActivityMixinSheet } from "./MidiActivityMixin.js";
 
 export let MidiDamageActivity: ReturnType<typeof defineMidiDamageActivityClass>;
@@ -18,7 +18,7 @@ export function setupDamageActivity() {
     // GameSystemConfig.activityTypes["dnd5eDamage"] = GameSystemConfig.activityTypes.damage;
     GameSystemConfig.activityTypes.damage = { documentClass: MidiDamageActivity };
   } else {
-    GameSystemConfig.activityTypes["midiDamage"] = { documentClass: MidiDamageActivity };
+    registerMidiActivityType("midiDamage", MidiDamageActivity, "damage");
   }
 }
 

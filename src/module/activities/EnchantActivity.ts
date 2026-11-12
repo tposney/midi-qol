@@ -1,3 +1,4 @@
+import { registerMidiActivityType } from "../utils.js";
 import { Activity } from "../../globals.js";
 import { debugEnabled, GameSystemConfig, warn } from "../../midi-qol.js";
 import { replaceDefaultActivities, configSettings } from "../settings.js";
@@ -15,7 +16,7 @@ export function setupEnchantActivity() {
     // GameSystemConfig.activityTypes["dnd5eEnchant"] = GameSystemConfig.activityTypes.enchant;
     GameSystemConfig.activityTypes.enchant = { documentClass: MidiEnchantActivity };
   } else {
-    GameSystemConfig.activityTypes["midiEnchant"] = { documentClass: MidiEnchantActivity };
+    registerMidiActivityType("midiEnchant", MidiEnchantActivity, "enchant");
   }
 }
 

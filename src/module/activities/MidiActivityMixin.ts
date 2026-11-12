@@ -84,6 +84,7 @@ import {
   toMessageMode,
   rollModeToMessageMode,
   tokenSourceCenter,
+  isActivityType
 } from "../utils.js";
 import { activityHasScaledTargetCount, attachTokenOptions, templateOriginOptions, createActivityTemplateRegions, preTemplateTargets, removeFlanking, requiresTargetConfirmation, selectTargetsFromTemplates, setDamageRollMinTerms, shouldEnforceSingleTarget } from "./activityHelpers.js";
 
@@ -809,7 +810,7 @@ export let MidiActivityMixin = Base => {
          */
         const deferConcentration = activity.requiresConcentration
           && !safeGetGameSetting("dnd5e", "disableConcentration")
-          && !(activity.type === "transform" && activity.transform?.mode === "form");
+          && !(isActivityType(activity, "transform") && activity.transform?.mode === "form");
         activityConsumptionHookId = Hooks.on("dnd5e.activityConsumption", (newActivity, usageConfig, messageConfig) => {
           if (usageConfig.workflow !== usage.workflow) return;
           usageData = usageConfig;
@@ -2677,7 +2678,7 @@ export let MidiActivityMixinSheet = Base => {
     async _preparePartContext(partId, context, options) {
       context = await super._preparePartContext(partId, context, options);
       context.hasDamage = this.activity.damage;
-      context.isSummons = this.activity.type === "summon";
+      context.isSummons = isActivityType(this.activity, "summon");
       context.consumesHP = this.activity.consumption?.targets?.some(t => t.target === "attributes.hp.value");
       context.hasAreaTarget = !!this.activity.target?.template?.type;
       if (partId === "midi-qol") {
