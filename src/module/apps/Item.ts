@@ -16,14 +16,6 @@ export class OnUseMacros {
     return macros;
   }
 
-  /** The item (or activity) has a macro of its own that a blank macro name can stand for. */
-  static hasOwnMacro(item: Item.Implementation | undefined): boolean {
-    if (!item) return false;
-    if (globalThis.DAE?.getItemMacroCommand(item)) return true;
-    // @ts-expect-error no dnd5e-types
-    return !!item.system?.activities?.some((a: Activity) => a.macro?.command);
-  }
-
   /**
    * Blank macro names stand for the item's own macro: the activity's (activityMacroName, "ActivityMacro" for the activity
    * being used) if it has one, else the item's. A blank name with neither is dropped.

@@ -1011,7 +1011,6 @@ No world information is exported. Module list helps with debugging.
 
 An onUse macro entry is `[pass]name` (item or actor *On Use Macros*), or `name, pass` in an effect change on `flags.midi-qol.onUseMacroName`. Besides `ItemMacro`, `ActivityMacro`, `function.…` and world macro names:
 - A **blank name** stands for the item's own macro: the macro of the activity being used if it has one, else the item macro. In an effect change it is the effect's activity macro, else the macro of the effect's item (its parent for a transfer effect, else its origin). With no such macro the entry does nothing.
-- An item that has a macro and no onUse macros runs that macro after active effects, as `[postActiveEffects]` with the name left blank. Macros shared with DAE (`macro.itemMacro` on/off) should check `args[0]`.
 - An effect change with no pass (`""`, `","`) is ignored and reported to the TroubleShooter.
 
 ## Roll Modifier Tracker (13.0.40+)

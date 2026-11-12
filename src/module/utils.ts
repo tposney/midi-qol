@@ -1790,6 +1790,9 @@ async function handleActionSaveRollResponse(
 async function handleActionSaveRollRequest(ctx: ActionSaveContext, changeTurnEnd: boolean): Promise<string | null | undefined> {
   const { actor, effect, details, owner, messageFlavor } = ctx;
   const { saveAbility, saveDC, rollMode, label, rollTypeString } = details;
+  // A save just rolled from the last card may have ended the effect (handleActionSaveRollResponse): nothing to ask for
+  const ended = () => !effect.id || !effect.parent?.effects.has(effect.id) || endingEffects.has(effect.uuid);
+  if (ended()) return effect.id;
 
   const MessageClass = getDocumentClass("ChatMessage");
   let dataset;
@@ -1839,6 +1842,10 @@ async function handleActionSaveRollRequest(ctx: ActionSaveContext, changeTurnEnd
       chatCardUuids.push(chatCard.uuid);
       await chatCard?.setFlag(MODULE_ID, "actorUuid", actor.uuid);
     }
+  }
+  if (ended()) {
+    for (const uuid of chatCardUuids) await (fromUuidSync(uuid) as ChatMessage.Implementation | null)?.delete();
+    return effect.id;
   }
 
   foundry.utils.setProperty(effect, `flags.${MODULE_ID}.actionSaveSuccess`, undefined);
@@ -9592,15 +9599,20 @@ export async function expireEffects(actor: Actor.Implementation, effects: Active
   for (const effect of effects) {
     // another expiry (e.g. a concurrent one for a different key) may have removed it
     if (!effect.id || !effect.parent?.effects.has(effect.id)) continue;
+    endingEffects.add(effect.uuid);
     try {
       await globalThis.DAE.expireEffect(effect, options);
       expired.push(effect.id);
     } catch (err) {
       console.warn(`midi-qol | expireEffects: ${effect.name} (${effect.uuid})`, err);
+    } finally {
+      endingEffects.delete(effect.uuid);
     }
   }
   return { expired };
 }
+// Effects being expired: still in their collection until the server's reply, so a change made to them meanwhile fails
+const endingEffects = new Set<string>();
 
 /** Remove effects: applied effects and enchantments are deleted, an item's own (transfer) effects disabled. */
 export async function deleteAppliedEffects(actor: Actor.Implementation, effects: ActiveEffect.Implementation[], options: Record<string, unknown> = {}): Promise<{ deleted: string[], disabled: ActiveEffect[], itemEffects: ActiveEffect[] }> {

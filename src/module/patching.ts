@@ -2602,9 +2602,6 @@ export function prepareOnUseMacroData(actorOrItem: Actor.Implementation | Item.I
   try {
     const macros = actorOrItem.flags?.[MODULE_ID]?.onUseMacroName;
     const parts = new OnUseMacros(macros ?? null);
-    // An item with a macro and no onUse macros runs its macro after active effects (a blank name; see OnUseMacros.withDefaults)
-    if (actorOrItem instanceof Item && parts.items.length === 0 && OnUseMacros.hasOwnMacro(actorOrItem))
-      parts.items.push(new OnUseMacro("[postActiveEffects]"));
     foundry.utils.setProperty(actorOrItem, "flags.midi-qol.onUseMacroParts", parts);
   } catch (err) {
     const message = `midi-qol | failed to prepare onUse macro data ${actorOrItem?.name}`;
@@ -2798,13 +2795,20 @@ export async function checkDeleteTemplate(templateDocument: MeasuredTemplateDocu
   if (!dependentOn) return;
 
   const parentEffect = fromUuidSync(dependentOn);
-  if (parentEffect instanceof ActiveEffect) {
+  // Several of its areas deleted together each find it without dependents: it is deleted once
+  if (parentEffect instanceof ActiveEffect && !endingParents.has(parentEffect.uuid)) {
     // @ts-expect-error no dnd5e-types
     if (parentEffect.getDependents()?.length === 0) {
-      await parentEffect.delete();
+      endingParents.add(parentEffect.uuid);
+      try {
+        await parentEffect.delete();
+      } finally {
+        endingParents.delete(parentEffect.uuid);
+      }
     }
   }
 };
+const endingParents = new Set<string>();
 
 export async function rollToolCheck(this: Actor.Implementation, wrapped, config: RollProcessConfig & { ability?: string, tool?: string } = {}, dialog: RollDialogConfig = {}, message: RollMessageConfig = {}) {
   let result: Roll[] | undefined;

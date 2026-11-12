@@ -1,3 +1,8 @@
+### 14.0.21
+* Changed: an item's own macro is no longer run automatically after active effects when its *On Use Macros* list is empty (added in 14.0.17). It ran macros a second time when the item's effects already called them, and showed an entry in the list that couldn't be deleted. To run an item's macro when the item is used, add an entry to its *On Use Macros* list; the macro name can be left blank to mean the item's own macro.
+* Fixed: deleting several areas of one concentration spell at once showed "ActiveEffect … does not exist"; concentration ends once.
+* Fixed: advancing the turn just after a successful action save could post a new save card and show an error; the ended effect is left alone.
+
 ### 14.0.20
 
 * Changed: midi-qol has moved to GitHub (https://github.com/tposney/midi-qol): updates and downloads come from its releases, and issues are reported there. Installed copies move over with this update.
