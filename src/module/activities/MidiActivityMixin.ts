@@ -66,6 +66,7 @@ import {
   validTargetTokens,
   userTargetsKeepingUndrawn,
   itemMagicAvailable,
+  hasNoReactionsMarker,
   healingButtonKey,
   activityHasEmanationNoTemplate,
   getActivityAutoTargetAction,
@@ -1722,7 +1723,7 @@ export let MidiActivityMixin = Base => {
 
         if (workflow.AoO) workflow.itemUsesReaction = true;
 
-        const queryReaction = workflow.itemUsesReaction && hasUsedReaction(reactingActor) && reactingActor.inCombat
+        const queryReaction = workflow.itemUsesReaction && (hasUsedReaction(reactingActor) || hasNoReactionsMarker(reactingActor)) && reactingActor.inCombat
           && needsReactionCheck(reactingActor)
         if (queryReaction) {
           const shouldRoll = await foundry.applications.api.DialogV2.confirm({

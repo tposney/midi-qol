@@ -5931,6 +5931,7 @@ export async function doReactions(targetRef: TokenOrDocument | string, triggerTo
     if (!target.actor || !target.actor.flags) return noResult;
 
     if (checkIncapacitated(target.actor, debugEnabled > 0, false)) return noResult;
+    if (hasNoReactionsMarker(target.actor)) return noResult;
     let player = playerFor(getTokenDocument(target));
     const usedReaction = hasUsedReaction(target.actor);
     if (getReactionSetting(player) === "none") return noResult;
@@ -7448,6 +7449,14 @@ export function hasUsedAction(actor: Actor.Implementation) {
 
 export function hasUsedReaction(actor: Actor.Implementation) {
   return (actor.getFlag(MODULE_ID, "actions")?.reactionsUsed ?? 0) >= (actor.getFlag(MODULE_ID, "actions")?.reactionsMax ?? 1);
+}
+
+const NO_REACTIONS_EFFECT = "Compendium.dnd5e.effects.ActiveEffect.tZuPpkTWg8lVjxhL";
+const NO_REACTIONS_ICON = "systems/dnd5e/icons/svg/statuses/no-reactions.svg";
+
+/** dnd5e 6.1's No Reactions marker (an empty effect from its effects compendium), by its source or icon */
+export function hasNoReactionsMarker(actor: Actor.Implementation | null | undefined): boolean {
+  return !!actor?.appliedEffects.some(effect => effect._stats?.compendiumSource === NO_REACTIONS_EFFECT || effect.img === NO_REACTIONS_ICON);
 }
 
 export function hasUsedAnyReaction(actor: Actor.Implementation) {
