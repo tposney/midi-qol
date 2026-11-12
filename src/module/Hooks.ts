@@ -1223,6 +1223,8 @@ function applyDamageReduction({ actor, damages, options }: DamageCalcParams): bo
       type: "none",
       value: dmAll,
       active: { multiplier: 1 },
+      // dnd5e 6.1's damage cards read every entry's `potential`
+      potential: {},
       allActives: drAllActives,
       properties: new Set(),
     };
@@ -1365,6 +1367,7 @@ function applyDamageReductionInline(
       type: "none",
       value: 0,
       active: { multiplier: 1, inlined: true },
+      potential: {},
       allActives: drAllActives,
       properties: new Set(),
       displayValue: -totalDRApplied,

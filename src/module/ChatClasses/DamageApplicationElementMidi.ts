@@ -135,14 +135,21 @@ export class DamageApplicationElementMidi extends globalThis.dnd5e.applications.
   /**
    * Override to handle "all" type and midi custom change types for labels
    */
-  getChangeSourceOptions(type: string, change: string, options: DamageApplicationOptions):
+  getChangeSourceOptions(type: string, change: string, options: DamageApplicationOptions, isActive?: boolean):
     { label: string, mode: string, pressed: string, title: string } {
     let mode = "active";
-    if ((options.ignore?.[change] === true) || options.ignore?.[change]?.has?.(type)) mode = "ignore";
-    else if ((change === "immunity") && (options.downgrade as Set<string>)?.has(type)) mode = "downgrade";
+    // dnd5e 6.1 passes whether the source applies (it builds the list from what would apply without ignores):
+    // one that applies is active; resistance can be downgraded too
+    if (isActive !== true) {
+      const downgradable = change === "immunity" || (isActive !== undefined && change === "resistance");
+      if ((options.ignore?.[change] === true) || options.ignore?.[change]?.has?.(type)) mode = "ignore";
+      else if (downgradable && ((options.downgrade === true) || (options.downgrade as Set<string>)?.has(type))) mode = "downgrade";
+    }
 
     const changeKey = change.charAt(0).toUpperCase() + change.slice(1);
-    const typeLabel = GameSystemConfig.damageTypes[type]?.label ?? GameSystemConfig.healingTypes?.[type]?.label ?? "";
+    const typeLabel = GameSystemConfig.damageTypes[type]?.label ?? GameSystemConfig.healingTypes?.[type]?.label
+      // @ts-expect-error dnd5e 6.1, no dnd5e-types
+      ?? GameSystemConfig.damageResistanceTypes?.[type]?.label ?? "";
     // `title` is the plain description; `label` is it wrapped for the ignore/downgrade states.
     const title = i18nFormat(`DND5E.DamageApplication.Change.${changeKey}`, { type: typeLabel });
     let label = title;
@@ -178,8 +185,8 @@ export class DamageApplicationElementMidi extends globalThis.dnd5e.applications.
     if (!token?.isOwner || !(token.actor instanceof Actor)) return li;
 
     const targetOptions = this.getMergedOptions(uuid);
-    const { active } = this.calculateDamage(token.actor, targetOptions);
-    this.#addInlineChangeSources(li, active as Record<string, Set<string> | boolean>, targetOptions);
+    const { active, potential } = this.calculateDamage(token.actor, targetOptions);
+    this.#addInlineChangeSources(li, potential, active, targetOptions);
     return li;
   }
 
@@ -195,9 +202,12 @@ export class DamageApplicationElementMidi extends globalThis.dnd5e.applications.
    */
   #addInlineChangeSources(
     li: HTMLLIElement,
+    sources: Record<string, Set<string> | boolean>,
     active: Record<string, Set<string> | boolean>,
     options: DamageApplicationOptions
   ): void {
+    // dnd5e 6.1 lists what would apply without ignores (`potential`) and marks what does; 6.0 lists `active`
+    const withPotential = sources !== active;
     const pill = li.querySelector("target-pill");
     if (!pill) return;
     pill.querySelector(".midi-inline-changes")?.remove();
@@ -212,7 +222,7 @@ export class DamageApplicationElementMidi extends globalThis.dnd5e.applications.
     const menu = document.createElement("menu");
     menu.classList.add("menu-change-sources", "unlist");
     row.append(menu);
-    for (const [change, values] of Object.entries(active)) {
+    for (const [change, values] of Object.entries(sources)) {
       const types: string[] = change === "threshold"
         ? (values ? ["threshold"] : [])
         : Array.from((values ?? []) as Set<string>);
@@ -230,9 +240,12 @@ export class DamageApplicationElementMidi extends globalThis.dnd5e.applications.
         const icon = midiIcon
           ?? (type === ALL_DAMAGE_KEY ? "systems/dnd5e/icons/svg/damage/all.svg"
             : type === "threshold" ? "systems/dnd5e/icons/svg/damage/threshold.svg"
-            : GameSystemConfig.damageTypes[type]?.icon ?? GameSystemConfig.healingTypes?.[type]?.icon);
+            : GameSystemConfig.damageTypes[type]?.icon ?? GameSystemConfig.healingTypes?.[type]?.icon
+              // @ts-expect-error dnd5e 6.1, no dnd5e-types
+              ?? GameSystemConfig.damageResistanceTypes?.[type]?.icon);
         if (!icon) continue;
-        const { label, pressed } = this.getChangeSourceOptions(type, change, options);
+        const applies = change === "threshold" ? !!active.threshold : !!(active[change] as Set<string> | undefined)?.has?.(type);
+        const { label, pressed } = this.getChangeSourceOptions(type, change, options, withPotential ? applies : undefined);
         const graphic = this.#changeSourceGraphic(icon);
         menu.insertAdjacentHTML("beforeend", `
           <li class="menu-change-source">
@@ -311,7 +324,7 @@ export class DamageApplicationElementMidi extends globalThis.dnd5e.applications.
     const options = this.getMergedOptions(uuids[0]);
     const damage = this.calculateDamage(actor, options);
     this.refreshListEntry(li, damage);
-    this.#addInlineChangeSources(li, damage.active as Record<string, Set<string> | boolean>, options);
+    this.#addInlineChangeSources(li, damage.potential, damage.active, options);
   }
 
   /**
@@ -391,6 +404,10 @@ export class DamageApplicationElementMidi extends globalThis.dnd5e.applications.
         for (const flag of DamageApplicationElementMidi.SET_FLAGS) {
           if (damage.active?.type?.[flag]) (active[flag] as Set<string>).add(damage.type);
           if (damage.active?.all?.[flag]) (active[flag] as Set<string>).add("ALL");
+          // dnd5e 6.1: resistances matched by a filter (falling), keyed by CONFIG.DND5E.damageResistanceTypes
+          for (const [special, value] of Object.entries(damage.active?.special ?? {})) {
+            if ((value as Record<string, unknown>)?.[flag]) (active[flag] as Set<string>).add(special);
+          }
         }
         // Save flags use "all" for consolidated icon, skip DR types
         if (!isDRType) {
@@ -404,7 +421,9 @@ export class DamageApplicationElementMidi extends globalThis.dnd5e.applications.
         }
       }
 
-      // Union with ignore sets to preserve button display for ignored items
+      // dnd5e 6.1 records what would apply without the ignores (`potential`): the change sources are built from it
+      if (damages.some(damage => damage.potential)) return { temp, tempMax, total, active, potential: DamageApplicationElementMidi.#potential(damages, active) };
+      // dnd5e 6.0: the ignored ones are kept on the buttons by adding the ignore sets
       for (const flag of [...DamageApplicationElementMidi.SET_FLAGS, ...DamageApplicationElementMidi.SAVE_FLAGS]) {
         if (foundry.utils.getType(options.ignore?.[flag]) === "Set") {
           active[flag] = (active[flag] as Set<string>).union(options.ignore?.[flag]);
@@ -422,6 +441,26 @@ export class DamageApplicationElementMidi extends globalThis.dnd5e.applications.
       console.warn(message, err);
       TroubleShooter.recordError(err, message);
     }
-    return { temp, tempMax, total, active };
+    return { temp, tempMax, total, active, potential: active };
+  }
+
+  /** dnd5e 6.1's change sources, as its `#flattenChanges` builds them from `potential`, with midi's own from `active` */
+  static #potential(damages: DamageDescription[], active: Record<string, Set<string> | boolean>): Record<string, Set<string> | boolean> {
+    const categories = ["modification", "resistance", "vulnerability", "immunity"];
+    const potential: Record<string, Set<string> | boolean> = Object.fromEntries(Object.entries(active)
+      .map(([flag, value]) => [flag, categories.includes(flag) ? new Set<string>() : (value instanceof Set ? new Set(value) : value)]));
+    potential.threshold = false;
+    for (const damage of damages) {
+      const d = damage.potential;
+      if (!d) continue;
+      if (d.threshold) potential.threshold = true;
+      for (const category of categories) {
+        const set = potential[category] as Set<string>;
+        if (d.all?.[category]) set.add("ALL");
+        if (d.type?.[category]) set.add(damage.type);
+        for (const [special, value] of Object.entries(d.special ?? {})) if ((value as Record<string, unknown>)?.[category]) set.add(special);
+      }
+    }
+    return potential;
   }
 }

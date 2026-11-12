@@ -1574,6 +1574,14 @@ export type DamageDescription = {
     uncannyDodge?: boolean;
     [key: string]: any; // custom resistance type names
   };
+  /** dnd5e 6.1: what immunity, resistance, vulnerability, modification and threshold would apply without ignores */
+  potential?: {
+    threshold?: boolean;
+    all?: { modification?: boolean; resistance?: boolean; vulnerability?: boolean; immunity?: boolean };
+    type?: { modification?: boolean; resistance?: boolean; vulnerability?: boolean; immunity?: boolean };
+    /** Resistances matched by a filter, keyed by CONFIG.DND5E.damageResistanceTypes (falling) */
+    special?: Record<string, { modification?: boolean; resistance?: boolean; vulnerability?: boolean; immunity?: boolean }>;
+  };
   damage?: number;
   formula?: string;
   allActives?: string[];

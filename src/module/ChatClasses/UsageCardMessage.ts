@@ -4,7 +4,7 @@
  */
 
 import { error } from "../../midi-qol.js";
-import { Activity, ChatMessageRenderOptions, Dnd5eChatMessage } from "../../globals.js";
+import { Activity, ChatMessageRenderOptions, DamageApplicationOptions, Dnd5eChatMessage } from "../../globals.js";
 import { checkRule, configSettings, safeGetGameSetting } from "../settings.js";
 import { getRemoveAllButtons, getRemoveAttackButtons, getRemoveDamageButtons, midiRenderAttackRoll,
   midiRenderDamageRolls, midiRenderOtherDamageRolls, midiRenderBonusDamageRolls, midiRenderFormulaRoll, renderRollAttributionIcon, renderSaveRollHTML,
@@ -260,6 +260,20 @@ export function setupUsageCardMessage() {
 
     // The button state worked out for dnd5e's buttons, reused for midi's in the same render
     #visibility: ReturnType<typeof midiButtonVisibility> | undefined;
+
+    /**
+     * dnd5e 6.1's damage tray merges each target's options with its card's attacker defaults through the card's
+     * system data (`DamageMessageData`). midi's tray is on the usage card, so the card answers the same way: as a
+     * damage card with no defaults, until midi records the use's attacker options.
+     */
+    getDamageApplicationOptions(base: DamageApplicationOptions = {}): DamageApplicationOptions {
+      return { ...base };
+    }
+
+    /** Whether the card's defaults include an option (dnd5e 6.1's tray): none yet */
+    hasDamageApplicationOption(_option: string, _type: string): boolean {
+      return false;
+    }
 
     /** dnd5e skips `shouldHideChatButton` for buttons visible to all, so midi's removal is applied here. */
     _prepareButtons() {
