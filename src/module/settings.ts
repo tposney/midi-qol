@@ -143,7 +143,7 @@ class ConfigSettings {
   /** Players see, read-only, which players midi waits for and on what kind of prompt */
   playerWaitShowPlayers: boolean = true;
   /** Gambit's Premades reaction prompts mirrored to the GM are listed on their player's row, hidden until the GM shows one */
-  playerWaitGambit: boolean = true;
+  playerWaitGambit: boolean = false;
   gmAutoAttack: boolean = false;
   gmAutoDamage: string = "none";
   gmAutoFastForward: string[] = [];

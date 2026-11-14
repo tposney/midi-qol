@@ -1,3 +1,6 @@
+### 14.6.12
+* Changed: *List Gambit's Premades prompts in the player list* is off by default.
+
 ### 14.6.11
 **Waiting on players**
 
