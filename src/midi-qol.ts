@@ -788,6 +788,7 @@ Hooks.once('ready', function () {
     "postDamageRoll": "After Damage Roll",
     "damageBonus": "return a damage bonus",
     "preDamageRollConfig": "Before Damage Configuration",
+    "preDamageCalculation": "Before calculating damage for each target",
     "preDamageApplication": "Before Damage Application",
     "preActiveEffects": "Before Active Effects",
     "postActiveEffects": "After Active Effects ",

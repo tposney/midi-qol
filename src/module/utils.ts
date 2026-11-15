@@ -718,6 +718,34 @@ export async function processDamageRoll(workflow: Workflow, defaultDamageType: s
         damageDetails.calcDamageOptions[type] = calcDamageOptions;
       }
 
+      if (configSettings.allowUseMacro && workflow.workflowOptions.noOnUseMacro !== true && workflow.item.flags) {
+        const macroOptions = {
+          actor,
+          token,
+          target: token,
+          targetUuid: token.document.uuid,
+          damages,
+          calcDamageOptions,
+          damageGroup: type
+        };
+        await workflow.callMacros(
+          workflow.item,
+          workflow.onUseMacros?.getMacros("preDamageCalculation", { includeAll: false }),
+          "OnUse",
+          "preDamageCalculation",
+          macroOptions
+        );
+        if (workflow.ammunition) {
+          await workflow.callMacros(
+            workflow.ammunition,
+            workflow.ammunitionOnUseMacros?.getMacros("preDamageCalculation", { includeAll: false }),
+            "OnUse",
+            "preDamageCalculation",
+            macroOptions
+          );
+        }
+      }
+
       //@ts-expect-error no dnd5e-types
       const calculated: DamageDescription[] = token.actor.calculateDamage(allDamage, calcDamageOptions) ?? [];
 
