@@ -322,15 +322,18 @@ function generateFoundryId() {
  * Recursively scans subdirectories for nested folder structures.
  */
 /**
- * pack-src files that differ from the last release (the newest tag of midi's major.minor reachable from HEAD), or are
- * new. Undefined, with a warning, when git can't tell: then only missing versions are set.
+ * pack-src files that differ from the last release (the newest tag of midi's major.minor reachable from HEAD, or
+ * of any earlier version when that minor has none yet), or are new. Undefined, with a warning, when git can't tell: then only missing versions are set.
  */
 function changedSinceRelease(packSrcDir) {
   const { execFileSync } = require("child_process");
   const git = (...args) => execFileSync("git", args, { encoding: "utf8" }).split("\n").filter(Boolean);
   const [major, minor] = PACKAGE.version.split(".");
   try {
-    const [release] = git("describe", "--tags", "--abbrev=0", "--match", `v${major}.${minor}.*`);
+    // The first build of a minor version has no release of its own yet: compare with the last release before it.
+    let release;
+    try { [release] = git("describe", "--tags", "--abbrev=0", "--match", `v${major}.${minor}.*`); }
+    catch { [release] = git("describe", "--tags", "--abbrev=0", "--match", "v*"); }
     // Paths relative to the working directory, as ensurePackIds compares them.
     const files = [...git("diff", "--name-only", "--relative", release, "--", packSrcDir), ...git("ls-files", "--others", "--exclude-standard", "--", packSrcDir)];
     plog(`CAT versions: ${files.length} file(s) in ${packSrcDir} changed since ${release}`);
@@ -518,10 +521,23 @@ function notesText(description) {
   return text.replace(/\s+/g, " ").trim() || undefined;
 }
 
+const automationCounts = new Map();
+const automationKey = doc => `${doc.type}|${doc.system?.identifier}|${doc.system?.source?.rules}`;
+function countAutomations(dir) {
+  for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+    const fullPath = path.join(dir, entry.name);
+    if (entry.isDirectory()) countAutomations(fullPath);
+    else if (entry.name.endsWith(".json") && !entry.name.startsWith("_")) {
+      const doc = JSON.parse(fs.readFileSync(fullPath, "utf8"));
+      if (doc.flags?.cat?.automation) automationCounts.set(automationKey(doc), (automationCounts.get(automationKey(doc)) ?? 0) + 1);
+    }
+  }
+}
+
 /**
  * Compiled pack only (pack-src unchanged, so versions aren't bumped): an automation lists the automation-notes macro,
- * which re-adds its notes block when CAT's medkit applies it over an item's own description, and carries the block
- * as plain-text notes for the medkit.
+ * which re-adds its notes block when CAT's medkit applies it over an item's own description, carries the block as
+ * plain-text notes for the medkit, and names midi as its source when its identifier is midi's only automation.
  */
 function addCatAutomationData(doc) {
   const automation = doc.flags?.cat?.automation;
@@ -530,6 +546,10 @@ function addCatAutomationData(doc) {
   const blockStart = description.lastIndexOf(NOTES_BLOCK);
   if (/midi-qol:|requires Coven/.test(blockStart < 0 ? description : description.slice(0, blockStart)))
     console.warn(`${doc.name}: midi-qol notes outside the cat-description block`);
+  // As CPR's items: CAT reads the applied automation of a copy dragged from the pack from its source. Not where
+  // several automations share an identifier (creature copies): by source CAT would resolve them all to one.
+  if (automationCounts.get(automationKey(doc)) === 1) automation.source = "midi-qol";
+  else delete automation.source;
   const notes = notesText(description);
   if (notes) automation.notes = notes;
   const itemMacros = (doc.flags.cat.macros ??= {}).item ??= [];
@@ -546,6 +566,8 @@ exports.compilePacks = gulp.series(
     if (!foundryvttCli) foundryvttCli = await import("@foundryvtt/foundryvtt-cli");
 
     await ensurePackIds("pack-src/sampleitems");
+    automationCounts.clear();
+    countAutomations("pack-src/sampleitems");
     await foundryvttCli.compilePack("pack-src/sampleitems", "packs/sampleitems", { recursive: true, transformEntry: addCatAutomationData });
     plog("Compiled pack-src/sampleitems to packs/sampleitems");
 

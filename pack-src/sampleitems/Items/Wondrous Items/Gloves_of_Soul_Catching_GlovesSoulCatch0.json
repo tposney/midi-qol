@@ -4,7 +4,7 @@
   "img": "icons/equipment/hand/glove-armored-leather-steel-brown.webp",
   "system": {
     "description": {
-      "value": "<div class=\"cat-description\"><p><em>midi-qol: Your Constitution is 20 while attuned, if it is lower. When your Unarmed Strike hits you are asked whether to use the gloves: 2d10 force damage and you regain hit points equal to the roll, or advantage on your next attack roll, ability check or saving throw before the end of your next turn.</em></p><p><em>No rules text (not SRD; Candlekeep Mysteries): give the character your own copy and apply this automation to it with CAT's medkit, which keeps your copy's description.</em></p></div>",
+      "value": "<div class=\"cat-description\"><p><em>midi-qol: Your Constitution is 20 while attuned, if it is lower. When your Unarmed Strike hits you are asked whether to use the gloves: 2d10 force damage and you regain hit points equal to the roll, or advantage on your next attack roll, ability check or saving throw before the end of your next turn.</em></p><p><em>No rules text (not SRD; Candlekeep Mysteries): give the character your own copy and apply this automation to it with CAT's CatKit, which keeps your copy's description.</em></p></div>",
       "chat": ""
     },
     "identifier": "gloves-of-soul-catching",
@@ -128,7 +128,7 @@
     },
     "cat": {
       "automation": {
-        "version": "14.6.5"
+        "version": "14.6.13"
       }
     }
   },

@@ -3,7 +3,7 @@
   "type": "feat",
   "system": {
     "description": {
-      "value": "<div class=\"cat-description\"><p><em>midi-qol: As a reaction, the attacking creature has disadvantage on its attack roll.</em></p><p><em>No rules text (not SRD; Player's Handbook): give the character your own copy and apply this automation to it with CAT's medkit, which keeps your copy's description.</em></p></div>",
+      "value": "<div class=\"cat-description\"><p><em>midi-qol: As a reaction, the attacking creature has disadvantage on its attack roll.</em></p><p><em>No rules text (not SRD; Player's Handbook): give the character your own copy and apply this automation to it with CAT's CatKit, which keeps your copy's description.</em></p></div>",
       "chat": ""
     },
     "source": {
@@ -323,7 +323,7 @@
     },
     "cat": {
       "automation": {
-        "version": "14.6.9"
+        "version": "14.6.13"
       }
     }
   },

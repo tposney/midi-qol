@@ -118,6 +118,12 @@
             "value": "0",
             "priority": 20,
             "type": "custom"
+          },
+          {
+            "key": "flags.midi-qol.stanch",
+            "value": "dc=15",
+            "priority": 20,
+            "type": "override"
           }
         ]
       },
@@ -279,7 +285,7 @@
     },
     "cat": {
       "automation": {
-        "version": "14.6.9"
+        "version": "14.6.13"
       }
     }
   },

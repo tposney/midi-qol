@@ -1314,6 +1314,8 @@ async function doD20Roll(this: Actor.Implementation, wrapped, kind: D20RollKind,
   config.midiOptions ??= {};
   let rollId = config[kind.idKey];
   const rollIds: string[] = config.midiOptions[kind.choicesKey] ?? (rollId ? [rollId] : []);
+  // A check with no ability is a bare d20; dnd5e's check message requires an ability
+  if (kind.rollType === "check" && !rollIds.length) message.data.type = "base";
   let overtimeActorUuid: string | undefined;
   let preRollHookId: number | undefined;
   let postRollHookId: number | undefined;

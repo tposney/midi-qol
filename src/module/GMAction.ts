@@ -991,15 +991,37 @@ function flashTokenBarSaves(data: {
  * Attached non-enumerable, on the options object itself: hook handlers' changes still reach the actor update, and the
  * card is not copied into the undo data midi stores.
  */
-function withDamageOrigin<T>(options: T): T {
+function withDamageOrigin<T>(options: T, undo = false): T {
   const uuid = foundry.utils.getProperty(options as object, "midi.itemCardUuid");
   const card = typeof uuid === "string" ? fromUuidSync(uuid) : undefined;
+  // midiUndo: the damage card is putting hit points back, which is not healing
+  if (options && typeof options === "object") Object.defineProperty(options, "midiUndo", { value: undo, enumerable: false, configurable: true, writable: true });
   if (options && typeof options === "object" && card instanceof ChatMessage) {
     for (const key of ["origin", "originatingMessage"]) {
       Object.defineProperty(options, key, { value: card, enumerable: false, configurable: true, writable: true });
     }
   }
   return options;
+}
+
+/**
+ * The death save failures a character has after taking `amount` damage, of which `deltaTemp` came off temporary and
+ * `deltaHP` off current hit points (Enforce death saves). At 0 HP: one more, two from a critical, three if the damage
+ * equals or exceeds the hit point maximum. Massive damage: dropping to 0 HP with damage left over that equals or
+ * exceeds the maximum is death (not with a vitality item, which takes the overflow).
+ */
+function deathFailuresFromDamage(actor: Actor.Implementation, damage: { amount: number, deltaTemp: number, deltaHP: number, critical: boolean, vitality: boolean }): { from: number, to: number } | undefined {
+  // @ts-expect-error no dnd5e-types
+  const { hp, death } = actor.system.attributes;
+  // @ts-expect-error no dnd5e-types
+  const isCharacter = actor.type === "character";
+  if (!configSettings.enforceDeathSaves || !isCharacter || !death || !(damage.amount > 0) || actor.statuses.has("dead")
+    || actor.getFlag(MODULE_ID, "noDeathSaveFailureFromDamage")) return undefined;
+  const from: number = death.failure ?? 0;
+  const hpMax: number = hp.effectiveMax ?? hp.max;
+  if (hp.value <= 0) return { from, to: damage.amount >= hpMax ? 3 : Math.min(3, from + (damage.critical ? 2 : 1)) };
+  if (!damage.vitality && hp.value - damage.deltaHP <= 0 && damage.amount - damage.deltaTemp - damage.deltaHP >= hpMax) return { from, to: 3 };
+  return undefined;
 }
 
 /** A damage card moving the death save failures across three marks the character dead, or undoes that. */
@@ -1382,7 +1404,8 @@ async function prepareDamageListItems(
       const { amount: rawAmount, healing: rawHealing, vitality: rawVitality } = calculateDamageAmounts(damageItem.rawDamageDetail);
       damageItem.totalDamage = damageItem.damageDetail.reduce((acc, d) => acc + (!["temphp", "midi-none", "vitality", "maximum"].includes(d.type) ? d.value : 0), 0);
       // The detail decides; hpDamage only disagrees when something changed one without the other (use MidiQOL.modifyDamageBy).
-      if (hpDamage !== deltaHP && tempMax === 0)
+      // hpDamage may exceed what the creature has left (a macro setting overkill damage): the applied change is clamped.
+      if (Math.clamp(hpDamage, -hp.damage, hp.value) !== deltaHP && tempMax === 0)
         error(`damage list entry for ${actor.name}: hpDamage ${hpDamage} but its damage detail gives ${deltaHP}; applying the detail`);
       const updates: Actor.UpdateData = {
         // @ts-expect-error no dnd5e-types
@@ -1457,17 +1480,11 @@ async function prepareDamageListItems(
         }
       }
 
-      // Damage at 0 HP: a death save failure, two from a critical, three if it equals or exceeds the hit point maximum.
-      // @ts-expect-error no dnd5e-types
-      const death = actor.system.attributes.death;
-      // @ts-expect-error no dnd5e-types
-      const isCharacter = actor.type === "character";
-      if (configSettings.enforceDeathSaves && isCharacter && death && hp.value <= 0 && amount > 0 && !actor.statuses.has("dead")
-        && !actor.getFlag(MODULE_ID, "noDeathSaveFailureFromDamage")) {
-        const oldFailures: number = death.failure ?? 0;
-        damageItem.oldDeathFailures = oldFailures;
-        damageItem.newDeathFailures = amount >= (hp.effectiveMax ?? hp.max) ? 3 : Math.min(3, oldFailures + (damageItem.critical ? 2 : 1));
-        updates["system.attributes.death.failure"] = damageItem.newDeathFailures;
+      const deathFailures = deathFailuresFromDamage(actor, { amount, deltaTemp, deltaHP, critical: !!damageItem.critical, vitality: !!vitalityItem });
+      if (deathFailures) {
+        damageItem.oldDeathFailures = deathFailures.from;
+        damageItem.newDeathFailures = deathFailures.to;
+        updates["system.attributes.death.failure"] = deathFailures.to;
       }
 
       if (createPromises && doHits && (data.autoApplyDamage.includes("yes") || data.forceApply)) {
@@ -1699,7 +1716,7 @@ export let processUndoDamageCard = (message: ChatMessage.Implementation, html: H
           await vitalityItem.update({ "system.uses.spent": undoItem.oldVitalitySpent });
           vitalityUpdated = true;
         }
-        if (actor?.isOwner && Hooks.call("dnd5e.preApplyDamage", actor, newHP - oldHP, updates, withDamageOrigin(calcDamageOptions as DamageApplicationOptions)) !== false) {
+        if (actor?.isOwner && Hooks.call("dnd5e.preApplyDamage", actor, newHP - oldHP, updates, withDamageOrigin(calcDamageOptions as DamageApplicationOptions, true)) !== false) {
           // The actor update - when no changes are made will update the passed options with a target
           // Set midiVitalityUpdatePending if vitality was updated to prevent double checkWounded calls
           const mergedOptions = foundry.utils.mergeObject(calcDamageOptions, updateOptions ?? {}, { inplace: false }) as any;
@@ -1797,7 +1814,7 @@ export let processUndoDamageCard = (message: ChatMessage.Implementation, html: H
           "system.attributes.hp.value": oldHP ?? 0
         };
         if (newTempMax! - oldTempMax!) updates["system.attributes.hp.tempmax"] = oldTempMax;
-        if (oldDeathFailures !== undefined) updates["system.attributes.death.failure"] = oldDeathFailures;
+        if (undoEntry.oldDeathFailures !== undefined) updates["system.attributes.death.failure"] = undoEntry.oldDeathFailures;
         // Handle vitality undo - only if actor still has a vitality item
         const vitalityItem = getVitalityItem(actor);
         let vitalityUpdated = false;
@@ -1806,7 +1823,7 @@ export let processUndoDamageCard = (message: ChatMessage.Implementation, html: H
           await vitalityItem.update({ "system.uses.spent": oldVitalitySpent });
           vitalityUpdated = true;
         }
-        if (actor?.isOwner && Hooks.call("dnd5e.preApplyDamage", actor, amount, updates, withDamageOrigin(calcDamageOptions as DamageApplicationOptions)) !== false) {
+        if (actor?.isOwner && Hooks.call("dnd5e.preApplyDamage", actor, amount, updates, withDamageOrigin(calcDamageOptions as DamageApplicationOptions, true)) !== false) {
           // The actor update - when no changes are made will update the passed options with a target
           // Set midiVitalityUpdatePending if vitality was updated to prevent double checkWounded calls
           const options = foundry.utils.mergeObject(calcDamageOptions ?? {}, updateOptions ?? {}, { inplace: false }) as any;
@@ -1819,7 +1836,7 @@ export let processUndoDamageCard = (message: ChatMessage.Implementation, html: H
             updateHPStatusHeader(html, actorUuid, false);
             return updatedActor;
           })
-          await syncFailedDeathSaves(actor, newDeathFailures, oldDeathFailures);
+          await syncFailedDeathSaves(actor, undoEntry.newDeathFailures, undoEntry.oldDeathFailures);
         }
         ev.stopPropagation();
       })();
@@ -1960,10 +1977,24 @@ export let processUndoDamageCard = (message: ChatMessage.Implementation, html: H
             }
           }
 
+          // Death save failures, as when the damage was first applied; the card's undo restores them
+          const tempLost = Math.min(preApplyTempHP, Math.max(0, totalMultipliedHpDamage));
+          const deathFailures = actor ? deathFailuresFromDamage(actor, {
+            amount: totalMultipliedHpDamage, deltaTemp: tempLost, deltaHP: Math.min(preApplyHP, Math.max(0, totalMultipliedHpDamage) - tempLost),
+            critical: false, vitality: !!vitalityItem   // the stored entry does not say whether the hit was critical
+          }) : undefined;
+
           // Apply HP damage (excluding vitality) with flag to prevent hook from also updating vitality
           applyOptions.midiVitalityHandled = true;
           // @ts-expect-error no dnd5e-types
           await actor?.applyDamage(hpDamageDetail, applyOptions);
+          if (actor && deathFailures) {
+            undoEntry.oldDeathFailures ??= deathFailures.from;
+            undoEntry.newDeathFailures = deathFailures.to;
+            // @ts-expect-error no dnd5e types
+            await actor.update({ "system.attributes.death.failure": deathFailures.to });
+            await syncFailedDeathSaves(actor, deathFailures.from, deathFailures.to);
+          }
 
           // Now update vitality if there was any change
           if (vitalityItem && newSpent !== currentSpent) {

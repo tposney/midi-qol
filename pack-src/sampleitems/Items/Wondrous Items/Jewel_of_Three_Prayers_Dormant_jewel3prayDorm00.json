@@ -4,7 +4,7 @@
   "img": "icons/commodities/gems/gem-faceted-diamond-blue.webp",
   "system": {
     "description": {
-      "value": "<div class=\"cat-description\"><p><em>midi-qol: The dormant jewel: +1 AC while attuned, and 3 charges regained at dawn. Light makes your token shed bright light for 15 feet and dim for 15 more until you end it; Invisibility (1 charge) casts the spell.</em></p><p><em>No rules text (not SRD; Critical Role: Call of the Netherdeep): give the character your own copy and apply this automation to it with CAT's medkit, which keeps your copy's description.</em></p></div>",
+      "value": "<div class=\"cat-description\"><p><em>midi-qol: The dormant jewel: +1 AC while attuned, and 3 charges regained at dawn. Light makes your token shed bright light for 15 feet and dim for 15 more until you end it; Invisibility (1 charge) casts the spell.</em></p><p><em>No rules text (not SRD; Critical Role: Call of the Netherdeep): give the character your own copy and apply this automation to it with CAT's CatKit, which keeps your copy's description.</em></p></div>",
       "chat": ""
     },
     "source": {
@@ -400,7 +400,7 @@
     },
     "cat": {
       "automation": {
-        "version": "14.6.5"
+        "version": "14.6.13"
       }
     },
     "dae": {}

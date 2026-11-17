@@ -141,14 +141,14 @@
     },
     "cat": {
       "automation": {
-        "version": "14.6.9"
+        "version": "14.6.13"
       }
     }
   },
   "img": "icons/magic/control/debuff-chains-ropes-net-white.webp",
   "system": {
     "description": {
-      "value": "<div class=\"cat-description\"><p><em>midi-qol: Create Ward makes the ward, its hit points held as the activity's uses. Damage you take is absorbed by the ward first; casting an Abjuration spell with a spell slot restores twice the spell's level, and Restore Ward (a bonus action) spends a spell slot to restore twice the slot's level. Its messages are whispered to the GM.</em></p><p><em>No rules text (not SRD; Player's Handbook): give the character your own copy and apply this automation to it with CAT's medkit, which keeps your copy's description.</em></p></div>",
+      "value": "<div class=\"cat-description\"><p><em>midi-qol: Create Ward makes the ward, its hit points held as the activity's uses. Damage you take is absorbed by the ward first; casting an Abjuration spell with a spell slot restores twice the spell's level, and Restore Ward (a bonus action) spends a spell slot to restore twice the slot's level. Its messages are whispered to the GM.</em></p><p><em>No rules text (not SRD; Player's Handbook): give the character your own copy and apply this automation to it with CAT's CatKit, which keeps your copy's description.</em></p></div>",
       "chat": ""
     },
     "source": {

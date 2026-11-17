@@ -310,13 +310,13 @@
     },
     "cat": {
       "automation": {
-        "version": "14.6.5"
+        "version": "14.6.13"
       }
     }
   },
   "system": {
     "description": {
-      "value": "<div class=\"cat-description\"><p><em>midi-qol: Sneak Attack (once per turn, a finesse or ranged weapon, Rogue levels needed) also applies without advantage when the target is the only creature within 5 feet of you and you don't have disadvantage. Your Charisma modifier is added to your initiative.</em></p><p><em>No rules text (not SRD; Xanathar's Guide to Everything): give the character your own copy and apply this automation to it with CAT's medkit, which keeps your copy's description.</em></p></div>",
+      "value": "<div class=\"cat-description\"><p><em>midi-qol: Sneak Attack (once per turn, a finesse or ranged weapon, Rogue levels needed) also applies without advantage when the target is the only creature within 5 feet of you and you don't have disadvantage. Your Charisma modifier is added to your initiative.</em></p><p><em>No rules text (not SRD; Xanathar's Guide to Everything): give the character your own copy and apply this automation to it with CAT's CatKit, which keeps your copy's description.</em></p></div>",
       "chat": ""
     },
     "source": {

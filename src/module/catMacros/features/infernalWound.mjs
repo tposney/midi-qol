@@ -1,11 +1,12 @@
-import {computeDistance, getTokenDocument} from '../../utils.js';
+import {getTokenDocument} from '../../utils.js';
 import {automationUtils, documentUtils, workflowUtils} from '../proxy.mjs';
 // Infernal wound (2024 Bearded Devil's Infernal Glaive, Horned Devil's Infernal Tail). A creature without a wound that
 // fails the save gets one: it loses hit points at the start of each of its turns, until the wound closes after its
 // duration, when a spell restores hit points to it, or when it or a creature within 5 feet succeeds on a Medicine check.
 // The glaive rolls its wound save (its save activity) against the creatures it hit that have no wound; the tail's save is
 // its own activity. The wound effect (flags.midi-qol.infernalWound) refuses to stack and, when created, takes the item's
-// configuration: what the wound costs each turn, how long it lasts and the Medicine DC.
+// configuration: what the wound costs each turn, how long it lasts and the Medicine DC. Stanching and the healing spell
+// are midi's stanch flag (lib/stanch.ts), which the wound sets from that configuration.
 const MODULE = 'midi-qol';
 const FLAG = 'infernalWound';
 const woundConfig = (formula, stanchDC) => ({
@@ -24,7 +25,7 @@ export const infernalWoundConfig = {
     'infernal-tail': woundConfig('3d6', '8 + @mod + @prof')
 };
 const config = (item, key) => automationUtils.getConfigValue(item, key) ?? infernalWoundConfig[documentUtils.getIdentifier(item)]?.[key]?.default;
-export const woundsOf = actor => actor?.effects.filter(effect => effect.getFlag(MODULE, FLAG) && !effect.disabled) ?? [];
+const woundsOf = actor => actor?.effects.filter(effect => effect.getFlag(MODULE, FLAG) && !effect.disabled) ?? [];
 /** A dice-free formula (a DC) against the devil's roll data */
 function evaluateDC(formula, item) {
     const value = Roll.safeEval(Roll.replaceFormulaData(String(formula), item?.getRollData?.() ?? {}, {missing: '0'}));
@@ -50,7 +51,8 @@ async function woundCreating({effect, actor}) {
     if (!effect?.flags?.[MODULE]?.[FLAG]) return;
     if (woundsOf(actor).length) return true;
     const item = originItem(effect.origin ?? effect.system?.origin?.activity);
-    effect.flags[MODULE][FLAG] = {formula: String(config(item, 'woundFormula')), stanchDC: evaluateDC(config(item, 'stanchDC'), item)};
+    effect.flags[MODULE][FLAG] = {formula: String(config(item, 'woundFormula'))};
+    effect.flags[MODULE].stanch = {dc: evaluateDC(config(item, 'stanchDC'), item), skill: 'med', range: 5, healing: 'spell'};
     const rounds = Number(config(item, 'duration'));
     if (rounds > 0) effect.duration = {...(effect.duration ?? {}), value: rounds, units: 'rounds'};
 }
@@ -61,42 +63,6 @@ async function turnStart({document: effect, actor, token}) {
     await roll.toMessage({flavor: `${effect.name}: hit points lost`, speaker: ChatMessage.getSpeaker({actor, token: getTokenDocument(token)})});
     // Hit points lost, not damage: no type, so nothing reduces it
     await actor.applyDamage(roll.total);
-}
-/** A Medicine check by `roller` against the wounds of `target` (itself, or within 5 feet): a success closes them */
-export async function stanchWounds(roller, target, total) {
-    const wounds = woundsOf(target?.actor);
-    if (!wounds.length) return false;
-    // Between the creatures' spaces, as midi measures reach (a Large creature's centre is 10 feet from its neighbour's)
-    if (roller && roller !== target) {
-        const distance = computeDistance(roller, target, {wallsBlock: false, includeCover: false});
-        if (distance < 0 || distance > 5) return false;
-    }
-    const closed = wounds.filter(wound => total >= (wound.getFlag(MODULE, FLAG)?.stanchDC ?? 10));
-    for (const wound of closed) await documentUtils.deleteDocument(wound);
-    if (closed.length) ui.notifications?.info(`${target.name}: ${closed[0].name} stanched`);
-    return closed.length > 0;
-}
-export function registerInfernalWoundHooks() {
-    // A Medicine check by a creature whose user targets a wounded creature within 5 feet, or by the wounded creature itself
-    Hooks.on('dnd5e.rollSkill', async (rolls, {skill, subject}) => {
-        if (skill !== 'med' || !rolls?.length) return;
-        const roller = subject?.getActiveTokens?.()[0];
-        const targets = [...(game.user?.targets ?? [])].filter(token => woundsOf(token.actor).length);
-        if (!targets.length && roller && woundsOf(subject).length) targets.push(roller);
-        for (const target of targets) await stanchWounds(roller, target, rolls[0].total);
-    });
-    // A spell that restores hit points closes the wound
-    Hooks.on('dnd5e.preApplyDamage', (actor, _amount, updates, options) => {
-        const wounds = woundsOf(actor);
-        if (!wounds.length) return;
-        const hp = actor.system.attributes.hp;
-        const newHp = updates?.['system.attributes.hp.value'];
-        if (!(typeof newHp === 'number' && newHp > hp.value)) return;
-        const message = options?.originatingMessage;
-        const sourceItem = message?.getAssociatedItem?.() ?? message?.system?.item;
-        if (sourceItem?.type !== 'spell') return;
-        for (const wound of wounds) documentUtils.deleteDocument(wound);
-    });
 }
 export const infernalWound = {
     name: 'Infernal Wound',

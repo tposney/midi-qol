@@ -1,3 +1,27 @@
+### 14.6.13
+This is the last 14.6 release. Later releases (14.7.0 onward) are for dnd5e 6.1 or later. Once 14.7.0 is out, the update check offers it (Foundry warns that it needs dnd5e 6.1); a world staying on dnd5e 6.0 installs 14.6.13 from its own manifest: https://github.com/tposney/midi-qol/releases/download/v14.6.13/module.json
+
+**New features**
+
+* Massive damage. With *Enforce death saves* on, a character dropped to 0 hit points dies outright when the damage left over equals or exceeds its hit point maximum: it gets three death save failures and the Dead status. Undo on the damage card reverses it, and the card's multiplier Apply (x2 and so on) counts death save failures as the first application does. Characters only; not with the vitality item, which takes the overflow.
+* Stanching wounds. An effect can be marked as one a check ends, with `flags.midi-qol.stanch` on the effect (its own flag, or a change with that key): `dc=15, skill=med, range=5, healing=spell`. It ends when the affected creature rolls that skill and reaches the DC, or when a creature within range rolls it with the affected creature targeted; a Medicine roll from the sheet is enough. `healing` says whether restoring hit points also ends it: `none` (the default), `spell` (healing from a spell), `magical` (from a spell or a magic item) or `any` (any healing). *Infernal Glaive*, *Infernal Tail*, *Devil's Glaive*, *Wounding Weapon* and *Longsword of Wounding* use it. See the README.
+
+**Changes and fixes**
+
+* Fixed: a check activity that names no ability, skill or tool threw and scored the target 1; it rolls a d20 with no modifier.
+* Fixed: with Coven's Automation Toolkit 0.1.8, an item with a cast activity made every effect pointing at it throw in CAT's effect hook; midi's workaround now covers 0.1.8.
+* Fixed: an item using CPR's Hide macro was handled as for an older CPR on CPR 2.1.8 (the check named 2.1.18).
+* Fixed: damage a macro set above the target's remaining HP logged a damage list error.
+
+**Sample items**
+
+* Removed, in favour of Cauldron of Plentiful Resources' automations (CPR 2.1.8 or later): *Aid*, *Chill Touch*, *Command*, *Dragon's Breath*, *Guiding Bolt*, *Mass Cure Wounds*, *Pass without Trace*, *Radiant Strikes*, *Sanctuary*, *Shield*, *Thunderwave*, *Toll the Dead*, and the actions *Check Cover*, *Generic Actions*, *Hide*, *Influence*, *Knock Out*, *Ready*, *Shove*, *Squeeze*, *Study*, *Suffocation* and *Underwater*.
+  * The macros of copies already on actors stay in 14.6.13 and are removed in 14.8.0. To switch a copy, open CAT's CatKit on the item and apply CPR's automation.
+  * midi's *Search* finds creatures hidden with CPR's *Hide*.
+  * A wound that could be stanched with the Stabilize action is stanched with a Medicine check (`flags.midi-qol.stanch`).
+* Changed: *Devil's Glaive*, *Wounding Weapon* and *Longsword of Wounding* wounds can be stanched by a creature within 5 feet (a Medicine check with the wounded creature targeted); *Devil's Glaive* no longer prompts at the start of the turn, and magical healing closes its wound.
+* Fixed: a sample item dragged from the compendium showed in CAT's CatKit as not automated, with no Configuration (*Detect Magic (Vision)*, *Infernal Glaive*, *Infernal Tail*).
+
 ### 14.6.12
 * Changed: *List Gambit's Premades prompts in the player list* is off by default.
 

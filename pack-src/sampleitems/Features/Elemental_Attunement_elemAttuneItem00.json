@@ -4,7 +4,7 @@
   "img": "icons/magic/fire/flame-burning-fist-strike.webp",
   "system": {
     "description": {
-      "value": "<div class=\"cat-description\"><p><em>midi-qol: Imbue Elements spends 1 Focus Point and for 10 minutes gives your Unarmed Strike 10 feet more reach. When the strike hits you choose acid, cold, fire, lightning, thunder or no change; with an element you can then push or pull the target 5 or 10 feet, which it resists with a Strength save against your Wisdom save DC. A grapple survives the move.</em></p><p><em>No rules text (not SRD; Player's Handbook (2024)): give the character your own copy and apply this automation to it with CAT's medkit, which keeps your copy's description.</em></p></div>",
+      "value": "<div class=\"cat-description\"><p><em>midi-qol: Imbue Elements spends 1 Focus Point and for 10 minutes gives your Unarmed Strike 10 feet more reach. When the strike hits you choose acid, cold, fire, lightning, thunder or no change; with an element you can then push or pull the target 5 or 10 feet, which it resists with a Strength save against your Wisdom save DC. A grapple survives the move.</em></p><p><em>No rules text (not SRD; Player's Handbook (2024)): give the character your own copy and apply this automation to it with CAT's CatKit, which keeps your copy's description.</em></p></div>",
       "chat": ""
     },
     "source": {
@@ -306,7 +306,7 @@
     },
     "cat": {
       "automation": {
-        "version": "14.6.5"
+        "version": "14.6.13"
       }
     }
   },

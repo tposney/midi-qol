@@ -4,7 +4,7 @@
   "img": "icons/commodities/gems/gem-faceted-diamond-blue.webp",
   "system": {
     "description": {
-      "value": "<div class=\"cat-description\"><p><em>midi-qol: The exalted jewel: +3 AC while attuned, and 7 charges regained at dawn. Your swimming speed equals your walking speed, and so does that of allies within 30 feet (an Aura Effects aura); breathing water is not automated (dnd5e has no field for it). Light, Invisibility, Free the Body and Prayer of Fortune work as on the awakened jewel (Prayer of Fortune for allies only; set the Ward effect's Aura Effects disposition to Any to allow any creature, as the rules do). Golden Flash (a bonus action, 1 charge) teleports you or a willing creature within 15 feet to a space you choose within 15 feet of you; you then choose the creatures within 5 feet of it that the radiance strikes: DC 18 Constitution save, 4d10 radiant and Blinded until the start of your next turn, half and not Blinded on a success. The Aura Effects module is required.</em></p><p><em>No rules text (not SRD; Critical Role: Call of the Netherdeep): give the character your own copy and apply this automation to it with CAT's medkit, which keeps your copy's description.</em></p></div>",
+      "value": "<div class=\"cat-description\"><p><em>midi-qol: The exalted jewel: +3 AC while attuned, and 7 charges regained at dawn. Your swimming speed equals your walking speed, and so does that of allies within 30 feet (an Aura Effects aura); breathing water is not automated (dnd5e has no field for it). Light, Invisibility, Free the Body and Prayer of Fortune work as on the awakened jewel (Prayer of Fortune for allies only; set the Ward effect's Aura Effects disposition to Any to allow any creature, as the rules do). Golden Flash (a bonus action, 1 charge) teleports you or a willing creature within 15 feet to a space you choose within 15 feet of you; you then choose the creatures within 5 feet of it that the radiance strikes: DC 18 Constitution save, 4d10 radiant and Blinded until the start of your next turn, half and not Blinded on a success. The Aura Effects module is required.</em></p><p><em>No rules text (not SRD; Critical Role: Call of the Netherdeep): give the character your own copy and apply this automation to it with CAT's CatKit, which keeps your copy's description.</em></p></div>",
       "chat": ""
     },
     "source": {
@@ -922,7 +922,7 @@
     },
     "cat": {
       "automation": {
-        "version": "14.6.5"
+        "version": "14.6.13"
       }
     },
     "dae": {

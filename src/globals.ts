@@ -92,6 +92,7 @@ declare module "fvtt-types/configuration" {
       "dnd5e.postUseLinkedSpell": (activity: Activity, usageConfig: ActivityUseConfiguration, results: unknown) => void;
       "dnd5e.preActivityConsumption": (activity: Activity, usageConfig: ActivityUseConfiguration, messageConfig: RollMessageConfig) => boolean | void;
       "dnd5e.preApplyDamage": (actor: Actor.Implementation, amount: number, updates: Actor.UpdateData, options: DamageApplicationOptions) => boolean | void;
+      "dnd5e.rollSkill": (rolls: Roll[], data: { skill?: string, subject?: Actor.Implementation }) => void;
       "dnd5e.preCalculateDamage": (actor: Actor.Implementation, damages: DamageDescription[], options: DamageApplicationOptions) => boolean | void;
       "dnd5e.preConfigureInitiative": (actor: Actor.Implementation, rollConfig: { data: AnyMutableObject, parts: string[], options: D20RollOptions }) => void;
       /**
@@ -273,6 +274,8 @@ declare module "fvtt-types/configuration" {
           failsRemaining?: number;  // Remaining fails needed for failCount
         };
         overtimeChatCardUuids?: string[];
+        /** A check ends the effect (lib/stanch.ts): "dc=15, skill=med, range=5, healing=spell", a DC, or the fields */
+        stanch?: string | number | { dc?: number | string, skill?: string, range?: number | string, healing?: string };
         /** A hide (sample Hide action): the Stealth total to find the creature */
         hidden?: { dc?: number };
         transformedActorUuids?: string[];
@@ -1170,6 +1173,10 @@ export type DamageApplicationOptions = {
   };
   invertHealing?: boolean;
   only?: "damage" | "healing";
+  /** dnd5e: the message the damage came from (midi's card, attached non-enumerable) */
+  originatingMessage?: ChatMessage.Implementation;
+  /** midi: the damage card putting hit points back, which is not healing (attached non-enumerable) */
+  midiUndo?: boolean;
   // midi additions:
   midi?: {
     noCalc?: boolean;

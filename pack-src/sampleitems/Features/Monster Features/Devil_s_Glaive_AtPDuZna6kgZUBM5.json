@@ -70,7 +70,13 @@
         "changes": [
           {
             "key": "flags.midi-qol.OverTime",
-            "value": "turn=end,\ndamageRoll=1d10,\ntype=slashing,\nactionSave=dialog,\nrollType=skill,\nsaveDC=12,\nsaveAbility=med,\nlabel=Infernal Wound",
+            "value": "turn=end,\ndamageRoll=1d10,\ntype=slashing,\nlabel=Infernal Wound",
+            "priority": 20,
+            "type": "override"
+          },
+          {
+            "key": "flags.midi-qol.stanch",
+            "value": "dc=12, healing=magical",
             "priority": 20,
             "type": "override"
           }
@@ -231,7 +237,7 @@
     },
     "cat": {
       "automation": {
-        "version": "14.6.9"
+        "version": "14.6.13"
       }
     }
   },

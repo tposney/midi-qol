@@ -588,6 +588,7 @@ Hooks.on("dae.modifySpecials", (specKey, specials, _characterSpec) => {
 //@ts-expect-error
 Hooks.on("dae.modifyBaseValues", (specKey: string, baseValues, _characterSpec) => {
   baseValues[`flags.${MODULE_ID}.ActivityOverTime`] = [new StringField({ initial: "" }), ""];
+  baseValues[`flags.${MODULE_ID}.stanch`] = [new StringField({ initial: "" }), ""];
 });
 //@ts-expect-error
 Hooks.on("dae.addFieldMappings", (fieldMappings) => {
@@ -1716,6 +1717,7 @@ function setupMidiFlags() {
   untyped(`flags.${MODULE_ID}.OverTime`);
   daeFieldBrowserFields.push(`flags.${MODULE_ID}.OverTime`);
   daeFieldBrowserFields.push(`flags.${MODULE_ID}.ActivityOverTime`);
+  daeFieldBrowserFields.push(`flags.${MODULE_ID}.stanch`);
   booleanFormula(`flags.${MODULE_ID}.inMotion`);
   daeFieldBrowserFields.push(`flags.${MODULE_ID}.inMotion`);
   booleanFormula(`flags.${MODULE_ID}.fail.disadvantage.heavy`);

@@ -14,6 +14,7 @@ import { ActorOnUseMacrosConfig } from "./apps/ActorOnUseMacroConfig.js";
 import { preActivityConsumptionHook, activityConsumptionHook, midiTemplateFlags, isTemplateRegion, templateElevation, clampTemplateElevation, attachedRegionBand } from "./activities/activityHelpers.js";
 import { ItemOnUseMacrosConfig } from "./apps/ItemOnUseMacrosConfig.js";
 import { Activity, DamageApplicationOptions, DamageDescription } from "../globals.js";
+import { registerStanchHooks } from "./lib/stanch.js";
 import { MidiDependentsRegistry, repointCopiedDependents, tokenHasDependents } from "./lib/MidiDependentsRegistry.js";
 
 export var concentrationCheckItemDisplayName = "Concentration Check";
@@ -337,6 +338,7 @@ export async function restManager(actor: Actor.Implementation, result: { longRes
 }
 
 export function initHooks() {
+  registerStanchHooks();
   Hooks.on("getChatMessageContextOptions", addViewAsPlayerOption);
   if (debugEnabled > 0) warn("Init Hooks processing");
   Hooks.on("preCreateChatMessage", (message, data, options, user) => {

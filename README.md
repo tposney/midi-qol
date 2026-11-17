@@ -194,7 +194,7 @@ If you prefer to configure settings manually, here's the recommended full automa
 
 | Module | Description |
 |--------|-------------|
-| [**Covens Automation Toolkit (CAT)**](https://github.com/chrisk123999/covens-automation-toolkit) | **Strongly recommended.** Midi's sample items that say *Automation requires Coven's Automation Toolkit (CAT)* (Hide, Search, the generic actions, …) only work with it; without it they still load, but that part of their automation does nothing. Shared automation framework used by CPR 2 and other automation packs. Its medkit matches items to automations by identifier and updates them; midi registers its own sample items with CAT. See the [CAT wiki](https://github.com/chrisk123999/covens-automation-toolkit/wiki). |
+| [**Covens Automation Toolkit (CAT)**](https://github.com/chrisk123999/covens-automation-toolkit) | **Strongly recommended.** Midi's sample items that say *Automation requires Coven's Automation Toolkit (CAT)* (Search, Attack, Magic, …) only work with it; without it they still load, but that part of their automation does nothing. Shared automation framework used by CPR 2 and other automation packs. Its CatKit matches items to automations by identifier and updates them; midi registers its own sample items with CAT. See the [CAT wiki](https://github.com/chrisk123999/covens-automation-toolkit/wiki). |
 | [**Cauldron of Plentiful Resources**](https://foundryvtt.com/packages/chris-premades) | Comprehensive collection of automated spells, class features, and monster abilities. Includes custom roll resolver for in-person games, fancy Eskiemoh animations, and quality-of-life UI extensions. Extends Midi-QOL's workflow API. Has its own [wiki](https://github.com/chrisk123999/chris-premades/wiki). |
 | [**Midi Item Showcase Community**](https://foundryvtt.com/packages/midi-item-showcase-community) | Community-contributed automations from the Posney's Foundry Automation Discord. Growing collection of user-submitted items, spells, and scripts. |
 | [**Gambit's Premades**](https://foundryvtt.com/packages/gambits-premades) | Curated library of automated spells, items, and feats. Handles difficult "3rd party reaction" items like Counterspell, Opportunity Attacks, and Silvery Barbs. Features custom AppV2 dialogs with animated countdown timers for reactions. |
@@ -450,7 +450,7 @@ Roll statistics (Keep Roll Statistics, Save statistics Every, Player statistics 
 
 ### Rules text for sample items
 
-Midi's sample items include automations for content that isn't in the SRD (Toll the Dead, Metamagic Adept, Arcane Ward, …). Midi can't ship their rules text, so their description holds only midi's automation notes and a line saying the rules text is missing. When such an item is added to an actor, midi fills the description in from content you already have in your world.
+Midi's sample items include automations for content that isn't in the SRD (Vow of Enmity, Metamagic Adept, Arcane Ward, …). Midi can't ship their rules text, so their description holds only midi's automation notes and a line saying the rules text is missing. When such an item is added to an actor, midi fills the description in from content you already have in your world.
 
 **Where the text comes from**, in this order:
 1. Your official D&D modules: the Player's Handbook, Tasha's Cauldron of Everything and the others (modules whose id starts with `dnd-`).
@@ -472,8 +472,8 @@ What each entry in the compendium needs:
 
 | Field | Required | What to set |
 |---|---|---|
-| Item type | Yes | The same type as the midi sample item: Spell for Toll the Dead, Feature for Metamagic Adept, and so on. An entry of another type is never matched. |
-| Identifier (`system.identifier`, item sheet: Details tab, *Identifier*) | Yes | The same identifier as the midi sample item (for example `toll-the-dead`). Left blank, the field shows, greyed, the identifier dnd5e makes from the item's name, and midi matches on that: an entry named exactly like the sample item ("Toll the Dead") needs nothing typed here. dnd5e lowercases the name, drops brackets and punctuation and joins the words with hyphens, so "Detect Magic (Vision)" gives `detect-magic-vision`. Type one in when the names differ. |
+| Item type | Yes | The same type as the midi sample item: Feature for Metamagic Adept, Equipment for Dragonhide Belt, and so on. An entry of another type is never matched. |
+| Identifier (`system.identifier`, item sheet: Details tab, *Identifier*) | Yes | The same identifier as the midi sample item (for example `metamagic-adept`). Left blank, the field shows, greyed, the identifier dnd5e makes from the item's name, and midi matches on that: an entry named exactly like the sample item ("Metamagic Adept") needs nothing typed here. dnd5e lowercases the name, drops brackets and punctuation and joins the words with hyphens, so "Detect Magic (Vision)" gives `detect-magic-vision`. Type one in when the names differ. |
 | Name | No | Any name, if the identifier is typed in. With a blank identifier, the name makes the identifier, so it must match the sample item's name. As a last resort an entry with the same name (case doesn't matter) is used even when the identifiers differ; the item's notes then say it was matched by name. |
 | Description (`system.description.value`, item sheet: Description tab) | Yes | The full rules text, as you want it shown on the item. An entry with an empty description is skipped. |
 | Rules version (`system.source.rules`, item sheet: Description tab, *Source*, the cog button (*Configure Source*) → *Rules*) | No | 2014 or 2024. When set on both, an entry for the sample item's version is preferred; one for the other version is still used if nothing else matches, and the notes say so. |
@@ -1459,7 +1459,25 @@ turn=end, saveDC=15, saveAbility=wis, failCount=2+, removeCondition=@attributes.
 
 ---
 
+### flags.midi-qol.stanch
+
+An effect another creature can end with a check, such as a wound that can be stanched. Put it on the effect as a change (key `flags.midi-qol.stanch`) or as the effect's own flag.
+
+```
+dc=15, skill=med, range=5, healing=spell
+```
+
+| Field | Meaning | Default |
+|---|---|---|
+| `dc` | The check's DC (a bare number is the DC) | 10 |
+| `skill` | The skill rolled | `med` |
+| `range` | How close, in feet, another creature must be | 5 |
+| `healing` | Restoring hit points also ends the effect: `spell`, `magical` (a spell or a magic item), `any`, or `none` | `none` |
+
+The effect ends when the affected creature rolls that skill and reaches the DC, or when a creature within range rolls it with the affected creature targeted. Any roll of the skill counts, from the sheet or an item. *Infernal Glaive*, *Infernal Tail*, *Devil's Glaive* and *Wounding Weapon* use it.
+
 # Changelog & Credits
+
 
 ## Changelog
 https://github.com/tposney/midi-qol/blob/dnd6/Changelog.md

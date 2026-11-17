@@ -5,7 +5,7 @@ import { infernalWoundConfig } from "./catMacros/features/infernalWound.mjs";
 import { detectMagicConfig } from "./catMacros/spells/detectMagic.mjs";
 
 /** The last CAT whose getOriginActivitySync reads `effects` on a cast activity, which has none on dnd5e 6. */
-const CAT_CAST_ACTIVITY_FIX_MAX = "0.1.7";
+const CAT_CAST_ACTIVITY_FIX_MAX = "0.1.8";
 
 /**
  * Temporary, while CAT <= CAT_CAST_ACTIVITY_FIX_MAX is active: CAT's getOriginActivitySync looks for the activity holding an
