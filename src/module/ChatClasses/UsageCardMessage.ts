@@ -15,6 +15,7 @@ import { Workflow } from "../Workflow.js";
 import { followUpButtons } from "../followUps.js";
 import { NOTE_MESSAGE_TYPE, noteCard, notesOf } from "./CardNoteMessage.js";
 import { attributionMap, cardMidi, rollTypeOf, rollsOfType, cardStateSchema, recordFor, recordList, type CardRecord, type CardRecords } from "../lib/cardState.js";
+import { DamageRules, applyDamageRules, copyDamageOptions, hasDamageRule, mergeDamageRules } from "../lib/damageRules.js";
 
 /** Renderer per roll-backed section; damage renderers aggregate the section's rolls into one block. */
 const SECTION_ROLL_RENDERERS: Record<string, (rolls: Roll[]) => Promise<string> | string> = {
@@ -263,29 +264,34 @@ export function setupUsageCardMessage() {
 
     /**
      * dnd5e 6.1's damage tray merges each target's options with its card's attacker defaults through the card's
-     * system data (`DamageMessageData`). midi's tray is on the usage card, so the card answers the same way: as a
-     * damage card with no defaults, until midi records the use's attacker options.
+     * system data (`DamageMessageData`). midi's tray is on the usage card, so the card answers the same way, with the
+     * use's attacker rules (`state.damageRules`).
      */
     getDamageApplicationOptions(base: DamageApplicationOptions = {}): DamageApplicationOptions {
-      return { ...base };
+      return applyDamageRules(copyDamageOptions(base), this.#damageRules());
     }
 
-    /** Whether the card's defaults include an option (dnd5e 6.1's tray): none yet */
-    hasDamageApplicationOption(_option: string, _type: string): boolean {
-      return false;
+    /** Whether the use's attacker rules include an option for a damage type (dnd5e 6.1's tray) */
+    hasDamageApplicationOption(option: string, type: string): boolean {
+      return hasDamageRule(this.#damageRules(), option, type);
     }
 
-    /** dnd5e 6.1 draws consume, refund and place template in a row of their own: midi's other-activity ones join them */
-    _prepareButtonGroups(context: Record<string, any>) {
+    #damageRules(): DamageRules | undefined {
+      return mergeDamageRules(this.midi?.state?.damageRules as Parameters<typeof mergeDamageRules>[0]);
+    }
+
+    /** dnd5e draws consume, refund and place template in a row of their own: midi's other-activity ones join them */
+    _prepareButtonGroups(context: { buttonGroups?: Record<string, unknown>, additionalButtons?: Record<string, unknown> }) {
       super._prepareButtonGroups(context);
-      if (!foundry.utils.isNewerVersion(game.system?.version ?? "0", "6.0.999")) return;
+      const groups = context.buttonGroups;
+      if (!groups) return;
       for (const action of ["consumeOtherActivity", "refundOtherActivity"]) {
-        const group = context.buttonGroups?.[action];
+        const group = groups[action];
         if (!group) continue;
         (context.additionalButtons ??= {})[action] = group;
-        delete context.buttonGroups[action];
+        delete groups[action];
       }
-      if (context.buttonGroups && foundry.utils.isEmpty(context.buttonGroups)) delete context.buttonGroups;
+      if (foundry.utils.isEmpty(groups)) delete context.buttonGroups;
     }
 
     /** dnd5e skips `shouldHideChatButton` for buttons visible to all, so midi's removal is applied here. */
@@ -494,7 +500,7 @@ export function setupUsageCardMessage() {
         case "defaultDamage": return localize(isActivityType(activity, "heal") ? "midi-qol.BaseHealingFlavor" : "midi-qol.BaseDamageFlavor");
         case "otherDamage": {
           const other = activity?.otherActivity;
-          if (other?.type === "heal") return localize("midi-qol.OtherHealingFlavor");
+          if (isActivityType(other, "heal")) return localize("midi-qol.OtherHealingFlavor");
           return other?.midiProperties?.displayActivityName ? localize(other.name ?? "") : localize("midi-qol.OtherDamageFlavor");
         }
         case "bonusDamage": return `(${rolls.map(r => foundry.utils.getProperty(r, "options.flavor") ?? foundry.utils.getProperty(r, "options.type"))})`;

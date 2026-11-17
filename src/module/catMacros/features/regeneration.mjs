@@ -11,7 +11,7 @@ const FLAG = 'regenerationDamaged';
 async function damaged({document: item, ditem}) {
     const c = item.flags?.[MODULE]?.regeneration;
     if (!c || !ditem) return;
-    const types = new Set((ditem.damageDetail ?? []).filter(d => (d.value ?? 0) > 0).map(d => d.type));
+    const types = new Set((ditem.calculatedDamages ?? []).filter(d => (d.value ?? 0) > 0).map(d => d.type));
     const state = (c.suppressTypes ?? []).some(t => types.has(t)) ? 'suppressed' : (c.reducedTypes ?? []).some(t => types.has(t)) ? 'reduced' : null;
     if (!state || item.getFlag(MODULE, FLAG) === 'suppressed' || item.getFlag(MODULE, FLAG) === state) return;
     await item.setFlag(MODULE, FLAG, state);

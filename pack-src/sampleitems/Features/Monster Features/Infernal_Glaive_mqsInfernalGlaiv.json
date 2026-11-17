@@ -285,7 +285,7 @@
       "max": ""
     },
     "description": {
-      "value": "<p class=\"feature\">[[/attack extended]]. [[/damage average extended]]. If the target is a creature and doesn't already have an infernal wound, it is subjected to the following effect. <em>Constitution Saving Throw:</em> DC [[lookup @save.dc.value activity=4qy3fKL086OAE1xR]]. <em>Failure:</em> The target receives an infernal wound. While wounded, the target loses [[/damage average activity=IS4utGV80LpDrjvt]] Hit Points at the start of each of its turns. The wound closes after 1 minute, after a spell restores Hit Points to the target, or after the target or a creature within 5 feet of it takes an action to stanch the wound, doing so by succeeding on a [[/check format=long activity=KNWa0TFhANjmQCds]].</p><div class=\"cat-description\"><p><em>midi-qol: A creature hit that has no infernal wound makes the wound save (Con, DC 12); on a failure it is wounded: it loses 1d10 hit points at the start of each of its turns. The wound closes after 1 minute, when a spell restores hit points to it, or when it or a creature within 5 feet succeeds on a Medicine check against DC 12 (a Medicine roll with the creature targeted, or the Stabilize action). The save, hit point loss, duration and Medicine DC are Cat Kit configuration options.</em></p><p><em>Automation requires Coven's Automation Toolkit (CAT).</em></p></div>",
+      "value": "<p class=\"feature\">[[/attack extended]]. [[/damage average extended]]. If the target is a creature and doesn't already have an infernal wound, it is subjected to the following effect. <em>Constitution Saving Throw:</em> DC [[lookup @save.dc.value activity=4qy3fKL086OAE1xR]]. <em>Failure:</em> The target receives an infernal wound. While wounded, the target loses [[/damage average activity=IS4utGV80LpDrjvt]] Hit Points at the start of each of its turns. The wound closes after 1 minute, after a spell restores Hit Points to the target, or after the target or a creature within 5 feet of it takes an action to stanch the wound, doing so by succeeding on a [[/check format=long activity=KNWa0TFhANjmQCds]].</p><div class=\"cat-description\"><p><em>midi-qol: A creature hit that has no infernal wound makes the wound save (Con, DC 12); on a failure it is wounded: it loses 1d10 hit points at the start of each of its turns. The wound closes after 1 minute, when a spell restores hit points to it, or when it or a creature within 5 feet succeeds on a Medicine check against DC 12 (a Medicine roll with the creature targeted). The save, hit point loss, duration and Medicine DC are Cat Kit configuration options.</em></p><p><em>Automation requires Coven's Automation Toolkit (CAT).</em></p></div>",
       "chat": ""
     },
     "identifier": "infernal-glaive",
@@ -425,7 +425,7 @@
     },
     "cat": {
       "automation": {
-        "version": "14.6.9",
+        "version": "14.7.0",
         "npc": true
       },
       "macros": {

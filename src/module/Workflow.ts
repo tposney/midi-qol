@@ -2,8 +2,8 @@ import { warn, debug, log, i18n, i18nFormat, busyWait, MESSAGE_TYPES, error, deb
 import { MidiTeleportActivity, TeleportOption } from "./activities/TeleportActivity.js";
 import { decodeWorkflowOptions, encodeWorkflowOptions, inheritableWorkflowOptions } from "./lib/workflowOptionsCodec.js";
 import { eventModifiers } from "./lib/rollKeys.js";
-import { TokenDocumentSet, hookTarget } from "./lib/tokenDocumentSet.js";
-import { CardRecords, RECORD_SETS, RecordSet, RecordFacts, STATE_KEYS, StateKey, attributionMap, attributionTriples, cardMidi, rollTypeOf, cardOtherConsumption, cardPreSelected, messagesFrom, recordList, recordPath, storedMidiFlag } from "./lib/cardState.js";
+import { TokenDocumentSet, hookTarget, tokenOf } from "./lib/tokenDocumentSet.js";
+import { CardRecords, RECORD_SETS, RecordSet, RecordFacts, STATE_KEYS, StateKey, attributionMap, attributionTriples, cardMidi, rollTypeOf, cardOtherConsumption, cardPreSelected, messagesFrom, recordList, recordPath, recordPathOfUuid, storedMidiFlag } from "./lib/cardState.js";
 import { preferredActiveGM, socketlibSocket, timedAwaitExecuteAsGM, timedExecuteAsGM, unTimedExecuteAsGM } from "./GMAction.js";
 import { beginPlayerWait, rollDialogsFor, trackPlayerWait } from "./lib/playerWaits.js";
 import { installedModules } from "./setupModules.js";
@@ -25,7 +25,7 @@ import {
   expireMyEffects,
   validTargetTokens,
   userTargetsKeepingUndrawn,
-  healingButtonKey,
+  HEALING_BUTTON_KEY,
   isActivityType,
   getOrCreateTokenForActorAsSet,
   doReactions,
@@ -83,6 +83,7 @@ import {
   getSaveMultiplierForActivity,
   checkActivityRange,
   isRangeCheckable,
+  checkDistance,
   getDistance,
   getActivityAutoTargetAction,
   activityHasEmanationNoTemplate,
@@ -133,6 +134,7 @@ import { AnyMutableObject, AnyObject, EmptyObject, InexactPartial } from "fvtt-t
 import Token = foundry.canvas.placeables.Token;
 import { MidiTransformActivity } from "./activities/TransformActivity.js";
 import { computeAttackAdvantage, MidiAttackActivity } from "./activities/AttackActivity.js";
+import { collectDamageRules, DamageRules, mergeDamageRules, sameDamageRules, storeDamageRules } from "./lib/damageRules.js";
 import { RollModifierTracker, CriticalModifierFlags, computeCriticalModifiers, computeTargetCriticalModifiers, getFlagDisplayName } from "./lib/RollModifierTracker.js";
 
 /**
@@ -260,6 +262,7 @@ class CardStateStore {
       const value = state[key];
       if (value === undefined || value === null) continue;
       if (key === "workflowOptions") this.#cache.set(key, decodeWorkflowOptions(foundry.utils.deepClone(value)));
+      else if (key === "damageRules") this.#cache.set(key, mergeDamageRules(value as Parameters<typeof mergeDamageRules>[0]));
       else this.#cache.set(key, foundry.utils.deepClone(value));
     }
     for (const key of ["attackRollCount", "damageRollCount"] as const) if (midi[key] != null) this.#cache.set(key, midi[key]);
@@ -270,7 +273,7 @@ class CardStateStore {
       const uuids = records.filter(record => record[field]).map(record => record.uuid);
       if (uuids.length) this.#cache.set(`recordValues.${field}`, new Set(uuids));
     }
-    // Every member, drawn or not (TokenDocumentSet); a record whose token no longer exists is left alone
+    // Every member, with a canvas token or not (TokenDocumentSet); a record whose token no longer exists is left alone
     for (const field of Object.keys(RECORD_SETS) as RecordSet[]) {
       const tokens = new TokenDocumentSet(records.filter(record => record[field]).map(record => record.uuid));
       this.#cache.set(field, tokens);
@@ -328,7 +331,7 @@ class CardStateStore {
   setTokenSet(field: RecordSet, tokens: Set<TokenOrDocument> | undefined, store = true): void {
     if (tokens === undefined) this.#cache.delete(field);
     // syncTokenSets passes the cached set itself: kept, so references to it stay the workflow's; another TokenDocumentSet is
-    // copied with its members not drawn
+    // copied, keeping its members with no canvas token
     else if (tokens !== this.#cache.get(field)) this.#cache.set(field, new TokenDocumentSet(tokens as Iterable<Token.Implementation | TokenDocument.Implementation>));
     if (!store) {
       this.#unstoredSets.add(field);
@@ -347,9 +350,11 @@ class CardStateStore {
       Object.assign(leaves, { [`${at}.uuid`]: document.uuid, [`${at}.${field}`]: value });
     };
     for (const document of members) mark(document, true);
+    // By uuid: a token deleted since has no document, and its record must still lose the mark
+    const memberUuids = new Set([...members].map(document => document.uuid));
     for (const uuid of before) {
-      const document = fromUuidSync(uuid);
-      if (document instanceof TokenDocument && !members.has(document)) mark(document, false);
+      const at = memberUuids.has(uuid) ? undefined : recordPathOfUuid(uuid);
+      if (at) leaves[`${at}.${field}`] = false;
     }
     // As syncTokenSets compares (the set's uuids): midi's stand-in for an actor with no token has none and no record
     this.#cache.set(written, new Set(this.tokenSet(field).uuids));
@@ -479,6 +484,18 @@ class CardStateStore {
 
 /** A reason shown on the attack roll: a bonus part (value) or the source of advantage. */
 export interface AttackModifier { kind: "flanking" | "flanked" | "granted", label: string, value?: string, advantage?: boolean }
+
+/** The workflow's own copy of an assigned set: a TokenDocumentSet is kept, so sets assigned from one another stay shared */
+function asTokenDocumentSet(tokens: Set<TokenOrDocument> | undefined | null): TokenDocumentSet | undefined {
+  if (!tokens) return undefined;
+  return tokens instanceof TokenDocumentSet ? tokens : new TokenDocumentSet(tokens);
+}
+
+/** What a target macro is given: the target's actor, its canvas token (none on another scene or level) and its TokenDocument */
+function targetMacroOptions(target: TokenOrDocument) {
+  const tokenDocument = target instanceof TokenDocument ? target : target.document;
+  return { actor: target.actor, token: tokenOf(tokenDocument) ?? null, tokenDocument };
+}
 
 export class Workflow {
 
@@ -941,6 +958,9 @@ export class Workflow {
   get attackingToken() {
     return this.token
   }
+  get attackingTokenDocument(): TokenDocument.Implementation | undefined {
+    return this.tokenDocument;
+  }
   get tokenUuid() {
     return this.token?.document.uuid;
   }
@@ -1083,6 +1103,21 @@ export class Workflow {
   /** A damage roll on its own (rerollDamage, DamageOnlyWorkflow): targets, hits and saves given; no effects or use-level passes */
   get damageOnly(): boolean { return this.#persisted.scalar("damageOnly", false); }
   set damageOnly(damageOnly: boolean) { this.#persisted.setScalar("damageOnly", damageOnly); }
+
+  /** dnd5e 6.1's attacker ignore/downgrade rules from the use's damage rolls, applied to every target's damage */
+  get damageRules(): DamageRules | undefined { return this.#persisted.scalar<DamageRules | undefined>("damageRules", undefined); }
+
+  /** Add a damage roll's rules (`rollConfig.applicationOptions`) to the use's */
+  addDamageRules(applicationOptions: Parameters<typeof mergeDamageRules>[0]): void {
+    const rules = mergeDamageRules(this.damageRules, applicationOptions);
+    if (sameDamageRules(rules, this.damageRules)) return;
+    this.#persisted.setScalar("damageRules", rules, storeDamageRules);
+  }
+
+  /** The use's damage is rolled anew: its rules are that roll's, not an earlier roll's as well */
+  clearDamageRules(): void {
+    if (this.damageRules) this.#persisted.setScalar("damageRules", undefined, storeDamageRules);
+  }
 
   /**
    * @deprecated Use workflow.attackRollModifierTracker.critical.isForced instead
@@ -1494,6 +1529,8 @@ export class Workflow {
   set criticalSaves(criticalSaves: Set<TokenOrDocument> | undefined) { this.#persisted.setTokenSet("criticalSave", criticalSaves); }
   get advantageSaves(): TokenDocumentSet { return this.#persisted.tokenSet("advantageSave"); }
   set advantageSaves(advantageSaves: Set<TokenOrDocument> | undefined) { this.#persisted.setTokenSet("advantageSave", advantageSaves); }
+  get disadvantageSaves(): TokenDocumentSet { return this.#persisted.tokenSet("disadvantageSave"); }
+  set disadvantageSaves(disadvantageSaves: Set<TokenOrDocument> | undefined) { this.#persisted.setTokenSet("disadvantageSave", disadvantageSaves); }
   saveRequests: Record<string, (value: any) => void>;
   /** What each chat-card save request asks for, by its key in saveRequests */
   saveRequestKinds: Record<string, SaveRequestKind>;
@@ -1680,7 +1717,7 @@ export class Workflow {
   get workflowType() { return "BaseWorkflow" };
 
   setTargets(targets: Set<TokenOrDocument>) {
-    // A token set: a plain copy of one would be its drawn Tokens
+    // A token set: a plain copy of one would be its canvas tokens
     this.targets = new TokenDocumentSet(targets);
     this.saves = new Set();
     this.failedSaves = new TokenDocumentSet(this.targets)
@@ -1688,6 +1725,7 @@ export class Workflow {
     this.superSavers = new Set();
     this.semiSuperSavers = new Set();
     this.advantageSaves = new Set();
+    this.disadvantageSaves = new Set();
     this.criticalSaves = new Set();
     this.fumbleSaves = new Set();
     this.hitTargetsEC = new Set();
@@ -1710,14 +1748,15 @@ export class Workflow {
   /** How the use ended up, for the stages after it: "ok" unless one of the genuine early exits or every target missed */
   outcome: WorkflowOutcome = "ok";
   longRangeAttack: boolean | undefined;
-  preSelectedTargets: TokenDocumentSet;
+  #preSelected = new TokenDocumentSet();
+  get preSelectedTargets(): TokenDocumentSet { return this.#preSelected; }
+  set preSelectedTargets(tokens: Set<TokenOrDocument>) { this.#preSelected = asTokenDocumentSet(tokens) ?? new TokenDocumentSet(); }
   postSummonHookId: number | undefined;
   summonedCreatures: TokenDocument.Implementation[] | undefined;
   transformedActorUuids: string[] | undefined;
   /** A teleport activity's moves: dnd5e's TeleportMovementResult list (token, plan, moved). */
   teleportResults: { token: Token.Implementation, plan: unknown, moved: boolean }[] | undefined;
   transformedActors: Actor.Implementation[] | undefined;
-  disadvantageSaves: TokenDocumentSet | undefined;
   saveResults: Roll[] | undefined; /* D20Roll */
   stateTransitionCount: number | undefined;
   /** Running performState calls: above 0 while the workflow executes, 0 when it is paused, finished or failed. */
@@ -1734,7 +1773,9 @@ export class Workflow {
     return getActivityAutoTargetAction(this.activity) !== "none" && activityHasAreaTarget(this.activity);
   }
   whisperAttackCard: boolean | undefined;
-  effectTargets: TokenDocumentSet | undefined;
+  #effectTargets: TokenDocumentSet | undefined;
+  get effectTargets(): TokenDocumentSet | undefined { return this.#effectTargets; }
+  set effectTargets(tokens: Set<TokenOrDocument> | undefined) { this.#effectTargets = asTokenDocumentSet(tokens); }
   // Deferred other activity damage rolling - stored when consumption needs to be checked first
   otherDamageConfig: RollProcessConfig | undefined;
   otherDamageDialog: RollDialogConfig | undefined;
@@ -1742,9 +1783,15 @@ export class Workflow {
   activationFails: TokenDocumentSet | undefined;
   otherActivationMatches: TokenDocumentSet | undefined;
   otherActivationFails: TokenDocumentSet | undefined;
-  otherEffectTargets: TokenDocumentSet | undefined;
-  effectTargetsOnSave: TokenDocumentSet | undefined;
-  otherEffectTargetsOnSave: TokenDocumentSet | undefined;
+  #otherEffectTargets: TokenDocumentSet | undefined;
+  get otherEffectTargets(): TokenDocumentSet | undefined { return this.#otherEffectTargets; }
+  set otherEffectTargets(tokens: Set<TokenOrDocument> | undefined) { this.#otherEffectTargets = asTokenDocumentSet(tokens); }
+  #effectTargetsOnSave: TokenDocumentSet | undefined;
+  get effectTargetsOnSave(): TokenDocumentSet | undefined { return this.#effectTargetsOnSave; }
+  set effectTargetsOnSave(tokens: Set<TokenOrDocument> | undefined) { this.#effectTargetsOnSave = asTokenDocumentSet(tokens); }
+  #otherEffectTargetsOnSave: TokenDocumentSet | undefined;
+  get otherEffectTargetsOnSave(): TokenDocumentSet | undefined { return this.#otherEffectTargetsOnSave; }
+  set otherEffectTargetsOnSave(tokens: Set<TokenOrDocument> | undefined) { this.#otherEffectTargetsOnSave = asTokenDocumentSet(tokens); }
   otherDamageTotal: number | undefined;
   bonusDamageTotal: number | undefined;
   needsHitTargetsDisplayed: boolean = true;
@@ -1762,6 +1809,8 @@ export class Workflow {
   activeDefenceDC: number | undefined;
   /** What midi's damage calculation actually applied, per target uuid. Set by `processDamageRoll`. */
   midiTargetDetail: Record<string, Record<string, unknown>> | undefined;
+  /** Each target's damage entries, one per damage list (other damage may have its own), by token uuid (processDamageRoll); not stored */
+  targetDamage: Record<string, DamageListEntry[]> | undefined;
   targetSaveDetails: Record<string, SaveDetails> | undefined;  // Per-target SaveDetails for attribution tracking
 
   /** Get save rolls keyed by target UUID - derived from targetSaveDetails */
@@ -1847,7 +1896,7 @@ export class Workflow {
       if (!this.token) {
         this.token = getOrCreateTokenForActor(this.actor);
       }
-      // Kept as a token set: a plain copy would read as the drawn Tokens only
+      // Kept as a token set: a plain copy would read as the canvas tokens only
       const given = targets ? new TokenDocumentSet(targets) : undefined;
       if (given?.count) this.targets = given;
       if (speaker) this.speaker = speaker;
@@ -2233,7 +2282,7 @@ export class Workflow {
     const tokens = computeActivityTemplateTargets(activity ?? this.activity, this.templateUuids);
     if (!tokens) return;
     updateUserTargets(tokens.map(t => t.id).filter(Boolean) as string[]);
-    // Creatures on other levels reached through an opening aren't drawn, so they join the use's targets, not the user's
+    // Creatures on other levels reached through an opening have no canvas token, so they join the use's targets, not the user's
     const offLevel = computeOffLevelTemplateTargets(activity ?? this.activity, this.templateUuids);
     this.setTargets(new Set<TokenOrDocument>([...(game.user?.targets ?? []), ...offLevel]));
   }
@@ -2800,7 +2849,7 @@ export class Workflow {
       await Workflow.removeItemCardButtons(this.itemCardUuid, { removeConfirmButtons: true });
     }
     if (!this.damageOnly && getActivityAutoTargetAction(this.activity) === "none" && activityHasAreaTarget(this.activity) && !this.activity.attack) {
-      // The user's targets, keeping the use's that aren't drawn (another level or scene; a macro's): they can't be the user's
+      // The user's targets, keeping those of the use with no canvas token (another level or scene; a macro's): they can't be the user's
       this.targets = validTargetTokens(userTargetsKeepingUndrawn(this.targets));
       this.hitTargets = new TokenDocumentSet(this.targets);
       this.hitTargetsEC = new Set();
@@ -3070,12 +3119,12 @@ export class Workflow {
   /** The targets the other activity's and the ammunition's damage apply to, each by its own use condition. */
   async buildOtherDamageMatches(): Promise<void> {
     const targets = this.activity.attack ? this.hitTargets.union(this.hitTargetsEC) : this.targets;
-    // A condition is evaluated against the target's Token; without one every target matches, with a Token or not
+    // Every target, with a canvas token or not: a condition is evaluated against its Token, or its TokenDocument when it has none
     const matching = async (condition: string | undefined) => {
       const matches = new TokenDocumentSet();
       for (const document of targets.documents) {
-        const token = targets.placeableOf(document);
-        if (!condition || (token && await evalActivationCondition(this, condition, token, { async: true, errorReturn: false }))) matches.add(token ?? document);
+        const target = targets.placeableOf(document) ?? document;
+        if (await evalActivationCondition(this, condition, target, { async: true, errorReturn: false })) matches.add(target);
       }
       return matches;
     };
@@ -3217,7 +3266,7 @@ export class Workflow {
   /** Which targets get the activity's, the other activity's and the ammunition's effects (applied and on save) */
   async effectsSelectTargets(ammo: Awaited<ReturnType<Workflow["effectsMatchTargets"]>>) {
     const { ammunitionEffectCondition, ammunitionHasSave, ammunitionActivationMatches } = ammo;
-    // By document, so targets not drawn (another scene or level) get their effects too
+    // By document, so targets with no canvas token (another scene or level) get their effects too
     const within = (set: TokenDocumentSet, keep: TokenDocumentSet) => new TokenDocumentSet(set.documents.filter(document => keep.has(document)));
     const allHits = this.hitTargets.union(this.hitTargetsEC);
     this.effectTargets = new TokenDocumentSet();
@@ -3439,16 +3488,11 @@ export class Workflow {
         doEffectsData.context.damageTotal = tokenDamages.totalDamage;
         doEffectsData.damage = tokenDamages.hpDamage;
         doEffectsData.context.damageApplied = tokenDamages.hpDamage;
-        doEffectsData.context.damageComponents = [tokenDamages.damageDetails["combinedDamage"], configSettings.singleConcentrationRoll ? [] : (tokenDamages.damageDetails["otherDamage"] ?? [])]
-          .reduce((summary, damages) => {
-            let damagesSummary = damages.reduce((damageComponents, damageEntry) => {
-              damageComponents[damageEntry.type] = damageEntry.value + (damageComponents[damageEntry.type] ?? 0);
-              return damageComponents;
-            }, {});
-            Object.keys(damagesSummary).forEach(key => {
-              summary[key] = damagesSummary[key] + (summary[key] ?? 0);
-            });
-            return summary;
+        // All of the target's damage, as macros left it: other damage may be in an entry of its own
+        doEffectsData.context.damageComponents = (this.targetDamage?.[token.uuid] ?? [tokenDamages]).flatMap(entry => entry.calculatedDamages)
+          .reduce((components: Record<string, number>, damage) => {
+            components[damage.type] = damage.value + (components[damage.type] ?? 0);
+            return components;
           }, {});
       }
 
@@ -4067,7 +4111,7 @@ export class Workflow {
     this.fumbleSaves = new Set();
     this.failedSaves = this.activity.hasAttack ? new TokenDocumentSet(this.hitTargets) : new TokenDocumentSet(this.targets);
     this.advantageSaves = new Set();
-    this.disadvantageSaves = new TokenDocumentSet();
+    this.disadvantageSaves = new Set();
     this.saveDisplayData = [];
     this.saveResults = [];
   };
@@ -4095,7 +4139,7 @@ export class Workflow {
     if (!this.actor) return;
 
     const actType = this.activity.actionType || "none";
-    // Sight and nearby foes are measured to the first drawn target
+    // Sight and nearby foes are measured to the first target with a canvas token
     const firstTarget = this.targets.tokens[0];
 
     // Determine ability for weapon attacks (mwak/rwak use str/dex)
@@ -4191,7 +4235,7 @@ export class Workflow {
           } else if (this.item.system.properties?.has("thr")) {
             // @ts-expect-error no dnd5e-types
             const meleeRange = this.item.system.range.reach ?? 5;
-            if (getDistance(this.token, firstTarget, { wallsBlock: false }) <= meleeRange) nearbyFoe = false;
+            if (checkDistance(this.token, firstTarget, meleeRange, { wallsBlock: false })) nearbyFoe = false;
             else nearbyFoe = checkNearby(-1, getToken(this.token), configSettings.optionalRules.nearbyFoe, { includeIncapacitated: false, canSee: true });
           }
           if (nearbyFoe) {
@@ -4251,7 +4295,7 @@ export class Workflow {
         const fails = target?.actor?.flags[MODULE_ID]?.fail?.critical ?? {};
 
         // Special case: grants.critical.range
-        // Measured to a drawn target (getDistance gives -1 for one not drawn)
+        // Measured to a target with a canvas token (getDistance gives -1 for one with no canvas token)
         const drawn = this.hitTargets.placeableOf(target);
         if (Number.isNumeric(grants.range) && drawn && getDistance(drawn, this.token, { wallsBlock: false }) <= Number(grants.range)) {
           this.attackRollModifierTracker.critical.force('grants.critical.range', `${getFlagDisplayName('grants.critical.range')} (${targetName})`);
@@ -4325,7 +4369,7 @@ export class Workflow {
     if (this.targets.count !== 1) return false;
 
     const token = (fromUuidSync(this.tokenUuid) as TokenDocument)?.object;
-    // Flanking is measured on the canvas: none for a target not drawn
+    // Flanking is measured on the canvas: none for a target with no canvas token
     const target = this.targets.tokens[0];
     if (!target) return false;
     const flankingMode = checkRule("checkFlanking") as string;
@@ -4428,7 +4472,7 @@ export class Workflow {
 
   async triggerTargetMacros(triggerList: string[], targets: TokenDocumentSet | Set<TokenOrDocument> = this.targets, options: { saved?: boolean } = {}) {
     let results: Record<string, unknown[]> = {};
-    // Every target, drawn or not: macros are given hookTarget's Token or TokenDocument
+    // Every target, with a canvas token or not (targetMacroOptions)
     for (let target of targets instanceof TokenDocumentSet ? targets.documents : targets) {
       const uuid = getTokenDocument(target)?.uuid ?? "";
       results[uuid] = [];
@@ -4443,7 +4487,7 @@ export class Workflow {
             actorOnUseMacros?.getMacros("isTargeted"),
             "TargetOnUse",
             "isTargeted",
-            { actor: target.actor, token: hookTarget(target) })
+            targetMacroOptions(target))
           );
         }
       }
@@ -4452,7 +4496,7 @@ export class Workflow {
           actorOnUseMacros?.getMacros("isPreAttacked"),
           "TargetOnUse",
           "isPreAttacked",
-          { actor: target.actor, token: hookTarget(target) })
+          targetMacroOptions(target))
         );
       }
 
@@ -4461,7 +4505,7 @@ export class Workflow {
           actorOnUseMacros?.getMacros("isAttacked"),
           "TargetOnUse",
           "isAttacked",
-          { actor: target.actor, token: hookTarget(target) })
+          targetMacroOptions(target))
         );
       }
       if (triggerList.includes("postTargetEffectApplication")) {
@@ -4469,7 +4513,7 @@ export class Workflow {
           actorOnUseMacros?.getMacros("postTargetEffectApplication"),
           "TargetOnUse",
           "postTargetEffectApplication",
-          { actor: target.actor, token: hookTarget(target) })
+          targetMacroOptions(target))
         );
       }
       // 13.0.39 isDamaged Hook is always called inside processDamageRoll, so don't do it here
@@ -4479,7 +4523,7 @@ export class Workflow {
       //    actorOnUseMacros?.getMacros("isDamaged"),
       //    "TargetOnUse",
       //    "isDamaged",
-      //    { actor: target.actor, token: hookTarget(target) })
+      //    targetMacroOptions(target))
       //  );
       // }
       if (wasHit && triggerList.includes("isHit")) {
@@ -4487,7 +4531,7 @@ export class Workflow {
           actorOnUseMacros?.getMacros("isHit"),
           "TargetOnUse",
           "isHit",
-          { actor: target.actor, token: hookTarget(target) })
+          targetMacroOptions(target))
         );
       }
       if (wasMissed && triggerList.includes("isMissed")) {
@@ -4495,7 +4539,7 @@ export class Workflow {
           actorOnUseMacros?.getMacros("isMissed"),
           "TargetOnUse",
           "isMissed",
-          { actor: target.actor, token: hookTarget(target) })
+          targetMacroOptions(target))
         );
       }
       if (triggerList.includes("preTargetDamageApplication")) {
@@ -4503,7 +4547,7 @@ export class Workflow {
           actorOnUseMacros?.getMacros("preTargetDamageApplication"),
           "TargetOnUse",
           "preTargetDamageApplication",
-          { actor: target.actor, token: hookTarget(target) })
+          targetMacroOptions(target))
         );
       }
 
@@ -4512,7 +4556,7 @@ export class Workflow {
           actorOnUseMacros?.getMacros("preTargetSave"),
           "TargetOnUse",
           "preTargetSave",
-          { actor: target.actor, token: hookTarget(target) })
+          targetMacroOptions(target))
         );
       }
 
@@ -4521,7 +4565,7 @@ export class Workflow {
           actorOnUseMacros?.getMacros("isAboutToSave"),
           "TargetOnUse",
           "isAboutToSave",
-          { actor: target.actor, token: hookTarget(target) })
+          targetMacroOptions(target))
         );
       }
 
@@ -4532,7 +4576,7 @@ export class Workflow {
           actorOnUseMacros?.getMacros("isSaveSuccess"),
           "TargetOnUse",
           "isSaveSuccess",
-          { actor: target.actor, token: hookTarget(target) })
+          targetMacroOptions(target))
         );
       }
       if (this.activityHasSave && triggerList.includes("isSaveFailure") && (!this.saves.has(target) || options.saved === false)) {
@@ -4540,7 +4584,7 @@ export class Workflow {
           actorOnUseMacros?.getMacros("isSaveFailure"),
           "TargetOnUse",
           "isSaveFailure",
-          { actor: target.actor, token: hookTarget(target) })
+          targetMacroOptions(target))
         );
       }
       if (this.activityHasSave && triggerList.includes("isSave")) {
@@ -4548,7 +4592,7 @@ export class Workflow {
           actorOnUseMacros?.getMacros("isSave"),
           "TargetOnUse",
           "isSave",
-          { actor: target.actor, token: hookTarget(target) })
+          targetMacroOptions(target))
         );
       }
     }
@@ -4578,7 +4622,7 @@ export class Workflow {
 
   async expireTargetEffects(expireList: string[]) {
     if (debugEnabled > 0) warn(`expireTargetEffects | ${expireList}`)
-    // Every target, drawn or not: a target on another scene or level still has its effects expired
+    // Every target, with a canvas token or not: a target on another scene or level still has its effects expired
     for (let target of this.targets.documents) {
       const expiryReason: string[] = [];
       const appliedEffects = getAppliedEffects(target.actor, { includeEnchantments: true });
@@ -4791,7 +4835,7 @@ export class Workflow {
     let superSaverUuids: string[] = [];
     let semiSuperSavers: TokenDocument[] = [];
     let semiSuperSaverUuids: string[] = [];
-    // Every member, drawn or not
+    // Every member, with a canvas token or not
     for (let target of this.targets.documents) {
       targets.push(target);
       targetUuids.push(target.uuid);
@@ -4997,7 +5041,7 @@ export class Workflow {
       item: context.macroItem,
       macroActivity: context.macroActivity,
       macro: DAE.createSyntheticMacro(
-        `return await ${func}({ speaker, actor, token, character, item, rolledItem, macroItem, args, scope, workflow })`,
+        `return await ${func}({ speaker, actor, token, tokenDocument, character, item, rolledItem, macroItem, args, scope, options, workflow })`,
         "function call"
       )
     };
@@ -5101,6 +5145,8 @@ export class Workflow {
     if (!macro?.command) return undefined;
 
     const actorToUse = (options.actor as Actor.Implementation | undefined) ?? this.actor;
+    const token = tokenForActor(actorToUse);
+    const targetOptions: { token?: Token.Implementation | null; tokenDocument?: TokenDocument.Implementation } = options;
     const scope: Macro.UnknownScope = {
       workflow: this,
       rolledActivity: this.activity,
@@ -5111,9 +5157,18 @@ export class Workflow {
       args: [workflowContext],
       options: options,
       actor: actorToUse,
-      token: tokenForActor(actorToUse),
+      // A target macro's are the target's (targetMacroOptions): no Token for a target with no canvas token
+      token: targetOptions.tokenDocument ? targetOptions.token : token,
+      tokenDocument: targetOptions.tokenDocument ?? token?.document ?? (actorToUse === this.actor ? this.tokenDocument : undefined),
       midiData: workflowContext
     };
+    if (targetOptions.tokenDocument && !targetOptions.token) {
+      // Foundry gives a macro with no token the canvas token with the speaker's token id, which another scene's token
+      // can share (a copied scene)
+      const speaker = ChatMessage.getSpeaker({ actor: actorToUse, token: targetOptions.tokenDocument });
+      if (speaker.token && canvas?.tokens?.get(speaker.token)) speaker.token = null;
+      scope.speaker = speaker;
+    }
 
     return macro.execute(scope);
   }
@@ -5247,7 +5302,7 @@ export class Workflow {
 
   #damageButtonText(): string {
     let text = (this.rollOptions.isCritical || this.isCritical) ? i18n("DND5E.Critical")
-      : i18n(this.activity.actionType === "heal" ? healingButtonKey() : "DND5E.Damage");
+      : i18n(this.activity.actionType === "heal" ? HEALING_BUTTON_KEY : "DND5E.Damage");
     if (this.rollOptions.fastForwardDamage && configSettings.showFastForward) text += ` ${i18n("midi-qol.fastForward")}`;
     return text;
   }
@@ -5541,7 +5596,8 @@ export class Workflow {
     if (!tokens.length) return {};
     // midi's detail for the damage tray goes in the card's state and records (cardTargetDetail), or on the descriptors of
     // a card the workflow does not own (a damage-only workflow's)
-    const descriptors = TargetsField.getDescriptors(tokens) as Record<string, unknown>[];
+    // Wrapped as dnd5e reads a Token (`target.document`): a TokenDocument's own `document` is midi's deprecated alias
+    const descriptors = TargetsField.getDescriptors(tokens.map(document => ({ document }))) as Record<string, unknown>[];
     const details = this.buildMidiTargetDescriptors(tokens);
     if (!this.ownsCard) {
       const byToken = new Map(details.map(d => [d.token, d]));
@@ -6053,19 +6109,19 @@ export class Workflow {
       // Standard dnd5e roll with advantageMode
       if (advantageMode === 1) this.advantageSaves.add(target);
       else this.advantageSaves.delete(target);
-      if (advantageMode === -1) this.disadvantageSaves?.add(target);
-      else this.disadvantageSaves?.delete(target);
+      if (advantageMode === -1) this.disadvantageSaves.add(target);
+      else this.disadvantageSaves.delete(target);
     } else {
       // Fallback for custom rolls (e.g., Better Rolls) that set terms[0].options
       // @ts-expect-error no dnd5e-types
       if (result[0]?.terms?.[0]?.options?.advantage) this.advantageSaves.add(target);
       else this.advantageSaves.delete(target);
       // @ts-expect-error no dnd5e-types
-      if (result[0]?.terms?.[0]?.options?.disadvantage) this.disadvantageSaves?.add(target);
-      else this.disadvantageSaves?.delete(target);
+      if (result[0]?.terms?.[0]?.options?.disadvantage) this.disadvantageSaves.add(target);
+      else this.disadvantageSaves.delete(target);
     }
     // If both advantage and disadvantage, they cancel out
-    if (this.advantageSaves.has(target) && this.disadvantageSaves?.has(target)) {
+    if (this.advantageSaves.has(target) && this.disadvantageSaves.has(target)) {
       this.advantageSaves.delete(target);
       this.disadvantageSaves.delete(target);
     }
@@ -6747,10 +6803,9 @@ export class Workflow {
     if (isCritical) this.criticalSaves = this.criticalSaves.add(target);
 
     // Trigger target macros that might modify the roll
-    const token = getToken(target);
-    if (token && configSettings.allowUseMacro && this.workflowOptions.noTargetOnUseMacro !== true) {
-      const rollResults = await this.triggerTargetMacros(["isSave", "isSaveSuccess", "isSaveFailure"], new Set([token]), { saved }) as Record<string, Roll[]>;
-      const newRolls = rollResults[token.document.uuid];
+    if (configSettings.allowUseMacro && this.workflowOptions.noTargetOnUseMacro !== true) {
+      const rollResults = await this.triggerTargetMacros(["isSave", "isSaveSuccess", "isSaveFailure"], new Set([target]), { saved }) as Record<string, Roll[]>;
+      const newRolls = rollResults[getTokenDocument(target)?.uuid ?? ""];
       if (newRolls?.[0] instanceof Roll) {
         saveRolls = newRolls;
         saveRollTotal = newRolls.reduce((acc, r) => acc + (r?.total ?? 0), 0);
@@ -6969,7 +7024,7 @@ export class Workflow {
 
     // Update advantage/disadvantage tracking sets
     if (saveDetails.advantage && !saveDetails.disadvantage) this.advantageSaves = this.advantageSaves.add(target);
-    else if (saveDetails.disadvantage && !saveDetails.advantage) this.disadvantageSaves?.add(target);
+    else if (saveDetails.disadvantage && !saveDetails.advantage) this.disadvantageSaves.add(target);
 
     return saveDetails;
   }
@@ -6997,10 +7052,7 @@ export class Workflow {
     return normalized;
   }
 
-  /**
-   * update this.saves to be a Set of successful saves from the set of tokens this.hitTargets and failed saves to be the complement
-   */
-
+  /** Rolls the hit targets' saves: this.saves the ones that saved, this.failedSaves the rest */
   async checkSaves(whisper = false, simulate = false) {
     if (!simulate) await this.flushCardWrites();
     this.initSaveResults();
@@ -7012,7 +7064,7 @@ export class Workflow {
     }
 
     if (!this.saveActivity) return;
-    // Every hit target rolls, drawn or not, as its Token when it has one: cover, reactions, hooks and target macros need it
+    // Every hit target rolls, with a canvas token or not, as its Token when it has one: cover, reactions, hooks and target macros need it
     const hitSet = this.hitTargets.union(this.hitTargetsEC);
     const allHitTargets: TokenOrDocument[] = hitSet.documents.map(document => hitSet.placeableOf(document) ?? document);
     if (allHitTargets.length === 0) return;
@@ -7074,12 +7126,11 @@ export class Workflow {
         // Store per-target saveDetails for later retrieval during result processing
         const targetUuid = getTokenDocument(target)?.uuid;
         if (targetUuid && this.targetSaveDetails) this.targetSaveDetails[targetUuid] = saveDetails;
-        // preTargetSave: modules may change saveDetails/tracker before the roll. Every target, as its Token, or its
-        // TokenDocument when it has none (another scene or level); target macros run for a Token only
-        const token = getToken(target);
-        const saver = token ?? getTokenDocument(target);
+        // preTargetSave: modules and target macros may change saveDetails/tracker before the roll. Every target, as its
+        // Token, or its TokenDocument when it has none (another scene or level)
+        const saver = getToken(target) ?? getTokenDocument(target);
         await asyncHooksCallAll("midi-qol.preTargetSave", saver && hookTarget(saver), this, saveDetails);
-        if (token && configSettings.allowUseMacro && this.workflowOptions.noTargetOnUseMacro !== true) await this.triggerTargetMacros(["preTargetSave"], new Set([token]));
+        if (saver && configSettings.allowUseMacro && this.workflowOptions.noTargetOnUseMacro !== true) await this.triggerTargetMacros(["preTargetSave"], new Set([saver]));
 
         // Queue the save roll using the appropriate handler
         const { promise, requestCard } = this.queueTargetSaveRoll({
@@ -7309,7 +7360,7 @@ export class Workflow {
         actorOnUseMacros?.getMacros(healedDamaged),
         "TargetOnUse",
         healedDamaged,
-        { actor: token.actor, token: hookTarget(token) });
+        targetMacroOptions(token));
       healedDamaged = damages.hpDamage < 0 ? "isHealed" : "isDamaged";  //recalculate what the total damage and trigger the correct special duration expiration.
       const expiredEffects = getAppliedEffects(token?.actor, { includeEnchantments: true }).filter(ef => {
         const specialDuration = ef.flags?.dae?.specialDuration;
@@ -7571,8 +7622,8 @@ export class Workflow {
     // Sum raw damage from non-healing types only
     let totalDamage = 0;
     for (const dl of this.damageList) {
-      if (dl.rawDamageDetail) {
-        for (const dd of dl.rawDamageDetail) {
+      if (dl.damages) {
+        for (const dd of dl.damages) {
           if (dd.value > 0 && dd.type && !GameSystemConfig.healingTypes[dd.type]) {
             totalDamage += dd.value;
           }
@@ -7592,8 +7643,8 @@ export class Workflow {
       // Record damage taken or healing received on the target actor
       if (hp !== 0 && dl.actorId) {
         const damageByType: Record<string, number> = {};
-        if (hp > 0 && dl.damageDetail) {
-          for (const dd of dl.damageDetail) {
+        if (hp > 0 && dl.calculatedDamages) {
+          for (const dd of dl.calculatedDamages) {
             if (dd.value > 0 && dd.type) {
               damageByType[dd.type] = (damageByType[dd.type] ?? 0) + dd.value;
             }
@@ -7609,15 +7660,15 @@ export class Workflow {
     const dealtByType: Record<string, number> = {};
     const appliedByType: Record<string, number> = {};
     for (const dl of this.damageList) {
-      if (dl.rawDamageDetail) {
-        for (const dd of dl.rawDamageDetail) {
+      if (dl.damages) {
+        for (const dd of dl.damages) {
           if (dd.value > 0 && dd.type && !GameSystemConfig.healingTypes[dd.type]) {
             dealtByType[dd.type] = (dealtByType[dd.type] ?? 0) + dd.value;
           }
         }
       }
-      if (dl.damageDetail) {
-        for (const dd of dl.damageDetail) {
+      if (dl.calculatedDamages) {
+        for (const dd of dl.calculatedDamages) {
           if (dd.value > 0 && dd.type && !GameSystemConfig.healingTypes[dd.type]) {
             appliedByType[dd.type] = (appliedByType[dd.type] ?? 0) + dd.value;
           }
@@ -7764,7 +7815,7 @@ export class Workflow {
     this.hitDisplayData = {};
     const challengeModeArmorSet = !([undefined, false, "none"].includes((checkRule("challengeModeArmor") as string | boolean | undefined)));
     for (const targetDocument of this.targets.documents) {
-      // Not drawn (another scene or level): its actor's AC, with no cover or reactions
+      // No canvas token (another scene or level): its actor's AC, with no cover or reactions
       const drawnToken = this.targets.placeableOf(targetDocument);
       const targetToken: TokenOrDocument = drawnToken ?? targetDocument;
       let targetName = configSettings.useTokenNames && targetToken.name ? targetToken.name : targetToken.actor?.name;
@@ -8478,7 +8529,7 @@ export class ActiveDefenceWorkflow extends Workflow {
       await this.displayAttackRoll();
       await this.checkActiveAttacks(false, this.attackRoll);
       const isHitEC = false;
-      // Active defence: the drawn targets (cover, the player asked to roll)
+      // Active defence: the targets with a canvas token (cover, the player asked to roll)
       for (let targetToken of this.targets.tokens) {
         let targetAC: number | undefined;
         let adRoll: Roll | undefined;
@@ -8582,7 +8633,7 @@ export class ActiveDefenceWorkflow extends Workflow {
     const fumbleTarget = 20 - (roll.options.criticalSuccess ?? 20) + 1;
     let advantageMode = roll?.options?.advantageMode ?? D20Roll.NORMAL;
     let promises: Promise<any>[] = [];
-    // Active defence rolls are for the drawn targets; results are read back in the same order below
+    // Active defence rolls are for the targets with a canvas token; results are read back in the same order below
     for (let target of this.targets.tokens) {
       if (!target.actor) continue;  // no actor means multi levels or bugged actor - but we won't roll a save
       const targetActor = target.actor;
@@ -8817,7 +8868,7 @@ export class DamageOnlyWorkflow extends Workflow {
     }) {
     if (options.storeWorkflow === undefined) options.storeWorkflow = true;
     if (!actor) actor = token.actor ?? targets[0]?.actor;
-    // A target that isn't drawn (another level or scene) stays as its document
+    // A target with no canvas token (another level or scene) stays as its document
     const theTargets = Array.from(targets).map(t => getToken(t) ?? getTokenDocument(t)).filter(t => !!t);
     let damageRoll = roll;
     if (!damageRoll) {
@@ -8948,6 +8999,11 @@ export class DamageOnlyWorkflow extends Workflow {
       }
     }
     const whisperCard = configSettings.autoCheckHit === "whisper" || safeGetGameSetting("core", "messageMode") === "blind";
+    // No dnd5e damage roll: the attacker's rules as dnd5e would collect them for one (stored with the use). Not when
+    // the only actor there is was a target's (the constructor's fallback): its rules aren't the damage's.
+    const ruleSource = this.item?.actor ?? this.actor;
+    if (ruleSource && !this.targets.documents.some(t => t.actor?.uuid === ruleSource.uuid))
+      this.addDamageRules(collectDamageRules(ruleSource, this.item));
     if (this.actor) { // Hacky process bonus flags
       // TODO come back and fix this for dnd3
       if (this.useOther) await this.setOtherDamageRolls(await this.processDamageRollBonusFlags(this.otherDamageRolls ?? []));
@@ -8978,7 +9034,7 @@ export class DamageOnlyWorkflow extends Workflow {
 
 export class TrapWorkflow extends Workflow {
   templateLocation: { x: number, y: number, direction?: number, removeDelay?: number } | undefined;
-  saveTargets: any;
+  saveTargets: TokenDocumentSet | undefined;
   targetsPassedToConstructor: boolean;
   static get forceCreate() { return false; }
   constructor(
@@ -9170,10 +9226,10 @@ export class TrapWorkflow extends Workflow {
         t.setTarget(false, { releaseOthers: false });
       });
       game.user?.targets.clear();
-      this.saveTargets.forEach(t => {
+      for (const t of this.saveTargets.tokens) {
         t.setTarget(true, { releaseOthers: false })
         game.user?.targets.add(t)
-      })
+      }
     }
     return super.WorkflowState_RollFinished
   }

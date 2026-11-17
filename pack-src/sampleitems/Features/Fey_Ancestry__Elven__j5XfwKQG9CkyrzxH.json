@@ -98,28 +98,6 @@
       "hash": "9c60a6d851cd358db6d49808b419fc13e62f8a86",
       "sourceId": "Item.BzJwRKxexNHA6sfb"
     },
-    "itemacro": {
-      "macro": {
-        "name": "Fey Ancestry (Elven) (10.0.44)",
-        "type": "script",
-        "img": "icons/svg/dice-target.svg",
-        "scope": "global",
-        "command": "const {item: attackingItem, saveDetails: saveDetails} = wsorkflow;\nconsole.error(attackingItem, saveDetails)\nif (!attackingItem || !saveDetails) return;\nif (attackingItem.effects.some(eff=>eff.label === \"Charmed\") \n    || attackingItem.effects.some(eff=>eff.system.changes.some(c=>[\"Charmed (CE)\", \"Charmed\"].some(con=>c.value.includes(con)))))\n    saveDetails.advantage = true;",
-        "sort": 0,
-        "ownership": {
-          "default": 0
-        },
-        "flags": {},
-        "_stats": {
-          "systemId": null,
-          "systemVersion": null,
-          "coreVersion": null,
-          "createdTime": null,
-          "modifiedTime": null,
-          "lastModifiedBy": null
-        }
-      }
-    },
     "midiProperties": {
       "confirmTargets": "default",
       "autoFailFriendly": false,
@@ -158,7 +136,29 @@
     },
     "cat": {
       "automation": {
-        "version": "14.6.5"
+        "version": "14.7.0"
+      }
+    },
+    "dae": {
+      "macro": {
+        "name": "Fey Ancestry (Elven)",
+        "type": "script",
+        "img": "icons/svg/dice-target.svg",
+        "scope": "global",
+        "command": "const saveDetails = workflow?.saveDetails;\nif (!rolledItem || !saveDetails) return;\nconst charms = effect => effect.statuses?.has(\"charmed\") || effect.name === \"Charmed\"\n  || effect.system?.changes?.some(change => typeof change.value === \"string\" && change.value.includes(\"Charmed\"));\nif (rolledItem.effects.some(charms)) saveDetails.advantage = true;",
+        "sort": 0,
+        "ownership": {
+          "default": 0
+        },
+        "flags": {},
+        "_stats": {
+          "systemId": null,
+          "systemVersion": null,
+          "coreVersion": null,
+          "createdTime": null,
+          "modifiedTime": null,
+          "lastModifiedBy": null
+        }
       }
     }
   },

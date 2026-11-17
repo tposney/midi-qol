@@ -1,8 +1,8 @@
 import { Activity, RollMessageConfig } from "../../globals.js";
 import { debugEnabled, GameSystemConfig, i18n, i18nFormat, warn, moveToken } from "../../midi-qol.js";
-import { replaceDefaultActivities, configSettings } from "../settings.js";
+import { configSettings } from "../settings.js";
 import { Workflow } from "../Workflow.js";
-import { callActivityHooks, collisionLevel, completeActivityUse, convertLengthTo, getToken, pauseReactionTimeout, registerMidiActivityType, isActivityType } from "../utils.js";
+import { callActivityHooks, collisionLevel, completeActivityUse, convertLengthTo, getToken, pauseReactionTimeout, isActivityType } from "../utils.js";
 import { MidiActivityMixin, MidiActivityMixinSheet } from "./MidiActivityMixin.js";
 import { highlightTokens, TokenHighlight } from "../lib/tokenHighlight.js";
 
@@ -18,8 +18,7 @@ export function setupTeleportActivity() {
   if (debugEnabled > 0) warn("MidiQOL | TeleportActivity | setupTeleportActivity | Called");
   MidiTeleportSheet = defineMidiTeleportSheetClass(sheet);
   MidiTeleportActivity = defineMidiTeleportActivityClass(base as Activity);
-  if (replaceDefaultActivities) GameSystemConfig.activityTypes.teleport = { documentClass: MidiTeleportActivity };
-  else registerMidiActivityType("midiTeleport", MidiTeleportActivity, "teleport");
+  GameSystemConfig.activityTypes.teleport = { documentClass: MidiTeleportActivity };
 }
 
 export const teleportMoverModes = ["default", "caster", "casterAndTargets", "targets", "swap"] as const;
@@ -81,7 +80,7 @@ let defineMidiTeleportActivityClass = <T extends Activity>(ActivityClass: T) => 
     static metadata =
       foundry.utils.mergeObject(
         super.metadata, {
-        title: configSettings.activityNamePrefix ? "midi-qol.TELEPORT.Title.one" : ActivityClass.metadata.title,
+        midiTitle: "midi-qol.TELEPORT.Title.one",
         dnd5eTitle: ActivityClass.metadata.title,
         sheetClass: MidiTeleportSheet,
         // No `chatCard` (see UtilityActivity). The card's Teleport button runs midi's planning.

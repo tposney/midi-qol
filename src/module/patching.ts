@@ -103,9 +103,6 @@ export function initPatching() {
   libWrapper.register(MODULE_ID, "CONFIG.Actor.documentClass.prototype.prepareData", actorPrepareData, "WRAPPER");
   // I think this can be removed in v13 libWrapper.register(MODULE_ID, "KeyboardManager.prototype._onFocusIn", _onFocusIn, "OVERRIDE");
   libWrapper.register(MODULE_ID, "CONFIG.Actor.documentClass.prototype.getRollData", actorGetRollData, "WRAPPER");
-  // dnd5e 6.1 lets a per-type ignore or downgrade reach an All Damage trait itself (it also added damageResistanceTypes)
-  // @ts-expect-error no dnd5e-types
-  if (!CONFIG.DND5E.damageResistanceTypes) libWrapper.register(MODULE_ID, "CONFIG.Actor.documentClass.prototype.calculateDamage", calculateDamageAllTraits, "WRAPPER");
   libWrapper.register(MODULE_ID, "CONFIG.Actor.documentClass.prototype.toggleStatusEffect", toggleImpliedStatus, "MIXED");
   libWrapper.register(MODULE_ID, "CONFIG.Combat.documentClass.prototype._preUpdate", combatPreUpdate, "WRAPPER");
   Hooks.on("updateCombat", recoverRerolledInitiativeUses);
@@ -1016,12 +1013,6 @@ async function combatOnEndTurn(this: Combat.Implementation, wrapped, combatant: 
   await processTurnOverTime(this, combatant, false);
 }
 
-const DAMAGE_TRAIT_KEYS = { immunity: "di", resistance: "dr", vulnerability: "dv" } as const;
-
-/**
- * A per-type ignore or downgrade also reaches an "All Damage" trait: for the (synchronous) calculation the trait
- * lists the concrete damage types instead. dnd5e decides "All Damage" before, and apart from, per-type options.
- */
 /**
  * A status carried only by one of midi's statuses (Invisible from the self-ending Invisible, before or without DAE's
  * dependent condition): core finds no document to toggle, so off would do nothing and a toggle would add a second one.
@@ -1033,26 +1024,6 @@ async function toggleImpliedStatus(this: Actor.Implementation, wrapped, statusId
   if (options.active) return true;
   await this.deleteEmbeddedDocuments("ActiveEffect", carriers);
   return false;
-}
-
-function calculateDamageAllTraits(this: Actor.Implementation, wrapped, damages, options: any = {}) {
-  const perType = (value: unknown) => value instanceof Set && value.size > 0 && !value.has("ALL");
-  // @ts-expect-error no dnd5e-types
-  const traits = this.system.traits;
-  const restore: [{ value: Set<string> }, Set<string>][] = [];
-  for (const [category, key] of Object.entries(DAMAGE_TRAIT_KEYS)) {
-    const trait = traits?.[key];
-    if (!(trait?.value instanceof Set) || !trait.value.has("ALL")) continue;
-    // Downgrades act on immunity, and through it on resistance.
-    if (!perType(options.ignore?.[category]) && !(category !== "vulnerability" && perType(options.downgrade))) continue;
-    restore.push([trait, trait.value]);
-    trait.value = new Set([...trait.value, ...Object.keys(GameSystemConfig.damageTypes)].filter(t => t !== "ALL"));
-  }
-  try {
-    return wrapped(damages, options);
-  } finally {
-    for (const [trait, value] of restore) trait.value = value;
-  }
 }
 
 const BINDING_OPERATORS = new Set(["*", "/", "%"]);
@@ -1315,7 +1286,11 @@ async function doD20Roll(this: Actor.Implementation, wrapped, kind: D20RollKind,
   message.data ??= {};
   config.midiOptions ??= {};
   let rollId = config[kind.idKey];
-  const rollIds: string[] = config.midiOptions[kind.choicesKey] ?? (rollId ? [rollId] : []);
+  // An empty choice list (CAT empties it) leaves the roll's own ability, skill or tool
+  const choices: string[] | undefined = config.midiOptions[kind.choicesKey];
+  const rollIds: string[] = choices?.length ? choices : (rollId ? [rollId] : []);
+  // A check with no ability is a bare d20; dnd5e's check message requires an ability
+  if (kind.rollType === "check" && !rollIds.length) message.data.type = "base";
   let overtimeActorUuid: string | undefined;
   let preRollHookId: number | undefined;
   let postRollHookId: number | undefined;
@@ -2261,9 +2236,12 @@ export function _prepareDerivedData(this: Actor.Implementation, wrapped, ...args
       const armorDetails = this.system.attributes.ac ?? {};
       const ac = armorDetails?.value ?? 10;
       const equippedArmor = armorDetails.equippedArmor;
-      let armorAC = equippedArmor?.system.armor.value ?? 10;
+      // dnd5e's values for AC, magical bonus included unless antimagic: the item's own armor.value gets it only later
+      // in preparation (dnd5e 6.1)
+      const equippedArmorAC = equippedArmor ? (armorDetails.armor ?? equippedArmor.system.armor.value) : 10;
+      let armorAC = equippedArmorAC;
       const equippedShield = armorDetails.equippedShield;
-      const shieldAC = equippedShield?.system.armor.value ?? 0;
+      const shieldAC = equippedShield ? (armorDetails.shield ?? equippedShield.system.armor.value) : 0;
 
       if (checkRule("challengeModeArmor") !== "challenge") {
         switch (armorDetails.calc) {
@@ -2272,11 +2250,11 @@ export function _prepareDerivedData(this: Actor.Implementation, wrapped, ...args
           case 'draconic': armorAC = 13; break;
           // @ts-expect-error no dnd5e-types
           case 'natural': armorAC = (armorDetails.value ?? 10) - this.system.abilities.dex.mod; break;
-          case 'custom': armorAC = equippedArmor?.system.armor.value ?? 10; break;
+          case 'custom': armorAC = equippedArmorAC; break;
           case 'mage': armorAC = 13; break; // perhaps this should be 10 if mage armor is magic bonus
           case 'unarmoredMonk': armorAC = 10; break;
           case 'unarmoredBarb': armorAC = 10; break;
-          default: armorAC = armorDetails.equippedArmor?.system.armor.value ?? 10; break;
+          default: armorAC = equippedArmorAC; break;
         };
         const armorReduction = armorAC - 10 + shieldAC;
         const ec = ac - armorReduction;
@@ -2291,10 +2269,9 @@ export function _prepareDerivedData(this: Actor.Implementation, wrapped, ...args
           error(this);
           return;
         }
+        // dnd5e's Dex modifier as the armor allows it (none for heavy, capped for medium)
         // @ts-expect-error no dnd5e-types
-        let dexMod = this.system.abilities.dex.mod;
-        if (equippedArmor?.system.armor.type === "heavy") dexMod = 0;
-        if (equippedArmor?.system.armor.type === "medium") dexMod = Math.min(dexMod, 2);
+        const dexMod = armorDetails.dex ?? this.system.abilities.dex.mod;
         // @ts-expect-error no dnd5e-types
         this.system.attributes.ac.EC = 10 + dexMod + shieldAC;
         // @ts-expect-error no dnd5e-types

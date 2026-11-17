@@ -46,7 +46,7 @@ function targetsOf(workflow) {
     return workflow.targets.documents;
 }
 function hasSave(spell) {
-    return spell.system.activities.some(activity => activity.type === 'save' || activity.save?.ability?.size);
+    return spell.system.activities.some(activity => activity.isLike('save') || activity.save?.ability?.size);
 }
 function durationSeconds(spell) {
     return effectUtils.durationToSeconds(spell.system.duration.getEffectData());

@@ -1,4 +1,4 @@
-import {automationUtils, documentUtils, effectUtils, tokenUtils} from '../proxy.mjs';
+import {automationUtils, distanceUtils, documentUtils, effectUtils, tokenUtils} from '../proxy.mjs';
 // Casting whispers the caster whether it senses magic within 30 feet; the Sense Magic activity (identifier
 // sense-magic, the spell's Magic action) the specifics that walls blocking sight don't hide: each creature's magic
 // items by kind (a longsword, a potion: never the item's name), the magical effects on it (marked magical, or from a
@@ -71,13 +71,13 @@ function regionMagic(region) {
     const level = item?.type === 'spell' ? Math.max(1, region.flags.dnd5e?.spellLevel ?? item.system.level ?? 1) : RARITY_LEVELS[item?.system.rarity] ?? 1;
     return {text: withSchool('a magical area', school), color: school ? SCHOOL_COLORS[school] ?? OTHER_COLOR : item ? ITEM_COLOR : OTHER_COLOR, level};
 }
-// The point of the region's bounds nearest `point`, and its distance in scene units.
+// The point of the region's bounds nearest `point`, and its distance in feet.
 function nearestPoint(region, point) {
     const b = region.object?.bounds;
     if (!b) return null;
     const near = {x: Math.clamp(point.x, b.x, b.x + b.width), y: Math.clamp(point.y, b.y, b.y + b.height)};
     const grid = canvas.scene.grid;
-    return {near, distance: Math.hypot(near.x - point.x, near.y - point.y) / grid.size * grid.distance};
+    return {near, distance: distanceUtils.toFeet(canvas.scene, Math.hypot(near.x - point.x, near.y - point.y) / grid.size * grid.distance)};
 }
 // What the caster senses: creatures (seen or not) and areas bearing magic, within range and not behind walls.
 function sense(caster) {

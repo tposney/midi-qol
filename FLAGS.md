@@ -37,7 +37,7 @@ This document is a reference for `flags.midi-qol.*` flags that can be set via Ac
 - [Getting Started](/Getting%20Started.md)
 - [Macros](/MACROS.md)
 - [Readme](/README.md)
-- [Workflow Fields](/docs/workflowfields.md)
+- [Workflow Fields](/docs/workflowfields-2026-11-17.md)
 
 ---
 
@@ -198,8 +198,8 @@ details.cr >= 10
 | `flags` | Actor flags |
 | `actor.raceOrType` | Actor's race or creature type |
 | `actor.typeOrRace` | Actor's creature type or race |
-| `items` | Array of actor's item roll data |
-| `equippedItems` | Array of actor's equipped item roll data |
+| `items` | Array of actor's item roll data (each has `magicAvailable`) |
+| `equippedItems` | Array of actor's equipped item roll data (each has `magicAvailable`) |
 
 **Item Data:**
 | Path | Description |
@@ -209,6 +209,7 @@ details.cr >= 10
 | `item.attunement` | Attunement status |
 | `item.equipped` | Is item equipped |
 | `isAttuned` | Is the item attuned |
+| `magicAvailable` | dnd5e 6.1: the item's magic is available (attuned if it needs attunement, and not under antimagic) |
 
 **Target Data (when a target exists):**
 | Path | Description |
@@ -227,8 +228,8 @@ details.cr >= 10
 | `target.isHitEC` | Same as `target.isHit` |
 | `target.system` | The target actor's `system` data (not just its roll data) |
 | `target.isCombatTurn` | Is target's combat turn |
-| `target.items` | Array of target's item roll data |
-| `target.equippedItems` | Array of target's equipped item roll data |
+| `target.items` | Array of target's item roll data (each has `magicAvailable`) |
+| `target.equippedItems` | Array of target's equipped item roll data (each has `magicAvailable`) |
 | `target.canSee` | Target can see actor |
 | `target.canSense` | Target can sense actor |
 | `canSee` | Actor can see target |
@@ -297,11 +298,11 @@ These functions are available in expressions. Actor/token parameters accept UUID
 | `checkNearby(disposition, tokenOrUuid, distance, options)` | Returns true if any nearby |
 | `canSee(tokenOrUuid, targetOrUuid)` | Returns true if token can see target |
 | `canSense(tokenOrUuid, targetOrUuid)` | Returns true if token can sense target |
-| `computeDistance(token1OrUuid, token2OrUuid, options)` | Returns distance between tokens |
+| `computeDistance(token1OrUuid, token2OrUuid, options)` | Returns distance between tokens; -1 when walls block, `Infinity` when the tokens can't be measured (so `<=` comparisons are false) |
 | `fromUuidSync(uuid)` | Synchronously retrieves document by UUID |
 | `Roll` | Foundry Roll class |
 | `abs()`, `floor()`, `ceil()`, `min()`, `max()`, etc. | Math functions (use directly without `Math.` prefix) |
-| `getDistance(token1OrUuid, token2OrUuid, options)` | Returns distance between tokens using the *Distance Measurement* setting (preferred over `computeDistance`, agrees with midi's range checks) |
+| `getDistance(token1OrUuid, token2OrUuid, options)` | Returns distance between tokens using the *Distance Measurement* setting (preferred over `computeDistance`, agrees with midi's range checks); -1 when walls block, `Infinity` when the tokens can't be measured |
 | `checkDistance(token1, token2, distance, options)` | Returns true if the tokens are within `distance` |
 | `checkActivityRange(activity, tokenOrUuid, targets)` | Checks an activity's range from a token to targets |
 | `sizeNumeric(size)` | Numeric value of a size (e.g. `"med"`) |
@@ -1432,7 +1433,7 @@ The value set for optional bonus flags determines what happens when the bonus is
 
 > [!note] Optional Critical
 > The `critical` value will have no effect on checks, saves, or skills unless the following setting is enabled: <br><br>
-> `Settings > MidiQOL > Workflow Settings > Rules Tab` [(see here)](README.md#rules-tab-optional-rules) <br>
+> `Settings > MidiQOL > Workflow Settings > Rules Tab` [(see here)](README.md#rules-tab) <br>
 > (House Rule) Critical/Fumble always succeed/fail for saving throws
 
 #### ItemMacro in Optional Bonus Flags
@@ -1578,6 +1579,14 @@ Flags marked **Truthy** are read as stored values, not evaluated per use: a CUST
 
 > [!tip] Navigation
 > See the README for OverTime syntax and parameters. ([Activity Overtimes](/README.md#over-time-effects-activity-tab) or [Legacy Overtimes](/README.md#overtime-effects-flag-based))
+
+### Stanching
+
+| Flag | Access | Description |
+|------|--------|-------------|
+| `flags.midi-qol.stanch` | Direct | On an effect (its own flag, or a change with this key): a skill check ends the effect. `dc=15, skill=med, range=5, healing=spell`; a bare number is the DC. Defaults: dc 10, skill `med`, range 5 ft, healing `none` (`spell`, `magical`, `any`) |
+
+> See the README, [Stanching Wounds](/README.md#stanching-wounds-flagsmidi-qolstanch).
 
 ### Hiding and Vision
 

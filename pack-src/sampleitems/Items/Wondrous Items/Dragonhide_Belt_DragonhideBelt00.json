@@ -79,13 +79,13 @@
     },
     "cat": {
       "automation": {
-        "version": "14.6.5"
+        "version": "14.7.0"
       }
     }
   },
   "system": {
     "description": {
-      "value": "<div class=\"cat-description\"><p><em>midi-qol: +2 to all your saving throw DCs (dnd5e has no separate one for Focus features). Regain Focus rolls your Martial Arts die and restores that many Focus Points; it needs a 2024 Monk with Monk's Focus.</em></p><p><em>No rules text (not SRD; Fizban's Treasury of Dragons): give the character your own copy and apply this automation to it with CAT's medkit, which keeps your copy's description.</em></p></div>",
+      "value": "<div class=\"cat-description\"><p><em>midi-qol: +2 to all your saving throw DCs (dnd5e has no separate one for Focus features). Regain Focus rolls your Martial Arts die and restores that many Focus Points; it needs a 2024 Monk with Monk's Focus.</em></p><p><em>No rules text (not SRD; Fizban's Treasury of Dragons): give the character your own copy and apply this automation to it with CAT's CatKit, which keeps your copy's description.</em></p></div>",
       "chat": ""
     },
     "source": {

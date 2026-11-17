@@ -1,4 +1,4 @@
-import {effectUtils, tokenUtils, workflowUtils} from '../proxy.mjs';
+import {activityUtils, effectUtils, tokenUtils, workflowUtils} from '../proxy.mjs';
 import {onCreatureDeath} from './death.mjs';
 // Runs one of the item's activities from an emanation, from flags.midi-qol.auraTurn entries:
 // {activity, when: 'targetTurnStart'|'targetTurnEnd'|'ownerTurnStart'|'ownerTurnEnd'|'death', distance (ft, default the activity's template size),
@@ -22,7 +22,7 @@ function immunityKey(item, owner, entry) {
 function qualifies(item, owner, target, entry, activity) {
     if (!target?.actor || target.id === owner.id || target.parent !== owner.parent) return false;
     if (entry.when !== 'death' && (owner.actor?.statuses.has('incapacitated') || owner.actor?.statuses.has('dead'))) return false;
-    const distance = entry.distance ?? activity.target?.template?.size ?? 5;
+    const distance = entry.distance ?? activityUtils.getTemplateSize(activity) ?? 5;
     if (tokenUtils.getDistance(owner, target) > distance) return false;
     // As the emanation would: a creature with total cover from the owner is left out (as a target it would stop the use)
     if (globalThis.MidiQOL?.totalCoverTargets?.(activity, owner, [target]).length) return false;

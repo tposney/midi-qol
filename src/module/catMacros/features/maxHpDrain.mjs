@@ -15,7 +15,7 @@ function damageTaken(workflow, token, type) {
         .reduce((total, e) => {
             const lost = Math.max(0, (e.oldHP ?? 0) - (e.newHP ?? 0)) + Math.max(0, (e.oldTempHP ?? 0) - (e.newTempHP ?? 0));
             if (!type) return total + lost;
-            const typed = (e.damageDetail ?? []).filter(d => d.type === type).reduce((sum, d) => sum + Math.max(0, d.value ?? 0), 0);
+            const typed = (e.calculatedDamages ?? []).filter(d => d.type === type).reduce((sum, d) => sum + Math.max(0, d.value ?? 0), 0);
             return total + Math.min(lost, typed);
         }, 0);
 }

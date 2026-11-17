@@ -3,7 +3,6 @@
 This guide is intended for new users to midi-qol who need some guidance on setting the very many options that exist.
 
 ## Table of contents
-[TOC]
 
 ## What can midi-qol do?
 Quite a lot, depending on how you configure it; at its simplest, it can speed up rolling by reducing the number of clicks/popups. To help illustrate some of its capabilities, here's an example: a spider attacking a goblin using the base dnd5e system.  
@@ -37,7 +36,7 @@ Midi-qol is a fairly complex module with many configuration options and dependen
 
 If you are too impatient to read a getting started guide, here is the quickest way to get something working. 
   1. Install the prerequisite modules (socketlib, libwrapper and Dynamic Active Effects), midi-qol won't activate without them.
-  2. Go to configure settings and for midi-qol tick "Enable Combat Automation".
+  2. Go to configure settings and for midi-qol tick "Enable roll automation support".
   3. Navigate to the midi-qol settings and click on the workflow button.
   4. Go to the quick settings tab and click full automation and confirm the changes. Midi will now do most things out of the box when you target an opponent and roll the sword.
 
@@ -48,8 +47,8 @@ Once you've done that come back and read through the rest of the configuration g
 3. Get some midi-compatible items to make all this automation stuff work.
 
 ## Prerequisites (modules you must install)
-This version of midi-qol is for Foundry v14 (14.369 or later) with dnd5e 6.
-* Dynamic Active Effects (14.6.4 or later)
+This version of midi-qol is for Foundry v14 (14.369 or later) with dnd5e 6.1. Worlds on dnd5e 6.0 stay on midi-qol 14.6.x.
+* Dynamic Active Effects (14.6.10 or later)
 * libwrapper
 * socketlib
 
@@ -58,10 +57,10 @@ This version of midi-qol is for Foundry v14 (14.369 or later) with dnd5e 6.
 * ItemMacro
 * Times-up (duration management is now handled by DAE)
 
-Before installing any of the modules below, check that the version you get supports Foundry v14 and dnd5e 6.
+Before installing any of the modules below, check that the version you get supports Foundry v14 and dnd5e 6.1.
 
 ## Modules you really should install
-* **Coven's Automation Toolkit (CAT)** runs the automation behind many items: midi's sample items whose description ends *Automation requires Coven's Automation Toolkit (CAT)*, and the item automation modules below.
+* **Coven's Automation Toolkit (CAT)** (0.1.8 or later) runs the automation behind many items: midi's sample items whose description ends *Automation requires Coven's Automation Toolkit (CAT)*, and the item automation modules below.
 
 * **Simple Calendar** and/or **Small Time** if you want time to advance in your world.
 
@@ -106,7 +105,7 @@ Imports characters, spells, items and monsters from D&D Beyond.
 Hides the names of creatures that you don't want revealed to your players; midi's chat cards and damage tray use the name it gives them.
 
 ## Configuration Overview
-First enable combat automation in the midi-qol settings.
+First enable roll automation support in the midi-qol settings.
 The next sections cover configuring how that combat automation works; midi refers to an attack or spell cast as a workflow. You need to click on the workflow settings to manage the next set of settings.
 
 The configuration panel has 9 tabs: **GM**, **Player**, **Workflow**, **Concentration**, **Reactions**, **Misc**, **Mechanics**, **Rules**, and **Quick Settings**. Each is described below.
@@ -219,7 +218,7 @@ Often, an item will have an active effect on it which should be applied to the t
 - **Calculate Cover**: Calculate the AC bonus for targets in cover. Options: *None*, *dnd5e cover status only* (the target's Half/Three-Quarters/Total Cover status) or a compatible cover module
 - **Vision test point height**: Which elevation to test for token visibility. Options: *Center*, *Top*
 - **Template Origin Height**: The height of the caster that activity templates are measured from: a sphere is centred on it, a cylinder, cube or line stands on it. Options: *Caster's base*, *Caster's top*, *Caster's eye level*. An activity can override this in its Region settings
-- **Occlude upper floor surfaces** / **Dim lower floors through surface holes**: For multi-level scenes, how floors above and below are drawn when viewed from a lower or upper floor
+- **Occlude upper floor surfaces**: For multi-level scenes, upper floor surfaces are transparent when viewed from a lower floor. *Mark lower floors where creatures can't be seen* is a per-player setting (Configure Settings › midi-qol)
 
 #### Configure checking saves
 Midi can automate the process of requesting and adjudicating saves.
@@ -338,7 +337,7 @@ For configuring gameplay mechanics:
 
 - **Add effect when hp falls below %**: Add a selected status when HP are less than or equal to a specified percentage of max. 0 disables. Choose the condition and whether to add it as an overlay or icon
 - **Add effect when HP = 0**: As above, but for 0hp. Separate settings for Player Controlled and GM Controlled tokens. Options: *Do Not Update*, *Add effect as overlay*, *Add effect as icon*. Also includes a "Mark defeated in combat tracker" checkbox
-- **Enforce death saves**: A character at 0 hit points that takes damage suffers a death saving throw failure, two from a critical hit, and three (death) if the damage equals or exceeds its hit point maximum. At three it is marked dead as for a failed death save; undo on the damage card restores the count and status
+- **Enforce death saves**: A character at 0 hit points that takes damage suffers a death saving throw failure, two from a critical hit, and three (death) if the damage equals or exceeds its hit point maximum. At three it is marked dead as for a failed death save; undo on the damage card restores the count and status A character dropped to 0 hit points dies outright if the damage left over equals or exceeds its hit point maximum (massive damage); not with the Vitality Item.
 - **Which ability checks / ability saves / skill checks are rolled blind**: Three settings choosing which rolls are always blind (death saves included)
 - **Blind roll display**: How those rolls appear to players: *Hidden* (players see nothing) or *Obscured* (the card is shown with the result as ??)
 - **Expire 1Hit/1Attack/1Action on roll**: Don't wait for damage roll before expiring attack/hit/action special duration effects
@@ -365,7 +364,7 @@ For configuring optional game rules:
 
 ![Rules1](GettingStartedPics/Rules1.png)
 
-- **When an Incapacitated actor takes an action**: Options: *Do nothing*, *Enforce no actions*, *Post a warning only*
+- **When an Incapacitated actor takes an action**: Options: *Allow it*, *Enforce no actions*, *Post a warning only*
 - **Check weapon range when attacking**: Options: *Do not check range*, *target range > long range: fail*, *target range > long range: disadvantage*
 - **Targets you can see**: For activities whose targets must be creatures you can see. Options: *Do not check*, *Unseen targets can't be targeted*, *Post a warning only*
 - **Force vision when checking**: Checked behaves as if all tokens have vision enabled. Unchecked means tokens without vision can see everything
@@ -392,7 +391,6 @@ For configuring optional game rules:
 - **Ranged attacks when a foe is closer than this have disadvantage**: 0 disables
 - DR-related house rules (grouped in a box):
   - *Only most effective DR applies*: Enabling means only the most effective Damage Reduction will apply. Off means DR accumulates
-  - *DRALL deducted from BOTH attack and Other damage*: Unchecked means DRALL applies just once to the total damage
 
 ![Rules2](GettingStartedPics/Rules2.png)
 

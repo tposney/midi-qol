@@ -2,7 +2,7 @@
 import { debug, debugEnabled, error, log, warn, busyWait, MODULE_ID } from "../midi-qol.js";
 import { socketlibSocket, unTimedExecuteAsGM } from "./GMAction.js";
 import { configSettings } from "./settings.js";
-import { getConcentrationEffect, getTokenDocument, isReactionItem } from "./utils.js";
+import { getConcentrationEffect, isReactionItem } from "./utils.js";
 import { UndoData, Workflow } from "./Workflow.js";
 import { messagesFrom } from "./lib/cardState.js";
 import { TroubleShooter } from "./apps/TroubleShooter.js";
@@ -179,11 +179,9 @@ export function addUndoChatCards(data: { id?: string, chatCardUuids: string[] })
 export async function saveTargetsUndoData(workflow: Workflow) {
   if (!workflow.undoData) return;
   workflow.undoData.targets = [];
-  workflow.targets.documents.forEach(t => {
-    let tokenDoc = getTokenDocument(t);
-    if (!tokenDoc) return;
-    if ((tokenDoc?.actor)?.uuid === workflow.actor.uuid) return;
-    workflow.undoData!.targets!.push({ tokenUuid: tokenDoc?.uuid, actorUuid: (tokenDoc?.actor)?.uuid ?? "" });
+  workflow.targets.documents.forEach(tokenDoc => {
+    if (tokenDoc.actor?.uuid === workflow.actor.uuid) return;
+    workflow.undoData!.targets!.push({ tokenUuid: tokenDoc.uuid, actorUuid: tokenDoc.actor?.uuid ?? "" });
   });
   workflow.undoData.serverTime = game.time?.serverTime;
   workflow.undoData.itemCardUuid = workflow.itemCardUuid;

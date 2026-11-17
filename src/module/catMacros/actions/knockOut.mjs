@@ -1,8 +1,10 @@
 import {actorUtils, workflowUtils} from '../proxy.mjs';
+import {modifyDamageBy} from '../../utils.js';
 // On the Knocking Out effect: a melee hit that would drop a creature to 0 hit points leaves it at 1 and Unconscious.
 async function spare({workflow, ditem}) {
     if (!workflowUtils.isAttackType(workflow, 'meleeAttack') || ditem.newHP > 0 || ditem.oldHP <= 0) return;
-    workflowUtils.preventZeroHP(ditem, {targetHP: 1});
+    // Take off the damage past temp HP and all but 1 hit point (hpDamage is capped at the hit points left)
+    modifyDamageBy({damageItem: ditem, value: (ditem.oldTempHP ?? 0) + ditem.oldHP - 1 - ditem.totalDamage, type: 'none', reason: 'Knock Out'});
     workflowUtils.setWorkflowProperty(workflow, 'knockedOut', [...(workflowUtils.getWorkflowProperty(workflow, 'knockedOut') ?? []), ditem.actorUuid]);
 }
 async function applyKnockOut({workflow}) {

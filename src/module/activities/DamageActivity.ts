@@ -2,8 +2,8 @@ import { AnyMutableObject } from "fvtt-types/utils";
 import { Activity } from "../../globals.js";
 import { debugEnabled, GameSystemConfig, warn } from "../../midi-qol.js";
 import { Workflow } from "../Workflow.js";
-import { replaceDefaultActivities, configSettings } from "../settings.js";
-import { isAutoFastForward, registerMidiActivityType } from "../utils.js";
+import { configSettings } from "../settings.js";
+import { isAutoFastForward } from "../utils.js";
 import { MidiActivityMixin, MidiActivityMixinSheet } from "./MidiActivityMixin.js";
 
 export let MidiDamageActivity: ReturnType<typeof defineMidiDamageActivityClass>;
@@ -14,12 +14,7 @@ export function setupDamageActivity() {
   //@ts-expect-error
   MidiDamageSheet = defineMidiDamageSheetClass(game.system.applications.activity.DamageSheet);
   MidiDamageActivity = defineMidiDamageActivityClass(GameSystemConfig.activityTypes.damage.documentClass as Activity);
-  if (replaceDefaultActivities) {
-    // GameSystemConfig.activityTypes["dnd5eDamage"] = GameSystemConfig.activityTypes.damage;
-    GameSystemConfig.activityTypes.damage = { documentClass: MidiDamageActivity };
-  } else {
-    registerMidiActivityType("midiDamage", MidiDamageActivity, "damage");
-  }
+  GameSystemConfig.activityTypes.damage = { documentClass: MidiDamageActivity };
 }
 
 let defineMidiDamageActivityClass = <T extends Activity>(ActivityClass: T) => {
@@ -28,7 +23,7 @@ let defineMidiDamageActivityClass = <T extends Activity>(ActivityClass: T) => {
     static metadata =
       foundry.utils.mergeObject(
         super.metadata, {
-        title: configSettings.activityNamePrefix ? "midi-qol.DAMAGE.Title.one" : ActivityClass.metadata.title,
+        midiTitle: "midi-qol.DAMAGE.Title.one",
         dnd5eTitle: ActivityClass.metadata.title,
         sheetClass: MidiDamageSheet,
         usage: {

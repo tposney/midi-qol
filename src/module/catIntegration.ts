@@ -5,7 +5,7 @@ import { infernalWoundConfig } from "./catMacros/features/infernalWound.mjs";
 import { detectMagicConfig } from "./catMacros/spells/detectMagic.mjs";
 
 /** The last CAT whose getOriginActivitySync reads `effects` on a cast activity, which has none on dnd5e 6. */
-const CAT_CAST_ACTIVITY_FIX_MAX = "0.1.7";
+const CAT_CAST_ACTIVITY_FIX_MAX = "0.1.8";
 
 /**
  * Temporary, while CAT <= CAT_CAST_ACTIVITY_FIX_MAX is active: CAT's getOriginActivitySync looks for the activity holding an
@@ -33,8 +33,8 @@ function setupCATCastActivityFix() {
 /**
  * CAT offers midi's sample items through its medkit. An item with `flags.cat.automation.version` automates the item
  * of the same identifier; demos and legacy copies have none and get a type no item has, so CAT never offers them.
- * Monster features (`flags.cat.automation.npc`, or a `monsterIdentifier`: that creature's copy) are for NPCs only: their
- * source type never matches a player's class feature.
+ * A creature's copy (`monsterIdentifier`) is matched to its creature by CAT (0.1.8). Other monster features
+ * (`flags.cat.automation.npc`) are for NPCs only: their source type never matches a player's class feature.
  */
 // Automations with configuration options (the Cat Kit's Configuration), by item identifier
 const AUTOMATION_CONFIG: Record<string, object> = { ...infernalWoundConfig, ...detectMagicConfig };
@@ -45,7 +45,7 @@ function automationInfo(entry): object {
   // The item's notes block as plain text (compilePacks), shown in the medkit.
   const config = AUTOMATION_CONFIG[entry.system?.identifier];
   const notes = { ...(automation.notes ? { notes: automation.notes } : {}), ...(config ? { config } : {}) };
-  if (automation.monsterIdentifier) return { ...notes, monsterIdentifier: automation.monsterIdentifier, sourceType: "midi-qol:npc" };
+  if (automation.monsterIdentifier) return { ...notes, monsterIdentifier: automation.monsterIdentifier };
   return automation.npc ? { ...notes, sourceType: "midi-qol:npc" } : notes;
 }
 

@@ -1,7 +1,6 @@
-import { registerMidiActivityType } from "../utils.js";
 import { Activity, RollDialogConfig, RollMessageConfig, RollProcessConfig } from "../../globals.js";
 import { debugEnabled, GameSystemConfig, warn } from "../../midi-qol.js";
-import { replaceDefaultActivities, configSettings } from "../settings.js";
+import { configSettings } from "../settings.js";
 import { MidiActivityMixin, MidiActivityMixinSheet } from "./MidiActivityMixin.js";
 
 export let MidiForwardActivity: ReturnType<typeof defineMidiForwardActivityClass>;
@@ -12,12 +11,7 @@ export function setupForwardActivity() {
   //@ts-expect-error
   MidiForwardSheet = defineMidiForwardSheetClass(game.system.applications.activity.ForwardSheet);
   MidiForwardActivity = defineMidiForwardActivityClass(GameSystemConfig.activityTypes.forward.documentClass as Activity);
-  if (replaceDefaultActivities) {
-    // GameSystemConfig.activityTypes["dnd5eForward"] = GameSystemConfig.activityTypes.forward;
-    GameSystemConfig.activityTypes.forward = { documentClass: MidiForwardActivity };
-  } else {
-    registerMidiActivityType("midiForward", MidiForwardActivity, "forward");
-  }
+  GameSystemConfig.activityTypes.forward = { documentClass: MidiForwardActivity };
 }
 let defineMidiForwardSheetClass = (baseClass: any) => {
   return class MidiForwardSheet extends MidiActivityMixinSheet(baseClass) {
@@ -35,7 +29,7 @@ let defineMidiForwardActivityClass = <T extends Activity>(ActivityClass: T) => {
     static metadata =
       foundry.utils.mergeObject(
         super.metadata, {
-        title: configSettings.activityNamePrefix ? "midi-qol.FORWARD.Title.one" : ActivityClass.metadata.title,
+        midiTitle: "midi-qol.FORWARD.Title.one",
         dnd5eTitle: ActivityClass.metadata.title,
         sheetClass: MidiForwardSheet,
         usage: {

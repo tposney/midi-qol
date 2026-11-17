@@ -2,7 +2,7 @@ import {effectUtils, workflowUtils} from '../proxy.mjs';
 // Macros on the Warded effect the spell applies; the save is the spell's own Save on Target activity.
 function isHarmful(activity) {
     if (!activity) return false;
-    if (activity.type === 'attack') return true;
+    if (activity.isLike('attack')) return true;
     return activity.item?.type === 'spell' && !!activity.damage?.parts?.length;
 }
 async function targeted({document: effect, workflow}) {
@@ -10,7 +10,7 @@ async function targeted({document: effect, workflow}) {
     if (!isHarmful(workflow.activity) || workflow.activity.target?.template?.type) return;
     const target = workflow.targets.documents[0];
     if (target.disposition === workflow.token.document.disposition) return;
-    const saveActivity = effectUtils.getOriginActivitySync(effect)?.item?.system.activities.find(activity => activity.type === 'save');
+    const saveActivity = effectUtils.getOriginActivitySync(effect)?.item?.system.activities.find(activity => activity.isLike('save'));
     if (!saveActivity) return;
     const saveWorkflow = await workflowUtils.syntheticActivityRoll(saveActivity, [workflow.token.document]);
     if (!saveWorkflow?.failedSaves?.count) return;
@@ -22,7 +22,7 @@ async function targeted({document: effect, workflow}) {
 }
 async function acted({document: effect, workflow}) {
     const damaged = workflow.damageList?.some(damage => (damage.totalDamage ?? 0) > 0 && damage.actorId !== workflow.actor?.id);
-    if (workflow.activity?.type !== 'attack' && workflow.item?.type !== 'spell' && !damaged) return;
+    if (!workflow.activity?.isLike('attack') && workflow.item?.type !== 'spell' && !damaged) return;
     if (workflow.activity?.item?.id === effectUtils.getOriginActivitySync(effect)?.item?.id) return;
     await effect.delete();
 }

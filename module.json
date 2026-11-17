@@ -41,8 +41,8 @@
         "id": "dnd5e",
         "type": "system",
         "compatibility": {
-          "minimum": "6.0.6",
-          "verified": "6.0.6",
+          "minimum": "6.1.0",
+          "verified": "6.1.0",
           "maximum": "6.1.999"
         }
       }
@@ -61,7 +61,7 @@
         "type": "module",
         "manifest": "https://github.com/tposney/dae/releases/download/latest-dnd6/module.json",
         "compatibility": {
-          "minimum": "14.6.7"
+          "minimum": "14.6.10"
         }
       }
     ]
@@ -159,7 +159,7 @@
   ],
   "compatibility": {
     "minimum": "14.369",
-    "verified": "14.369",
+    "verified": "14.370",
     "maximum": "14.999"
   },
   "bugs": "https://github.com/tposney/midi-qol/issues",

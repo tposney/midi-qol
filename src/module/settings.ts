@@ -50,7 +50,6 @@ export let midiSoundSettings: any = {};
 export let midiSoundSettingsBackup: any = undefined;
 export let nsaFlag: boolean;
 export let playerControlsInvisibleTokens: boolean = false;
-export let replaceDefaultActivities: boolean = true;
 export let saveRequests = {};
 export let saveTimeouts = {};
 export let targetConfirmation: typeof defaultTargetConfirmationSettings;
@@ -143,7 +142,7 @@ class ConfigSettings {
   /** Players see, read-only, which players midi waits for and on what kind of prompt */
   playerWaitShowPlayers: boolean = true;
   /** Gambit's Premades reaction prompts mirrored to the GM are listed on their player's row, hidden until the GM shows one */
-  playerWaitGambit: boolean = true;
+  playerWaitGambit: boolean = false;
   gmAutoAttack: boolean = false;
   gmAutoDamage: string = "none";
   gmAutoFastForward: string[] = [];
@@ -272,7 +271,6 @@ export async function resetConfigSettingsToDefaults(): Promise<void> {
   // Note: EnableWorkflow is explicitly set to true as requested
   await game.settings.set("midi-qol", "EnableWorkflow", true);
   // PreferredGM is intentionally not reset - user preference
-  await game.settings.set("midi-qol", "ReplaceDefaultActivities", true);
   await game.settings.set("midi-qol", "showGM", false);
   await game.settings.set("midi-qol", "ForceHideRoll", true);
   await game.settings.set("midi-qol", "DragDropTarget", false);
@@ -348,7 +346,6 @@ export function collectSettingData() {
     forceHideRoll,
     nsaFlag,
     playerControlsInvisibleTokens,
-    replaceDefaultActivities,
     targetConfirmation,
     useWeakReferences,
     flags: {}
@@ -556,10 +553,6 @@ export async function importSettingsFromJSON(json) {
   if (json.forceHideRoll !== undefined) {
     if (game.settings.get("midi-qol", "ForceHideRoll") !== json.forceHideRoll) requiresReload = true;
     await game.settings.set("midi-qol", "ForceHideRoll", json.forceHideRoll);
-  }
-  if (json.replaceDefaultActivities !== undefined) {
-    if (game.settings.get("midi-qol", "ReplaceDefaultActivities") !== json.replaceDefaultActivities) requiresReload = true;
-    await game.settings.set("midi-qol", "ReplaceDefaultActivities", json.replaceDefaultActivities);
   }
   await game.settings.set("midi-qol", "showGM", json.nsaFlag);
   await game.settings.set("midi-qol", "UseWeakReferences", json.useWeakReferences);
@@ -939,7 +932,6 @@ export let fetchParams = () => {
   forceHideRoll = game.settings.get("midi-qol", "ForceHideRoll");
   dragDropTargeting = game.settings.get("midi-qol", "DragDropTarget");
   chatCardUpdates = game.settings.get("midi-qol", "ChatCardUpdates");
-  replaceDefaultActivities = game.settings.get("midi-qol", "ReplaceDefaultActivities");
   const oldWeakReferences = useWeakReferences;
   useWeakReferences = game.settings.get("midi-qol", "UseWeakReferences") ?? false;
   if (useWeakReferences !== oldWeakReferences) Workflow.clearWorkflows();
@@ -1607,8 +1599,8 @@ export const consumeConfigOptions = keysToOptionsObj("ConfigDialogOptions", [
 ]);
 
 export const registerSettings = function () {
-  // Workflow token sets read as TokenDocuments (TokenDocumentSet document mode); read once at init, so a change needs a
-  // reload. For developers trying document mode: MidiQOL.setTokenDocumentSets(true). Revisit when this setting goes.
+  // Workflow token sets read as canvas tokens until MidiQOL.setTokenDocumentSets(true) (TokenDocumentSet document mode);
+  // read once at init, so a change needs a reload. Removed in 14.8.0: sets then always read as TokenDocuments.
   game.settings.register("midi-qol", "tokenDocumentSets", {
     scope: "world",
     type: Boolean,
@@ -1717,14 +1709,13 @@ export const registerSettings = function () {
     type: String
   });
 
+  // Unused; still registered because CAT's troubleshooter requires it to be true
   game.settings.register("midi-qol", "ReplaceDefaultActivities", {
     name: "midi-qol.ReplaceDefaultActivities.Name",
-    hint: "midi-qol.ReplaceDefaultActivities.Hint",
     scope: "world",
     default: true,
-    config: true,
-    type: Boolean,
-    requiresReload: true
+    config: false,
+    type: Boolean
   });
 
   // Deprecated: kept for one version cycle to allow migration of old value into configSettings arrays

@@ -1,8 +1,7 @@
-import { registerMidiActivityType } from "../utils.js";
 import { TokenDocumentSet } from "../lib/tokenDocumentSet.js";
 import { Activity } from "../../globals.js";
 import { debugEnabled, GameSystemConfig, i18nFormat, warn } from "../../midi-qol.js";
-import { replaceDefaultActivities, configSettings } from "../settings.js";
+import { configSettings } from "../settings.js";
 import { MidiActivityMixin, MidiActivityMixinSheet } from "./MidiActivityMixin.js";
 import type { ActivityUseConfiguration } from "../../globals.js";
 
@@ -14,12 +13,7 @@ export function setupTransformActivity() {
   //@ts-expect-error
   MidiTransformSheet = defineMidiTransformSheetClass(game.system.applications.activity.TransformSheet);
   MidiTransformActivity = defineMidiTransformActivityClass(GameSystemConfig.activityTypes.transform.documentClass as Activity);
-  if (replaceDefaultActivities) {
-    // GameSystemConfig.activityTypes["dnd5eTransform"] = GameSystemConfig.activityTypes.Transform;
-    GameSystemConfig.activityTypes.transform = { documentClass: MidiTransformActivity };
-  } else {
-    registerMidiActivityType("midiTransform", MidiTransformActivity, "transform");
-  }
+  GameSystemConfig.activityTypes.transform = { documentClass: MidiTransformActivity };
 }
 let defineMidiTransformSheetClass = (baseClass: any) => {
   return class MidiTransformSheet extends MidiActivityMixinSheet(baseClass) {
@@ -32,7 +26,7 @@ let defineMidiTransformActivityClass = <T extends Activity>(ActivityClass: T) =>
     static metadata =
       foundry.utils.mergeObject(
         super.metadata, {
-        title: configSettings.activityNamePrefix ? "midi-qol.TRANSFORM.Title.one" : ActivityClass.metadata.title,
+        midiTitle: "midi-qol.TRANSFORM.Title.one",
         dnd5eTitle: ActivityClass.metadata.title,
         sheetClass: MidiTransformSheet,
         usage: {
@@ -65,8 +59,8 @@ let defineMidiTransformActivityClass = <T extends Activity>(ActivityClass: T) =>
     }
 
     async transformActor(config: ActivityUseConfiguration, message: ChatMessage) {
-      // Every given target, drawn or not (only their actors are used)
-      const given = config.midiOptions?.targetsToUse ?? config.workflow?.targets ?? game.user?.targets ?? new Set();
+      // Every given target, with a canvas token or not (only their actors are used)
+      const given = config.midiOptions?.targetsToUse ?? config.workflow?.targets ?? new Set();
       const targets = given instanceof TokenDocumentSet ? given.documents : Array.from(given);
       if (!targets.length) {
         ui.notifications?.warn("DND5E.ActionWarningNoToken", { localize: true });

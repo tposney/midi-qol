@@ -19,18 +19,18 @@ const WORDS = {one: 1, two: 2, three: 3, four: 4, five: 5, six: 6};
 function config(item) {
     const activities = item.system.activities.contents;
     const text = [item.system.description.value, ...activities.map(a => a.activation?.condition ?? '')].join(' ');
-    const swallow = activities.find(a => ['action', 'bonus'].includes(a.activation?.type) && ['utility', 'save'].includes(a.type) && !/escape/i.test(a.name));
+    const swallow = activities.find(a => ['action', 'bonus'].includes(a.activation?.type) && (a.isLike('utility') || a.isLike('save')) && !/escape/i.test(a.name));
     const capacity = text.match(/up to (\w+) creatures? swallowed/i)?.[1];
     const defaults = {
         activity: swallow?.id,
-        damageActivity: activities.find(a => a.type === 'damage')?.id,
-        regurgitateActivity: activities.find(a => a.type === 'save' && a !== swallow)?.id,
-        escapeActivity: activities.find(a => a.type === 'utility' && /escape/i.test(a.name))?.id,
+        damageActivity: activities.find(a => a.isLike('damage'))?.id,
+        regurgitateActivity: activities.find(a => a.isLike('save') && a !== swallow)?.id,
+        escapeActivity: activities.find(a => a.isLike('utility') && /escape/i.test(a.name))?.id,
         capacity: capacity ? (WORDS[capacity.toLowerCase()] ?? Number(capacity) ?? 1) : 1,
         damageAt: 'ownerStart',
         threshold: Number(text.match(/takes (\d+) damage or more/i)?.[1]) || null,
         requireGrappled: /grappl/i.test(`${swallow?.target?.affects?.special ?? ''} ${item.system.description.value}`),
-        attackItem: swallow?.type === 'utility' && item.actor?.items.some(i => i.system.identifier === 'tentacles') ? 'tentacles' : null
+        attackItem: swallow?.isLike('utility') && item.actor?.items.some(i => i.system.identifier === 'tentacles') ? 'tentacles' : null
     };
     return {...defaults, ...(item.flags?.[MODULE]?.swallow ?? {})};
 }
@@ -203,7 +203,7 @@ async function rollFinished({document: item, workflow}) {
     const holderDoc = workflow.token?.document ?? holderToken(item.actor);
     const targetDoc = workflow.targets.documents[0];
     if (!holderDoc || !targetDoc) return;
-    if (swallow.type === 'save') {
+    if (swallow.isLike('save')) {
         // Only a creature small enough is swallowed (the Kraken's save also hurts a larger one).
         const limit = sizeLimit(swallow);
         if (limit !== null && (SIZE_KEYS[targetDoc.actor?.system.traits.size] ?? 2) > limit) return;
@@ -212,7 +212,7 @@ async function rollFinished({document: item, workflow}) {
     }
     if (!c.attackItem) return swallowTarget(item, holderDoc, targetDoc);
     // An attack must hit first (a Tentacles attack against the grappled creature).
-    const attack = item.actor.items.find(i => i.system.identifier === c.attackItem)?.system.activities.find(a => a.type === 'attack');
+    const attack = item.actor.items.find(i => i.system.identifier === c.attackItem)?.system.activities.find(a => a.isLike('attack'));
     if (!attack) return;
     const attackWorkflow = await workflowUtils.syntheticActivityRoll(attack, [targetDoc], {consumeUsage: false, consumeResources: false});
     if (attackWorkflow?.hitTargets?.has(targetDoc)) await swallowTarget(item, holderDoc, targetDoc);

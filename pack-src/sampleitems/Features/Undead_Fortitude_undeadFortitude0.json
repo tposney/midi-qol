@@ -76,7 +76,7 @@
         "type": "script",
         "img": "icons/svg/dice-target.svg",
         "scope": "global",
-        "command": "// Undead Fortitude - triggered on the isDamaged target pass\nif (args[0].tag !== \"TargetOnUse\" || args[0].macroPass !== \"isDamaged\") return;\nconst di = workflow?.damageItem;\nif (!di || di.oldHP < 1 || di.hpDamage <= 0) return;\n// Only when this damage reduces the creature to 0 HP\nif (di.newHP > 0) return;\n// ...unless the damage is radiant or from a critical hit\nif (workflow.isCritical || di.critical) return;\nconst isRadiant = (di.damageDetail ?? []).some(d => (d.type ?? \"\").toLowerCase() === \"radiant\");\nif (isRadiant) return;\n\nconst name = macroItem?.name ?? \"Undead Fortitude\";\nconst dc = 5 + Math.max(0, di.totalDamage);\nconst flavor = `${name} - DC ${dc} Constitution saving throw`;\nconst save = (await actor.rollSavingThrow({ ability: \"con\", target: dc }, {}, { flavor, fastForward: true }))?.[0]?.total ?? 0;\nif (save < dc) return; // failed the save - drops as normal\n\n// Success: reduce the damage so exactly 1 HP remains.\nconst base = di.totalDamage;\nMidiQOL.modifyDamageBy({ damageItem: di, value: (di.oldHP - 1) - base, type: \"none\", reason: name });\ndi.newHP = 1;\nChatMessage.create({\n  speaker: ChatMessage.getSpeaker({ actor }),\n  content: `<strong>${name}</strong>: ${actor.name} succeeds on a DC ${dc} Constitution save and drops to 1 hit point instead of 0.`\n});\n",
+        "command": "// Undead Fortitude - triggered on the isDamaged target pass\nif (args[0].tag !== \"TargetOnUse\" || args[0].macroPass !== \"isDamaged\") return;\nconst di = workflow?.damageItem;\nif (!di || di.oldHP < 1 || di.hpDamage <= 0) return;\n// Only when this damage reduces the creature to 0 HP\nif (di.newHP > 0) return;\n// ...unless the damage is radiant or from a critical hit\nif (workflow.isCritical || di.critical) return;\nconst isRadiant = (di.calculatedDamages ?? []).some(d => (d.type ?? \"\").toLowerCase() === \"radiant\");\nif (isRadiant) return;\n\nconst name = macroItem?.name ?? \"Undead Fortitude\";\nconst dc = 5 + Math.max(0, di.totalDamage);\nconst flavor = `${name} - DC ${dc} Constitution saving throw`;\nconst save = (await actor.rollSavingThrow({ ability: \"con\", target: dc }, {}, { flavor, fastForward: true }))?.[0]?.total ?? 0;\nif (save < dc) return; // failed the save - drops as normal\n\n// Success: reduce the damage so exactly 1 HP remains.\nconst base = di.totalDamage;\nMidiQOL.modifyDamageBy({ damageItem: di, value: (di.oldHP - 1) - base, type: \"none\", reason: name });\ndi.newHP = 1;\nChatMessage.create({\n  speaker: ChatMessage.getSpeaker({ actor }),\n  content: `<strong>${name}</strong>: ${actor.name} succeeds on a DC ${dc} Constitution save and drops to 1 hit point instead of 0.`\n});\n",
         "author": null,
         "ownership": {
           "default": 3
@@ -108,7 +108,7 @@
     },
     "cat": {
       "automation": {
-        "version": "14.6.5"
+        "version": "14.7.0"
       }
     }
   },

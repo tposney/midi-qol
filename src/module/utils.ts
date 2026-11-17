@@ -1,4 +1,5 @@
 import { DialogCountdown } from "./lib/dialogCountdown.js";
+import { applyDamageRules, collectDamageRules, copyDamageOptions } from "./lib/damageRules.js";
 import type { AttackModifier } from "./Workflow.js";
 import { TokenDocumentSet, hookTarget, memberCount, rememberSyntheticToken, tokenOf } from "./lib/tokenDocumentSet.js";
 import { rollBonusLabel } from "./activities/AttackActivity.js";
@@ -14,7 +15,7 @@ import { concentrationCheckItemDisplayName } from "./Hooks.js";
 import { OnUseMacros } from "./apps/Item.js";
 import { TroubleShooter } from "./apps/TroubleShooter.js";
 import { MidiActivityChoiceDialog } from "./apps/MidiActivityChoiceDialog.js";
-import { Activity, ActivityUseConfiguration, CalcDamageOptions, MidiChangeData, DamageDescription, DamageListEntry, PreComputedAdvantageData, PreSetupDamageListEntry, RollDialogConfig, RollMessageConfig, TokenOrDocument, DND5ETargetDescriptor, SaveDetails, Dnd5eSystem } from "../globals.js";
+import { Activity, ActivityUseConfiguration, CalcDamageOptions, MidiChangeData, DamageDescription, DamageDetailsByCategory, DamageListEntry, PreComputedAdvantageData, PreSetupDamageListEntry, RollDialogConfig, RollMessageConfig, TokenOrDocument, DND5ETargetDescriptor, SaveDetails, Dnd5eSystem } from "../globals.js";
 
 import Token = foundry.canvas.placeables.Token;
 import { AnyMutableObject, AnyObject } from "fvtt-types/utils";
@@ -77,14 +78,15 @@ export function modifyDamageBy({
   //reminder: For use during the isDamaged macro passes ONLY!
   if (!damageItem || foundry.utils.isEmpty(damageItem)) return {};
   if (!value) return {};
-  const damageModification = { value, active: { multiplier }, type, properties: new Set<string>() };
-  damageItem.damageDetail.push(damageModification);
+  // dnd5e 6.1's damage cards read every entry's `potential`
+  const damageModification = { value, active: { multiplier }, potential: {}, type, properties: new Set<string>() };
+  damageItem.calculatedDamages.push(damageModification);
   if (reason) damageItem.details.push(reason);
   // hpDamage and the rest follow the detail, as midi will apply it (isDamaged/isHealed and later macros read them).
   // @ts-expect-error no dnd5e-types
   const hp = fromActorUuid(damageItem.actorUuid)?.system.attributes.hp;
   if (hp) {
-    const { totalDamage, deltaHP, deltaTemp, newTempHP } = hpChangeFromDetail(damageItem.damageDetail, hp);
+    const { totalDamage, deltaHP, deltaTemp, newTempHP } = hpChangeFromDetail(damageItem.calculatedDamages, hp);
     Object.assign(damageItem, { totalDamage, hpDamage: deltaHP, tempDamage: deltaTemp, newHP: hp.value - deltaHP, newTempHP });
   }
   return damageModification;
@@ -277,6 +279,8 @@ export async function applyTokenDamage(
   if (item && !options.workflow) workflow = Workflow.runningFor(item);
   // What a successful save does to the damage; applySaves adds Super Saver and Semi Super Saver.
   const saveMultiplier = workflow?.activity ? getSaveMultiplierForActivity(workflow.activity) : itemSaveMultiplier(item);
+  // No dnd5e damage roll to carry the attacker's rules (ignore immunity, downgrade...): collect them as one would
+  const damageRules = collectDamageRules(workflow?.actor ?? item?.actor, item ?? workflow?.item);
 
   // Every member, matched by document: a caller's sets may hold Tokens or TokenDocuments
   const savers = new TokenDocumentSet(saves);
@@ -311,27 +315,23 @@ export async function applyTokenDamage(
         isFumble: false
       }
     };
-    // @ts-expect-error no dnd5e-types
-    const combinedDamage: DamageDescription[] = foundry.utils.deepClone(actor.calculateDamage(damageDetail, calcDamageOptions));
+    applyDamageRules(calcDamageOptions as CalcDamageOptions, damageRules);
+    const combinedDamage: DamageDescription[] = foundry.utils.deepClone(actor.calculateDamage(damageDetail, calcDamageOptions) || []);
     const fullDamage = setupDamageDetails({
       actorId: actor.id!,
       actorUuid: actor.uuid,
+      options: calcDamageOptions as CalcDamageOptions,
       critical: false,
-      damageDetail: combinedDamage,
-      damageDetails: {
-        combinedDamage,
-        rawcombinedDamage: damageDetail,
-        calcDamageOptions: { combinedDamage: calcDamageOptions }
-      },
+      calculatedDamages: combinedDamage,
+      damages: damageDetail,
       isHit,
-      rawDamageDetail: damageDetail,
       saved,
       sceneId: canvas.scene?.id ?? "",
       semiSuperSaver,
       superSaver,
       totalDamage,
       targetUuid: getTokenDocument(token)?.uuid ?? "",
-    }, "combinedDamage", actor);
+    }, actor);
     if (fullDamage) allDamages[actor.uuid] = fullDamage;
   }
 
@@ -372,6 +372,7 @@ export async function applyTokenDamageMany(
   let workflow: Workflow | undefined = options.workflow;
   // A macro running inside the item's use: that use's card (an earlier, finished one would be a guess)
   if (item && !options.workflow) workflow = Workflow.runningFor(item);
+  const damageRules = collectDamageRules(workflow?.actor ?? item?.actor, item ?? workflow?.item);
 
   for (const entry of targetDamages) {
     const actor = entry.token.actor;
@@ -397,27 +398,23 @@ export async function applyTokenDamageMany(
         isFumble: false
       }
     };
-    // @ts-expect-error no dnd5e-types
-    const combinedDamage: DamageDescription[] = foundry.utils.deepClone(actor.calculateDamage(damageDetail, calcDamageOptions));
+    applyDamageRules(calcDamageOptions as CalcDamageOptions, damageRules);
+    const combinedDamage: DamageDescription[] = foundry.utils.deepClone(actor.calculateDamage(damageDetail, calcDamageOptions) || []);
     const fullDamage = setupDamageDetails({
       actorId: actor.id!,
       actorUuid: actor.uuid,
+      options: calcDamageOptions as CalcDamageOptions,
       critical: false,
-      damageDetail: combinedDamage,
-      damageDetails: {
-        combinedDamage,
-        rawcombinedDamage: damageDetail,
-        calcDamageOptions: { combinedDamage: calcDamageOptions }
-      },
+      calculatedDamages: combinedDamage,
+      damages: damageDetail,
       isHit: true,
-      rawDamageDetail: damageDetail,
       saved: false,
       sceneId: canvas.scene?.id ?? "",
       semiSuperSaver: false,
       superSaver: false,
       totalDamage: entry.totalDamage,
       targetUuid: getTokenDocument(entry.token)?.uuid ?? "",
-    }, "combinedDamage", actor);
+    }, actor);
     if (fullDamage) allDamages[actor.uuid] = fullDamage;
   }
 
@@ -445,25 +442,6 @@ export interface applyDamageDetails {
   saves?: Set<Token | TokenDocument>;
   superSavers?: Set<Token | TokenDocument>;
   semiSuperSavers?: Set<Token | TokenDocument>;
-}
-export function mergeDamageDetail(damageDetail: any[]) {
-  // merge the damage details into a single array, removing duplicates
-  const merged: Record<string, DamageDescription> = {};
-  for (const dd of damageDetail) {
-    const makeHash = (type, properties = [], active: AnyObject) => [type, ...(true ? Array.from(properties).sort() : []), Array.from(active ? Object.entries(active) : [])].join();
-    const key = makeHash(dd.type, dd.properties ?? new Set(), dd.active)
-    if (dd.type === "midi-none") continue;
-    if (merged[key]) {
-      merged[key].value += dd.value;
-      merged[key].damage = merged[key].value; // deprecated
-      merged[key].formula += " + " + dd.formula;
-      if (dd.properties)
-        merged[key].properties = merged[key].properties.union(dd.properties);
-    } else {
-      merged[key] = { ...dd };
-    }
-  }
-  return Object.values(merged);
 }
 /** Whether a damage detail heals: healing, or damage the target absorbs (Damage Absorption). Shared by the damage card's
  * figures and the damage's application so the two agree. */
@@ -497,33 +475,75 @@ export function hpChangeFromDetail(damageDetail: DamageDescription[], hp: { valu
   return { totalDamage, change, temp, healing, vitality, tempMax, deltaTemp, deltaHP, newTempHP };
 }
 
-export function setupDamageDetails(actorDamage: PreSetupDamageListEntry, selector: "combinedDamage" | "otherDamage", actor: Actor.Implementation) {
-  const mergedDetails = mergeDamageDetail(actorDamage.damageDetails[selector] ?? []);
-  const as = actor?.system;
+export function setupDamageDetails(actorDamage: PreSetupDamageListEntry, actor: Actor.Implementation): DamageListEntry | undefined {
   // @ts-expect-error no dnd5e-types
-  if (!as || !as.attributes.hp) return;
-  // @ts-expect-error no dnd5e-types
-  const hp = as.attributes.hp;
-  const { totalDamage, change: healingAdjustedTotalDamage, deltaHP, newTempHP } = hpChangeFromDetail(mergedDetails, hp);
+  const hp = actor?.system?.attributes?.hp;
+  if (!hp) return;
+  const { totalDamage, deltaHP, newTempHP } = hpChangeFromDetail(actorDamage.calculatedDamages, hp);
   const oldTempHP = hp.temp ?? 0;
-  const completeActorDamage: DamageListEntry = {
-    damageSelector: selector,
+  return withDeprecatedDamageFields({
     ...actorDamage,
     updateOptions: {},
-    calcDamageOptions: actorDamage.damageDetails.calcDamageOptions[selector] as CalcDamageOptions,
     oldHP: hp.value,
     newHP: hp.value - deltaHP,
     oldTempHP,
     hpDamage: deltaHP,
     newTempHP,
-    // damages.tempDamage = deltaTemp,
     tempDamage: oldTempHP - newTempHP,
-    totalDamage: totalDamage,
-    healingAdjustedTotalDamage: healingAdjustedTotalDamage,
+    totalDamage,
     details: [],
     wasHit: actorDamage.isHit,
+  });
+}
+
+const DAMAGE_CATEGORIES = ["defaultDamage", "otherDamage", "bonusDamage"] as const;
+
+/** midi's names for the record's fields before 14.7.0, and dnd5e's names for them now */
+const RENAMED_DAMAGE_FIELDS = { damageDetail: "calculatedDamages", rawDamageDetail: "damages", calcDamageOptions: "options" } as const;
+
+/**
+ * Shims for the fields 14.7.0 renamed or stopped storing on a damage entry, worked out from its one record and
+ * warning once. Not enumerable, so copies and the card never carry them. Remove them by deleting this function's
+ * body.
+ */
+export function withDeprecatedDamageFields<T extends DamageListEntry>(entry: T): T {
+  const warn = (field: string, use: string, until = "14.9.0") => foundry.utils.logCompatibilityWarning(
+    `midi-qol | damage entry ${field} is deprecated: use ${use}`, { since: "14.7.0", until, once: true });
+  const shim = (field: string, descriptor: PropertyDescriptor) => {
+    if (!Object.getOwnPropertyDescriptor(entry, field)) Object.defineProperty(entry, field, { configurable: true, enumerable: false, ...descriptor });
   };
-  return completeActorDamage;
+  for (const [field, renamed] of Object.entries(RENAMED_DAMAGE_FIELDS) as [keyof typeof RENAMED_DAMAGE_FIELDS, typeof RENAMED_DAMAGE_FIELDS[keyof typeof RENAMED_DAMAGE_FIELDS]][]) shim(field, {
+    get(this: DamageListEntry) { warn(field, renamed); return this[renamed]; },
+    set(this: DamageListEntry, value: never) { warn(field, renamed); this[renamed] = value; }
+  });
+  shim("damageDetails", {
+    get(this: DamageListEntry): DamageDetailsByCategory {
+      warn("damageDetails", "calculatedDamages / damages (each entry's midiCategory)", "14.8.0");
+      const details: DamageDetailsByCategory = {
+        calcDamageOptions: { combinedDamage: this.options },
+        combinedDamage: this.calculatedDamages,
+        rawcombinedDamage: this.damages,
+        injectedDamage: this.calculatedDamages.filter(d => !d.midiCategory)
+      };
+      for (const category of DAMAGE_CATEGORIES) {
+        details[category] = this.calculatedDamages.filter(d => d.midiCategory === category);
+        details[`raw${category}` as const] = this.damages.filter(d => d.midiCategory === category);
+        details.calcDamageOptions[category] = this.options;
+      }
+      return details;
+    }
+  });
+  shim("healingAdjustedTotalDamage", {
+    get(this: DamageListEntry): number {
+      warn("healingAdjustedTotalDamage", "hpDamage + tempDamage (what the creature lost; this is the damage before that limit)", "14.8.0");
+      // As before 14.7.0: damage plus healing, not limited to the hit points the creature had
+      const { amount, healing } = calculateDamageAmounts(this.calculatedDamages);
+      const change = Math.max(0, amount) + healing;
+      return change > 0 ? Math.floor(change) : Math.ceil(change);
+    },
+    set(_value: number) { warn("healingAdjustedTotalDamage", "hpDamage / calculatedDamages (setting it changes nothing)", "14.8.0"); }
+  });
+  return entry;
 }
 
 /**
@@ -544,7 +564,7 @@ function uncannyDodgeSourceIcon(actor: Actor.Implementation): string | undefined
 
 export async function processDamageRoll(workflow: Workflow, defaultDamageType: string) {
   if (debugEnabled > 0) warn("processDamageRoll |", workflow)
-  // Every target, drawn on the canvas or not: damage goes by the token's document and actor
+  // Every target, with a canvas token or not: damage goes by the token's document and actor
   const hitTargets = workflow.hitTargets.union(workflow.hitTargetsEC);
   const theTargets = workflow.targets.documents;
   // TODO becomes activity.target.affects.type === "self"
@@ -564,7 +584,7 @@ export async function processDamageRoll(workflow: Workflow, defaultDamageType: s
   const otherNoDamage = workflow.rawOtherDamageDetail?.length === 0 || (workflow.rawOtherDamageDetail?.length === 1 && workflow.rawOtherDamageDetail[0]?.type === "midi-none");
   if (baseNoDamage && bonusNoDamage && otherNoDamage) return;
 
-  const damagePerActor: Record<string, PreSetupDamageListEntry> = {};
+  const damagePerActor: Record<string, Omit<PreSetupDamageListEntry, "options"> & { options?: CalcDamageOptions }> = {};
   workflow.damageList = [];
   totalDamage = 0;
   totalDamage = workflow.rawDamageDetail?.reduce((acc, di) => acc + (di.type === "temphp" ? 0 : di.type === "healing" ? -di.value : di.value), 0) ?? 0;
@@ -598,10 +618,9 @@ export async function processDamageRoll(workflow: Workflow, defaultDamageType: s
       challengeModeScale,
       challengeModeAR,
       critical: workflow.isCritical,
-      damageDetail: [],
-      damageDetails: { combinedDamage: [], rawcombinedDamage: [], defaultDamage: [], rawdefaultDamage: workflow.rawDamageDetail ?? [], otherDamage: [], rawotherDamage: workflow.rawOtherDamageDetail ?? [], bonusDamage: [], rawbonusDamage: workflow.rawBonusDamageDetail ?? [], calcDamageOptions: {} },
+      calculatedDamages: [],
+      damages: [],
       isHit: hitTargets.has(tokenDocument),
-      rawDamageDetail: [],
       saved: hasSaved,
       sceneId: tokenDocument.parent?.id ?? "",
       semiSuperSaver,
@@ -615,10 +634,6 @@ export async function processDamageRoll(workflow: Workflow, defaultDamageType: s
         await doReactions(token, workflow.tokenUuid, workflow.damageRoll ?? workflow.bonusDamageRoll ?? workflow.otherDamageRoll ?? new Roll("0"), !isHealing ? "reactiondamage" : "reactionheal", { activity: workflow.activity, item: workflow.item, workflow, workflowOptions: { damageDetail: workflow.rawDamageDetail, damageTotal: totalDamage, sourceActorUuid: workflow.actor.uuid, sourceItemUuid: workflow.item.uuid, sourceAmmoUuid: workflow.ammunition?.uuid } });
       }
     }
-    const damageDetails = damagePerActor[actor.uuid].damageDetails;
-    let combinedRawDamageDetails: DamageDescription[] = [];
-    let combinedDamageDetails: DamageDescription[] = [];
-
     const damageBuckets: [DamageDescription[], "defaultDamage" | "otherDamage" | "bonusDamage"][] = [
       [workflow.damageDetail ?? [], "defaultDamage"],
       [workflow.otherDamageFor(tokenDocument), "otherDamage"],
@@ -721,89 +736,68 @@ export async function processDamageRoll(workflow: Workflow, defaultDamageType: s
             .filter(damageType => immunities.has(damageType) || immunities.has(ALL_DAMAGE_KEY)));
         if (downgradeTypes.size) calcDamageOptions.downgrade = downgradeTypes;
       }
-      return calcDamageOptions;
+      // dnd5e 6.1's attacker rules: downgrade is dnd5e's two steps, unlike Downgrade Immunity above
+      return applyDamageRules(calcDamageOptions, workflow.damageRules);
     };
 
-
+    // One record per target: the raw damage, each entry tagged with its category, and dnd5e's calculation of it
+    const calcDamageOptions = buildCalcDamageOptions();
+    // Per category, the record's options are the first category's, as calculated with
+    let categoryOptions: CalcDamageOptions | undefined = calcDamageOptions;
+    const rawDamage: DamageDescription[] = [];
+    let calculated: DamageDescription[] = [];
+    for (const [damages, type] of damageBuckets) {
+      if (!damages) {
+        const message = `processDamageRoll | ${type} damages is not defined`;
+        TroubleShooter.recordError(new Error("no valid damage"), message);
+        error(message);
+        continue;
+      }
+      for (const d of damages) d.midiCategory = type;
+      rawDamage.push(...damages.filter(d => d.type !== "midi-none"));
+      // dnd5e's damage modification and midi's DR are budgets consumed per call: one call for all of the damage,
+      // unless each category is to be calculated on its own
+      if (!configSettings.singleDamageCalculation) {
+        // False when a hook vetoes the calculation
+        const categoryDamage: DamageDescription[] = actor.calculateDamage(damages, categoryOptions ?? buildCalcDamageOptions()) || [];
+        categoryOptions = undefined;
+        // What midi's DR pass added belongs to this category's damage
+        for (const d of categoryDamage) d.midiCategory ??= type;
+        calculated = calculated.concat(categoryDamage);
+      }
+    }
     if (configSettings.singleDamageCalculation) {
-      // One calculateDamage call for all of a target's damage: dnd5e's damage modification and midi's
-      // own DR are both budgets consumed per call, so calling per category applied them per category.
-      // The only per-category input is the other-damage save multiplier, carried on the entries.
-      const calcDamageOptions = buildCalcDamageOptions();
-
-      const allDamage: DamageDescription[] = [];
-      for (const [damages, type] of damageBuckets) {
-        for (const d of damages) d.midiCategory = type;
-        allDamage.push(...damages);
-        damageDetails[`raw${type}`] = damages;
-        damageDetails.calcDamageOptions[type] = calcDamageOptions;
-      }
-
-      //@ts-expect-error no dnd5e-types
-      const calculated: DamageDescription[] = actor.calculateDamage(allDamage, calcDamageOptions) ?? [];
-
-      // Partition by tag, never by index: midi's DR pass pushes an aggregate entry and splices out
-      // midi-none entries, so the returned array is neither the same length nor order as the input.
-      for (const [, type] of damageBuckets) damageDetails[type] = calculated.filter(d => d.midiCategory === type);
-      // Injected entries are cross-category, so they ride with the combined total.
-      damageDetails.injectedDamage = calculated.filter(d => !d.midiCategory);
-      combinedRawDamageDetails = allDamage;
-      combinedDamageDetails = (damageDetails.defaultDamage ?? [])
-        .concat(damageDetails.otherDamage ?? [], damageDetails.bonusDamage ?? [], damageDetails.injectedDamage);
-    } else {
-      for (let [damages, type] of damageBuckets) {
-        if (!damages) {
-          const message = `processDamageRoll | ${type} damages is not defined`;
-          TroubleShooter.recordError(new Error("no valid damage"), message);
-          error(message);
-          continue;
-        }
-        const calcDamageOptions = buildCalcDamageOptions();
-
-        //@ts-expect-error no dnd5e-types
-        let returnDamages = actor.calculateDamage(damages, calcDamageOptions);
-        damageDetails[type] = returnDamages;
-        damageDetails[`raw${type}`] = damages;
-        damageDetails.calcDamageOptions[type] = calcDamageOptions;
-        if (configSettings.singleConcentrationRoll) {
-          combinedDamageDetails = combinedDamageDetails.concat(returnDamages);
-          combinedRawDamageDetails = combinedRawDamageDetails.concat(damages);
-        }
-      }
+      // Tagged entries, never by index: midi's DR pass adds an aggregate entry and splices out midi-none entries
+      calculated = actor.calculateDamage(damageBuckets.flatMap(([damages]) => damages ?? []), calcDamageOptions) || [];
     }
-    damageDetails.calcDamageOptions.combinedDamage = damageDetails.calcDamageOptions.defaultDamage;
-    const injected = damageDetails.injectedDamage ?? [];
-    if (configSettings.singleConcentrationRoll) {
-      damageDetails["rawcombinedDamage"] = mergeDamageDetail(combinedRawDamageDetails);
-      damageDetails["combinedDamage"] = combinedDamageDetails;
-    } else {
-      damageDetails.rawcombinedDamage = mergeDamageDetail((damageDetails.rawdefaultDamage ?? []).concat(damageDetails.rawbonusDamage ?? []));
-      damageDetails.combinedDamage = (damageDetails?.defaultDamage ?? []).concat(damageDetails.bonusDamage ?? [], injected);
-    }
+    Object.assign(damagePerActor[actor.uuid], { options: calcDamageOptions, calculatedDamages: calculated, damages: rawDamage });
   }
 
-  const preDamageList = Object.values(damagePerActor);
-  // Explicitly typed because it only ever gets called with this, currently
-  const toCheck: ("combinedDamage" | "otherDamage")[] = ["combinedDamage"];
-  if (!configSettings.singleConcentrationRoll && workflow.otherDamageRolls) toCheck.push("otherDamage");
+  // Other damage gets a list (and card) of its own unless one concentration check covers all of the damage
+  const selectors: ("combinedDamage" | "otherDamage")[] = ["combinedDamage"];
+  if (!configSettings.singleConcentrationRoll && workflow.otherDamageRolls) selectors.push("otherDamage");
+  const inSelector = (selector: "combinedDamage" | "otherDamage") => (d: DamageDescription) =>
+    selector === "otherDamage" ? d.midiCategory === "otherDamage" : (selectors.length === 1 || d.midiCategory !== "otherDamage");
+  // Each target's damage entries, one per list: the effects' damage components are all of them, as macros leave them
+  workflow.targetDamage = {};
   // Damage cards are linked to the usage card (system.origin), so undo finds them.
-  for (let selector of toCheck) {
+  for (const selector of selectors) {
     workflow.damageList = [];
-    preDamageList.forEach(damageEntry => {
-      damageEntry.damageDetail = damageEntry.damageDetails[selector] ?? damageEntry.damageDetail;
-      damageEntry.rawDamageDetail = damageEntry.damageDetails[`raw${selector}`] ?? damageEntry.rawDamageDetail;
-      // damageEntry.calcDamageOptions = damageEntry.damageDetails[`calcDamageOptions.${selector}`] ?? damageEntry.calcDamageOptions;
-    });
-
     for (const tokenDocument of theTargets) {
       const actor = tokenDocument.actor;
       if (!actor) continue;
-      const preDamageDetails = damagePerActor[actor.uuid];
-      const damageDetails = setupDamageDetails(preDamageDetails, selector, actor);
-      if (damageDetails) {
-        damageDetails.damageDetails[selector] = damageDetails.damageDetail;
-        workflow.damageList.push(damageDetails);
-        await workflow?.callDamageHooksAndMacros(damageDetails, tokenDocument);
+      const target = damagePerActor[actor.uuid];
+      if (!target?.options) continue;
+      const damageEntry = setupDamageDetails({
+        ...target,
+        options: copyDamageOptions(target.options),
+        calculatedDamages: target.calculatedDamages.filter(inSelector(selector)),
+        damages: target.damages.filter(inSelector(selector))
+      }, actor);
+      if (damageEntry) {
+        workflow.damageList.push(damageEntry);
+        (workflow.targetDamage[tokenDocument.uuid] ??= []).push(damageEntry);
+        await workflow?.callDamageHooksAndMacros(damageEntry, tokenDocument);
       }
     }
     await timedAwaitExecuteAsGM("createReverseDamageCard", {
@@ -846,60 +840,66 @@ export function getSaveMultiplierForActivity(activity: Activity) {
 }
 
 /**
- * Whether an item's own damage is magical: a physical item's `magicAvailable` (false while attunement is missing or,
- * from dnd5e 6.1, under antimagic), anything else its Magical property. dnd5e 6.1 gives every item `magicAvailable`,
- * true for spells and features, which would make all feature damage magical.
+ * Whether an item's own damage is magical: a physical item's `magicAvailable` (false while attunement is missing or
+ * under antimagic), anything else its Magical property. dnd5e gives every item `magicAvailable`, true for spells and
+ * features, which would make all feature damage magical.
  */
 export function itemMagicAvailable(item: Item.Implementation | null | undefined): boolean {
-  // @ts-expect-error no dnd5e-types
-  const system: { isPhysical?: boolean, quantity?: number, magicAvailable?: boolean, properties?: Set<string> } | undefined = item?.system;
-  // isPhysical is new in 6.1; physical items have a quantity on 6.0 too, spells and features none
-  const physical = system?.isPhysical ?? (!!system && "quantity" in system);
-  if (physical && system?.magicAvailable !== undefined) return system.magicAvailable;
+  const system = dnd5eItem(item)?.system;
+  if (system?.isPhysical && system.magicAvailable !== undefined) return system.magicAvailable;
   return !!system?.properties?.has?.("mgc");
 }
 
-/** dnd5e's healing button label: 6.1 split it into Short/Full */
-export function healingButtonKey(): string {
-  return game.i18n?.has("DND5E.HEAL.HealingButton.Full") ? "DND5E.HEAL.HealingButton.Full" : "DND5E.HEAL.HealingButton";
+/** The dnd5e item fields midi reads for magic: the one place they are read untyped */
+function dnd5eItem(item: Item.Implementation | null | undefined): { type?: string, system?: { isPhysical?: boolean, magicAvailable?: boolean, properties?: Set<string> } } | undefined {
+  // @ts-expect-error no dnd5e-types
+  return item ?? undefined;
 }
 
+export function itemIsSpell(item: Item.Implementation | null | undefined): boolean {
+  return dnd5eItem(item)?.type === "spell";
+}
+
+/** Whether an item is magic for dnd5e's antimagic: a spell, or one with the Magical property */
+export function itemIsMagical(item: Item.Implementation | null | undefined): boolean {
+  const data = dnd5eItem(item);
+  return data?.type === "spell" || !!data?.system?.properties?.has?.("mgc");
+}
+
+export const HEALING_BUTTON_KEY = "DND5E.HEAL.HealingButton.Full";
+
 /**
- * dnd5e's convertLength in the form each version takes: 6.1 takes `{ to, legacy: false }` and returns `{ value, unit }`
- * (the positional `to` is deprecated). No target unit keeps the value: 6.0 did, 6.1 would pick the largest unit that fits.
+ * A length in another unit (dnd5e's convertLength). No target unit keeps the value: dnd5e would pick the largest unit
+ * that fits.
  */
 export function convertLengthTo(value: number, from: string | undefined, to: string | undefined | null): number {
   const convert = globalThis.dnd5e?.utils?.convertLength;
   if (!convert || !to || !from) return value;
-  if (foundry.utils.isNewerVersion(game.system?.version ?? "0", "6.0.999")) return convert(value, from, { to, legacy: false, strict: false })?.value ?? value;
-  return convert(value, from, to, { strict: false }) ?? value;
+  return convert(value, from, { to, legacy: false, strict: false })?.value ?? value;
 }
 
 /**
- * Whether a calculated damage entry has an active change: on its type, on All Damage, or (dnd5e 6.1) on a
+ * Whether a calculated damage entry has an active change: on its type, on All Damage (modification), or on a
  * resistance matched by a filter, such as falling (`active.special`).
  */
 export function damageActiveHas(damage: DamageDescription, flag: string): boolean {
-  const active = damage.active;
-  if (active?.type?.[flag] || active?.all?.[flag]) return true;
-  return Object.values((active?.special ?? {}) as Record<string, Record<string, unknown>>).some(change => !!change?.[flag]);
+  return damageChangeHas(damage, "active", flag);
+}
+
+/** The same for dnd5e 6.1's `potential` record (what would apply with nothing ignored or downgraded), or `active`. */
+export function damageChangeHas(damage: DamageDescription, record: "active" | "potential", flag: string): boolean {
+  const changes = damage[record];
+  if (changes?.type?.[flag] || changes?.all?.[flag]) return true;
+  return Object.values((changes?.special ?? {}) as Record<string, Record<string, unknown>>).some(change => !!change?.[flag]);
 }
 
 /**
- * Whether an activity is of a dnd5e activity type: that type, one dnd5e 6.1 treats as it (`metadata.like`), or
- * midi's own registered beside dnd5e's (Replace Default Activities off: `midiAttack` for `attack`).
+ * Whether an activity is of a dnd5e activity type: that type, or one dnd5e 6.1 treats as it (`metadata.like`).
+ * As `activity.isLike(type)`, but also for an activity's roll data (a roll's `data.activity`), which has no methods.
  */
 export function isActivityType(activity: Activity | null | undefined, type: string): boolean {
   if (!activity) return false;
-  if (activity.type === type) return true;
-  if ((activity.metadata as { like?: string } | undefined)?.like === type) return true;
-  return activity.type === `midi${type.charAt(0).toUpperCase()}${type.slice(1)}`;
-}
-
-/** Register midi's activity type beside dnd5e's (Replace Default Activities off): dnd5e 6.1 treats it as its base type */
-export function registerMidiActivityType(key: string, documentClass: Function & { metadata: Record<string, unknown> }, baseType: string): void {
-  documentClass.metadata = foundry.utils.mergeObject(documentClass.metadata, { like: baseType }, { inplace: false });
-  GameSystemConfig.activityTypes[key] = { documentClass };
+  return typeof activity.isLike === "function" ? activity.isLike(type) : activity.type === type;
 }
 
 export let getSaveMultiplierForItem = (item?: Item.Implementation | null, itemDamageType?: string) => {
@@ -2453,7 +2453,7 @@ export async function completeActivityUse(activityRef: Activity | string | undef
 ): Promise<Workflow | undefined> {
   activityRef = foundry.utils.deepClone(activityRef);
   usage.midiOptions ??= {};
-  // The union of targetsToUse and targetUuids, by document: a token on another level or scene isn't drawn but is a target
+  // The union of targetsToUse and targetUuids, by document: a token on another level or scene has no canvas token but is a target
   let targetsToUse = new TokenDocumentSet();
   const addTarget = (ref: unknown) => {
     const entity = typeof ref === "string" ? fromUuidSync(ref, { strict: false }) : ref;
@@ -2525,9 +2525,10 @@ export async function completeActivityUse(activityRef: Activity | string | undef
         if (source && debugEnabled > 0) warn(`completeActivityUse ${source}: ${activity?.item?.name} ${completeHookName}`);
         // Put back the targets saved at the start only if the user's are still the ones this use left: another use
         // (or the player) may have targeted since, and restoring would take its targets away.
-        // The drawn ones: the user's targets are Tokens
+        // Those with a canvas token: the user's targets are Tokens
         const ownTargets = (result as Workflow | undefined)?.targets ?? new TokenDocumentSet(targetsToUse);
-        const own = new Set(ownTargets.tokens.map(t => t.id));
+        // midi's own token for an actor with none on the scene has no id and is never a user target
+        const own = new Set(ownTargets.tokens.map(t => t.id).filter(id => id));
         const current = new Set([...(game.user?.targets ?? [])].map(t => t.id));
         if (current.size === own.size && [...current].every(id => own.has(id))) updateUserTargets(localSavedTargetIds);
         resolve(result);
@@ -2546,7 +2547,7 @@ export async function completeActivityUse(activityRef: Activity | string | undef
       timeoutId = setTimeout(() => {
         cleanupAndResolve(undefined, "timeout");
       }, maxWait * 1000);
-      // Documents in a plain Set: the use's config is copied, and a token set copies as its drawn Tokens
+      // Documents in a plain Set, so targets with no canvas token survive the use's config being copied
       usage.midiOptions!.targetsToUse = new Set(targetsToUse.documents);
       const isMidiActivity = !!(activity as { isMidiActivity?: boolean }).isMidiActivity;
       // Another module's activity reads the user's targets, not midi's options.
@@ -3537,7 +3538,53 @@ function mountOf(token: any): any {
   return mount.object ?? null;
 }
 
+/**
+ * Why two tokens can't be measured. `blocked`: walls block. The others: there is nothing to measure between them.
+ * `noPosition`: no token (midi's token for an actor with none on the scene sits at the prototype's 0,0);
+ * `notDrawn`: on the viewed scene but not on the canvas (another level), which midi can only measure on the canvas.
+ */
+export type UnmeasurableReason = "noCanvas" | "noPosition" | "differentScene" | "notDrawn" | "blocked";
+export type TokenMeasure = { ok: true, distance: number } | { ok: false, reason: UnmeasurableReason };
+
+/** getDistance / computeDistance for tokens that can't be measured: out of any range, as `d <= range` and `d > range` both read it */
+export const UNMEASURABLE_DISTANCE = Infinity;
+
+function measuredDocument(ref: unknown): TokenDocument.Implementation | undefined {
+  const entity = typeof ref === "string" ? fromUuidSync(ref, { strict: false }) : ref;
+  if (entity instanceof TokenDocument) return entity as TokenDocument.Implementation;
+  if (entity instanceof foundry.canvas.placeables.Token) return entity.document as TokenDocument.Implementation;
+  // An actor, item or effect: its token on the canvas
+  const owner = entity instanceof ActiveEffect ? entity.parent : entity;
+  const actor = owner instanceof Actor ? owner : owner instanceof Item ? owner.actor : null;
+  return actor ? getPlaceable(actor as Actor.Implementation)?.document as TokenDocument.Implementation | undefined : undefined;
+}
+
+function unmeasurable(t1: unknown, t2: unknown): Exclude<UnmeasurableReason, "blocked"> | undefined {
+  if (!canvas?.scene || !canvas.grid || !canvas.dimensions) return "noCanvas";
+  const d1 = measuredDocument(t1);
+  const d2 = measuredDocument(t2);
+  if (!d1 || !d2) return "noPosition";
+  if (d1 === d2) return undefined;
+  if (!d1.id || !d2.id) return "noPosition";
+  if (d1.parent !== d2.parent) return "differentScene";
+  if (!tokenOf(d1) || !tokenOf(d2)) return "notDrawn";
+  return undefined;
+}
+
+/**
+ * The distance between two tokens (Tokens, TokenDocuments or uuids), as getDistance measures it, or why it can't be
+ * measured: walls block, or the tokens are on different scenes, not on the canvas, or one has no token.
+ */
+export function measureTokens(t1: unknown, t2: unknown, options: DistanceOptions = {}): TokenMeasure {
+  const reason = unmeasurable(t1, t2);
+  if (reason) return { ok: false, reason };
+  const distance = getDistance(t1, t2, options);
+  return distance < 0 ? { ok: false, reason: "blocked" } : { ok: true, distance };
+}
+
+/** -1 when walls block; UNMEASURABLE_DISTANCE (Infinity) when the tokens can't be measured (measureTokens says why) */
 export function getDistance(t1: any, t2: any, options: DistanceOptions = {}): number {
+  if (unmeasurable(t1, t2)) return UNMEASURABLE_DISTANCE;
   t1 = spaceToken(getPlaceable(t1) ?? t1);
   t2 = spaceToken(getPlaceable(t2) ?? t2);
   const { wallsBlock = false, includeCover = true, includeElevation = configSettings.optionalRules.distanceIncludesHeight } = options;
@@ -3551,7 +3598,7 @@ export function getDistance(t1: any, t2: any, options: DistanceOptions = {}): nu
     // Default: use Foundry's core measurePath between token centers
     const token1 = getPlaceable(t1);
     const token2 = getPlaceable(t2);
-    if (!token1 || !token2 || !canvas?.grid) return -1;
+    if (!token1 || !token2 || !canvas?.grid) return UNMEASURABLE_DISTANCE;
     if (token1 === token2) return 0;
     // Still run wall blocking checks even in default mode
     if (wallsBlock) {
@@ -3665,11 +3712,13 @@ function combineDistanceWithHeight(distance: number, heightDifference: number): 
 *** gets the shortest distance betwen two tokens taking into account both tokens size
 *** if wallblocking is set then wall are checked
 **/
+/** -1 when walls block; UNMEASURABLE_DISTANCE (Infinity) when the tokens can't be measured (measureTokens says why) */
 export function computeDistance(t1: any /*Token*/, t2: any /*Token*/, options: { wallsBlock?: boolean, includeCover?: boolean, includeElevation?: boolean } = { wallsBlock: false, includeCover: true }): number {
-  if (!canvas?.scene || !canvas.grid || !canvas.dimensions) return -1;
+  if (unmeasurable(t1, t2)) return UNMEASURABLE_DISTANCE;
+  if (!canvas?.scene || !canvas.grid || !canvas.dimensions) return UNMEASURABLE_DISTANCE;
   t1 = getPlaceable(t1);
   t2 = getPlaceable(t2);
-  if (!t1 || !t2) return -1;
+  if (!t1 || !t2) return UNMEASURABLE_DISTANCE;
   let { wallsBlock = false, includeCover = true, includeElevation = configSettings.optionalRules.distanceIncludesHeight } = options;
   const actor = t1.actor;
   t1 = spaceToken(t1);
@@ -3953,10 +4002,8 @@ export function checkActivityRange(activityIn: Activity, tokenRef: TokenOrDocume
         includeCover: !ignoreTotalCover,
       };
 
-      const rawDistance = getDistance(token, target, coverOptions);
-
-      // Wall blocking is indicated by rawDistance < 0, check it first before applying fudge factor
-      if (rawDistance < 0) {
+      const measured = measureTokens(token, target, coverOptions);
+      if (!measured.ok && measured.reason === "blocked") {
         log(`${target.name} has total cover`)
         return {
           result: "fail",
@@ -3965,9 +4012,15 @@ export function checkActivityRange(activityIn: Activity, tokenRef: TokenOrDocume
           longRange
         }
       }
+      if (!measured.ok) return {
+        result: "fail",
+        reason: i18nFormat(`midi-qol.RangeUnmeasurable.${measured.reason}`, { name: actor?.name ?? "", target: target.name ?? "" }),
+        range,
+        longRange
+      };
 
       // Fudge factor is applied in getDistance - no additional adjustment needed here
-      const distance = Math.max(0, parseFloat(rawDistance.toFixed(isMetric ? 1 : 0)));
+      const distance = Math.max(0, parseFloat(measured.distance.toFixed(isMetric ? 1 : 0)));
 
       if ((longRange !== 0 && distance > longRange) || (distance > range && longRange === 0)) {
         log(`${target.name} is too far ${distance} from your character you cannot hit`)
@@ -4002,7 +4055,8 @@ export function checkActivityRange(activityIn: Activity, tokenRef: TokenOrDocume
   }
 
   const tokenIn = getToken(tokenRef);
-  const targetsIn = targetsRef?.map(t => getToken(t)).filter(t => !!t);
+  // An array: a Set's map can't give the same value twice (two targets with no Token)
+  const targetsIn = targetsRef ? new Set([...targetsRef].map(t => getToken(t)).filter(t => !!t)) : undefined;
   if (!tokenIn || !targetsIn) return { result: "fail", attackingToken: undefined };
   let attackingToken = tokenIn;
   if (!canvas || !canvas.tokens || !tokenIn || !targetsIn) return {
@@ -4902,16 +4956,6 @@ export async function expireMyEffects(this: Workflow, effectsToExpire: string[])
   if (expireTurnAction) effectsToExpire.push("Turn Action");
   if (expireMiss) effectsToExpire.push("1Miss");
   // expire any effects on the actor that require it
-  // if (debugEnabled && false) {
-  //   const test = this.actor.effects.map(ef => {
-  //     const specialDuration = foundry.utils.getProperty(ef.flags, "dae.specialDuration") as string[];
-  //     return [(expireAnyAction && specialDuration?.includes("1Action")),
-  //     (expireAttack && specialDuration?.includes("1Attack") && this.item?.hasAttack),
-  //     (expireHit && this.item?.hasAttack && specialDuration?.includes("1Hit") && this.hitTargets.size > 0)]
-  //   })
-  //   if (debugEnabled > 1) debug("expiry map is ", test)
-  // }
-
   let allEffects = getAppliedEffects(this.actor, { includeEnchantments: true });
   const myExpiredEffects = allEffects?.filter(ef => {
     const specialDuration = foundry.utils.getProperty(ef.flags, "dae.specialDuration") as string[];
@@ -4964,19 +5008,21 @@ export async function expireRollEffect(this: Actor.Implementation, rolltype: str
 }
 
 // This doesn't actually _need_ to be used anywhere as long as we're strict about things
-/** The members that can be targets (with an actor, not a group…): every member of a token set, drawn or not */
+/** The members that can be targets (with an actor, not a group…): every member of a token set, with a canvas token or not */
 export function validTargetTokens(tokens?: Iterable<TokenOrDocument>): TokenDocumentSet {
   const members = tokens instanceof TokenDocumentSet ? tokens.documents : [...(tokens ?? [])];
   return new TokenDocumentSet(members.filter(token => !!token?.actor && isValidTarget(token)));
 }
 
 /**
- * The user's targets, keeping those of `current` that aren't drawn (on another level, reached through an opening in
+ * The user's targets, keeping those of `current` with no canvas token (on another level, reached through an opening in
  * a floor): they can't be the user's targets, so re-reading the user's must not drop them.
  */
 export function userTargetsKeepingUndrawn(current?: Iterable<TokenOrDocument>): Set<TokenOrDocument> {
-  // By document: a token on another scene can share a drawn token's id (a copied scene)
-  const notDrawn = validTargetTokens(current).documents.filter(document => canvas?.tokens?.get(document.id!)?.document !== document);
+  // By document: a token on another scene can share a canvas token's id (a copied scene)
+  // A token deleted since is not kept: only midi's own (no id) and those still in their scene
+  const exists = (document: TokenDocument.Implementation) => !document.id || document.parent?.tokens.get(document.id) === document;
+  const notDrawn = validTargetTokens(current).documents.filter(document => exists(document) && canvas?.tokens?.get(document.id!)?.document !== document);
   return new Set<TokenOrDocument>([...(game.user?.targets ?? []), ...notDrawn]);
 }
 
@@ -5972,6 +6018,8 @@ export async function doReactions(targetRef: TokenOrDocument | string, triggerTo
         for (let activity of theItem.system.activities) {
           const activationType = activity.effectiveActivationType ?? activity.activation?.type;
           if (!activationType?.includes("reaction")) continue;
+          // What dnd5e would refuse (a spell under 6.1's antimagic status, its own visibility rules) isn't offered
+          if (activity.canUse === false) continue;
           if (activationType !== "reaction") {
             console.warn(`midi-qol | itemReaction | item ${item.name} ${activity.name} has a reaction type of ${activationType} which is deprecated - please update to reaction and reaction conditions`)
           }
@@ -6944,6 +6992,14 @@ function collectActivityDamageTypes(
 
 }
 
+/** An item's roll data for conditions, with the dnd5e getters conditions use (getters are not in getRollData). */
+function itemConditionData(item: Item.Implementation) {
+  const itemData: { magicAvailable?: boolean } = item.getRollData().item ?? {};
+  // dnd5e 6.1: attuned if required, magical, and not under antimagic
+  itemData.magicAvailable = dnd5eItem(item)?.system?.magicAvailable;
+  return itemData;
+}
+
 export function createConditionData(data: {
   workflow?: Workflow,
   target?: TokenOrDocument | Actor | string,
@@ -6968,6 +7024,9 @@ export function createConditionData(data: {
   // Use options.damageRolls as fallback when workflow.damageRolls is empty (not yet populated during bonus processing)
   const damageRolls = data.workflow?.damageRolls?.length ? data.workflow.damageRolls : data.options?.damageRolls;
   collectDamageTypes(damageRolls, data.workflow?.activity, rollData);
+  // A workflow's conditions are about the item it used
+  const conditionItem = data.workflow?.item ?? item;
+  if (conditionItem) rollData.item = itemConditionData(conditionItem);
   rollData = foundry.utils.mergeObject(rollData, data.extraData ?? {});
   rollData.isAttuned = rollData.item?.attuned || rollData.item?.attunement === "";
   rollData.options = data?.options;
@@ -6976,12 +7035,12 @@ export function createConditionData(data: {
   rollData.actor = {};
   rollData.actor.raceOrType = actor ? raceOrType(actor) : "";
   rollData.actor.typeOrRace = actor ? typeOrRace(actor) : "";
-  rollData.items = actor?.items?.map(i => i.getRollData().item) ?? [];
+  rollData.items = actor?.items?.map(i => itemConditionData(i)) ?? [];
   rollData.equippedItems = rollData.items.filter(i => i.equipped) ?? [];
   rollData.worldTime = game.time?.worldTime;
   try {
     if (data.target) {
-      // The target's document: an undrawn target has no Token
+      // The target's document: a target with no canvas token has no Token
       const theTarget = getToken(data.target)?.document ?? getTokenDocument(data.target);
       if (theTarget) {
         const theTargetActor = theTarget.actor as Actor;
@@ -6998,7 +7057,7 @@ export function createConditionData(data: {
         rollData.typeOrRace = theTargetActor ? typeOrRace(theTargetActor) : "";
         rollData.target.raceOrType = theTarget.actor ? raceOrType(theTargetActor) : "";
         rollData.target.typeOrRace = theTarget.actor ? typeOrRace(theTargetActor) : "";
-        rollData.target.items = theTargetActor?.items?.map(i => i.getRollData().item) ?? [];
+        rollData.target.items = theTargetActor?.items?.map(i => itemConditionData(i)) ?? [];
         rollData.target.equippedItems = rollData.target.items.filter(i => i.equipped) ?? [];
         rollData.target.saved = data.workflow?.saves.has(theTarget);
         rollData.target.failedSave = data.workflow?.failedSaves.has(theTarget);
@@ -7038,7 +7097,6 @@ export function createConditionData(data: {
       });
       rollData.otherDamageActivity = data.workflow?.otherActivity;
       rollData.hasSave = data.workflow.hasSave;
-      rollData.item = data.workflow.item.getRollData().item;
       rollData.shouldRollDamage = data.workflow.shouldRollDamage;
       rollData.hasAttack = data.workflow.activity.attack;
       rollData.hasDamage = data.workflow.activity.hasDamage;
@@ -7070,7 +7128,7 @@ export function createConditionData(data: {
     rollData.CONFIG = CONFIG;
     rollData.CONST = {};
     let exclusions: string[] = ["DOCUMENT_TYPES"];
-    Object.keys(CONST).forEach(key => !exclusions.includes[key] && (rollData.CONST[key] = CONST[key]));
+    Object.keys(CONST).forEach(key => !exclusions.includes(key) && (rollData.CONST[key] = CONST[key]));
     //Only here to avoid deprecation warnings - remove when we get to v14
     // Other modules add their own data, e.g. world state an item's conditions refer to.
     Hooks.callAll("midi-qol.conditionData", rollData, data);
@@ -8312,7 +8370,8 @@ export async function computeFlankingStatus(token: Token.Implementation, target:
   if (token.actor?.items.contents.some(item => item.system?.properties?.has("rch") && item.system.equipped)) {
     range = 2;
   }
-  if (getFlankingDistance(token, target) > range * (canvas.dimensions?.distance ?? 5)) return false;
+  const flankingDistance = getFlankingDistance(token, target);
+  if (flankingDistance < 0 || flankingDistance > range * (canvas.dimensions?.distance ?? 5)) return false;
   // an enemy's enemies are my friends.
   const allies = findPotentialFlankers(target)
 
@@ -8567,7 +8626,7 @@ export async function updateFlankingHighlight(): Promise<void> {
     tokenRange = 2;
   }
   const tokenDist = getDistance(token, target, { wallsBlock: true });
-  if (tokenDist > tokenRange * gridDist) return;
+  if (tokenDist < 0 || tokenDist > tokenRange * gridDist) return;
 
   const gridW = canvas.grid.sizeX ?? 100;
   const gridH = canvas.grid.sizeY ?? 100;
@@ -9308,7 +9367,7 @@ export async function videoThumbnail(src: string): Promise<string> {
 }
 
 export function getTokenName(entity?: TokenOrDocument | null): string {
-  // Not drawn (another scene or level): named from its document
+  // No canvas token (another scene or level): named from its document
   const token = getToken(entity) ?? getTokenDocument(entity);
   if (!token) return "<unknown>";
   return getTokenNameExact(token) ?? "<unknown>";
@@ -9579,7 +9638,7 @@ export async function chooseEffect({ actor, token, item, workflow, options }: {
   if (chosenEffect.toObject()) {
     if (debugEnabled)
       warn(
-        `chooseEffect | applying effect ${chosenEffect.name} to ${targets.size} targets`,
+        `chooseEffect | applying effect ${chosenEffect.name} to ${targets.count} targets`,
         targets
       );
   }
@@ -10258,11 +10317,6 @@ export function setRangedTargets(tokenToUse: Token.Implementation, targetDetails
       }
     }
 
-    // if (!this.ignoreUserTargets) this.targets = new Set(game.user?.targets ?? []);
-    // this.saves = new Set();
-    // this.failedSaves = new Set(this.targets)
-    // this.hitTargets = new Set(this.targets);
-    // this.hitTargetsEC = new Set();
     game.user?.broadcastActivity({ targets: targetIds });
   }
   return true;

@@ -1,18 +1,23 @@
-> [!tip] Navigation
-> [Go to Readme](/README.md#table-of-contents) <br>
-> [Go to Macro Guide](/MACROS.md#table-of-contents) <br>
-> [Go to Flowchart (v12.4.64 to v13.0.22)](docs/flowchart.md) <br>
-> [Go to Workflow Fields](docs/workflowfields.md)
+> [!TIP]
+> [Readme](/README.md#table-of-contents) · [Macro Guide](/MACROS.md#table-of-contents) · [Flowchart, default order](flowchart.md) · [Workflow Fields](workflowfields-2026-11-17.md)
 
 # Macro Passes for MidiQOL
 
-> *(versions 13.0.23+)*
+> With the setting *Roll saves before damage (Experimental)* on (Workflow Settings › Misc). Otherwise the order is the [default one](flowchart.md).
 
->>> [!important] 
-This flowchart is only valid if the new setting is enabled at `MidiQOL > Workflow Settings > Misc > Roll saves before damage`. The sequence is otherwise the same as in previous versions [(see here)](docs/flowchart.md).
->>>
+This page shows when and why each macro pass is called. See [Workflow Fields](workflowfields-2026-11-17.md) for the fields available in each pass. In the menu for configuring an item's on use macro calls, some options are shown with a description rather than the name of the pass; each node in the chart gives both.
 
-::include{file=flowchart-description.md}
+The chart is arranged by `args[0].tag`, the category of macro pass:
+
+- `OnUse` passes run on the client rolling the item.
+- `TargetOnUse` passes run once for each target before proceeding.
+- `optional` passes are called only when a macro is named in a `flags.midi-qol.optional.NAME.*` flag ([see here](/FLAGS.md#itemmacro-in-optional-bonus-flags)).
+- `DamageBonus` has one pass, called when macros are named in the *Damage Bonus Macro* field in a character's special traits, or set by an effect with `flags.dnd5e.DamageBonusMacro` ([see here](/MACROS.md#damage-bonus-macros)).
+
+A teleport activity (dnd5e 6) also runs `preTeleport` before anyone moves and `postTeleport` after the moves; they are not drawn on the chart.
+
+> [!NOTE]
+> If your macro changes a document the calling client may not have permission for, use sockets. Utilities are available in `MidiQOL.socket()`.
 
 ```mermaid
 ---
@@ -271,4 +276,4 @@ flowchart TD
   %% graphic design is my passion 😎
   ```
 
-  > [!tip] [Jump to Top](#macro-passes-for-midiqol)
+[Jump to Top](#macro-passes-for-midiqol)

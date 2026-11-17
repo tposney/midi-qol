@@ -8,7 +8,7 @@ async function casterTurn({document: effect, token, combatant}) {
     const caster = item?.actor;
     const current = combatant ?? game.combat?.combatant;
     if (!caster || !token || current?.actor?.uuid !== caster.uuid) return;
-    const damage = item.system.activities.find(activity => activity.type === 'damage');
+    const damage = item.system.activities.find(activity => activity.isLike('damage'));
     if (!damage) return;
     const userId = queryUtils.firstOwner(caster)?.id ?? game.user.id;
     const harm = await dialogUtils.confirm(item.name, `Does the phantasm harm ${token.name} this turn (it is in or within 5 feet of the phantasm)?`, {userId});

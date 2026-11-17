@@ -24,7 +24,7 @@ import * as workflowOptionsCodec from "./module/lib/workflowOptionsCodec";
 import * as settings from "./module/settings";
 import { RollStats, Stats } from "./module/RollStats";
 import { checkRule, configSettings, targetConfirmation } from "./module/settings";
-import { PersistedUndoEntry, SaferSocket, SerializedDamageListEntry } from "./module/GMAction";
+import { SaferSocket, StoredUndoEntry } from "./module/GMAction";
 import { MidiActivityMixin } from "./module/activities/MidiActivityMixin";
 import * as undo from "./module/undo";
 import * as patching from "./module/patching";
@@ -92,6 +92,7 @@ declare module "fvtt-types/configuration" {
       "dnd5e.postUseLinkedSpell": (activity: Activity, usageConfig: ActivityUseConfiguration, results: unknown) => void;
       "dnd5e.preActivityConsumption": (activity: Activity, usageConfig: ActivityUseConfiguration, messageConfig: RollMessageConfig) => boolean | void;
       "dnd5e.preApplyDamage": (actor: Actor.Implementation, amount: number, updates: Actor.UpdateData, options: DamageApplicationOptions) => boolean | void;
+      "dnd5e.rollSkill": (rolls: Roll[], data: { skill?: string, subject?: Actor.Implementation }) => void;
       "dnd5e.preCalculateDamage": (actor: Actor.Implementation, damages: DamageDescription[], options: DamageApplicationOptions) => boolean | void;
       "dnd5e.preConfigureInitiative": (actor: Actor.Implementation, rollConfig: { data: AnyMutableObject, parts: string[], options: D20RollOptions }) => void;
       /**
@@ -141,7 +142,6 @@ declare module "fvtt-types/configuration" {
       "midi-qol.ready": () => void;
       "midi-qol.removeUndoEntry": (data?: UndoData) => void;
       "midi-qol.setup": (data: typeof globalThis.MidiQOL) => void;
-      "midi-qol.targeted": (targets: Set<Token.Implementation> | undefined) => void;
       "midi-qol.dependentsRegistryChanged": (event: RegistryChangeEvent) => void;
       "midi-qol-setup-wizard.launch": () => void;
       "getHeaderControlsActivitySheet": (app: foundry.applications.api.Application /*dnd5e.applications.activity.activitySheet*/ , buttons: any[]) => void;
@@ -273,6 +273,8 @@ declare module "fvtt-types/configuration" {
           failsRemaining?: number;  // Remaining fails needed for failCount
         };
         overtimeChatCardUuids?: string[];
+        /** A check ends the effect (lib/stanch.ts): "dc=15, skill=med, range=5, healing=spell", a DC, or the fields */
+        stanch?: string | number | { dc?: number | string, skill?: string, range?: number | string, healing?: string };
         /** A hide (sample Hide action): the Stealth total to find the creature */
         hidden?: { dc?: number };
         transformedActorUuids?: string[];
@@ -540,7 +542,11 @@ declare module "fvtt-types/configuration" {
         /** Damage card: the attacker */
         actorUuid?: string;
         /** Damage card: what was applied, for its undo; messages predating the prune carry the full socket shape */
-        undoDamage?: (PersistedUndoEntry | SerializedDamageListEntry)[];
+        undoDamage?: StoredUndoEntry[];
+        /** Damage card format (GMAction DAMAGE_RECORD_VERSION), written from 14.7.0; not read */
+        damageRecord?: number;
+        /** Damage card from 14.7.0: the raw damage lists its entries point to (rawIndex), each once */
+        rawDamage?: DamageDescriptionObject[][];
         /** The workflow was undone: the card is drawn with the undo colour */
         undone?: boolean;
         /** One of a card note's messages (MidiQOL.cardNoteMessageData): its role, for the note's renderer */
@@ -708,6 +714,10 @@ declare global {
   }
 
   // Foundry v14 TokenDocument additions not yet in fvtt-types.
+  interface Actor<out SubType extends Actor.SubType = Actor.SubType> {
+    /** dnd5e: false when a dnd5e.preCalculateDamage hook vetoes the calculation */
+    calculateDamage(damages: DamageDescription[], options?: DamageApplicationOptions): DamageDescription[] | false;
+  }
   interface TokenDocument {
     /** Token vertical depth in grid units; affects collision and elevation math. */
     depth: number;
@@ -853,6 +863,8 @@ declare global {
     computeDistance: typeof utils.computeDistance;
     convertDuration: typeof utils.convertDuration;
     getDistance: typeof utils.getDistance;
+    measureTokens: typeof utils.measureTokens;
+    UNMEASURABLE_DISTANCE: typeof utils.UNMEASURABLE_DISTANCE;
     computeSkillAdvantage: typeof patching.computeSkillAdvantage;
     computeTargetsFromTemplates: typeof computeTargetsFromTemplates;
     computeToolAdvantage: typeof patching.computeToolAdvantage;
@@ -1016,6 +1028,7 @@ declare global {
         label: string;
       }>;
       abilityActivationTypes: Record<string, string>;
+      itemProperties: Record<string, { label: string; isPhysical?: boolean }>;
       activityTypes: Record<string, {
         documentClass: Function | Activity
       }>;
@@ -1041,6 +1054,7 @@ declare global {
       aggregateDamageDisplay: boolean;
       // This one's added by midi
       customDamageResistanceTypes: Record<string, string>;
+      damageResistanceTypes?: Record<string, { label: string; icon?: string }>;
       damageTypes: Record<string, {
         label: string;
         // Only healingTypes are localized with a short label today, but dnd5e reads
@@ -1170,7 +1184,11 @@ export type DamageApplicationOptions = {
   };
   invertHealing?: boolean;
   only?: "damage" | "healing";
+  /** dnd5e: the message the damage came from (midi's card, attached non-enumerable) */
+  originatingMessage?: ChatMessage.Implementation;
   // midi additions:
+  /** The damage card putting hit points back: not healing (attached non-enumerable) */
+  midiUndo?: boolean;
   midi?: {
     noCalc?: boolean;
     superSaver?: boolean;
@@ -1224,32 +1242,35 @@ export type CalcDamageOptions = DamageApplicationOptions & {
   };
 };
 
+/** A damage category's lists, by name: the calculated list and the raw one (`raw<category>`) */
+export type DamageDetailsByCategory = {
+  calcDamageOptions: Record<string, CalcDamageOptions | undefined>,
+  combinedDamage: DamageDescription[];
+  rawcombinedDamage: DamageDescription[];
+  defaultDamage?: DamageDescription[];
+  rawdefaultDamage?: DamageDescription[];
+  otherDamage?: DamageDescription[];
+  rawotherDamage?: DamageDescription[];
+  bonusDamage?: DamageDescription[];
+  rawbonusDamage?: DamageDescription[];
+  injectedDamage?: DamageDescription[];
+};
+
+/**
+ * A target's damage: one record, in dnd5e's terms. `damages` is the damage as rolled and `options` the damage
+ * application options, as dnd5e's `Actor5e#applyDamage(damages, options)` takes them. `calculatedDamages` is
+ * `calculateDamage(damages, options)` (each entry's applied `value`, `active`, `potential`, `midiCategory`): what is
+ * applied, edited in place by macros. Totals and per-category lists are worked out from them.
+ */
 export type PreSetupDamageListEntry = {
   actorId: string;
   actorUuid: string;
-  // calcDamageOptions: CalcDamageOptions;
+  options: CalcDamageOptions;
   challengeModeScale?: number;
   challengeModeAR?: number;
   critical: boolean;
-  damageDetail: DamageDescription[];
-  damageDetails: {
-    calcDamageOptions: {
-      combinedDamage?: CalcDamageOptions,
-      defaultDamage?: CalcDamageOptions,
-      otherDamage?: CalcDamageOptions,
-      bonusDamage?: CalcDamageOptions,
-    },
-    bonusDamage?: DamageDescription[];
-    combinedDamage: DamageDescription[];
-    // Entries midi injects during calculation (the aggregate DR entry) - cross-category.
-    injectedDamage?: DamageDescription[];
-    defaultDamage?: DamageDescription[];
-    otherDamage?: DamageDescription[];
-    rawbonusDamage?: DamageDescription[];
-    rawcombinedDamage: DamageDescription[];
-    rawdefaultDamage?: DamageDescription[];
-    rawotherDamage?: DamageDescription[];
-  };
+  calculatedDamages: DamageDescription[];
+  damages: DamageDescription[];
   isCharacter?: boolean;
   isHit: boolean;
   isNpc?: boolean;
@@ -1260,7 +1281,6 @@ export type PreSetupDamageListEntry = {
   oldDeathFailures?: number;
   newDeathFailures?: number;
   newVitalitySpent?: number;
-  rawDamageDetail: DamageDescription[];
   rawTotalDamage?: number;
   saved: boolean;
   sceneId: string;
@@ -1271,17 +1291,15 @@ export type PreSetupDamageListEntry = {
   uncannyDodge?: boolean;
 }
 
-/** Per-entry display data for the damage card tooltip, kept because the stored damageDetail is the
- *  raw (pre-calculation) list and so carries no `active` markers to derive modifications from. */
+/** Per-entry display data for the damage card tooltip. Only cards written before 14.7.0 store it (their stored
+ *  list was the raw one, with no `active` markers). */
 export type DamageModDisplay = { type: string; value: number; mods: string[] };
 
 export type DamageListEntry = PreSetupDamageListEntry & {
+  /** Cards before 14.7.0 only */
   damageMods?: DamageModDisplay[];
-  damageSelector: string;
-  calcDamageOptions: CalcDamageOptions;
   updateOptions: any;
   details: string[];
-  healingAdjustedTotalDamage: number;
   hpDamage: number;
   newHP: number;
   newTempHP: number;
@@ -1291,6 +1309,16 @@ export type DamageListEntry = PreSetupDamageListEntry & {
   oldTempMax?: number;
   tempDamage: number;
   wasHit: boolean;
+  /** @deprecated since 14.7.0: `calculatedDamages` */
+  damageDetail?: DamageDescription[];
+  /** @deprecated since 14.7.0: `damages` */
+  rawDamageDetail?: DamageDescription[];
+  /** @deprecated since 14.7.0: `options` */
+  calcDamageOptions?: CalcDamageOptions;
+  /** @deprecated since 14.7.0: `calculatedDamages` / `damages` filtered by `midiCategory` */
+  readonly damageDetails?: DamageDetailsByCategory;
+  /** @deprecated since 14.7.0: `hpDamage` + `tempDamage` */
+  healingAdjustedTotalDamage?: number;
 }
 
 // Temporary, so that I can at least type them to _something_
@@ -1328,6 +1356,8 @@ export interface ActivityEffectData {
 }
 
 export interface Activity extends AnyMutableObject {
+  /** dnd5e 6.1: this type, or one that behaves as it (`metadata.like`) */
+  isLike(type: string): boolean;
   get applicableEffects(): ActivityEffectData[] | null;
   /** The level effect profiles are filtered against. */
   relevantLevel: number;
@@ -1645,6 +1675,8 @@ export type RollProcessConfig = {
   }
   flags?: unknown;
   scaling?: number | false;
+  /** dnd5e 6.1: the attacker's damage rules for a damage roll (AppliedRules#toDamageApplicationOptions) */
+  applicationOptions?: { downgrade?: Set<string>, ignore?: Partial<Record<"immunity" | "resistance" | "vulnerability", Set<string>>> };
 };
 export type RollDialogConfig = {
   configure?: boolean;
@@ -1679,6 +1711,12 @@ export type RollDialogConfig = {
  * accessors on `ChatMessage5e` (`chat-message.mjs`). They are optional here because a world can be
  * running a dnd5e old enough not to have them.
  */
+/** dnd5e roll data as midi reads it: an item's system data is under `item`, a roll's own under `roll` */
+export type Dnd5eRollData = Record<string, unknown> & {
+  item?: Record<string, unknown> & { properties?: Iterable<string> };
+  roll?: Record<string, unknown> & { properties?: string[] };
+};
+
 /**
  * `game.system` with dnd5e's additions. fvtt-types' `System` is a default-exported class, which a
  * module augmentation cannot extend, so this is applied as `(game.system as Dnd5eSystem)`.

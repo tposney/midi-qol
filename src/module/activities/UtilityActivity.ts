@@ -2,9 +2,9 @@ import { Activity, RollDialogConfig, RollMessageConfig, RollProcessConfig } from
 import { debugEnabled, i18n, warn, error, GameSystemConfig } from "../../midi-qol.js";
 import { Workflow } from "../Workflow.js";
 import { TroubleShooter } from "../apps/TroubleShooter.js";
-import { replaceDefaultActivities, configSettings } from "../settings.js";
+import { configSettings } from "../settings.js";
 import { heldKeys } from "../lib/rollKeys.js";
-import { areMidiKeysPressed, callActivityHooks, isAutoFastForward, registerMidiActivityType } from "../utils.js";
+import { areMidiKeysPressed, callActivityHooks, isAutoFastForward } from "../utils.js";
 import { MidiActivityMixin, MidiActivityMixinSheet } from "./MidiActivityMixin.js";
 import { displayDSNForRoll } from "../utils.js";
 
@@ -17,12 +17,7 @@ export function setupUtilityActivity() {
   MidiUtilitySheet = defineMidiUtilitySheetClass(game.system.applications.activity.UtilitySheet);
 
   MidiUtilityActivity = defineMidiUtilityActivityClass(GameSystemConfig.activityTypes.utility.documentClass as Activity);
-  if (replaceDefaultActivities) {
-    // GameSystemConfig.activityTypes["dnd5eUtility"] = GameSystemConfig.activityTypes.utility;
-    GameSystemConfig.activityTypes.utility = { documentClass: MidiUtilityActivity };
-  } else {
-    registerMidiActivityType("midiUtility", MidiUtilityActivity, "utility");
-  }
+  GameSystemConfig.activityTypes.utility = { documentClass: MidiUtilityActivity };
 }
 
 let defineMidiUtilityActivityClass = <T extends Activity>(ActivityClass: T) => {
@@ -32,7 +27,7 @@ let defineMidiUtilityActivityClass = <T extends Activity>(ActivityClass: T) => {
     static metadata =
       foundry.utils.mergeObject(
         super.metadata, {
-        title: configSettings.activityNamePrefix ? "midi-qol.UTILITY.Title.one" : ActivityClass.metadata.title,
+        midiTitle: "midi-qol.UTILITY.Title.one",
         dnd5eTitle: ActivityClass.metadata.title,
         sheetClass: MidiUtilitySheet,
         usage: {

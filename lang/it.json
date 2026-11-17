@@ -730,8 +730,6 @@
 "midi-qol.CollapsibleTargets.Hint": "La visualizzazione del bersaglio Colpito/Mancato nella scheda chat è comprimibile",
 "midi-qol.AutoRemoveInstantaneousTemplate.Name": "Rimozione automatica dei modelli istantanei",
 "midi-qol.AutoRemoveInstantaneousTemplate.Hint": "I modelli posizionati da un oggetto con durata istantanea vengono rimossi alla fine del tiro dell'oggetto",
-"midi-qol.ReplaceDefaultActivities.Name": "Sostituisci le attività dnd5e con gli equivalenti midi-qol",
-"midi-qol.ReplaceDefaultActivities.Hint": "Tutte le attività esistenti, utilizzeranno le versioni midi. Ciò è necessario per automatizzare gli elementi SRD, altrimenti dovrai configurare manualmente ogni elemento per l'automazione midi.",
 "midi-qol.ConfirmAmmunition.Name": "Conferma la scelta delle munizioni quando esegui un attacco con il tiro - mostra la configurazione del tiro di attacco",
 "midi-qol.ActivityNamePrefix.Name": "Prefisso attività",
 "midi-qol.ActivityNamePrefix.Hint": "Aggiungi il prefisso Midi al nome delle attività midi-qol. La modifica richiede il ricaricamento",

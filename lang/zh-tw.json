@@ -896,8 +896,6 @@
     "midi-qol.CollapsibleTargets.Hint": "聊天卡片中的命中/未命中顯示可摺疊。",
     "midi-qol.AutoRemoveInstantaneousTemplate.Name": "自動移除瞬間(Instantaneous)模板",
     "midi-qol.AutoRemoveInstantaneousTemplate.Hint": "持續時間為瞬間的模板在擲骰結束後自動移除。",
-    "midi-qol.ReplaceDefaultActivities.Name": "將 dnd5e 活動替換為 midi-qol 等效項",
-    "midi-qol.ReplaceDefaultActivities.Hint": "所有既存活動（攻擊、傷害、豁免等）將改用 midi 版本。這是自動化 SRD 物品的關鍵。",
     "midi-qol.ConfirmAmmunition.Name": "攻擊時確認彈藥選擇 — 顯示攻擊配置",
     "midi-qol.ActivityNamePrefix.Name": "活動前綴",
     "midi-qol.ActivityNamePrefix.Hint": "在活動名稱前加上 Midi。需重載。",

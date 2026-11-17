@@ -195,7 +195,7 @@
     },
     "cat": {
       "automation": {
-        "version": "14.6.5"
+        "version": "14.7.0"
       }
     }
   },
@@ -296,7 +296,7 @@
         "activation": {
           "type": "action",
           "value": 1,
-          "condition": "workflow.diceRoll === 20 && !([\"construct\", \"undead\"].includes(raceOrType)) && item.attunement !== CONFIG.DND5E.attunementTypes.REQUIRED",
+          "condition": "workflow.diceRoll === 20 && !([\"construct\", \"undead\"].includes(raceOrType)) && item.magicAvailable",
           "override": false
         },
         "consumption": {
@@ -480,7 +480,7 @@
             }
           ]
         },
-        "useConditionText": "isAttuned && w.d20AttackRoll === 20 && ![\"undead\", \"construct\"].includes(raceOrType)",
+        "useConditionText": "item.magicAvailable && w.d20AttackRoll === 20 && ![\"undead\", \"construct\"].includes(raceOrType)",
         "effectConditionText": "",
         "name": "Necrotic Damage",
         "macroData": {

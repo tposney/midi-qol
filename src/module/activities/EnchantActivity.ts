@@ -1,7 +1,6 @@
-import { registerMidiActivityType } from "../utils.js";
 import { Activity } from "../../globals.js";
 import { debugEnabled, GameSystemConfig, warn } from "../../midi-qol.js";
-import { replaceDefaultActivities, configSettings } from "../settings.js";
+import { configSettings } from "../settings.js";
 import { MidiActivityMixin, MidiActivityMixinSheet } from "./MidiActivityMixin.js";
 
 export let MidiEnchantActivity: ReturnType<typeof defineMidiEnchantActivityClass>;
@@ -12,12 +11,7 @@ export function setupEnchantActivity() {
   //@ts-expect-error
   MidiEnchantSheet = defineMidiEnchantSheetClass(game.system.applications.activity.EnchantSheet);
   MidiEnchantActivity = defineMidiEnchantActivityClass(GameSystemConfig.activityTypes.enchant.documentClass as Activity);
-  if (replaceDefaultActivities) {
-    // GameSystemConfig.activityTypes["dnd5eEnchant"] = GameSystemConfig.activityTypes.enchant;
-    GameSystemConfig.activityTypes.enchant = { documentClass: MidiEnchantActivity };
-  } else {
-    registerMidiActivityType("midiEnchant", MidiEnchantActivity, "enchant");
-  }
+  GameSystemConfig.activityTypes.enchant = { documentClass: MidiEnchantActivity };
 }
 
 let defineMidiEnchantActivityClass = <T extends Activity>(ActivityClass: T) => {
@@ -26,7 +20,7 @@ let defineMidiEnchantActivityClass = <T extends Activity>(ActivityClass: T) => {
     static metadata =
       foundry.utils.mergeObject(
         super.metadata, {
-        title: configSettings.activityNamePrefix ? "midi-qol.ENCHANT.Title.one" : ActivityClass.metadata.title,
+        midiTitle: "midi-qol.ENCHANT.Title.one",
         dnd5eTitle: ActivityClass.metadata.title,
         sheetClass: MidiEnchantSheet,
         usage: {

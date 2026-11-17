@@ -185,7 +185,7 @@
             }
           ]
         },
-        "useConditionText": "raceOrType.includes(\"dragon\") && (item.attuned || item.attunement !== \"required\")",
+        "useConditionText": "raceOrType.includes(\"dragon\") && item.magicAvailable",
         "effectConditionText": "",
         "name": "Slayer Damage",
         "macroData": {

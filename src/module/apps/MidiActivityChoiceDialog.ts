@@ -1,6 +1,7 @@
 import { i18n } from "../../midi-qol.js";
 import { safeGetGameSetting } from "../settings.js";
 import { asyncHooksCallAll } from "../utils.js";
+import { Activity } from "../../globals.js";
 
 //@ts-expect-error
 const ActivityChoiceDialog = dnd5e.applications?.activity?.ActivityChoiceDialog;
@@ -10,9 +11,14 @@ const ActivityChoiceDialog = dnd5e.applications?.activity?.ActivityChoiceDialog;
 // WeakMap lets entries be collected with their item.
 const pendingChoices = new WeakMap();
 
+/** dnd5e's context for one choice; `uses` from dnd5e 6.1 */
+type ActivityChoiceContext = { id: string, name: string, img: string, sort: number, uses?: { value: number, max: number } | null };
+
 export class MidiActivityChoiceDialog extends ActivityChoiceDialog {
+  declare _prepareActivityContext: (activity: Activity) => ActivityChoiceContext;
+
   /** The item's offerable activities after midi's usability filter and the module prune hook.
-   *  Returns the surviving choice contexts ({id, name, img, sort}), sorted. Single source of truth
+   *  Returns the surviving choice contexts as dnd5e prepares them ({id, name, img, sort, uses}), sorted. Single source of truth
    *  for "which activities can be used" — shared by the dialog and the item-use entry points so the
    *  prompt-vs-autoselect-vs-skip decision matches exactly what the dialog would display. */
   static async getActivities(item: Item.Implementation) {
@@ -20,7 +26,8 @@ export class MidiActivityChoiceDialog extends ActivityChoiceDialog {
     const all = [...item.system.activities];
     const activities = all
       .filter(a => a.canUse !== false && !a.isRider && !a.midiProperties?.automationOnly && !a.inProgress)
-      .map(a => ({ id: a.id, name: a.name, img: a.img, sort: a.sort }))
+      // dnd5e's own context (6.1 adds the activity's uses); it reads nothing from the dialog
+      .map(a => this.prototype._prepareActivityContext(a))
       .sort((a, b) => a.sort - b.sort);
     // Modules may remove entries from `activities` to make them unavailable for this use.
     await asyncHooksCallAll("midi-qol.itemUseActivitySelect", { activities, item });

@@ -1,19 +1,19 @@
 import Token = foundry.canvas.placeables.Token;
 
 type TokenMember = Token.Implementation | TokenDocument.Implementation | string;
-/** What reading a token set gives: drawn Tokens, or TokenDocuments in document mode */
+/** What reading a token set gives: TokenDocuments, or canvas tokens with document mode off */
 export type TokenSetMember = Token.Implementation | TokenDocument.Implementation;
 
-/** Document mode (world setting tokenDocumentSets): a token set iterates its TokenDocuments; otherwise its drawn Tokens */
+/** Document mode (world setting tokenDocumentSets, off by default until 14.8.0): a token set iterates its TokenDocuments; off, its canvas tokens */
 let documentMode = false;
 export function tokenSetDocumentMode(): boolean {
   return documentMode;
 }
 
-/** Read once at init, as it also patches TokenDocument: a change takes effect on reload */
+/** Read once at init: a change takes effect on reload. TokenDocument#document is patched in either mode */
 export function setupTokenSetMode(enabled: boolean) {
   documentMode = enabled;
-  if (!enabled || Object.getOwnPropertyDescriptor(TokenDocument.prototype, "document")) return;
+  if (Object.getOwnPropertyDescriptor(TokenDocument.prototype, "document")) return;
   // Code written for sets of Tokens reads `member.document`: a TokenDocument is its own document, with a warning once per
   // reading line, named even when it is midi's own (Foundry's `once` keys on the whole stack, so one line reached from many
   // places would warn many times)
@@ -23,11 +23,14 @@ export function setupTokenSetMode(enabled: boolean) {
     get() {
       // Only while warnings are shown: a stack on every read is slow
       if (CONFIG.compatibility.mode === CONST.COMPATIBILITY_MODES.SILENT) return this;
-      const caller = new Error().stack?.split("\n")[2] ?? "";
-      if (!warned.has(caller)) {
-        warned.add(caller);
-        foundry.utils.logCompatibilityWarning(`midi-qol | workflow token sets give TokenDocuments (tokenDocumentSets): use the member itself, not member.document, or set.tokens for the Tokens. ${caller.trim()}`, { since: "14.6.9", until: "14.8.0" });
-      }
+      // V8 heads the stack with the error's own line; Firefox and Safari don't
+      const stack = new Error().stack?.split("\n") ?? [];
+      const caller = stack[stack[0]?.startsWith("Error") ? 2 : 1] ?? "";
+      // dnd5e and core read `.document` to accept a Token or a TokenDocument: nothing for them to change
+      if (warned.has(caller) || /\/systems\/|\/scripts\/foundry\.m?js/.test(caller)) return this;
+      warned.add(caller);
+      const gives = documentMode ? "workflow token sets and target hooks give TokenDocuments" : "midi's target hooks give TokenDocuments, as workflow token sets will from 14.8.0";
+      foundry.utils.logCompatibilityWarning(`midi-qol | ${gives}: use the member itself, not member.document, or set.tokens for the Tokens. ${caller.trim()}`, { since: "14.6.9", until: "14.9.0" });
       return this;
     }
   });
@@ -58,8 +61,8 @@ export function rememberSyntheticToken(token: Token.Implementation) {
 }
 
 /**
- * A member's Token now: drawn, else midi's own for a token never created; none on another scene or level, or deleted.
- * A document with no id is midi's own: Foundry's lazy `object` would create another, undrawn Token for it.
+ * A member's Token now: its canvas token, else midi's own for a token never created; none on another scene or level, or deleted.
+ * A document with no id is midi's own: Foundry's lazy `object` would create another Token for it.
  */
 export function tokenOf(document: TokenDocument.Implementation): Token.Implementation | undefined {
   if (!document.id) {
@@ -72,6 +75,11 @@ export function tokenOf(document: TokenDocument.Implementation): Token.Implement
 
 function documentsOf(other: ReadonlySetLike<unknown> | Iterable<unknown>): TokenDocument.Implementation[] {
   if (other instanceof TokenDocumentSet) return other.documents;
+  // One member, not a collection of them
+  if (typeof other === "string" || other instanceof TokenDocument || other instanceof foundry.canvas.placeables.Token) {
+    const document = toDocument(other);
+    return document ? [document] : [];
+  }
   // A Map's members are its keys, not its entries; a set-like that can't be iterated gives its keys
   const members: Iterable<unknown> = other instanceof Map ? other.keys()
     : Symbol.iterator in other ? other as Iterable<unknown> : { [Symbol.iterator]: () => (other as ReadonlySetLike<unknown>).keys() };
@@ -81,9 +89,9 @@ function documentsOf(other: ReadonlySetLike<unknown> | Iterable<unknown>): Token
 const setValues = Set.prototype.values;
 
 /**
- * A workflow's token set: a Set of TokenDocuments (every member, drawn or not; a deleted token stays a member while the workflow is in memory). Members are
+ * A workflow's token set: a Set of TokenDocuments (every member, with a canvas token or not; a deleted token stays a member while the workflow is in memory). Members are
  * added, removed and tested as a Token, a TokenDocument or a uuid. Reading it (iteration, `size`, `first()`) gives the
- * drawn Tokens, or in document mode every member's TokenDocument; `documents`, `count`, `tokens` and `uuids` are the
+ * canvas tokens, or in document mode every member's TokenDocument; `documents`, `count`, `tokens` and `uuids` are the
  * same in both modes, and midi itself reads only those. Iteration is over the members as it starts (members added
  * meanwhile aren't visited). Copy one with `new TokenDocumentSet(set)`; set algebra (`difference`, `union`,
  * `isSubsetOf`, `equals`…) is over every member and gives a TokenDocumentSet, but only called on the TokenDocumentSet:
@@ -96,17 +104,17 @@ export class TokenDocumentSet extends Set<TokenSetMember> {
     for (const document of members ? documentsOf(members) : []) this.add(document);
   }
 
-  /** How many members, drawn or not (size in document mode) */
+  /** How many members, with a canvas token or not (size in document mode) */
   get count(): number {
     return super.size;
   }
 
-  /** Every member's TokenDocument, drawn or not */
+  /** Every member's TokenDocument, with a canvas token or not */
   get documents(): TokenDocument.Implementation[] {
     return [...setValues.call(this)] as TokenDocument.Implementation[];
   }
 
-  /** The members' Tokens now: drawn, or midi's own for an actor with no token on the scene */
+  /** The members' Tokens now: canvas tokens, or midi's own for an actor with no token on the scene */
   get tokens(): Token.Implementation[] {
     return this.documents.map(tokenOf).filter((token): token is Token.Implementation => !!token);
   }
@@ -162,7 +170,7 @@ export class TokenDocumentSet extends Set<TokenSetMember> {
     for (const member of this.values()) callback.call(thisArg, member, member, this);
   }
 
-  // Set algebra is over every member, drawn or not, and gives a TokenDocumentSet; the other set's members (Tokens,
+  // Set algebra is over every member, with a canvas token or not, and gives a TokenDocumentSet; the other set's members (Tokens,
   // TokenDocuments or uuids) are matched by document
   override union(other: ReadonlySetLike<TokenMember>): TokenDocumentSet;
   override union<U>(other: ReadonlySetLike<U>): Set<TokenSetMember | U>;
@@ -210,16 +218,18 @@ export class TokenDocumentSet extends Set<TokenSetMember> {
   equals(other: unknown): boolean {
     if (!(other instanceof Set)) return false;
     const theirs = new Set(documentsOf(other));
+    // A member of theirs that is no token makes the sets differ
+    if (!(other instanceof TokenDocumentSet) && [...other].some(member => !toDocument(member))) return false;
     return theirs.size === super.size && [...theirs].every(document => this.has(document));
   }
 }
 
-/** How many members a set has: every member of a TokenDocumentSet (drawn or not), else the Set's size */
+/** How many members a set has: every member of a TokenDocumentSet (with a canvas token or not), else the Set's size */
 export function memberCount(set: ReadonlySetLike<unknown> | undefined | null): number {
   return set instanceof TokenDocumentSet ? set.count : set?.size ?? 0;
 }
 
-/** What a hook or macro is given for a target: its TokenDocument in document mode, else its Token when drawn (else the document) */
+/** What a hook is given for a target, as reading a token set gives it: its TokenDocument, or with document mode off its canvas token (the document when it has none) */
 export function hookTarget(member: Token.Implementation | TokenDocument.Implementation): TokenSetMember {
   const document = toDocument(member);
   if (!document) return member;

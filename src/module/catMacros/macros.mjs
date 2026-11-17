@@ -10,7 +10,7 @@ import {suffocationHoldingBreath, suffocationOutOfAir} from './actions/suffocati
 import {toggleEffect} from './actions/toggleEffect.mjs';
 import {automationNotes} from './automationNotes.mjs';
 import {auraTurn} from './features/auraTurn.mjs';
-import {infernalWound, registerInfernalWoundHooks} from './features/infernalWound.mjs';
+import {infernalWound} from './features/infernalWound.mjs';
 import {registerDeathHooks} from './features/death.mjs';
 import {fearAura} from './features/fearAura.mjs';
 import {forcedMovement} from './features/forcedMovement.mjs';
@@ -32,6 +32,8 @@ import {phantasmalForce} from './spells/phantasmalForce.mjs';
 import {sanctuary} from './spells/sanctuary.mjs';
 import {sleep} from './spells/sleep.mjs';
 // CAT macros of midi's sample items, keyed by the identifier items reference in flags.cat.macros.
+// Macros of sample items retired for CPR's (check-cover, generic-actions, hide, influence, knock-out, stabilize,
+// suffocation-*, command, dragons-breath, sanctuary) stay registered for copies still on actors; to be removed in 14.8.0.
 const catMacros = {
     'attack': attack,
     'check-cover': checkCover,
@@ -90,5 +92,4 @@ export function registerCATMacros(source) {
     cat.api.registerSourceName(source, game.modules.get(source)?.title ?? source);
     registerDeathHooks();
     registerSwallowHooks();
-    registerInfernalWoundHooks();
 }

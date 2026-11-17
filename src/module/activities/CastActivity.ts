@@ -1,8 +1,7 @@
-import { registerMidiActivityType } from "../utils.js";
 import { Activity, ActivityUseConfiguration, RollDialogConfig, RollMessageConfig } from "../../globals.js";
 import { debugEnabled, GameSystemConfig, warn } from "../../midi-qol.js";
 import { Workflow } from "../Workflow.js";
-import { replaceDefaultActivities, configSettings } from "../settings.js";
+import { configSettings } from "../settings.js";
 import { MidiActivityMixin, MidiActivityMixinSheet } from "./MidiActivityMixin.js";
 
 export let MidiCastActivity: ReturnType<typeof defineMidiCastActivityClass>;
@@ -13,12 +12,7 @@ export function setupCastActivity() {
   //@ts-expect-error
   MidiCastSheet = defineMidiCastSheetClass(game.system.applications.activity.CastSheet);
   MidiCastActivity = defineMidiCastActivityClass(GameSystemConfig.activityTypes.cast.documentClass as Activity);
-  if (replaceDefaultActivities) {
-    // GameSystemConfig.activityTypes["dnd5eCast"] = GameSystemConfig.activityTypes.cast;
-    GameSystemConfig.activityTypes.cast = { documentClass: MidiCastActivity };
-  } else {
-    registerMidiActivityType("midiCast", MidiCastActivity, "cast");
-  }
+  GameSystemConfig.activityTypes.cast = { documentClass: MidiCastActivity };
 }
 let defineMidiCastSheetClass = (baseClass: any) => {
   return class MidiCastSheet extends MidiActivityMixinSheet(baseClass) {
@@ -31,7 +25,7 @@ let defineMidiCastActivityClass =  <T extends Activity>(ActivityClass: T) => {
     static metadata =
       foundry.utils.mergeObject(
         super.metadata, {
-        title: configSettings.activityNamePrefix ? "midi-qol.CAST.Title.one" : ActivityClass.metadata.title,
+        midiTitle: "midi-qol.CAST.Title.one",
         dnd5eTitle: ActivityClass.metadata.title,
         sheetClass: MidiCastSheet,
         usage: {

@@ -332,7 +332,7 @@
     },
     "cat": {
       "automation": {
-        "version": "14.6.5"
+        "version": "14.7.0"
       }
     }
   },
@@ -638,7 +638,7 @@
             }
           ]
         },
-        "useConditionText": "isAttuned && w.d20AttackRoll === 20",
+        "useConditionText": "item.magicAvailable && w.d20AttackRoll === 20",
         "effectConditionText": "(await new Roll(\"1d20\").roll()).total === 20",
         "macroData": {
           "name": "",

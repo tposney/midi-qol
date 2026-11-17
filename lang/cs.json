@@ -725,8 +725,6 @@
   "midi-qol.CollapsibleTargets.Hint": "Po zaškrtnutí bude zobrazení zasažených/nezasažených cílů v kartě chatu sbalitelné.",
   "midi-qol.AutoRemoveInstantaneousTemplate.Name": "Odstraňovat automaticky šablony okamžitých kouzel po vypořádání?",
   "midi-qol.AutoRemoveInstantaneousTemplate.Hint": "Šablony umístěné položkou s trváním ´ihned´ budou odstraněny na konci hodu položky.",
-  "midi-qol.ReplaceDefaultActivities.Name": "Změnit aktivity DnD5E na Midi-QoL?",
-  "midi-qol.ReplaceDefaultActivities.Hint": "Jakékoliv existující aktivity (Útok, Zranění, Záchrana, Ověření, Pomocná aktivita) budou používat Midi verze. Je to nutné pro automatizaci položek SRD, jinak bude třeba každou položku pro automatizaci Midi nastavovat ručně.",
   "midi-qol.ConfirmAmmunition.Name": "Potvrzovat výběr munice při hodu na útok (bude se zobrazovat dialog hodu na útok)?",
   "midi-qol.ActivityNamePrefix.Name": "Jaká má být předpona aktivity?",
   "midi-qol.ActivityNamePrefix.Hint": "Předpona názvu Midi-QoL aktivit s Midi. Změna vyžaduje znovunačtení světa.",

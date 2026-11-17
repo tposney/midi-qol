@@ -1,7 +1,7 @@
 import { Activity } from "../../globals.js";
 import { debugEnabled, GameSystemConfig, warn } from "../../midi-qol.js";
-import { replaceDefaultActivities, configSettings } from "../settings.js";
-import { getTokenDocument, registerMidiActivityType } from "../utils.js";
+import { configSettings } from "../settings.js";
+import { getTokenDocument } from "../utils.js";
 import { MidiActivityMixin, MidiActivityMixinSheet } from "./MidiActivityMixin.js";
 
 export let MidiSummonActivity: ReturnType<typeof defineMidiSummonActivityClass>;
@@ -12,12 +12,7 @@ export function setupSummonActivity() {
   //@ts-expect-error
   MidiSummonSheet = defineMidiSummonSheetClass(game.system.applications.activity.SummonSheet);
   MidiSummonActivity = defineMidiSummonActivityClass(GameSystemConfig.activityTypes.summon.documentClass as Activity);
-  if (replaceDefaultActivities) {
-    // GameSystemConfig.activityTypes["dnd5eSummon"] = GameSystemConfig.activityTypes.summon;
-    GameSystemConfig.activityTypes.summon = { documentClass: MidiSummonActivity };
-  } else {
-    registerMidiActivityType("midiSummon", MidiSummonActivity, "summon");
-  }
+  GameSystemConfig.activityTypes.summon = { documentClass: MidiSummonActivity };
   //@ts-expect-error
   Hooks.on("dnd5e.summonToken", (activity, profile, tokenData, options) => {
     if (!activity.friendlySummon) return;
@@ -36,7 +31,7 @@ let defineMidiSummonActivityClass = <T extends Activity>(ActivityClass: T) => {
     static metadata =
       foundry.utils.mergeObject(
         super.metadata, {
-        title: configSettings.activityNamePrefix ? "midi-qol.SUMMON.Title.one" : ActivityClass.metadata.title,
+        midiTitle: "midi-qol.SUMMON.Title.one",
         dnd5eTitle: ActivityClass.metadata.title,
         sheetClass: MidiSummonSheet,
         usage: {

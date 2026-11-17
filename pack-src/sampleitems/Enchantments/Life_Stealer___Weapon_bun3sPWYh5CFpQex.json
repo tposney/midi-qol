@@ -185,7 +185,7 @@
             }
           ]
         },
-        "useConditionText": "isAttuned && w.d20AttackRoll === 20 && ![\"undead\", \"construct\"].includes(raceOrType)",
+        "useConditionText": "item.magicAvailable && w.d20AttackRoll === 20 && ![\"undead\", \"construct\"].includes(raceOrType)",
         "effectConditionText": "",
         "name": "Necrotic Damage",
         "macroData": {

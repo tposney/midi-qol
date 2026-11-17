@@ -247,7 +247,7 @@
       "max": ""
     },
     "description": {
-      "value": "<p class=\"feature\"><em>Dexterity Saving Throw:</em> DC [[lookup @save.dc.value activity=tJYeyUk3iPYJq9xM]], one [[lookup @target.affects.type activity=tJYeyUk3iPYJq9xM]] the [[lookup @name lowercase]] can see within [[lookup @range.value activity=tJYeyUk3iPYJq9xM]] [[lookup @range.units activity=tJYeyUk3iPYJq9xM]].</p><p class=\"feature\"><em>Failure:</em> [[/damage average activity=tJYeyUk3iPYJq9xM]] damage, and the target receives an infernal wound if it doesn't have one. While wounded, the target loses [[/damage average activity=zZfCQ0IeJZCjPLzE]] Hit Points at the start of each of its turns. The wound closes after [[lookup @duration.value activity=tJYeyUk3iPYJq9xM]] [[lookup @duration.units activity=tJYeyUk3iPYJq9xM]], after a spell restores Hit Points to the target, or after the target or a creature within 5 feet of it takes an action to stanch the wound, doing so by succeeding on a [[/check dc=17 ability=wis skill=med format=long]].</p><div class=\"cat-description\"><p><em>midi-qol: A creature that fails the save takes the damage and, if it has no infernal wound, is wounded: it loses 3d6 hit points at the start of each of its turns. The wound closes after 1 minute, when a spell restores hit points to it, or when it or a creature within 5 feet succeeds on a Medicine check against DC 17 (a Medicine roll with the creature targeted, or the Stabilize action). The hit point loss, duration and Medicine DC are Cat Kit configuration options; the save is the activity's own.</em></p><p><em>Automation requires Coven's Automation Toolkit (CAT).</em></p></div>",
+      "value": "<p class=\"feature\"><em>Dexterity Saving Throw:</em> DC [[lookup @save.dc.value activity=tJYeyUk3iPYJq9xM]], one [[lookup @target.affects.type activity=tJYeyUk3iPYJq9xM]] the [[lookup @name lowercase]] can see within [[lookup @range.value activity=tJYeyUk3iPYJq9xM]] [[lookup @range.units activity=tJYeyUk3iPYJq9xM]].</p><p class=\"feature\"><em>Failure:</em> [[/damage average activity=tJYeyUk3iPYJq9xM]] damage, and the target receives an infernal wound if it doesn't have one. While wounded, the target loses [[/damage average activity=zZfCQ0IeJZCjPLzE]] Hit Points at the start of each of its turns. The wound closes after [[lookup @duration.value activity=tJYeyUk3iPYJq9xM]] [[lookup @duration.units activity=tJYeyUk3iPYJq9xM]], after a spell restores Hit Points to the target, or after the target or a creature within 5 feet of it takes an action to stanch the wound, doing so by succeeding on a [[/check dc=17 ability=wis skill=med format=long]].</p><div class=\"cat-description\"><p><em>midi-qol: A creature that fails the save takes the damage and, if it has no infernal wound, is wounded: it loses 3d6 hit points at the start of each of its turns. The wound closes after 1 minute, when a spell restores hit points to it, or when it or a creature within 5 feet succeeds on a Medicine check against DC 17 (a Medicine roll with the creature targeted). The hit point loss, duration and Medicine DC are Cat Kit configuration options; the save is the activity's own.</em></p><p><em>Automation requires Coven's Automation Toolkit (CAT).</em></p></div>",
       "chat": ""
     },
     "identifier": "infernal-tail",
@@ -322,7 +322,7 @@
     },
     "cat": {
       "automation": {
-        "version": "14.6.9",
+        "version": "14.7.0",
         "npc": true
       }
     }

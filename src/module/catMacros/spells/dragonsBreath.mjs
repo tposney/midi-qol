@@ -2,8 +2,8 @@ import {dialogUtils, effectUtils, itemUtils, workflowUtils} from '../proxy.mjs';
 // Cast gives the target a Dragon's Breath feature holding a copy of the spell's Exhale activity, fixed to the chosen
 // damage type, the caster's save DC and the cast level; it goes when concentration ends.
 async function cast({workflow}) {
-    if (workflow.activity.type !== 'utility' || !workflow.targets.count) return;
-    const exhale = workflow.item.system.activities.find(activity => activity.type === 'save');
+    if (!workflow.activity.isLike('utility') || !workflow.targets.count) return;
+    const exhale = workflow.item.system.activities.find(activity => activity.isLike('save'));
     if (!exhale) return;
     const damageTypes = exhale.damage.parts[0]?.types ? [...exhale.damage.parts[0].types] : ['acid', 'cold', 'fire', 'lightning', 'poison'];
     const damageType = await dialogUtils.selectDamageType(damageTypes, workflow.item.name, 'Choose the breath\'s damage type');

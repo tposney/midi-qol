@@ -4,8 +4,8 @@ import { unTimedExecuteAsGM } from "../GMAction.js";
 import { Workflow } from "../Workflow.js";
 import { decideRollDialog, dialogShown, heldKeys } from "../lib/rollKeys.js";
 import { RollModifierTracker, AdvantageFlags, computeAdvantageFlags, computeRollModifiers, applyRollModifiers, RollModifierFlags, applyTrackerAdvantage } from "../lib/RollModifierTracker.js";
-import { MidiOptions, registerMidiActivityType } from "../utils.js";
-import { replaceDefaultActivities, configSettings, confirmTargetOptions, ammunitionPerTargetOptions } from "../settings.js";
+import { MidiOptions } from "../utils.js";
+import { configSettings, confirmTargetOptions, ammunitionPerTargetOptions } from "../settings.js";
 import { addAttribution, areMidiKeysPressed, callActivityHooks, addUpdatesCache, displayDSNForRoll, getSpeaker, isAutoFastForward, updateUserTargets, validTargetTokens, getToken, tokenSourceCenter } from "../utils.js";
 import { MidiActivityMixin, MidiActivityMixinSheet, findAmmunitionActivity } from "./MidiActivityMixin.js";
 import { doActivityReactions } from "./activityHelpers.js";
@@ -97,12 +97,7 @@ export function setupAttackActivity() {
   //@ts-expect-error
   MidiAttackSheet = defineMidiAttackSheetClass(game.system.applications.activity.AttackSheet);
   MidiAttackActivity = defineMidiAttackActivityClass(GameSystemConfig.activityTypes.attack.documentClass as Activity);
-  if (replaceDefaultActivities) {
-    // GameSystemConfig.activityTypes["dnd5eAttack"] = GameSystemConfig.activityTypes.attack;
-    GameSystemConfig.activityTypes.attack = { documentClass: MidiAttackActivity };
-  } else {
-    registerMidiActivityType("midiAttack", MidiAttackActivity, "attack");
-  }
+  GameSystemConfig.activityTypes.attack = { documentClass: MidiAttackActivity };
 }
 
 let defineMidiAttackSheetClass = (baseClass: any) => {
@@ -198,7 +193,7 @@ let defineMidiAttackActivityClass = <T extends Activity>(ActivityClass: T) => {
       foundry.utils.mergeObject(
         super.metadata, {
         sheetClass: MidiAttackSheet,
-        title: configSettings.activityNamePrefix ? "midi-qol.ATTACK.Title.one" : ActivityClass.metadata.title,
+        midiTitle: "midi-qol.ATTACK.Title.one",
         dnd5eTitle: ActivityClass.metadata.title,
         usage: {
           /*
@@ -228,9 +223,14 @@ let defineMidiAttackActivityClass = <T extends Activity>(ActivityClass: T) => {
     static async attackAgain(activity: Activity, workflow: Workflow | undefined, event?: Event): Promise<ActivityUseConfiguration> {
       if (workflow?.itemCardUuid) Workflow.removeItemCardButtons(workflow.itemCardUuid, { removeAllButtons: true });
       const usage: ActivityUseConfiguration = { event, workflow };
-      usage.midiOptions = workflow?.rollOptions ?? {};
-      usage.midiOptions.workflowOptions ??= {};
-      usage.midiOptions.targets = new TokenDocumentSet(workflow?.targets);
+      // A copy: the finished workflow keeps its own options
+      usage.midiOptions = { ...(workflow?.rollOptions ?? {}) };
+      usage.midiOptions.workflowOptions = { ...(usage.midiOptions.workflowOptions ?? {}) };
+      if (workflow?.targets.count) {
+        // Every target of the finished use, with a canvas token or not
+        usage.midiOptions.targetsToUse = new Set(workflow.targets.documents);
+        usage.midiOptions.ignoreUserTargets = true;
+      }
       if (workflow) usage.midiOptions.workflowOptions.autoRollAttack = true;
       // @ts-expect-error
       await activity.use(usage, {}, {});
@@ -377,7 +377,7 @@ let defineMidiAttackActivityClass = <T extends Activity>(ActivityClass: T) => {
      * bonus action checks; ammunition is spent by their attack rolls as the activity's Ammunition setting says.
      */
     async attackEachTarget(workflow: Workflow): Promise<void> {
-      // Every target, drawn or not: one on another level or scene is attacked too
+      // Every target, with a canvas token or not: one on another level or scene is attacked too
       const targets = workflow.targets.documents;
       const savedTargetIds = Array.from(game.user?.targets ?? []).map(t => t.id);
       let ammunition: string | undefined;

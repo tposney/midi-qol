@@ -2,6 +2,7 @@
 
 > [!tip] Navigation
 > This document covers macro writing for midi-qol. For general module documentation, see [README.md](README.md).
+> It is for midi-qol 14.7 (dnd5e 6.1). Moving macros from 14.6: [Migrating to midi-qol 14.7](https://github.com/tposney/midi-qol/wiki/Token-Sets-Document-Mode), and [Migrating macros and modules](#migrating-macros-and-modules) below.
 
 ## Table of Contents
 - [Getting Started](#getting-started)
@@ -25,7 +26,7 @@
 - [Flowchart](/docs/flowchart.md)
 - [Getting Started](/Getting%20Started.md)
 - [Readme](/README.md)
-- [Workflow Fields](/docs/workflowfields-2026-10-30.md)
+- [Workflow Fields](/docs/workflowfields-2026-11-17.md)
 
 ---
 
@@ -48,8 +49,9 @@ Roll keys follow dnd5e's keybindings (Configure Controls), and apply when you pa
 
 ### Legacy Support
 - `item.roll()` no longer exists in dnd5e 6: use `activity.use()`, `item.use()` or `MidiQOL.completeActivityUse()`.
-- `MidiQOL.applyTokenDamage` is exported.
-- `MidiQOL.applyTokenDamageMany` is exported: it applies different damage amounts per target, with a single damage card.
+- `await MidiQOL.applyTokenDamage(damageDetail, totalDamage, targets, item, saves, options)`: `damageDetail` is `[{ value, type }]`, `targets` and `saves` Sets of Tokens or TokenDocuments.
+- `await MidiQOL.applyTokenDamageMany([{ token, damageDetail, totalDamage }], item, options)`: different damage per target, one damage card.
+- Both apply the attacker's dnd5e 6.1 damage rules (ignore/downgrade), taken from `item`'s actor or `options.workflow`.
 
 ### Roll Complete Hooks
 If you have macros that depend on being called when the roll is complete:
@@ -122,7 +124,7 @@ await activity.use(
 | `isCritical` | boolean | Force critical hit |
 | `spellLevel` | number | Cast a spell at this level without spending a slot (scales its damage and effects) |
 | `rollAs` | Actor | Use the activity as if this actor used it |
-| `targetsToUse` | Set<Token> | The targets for this use, instead of the user's targets |
+| `targetsToUse` | Set<Token \| TokenDocument> | The targets for this use, instead of the user's targets: a Set of Tokens or TokenDocuments, or a workflow token set (a target on another level has no Token) |
 | `workflowOptions` | object | Additional workflow options (see below) |
 
 `targetUuids`, `ignoreUserTargets`, `asUser`, `checkGMstatus`, `activityId` and `activityIdentifier` are read only by `MidiQOL.completeActivityUse` / `MidiQOL.completeItemUse` (below): a plain `activity.use()` ignores them.
@@ -150,7 +152,7 @@ Leave an option out and the midi-qol configuration panel's setting applies.
 const item = actor.items.getName("Fireball");
 const activity = item.system.activities.contents[0];
 
-// By token: activity.use takes a set of tokens
+// By token or TokenDocument
 await activity.use({
   midiOptions: { targetsToUse: new Set([target1, target2]) }
 }, { configure: false }, { create: true });
@@ -226,7 +228,7 @@ Uses the activity and resolves when its midi-qol workflow has finished, with the
 | `disadvantage` | boolean | Force disadvantage on attack |
 | `fastForward` | boolean | Skip roll dialogs |
 | `targetUuids` | string[] | Target these token UUIDs |
-| `targetsToUse` | Set<Token> | Target these tokens |
+| `targetsToUse` | Set<Token \| TokenDocument> | Target these tokens |
 | `ignoreUserTargets` | boolean | Don't fall back to the user's targets |
 | `spellLevel` | number | Cast a spell at this level without spending a slot |
 | `rollAs` | Actor | Use the activity as if this actor used it |
@@ -272,7 +274,7 @@ const workflow = await MidiQOL.completeActivityUse(activity, {
 }, { configure: false }, { create: true });
 
 // workflow contains the completed midi-qol workflow
-console.log(workflow.hitTargets); // Set of hit targets
+console.log(workflow.hitTargets.documents); // the hit targets' TokenDocuments
 ```
 
 **Example - Silent roll with custom roll mode:**
@@ -431,7 +433,8 @@ The markers midi uses to enforce *Enforce reactions* / *Enforce bonus actions* (
 ### Distance, cover and visibility
 
 ```js
-MidiQOL.getDistance(t1, t2, { wallsBlock?, includeCover?, includeElevation? })   // number, -1 if invalid or (wallsBlock) blocked
+MidiQOL.getDistance(t1, t2, { wallsBlock?, includeCover?, includeElevation? })   // number; -1 if walls block; Infinity if it can't be measured
+MidiQOL.measureTokens(t1, t2, { wallsBlock?, includeCover?, includeElevation? }) // { ok: true, distance } or { ok: false, reason }
 MidiQOL.checkDistance(t1, t2, distance, { wallsBlock?, includeCover? })          // boolean: within distance
 MidiQOL.computeCoverBonus(attacker, target, activity?, { position? })            // AC bonus from cover
 MidiQOL.unseenTargets(activity, token, targets)        // the targets token can't see
@@ -439,6 +442,13 @@ MidiQOL.totalCoverTargets(activity, token, targets)    // the targets in total c
 ```
 
 `getDistance` measures as midi does for range checks: the *Distance measurement method* setting, and height when *Include height difference* is on (unless `includeElevation` says otherwise). See also `canSee`, `canSense` and `getCoverBonus` above.
+
+`t1`/`t2` are Tokens, TokenDocuments or uuids. From 14.7.0 `getDistance` and `computeDistance` return `Infinity` (`MidiQOL.UNMEASURABLE_DISTANCE`) when there is nothing to measure, so `d <= range` is false; -1 still means walls block. Test `d < 0` for walls and `Number.isFinite(d)` for measured, not `d === -1` for invalid. `measureTokens` says why: `reason` is `blocked`, `noCanvas`, `noPosition` (no token: an actor with none on the scene), `differentScene` or `notDrawn` (on the scene but another level).
+
+```js
+const m = MidiQOL.measureTokens(workflow.tokenDocument, targetDocument, { wallsBlock: true });
+if (m.ok && m.distance <= 30) { /* in range */ }
+```
 
 ### Concentration and dependents
 
@@ -460,6 +470,8 @@ const values = MidiQOL.evalAllConditions(actor, "flags.midi-qol.someFlag", data)
 ```
 
 The data midi's activation and effect conditions see (`workflow`, `item`, `activity`, `target`, `raceOrType`, the actor's roll data…). Add your own with the `midi-qol.conditionData` hook, given the condition data and what it was built from: `Hooks.on("midi-qol.conditionData", (conditionData, input) => { conditionData.myValue = … })`.
+
+dnd5e 6.1: `item`, and each entry of `items`, `equippedItems` and `target.items`, has `magicAvailable` (false while the item lacks a needed attunement or is under antimagic), e.g. `item.magicAvailable && target.raceOrType === "dragon"`.
 
 ### Players and tokens
 
@@ -528,8 +540,16 @@ Hooks that can cancel also fire with `.{workflow.id}`.
 **Damage Calculation Hooks:**
 | Hook | Returns | Description |
 |------|---------|-------------|
-| `midi-qol.dnd5ePreCalculateDamage` | boolean | Before damage calculation. Return false to abort. |
-| `midi-qol.dnd5eCalculateDamage` | boolean | After damage calculation. Return false to cancel it. |
+| `midi-qol.dnd5ePreCalculateDamage` | boolean | `(actor, damages, options)` before midi's damage calculation. Return false to abort. |
+| `midi-qol.dnd5eCalculateDamage` | boolean | `(actor, damages, options)` after it: `damages` have their applied `value`, `active` and `potential`. Return false to cancel it. An entry added here needs `active` and `potential` (see `MidiQOL.modifyDamageBy`). |
+
+**Target Hooks:** `target` is the target's canvas token until 14.8.0 (its TokenDocument when it has none), a TokenDocument from 14.8.0 or with `MidiQOL.setTokenDocumentSets(true)`.
+| Hook | Description |
+|------|-------------|
+| `midi-qol.preTargetSave` | `(target, workflow, saveDetails)` before each target's save is requested |
+| `midi-qol.premades.checkHitTarget` | `({ workflow, target, attackTotal, targetAC, isHit, isHitEC, isCritical, isFumble })` per target; change the fields to change the result |
+| `midi-qol.preTargetDamageApplication` | `(target, { item, workflow, damageItem })` before a target's damage is applied; change `damageItem` |
+| `midi-qol.isDamaged` / `midi-qol.isHealed` | `(target, { item, workflow, damageItem })` for a target that loses or gains hit points |
 
 ---
 
@@ -541,7 +561,7 @@ Hooks that can cancel also fire with `.{workflow.id}`.
 new MidiQOL.TrapWorkflow(actor, activity, [targets], { x, y, direction?, removeDelay? })
 ```
 
-Uses the activity (not the item) and applies its attack and/or damage to the passed targets. If the activity has an area template, it is placed at x,y (pointing in `direction`) and the targets in it are selected.
+Uses the activity (not the item) and applies its attack and/or damage to the passed targets. If the activity has an area template, it is placed at x,y (pointing in `direction`) and the targets in it are selected. `targets` are canvas Tokens (from a token set: `set.tokens`), not TokenDocuments.
 
 ### DamageOnlyWorkflow
 
@@ -553,7 +573,7 @@ new MidiQOL.DamageOnlyWorkflow(
   token,           // Token of the actor
   damageTotal,     // Total damage amount
   "damageType",    // Damage type (e.g., "radiant", "fire")
-  targets,         // Array of target tokens
+  targets,         // Array of target Tokens or TokenDocuments (set.documents keeps targets with no canvas token)
   damageRoll,      // The Roll object
   {
     flavor: "Description",
@@ -610,14 +630,14 @@ flags.midi-qol.onUseMacroName | Custom | macroName,macroPass
 | `ActivityMacro-<id>` | The activity macro, run only when the activity being used has this id |
 | `macro name` / `Macro.macro name` | World macro by exact name |
 | `Compendium.<scope>.<pack>.Macro.<id>` | Compendium macro, by its UUID only |
-| `function.functionName` | A global function, called with one object: `{ speaker, actor, token, character, item, rolledItem, macroItem, args, scope, workflow }` |
+| `function.functionName` | A global function, called with one object: `{ speaker, actor, token, tokenDocument, character, item, rolledItem, macroItem, args, scope, options, workflow }` |
 
 Add `|uuid` to a name to run it with that item, activity or effect's item as its context (`macroItem`, `macroActivity`).
 
 ### Macro Passes
 
 > [!important] **Documentation:** A flowchart is available at [docs/flowchart.md](docs/flowchart.md).
-> Data available at each pass: [docs/workflowfields-2026-10-30.md](docs/workflowfields-2026-10-30.md).
+> Data available at each pass: [docs/workflowfields-2026-11-17.md](docs/workflowfields-2026-11-17.md).
 
 **Item/Actor passes:**
 | Pass | Description |
@@ -686,7 +706,7 @@ For each workflow state, hooks are also called with the pattern:
 - `midi-qol.premades.pre{StateName}` (for premade automation)
 - hooks that can cancel also fire with `.{workflow.id}`
 
-**Target-only passes (actor macros):** these run for the target's actor macros, with `tag: "TargetOnUse"`; `actor` in the macro is the target's actor.
+**Target-only passes (actor macros):** these run for the target's actor macros, with `tag: "TargetOnUse"`; `actor` in the macro is the target's actor. `token` is the target's canvas token (`null` for a target on another scene or level) and `tokenDocument` its TokenDocument, always there; `options.token` and `options.tokenDocument` are the same two.
 | Pass | Description |
 |------|-------------|
 | `isTargeted` | Target is targeted |
@@ -706,11 +726,11 @@ For each workflow state, hooks are also called with the pattern:
 
 ### Accessing Workflow Data
 
-The macro's scope has `workflow`, `args` (`args[0]` is the macro data below, also as `midiData`), `actor`, `token`, `rolledItem` and `rolledActivity` (what is being used), `macroItem` and `macroActivity` (the item or activity whose macro this is), and `options` (data for the pass, e.g. `{ usage, dialog, message }`, `teleport`):
+The macro's scope has `workflow`, `args` (`args[0]` is the macro data below, also as `midiData`), `actor`, `token` (the actor's canvas token; `undefined` if it has none on the viewed scene) and `tokenDocument` (its TokenDocument), `rolledItem` and `rolledActivity` (what is being used), `macroItem` and `macroActivity` (the item or activity whose macro this is), and `options` (data for the pass, e.g. `{ usage, dialog, message }`, `teleport`):
 
 ```js
 // Access workflow properties
-console.log(workflow.hitTargets);
+console.log(workflow.hitTargets.uuids);
 console.log(workflow.damageTotal);
 
 // Modify workflow
@@ -727,7 +747,17 @@ const damageRoll = await new CONFIG.Dice.DamageRoll("1d10", {}, { type: "fire" }
 await workflow.setDamageRolls([damageRoll]);
 ```
 
-To change the damage a target takes, use `MidiQOL.modifyDamageBy` (in an `isDamaged` or `preTargetDamageApplication` macro) rather than editing the damage list.
+To change the damage a target takes, use `MidiQOL.modifyDamageBy` in a `preTargetDamageApplication` or `isDamaged` macro or hook:
+
+```js
+MidiQOL.modifyDamageBy({ damageItem: workflow.damageItem, value: -5, type: "none", reason: "Warding: -5" }); // negative reduces
+```
+
+It adds an entry to `damageItem.calculatedDamages` and updates `totalDamage`, `hpDamage`, `tempDamage`, `newHP` and `newTempHP`; `reason` is added to `damageItem.details`. An entry you add yourself (there, or to `damages` in `dnd5e.calculateDamage`) must have `active` and `potential` records, or dnd5e 6.1's damage card throws:
+
+```js
+damages.push({ value: -5, type: "none", properties: new Set(), active: { multiplier: 1 }, potential: {} });
+```
 
 ---
 
@@ -786,39 +816,49 @@ A read-only copy is a snapshot of the card when it was made, and a copy you hold
 
 ### Token sets
 
-A workflow's token sets (`targets`, `hitTargets`, `hitTargetsEC`, `saves`, `failedSaves`, `superSavers`, `semiSuperSavers`, `criticalSaves`, `fumbleSaves`, `advantageSaves`, `otherDamageMatches`, `ammunitionDamageMatches`) are `MidiQOL.TokenDocumentSet`s: they hold every member's TokenDocument, including tokens on another scene or on a level not shown. Assigning any Set to one (`workflow.targets = new Set([...])`) makes it a TokenDocumentSet. `effectTargets` and `preSelectedTargets` are TokenDocumentSets midi sets, but plain fields: a Set assigned to them stays as it is. `has`, `add`, `delete` and set algebra accept a Token, a TokenDocument or a uuid. These properties give the same result whichever way the set reads (drawn Tokens or TokenDocuments, below):
+A workflow's token sets (`targets`, `hitTargets`, `hitTargetsEC`, `saves`, `failedSaves`, `superSavers`, `semiSuperSavers`, `criticalSaves`, `fumbleSaves`, `advantageSaves`, `disadvantageSaves`, `otherDamageMatches`, `ammunitionDamageMatches`, `preSelectedTargets`, `effectTargets`, `otherEffectTargets`, `effectTargetsOnSave`, `otherEffectTargetsOnSave`) are `MidiQOL.TokenDocumentSet`s: they hold every member's TokenDocument, including tokens on another scene or on a level not shown. Assigning any Set to one (`workflow.targets = new Set([...])`) makes it a TokenDocumentSet. `effectTargets` and its three variants are `undefined` until effect targets are chosen. `targetsCanSee`, `targetsCanSense`, `tokenCanSee` and `tokenCanSense` are plain Sets of canvas Tokens (sight is between canvas tokens). `has`, `add`, `delete` and set algebra accept a Token, a TokenDocument or a uuid. These properties say what you want, however the set itself reads:
 
 ```js
 workflow.hitTargets.documents;          // every hit target's TokenDocument (a new array each read)
-workflow.hitTargets.count;              // how many, drawn or not
-workflow.hitTargets.tokens;             // the drawn Tokens (for an actor with no token on the scene, the one midi made)
+workflow.hitTargets.count;              // how many, with a canvas token or not
+workflow.hitTargets.tokens;             // the canvas tokens (below)
 workflow.hitTargets.uuids;              // their uuids
 workflow.hitTargets.has(token);         // a Token, TokenDocument or uuid
 workflow.saves.add(token);              // changes the workflow's set
 workflow.hitTargets.difference(workflow.saves).documents; // set algebra is over every member and gives a TokenDocumentSet
 ```
 
-Reading a set directly (iteration, `size`, `first()`, `map`/`filter`/`some`) gives the drawn Tokens by default; `filter` returns a TokenDocumentSet of the members that pass. Call set algebra on the TokenDocumentSet (`set.difference(plain)`, not `plain.difference(set)`, which reads the set as it iterates). A deleted token stays a member only while the workflow is in memory: a workflow rebuilt from its card has the tokens that still exist. TokenDocuments will become the default; a GM can try it now with `MidiQOL.setTokenDocumentSets(true)` (the whole world, after a reload; `false` switches back, `MidiQOL.tokenDocumentSets()` says which is on). Then a set reads as every member's TokenDocument, `member.document` returns the member itself with a deprecation warning naming the calling line, and target hooks and target macros' `token` are TokenDocuments. `workflow.token` stays the caster's Token; `workflow.tokenDocument` is its TokenDocument.
+A token's **canvas token** is its Token object (`tokenDocument.object`, a placeable). Foundry creates one, on each client separately, only for tokens on the scene and level that client is viewing; a target anywhere else has a TokenDocument and no canvas token. `set.tokens` gives the canvas token of each member that has one on this client: a member on another scene, on a level not being viewed, or deleted since it was targeted is left out.
+
+midi makes a Token of its own when a use needs a token for an actor that has no canvas token: the actor using the item (an item used from a sheet or the sidebar with no token on the viewed scene), or an actor a use targets as itself (a self-target activity, self effects, an over-time effect's use). That Token is built from the actor's prototype token and is never added to the scene or the canvas:
+
+- it has no id and no uuid, so it is in `set.tokens`, `set.documents` and `set.count` but not in `set.uuids`;
+- its position is the prototype's (0, 0): `getDistance` to it is `Infinity` (`measureTokens`: `noPosition`), and sight and cover to it mean nothing;
+- `token.actor` and `token.document.actor` are the actor, which is all it is for.
+
+midi never makes one for a target that has a TokenDocument: a target on another scene or level stays a TokenDocument with no Token.
+
+Reading a set directly (iteration, `size`, `first()`, `map`/`filter`/`some`) gives the members' canvas tokens until 14.8.0, and every member's TokenDocument from then on (now, in a world where a GM has run `MidiQOL.setTokenDocumentSets(true)`); `filter` returns a TokenDocumentSet of the members that pass. Call set algebra on the TokenDocumentSet (`set.difference(plain)`, not `plain.difference(set)`, which reads the set as it iterates). A deleted token stays a member only while the workflow is in memory: a workflow rebuilt from its card has the tokens that still exist. For code written for sets of Tokens, a TokenDocument's `member.document` returns the member itself, with a deprecation warning naming the calling line, until 14.9.0. Target hooks are given what a set gives: canvas tokens until 14.8.0 (the TokenDocument for a target that has none), TokenDocuments after; a target macro's `token` stays the target's canvas token, with `tokenDocument` beside it. `workflow.token` stays the caster's Token; `workflow.tokenDocument` is its TokenDocument. A GM can switch a world to TokenDocuments now with `MidiQOL.setTokenDocumentSets(true)` (the whole world, after a reload; `MidiQOL.tokenDocumentSets()` says which is on). The setting is removed in 14.8.0. `set.documents`, `set.tokens`, `set.uuids` and `set.count` read the same either way.
+
+`MidiQOL.setTokenDocumentSets(true)` asks to reload the world; pass `{ reload: false }` to reload later. `workflow.attackingTokenDocument` is the same as `workflow.tokenDocument`.
 
 #### Migrating macros and modules
 
-**Nothing has to change today.** By default a set reads as drawn Tokens, as before, so existing macros keep working, and they still skip targets that aren't drawn, as they always did. One thing is new in both modes: target hooks and target macros (`midi-qol.preTargetSave`, `preTargetDamageApplication`, `isDamaged`/`isHealed`, `TargetOnUse` macros) now also run for a target that isn't drawn, and get its TokenDocument. A handler that assumes a Token (`token.document.actor`, `token.center`) fails for that target, so make those handlers accept either (below).
+**From 14.8.0 a set reads as TokenDocuments**, and target hooks (`midi-qol.preTargetSave`, `preTargetDamageApplication`, `isDamaged`/`isHealed`, `premades.checkHitTarget`) are given TokenDocuments; test with `MidiQOL.setTokenDocumentSets(true)` on 14.7.0. Code that reads `member.document.x` keeps working until 14.9.0 and logs a deprecation warning naming the line to change; code that uses a member as a Token (`t.center`, `t === workflow.token`) has to change by 14.8.0. Target macros also run for a target with no canvas token: `token` is `null` for it, and `tokenDocument` is always there.
 
-Document mode becomes the default later. To be ready, write code that works in both modes, then check it with `MidiQOL.setTokenDocumentSets(true)` (a GM, the whole world, after a reload). In document mode each `member.document` logs a deprecation warning naming the line to change.
-
-| Instead of | Use (works in both modes) |
+| Instead of | Use |
 |---|---|
-| `for (const t of workflow.targets)` for saves, damage, effects, HP | `for (const t of workflow.targets.documents)`: every target, drawn or not |
+| `for (const t of workflow.targets)` for saves, damage, effects, HP | `for (const t of workflow.targets.documents)`: every target, with a canvas token or not |
 | `workflow.targets.size` | `workflow.targets.count` |
 | `workflow.targets.first()` | `workflow.targets.documents[0]` (or `.tokens[0]` for the canvas) |
 | `t.document.uuid`, `[...set].map(t => t.document.uuid)` | `set.uuids`; for one member, `doc.uuid` (below) |
-| `t.document` on a set member or hook target | `const doc = t instanceof TokenDocument ? t : t.document` (`x.document ?? x` also works but warns in document mode) |
-| `t.center`, `t.x`/`t.y` for distance, sight, cover, moving | `workflow.targets.tokens` (drawn targets only), or `doc.object` (null when not drawn) |
+| `t.document` on a set member or hook target | `const doc = t instanceof TokenDocument ? t : t.document` (`x.document ?? x` also works but warns) |
+| `t.center`, `t.x`/`t.y` for distance, sight, cover, moving | `workflow.targets.tokens` (targets with a canvas token only), or `doc.object` (null with no canvas token) |
 | `t === workflow.token` | `workflow.targets.has(workflow.tokenDocument)`, or compare `doc` with `workflow.tokenDocument` |
 | `new Set(workflow.targets)`, `[...workflow.targets]` to copy | `new MidiQOL.TokenDocumentSet(workflow.targets)`: keeps every member |
 | `plainSet.difference(workflow.saves)` | `workflow.saves.difference(plainSet)`: call set algebra on the TokenDocumentSet |
 
-These work unchanged in both modes: `t.actor`, `t.id`, `t.name`, `set.has(x)`/`add(x)`/`delete(x)` with a Token, TokenDocument or uuid, and assigning a Set (`workflow.targets = new Set(tokensOrDocuments)`).
+These work unchanged: `t.actor`, `t.id`, `t.name`, `set.has(x)`/`add(x)`/`delete(x)` with a Token, TokenDocument or uuid, and assigning a Set (`workflow.targets = new Set(tokensOrDocuments)`).
 
 ### Storing data on the card
 
@@ -898,9 +938,9 @@ Data passed to OnUse and DamageBonus macros in `args[0]`:
 | Field | Description |
 |-------|-------------|
 | `actor` | The actor using the item (target passes: the target's actor) |
-| `actorData` | actor.toObject(false) |
-| `actorUuid` | Actor UUID |
-| `tokenUuid` | Token UUID |
+| `actorData` | The using actor's `toObject(false)` (also in target passes) |
+| `actorUuid` | The using actor's UUID (also in target passes; the target's is `actor.uuid` / `options.tokenDocument.actor.uuid`) |
+| `tokenUuid` | The using token's UUID (also in target passes; the target's is `options.tokenDocument.uuid`) |
 | `item` | item.toObject(false) with a uuid property, and `actionType` (the used activity's) |
 | `itemData` | Same as item |
 | `itemUuid` | Item UUID |
@@ -941,9 +981,14 @@ The workflow itself also has `workflow.rawDamageDetail` etc.
 | `type` | string | Damage type (e.g., "fire", "slashing", "healing") |
 | `properties` | Set\<string\> | Damage properties (e.g., "magical", "silver") |
 | `active.multiplier` | number | Damage multiplier applied (0.5 for resistance, 2 for vulnerability) |
-| `active.type.<change>` / `active.all.<change>` | boolean | A change applied to this damage type, or to all damage. `<change>` is one of `resistance`, `vulnerability`, `immunity`, `modification`, `absorption`, `DR`, `saved`, `superSaver`, `semiSuperSaver`, `uncannyDodge` |
+| `active.type.<change>` | boolean | A change applied to this damage. `<change>` is one of `resistance`, `vulnerability`, `immunity`, `modification`, `absorption`, `DR`, `saved`, `superSaver`, `semiSuperSaver`, `uncannyDodge`. dnd5e 6.1: a resistance, immunity or vulnerability to all damage is here too, not under `active.all` |
+| `active.all.modification` | boolean | dnd5e's damage modification for all damage types applied (the only `active.all` entry) |
+| `active.threshold` | boolean | The damage threshold reduced the damage to 0 |
+| `active.special.<type>.<change>` | boolean | A filter-matched resistance applied (dnd5e 6.1: `falling`, from `CONFIG.DND5E.damageResistanceTypes`) |
+| `potential` | object | Same shape as `active` (dnd5e 6.1): what would have applied with nothing ignored or downgraded. A trait in `potential` but not `active` was ignored or downgraded |
+| `midiCategory` | string | `defaultDamage`, `otherDamage` or `bonusDamage`: the roll the damage came from. Entries midi adds during calculation (damage reduction) have none |
 
-On a calculated entry (a target's `damageDetail` in `damageList`), e.g. `entry.damageDetail[0].active?.type?.resistance`.
+On a calculated entry (a target's `calculatedDamages` in `damageList`), e.g. `entry.calculatedDamages[0].active?.type?.resistance`.
 
 **DamageListEntry (damageList array elements):**
 
@@ -953,8 +998,9 @@ Each entry represents damage applied to a specific target:
 |-------|------|-------------|
 | `actorUuid` | string | Target actor UUID |
 | `targetUuid` | string | Target token UUID |
-| `rawDamageDetail` | DamageDescription[] | Damage before resistances/immunities |
-| `damageDetail` | DamageDescription[] | Damage after resistances/immunities |
+| `damages` | DamageDescription[] | The damage as rolled: what dnd5e's `actor.applyDamage(damages, options)` takes |
+| `options` | object | The damage application options (saves, ignores and downgrades, including the attacker's dnd5e 6.1 rules) |
+| `calculatedDamages` | DamageDescription[] | `actor.calculateDamage(damages, options)`: damage after resistances/immunities, and what is applied. Change it in place to change the damage |
 | `totalDamage` | number | Total damage after all modifiers |
 | `hpDamage` | number | HP damage applied |
 | `tempDamage` | number | Temp HP damage applied |
@@ -970,12 +1016,59 @@ Each entry represents damage applied to a specific target:
 | `critical` | boolean | Attack was critical |
 | `details` | string[] | Human-readable damage breakdown |
 
+From 14.7.0 an entry is one record in dnd5e's terms: `damages`, `options` and `calculatedDamages`; the rest is worked out from them. midi's old names are shims onto the record, warning when used:
+- `damageDetail` → `calculatedDamages`, `rawDamageDetail` → `damages`, `calcDamageOptions` → `options` (the same arrays and object, so in-place edits still apply; until 14.9.0).
+- `damageDetails` (the per-category copies): filter `calculatedDamages` / `damages` by `midiCategory` (until 14.8.0).
+- `healingAdjustedTotalDamage`: use `hpDamage + tempDamage`, what the creature lost (the old value was not limited to the hit points it had; `totalDamage` is the damage before that limit). Setting it changes nothing (until 14.8.0).
+- `damageSelector` and `damageMods` are gone.
+
+The shims are not enumerable: a copy of an entry (`{...entry}`, `deepClone`) has only the new names.
+
+### Damage midi applies: dnd5e's hooks and undo
+
+midi calls `dnd5e.preApplyDamage(actor, amount, updates, options)` and `dnd5e.applyDamage(actor, amount, options)` for the damage it applies. `options.midi` has midi's data, and `options.origin` / `options.originatingMessage` are the usage card (not enumerable). When the damage card's undo puts hit points back, `options.midiUndo` is true (not enumerable; false otherwise): hit points going up there is not healing.
+
+```js
+Hooks.on("dnd5e.preApplyDamage", (actor, amount, updates, options) => {
+  if (options.midiUndo) return;       // an undo, not healing
+  // ...
+});
+```
+
+### Massive damage
+
+With *Enforce death saves*, a character dropped to 0 HP with leftover damage of at least its hit point maximum gets three death save failures and Dead; at 0 HP, damage adds one failure (two for a critical, three if the damage is at least the maximum). Not with a vitality item. The damage entry has `oldDeathFailures` / `newDeathFailures`; the damage card's undo restores them. `flags.midi-qol.noDeathSaveFailureFromDamage` on the actor turns it off for that actor.
+
+### Attacker damage rules (dnd5e 6.1)
+
+dnd5e 6.1 effects on the attacker can ignore a target's immunity, resistance or vulnerability to a type, or downgrade immunity to resistance. midi merges them into each target's `entry.options` (`options.ignore.resistance`, `options.downgrade`: Sets of damage types, or `"ALL"`), also for `applyTokenDamage` and `DamageOnlyWorkflow`. A trait in `calculatedDamages[i].potential` but not in `.active` was ignored or downgraded. DAE's `system.traits.idi/idr/idv` keys are deprecated for these rules.
+
+### Wounds a check ends (flags.midi-qol.stanch)
+
+An effect with `flags.midi-qol.stanch` (its own flag, or a change with that key) ends on a skill check: `dc=15, skill=med, range=5, healing=spell` (a bare number is the DC; defaults dc 10, skill med, range 5 ft, healing none).
+
+```js
+effectData.flags = { "midi-qol": { stanch: "dc=13, healing=magical" } };  // or { dc: 13, healing: "magical" }
+```
+
+It ends when the affected creature rolls that skill and reaches the DC, or a creature within range rolls it with the affected creature targeted (any roll of the skill). `healing`: `spell`, `magical` (a spell or a magic item) or `any` healing also ends it. Every stack of a stacking effect is removed.
+
+### Activity types (dnd5e 6.1 "like")
+
+dnd5e 6.1 activity types can declare themselves like another type; midi treats them as that type. Test with `activity.isLike("attack")`, not `activity.type === "attack"`.
+
+### Retired sample items
+
+Sample items removed in 14.6.9 and 14.7.0 are automated by CPR 2.1.8 or later; open CAT's CatKit on the actor's copy to switch it. The macros of copies already on actors stay registered until 14.8.0.
+
+The damage card's flags (`flags.midi-qol.undoDamage`) are midi's own and change between versions: read damage from `damageList` / `workflow.damageItem`, or the `midi-qol.isDamaged` / `preTargetDamageApplication` hooks, not from the card.
+
 **Example - Checking damage reduction:**
 ```js
 // In postActiveEffects (in preDamageApplication, use workflow.damageItem: the list holds only the targets so far)
 for (const entry of workflow.damageList) {
-  const rawTotal = entry.rawDamageDetail.reduce((sum, d) => sum + d.value, 0);
-  const actualTotal = entry.damageDetail.reduce((sum, d) => sum + d.value, 0);
+  const rawTotal = entry.damages.reduce((sum, d) => sum + d.value, 0);
+  const actualTotal = entry.calculatedDamages.reduce((sum, d) => sum + d.value, 0);
   const reduction = rawTotal - actualTotal;
   console.log(`${entry.targetUuid}: ${rawTotal} raw -> ${actualTotal} actual (${reduction} reduced)`);
 }
@@ -983,23 +1076,23 @@ for (const entry of workflow.damageList) {
 
 **Important: Fields recalculated when applying damage**
 
-When damage is applied via GM action, the following fields are **recalculated** from `damageDetail` and `rawDamageDetail` (the pre-calculated values are ignored):
-- `hpDamage` - recalculated from damageDetail
-- `tempDamage` - recalculated from damageDetail
-- `totalDamage` - recalculated from damageDetail
+When damage is applied via GM action, the following fields are **recalculated** from `calculatedDamages` and `damages` (the pre-calculated values are ignored):
+- `hpDamage` - recalculated from calculatedDamages
+- `tempDamage` - recalculated from calculatedDamages
+- `totalDamage` - recalculated from calculatedDamages
 - `newHP` - recalculated based on actor's current HP
 - `newTempHP` - recalculated based on actor's current temp HP
-- `rawTotalDamage` - recalculated from rawDamageDetail
+- `rawTotalDamage` - recalculated from damages
 
 **Fields that ARE used when applying damage:**
-- `damageDetail` - **source of truth** for final damage calculation
-- `rawDamageDetail` - used for raw damage display and undo
-- `calcDamageOptions` - passed to dnd5e damage hooks
+- `calculatedDamages` - **source of truth** for final damage calculation
+- `damages` - used for raw damage display and undo
+- `options` - passed to dnd5e damage hooks
 - `actorUuid`, `targetUuid` - target identification
 - `wasHit` - determines if damage should apply
 - `oldHP`, `oldVitality`, `newVitality` - HP tracking
 
-This means if you modify `workflow.damageItem.damageDetail` in `preDamageApplication`, the changes will be applied. Modifying `hpDamage` directly will have no effect. Easier still: `MidiQOL.modifyDamageBy`.
+This means if you modify `workflow.damageItem.calculatedDamages` in `preDamageApplication`, the changes will be applied. Modifying `hpDamage` directly will have no effect. Easier still: `MidiQOL.modifyDamageBy`.
 
 **Target Data:**
 | Field | Description |

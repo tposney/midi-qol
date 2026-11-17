@@ -7,7 +7,7 @@ import { checkRule } from "../settings.js";
 
 type ConditionChange = { key: string, type: string, value: string };
 
-const WITHIN_5_FEET = "getDistance(workflow.rangeDetails?.attackingToken ?? workflow.token, workflow.targets.tokens[0]) <= 5";
+const WITHIN_5_FEET = "checkDistance(workflow.rangeDetails?.attackingToken ?? workflow.token, workflow.targets.tokens[0], 5)";
 const BEYOND_5_FEET = "getDistance(workflow.rangeDetails?.attackingToken ?? workflow.token, workflow.targets.tokens[0]) > 5";
 
 const flag = (key: string, value = "true"): ConditionChange => ({ key: `flags.midi-qol.${key}`, type: "custom", value });

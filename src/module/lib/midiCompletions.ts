@@ -22,12 +22,12 @@ interface CompletionEntry {
 function tokenSetEntry(info: string): CompletionEntry {
   return {
     type: "property", detail: "TokenDocumentSet",
-    info: `${info}. Read it with documents (every member), tokens (the drawn Tokens), uuids or count; plain iteration, size and first() give Tokens, or TokenDocuments in document mode`,
+    info: `${info}. Read it with documents (every member), tokens (the canvas tokens), uuids or count; plain iteration, size and first() give canvas tokens by default in 14.7, TokenDocuments with the tokenDocumentSets setting on (the default from 14.8.0)`,
     children: {
-      documents: { type: "property", detail: "TokenDocument5e[]", info: "Every member's TokenDocument, drawn or not" },
-      tokens: { type: "property", detail: "Token5e[]", info: "The members drawn on the canvas, as Tokens" },
+      documents: { type: "property", detail: "TokenDocument5e[]", info: "Every member's TokenDocument, with a canvas token or not" },
+      tokens: { type: "property", detail: "Token5e[]", info: "The members' canvas tokens (and midi's own Token for an actor with none)" },
       uuids: { type: "property", detail: "string[]", info: "Every member's TokenDocument uuid" },
-      count: { type: "property", detail: "number", info: "How many members, drawn or not" },
+      count: { type: "property", detail: "number", info: "How many members, with a canvas token or not" },
       has: { type: "method", detail: "(member) => boolean", info: "Whether a Token, TokenDocument or uuid is a member" },
       add: { type: "method", detail: "(member) => TokenDocumentSet", info: "Add a Token, TokenDocument or uuid" },
       delete: { type: "method", detail: "(member) => boolean", info: "Remove a Token, TokenDocument or uuid" },
@@ -35,8 +35,8 @@ function tokenSetEntry(info: string): CompletionEntry {
       difference: { type: "method", detail: "(other: Set) => TokenDocumentSet", info: "Members not in other (matched by document)" },
       union: { type: "method", detail: "(other: Set) => TokenDocumentSet", info: "Members of either set" },
       intersection: { type: "method", detail: "(other: Set) => TokenDocumentSet", info: "Members of both sets" },
-      size: { type: "property", detail: "number", info: "Drawn Tokens, or every member in document mode; count is the same in both" },
-      first: { type: "method", detail: "() => Token5e | TokenDocument5e | undefined", info: "The first drawn Token, or TokenDocument in document mode; documents[0] / tokens[0] are the same in both" },
+      size: { type: "property", detail: "number", info: "How many members iteration gives: those with a canvas token by default in 14.7, every member with tokenDocumentSets on; count is always every member" },
+      first: { type: "method", detail: "() => Token5e | TokenDocument5e | undefined", info: "The first member: its canvas token by default in 14.7, its TokenDocument with tokenDocumentSets on; documents[0] or tokens[0] say which" },
     }
   };
 }
@@ -65,8 +65,9 @@ const MIDI_COMPLETIONS: CompletionNode = {
       completeActivityUse: { type: "function", detail: "(activity, usage?, dialog?, message?) => Promise<Workflow>", info: "Complete an activity use workflow.\n- activity: Activity or UUID string\n- usage.midiOptions: {advantage, disadvantage, critical, fastForward, fastForwardAttack, fastForwardDamage, targetUuids, targetsToUse, rollAs, ignoreUserTargets, ...}\nReturns: Workflow or undefined" },
 
       // Distance and targeting
-      getDistance: { type: "function", detail: "(token1, token2, options?) => number", info: "Preferred. Distance between two tokens in grid units, honouring the Distance Measurement setting (default/centre/perimeter) and the fudge factor, so it agrees with midi's own range checks.\n- options.wallsBlock: block if no LOS (default false)\n- options.includeCover: include cover calc (default true)\n- options.includeElevation: include height difference\nReturns: distance or -1 if fully blocked" },
-      computeDistance: { type: "function", detail: "(token1, token2, options?) => number", info: "Centre-based primitive; prefer getDistance, which also honours perimeter measurement. Compute distance between two tokens in grid units.\n- options.wallsBlock: block if no LOS (default false)\n- options.includeCover: include cover calc (default true)\n- options.includeElevation: include height difference\nReturns: distance or -1 if fully blocked" },
+      getDistance: { type: "function", detail: "(token1, token2, options?) => number", info: "Preferred. Distance between two tokens in grid units, honouring the Distance Measurement setting (default/centre/perimeter) and the fudge factor, so it agrees with midi's own range checks.\n- options.wallsBlock: block if no LOS (default false)\n- options.includeCover: include cover calc (default true)\n- options.includeElevation: include height difference\nReturns: distance, -1 if walls block, or Infinity if the tokens can't be measured (another scene or level, no token); compare with 0 <= d && d <= range" },
+      computeDistance: { type: "function", detail: "(token1, token2, options?) => number", info: "Centre-based primitive; prefer getDistance, which also honours perimeter measurement. Compute distance between two tokens in grid units.\n- options.wallsBlock: block if no LOS (default false)\n- options.includeCover: include cover calc (default true)\n- options.includeElevation: include height difference\nReturns: distance, -1 if walls block, or Infinity if the tokens can't be measured (another scene or level, no token); compare with 0 <= d && d <= range" },
+      measureTokens: { type: "function", detail: "(token1, token2, options?) => {ok, distance} | {ok: false, reason}", info: "The distance getDistance gives, or why it can't be measured.\n- reason: \"blocked\" (walls), \"differentScene\", \"notDrawn\" (not on the level being viewed), \"noPosition\" (no token), \"noCanvas\"\nTokens, TokenDocuments or uuids" },
       checkDistance: { type: "function", detail: "(t1, t2, distance, options?) => boolean", info: "Check if two tokens are within a given distance.\n- distance: max distance in grid units\n- options.wallsBlock: block if no LOS (default false)\n- options.includeCover: include cover calc (default true)\nReturns: true if distance <= threshold" },
       findNearby: { type: "function", detail: "(disposition, token, distance, options?) => Token[]", info: "Find all tokens within distance matching disposition.\n- disposition: -1=hostile, 0=neutral, 1=friendly, null/\"all\"=any, or array\n- options: {includeIncapacitated, canSee, isSeen, includeToken, maxSize, relative}\n- relative (default true): disposition relative to token\nReturns: Token[]" },
       findNearbyCount: { type: "function", detail: "(disposition, token, distance, options?) => number", info: "Count tokens within distance matching disposition.\n- disposition: -1=hostile, 0=neutral, 1=friendly, null/\"all\"=any, or array\n- options: {includeIncapacitated, canSee, isSeen, includeToken, maxSize, relative}\nReturns: number of matching tokens" },
@@ -368,6 +369,8 @@ const MIDI_COMPLETIONS: CompletionNode = {
         }
       },
       tokenDocument: { type: "property", detail: "TokenDocument5e", info: "The TokenDocument of the token performing the action (workflow.token.document)" },
+      attackingToken: { type: "property", detail: "Token5e", info: "The token attacking (workflow.token)" },
+      attackingTokenDocument: { type: "property", detail: "TokenDocument5e", info: "The attacking token's TokenDocument" },
       inCombat: { type: "property", detail: "boolean", info: "Whether the actor was in a combat when the use started" },
       isTurn: { type: "property", detail: "boolean", info: "Whether it was the actor's turn when the use started" },
       isCritical: { type: "property", detail: "boolean", info: "Whether the attack is a critical hit" },
@@ -448,6 +451,7 @@ const MIDI_SCOPE_MAP: Array<{ key: string; detail: string; info: string; ref?: s
   { key: "macroItem", detail: "Item", info: "The item the macro is attached to (may differ from rolledItem for transferred macros)", ref: "item" },
   { key: "args", detail: "any[]", info: "Macro arguments array, args[0] is MidiMacroData" },
   { key: "options", detail: "object", info: "Options passed to callMacro" },
+  { key: "tokenDocument", detail: "TokenDocument5e", info: "The TokenDocument of `token`; in a target macro the target's, there even when the target has no canvas token (token is then undefined)" },
   { key: "midiData", detail: "MidiMacroData", info: "Full midi macro data object (same as args[0] and scope.midiData)" },
 ];
 
@@ -475,7 +479,26 @@ const MIDI_ARGS0: CompletionEntry = {
 
     // Damage info
     damageDetail: { type: "property", detail: "DamageDescription[]", info: "Damage breakdown by type" },
-    damageList: { type: "property", detail: "DamageListEntry[]", info: "Detailed damage list entries" },
+    damageList: { type: "property", detail: "DamageListEntry[]", info: "Each target's damage record (see damageItem for its fields)" },
+    damageItem: {
+      type: "property", detail: "DamageListEntry", info: "The damage record of the target being damaged (preTargetDamageApplication, isDamaged, isHealed)",
+      children: {
+        damages: { type: "property", detail: "DamageDescription[]", info: "The damage as rolled: what dnd5e's actor.applyDamage(damages, options) takes" },
+        options: { type: "property", detail: "DamageApplicationOptions", info: "The damage application options (saves, ignores, downgrades, the attacker's dnd5e rules)" },
+        calculatedDamages: { type: "property", detail: "DamageDescription[]", info: "actor.calculateDamage(damages, options): what is applied. Change it in place to change the damage" },
+        hpDamage: { type: "property", detail: "number", info: "HP lost (negative for healing)" },
+        tempDamage: { type: "property", detail: "number", info: "Temp HP lost" },
+        totalDamage: { type: "property", detail: "number", info: "Total damage after modifiers" },
+        oldHP: { type: "property", detail: "number", info: "HP before" },
+        newHP: { type: "property", detail: "number", info: "HP after" },
+        oldTempHP: { type: "property", detail: "number", info: "Temp HP before" },
+        newTempHP: { type: "property", detail: "number", info: "Temp HP after" },
+        actorUuid: { type: "property", detail: "string", info: "The target actor's UUID" },
+        targetUuid: { type: "property", detail: "string", info: "The target token's UUID" },
+        saved: { type: "property", detail: "boolean", info: "The target saved" },
+        details: { type: "property", detail: "string[]", info: "Reasons the damage was changed" },
+      }
+    },
     damageRoll: { type: "property", detail: "Roll", info: "The combined damage roll" },
     damageRolls: { type: "property", detail: "Roll[]", info: "Individual damage rolls" },
     damageTotal: { type: "property", detail: "number", info: "Total damage dealt" },

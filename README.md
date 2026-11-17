@@ -1,8 +1,8 @@
 # Midi-QOL
 
 ![](https://img.shields.io/badge/Foundry-v14.369+-informational)
-![](https://img.shields.io/badge/Dnd5e-v6.0.x-informational)
-![](https://img.shields.io/badge/DAE-v14.6.4+-informational)
+![](https://img.shields.io/badge/Dnd5e-v6.1.x-informational)
+![](https://img.shields.io/badge/DAE-v14.6.10+-informational)
 ![Latest release](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fgithub.com%2Ftposney%2Fmidi-qol%2Freleases%2Fdownload%2Flatest-dnd6%2Fmodule.json&query=%24.version&label=Latest%20release&prefix=v&color=blue)
 ![Forge Installs](https://img.shields.io/badge/dynamic/json?label=Forge%20Installs&query=package.installs&suffix=%25&url=https%3A%2F%2Fforge-vtt.com%2Fapi%2Fbazaar%2Fpackage%2Fmidi-qol&colorB=4aa94a)
 
@@ -50,10 +50,10 @@ Midi-QOL is highly configurable with quick-start presets for common play styles,
 ## Other Pages
 
 - [Flags](/FLAGS.md)
-- [Flowchart](/docs/flowchart.md)
+- [Flowchart](/docs/flowchart.md) ([with saves before damage](/docs/flowchart_save-before-dmg.md))
 - [Getting Started](/Getting%20Started.md)
 - [Macros](/MACROS.md)
-- [Workflow Fields](/docs/workflowfields-2026-10-30.md)
+- [Workflow Fields](/docs/workflowfields-2026-11-17.md)
 
 ---
 
@@ -139,13 +139,14 @@ If you prefer to configure settings manually, here's the recommended full automa
 | v12.4.27+ | v12 | v4.2+ | [manifest](https://gitlab.com/tposney/midi-qol/raw/v12dnd4/package/module.json) |
 | v13.0.52+ | v13 | v5.2.4+ / v5.3 | [manifest](https://github.com/tposney/midi-qol/releases/download/latest-v13/module.json) |
 | v14.0.x | v14 (14.368+) | v5.3 | [manifest](https://github.com/tposney/midi-qol/releases/download/latest-v14/module.json) |
-| v14.6.x | v14 (14.369+) | v6.0.x | [manifest](https://github.com/tposney/midi-qol/releases/download/latest-dnd6/module.json) |
+| v14.6.x | v14 (14.369+) | v6.0.x | [manifest](https://github.com/tposney/midi-qol/releases/download/v14.6.13/module.json) (14.6.13 is the last 14.6 release) |
+| v14.7.x | v14 (14.369+) | v6.1.x | [manifest](https://github.com/tposney/midi-qol/releases/download/latest-dnd6/module.json) |
 
 ## Required Modules
 
 | Module | Notes |
 |--------|-------|
-| **DAE** | Dynamic Active Effects - required (14.6.4+) |
+| **DAE** | Dynamic Active Effects - required (14.6.10+) |
 | **libwrapper** | Required |
 | **socketlib** | Required |
 
@@ -194,7 +195,7 @@ If you prefer to configure settings manually, here's the recommended full automa
 
 | Module | Description |
 |--------|-------------|
-| [**Covens Automation Toolkit (CAT)**](https://github.com/chrisk123999/covens-automation-toolkit) | **Strongly recommended.** Midi's sample items that say *Automation requires Coven's Automation Toolkit (CAT)* (Hide, Search, the generic actions, …) only work with it; without it they still load, but that part of their automation does nothing. Shared automation framework used by CPR 2 and other automation packs. Its medkit matches items to automations by identifier and updates them; midi registers its own sample items with CAT. See the [CAT wiki](https://github.com/chrisk123999/covens-automation-toolkit/wiki). |
+| [**Covens Automation Toolkit (CAT)**](https://github.com/chrisk123999/covens-automation-toolkit) | **Strongly recommended.** midi's CAT integration needs CAT 0.1.8 or later. Midi's sample items that say *Automation requires Coven's Automation Toolkit (CAT)* (Search, Attack, Magic, …) only work with it; without it they still load, but that part of their automation does nothing. Shared automation framework used by CPR 2 and other automation packs. Its CatKit matches items to automations by identifier and updates them; midi registers its own sample items with CAT. See the [CAT wiki](https://github.com/chrisk123999/covens-automation-toolkit/wiki). |
 | [**Cauldron of Plentiful Resources**](https://foundryvtt.com/packages/chris-premades) | Comprehensive collection of automated spells, class features, and monster abilities. Includes custom roll resolver for in-person games, fancy Eskiemoh animations, and quality-of-life UI extensions. Extends Midi-QOL's workflow API. Has its own [wiki](https://github.com/chrisk123999/chris-premades/wiki). |
 | [**Midi Item Showcase Community**](https://foundryvtt.com/packages/midi-item-showcase-community) | Community-contributed automations from the Posney's Foundry Automation Discord. Growing collection of user-submitted items, spells, and scripts. |
 | [**Gambit's Premades**](https://foundryvtt.com/packages/gambits-premades) | Curated library of automated spells, items, and feats. Handles difficult "3rd party reaction" items like Counterspell, Opportunity Attacks, and Silvery Barbs. Features custom AppV2 dialogs with animated countdown timers for reactions. |
@@ -450,7 +451,7 @@ Roll statistics (Keep Roll Statistics, Save statistics Every, Player statistics 
 
 ### Rules text for sample items
 
-Midi's sample items include automations for content that isn't in the SRD (Toll the Dead, Metamagic Adept, Arcane Ward, …). Midi can't ship their rules text, so their description holds only midi's automation notes and a line saying the rules text is missing. When such an item is added to an actor, midi fills the description in from content you already have in your world.
+Midi's sample items include automations for content that isn't in the SRD (Vow of Enmity, Metamagic Adept, Arcane Ward, …). Midi can't ship their rules text, so their description holds only midi's automation notes and a line saying the rules text is missing. When such an item is added to an actor, midi fills the description in from content you already have in your world.
 
 **Where the text comes from**, in this order:
 1. Your official D&D modules: the Player's Handbook, Tasha's Cauldron of Everything and the others (modules whose id starts with `dnd-`).
@@ -458,7 +459,7 @@ Midi's sample items include automations for content that isn't in the SRD (Toll 
 3. The *Rules text compendium* you choose on the Misc tab, for anything the first two don't have.
 
 **How an item is matched:**
-- The same item type (spell, feat, …) and the same identifier (`system.identifier`, shown on the item sheet's details as *Identifier*, for example `toll-the-dead`; a blank identifier counts as the one dnd5e makes from the item's name). An item for the same rules version (2014 or 2024) is preferred; one for the other version is used if nothing else matches, and the item's notes say so.
+- The same item type (spell, feat, …) and the same identifier (`system.identifier`, shown on the item sheet's details as *Identifier*, for example `vow-of-enmity`; a blank identifier counts as the one dnd5e makes from the item's name). An item for the same rules version (2014 or 2024) is preferred; one for the other version is used if nothing else matches, and the item's notes say so.
 - Otherwise, the same item type and the same name, ignoring case; the notes say it was matched by name.
 
 The matching item's description replaces the placeholder, midi's automation notes are kept after it, and a line says which compendium the text came from (with a link to the entry).
@@ -472,8 +473,8 @@ What each entry in the compendium needs:
 
 | Field | Required | What to set |
 |---|---|---|
-| Item type | Yes | The same type as the midi sample item: Spell for Toll the Dead, Feature for Metamagic Adept, and so on. An entry of another type is never matched. |
-| Identifier (`system.identifier`, item sheet: Details tab, *Identifier*) | Yes | The same identifier as the midi sample item (for example `toll-the-dead`). Left blank, the field shows, greyed, the identifier dnd5e makes from the item's name, and midi matches on that: an entry named exactly like the sample item ("Toll the Dead") needs nothing typed here. dnd5e lowercases the name, drops brackets and punctuation and joins the words with hyphens, so "Detect Magic (Vision)" gives `detect-magic-vision`. Type one in when the names differ. |
+| Item type | Yes | The same type as the midi sample item: Feature for Metamagic Adept, Equipment for Dragonhide Belt, and so on. An entry of another type is never matched. |
+| Identifier (`system.identifier`, item sheet: Details tab, *Identifier*) | Yes | The same identifier as the midi sample item (for example `metamagic-adept`). Left blank, the field shows, greyed, the identifier dnd5e makes from the item's name, and midi matches on that: an entry named exactly like the sample item ("Metamagic Adept") needs nothing typed here. dnd5e lowercases the name, drops brackets and punctuation and joins the words with hyphens, so "Detect Magic (Vision)" gives `detect-magic-vision`. Type one in when the names differ. |
 | Name | No | Any name, if the identifier is typed in. With a blank identifier, the name makes the identifier, so it must match the sample item's name. As a last resort an entry with the same name (case doesn't matter) is used even when the identifiers differ; the item's notes then say it was matched by name. |
 | Description (`system.description.value`, item sheet: Description tab) | Yes | The full rules text, as you want it shown on the item. An entry with an empty description is skipped. |
 | Rules version (`system.source.rules`, item sheet: Description tab, *Source*, the cog button (*Configure Source*) → *Rules*) | No | 2014 or 2024. When set on both, an entry for the sample item's version is preferred; one for the other version is still used if nothing else matches, and the notes say so. |
@@ -492,6 +493,7 @@ An item that already has its rules text is never changed. Turn *Fill in missing 
 
 | Setting | Description |
 |---------|-------------|
+| Enforce death saves | A character at 0 HP that takes damage suffers a death save failure, two from a critical hit, three if the damage equals or exceeds its hit point maximum. Massive damage: a character dropped to 0 HP dies outright (three failures and Dead) when the damage left over equals or exceeds its hit point maximum. Characters only; not with the Vitality Item, which takes the overflow. Undo on the damage card reverses it |
 | Add effect when hp falls below % | Add the selected status (as icon or overlay) when HP falls to or below this % of max (0 disables) |
 | Add effect when HP = 0 | Status for Player Controlled and GM Controlled actors at 0 HP (Do Not Update/Add effect as overlay/Add effect as icon) |
 | Mark defeated in combat tracker | Separate checkboxes for player and GM controlled tokens |
@@ -730,7 +732,7 @@ These fields appear only for activities with area targets (templates):
 
 ### Region Behaviour (AoE)
 
-An activity with a template can attach a **Midi Region Activity** behaviour to the region it places (activity sheet, *Region Behaviour* section). The region then runs activities or effects as creatures interact with it, as Spirit Guardians, Moonbeam and Cloudkill do in the sample items.
+An activity with a template can attach a **Midi Region Activity** behaviour to the region it places (activity sheet, *Region Behaviour* section). The region then runs activities or effects as creatures interact with it, as spells such as Spirit Guardians, Moonbeam and Cloudkill need. A creature with dnd5e's antimagic status is unaffected by a magical area's rules.
 
 | Field | Description |
 |-------|-------------|
@@ -767,7 +769,7 @@ These fields appear only for activities that deal damage:
 | **Magic Effect** | (Save activities) Saves against it are saves against magic (Magic Resistance). |
 | **Friendly Save** | (Save and check activities) Roll save/Friends Succeed/Friends Fail for the caster's allies. |
 | **Friendly Summons** | (Summon activities) The summoned token takes the caster's disposition. |
-| **Targets you can see** | On dnd5e's *Targeting* tab (*Midi Targeting*): the activity can only be used on targets its token can see ("a creature you can see"). Enforced by the Mechanics setting *Targets you can see*. |
+| **Targets you can see** | On dnd5e's *Targeting* tab (*Midi Targeting*): the activity can only be used on targets its token can see ("a creature you can see"). Enforced by the Rules tab setting *Targets you can see*. |
 
 ### Triggered Activities
 
@@ -776,7 +778,7 @@ Configure an activity to automatically trigger another activity on the same item
 | Field | Description |
 |-------|-------------|
 | **Trigger Activity** | Select another activity on this item to execute after this one completes. |
-| **Trigger Condition** | Condition that must be true for the triggered activity to run, evaluated with the workflow's data (e.g., `workflow.hitTargets.size > 0` to only trigger on a hit). |
+| **Trigger Condition** | Condition that must be true for the triggered activity to run, evaluated with the workflow's data (e.g., `workflow.hitTargets.count > 0` to only trigger on a hit). |
 | **Trigger Targets** | Target item owner/Same targets/Hit targets/Missed targets/Target failed saves/Target successful saves/Generate new targets. |
 | **Roll As** | Roll the activity as if owned by: Item Owner/First target/First hit target/First missed target/First saved target/First failed save target. |
 | **Consume Resources** | Consume uses/slots when the triggered activity runs. |
@@ -796,7 +798,7 @@ The button is shown to the attacker's owners and the GM, greyed out when the act
 
 ### Over Time Effects (Activity Tab)
 
-For activities that repeat on subsequent turns (like ongoing damage, regeneration, or repeated saves). Marking an activity *Is Over Time* does not run it by itself: an effect must name it with the change `flags.midi-qol.ActivityOverTime` (Override), value the activity's identifier (shown on its Midi tab) or its UUID. While a creature has that effect, midi-qol uses the activity at the chosen point of that creature's turn. The Regeneration and Acid Arrow sample items show the setup.
+For activities that repeat on subsequent turns (like ongoing damage, regeneration, or repeated saves). Marking an activity *Is Over Time* does not run it by itself: an effect must name it with the change `flags.midi-qol.ActivityOverTime` (Override), value the activity's identifier (shown on its Midi tab) or its UUID. While a creature has that effect, midi-qol uses the activity at the chosen point of that creature's turn. The *Regeneration (activity over time)* sample item shows the setup.
 
 | Field | Description |
 |-------|-------------|
@@ -884,6 +886,8 @@ Enable in config to prompt targets for reaction items when hit.
 - Reaction type requires Auto Check Hits enabled
 - Reaction Damaged requires Auto Check Hits + Saves + Apply Damage
 
+A creature with dnd5e's *No Reactions* effect is offered no reactions. A reaction dnd5e won't allow (a spell under the antimagic status) is not offered.
+
 ## Roll Statistics
 
 Track roll data per actor and item (attacks, saves, damage taken by type, concentration and death saves):
@@ -910,7 +914,7 @@ Advantage on saves against magic (a spell, or an activity with *Magic Effect*) f
 
 ## Special Effect Expiry
 
-midi adds these special durations to DAE (DAE 14.0.18+ on v14, 14.6.2+ on dnd6), which expires the effects:
+midi adds these special durations to DAE, which expires the effects:
 
 | Trigger | Description |
 |---------|-------------|
@@ -926,6 +930,23 @@ midi adds these special durations to DAE (DAE 14.0.18+ on v14, 14.6.2+ on dnd6),
 | `shortRest`, `longRest`, `newDay` | On a rest or new day |
 
 *Expire 1Hit/1Attack/1Action on roll* (Mechanics tab) expires these when the roll is made instead of waiting for damage.
+
+## Stanching Wounds (flags.midi-qol.stanch)
+
+An effect a check ends, such as a wound that can be stanched: the affected creature's own check, or another creature's. Put it on the effect as a change (key `flags.midi-qol.stanch`) or as the effect's own flag.
+
+```
+dc=15, skill=med, range=5, healing=spell
+```
+
+| Field | Meaning | Default |
+|---|---|---|
+| `dc` | The check's DC (a bare number is the DC) | 10 |
+| `skill` | The skill rolled | `med` |
+| `range` | How close, in feet, another creature must be | 5 |
+| `healing` | Restoring hit points also ends the effect: `none`, `spell`, `magical` (a spell or a magic item) or `any` | `none` |
+
+The effect ends when the affected creature rolls that skill and reaches the DC, or when a creature within range rolls it with the affected creature targeted. Any roll of the skill counts, from the sheet or an item. Every stack of a stacking effect ends. Undoing damage on the damage card is not healing. *Infernal Glaive*, *Infernal Tail*, *Devil's Glaive*, *Wounding Weapon* and *Longsword of Wounding* use it.
 
 ## Item Description Keywords
 
@@ -990,6 +1011,7 @@ e.g. `system.abilities.dex.save.roll.fail` = `1`. The old `flags.midi-qol.fail/s
 | `flags.midi-qol.potentCantrip` | Cantrips do half on save |
 | `flags.midi-qol.concentrationSaveBonus` | Deprecated: use `system.attributes.concentration.roll.bonus` |
 | `flags.midi-qol.deathSaveBonus` | Add to death saves |
+| `flags.midi-qol.stanch` | On an effect: a skill check ends it (`dc=15, skill=med, range=5, healing=spell`); see [Stanching Wounds](#stanching-wounds-flagsmidi-qolstanch) |
 | `flags.midi-qol.bloodsense` | Range (e.g. 30): no disadvantage against hidden/invisible creatures that aren't at full HP within that range |
 
 > [!tip] Navigation 
@@ -1001,7 +1023,7 @@ e.g. `system.abilities.dex.save.roll.fail` = `1`. The old `flags.midi-qol.fail/s
 
 Enabled by the **Optional Game Rules** checkbox on the Rules tab.
 
-Targeting rules that don't need it: with *Calculate Cover* set, a target with total cover (dnd5e's Total Cover status, or the cover module's) can't be targeted by an activity that targets creatures directly (not an area template or emanation); *Walls block ranged attacks* blocks an attack only at walls that block movement; *Targets you can see* (Mechanics tab) checks activities that need a target their token can see.
+Targeting rules that don't need it: with *Calculate Cover* set, a target with total cover (dnd5e's Total Cover status, or the cover module's) can't be targeted by an activity that targets creatures directly (not an area template or emanation); *Walls block ranged attacks* blocks an attack only at walls that block movement; *Targets you can see* (Rules tab) checks activities that need a target their token can see.
 
 | Rule | Description |
 |------|-------------|
@@ -1052,6 +1074,8 @@ Alternative AC system with Evasion Class (EC) and Armor Resistance (AR):
 - Roll >= EC and <= AC: Glancing blow (damage reduced by AR)
 - Roll > AC: Full hit
 
+EC and AR come from dnd5e's armor, shield and Dex values, so a magic armor's bonus counts as armor and is lost under antimagic.
+
 ---
 
 # Migration Notes
@@ -1068,6 +1092,18 @@ Alternative AC system with Evasion Class (EC) and Armor Resistance (AR):
 - `flags.midi-qol.fail/success/min/max` keys for saves, checks, skills, tools, attacks, death saves and concentration are deprecated: use dnd5e's roll fields (e.g. `system.abilities.dex.save.roll.fail`, `system.skills.ste.roll.success`, `system.rolls.attack.fail`). DAE converts the old keys.
 - `flags.midi-qol.concentrationSaveBonus` is deprecated: use `system.attributes.concentration.roll.bonus`.
 - dnd5e decides advantage: midi's flags and its own sources (flanking, range, visibility) count alongside dnd5e's roll mode fields and advantage rules.
+
+## dnd5e 6.1 (midi-qol 14.7)
+
+- midi-qol 14.7 requires dnd5e 6.1 and DAE 14.6.10; worlds on dnd5e 6.0 stay on midi-qol 14.6.x. midi's CAT integration needs CAT 0.1.8.
+- Ignoring or downgrading a target's immunity, resistance or vulnerability is a dnd5e rule on the attacker's effects. DAE's `system.traits.idi.value`, `idr` and `idv` are deprecated; DAE 14.6.10 migrates them. Ignoring immunity gives full damage to a target that is only immune (it was half).
+- The damage card has one resistance button per damage type; the *All Damage Resistance* button is gone.
+- Workflow token sets and target hooks give canvas Tokens in 14.7 (TokenDocuments after `MidiQOL.setTokenDocumentSets(true)`), always TokenDocuments from 14.8.0; `member.document` on a TokenDocument is removed in 14.9.0. `set.documents`, `set.tokens`, `set.uuids` and `set.count` read the same throughout.
+- Damage entries: `damages`, `options` and `calculatedDamages` replace `rawDamageDetail`, `calcDamageOptions` and `damageDetail` (aliases until 14.9.0).
+- `MidiQOL.getDistance` / `computeDistance` return `Infinity` when the tokens can't be measured (-1 still means walls block); `MidiQOL.measureTokens` says why.
+- The *Replace dnd5e activities with midi-qol equivalents* setting is removed: midi always uses its own activities.
+- Sample items now automated by Cauldron of Plentiful Resources were removed (see the [Changelog](Changelog.md)); the macros of copies on actors stay until 14.8.0.
+- See [Migrating to midi-qol 14.7](https://github.com/tposney/midi-qol/wiki/Token-Sets-Document-Mode).
 
 ## Removed Flags (13.0.49)
 
@@ -1210,13 +1246,13 @@ Additional states: `AwaitTemplate`, `TemplatePlaced`, `AoETargetConfirmation`, `
 | `midi-qol.AttackRollComplete` | After attack roll complete | |
 | `midi-qol.DamageRollComplete` | After damage roll complete | |
 | `midi-qol.preCheckSaves` | Before save rolls | |
-| `midi-qol.preTargetSave` | Before each target's save; args `(target, workflow, saveDetails)`: `target` is the Token, or the TokenDocument of a target not drawn (another scene or level), and always the TokenDocument in document mode | `saveDetails` can be changed (advantage, tracker) |
+| `midi-qol.preTargetSave` | Before each target's save; args `(target, workflow, saveDetails)`: `target` is the target's canvas Token, or its TokenDocument when it has none (another scene or level); always its TokenDocument after `MidiQOL.setTokenDocumentSets(true)`, and from 14.8.0 | `saveDetails` can be changed (advantage, tracker) |
 | `midi-qol.postCheckSaves` | After save rolls | |
 | `midi-qol.postActiveEffects` | After effects applied | |
 | `midi-qol.RollComplete` | Workflow fully complete | |
-| `midi-qol.preTargetDamageApplication` | Before damage to target | Args: token, {item, workflow, damageItem}; `token` as for preTargetSave |
-| `midi-qol.isHealed` | After healing applied | Args: token, {item, workflow, damageItem, ditem}; `token` as for preTargetSave |
-| `midi-qol.isDamaged` | After damage applied | Args: token, {item, workflow, damageItem, ditem}; `token` as for preTargetSave |
+| `midi-qol.preTargetDamageApplication` | Before damage to target | Args: target, {item, workflow, damageItem}; `target` as for preTargetSave |
+| `midi-qol.isHealed` | After healing applied | Args: target, {item, workflow, damageItem, ditem}; `target` as for preTargetSave |
+| `midi-qol.isDamaged` | After damage applied | Args: target, {item, workflow, damageItem, ditem}; `target` as for preTargetSave |
 | `midi-qol.conditionData` | Condition data being built | Args: (conditionData, {workflow, actor, item, target}); add fields conditions can refer to |
 
 ### Teleport Hooks
@@ -1269,6 +1305,8 @@ All workflow state hooks also have `midi-qol.premades.{pre|post}{StateName}` var
 
 ### DR/DI/DV
 System traits support expressions evaluated with actor roll data.
+
+dnd5e 6.1 effects on the attacker can ignore a target's immunity, resistance or vulnerability to a damage type, or downgrade immunity to resistance; midi applies them to all the damage it applies, including `applyTokenDamage` and `DamageOnlyWorkflow`. DAE's `system.traits.idi.value`, `idr` and `idv` keys are deprecated for these. Falling damage has its own resistance, immunity and vulnerability.
 
 An activity's *Ignore Damage Traits* can ignore a target's immunity, resistance, vulnerability, absorption or modification, per damage type or for all, or downgrade immunity to resistance (see [Damage Options](#damage-options)).
 
@@ -1452,17 +1490,18 @@ turn=end, saveDC=15, saveAbility=wis, failCount=2+, removeCondition=@attributes.
 - All @-field expressions are evaluated against the affected actor's roll data
 - Multiple OverTime flags can exist on the same effect (use different keys like `flags.midi-qol.OverTime.burn` and `flags.midi-qol.OverTime.poison`)
 - The `itemName` parameter can reference items by UUID or by name (searches actor items first, then world items)
-- For activity-based overtime effects (recommended for v13+), see the Over Time Effects section in Activity configuration
+- For activity-based overtime effects (recommended), see the Over Time Effects section in Activity configuration
 
 > [!tip] Navigation
-> See [docs/workflowfields-2026-10-30.md](docs/workflowfields-2026-10-30.md) for available workflow data in conditions.
+> See [docs/workflowfields-2026-11-17.md](docs/workflowfields-2026-11-17.md) for available workflow data in conditions.
 
 ---
 
 # Changelog & Credits
 
+
 ## Changelog
-https://github.com/tposney/midi-qol/blob/dnd6/Changelog.md
+https://github.com/tposney/midi-qol/blob/dnd5e-6.1/Changelog.md
 
 ## Credits
 

@@ -1,4 +1,4 @@
-import {effectUtils, tokenUtils, workflowUtils} from '../proxy.mjs';
+import {activityUtils, effectUtils, tokenUtils, workflowUtils} from '../proxy.mjs';
 // Fear Aura: an enemy that starts its turn in the emanation makes the item's Wisdom save; on a
 // failure it is Frightened until the start of its next turn (the activity's effect), on a success it is immune to this
 // creature's aura for 24 hours. No aura while the creature is incapacitated.
@@ -9,9 +9,9 @@ async function turnStart({document: item, token: starter}) {
     const auraToken = holder?.token ?? holder?.getActiveTokens(false, true).find(t => t.parent === starter?.parent);
     const target = starter?.actor;
     if (!holder || !target || !auraToken || starter === auraToken || holder.statuses.has('incapacitated')) return;
-    const activity = item.system.activities.find(a => a.type === 'save');
+    const activity = item.system.activities.find(a => a.isLike('save'));
     if (!activity) return;
-    if (tokenUtils.getDistance(auraToken, starter) > (activity.target?.template?.size || 10)) return;
+    if (tokenUtils.getDistance(auraToken, starter) > (activityUtils.getTemplateSize(activity) || 10)) return;
     if (target.effects.some(e => e.flags?.[MODULE]?.fearAuraImmune === item.uuid)) return;
     // Only the creature starting its turn: without the activity's emanation template, which would target everyone in it.
     const data = activity.toObject();

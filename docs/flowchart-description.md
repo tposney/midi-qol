@@ -1,13 +1,13 @@
-<!-- NOTE: This page is copied to several places using "::include" from GitLab markdown -->
-This page provides information on when and why a pass is called. Check the [Workflow Fields](workflowfields.md) page to see what fields are available in each pass. In the menu for configuring item on use macro calls, some options are shown with a description rather than the name of the pass. Names and descriptions are associated in each node in the chart below.
+This page shows when and why each macro pass is called. See [Workflow Fields](workflowfields-2026-11-17.md) for the fields available in each pass. In the menu for configuring an item's on use macro calls, some options are shown with a description rather than the name of the pass; each node in the chart gives both.
 
-The chart is arranged by `args[0].tag`, which holds a string representing a category of macro passes:
+The chart is arranged by `args[0].tag`, the category of macro pass:
 
-- `OnUse` contains passes that run on the client rolling the item.
-- `TargetOnUse` contains passes that run once for each target before proceeding.
-- `optional` passes are a special case called only when a macro is specified in a `flags.midi-qol.optional.NAME.*` flag ([see here](/FLAGS.md#itemmacro-in-optional-bonus-flags)).
-- `DamageBonus` is a tag with one pass called if one or more macros are specified in the "*Damage Bonus Macro*" field in the special traits on a character sheet, or set by an effect using flag `flags.dnd5e.DamageBonusMacro` ([see here](/MACROS.md#damage-bonus-macros)).
+- `OnUse` passes run on the client rolling the item.
+- `TargetOnUse` passes run once for each target before proceeding.
+- `optional` passes are called only when a macro is named in a `flags.midi-qol.optional.NAME.*` flag ([see here](/FLAGS.md#itemmacro-in-optional-bonus-flags)).
+- `DamageBonus` has one pass, called when macros are named in the *Damage Bonus Macro* field in a character's special traits, or set by an effect with `flags.dnd5e.DamageBonusMacro` ([see here](/MACROS.md#damage-bonus-macros)).
 
->>> [!note]
-If your macro makes changes to a document when the calling client may not have permission, you will need to use sockets. Utilities are available in `MidiQOL.socket()`.
->>>
+A teleport activity (dnd5e 6) also runs `preTeleport` before anyone moves and `postTeleport` after the moves; they are not drawn on the chart.
+
+> [!NOTE]
+> If your macro changes a document the calling client may not have permission for, use sockets. Utilities are available in `MidiQOL.socket()`.

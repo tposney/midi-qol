@@ -1,9 +1,8 @@
-import { registerMidiActivityType } from "../utils.js";
 import { AnyMutableObject } from "fvtt-types/utils";
 import { Activity, RollDialogConfig, RollMessageConfig, RollProcessConfig } from "../../globals.js";
 import { debugEnabled, GameSystemConfig, i18n, warn } from "../../midi-qol.js";
 import { Workflow } from "../Workflow.js";
-import { replaceDefaultActivities, autoCheckSavesOptions, configSettings, safeGetGameSetting } from "../settings.js";
+import { autoCheckSavesOptions, configSettings, safeGetGameSetting } from "../settings.js";
 import { MidiActivityMixin, MidiActivityMixinSheet } from "./MidiActivityMixin.js";
 import { MidiSaveActivity } from "./SaveActivity.js";
 import { getSceneTargets } from "./activityHelpers.js";
@@ -16,12 +15,7 @@ export function setupCheckActivity() {
   //@ts-expect-error
   MidiCheckSheet = defineMidiCheckSheetClass(game.system.applications.activity.CheckSheet);
   MidiCheckActivity = defineMidiCheckActivityClass(GameSystemConfig.activityTypes.check.documentClass as Activity);
-  if (replaceDefaultActivities) {
-    // GameSystemConfig.activityTypes["dnd5eAttack"] = GameSystemConfig.activityTypes.attack;
-    GameSystemConfig.activityTypes.check = { documentClass: MidiCheckActivity };
-  } else {
-    registerMidiActivityType("midiCheck", MidiCheckActivity, "check");
-  }
+  GameSystemConfig.activityTypes.check = { documentClass: MidiCheckActivity };
 }
 
 let defineMidiCheckActivityClass = <T extends Activity>(ActivityClass: T) => {
@@ -31,7 +25,7 @@ let defineMidiCheckActivityClass = <T extends Activity>(ActivityClass: T) => {
     static metadata =
       foundry.utils.mergeObject(
         super.metadata, {
-        title: configSettings.activityNamePrefix ? "midi-qol.CHECK.Title.one" : ActivityClass.metadata.title,
+        midiTitle: "midi-qol.CHECK.Title.one",
         dnd5eTitle: ActivityClass.metadata.title,
         sheetClass: MidiCheckSheet,
         usage: {

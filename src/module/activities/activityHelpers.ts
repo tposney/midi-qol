@@ -146,7 +146,7 @@ export function requiresTargetConfirmation(activity: Activity, options: MidiOpti
   if (options.workflowOptions?.targetConfirmation === "always") return true;
   // The targets this use will have: those it was given, else the user's (another use can change the user's meanwhile).
   const targets: Set<TokenOrDocument> = memberCount(options.targetsToUse) ? options.targetsToUse! : new Set(game.user?.targets ?? []);
-  // Every target as a document (drawn or not): what the checks read is the token's, not the canvas's
+  // Every target as a document (with a canvas token or not): what the checks read is the token's, not the canvas's
   const targetDocuments = targets instanceof TokenDocumentSet ? targets.documents
     : [...targets].map(target => getTokenDocument(target)).filter((document): document is TokenDocument.Implementation => !!document);
   const targetCount = targetDocuments.length;
@@ -472,7 +472,7 @@ function levelFloor(level: LevelElevation | undefined): number | undefined {
   return Number.isFinite(floor) ? floor : undefined;
 }
 
-/** A token's feet and head, from its document (drawn or not). */
+/** A token's feet and head, from its document (with a canvas token or not). */
 function tokenSpan(token: TokenDocument.Implementation): { feet: number, head: number } {
   const feet = token.elevation ?? 0;
   return { feet, head: feet + (token.depth ?? 1) * (token.parent?.grid.distance ?? 5) };
@@ -533,8 +533,7 @@ function templateBand(activity: any, shape: any, { level, token, attached = fals
   const sceneUnits = (value: unknown): number | undefined => {
     const size = Number(value);
     if (!Number.isFinite(size) || size <= 0) return undefined;
-    const converted = convertLengthTo(size, template.units, canvas?.scene?.grid.units);
-    return typeof converted === "number" ? converted : size;
+    return convertLengthTo(size, template.units, canvas?.scene?.grid.units);
   };
   const band = (bottom: number, top: number | undefined): Band => ({ bottom, top: top ?? null, topInclusive: true });
   const { feet, head } = tokenSpan(source);
@@ -734,8 +733,7 @@ export async function createActivityTemplateRegions(
 
   const convert = (value: number | undefined) => {
     if (!value) return 0;
-    const converted = convertLengthTo(value, target.units, scene.grid.units);
-    return (typeof converted === "number" ? converted : value) * (scene.grid.size / scene.grid.distance);
+    return convertLengthTo(value, target.units, scene.grid.units) * (scene.grid.size / scene.grid.distance);
   };
   const size = convert(target.size);
   const width = convert(target.width) || (scene.grid.size);

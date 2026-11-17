@@ -1,14 +1,15 @@
-import { checkRule, configSettings } from "./settings.js";
+import { ALL_DAMAGE_KEY, checkRule, configSettings } from "./settings.js";
 import { _closePlayerRollDialogs, playerWaitHandlers } from "./lib/playerWaits.js";
 import { DialogCountdown, dialogCountdownOptions } from "./lib/dialogCountdown.js";
 import { withWorkflowOptionsCodec } from "./lib/workflowOptionsCodec.js";
 import { i18n, log, warn, gameStats, getCanvas, error, debugEnabled, debug, GameSystemConfig, MODULE_ID } from "../midi-qol.js";
-import { damageActiveHas, _pauseReactionTimer, _closeReactionDialog, calculateDamageAmounts, hpChangeFromDetail, getToken, getTokenDocument, gmOverTimeEffect, fromActorUuid, promptReactions, hasUsedAction, hasUsedBonusAction, removeActionUsed, removeBonusActionUsed, removeReactionUsed, ReactionItemReference, isEffectExpired, expireEffects, deleteAppliedEffects, getAppliedEffects, CERemoveEffect, CEAddEffectWith, getActor, completeItemUse, completeActivityUse, localActivityOverTimeEffect, isValidTarget, validTargetTokens, hasUsedAnyReaction, getVitalityItem, MidiOptions, tokenSourceCenter, toggleStatus } from "./utils.js";
+import { damageActiveHas, damageChangeHas, _pauseReactionTimer, _closeReactionDialog, calculateDamageAmounts, hpChangeFromDetail, getToken, getTokenDocument, gmOverTimeEffect, fromActorUuid, promptReactions, hasUsedAction, hasUsedBonusAction, removeActionUsed, removeBonusActionUsed, removeReactionUsed, ReactionItemReference, isEffectExpired, expireEffects, deleteAppliedEffects, getAppliedEffects, CERemoveEffect, CEAddEffectWith, getActor, completeItemUse, completeActivityUse, localActivityOverTimeEffect, isValidTarget, validTargetTokens, hasUsedAnyReaction, getVitalityItem, MidiOptions, tokenSourceCenter, toggleStatus, withDeprecatedDamageFields } from "./utils.js";
 import { DAMAGE_MESSAGE_TYPE } from "./ChatClasses/DamageCardMessage.js";
 import { DamageDescriptionObject, Workflow } from "./Workflow.js";
 import { applyFailedDeathSaves, bonusCheck, revertFailedDeathSaves } from "./patching.js";
 import { RollModifierTracker } from "./lib/RollModifierTracker.js";
 import { TokenDocumentSet } from "./lib/tokenDocumentSet.js";
+import { copyDamageOptions } from "./lib/damageRules.js";
 import { actorEmbeddedByPath, repointCopiedDependentsSource } from "./lib/MidiDependentsRegistry.js";
 import { queueUndoData, startUndoWorkflow, _removeMostRecentWorkflow, _undoMostRecentWorkflow, undoTillWorkflow, _queueUndoDataDirect, addUndoChatCards } from "./undo.js";
 import { TroubleShooter } from "./apps/TroubleShooter.js";
@@ -413,10 +414,9 @@ async function _applyEffects(data: { workflowId: string, targets: string[] }) {
   try {
     const workflow = Workflow.findWorkflow(data.workflowId);
     if (!workflow) throw new Error(`_applyEffects | workflowId: ${data.workflowId} - workflow not found`);
-    // As the button does for the author: the requester's targets, which forceApplyEffects keeps
+    // As the button does for the author: effects go to the use's targets; the requester's only confirm the request
     workflow.forceApplyEffects = true;
-    workflow.effectTargets = new TokenDocumentSet(data.targets);
-    if (workflow.effectTargets.count > 0) result = await workflow.performState(workflow.WorkflowState_ApplyDynamicEffects);
+    if (data.targets.length > 0) result = await workflow.performState(workflow.WorkflowState_ApplyDynamicEffects);
     return result;
   } catch (err) {
     const message = `_applyEffects | remote apply effects error`;
@@ -435,7 +435,7 @@ async function _completeActivityUse(data: {
   if (actor?.actor) actor = actor.actor;
   if (!actor) return null;
   if (usage.midiOptions?.targetsToUse) {
-    // By document: a target the GM isn't viewing (another level or scene) isn't drawn on their client
+    // By document: a target the GM isn't viewing (another level or scene) has no canvas token on their client
     usage.midiOptions.targetsToUse = new Set(validTargetTokens(new TokenDocumentSet(usage.midiOptions.targetsToUse as string[])).documents);
   }
   const workflow = await completeActivityUse(activityUuid, usage, dialog, message);
@@ -991,15 +991,37 @@ function flashTokenBarSaves(data: {
  * Attached non-enumerable, on the options object itself: hook handlers' changes still reach the actor update, and the
  * card is not copied into the undo data midi stores.
  */
-function withDamageOrigin<T>(options: T): T {
+function withDamageOrigin<T>(options: T, undo = false): T {
   const uuid = foundry.utils.getProperty(options as object, "midi.itemCardUuid");
   const card = typeof uuid === "string" ? fromUuidSync(uuid) : undefined;
+  // midiUndo: the damage card is putting hit points back, which is not healing
+  if (options && typeof options === "object") Object.defineProperty(options, "midiUndo", { value: undo, enumerable: false, configurable: true, writable: true });
   if (options && typeof options === "object" && card instanceof ChatMessage) {
     for (const key of ["origin", "originatingMessage"]) {
       Object.defineProperty(options, key, { value: card, enumerable: false, configurable: true, writable: true });
     }
   }
   return options;
+}
+
+/**
+ * The death save failures a character has after taking `amount` damage, of which `deltaTemp` came off temporary and
+ * `deltaHP` off current hit points (Enforce death saves). At 0 HP: one more, two from a critical, three if the damage
+ * equals or exceeds the hit point maximum. Massive damage: dropping to 0 HP with damage left over that equals or
+ * exceeds the maximum is death (not with a vitality item, which takes the overflow).
+ */
+function deathFailuresFromDamage(actor: Actor.Implementation, damage: { amount: number, deltaTemp: number, deltaHP: number, critical: boolean, vitality: boolean }): { from: number, to: number } | undefined {
+  // @ts-expect-error no dnd5e-types
+  const { hp, death } = actor.system.attributes;
+  // @ts-expect-error no dnd5e-types
+  const isCharacter = actor.type === "character";
+  if (!configSettings.enforceDeathSaves || !isCharacter || !death || !(damage.amount > 0) || actor.statuses.has("dead")
+    || actor.getFlag(MODULE_ID, "noDeathSaveFailureFromDamage")) return undefined;
+  const from: number = death.failure ?? 0;
+  const hpMax: number = hp.effectiveMax ?? hp.max;
+  if (hp.value <= 0) return { from, to: damage.amount >= hpMax ? 3 : Math.min(3, from + (damage.critical ? 2 : 1)) };
+  if (!damage.vitality && hp.value - damage.deltaHP <= 0 && damage.amount - damage.deltaTemp - damage.deltaHP >= hpMax) return { from, to: 3 };
+  return undefined;
 }
 
 /** A damage card moving the death save failures across three marks the character dead, or undoes that. */
@@ -1285,37 +1307,45 @@ function updateHPStatusHeader(html: HTMLElement, actorUuid?: string, applied?: b
   }
 }
 
-/** The modification labels for one calculated damage entry. */
-export function damageDetailMods(di: DamageDescription): string[] {
+/**
+ * The modification labels for one calculated damage entry: what applied (`active`), and a trait the target has that
+ * was ignored or downgraded (in `potential`, dnd5e 6.1, but not `active`).
+ */
+export function damageDetailMods(di: DamageDescription, options?: DamageApplicationOptions): string[] {
   let allMods: string[] = [];
   for (const cat of ["modification", "resistance", "vulnerability", "immunity",
     "absorption", "DR", "saved", "uncannyDodge", "spell", "magic", "nonmagic"]) {
     if (damageActiveHas(di, cat)) allMods.push(cat);
   }
   if (di.active?.threshold) allMods.push("threshold");
+  for (const cat of ["immunity", "resistance", "vulnerability"]) {
+    if (!damageChangeHas(di, "potential", cat) || damageActiveHas(di, cat)) continue;
+    const downgrade = options?.downgrade;
+    const downgraded = cat !== "vulnerability" && (downgrade === true || !!downgrade?.has(di.type) || !!downgrade?.has(ALL_DAMAGE_KEY));
+    allMods.push(`${cat} ${downgraded ? "downgraded" : "ignored"}`);
+  }
   if ((di.allActives?.length ?? 0) > 0) allMods = allMods.concat(di.allActives!);
   return allMods;
 }
 
 /** The card tooltip's per-entry display data, taken from the CALCULATED damage detail. */
-export function buildDamageMods(damageDetail?: DamageDescription[]): DamageModDisplay[] {
+export function buildDamageMods(damageDetail?: DamageDescription[], options?: DamageApplicationOptions): DamageModDisplay[] {
   return (damageDetail ?? []).map(di => ({
-    type: di.type, value: di.displayValue ?? di.value, mods: damageDetailMods(di)
+    type: di.type, value: di.displayValue ?? di.value, mods: damageDetailMods(di, options)
   }));
 }
 
 /** Helper to generate tooltip HTML for a damage item */
 function generateDamageTooltip(damageItem: DamageListEntry, tokenName?: string): string {
-  // damageMods is stored on the card because the stored damageDetail is the raw list and has no
-  // `active` markers; live application still derives it from the calculated detail.
-  const entries = damageItem.damageMods ?? buildDamageMods(damageItem.damageDetail);
+  // Cards before 14.7.0 stored the labels beside a raw list; from 14.7.0 the stored list is the calculated one
+  const entries = damageItem.damageMods ?? buildDamageMods(damageItem.calculatedDamages, damageItem.options);
   const tooltipList = entries.map(e => {
     const mods = (e.mods.length > 0) ? `| ${e.mods.join(",")}` : "";
     return `${e.value > 0 ? Math.floor(e.value) : Math.ceil(e.value)} ${{ ...GameSystemConfig.damageTypes, ...GameSystemConfig.healingTypes }[e.type === "" ? "none" : e.type]?.label ?? "none"} ${mods}`
   }).map(s => s.replaceAll(",,", ",").replaceAll(",,", ","));
 
   const toolTipHeader: string[] = [];
-  if (damageItem.damageDetail) {
+  if (damageItem.calculatedDamages) {
     if (damageItem.newHP !== damageItem.oldHP) toolTipHeader.push(`HP: ${damageItem.oldHP} -> ${damageItem.newHP}`);
     if ((damageItem.newTempHP ?? 0) !== (damageItem.oldTempHP ?? 0)) toolTipHeader.push(`TempHP: ${damageItem.oldTempHP} -> ${damageItem.newTempHP}`);
     if ((damageItem.newVitality ?? 0) !== (damageItem.oldVitality ?? 0)) toolTipHeader.push(`Vitality: ${damageItem.oldVitality} -> ${damageItem.newVitality}`);
@@ -1378,11 +1408,12 @@ async function prepareDamageListItems(
     if (!fromStoredData && actor.isOwner && (data.autoApplyDamage !== "yesCardNPC" || actor.type !== "character")) {
       // @ts-expect-error no dnd5e-types
       const hp = actor.system.attributes.hp;
-      const { change: amount, vitality: vitalityDamage, tempMax, deltaTemp, deltaHP, newTempHP } = hpChangeFromDetail(damageItem.damageDetail, hp);
-      const { amount: rawAmount, healing: rawHealing, vitality: rawVitality } = calculateDamageAmounts(damageItem.rawDamageDetail);
-      damageItem.totalDamage = damageItem.damageDetail.reduce((acc, d) => acc + (!["temphp", "midi-none", "vitality", "maximum"].includes(d.type) ? d.value : 0), 0);
+      const { change: amount, vitality: vitalityDamage, tempMax, deltaTemp, deltaHP, newTempHP } = hpChangeFromDetail(damageItem.calculatedDamages, hp);
+      const { amount: rawAmount, healing: rawHealing, vitality: rawVitality } = calculateDamageAmounts(damageItem.damages);
+      damageItem.totalDamage = damageItem.calculatedDamages.reduce((acc, d) => acc + (!["temphp", "midi-none", "vitality", "maximum"].includes(d.type) ? d.value : 0), 0);
       // The detail decides; hpDamage only disagrees when something changed one without the other (use MidiQOL.modifyDamageBy).
-      if (hpDamage !== deltaHP && tempMax === 0)
+      // hpDamage may exceed what the creature has left (a macro setting overkill damage): the applied change is clamped.
+      if (Math.clamp(hpDamage, -hp.damage, hp.value) !== deltaHP && tempMax === 0)
         error(`damage list entry for ${actor.name}: hpDamage ${hpDamage} but its damage detail gives ${deltaHP}; applying the detail`);
       const updates: Actor.UpdateData = {
         // @ts-expect-error no dnd5e-types
@@ -1457,29 +1488,23 @@ async function prepareDamageListItems(
         }
       }
 
-      // Damage at 0 HP: a death save failure, two from a critical, three if it equals or exceeds the hit point maximum.
-      // @ts-expect-error no dnd5e-types
-      const death = actor.system.attributes.death;
-      // @ts-expect-error no dnd5e-types
-      const isCharacter = actor.type === "character";
-      if (configSettings.enforceDeathSaves && isCharacter && death && hp.value <= 0 && amount > 0 && !actor.statuses.has("dead")
-        && !actor.getFlag(MODULE_ID, "noDeathSaveFailureFromDamage")) {
-        const oldFailures: number = death.failure ?? 0;
-        damageItem.oldDeathFailures = oldFailures;
-        damageItem.newDeathFailures = amount >= (hp.effectiveMax ?? hp.max) ? 3 : Math.min(3, oldFailures + (damageItem.critical ? 2 : 1));
-        updates["system.attributes.death.failure"] = damageItem.newDeathFailures;
+      const deathFailures = deathFailuresFromDamage(actor, { amount, deltaTemp, deltaHP, critical: !!damageItem.critical, vitality: !!vitalityItem });
+      if (deathFailures) {
+        damageItem.oldDeathFailures = deathFailures.from;
+        damageItem.newDeathFailures = deathFailures.to;
+        updates["system.attributes.death.failure"] = deathFailures.to;
       }
 
       if (createPromises && doHits && (data.autoApplyDamage.includes("yes") || data.forceApply)) {
         //recover the options used when calculating the damage
         // If midi-qol handled vitality (overflow or direct damage), mark it so the hook doesn't double-handle
         if (vitalityItemUpdatePromise) {
-          (damageItem.calcDamageOptions as any).midiVitalityHandled = true;
+          (damageItem.options as any).midiVitalityHandled = true;
         }
-        if (Hooks.call("dnd5e.preApplyDamage", actor, amount, updates, withDamageOrigin(damageItem.calcDamageOptions as DamageApplicationOptions)) !== false) {
+        if (Hooks.call("dnd5e.preApplyDamage", actor, amount, updates, withDamageOrigin(damageItem.options as DamageApplicationOptions)) !== false) {
           // The actor update - when no changes are made will update the passed options with a target
           // If vitality update is pending, flag it so updateActor hook skips checkWounded (updateItem hook will handle it)
-          const mergedOptions = foundry.utils.mergeObject(damageItem.calcDamageOptions, data.updateOptions ?? {}, { inplace: false }) as any;
+          const mergedOptions = foundry.utils.mergeObject(damageItem.options, data.updateOptions ?? {}, { inplace: false }) as any;
           if (vitalityItemUpdatePromise) {
             mergedOptions.midiVitalityUpdatePending = true;
           }
@@ -1490,7 +1515,7 @@ async function prepareDamageListItems(
             if (vitalityItemUpdatePromise) {
               await vitalityItemUpdatePromise;
             }
-            if (updatedActor) Hooks.callAll("dnd5e.applyDamage", updatedActor, amount, withDamageOrigin(damageItem.calcDamageOptions as DamageApplicationOptions));
+            if (updatedActor) Hooks.callAll("dnd5e.applyDamage", updatedActor, amount, withDamageOrigin(damageItem.options as DamageApplicationOptions));
             await syncFailedDeathSaves(updatedActor ?? actor, damageItem.oldDeathFailures, damageItem.newDeathFailures);
             return updatedActor;
           });
@@ -1504,9 +1529,6 @@ async function prepareDamageListItems(
       actorUuid,
       actorId,
       totalDamage: Math.abs(Math.trunc(damageItem.totalDamage)),
-      // raw detail, so a multiplier re-applied from the card recalculates from unmodified damage
-      damageDetail: damageItem.rawDamageDetail,
-      damageMods: damageItem.damageMods ?? buildDamageMods(damageItem.damageDetail),
       updateOptions: data.updateOptions ?? {}
     });
 
@@ -1532,7 +1554,7 @@ async function prepareDamageListItems(
     const isHealing = (damageItem.rawTotalDamage ?? 0) < 0 || playerViewTotalDamage < 0;
     // Extract direct vitality damage/healing from damage detail (not overflow) - only if vitality system is enabled
     const vitalityEnabled = !!checkRule("vitalityItem");
-    const directVitalityDamage = vitalityEnabled ? calculateDamageAmounts(damageItem.rawDamageDetail ?? damageItem.damageDetail ?? []).vitality : 0;
+    const directVitalityDamage = vitalityEnabled ? calculateDamageAmounts(damageItem.damages ?? damageItem.calculatedDamages ?? []).vitality : 0;
     let listItem: DamageListContextEntry = {
       isCharacter: actor.hasPlayerOwner,
       isNpc: !actor.hasPlayerOwner,
@@ -1595,8 +1617,8 @@ function showsPlayerView(damageList: DamageListEntry[]): boolean {
   if (configSettings.playerDamageCard === "none") return false;
   if (!configSettings.playerCardDamageDifferent) return true;
   return damageList.some(damageItem => {
-    const { amount: rawAmount, healing: rawHealing } = calculateDamageAmounts(damageItem.rawDamageDetail);
-    // rawDamageDetail holds healing as positive values while hpDamage is negative for healing
+    const { amount: rawAmount, healing: rawHealing } = calculateDamageAmounts(damageItem.damages);
+    // damages holds healing as positive values while hpDamage is negative for healing
     return rawAmount - rawHealing !== damageItem.hpDamage;
   });
 }
@@ -1654,7 +1676,7 @@ async function createDamageCard(
         playerButtons: ["playerbuttons", "npcplayerbuttons"].includes(configSettings.playerDamageCard),
         origin: damageCardOrigin(data.chatCardUuid)
       } satisfies DamageCardOptions & { origin: string | null },
-      flags: { [MODULE_ID]: { "undoDamage": prepareDamageListForFlag(tokenDataList), actorUuid: data.actorUuid } }
+      flags: { [MODULE_ID]: { ...prepareDamageListForFlag(tokenDataList), damageRecord: DAMAGE_RECORD_VERSION, actorUuid: data.actorUuid } }
     };
     chatData.style = CONST.CHAT_MESSAGE_STYLES.OTHER;
     chatCardUuid = (await ChatMessage.create(chatData))?.uuid;
@@ -1669,9 +1691,9 @@ export let processUndoDamageCard = (message: ChatMessage.Implementation, html: H
   button?.addEventListener("click", (ev) => {
     (async () => {
       // TODO: Remove the latter after sufficient time has passed
-      const undoFlag = message.flags?.[MODULE_ID]?.undoDamage ?? foundry.utils.getProperty(message, "flags.midi-qol.undoDamage") as SerializedDamageListEntry[];
+      const undoFlag = message.flags?.[MODULE_ID]?.undoDamage ?? foundry.utils.getProperty(message, "flags.midi-qol.undoDamage") as StoredUndoEntry[];
       const undoDamageData = recoverUndoListFromFlag(message, undoFlag);
-      if (undoDamageData) for (let { actorUuid, oldTempHP, oldHP, oldTempMax, newHP, newTempMax, oldDeathFailures, newDeathFailures, calcDamageOptions, updateOptions } of undoDamageData) {
+      if (undoDamageData) for (let { actorUuid, oldTempHP, oldHP, oldTempMax, newHP, newTempMax, oldDeathFailures, newDeathFailures, options: calcDamageOptions, updateOptions } of undoDamageData) {
         if (!actorUuid) continue;
         const applyButton = html.querySelector<HTMLButtonElement>(`#apply-${actorUuid.replaceAll(".", "")}`);
         applyButton?.children[0].classList.add("midi-qol-enable-damage-button");
@@ -1699,7 +1721,7 @@ export let processUndoDamageCard = (message: ChatMessage.Implementation, html: H
           await vitalityItem.update({ "system.uses.spent": undoItem.oldVitalitySpent });
           vitalityUpdated = true;
         }
-        if (actor?.isOwner && Hooks.call("dnd5e.preApplyDamage", actor, newHP - oldHP, updates, withDamageOrigin(calcDamageOptions as DamageApplicationOptions)) !== false) {
+        if (actor?.isOwner && Hooks.call("dnd5e.preApplyDamage", actor, newHP - oldHP, updates, withDamageOrigin(calcDamageOptions as DamageApplicationOptions, true)) !== false) {
           // The actor update - when no changes are made will update the passed options with a target
           // Set midiVitalityUpdatePending if vitality was updated to prevent double checkWounded calls
           const mergedOptions = foundry.utils.mergeObject(calcDamageOptions, updateOptions ?? {}, { inplace: false }) as any;
@@ -1724,9 +1746,9 @@ export let processUndoDamageCard = (message: ChatMessage.Implementation, html: H
   button?.addEventListener("click", (ev) => {
     (async () => {
       // TODO: Remove the latter after sufficient time has passed
-      const undoFlag = message.flags?.[MODULE_ID]?.undoDamage ?? foundry.utils.getProperty(message, "flags.midi-qol.undoDamage") as SerializedDamageListEntry[];
+      const undoFlag = message.flags?.[MODULE_ID]?.undoDamage ?? foundry.utils.getProperty(message, "flags.midi-qol.undoDamage") as StoredUndoEntry[];
       const undoDamageData = recoverUndoListFromFlag(message, undoFlag);
-      if (undoDamageData) for (let { actorUuid, newHP, newTempHP, newTempMax, oldHP, oldTempMax, oldDeathFailures, newDeathFailures, calcDamageOptions, updateOptions } of undoDamageData) {
+      if (undoDamageData) for (let { actorUuid, newHP, newTempHP, newTempMax, oldHP, oldTempMax, oldDeathFailures, newDeathFailures, options: calcDamageOptions, updateOptions } of undoDamageData) {
         if (!actorUuid) continue;
         let actor = fromActorUuid(actorUuid);
         const applyButton = html.querySelector<HTMLButtonElement>(`#apply-${actorUuid.replaceAll(".", "")}`);
@@ -1771,10 +1793,13 @@ export let processUndoDamageCard = (message: ChatMessage.Implementation, html: H
   })
 
   // TODO: Remove the latter after sufficient time has passed
-  const undoFlag = message.flags?.[MODULE_ID]?.undoDamage ?? foundry.utils.getProperty(message, "flags.midi-qol.undoDamage") as SerializedDamageListEntry[];
+  const undoFlag = message.flags?.[MODULE_ID]?.undoDamage ?? foundry.utils.getProperty(message, "flags.midi-qol.undoDamage") as StoredUndoEntry[];
   const undoDamageData = recoverUndoListFromFlag(message, undoFlag);
   undoDamageData?.forEach((undoEntry) => {
-    const { actorUuid, oldTempHP, oldHP, oldTempMax, newHP, newTempHP, newTempMax, damageDetail, calcDamageOptions, updateOptions, oldVitalitySpent, newVitalitySpent, oldDeathFailures, newDeathFailures } = undoEntry;
+    const { actorUuid, oldTempHP, oldHP, oldTempMax, newHP, newTempHP, newTempMax, damages: rawDamageDetail, options: calcDamageOptions, updateOptions, oldVitalitySpent, newVitalitySpent, oldDeathFailures, newDeathFailures } = undoEntry;
+    // A multiplier the GM picks recalculates the damage as rolled with the target's options (saves, ignores, damage
+    // reduction), the multiplier replaced
+    const withMultiplier = (multiplier: number): DamageApplicationOptions => ({ ...copyDamageOptions(calcDamageOptions), ...(updateOptions ?? {}), multiplier });
     if (!actorUuid) return;
     let button = html.querySelector<HTMLButtonElement>(`#reverse-${actorUuid.replaceAll(".", "")}`);
     button?.addEventListener("click", (ev) => {
@@ -1797,7 +1822,7 @@ export let processUndoDamageCard = (message: ChatMessage.Implementation, html: H
           "system.attributes.hp.value": oldHP ?? 0
         };
         if (newTempMax! - oldTempMax!) updates["system.attributes.hp.tempmax"] = oldTempMax;
-        if (oldDeathFailures !== undefined) updates["system.attributes.death.failure"] = oldDeathFailures;
+        if (undoEntry.oldDeathFailures !== undefined) updates["system.attributes.death.failure"] = undoEntry.oldDeathFailures;
         // Handle vitality undo - only if actor still has a vitality item
         const vitalityItem = getVitalityItem(actor);
         let vitalityUpdated = false;
@@ -1806,7 +1831,7 @@ export let processUndoDamageCard = (message: ChatMessage.Implementation, html: H
           await vitalityItem.update({ "system.uses.spent": oldVitalitySpent });
           vitalityUpdated = true;
         }
-        if (actor?.isOwner && Hooks.call("dnd5e.preApplyDamage", actor, amount, updates, withDamageOrigin(calcDamageOptions as DamageApplicationOptions)) !== false) {
+        if (actor?.isOwner && Hooks.call("dnd5e.preApplyDamage", actor, amount, updates, withDamageOrigin(calcDamageOptions as DamageApplicationOptions, true)) !== false) {
           // The actor update - when no changes are made will update the passed options with a target
           // Set midiVitalityUpdatePending if vitality was updated to prevent double checkWounded calls
           const options = foundry.utils.mergeObject(calcDamageOptions ?? {}, updateOptions ?? {}, { inplace: false }) as any;
@@ -1819,7 +1844,7 @@ export let processUndoDamageCard = (message: ChatMessage.Implementation, html: H
             updateHPStatusHeader(html, actorUuid, false);
             return updatedActor;
           })
-          await syncFailedDeathSaves(actor, newDeathFailures, oldDeathFailures);
+          await syncFailedDeathSaves(actor, undoEntry.newDeathFailures, undoEntry.oldDeathFailures);
         }
         ev.stopPropagation();
       })();
@@ -1876,7 +1901,7 @@ export let processUndoDamageCard = (message: ChatMessage.Implementation, html: H
         } else {
           // For other multipliers, use applyDamage with the new multiplier
           // Calculate what vitality will be after applying the multiplied damage
-          const applyOptions: DamageApplicationOptions = foundry.utils.mergeObject(updateOptions ?? {}, { multiplier: mults[multiplierString ?? "x1"] ?? 1 }, { inplace: false });
+          const applyOptions: DamageApplicationOptions = withMultiplier(mults[multiplierString ?? "x1"] ?? 1);
 
           // Get current HP before applying
           // @ts-expect-error no dnd5e types
@@ -1886,11 +1911,10 @@ export let processUndoDamageCard = (message: ChatMessage.Implementation, html: H
 
           // Separate vitality and maximum from HP damage
           // Filter out vitality and maximum from damageDetail for HP application
-          const hpDamageDetail = damageDetail?.filter(d => d.type !== "vitality" && d.type !== "maximum") ?? [];
+          const hpDamageDetail = rawDamageDetail?.filter(d => d.type !== "vitality" && d.type !== "maximum") ?? [];
 
           // Calculate the multiplied HP damage (excluding vitality)
-          // @ts-expect-error no dnd5e-types
-          const calculatedDamages: DamageDescription[] = foundry.utils.deepClone(actor?.calculateDamage(hpDamageDetail, applyOptions) ?? []);
+          const calculatedDamages: DamageDescription[] = foundry.utils.deepClone(actor?.calculateDamage(hpDamageDetail, applyOptions) || []);
           let totalMultipliedHpDamage = 0;
           for (const dmg of calculatedDamages) {
             if (dmg.type !== "temphp" && !["midi-none", "none", "vitality"].includes(dmg.type)) {
@@ -1903,7 +1927,7 @@ export let processUndoDamageCard = (message: ChatMessage.Implementation, html: H
           const multiplier = mults[multiplierString ?? "x1"] ?? 1;
           let multipliedVitalityDamage = 0;
           let multipliedTempMaxDamage = 0;
-          for (const d of damageDetail ?? []) {
+          for (const d of rawDamageDetail ?? []) {
             if (d.type === "vitality") {
               multipliedVitalityDamage += d.value * multiplier;
             } else if (d.type === "maximum") {
@@ -1960,10 +1984,24 @@ export let processUndoDamageCard = (message: ChatMessage.Implementation, html: H
             }
           }
 
+          // Death save failures, as when the damage was first applied; the card's undo restores them
+          const tempLost = Math.min(preApplyTempHP, Math.max(0, totalMultipliedHpDamage));
+          const deathFailures = actor ? deathFailuresFromDamage(actor, {
+            amount: totalMultipliedHpDamage, deltaTemp: tempLost, deltaHP: Math.min(preApplyHP, Math.max(0, totalMultipliedHpDamage) - tempLost),
+            critical: false, vitality: !!vitalityItem   // the stored entry does not say whether the hit was critical
+          }) : undefined;
+
           // Apply HP damage (excluding vitality) with flag to prevent hook from also updating vitality
           applyOptions.midiVitalityHandled = true;
           // @ts-expect-error no dnd5e-types
           await actor?.applyDamage(hpDamageDetail, applyOptions);
+          if (actor && deathFailures) {
+            undoEntry.oldDeathFailures ??= deathFailures.from;
+            undoEntry.newDeathFailures = deathFailures.to;
+            // @ts-expect-error no dnd5e types
+            await actor.update({ "system.attributes.death.failure": deathFailures.to });
+            await syncFailedDeathSaves(actor, deathFailures.from, deathFailures.to);
+          }
 
           // Now update vitality if there was any change
           if (vitalityItem && newSpent !== currentSpent) {
@@ -2006,20 +2044,9 @@ export let processUndoDamageCard = (message: ChatMessage.Implementation, html: H
       // @ts-expect-error no dnd5e types
       const maxHP = actor.system.attributes.hp.max ?? 0;
 
-      // Calculate damage with the selected multiplier
-      // "calc" uses the original options (with saves), others use clean options with just the multiplier
-      let options: DamageApplicationOptions;
-      if (multiplierString === "calc") {
-        // Use original calculated options (includes save information)
-        options = foundry.utils.deepClone(calcDamageOptions ?? {}) as DamageApplicationOptions;
-      } else {
-        // Use absolute multiplier without save information
-        options = { multiplier: mults[multiplierString ?? "x1"] ?? 1 } as DamageApplicationOptions;
-      }
-
-      // Use actor.calculateDamage to preview the result
-      // @ts-expect-error no dnd5e types
-      const calculatedDamages: DamageDescription[] = foundry.utils.deepClone(actor.calculateDamage(damageDetail, options));
+      // "=" is what was applied (a card before 14.7.0 kept only the raw damage); another multiplier recalculates as Apply will
+      const calculatedDamages: DamageDescription[] = multiplierString === "calc" && !undoEntry.damageMods ? undoEntry.calculatedDamages
+        : foundry.utils.deepClone(actor.calculateDamage(rawDamageDetail, multiplierString === "calc" ? copyDamageOptions(calcDamageOptions) : withMultiplier(mults[multiplierString ?? "x1"] ?? 1)) || []);
 
       // Sum up the damage values and truncate towards 0 (matching how damage is actually applied)
       // Exclude vitality and maximum from HP total - they're shown separately
@@ -2389,32 +2416,32 @@ async function rollActionSave(data: { actorUuid: string; effectName: string; sav
   return rollAbility({ saveDetails: data.saveDetails, displayOptions: data.displayOptions });
 }
 
-export interface SerializedDamageListEntry extends Omit<DamageListEntry, "calcDamageOptions" | "damageDetail" | "rawDamageDetail" | "damageDetails"> {
+type SerializedDamageOptions = Omit<DamageApplicationOptions, "downgrade" | "ignore"> & {
+  downgrade?: true | string[];
+  ignore?: true | {
+    immunity: true | string[];
+    resistance: true | string[];
+    vulnerability: true | string[];
+    modification: true | string[];
+    superSaver?: true | string[];
+    semiSuperSaver?: true | string[];
+    saved?: true | string[];
+    DR?: string[];
+  };
+};
+
+export interface SerializedDamageListEntry extends Omit<DamageListEntry, "options" | "calculatedDamages" | "damages" | "damageDetail" | "rawDamageDetail" | "calcDamageOptions" | "damageDetails" | "healingAdjustedTotalDamage"> {
+  calculatedDamages: DamageDescriptionObject[];
+  damages: DamageDescriptionObject[];
+  options: SerializedDamageOptions;
+}
+
+/** Cards before 14.7.0: midi's names for the record, per-category copies, and damageDetail the raw list */
+interface LegacySerializedDamageListEntry extends Omit<SerializedDamageListEntry, "calculatedDamages" | "damages" | "options"> {
   damageDetail: DamageDescriptionObject[];
-  damageDetails: {
-    bonusDamage?: DamageDescriptionObject[];
-    combinedDamage: DamageDescriptionObject[];
-    defaultDamage?: DamageDescriptionObject[];
-    otherDamage?: DamageDescriptionObject[];
-    rawbonusDamage?: DamageDescriptionObject[];
-    rawcombinedDamage: DamageDescriptionObject[];
-    rawdefaultDamage?: DamageDescriptionObject[];
-    rawotherDamage?: DamageDescriptionObject[];
-  };
-  rawDamageDetail: DamageDescriptionObject[]
-  calcDamageOptions: Omit<DamageApplicationOptions, "downgrade" | "ignore"> & {
-    downgrade?: true | string[];
-    ignore?: true | {
-      immunity: true | string[];
-      resistance: true | string[];
-      vulnerability: true | string[];
-      modification: true | string[];
-      superSaver?: true | string[];
-      semiSuperSaver?: true | string[];
-      saved?: true | string[];
-      DR?: string[];
-    };
-  };
+  rawDamageDetail?: DamageDescriptionObject[];
+  calcDamageOptions: SerializedDamageOptions;
+  damageDetails?: Record<string, DamageDescriptionObject[]>;
 }
 /**
  * The members of a damage-list entry that survive onto `flags.midi-qol.undoDamage`.
@@ -2425,11 +2452,13 @@ export interface SerializedDamageListEntry extends Omit<DamageListEntry, "calcDa
  *
  * To store another field: add it here. Nothing else needs to change.
  */
-const PERSISTED_UNDO_FIELDS = ["actorUuid", "targetUuid", "damageSelector", "wasHit", "damageMods",
+const PERSISTED_UNDO_FIELDS = ["actorUuid", "targetUuid", "wasHit",
   "oldHP", "newHP", "oldTempHP", "newTempHP", "oldTempMax", "newTempMax",
   "oldVitality", "newVitality", "oldVitalitySpent", "newVitalitySpent",
-  "oldDeathFailures", "newDeathFailures",
-  "hpDamage", "totalDamage", "rawTotalDamage"] as const;
+  "oldDeathFailures", "newDeathFailures", "hpDamage"] as const;
+
+/** `flags.midi-qol.damageRecord`, written on damage cards from 14.7.0 for a later format change; not read (an entry's format is detected per entry) */
+export const DAMAGE_RECORD_VERSION = 3;
 
 /** Members carried verbatim; those below need their encoding changed and are handled explicitly. */
 type PersistedUndoFields = Pick<DamageListEntry, typeof PERSISTED_UNDO_FIELDS[number]>;
@@ -2450,33 +2479,55 @@ export interface DamageCardOptions {
   playerButtons?: boolean;
 }
 
-/** What is written to `flags.midi-qol.undoDamage`. */
+/**
+ * What is written to `flags.midi-qol.undoDamage`: the target's calculated damage (what was applied), its options and
+ * HP before and after. Its raw damage is one of the card's `flags.midi-qol.rawDamage` lists (`rawIndex`), stored once.
+ */
 export interface PersistedUndoEntry extends PersistedUndoFields {
-  damageDetail: DamageDescriptionObject[];
-  calcDamageOptions: SerializedDamageListEntry["calcDamageOptions"];
+  calculatedDamages: DamageDescriptionObject[];
+  rawIndex: number;
+  options: SerializedDamageOptions;
   updateOptions: any;
 }
 
-/** A stored entry with its Sets and DamageDescriptions rehydrated. */
-export type RecoveredUndoEntry = Omit<PersistedUndoEntry, "damageDetail" | "calcDamageOptions"> & {
-  damageDetail: DamageDescription[];
-  calcDamageOptions: DamageListEntry["calcDamageOptions"];
+/** An entry on a card before 14.7.0: the raw list, with the tooltip's labels and totals beside it */
+interface LegacyPersistedUndoEntry extends Omit<PersistedUndoEntry, "calculatedDamages" | "rawIndex" | "options"> {
+  damageDetail: DamageDescriptionObject[];
+  rawDamageDetail?: DamageDescriptionObject[];
+  calcDamageOptions: SerializedDamageOptions;
+  damageMods?: DamageModDisplay[];
+  totalDamage?: number;
+  rawTotalDamage?: number;
+}
+
+/** What a card's `flags.midi-qol.undoDamage` holds, by when it was written */
+export type StoredUndoEntry = PersistedUndoEntry | LegacyPersistedUndoEntry | LegacySerializedDamageListEntry;
+
+/** A stored entry with its Sets and DamageDescriptions rehydrated, and the figures worked out from them. */
+export type RecoveredUndoEntry = Omit<PersistedUndoEntry, "calculatedDamages" | "options" | "rawIndex"> & {
+  calculatedDamages: DamageDescription[];
+  damages: DamageDescription[];
+  options: DamageListEntry["options"];
+  /** Cards before 14.7.0 */
+  damageMods?: DamageModDisplay[];
+  totalDamage: number;
+  rawTotalDamage: number;
 };
 
 /**
- * Members of `calcDamageOptions.midi` that are outputs rather than inputs — midi's own
+ * Members of `options.midi` that are outputs rather than inputs — midi's own
  * dnd5e.preApplyDamage handler rewrites them on every replay, so a stored copy is never read.
  */
 const RECOMPUTED_MIDI_OPTIONS = ["updates", "amount"];
 
 /**
- * Members of `calcDamageOptions.midi` that repeat something already on the message. Dropped on the
+ * Members of `options.midi` that repeat something already on the message. Dropped on the
  * way out and put back by recoverUndoListFromFlag, so the replay hooks see them unchanged.
  */
 const DUPLICATED_MIDI_OPTIONS = ["targetUuid", "sourceActorUuid"];
 
 /**
- * `calcDamageOptions` scopes midi persists. Other modules add their own (RPG Damage Numbers writes
+ * `options` scopes midi persists. Other modules add their own (RPG Damage Numbers writes
  * `RPGDN`); those are display state for a card that has already been rendered, so they are not
  * stored. midi's own keys plus dnd5e's DamageApplicationOptions.
  */
@@ -2487,27 +2538,35 @@ const PERSISTED_DAMAGE_OPTIONS = ["midi", "ignore", "downgrade", "invertHealing"
  * Serialise for storage on the chat message. Runs the socket serialiser then drops what the flag
  * does not need, so this decides only WHICH members survive, never how any of them is encoded.
  */
-export function prepareDamageListForFlag(damageList: DamageListEntry[]): PersistedUndoEntry[] {
-  return prepareDamageListToJSON(damageList).map(entry => {
+export function prepareDamageListForFlag(damageList: DamageListEntry[]): { undoDamage: PersistedUndoEntry[], rawDamage: DamageDescriptionObject[][] } {
+  const rawDamage: DamageDescriptionObject[][] = [];
+  const rawKeys: string[] = [];
+  const undoDamage = prepareDamageListToJSON(damageList).map(entry => {
     const kept = Object.fromEntries(PERSISTED_UNDO_FIELDS
       .filter(field => entry[field] !== undefined)
       .map(field => [field, entry[field]])) as PersistedUndoFields;
-    const { midi, ...otherOptions } = entry.calcDamageOptions ?? {};
+    const { midi, ...otherOptions } = entry.options ?? {};
     const keptOptions = Object.fromEntries(Object.entries(otherOptions)
       .filter(([key]) => PERSISTED_DAMAGE_OPTIONS.includes(key)));
+    // Targets usually share their raw damage: each distinct list once
+    const rawKey = JSON.stringify(entry.damages ?? []);
+    let rawIndex = rawKeys.indexOf(rawKey);
+    if (rawIndex < 0) { rawIndex = rawKeys.push(rawKey) - 1; rawDamage.push(entry.damages ?? []); }
     return {
       ...kept,
-      damageDetail: entry.damageDetail,
-      calcDamageOptions: midi
+      calculatedDamages: entry.calculatedDamages,
+      rawIndex,
+      options: midi
         ? {
           ...keptOptions,
           midi: Object.fromEntries(Object.entries(midi).filter(([key]) =>
             !RECOMPUTED_MIDI_OPTIONS.includes(key) && !DUPLICATED_MIDI_OPTIONS.includes(key)))
-        } as PersistedUndoEntry["calcDamageOptions"]
-        : keptOptions as PersistedUndoEntry["calcDamageOptions"],
+        } as SerializedDamageOptions
+        : keptOptions as SerializedDamageOptions,
       updateOptions: entry.updateOptions
     };
   });
+  return { undoDamage, rawDamage };
 }
 
 /** Build a damage card's context from the message. Shared by card creation and the sub-type render. */
@@ -2553,24 +2612,50 @@ export async function buildDamageCardContext(
  * handler reads `midi.sourceActorUuid`. Only fills what is absent, so older entries keep theirs.
  */
 function recoverUndoListFromFlag(message: ChatMessage.Implementation,
-  damageList: (PersistedUndoEntry | SerializedDamageListEntry)[]): RecoveredUndoEntry[] {
-  const sourceActorUuid = message?.flags?.[MODULE_ID]?.actorUuid;
-  const recovered = recoverDamageListFromJSON(damageList as SerializedDamageListEntry[]);
-  for (const entry of recovered) {
-    const midi = entry.calcDamageOptions?.midi;
-    if (!midi) continue;
-    midi.targetUuid ??= entry.targetUuid;
-    if (sourceActorUuid) midi.sourceActorUuid ??= sourceActorUuid;
-  }
-  return recovered;
+  damageList: StoredUndoEntry[]): RecoveredUndoEntry[] {
+  const flags = message?.flags?.[MODULE_ID];
+  const sourceActorUuid = flags?.actorUuid;
+  const rawDamage = (flags?.rawDamage ?? []) as DamageDescriptionObject[][];
+  return (damageList ?? []).map(stored => {
+    // Each entry says which format it is in: a copied entry may sit on a card without the record's flags
+    const isRecord = "calculatedDamages" in stored;
+    let serialized: SerializedDamageListEntry;
+    if (isRecord) {
+      const { rawIndex, ...persisted } = stored as PersistedUndoEntry;
+      // No raw list on this card: the recovery falls back to the calculated damage
+      serialized = { ...persisted, damages: rawDamage[rawIndex ?? 0] } as SerializedDamageListEntry;
+    } else {
+      // Before 14.7.0 the stored damageDetail was the raw list
+      const { damageDetail, rawDamageDetail, calcDamageOptions, damageDetails: _copies, ...legacy } = stored as LegacySerializedDamageListEntry;
+      serialized = { ...legacy, calculatedDamages: damageDetail, damages: rawDamageDetail ?? damageDetail, options: calcDamageOptions } as SerializedDamageListEntry;
+    }
+    const [entry] = recoverDamageListFromJSON([serialized]);
+    const midi = entry.options?.midi;
+    if (midi) {
+      midi.targetUuid ??= entry.targetUuid;
+      if (sourceActorUuid) midi.sourceActorUuid ??= sourceActorUuid;
+    }
+    const totalDamage = isRecord || entry.totalDamage === undefined ? appliedTotal(entry.calculatedDamages) : entry.totalDamage;
+    const rawTotalDamage = isRecord || entry.rawTotalDamage === undefined ? rawTotal(entry.damages) : entry.rawTotalDamage;
+    return { ...entry, totalDamage, rawTotalDamage };
+  });
 }
 
-export function prepareDamageListToJSON(damageList: DamageListEntry[]) {
-  const newDL = foundry.utils.deepClone(damageList).map(damageItem => {
-    const { downgrade, ignore } = damageItem.calcDamageOptions;
-    let newDowngrade: true | string[] | undefined;
-    if (downgrade instanceof Set) newDowngrade = Array.from(downgrade);
-    else if (downgrade) newDowngrade = downgrade;
+/** The damage card's total: the calculated damage, without temp HP and the HP pools */
+function appliedTotal(damageDetail: DamageDescription[]): number {
+  return Math.abs(Math.trunc(damageDetail.reduce((acc, d) => acc + (!["temphp", "midi-none", "vitality", "maximum"].includes(d.type) ? d.value : 0), 0)));
+}
+
+/** The damage as rolled, healing and vitality included */
+function rawTotal(rawDamageDetail: DamageDescription[]): number {
+  const { amount, healing, vitality } = calculateDamageAmounts(rawDamageDetail);
+  return amount + healing + vitality;
+}
+
+export function prepareDamageListToJSON(damageList: DamageListEntry[]): SerializedDamageListEntry[] {
+  // The clone has none of an entry's deprecated accessors (not enumerable)
+  return foundry.utils.deepClone(damageList).map(({ options, calculatedDamages, damages, ...entry }) => {
+    const { downgrade, ignore } = options;
     let newIgnore: true | Record<string, true | string[]> | undefined;
     if (ignore === true) newIgnore = ignore;
     else if (ignore) {
@@ -2580,24 +2665,17 @@ export function prepareDamageListToJSON(damageList: DamageListEntry[]) {
         else if (value) newIgnore[key] = value;
       }
     }
-    const newDamageDetail = prepareDamageDetailToJSON(damageItem.damageDetail);
-    const newRawDamageDetail = prepareDamageDetailToJSON(damageItem.rawDamageDetail);
-    const newDamageDetails = Object.fromEntries(Object.entries(damageItem.damageDetails).filter(i => i[0] !== "calcDamageOptions").map(([key, value]) => [key, prepareDamageDetailToJSON(value as DamageDescription[])]));
-    const serializedEntry: SerializedDamageListEntry = {
-      ...damageItem,
-      calcDamageOptions: {
-        ...damageItem.calcDamageOptions,
-        downgrade: newDowngrade,
-        ignore: newIgnore as SerializedDamageListEntry["calcDamageOptions"]["ignore"]
+    return {
+      ...entry,
+      options: {
+        ...options,
+        downgrade: downgrade instanceof Set ? Array.from(downgrade) : downgrade,
+        ignore: newIgnore as SerializedDamageOptions["ignore"]
       },
-      damageDetail: newDamageDetail,
-      rawDamageDetail: newRawDamageDetail,
-      // Maybe some day I'll figure out the proper way to type this
-      damageDetails: newDamageDetails as unknown as SerializedDamageListEntry["damageDetails"]
-    }
-    return serializedEntry;
+      calculatedDamages: prepareDamageDetailToJSON(calculatedDamages),
+      damages: prepareDamageDetailToJSON(damages)
+    };
   });
-  return newDL;
 }
 
 function prepareDamageDetailToJSON(damageDetail?: DamageDescription[]): DamageDescriptionObject[] {
@@ -2605,11 +2683,8 @@ function prepareDamageDetailToJSON(damageDetail?: DamageDescription[]): DamageDe
 }
 
 function recoverDamageListFromJSON(damageList: SerializedDamageListEntry[]): DamageListEntry[] {
-  const newDL = foundry.utils.deepClone(damageList).map(damageItem => {
-    const { downgrade, ignore } = damageItem.calcDamageOptions;
-    let newDowngrade: true | Set<string> | undefined;
-    if (downgrade instanceof Array) newDowngrade = new Set(downgrade);
-    else if (downgrade) newDowngrade = downgrade;
+  return foundry.utils.deepClone(damageList).map(({ options, calculatedDamages, damages, ...entry }) => {
+    const { downgrade, ignore } = options;
     let newIgnore: true | Record<string, true | Set<string>> | undefined;
     if (ignore === true) newIgnore = ignore;
     else if (ignore) {
@@ -2619,27 +2694,18 @@ function recoverDamageListFromJSON(damageList: SerializedDamageListEntry[]): Dam
         else if (value) newIgnore[key] = value;
       }
     }
-    const newDamageDetail = recoverDamageDetailFromJSON(damageItem.damageDetail);
-    // Stored entries carry neither (see prepareDamageListForFlag); fall back to the detail itself.
-    const newRawDamageDetail = damageItem.rawDamageDetail
-      ? recoverDamageDetailFromJSON(damageItem.rawDamageDetail)
-      : newDamageDetail;
-    const newDamageDetails = Object.fromEntries(Object.entries(damageItem.damageDetails ?? {})
-      .map(([key, value]) => [key, recoverDamageDetailFromJSON(value)]));
-    const unSerializedEntry: DamageListEntry = {
-      ...damageItem,
-      calcDamageOptions: {
-        ...damageItem.calcDamageOptions,
-        downgrade: newDowngrade,
-        ignore: newIgnore as DamageListEntry["calcDamageOptions"]["ignore"]
-      } as DamageListEntry["calcDamageOptions"],
-      damageDetail: newDamageDetail,
-      rawDamageDetail: newRawDamageDetail,
-      damageDetails: newDamageDetails as unknown as DamageListEntry["damageDetails"]
-    }
-    return unSerializedEntry;
+    const recoveredCalculated = recoverDamageDetailFromJSON(calculatedDamages);
+    return withDeprecatedDamageFields({
+      ...entry,
+      options: {
+        ...options,
+        downgrade: downgrade instanceof Array ? new Set(downgrade) : downgrade,
+        ignore: newIgnore as DamageListEntry["options"]["ignore"]
+      } as DamageListEntry["options"],
+      calculatedDamages: recoveredCalculated,
+      damages: damages ? recoverDamageDetailFromJSON(damages) : recoveredCalculated
+    });
   });
-  return newDL;
 }
 
 function recoverDamageDetailFromJSON(damageDetail?: DamageDescriptionObject[]): DamageDescription[] {

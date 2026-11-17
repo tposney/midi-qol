@@ -619,6 +619,10 @@
   },
   "midi-qol.NearbyFoe.Name": "Ranged attacks when a foe is closer than this have disadvantage. 0 disables",
   "midi-qol.TargetTotalCover": "{name}'s target has total cover",
+  "midi-qol.RangeUnmeasurable.noCanvas": "{name}'s range to {target} can't be checked: no scene is being viewed",
+  "midi-qol.RangeUnmeasurable.noPosition": "{name}'s range to {target} can't be checked: {name} has no token on this scene",
+  "midi-qol.RangeUnmeasurable.differentScene": "{target} is on another scene from {name}",
+  "midi-qol.RangeUnmeasurable.notDrawn": "{name}'s range to {target} can't be checked: one of them is not on the level being viewed",
   "midi-qol.WallsBlockRange.Name": "Walls block ranged attacks",
   "midi-qol.WallsBlockRange.Hint": "If a cover module determines total cover, the attack is blocked.",
   "midi-qol.WallsBlockRangeOptionsNew": {
@@ -874,8 +878,9 @@
   "midi-qol.AddDead.Hint1": "Player Controlled",
   "midi-qol.AddDead.Hint2": "GM Controlled",
   "midi-qol.markDefeated": "Mark defeated in combat tracker",
+  "midi-qol.Stanched": "{name}: {effects} stanched",
   "midi-qol.EnforceDeathSaves.Name": "Enforce death saves",
-  "midi-qol.EnforceDeathSaves.Hint": "A character at 0 hit points that takes damage suffers a death saving throw failure, two from a critical hit, and three (death) if the damage equals or exceeds its hit point maximum. At three it is marked dead as for a failed death save; undo on the damage card restores the count and status.",
+  "midi-qol.EnforceDeathSaves.Hint": "A character at 0 hit points that takes damage suffers a death saving throw failure, two from a critical hit, and three (death) if the damage equals or exceeds its hit point maximum. A character dropped to 0 hit points dies if the damage left over equals or exceeds its hit point maximum (massive damage). At three it is marked dead as for a failed death save; undo on the damage card restores the count and status.",
   "midi-qol.AddDeadOptions": {
     "none": "Do Not Update",
     "overlay": "Add effect as overlay",
@@ -1238,7 +1243,6 @@
   "midi-qol.AutoRemoveInstantaneousTemplate.Name": "Auto remove instantaneous templates",
   "midi-qol.AutoRemoveInstantaneousTemplate.Hint": "Templates placed by an item with duration instantaneous are removed at the end of the item roll",
   "midi-qol.ReplaceDefaultActivities.Name": "Replace dnd5e activities with midi-qol equivalents",
-  "midi-qol.ReplaceDefaultActivities.Hint": "Any existing activities, Attack, Damage, Save, Check, Utility will instead use the midi versions. This is required to automate SRD items, otherwise you will need to hand configure every item for midi automation.",
   "midi-qol.ConfirmAmmunition.Name": "Confirm Ammunition choice when rolling attack - shows attack roll configuration",
   "midi-qol.ActivityNamePrefix.Name": "Activity Prefix",
   "midi-qol.ActivityNamePrefix.Hint": "Prefix midi-qol activities name with Midi. Change requires reload",
@@ -2013,6 +2017,10 @@
     "flags.midi-qol.DR.final": {
       "name": "Damage Reduction Final (Deprecated)",
       "description": "Use the system.traits.dm fields (with a negative value) instead."
+    },
+    "flags.midi-qol.stanch": {
+      "name": "Stanch",
+      "description": "A check ends this effect: dc=15, skill=med, range=5, healing=none|spell|magical|any. Rolled by the creature, or by one within range that targets it."
     },
     "flags.midi-qol.OverTime": {
       "name": "Over Time Effects",

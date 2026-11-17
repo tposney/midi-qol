@@ -5,10 +5,10 @@ import {Workflow} from '../../Workflow.js';
 import {HIDING, hiddenDC, hiddenFrom, hidingCondition, hidingConditionId, passivePerception} from '../../lib/hiding.js';
 // 2024 Hide and Search. Hide is a DC 15 Stealth check; on a success the creature gets dnd5e's Hiding condition, carrying
 // the check's total as the DC to find it (flags.midi-qol.hidden.dc). midi treats Hiding as Invisible towards each creature
-// that doesn't perceive the hider (lib/hiding.ts). The activity's configured effect (with CPR before 2.1.18 active,
+// that doesn't perceive the hider (lib/hiding.ts). The activity's configured effect (with CPR before 2.1.8 active,
 // applied by CPR's generic hide macro for its animation) carries no status: it times the hide (DAE 1Attack, ending it
 // on an attack roll). It and the condition are each other's dnd5e dependents, so either ending ends the hide: an attack,
-// a spell with a Verbal component (hook below), being found (Search) or the condition removed by hand. CPR 2.1.18's
+// a spell with a Verbal component (hook below), being found (Search) or the condition removed by hand. CPR 2.1.8's
 // generic hide applies the condition itself (with the DC and 1Attack), and midi only tells the GM. Noise and the
 // cover/obscurement requirement are the GM's. Search (any Perception check activity can use it) compares the check's
 // total with each hidden enemy in the searcher's line of sight; those found (confirmed by the GM, Search option GM
@@ -16,10 +16,10 @@ import {HIDING, hiddenDC, hiddenFrom, hidingCondition, hidingConditionId, passiv
 const MODULE = 'midi-qol';
 const gmWhisper = () => game.users.filter(u => u.isGM).map(u => u.id);
 const cprActive = () => !!game.modules.get('chris-premades')?.active;
-// From 2.1.18 CPR's generic hide applies the Hiding condition itself, with no configured Hidden effect.
+// From 2.1.8 CPR's generic hide applies the Hiding condition itself, with no configured Hidden effect.
 const cprAppliesCondition = () => {
     const cpr = game.modules.get('chris-premades');
-    return !!cpr?.active && foundry.utils.isNewerVersion(cpr.version, '2.1.17');
+    return !!cpr?.active && foundry.utils.isNewerVersion(cpr.version, '2.1.7');
 };
 // Results are notes on the action's card (`origin`, its id), so deleting it (or a Generic Actions card above it) deletes them.
 const post = (actor, content, origin, whisper) => {
@@ -78,7 +78,7 @@ Hooks.on('createActiveEffect', async (effect, options, userId) => {
     const card = effect.flags[MODULE].hidden.card ?? useCard(effect);
     await post(actor, `<p>${actor.name} is hidden: Perception DC ${dc} to find.${perceivers}</p>`, card, gmWhisper());
 });
-// Whichever macro creates the Hide effect (CPR's before 2.1.18, for its animation, or midi's) does so after midi's
+// Whichever macro creates the Hide effect (CPR's before 2.1.8, for its animation, or midi's) does so after midi's
 // RollComplete, from its roll-finished pass: the total is kept until then, and the effect is recognised by its origin
 // (the activity's configured effect) as it is created.
 const cprHides = activity => cprActive() && usesMacro(activity, 'chris-premades');

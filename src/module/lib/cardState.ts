@@ -1,4 +1,5 @@
 import type { MidiCardSection } from "../ChatClasses/UsageCardMessage.js";
+import { RULE_IGNORES } from "./damageRules.js";
 /**
  * The workflow's state on its usage card: `system.midi.state` (scalars) and `system.midi.records` (one record per
  * token, keyed by scene id then token id, as a duplicated scene keeps its token ids; a token set is the records with its
@@ -29,7 +30,9 @@ export const STATE_KEYS = [
   // Concentration the use begins once it can no longer be cancelled (MidiActivityMixin)
   "deferredConcentration",
   // What the use changed in its item and activity, JSON (lib/useChanges.ts)
-  "useChanges"
+  "useChanges",
+  // dnd5e 6.1's attacker ignore/downgrade rules from the use's damage rolls (lib/damageRules.ts), as arrays
+  "damageRules"
 ] as const;
 export type StateKey = typeof STATE_KEYS[number];
 
@@ -44,7 +47,9 @@ export const RECORD_SETS = {
   failedSave: "failedSaveUuids",
   fumbleSave: "fumbleSaveUuids",
   criticalSave: "criticalSaveUuids",
-  advantageSave: "advantageSaveUuids"
+  advantageSave: "advantageSaveUuids",
+  // From 14.7.0: never a flag
+  disadvantageSave: "disadvantageSaveUuids"
 } as const;
 export type RecordSet = keyof typeof RECORD_SETS;
 
@@ -90,7 +95,11 @@ export function cardStateSchema() {
       ammunitionData: new ObjectField(unset),
       inCombat: bool(), isTurn: bool(),
       deferredConcentration: new ObjectField({ ...unset, nullable: true }),
-      useChanges: new StringField({ ...unset, blank: true, nullable: true })
+      useChanges: new StringField({ ...unset, blank: true, nullable: true }),
+      damageRules: new SchemaField({
+        downgrade: new ArrayField(new StringField(), unset),
+        ignore: new SchemaField(Object.fromEntries(RULE_IGNORES.map(category => [category, new ArrayField(new StringField(), unset)])), unset)
+      }, { ...unset, nullable: true })
     }, { required: false }),
     records: new TypedObjectField(new TypedObjectField(new SchemaField({
       uuid: new StringField({ required: true, blank: false }),
@@ -113,6 +122,12 @@ export type CardRecords = Record<string, Record<string, CardRecord>>;
 export function recordPath(document: TokenDocument.Implementation): string | undefined {
   const sceneId = document.parent?.id;
   return sceneId && document.id ? `system.midi.records.${sceneId}.${document.id}` : undefined;
+}
+
+/** The record path of a token by its uuid (`Scene.<id>.Token.<id>`), for a token that may be gone */
+export function recordPathOfUuid(tokenUuid: string): string | undefined {
+  const [type, sceneId, embedded, tokenId] = tokenUuid.split(".");
+  return type === "Scene" && embedded === "Token" && sceneId && tokenId ? `system.midi.records.${sceneId}.${tokenId}` : undefined;
 }
 
 /** Every record on a card */

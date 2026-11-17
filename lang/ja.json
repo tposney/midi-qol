@@ -737,8 +737,6 @@
   "midi-qol.CollapsibleTargets.Hint": "チャットカード内のターゲットへの命中/ミス表示が折り畳めるようになります",
   "midi-qol.AutoRemoveInstantaneousTemplate.Name": "瞬間テンプレートを自動削除",
   "midi-qol.AutoRemoveInstantaneousTemplate.Hint": "持続時間：瞬間のアイテムによって配置されたテンプレートはアイテムロール終了後に削除されます",
-  "midi-qol.ReplaceDefaultActivities.Name": "dnd5eの用途をmidi-qol内で相当するものに置き換える",
-  "midi-qol.ReplaceDefaultActivities.Hint": "存在するあらゆる用途（攻撃、ダメージ、セーヴ、判定、ユーティリティ）の代わりにmidiバージョンを使用します。これはSRDアイテムを自動化するために必要です。それ以外のアイテムはmidi自動化の設定が必要です。",
   "midi-qol.ConfirmAmmunition.Name": "攻撃ロール時に矢弾の選択を確認",
   "midi-qol.ActivityNamePrefix.Name": "用途接頭辞",
   "midi-qol.ActivityNamePrefix.Hint": "midi-qolの用途名に「Midi」という接頭辞を付けます。変更には再読み込みが必要です",

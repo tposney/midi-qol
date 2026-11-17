@@ -4,7 +4,7 @@ import {effectUtils} from '../proxy.mjs';
 // isDamaged special duration); a success ends Sleeping.
 async function turnEnd({document: effect, token}) {
     if (effect.statuses.has('unconscious') || !token) return;
-    const save = effectUtils.getOriginActivitySync(effect)?.item?.system.activities.find(activity => activity.type === 'save');
+    const save = effectUtils.getOriginActivitySync(effect)?.item?.system.activities.find(activity => activity.isLike('save'));
     if (!save) return;
     // A plain saving throw: re-running the save activity would apply a fresh Sleeping effect.
     const [roll] = await effect.parent.rollSavingThrow({ability: save.save.ability.first() ?? 'wis', target: save.save.dc.value}, {configure: false}) ?? [];

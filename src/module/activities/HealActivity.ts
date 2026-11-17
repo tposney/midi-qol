@@ -1,8 +1,8 @@
 import { Activity, RollDialogConfig, RollMessageConfig, RollProcessConfig } from "../../globals.js";
 import { debugEnabled, GameSystemConfig, warn } from "../../midi-qol.js";
 import { Workflow } from "../Workflow.js";
-import { replaceDefaultActivities, configSettings } from "../settings.js";
-import { isAutoFastForward, registerMidiActivityType } from "../utils.js";
+import { configSettings } from "../settings.js";
+import { isAutoFastForward } from "../utils.js";
 import { MidiActivityMixin, MidiActivityMixinSheet } from "./MidiActivityMixin.js";
 
 export let MidiHealActivity: ReturnType<typeof defineMidiHealActivityClass>;
@@ -13,12 +13,7 @@ export function setupHealActivity() {
   //@ts-expect-error
   MidiHealSheet = defineMidiHealSheetClass(game.system.applications.activity.HealSheet);
   MidiHealActivity = defineMidiHealActivityClass(GameSystemConfig.activityTypes.heal.documentClass as Activity);
-  if (replaceDefaultActivities) {
-    // GameSystemConfig.activityTypes["dnd5eHeal"] = GameSystemConfig.activityTypes.heal;
-    GameSystemConfig.activityTypes.heal = { documentClass: MidiHealActivity };
-  } else {
-    registerMidiActivityType("midiHeal", MidiHealActivity, "heal");
-  }
+  GameSystemConfig.activityTypes.heal = { documentClass: MidiHealActivity };
 }
 
 let defineMidiHealActivityClass = <T extends Activity>(ActivityClass: T) => {
@@ -27,7 +22,7 @@ let defineMidiHealActivityClass = <T extends Activity>(ActivityClass: T) => {
     static metadata =
       foundry.utils.mergeObject(
         super.metadata, {
-        title: configSettings.activityNamePrefix ? "midi-qol.HEAL.Title.one" : ActivityClass.metadata.title,
+        midiTitle: "midi-qol.HEAL.Title.one",
         dnd5eTitle: ActivityClass.metadata.title,
         sheetClass: MidiHealSheet,
         usage: {

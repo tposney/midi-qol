@@ -1,3 +1,87 @@
+### 14.7.0
+midi 14.7.0 requires dnd5e 6.1 and DAE 14.6.10. Worlds on dnd5e 6.0 stay on midi 14.6.x: Foundry warns before updating them to 14.7.0, and the last 14.6 release installs from https://github.com/tposney/midi-qol/releases/download/v14.6.13/module.json. midi's CAT integration requires Coven's Automation Toolkit 0.1.8.
+
+**What dnd5e 6.1 changes**
+
+*Rules on the attacker.* dnd5e 6.1 adds rule changes to effects: ignore a target's immunity, resistance or vulnerability to a damage type, or downgrade its immunity to resistance. They sit on the attacker and are checked at each damage roll.
+* midi applies them to all the damage it applies, including damage with no damage roll (`applyTokenDamage`, `DamageOnlyWorkflow`), and keeps them through the damage card's undo and redo.
+* As on dnd5e's own damage card, the GM can't switch an attacker's rule off for one target.
+* A use keeps one set of attacker rules for all its damage, taken from its latest damage roll. Rules per damage roll (main, other, bonus), as dnd5e keeps them, are planned for 14.8.0.
+* DAE's keys `system.traits.idi.value`, `idr` and `idv` are deprecated in favour of these rules; DAE 14.6.10 migrates them. Ignoring immunity now gives full damage to a target that is only immune (it was half).
+
+*The damage card.* dnd5e 6.1 reworked how its damage tray shows what applies to each target, and midi's card follows it.
+* There is one resistance button per damage type; the *All Damage Resistance* button is gone.
+* An immunity downgraded to resistance shows on the target's buttons, and the tooltip lists traits that were ignored or downgraded.
+* Damage reduction shows on dnd5e's own damage cards, with midi's DR applied.
+* A multiplier picked on the card keeps the target's saves, resistances and damage reduction.
+
+*Falling damage.* dnd5e 6.1 has resistance, immunity and vulnerability to falling damage. They apply to damage midi applies and are labelled on the damage card like other resistances.
+
+*Antimagic and magic items.* dnd5e 6.1 has an antimagic status, and knows whether an item's magic is available: not while it needs attunement it lacks, and not under antimagic.
+* A creature with the antimagic status is unaffected by midi's magical area activities.
+* A reaction dnd5e won't allow (a spell under antimagic) is no longer offered and then refused.
+* Activity conditions can read `item.magicAvailable`; the sample magic weapons use it (see Sample items).
+* Challenge mode armor follows dnd5e's armor and Dex values, so antimagic removes a magic armor's bonus. It counted that bonus as evasion, and the Challenge variant gave heavy armor its Dex bonus.
+* Fixed: damage from feats and other non-physical items counted as magical and got past resistance to nonmagical damage.
+
+*Reactions.* A creature with dnd5e's *No Reactions* effect is offered no reactions; its reaction uses count as spent.
+
+*Activities.*
+* midi's activity picker shows each activity's uses, as dnd5e 6.1's does.
+* midi's use/refund other activity buttons have short labels and sit on dnd5e's additional-actions row.
+* Activities dnd5e 6.1 declares "like" another type are treated as that type.
+* Fixed: the healing button showed a language key; faction actors (dnd5e 6.1 renown) could be targeted; distance conversions warned of a deprecated call.
+
+**New features**
+
+* Massive damage. With *Enforce death saves* on, a character dropped to 0 hit points dies outright when the damage left over equals or exceeds its hit point maximum: it gets three death save failures and the Dead status. Undo on the damage card reverses it, and the card's multiplier Apply (x2 and so on) counts death save failures as the first application does. Characters only; not with the vitality item, which takes the overflow.
+* Stanching wounds. An effect can be marked as one a check ends, with `flags.midi-qol.stanch` on the effect (its own flag, or a change with that key): `dc=15, skill=med, range=5, healing=spell`. It ends when the affected creature rolls that skill and reaches the DC, or when a creature within range rolls it with the affected creature targeted; a Medicine roll from the sheet is enough. `healing` says whether restoring hit points also ends it: `none` (the default), `spell` (healing from a spell), `magical` (from a spell or a magic item) or `any` (any healing). *Infernal Glaive*, *Infernal Tail*, *Devil's Glaive*, *Wounding Weapon* and *Longsword of Wounding* use it. See the README.
+
+**Other changes and fixes**
+
+* Changed: with CAT 0.1.8, a creature's copy of a monster feature is matched to its creature by CAT.
+* Removed: the *Replace dnd5e activities with midi-qol equivalents* setting. It never took effect: midi always uses its own activities.
+* Fixed: an unmeasurable distance read as within reach: prone's advantage within 5 ft, a thrown weapon's nearby foe check, flanking and the flanking highlight. A range check from an actor with no token on the scene says so, rather than measuring from the scene's corner.
+* Fixed: *Activity Prefix* off still named midi's activities "Midi …" (since 14.6.9), and Boss Loot FX no longer turned the prefix off, so its animations by activity name didn't play.
+* Fixed: on a scene measured in metres, midi's CAT automations (forced movement toward an area, Detect Magic's areas, Fear Aura and turn auras) compared metres with feet.
+* Fixed: a check activity that names no ability, skill or tool threw and scored the target 1; it rolls a d20 with no modifier.
+* Fixed: an item using CPR's Hide macro was handled as for an older CPR on CPR 2.1.8 (the check named 2.1.18).
+* Fixed: damage a macro set above the target's remaining HP logged a damage list error.
+* Fixed: a target with no canvas token (another level or scene) never matched an other/ammunition damage condition, didn't run its `preTargetSave`/`isSave` target macros, and was lost when an attack was rolled again from a finished card.
+* Fixed: a target deleted during a use stayed marked on the card when removed from a token set, and was kept when the user's targets were re-read.
+* Fixed: a self-targeted use by an actor with no token on the scene did not put the user's targets back.
+* Fixed: `workflow.disadvantageSaves` was lost when a workflow was rebuilt from its card and not cleared with the targets.
+* Fixed: a source's ignore traits (`ida`, `idm`...) threw when a damage category was already ignored wholesale; a vetoed damage calculation (`dnd5e.preCalculateDamage` returning false) threw.
+
+**Sample items**
+
+* Removed, in favour of Cauldron of Plentiful Resources' automations (CPR 2.1.8 or later): *Aid*, *Chill Touch*, *Command*, *Dragon's Breath*, *Guiding Bolt*, *Mass Cure Wounds*, *Pass without Trace*, *Radiant Strikes*, *Sanctuary*, *Shield*, *Thunderwave*, *Toll the Dead*, and the actions *Check Cover*, *Generic Actions*, *Hide*, *Influence*, *Knock Out*, *Ready*, *Shove*, *Squeeze*, *Study*, *Suffocation* and *Underwater*.
+  * The macros of copies already on actors stay in 14.7 and are removed in 14.8.0. To switch a copy, open CAT's CatKit on the item and apply CPR's automation.
+  * midi's *Search* finds creatures hidden with CPR's *Hide*.
+  * A wound that could be stanched with the Stabilize action is stanched with a Medicine check (`flags.midi-qol.stanch`).
+* Changed: *Devil's Glaive*, *Wounding Weapon* and *Longsword of Wounding* wounds can be stanched by a creature within 5 feet (a Medicine check with the wounded creature targeted); *Devil's Glaive* no longer prompts at the start of the turn, and magical healing closes its wound.
+* Changed: magic weapons whose extra damage needs attunement (Longswords of Sharpness, Life Stealing and Wounding, Dragon Slayer, the Life Stealer and Dragon Slayer enchantments) do nothing while their magic is unavailable (attunement missing, or antimagic).
+* Changed: Counter Mage's Abjuration-Breaker puts the target under dnd5e's antimagic for the attack instead of removing its items' magic property; its Antimagic Shot also stops the Magic action on a magic item (features using the Magic action aren't detected).
+* Changed: Reverse Gravity's ceiling damage is falling damage (falling resistance applies).
+* Changed: the sample items that read token sets or damage entries use the new names (`tokens` / `documents`, `calculatedDamages`): Elemental Attunement, Rakish Audacity, Vow of Enmity, Divine Word, Prismatic Spray, Reverse Gravity, Draught of the Echoing Step, Arrow of Echoed Wounds, Chainbreaker Bolt, Starfall Bullet, Blessed Healer, Undead Fortitude, Gloves of Soul Catching, Wounding Weapon, Longsword of Wounding, Metamagic and Counter Mage.
+* Fixed: a sample item dragged from the compendium showed in CAT's CatKit as not automated, with no Configuration (*Detect Magic (Vision)*, *Infernal Glaive*, *Infernal Tail*).
+* Fixed: Elemental Attunement's push save was used without its target.
+* Fixed: Arcane Ward, Delayed Blast Fireball, Storm of Vengeance, Emboldening Bond, Fey Ancestry (Elven), Goggles of Night (Light Amplification), Lantern, Longsword of Wounding and True Resurrection.
+
+**Macro writers and module authors**
+
+Most macros and modules written for 14.6.x run unchanged on 14.7.0, with deprecation warnings where something will change later; the items below can need a change now. What breaks, what to change and the timeline are in the wiki: [Migrating to midi-qol 14.7: TokenDocuments and dnd5e 6.1](https://github.com/tposney/midi-qol/wiki/Token-Sets-Document-Mode). MACROS.md has the reference.
+* Token sets and target hooks move from canvas tokens to TokenDocuments in three steps. 14.7.0: canvas tokens still; `MidiQOL.setTokenDocumentSets(true)` gives TokenDocuments now. 14.8.0: always TokenDocuments. 14.9.0: `member.document` on a TokenDocument is removed. `set.documents`, `set.tokens`, `set.uuids` and `set.count` read the same throughout.
+* Macros have `tokenDocument` beside `token`; in a target macro `token` is the target's canvas token, `null` for a target with none. `workflow.attackingTokenDocument` is new.
+* A damage entry is one record in dnd5e's terms: `damages` (as rolled), `options` and `calculatedDamages` (what is applied). `damageDetail`, `rawDamageDetail` and `calcDamageOptions` are deprecated aliases until 14.9.0; `damageDetails` and `healingAdjustedTotalDamage` until 14.8.0; `damageSelector` and `damageMods` are gone.
+* dnd5e 6.1 damage records: a resistance to all damage is `active.type.resistance`, not `active.all.resistance`, and an entry a macro adds in `dnd5e.calculateDamage` must carry a `potential` record, or dnd5e's damage card throws; `MidiQOL.modifyDamageBy` adds it.
+* `MidiQOL.measureTokens(a, b, options)` gives a distance or why it can't be measured; `getDistance` and `computeDistance` return `Infinity` (`MidiQOL.UNMEASURABLE_DISTANCE`) for those, and -1 still means walls block.
+* The damage card stores each target's calculated damage and the raw damage once; `totalDamage` and `rawTotalDamage` are no longer in `flags.midi-qol.undoDamage`.
+* Condition data `items`, `equippedItems` and `target.items` entries have `magicAvailable`. Macro autocomplete offers `workflow.damageItem` and its fields.
+
+### 14.6.12
+* Changed: *List Gambit's Premades prompts in the player list* is off by default.
+
 ### 14.6.11
 **Waiting on players**
 
@@ -36,8 +120,8 @@ midi now shows in Foundry's player list which players it is waiting for, and the
 * A save, Active Defence or contested roll the GM makes for a player (taken over from the player list, or a timed-out save for another player's creature) uses the player's roll mode: private and self rolls are whispered to the player, blind ones aren't. With no GM connected a timed-out save is rolled without bonus prompts.
 * A GM using a reaction that targets another creature, places an area or teleports, on a scene they aren't viewing, is asked to view it first. Self-only reactions (Shield) work from any scene.
 * A GM using an item for a creature whose token is on a scene they aren't viewing is asked to view that scene first (targets are then confirmed there) or use it anyway: other modules' reactions (Gambit's Premades), animations and placement only work on the viewed scene.
-* Fixed: a use given targets that aren't drawn (on another level or scene), by `completeActivityUse` or a macro, lost them, so they made no save and took no damage. This includes an area with auto-targeting off, and a target on another scene sharing a drawn token's id (a copied scene).
-* Fixed: `MidiQOL.DamageOnlyWorkflow` dropped targets that aren't drawn (on another level or scene), so they took no damage.
+* Fixed: a use given targets with no canvas token (on another level or scene), by `completeActivityUse` or a macro, lost them, so they made no save and took no damage. This includes an area with auto-targeting off, and a target on another scene sharing a canvas token's id (a copied scene).
+* Fixed: `MidiQOL.DamageOnlyWorkflow` dropped targets with no canvas token (on another level or scene), so they took no damage.
 * Fixed: damage with no type, in a use with nothing typed to take its type from (a macro's untyped roll, a damage-only workflow given no type), is midi's No Type: applied in full, with no resistance. It was an unknown type named after a missing language key (in some languages a word such as "Ninguno"), or the type of whatever use ran last, so the previous use's resistances could apply.
 * Fixed: `applyTokenDamage` gave a target that saved the default damage on a save, not the activity's (full, half or none), and warned that `getSaveMultiplierForItem` is deprecated each time.
 
@@ -95,14 +179,14 @@ midi now shows in Foundry's player list which players it is waiting for, and the
 
 **Macros**
 
-Token sets. A workflow's target collection (`workflow.targets`, `hitTargets`, `saves`, `failedSaves` and the others) used to hold Tokens, the placeables drawn on the canvas you're viewing. A target that isn't drawn there (on another scene, or on a level you aren't viewing) has no Token, so it was dropped: no damage, no save, no effects, and a workflow rebuilt from its card lost it. The collections are now `MidiQOL.TokenDocumentSet`s, which hold every target's TokenDocument, drawn or not.
-* **Nothing has to change today.** By default a set still reads as the drawn Tokens (iteration, `size`, `first()`, `map`/`filter`), so existing macros keep working, and they still skip targets that aren't drawn. `filter` returns a TokenDocumentSet. The one change in both modes: target hooks and target macros now also run for a target that isn't drawn, with its TokenDocument (below), so a handler that assumes a Token should accept either.
+Token sets. A workflow's target collection (`workflow.targets`, `hitTargets`, `saves`, `failedSaves` and the others) used to hold canvas tokens: Token objects, which Foundry creates only for the scene and level you're viewing. A target with no canvas token (on another scene, or on a level you aren't viewing) has no Token, so it was dropped: no damage, no save, no effects, and a workflow rebuilt from its card lost it. The collections are now `MidiQOL.TokenDocumentSet`s, which hold every target's TokenDocument, with a canvas token or not.
+* **Nothing has to change today.** By default a set still reads as the canvas tokens (iteration, `size`, `first()`, `map`/`filter`), so existing macros keep working, and they still skip targets with no canvas token. `filter` returns a TokenDocumentSet. The one change in both modes: target hooks and target macros now also run for a target with no canvas token, with its TokenDocument (below), so a handler that assumes a Token should accept either.
 * **Migrating** (works in both modes; MACROS.md, Token sets, *Migrating macros and modules*, has the full table): iterate `set.documents` for saves, damage, effects and HP, and `set.tokens` for the canvas; `set.count` for `size`; `set.uuids` for `t.document.uuid`; for one member or hook target, `const doc = t instanceof TokenDocument ? t : t.document`; copy with `new MidiQOL.TokenDocumentSet(set)`. `t.actor`, `t.id`, `t.name` and `has`/`add`/`delete` work as they are.
-* To get every target, use the set's properties, which give the same result whichever way the set reads: `set.documents` is every target's TokenDocument, drawn or not (use it for saves, damage, effects and HP); `set.tokens` is the drawn Tokens (use it for distance, sight, cover and moving tokens); `set.uuids` is every target's uuid; `set.count` is how many targets there are.
+* To get every target, use the set's properties, which give the same result whichever way the set reads: `set.documents` is every target's TokenDocument, with a canvas token or not (use it for saves, damage, effects and HP); `set.tokens` is the canvas tokens (use it for distance, sight, cover and moving tokens); `set.uuids` is every target's uuid; `set.count` is how many targets there are.
 * `add`, `delete` and `has` accept a Token, a TokenDocument or a uuid. Assigning any Set (`workflow.targets = new Set(tokens)`) converts it. Set algebra (`difference`, `union`, …) is over every member when called on the TokenDocumentSet. Copy a set with `new MidiQOL.TokenDocumentSet(set)`; `new Set(set)` keeps only what reading gives.
 * Reading as TokenDocuments will become the default. A GM can test it now with `MidiQOL.setTokenDocumentSets(true)` (whole world, after a reload): sets read as TokenDocuments, and target hooks and target macros get TokenDocuments. `workflow.token` stays a Token; `workflow.tokenDocument` added. See MACROS.md, Token sets, and the wiki page Token-Sets-Document-Mode.
 * In that mode midi adds a `TokenDocument#document` property that returns the TokenDocument itself, so code written for Tokens (`target.document.uuid`) keeps working on a set that now gives TokenDocuments. Each use logs a deprecation warning once per calling line (midi's own included), naming the line to change: use the member itself. It applies to every TokenDocument, not only set members, so code that already handles both (`x.document ?? x`, as dnd5e and Simple Cover do) warns too and can be left alone. It is removed in 14.8.0.
-* `midi-qol.preTargetSave`, `preTargetDamageApplication`, `isDamaged`/`isHealed` and the target macros now also run for targets that aren't drawn; their `target`/`token` is then the TokenDocument (the Token otherwise).
+* `midi-qol.preTargetSave`, `preTargetDamageApplication`, `isDamaged`/`isHealed` and the target macros now also run for targets with no canvas token; their `target`/`token` is then the TokenDocument (the Token otherwise).
 
 **Workflows and Cards.**
 A use's workflow now keeps its state on its usage card, so it can always be rebuilt from the card: after a reload, on another client, or when the workflow has been dropped from memory.

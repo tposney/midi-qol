@@ -1136,8 +1136,6 @@
   "midi-qol.CollapsibleTargets.Hint": "A exibição de Acerto/Erro do alvo no cartão do chat é recolhível.",
   "midi-qol.AutoRemoveInstantaneousTemplate.Name": "Remover Modelos Instantâneos",
   "midi-qol.AutoRemoveInstantaneousTemplate.Hint": "Modelos colocados por um item com duração 'Instantânea' são removidos no final da rolagem do item.",
-  "midi-qol.ReplaceDefaultActivities.Name": "Substituir Atividades D&D5e por Midi QOL",
-  "midi-qol.ReplaceDefaultActivities.Hint": "Quaisquer atividades existentes, Ataque, Dano, Salvaguarda, Teste e Utilidade usarão as versões do Midi QOL. Isso é necessário para automatizar itens do SRD. Do contrário, você precisará configurar manualmente cada item para automação do Midi QOL.",
   "midi-qol.ConfirmAmmunition.Name": "Confirmar Munição ao Rolar Ataque",
   "midi-qol.ActivityNamePrefix.Name": "Prefixo de Atividade",
   "midi-qol.ActivityNamePrefix.Hint": "Coloca o nome 'Midi' como prefixo das atividades do Midi QOL. Necessário recarregar o mundo.",

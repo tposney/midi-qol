@@ -14,6 +14,7 @@ import { ActorOnUseMacrosConfig } from "./apps/ActorOnUseMacroConfig.js";
 import { preActivityConsumptionHook, activityConsumptionHook, midiTemplateFlags, isTemplateRegion, templateElevation, clampTemplateElevation, attachedRegionBand } from "./activities/activityHelpers.js";
 import { ItemOnUseMacrosConfig } from "./apps/ItemOnUseMacrosConfig.js";
 import { Activity, DamageApplicationOptions, DamageDescription } from "../globals.js";
+import { registerStanchHooks } from "./lib/stanch.js";
 import { MidiDependentsRegistry, repointCopiedDependents, tokenHasDependents } from "./lib/MidiDependentsRegistry.js";
 
 export var concentrationCheckItemDisplayName = "Concentration Check";
@@ -337,6 +338,7 @@ export async function restManager(actor: Actor.Implementation, result: { longRes
 }
 
 export function initHooks() {
+  registerStanchHooks();
   Hooks.on("getChatMessageContextOptions", addViewAsPlayerOption);
   if (debugEnabled > 0) warn("Init Hooks processing");
   Hooks.on("preCreateChatMessage", (message, data, options, user) => {
@@ -894,6 +896,13 @@ const SOURCE_TRAIT_CONFIG: Record<string, string> = {
   idm: "modification",
 };
 
+/** Source trait codes dnd5e 6.1 replaces with attacker damage rules */
+const DEPRECATED_SOURCE_TRAITS: Record<string, string> = {
+  idi: "Ignore Immunity (dnd5e.damage.ignore.immunity)",
+  idr: "Ignore Resistance (dnd5e.damage.ignore.resistance)",
+  idv: "Ignore Vulnerability (dnd5e.damage.ignore.vulnerability)",
+};
+
 /** Custom resistance type matchers - maps custom resistance names to damage predicates */
 type DamagePredicate = (damage: DamageDescription, bypasses?: Set<string>) => boolean;
 
@@ -1038,49 +1047,29 @@ function shouldIgnore(
   return false;
 }
 
-function hasTraitEffect(
-  actorTraits: any,
-  category: string,
-  type: string,
-  properties?: Set<string>,
-  options?: DamageApplicationOptions
-): boolean {
-  if (category === "dr" && shouldDowngrade(options ?? {}, type)) {
-    if (hasTraitEffect(actorTraits, "di", type, properties) && !shouldIgnore(options ?? {}, "immunity", type, actorTraits, true)) {
-      return true;
-    }
-  }
-  const config = actorTraits[category];
-  if (!config?.value?.has(type)) return false;
-  if (!CONFIG.DND5E.damageTypes[type]?.isPhysical || !properties?.size) return true;
-  return !(config.bypasses?.intersection(properties)?.size);
-}
-
-function computeSourceIgnores({ actor, sourceActor, damages, options }: DamageCalcParams): void {
-  if (!sourceActor || options.midiIgnoreComputed) return;
-
-  //@ts-expect-error no dnd5e types
-  const actorTraits = actor.system?.traits ?? {};
+function computeSourceIgnores({ sourceActor, damages, options }: DamageCalcParams): void {
+  if (!sourceActor || options.midiIgnoreComputed || options.ignore === true) return;
 
   for (const [traitCode, category] of Object.entries(SOURCE_TRAIT_CONFIG)) {
     //@ts-expect-error no dnd5e types
     const trait = sourceActor.system?.traits?.[traitCode];
     if (!trait?.value?.size) continue;
+    // Already ignored wholesale
+    if (options.ignore?.[category] === true) continue;
 
     if (!options.ignore?.[category]) {
       foundry.utils.setProperty(options, `ignore.${category}`, new Set());
     }
 
+    if (traitCode in DEPRECATED_SOURCE_TRAITS) foundry.utils.logCompatibilityWarning(`midi-qol | system.traits.${traitCode}.value is deprecated: use dnd5e's ${DEPRECATED_SOURCE_TRAITS[traitCode]} effect change (DAE migrates it)`,
+      { since: "14.7.0", until: "14.9.0", once: true });
+
     for (const dt of Object.keys(GameSystemConfig.damageTypes)) {
-      if (!trait.value.has(dt) && !trait.all) continue;
+      if (!trait.value.has(dt) && !trait.value.has("ALL") && !trait.all) continue;
       if (!damages.some(di => di.type === dt)) continue;
 
-      if (category === "immunity" && hasTraitEffect(actorTraits, "di", dt) && !hasTraitEffect(actorTraits, "dr", dt)) {
-        if (!(options.downgrade instanceof Set)) options.downgrade = new Set();
-        (options.downgrade as Set<string>).add(dt);
-      } else if (options.ignore) {
-        options.ignore[category].add(dt);
-      }
+      // Ignored immunity is ignored, as dnd5e's rule (before 14.7.0 an immune-only target took half)
+      options.ignore?.[category].add(dt);
     }
   }
   options.midiIgnoreComputed = true;
@@ -1458,7 +1447,7 @@ function applyTraitMultipliers({ actor, damages, options }: DamageCalcParams): v
 }
 
 function applyCustomResistances({ actor, damages, options }: DamageCalcParams): void {
-  const categories = { di: "immunity", dr: "resistance", dv: "vulnerability", da: "absorption" };
+  const categories = { di: "immunity", dr: "resistance", dv: "vulnerability", da: "absorption" } as const;
   const traitMultipliers = {
     dr: configSettings.damageResistanceMultiplier,
     di: configSettings.damageImmunityMultiplier,
@@ -1492,14 +1481,16 @@ function applyCustomResistances({ actor, damages, options }: DamageCalcParams): 
         // Check nested (dnd5e 5.3+) active keys using helper
         if (getDamageActiveFlag(damage, categories[trait])) continue;
         if (getDamageActiveFlag(damage, custom)) continue;
-        if (shouldIgnore(options, categories[trait], damage.type, actorTraits)) continue;
-        if (shouldIgnore(options, custom, damage.type, actorTraits)) continue;
 
         const matches = matcher
           ? matcher.match(damage, bypasses)
           : damage.properties?.has(custom);
 
         if (!matches) continue;
+        // What would apply with nothing ignored (dnd5e 6.1's `potential`): the damage tray lists its buttons from it
+        if (trait !== "da") ((damage.potential ??= {}).type ??= {})[categories[trait]] = true;
+        if (shouldIgnore(options, categories[trait], damage.type, actorTraits)) continue;
+        if (shouldIgnore(options, custom, damage.type, actorTraits)) continue;
 
         setDamageActiveFlag(damage, GameSystemConfig.customDamageResistanceTypes?.[normalizedCustom] ?? custom);
         setDamageActiveFlag(damage, categories[trait]);

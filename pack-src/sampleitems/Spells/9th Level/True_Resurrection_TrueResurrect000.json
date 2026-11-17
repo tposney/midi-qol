@@ -34,13 +34,23 @@
       "otherCondition": "",
       "removeAttackDamageButtons": "default"
     },
-    "itemacro": {
+    "dnd5e": {
+      "riders": {
+        "activity": []
+      }
+    },
+    "cat": {
+      "automation": {
+        "version": "14.7.0"
+      }
+    },
+    "dae": {
       "macro": {
         "name": "True Resurrection",
         "type": "script",
         "img": "icons/svg/dice-target.svg",
         "scope": "global",
-        "command": "// True Resurrection — restore to life with full HP, remove all conditions\nfor (const target of workflow.targets) {\n  const tActor = target.actor;\n  if (!tActor) continue;\n  const hp = tActor.system.attributes.hp;\n  await tActor.update({\n    \"system.attributes.hp.value\": hp.max,\n    \"system.attributes.hp.temp\": 0,\n    \"system.attributes.death.success\": 0,\n    \"system.attributes.death.failure\": 0,\n    \"system.attributes.exhaustion\": 0\n  });\n  const conditions = [\"dead\", \"unconscious\", \"poisoned\", \"diseased\", \"cursed\", \"blinded\", \"deafened\", \"paralyzed\", \"stunned\", \"petrified\", \"prone\"];\n  for (const c of conditions) {\n    await tActor.toggleStatusEffect(c, {active: false});\n  }\n  ChatMessage.create({\n    content: `<strong>True Resurrection</strong>: ${target.name} is restored to life with full hit points. All wounds, poisons, diseases, and curses are lifted.`,\n    speaker: ChatMessage.getSpeaker({ actor: workflow.actor })\n  });\n}",
+        "command": "// True Resurrection — restore to life with full HP, remove all conditions\nfor (const target of workflow.targets.documents) {\n  const tActor = target.actor;\n  if (!tActor) continue;\n  const hp = tActor.system.attributes.hp;\n  await tActor.update({\n    \"system.attributes.hp.value\": hp.max,\n    \"system.attributes.hp.temp\": 0,\n    \"system.attributes.death.success\": 0,\n    \"system.attributes.death.failure\": 0,\n    \"system.attributes.exhaustion\": 0\n  });\n  const conditions = [\"dead\", \"unconscious\", \"poisoned\", \"diseased\", \"cursed\", \"blinded\", \"deafened\", \"paralyzed\", \"stunned\", \"petrified\", \"prone\"];\n  // Queued with midi's own removal of Dead\n  for (const c of conditions) {\n    if (tActor.statuses.has(c)) await MidiQOL.toggleStatus(tActor, c, {active: false});\n  }\n  ChatMessage.create({\n    content: `<strong>True Resurrection</strong>: ${target.name} is restored to life with full hit points. All wounds, poisons, diseases, and curses are lifted.`,\n    speaker: ChatMessage.getSpeaker({ actor: workflow.actor })\n  });\n}",
         "sort": 0,
         "ownership": {
           "default": 3
@@ -56,16 +66,6 @@
         },
         "_id": null,
         "folder": null
-      }
-    },
-    "dnd5e": {
-      "riders": {
-        "activity": []
-      }
-    },
-    "cat": {
-      "automation": {
-        "version": "14.6.9"
       }
     }
   },

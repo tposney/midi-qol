@@ -1,5 +1,5 @@
 import {getTokenDocument} from '../../utils.js';
-import {actorUtils, dialogUtils, effectUtils, tokenUtils} from '../proxy.mjs';
+import {actorUtils, dialogUtils, distanceUtils, effectUtils, tokenUtils} from '../proxy.mjs';
 // Pushes or pulls targets after an activity, from the item's flags.midi-qol.forcedMovement entries:
 // {activity, when: 'hit'|'failedSave'|'always', direction: 'push'|'pull', distance (ft; a pull without one ends adjacent),
 // maxSize ('med'|'lg'...), optional (ask first), targetArmor: 'nonmagicalMetal', effectIfAdjacent (item effect id,
@@ -21,7 +21,7 @@ function areaCentre(workflow) {
     return b ? {x: b.x + b.width / 2, y: b.y + b.height / 2} : null;
 }
 function targetsFor(workflow, when) {
-    // Moved on the canvas: the drawn tokens
+    // Moved on the canvas: the canvas tokens
     if (when === 'hit') return workflow.hitTargets.tokens;
     if (when === 'failedSave') return workflow.failedSaves.tokens;
     return workflow.targets.tokens;
@@ -43,8 +43,9 @@ async function moved({document: item, workflow}) {
                 const centre = areaCentre(workflow);
                 const from = targetDoc.object?.center;
                 if (!centre || !from) continue;
-                const gap = Math.hypot(centre.x - from.x, centre.y - from.y) / targetDoc.parent.grid.size * targetDoc.parent.grid.distance;
-                const pull = Math.min(distance ?? gap, Math.floor(gap / 5) * 5);
+                // Whole grid spaces to the centre, in feet (a 1.5 m space is not exactly 5 ft)
+                const gap = distanceUtils.fromGridSpaces(targetDoc.parent, Math.floor(Math.hypot(centre.x - from.x, centre.y - from.y) / targetDoc.parent.grid.size));
+                const pull = Math.min(distance ?? gap, gap);
                 if (pull > 0) await tokenUtils.slideToken(targetDoc, {distance: pull, ray: new foundry.canvas.geometry.Ray(from, centre)});
                 continue;
             }
@@ -54,7 +55,7 @@ async function moved({document: item, workflow}) {
             }
             if (distance) {
                 const verb = distance > 0 ? 'Push' : 'Pull';
-                if (entry.optional && !await dialogUtils.confirm(item.name, `${verb} ${targetDoc.name} ${Math.abs(distance)} feet?`)) continue;
+                if (entry.optional && !await dialogUtils.confirm(item.name, `${verb} ${targetDoc.name} ${distanceUtils.formatDistance(targetDoc.parent, Math.abs(distance))}?`)) continue;
                 await tokenUtils.slideToken(targetDoc, {sourceToken: source, distance});
             }
             const effect = entry.effectIfAdjacent && item.effects.get(entry.effectIfAdjacent);

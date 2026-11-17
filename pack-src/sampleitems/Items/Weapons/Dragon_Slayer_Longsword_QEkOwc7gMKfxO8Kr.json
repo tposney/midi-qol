@@ -15,7 +15,7 @@
       "rollAttackPerTarget": "default",
       "removeAttackDamageButtons": "default",
       "itemCondition": "",
-      "otherCondition": "raceOrType.includes(\"dragon\") && (item.attuned || item.attunement !== \"required\")",
+      "otherCondition": "raceOrType.includes(\"dragon\") && item.magicAvailable",
       "effectCondition": "",
       "reactionCondition": ""
     },
@@ -156,7 +156,7 @@
     },
     "cat": {
       "automation": {
-        "version": "14.6.5"
+        "version": "14.7.0"
       }
     }
   },
@@ -444,7 +444,7 @@
             }
           ]
         },
-        "useConditionText": "raceOrType.includes(\"dragon\") && (item.attuned || item.attunement !== \"required\")",
+        "useConditionText": "raceOrType.includes(\"dragon\") && item.magicAvailable",
         "effectConditionText": "",
         "name": "Bonus Damage",
         "midiProperties": {

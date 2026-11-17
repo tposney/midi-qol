@@ -67,7 +67,7 @@ import {
   userTargetsKeepingUndrawn,
   itemMagicAvailable,
   hasNoReactionsMarker,
-  healingButtonKey,
+  HEALING_BUTTON_KEY,
   activityHasEmanationNoTemplate,
   getActivityAutoTargetAction,
   areMidiKeysPressed,
@@ -503,9 +503,9 @@ export let MidiActivityMixin = Base => {
           targets: Array.from(game.user?.targets).map(t => t.document.uuid)
         });
       } else {
-        workflow.forceApplyEffects = true; // don't overwrite the application targets
-        workflow.effectTargets = new TokenDocumentSet(game.user?.targets);
-        if (workflow.effectTargets.count > 0) await workflow.performState(workflow.WorkflowState_ApplyDynamicEffects)
+        // Forced: effects go to the use's targets; the user's only confirm the request
+        workflow.forceApplyEffects = true;
+        if (game.user?.targets.size) await workflow.performState(workflow.WorkflowState_ApplyDynamicEffects)
       }
     }
     static async #confirmDamageRollCancel(this: MidiActivityMixin, event: PointerEvent, target: HTMLElement, message: ChatMessage.Implementation) {
@@ -1018,6 +1018,7 @@ export let MidiActivityMixin = Base => {
         return Workflow.rerollDamage(config.workflow, this, config, dialog, message);
       // TODO: This is odd. `midiOptions` should have `workflowOptions` _in_ it, not be assigned it
       config.midiOptions ??= config.workflow.workflowOptions ?? {};
+      if (config.midiOptions?.updateWorkflow !== false) config.workflow.clearDamageRules();
       if (debugEnabled > 0) {
         warn("MidiActivity | rollDamage | Called", config, dialog, message);
       }
@@ -1320,6 +1321,8 @@ export let MidiActivityMixin = Base => {
     getDamageConfig(config: RollProcessConfig = {}) {
       config.attackMode = config.workflow?.attackMode;
       const rollConfig = super.getDamageConfig(config);
+      // dnd5e 6.1's attacker ignore/downgrade rules for this roll: the use's damage applies them
+      if (config.workflow && config.midiOptions?.updateWorkflow !== false) config.workflow.addDamageRules(rollConfig.applicationOptions);
       this.configureDamageRoll(rollConfig);
       this.createDamageRollModifiers(rollConfig);
 
@@ -1481,7 +1484,7 @@ export let MidiActivityMixin = Base => {
     async setupCanSeeSense(usage: { workflow?: Workflow }) {
       const workflow = usage.workflow;
       if (!workflow) return;
-      // Sight between drawn tokens: a target not drawn is neither seen nor sensed
+      // Sight between canvas tokens: a target with no canvas token is neither seen nor sensed
       for (let target of workflow.targets.tokens) {
         // TODO: This is odd - if `!workflow.token` then `true`, but then we're adding `undefined` to `targetsCanSense`
         const tokenCanSense = workflow.token ? canSense(workflow.token, target, globalThis.MidiQOL.InvisibleDisadvantageVisionModes, { forceVision: true }) : true;
@@ -1541,7 +1544,7 @@ export let MidiActivityMixin = Base => {
         || configSettings.enforceSingleWeaponTarget)) {
         if (!(await preTemplateTargets(this, config.midiOptions ?? {})))
           return false;
-        // Confirmation was shown: the user's final selection, keeping given targets that aren't drawn (it can't show them)
+        // Confirmation was shown: the user's final selection, keeping given targets with no canvas token (it can't show them)
         workflow.setTargets(validTargetTokens(hasTargetsToUse ? userTargetsKeepingUndrawn(config.midiOptions!.targetsToUse) : new Set(game.user?.targets)));
       } else if (hasTargetsToUse) {
         // No confirmation needed — set workflow targets directly from the provided Set
@@ -1560,13 +1563,7 @@ export let MidiActivityMixin = Base => {
           // to avoid a race condition where concurrent workflows clear game.user.targets
           // via updateUserTargets([]) during async gaps.
           const snapshotUuids = config.midiOptions?.workflowOptions?.preSelectedTargetUuids;
-          const userTargets: Set<Token.Implementation> = snapshotUuids?.length
-            ? new Set(
-                snapshotUuids
-                  .map(uuid => (fromUuidSync(uuid) as TokenDocument | null)?.object)
-                  .filter((t): t is Token.Implementation => !!t)
-              )
-            : new Set(game.user?.targets);
+          const userTargets = snapshotUuids?.length ? new TokenDocumentSet(snapshotUuids) : new Set(game.user?.targets);
           workflow.setTargets(validTargetTokens(userTargets));
         } else {
           foundry.utils.setProperty(config, "midiOptions.workflowOptions.targetConfirmation", "none");
@@ -1843,7 +1840,7 @@ export let MidiActivityMixin = Base => {
 
         let tokenToUse: foundry.canvas.placeables.Token.Implementation | undefined;
         if (speaker.token) tokenToUse = canvas.tokens?.get(speaker.token);
-        // Range, cover and sight are measured to the drawn targets
+        // Range, cover and sight are measured to the targets with a canvas token
         const rangeDetails = checkActivityRange(this, tokenToUse, new Set(workflow.targets.tokens), checkMechanic("checkRange") !== "none" && !isAoETargeting && !workflow.AoO)
         if (checkMechanic("checkRange") !== "none" && !isAoETargeting && !isEmanationTargeting && !workflow.AoO && speaker.token) {
           if (tokenToUse && workflow.targets.tokens.length > 0) {
@@ -2081,7 +2078,7 @@ export let MidiActivityMixin = Base => {
       const behaviors: any[] = [];
       let regionUpdate: any | undefined;
       // A cast that rolls against the creatures in the area has dealt with those already inside.
-      const castAffectsTargets = ["attack", "damage", "save"].includes(this.type) && !!workflow?.targets?.count;
+      const castAffectsTargets = ["attack", "damage", "save"].some(type => isActivityType(this, type)) && !!workflow?.targets?.count;
       // Effects applied while a token is inside are dnd5e's apply-effect behaviour; midi's own behaviour runs activities.
       const effectBehavior = (effectUuids: string[], dispositionFilter: number, excludeSource: boolean) => {
         if (!effectUuids.length) return;
@@ -2274,7 +2271,7 @@ export let MidiActivityMixin = Base => {
       // if target type is not blank or there are targets only set hasEffects if we are not going to remove the button later
       if (this.target?.affects.type !== "" || workflow?.targets.count !== 0)
         hasEffects &&= !["applyNoButton", "applyRemove"].includes(configSettings.autoItemEffects);
-      let dmgBtnText = (this.actionType === "heal") ? i18n(healingButtonKey()) : i18n("DND5E.Damage");
+      let dmgBtnText = (this.actionType === "heal") ? i18n(HEALING_BUTTON_KEY) : i18n("DND5E.Damage");
       if (workflow?.workflowOptions?.fastForwardDamage && configSettings.showFastForward) dmgBtnText += ` ${i18n("midi-qol.fastForward")}`;
 
       const midiContextData: MidiUsageChatContext = {
@@ -2740,6 +2737,25 @@ function renderActivitySheetHook(app, [elem]) {
 }
 
 export let MidiActivityUsageDialog;
+/**
+ * Each midi activity type's title (its `midiTitle`, else dnd5e's), chosen by the Activity Prefix setting when it is read:
+ * the classes are defined before midi's settings load, and Boss Loot FX turns the prefix off as they do.
+ */
+export function setupActivityTitles() {
+  for (const config of Object.values(GameSystemConfig.activityTypes)) {
+    const cls = config?.documentClass;
+    const metadata: unknown = cls && "metadata" in cls ? cls.metadata : undefined;
+    if (typeof metadata !== "object" || metadata === null || !("midiTitle" in metadata) || typeof metadata.midiTitle !== "string") continue;
+    const midiTitle = metadata.midiTitle;
+    const dnd5eTitle = "dnd5eTitle" in metadata ? metadata.dnd5eTitle : undefined;
+    Object.defineProperty(metadata, "title", {
+      get: () => configSettings.activityNamePrefix ? midiTitle : dnd5eTitle,
+      configurable: true,
+      enumerable: true
+    });
+  }
+}
+
 export function setupMidiActivityMixin() {
   //@ts-expect-error
   const ActivityUsageDialog = game.system.applications.activity.ActivityUsageDialog;
