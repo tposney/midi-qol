@@ -7,6 +7,7 @@
  * a `whenAbsent` handler only fills an action nothing else handles.
  */
 import type { Activity } from "../../globals.js";
+import { activityPolicy } from "./activityPrototype.js";
 
 export type CardActionHandler = (this: Activity, event: PointerEvent, target: HTMLElement, message: ChatMessage.Implementation) => unknown;
 
@@ -44,6 +45,8 @@ type ActivityClassLike = { metadata?: { usage?: { actions?: Record<string, CardA
 /** Puts the registered handlers on every activity type's class in CONFIG. Run after the classes are registered. */
 export function installCardActions(activityTypes: Record<string, { documentClass?: unknown }>) {
   for (const [type, config] of Object.entries(activityTypes)) {
+    // Only types midi automates (dnd5e's order, another module's type unless it registers a policy)
+    if (!activityPolicy(type).automated) continue;
     const cls = config?.documentClass as ActivityClassLike | undefined;
     const metadata = cls?.metadata;
     if (!cls || !metadata) continue;
