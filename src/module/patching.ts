@@ -2,7 +2,7 @@ import { initHiding } from "./lib/hiding.js";
 import { log, i18n, error, i18nFormat, warn, debugEnabled, GameSystemConfig, MODULE_ID, gameStats, getStaticID, MIDI_IMPLYING_STATUSES } from "../midi-qol.js";
 import { saveDisplayMode } from "./lib/saveVisibility.js";
 import { configSettings, checkRule, checkMechanic, safeGetGameSetting, safeSetGameSetting, playerControlsInvisibleTokens } from "./settings.js";
-import { bonusDialog, createConditionData, displayDSNForRoll, expireRollEffect, getCriticalDamage, getDeadStatus, getOptionalCountRemainingShortFlag, getUnconsciousStatus, getVitalityDeadStatus, getWoundedStatus, hasUsedAction, hasUsedBonusAction, hasUsedReaction, midiRenderRoll, notificationNotify, removeActionUsed, removeBonusActionUsed, removeReactionUsed, tokenForActor, expireEffects, DSNMarkDiceDisplayed, evalAllConditionsAsync, hasCondition, areMidiKeysPressed, MidiOptions, getVitalityItem, checkMagicResistanceAndVulnerability, isAutoFastForward, FastForwardRollType, buildRollChoices, selectBestRollChoice, getTokenPerimeterPolygon, closestPointOnPerimeter, measurePointDistance, setUserInitiatedTarget, dnd5eRollType, updateUserTargets, isEffectExpired, processTurnOverTime, toggleStatus, isActivityType } from "./utils.js";
+import { bonusDialog, createConditionData, displayDSNForRoll, expireRollEffect, getCriticalDamage, getDeadStatus, getOptionalCountRemainingShortFlag, getUnconsciousStatus, getVitalityDeadStatus, getWoundedStatus, hasUsedAction, hasUsedBonusAction, hasUsedReaction, midiRenderRoll, notificationNotify, removeActionUsed, removeBonusActionUsed, removeReactionUsed, tokenForActor, expireEffects, DSNMarkDiceDisplayed, evalAllConditionsAsync, hasCondition, areMidiKeysPressed, MidiOptions, getVitalityItem, checkMagicResistanceAndVulnerability, isAutoFastForward, FastForwardRollType, buildRollChoices, selectBestRollChoice, getTokenPerimeterPolygon, closestPointOnPerimeter, measurePointDistance, setUserInitiatedTarget, dnd5eRollType, updateUserTargets, isEffectExpired, processTurnOverTime, toggleStatus, isActivityType, getTokenDocument } from "./utils.js";
 import { computeActivityTemplateTargets } from "./activities/activityHelpers.js";
 import { installedModules } from "./setupModules.js";
 import { OnUseMacro, OnUseMacros } from "./apps/Item.js";
@@ -16,6 +16,8 @@ import Token = foundry.canvas.placeables.Token;
 import { AnyMutableObject } from "fvtt-types/utils";
 import { Activity, ActivityUseConfiguration, RollDialogConfig, RollMessageConfig, RollProcessConfig } from "../globals.js";
 import { Workflow } from "./Workflow.js";
+import type { Dnd5eChatMessage } from "../globals.js";
+import { activityPolicy } from "./activities/activityPrototype.js";
 import { preferredActiveGM, socketlibSocket } from "./GMAction.js";
 import { MidiDependentsRegistry, MidiDependentDocumentMixin, actorEmbeddedByPath } from "./lib/MidiDependentsRegistry.js";
 import { ADVANTAGE, DISADVANTAGE, NORMAL, decideRollDialog, heldKeys, keyMode } from "./lib/rollKeys.js";
@@ -1274,6 +1276,37 @@ const D20_ROLL_KINDS: Record<D20RollKind["rollType"], D20RollKind> = {
  * by another module), a choice of several abilities/skills/tools, request cards, blind rolls, 3D dice, optional
  * bonuses, the chat message and special durations.
  */
+/**
+ * A save or check rolled from a button on the usage card of an activity midi automates: dnd5e's handler rolls it and
+ * names the card as the save message's origin; midi adds its part (as its own handlers once did): the message mode its
+ * save settings choose and, for a save, the workflow, the target's row on the card and the request id it is matched by.
+ */
+function applyCardRollOptions(actor: Actor.Implementation, kind: D20RollKind, config: RollProcessConfig & { target?: number }, message: RollMessageConfig) {
+  const originId = foundry.utils.getProperty(message, "data.system.origin");
+  if (typeof originId !== "string" || foundry.utils.getProperty(message, "flags.midi-qol.requestId")) return;
+  const card = game.messages?.get(originId) as Dnd5eChatMessage | undefined;
+  const cardActivity = card?.getAssociatedActivity?.();
+  if (!card || !cardActivity || !activityPolicy(cardActivity).automated) return;
+  // v14 message-mode strings (CONFIG.ChatMessage.modes keys) so the value matches the roll dialog's options
+  const messageConfig: AnyMutableObject = message;
+  if (["none", "allShow"].includes(configSettings.autoCheckSaves) || actor.hasPlayerOwner) messageConfig.rollMode = safeGetGameSetting("core", "messageMode");
+  else messageConfig.rollMode = "gm";
+  if (!game.user?.isGM) {
+    const playerModes: Record<string, string> = { noneDialogPublic: "public", noneDialogPrivate: "gm", noneDialogSelf: "self", noneDialogBlind: "blind" };
+    messageConfig.rollMode = playerModes[configSettings.playerRollSaves] ?? safeGetGameSetting("core", "messageMode");
+  }
+  if (kind.rollType !== "save") return;
+  const workflow = Workflow.findWorkflow(card.uuid);
+  if (workflow) config.workflow ??= workflow;
+  const speaker = foundry.utils.getProperty(message, "data.speaker") as { scene?: string, token?: string } | undefined;
+  const speakerToken = speaker?.token ? game.scenes?.get(speaker.scene ?? "")?.tokens.get(speaker.token) : undefined;
+  foundry.utils.setProperty(message, "flags.midi-qol.requestId", speakerToken?.uuid ?? actor.uuid);
+  // Its row on the card, whoever the save message's speaker is (an actor with no token, another of its tokens)
+  const targetUuid = speakerToken?.uuid ?? getTokenDocument(actor)?.uuid;
+  if (targetUuid) foundry.utils.setProperty(message, "data.flags.midi-qol.targetUuid", targetUuid);
+  if (configSettings.autoCheckSaves === "whisper") config.target = undefined;
+}
+
 async function doD20Roll(this: Actor.Implementation, wrapped, kind: D20RollKind, config: RollProcessConfig & { ability?: string, skill?: string, tool?: string } = {}, dialog: RollDialogConfig = {}, message: RollMessageConfig = {}) {
   const isAbility = kind.rollType === "save" || kind.rollType === "check";
   if (isAbility && config.midiOptions?.target) config.target = config.midiOptions.target;
@@ -1285,6 +1318,7 @@ async function doD20Roll(this: Actor.Implementation, wrapped, kind: D20RollKind,
   }
   message.data ??= {};
   config.midiOptions ??= {};
+  if (isAbility) applyCardRollOptions(this, kind, config, message);
   let rollId = config[kind.idKey];
   // An empty choice list (CAT empties it) leaves the roll's own ability, skill or tool
   const choices: string[] | undefined = config.midiOptions[kind.choicesKey];

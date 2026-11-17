@@ -108,57 +108,6 @@ export function cardRollDamage(this: Activity, event: PointerEvent, target: HTML
   return activity.rollDamage({ event, workflow }, {}, {});
 }
 
-export async function cardRollSave(this: Activity, event: PointerEvent, target: HTMLElement, message: ChatMessage.Implementation) {
-  const workflow = Workflow.findWorkflow(message?.uuid);
-  const activity = workflow ? workflow.activityFor(this) : this;
-  // return ActivityClass.#rollSave.bind(this)(event, target, message);
-  // Can't call ActivityClass.#rollSave.bind(this)(event, target, message) as it's private
-  // As dnd5e 6: the card's targets (honouring its targeted/selected toggle) and the clicked button's data from
-  // the card, which is all a grouped (dropdown) button carries.
-  const targets: Array<foundry.canvas.placeables.Token.Implementation | TokenDocument.Implementation | Actor.Implementation> =
-    // @ts-expect-error no dnd5e-types
-    [...(message?.system?.evaluatedTargets ?? getSceneTargets())];
-  if (!targets.length && game.user?.character) targets.push(game.user?.character);
-  if (!targets.length) ui.notifications?.warn("DND5E.ActionWarningNoToken", { localize: true });
-  // @ts-expect-error no dnd5e-types
-  const button: Record<string, string | number | undefined> = message?.system?.getButton?.(target)?.dataset ?? target.dataset;
-  const dc = (button.dc === undefined || button.dc === "") ? NaN : Number(button.dc);
-  for (const token of targets) {
-    const actor = token instanceof Actor ? token : token.actor;
-    const tokenDocument = token instanceof foundry.canvas.placeables.Token ? token.document : token instanceof TokenDocument ? token : null;
-    const speaker = ChatMessage.getSpeaker({ actor, scene: canvas.scene, token: tokenDocument });
-    const message: AnyMutableObject = { data: { speaker } };
-    // if (!actor?.hasPlayerOwner && workflow) message.create = false - this breaks save checking from chat card
-    if (token instanceof foundry.canvas.placeables.Token) foundry.utils.setProperty(message, "flags.midi-qol.requestId", token.document.uuid);
-    else foundry.utils.setProperty(message, "flags.midi-qol.requestId", token?.uuid);
-    // Its row on the card, whoever the save message's speaker is (an actor with no token, another of its tokens)
-    const targetUuid = tokenDocument?.uuid ?? getTokenDocument(actor)?.uuid;
-    if (targetUuid) foundry.utils.setProperty(message, "data.flags.midi-qol.targetUuid", targetUuid);
-    // v14 message-mode strings (CONFIG.ChatMessage.modes keys) so the value matches the roll dialog's options
-    if (["none", "allShow"].includes(configSettings.autoCheckSaves) || actor?.hasPlayerOwner) message.rollMode = safeGetGameSetting("core", "messageMode");
-    else message.rollMode = "gm";
-    if (!game.user?.isGM) {
-      if (configSettings.playerRollSaves === "noneDialogPublic") message.rollMode = "public";
-      else if (configSettings.playerRollSaves === "noneDialogPrivate") message.rollMode = "gm";
-      else if (configSettings.playerRollSaves === "noneDialogSelf") message.rollMode = "self";
-      else if (configSettings.playerRollSaves === "noneDialogBlind") message.rollMode = "blind";
-      else message.rollMode = safeGetGameSetting("core", "messageMode");
-    }
-
-
-    //@ts-expect-error no dnd5e types
-    await actor?.rollSavingThrow({
-      event,
-      workflow,
-      //@ts-expect-error this has been bound to an activity
-      ability: button.ability ?? activity.save.ability.first(),
-      //@ts-expect-error this has been bound to an activity
-      target: configSettings.autoCheckSaves === "whisper" ? undefined : (Number.isFinite(dc) ? dc : activity.save.dc.value)
-    }, {}, message);
-  }
-}
-
 registerCardActions(["save"], {
-  rollDamage: cardRollDamage,
-  rollSave: cardRollSave
+  rollDamage: cardRollDamage
 });
