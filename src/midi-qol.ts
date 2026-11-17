@@ -429,6 +429,7 @@ Hooks.once('init', async function () {
   window.customElements.define("midi-damage-application", DamageApplicationElementMidi as unknown as CustomElementConstructor);
   setupActivities();
   defineCoverService();
+  definePerceptionService();
   Hooks.on("midi-qol.ConfigSettingsChanged", refreshServices);
   Hooks.callAll("midi-qol.registerServices", servicesApi);
   setupCATIntegration();
@@ -997,15 +998,13 @@ import { fillRulesText } from "./module/lib/rulesText.js";
 import { MIDI_API_VERSION, isRunning, markRunning } from "./module/api/contract.js";
 import { refreshServices, servicesApi } from "./module/api/services.js";
 import { defineCoverService } from "./module/services/cover.js";
+import { definePerceptionService, isImprecise } from "./module/services/perception.js";
 
 // Add any additional hooks if necessary
 // Phase 2: setup hook — properties that depend on CONFIG, settings, i18n, or game state
 function setupMidiQOLApi() {
 
-  const detectionModes = CONFIG.Canvas.detectionModes;
-  const InvisibleDisadvantageVisionModes = Object.keys(detectionModes)
-    //@ts-expect-error I think imprecise is added by a module - TODO Check
-    .filter(dm => !detectionModes[dm].imprecise);
+  const InvisibleDisadvantageVisionModes = Object.keys(CONFIG.Canvas.detectionModes).filter(dm => !isImprecise(dm));
 
   const humanoid = ["human", "humanoid", "elven", "elf", "half-elf", "drow", "dwarf", "dwarven", "halfling", "gnome", "tiefling", "orc", "dragonborn", "half-orc"];
 

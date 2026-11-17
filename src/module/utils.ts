@@ -1,5 +1,6 @@
 import { DialogCountdown } from "./lib/dialogCountdown.js";
 import { coverBetween } from "./services/cover.js";
+import { sensesModes } from "./services/perception.js";
 import { applyDamageRules, collectDamageRules, copyDamageOptions } from "./lib/damageRules.js";
 import type { AttackModifier } from "./Workflow.js";
 import { TokenDocumentSet, hookTarget, memberCount, rememberSyntheticToken, tokenOf } from "./lib/tokenDocumentSet.js";
@@ -8715,7 +8716,7 @@ export function canSenseModes(tokenEntity: TokenOrDocument | string, targetEntit
   const token = getToken(tokenEntity);
   const target = getToken(targetEntity);
   if (!token || !target) return [];
-  return _canSenseModes(token, target, validModes, options);
+  return sensesModes(token, target, { modes: validModes, forceVision: options.forceVision });
 }
 const newCheckVisionSource = (tk: Token.Implementation) => new CONFIG.Canvas.visionSourceClass({ sourceId: `${tk.sourceId}.midiCheck`, object: tk });
 type CheckVisionSource = ReturnType<typeof newCheckVisionSource> | NonNullable<Token.Implementation["vision"]>;
@@ -9558,15 +9559,11 @@ export async function chooseEffect({ actor, token, item, workflow, options }: {
   return chosenEffect;
 }
 
-export function canSee(tokenEntity: TokenOrDocument, targetEntity: TokenOrDocument, options: SenseOptions = {}) {
-  const NON_SIGHT_CONSIDERED_SIGHT = ["blindsight"];
-  const detectionModes = CONFIG.Canvas.detectionModes;
-  const sightDetectionModes = Object.keys(detectionModes).filter(
-    (d) =>
-      detectionModes[d].type === foundry.canvas.perception.DetectionMode.DETECTION_TYPES.SIGHT ||
-      NON_SIGHT_CONSIDERED_SIGHT.includes(d)
-  );
-  return canSense(tokenEntity, targetEntity, sightDetectionModes, options);
+export function canSee(tokenEntity: TokenOrDocument, targetEntity: TokenOrDocument, options: SenseOptions = {}): boolean {
+  const token = getToken(tokenEntity);
+  const target = getToken(targetEntity);
+  if (!token || !target) return false;
+  return sensesModes(token, target, { modes: "sight", forceVision: options.forceVision }).length > 0;
 }
 
 export function sumRolls(rolls: Array<Roll> | undefined = [], countHealing?: "ignore" | "negative" | "positive" | "negativeIgnoreTemp" | "positiveIgnoreTemp"): number {

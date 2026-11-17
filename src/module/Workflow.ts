@@ -4205,6 +4205,7 @@ export class Workflow {
 
     // Check hidden
     if (checkRule("hiddenAdvantage") && checkRule("hiddenAdvantage") !== "none" && firstTarget) {
+      // TODO: Perceptive could become an async hiddenFrom provider of the perception service
       if (checkRule("hiddenAdvantage") === "perceptive" && installedModules.get("perceptive")) {
         //@ts-expect-error .api
         const perceptiveApi = game.modules.get("perceptive")?.api;

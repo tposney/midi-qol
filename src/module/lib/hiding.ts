@@ -1,5 +1,6 @@
 import { MODULE_ID } from "../../midi-qol.js";
 import { checkRule, configSettings } from "../settings.js";
+import { isHiddenFrom } from "../services/perception.js";
 
 /**
  * dnd5e's Hiding status works as Invisible towards the creatures that don't perceive the hider. While Foundry (or
@@ -58,8 +59,13 @@ export function passivePerception(actor: Actor.Implementation | null | undefined
   return actor?.system.skills?.prc?.passive ?? 0;
 }
 
-/** Whether a hiding target is hidden from `viewer` */
+/** Whether a hiding target is hidden from `viewer`: the perception service's answer */
 export function hiddenFrom(target: TokenDocument.Implementation, viewer: TokenDocument.Implementation): boolean {
+  return isHiddenFrom(target, viewer);
+}
+
+/** midi's answer (the perception service's default provider) */
+export function midiHiddenFrom(target: TokenDocument.Implementation, viewer: TokenDocument.Implementation): boolean {
   const mode = checkRule("hiddenAdvantage");
   if (mode !== "perObserver" && mode !== "perObserverPassive") return false;
   if (target === viewer || !target.actor?.statuses.has(HIDING)) return false;
