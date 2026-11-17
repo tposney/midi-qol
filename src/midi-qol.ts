@@ -13,7 +13,7 @@ import { setupMagicSight, drawnMagicSight } from './module/magicSight.js';
 import { SaferSocket, initGMActionSetup, setupSocket, socketlibSocket, unTimedExecuteAsGM } from './module/GMAction.js';
 import { setupSheetQol } from './module/sheetQOL.js';
 import { TrapWorkflow, DamageOnlyWorkflow, Workflow, DummyWorkflow, UserWorkflow } from './module/Workflow.js';
-import { addConcentrationDependent, addRollTo, addRollToAsync, applyTokenDamage, applyTokenDamageMany, canSee, canSense, canSenseModes, checkDistance, checkIncapacitated, checkNearby, chooseEffect, completeItemUse, computeCoverBonus, getCoverBonus, tokenAtPosition, createConditionData, throttledUpdate, displayDSNForRoll, doConcentrationCheck, doOverTimeEffect, evalAllConditions, evalCondition, findNearby, findNearbyCount, getCachedDocument, getChanges, getConcentrationEffect, getTokenDocument, getOrCreateTokenForActor, getOrCreateTokenForActorAsSet, getTokenPlayerName, getTokenPlayerNameForUser, getTraitMult, hasCondition, hasUsedBonusAction, hasUsedReaction, isValidTarget, midiRenderAttackRoll, midiRenderBonusDamageRoll, midiRenderDamageRoll, midiRenderOtherDamageRoll, midiRenderRoll, fromActorUuid, playerFor, playerForActor, raceOrType, reactionDialog, removeHiddenCondition, removeInvisibleCondition, removeReactionUsed, setActionUsed, setBonusActionUsed, setReactionUsed, hasUsedAction, tokenForActor, typeOrRace, validRollAbility, actorFromUuid, removeActionUsed, removeBonusActionUsed, getCheckRollModeFor, getSaveRollModeFor, completeActivityUse, checkActivityRange, unseenTargets, totalCoverTargets, modifyDamageBy, computeDistance, convertDuration, splitOvertimeSpec, isRangeCheckable, activityRanges, getDistance, getItemFromEffectOrigin, addDependent, cleanCPRFlanked, updatesCache, createDamageDetail, activityHasEmanationNoTemplate, getVitalityItem, getVitalityValue, getVitalityMax, hasVitalitySystem, resolveItemMacro, resolveActivityMacro, setupMidiFlagTypes, initCoverConstants, ReactionDialog, RollModifyDialog, sizeNumeric, restoreWorkflowTokenSets, setupMarkerChecks, setupCheckVision, toggleStatus } from './module/utils.js';
+import { addConcentrationDependent, addRollTo, addRollToAsync, applyTokenDamage, applyTokenDamageMany, canSee, canSense, canSenseModes, checkDistance, checkIncapacitated, checkNearby, chooseEffect, completeItemUse, computeCoverBonus, getCoverBonus, tokenAtPosition, createConditionData, throttledUpdate, displayDSNForRoll, doConcentrationCheck, doOverTimeEffect, evalAllConditions, evalCondition, findNearby, findNearbyCount, getCachedDocument, getChanges, getConcentrationEffect, getTokenDocument, getOrCreateTokenForActor, getOrCreateTokenForActorAsSet, getTokenPlayerName, getTokenPlayerNameForUser, getTraitMult, hasCondition, hasUsedBonusAction, hasUsedReaction, isValidTarget, midiRenderAttackRoll, midiRenderBonusDamageRoll, midiRenderDamageRoll, midiRenderOtherDamageRoll, midiRenderRoll, fromActorUuid, playerFor, playerForActor, raceOrType, reactionDialog, removeHiddenCondition, removeInvisibleCondition, removeReactionUsed, setActionUsed, setBonusActionUsed, setReactionUsed, hasUsedAction, tokenForActor, typeOrRace, validRollAbility, actorFromUuid, removeActionUsed, removeBonusActionUsed, getCheckRollModeFor, getSaveRollModeFor, completeActivityUse, checkActivityRange, unseenTargets, totalCoverTargets, modifyDamageBy, computeDistance, convertDuration, splitOvertimeSpec, isRangeCheckable, activityRanges, getDistance, getItemFromEffectOrigin, addDependent, updatesCache, createDamageDetail, activityHasEmanationNoTemplate, getVitalityItem, getVitalityValue, getVitalityMax, hasVitalitySystem, resolveItemMacro, resolveActivityMacro, setupMidiFlagTypes, initCoverConstants, ReactionDialog, RollModifyDialog, sizeNumeric, restoreWorkflowTokenSets, setupMarkerChecks, setupCheckVision, toggleStatus } from './module/utils.js';
 import { addFollowUp } from './module/followUps.js';
 import { highlightTokens } from './module/lib/tokenHighlight.js';
 import { ConfigPanel } from './module/apps/ConfigPanel.js';
@@ -407,6 +407,7 @@ function setupActivities() {
   setupForwardActivity();
   globalThis.MidiQOL.activityTypes["forward"] = { documentClass: MidiForwardActivity };
   globalThis.MidiQOL.activityTypes["MidiActivityMixin"] = MidiActivityMixin;
+  setupActivityTitles();
 }
 
 Hooks.once('init', async function () {
@@ -837,7 +838,6 @@ function addConfigOptions() {
 /* When ready							*/
 /* ------------------------------------ */
 Hooks.once('ready', function () {
-  cleanCPRFlanked();
   addConfigOptions();
   // allDamageTypes = {};
   // allDamageTypes.none = foundry.utils.duplicate(GameSystemConfig.damageTypes["midi-none"]);
@@ -969,7 +969,7 @@ import { MidiCastActivity, setupCastActivity } from './module/activities/CastAct
 import { MidiCheckActivity, setupCheckActivity } from './module/activities/CheckActivity.js';
 import { MidiHealActivity, setupHealActivity } from './module/activities/HealActivity.js';
 import { computeTargetsFromTemplates, requiresTargetConfirmation, resolveTargetConfirmation, selectTargetsFromTemplates, showItemInfo } from './module/activities/activityHelpers.js';
-import { MidiActivityMixin, setupMidiActivityMixin } from './module/activities/MidiActivityMixin.js';
+import { MidiActivityMixin, setupActivityTitles, setupMidiActivityMixin } from './module/activities/MidiActivityMixin.js';
 import { MidiForwardActivity, setupForwardActivity } from './module/activities/ForwardActivity.js';
 import { MidiEnchantActivity, setupEnchantActivity } from './module/activities/EnchantActivity.js';
 import { MidiTransformActivity, setupTransformActivity } from './module/activities/TransformActivity.js';

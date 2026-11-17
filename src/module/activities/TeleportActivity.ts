@@ -81,7 +81,7 @@ let defineMidiTeleportActivityClass = <T extends Activity>(ActivityClass: T) => 
     static metadata =
       foundry.utils.mergeObject(
         super.metadata, {
-        title: configSettings.activityNamePrefix ? "midi-qol.TELEPORT.Title.one" : ActivityClass.metadata.title,
+        midiTitle: "midi-qol.TELEPORT.Title.one",
         dnd5eTitle: ActivityClass.metadata.title,
         sheetClass: MidiTeleportSheet,
         // No `chatCard` (see UtilityActivity). The card's Teleport button runs midi's planning.

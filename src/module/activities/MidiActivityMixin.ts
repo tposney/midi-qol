@@ -2739,6 +2739,25 @@ function renderActivitySheetHook(app, [elem]) {
 }
 
 export let MidiActivityUsageDialog;
+/**
+ * Each midi activity type's title (its `midiTitle`, else dnd5e's), chosen by the Activity Prefix setting when it is read:
+ * the classes are defined before midi's settings load, and Boss Loot FX turns the prefix off as they do.
+ */
+export function setupActivityTitles() {
+  for (const config of Object.values(GameSystemConfig.activityTypes)) {
+    const cls = config?.documentClass;
+    const metadata: unknown = cls && "metadata" in cls ? cls.metadata : undefined;
+    if (typeof metadata !== "object" || metadata === null || !("midiTitle" in metadata) || typeof metadata.midiTitle !== "string") continue;
+    const midiTitle = metadata.midiTitle;
+    const dnd5eTitle = "dnd5eTitle" in metadata ? metadata.dnd5eTitle : undefined;
+    Object.defineProperty(metadata, "title", {
+      get: () => configSettings.activityNamePrefix ? midiTitle : dnd5eTitle,
+      configurable: true,
+      enumerable: true
+    });
+  }
+}
+
 export function setupMidiActivityMixin() {
   //@ts-expect-error
   const ActivityUsageDialog = game.system.applications.activity.ActivityUsageDialog;

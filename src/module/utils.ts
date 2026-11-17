@@ -3096,44 +3096,13 @@ export function checkWallCollision(
   const level = collisionLevel(source);
   let blocked: boolean;
 
-  switch (wallsBlockRange) {
-    case "center": {
-      blocked = !!wallBlocksPath(origin, dest, source, level);
-      // v14: also check region surface collisions for cross-elevation rays
-      if (!blocked) blocked = checkSurfaceCollision(origin, dest, options);
-      return blocked;
-    }
-
-    case "levelsautocover":
-      // Unresolved by the levelsautocover pre-check falls back to the "center" check - Levels has
-      // no collision API on v14, only a Scene#testSurfaceCollision wrapper.
-      if (coverVisible === false) return true;
-      if (coverVisible !== undefined) return false;
-      blocked = !!wallBlocksPath(origin, dest, source, level);
-      if (!blocked) blocked = checkSurfaceCollision(origin, dest, options);
-      return blocked;
-
-    case "alternative":
-      if (coverVisible === undefined) {
-        blocked = !!wallBlocksPath(origin, dest, source, level);
-        if (!blocked) blocked = checkSurfaceCollision(origin, dest, options);
-        return blocked;
-      }
-      return false;
-
-    case "simplecover5e":
-      // simplecover5e wall blocking is handled entirely by the pre-check (getCover with losCheck: true)
-      // No per-ray fallback — if the pre-check didn't resolve, we don't block
-      return false;
-
-    case "tokencover":
-      // tokencover is handled entirely by pre-check, no per-segment check needed
-      return false;
-
-    case "none":
-    default:
-      return false;
-  }
+  if (wallsBlockRange === "none") return false;
+  // A cover module (AutoCover) has answered for the whole target
+  if (coverVisible !== undefined) return !coverVisible;
+  blocked = !!wallBlocksPath(origin, dest, source, level);
+  // v14: also check region surface collisions for cross-elevation rays
+  if (!blocked) blocked = checkSurfaceCollision(origin, dest, options);
+  return blocked;
 }
 
 /**
@@ -3160,10 +3129,10 @@ function shapesOverlap(poly1: PIXI.Polygon, poly2: PIXI.Polygon): boolean {
 }
 
 /**
- * Run module-level pre-checks (levelsautocover, tokencover, simplecover5e)
- * to determine if a target is fully blocked before doing per-ray wall checks.
- * Returns { blocked: true } if the module says total cover,
- * or { coverVisible } to pass through to per-ray checks.
+ * Whether the selected wall check's cover module says the target is walled off. Only AutoCover is asked, when walls
+ * block and cover counts: its total cover follows movement walls. Simple Cover's and Alternative Token Cover's total
+ * cover follows sight (a curtain would block an attack, a window wouldn't), so with them, as without a module, midi's
+ * movement wall rays decide (`coverVisible` undefined).
  */
 function computeWallBlockPreCheck(
   t1: Token.Implementation,
@@ -3171,33 +3140,51 @@ function computeWallBlockPreCheck(
   wallsBlock: boolean,
   includeCover: boolean
 ): { blocked: boolean, coverVisible?: boolean | undefined } {
-  const wallsBlockRange = configSettings.optionalRules.wallsBlockRange;
-  if (wallsBlockRange === "levelsautocover" && wallsBlock && includeCover) {
-    const tier = autoCoverTier(t1, t2);
-    if (tier) return tier === "total" ? { blocked: true } : { blocked: false, coverVisible: true };
-    // AutoCover not in use or failed: midi's own wall check
-    return { blocked: false, coverVisible: undefined };
-  } else if (installedModules.get("tokencover") && wallsBlockRange === "tokencover" && includeCover) {
-    const coverValue = calcTokenCover(t1, t2);
-    const result = (coverValue === 3 && wallsBlock) ? { blocked: true } : { blocked: false, coverVisible: true };
-    return result;
-  } else if (installedModules.get("simplecover5e") && wallsBlockRange === "simplecover5e" && wallsBlock) {
-    //@ts-expect-error
-    const simpleCoverApi = game.modules.get("simplecover5e")?.api;
-    if (simpleCoverApi) {
-      // If we're using simple cover to determine walls block have to use losCheck: true, otherwise will never return more than 3/4 cover
-      // const losCheck = !!safeGetGameSetting("simplecover5e", "losCheck");
-      const coverResult = simpleCoverApi.getCover({
-        attacker: t1,
-        target: t2,
-        scene: t1.scene,
-        losCheck: true
-      });
-      const result = (coverResult?.bonus === null || coverResult?.cover === "total") ? { blocked: true } : { blocked: false, coverVisible: true };
-      return result;
-    }
+  if (!wallsBlock || !includeCover || configSettings.optionalRules.wallsBlockRange !== "levelsautocover") return { blocked: false, coverVisible: undefined };
+  const tier = autoCoverTier(t1, t2);
+  // AutoCover not in use or failed: midi's own wall check
+  if (!tier) return { blocked: false, coverVisible: undefined };
+  return tier === "total" ? { blocked: true } : { blocked: false, coverVisible: true };
+}
+
+/** A point standing in for an attacker (a template's origin for Simple Cover) */
+type CoverPoint = { center: { x: number, y: number }, elevation?: number };
+
+/** The target's test points for wall rays: its centre and two rings around it (as _canSenseModes) */
+function wallTestPoints(target: Token.Implementation): PIXI.Point[] {
+  const centre = tokenSourceCenter(target);
+  const t = Math.min(target.w, target.h) / 4;
+  const edge = Math.min(target.w, target.h) / 2 - 2;
+  const offsets = t > 0 ? [
+    [0, 0], [-t, -t], [-t, t], [t, t], [t, -t], [-t, 0], [t, 0], [0, -t], [0, t],
+    [-edge, -edge], [-edge, edge], [edge, edge], [edge, -edge], [-edge, 0], [edge, 0], [0, -edge], [0, edge]
+  ] : [[0, 0]];
+  return offsets.map(o => new PIXI.Point(centre.x + o[0], centre.y + o[1]));
+}
+
+/**
+ * Total cover from walls: every line from the attacker (or the point it stands for, a template's origin) to the
+ * target's test points crosses a wall that blocks movement, or a surface. Whatever the wall check setting.
+ */
+export function wallsGiveTotalCover(attacker: Token.Implementation | CoverPoint, target: Token.Implementation): boolean {
+  if (attacker === target || !canvas?.scene) return false;
+  const gridDistance = canvas.dimensions?.distance ?? 5;
+  let centre: { x: number, y: number }, originElevation: number, originTopElevation: number, source: TokenDocument.Implementation | undefined;
+  if (attacker instanceof foundry.canvas.placeables.Token) {
+    if (attacker.actor && foundry.utils.getProperty(attacker.actor, `flags.${MODULE_ID}.ignoreWalls`)) return false;
+    centre = tokenSourceCenter(attacker);
+    originElevation = getTokenVisionElevation(attacker, "visionSourceHeight");
+    originTopElevation = tokenSourceElevation(attacker) + Math.max(attacker.document.height ?? 1, attacker.document.width ?? 1) * gridDistance;
+    source = attacker.document;
+  } else {
+    centre = attacker.center;
+    originElevation = originTopElevation = attacker.elevation ?? 0;
   }
-  return { blocked: false, coverVisible: undefined };
+  const origin = new PIXI.Point(centre.x, centre.y);
+  const destElevation = getTokenVisionElevation(target, "visionTargetHeight");
+  const destTopElevation = tokenSourceElevation(target) + Math.min(target.document.height ?? 1, target.document.width ?? 1) * gridDistance;
+  return wallTestPoints(target).every(point => checkWallCollision(origin, point, {
+    source, wallsBlockRange: "center", originElevation, destElevation, originTopElevation, destTopElevation }));
 }
 
 
@@ -3254,14 +3241,7 @@ export function computePerimeterDistance(
       // Block only if ALL rays are blocked by walls.
       if (preCheck.coverVisible === undefined) {
         const srcCenter = tokenSourceCenter(token1);
-        const tgtCenter = tokenSourceCenter(token2);
-        const t = Math.min((token2 as Token).w, (token2 as Token).h) / 4;
-        const t2half = Math.min((token2 as Token).w, (token2 as Token).h) / 2 - 2;
-        const offsets = t > 0 ? [
-          [0, 0], [-t, -t], [-t, t], [t, t], [t, -t], [-t, 0], [t, 0], [0, -t], [0, t],
-          [-t2half, -t2half], [-t2half, t2half], [t2half, t2half], [t2half, -t2half], [-t2half, 0], [t2half, 0], [0, -t2half], [0, t2half]
-        ] : [[0, 0]];
-        const testPoints = offsets.map(o => new PIXI.Point(tgtCenter.x + o[0], tgtCenter.y + o[1]));
+        const testPoints = wallTestPoints(token2 as Token.Implementation);
         const srcOrigin = new PIXI.Point(srcCenter.x, srcCenter.y);
 
         const t1Elevation = tokenSourceElevation(token1);
@@ -4175,7 +4155,7 @@ export function computeCoverBonus(attackerIn: TokenOrDocument | undefined, targe
     foundry.utils.logCompatibilityWarning("computeCoverBonus(attacker, target, item) is deprecated in favor of computeCoverBonus(attacker, target, activity)");
   }
   if (!target) return 0;
-  // AutoCover can measure from an origin (a template's) without an attacker
+  // AutoCover can measure from an origin (a template's) without an attacker; Alternative Token Cover needs the attacker
   if (configSettings.optionalRules.coverCalculation === "levelsautocover") {
     const tier = autoCoverTier(attacker ?? undefined, target, options.origin);
     return tier ? autoCoverBonus(tier) : 0;
@@ -4190,19 +4170,16 @@ export function computeCoverBonus(attackerIn: TokenOrDocument | undefined, targe
         //@ts-expect-error
         const simpleCoverApi = game.modules.get("simplecover5e")?.api;
         if (!installedModules.get("simplecover5e") || !simpleCoverApi) return 0;
-          // simplecover5e caps at 3/4 cover from occluders — check LOS first via wallsBlockRange
-          if (attacker !== target && configSettings.optionalRules.wallsBlockRange !== "none") {
-            const preCheck = computeWallBlockPreCheck(attacker as Token.Implementation, target as Token.Implementation, true, true);
-            if (preCheck.blocked) {
-              coverBonus = TOTAL_COVER;
-              break;
-            }
+          // Total cover is midi's (movement walls); Simple Cover's own (losCheck) follows sight walls. Its partial cover is kept.
+          if (wallsGiveTotalCover(attacker, target)) {
+            coverBonus = TOTAL_COVER;
+            break;
           }
           const coverOptions: any = {
             attacker,
             target,
             scene: attacker.scene,
-            losCheck: true
+            losCheck: false
           };
           if (activity) coverOptions.activity = activity;
           const coverResult = simpleCoverApi.getCover(coverOptions);
@@ -4213,7 +4190,7 @@ export function computeCoverBonus(attackerIn: TokenOrDocument | undefined, targe
       case "tokencover":
         if (!installedModules.get("tokencover")) coverBonus = 0;
         else {
-          const coverValue = calcTokenCover(attacker, target);
+          const coverValue = calcTokenCover(attacker, target, options.origin);
           if (coverValue === 4 || coverValue === 3) coverBonus = TOTAL_COVER;
           else if (coverValue === 2) coverBonus = THREE_QUARTERS_COVER;
           else if (coverValue === 1) coverBonus = HALF_COVER;
@@ -8345,11 +8322,11 @@ export function getFlankedEffect() {
 
 export function getReactionEffect() {
   if (!midiReactionEffect) return undefined;
-  return getCPREffect(midiReactionEffect._id!) ?? midiReactionEffect;
+  return midiReactionEffect;
 }
 export function getBonusActionEffect() {
   if (!midiBonusActionEffect) return undefined;
-  return getCPREffect(midiBonusActionEffect._id!) ?? midiBonusActionEffect;
+  return midiBonusActionEffect;
 }
 
 let _markFlankingPromise: Promise<boolean> = Promise.resolve(false);
@@ -8392,21 +8369,8 @@ async function _markFlankingImpl(token?: Token.Implementation | null, target?: T
     } else if (flankingMode === "midiFlanking") {
       const MidiFlanking: any = CONFIG.statusEffects.find(se => se.id === "flanking");
       if (!MidiFlanking) return false;
-      let cprEffect: ActiveEffect | undefined = getCPREffect(MidiFlanking?._id as string)
-      if (!cprEffect) {
-        if (!token.actor?.isOwner) await unTimedExecuteAsGM("toggleStatusEffect", { actorUuid: token.actor?.uuid, statusId: MidiFlanking.id, options: { active: needsFlanking } });
-        else await toggleStatus(token.actor, MidiFlanking.id, { active: needsFlanking });
-      } else if (needsFlanking) {
-        if (!token.actor?.effects.get(cprEffect.id!)) {
-          if (!token.actor?.isOwner) await unTimedExecuteAsGM("createEffects", { actorUuid: token.actor?.uuid, effects: [cprEffect.toObject()], options: { keepId: true } });
-          else await queueActorEffects(token.actor, () => createEffectWithId(token.actor!, cprEffect!.toObject()));
-        }
-      } else {
-        if (token.actor?.effects.get(cprEffect.id!)) {
-          if (!target.actor.isOwner) await unTimedExecuteAsGM("removeEffects", { actorUuid: token.actor.uuid, effects: [cprEffect.id], options: {} });
-          await token.actor.deleteEmbeddedDocuments("ActiveEffect", [cprEffect.id!]);
-        }
-      }
+      if (!token.actor?.isOwner) await unTimedExecuteAsGM("toggleStatusEffect", { actorUuid: token.actor?.uuid, statusId: MidiFlanking.id, options: { active: needsFlanking } });
+      else await toggleStatus(token.actor, MidiFlanking.id, { active: needsFlanking });
     }
     // advonly: no status to apply
     return needsFlanking;
@@ -8430,21 +8394,8 @@ async function _markFlankingImpl(token?: Token.Implementation | null, target?: T
     } else if (["midiFlanked", "midiFlankedNoConga"].includes(flankingMode)) {
       const MidiFlanked = CONFIG.statusEffects.find(se => se.id === "flanked");
       if (!MidiFlanked) return false;
-      const cprEffect: ActiveEffect | undefined = getCPREffect(MidiFlanked?._id as string)
-      if (!cprEffect) {
-        if (!target.actor.isOwner) await unTimedExecuteAsGM("toggleStatusEffect", { actorUuid: target.actor.uuid, statusId: MidiFlanked.id, options: { active: needsFlanked } });
-        else await toggleStatus(target.actor, MidiFlanked.id, { active: needsFlanked });
-      } else if (needsFlanked) {
-        if (!target.actor.effects.get(cprEffect.id!)) {
-          if (!target.actor.isOwner) await unTimedExecuteAsGM("createEffects", { actorUuid: target.actor.uuid, effects: [cprEffect.toObject()], options: { keepId: true } });
-          else await queueActorEffects(target.actor, () => createEffectWithId(target.actor!, cprEffect!.toObject()));
-        }
-      } else {
-        if (target.actor.effects.get(cprEffect.id!)) {
-          if (!target.actor.isOwner) await unTimedExecuteAsGM("removeEffects", { actorUuid: target.actor.uuid, effects: [cprEffect.id], options: {} });
-          else await target.actor.deleteEmbeddedDocuments("ActiveEffect", [cprEffect.id!]);
-        }
-      }
+      if (!target.actor.isOwner) await unTimedExecuteAsGM("toggleStatusEffect", { actorUuid: target.actor.uuid, statusId: MidiFlanked.id, options: { active: needsFlanked } });
+      else await toggleStatus(target.actor, MidiFlanked.id, { active: needsFlanked });
     }
     return needsFlanked;
   }
@@ -9198,12 +9149,23 @@ export function getPlaceable(tokenRef?: Actor.Implementation | TokenOrDocument |
   return undefined;
 }
 
-export function calcTokenCover(attacker: TokenOrDocument, target: TokenOrDocument): number {
+type TokenCoverCalculator = { targetCover(target: TokenOrDocument): number };
+type TokenCoverCalculatorClass = {
+  createCoverCalculatorForTokenLocation?(token: Token.Implementation, position: { x: number, y: number }, elevation?: number): TokenCoverCalculator | undefined
+};
+
+/** Alternative Token Cover's calculator for the attacker, or one for the attacker standing at `origin` (a template's) */
+function tokenCoverCalculator(attacker: Token.Implementation, origin?: CoverPosition): TokenCoverCalculator | undefined {
+  const calculator = "coverCalculator" in attacker ? attacker.coverCalculator as TokenCoverCalculator | undefined : undefined;
+  if (!origin || !calculator) return calculator;
+  const calculatorClass = calculator.constructor as TokenCoverCalculatorClass;
+  return calculatorClass.createCoverCalculatorForTokenLocation?.(attacker, { x: origin.x, y: origin.y }, origin.elevation) ?? calculator;
+}
+
+export function calcTokenCover(attacker: TokenOrDocument, target: TokenOrDocument, origin?: CoverPosition): number {
   const attackerToken = getToken(attacker);
   const targetToken = getToken(target);
-
-  //@ts-expect-error .coverCalc
-  const coverCalc = attackerToken?.coverCalculator;
+  const coverCalc = attackerToken ? tokenCoverCalculator(attackerToken, origin) : undefined;
   if (!attackerToken || !targetToken || !coverCalc) {
     let message = "midi-qol | calcTokenCover | failed";
     if (!coverCalc)
@@ -9217,8 +9179,7 @@ export function calcTokenCover(attacker: TokenOrDocument, target: TokenOrDocumen
     console.warn(message, err);
     return 0;
   }
-  let targetCover = coverCalc.targetCover(target);
-  return targetCover;
+  return coverCalc.targetCover(target);
 }
 
 const MaxNameLength = 20;
@@ -10205,12 +10166,6 @@ export function setRangedTargets(tokenToUse: Token.Implementation, targetDetails
   return true;
 }
 
-// CPR's effect-interface item was removed. Return undefined (callers fall back to midi's built-ins)
-// until a future CPR version provides a new effect source — wire it up here. TODO(CPR).
-function getCPREffect(id: string): ActiveEffect.Implementation | undefined {
-  return undefined;
-}
-
 // --- Target save/restore ---
 
 export function updateUserTargets(targetIds: string[]) {
@@ -10272,30 +10227,6 @@ export function onUserManualTarget(user: User) {
   }
 }
 
-export async function cleanCPRFlanked() {
-  const flankedId = getStaticID("flanked");
-  let cprEffect = getCPREffect(flankedId);
-  if (!cprEffect) return;
-  let updateNeeded = false;
-  // @ts-expect-error v14 system.changes not typed in fvtt-types
-  const changes = foundry.utils.deepClone(cprEffect.system.changes);
-  changes.forEach(c => {
-    if (c.key === "flags.midi-qol.grants.attack.advantage.mwak") {
-      c.key = "flags.midi-qol.grants.advantage.attack.mwak";
-      updateNeeded = true;
-    }
-    if (c.key === "flags.midi-qol.grants.attack.advantage.msak") {
-      c.key = "flags.midi-qol.grants.advantage.attack.msak";
-      updateNeeded = true;
-    }
-  });
-  if (updateNeeded) {
-    // @ts-expect-error v14 system.changes not typed in fvtt-types
-    await cprEffect.update({ "system.changes": changes });
-    console.warn("midi-qol | cleanCPRFlanked | corrected flanked effect", cprEffect);
-  }
-  cprEffect = getCPREffect(flankedId);
-}
 export function getItemFromEffectOrigin(origin: string, alreadyVisited: string[] = []): Item.Implementation | undefined {
   let originItem: Item.Implementation | undefined;
   if (alreadyVisited.includes(origin)) return;

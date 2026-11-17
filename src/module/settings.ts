@@ -696,6 +696,9 @@ export let fetchParams = () => {
   // Simbul's Cover Calculator has no Foundry 14 release
   if (String(configSettings.optionalRules.wallsBlockRange) === "simbuls-cover-calculator") configSettings.optionalRules.wallsBlockRange = "center";
   if (String(configSettings.optionalRules.coverCalculation) === "simbuls-cover-calculator") configSettings.optionalRules.coverCalculation = "none";
+  // Alternative Token Visibility's cover moved to Alternative Token Cover long ago: a stored choice of it did nothing
+  if (String(configSettings.optionalRules.wallsBlockRange) === "tokenvisibility") configSettings.optionalRules.wallsBlockRange = "center";
+  if (String(configSettings.optionalRules.coverCalculation) === "tokenvisibility") configSettings.optionalRules.coverCalculation = "none";
   //@ts-expect-error legacy boolean value
   if (configSettings.optionalRules.checkFlanking === true) configSettings.optionalRules.checkFlanking = "ceadv";
   if (!configSettings.optionalRules.coverCalculation) configSettings.optionalRules.coverCalculation = "none";

@@ -32,7 +32,7 @@ let defineMidiUtilityActivityClass = <T extends Activity>(ActivityClass: T) => {
     static metadata =
       foundry.utils.mergeObject(
         super.metadata, {
-        title: configSettings.activityNamePrefix ? "midi-qol.UTILITY.Title.one" : ActivityClass.metadata.title,
+        midiTitle: "midi-qol.UTILITY.Title.one",
         dnd5eTitle: ActivityClass.metadata.title,
         sheetClass: MidiUtilitySheet,
         usage: {

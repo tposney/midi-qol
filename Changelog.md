@@ -1,3 +1,10 @@
+### 14.6.14
+* Fixed: *Activity Prefix* off still named midi's activities "Midi …" (since 14.6.9), and Boss Loot FX no longer turned the prefix off, so its animations by activity name didn't play.
+* Fixed: with Simple Cover chosen for *Walls block ranged attacks* or to calculate cover, total cover followed sight walls: a curtain blocked an attack and a window didn't. Total cover from walls is now midi's (walls that block movement) whichever module is chosen; Simple Cover and Alternative Token Cover supply partial cover. AutoCover is unchanged.
+* Fixed: target confirmation for a target in cover ignored a cover status on the target.
+* Fixed: with Alternative Token Cover, a DEX save's cover against an area was measured from the caster, not the area's origin.
+* Changed: a stored *Alternative Token Visibility* choice for walls or cover (it did nothing) becomes *Centre* / *None*.
+
 ### 14.6.13
 This is the last 14.6 release. Later releases (14.7.0 onward) are for dnd5e 6.1 or later. Once 14.7.0 is out, the update check offers it (Foundry warns that it needs dnd5e 6.1); a world staying on dnd5e 6.0 installs 14.6.13 from its own manifest: https://github.com/tposney/midi-qol/releases/download/v14.6.13/module.json
 

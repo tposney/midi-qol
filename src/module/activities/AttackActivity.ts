@@ -198,7 +198,7 @@ let defineMidiAttackActivityClass = <T extends Activity>(ActivityClass: T) => {
       foundry.utils.mergeObject(
         super.metadata, {
         sheetClass: MidiAttackSheet,
-        title: configSettings.activityNamePrefix ? "midi-qol.ATTACK.Title.one" : ActivityClass.metadata.title,
+        midiTitle: "midi-qol.ATTACK.Title.one",
         dnd5eTitle: ActivityClass.metadata.title,
         usage: {
           /*

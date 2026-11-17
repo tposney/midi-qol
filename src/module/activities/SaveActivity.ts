@@ -30,7 +30,7 @@ let defineMidiSaveActivityClass = <T extends Activity>(ActivityClass: T) => {
     static metadata =
       foundry.utils.mergeObject(
         super.metadata, {
-        title: configSettings.activityNamePrefix ? "midi-qol.SAVE.Title.one" : ActivityClass.metadata.title,
+        midiTitle: "midi-qol.SAVE.Title.one",
         dnd5eTitle: ActivityClass.metadata.title,
         sheetClass: MidiSaveSheet,
         usage: {

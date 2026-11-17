@@ -36,7 +36,7 @@ let defineMidiSummonActivityClass = <T extends Activity>(ActivityClass: T) => {
     static metadata =
       foundry.utils.mergeObject(
         super.metadata, {
-        title: configSettings.activityNamePrefix ? "midi-qol.SUMMON.Title.one" : ActivityClass.metadata.title,
+        midiTitle: "midi-qol.SUMMON.Title.one",
         dnd5eTitle: ActivityClass.metadata.title,
         sheetClass: MidiSummonSheet,
         usage: {

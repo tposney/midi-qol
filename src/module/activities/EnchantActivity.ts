@@ -25,7 +25,7 @@ let defineMidiEnchantActivityClass = <T extends Activity>(ActivityClass: T) => {
     static metadata =
       foundry.utils.mergeObject(
         super.metadata, {
-        title: configSettings.activityNamePrefix ? "midi-qol.ENCHANT.Title.one" : ActivityClass.metadata.title,
+        midiTitle: "midi-qol.ENCHANT.Title.one",
         dnd5eTitle: ActivityClass.metadata.title,
         sheetClass: MidiEnchantSheet,
         usage: {
