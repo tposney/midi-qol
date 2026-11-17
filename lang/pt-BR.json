@@ -874,8 +874,9 @@
   "midi-qol.AddDead.Hint1": "Controlado por Jogador",
   "midi-qol.AddDead.Hint2": "Controlado pelo Mestre",
   "midi-qol.markDefeated": "Marcar como Derrotado no Monitor de Combate",
+  "midi-qol.Stanched": "{name}: {effects} estancados",
   "midi-qol.EnforceDeathSaves.Name": "Aplicar Salvaguardas Contra Morte",
-  "midi-qol.EnforceDeathSaves.Hint": "Um personagem com 0 pontos de vida que sofra dano, recebe uma falha na Salvaguarda Contra Morte, duas falhas se o dano vier de um acerto crítico e três falhas (morte) se o dano for igual ou superior aos seus pontos de vida máximos. Com três falhas ele é marcado como Morto, como ocorreria ao falhar em três Salvaguardas Contra Morte. Desfazer a aplicação do dano pelo cartão de dano restaura a contagem de falhas e o status anterior.",
+  "midi-qol.EnforceDeathSaves.Hint": "Um personagem com 0 pontos de vida que sofra dano, recebe uma falha na Salvaguarda Contra Morte, duas falhas se o dano vier de um acerto crítico e três falhas (morte) se o dano for igual ou superior aos seus pontos de vida máximos. Um personagem reduzido a 0 pontos de vida morre se o dano excedente for igual ou superior aos seus Pontos de Vida máximos (dano massivo). Com três falhas ele é marcado como Morto, como ocorreria ao falhar em três Salvaguardas Contra Morte. Desfazer a aplicação do dano pelo cartão de dano restaura a contagem de falhas e o status anterior.",
   "midi-qol.AddDeadOptions": {
     "none": "Não Atualizar",
     "overlay": "Sobreposição",
@@ -2011,6 +2012,10 @@
     "flags.midi-qol.DR.final": {
       "name": "(Obsoleto) Redução de Dano Final",
       "description": "Ao invés de usar este, use os campos de system.traits.dm com valores negativos." 
+    },
+    "flags.midi-qol.stanch": {
+      "name": "Estancar",
+      "description": "Um teste encerra este efeito: dc=15, skill=med, range=5, healing=none|spell|magical|any. O teste é realizado pela própria criatura ou por outra criatura dentro do alcance que a selecione como alvo."
     },
     "flags.midi-qol.OverTime": {
       "name": "Efeitos Over Time",
