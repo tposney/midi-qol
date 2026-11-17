@@ -1,4 +1,5 @@
 import { DialogCountdown } from "./lib/dialogCountdown.js";
+import { coverBetween } from "./services/cover.js";
 import { applyDamageRules, collectDamageRules, copyDamageOptions } from "./lib/damageRules.js";
 import type { AttackModifier } from "./Workflow.js";
 import { TokenDocumentSet, hookTarget, memberCount, rememberSyntheticToken, tokenOf } from "./lib/tokenDocumentSet.js";
@@ -3189,7 +3190,7 @@ function shapesOverlap(poly1: PIXI.Polygon, poly2: PIXI.Polygon): boolean {
  * cover follows sight (a curtain would block an attack, a window wouldn't), so with them, as without a module, midi's
  * movement wall rays decide (`coverVisible` undefined).
  */
-function computeWallBlockPreCheck(
+export function computeWallBlockPreCheck(
   t1: Token.Implementation,
   t2: Token.Implementation,
   wallsBlock: boolean,
@@ -3203,7 +3204,7 @@ function computeWallBlockPreCheck(
 }
 
 /** A point standing in for an attacker (a template's origin for Simple Cover) */
-type CoverPoint = { center: { x: number, y: number }, elevation?: number };
+export type CoverPoint = { center: { x: number, y: number }, elevation?: number };
 
 /** The target's test points for wall rays: its centre and two rings around it (as _canSenseModes) */
 function wallTestPoints(target: Token.Implementation): PIXI.Point[] {
@@ -4249,10 +4250,6 @@ export function autoCoverTier(attacker: TokenOrDocument | undefined, target: Tok
   }
 }
 
-function autoCoverBonus(tier: AutoCoverTier): number {
-  return { none: 0, half: HALF_COVER, threeQuarters: THREE_QUARTERS_COVER, total: TOTAL_COVER }[tier];
-}
-
 export function computeCoverBonus(attackerIn: TokenOrDocument | undefined, targetIn: TokenOrDocument, activity?: Activity,
   options: { position?: CoverPosition, origin?: CoverPosition } = {}): number {
   let attacker = attackerIn instanceof TokenDocument ? attackerIn.object : attackerIn;
@@ -4263,54 +4260,9 @@ export function computeCoverBonus(attackerIn: TokenOrDocument | undefined, targe
     foundry.utils.logCompatibilityWarning("computeCoverBonus(attacker, target, item) is deprecated in favor of computeCoverBonus(attacker, target, activity)");
   }
   if (!target) return 0;
-  // AutoCover can measure from an origin (a template's) without an attacker; Alternative Token Cover needs the attacker
-  if (configSettings.optionalRules.coverCalculation === "levelsautocover") {
-    const tier = autoCoverTier(attacker ?? undefined, target, options.origin);
-    return tier ? autoCoverBonus(tier) : 0;
-  }
-  if (!attacker) return 0;
-
-  let coverBonus = 0;
   try {
-    switch (configSettings.optionalRules.coverCalculation) {
-
-      case "simplecover5e":
-        //@ts-expect-error
-        const simpleCoverApi = game.modules.get("simplecover5e")?.api;
-        if (!installedModules.get("simplecover5e") || !simpleCoverApi) return 0;
-          // Total cover is midi's (movement walls); Simple Cover's own (losCheck) follows sight walls. Its partial cover is kept.
-          if (wallsGiveTotalCover(attacker, target)) {
-            coverBonus = TOTAL_COVER;
-            break;
-          }
-          const coverOptions: any = {
-            attacker,
-            target,
-            scene: attacker.scene,
-            losCheck: false
-          };
-          if (activity) coverOptions.activity = activity;
-          const coverResult = simpleCoverApi.getCover(coverOptions);
-          if (!coverResult || coverResult.bonus == null) return TOTAL_COVER;
-          coverBonus = coverResult.bonus;
-        break;
-
-      case "tokencover":
-        if (!installedModules.get("tokencover")) coverBonus = 0;
-        else {
-          const coverValue = calcTokenCover(attacker, target, options.origin);
-          if (coverValue === 4 || coverValue === 3) coverBonus = TOTAL_COVER;
-          else if (coverValue === 2) coverBonus = THREE_QUARTERS_COVER;
-          else if (coverValue === 1) coverBonus = HALF_COVER;
-          else coverBonus = 0;
-        }
-        break;
-      case "none":
-      default:
-        coverBonus = 0;
-        break;
-    }
-    return coverBonus;
+    // The cover service's active provider (services/cover.ts), chosen by the Cover Calculation setting
+    return coverBetween({ attacker: attacker ?? undefined, target, activity, origin: options.origin }).bonus;
   } catch (err) {
     const message = "Error in computeCoverBonus";
     error(message, err);

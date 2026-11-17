@@ -71,6 +71,10 @@ declare module "fvtt-types/configuration" {
       "midi-qol.playerWaitStarted": (info: playerWaits.WaitInfo) => void;
       "midi-qol.playerWaitEnded": (info: playerWaits.WaitInfo, result: { choice?: string, claimed?: boolean }) => void;
       "midi-qol.playerWaitsChanged": (waits: playerWaits.WaitInfo[]) => void;
+      /** A service's providers or wrappers changed (api/services.ts) */
+      "midi-qol.servicesChanged": (serviceId: string) => void;
+      /** midi's init: register service providers */
+      "midi-qol.registerServices": (services: typeof import("./module/api/services.js").servicesApi) => void;
       /** dnd5e's roll configuration dialogs (and midi's MidiRollChoiceDialog) when they render */
       "renderRollConfigurationDialog": (app: foundry.applications.api.ApplicationV2, element: HTMLElement, context: unknown, options: unknown) => void;
       "dnd5e.calculateDamage": (actor: Actor.Implementation, damages: DamageDescription[], options: DamageApplicationOptions) => boolean | void;

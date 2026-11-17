@@ -202,6 +202,7 @@ globalThis.MidiQOL ??= {};
 Object.assign(globalThis.MidiQOL, {
   apiVersion: MIDI_API_VERSION,
   isRunning,
+  services: servicesApi,
   registerActivityPolicy,
   activityPolicy,
   fillRulesText,
@@ -425,6 +426,9 @@ Hooks.once('init', async function () {
   log('Initializing midi-qol');
   window.customElements.define("midi-damage-application", DamageApplicationElementMidi as unknown as CustomElementConstructor);
   setupActivities();
+  defineCoverService();
+  Hooks.on("midi-qol.ConfigSettingsChanged", refreshServices);
+  Hooks.callAll("midi-qol.registerServices", servicesApi);
   setupCATIntegration();
   setupPlayerWaits();
   setupPlayerWaitsUI();
@@ -988,6 +992,8 @@ import { MoveTokenOptions, TeleportTokenDestination, TokenOrDocument, SelectOpti
 import { DamageApplicationElementMidi } from './module/ChatClasses/DamageApplicationElementMidi.js';
 import { fillRulesText } from "./module/lib/rulesText.js";
 import { MIDI_API_VERSION, isRunning, markRunning } from "./module/api/contract.js";
+import { refreshServices, servicesApi } from "./module/api/services.js";
+import { defineCoverService } from "./module/services/cover.js";
 
 // Add any additional hooks if necessary
 // Phase 2: setup hook — properties that depend on CONFIG, settings, i18n, or game state

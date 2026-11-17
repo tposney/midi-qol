@@ -146,6 +146,7 @@
     "RollModifierTracker",
     "safeGetGameSetting",
     "selectTargetsFromTemplates",
+    "services",
     "setActionUsed",
     "setBonusActionUsed",
     "setReactionUsed",
@@ -275,8 +276,10 @@
     "midi-qol.preWaitForUtilityRoll",
     "midi-qol.ReactionFilter",
     "midi-qol.ready",
+    "midi-qol.registerServices",
     "midi-qol.removeUndoEntry",
     "midi-qol.RollComplete",
+    "midi-qol.servicesChanged",
     "midi-qol.setBonusActionUsed",
     "midi-qol.setReactionUsed",
     "midi-qol.setup",
@@ -311,5 +314,7 @@
     "tokenDocumentSets",
     "UseWeakReferences"
   ],
-  "services": []
+  "services": [
+    "cover"
+  ]
 }

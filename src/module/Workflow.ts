@@ -6023,33 +6023,8 @@ export class Workflow {
     }
 
     if (position) {
-      // Cover calculation from a point (coverOrigin, template center, etc.)
-      if (["levelsautocover", "tokencover"].includes(configSettings.optionalRules.coverCalculation)
-        && installedModules.get(configSettings.optionalRules.coverCalculation)) {
-        // From the template's origin, the caster making it: AutoCover's point source, Alternative Token Cover's
-        // calculator for the caster standing there
-        moduleCoverBonus = computeCoverBonus(this.token, target, this.activity,
-          { origin: { x: position.x, y: position.y, elevation: originElevation } });
-      } else if (configSettings.optionalRules.coverCalculation === "simplecover5e"
-        && installedModules.get("simplecover5e")) {
-        const syntheticAttacker = {
-          center: position,
-          scene: canvas.scene,
-          id: this.token?.id,
-          x: position.x,
-          y: position.y,
-          elevation: originElevation,
-          getCenterPoint() { return { x: position.x, y: position.y }; },
-          document: {
-            x: position.x,
-            y: position.y,
-            elevation: originElevation,
-            disposition: targetDocument?.disposition,
-            getCenterPoint() { return { x: position.x, y: position.y }; },
-          }
-        };
-        moduleCoverBonus = computeCoverBonus(syntheticAttacker as unknown as Token, target, this.activity);
-      }
+      // From a point (coverOrigin, the template's origin): the cover provider measures from it, the caster making it
+      moduleCoverBonus = computeCoverBonus(this.token, target, this.activity, { origin: { x: position.x, y: position.y, elevation: originElevation } });
     } else if (this.token) {
       // Direct targeting (no template) — cover from caster position
       moduleCoverBonus = computeCoverBonus(this.token, target, this.activity);

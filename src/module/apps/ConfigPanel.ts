@@ -1,4 +1,5 @@
 import { chooseJsonFile } from "../lib/fileDialogs.js";
+import { providers as servicesProviders } from "../api/services.js";
 import { rulesTextCompendiumChoices } from "../lib/rulesText.js";
 import { criticalDamage, criticalDamageChoices, coloredBorders, coloredBordersOptions, importSettingsFromJSON, exportSettingsToJSON, enableWorkflow, wallsBlockRangeOptionsNew, visionTestHeightOptions, templateOriginHeightOptions, templatePlacedOriginOptions, coverCalculationOptions, hiddenAdvantageOptions, addDeadOptions, rollNPCSavesOptions, playerRollSavesOptions, autoCheckHitOptions, autoTargetOptions, rangeTargetOptions, requiresTargetsOptions, autoCheckSavesOptions, saveSummaryStyleOptions, chatCardSummariesOptions, autoRollDamageOptions, removeButtonsOptions, autoApplyDamageOptions, playerDamageCardOptions, damageImmunitiesOptions, showItemDetailsOptions, doReactionsOptions, gmDoReactionsOptions, autoCEEffectsOptions, showReactionAttackRollOptions, recordAOOOptions, EnforceReactionsOptions, autoEffectsOptions, requireMagicalOptions, gmAttackDisplayOptions, gmDamageDisplayOptions, gmDsnDisplayOptions, blindRollDisplayOptions, checkFlankingOptions, flankingBonusOptions, rollAlternateOptions, consumeResourceOptions, averageDamageOptions, removeConcentrationEffectsOptions, incapacitatedOptions, checkRangeOptions, targetMustBeSeenOptions, invisAdvantageOptions, confirmAttackDamageOptions, challengeModeArmorOptions, saveDROrderOptions, defaultOtherActivityOptions, doConcentrationCheckOptions, activationAutomationOptions, safeGetGameSetting, distanceMeasurementOptions } from "../settings.js"
 import { configSettings } from "../settings.js"
@@ -96,6 +97,9 @@ export class ConfigPanel extends HandlebarsApplicationMixin(ApplicationV2) {
         CoverCalculationOptions[module.id] = withOptionLabel(CoverCalculationOptions[module.id], `${i18n(CoverCalculationOptions[module.id])} - ${notInstalled}`);
       }
     });
+    // Cover providers other modules registered (MidiQOL.services) are choices too
+    for (const provider of servicesProviders("cover"))
+      if (!(provider.id in CoverCalculationOptions)) CoverCalculationOptions[provider.id] = provider.label ?? provider.id;
     // Mark walledtemplates option as "not installed" when the module is not active
     const autoTargetOptionsLocalized: SelectOptions = foundry.utils.duplicate(autoTargetOptions);
     if (!installedModules.get("walledtemplates")) {
