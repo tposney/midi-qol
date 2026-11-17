@@ -114,8 +114,5 @@ let defineMidiTransformActivityClass = <T extends Activity>(ActivityClass: T) =>
       }
     }
 
-    async _triggerSubsequentActions(config, results) {
-      if (this.transform.mode === "form") await super._triggerSubsequentActions(config, results);
-    }
   }
 }

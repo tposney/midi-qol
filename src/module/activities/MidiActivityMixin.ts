@@ -194,11 +194,6 @@ export function findAmmunitionActivity(ammunitionItem: any): any | undefined {
   return found;
 }
 
-/** Whether saves are rolled from the card's buttons rather than by midi. */
-function savesRolledFromChat(): boolean {
-  const rollSaveOptions = new Set([configSettings.rollNPCLinkedSaves, configSettings.rollNPCSaves, configSettings.playerRollSaves]);
-  return rollSaveOptions.has("none") || rollSaveOptions.has("chat") || configSettings.autoCheckSaves === "none";
-}
 
 export let MidiActivityMixin = Base => {
   interface MidiActivityMixin extends Activity { };
@@ -1471,99 +1466,7 @@ export let MidiActivityMixin = Base => {
       return true;
     }
 
-    _usageChatButtons(message) { // need to filter out place template button for auto placed or no templates
-      let buttons = super._usageChatButtons(message);
-      const autoCreateTemplate = activityHasAutoPlaceTemplate(this);
-      const emanationNoTemplate = activityHasEmanationNoTemplate(this);
-      if (autoCreateTemplate || emanationNoTemplate) {
-        // dnd5e 6.0 carries the action at the top level and leaves `dataset` empty on its own
-        // buttons, so matching on the dataset alone stopped matching anything and the Place Template
-        // button survived auto placement.
-        buttons = buttons.filter(b => (b.action ?? b.dataset?.action) !== "placeTemplate")
-      }
 
-      /*
-       * Other-activity consumption buttons, in 6.0's button format: `action` at the top level, a
-       * `label` object, and `icon` as FontAwesome classes rather than markup. The old shape triggered
-       * `#migrateLegacyChatButtons`, deprecated in 6.0 and removed in 6.2.
-       *
-       * The label is a key, not localized text — `card-buttons.hbs` localizes it at render, so a
-       * stored string would not follow a language change.
-       */
-      // Rolled from the card when saves are not auto-rolled; #rollOtherSave hands them to the activity they belong to.
-      const saveSource = this.otherSaveSource;
-      if (saveSource && !this.save && !this.check && savesRolledFromChat()) {
-        buttons.push(...saveSource._usageChatButtons(message)
-          .filter(b => ["rollSave", "rollCheck"].includes(b.action ?? b.dataset?.action)));
-      }
-
-      if (this.otherActivity?.hasConsumption()) {
-        buttons.push({
-          action: "consumeOtherActivity",
-          label: { value: "midi-qol.ConsumeOtherActivityResource", short: "midi-qol.ConsumeOtherActivityResourceShort" },
-          icon: "fa-solid fa-cubes-stacked",
-          visibility: "creator"
-        }, {
-          action: "refundOtherActivity",
-          label: { value: "midi-qol.RefundOtherActivityResource", short: "midi-qol.RefundOtherActivityResourceShort" },
-          icon: "fa-solid fa-clock-rotate-left",
-          visibility: "creator"
-        });
-      }
-
-      return buttons;
-    }
-
-    /**
-     * Determine whether a chat button should be hidden based on current state.
-     * Mirrors dnd5e's shouldHideChatButton pattern.
-     */
-    shouldHideChatButton(
-      button: HTMLButtonElement | { action?: string, dataset?: Record<string, string> },
-      message: ChatMessage.Implementation
-    ): boolean {
-      const { consumed } = cardOtherConsumption(message);
-      // dnd5e 6.0 calls this from `_prepareButtons` with the stored button descriptor, which carries
-      // `action` at the top level; before that it was called with the rendered element, where the
-      // action lives on the dataset. Accept either.
-      // `||` not `??`: the button schema always defines `action`, so midi's own buttons — which
-      // carry theirs on the dataset — arrive with it set to the empty string rather than absent.
-      const action = ("action" in button ? button.action : undefined) || button.dataset?.action;
-      const midi = cardMidi(message);
-      // The same rule midi's own buttons are drawn by, so the two cannot disagree.
-      const visible = midiButtonVisibility(message, this);
-      if (visible.allRemoved) return true;
-      switch (action) {
-        /*
-         * midi draws its own attack and damage controls, with the advantage, disadvantage and
-         * critical variants dnd5e has no equivalent for, so the system's plain pair would be a second
-         * way to do the same thing — and one that ignores midi's fast-forward settings.
-         *
-         * Suppressed here rather than dropped in `_usageChatButtons` so the buttons still exist in
-         * `message.system.buttons`: a card midi did not draw (`midi.hasAttack` unset, e.g. an
-         * activity used while midi's automation is off) falls through and gets the system's own.
-         */
-        case "rollAttack": if (midi?.hasAttack || visible.attackSpent) return true; break;
-        case "rollDamage": if (midi?.hasDamage || visible.damageSpent) return true; break;
-        // Show consume button only when rolled but didn't consume (empty object {})
-        // Hide if: cancelled (false), not checked (undefined), or already consumed (non-empty object)
-        case "consumeOtherActivity": return !(consumed && foundry.utils.isEmpty(consumed));
-        // Show refund button only when actually consumed (non-empty object)
-        case "refundOtherActivity": return !consumed || foundry.utils.isEmpty(consumed);
-        // dnd5e hides placeTemplate when !game.canvas.scene, which is true during page reload
-        // before canvas is ready — only check permission here
-        // REGION_CREATE replaced the deprecated TEMPLATE_CREATE in v14 (templates are regions); cast until fvtt-types catches up
-        case "planTeleport": if (visible.teleported) return true; break;
-        case "placeTemplate":
-          if (visible.templatesPlaced) return true;
-          return !game.user?.can("REGION_CREATE" as User.ActionPermission);
-        case "rollSave":
-        case "rollCheck":
-          if (visible.savesResolved) return true;
-          break;
-      }
-      return super.shouldHideChatButton?.(button, message) ?? false;
-    }
 
     // Region update deferred from _placeEmanationTemplate, consumed by
     // _attachRegionActivityBehavior later in the same use flow (same activity clone)

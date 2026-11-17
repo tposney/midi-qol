@@ -116,7 +116,5 @@ let defineMidiCastActivityClass =  <T extends Activity>(ActivityClass: T) => {
 
 
     
-    async _triggerSubsequentActions(config, results) {
-    }
   }
 }

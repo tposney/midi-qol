@@ -226,8 +226,6 @@ let defineMidiAttackActivityClass = <T extends Activity>(ActivityClass: T) => {
       return super.rollDamage(config, dialog, message);
     }
 
-    async _triggerSubsequentActions(config, results) {
-    }
 
     /** Whether each target gets its own attack: the activity's Attack Roll Per Target, else the world setting. */
     get attacksEachTarget(): boolean {

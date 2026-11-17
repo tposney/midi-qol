@@ -119,6 +119,7 @@ declare module "fvtt-types/configuration" {
       "dnd5e.preRollSkill": (config: RollProcessConfig, dialog: RollDialogConfig, message: RollMessageConfig) => boolean | void;
       "dnd5e.preRollTool": (config: RollProcessConfig, dialog: RollDialogConfig, message: RollMessageConfig) => boolean | void;
       "dnd5e.preUseActivity": (activity: Activity, usageConfig: AnyMutableObject, dialogConfig: AnyMutableObject, messageConfig: AnyMutableObject) => boolean | void;
+      "dnd5e.preCreateUsageMessage": (activity: Activity, messageConfig: AnyMutableObject) => void;
       "dnd5e.restCompleted": (actor: Actor.Implementation, result: { longRest: boolean; newDay: boolean }, config: unknown) => void;
       "dnd5e.rollAttack": (rolls: Roll[], data: { subject: Activity | null, ammoUpdate: { id: string, destroy: boolean; quantity: number } | null }) => void;
       "dnd5e.rollConcentration": (rolls: Roll[], data: { subject?: Actor.Implementation }) => void;

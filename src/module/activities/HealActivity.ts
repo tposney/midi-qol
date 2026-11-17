@@ -55,8 +55,6 @@ let defineMidiHealActivityClass = <T extends Activity>(ActivityClass: T) => {
       return rollConfig;
     }
     */
-    async _triggerSubsequentActions(config, results) {
-    }
   }
 }
 

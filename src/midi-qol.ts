@@ -420,6 +420,7 @@ function setupActivities() {
   globalThis.MidiQOL.activityTypes["forward"] = { documentClass: MidiForwardActivity };
   globalThis.MidiQOL.activityTypes["MidiActivityMixin"] = MidiActivityMixin;
   installCardActions(GameSystemConfig.activityTypes);
+  installUsageButtons();
   setupActivityTitles();
 }
 
@@ -989,6 +990,7 @@ import { MidiActivityMixin, setupActivityTitles, setupMidiActivityMixin } from '
 import { initUseRelaunch, useRelaunchSpike } from './module/activities/useRelaunch.js';
 import { installActivitySchema } from './module/activities/activitySchema.js';
 import { installCardActions, registerCardAction } from './module/activities/cardActions.js';
+import { installUsageButtons } from './module/activities/usageButtons.js';
 import { installActivityPrototype, registerActivityPolicy, activityPolicy } from './module/activities/activityPrototype.js';
 import { MidiForwardActivity, setupForwardActivity } from './module/activities/ForwardActivity.js';
 import { MidiEnchantActivity, setupEnchantActivity } from './module/activities/EnchantActivity.js';

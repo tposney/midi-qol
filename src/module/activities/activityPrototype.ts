@@ -20,24 +20,32 @@ export interface ActivityPolicy {
   selfTriggerableOnly: boolean;
   /** target confirmation forced for this type ("never"), else the activity's own setting */
   forcedTargetConfirmation?: string;
+  /** whether dnd5e runs the type's follow-up action after a use (e.g. placing an enchantment), midi doing the rest */
+  subsequentActions: (activity: Activity) => boolean;
 }
 
-const DEFAULT_POLICY: ActivityPolicy = { automated: false, possibleOtherActivity: false, neverOtherActivity: false, triggerable: true, selfTriggerableOnly: false };
+const DEFAULT_POLICY: ActivityPolicy = { automated: false, possibleOtherActivity: false, neverOtherActivity: false, triggerable: true, selfTriggerableOnly: false,
+  subsequentActions: () => true };
+const none = () => false;
 const automated = (policy: Partial<ActivityPolicy> = {}): Partial<ActivityPolicy> => ({ automated: true, ...policy });
 
 const policies: Record<string, Partial<ActivityPolicy>> = {
-  attack: automated({ neverOtherActivity: true }),
-  cast: automated({ forcedTargetConfirmation: "never" }),
-  check: automated({ possibleOtherActivity: true }),
-  damage: automated({ possibleOtherActivity: true }),
+  attack: automated({ neverOtherActivity: true, subsequentActions: none }),
+  cast: automated({ forcedTargetConfirmation: "never", subsequentActions: none }),
+  check: automated({ possibleOtherActivity: true, subsequentActions: none }),
+  damage: automated({ possibleOtherActivity: true, subsequentActions: none }),
   enchant: automated(),
   forward: automated({ triggerable: false, forcedTargetConfirmation: "never" }),
-  heal: automated({ possibleOtherActivity: true }),
+  heal: automated({ possibleOtherActivity: true, subsequentActions: none }),
   save: automated({ possibleOtherActivity: true }),
-  summon: automated(),
+  summon: automated({ subsequentActions: none }),
   teleport: automated(),
-  transform: automated(),
-  utility: automated({ possibleOtherActivity: true }),
+  // dnd5e applies a chosen form (form mode) itself
+  transform: automated({
+    // @ts-expect-error no dnd5e-types
+    subsequentActions: activity => activity.transform?.mode === "form"
+  }),
+  utility: automated({ possibleOtherActivity: true, subsequentActions: none }),
 };
 
 /** For a module's own activity type: how midi treats it. Merged over what is registered. */

@@ -46,8 +46,6 @@ let defineMidiDamageActivityClass = <T extends Activity>(ActivityClass: T) => {
       return super.rollDamage(config, dialog, message);
     }
 
-    async _triggerSubsequentActions(config, results) {
-    }
   }
 }
 

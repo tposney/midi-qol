@@ -52,8 +52,6 @@ let defineMidiSummonActivityClass = <T extends Activity>(ActivityClass: T) => {
       }, { inplace: false, insertKeys: true, insertValues: true });
 
 
-    async _triggerSubsequentActions(config, results) {
-    }
 
     async getPlacement(token, profile, options) {
       if (options?.placements?.length) {

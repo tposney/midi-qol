@@ -3,6 +3,8 @@
  * advantage presentation and the damage tray. Design notes: dnd5e-v6-checklist, M13.
  */
 
+import { activityPolicy } from "../activities/activityPrototype.js";
+import { midiButtonHidden } from "../activities/usageButtons.js";
 import { error } from "../../midi-qol.js";
 import { Activity, ChatMessageRenderOptions, DamageApplicationOptions, Dnd5eChatMessage } from "../../globals.js";
 import { checkRule, configSettings, safeGetGameSetting } from "../settings.js";
@@ -299,8 +301,20 @@ export function setupUsageCardMessage() {
       const buttons = super._prepareButtons() as { action: string, visibility: string, hidden: boolean }[];
       const parent = this.parent as Dnd5eChatMessage;
       const visible = this.#visibility = midiButtonVisibility(parent, parent.getAssociatedActivity?.());
+      const activity = parent.getAssociatedActivity?.();
+      const automated = activityPolicy(activity).automated;
+      const isCreator = game.user?.isGM || this.actor?.isOwner || parent.isAuthor;
       return buttons.map(button => {
-        if (button.hidden || button.visibility !== "all") return button;
+        // Buttons not visible to all: midi's rule first, dnd5e's own where midi has none (as dnd5e's _prepareButtons)
+        if (button.visibility !== "all") {
+          if (!automated) return button;
+          const gmOnly = button.visibility === "gm" && !game.user?.isGM;
+          const midiHidden = midiButtonHidden(button, parent, activity);
+          const dnd5eHide: unknown = activity?.shouldHideChatButton;
+          const hidden = gmOnly || !isCreator || (midiHidden ?? (typeof dnd5eHide === "function" && !!dnd5eHide.call(activity, button, parent)));
+          return hidden === button.hidden ? button : { ...button, hidden };
+        }
+        if (button.hidden) return button;
         const spent = visible.allRemoved || (visible.savesResolved && ["rollSave", "rollCheck"].includes(button.action))
           || (visible.teleported && button.action === "planTeleport");
         return spent ? { ...button, hidden: true } : button;
