@@ -317,6 +317,7 @@
     "UseWeakReferences"
   ],
   "services": [
-    "cover"
+    "cover",
+    "perception"
   ]
 }
