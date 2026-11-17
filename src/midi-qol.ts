@@ -200,6 +200,8 @@ Hooks.once("init", () => {
 // @ts-expect-error it'll get populated incrementally
 globalThis.MidiQOL ??= {};
 Object.assign(globalThis.MidiQOL, {
+  apiVersion: MIDI_API_VERSION,
+  isRunning,
   fillRulesText,
   activityHasEmanationNoTemplate,
   addDependent,
@@ -937,6 +939,7 @@ Hooks.once('ready', function () {
     tokenObj.hover = true
   });
 
+  markRunning();
   Hooks.callAll("midi-qol.midiReady");
   if (game.user?.isGM) { // need to improve the test
     const problems = TroubleShooter.collectTroubleShooterData().problems
@@ -978,6 +981,7 @@ import { MidiCombat5e } from './module/MidiCombat5e.js';
 import { MoveTokenOptions, TeleportTokenDestination, TokenOrDocument, SelectOptionValue } from './globals.js';
 import { DamageApplicationElementMidi } from './module/ChatClasses/DamageApplicationElementMidi.js';
 import { fillRulesText } from "./module/lib/rulesText.js";
+import { MIDI_API_VERSION, isRunning, markRunning } from "./module/api/contract.js";
 
 // Add any additional hooks if necessary
 // Phase 2: setup hook — properties that depend on CONFIG, settings, i18n, or game state

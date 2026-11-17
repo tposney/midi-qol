@@ -18,7 +18,9 @@
     "generate:types": "node scripts/generate-types.mjs",
     "generate:completions": "node scripts/generateFoundryCompletions.js",
     "compilePacks": "npx gulp compilePacks",
-    "extractPacks": "npx gulp extractPacks"
+    "extractPacks": "npx gulp extractPacks",
+    "surface": "node tools/surface.mjs",
+    "surface:check": "node tools/surface.mjs --check"
   },
   "prettier": {
     "tabWidth": 2,
