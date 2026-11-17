@@ -205,6 +205,7 @@ Object.assign(globalThis.MidiQOL, {
   services: servicesApi,
   registerActivityPolicy,
   activityPolicy,
+  registerCardAction,
   fillRulesText,
   activityHasEmanationNoTemplate,
   addDependent,
@@ -418,6 +419,7 @@ function setupActivities() {
   setupForwardActivity();
   globalThis.MidiQOL.activityTypes["forward"] = { documentClass: MidiForwardActivity };
   globalThis.MidiQOL.activityTypes["MidiActivityMixin"] = MidiActivityMixin;
+  installCardActions(GameSystemConfig.activityTypes);
   setupActivityTitles();
 }
 
@@ -985,6 +987,7 @@ import { computeTargetsFromTemplates, requiresTargetConfirmation, resolveTargetC
 import { MidiActivityMixin, setupActivityTitles, setupMidiActivityMixin } from './module/activities/MidiActivityMixin.js';
 import { initUseRelaunch, useRelaunchSpike } from './module/activities/useRelaunch.js';
 import { installActivitySchema } from './module/activities/activitySchema.js';
+import { installCardActions, registerCardAction } from './module/activities/cardActions.js';
 import { installActivityPrototype, registerActivityPolicy, activityPolicy } from './module/activities/activityPrototype.js';
 import { MidiForwardActivity, setupForwardActivity } from './module/activities/ForwardActivity.js';
 import { MidiEnchantActivity, setupEnchantActivity } from './module/activities/EnchantActivity.js';

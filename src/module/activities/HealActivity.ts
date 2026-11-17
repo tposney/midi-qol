@@ -1,3 +1,4 @@
+import { registerCardActions } from "./cardActions.js";
 import { Activity, RollDialogConfig, RollMessageConfig, RollProcessConfig } from "../../globals.js";
 import { debugEnabled, GameSystemConfig, warn } from "../../midi-qol.js";
 import { Workflow } from "../Workflow.js";
@@ -32,18 +33,9 @@ let defineMidiHealActivityClass = <T extends Activity>(ActivityClass: T) => {
            * template short-circuits on it, so the card face never runs. Deprecated in dnd5e 6.0 and
            * removed in 6.2 (`activity/mixin.mjs#legacyUsageContent`) regardless. See AttackActivity.
            */
-          actions: {
-            rollHealing: MidiHealActivity.#rollHealing
-          }
         },
       }, { inplace: false, insertKeys: true, insertValues: true })
 
-    static #rollHealing(this: Activity, event: PointerEvent, target: HTMLElement, message: ChatMessage.Implementation) {
-      const workflow = Workflow.forDamageButton(message);
-      if (workflow === false) return;
-      const activity = workflow && !workflow.readOnly ? workflow.activityFor(this) : this;
-      return activity.rollDamage({event, workflow}, {}, {});
-    }
     
     async rollDamage(config: RollProcessConfig = {}, dialog: RollDialogConfig = {}, message: RollMessageConfig = {}) {
       config.midiOptions ??= {};
@@ -71,3 +63,14 @@ let defineMidiHealActivityClass = <T extends Activity>(ActivityClass: T) => {
 export function defineMidiHealSheetClass(baseClass: any) {
   return class MidiHealSheet extends MidiActivityMixinSheet(baseClass) {};
 }
+
+function cardRollHealing(this: Activity, event: PointerEvent, target: HTMLElement, message: ChatMessage.Implementation) {
+  const workflow = Workflow.forDamageButton(message);
+  if (workflow === false) return;
+  const activity = workflow && !workflow.readOnly ? workflow.activityFor(this) : this;
+  return activity.rollDamage({event, workflow}, {}, {});
+}
+
+registerCardActions(["heal"], {
+  rollHealing: cardRollHealing
+});

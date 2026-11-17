@@ -1,3 +1,4 @@
+import { registerCardAction, registerCardActions } from "./cardActions.js";
 import { cardMidi, cardOtherConsumption } from "../lib/cardState.js";
 import { heldKeys } from "../lib/rollKeys.js";
 import { TokenDocumentSet, memberCount } from "../lib/tokenDocumentSet.js";
@@ -220,112 +221,13 @@ export let MidiActivityMixin = Base => {
       super.metadata, {
       usage: {
         dialog: MidiActivityUsageDialog,
-        actions: {
-          placeTemplate: MidiActivityMixin.#placeTemplate,
-          rollDamage: MidiActivityMixin.#rollDamage,
-          rollDamageNoCritical: MidiActivityMixin.#rollDamageNoCritical,
-          rollDamageCritical: MidiActivityMixin.#rollDamageCritical,
-          confirmDamageRollCancel: MidiActivityMixin.#confirmDamageRollCancel,
-          confirmDamageRollComplete: MidiActivityMixin.#confirmDamageRollComplete,
-          confirmDamageRollCompleteHit: MidiActivityMixin.#confirmDamageRollCompleteHit,
-          confirmDamageRollCompleteMiss: MidiActivityMixin.#confirmDamageRollCompleteMiss,
-          midiApplyEffects: MidiActivityMixin.#applyEffects,
-          midiFollowUp: MidiActivityMixin.#followUp,
-          refundOtherActivity: MidiActivityMixin.#refundOtherActivity,
-          consumeOtherActivity: MidiActivityMixin.#consumeOtherActivity,
-        }
       },
     }, { inplace: false, insertValues: true, insertKeys: true });
 
-    // Only where the activity has no handler of its own: save and check activities keep theirs.
-    static {
-      this.metadata = foundry.utils.mergeObject(this.metadata, {
-        usage: { actions: { rollSave: MidiActivityMixin.#rollOtherSave, rollCheck: MidiActivityMixin.#rollOtherSave } }
-      }, { inplace: false, overwrite: false });
-    }
 
 
-    /** A save or check button for another activity's save, on this activity's card: that activity rolls it. */
-    static async #rollOtherSave(this: MidiActivityMixin, event: PointerEvent, target: HTMLElement, message: ChatMessage.Implementation) {
-      const workflow = Workflow.findWorkflow(message.uuid);
-      const source = workflow?.otherSaveActivity ?? this.otherSaveSource;
-      // @ts-expect-error no dnd5e-types
-      const action = target.dataset.action ?? message.system.getButton(target)?.action;
-      const handler = source?.metadata?.usage?.actions?.[action];
-      if (!source || source === this || !handler) return;
-      // A save activity's handler adopts the card's workflow as its own; this card's workflow stays this activity's.
-      const activity = workflow?.activity;
-      try {
-        return await handler.call(source, event, target, message);
-      } finally {
-        if (workflow && activity) workflow.activity = activity;
-      }
-    }
 
-    static async #followUp(this: MidiActivityMixin, event: PointerEvent, target: HTMLElement, message: ChatMessage.Implementation) {
-      const index = Number(target.dataset.followUp);
-      if (Number.isInteger(index)) await runFollowUp(message, index);
-    }
-    static async #applyEffects(this: MidiActivityMixin, event: PointerEvent, target: HTMLElement, message: ChatMessage.Implementation) {
-      const workflow = Workflow.findWorkflow(message.uuid);
-      if (workflow) workflow.activityFor(this);
-      if (!workflow) {
-        const errMessage = "MidiQOL | MidiActivity | applyEffects | No workflow found";
-        error(errMessage);
-        TroubleShooter.recordError(new Error("No workflow found"), errMessage);
-        return;
-      }
-      const authorId = message.author?.id;
-      if (game.user?.id !== authorId) {
-        // applying effects on behalf of another user;
-        if (!game.user?.isGM) {
-          ui.notifications?.warn("Only the GM can apply effects for other players")
-          return;
-        }
-        if (game.user?.targets.size === 0) {
-          ui.notifications?.warn(i18n("midi-qol.noTargets"));
-          return;
-        }
-        await socketlibSocket.executeAsUser("applyEffects", authorId, {
-          workflowId: message.uuid,
-          targets: Array.from(game.user?.targets).map(t => t.document.uuid)
-        });
-      } else {
-        // Forced: effects go to the use's targets; the user's only confirm the request
-        workflow.forceApplyEffects = true;
-        if (game.user?.targets.size) await workflow.performState(workflow.WorkflowState_ApplyDynamicEffects)
-      }
-    }
-    static async #confirmDamageRollCancel(this: MidiActivityMixin, event: PointerEvent, target: HTMLElement, message: ChatMessage.Implementation) {
-      const workflowId = message.uuid;
-      const authorId = message.author?.id;
-      if (!authorId || !workflowId) return;
-      if (!game.user?.isGM && configSettings.confirmAttackDamage === "gmOnly") {
-        return;
-      }
-      /* TODO Since workflows are available locally we can use them to cancel the workflow without a socket call
-        const workflow = Workflow.findWorkflow(workflowId);
-        if (workflow) cancelWorkflow(workflowId);
-      */
-      const user = game.users?.get(authorId);
-      if (user?.active) {
-        await socketlibSocket.executeAsUser("cancelWorkflow", authorId, { workflowId, itemCardUuid: message.uuid }).then(result => {
-          if (typeof result === "string") ui.notifications?.warn(result);
-        });
-      } else {
-        await Workflow.removeItemCardButtons(message.uuid, { removeAllButtons: true });
-      }
-    }
 
-    static async #confirmDamageRollComplete(this: MidiActivityMixin, event: PointerEvent, target: HTMLElement, message: ChatMessage.Implementation) {
-      await this.doConfirmation("confirmDamageRollComplete", event, target, message);
-    }
-    static async #confirmDamageRollCompleteHit(this: MidiActivityMixin, event: PointerEvent, target: HTMLElement, message: ChatMessage.Implementation) {
-      await this.doConfirmation("confirmDamageRollCompleteHit", event, target, message);
-    }
-    static async #confirmDamageRollCompleteMiss(this: MidiActivityMixin, event: PointerEvent, target: HTMLElement, message: ChatMessage.Implementation) {
-      await this.doConfirmation("confirmDamageRollCompleteMiss", event, target, message);
-    }
     async doConfirmation(actionToCall: string, event: PointerEvent, target: HTMLElement, message: ChatMessage.Implementation) {
       if (!game.user?.isGM && configSettings.confirmAttackDamage === "gmOnly") {
         return;
@@ -338,108 +240,11 @@ export let MidiActivityMixin = Base => {
       }
     }
 
-    static async #refundOtherActivity(this: MidiActivityMixin, event: PointerEvent, target: HTMLElement, message: ChatMessage.Implementation) {
-      // Get the other activity from the associated activity on the message
-      //@ts-expect-error no dnd5e types
-      const activity = message.getAssociatedActivity?.() as MidiActivityMixin | undefined;
-      const otherActivity = activity?.otherActivity;
-      if (!otherActivity) return;
 
-      // What the other activity's use consumed (mirrors dnd5e's structure)
-      const { consumed } = cardOtherConsumption(message);
-      if (!consumed || foundry.utils.isEmpty(consumed)) return;
-      await otherActivity.refund(consumed);
-      // Nothing consumed now: the refund button goes (shouldHideChatButton)
-      await message.update({ "system.midi.state.otherConsumed": null } as ChatMessage.UpdateData);
-      // A card made before 14.6.9 kept it in its flags
-      if (message.flags[MODULE_ID]?.use?.consumed) await message.update({ [`flags.${MODULE_ID}.use.consumed`]: null } as ChatMessage.UpdateData);
-    }
 
-    static async #consumeOtherActivity(this: MidiActivityMixin, event: PointerEvent, target: HTMLElement, message: ChatMessage.Implementation) {
-      // Get the other activity from the associated activity on the message
-      //@ts-expect-error no dnd5e types
-      const activity = message.getAssociatedActivity?.() as MidiActivityMixin | undefined;
-      const otherActivity = activity?.otherActivity;
-      if (!otherActivity) return;
 
-      // Prepare usage config for consumption
-      const otherUsageConfig = otherActivity._prepareUsageConfig({
-        consume: { resources: true, spellSlot: false, action: false }
-      });
 
-      // Check if consumption would succeed
-      const consumptionCheck = await otherActivity._prepareUsageUpdates(otherUsageConfig, { returnErrors: true });
-      if (Array.isArray(consumptionCheck) && consumptionCheck.length > 0) {
-        // Consumption would fail - show warning
-        ui.notifications?.warn(i18nFormat("midi-qol.otherActivityConsumptionFailed", {
-          actorName: otherActivity.actor?.name ?? "Unknown",
-          itemName: otherActivity.item?.name ?? "Unknown",
-          activityName: otherActivity.name ?? "Unknown"
-        }));
-        return;
-      }
 
-      // Consume resources
-      const messageConfig: any = { data: {} };
-      const consumeResult = await otherActivity.consume(otherUsageConfig, messageConfig);
-      if (consumeResult === false) {
-        // Consumption was cancelled by a hook
-        return;
-      }
-
-      // Get consumed delta data from messageConfig (not return value)
-      const consumed = getConsumptionData(messageConfig);
-
-      // Recorded on the card: the consume button goes and the refund button shows (shouldHideChatButton)
-      if (consumed) await message.update({ "system.midi.state.otherConsumed": consumed, "system.midi.state.otherDeclined": null } as ChatMessage.UpdateData);
-    }
-
-    /**
-     * Handle the "Place Template" button click from the chat card.
-     * Places all templates sequentially and delegates to workflow for validation and processing.
-     */
-    static async #placeTemplate(this: MidiActivityMixin, event: PointerEvent, target: HTMLElement, message: ChatMessage.Implementation) {
-      // `TemplatePlacement.fromActivity` runs the placement UI and creates the Regions itself,
-      // returning them; the deprecated `AbilityTemplate` preview/draw dance is gone.
-      let templates: MeasuredTemplateDocument[] = [];
-      try {
-        const created = await globalThis.dnd5e.canvas.TemplatePlacement.fromActivity(this);
-        if (created?.length) templates = created as unknown as MeasuredTemplateDocument[];
-      } catch (err) {
-        // User cancelled during placement — fall through to validation
-      }
-
-      // Find workflow and process (handles count validation, deletion if incomplete)
-      const workflow = Workflow.findWorkflow(message.uuid);
-      if (!workflow) {
-        warn("MidiActivityMixin | #placeTemplate | No workflow found for message", message.uuid);
-        return;
-      }
-
-      // processPlacedTemplates handles validation, cleanup, and workflow advancement
-      await workflow.processPlacedTemplates(templates, this);
-    }
-
-    static #rollDamage(this: Activity, event, target, message) {
-      const workflow = Workflow.forDamageButton(message);
-      if (workflow === false) return;
-      const activity = workflow && !workflow.readOnly ? workflow.activityFor(this) : this;
-      return activity.rollDamage({ event, workflow, midiOptions: { isCritical: workflow?.workflowOptions?.isCritical || workflow?.isCritical } }, {}, message);
-    }
-
-    static #rollDamageNoCritical(this: Activity, event, target, message) {
-      const workflow = Workflow.forDamageButton(message);
-      if (workflow === false) return;
-      const activity = workflow && !workflow.readOnly ? workflow.activityFor(this) : this;
-      return activity.rollDamage({ event, workflow, critical: { allow: false }, midiOptions: { isCritical: false } }, {}, message);
-    }
-
-    static #rollDamageCritical(this: Activity, event, target, message) {
-      const workflow = Workflow.forDamageButton(message);
-      if (workflow === false) return;
-      const activity = workflow && !workflow.readOnly ? workflow.activityFor(this) : this;
-      return activity.rollDamage({ event, workflow, critical: { allow: true }, midiOptions: { isCritical: true } }, {}, message);
-    }
 
 
     _preCreate(data) {
@@ -2489,3 +2294,216 @@ export function setupMidiActivityMixin() {
   Hooks.on("renderActivitySheet", renderActivitySheetHook);
 
 }
+
+/**
+ * Handle the "Place Template" button click from the chat card.
+ * Places all templates sequentially and delegates to workflow for validation and processing.
+ */
+async function cardPlaceTemplate(this: Activity, event: PointerEvent, target: HTMLElement, message: ChatMessage.Implementation) {
+  // `TemplatePlacement.fromActivity` runs the placement UI and creates the Regions itself,
+  // returning them; the deprecated `AbilityTemplate` preview/draw dance is gone.
+  let templates: MeasuredTemplateDocument[] = [];
+  try {
+    const created = await globalThis.dnd5e.canvas.TemplatePlacement.fromActivity(this);
+    if (created?.length) templates = created as unknown as MeasuredTemplateDocument[];
+  } catch (err) {
+    // User cancelled during placement — fall through to validation
+  }
+
+  // Find workflow and process (handles count validation, deletion if incomplete)
+  const workflow = Workflow.findWorkflow(message.uuid);
+  if (!workflow) {
+    warn("Activity | #placeTemplate | No workflow found for message", message.uuid);
+    return;
+  }
+
+  // processPlacedTemplates handles validation, cleanup, and workflow advancement
+  await workflow.processPlacedTemplates(templates, this);
+}
+
+function cardRollDamage(this: Activity, event, target, message) {
+  const workflow = Workflow.forDamageButton(message);
+  if (workflow === false) return;
+  const activity = workflow && !workflow.readOnly ? workflow.activityFor(this) : this;
+  return activity.rollDamage({ event, workflow, midiOptions: { isCritical: workflow?.workflowOptions?.isCritical || workflow?.isCritical } }, {}, message);
+}
+
+function cardRollDamageNoCritical(this: Activity, event, target, message) {
+  const workflow = Workflow.forDamageButton(message);
+  if (workflow === false) return;
+  const activity = workflow && !workflow.readOnly ? workflow.activityFor(this) : this;
+  return activity.rollDamage({ event, workflow, critical: { allow: false }, midiOptions: { isCritical: false } }, {}, message);
+}
+
+function cardRollDamageCritical(this: Activity, event, target, message) {
+  const workflow = Workflow.forDamageButton(message);
+  if (workflow === false) return;
+  const activity = workflow && !workflow.readOnly ? workflow.activityFor(this) : this;
+  return activity.rollDamage({ event, workflow, critical: { allow: true }, midiOptions: { isCritical: true } }, {}, message);
+}
+
+async function cardConfirmDamageRollCancel(this: Activity, event: PointerEvent, target: HTMLElement, message: ChatMessage.Implementation) {
+  const workflowId = message.uuid;
+  const authorId = message.author?.id;
+  if (!authorId || !workflowId) return;
+  if (!game.user?.isGM && configSettings.confirmAttackDamage === "gmOnly") {
+    return;
+  }
+  /* TODO Since workflows are available locally we can use them to cancel the workflow without a socket call
+    const workflow = Workflow.findWorkflow(workflowId);
+    if (workflow) cancelWorkflow(workflowId);
+  */
+  const user = game.users?.get(authorId);
+  if (user?.active) {
+    await socketlibSocket.executeAsUser("cancelWorkflow", authorId, { workflowId, itemCardUuid: message.uuid }).then(result => {
+      if (typeof result === "string") ui.notifications?.warn(result);
+    });
+  } else {
+    await Workflow.removeItemCardButtons(message.uuid, { removeAllButtons: true });
+  }
+}
+
+/** The activity's own confirmation step (doConfirmation on midi's activities) */
+async function confirmOnCard(activity: Activity, action: string, event: PointerEvent, target: HTMLElement, message: ChatMessage.Implementation) {
+  const doConfirmation: unknown = activity.doConfirmation;
+  if (typeof doConfirmation === "function") await doConfirmation.call(activity, action, event, target, message);
+}
+
+async function cardConfirmDamageRollComplete(this: Activity, event: PointerEvent, target: HTMLElement, message: ChatMessage.Implementation) {
+  await confirmOnCard(this, "confirmDamageRollComplete", event, target, message);
+}
+
+async function cardConfirmDamageRollCompleteHit(this: Activity, event: PointerEvent, target: HTMLElement, message: ChatMessage.Implementation) {
+  await confirmOnCard(this, "confirmDamageRollCompleteHit", event, target, message);
+}
+
+async function cardConfirmDamageRollCompleteMiss(this: Activity, event: PointerEvent, target: HTMLElement, message: ChatMessage.Implementation) {
+  await confirmOnCard(this, "confirmDamageRollCompleteMiss", event, target, message);
+}
+
+async function cardApplyEffects(this: Activity, event: PointerEvent, target: HTMLElement, message: ChatMessage.Implementation) {
+  const workflow = Workflow.findWorkflow(message.uuid);
+  if (workflow) workflow.activityFor(this);
+  if (!workflow) {
+    const errMessage = "MidiQOL | MidiActivity | applyEffects | No workflow found";
+    error(errMessage);
+    TroubleShooter.recordError(new Error("No workflow found"), errMessage);
+    return;
+  }
+  const authorId = message.author?.id;
+  if (game.user?.id !== authorId) {
+    // applying effects on behalf of another user;
+    if (!game.user?.isGM) {
+      ui.notifications?.warn("Only the GM can apply effects for other players")
+      return;
+    }
+    if (game.user?.targets.size === 0) {
+      ui.notifications?.warn(i18n("midi-qol.noTargets"));
+      return;
+    }
+    await socketlibSocket.executeAsUser("applyEffects", authorId, {
+      workflowId: message.uuid,
+      targets: Array.from(game.user?.targets).map(t => t.document.uuid)
+    });
+  } else {
+    // Forced: effects go to the use's targets; the user's only confirm the request
+    workflow.forceApplyEffects = true;
+    if (game.user?.targets.size) await workflow.performState(workflow.WorkflowState_ApplyDynamicEffects)
+  }
+}
+
+async function cardFollowUp(this: Activity, event: PointerEvent, target: HTMLElement, message: ChatMessage.Implementation) {
+  const index = Number(target.dataset.followUp);
+  if (Number.isInteger(index)) await runFollowUp(message, index);
+}
+
+async function cardRefundOtherActivity(this: Activity, event: PointerEvent, target: HTMLElement, message: ChatMessage.Implementation) {
+  // Get the other activity from the associated activity on the message
+  //@ts-expect-error no dnd5e types
+  const activity = message.getAssociatedActivity?.() as Activity | undefined;
+  const otherActivity = activity?.otherActivity;
+  if (!otherActivity) return;
+
+  // What the other activity's use consumed (mirrors dnd5e's structure)
+  const { consumed } = cardOtherConsumption(message);
+  if (!consumed || foundry.utils.isEmpty(consumed)) return;
+  await otherActivity.refund(consumed);
+  // Nothing consumed now: the refund button goes (shouldHideChatButton)
+  await message.update({ "system.midi.state.otherConsumed": null } as ChatMessage.UpdateData);
+  // A card made before 14.6.9 kept it in its flags
+  if (message.flags[MODULE_ID]?.use?.consumed) await message.update({ [`flags.${MODULE_ID}.use.consumed`]: null } as ChatMessage.UpdateData);
+}
+
+async function cardConsumeOtherActivity(this: Activity, event: PointerEvent, target: HTMLElement, message: ChatMessage.Implementation) {
+  // Get the other activity from the associated activity on the message
+  //@ts-expect-error no dnd5e types
+  const activity = message.getAssociatedActivity?.() as Activity | undefined;
+  const otherActivity = activity?.otherActivity;
+  if (!otherActivity) return;
+
+  // Prepare usage config for consumption
+  const otherUsageConfig = otherActivity._prepareUsageConfig({
+    consume: { resources: true, spellSlot: false, action: false }
+  });
+
+  // Check if consumption would succeed
+  const consumptionCheck = await otherActivity._prepareUsageUpdates(otherUsageConfig, { returnErrors: true });
+  if (Array.isArray(consumptionCheck) && consumptionCheck.length > 0) {
+    // Consumption would fail - show warning
+    ui.notifications?.warn(i18nFormat("midi-qol.otherActivityConsumptionFailed", {
+      actorName: otherActivity.actor?.name ?? "Unknown",
+      itemName: otherActivity.item?.name ?? "Unknown",
+      activityName: otherActivity.name ?? "Unknown"
+    }));
+    return;
+  }
+
+  // Consume resources
+  const messageConfig: any = { data: {} };
+  const consumeResult = await otherActivity.consume(otherUsageConfig, messageConfig);
+  if (consumeResult === false) {
+    // Consumption was cancelled by a hook
+    return;
+  }
+
+  // Get consumed delta data from messageConfig (not return value)
+  const consumed = getConsumptionData(messageConfig);
+
+  // Recorded on the card: the consume button goes and the refund button shows (shouldHideChatButton)
+  if (consumed) await message.update({ "system.midi.state.otherConsumed": consumed, "system.midi.state.otherDeclined": null } as ChatMessage.UpdateData);
+}
+
+/** A save or check button for another activity's save, on this activity's card: that activity rolls it. */
+async function cardRollOtherSave(this: Activity, event: PointerEvent, target: HTMLElement, message: ChatMessage.Implementation) {
+  const workflow = Workflow.findWorkflow(message.uuid);
+  const source: Activity | undefined = workflow?.otherSaveActivity ?? (this.otherSaveSource as Activity | undefined);
+  // @ts-expect-error no dnd5e-types
+  const action = target.dataset.action ?? message.system.getButton(target)?.action;
+  const handler = source?.metadata?.usage?.actions?.[action];
+  if (!source || source === this || !handler) return;
+  // A save activity's handler adopts the card's workflow as its own; this card's workflow stays this activity's.
+  const activity = workflow?.activity;
+  try {
+    return await handler.call(source, event, target, message);
+  } finally {
+    if (workflow && activity) workflow.activity = activity;
+  }
+}
+
+registerCardActions(undefined, {
+  placeTemplate: cardPlaceTemplate,
+  rollDamage: cardRollDamage,
+  rollDamageNoCritical: cardRollDamageNoCritical,
+  rollDamageCritical: cardRollDamageCritical,
+  confirmDamageRollCancel: cardConfirmDamageRollCancel,
+  confirmDamageRollComplete: cardConfirmDamageRollComplete,
+  confirmDamageRollCompleteHit: cardConfirmDamageRollCompleteHit,
+  confirmDamageRollCompleteMiss: cardConfirmDamageRollCompleteMiss,
+  midiApplyEffects: cardApplyEffects,
+  midiFollowUp: cardFollowUp,
+  refundOtherActivity: cardRefundOtherActivity,
+  consumeOtherActivity: cardConsumeOtherActivity
+});
+// Only where the activity type has no handler of its own: save and check activities keep theirs.
+registerCardAction("rollSave", cardRollOtherSave, { whenAbsent: true });
+registerCardAction("rollCheck", cardRollOtherSave, { whenAbsent: true });

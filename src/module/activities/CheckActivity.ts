@@ -1,3 +1,5 @@
+import { registerCardActions } from "./cardActions.js";
+import { cardRollDamage } from "./SaveActivity.js";
 import { AnyMutableObject } from "fvtt-types/utils";
 import { Activity, RollDialogConfig, RollMessageConfig, RollProcessConfig } from "../../globals.js";
 import { debugEnabled, GameSystemConfig, i18n, warn } from "../../midi-qol.js";
@@ -36,72 +38,12 @@ let defineMidiCheckActivityClass = <T extends Activity>(ActivityClass: T) => {
            * removed in 6.2 (`activity/mixin.mjs#legacyUsageContent`) regardless. See AttackActivity.
            */
           actions: {
-            rollCheck: MidiCheckActivity.#rollCheck, // Having this means having to track CheckActivity.#rollCheck code changes
             // Needed so the workflow can be inserted
-            rollDamage: MidiSaveActivity.metadata.usage.actions.rollDamage,
           }
         },
       }, { inplace: false, insertKeys: true, insertValues: true })
 
 
-    static async #rollCheck(this: Activity, event: PointerEvent, target: HTMLElement, message: ChatMessage.Implementation) {
-      let workflow = message ? Workflow.findWorkflow(message.uuid) : null;
-      const activity = workflow ? workflow.activityFor(this) : this;
-      // return ActivityClass.#rollCheck return ActivityClass.#rollCheck.bind(this)(event, target);
-      // Can't do this as it's private
-      // As dnd5e 6: the card's targets (honouring its targeted/selected toggle) and the clicked button's data from
-      // the card, which is all a grouped (dropdown) button carries.
-      const targets: Array<foundry.canvas.placeables.Token.Implementation | TokenDocument.Implementation | Actor.Implementation> =
-        // @ts-expect-error no dnd5e-types
-        [...(message?.system?.evaluatedTargets ?? getSceneTargets())];
-      if (!targets.length && game.user?.character) targets.push(game.user?.character);
-      if (!targets.length) ui.notifications?.warn("DND5E.ActionWarningNoToken", { localize: true });
-      // @ts-expect-error no dnd5e-types
-      const button: Record<string, string | number | undefined> = message?.system?.getButton?.(target)?.dataset ?? target.dataset;
-      const ability = button.ability as string | undefined;
-      const skill = button.skill as string | undefined;
-      const tool = button.tool as string | undefined;
-      const dc = (button.dc === undefined || button.dc === "") ? NaN : Number(button.dc);
-      const check = activity.check;
-      const item = activity.item;
-      const rollData: AnyMutableObject = { event, target: Number.isFinite(dc) ? dc : check!.dc.value };
-      if (ability && (ability in globalThis.dnd5e.config.abilities)) rollData.ability = ability;
-
-      for (const token of targets) {
-        const actor = token instanceof Actor ? token : token.actor;
-        const tokenDocument = token instanceof foundry.canvas.placeables.Token ? token.document : token instanceof TokenDocument ? token : null;
-        const speaker = ChatMessage.getSpeaker({ actor, scene: canvas.scene, token: tokenDocument });
-        const messageData: AnyMutableObject = { data: { speaker } };
-        if (!actor) continue;
-        // v14 message-mode strings (CONFIG.ChatMessage.modes keys) so the value matches the roll dialog's options
-        if (["none", "allShow"].includes(configSettings.autoCheckSaves) || actor?.hasPlayerOwner) messageData.rollMode = safeGetGameSetting("core", "messageMode");
-        else messageData.rollMode = "gm";
-        if (!game.user?.isGM) {
-          if (configSettings.playerRollSaves === "noneDialogPublic") messageData.rollMode = "public";
-          else if (configSettings.playerRollSaves === "noneDialogPrivate") messageData.rollMode = "gm";
-          else if (configSettings.playerRollSaves === "noneDialogSelf") messageData.rollMode = "self";
-          else if (configSettings.playerRollSaves === "noneDialogBlind") messageData.rollMode = "blind";
-          else messageData.rollMode = safeGetGameSetting("core", "messageMode");
-        }
-        //@ts-expect-error no dnd5e types
-        if (skill) await actor.rollSkill({ ...rollData, skill }, {}, messageData);
-        else if (tool) {
-          rollData.tool = tool;
-          // @ts-expect-error no dnd5e-types
-          if ((item.type === "tool") && !check!.associated.size) {
-            // @ts-expect-error no dnd5e-types
-            rollData.bonus = item.system.bonus;
-            // @ts-expect-error no dnd5e-types
-            rollData.prof = item.system.prof;
-            rollData.item = item;
-          }
-          //@ts-expect-error no dnd5e types
-          await actor.rollToolCheck(rollData, {}, messageData);
-        }
-        // @ts-expect-error no dnd5e types
-        else await actor.rollAbilityCheck(rollData, {}, messageData);
-      }
-    }
 
 
 
@@ -199,3 +141,67 @@ export function defineMidiCheckSheetClass(baseClass: any) {
     }
   }
 }
+
+async function cardRollCheck(this: Activity, event: PointerEvent, target: HTMLElement, message: ChatMessage.Implementation) {
+  let workflow = message ? Workflow.findWorkflow(message.uuid) : null;
+  const activity = workflow ? workflow.activityFor(this) : this;
+  // return ActivityClass.#rollCheck return ActivityClass.#rollCheck.bind(this)(event, target);
+  // Can't do this as it's private
+  // As dnd5e 6: the card's targets (honouring its targeted/selected toggle) and the clicked button's data from
+  // the card, which is all a grouped (dropdown) button carries.
+  const targets: Array<foundry.canvas.placeables.Token.Implementation | TokenDocument.Implementation | Actor.Implementation> =
+    // @ts-expect-error no dnd5e-types
+    [...(message?.system?.evaluatedTargets ?? getSceneTargets())];
+  if (!targets.length && game.user?.character) targets.push(game.user?.character);
+  if (!targets.length) ui.notifications?.warn("DND5E.ActionWarningNoToken", { localize: true });
+  // @ts-expect-error no dnd5e-types
+  const button: Record<string, string | number | undefined> = message?.system?.getButton?.(target)?.dataset ?? target.dataset;
+  const ability = button.ability as string | undefined;
+  const skill = button.skill as string | undefined;
+  const tool = button.tool as string | undefined;
+  const dc = (button.dc === undefined || button.dc === "") ? NaN : Number(button.dc);
+  const check = activity.check;
+  const item = activity.item;
+  const rollData: AnyMutableObject = { event, target: Number.isFinite(dc) ? dc : check!.dc.value };
+  if (ability && (ability in globalThis.dnd5e.config.abilities)) rollData.ability = ability;
+
+  for (const token of targets) {
+    const actor = token instanceof Actor ? token : token.actor;
+    const tokenDocument = token instanceof foundry.canvas.placeables.Token ? token.document : token instanceof TokenDocument ? token : null;
+    const speaker = ChatMessage.getSpeaker({ actor, scene: canvas.scene, token: tokenDocument });
+    const messageData: AnyMutableObject = { data: { speaker } };
+    if (!actor) continue;
+    // v14 message-mode strings (CONFIG.ChatMessage.modes keys) so the value matches the roll dialog's options
+    if (["none", "allShow"].includes(configSettings.autoCheckSaves) || actor?.hasPlayerOwner) messageData.rollMode = safeGetGameSetting("core", "messageMode");
+    else messageData.rollMode = "gm";
+    if (!game.user?.isGM) {
+      if (configSettings.playerRollSaves === "noneDialogPublic") messageData.rollMode = "public";
+      else if (configSettings.playerRollSaves === "noneDialogPrivate") messageData.rollMode = "gm";
+      else if (configSettings.playerRollSaves === "noneDialogSelf") messageData.rollMode = "self";
+      else if (configSettings.playerRollSaves === "noneDialogBlind") messageData.rollMode = "blind";
+      else messageData.rollMode = safeGetGameSetting("core", "messageMode");
+    }
+    //@ts-expect-error no dnd5e types
+    if (skill) await actor.rollSkill({ ...rollData, skill }, {}, messageData);
+    else if (tool) {
+      rollData.tool = tool;
+      // @ts-expect-error no dnd5e-types
+      if ((item.type === "tool") && !check!.associated.size) {
+        // @ts-expect-error no dnd5e-types
+        rollData.bonus = item.system.bonus;
+        // @ts-expect-error no dnd5e-types
+        rollData.prof = item.system.prof;
+        rollData.item = item;
+      }
+      //@ts-expect-error no dnd5e types
+      await actor.rollToolCheck(rollData, {}, messageData);
+    }
+    // @ts-expect-error no dnd5e types
+    else await actor.rollAbilityCheck(rollData, {}, messageData);
+  }
+}
+
+registerCardActions(["check"], {
+  rollCheck: cardRollCheck,
+  rollDamage: cardRollDamage
+});

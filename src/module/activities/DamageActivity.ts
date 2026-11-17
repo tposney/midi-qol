@@ -1,3 +1,4 @@
+import { registerCardActions } from "./cardActions.js";
 import { AnyMutableObject } from "fvtt-types/utils";
 import { Activity } from "../../globals.js";
 import { debugEnabled, GameSystemConfig, warn } from "../../midi-qol.js";
@@ -33,18 +34,9 @@ let defineMidiDamageActivityClass = <T extends Activity>(ActivityClass: T) => {
            * template short-circuits on it, so the card face never runs. Deprecated in dnd5e 6.0 and
            * removed in 6.2 (`activity/mixin.mjs#legacyUsageContent`) regardless. See AttackActivity.
            */
-          actions: {
-            rollDamage: MidiDamageActivity.#rollDamage
-          },
         }
       }, { inplace: false, insertKeys: true, insertValues: true });
 
-    static #rollDamage(this: Activity, event: PointerEvent, target: HTMLElement, message: ChatMessage.Implementation) {
-      const workflow = Workflow.forDamageButton(message);
-      if (workflow === false) return;
-      const activity = workflow && !workflow.readOnly ? workflow.activityFor(this) : this;
-      activity.rollDamage({ event, workflow }, {}, {});
-    }
 
     
     async rollDamage(config: AnyMutableObject, dialog: AnyMutableObject, message: AnyMutableObject) {
@@ -62,3 +54,14 @@ let defineMidiDamageActivityClass = <T extends Activity>(ActivityClass: T) => {
 export function defineMidiDamageSheetClass(baseClass: any) {
   return class MidiDamageSheet extends MidiActivityMixinSheet(baseClass) {};
 }
+
+function cardRollDamage(this: Activity, event: PointerEvent, target: HTMLElement, message: ChatMessage.Implementation) {
+  const workflow = Workflow.forDamageButton(message);
+  if (workflow === false) return;
+  const activity = workflow && !workflow.readOnly ? workflow.activityFor(this) : this;
+  activity.rollDamage({ event, workflow }, {}, {});
+}
+
+registerCardActions(["damage"], {
+  rollDamage: cardRollDamage
+});

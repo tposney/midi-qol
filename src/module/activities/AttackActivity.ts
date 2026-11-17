@@ -1,3 +1,4 @@
+import { registerCardActions } from "./cardActions.js";
 import { TokenDocumentSet } from "../lib/tokenDocumentSet.js";
 import { debugEnabled, warn, error, busyWait, GameSystemConfig, debug, i18n, MODULE_ID, i18nFormat } from "../../midi-qol.js";
 import { unTimedExecuteAsGM } from "../GMAction.js";
@@ -182,14 +183,6 @@ let defineMidiAttackActivityClass = <T extends Activity>(ActivityClass: T) => {
            *
            * `usage.chatCard` is deprecated in dnd5e 6.0 and removed in 6.2, so this had to go anyway.
            */
-          actions: {
-            rollAttack: MidiAttackActivity.#rollAttack,
-            rollAttackAdvantage: MidiAttackActivity.#rollAttackAdvantage,
-            rollAttackDisadvantage: MidiAttackActivity.#rollAttackDisadvantage,
-            rollDamage: MidiAttackActivity.#rollDamage,
-            rollDamageNoCritical: MidiAttackActivity.#rollDamageNoCritical,
-            rollDamageCritical: MidiAttackActivity.#rollDamageCritical,
-          }
         },
       }, { inplace: false, insertKeys: true, insertValues: true })
 
@@ -214,116 +207,11 @@ let defineMidiAttackActivityClass = <T extends Activity>(ActivityClass: T) => {
       return usage;
     }
 
-    static #rollAttack(this: Activity, event: PointerEvent, target: HTMLElement, message: ChatMessage.Implementation) {
-      const workflow = Workflow.findWorkflow(message?.uuid);
 
-      if (!message || !workflow || (workflow.currentAction && [workflow.WorkflowState_Abort, workflow.WorkflowState_Completed].includes(workflow.currentAction))) {
-        MidiAttackActivity.attackAgain(this, workflow, event);
-      } else {
-        const attackConfig: ActivityUseConfiguration = { workflow };
-        attackConfig.midiOptions = workflow?.rollOptions ?? {};
-        attackConfig.midiOptions.workflowOptions ??= workflow.workflowOptions ?? {};
-        workflow.advantage = undefined;
-        workflow.disadvantage = undefined;
-        attackConfig.midiOptions.advantage = undefined;
-        attackConfig.midiOptions.disadvantage = undefined;
-        const activity = workflow.activityFor(this);
-        // Update targets if user has selected new ones; preserve existing targets otherwise
-        // (e.g. template-derived targets, programmatic targetsToUse, or no selection)
-        const currentTargets = validTargetTokens(new Set(game.user?.targets));
-        if (currentTargets.count > 0) workflow.setTargets(currentTargets);
-        // @ts-expect-error
-        return activity.rollAttack({ workflow }, {}, {});
-      }
-    }
 
-    static #rollAttackAdvantage(this: Activity, event: PointerEvent, target: HTMLElement, message: ChatMessage.Implementation) {
-      const workflow = Workflow.findWorkflow(message?.uuid);
-      if (!message || !workflow || (workflow.currentAction && [workflow.WorkflowState_Abort, workflow.WorkflowState_Completed].includes(workflow.currentAction))) {
-        if (workflow?.itemCardUuid) Workflow.removeItemCardButtons(workflow.itemCardUuid, { removeAllButtons: true });
-        const attackConfig: any = { event, workflow };
-        attackConfig.midiOptions = workflow?.rollOptions ?? {};
-        attackConfig.midiOptions.workflowOptions ??= {};
-        attackConfig.workflow = workflow;
-        if (workflow) {
-          attackConfig.midiOptions.workflowOptions ??= {};
-          attackConfig.midiOptions.workflowOptions.advantage = true;
-          attackConfig.midiOptions.workflowOptions.disadvantage = false;
-          attackConfig.midiOptions.workflowOptions.autoRollAttack = true;
-        }
-        //@ts-expect-error
-        this.use(attackConfig, {}, {});
-      } else {
-        const attackConfig: ActivityUseConfiguration = { workflow };
-        attackConfig.midiOptions = workflow?.rollOptions ?? {};
-        attackConfig.midiOptions.workflowOptions ??= workflow.workflowOptions ?? {};
-        // User explicitly chose advantage — set workflowOptions so checkAttackAdvantage processes it
-        attackConfig.midiOptions.workflowOptions.advantage = true;
-        attackConfig.midiOptions.workflowOptions.disadvantage = false;
-        const activity = workflow.activityFor(this);
-        // Update targets if user has selected new ones; preserve existing targets otherwise
-        const currentTargets = validTargetTokens(new Set(game.user?.targets));
-        if (currentTargets.count > 0) workflow.setTargets(currentTargets);
-        //@ts-expect-error
-        return activity.rollAttack(attackConfig, {}, {});
-      }
-    }
 
-    static #rollAttackDisadvantage(this: Activity, event: PointerEvent, target: HTMLElement, message: ChatMessage.Implementation) {
-      const workflow = Workflow.findWorkflow(message?.uuid);
-      if (!message || !workflow || (workflow.currentAction && [workflow.WorkflowState_Abort, workflow.WorkflowState_Completed].includes(workflow.currentAction))) {
-        if (workflow?.itemCardUuid) Workflow.removeItemCardButtons(workflow.itemCardUuid, { removeAllButtons: true });
-        const attackConfig: ActivityUseConfiguration = { event, workflow };
-        attackConfig.midiOptions = workflow?.rollOptions ?? {};
-        attackConfig.midiOptions.workflowOptions ??= {};
-        attackConfig.workflow = workflow;
-        if (workflow) {
-          attackConfig.midiOptions.workflowOptions ??= {};
-          attackConfig.midiOptions.workflowOptions.autoRollAttack = true;
-          attackConfig.midiOptions.advantage = false;
-          attackConfig.midiOptions.disadvantage = true;
-        }
-        //@ts-expect-error
-        this.use(attackConfig, {}, {});
-      } else {
-        const attackConfig: any = { workflow };
-        attackConfig.midiOptions = workflow?.rollOptions ?? {};
-        attackConfig.midiOptions.workflowOptions ??= workflow.workflowOptions ?? {};
-        // User explicitly chose disadvantage — set workflowOptions so checkAttackAdvantage processes it
-        attackConfig.midiOptions.workflowOptions.advantage = false;
-        attackConfig.midiOptions.workflowOptions.disadvantage = true;
-        const activity = workflow.activityFor(this);
-        // Update targets if user has selected new ones; preserve existing targets otherwise
-        const currentTargets = validTargetTokens(new Set(game.user?.targets));
-        if (currentTargets.count > 0) workflow.setTargets(currentTargets);
-        //@ts-expect-error
-        return activity.rollAttack(attackConfig, {}, {});
-      }
-    }
 
-    static #rollDamage(this: Activity, event: PointerEvent, target: HTMLElement, message: ChatMessage.Implementation) {
-      const workflow = Workflow.forDamageButton(message);
-      if (workflow === false) return;
-      const activity = workflow && !workflow.readOnly ? workflow.activityFor(this) : this;
-      // @ts-expect-error
-      return activity.rollDamage({ event, workflow, midiOptions: { isCritical: workflow?.workflowOptions?.isCritical || workflow?.isCritical } }, {}, message);
-    }
 
-    static #rollDamageNoCritical(this: Activity, event: PointerEvent, target: HTMLElement, message: ChatMessage.Implementation) {
-      const workflow = Workflow.forDamageButton(message);
-      if (workflow === false) return;
-      const activity = workflow && !workflow.readOnly ? workflow.activityFor(this) : this;
-      // @ts-expect-error
-      return activity.rollDamage({ event, workflow, critical: { allow: false }, midiOptions: { isCritical: false } }, {}, message);
-    }
-
-    static #rollDamageCritical(this: Activity, event: PointerEvent, target: HTMLElement, message: ChatMessage.Implementation) {
-      const workflow = Workflow.forDamageButton(message);
-      if (workflow === false) return;
-      const activity = workflow && !workflow.readOnly ? workflow.activityFor(this) : this;
-      // @ts-expect-error
-      return activity.rollDamage({ event, workflow, midiOptions: { isCritical: true } }, {}, message);
-    }
 
     async rollDamage(config: RollProcessConfig, dialog: RollDialogConfig, message: RollMessageConfig) {
       if (!config.ammunition) {
@@ -962,3 +850,123 @@ export function rollBonusSources(activity: any, ability: string | undefined, act
   }
   return sources;
 }
+
+function cardRollAttack(this: Activity, event: PointerEvent, target: HTMLElement, message: ChatMessage.Implementation) {
+  const workflow = Workflow.findWorkflow(message?.uuid);
+
+  if (!message || !workflow || (workflow.currentAction && [workflow.WorkflowState_Abort, workflow.WorkflowState_Completed].includes(workflow.currentAction))) {
+    MidiAttackActivity.attackAgain(this, workflow, event);
+  } else {
+    const attackConfig: ActivityUseConfiguration = { workflow };
+    attackConfig.midiOptions = workflow?.rollOptions ?? {};
+    attackConfig.midiOptions.workflowOptions ??= workflow.workflowOptions ?? {};
+    workflow.advantage = undefined;
+    workflow.disadvantage = undefined;
+    attackConfig.midiOptions.advantage = undefined;
+    attackConfig.midiOptions.disadvantage = undefined;
+    const activity = workflow.activityFor(this);
+    // Update targets if user has selected new ones; preserve existing targets otherwise
+    // (e.g. template-derived targets, programmatic targetsToUse, or no selection)
+    const currentTargets = validTargetTokens(new Set(game.user?.targets));
+    if (currentTargets.count > 0) workflow.setTargets(currentTargets);
+    // @ts-expect-error
+    return activity.rollAttack({ workflow }, {}, {});
+  }
+}
+
+function cardRollAttackAdvantage(this: Activity, event: PointerEvent, target: HTMLElement, message: ChatMessage.Implementation) {
+  const workflow = Workflow.findWorkflow(message?.uuid);
+  if (!message || !workflow || (workflow.currentAction && [workflow.WorkflowState_Abort, workflow.WorkflowState_Completed].includes(workflow.currentAction))) {
+    if (workflow?.itemCardUuid) Workflow.removeItemCardButtons(workflow.itemCardUuid, { removeAllButtons: true });
+    const attackConfig: any = { event, workflow };
+    attackConfig.midiOptions = workflow?.rollOptions ?? {};
+    attackConfig.midiOptions.workflowOptions ??= {};
+    attackConfig.workflow = workflow;
+    if (workflow) {
+      attackConfig.midiOptions.workflowOptions ??= {};
+      attackConfig.midiOptions.workflowOptions.advantage = true;
+      attackConfig.midiOptions.workflowOptions.disadvantage = false;
+      attackConfig.midiOptions.workflowOptions.autoRollAttack = true;
+    }
+    //@ts-expect-error
+    this.use(attackConfig, {}, {});
+  } else {
+    const attackConfig: ActivityUseConfiguration = { workflow };
+    attackConfig.midiOptions = workflow?.rollOptions ?? {};
+    attackConfig.midiOptions.workflowOptions ??= workflow.workflowOptions ?? {};
+    // User explicitly chose advantage — set workflowOptions so checkAttackAdvantage processes it
+    attackConfig.midiOptions.workflowOptions.advantage = true;
+    attackConfig.midiOptions.workflowOptions.disadvantage = false;
+    const activity = workflow.activityFor(this);
+    // Update targets if user has selected new ones; preserve existing targets otherwise
+    const currentTargets = validTargetTokens(new Set(game.user?.targets));
+    if (currentTargets.count > 0) workflow.setTargets(currentTargets);
+    //@ts-expect-error
+    return activity.rollAttack(attackConfig, {}, {});
+  }
+}
+
+function cardRollAttackDisadvantage(this: Activity, event: PointerEvent, target: HTMLElement, message: ChatMessage.Implementation) {
+  const workflow = Workflow.findWorkflow(message?.uuid);
+  if (!message || !workflow || (workflow.currentAction && [workflow.WorkflowState_Abort, workflow.WorkflowState_Completed].includes(workflow.currentAction))) {
+    if (workflow?.itemCardUuid) Workflow.removeItemCardButtons(workflow.itemCardUuid, { removeAllButtons: true });
+    const attackConfig: ActivityUseConfiguration = { event, workflow };
+    attackConfig.midiOptions = workflow?.rollOptions ?? {};
+    attackConfig.midiOptions.workflowOptions ??= {};
+    attackConfig.workflow = workflow;
+    if (workflow) {
+      attackConfig.midiOptions.workflowOptions ??= {};
+      attackConfig.midiOptions.workflowOptions.autoRollAttack = true;
+      attackConfig.midiOptions.advantage = false;
+      attackConfig.midiOptions.disadvantage = true;
+    }
+    //@ts-expect-error
+    this.use(attackConfig, {}, {});
+  } else {
+    const attackConfig: any = { workflow };
+    attackConfig.midiOptions = workflow?.rollOptions ?? {};
+    attackConfig.midiOptions.workflowOptions ??= workflow.workflowOptions ?? {};
+    // User explicitly chose disadvantage — set workflowOptions so checkAttackAdvantage processes it
+    attackConfig.midiOptions.workflowOptions.advantage = false;
+    attackConfig.midiOptions.workflowOptions.disadvantage = true;
+    const activity = workflow.activityFor(this);
+    // Update targets if user has selected new ones; preserve existing targets otherwise
+    const currentTargets = validTargetTokens(new Set(game.user?.targets));
+    if (currentTargets.count > 0) workflow.setTargets(currentTargets);
+    //@ts-expect-error
+    return activity.rollAttack(attackConfig, {}, {});
+  }
+}
+
+function cardRollDamage(this: Activity, event: PointerEvent, target: HTMLElement, message: ChatMessage.Implementation) {
+  const workflow = Workflow.forDamageButton(message);
+  if (workflow === false) return;
+  const activity = workflow && !workflow.readOnly ? workflow.activityFor(this) : this;
+  // @ts-expect-error
+  return activity.rollDamage({ event, workflow, midiOptions: { isCritical: workflow?.workflowOptions?.isCritical || workflow?.isCritical } }, {}, message);
+}
+
+function cardRollDamageNoCritical(this: Activity, event: PointerEvent, target: HTMLElement, message: ChatMessage.Implementation) {
+  const workflow = Workflow.forDamageButton(message);
+  if (workflow === false) return;
+  const activity = workflow && !workflow.readOnly ? workflow.activityFor(this) : this;
+  // @ts-expect-error
+  return activity.rollDamage({ event, workflow, critical: { allow: false }, midiOptions: { isCritical: false } }, {}, message);
+}
+
+function cardRollDamageCritical(this: Activity, event: PointerEvent, target: HTMLElement, message: ChatMessage.Implementation) {
+  const workflow = Workflow.forDamageButton(message);
+  if (workflow === false) return;
+  const activity = workflow && !workflow.readOnly ? workflow.activityFor(this) : this;
+  // @ts-expect-error
+  return activity.rollDamage({ event, workflow, midiOptions: { isCritical: true } }, {}, message);
+}
+
+registerCardActions(["attack"], {
+  rollAttack: cardRollAttack,
+  rollAttackAdvantage: cardRollAttackAdvantage,
+  rollAttackDisadvantage: cardRollAttackDisadvantage,
+  rollDamage: cardRollDamage,
+  rollDamageNoCritical: cardRollDamageNoCritical,
+  rollDamageCritical: cardRollDamageCritical
+});

@@ -1,3 +1,4 @@
+import { registerCardActions } from "./cardActions.js";
 import { Activity, RollDialogConfig, RollMessageConfig, RollProcessConfig } from "../../globals.js";
 import { debugEnabled, i18n, warn, error, GameSystemConfig } from "../../midi-qol.js";
 import { Workflow } from "../Workflow.js";
@@ -37,9 +38,6 @@ let defineMidiUtilityActivityClass = <T extends Activity>(ActivityClass: T) => {
            * template short-circuits on it, so the card face never runs. Deprecated in dnd5e 6.0 and
            * removed in 6.2 (`activity/mixin.mjs#legacyUsageContent`) regardless. See AttackActivity.
            */
-          actions: {
-            rollFormula: MidiUtilityActivity.#rollFormula
-          }
         }
       }, { inplace: false, insertKeys: true, insertValues: true });
 
@@ -58,12 +56,6 @@ let defineMidiUtilityActivityClass = <T extends Activity>(ActivityClass: T) => {
         };
         return schema;
       }
-    static #rollFormula(this: Activity, event: PointerEvent, target: HTMLElement, message: ChatMessage.Implementation) {
-      const workflow = Workflow.findWorkflow(message?.uuid);
-      const activity = workflow ? workflow.activityFor(this) : this;
-
-      return activity.rollFormula?.({ event, workflow }, {}, {});
-    }
 
 
     async _triggerSubsequentActions(config, results) {
@@ -131,3 +123,14 @@ let defineMidiUtilityActivityClass = <T extends Activity>(ActivityClass: T) => {
 export function defineMidiUtilitySheetClass(baseClass: any) {
   return class MidiUtilitySheet extends MidiActivityMixinSheet(baseClass) {};
 }
+
+function cardRollFormula(this: Activity, event: PointerEvent, target: HTMLElement, message: ChatMessage.Implementation) {
+  const workflow = Workflow.findWorkflow(message?.uuid);
+  const activity = workflow ? workflow.activityFor(this) : this;
+
+  return activity.rollFormula?.({ event, workflow }, {}, {});
+}
+
+registerCardActions(["utility"], {
+  rollFormula: cardRollFormula
+});

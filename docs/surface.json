@@ -126,6 +126,7 @@
     "raceOrType",
     "reactionDialog",
     "registerActivityPolicy",
+    "registerCardAction",
     "registerCardNoteRenderer",
     "registerWorkflowOptionsSchema",
     "removeActionUsed",

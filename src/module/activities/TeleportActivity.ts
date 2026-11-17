@@ -1,3 +1,4 @@
+import { registerCardActions } from "./cardActions.js";
 import { Activity, RollMessageConfig } from "../../globals.js";
 import { debugEnabled, GameSystemConfig, i18n, i18nFormat, warn, moveToken } from "../../midi-qol.js";
 import { configSettings } from "../settings.js";
@@ -84,7 +85,7 @@ let defineMidiTeleportActivityClass = <T extends Activity>(ActivityClass: T) => 
         dnd5eTitle: ActivityClass.metadata.title,
         sheetClass: MidiTeleportSheet,
         // No `chatCard` (see UtilityActivity). The card's Teleport button runs midi's planning.
-        usage: { actions: { planTeleport: MidiTeleportActivity.#planTeleport } },
+        usage: { actions: { planTeleport: cardPlanTeleport } },
         // dnd5e lists the card's targets (Targeted/Selected): who teleports, apart from the caster.
         targetPhase: "pre"
       }, { inplace: false, insertKeys: true, insertValues: true });
@@ -92,13 +93,6 @@ let defineMidiTeleportActivityClass = <T extends Activity>(ActivityClass: T) => 
 
 
 
-    /** The card's Teleport button: the tokens its targets list shows, ticked, in the Targeted or Selected view. */
-    static #planTeleport(this: { planTeleport: (options: { message?: ChatMessage.Implementation, listed?: Token.Implementation[] }) => Promise<unknown> },
-      event: PointerEvent, target: HTMLElement, message: ChatMessage.Implementation) {
-      const list = target?.closest("[data-message-id]")?.querySelector("recorded-targets") as (HTMLElement & { targets: Iterable<string> }) | null;
-      const listed = list ? Array.from(list.targets, uuid => getToken(uuid)).filter((t): t is Token.Implementation => !!t) : undefined;
-      return this.planTeleport({ message, listed });
-    }
 
     /** A caster-only teleport lists the caster on its card. */
     async _createUsageMessage(message: RollMessageConfig = {}) {
@@ -585,3 +579,16 @@ let defineMidiTeleportSheetClass = (baseClass: any) => {
     };
   }
 }
+
+/** The card's Teleport button: the tokens its targets list shows, ticked, in the Targeted or Selected view. */
+function cardPlanTeleport(this: Activity, event: PointerEvent, target: HTMLElement, message: ChatMessage.Implementation) {
+  const list = target?.closest("[data-message-id]")?.querySelector("recorded-targets") as (HTMLElement & { targets: Iterable<string> }) | null;
+  const listed = list ? Array.from(list.targets, uuid => getToken(uuid)).filter((t): t is Token.Implementation => !!t) : undefined;
+  const planTeleport: unknown = this.planTeleport;
+  if (typeof planTeleport !== "function") return;
+  return planTeleport.call(this, { message, listed });
+}
+
+registerCardActions(["teleport"], {
+  planTeleport: cardPlanTeleport
+});
