@@ -92,6 +92,19 @@ function getEffectiveForceRollDialog(activity: any): "always" | "never" | "defau
   return "default";
 }
 
+/**
+ * Whether a dnd5e roll hook is for this activity's roll. midi's handlers are registered when its roll starts, so they
+ * run after other modules' listeners, and filter on the roll's subject so a concurrent roll can't take them.
+ */
+function isRollOf(subject: unknown, activity: { uuid: string }): boolean {
+  return !!subject && typeof subject === "object" && "uuid" in subject && subject.uuid === activity.uuid;
+}
+
+function isAttackRoll(config: unknown): boolean {
+  const hookNames: unknown = config && typeof config === "object" && "hookNames" in config ? config.hookNames : undefined;
+  return Array.isArray(hookNames) && hookNames.includes("attack");
+}
+
 export function setupAttackActivity() {
   if (debugEnabled > 0) warn("MidiQOL | AttackActivity | setupAttackActivity | Called");
 
@@ -370,7 +383,8 @@ let defineMidiAttackActivityClass = <T extends Activity>(ActivityClass: T) => {
 
         dialog.options ??= {};
 
-        hookIds["dnd5e.preRollAttack"] = Hooks.once("dnd5e.preRollAttack", (rollConfig, dialogConfig, messageConfig) => {
+        hookIds["dnd5e.preRollAttack"] = Hooks.on("dnd5e.preRollAttack", (rollConfig, dialogConfig, messageConfig) => {
+          if (!isRollOf(rollConfig?.subject, this)) return true;
           if (workflow?.aborted) return false;
           if (configSettings.checkTwoHanded && ["twoHanded", "offhand"].includes(rollConfig.attackMode)) {
             // check equipment - shield other weapons for equipped status
@@ -420,7 +434,8 @@ let defineMidiAttackActivityClass = <T extends Activity>(ActivityClass: T) => {
           const sources = rollBonusSources(this, ability, this.getActionType?.(options.attackMode ?? process?.attackMode) ?? this.actionType);
           foundry.utils.setProperty(config, `options.${MODULE_ID}.rollBonusSources`, sources);
         });
-        hookIds["dnd5e.rollAttack"] = Hooks.once("dnd5e.rollAttack", (rolls, { ammoUpdate, subject }) => {
+        hookIds["dnd5e.rollAttack"] = Hooks.on("dnd5e.rollAttack", (rolls, { ammoUpdate, subject }) => {
+          if (!isRollOf(subject, this)) return;
           if (ammoUpdate) {
             // dnd5e spends one; the activity's Ammunition setting may spend none (a later target, one per use) or one each
             const ammo = this.actor?.items.get(ammoUpdate.id);
@@ -435,7 +450,8 @@ let defineMidiAttackActivityClass = <T extends Activity>(ActivityClass: T) => {
             if (workflow) workflow.spentAmmunitionData = this.actor.items.get(ammoUpdate.id).toObject();
           }
         });
-        hookIds["dnd5e.postAttackRollConfiguration"] = Hooks.once("dnd5e.postAttackRollConfiguration", (rolls, config, dialog, message) => {
+        hookIds["dnd5e.postAttackRollConfiguration"] = Hooks.on("dnd5e.postAttackRollConfiguration", (rolls, config, dialog, message) => {
+          if (!isRollOf(config?.subject, this)) return true;
           if (rolls?.length === 0) {
             // if (config.workflow) config.workflow.aborted = true;
             return false;
@@ -468,7 +484,8 @@ let defineMidiAttackActivityClass = <T extends Activity>(ActivityClass: T) => {
           return true;
         })
         // Capture target descriptors last, after all other modules have had a chance to modify AC (e.g. cover)
-        hookIds["dnd5e.postRollConfiguration"] = Hooks.once("dnd5e.postRollConfiguration", (rolls, config, dialog, message) => {
+        hookIds["dnd5e.postRollConfiguration"] = Hooks.on("dnd5e.postRollConfiguration", (rolls, config, dialog, message) => {
+          if (!isRollOf(config?.subject, this) || !isAttackRoll(config)) return true;
           const targetDescriptors = foundry.utils.getProperty(message, "data.system.targets") as DND5ETargetDescriptor[] | undefined;
           if (targetDescriptors && workflow) {
             // Don't mutate td.ac — it's a shared reference with the chat message data.
