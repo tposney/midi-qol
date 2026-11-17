@@ -30,6 +30,7 @@ import {
 } from "../settings.js";
 import { installedModules } from "../setupModules.js";
 import { saveUndoData } from "../undo.js";
+import { isRelaunched, takeRelaunch, useRelaunchSpike } from "./useRelaunch.js";
 import {
   activityHasAreaTarget,
   callActivityHooks,
@@ -474,6 +475,13 @@ export let MidiActivityMixin = Base => {
     }
 
     async use(usage: ActivityUseConfiguration = {}, dialog: RollDialogConfig = {}, message: RollMessageConfig = {}) {
+      if (useRelaunchSpike.enabled && !isRelaunched(usage)) {
+        // As if midi did not override use: dnd5e's own, which the preUseActivity hook cancels and relaunches
+        if (!useRelaunchSpike.keepResult) return super.use(usage, dialog, message);
+        const useKey = foundry.utils.randomID();
+        const first = await super.use({ ...usage, useRelaunch: { useKey } }, dialog, message);
+        return first ?? await takeRelaunch(useKey);
+      }
       if (usage.midiOptions?.rollAs) return this.useAs(usage.midiOptions.rollAs, usage, dialog, message);
       if (!this.item.isEmbedded) return;
       if (!this.item.isOwner) {

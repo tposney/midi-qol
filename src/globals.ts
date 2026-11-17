@@ -1827,6 +1827,8 @@ export type ActivityUseConfiguration = InexactPartial<{
   midi: {
     workflowClass: typeof Workflow;
   };
+  /** midi-next spike: a use dnd5e cancelled in preUseActivity and midi started again */
+  useRelaunch: { relaunched?: boolean; useKey?: string };
   sequenceId: string;
   activity: Activity;
 }>;
