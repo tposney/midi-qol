@@ -828,7 +828,8 @@ declare global {
   }
   var MidiQOL: {
     actionQueue: foundry.utils.Semaphore;
-    activityTypes: Record<string, { documentClass: ReturnType<typeof MidiActivityMixin> }> & {
+    /** dnd5e's activity type entries (CONFIG.DND5E.activityTypes), whose classes carry midi's members */
+    activityTypes: Record<string, { documentClass?: unknown }> & {
       MidiActivityMixin: typeof MidiActivityMixin;
     };
     activityHasEmanationNoTemplate: typeof utils.activityHasEmanationNoTemplate;

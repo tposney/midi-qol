@@ -1,3 +1,4 @@
+import { adoptActivityType } from "./graft.js";
 import { Activity } from "../../globals.js";
 import { debugEnabled, GameSystemConfig, warn } from "../../midi-qol.js";
 import { configSettings } from "../settings.js";
@@ -12,7 +13,7 @@ export function setupSummonActivity() {
   //@ts-expect-error
   MidiSummonSheet = defineMidiSummonSheetClass(game.system.applications.activity.SummonSheet);
   MidiSummonActivity = defineMidiSummonActivityClass(GameSystemConfig.activityTypes.summon.documentClass as Activity);
-  GameSystemConfig.activityTypes.summon = { documentClass: MidiSummonActivity };
+  adoptActivityType("summon", MidiSummonActivity, MidiSummonSheet);
   //@ts-expect-error
   Hooks.on("dnd5e.summonToken", (activity, profile, tokenData, options) => {
     if (!activity.friendlySummon) return;

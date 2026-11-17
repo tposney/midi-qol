@@ -1,3 +1,4 @@
+import { adoptActivityType } from "./graft.js";
 import { registerCardActions } from "./cardActions.js";
 import { AnyMutableObject } from "fvtt-types/utils";
 import { Activity, ActivityUseConfiguration, RollDialogConfig, RollMessageConfig, RollProcessConfig } from "../../globals.js";
@@ -16,7 +17,7 @@ export function setupSaveActivity() {
   //@ts-expect-error
   MidiSaveSheet = defineMidiSaveSheetClass(game.system.applications.activity.SaveSheet);
   MidiSaveActivity = defineMidiSaveActivityClass(GameSystemConfig.activityTypes.save.documentClass as Activity);
-  GameSystemConfig.activityTypes.save = { documentClass: MidiSaveActivity };
+  adoptActivityType("save", MidiSaveActivity, MidiSaveSheet);
   // Localization.localizeDataModel(MidiSaveActivity);
 }
 

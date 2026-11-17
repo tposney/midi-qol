@@ -1960,7 +1960,7 @@ export class Workflow {
     }
 
     this.preSelectedTargets = this.#preSelectedTargets();
-    if (this.activity instanceof MidiSummonActivity && configSettings.autoRemoveSummonedCreature) {
+    if (isActivityType(this.activity, "summon") && configSettings.autoRemoveSummonedCreature) {
       // Hooks.on + uuid filter rather than Hooks.once: concurrent summon workflows must not consume each other's hook
       this.postSummonHookId = Hooks.on("dnd5e.postSummon", (activity, profile, createdTokens, options) => {
         if (activity?.uuid !== this.activity?.uuid) return;
@@ -2614,7 +2614,7 @@ export class Workflow {
       return this.WorkflowState_Abort;
     }
     await this.beginDeferredConcentration();
-    if ((!getAutoRollAttack(this) && this.activity.attack) || this.activity instanceof MidiTransformActivity) {
+    if ((!getAutoRollAttack(this) && this.activity.attack) || isActivityType(this.activity, "transform")) {
       // Not auto rolling so display targets
       const rollMode = safeGetGameSetting("core", "messageMode") as string;
       this.whisperAttackCard = configSettings.autoCheckHit === "whisper" || rollMode === "blind" || rollMode === "gm";
@@ -2673,7 +2673,7 @@ export class Workflow {
 
   async WorkflowState_WaitForAttackRoll(): Promise<WorkflowState> {
     // Attack per target: this use has its targets (template, confirmation) and its cost; each target gets its own use
-    if (MidiAttackActivity && this.activity instanceof MidiAttackActivity && this.activity.attacksEachTarget
+    if (isActivityType(this.activity, "attack") && this.activity.attacksEachTarget
       && this.targets.count > 1 && !this.workflowOptions?.attackSplit) {
       if (this.chatCard) await this.performThrottledUpdate(this.chatCard, { "system.midi.progress.attacksSplit": true } as ChatMessage.UpdateData);
       // The targets, filled in with each one's hit or miss as its own use resolves (addSplitAttackResult)
@@ -2681,7 +2681,8 @@ export class Workflow {
       this.whisperAttackCard = configSettings.autoCheckHit === "whisper" || rollMode === "blind" || rollMode === "gm";
       if (configSettings.autoCheckHit !== "none") await this.displayHitTargets(this.whisperAttackCard);
       this.needsHitTargetsDisplayed = false;
-      await this.activity.attackEachTarget(this);
+      const attackEachTarget: unknown = this.activity.attackEachTarget;
+      if (typeof attackEachTarget === "function") await attackEachTarget.call(this.activity, this);
       this.outcome = "split";
       return this.WorkflowState_RollFinished;
     }
@@ -3878,7 +3879,8 @@ export class Workflow {
       TroubleShooter.recordError(new Error(message), message);
     }
     // A teleport planned with the workflow: after its effects and damage, before RollComplete
-    if (!this.aborted && !this.damageOnly && MidiTeleportActivity && this.activity instanceof MidiTeleportActivity) await this.activity.autoTeleport(this);
+    const autoTeleport: unknown = this.activity?.autoTeleport;
+    if (!this.aborted && !this.damageOnly && isActivityType(this.activity, "teleport") && typeof autoTeleport === "function") await autoTeleport.call(this.activity, this);
     const specialExpiries = [
       "isDamaged",
       "isHealed",

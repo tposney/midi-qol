@@ -1,3 +1,4 @@
+import { adoptActivityType } from "./graft.js";
 import { registerCardActions } from "./cardActions.js";
 import { TokenDocumentSet } from "../lib/tokenDocumentSet.js";
 import { debugEnabled, warn, error, busyWait, GameSystemConfig, debug, i18n, MODULE_ID, i18nFormat } from "../../midi-qol.js";
@@ -111,7 +112,7 @@ export function setupAttackActivity() {
   //@ts-expect-error
   MidiAttackSheet = defineMidiAttackSheetClass(game.system.applications.activity.AttackSheet);
   MidiAttackActivity = defineMidiAttackActivityClass(GameSystemConfig.activityTypes.attack.documentClass as Activity);
-  GameSystemConfig.activityTypes.attack = { documentClass: MidiAttackActivity };
+  adoptActivityType("attack", MidiAttackActivity, MidiAttackSheet);
 }
 
 let defineMidiAttackSheetClass = (baseClass: any) => {

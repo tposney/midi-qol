@@ -1,3 +1,4 @@
+import { adoptActivityType } from "./graft.js";
 import { registerCardActions } from "./cardActions.js";
 import { AnyMutableObject } from "fvtt-types/utils";
 import { Activity } from "../../globals.js";
@@ -15,7 +16,7 @@ export function setupDamageActivity() {
   //@ts-expect-error
   MidiDamageSheet = defineMidiDamageSheetClass(game.system.applications.activity.DamageSheet);
   MidiDamageActivity = defineMidiDamageActivityClass(GameSystemConfig.activityTypes.damage.documentClass as Activity);
-  GameSystemConfig.activityTypes.damage = { documentClass: MidiDamageActivity };
+  adoptActivityType("damage", MidiDamageActivity, MidiDamageSheet);
 }
 
 let defineMidiDamageActivityClass = <T extends Activity>(ActivityClass: T) => {

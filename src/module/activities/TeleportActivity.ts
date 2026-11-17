@@ -1,3 +1,4 @@
+import { adoptActivityType } from "./graft.js";
 import { registerCardActions } from "./cardActions.js";
 import { Activity, RollMessageConfig } from "../../globals.js";
 import { debugEnabled, GameSystemConfig, i18n, i18nFormat, warn, moveToken } from "../../midi-qol.js";
@@ -19,7 +20,7 @@ export function setupTeleportActivity() {
   if (debugEnabled > 0) warn("MidiQOL | TeleportActivity | setupTeleportActivity | Called");
   MidiTeleportSheet = defineMidiTeleportSheetClass(sheet);
   MidiTeleportActivity = defineMidiTeleportActivityClass(base as Activity);
-  GameSystemConfig.activityTypes.teleport = { documentClass: MidiTeleportActivity };
+  adoptActivityType("teleport", MidiTeleportActivity, MidiTeleportSheet);
 }
 
 export const teleportMoverModes = ["default", "caster", "casterAndTargets", "targets", "swap"] as const;
@@ -158,7 +159,7 @@ let defineMidiTeleportActivityClass = <T extends Activity>(ActivityClass: T) => 
       if (!this.canPlanTeleport) return null;
       workflow ??= Workflow.findWorkflow(message?.uuid);
       message ??= workflow?.chatCard;
-      const targets = listed ?? this.#workflowTargets(workflow, message);
+      const targets = listed ?? this._midiWorkflowTargets(workflow, message);
       const movers = this.teleportMovers(targets, listed);
       if (!movers.length) {
         ui.notifications?.warn("DND5E.ActionWarningNoToken", { localize: true });
@@ -173,7 +174,7 @@ let defineMidiTeleportActivityClass = <T extends Activity>(ActivityClass: T) => 
       const config: TeleportConfig = { maxDistance, tokens: movers.map(m => m.token), movers: this.midiTeleport?.movers ?? "default" };
       if (Hooks.call("dnd5e.preTeleport", this, config) === false) return;
       if (await callActivityHooks(this, "midi-qol.preTeleport", workflow, config) === false) return;
-      if (workflow && await this.#callTeleportMacros(workflow, "preTeleport", { teleport: config })) return;
+      if (workflow && await this._midiCallTeleportMacros(workflow, "preTeleport", { teleport: config })) return;
       const kept = movers.filter(m => config.tokens.includes(m.token));
 
       const option = workflow?.workflowOptions?.teleport as TeleportOption | undefined;
@@ -185,8 +186,8 @@ let defineMidiTeleportActivityClass = <T extends Activity>(ActivityClass: T) => 
       let plans: (TeleportPlan[] & { failed?: boolean }) | undefined;
       try {
         plans = this.midiTeleport?.movers === "swap"
-          ? this.#planSwap(kept, config.maxDistance)
-          : await this.#planMovers(kept, config.maxDistance, highlight, destinations);
+          ? this._midiPlanSwap(kept, config.maxDistance)
+          : await this._midiPlanMovers(kept, config.maxDistance, highlight, destinations);
       } finally {
         highlight.remove();
         if (reactionRequest) await pauseReactionTimeout(reactionRequest, false);
@@ -194,21 +195,21 @@ let defineMidiTeleportActivityClass = <T extends Activity>(ActivityClass: T) => 
       if (!plans?.length) return;
       if (Hooks.call("dnd5e.teleport", this, plans.map(p => ({ token: p.token, plan: p.plan }))) === false) return;
       if (plans.failed) {
-        await this.#failTeleport(kept.map(m => m.token));
+        await this._midiFailTeleport(kept.map(m => m.token));
         return [];
       }
 
-      const results = await Promise.all(plans.map(async p => ({ token: p.token, plan: p.plan, moved: await this.#move(p) })));
+      const results = await Promise.all(plans.map(async p => ({ token: p.token, plan: p.plan, moved: await this._midiMove(p) })));
       Hooks.callAll("dnd5e.postTeleport", this, results);
       if (workflow) workflow.teleportResults = results;
-      if (message && results.some(r => r.moved)) await this.#recordTeleported(message, workflow);
+      if (message && results.some(r => r.moved)) await this._midiRecordTeleported(message, workflow);
       await callActivityHooks(this, "midi-qol.postTeleport", workflow, results);
-      if (workflow) await this.#callTeleportMacros(workflow, "postTeleport", { teleport: { ...config, results } });
+      if (workflow) await this._midiCallTeleportMacros(workflow, "postTeleport", { teleport: { ...config, results } });
       return results;
     }
 
     /** The card's Teleport button goes once the move is made. */
-    async #recordTeleported(message: ChatMessage.Implementation, workflow: Workflow | undefined) {
+    async _midiRecordTeleported(message: ChatMessage.Implementation, workflow: Workflow | undefined) {
       if (!message.isOwner || !foundry.utils.getProperty(message, "system.midi")) return;
       const update = { "system.midi.progress.teleported": true } as ChatMessage.UpdateData;
       // With the run's next card write when the use's workflow is running, else at once
@@ -216,7 +217,7 @@ let defineMidiTeleportActivityClass = <T extends Activity>(ActivityClass: T) => 
       else await message.update(update).catch(() => undefined);
     }
 
-    #workflowTargets(workflow: Workflow | undefined, message: ChatMessage.Implementation | undefined): Token.Implementation[] {
+    _midiWorkflowTargets(workflow: Workflow | undefined, message: ChatMessage.Implementation | undefined): Token.Implementation[] {
       if (workflow?.targets?.tokens.length) return workflow.targets.tokens;
       // @ts-expect-error no dnd5e-types
       const descriptors: { token?: string }[] = message?.system?.targets ?? [];
@@ -224,25 +225,25 @@ let defineMidiTeleportActivityClass = <T extends Activity>(ActivityClass: T) => 
     }
 
     /** Run the item's on-use macros for a teleport pass; true when one returned false (cancel). */
-    async #callTeleportMacros(workflow: Workflow, pass: "preTeleport" | "postTeleport", options: Record<string, unknown>): Promise<boolean> {
+    async _midiCallTeleportMacros(workflow: Workflow, pass: "preTeleport" | "postTeleport", options: Record<string, unknown>): Promise<boolean> {
       if (!configSettings.allowUseMacro || workflow.workflowOptions?.noOnUseMacro === true) return false;
       const results = await workflow.callMacros(workflow.item, workflow.onUseMacros?.getMacros(pass), "OnUse", pass, options);
       return results.some(r => r === false);
     }
 
     /** Swap: the caster and the target trade places, the target within the teleport distance (and seen, if required). */
-    #planSwap(movers: Mover[], maxDistance: number): (TeleportPlan[] & { failed?: boolean }) | undefined {
+    _midiPlanSwap(movers: Mover[], maxDistance: number): (TeleportPlan[] & { failed?: boolean }) | undefined {
       const [first, second] = movers.map(m => m.token);
       if (!first || !second) return;
       const plans: TeleportPlan[] & { failed?: boolean } = [
-        { token: first, plan: { origin: this.#positionOf(first), destination: this.#positionOf(second), waypoints: [] } },
-        { token: second, plan: { origin: this.#positionOf(second), destination: this.#positionOf(first), waypoints: [] } }
+        { token: first, plan: { origin: this._midiPositionOf(first), destination: this._midiPositionOf(second), waypoints: [] } },
+        { token: second, plan: { origin: this._midiPositionOf(second), destination: this._midiPositionOf(first), waypoints: [] } }
       ];
       const fail = this.midiTeleport?.blocked === "fail";
-      let problem = this.#gap(this.#space(first, first.document), this.#space(second, second.document)) > maxDistance + 0.01
+      let problem = this._midiGap(this._midiSpace(first, first.document), this._midiSpace(second, second.document)) > maxDistance + 0.01
         ? "midi-qol.TELEPORT.TooFar" : undefined;
       for (const { token, plan } of plans) {
-        problem ??= this.#destinationProblem(token, this.#space(token, plan.destination), plans, { from: first });
+        problem ??= this._midiDestinationProblem(token, this._midiSpace(token, plan.destination), plans, { from: first });
       }
       if (!problem) return plans;
       if (fail) {
@@ -253,7 +254,7 @@ let defineMidiTeleportActivityClass = <T extends Activity>(ActivityClass: T) => 
       return;
     }
 
-    async #planMovers(movers: Mover[], maxDistance: number, highlight: TokenHighlight, destinations?: Record<string, Position>): Promise<(TeleportPlan[] & { failed?: boolean }) | undefined> {
+    async _midiPlanMovers(movers: Mover[], maxDistance: number, highlight: TokenHighlight, destinations?: Record<string, Position>): Promise<(TeleportPlan[] & { failed?: boolean }) | undefined> {
       const plans: TeleportPlan[] & { failed?: boolean } = [];
       const caster = this.casterToken;
       const fail = this.midiTeleport?.blocked === "fail";
@@ -264,10 +265,10 @@ let defineMidiTeleportActivityClass = <T extends Activity>(ActivityClass: T) => 
         let planned = false;
         const destination = given(mover.token);
         if (destination) {
-          const space = this.#space(mover.token, destination);
-          const origin = this.#positionOf(mover.token);
-          const problem = this.#travel(mover.token, origin, destination) > maxDistance + 0.01
-            ? "midi-qol.TELEPORT.TooFar" : this.#destinationProblem(mover.token, space, plans, { from: caster });
+          const space = this._midiSpace(mover.token, destination);
+          const origin = this._midiPositionOf(mover.token);
+          const problem = this._midiTravel(mover.token, origin, destination) > maxDistance + 0.01
+            ? "midi-qol.TELEPORT.TooFar" : this._midiDestinationProblem(mover.token, space, plans, { from: caster });
           if (problem && !fail) {
             ui.notifications?.warn(i18nFormat("midi-qol.TELEPORT.Blocked", { name: mover.token.name, reason: i18n(problem) }));
             if (mover.token === caster) return;
@@ -281,8 +282,8 @@ let defineMidiTeleportActivityClass = <T extends Activity>(ActivityClass: T) => 
         for (let attempt = 0; attempt < 5; attempt++) {
           const plan = await mover.token.planMovement({ allowedActions: ["blink"], direct: true, maxDistance, preventDrop: true });
           if (!plan) break;
-          const space = this.#space(mover.token, plan.destination);
-          const problem = this.#destinationProblem(mover.token, space, plans, { from: caster });
+          const space = this._midiSpace(mover.token, plan.destination);
+          const problem = this._midiDestinationProblem(mover.token, space, plans, { from: caster });
           if (problem && !fail) {
             ui.notifications?.warn(i18nFormat("midi-qol.TELEPORT.Blocked", { name: mover.token.name, reason: i18n(problem) }));
             continue;
@@ -304,27 +305,27 @@ let defineMidiTeleportActivityClass = <T extends Activity>(ActivityClass: T) => 
       for (const mover of placed) {
         const constraint = mode === "casterAndTargets"
           ? { near: anchor!, within: canvas!.grid!.distance }
-          : { near: caster ? this.#space(caster, caster.document) : undefined, within: maxDistance };
+          : { near: caster ? this._midiSpace(caster, caster.document) : undefined, within: maxDistance };
         highlight.setActive(mover.token);
-        const origin = this.#positionOf(mover.token);
+        const origin = this._midiPositionOf(mover.token);
         let destination: Position | undefined | null = given(mover.token);
         if (destination) {
-          const problem = this.#placementProblem(mover.token, this.#space(mover.token, destination), constraint, plans, fail);
+          const problem = this._midiPlacementProblem(mover.token, this._midiSpace(mover.token, destination), constraint, plans, fail);
           if (problem) {
             ui.notifications?.warn(i18nFormat("midi-qol.TELEPORT.Blocked", { name: mover.token.name, reason: i18n(problem) }));
             continue;
           }
         } else {
-          destination = await this.#pickDestination(mover.token, constraint, plans, fail);
+          destination = await this._midiPickDestination(mover.token, constraint, plans, fail);
           if (destination === null) return; // dismissed
         }
-        if (!destination && mode === "casterAndTargets") destination = this.#nearestFree(mover.token, anchor!, plans);
+        if (!destination && mode === "casterAndTargets") destination = this._midiNearestFree(mover.token, anchor!, plans);
         if (!destination) {
           if (mode === "casterAndTargets") ui.notifications?.warn(i18nFormat("midi-qol.TELEPORT.NoSpace", { name: mover.token.name }));
           continue;
         }
-        const space = this.#space(mover.token, destination);
-        if (fail && this.#destinationProblem(mover.token, space, plans, { from: anchor ? undefined : caster, reachableFrom: anchor })) plans.failed = true;
+        const space = this._midiSpace(mover.token, destination);
+        if (fail && this._midiDestinationProblem(mover.token, space, plans, { from: anchor ? undefined : caster, reachableFrom: anchor })) plans.failed = true;
         // Next to the caster's destination: on its level; otherwise the level the pick was made on.
         const { elevation, level } = anchor ? plans[0]!.plan.destination : { ...origin, ...destination };
         plans.push({ token: mover.token, plan: { origin, destination: { x: destination.x, y: destination.y, elevation, level }, waypoints: [] } });
@@ -333,17 +334,17 @@ let defineMidiTeleportActivityClass = <T extends Activity>(ActivityClass: T) => 
     }
 
     /** Why a placed mover can't go to `space`: too far from its anchor, or (unless the teleport fails instead) blocked. */
-    #placementProblem(token: Token.Implementation, space: Space, constraint: { near?: Space, within: number }, plans: TeleportPlan[], fail: boolean): string | undefined {
-      if (constraint.near && this.#gap(constraint.near, space) > constraint.within + 0.01) return "midi-qol.TELEPORT.TooFar";
+    _midiPlacementProblem(token: Token.Implementation, space: Space, constraint: { near?: Space, within: number }, plans: TeleportPlan[], fail: boolean): string | undefined {
+      if (constraint.near && this._midiGap(constraint.near, space) > constraint.within + 0.01) return "midi-qol.TELEPORT.TooFar";
       if (fail) return undefined;
-      return this.#destinationProblem(token, space, plans, { reachableFrom: this.midiTeleport?.movers === "casterAndTargets" ? constraint.near : undefined });
+      return this._midiDestinationProblem(token, space, plans, { reachableFrom: this.midiTeleport?.movers === "casterAndTargets" ? constraint.near : undefined });
     }
 
     /**
      * Let the user pick where `token` goes: Foundry's token placement preview, nothing created. Undefined when the
      * user skips it (right click), null when they dismiss the placement.
      */
-    async #pickDestination(token: Token.Implementation, constraint: { near?: Space, within: number }, plans: TeleportPlan[], fail: boolean): Promise<Position | undefined | null> {
+    async _midiPickDestination(token: Token.Implementation, constraint: { near?: Space, within: number }, plans: TeleportPlan[], fail: boolean): Promise<Position | undefined | null> {
       let skipped = false;
       // Foundry places only tokens the user owns and moves the preview in x and y alone: preview an owned token (the
       // caster's) with the mover's size and image, on the level being viewed.
@@ -363,7 +364,7 @@ let defineMidiTeleportActivityClass = <T extends Activity>(ActivityClass: T) => 
         create: false,
         allowRotation: false,
         preConfirm: ({ document }: { document: TokenDocument.Implementation }) => {
-          const problem = this.#placementProblem(token, this.#space(token, document), constraint, plans, fail);
+          const problem = this._midiPlacementProblem(token, this._midiSpace(token, document), constraint, plans, fail);
           if (problem) ui.notifications?.warn(i18nFormat("midi-qol.TELEPORT.Blocked", { name: token.name, reason: i18n(problem) }));
           return !problem;
         },
@@ -376,7 +377,7 @@ let defineMidiTeleportActivityClass = <T extends Activity>(ActivityClass: T) => 
     }
 
     /** The nearest free space within 5 ft of `anchor`, or undefined. */
-    #nearestFree(token: Token.Implementation, anchor: Space, plans: TeleportPlan[]): Position | undefined {
+    _midiNearestFree(token: Token.Implementation, anchor: Space, plans: TeleportPlan[]): Position | undefined {
       const grid = canvas!.grid!;
       const within = grid.distance;
       const candidates: Position[] = [];
@@ -402,12 +403,12 @@ let defineMidiTeleportActivityClass = <T extends Activity>(ActivityClass: T) => 
       }
       const centre = (r: Rect) => ({ x: r.x + r.width / 2, y: r.y + r.height / 2 });
       const a = centre(anchor.rect);
-      const distanceFrom = (p: Position) => { const c = centre(this.#space(token, p).rect); return Math.hypot(c.x - a.x, c.y - a.y); };
+      const distanceFrom = (p: Position) => { const c = centre(this._midiSpace(token, p).rect); return Math.hypot(c.x - a.x, c.y - a.y); };
       candidates.sort((p1, p2) => distanceFrom(p1) - distanceFrom(p2));
       return candidates.find(p => {
-        const space = this.#space(token, p);
-        return !this.#overlaps(space, anchor) && this.#gap(anchor, space) <= within + 0.01
-          && !this.#destinationProblem(token, space, plans, { reachableFrom: anchor });
+        const space = this._midiSpace(token, p);
+        return !this._midiOverlaps(space, anchor) && this._midiGap(anchor, space) <= within + 0.01
+          && !this._midiDestinationProblem(token, space, plans, { reachableFrom: anchor });
       });
     }
 
@@ -416,7 +417,7 @@ let defineMidiTeleportActivityClass = <T extends Activity>(ActivityClass: T) => 
      * tokens and the other movers' destinations), not inside a wall, reachable from `reachableFrom` without
      * crossing a wall, and seen from `from` when the activity requires sight.
      */
-    #destinationProblem(token: Token.Implementation, space: Space, plans: TeleportPlan[], { from, reachableFrom }: { from?: Token.Implementation, reachableFrom?: Space } = {}): string | undefined {
+    _midiDestinationProblem(token: Token.Implementation, space: Space, plans: TeleportPlan[], { from, reachableFrom }: { from?: Token.Implementation, reachableFrom?: Space } = {}): string | undefined {
       const scene = canvas!.dimensions!.sceneRect;
       const rect = space.rect;
       if (rect.x < scene.x || rect.y < scene.y || rect.x + rect.width > scene.x + scene.width || rect.y + rect.height > scene.y + scene.height)
@@ -426,27 +427,27 @@ let defineMidiTeleportActivityClass = <T extends Activity>(ActivityClass: T) => 
       const sameLevel = (other: Space) => !space.level || !other.level || other.level === space.level;
       const occupied = canvas!.tokens!.placeables.some(t => {
         if (t === token || moving.has(t) || t.document.hidden === true) return false;
-        const other = this.#space(t, t.document);
-        return sameLevel(other) && this.#overlaps(space, other);
+        const other = this._midiSpace(t, t.document);
+        return sameLevel(other) && this._midiOverlaps(space, other);
       });
       const reserved = plans.some(p => {
         if (p.token === token) return false;
-        const other = this.#space(p.token, p.plan.destination);
-        return sameLevel(other) && this.#overlaps(space, other);
+        const other = this._midiSpace(p.token, p.plan.destination);
+        return sameLevel(other) && this._midiOverlaps(space, other);
       });
       if (occupied || reserved) return "midi-qol.TELEPORT.Occupied";
-      if (this.#wallInside(space, token)) return "midi-qol.TELEPORT.InWall";
+      if (this._midiWallInside(space, token)) return "midi-qol.TELEPORT.InWall";
       const centre = { x: rect.x + rect.width / 2, y: rect.y + rect.height / 2 };
       if (reachableFrom) {
         const origin = { x: reachableFrom.rect.x + reachableFrom.rect.width / 2, y: reachableFrom.rect.y + reachableFrom.rect.height / 2 };
-        if (this.#collides(origin, centre, "move", token, space.level)) return "midi-qol.TELEPORT.BehindWall";
+        if (this._midiCollides(origin, centre, "move", token, space.level)) return "midi-qol.TELEPORT.BehindWall";
       }
-      if (from && this.midiTeleport?.requireSight && this.#collides(from.center, centre, "sight", from)) return "midi-qol.TELEPORT.NotSeen";
+      if (from && this.midiTeleport?.requireSight && this._midiCollides(from.center, centre, "sight", from)) return "midi-qol.TELEPORT.NotSeen";
       return undefined;
     }
 
     /** A wall between two points on `levelId`'s level (default: the token's). */
-    #collides(origin: { x: number, y: number }, destination: { x: number, y: number }, type: "move" | "sight", token: Token.Implementation, levelId?: string): boolean {
+    _midiCollides(origin: { x: number, y: number }, destination: { x: number, y: number }, type: "move" | "sight", token: Token.Implementation, levelId?: string): boolean {
       // @ts-expect-error no dnd5e-types for document.level / scene.levels
       const level = (levelId && canvas?.scene?.levels?.get(levelId)) || collisionLevel(token);
       // @ts-expect-error v14 collision level not in fvtt-types
@@ -457,7 +458,7 @@ let defineMidiTeleportActivityClass = <T extends Activity>(ActivityClass: T) => 
      * A movement-blocking wall crossing the space: each grid space's edges and diagonals (the bounds when gridless),
      * inset so walls along its border don't count.
      */
-    #wallInside(space: Space, token: Token.Implementation): boolean {
+    _midiWallInside(space: Space, token: Token.Implementation): boolean {
       const inset = 2;
       const outlines: { x: number, y: number }[][] = space.cells
         ? space.cells.map(cell => canvas!.grid!.getVertices(cell))
@@ -472,20 +473,20 @@ let defineMidiTeleportActivityClass = <T extends Activity>(ActivityClass: T) => 
         });
         const n = points.length;
         for (let k = 0; k < n; k++) {
-          if (this.#collides(points[k], points[(k + 1) % n], "move", token, space.level)) return true;
-          if (k < n / 2 && this.#collides(points[k], points[k + Math.floor(n / 2)], "move", token, space.level)) return true;
+          if (this._midiCollides(points[k], points[(k + 1) % n], "move", token, space.level)) return true;
+          if (k < n / 2 && this._midiCollides(points[k], points[k + Math.floor(n / 2)], "move", token, space.level)) return true;
         }
       }
       return false;
     }
 
-    #positionOf(token: Token.Implementation): Position {
+    _midiPositionOf(token: Token.Implementation): Position {
       const { x, y, elevation } = token.document._source;
       return { x, y, elevation, level: tokenLevel(token.document) };
     }
 
     /** `token`'s footprint at `position`: its grid spaces on square and hex grids, its bounds. */
-    #space(token: Token.Implementation, position: Position | TokenDocument.Implementation): Space {
+    _midiSpace(token: Token.Implementation, position: Position | TokenDocument.Implementation): Space {
       const rect = { x: position.x, y: position.y, width: token.w, height: token.h };
       const level = (position instanceof TokenDocument ? tokenLevel(position) : position.level) ?? tokenLevel(token.document);
       if (canvas!.grid!.isGridless) return { rect, level };
@@ -500,7 +501,7 @@ let defineMidiTeleportActivityClass = <T extends Activity>(ActivityClass: T) => 
       return { rect, cells, level };
     }
 
-    #overlaps(a: Space, b: Space): boolean {
+    _midiOverlaps(a: Space, b: Space): boolean {
       if (a.cells && b.cells) {
         const keys = new Set(a.cells.map(c => `${c.i},${c.j}`));
         return b.cells.some(c => keys.has(`${c.i},${c.j}`));
@@ -514,7 +515,7 @@ let defineMidiTeleportActivityClass = <T extends Activity>(ActivityClass: T) => 
      * How far apart two spaces are, in scene units, as the grid measures from space to space: one grid space's
      * distance when adjacent. Gridless: the gap between their bounds.
      */
-    #gap(a: Space, b: Space): number {
+    _midiGap(a: Space, b: Space): number {
       const grid = canvas!.grid!;
       if (a.cells && b.cells) {
         let best = Infinity;
@@ -531,12 +532,12 @@ let defineMidiTeleportActivityClass = <T extends Activity>(ActivityClass: T) => 
     }
 
     /** The distance a token's own teleport covers, as the grid measures it. */
-    #travel(token: Token.Implementation, from: Position, to: Position): number {
+    _midiTravel(token: Token.Implementation, from: Position, to: Position): number {
       const centre = (p: Position) => ({ x: p.x + token.w / 2, y: p.y + token.h / 2 });
       return canvas!.grid!.measurePath([centre(from), centre(to)], {}).distance;
     }
 
-    async #move({ token, plan }: TeleportPlan): Promise<boolean> {
+    async _midiMove({ token, plan }: TeleportPlan): Promise<boolean> {
       // Leaving the viewed level undraws the token; Foundry's target animation then draws on it and throws.
       const viewed = viewedLevel();
       if (plan.destination.level && viewed && plan.destination.level !== viewed.id && token.isTargeted)
@@ -553,7 +554,7 @@ let defineMidiTeleportActivityClass = <T extends Activity>(ActivityClass: T) => 
     }
 
     /** Dimension Door: an arrival in an occupied or filled space fails the teleport and damages every traveller. */
-    async #failTeleport(travellers: Token.Implementation[]) {
+    async _midiFailTeleport(travellers: Token.Implementation[]) {
       ui.notifications?.warn(i18n("midi-qol.TELEPORT.Failed"));
       // @ts-expect-error no dnd5e-types
       const damage = this.item.system.activities.find(a => isActivityType(a, "damage") && a.id !== this.id);

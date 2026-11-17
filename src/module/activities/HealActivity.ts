@@ -1,3 +1,4 @@
+import { adoptActivityType } from "./graft.js";
 import { registerCardActions } from "./cardActions.js";
 import { Activity, RollDialogConfig, RollMessageConfig, RollProcessConfig } from "../../globals.js";
 import { debugEnabled, GameSystemConfig, warn } from "../../midi-qol.js";
@@ -14,7 +15,7 @@ export function setupHealActivity() {
   //@ts-expect-error
   MidiHealSheet = defineMidiHealSheetClass(game.system.applications.activity.HealSheet);
   MidiHealActivity = defineMidiHealActivityClass(GameSystemConfig.activityTypes.heal.documentClass as Activity);
-  GameSystemConfig.activityTypes.heal = { documentClass: MidiHealActivity };
+  adoptActivityType("heal", MidiHealActivity, MidiHealSheet);
 }
 
 let defineMidiHealActivityClass = <T extends Activity>(ActivityClass: T) => {

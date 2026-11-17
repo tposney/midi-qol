@@ -1,3 +1,4 @@
+import { adoptActivityType } from "./graft.js";
 import { Activity } from "../../globals.js";
 import { debugEnabled, GameSystemConfig, warn } from "../../midi-qol.js";
 import { configSettings } from "../settings.js";
@@ -11,7 +12,7 @@ export function setupEnchantActivity() {
   //@ts-expect-error
   MidiEnchantSheet = defineMidiEnchantSheetClass(game.system.applications.activity.EnchantSheet);
   MidiEnchantActivity = defineMidiEnchantActivityClass(GameSystemConfig.activityTypes.enchant.documentClass as Activity);
-  GameSystemConfig.activityTypes.enchant = { documentClass: MidiEnchantActivity };
+  adoptActivityType("enchant", MidiEnchantActivity, MidiEnchantSheet);
 }
 
 let defineMidiEnchantActivityClass = <T extends Activity>(ActivityClass: T) => {

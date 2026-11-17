@@ -1,3 +1,4 @@
+import { adoptActivityType } from "./graft.js";
 import { TokenDocumentSet } from "../lib/tokenDocumentSet.js";
 import { Activity } from "../../globals.js";
 import { debugEnabled, GameSystemConfig, i18nFormat, warn } from "../../midi-qol.js";
@@ -13,7 +14,7 @@ export function setupTransformActivity() {
   //@ts-expect-error
   MidiTransformSheet = defineMidiTransformSheetClass(game.system.applications.activity.TransformSheet);
   MidiTransformActivity = defineMidiTransformActivityClass(GameSystemConfig.activityTypes.transform.documentClass as Activity);
-  GameSystemConfig.activityTypes.transform = { documentClass: MidiTransformActivity };
+  adoptActivityType("transform", MidiTransformActivity, MidiTransformSheet);
 }
 let defineMidiTransformSheetClass = (baseClass: any) => {
   return class MidiTransformSheet extends MidiActivityMixinSheet(baseClass) {

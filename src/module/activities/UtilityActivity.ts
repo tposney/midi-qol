@@ -1,3 +1,4 @@
+import { adoptActivityType } from "./graft.js";
 import { registerCardActions } from "./cardActions.js";
 import { Activity, RollDialogConfig, RollMessageConfig, RollProcessConfig } from "../../globals.js";
 import { debugEnabled, i18n, warn, error, GameSystemConfig } from "../../midi-qol.js";
@@ -18,7 +19,7 @@ export function setupUtilityActivity() {
   MidiUtilitySheet = defineMidiUtilitySheetClass(game.system.applications.activity.UtilitySheet);
 
   MidiUtilityActivity = defineMidiUtilityActivityClass(GameSystemConfig.activityTypes.utility.documentClass as Activity);
-  GameSystemConfig.activityTypes.utility = { documentClass: MidiUtilityActivity };
+  adoptActivityType("utility", MidiUtilityActivity, MidiUtilitySheet);
 }
 
 let defineMidiUtilityActivityClass = <T extends Activity>(ActivityClass: T) => {

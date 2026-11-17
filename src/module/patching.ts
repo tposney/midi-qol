@@ -2664,7 +2664,7 @@ export async function doItemUse(this: Item.Implementation, wrapped, config: Acti
     !a.midiProperties?.automationOnly &&
     !a.inProgress
   );
-  const attackActivities = activities?.filter(a => a instanceof MidiAttackActivity);
+  const attackActivities = activities?.filter(a => isActivityType(a, "attack"));
   if (attackActivities?.length === 1) { // if there is a single attack activity and no other non-automation activities use it
     const attackActivity = attackActivities[0];
     const extraActivities = activities?.filter(a => a !== attackActivity && a !== attackActivity?.otherActivity);

@@ -1,3 +1,4 @@
+import { adoptActivityType } from "./graft.js";
 import { Activity, RollDialogConfig, RollMessageConfig, RollProcessConfig } from "../../globals.js";
 import { debugEnabled, GameSystemConfig, warn } from "../../midi-qol.js";
 import { configSettings } from "../settings.js";
@@ -11,7 +12,7 @@ export function setupForwardActivity() {
   //@ts-expect-error
   MidiForwardSheet = defineMidiForwardSheetClass(game.system.applications.activity.ForwardSheet);
   MidiForwardActivity = defineMidiForwardActivityClass(GameSystemConfig.activityTypes.forward.documentClass as Activity);
-  GameSystemConfig.activityTypes.forward = { documentClass: MidiForwardActivity };
+  adoptActivityType("forward", MidiForwardActivity, MidiForwardSheet);
 }
 let defineMidiForwardSheetClass = (baseClass: any) => {
   return class MidiForwardSheet extends MidiActivityMixinSheet(baseClass) {

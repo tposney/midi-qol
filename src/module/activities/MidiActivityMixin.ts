@@ -1895,7 +1895,7 @@ export let MidiActivityMixinSheet = Base => {
     }
 
     /** A special duration chosen from a status's "add" list joins that status's durations. */
-    #onAddMidiStatusDuration(event: Event) {
+    _midiOnAddMidiStatusDuration(event: Event) {
       // Not a form field: the form must not submit the status list before this update.
       event.stopPropagation();
       const select = event.currentTarget as HTMLSelectElement;
@@ -2119,7 +2119,7 @@ export let MidiActivityMixinSheet = Base => {
     async _onRender(context, options) {
       await super._onRender(context, options);
       this.element.querySelectorAll("select[data-midi-status-duration]")
-        .forEach(select => select.addEventListener("change", this.#onAddMidiStatusDuration.bind(this)));
+        .forEach(select => select.addEventListener("change", this._midiOnAddMidiStatusDuration.bind(this)));
 
       // Auto-set target.override when region behaviour is enabled. The form-rendered
       // checkbox lives in the activation tab via region-behavior-targeting.hbs.

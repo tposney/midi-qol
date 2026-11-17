@@ -1,3 +1,4 @@
+import { adoptActivityType } from "./graft.js";
 import { Activity, ActivityUseConfiguration, RollDialogConfig, RollMessageConfig } from "../../globals.js";
 import { debugEnabled, GameSystemConfig, warn } from "../../midi-qol.js";
 import { Workflow } from "../Workflow.js";
@@ -12,7 +13,7 @@ export function setupCastActivity() {
   //@ts-expect-error
   MidiCastSheet = defineMidiCastSheetClass(game.system.applications.activity.CastSheet);
   MidiCastActivity = defineMidiCastActivityClass(GameSystemConfig.activityTypes.cast.documentClass as Activity);
-  GameSystemConfig.activityTypes.cast = { documentClass: MidiCastActivity };
+  adoptActivityType("cast", MidiCastActivity, MidiCastSheet);
 }
 let defineMidiCastSheetClass = (baseClass: any) => {
   return class MidiCastSheet extends MidiActivityMixinSheet(baseClass) {

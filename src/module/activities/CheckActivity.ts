@@ -1,3 +1,4 @@
+import { adoptActivityType } from "./graft.js";
 import { registerCardActions } from "./cardActions.js";
 import { cardRollDamage } from "./SaveActivity.js";
 import { AnyMutableObject } from "fvtt-types/utils";
@@ -17,7 +18,7 @@ export function setupCheckActivity() {
   //@ts-expect-error
   MidiCheckSheet = defineMidiCheckSheetClass(game.system.applications.activity.CheckSheet);
   MidiCheckActivity = defineMidiCheckActivityClass(GameSystemConfig.activityTypes.check.documentClass as Activity);
-  GameSystemConfig.activityTypes.check = { documentClass: MidiCheckActivity };
+  adoptActivityType("check", MidiCheckActivity, MidiCheckSheet);
 }
 
 let defineMidiCheckActivityClass = <T extends Activity>(ActivityClass: T) => {
