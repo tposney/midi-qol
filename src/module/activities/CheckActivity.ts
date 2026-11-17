@@ -43,40 +43,6 @@ let defineMidiCheckActivityClass = <T extends Activity>(ActivityClass: T) => {
         },
       }, { inplace: false, insertKeys: true, insertValues: true })
 
-    static defineSchema() {
-      const { StringField, ArrayField, BooleanField, SchemaField } = foundry.data.fields;
-      //@ts-expect-error
-      const dataModels = game.system.dataModels;
-      const { DamageField } = dataModels.shared
-      const FormulaField = dataModels.fields.FormulaField;
-
-      const schema = {
-        ...super.defineSchema(),
-        otherActivityAsParentType: new BooleanField({
-          name: "otherActivityAsParentType",
-          initial: true,
-          required: false,
-          label: i18n("midi-qol.SHARED.FIELDS.otherActivityAsParentType.label"),
-          hint: i18n("midi-qol.SHARED.FIELDS.otherActivityAsParentType.hint")
-        }),
-        damage: new SchemaField({
-          onSave: new StringField({
-            initial: "half",
-            default: "half",
-            name: "onSave",
-            hint: i18n("DND5E.SAVE.FIELDS.damage.onSave.hint"),
-            label: i18n("DND5E.SAVE.FIELDS.damage.onSave.label")
-          }),
-          parts: new ArrayField(new DamageField()),
-          critical: new SchemaField({
-            allow: new BooleanField(),
-            bonus: new FormulaField(),
-          }),
-        }),
-        friendlySave: new StringField({ initial: "default", name: "friendlySave" })
-      };
-      return schema;
-    }
 
     static async #rollCheck(this: Activity, event: PointerEvent, target: HTMLElement, message: ChatMessage.Implementation) {
       let workflow = message ? Workflow.findWorkflow(message.uuid) : null;
@@ -137,14 +103,8 @@ let defineMidiCheckActivityClass = <T extends Activity>(ActivityClass: T) => {
       }
     }
 
-    get possibleOtherActivity() {
-      return true;
-    }
 
 
-    get isSelfTriggerableOnly() {
-      return false;
-    }
 
     async _triggerSubsequentActions(config, results) {
     }

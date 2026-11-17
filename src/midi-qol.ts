@@ -202,6 +202,8 @@ globalThis.MidiQOL ??= {};
 Object.assign(globalThis.MidiQOL, {
   apiVersion: MIDI_API_VERSION,
   isRunning,
+  registerActivityPolicy,
+  activityPolicy,
   fillRulesText,
   activityHasEmanationNoTemplate,
   addDependent,
@@ -386,6 +388,8 @@ for (const appName of ["ConfigPanel", "TargetConfirmationDialog", "TroubleShoote
 function setupActivities() {
   // @ts-expect-error it'll get populated don't worry
   globalThis.MidiQOL.activityTypes = {};
+  installActivitySchema();
+  installActivityPrototype();
   setupMidiActivityMixin();
   setupAttackActivity();
   globalThis.MidiQOL.activityTypes["attack"] = { documentClass: MidiAttackActivity };
@@ -973,6 +977,8 @@ import { MidiCheckActivity, setupCheckActivity } from './module/activities/Check
 import { MidiHealActivity, setupHealActivity } from './module/activities/HealActivity.js';
 import { computeTargetsFromTemplates, requiresTargetConfirmation, resolveTargetConfirmation, selectTargetsFromTemplates, showItemInfo } from './module/activities/activityHelpers.js';
 import { MidiActivityMixin, setupActivityTitles, setupMidiActivityMixin } from './module/activities/MidiActivityMixin.js';
+import { installActivitySchema } from './module/activities/activitySchema.js';
+import { installActivityPrototype, registerActivityPolicy, activityPolicy } from './module/activities/activityPrototype.js';
 import { MidiForwardActivity, setupForwardActivity } from './module/activities/ForwardActivity.js';
 import { MidiEnchantActivity, setupEnchantActivity } from './module/activities/EnchantActivity.js';
 import { MidiTransformActivity, setupTransformActivity } from './module/activities/TransformActivity.js';

@@ -65,9 +65,6 @@ let defineMidiUtilityActivityClass = <T extends Activity>(ActivityClass: T) => {
       return activity.rollFormula?.({ event, workflow }, {}, {});
     }
 
-    get possibleOtherActivity() {
-      return true;
-    }
 
     async _triggerSubsequentActions(config, results) {
     }

@@ -43,40 +43,6 @@ let defineMidiSaveActivityClass = <T extends Activity>(ActivityClass: T) => {
         },
       }, { inplace: false, overwrite: true, insertKeys: true, insertValues: true });
 
-    static defineSchema() {
-      const { StringField, ArrayField, BooleanField, SchemaField } = foundry.data.fields;
-
-      //@ts-expect-error
-      const dataModels = game.system.dataModels;
-      const { DamageField } = dataModels.shared
-      const FormulaField = dataModels.fields.FormulaField;
-
-      return {
-        ...super.defineSchema(),
-        otherActivityAsParentType: new BooleanField({
-          name: "otherActivityAsParentType",
-          initial: true,
-          required: false,
-          label: i18n("midi-qol.SHARED.FIELDS.otherActivityAsParentType.label"),
-          hint: i18n("midi-qol.SHARED.FIELDS.otherActivityAsParentType.hint")
-        }),
-        damage: new SchemaField({
-          onSave: new StringField({
-            initial: "half",
-            default: "half",
-            name: "onSave",
-            hint: i18n("DND5E.SAVE.FIELDS.damage.onSave.hint"),
-            label: i18n("DND5E.SAVE.FIELDS.damage.onSave.label")
-          }),
-          critical: new SchemaField({
-            allow: new BooleanField(),
-            bonus: new FormulaField(),
-          }),
-          parts: new ArrayField(new DamageField()),
-        }),
-        friendlySave: new StringField({ initial: "default", name: "friendlySave" }),
-      }
-    }
 
     static #rollDamage(this: Activity, event: PointerEvent, target: HTMLElement, message: ChatMessage.Implementation) {
       const workflow = Workflow.forDamageButton(message);
@@ -139,9 +105,6 @@ let defineMidiSaveActivityClass = <T extends Activity>(ActivityClass: T) => {
       return super.use(config, dialog, message);
     }
 
-    get possibleOtherActivity() {
-      return true;
-    }
     async _triggerSubsequentActions(config, results) {
     }
     

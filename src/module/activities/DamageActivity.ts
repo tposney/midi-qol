@@ -46,9 +46,6 @@ let defineMidiDamageActivityClass = <T extends Activity>(ActivityClass: T) => {
       activity.rollDamage({ event, workflow }, {}, {});
     }
 
-    get possibleOtherActivity() {
-      return true;
-    }
     
     async rollDamage(config: AnyMutableObject, dialog: AnyMutableObject, message: AnyMutableObject) {
       config.midiOptions ??= {};

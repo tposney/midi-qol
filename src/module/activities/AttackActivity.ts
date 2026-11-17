@@ -166,29 +166,6 @@ let defineMidiAttackActivityClass = <T extends Activity>(ActivityClass: T) => {
 
     static LOCALIZATION_PREFIXES = [...super.LOCALIZATION_PREFIXES, "midi-qol.ATTACK"];
 
-    static defineSchema() {
-      const { StringField, BooleanField, NumberField } = foundry.data.fields;
-
-      const schema = {
-        ...super.defineSchema(),
-        otherActivityAsParentType: new BooleanField({
-          name: "otherActivityAsParentType",
-          initial: true,
-          required: false,
-          label: i18n("midi-qol.SHARED.FIELDS.otherActivityAsParentType.label"),
-          hint: i18n("midi-qol.SHARED.FIELDS.otherActivityAsParentType.hint")
-        }),
-        attackMode: new StringField({ name: "attackMode", initial: "oneHanded" }),
-        ammunition: new StringField({ name: "ammunition", initial: "" }),
-        // deprecated 
-        otherActivityUuid: new StringField({ name: "otherActivityUuid", required: false, initial: "" }),
-        attackRollPerTarget: new StringField({ name: "attackRollPerTarget", initial: "default", required: true }),
-        // Ammunition spent when the attack has several targets: default (one per attack roll), use (one), target (one each)
-        ammunitionPerTarget: new StringField({ name: "ammunitionPerTarget", initial: "default", required: true }),
-        fumbleThreshold: new NumberField({ name: "fumbleThreshold", initial: 1, required: false }),
-      };
-      return schema;
-    }
     static metadata =
       foundry.utils.mergeObject(
         super.metadata, {
@@ -782,12 +759,6 @@ let defineMidiAttackActivityClass = <T extends Activity>(ActivityClass: T) => {
       if (!this.ammunition) return undefined;
       const ammunitionItem = this.actor?.items?.get(this.ammunition);
       return ammunitionItem
-    }
-    get possibleOtherActivity() {
-      return false;
-    }
-    get isOtherActivityCompatible() {
-      return false;
     }
 
 

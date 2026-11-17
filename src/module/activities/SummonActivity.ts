@@ -51,18 +51,6 @@ let defineMidiSummonActivityClass = <T extends Activity>(ActivityClass: T) => {
         },
       }, { inplace: false, insertKeys: true, insertValues: true });
 
-    static defineSchema() {
-      return {
-        ...super.defineSchema(),
-        friendlySummon: new foundry.data.fields.BooleanField({ initial: false, name: "friendlySummon", required: false })
-      }
-    }
-    get possibleOtherActivity() {
-      return false;
-    }
-    get isTriggerableActivity() {
-      return true;
-    }
 
     async _triggerSubsequentActions(config, results) {
     }

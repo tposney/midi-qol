@@ -201,227 +201,19 @@ function savesRolledFromChat(): boolean {
 export let MidiActivityMixin = Base => {
   interface MidiActivityMixin extends Activity { };
   class MidiActivityMixin extends Base {
-    /** @deprecated MidiQOL.Workflow.workflowFor(activity) */
-    get workflow() {
-      foundry.utils.logCompatibilityWarning("midi-qol | activity.workflow is deprecated and will be removed in 14.8.0: use MidiQOL.Workflow.workflowFor(activity).", { since: "14.6.9", until: "14.8.0", once: true });
-      return Workflow.workflowFor(this);
-    }
-    set workflow(value) {
-      error("MidiActivityMixin | activity.workflow = is deprecated. activities no long store workflow references"); ``
-    }
 
-    /** The effective activation type for this activity. Overridden by MidiCastActivity to resolve from the linked spell. */
-    get effectiveActivationType(): string | undefined {
-      return this.activation?.type;
-    }
 
     static LOCALIZATION_PREFIXES = [...super.LOCALIZATION_PREFIXES, "midi-qol.SHARED"];
 
-    static defineSchema() {
-      const { StringField, ArrayField, BooleanField, SchemaField, SetField, NumberField, ColorField } = foundry.data.fields;
-      const schema = {
-        ...super.defineSchema(),
-        // flags: new ObjectField(),
-        useConditionText: new MidiConditionField({ name: "useCondition", initial: "" }),
-        useConditionReason: new StringField({ name: "useConditionReason", initial: "" }),
-        effectConditionText: new MidiConditionField({ name: "effectCondition", initial: "" }),
-        // null means never set, so imported items follow configSettings.defaultOtherActivity
-        otherActivityId: new StringField({ name: "otherActivity", initial: null, nullable: true }),
-        // disabled pending a way to make it work 
-        // useSystemActivity: new BooleanField({ name: "useSystemActivity", initial: false }),
-        macroData: new SchemaField({
-          name: new StringField({ name: "name", initial: "" }),
-          command: new StringField({ name: "command", initial: "" }),
-        }),
-        ignoreTraits: new SchemaField({
-          idi: new BooleanField({ name: "idi", initial: false }),
-          idr: new BooleanField({ name: "idr", initial: false }),
-          idv: new BooleanField({ name: "idv", initial: false }),
-          ida: new BooleanField({ name: "ida", initial: false }),
-          idm: new BooleanField({ name: "idm", initial: false })
-        }),
-        midiProperties: new SchemaField({
-          ignoreTraits: new SetField(new StringField(), { initial: [] }),
-          triggeredActivityId: new StringField({ name: "triggeredActivity", initial: "none", required: true, blank: false }),
-          //@ts-expect-error
-          triggeredActivityConditionText: new MidiConditionField({ name: "triggeredActivityCondition", initial: "" }),
-          triggeredActivityTargets: new StringField({ name: "triggeredActivityTargets", initial: "targets", required: true, blank: false }),
-          triggeredActivityRollAs: new StringField({ name: "triggeredActivityRollAs", initial: "self" }),
-          triggeredActivityConsume: new BooleanField({ name: "triggeredActivityConsume", initial: true }),
-          triggeredActivityConfigure: new BooleanField({ name: "triggeredActivityConfigure", initial: true }),
-          // Offered as a button on the card when another of the item's activities hits (followUps.ts).
-          followUp: new BooleanField({ name: "followUp", initial: false }),
-          followUpTargets: new StringField({ name: "followUpTargets", initial: "default", required: true, blank: false,
-            choices: Object.fromEntries(followUpTargetModes.map(mode => [mode, mode === "default" ? "midi-qol.FollowUp.Targets.default" : `midi-qol.TriggeredActivityTargetOptions.${mode}`])) }),
-          //@ts-expect-error
-          followUpCondition: new MidiConditionField({ name: "followUpCondition", initial: "" }),
-          autoConsume: new BooleanField({ name: "autoConsume", initial: false }),
-          forceConsumeDialog: new StringField({ name: "forceConsumeDialog", initial: "default" }),
-          forceRollDialog: new StringField({ name: "forceRollDialog", initial: "default" }),
-          forceDamageDialog: new StringField({ name: "forceDamageDialog", initial: "default" }),
-          confirmTargets: new StringField({ name: "confirmTargets", initial: "default", required: true, blank: false }),
-          autoTargetType: new StringField({ name: "autoTargetType", initial: "any", required: true, blank: false }),
-          autoTargetAction: new StringField({ name: "autoTargetAction", initial: "default" }),
-          automationOnly: new BooleanField({ name: "automationOnly", initial: false }),
-          otherActivityCompatible: new BooleanField({ name: "otherActivityCompatible", initial: true }),
-          otherActivityAsParentType: new BooleanField({ name: "otherActivityAsParentType", initial: true, required: false }),
-          identifier: new StringField({ name: "identifier", initial: "", required: false }),
-          displayActivityName: new BooleanField({ name: "displayActivityName", initial: false }),
-          rollMode: new StringField({ name: "rollMode", initial: "default", required: true, blank: false }),
-          chooseEffects: new BooleanField({ name: "chooseEffects", initial: false }),
-          toggleEffect: new BooleanField({ name: "toggleEffect", initial: false }),
-          ignoreFullCover: new BooleanField({ name: "ignoreFullCover", initial: false }),
-          targetMustBeSeen: new BooleanField({ name: "targetMustBeSeen", initial: false }),
-          removeChatButtons: new StringField({ name: "removeChatButtons", initial: "default", blank: false, required: true }),
-          magicEffect: new BooleanField({ name: "magicEffect", initial: false }),
-          magicDamage: new BooleanField({ name: "magicDamage", initial: false }),
-          noConcentrationCheck: new BooleanField({ name: "noConcentrationCheck", initial: false }),
-          skipConcentrationCheck: new BooleanField({ name: "skipConcentrationCheck", initial: false }),
-          autoCEEffects: new StringField({ name: "autoCEEffects", initial: "default", blank: false, required: true }),
-          // Conditions applied to the targets as the condition itself (as the token HUD does), with the activity's
-          // effects: on a failed save, or always with onSave. specialDuration adds to the status's own.
-          statuses: new ArrayField(new SchemaField({
-            id: new StringField({ initial: "" }),
-            specialDuration: new ArrayField(new StringField()),
-            onSave: new BooleanField({ initial: false })
-          }), { initial: [] }),
-        }),
-        isOverTimeFlag: new BooleanField({ name: "isOverTimeFlag", initial: false }),
-        overTimeProperties: new SchemaField({
-          turnChoice: new StringField({ blank: false, choices: ["start", "end"], default: "start" }),
-          saveRemoves: new BooleanField({ initial: true }),
-          rollAs: new StringField({ blank: false, choices: ["target", "source"], initial: "target" }),
-          //@ts-expect-error find out why there is a type error here
-          preRemoveConditionText: new MidiConditionField({ name: "removeCondition", initial: "" }),
-          //@ts-expect-error find out why there is a type error here
-          postRemoveConditionText: new MidiConditionField({ name: "postRemoveCondition", initial: "" }),
-        }),
-        regionBehavior: new SchemaField({
-          enabled: new BooleanField({ initial: false }),
-          dispositionFilter: new NumberField({ initial: -1, choices: { [-1]: "Enemies", [0]: "All", [1]: "Allies" } }),
-          excludeSource: new BooleanField({ initial: true }),
-          oncePerTurn: new BooleanField({ initial: true }),
-          // @ts-expect-error fvtt-types missing EDGE_RESTRICTION_TYPES (v14 regions use EDGE not WALL)
-          wallRestriction: new StringField({ initial: "none", choices: ["none", ...CONST.EDGE_RESTRICTION_TYPES] }),
-          regionVisibility: new NumberField({ initial: CONST.REGION_VISIBILITY.ALWAYS, choices: Object.values(CONST.REGION_VISIBILITY) }),
-          // "default" leaves the region stationary. "caster" attaches it to the caster's token;
-          // "target" attaches it to a chosen target (prompts if multiple targets are selected).
-          attachToken: new StringField({ initial: "default", choices: ["default", "caster", "target"] }),
-          // Moves the region each turn of the caster: away from it, or in a direction its owner chooses.
-          moveDistance: new NumberField({ initial: 0, min: 0 }),
-          moveDirection: new StringField({ initial: "away", choices: ["away", "choose"] }),
-          moveTiming: new StringField({ initial: "start", choices: ["start", "end"] }),
-          // The caster's height a template is measured from; "default" follows the Template Origin Height setting.
-          templateOrigin: new StringField({ initial: "default", required: true, blank: false, choices: ["default", "floor", "base", "top", "eye"] }),
-          rules: new ArrayField(new SchemaField({
-            trigger: new StringField({ required: true, blank: false, initial: "entry" }),
-            action: new StringField({ required: true, blank: false, initial: "useActivity" }),
-            targetId: new StringField({ required: true, blank: false, initial: "" }),
-          }), { initial: [] }),
-        }),
-        regionLight: new SchemaField({
-          enabled: new BooleanField({ initial: false }),
-          dim: new NumberField({ initial: 0, min: 0 }),
-          bright: new NumberField({ initial: 0, min: 0 }),
-          color: new ColorField({ initial: null, nullable: true }),
-          alpha: new NumberField({ initial: 0.5, min: 0, max: 1 }),
-          luminosity: new NumberField({ initial: 0.5, min: 0, max: 1 }),
-          animationType: new StringField({ initial: "", nullable: true }),
-          animationSpeed: new NumberField({ initial: 5, min: 0, max: 10 }),
-          animationIntensity: new NumberField({ initial: 5, min: 1, max: 10 }),
-        }),
-      };
-      return schema;
-    }
-
-    /**
-     * @type {boolean}
-     * @memberof MidiActivityMixin
-     * @readonly
-     * @returns {boolean}
-     * @description Is this activity suitable as an other activity. It must be a possible other activity (default false) and the otherActivityCompatible flag must be set to true
-     */
-    /** midi wraps this activity, so using it runs a midi workflow. */
-    get isMidiActivity(): boolean {
-      return true;
-    }
-
-    get isOtherActivityCompatible() {
-      if (!this.possibleOtherActivity) return false;
-      return this.midiProperties!.otherActivityCompatible;
-    }
-
-    /**
-     * @type {boolean}
-     * @memberof MidiActivityMixin
-     * @readonly
-     * @returns {boolean}
-     * @description Is this activity suitable as a triggerable activity. Default is true and must be overridden in the subclass
-     * Examples of non triggerable activities are the Enchant activity
-     */
-    get isTriggerableActivity() {
-      return true;
-    }
-
-    /**
-     * @type {boolean}
-     * @memberof MidiActivityMixin
-     * @readonly
-     * @returns {boolean}
-     * @description Is this activity only triggerable by the actor that owns it. 
-     * Default is false and must be overridden in the subclass
-     * Examples of self triggerOnly are the Cast and Forward activities
-     */
-    get isSelfTriggerableOnly() {
-      return false;
-    }
-
-    get forcedTargetConfirmation(): string | undefined {
-      /*
-       * A self-target activity can never confirm targets: requiresTargetConfirmation returns false
-       * on affects.type === "self" before it ever reaches confirmTargets. Reporting that here makes
-       * the sheet show the effective value rather than a stored one that does nothing — the same
-       * treatment ForwardActivity and CastActivity already give themselves.
-       */
-      if (this.target?.affects?.type === "self") return "never";
-      return undefined;
-    }
-    /**
-     * @type {boolean}
-     * @memberof MidiActivityMixin
-     * @readonly
-     * @returns {boolean}
-     * @description Is this activity a candidate to be used as an "other" activity. Default is false and must be overridden in the subclass
-     */
-    get possibleOtherActivity() {
-      return false;
-    }
 
 
-    get canUse() {
-      // if (this.midiProperties?.automationOnly) return false;
-      return super.canUse;
-    }
 
-    get validProperties() {
-      return new Set(["idi", "idr", "idv", "ida"]);
-    }
 
-    get macro() {
-      return new Macro({ name: this.macroData.name || this.name, command: this.macroData.command, img: this.img, type: "script" });
-    }
-    set macro(macro: Macro) {
-      //@ts-expect-error
-      return this.update({ macroData: { name: macro.name, command: macro.command } });
-    }
-    async getTriggeredActivity() {
-      // @ts-expect-error no dnd5e-types
-      let activity = this.item.system.activities.find(a => a.id === this.midiProperties?.triggeredActivityId);
-      // @ts-expect-error no dnd5e-types
-      if (!activity) activity = this.item.system.activities.find(a => a.identifier === this.midiProperties?.triggeredActivityId);
-      if (!activity) activity = await fromUuid(this.midiProperties?.triggeredActivityId);
-      return activity as MidiActivityMixin | undefined;
-    }
+
+
+
+
+
 
     static metadata = foundry.utils.mergeObject(
       super.metadata, {
@@ -451,11 +243,6 @@ export let MidiActivityMixin = Base => {
       }, { inplace: false, overwrite: false });
     }
 
-    /** The activity supplying this one's other save or check: its own other activity's, else its ammunition's. */
-    get otherSaveSource(): MidiActivityMixin | undefined {
-      return [this.otherActivity, this.ammunitionActivity]
-        .find(activity => activity && activity !== this && (activity.save || activity.check));
-    }
 
     /** A save or check button for another activity's save, on this activity's card: that activity rolls it. */
     static async #rollOtherSave(this: MidiActivityMixin, event: PointerEvent, target: HTMLElement, message: ChatMessage.Implementation) {
@@ -653,10 +440,6 @@ export let MidiActivityMixin = Base => {
       return activity.rollDamage({ event, workflow, critical: { allow: true }, midiOptions: { isCritical: true } }, {}, message);
     }
 
-    get identifier() {
-      if (this.midiProperties?.identifier) return this.midiProperties.identifier;
-      return this.name.slugify();
-    }
 
     _preCreate(data) {
       super._preCreate(data);
@@ -671,11 +454,6 @@ export let MidiActivityMixin = Base => {
       super.prepareData();
     }
 
-    async _onChatAction(event: PointerEvent, target: HTMLElement, message: ChatMessage.Implementation) {
-      // `this` is dnd5e's activity from the card, scaled as it was used; the handlers find the workflow they need
-      const handler = this.metadata.usage?.actions?.[target.dataset.action ?? ""];
-      if (handler) await handler.call(this, event, target, message);
-    }
 
     async useAs(actor: Actor.Implementation | null | undefined, usage: ActivityUseConfiguration = {}, dialog: RollDialogConfig = {}, message: RollMessageConfig = {}) {
       // itemData._id = this.item._id;
@@ -2352,83 +2130,13 @@ export let MidiActivityMixin = Base => {
 
     _ammunitionActivity: MidiActivityMixin | null | undefined;
 
-    /**
-     * An activity carried by the loaded ammunition. Resolved independently of otherActivity so an
-     * item's own other activity and its ammunition can both run — previously ammunition won the
-     * single slot, and `otherActivityId: "none"` silenced it even though that setting exists to stop
-     * auto-detection from the item's *own* activities.
-     */
-    get ammunitionActivity(): MidiActivityMixin | undefined {
-      if (this._ammunitionActivity !== undefined) return this._ammunitionActivity ?? undefined;
-      this._ammunitionActivity = findAmmunitionActivity(this.ammunitionItem) ?? null;
-      return this._ammunitionActivity ?? undefined;
-    }
 
-    get otherActivity() {
-      if (this._otherActivity !== undefined) return this._otherActivity as MidiActivityMixin;
-      if (this.otherActivityId === "none") return undefined;
-      if (this.otherActivityId) {
-        // @ts-expect-error no dnd5e-types
-        this._otherActivity = this.item.system.activities.get(this.otherActivityId) as MidiActivityMixin | undefined;
-        // @ts-expect-error no dnd5e-types
-        if (!this._otherActivity) this._otherActivity = this.item.system.activities.find(a => a.identifier === this.otherActivityId) as MidiActivityMixin | undefined;
-        this._otherActivity?.prepareData();
-        return this._otherActivity as MidiActivityMixin | undefined;
-      }
 
-      // Auto-detect only applies to attack activities
-      if (!this.attack) {
-        this._otherActivity = null;
-        return this._otherActivity as null;
-      }
 
-      // unset ("" or null) follows the configured default; new activities are stamped "none"
-      if (configSettings.defaultOtherActivity === "none") {
-        this._otherActivity = null;
-        return this._otherActivity as null;
-      }
 
-      // Prefer a sole automationOnly candidate, else a sole compatible one; ambiguity means no pairing
-      const soleCandidate = (filter: (a: any) => boolean) => {
-        // @ts-expect-error no dnd5e-types
-        const options = this.item.system.activities.filter(a => filter(a) && a.isOtherActivityCompatible && a.uuid !== this.uuid);
-        return options.length === 1 ? options[0] : undefined;
-      };
-      this._otherActivity = soleCandidate(a => a.midiProperties?.automationOnly) ?? soleCandidate(() => true);
-      this._otherActivity?.prepareData();
-      if (!this._otherActivity) this._otherActivity = null;
-      return this._otherActivity as MidiActivityMixin | undefined | null;
-    }
 
-    get useCondition() {
-      return this.useConditionText ?? "";
-    }
 
-    get effectCondition() {
-      return this.effectConditionText ?? "";
-    }
 
-    get reactionCondition() {
-      return this.useCondition ?? "";
-    }
-
-    get otherCondition() {
-      return this.otherActivity?.useCondition ?? "";
-    }
-
-    get hasDamage() {
-      return (this.damage?.parts?.length ?? 0) > 0;
-    }
-
-    get hasHealing() {
-      return this.healing !== undefined;
-    }
-    get hasAttack() {
-      return this.attack !== undefined;
-    }
-    get hasSave() {
-      return (!!this.save || !!this.check);
-    }
   }
   return MidiActivityMixin;
 }

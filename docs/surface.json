@@ -3,6 +3,7 @@
   "api": [
     "actionQueue",
     "activityHasEmanationNoTemplate",
+    "activityPolicy",
     "activityRanges",
     "activityTypes",
     "actorFromUuid",
@@ -124,6 +125,7 @@
     "processWoundedStatus",
     "raceOrType",
     "reactionDialog",
+    "registerActivityPolicy",
     "registerCardNoteRenderer",
     "registerWorkflowOptionsSchema",
     "removeActionUsed",

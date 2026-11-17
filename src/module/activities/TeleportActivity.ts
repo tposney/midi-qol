@@ -89,29 +89,8 @@ let defineMidiTeleportActivityClass = <T extends Activity>(ActivityClass: T) => 
         targetPhase: "pre"
       }, { inplace: false, insertKeys: true, insertValues: true });
 
-    static defineSchema() {
-      const { BooleanField, SchemaField, StringField } = foundry.data.fields;
-      return {
-        ...super.defineSchema(),
-        midiTeleport: new SchemaField({
-          movers: new StringField({ initial: "default", required: true, blank: false,
-            choices: Object.fromEntries(teleportMoverModes.map(mode => [mode, `midi-qol.TELEPORT.Movers.${mode}`])) }),
-          plan: new StringField({ initial: "button", required: true, blank: false,
-            choices: Object.fromEntries(teleportPlanModes.map(mode => [mode, `midi-qol.TELEPORT.PlanModes.${mode}`])) }),
-          blocked: new StringField({ initial: "refuse", required: true, blank: false,
-            choices: { refuse: "midi-qol.TELEPORT.BlockedModes.refuse", fail: "midi-qol.TELEPORT.BlockedModes.fail" } }),
-          requireSight: new BooleanField({ initial: false })
-        })
-      };
-    }
 
-    get possibleOtherActivity() {
-      return false;
-    }
 
-    get isTriggerableActivity() {
-      return true;
-    }
 
     /** The card's Teleport button: the tokens its targets list shows, ticked, in the Targeted or Selected view. */
     static #planTeleport(this: { planTeleport: (options: { message?: ChatMessage.Implementation, listed?: Token.Implementation[] }) => Promise<unknown> },

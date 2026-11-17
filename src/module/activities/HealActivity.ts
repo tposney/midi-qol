@@ -44,9 +44,6 @@ let defineMidiHealActivityClass = <T extends Activity>(ActivityClass: T) => {
       const activity = workflow && !workflow.readOnly ? workflow.activityFor(this) : this;
       return activity.rollDamage({event, workflow}, {}, {});
     }
-    get possibleOtherActivity() { 
-      return true;
-    }
     
     async rollDamage(config: RollProcessConfig = {}, dialog: RollDialogConfig = {}, message: RollMessageConfig = {}) {
       config.midiOptions ??= {};

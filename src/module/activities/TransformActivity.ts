@@ -113,17 +113,6 @@ let defineMidiTransformActivityClass = <T extends Activity>(ActivityClass: T) =>
         config.workflow.transformedActors = transformedActors;
       }
     }
-    static defineSchema() {
-      return {
-        ...super.defineSchema()
-      }
-    }
-    get possibleOtherActivity() {
-      return false;
-    }
-    get isTriggerableActivity() {
-      return true;
-    }
 
     async _triggerSubsequentActions(config, results) {
       if (this.transform.mode === "form") await super._triggerSubsequentActions(config, results);

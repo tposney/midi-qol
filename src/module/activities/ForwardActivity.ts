@@ -42,38 +42,9 @@ let defineMidiForwardActivityClass = <T extends Activity>(ActivityClass: T) => {
         },
       }, { inplace: false, insertKeys: true, insertValues: true });
 
-    get possibleOtherActivity() {
-      return false;
-    }
 
-    /** @override */
-    async use(usage: RollProcessConfig = {}, dialog: RollDialogConfig = {}, message: RollMessageConfig = {}) {
-      const usageConfig = foundry.utils.mergeObject({
-        cause: {
-          activity: this.relativeUUID
-        },
-        consume: {
-          resources: false,
-          spellSlot: false
-        }
-      }, usage);
 
-      // @ts-expect-error no dnd5e-types
-      const activity = this.item.system.activities.get(this.activity.id);
-      if (!activity) ui.notifications?.error("DND5E.FORWARD.Warning.NoActivity", { localize: true });
-      return activity?.use(usageConfig, dialog, message);
-    }
-    get isSelfTriggerableOnly() {
-      return false;
-    }
 
-    get isTriggerableActivity() {
-      return false;
-    }
-
-    get forcedTargetConfirmation() {
-      return "never";
-    }
 
     async _triggerSubsequentActions(config, results) {
     }

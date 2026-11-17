@@ -113,21 +113,9 @@ let defineMidiCastActivityClass =  <T extends Activity>(ActivityClass: T) => {
       // CastActivity here. The spell's own workflow uses the spell's activity data directly.
     }
 
-    get possibleOtherActivity() {
-      return false;
-    }
 
-    get isSelfTriggerableOnly() {
-      return false;
-    }
 
-    get isTriggerableActivity() {
-      return true;
-    }
     
-    get forcedTargetConfirmation() {
-      return "never";
-    }
     async _triggerSubsequentActions(config, results) {
     }
   }
