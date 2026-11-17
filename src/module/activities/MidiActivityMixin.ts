@@ -2313,7 +2313,7 @@ async function cardPlaceTemplate(this: Activity, event: PointerEvent, target: HT
   // Find workflow and process (handles count validation, deletion if incomplete)
   const workflow = Workflow.findWorkflow(message.uuid);
   if (!workflow) {
-    warn("Activity | #placeTemplate | No workflow found for message", message.uuid);
+    warn("MidiActivityMixin | #placeTemplate | No workflow found for message", message.uuid);
     return;
   }
 

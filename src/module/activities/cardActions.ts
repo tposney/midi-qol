@@ -13,10 +13,13 @@ export type CardActionHandler = (this: Activity, event: PointerEvent, target: HT
 
 interface CardActionEntry { action: string, handler: CardActionHandler, types?: string[], whenAbsent?: boolean }
 
-const entries: CardActionEntry[] = [];
+// Activity files register as they load, which can be before this module's body runs (circular imports): created on first use
+let registered: CardActionEntry[] | undefined;
+function entriesList(): CardActionEntry[] { return registered ??= []; }
 
 /** A handler for a card button's action; `types` limits it to those activity types. */
 export function registerCardAction(action: string, handler: CardActionHandler, options: { types?: string[], whenAbsent?: boolean } = {}) {
+  const entries = entriesList();
   const existing = entries.findIndex(e => e.action === action && sameTypes(e.types, options.types) && !!e.whenAbsent === !!options.whenAbsent);
   const entry = { action, handler, types: options.types, whenAbsent: options.whenAbsent };
   if (existing >= 0) entries[existing] = entry;
@@ -34,6 +37,7 @@ function sameTypes(a?: string[], b?: string[]) {
 /** The actions an activity type's metadata should carry: dnd5e's (`base`) with midi's applied. */
 export function cardActionsFor(type: string, base: Record<string, CardActionHandler> = {}): Record<string, CardActionHandler> {
   const actions = { ...base };
+  const entries = entriesList();
   for (const e of entries) if (!e.whenAbsent && !e.types) actions[e.action] = e.handler;
   for (const e of entries) if (!e.whenAbsent && e.types?.includes(type)) actions[e.action] = e.handler;
   for (const e of entries) if (e.whenAbsent && (!e.types || e.types.includes(type)) && !(e.action in actions)) actions[e.action] = e.handler;
