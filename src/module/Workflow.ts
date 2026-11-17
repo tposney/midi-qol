@@ -6024,13 +6024,12 @@ export class Workflow {
 
     if (position) {
       // Cover calculation from a point (coverOrigin, template center, etc.)
-      if (configSettings.optionalRules.coverCalculation === "levelsautocover"
-        && installedModules.get("levelsautocover")) {
-        // From the template's origin, as a point (AutoCover's point source), the caster making it
+      if (["levelsautocover", "tokencover"].includes(configSettings.optionalRules.coverCalculation)
+        && installedModules.get(configSettings.optionalRules.coverCalculation)) {
+        // From the template's origin, the caster making it: AutoCover's point source, Alternative Token Cover's
+        // calculator for the caster standing there
         moduleCoverBonus = computeCoverBonus(this.token, target, this.activity,
           { origin: { x: position.x, y: position.y, elevation: originElevation } });
-      } else if (configSettings.optionalRules.coverCalculation === "tokencover" && installedModules.get("tokencover")) {
-        if (this.token) moduleCoverBonus = computeCoverBonus(foundry.utils.deepClone(this.token, { center: position } as any), target, this.activity);
       } else if (configSettings.optionalRules.coverCalculation === "simplecover5e"
         && installedModules.get("simplecover5e")) {
         const syntheticAttacker = {

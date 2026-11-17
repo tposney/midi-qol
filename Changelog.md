@@ -43,6 +43,10 @@ midi 14.7.0 requires dnd5e 6.1 and DAE 14.6.10. Worlds on dnd5e 6.0 stay on midi
 * Removed: the *Replace dnd5e activities with midi-qol equivalents* setting. It never took effect: midi always uses its own activities.
 * Fixed: an unmeasurable distance read as within reach: prone's advantage within 5 ft, a thrown weapon's nearby foe check, flanking and the flanking highlight. A range check from an actor with no token on the scene says so, rather than measuring from the scene's corner.
 * Fixed: *Activity Prefix* off still named midi's activities "Midi …" (since 14.6.9), and Boss Loot FX no longer turned the prefix off, so its animations by activity name didn't play.
+* Fixed: with Simple Cover chosen for *Walls block ranged attacks* or to calculate cover, total cover followed sight walls: a curtain blocked an attack and a window didn't. Total cover from walls is now midi's (walls that block movement) whichever module is chosen; Simple Cover and Alternative Token Cover supply partial cover. AutoCover is unchanged.
+* Fixed: target confirmation for a target in cover ignored a cover status on the target.
+* Fixed: with Alternative Token Cover, a DEX save's cover against an area was measured from the caster, not the area's origin.
+* Changed: a stored *Alternative Token Visibility* choice for walls or cover (it did nothing) becomes *Centre* / *None*.
 * Fixed: on a scene measured in metres, midi's CAT automations (forced movement toward an area, Detect Magic's areas, Fear Aura and turn auras) compared metres with feet.
 * Fixed: a check activity that names no ability, skill or tool threw and scored the target 1; it rolls a d20 with no modifier.
 * Fixed: an item using CPR's Hide macro was handled as for an older CPR on CPR 2.1.8 (the check named 2.1.18).

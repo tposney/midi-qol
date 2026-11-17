@@ -743,15 +743,6 @@ export class TroubleShooter extends HandlebarsApplicationMixin(ApplicationV2) {
           });
         }
         break;
-      case "tokenvisibility":
-        data.problems.push({
-          moduleId: "tokenvisibility",
-          severity: "Error",
-          problemSummary: "Midi has swtiched to Alternate Token Cover from Alternate Token Visibility. You should install and activate Alternative Token Cover",
-          problemDetail: undefined,
-          fixer: "Enable the 'tokencover' module and set 'Walls Block Range' to 'Token Cover' on the Mechanics Tab"
-        });
-        break;
       case "tokencover":
         if (!(game.modules.get("tokencover")?.active)) {
           data.problems.push({
@@ -777,15 +768,6 @@ export class TroubleShooter extends HandlebarsApplicationMixin(ApplicationV2) {
             fixer: "Enable the 'levelsautocover' module"
           });
         }
-        break;
-      case "tokenvisibility":
-        data.problems.push({
-          moduleId: "tokenvisibility",
-          severity: "Error",
-          problemSummary: "Midi has swtiched to Alternate Token Cover from Alternate Token Visibility. You should install Alternative Token Cover",
-          problemDetail: undefined,
-          fixer: "Enable the 'tokencover' module and update 'Calculate Cover' to 'Token Cover' on the Mechanics tab"
-        });
         break;
       case "simplecover5e":
         if (!(game.modules.get("simplecover5e")?.active)) {

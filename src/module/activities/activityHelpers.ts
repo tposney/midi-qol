@@ -5,7 +5,7 @@ import { Workflow } from "../Workflow.js";
 import { TargetConfirmationDialog, TargetConfirmationOptions } from "../apps/TargetConfirmation.js";
 import { configSettings, targetConfirmation } from "../settings.js";
 import { installedModules } from "../setupModules.js";
-import { collisionLevel, getFlankingEffect, CERemoveEffect, sumRolls, computeTemplateShapeDistance, getToken, getTokenDocument, checkActivityRange, checkDefeated, checkIncapacitated, computeCoverBonus, hasWallBlockingCondition, isValidTarget, tokenForActor, activityHasAreaTarget, activityHasAutoPlaceTemplate, activityHasEmanationNoTemplate, getActivityAutoTargetAction, getAoETargetType, doReactions, updateUserTargets, rangeToSceneUnits, tokenSourcePosition, tokenSourceCenter, tokenSourceElevation, getTokenVisionElevation, userTargetsKeepingUndrawn, convertLengthTo, MidiOptions } from "../utils.js";
+import { collisionLevel, getFlankingEffect, CERemoveEffect, sumRolls, computeTemplateShapeDistance, getToken, getTokenDocument, checkActivityRange, checkDefeated, checkIncapacitated, getCoverBonus, hasWallBlockingCondition, isValidTarget, tokenForActor, activityHasAreaTarget, activityHasAutoPlaceTemplate, activityHasEmanationNoTemplate, getActivityAutoTargetAction, getAoETargetType, doReactions, updateUserTargets, rangeToSceneUnits, tokenSourcePosition, tokenSourceCenter, tokenSourceElevation, getTokenVisionElevation, userTargetsKeepingUndrawn, convertLengthTo, MidiOptions } from "../utils.js";
 import { allAttackTypes } from "../../midi-qol.js";
 import Token = foundry.canvas.placeables.Token;
 
@@ -234,7 +234,7 @@ export function requiresTargetConfirmation(activity: Activity, options: MidiOpti
       const isRangeTargeting = ["ft", "m"].includes(activity.range?.units ?? "") && ["creature", "ally", "enemy"].includes(activity.target?.affects?.type ?? "");
       if (!activity.target?.template?.type && !isRangeTargeting && token) {
         for (let target of targets) {
-          if (computeCoverBonus(token, target, activity) > 0) {
+          if (getCoverBonus(token, target, activity) > 0) {
             if (debugEnabled > 0) warn("target confirmation triggered from targetConfirmation.inCover");
             return true;
           }
