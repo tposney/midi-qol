@@ -324,6 +324,7 @@
     "cover",
     "damageModifiers",
     "perception",
+    "rollBonuses",
     "rollModifiers",
     "targetConfirmation"
   ]

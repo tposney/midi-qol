@@ -441,6 +441,7 @@ Hooks.once('init', async function () {
   defineDamageModifiersService();
   defineTargetConfirmationService(resolveTargetConfirmation);
   defineChooseTokensService();
+  defineRollBonusesService();
   setServiceProblemReporter((serviceId, providerId, message, err) => {
     const text = `midi-qol | ${serviceId} | ${providerId}: ${message}`;
     console.warn(text, err ?? "");
@@ -1022,6 +1023,7 @@ import { registerAttackRollRules } from "./module/services/attackRollRules.js";
 import { defineDamageModifiersService } from "./module/services/damageModifiers.js";
 import { defineTargetConfirmationService } from "./module/services/targetConfirmation.js";
 import { chooseTokens, defineChooseTokensService } from "./module/services/chooseTokens.js";
+import { defineRollBonusesService } from "./module/services/rollBonuses.js";
 
 // Add any additional hooks if necessary
 // Phase 2: setup hook — properties that depend on CONFIG, settings, i18n, or game state

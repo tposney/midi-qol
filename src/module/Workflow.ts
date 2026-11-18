@@ -125,6 +125,7 @@ import {
 import { OnUseMacros } from "./apps/Item.js";
 import { bonusCheck, collectBonusFlags, defaultRollOptions, buildPreComputedAdvantageMap, checkActivityAbilities } from "./patching.js";
 import { collectRollModifiers } from "./services/rollModifiers.js";
+import { collectBonusCandidates, type RollBonusQuery } from "./services/rollBonuses.js";
 import { saveTargetsUndoData, saveUndoData } from "./undo.js";
 import { TroubleShooter } from "./apps/TroubleShooter.js";
 import { restoredUse, useChangesJson } from "./lib/useChanges.js";
@@ -7552,6 +7553,14 @@ export class Workflow {
     return { keys, owners };
   }
 
+  /** What rollBonuses contributors are told about this use's attack or damage roll. */
+  rollBonusQuery(kind: "attack" | "damage"): RollBonusQuery {
+    return {
+      kind, actor: this.actor, token: getTokenDocument(this.token), workflow: this, activity: this.activity, item: this.item,
+      target: this.targets.count === 1 ? this.targets.documents[0] : undefined, actionType: this.activity?.actionType
+    };
+  }
+
   async processAttackRollBonusFlags() {
     let attackBonus = "attack.all";
     if (this.activity && this.activity.hasAttack) attackBonus = `attack.${this.activity.actionType}`;
@@ -7571,11 +7580,13 @@ export class Workflow {
       })
       .map(flag => midiFlag(`optional.${flag}`));
 
-    if (bonusFlags.length > 0) {
+    const bonusQuery = this.rollBonusQuery("attack");
+    let candidates = await collectBonusCandidates(bonusQuery, "preResult", this.attackRoll!, { isFumble: this.isFumble });
+    if (bonusFlags.length > 0 || candidates.length > 0) {
       const displayBonusRolls: boolean | undefined = bonusFlags.reduce((acc: boolean | undefined, flag) => (acc || (foundry.utils.getProperty(flagOwners[flag] ?? this.actor ?? {}, `${flag}.displayBonusRolls`) as boolean)), undefined)
         ?? checkMechanic("displayBonusRolls") as boolean;
       await this.flushCardWrites(); // a person decides next
-      const newRoll = await bonusDialog.bind(this)(bonusFlags, attackBonus, displayBonusRolls, `${this.actor.name} - ${i18n("DND5E.Attack")} ${i18n("DND5E.Roll")}`, this.attackRoll!, "attackRoll", { flagOwners })
+      const newRoll = await bonusDialog.bind(this)(bonusFlags, attackBonus, displayBonusRolls, `${this.actor.name} - ${i18n("DND5E.Attack")} ${i18n("DND5E.Roll")}`, this.attackRoll!, "attackRoll", { flagOwners, bonusQuery, bonusPhase: "preResult", candidates })
       if (newRoll) this.setAttackRoll(newRoll);
     }
     if (this.targets.count === 1) {
@@ -7602,11 +7613,12 @@ export class Workflow {
             return getOptionalCountRemainingShortFlag(this.actor, flag, owner) > 0;
           })
           .map(flag => midiFlag(`optional.${flag}`));
-        if (bonusFlags.length > 0) {
+        candidates = await collectBonusCandidates(bonusQuery, "postResult", this.attackRoll!, { success: false, isFumble: this.isFumble });
+        if (bonusFlags.length > 0 || candidates.length > 0) {
           const displayBonusRolls: boolean | undefined = bonusFlags.reduce((acc: boolean | undefined, flag: string) => (acc || (foundry.utils.getProperty(flagOwners[flag] ?? this.actor ?? {}, `${flag}.displayBonusRolls`) as boolean)), undefined)
             ?? checkMechanic("displayBonusRolls") as boolean;
           await this.flushCardWrites(); // a person decides next
-          const newRoll = await bonusDialog.bind(this)(bonusFlags, attackBonus, displayBonusRolls, `${this.actor.name} - ${i18n("DND5E.Attack")} ${i18n("DND5E.Roll")}`, this.attackRoll, "attackRoll", { flagOwners });
+          const newRoll = await bonusDialog.bind(this)(bonusFlags, attackBonus, displayBonusRolls, `${this.actor.name} - ${i18n("DND5E.Attack")} ${i18n("DND5E.Roll")}`, this.attackRoll, "attackRoll", { flagOwners, bonusQuery, bonusPhase: "postResult", candidates });
           if (newRoll) this.setAttackRoll(newRoll);
         }
       }
@@ -7630,13 +7642,15 @@ export class Workflow {
         return getOptionalCountRemainingShortFlag(this.actor, flag, owner) > 0;
       })
       .map(flag => midiFlag(`optional.${flag}`));
-    if (bonusFlags.length > 0) {
+    const bonusQuery = this.rollBonusQuery("damage");
+    const candidates = damageRolls[0] ? await collectBonusCandidates(bonusQuery, "postResult", damageRolls[0]) : [];
+    if (bonusFlags.length > 0 || candidates.length > 0) {
       // this.damamgeRollHTML = $(this.damageRolHTML).find(".dice-roll").remove();
       // TODO dnd3 work out what this means for multiple rolls
       const displayBonusRolls: boolean | undefined = bonusFlags.reduce((acc: boolean | undefined, flag: string) => (acc || (foundry.utils.getProperty(flagOwners[flag] ?? this.actor ?? {}, `${flag}.displayBonusRolls`) as boolean)), undefined)
         ?? checkMechanic("displayBonusRolls") as boolean;
       await this.flushCardWrites(); // a person decides next
-      let newRoll = await bonusDialog.bind(this)(bonusFlags, damageBonus, displayBonusRolls === true, `${this.actor.name} - ${i18n("DND5E.Damage")} ${i18n("DND5E.Roll")}`, damageRolls[0], "damageRoll", { hideDSN, damageRolls, flagOwners })
+      let newRoll = await bonusDialog.bind(this)(bonusFlags, damageBonus, displayBonusRolls === true, `${this.actor.name} - ${i18n("DND5E.Damage")} ${i18n("DND5E.Roll")}`, damageRolls[0], "damageRoll", { hideDSN, damageRolls, flagOwners, bonusQuery, bonusPhase: "postResult", candidates })
       if (newRoll) damageRolls[0] = newRoll;
     }
     return damageRolls;

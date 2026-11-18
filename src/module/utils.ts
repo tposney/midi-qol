@@ -1,3 +1,4 @@
+import { applyOfferedBonus, type BonusPhase, type OfferedBonus, type RollBonusQuery } from "./services/rollBonuses.js";
 import { crossesOppositeSides, opposedByAngle } from "./rules/flanking.js";
 import { DialogCountdown } from "./lib/dialogCountdown.js";
 import { coverBetween, coverFor } from "./services/cover.js";
@@ -5003,7 +5004,10 @@ export class RollModifyDialog extends HandlebarsApplicationMixin(ApplicationV2) 
     rollMode: string | undefined,
     timeout: number,
     item: Item | undefined,
-    flagOwners?: Record<string, any>
+    flagOwners?: Record<string, any>,
+    /** rollBonuses contributors' optional bonuses, shown after the flag buttons */
+    candidates?: OfferedBonus[],
+    onCandidate?: (dialog: RollModifyDialog, button: { candidate: OfferedBonus }) => Promise<void>
   }
 
   constructor(data) {
@@ -5059,7 +5063,7 @@ export class RollModifyDialog extends HandlebarsApplicationMixin(ApplicationV2) 
       if ((getOptionalCountRemaining(this.data.actor, `${flagName}.count`, owner)) < 1) return false;
       return foundry.utils.getProperty(owner, flagName) !== undefined
     });
-    if (this.data.flags.length === 0) this.close();
+    if (this.data.flags.length === 0 && !this.data.candidates?.length) this.close();
     this.data.buttons = this.data.flags.reduce((obj, flag) => {
       const owner = ownerOf(flag);
       let flagData: any = foundry.utils.getProperty(owner ?? {}, flag) as any; // TODO This should be tightened up
@@ -5144,6 +5148,16 @@ export class RollModifyDialog extends HandlebarsApplicationMixin(ApplicationV2) 
       }
       return obj;
     }, {})
+    for (const candidate of this.data.candidates ?? []) {
+      const detail = candidate.effect.kind === "add" ? ` (${candidate.effect.formula})` : candidate.effect.kind === "replace" ? ` (${candidate.effect.formula})` : "";
+      this.data.buttons[foundry.utils.randomID()] = {
+        icon: '<i class="fas fa-dice-d20"></i>',
+        label: `${candidate.label}${detail}`,
+        key: candidate.id,
+        candidate,
+        callback: this.data.onCandidate
+      };
+    }
     this.data.buttons.no = {
       icon: '<i class="fas fa-xmark"></i>',
       label: i18n("Cancel"),
@@ -5323,6 +5337,11 @@ export async function bonusDialog(
 ): Promise<Roll | undefined> {
   const showDiceSoNice = !options.hideDSN && dice3dEnabled();
   if (!roll) return undefined;
+  // rollBonuses contributors' candidates for this roll and phase (options.bonusQuery/bonusPhase); flags keep their own path
+  const bonusQuery: RollBonusQuery | undefined = options.bonusQuery;
+  const bonusPhase: BonusPhase = options.bonusPhase ?? "preResult";
+  let optionalCandidates: OfferedBonus[] = (options.candidates ?? []).filter((c: OfferedBonus) => c.optional);
+  const automaticCandidates: OfferedBonus[] = (options.candidates ?? []).filter((c: OfferedBonus) => !c.optional);
   if (this instanceof Workflow) options.card ??= this.itemCardUuid;
   options.anchor ??= rollType === "attackRoll" ? "attack" : rollType === "damageRoll" ? "damage" : "saves";
   let newRoll = roll;
@@ -5545,7 +5564,7 @@ export async function bonusDialog(
     usedLabels.push(bonusLabel(button.key));
     if (dialog) {
       validFlags = validFlags.filter(bf => bf !== button.key);
-      if (validFlags.length === 0) {
+      if (validFlags.length === 0 && optionalCandidates.length === 0) {
         dialog?.close();
         return;
       }
@@ -5625,7 +5644,40 @@ export async function bonusDialog(
     const card = await displayBeforeAfterRolls({ originalRoll: oldRoll, newRoll: roll, rollMode, title, player, options, actor: this.actor });
     if (card?.uuid && this instanceof Workflow && configSettings.undoWorkflow) await unTimedExecuteAsGM("addUndoChatCards", { id: this.id, chatCardUuids: [card.uuid] });
   }
-  if (validFlags.length === 0) return roll;
+  const bonusRollData = (this.activity ?? this.item ?? this.actor)?.getRollData() ?? {};
+  const candidateContext = (current: Roll) => ({ query: bonusQuery!, phase: bonusPhase, roll: current });
+  if (bonusQuery && automaticCandidates.length) {
+    const before = roll;
+    for (const candidate of automaticCandidates) {
+      roll = newRoll = await applyOfferedBonus(candidate, candidateContext(roll), bonusRollData);
+      usedLabels.push(candidate.label);
+    }
+    if (showRoll && lastForceFlag === "" && roll !== before) {
+      DSNMarkDiceDisplayed(roll);
+      //@ts-expect-error
+      const card = await displayBeforeAfterRolls({ originalRoll: before, newRoll: roll, rollMode: before.options.rollMode ?? safeGetGameSetting("core", "messageMode"), title, player, options, actor: this.actor });
+      if (card?.uuid && this instanceof Workflow && configSettings.undoWorkflow) await unTimedExecuteAsGM("addUndoChatCards", { id: this.id, chatCardUuids: [card.uuid] });
+    }
+  }
+  if (!bonusQuery) optionalCandidates = [];
+  if (validFlags.length === 0 && optionalCandidates.length === 0) return roll;
+  const onCandidate = async (dialog: RollModifyDialog, button: { candidate: OfferedBonus }) => {
+    const candidate = button.candidate;
+    newRoll = await applyOfferedBonus(candidate, candidateContext(newRoll), bonusRollData);
+    roll = newRoll;
+    usedLabels.push(candidate.label);
+    optionalCandidates = optionalCandidates.filter(c => c.id !== candidate.id);
+    dialog.data.candidates = optionalCandidates;
+    if (validFlags.length === 0 && optionalCandidates.length === 0) {
+      dialog.close();
+      return;
+    }
+    const newRollHTML = await midiRenderRoll(newRoll);
+    const rollMode = options?.rollMode ?? safeGetGameSetting("core", "messageMode");
+    dialog.data.currentRoll = newRoll;
+    dialog.data.content = game.user?.isGM || ["public", "gm", "self"].includes(toMessageMode(rollMode)) ? newRollHTML : "Hidden Roll";
+    dialog.render(true);
+  };
   let timeout = options.timeout ?? configSettings.reactionTimeout ?? defaultTimeout;
   return new Promise((resolve, reject) => {
     async function onClose() {
@@ -5666,7 +5718,9 @@ export async function bonusDialog(
         timeout,
         item: this.item,
         workflow: this instanceof Workflow ? this : undefined,
-        flagOwners
+        flagOwners,
+        candidates: optionalCandidates,
+        onCandidate
       }).render({ force: true });
   });
 }
