@@ -23,7 +23,9 @@ export interface DamageSummary {
 export interface CalculatedDamageApplication {
   /** Update options for the actor update (noConcentrationCheck, isUndo, dnd5e.concentrationCheck...). */
   updateOptions?: Record<string, unknown>;
-  /** Values written last, after every hook (undo/redo restores, death save failures): flat paths. */
+  /** Added to dnd5e's updates before other preApplyDamage handlers see them (death save failures): flat paths. */
+  updates?: Record<string, unknown>;
+  /** Values written last, after every hook (undo/redo restores): flat paths. */
   extraUpdates?: Record<string, unknown>;
 }
 
@@ -54,15 +56,21 @@ export function registerDamageApplication() {
 
 /**
  * Applies damage midi has already calculated with dnd5e's applyDamage: dnd5e fires preApplyDamage,
- * modifyTokenAttribute and applyDamage and makes the update; `application` reaches that update.
+ * modifyTokenAttribute and applyDamage and makes the update; `application` reaches that update. `options` is used as
+ * it is (not copied): the hooks get the same object, non-enumerable properties included (the card origin).
  */
 export async function applyCalculatedDamage(actor: Actor.Implementation, summary: DamageSummary,
   application: CalculatedDamageApplication = {}, options: Record<string, unknown> = {}): Promise<Actor.Implementation> {
-  const applyOptions: DamageOptions = { ...options };
-  Object.defineProperty(applyOptions, PRECALCULATED, { value: summary, enumerable: false });
-  Object.defineProperty(applyOptions, UPDATE_OPTIONS, { value: application, enumerable: false });
-  // @ts-expect-error no dnd5e-types
-  return actor.applyDamage(summary.damages, applyOptions);
+  const applyOptions = options as DamageOptions;
+  Object.defineProperty(applyOptions, PRECALCULATED, { value: summary, enumerable: false, configurable: true });
+  Object.defineProperty(applyOptions, UPDATE_OPTIONS, { value: application, enumerable: false, configurable: true });
+  try {
+    // @ts-expect-error no dnd5e-types
+    return await actor.applyDamage(summary.damages, applyOptions);
+  } finally {
+    delete applyOptions[PRECALCULATED];
+    delete applyOptions[UPDATE_OPTIONS];
+  }
 }
 
 /**
@@ -72,6 +80,7 @@ export async function applyCalculatedDamage(actor: Actor.Implementation, summary
 export function stampDamageApplication(updates: Record<string, unknown>, options: DamageOptions | undefined, extraOptions?: Record<string, unknown>) {
   const given = options?.[UPDATE_OPTIONS] as CalculatedDamageApplication | undefined;
   if (!given && !extraOptions) return;
+  if (given?.updates) Object.assign(updates, given.updates);
   const application: CalculatedDamageApplication = { ...given };
   if (extraOptions) application.updateOptions = foundry.utils.mergeObject(application.updateOptions ?? {}, extraOptions, { inplace: false });
   const id = foundry.utils.randomID();

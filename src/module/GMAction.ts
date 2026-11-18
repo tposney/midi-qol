@@ -1,3 +1,4 @@
+import { afterDamageApplied, applyCalculatedDamage } from "./services/damageApplication.js";
 import { ALL_DAMAGE_KEY, checkRule, configSettings } from "./settings.js";
 import { _closePlayerRollDialogs, playerWaitHandlers } from "./lib/playerWaits.js";
 import { DialogCountdown, dialogCountdownOptions } from "./lib/dialogCountdown.js";
@@ -1408,7 +1409,7 @@ async function prepareDamageListItems(
     if (!fromStoredData && actor.isOwner && (data.autoApplyDamage !== "yesCardNPC" || actor.type !== "character")) {
       // @ts-expect-error no dnd5e-types
       const hp = actor.system.attributes.hp;
-      const { change: amount, vitality: vitalityDamage, tempMax, deltaTemp, deltaHP, newTempHP } = hpChangeFromDetail(damageItem.calculatedDamages, hp);
+      const { change: amount, vitality: vitalityDamage, tempMax, deltaTemp, deltaHP, newTempHP, temp: tempGranted } = hpChangeFromDetail(damageItem.calculatedDamages, hp);
       const { amount: rawAmount, healing: rawHealing, vitality: rawVitality } = calculateDamageAmounts(damageItem.damages);
       damageItem.totalDamage = damageItem.calculatedDamages.reduce((acc, d) => acc + (!["temphp", "midi-none", "vitality", "maximum"].includes(d.type) ? d.value : 0), 0);
       // The detail decides; hpDamage only disagrees when something changed one without the other (use MidiQOL.modifyDamageBy).
@@ -1420,14 +1421,17 @@ async function prepareDamageListItems(
         "system.attributes.hp.temp": newTempHP,
         "system.attributes.hp.value": hp.value - deltaHP
       };
-      // Apply tempmax reduction (positive tempMax = reduce max HP)
+      // Apply tempmax reduction (positive tempMax = reduce max HP); from the stored value, as dnd5e does (the
+      // prepared one includes effects, which would then be stored and added again)
+      // @ts-expect-error no dnd5e-types
+      const sourceTempMax: number = actor.system._source?.attributes?.hp?.tempmax ?? 0;
       if (tempMax !== 0) {
-        updates["system.attributes.hp.tempmax"] = (hp.tempmax ?? 0) - tempMax;
+        updates["system.attributes.hp.tempmax"] = sourceTempMax - tempMax;
       }
 
       damageItem.newTempHP = updates["system.attributes.hp.temp"];
       damageItem.newHP = updates["system.attributes.hp.value"];
-      damageItem.oldTempMax = hp.tempmax ?? 0;
+      damageItem.oldTempMax = sourceTempMax;
       damageItem.newTempMax = updates["system.attributes.hp.tempmax"] ?? damageItem.oldTempMax;
       damageItem.hpDamage = deltaHP;
       damageItem.tempDamage = deltaTemp;
@@ -1436,7 +1440,8 @@ async function prepareDamageListItems(
 
       // Handle vitality system - always record current vitality state for undo support
       const vitalityItem = getVitalityItem(actor);
-      let vitalityItemUpdatePromise: Promise<any> | undefined;
+      // After the actor update (applyCalculatedDamage resolved)
+      let vitalityItemUpdate: (() => Promise<unknown>) | undefined;
 
       if (vitalityItem) {
         // Always record current vitality state so undo can restore it
@@ -1480,10 +1485,9 @@ async function prepareDamageListItems(
           damageItem.newVitalitySpent = newSpent;
           damageItem.newVitality = maxUses - newSpent;
 
-          // Queue vitality item update (will be executed after actor update)
           if (createPromises && doHits && (data.autoApplyDamage.includes("yes") || data.forceApply)) {
             // @ts-expect-error item update for uses.spent
-            vitalityItemUpdatePromise = vitalityItem.update({ "system.uses.spent": newSpent });
+            vitalityItemUpdate = () => vitalityItem.update({ "system.uses.spent": newSpent });
           }
         }
       }
@@ -1496,31 +1500,29 @@ async function prepareDamageListItems(
       }
 
       if (createPromises && doHits && (data.autoApplyDamage.includes("yes") || data.forceApply)) {
-        //recover the options used when calculating the damage
-        // If midi-qol handled vitality (overflow or direct damage), mark it so the hook doesn't double-handle
-        if (vitalityItemUpdatePromise) {
-          (damageItem.options as any).midiVitalityHandled = true;
-        }
-        if (Hooks.call("dnd5e.preApplyDamage", actor, amount, updates, withDamageOrigin(damageItem.options as DamageApplicationOptions)) !== false) {
-          // The actor update - when no changes are made will update the passed options with a target
-          // If vitality update is pending, flag it so updateActor hook skips checkWounded (updateItem hook will handle it)
-          const mergedOptions = foundry.utils.mergeObject(damageItem.options, data.updateOptions ?? {}, { inplace: false }) as any;
-          if (vitalityItemUpdatePromise) {
-            mergedOptions.midiVitalityUpdatePending = true;
-          }
-          const updatePromise = actor.update(updates, mergedOptions).then(async updatedActor => {
-            // Wait for vitality item update if needed
-            // Note: checkWounded is called by the updateItem hook when vitality changes,
-            // so we don't need to call it explicitly here
-            if (vitalityItemUpdatePromise) {
-              await vitalityItemUpdatePromise;
-            }
-            if (updatedActor) Hooks.callAll("dnd5e.applyDamage", updatedActor, amount, withDamageOrigin(damageItem.options as DamageApplicationOptions));
-            await syncFailedDeathSaves(updatedActor ?? actor, damageItem.oldDeathFailures, damageItem.newDeathFailures);
-            return updatedActor;
-          });
-          promises.push(updatePromise);
-        }
+        // midi has handled vitality: dnd5e.preApplyDamage's non-midi vitality handling must not
+        if (vitalityItemUpdate) (damageItem.options as any).midiVitalityHandled = true;
+        const applyOptions = withDamageOrigin(damageItem.options as DamageApplicationOptions) as unknown as Record<string, unknown>;
+        // The calculation options went on the update as they did when midi made the update itself
+        const updateOptions = foundry.utils.mergeObject(damageItem.options, data.updateOptions ?? {}, { inplace: false }) as Record<string, unknown>;
+        // The vitality item's update does the wounded check (updateActor's is skipped)
+        if (vitalityItemUpdate) updateOptions.midiVitalityUpdatePending = true;
+        const summary = {
+          damages: damageItem.calculatedDamages.filter(d => !["vitality", "midi-none"].includes(d.type)),
+          amount, temp: tempGranted, tempMax
+        };
+        const deathUpdate = deathFailures ? { "system.attributes.death.failure": deathFailures.to } : undefined;
+        // dnd5e.applyDamage fires only when no handler cancelled the damage, before applyDamage returns
+        let applied = false;
+        afterDamageApplied(applyOptions, async () => { applied = true; });
+        const updatePromise = applyCalculatedDamage(actor, summary, { updateOptions, updates: deathUpdate }, applyOptions).then(async updatedActor => {
+          if (!applied) return updatedActor;
+          // checkWounded runs from the vitality item's updateItem hook
+          if (vitalityItemUpdate) await vitalityItemUpdate();
+          await syncFailedDeathSaves(updatedActor ?? actor, damageItem.oldDeathFailures, damageItem.newDeathFailures);
+          return updatedActor;
+        });
+        promises.push(updatePromise);
       }
     }
     tokenDataList.push({
