@@ -31,7 +31,7 @@ import {
 } from "../settings.js";
 import { installedModules } from "../setupModules.js";
 import { saveUndoData } from "../undo.js";
-import { isRelaunched, takeRelaunch, useRelaunchSpike } from "./useRelaunch.js";
+import { clearAbandonedUse, isRelaunched, takeRelaunch, type UseState } from "./useRelaunch.js";
 import { activityHasAreaTarget, callActivityHooks, canSee, canSense, checkActivityRange, checkTargetsSeen, checkTotalCover, checkIncapacitated, createConditionData, displayDSNForRoll, evalActivationCondition, evalCondition, getAutoRollAttack, getAutoRollDamage, getRemoveAttackButtons, getRemoveDamageButtons, getSpeaker, getToken, activityHasAutoPlaceTemplate, confirmUseOffScene, hasUsedBonusAction, hasUsedReaction, autoConsumeResource, isInCombat, logIncapacitatedCheckResult, needsBonusActionCheck, needsReactionCheck, setBonusActionUsed, setReactionUsed, sumRolls, getOrCreateTokenForActor, validTargetTokens, userTargetsKeepingUndrawn, itemMagicAvailable, hasNoReactionsMarker, HEALING_BUTTON_KEY, activityHasEmanationNoTemplate, getActivityAutoTargetAction, areMidiKeysPressed, getActor, setRangedTargets, updateUserTargets, isValidTarget, needsAOOCheck, addRollTo, getConsumptionData, toMessageMode, rollModeToMessageMode, tokenSourceCenter, isActivityType, speakerFor, setMessageTargets } from "../utils.js";
 import { activityHasScaledTargetCount, attachTokenOptions, templateOriginOptions, createActivityTemplateRegions, preTemplateTargets, removeFlanking, requiresTargetConfirmation, selectTargetsFromTemplates, setDamageRollMinTerms, shouldEnforceSingleTarget } from "./activityHelpers.js";
 
@@ -110,14 +110,6 @@ async function writeRegion(
   });
 }
 
-/** Clears a cancelled use's state, so a resubmitted config starts afresh. */
-function clearAbandonedUse(...configs: (ActivityUseConfiguration | undefined)[]) {
-  for (const config of configs) {
-    if (!config) continue;
-    delete config.workflow;
-    delete config.midiOptions?.workflowOptions?.preSelectedTargetUuids;
-  }
-}
 
 /**
  * The activity an ammunition item contributes, if any.
@@ -142,18 +134,7 @@ export function findAmmunitionActivity(ammunitionItem: any): any | undefined {
 
 export let MidiActivityMixin = Base => {
   interface MidiActivityMixin extends Activity { };
-  /** One use's working state between midi's pre-use work, dnd5e's use and midi's post-use work (prepareUse/finishUse) */
-  interface UseState {
-    usage: ActivityUseConfiguration;
-    dialog: RollDialogConfig;
-    message: RollMessageConfig;
-    /** The clone midi works on, the one dnd5e's use is called on */
-    activity: MidiActivityMixin;
-    deferConcentration: boolean;
-    /** dnd5e's copy of the usage (preUseActivity) and the one consumption ran with (activityConsumption) */
-    dnd5eUsageConfig?: ActivityUseConfiguration;
-    usageData?: ActivityUseConfiguration;
-  }
+
   class MidiActivityMixin extends Base {
 
 
@@ -231,37 +212,16 @@ export let MidiActivityMixin = Base => {
       return activity.use(usage, dialog, message);
     }
 
+    /**
+     * midi's use (M10, activities/useRelaunch.ts): calls dnd5e's use with a use key, which midi's preUseActivity
+     * listener cancels and restarts after midi's pre-use work; returns the restart's result. The restarted call
+     * (marked) is dnd5e's use itself, so other listeners see one use.
+     */
     async use(usage: ActivityUseConfiguration = {}, dialog: RollDialogConfig = {}, message: RollMessageConfig = {}) {
-      if (useRelaunchSpike.enabled && !isRelaunched(usage)) {
-        // As if midi did not override use: dnd5e's own, which the preUseActivity hook cancels and relaunches
-        if (!useRelaunchSpike.keepResult) return super.use(usage, dialog, message);
-        const useKey = foundry.utils.randomID();
-        const first = await super.use({ ...usage, useRelaunch: { useKey } }, dialog, message);
-        return first ?? await takeRelaunch(useKey);
-      }
-      const prepared = await this.prepareUse(usage, dialog, message);
-      if (prepared.done) return prepared.result;
-      const state = prepared.state;
-      const preUseActivityHookId = Hooks.on("dnd5e.preUseActivity", (newActivity, usageConfig) => this.onUsePreUse(state, newActivity, usageConfig));
-      const activityConsumptionHookId = Hooks.on("dnd5e.activityConsumption", (newActivity, usageConfig) => this.onUseConsumption(state, newActivity, usageConfig));
-      let useResults: any;
-      try {
-        // The usage card describes the use's targets, not the player's (which an automated use leaves alone)
-        state.message = setMessageTargets(state.message ?? {}, usage.workflow);
-        useResults = await super.use.bind(state.activity)(usage, dialog, state.message);
-      } catch (err) {
-        error("MidiQOL | MidiActivity | use | Error in super.use", err);
-        TroubleShooter.recordError(err, "Error in super.use");
-        Workflow.removeWorkflow(usage.workflow?.id);
-        clearAbandonedUse(usage, state.dnd5eUsageConfig);
-        return false;
-      } finally {
-        // The rest of use() can outlive the workflow, and these match by the use's workflow, so a following use of the
-        // same activity would otherwise be handled by this use's hooks.
-        Hooks.off("dnd5e.preUseActivity", preUseActivityHookId);
-        Hooks.off("dnd5e.activityConsumption", activityConsumptionHookId);
-      }
-      return this.finishUse(state, useResults);
+      if (isRelaunched(usage)) return super.use(usage, dialog, message);
+      const useKey = foundry.utils.randomID();
+      const first = await super.use({ ...usage, useRelaunch: { useKey } }, dialog, message);
+      return first ?? await takeRelaunch(useKey, usage);
     }
 
     /**
