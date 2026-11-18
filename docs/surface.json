@@ -65,6 +65,7 @@
     "fillRulesText",
     "findNearby",
     "findNearbyCount",
+    "flows",
     "fromUuidSync",
     "gameStats",
     "getActorWoundedSemaphore",

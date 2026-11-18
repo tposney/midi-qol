@@ -83,8 +83,8 @@ export function cardStateSchema() {
     state: new SchemaField({
       // Workflow class: a card with none recorded is never rebuilt. Where it waits is worked out (Workflow.cardResumePoint)
       workflowClass: str(),
-      // The step the workflow is in (M2, steps/steps.ts); not yet read on rebuild
-      step: str(),
+      // The flow and step the workflow is in (M2, steps/flows.ts, steps/steps.ts); not yet read on rebuild
+      flow: str(), step: str(),
       isCritical: bool(), isFumble: bool(),
       templateUuids: new ArrayField(new StringField(), unset),
       workflowOptions: new ObjectField(unset),

@@ -1,4 +1,5 @@
-import { allSteps, stepForMethod } from "./steps/steps.js";
+import { allSteps, getStep, stepForMethod } from "./steps/steps.js";
+import "./steps/flows.js";
 import { getDistance } from "./services/distance/service.js";
 import { computeFlankedStatus, computeFlankingStatus } from "./services/flanking/service.js";
 import { speakerFor } from "./utils.js";
@@ -278,6 +279,13 @@ class CardStateStore {
     if (this.#cache.get("workflowClass") === name) return;
     this.#cache.set("workflowClass", name);
     this.#write({ "system.midi.state.workflowClass": name });
+  }
+
+  /** The flow the workflow follows (M2): written with the card's next flush */
+  setFlow(id: string | undefined): void {
+    if (!id || this.#cache.get("flow") === id) return;
+    this.#cache.set("flow", id);
+    this.#write({ "system.midi.state.flow": id });
   }
 
   /** The step the workflow is in (M2): written with the card's next flush */
@@ -944,16 +952,41 @@ export class Workflow {
   // Not stored: a workflow rebuilt from its card is suspended
   suspended: boolean = false;
 
-  #currentAction: WorkflowState;
-  get currentAction() {
-    return this.#currentAction;
+  /** The step the workflow is in or waits in (steps/steps.ts) */
+  #currentStep: string | undefined;
+  get currentStep(): string | undefined {
+    return this.#currentStep;
   }
-  set currentAction(currentAction: WorkflowState) {
-    this.#currentAction = currentAction;
+  /** The current step's method: compatible with comparing against `workflow.WorkflowState_<name>` */
+  get currentAction(): WorkflowState {
+    return this.methodForStep(this.#currentStep);
+  }
+  set currentAction(currentAction: WorkflowState | string) {
+    this.#currentStep = Workflow.stepIdOf(currentAction);
     this.#persisted.setClass(this.constructor.name);
     // Recorded for M2's flows; a rebuilt workflow still works out where it waits from its card (cardResumePoint)
-    this.#persisted.setStep(stepForMethod(currentAction?.name)?.id);
+    this.#persisted.setStep(this.#currentStep);
+    this.#persisted.setFlow(this.flowId);
   }
+
+  /** A step's id from a step id or a workflow state method (`this.WorkflowState_<name>`, as callers pass it) */
+  static stepIdOf(state: WorkflowState | string | undefined): string | undefined {
+    if (typeof state === "string") return getStep(state)?.id ?? stepForMethod(state)?.id;
+    return stepForMethod(state?.name?.replace(/^bound /, ""))?.id;
+  }
+
+  /** The method that runs a step on this workflow (its class's override, if it has one) */
+  methodForStep(id: string | undefined): WorkflowState {
+    const method = id ? getStep(id)?.method : undefined;
+    return method ? (this as any)[method] : undefined;
+  }
+
+  /** The flow this workflow follows (steps/flows.ts) */
+  get flowId(): string {
+    if (this.damageOnly && this.constructor === Workflow) return "midi-qol.damageReroll";
+    return (this.constructor as typeof Workflow).flowId;
+  }
+  static flowId = "midi-qol.standard";
 
   /**
    * The state a workflow rebuilt from `card` waits in, worked out from the card: what has been placed, rolled and
@@ -1917,7 +1950,7 @@ export class Workflow {
     const resumePoint = Workflow.cardResumePoint(this.#ownCard()) ?? "";
     const action: unknown = Reflect.get(this, resumePoint);
     const isState = (value: unknown): value is WorkflowState => typeof value === "function";
-    if (isState(action)) this.#currentAction = action;
+    if (isState(action)) this.#currentStep = Workflow.stepIdOf(action);
     else error(`${this.workflowName} | no state ${resumePoint} to resume in`);
     if (!this.#item) error(`${this.workflowName} | could not find the item of card ${this.itemCardUuid}`);
     this.#mergeWorkflowOptions(this.workflowOptions);
@@ -2087,7 +2120,7 @@ export class Workflow {
   }
 
   // A roll that finished while its waiting state was still on its way to suspending (writing the card): taken up then
-  #pendingEvent: { state: WorkflowState, event?: WorkflowEvent } | undefined;
+  #pendingEvent: { step: string | undefined, event?: WorkflowEvent } | undefined;
 
   /** The state that waits for `event`, if the workflow is in it */
   #awaits(event: WorkflowEvent | undefined): boolean {
@@ -2103,7 +2136,7 @@ export class Workflow {
   /** Wake a suspended workflow; without an event it re-runs the state it waits in */
   public async resume(event?: WorkflowEvent) {
     if (!this.suspended) {
-      if (this.executingStates > 0 && this.#awaits(event)) this.#pendingEvent = { state: this.currentAction, event };
+      if (this.executingStates > 0 && this.#awaits(event)) this.#pendingEvent = { step: this.#currentStep, event };
       return;
     }
     // New damage while saves are awaited is shown, and the saves keep waiting
@@ -2284,9 +2317,15 @@ export class Workflow {
     return renderAttributionTooltip(this.attackAttribution ?? {}, title);
   }
 
-  public async performState(newState: WorkflowState) {
+  /**
+   * Run the workflow from `newState` (a step id or a state method) until it suspends or ends. On each move to a new
+   * step: the old step's post pass and hook, then the new step's pre pass and hook (either can cancel or abort).
+   */
+  public async performState(newState: WorkflowState | string) {
+    const SUSPEND = "midi-qol.Suspend", ABORT = "midi-qol.Abort", FINISHED = "midi-qol.RollFinished", COMPLETED = "midi-qol.Completed";
+    let next: string | undefined = Workflow.stepIdOf(newState);
     // The workflow moved on: a roll it waited on its player for is done
-    if (newState !== this.WorkflowState_Suspend && this.#rollWait) {
+    if (next !== SUSPEND && this.#rollWait) {
       this.#rollWait.end();
       this.#rollWait = undefined;
     }
@@ -2297,77 +2336,80 @@ export class Workflow {
     if (this.stateTransitionCount === undefined) this.stateTransitionCount = 0;
     let isAborting = this.aborted;
     this.executingStates += 1;
+    const nameOf = (id: string | undefined) => (id && getStep(id)?.name) ?? String(id);
 
     try {
       while (this.stateTransitionCount < (this.maxTransitionCount)) {
-        const currentName = this.nameForState(this.currentAction);
+        const current = this.#currentStep;
+        const currentName = nameOf(current);
         this.suspended = false;
         this.stateTransitionCount += 1;
-        isAborting ||= this.aborted || (newState === this.WorkflowState_Abort);
-        if (newState === undefined) {
-          const message = `${this.workflowName} Perform state called with undefined action - previous state was ${this.nameForState(this.currentAction)}`
+        isAborting ||= this.aborted || (next === ABORT);
+        if (next === undefined) {
+          const message = `${this.workflowName} Perform state called with undefined action - previous state was ${currentName}`
           error(message);
           TroubleShooter.recordError(new Error(message), message);
           this.suspended = true;
           break;
         }
-        const name = this.nameForState(newState);
+        const name = nameOf(next);
         // TODO: Is this necessary?
         await busyWait(1);
-        if (this.currentAction !== newState) {
-          if (!isAborting || this.currentAction === this.WorkflowState_Completed) {
-            await this.callOnUseMacrosForAction("post", this.currentAction);
-            if (await this.callHooksForAction("post", this.currentAction) === false && !isAborting) {
-              console.warn(`${this.workflowName}${this.id} ${currentName} -> ${name} aborted by post ${this.nameForState(this.currentAction)} Hook`)
+        if (current !== next) {
+          if (!isAborting || current === COMPLETED) {
+            await this.callOnUseMacrosForAction("post", this.methodForStep(current));
+            if (await this.callHooksForAction("post", this.methodForStep(current)) === false && !isAborting) {
+              console.warn(`${this.workflowName}${this.id} ${currentName} -> ${name} aborted by post ${currentName} Hook`)
               if (!this.aborted) this.outcome = "cancelled";
-              newState = this.aborted ? this.WorkflowState_Abort : this.WorkflowState_RollFinished;
+              next = this.aborted ? ABORT : FINISHED;
             }
             if (debugEnabled > 0) warn(`${this.workflowName} ${this.id} finished ${currentName}`);
-            if (debugEnabled > 0) warn(`${this.workflowName} ${this.id} transition ${this.nameForState(this.currentAction)} -> ${name}`);
+            if (debugEnabled > 0) warn(`${this.workflowName} ${this.id} transition ${currentName} -> ${name}`);
 
             if (!isAborting && this.aborted) {
-              console.warn(`${this.workflowName} ${this.id} ${currentName} -> ${name} aborted by pre ${this.nameForState(this.currentAction)} macro pass`)
-              newState = this.WorkflowState_Abort;
+              console.warn(`${this.workflowName} ${this.id} ${currentName} -> ${name} aborted by pre ${currentName} macro pass`)
+              next = ABORT;
               continue;
             }
           }
-          await this.callOnUseMacrosForAction("pre", newState);
-          if (await this.callHooksForAction("pre", newState) === false && !isAborting) {
-            console.warn(`${this.workflowName} ${this.id} ${currentName} -> ${name} aborted by pre ${this.nameForState(newState)} Hook`)
+          await this.callOnUseMacrosForAction("pre", this.methodForStep(next));
+          if (await this.callHooksForAction("pre", this.methodForStep(next)) === false && !isAborting) {
+            console.warn(`${this.workflowName} ${this.id} ${currentName} -> ${name} aborted by pre ${nameOf(next)} Hook`)
             if (!this.aborted) this.outcome = "cancelled";
-            newState = this.aborted ? this.WorkflowState_Abort : this.WorkflowState_RollFinished;
+            next = this.aborted ? ABORT : FINISHED;
             continue;
           }
           if (this.aborted && !isAborting) {
-            console.warn(`${this.workflowName} ${currentName} ${this.id} -> ${name} aborted by pre ${this.nameForState(newState)} macro pass`)
-            newState = this.WorkflowState_Abort;
+            console.warn(`${this.workflowName} ${currentName} ${this.id} -> ${name} aborted by pre ${nameOf(next)} macro pass`)
+            next = ABORT;
             continue;
           }
-          this.currentAction = newState;
+          this.currentAction = next;
         }
-        let nextState: WorkflowState;
+        let returned: WorkflowState | string;
         this.#queueingWrites += 1;
         try {
-          nextState = await this.currentAction.bind(this)();
+          returned = await this.#runStep(this.#currentStep);
         } finally {
           this.#queueingWrites -= 1;
         }
-        if (nextState === this.WorkflowState_Suspend || stepForMethod(this.currentAction?.name)?.flush) await this.flushCardWrites();
+        const after = Workflow.stepIdOf(returned);
+        if (after === SUSPEND || getStep(this.#currentStep ?? "")?.flush) await this.flushCardWrites();
         else if (chatCardUpdates === "everyStep") await this.flushCardWrites(true);
 
-        if (nextState === this.WorkflowState_Suspend) {
+        if (after === SUSPEND) {
           this.suspended = true;
-          if (debugEnabled > 0) warn(`${this.workflowName} ${this.nameForState(this.currentAction)} -> suspended Workflow ${this.id}`);
+          if (debugEnabled > 0) warn(`${this.workflowName} ${nameOf(this.#currentStep)} -> suspended Workflow ${this.id}`);
           const pending = this.#pendingEvent;
           this.#pendingEvent = undefined;
-          if (pending?.state === this.currentAction) {
+          if (pending && pending.step === this.#currentStep) {
             this.suspended = false;
-            newState = this.stateAfter(pending.event!);
+            next = Workflow.stepIdOf(this.stateAfter(pending.event!));
             continue;
           }
           break;
         }
-        newState = nextState;
+        next = after;
       }
 
       if (this.stateTransitionCount >= this.maxTransitionCount) {
@@ -2387,6 +2429,13 @@ export class Workflow {
         this.executingStates -= 1;
       }
     }
+  }
+
+  /** Run one step: the flow's implementation of it for this workflow (in M2 stage 2, its class's method) */
+  async #runStep(id: string | undefined): Promise<WorkflowState | string> {
+    const run = this.methodForStep(id);
+    if (!run) throw new Error(`${this.workflowName}: no step ${id}`);
+    return run.call(this);
   }
 
   async WorkflowState_Suspend(): Promise<WorkflowState> {
@@ -8199,6 +8248,7 @@ export class Workflow {
   }
 }
 export class SavesFirstWorkflow extends Workflow {
+  static flowId = "midi-qol.savesFirst";
   get postAttackRollState(): WorkflowState {
     return this.WorkflowState_WaitForSaves;
   }
@@ -8247,6 +8297,7 @@ export class SavesFirstWorkflow extends Workflow {
 }
 
 export class ActiveDefenceWorkflow extends Workflow {
+  static flowId = "midi-qol.activeDefence";
   async WorkflowState_WaitForAttackRoll(): Promise<WorkflowState> {
     this.workflowOptions.attackRollDSN = false;
     return super.WorkflowState_WaitForAttackRoll();
@@ -8597,6 +8648,7 @@ export class UserWorkflow extends Workflow {
 }
 
 export class DamageOnlyWorkflow extends Workflow {
+  static flowId = "midi-qol.damageOnly";
   /** @deprecated use itemCardUuid */
   get itemCard(): ChatMessage.Implementation | undefined {
     foundry.utils.logCompatibilityWarning("midi-qol | DamageOnlyWorkflow#itemCard is deprecated and will be removed in 14.8.0: use itemCardUuid.", { since: "14.6.9", until: "14.8.0", once: true });
@@ -8789,6 +8841,7 @@ export class DamageOnlyWorkflow extends Workflow {
 }
 
 export class TrapWorkflow extends Workflow {
+  static flowId = "midi-qol.trap";
   templateLocation: { x: number, y: number, direction?: number, removeDelay?: number } | undefined;
   saveTargets: TokenDocumentSet | undefined;
   targetsPassedToConstructor: boolean;

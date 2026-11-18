@@ -279,6 +279,7 @@ Object.assign(globalThis.MidiQOL, {
   getDistance,
   measureTokens,
   applyCalculatedDamage,
+  flows: { get: getFlow, list: allFlows, coarseStepOf },
   UNMEASURABLE_DISTANCE,
   getItemFromEffectOrigin,
   getTokenPlayerName,
@@ -1036,6 +1037,7 @@ import { defineTargetConfirmationService } from "./module/services/targetConfirm
 import { chooseTokens, defineChooseTokensService } from "./module/services/targetConfirmation/chooseTokens.js";
 import { defineRollBonusesService } from "./module/services/rollBonuses/service.js";
 import { defineDistanceService } from "./module/services/distance/service.js";
+import { allFlows, coarseStepOf, getFlow } from "./module/steps/flows.js";
 import { defineFlankingService } from "./module/services/flanking/service.js";
 import { applyCalculatedDamage, registerDamageApplication } from "./module/damage/application.js";
 import { bonusPromptService, defineBonusPromptService } from "./module/services/rollBonuses/prompt.js";
