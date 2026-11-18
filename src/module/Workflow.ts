@@ -7513,6 +7513,12 @@ export class Workflow {
 
   #preRollBonuses: { attack?: OfferedBonus[] } = {};
 
+  /** rollBonuses' damage bonuses for particular targets (stage 9), added to those targets' damage by midi's damageModifiers contributor */
+  targetedDamageBonuses: { targets: string[], amount: number, type: string, label: string }[] = [];
+  addTargetedDamageBonus(bonus: { targets: string[], amount: number, type: string, label: string }): void {
+    this.targetedDamageBonuses.push(bonus);
+  }
+
   /**
    * rollBonuses' preRoll phase (stage 7): automatic bonuses that add to the formula are collected before the roll and
    * become parts of it (attackRollParts), so they show in the roll and dnd5e doubles their dice on a critical. Optional
@@ -9414,3 +9420,18 @@ function activeDiceTotal(term: foundry.dice.terms.DiceTerm | undefined, counted 
   if (!active?.length) return undefined;
   return active.reduce((sum, r) => sum + Number(counted ? r.count ?? r.result : r.result), 0);
 }
+
+/**
+ * damageModifiers contributor "midi-qol.targetedBonuses": a use's damage bonuses chosen for particular targets
+ * (rollBonuses stage 9), each added to its targets' damage only.
+ */
+export const targetedDamageBonusContributor = {
+  stage: "bonus" as const,
+  for(query: { options: { midi?: { itemCardUuid?: string, targetUuid?: string } } }) {
+    const midi = query.options?.midi;
+    if (!midi?.itemCardUuid || !midi.targetUuid) return undefined;
+    const workflow = Workflow.getWorkflow(midi.itemCardUuid);
+    return workflow?.targetedDamageBonuses.filter(bonus => bonus.targets.includes(midi.targetUuid!))
+      .map(bonus => ({ types: [bonus.type], amount: bonus.amount, label: bonus.label }));
+  }
+};

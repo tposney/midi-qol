@@ -14,7 +14,7 @@ import { setupRegionMagic } from './module/regionMagic.js';
 import { setupMagicSight, drawnMagicSight } from './module/magicSight.js';
 import { SaferSocket, initGMActionSetup, setupSocket, socketlibSocket, unTimedExecuteAsGM } from './module/GMAction.js';
 import { setupSheetQol } from './module/sheetQOL.js';
-import { TrapWorkflow, DamageOnlyWorkflow, Workflow, DummyWorkflow, UserWorkflow } from './module/Workflow.js';
+import { TrapWorkflow, DamageOnlyWorkflow, Workflow, DummyWorkflow, UserWorkflow, targetedDamageBonusContributor } from './module/Workflow.js';
 import { addConcentrationDependent, addRollTo, addRollToAsync, applyTokenDamage, applyTokenDamageMany, canSee, canSense, canSenseModes, checkDistance, checkIncapacitated, checkNearby, chooseEffect, completeItemUse, computeCoverBonus, getCoverBonus, tokenAtPosition, createConditionData, throttledUpdate, displayDSNForRoll, doConcentrationCheck, doOverTimeEffect, evalAllConditions, evalCondition, findNearby, findNearbyCount, getCachedDocument, getChanges, getConcentrationEffect, getTokenDocument, getOrCreateTokenForActor, getOrCreateTokenForActorAsSet, getTokenPlayerName, getTokenPlayerNameForUser, getTraitMult, hasCondition, hasUsedBonusAction, hasUsedReaction, isValidTarget, midiRenderAttackRoll, midiRenderBonusDamageRoll, midiRenderDamageRoll, midiRenderOtherDamageRoll, midiRenderRoll, fromActorUuid, playerFor, playerForActor, raceOrType, reactionDialog, removeHiddenCondition, removeInvisibleCondition, removeReactionUsed, setActionUsed, setBonusActionUsed, setReactionUsed, hasUsedAction, tokenForActor, typeOrRace, validRollAbility, actorFromUuid, removeActionUsed, removeBonusActionUsed, getCheckRollModeFor, getSaveRollModeFor, completeActivityUse, checkActivityRange, unseenTargets, totalCoverTargets, modifyDamageBy, convertDuration, splitOvertimeSpec, isRangeCheckable, activityRanges, getItemFromEffectOrigin, addDependent, updatesCache, createDamageDetail, activityHasEmanationNoTemplate, getVitalityItem, getVitalityValue, getVitalityMax, hasVitalitySystem, resolveItemMacro, resolveActivityMacro, setupMidiFlagTypes, initCoverConstants, ReactionDialog, RollModifyDialog, sizeNumeric, restoreWorkflowTokenSets, setupMarkerChecks, setupCheckVision, toggleStatus } from "./module/utils.js";
 import { addFollowUp } from './module/followUps.js';
 import { highlightTokens } from './module/lib/tokenHighlight.js';
@@ -444,6 +444,7 @@ Hooks.once('init', async function () {
   defineRollModifiersService();
   registerAttackRollRules();
   defineDamageModifiersService();
+  damageModifiersService.register("midi-qol.targetedBonuses", targetedDamageBonusContributor, { label: "Midi-QOL: bonuses for particular targets" });
   defineTargetConfirmationService(resolveTargetConfirmation);
   defineChooseTokensService();
   defineRollBonusesService();
@@ -1034,7 +1035,7 @@ import { coverFor, defineCoverService } from "./module/services/cover/service.js
 import { definePerceptionService, isImprecise } from "./module/services/perception/service.js";
 import { defineRollModifiersService } from "./module/services/rollModifiers/service.js";
 import { registerAttackRollRules } from "./module/services/rollModifiers/attackRules.js";
-import { defineDamageModifiersService } from "./module/services/damageModifiers/service.js";
+import { defineDamageModifiersService, damageModifiersService } from "./module/services/damageModifiers/service.js";
 import { defineTargetConfirmationService } from "./module/services/targetConfirmation/service.js";
 import { chooseTokens, defineChooseTokensService } from "./module/services/targetConfirmation/chooseTokens.js";
 import { defineRollBonusesService } from "./module/services/rollBonuses/service.js";

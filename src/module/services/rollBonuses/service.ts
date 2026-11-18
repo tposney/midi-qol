@@ -55,6 +55,11 @@ export interface BonusCandidate {
   cost?: BonusCost;
   /** Its onChosen spends the cost itself (as CAT's bonuses do): midi only checks it. */
   spendsOwnCost?: boolean;
+  /**
+   * Damage only: the bonus is for these targets (token document uuids), not the whole roll. Its formula is rolled when
+   * chosen and added to just those targets' damage (the damageModifiers bonus stage); the damage roll is unchanged.
+   */
+  targets?: readonly string[];
   /** Offered on a natural 1 (attack fumble). */
   onFumble?: boolean;
   /** True, or why it is not offered now. */
@@ -211,7 +216,11 @@ export async function spendBonusCost(actor: Actor.Implementation, cost: BonusCos
 export async function applyOfferedBonus(bonus: OfferedBonus, ctx: BonusContext, rollData: object): Promise<Roll> {
   let roll = ctx.roll;
   try {
-    roll = await applyBonusEffect(ctx.roll, bonus.effect, rollData, bonus.label);
+    if (bonus.targets?.length && ctx.query.kind === "damage" && bonus.effect.kind === "add" && ctx.query.workflow) {
+      const extra = await new Roll(bonus.effect.formula, { ...ctx.roll.data, ...rollData }).evaluate();
+      ctx.query.workflow.addTargetedDamageBonus({ targets: [...bonus.targets], amount: extra.total ?? 0,
+        type: bonus.effect.damageType ?? (ctx.roll.options as { type?: string }).type ?? "none", label: bonus.label });
+    } else roll = await applyBonusEffect(ctx.roll, bonus.effect, rollData, bonus.label);
     // A changed roll is a new object: carry forward what was used on the roll it came from
     const used: string[] = [...(foundry.utils.getProperty(ctx.roll, "flags.midi-qol.optionalsUsed") as string[] ?? [])];
     used.push(bonus.id);
