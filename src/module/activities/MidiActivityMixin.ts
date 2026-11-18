@@ -1,6 +1,6 @@
 import { getDistance } from "../services/distance/service.js";
 import { registerCardAction, registerCardActions } from "./cardActions.js";
-import { cardMidi, cardOtherConsumption } from "../lib/cardState.js";
+import { cardOtherConsumption } from "../lib/cardState.js";
 import { heldKeys } from "../lib/rollKeys.js";
 import { TokenDocumentSet, memberCount } from "../lib/tokenDocumentSet.js";
 import { Activity, ActivityEffectData, ActivityUseConfiguration, RollDialogConfig, DND5ETargetDescriptor, RollMessageConfig, RollProcessConfig, MidiUsageChatContext, Dnd5eSystem, EmanationShapeData } from "../../globals.js";
@@ -8,9 +8,8 @@ import { GameSystemConfig, MODULE_ID, debugEnabled, error, i18n, i18nFormat, war
 import { socketlibSocket, timedAwaitExecuteAsGM } from "../GMAction.js";
 import { ActiveDefenceWorkflow, AugmentedEvent, TrapWorkflow, Workflow, SavesFirstWorkflow } from "../Workflow.js";
 import { TroubleShooter } from "../apps/TroubleShooter.js";
-import { midiButtonVisibility } from "../ChatClasses/UsageCardMessage.js";
 import { ConditionEditor } from "../apps/ConditionEditor.js";
-import { followUpTargetModes, runFollowUp } from "../followUps.js";
+import { runFollowUp } from "../followUps.js";
 import { RegionBehaviorEditor } from "../apps/RegionBehaviorEditor.js";
 import { averageDice, skipConcentrationActorUuids } from "../patching.js"
 import {
@@ -33,7 +32,7 @@ import {
 import { installedModules } from "../setupModules.js";
 import { saveUndoData } from "../undo.js";
 import { isRelaunched, takeRelaunch, useRelaunchSpike } from "./useRelaunch.js";
-import { activityHasAreaTarget, callActivityHooks, canSee, canSense, checkActivityRange, checkTargetsSeen, checkTotalCover, checkIncapacitated, createConditionData, displayDSNForRoll, evalActivationCondition, evalCondition, getAutoRollAttack, getAutoRollDamage, getRemoveAttackButtons, getRemoveDamageButtons, getSpeaker, getToken, activityHasAutoPlaceTemplate, confirmUseOffScene, hasUsedBonusAction, hasUsedReaction, autoConsumeResource, isInCombat, logIncapacitatedCheckResult, needsBonusActionCheck, needsReactionCheck, setBonusActionUsed, setReactionUsed, sumRolls, getOrCreateTokenForActor, validTargetTokens, userTargetsKeepingUndrawn, itemMagicAvailable, hasNoReactionsMarker, HEALING_BUTTON_KEY, activityHasEmanationNoTemplate, getActivityAutoTargetAction, areMidiKeysPressed, getActor, setRangedTargets, updateUserTargets, isValidTarget, needsAOOCheck, addRollTo, pushTargetSave, popTargetSave, clearTargetSave, getConsumptionData, toMessageMode, rollModeToMessageMode, tokenSourceCenter, isActivityType, speakerFor, setMessageTargets } from "../utils.js";
+import { activityHasAreaTarget, callActivityHooks, canSee, canSense, checkActivityRange, checkTargetsSeen, checkTotalCover, checkIncapacitated, createConditionData, displayDSNForRoll, evalActivationCondition, evalCondition, getAutoRollAttack, getAutoRollDamage, getRemoveAttackButtons, getRemoveDamageButtons, getSpeaker, getToken, activityHasAutoPlaceTemplate, confirmUseOffScene, hasUsedBonusAction, hasUsedReaction, autoConsumeResource, isInCombat, logIncapacitatedCheckResult, needsBonusActionCheck, needsReactionCheck, setBonusActionUsed, setReactionUsed, sumRolls, getOrCreateTokenForActor, validTargetTokens, userTargetsKeepingUndrawn, itemMagicAvailable, hasNoReactionsMarker, HEALING_BUTTON_KEY, activityHasEmanationNoTemplate, getActivityAutoTargetAction, areMidiKeysPressed, getActor, setRangedTargets, updateUserTargets, isValidTarget, needsAOOCheck, addRollTo, getConsumptionData, toMessageMode, rollModeToMessageMode, tokenSourceCenter, isActivityType, speakerFor, setMessageTargets } from "../utils.js";
 import { activityHasScaledTargetCount, attachTokenOptions, templateOriginOptions, createActivityTemplateRegions, preTemplateTargets, removeFlanking, requiresTargetConfirmation, selectTargetsFromTemplates, setDamageRollMinTerms, shouldEnforceSingleTarget } from "./activityHelpers.js";
 
 export class MidiConditionField extends globalThis.dnd5e.dataModels.fields.FormulaField {

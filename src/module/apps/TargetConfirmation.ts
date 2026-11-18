@@ -1,4 +1,4 @@
-import { computeFlankedStatus, computeFlankingStatus } from "../services/flanking/service.js";
+import { computeFlankingStatus } from "../services/flanking/service.js";
 import { Activity } from "../../globals.js";
 import { i18n, error, i18nFormat } from "../../midi-qol.js";
 import { checkMechanic, checkRule, configSettings, targetConfirmation } from "../settings.js";

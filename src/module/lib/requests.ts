@@ -1,7 +1,7 @@
 import { configSettings } from "../settings.js";
 import { DialogCountdown } from "./dialogCountdown.js";
 import { beginPlayerWait, type PlayerWait, type WaitChoice, type WaitChoiceSpec } from "./playerWaits.js";
-import { MidiRequest, RequestRegistry, type Settled, type SettledHow } from "./requests/core.js";
+import { MidiRequest, RequestRegistry, type SettledHow } from "./requests/core.js";
 
 /*
  * Requests between clients (midi-next M3 stage 3; plan ~/Documents/midi-next-M3-plan-2026-11-18.md). The requester asks

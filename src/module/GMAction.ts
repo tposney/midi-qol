@@ -4,7 +4,7 @@ import { _closePlayerRollDialogs, playerWaitHandlers } from "./lib/playerWaits.j
 import { DialogCountdown, dialogCountdownOptions } from "./lib/dialogCountdown.js";
 import { withWorkflowOptionsCodec } from "./lib/workflowOptionsCodec.js";
 import { i18n, log, warn, gameStats, getCanvas, error, debugEnabled, debug, GameSystemConfig, MODULE_ID } from "../midi-qol.js";
-import { damageActiveHas, damageChangeHas, REACTIONS_REQUEST, calculateDamageAmounts, hpChangeFromDetail, getToken, getTokenDocument, gmOverTimeEffect, fromActorUuid, promptReactions, hasUsedAction, hasUsedBonusAction, removeActionUsed, removeBonusActionUsed, removeReactionUsed, ReactionItemReference, isEffectExpired, expireEffects, deleteAppliedEffects, getAppliedEffects, CERemoveEffect, CEAddEffectWith, getActor, completeItemUse, completeActivityUse, localActivityOverTimeEffect, isValidTarget, validTargetTokens, hasUsedAnyReaction, getVitalityItem, MidiOptions, tokenSourceCenter, toggleStatus, withDeprecatedDamageFields, speakerFor } from "./utils.js";
+import { damageActiveHas, damageChangeHas, REACTIONS_REQUEST, calculateDamageAmounts, hpChangeFromDetail, getToken, getTokenDocument, gmOverTimeEffect, fromActorUuid, promptReactions, hasUsedAction, hasUsedBonusAction, removeActionUsed, removeBonusActionUsed, removeReactionUsed, ReactionItemReference, isEffectExpired, expireEffects, deleteAppliedEffects, getAppliedEffects, CERemoveEffect, CEAddEffectWith, getActor, completeItemUse, completeActivityUse, localActivityOverTimeEffect, validTargetTokens, hasUsedAnyReaction, getVitalityItem, MidiOptions, tokenSourceCenter, toggleStatus, withDeprecatedDamageFields, speakerFor } from "./utils.js";
 import { registerRequestHandler, type IncomingRequest } from "./lib/requests.js";
 import { DAMAGE_MESSAGE_TYPE } from "./ChatClasses/DamageCardMessage.js";
 import { DamageDescriptionObject, Workflow } from "./Workflow.js";
@@ -840,7 +840,7 @@ export async function rollAbility(data: {
   // Reconstruct tracker instances from advantageByChoice - class instances don't survive socketlib
   // (tracker.toJSON() is called automatically during serialization, so tracker is a plain object after transmission)
   if (advantageByChoice && typeof advantageByChoice === "object") {
-    for (const [key, value] of Object.entries(advantageByChoice)) {
+    for (const value of Object.values(advantageByChoice)) {
       if (value?.tracker && !(value.tracker instanceof RollModifierTracker)) {
         const trackerData = value.tracker;
         value.tracker = new RollModifierTracker();

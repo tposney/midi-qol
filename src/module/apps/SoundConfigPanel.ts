@@ -125,9 +125,9 @@ export class SoundConfigPanel extends HandlebarsApplicationMixin(ApplicationV2) 
     const requiredPlayLists: any = {};
     for (let [cek, ce] of Object.entries(midiSoundSettings)) {
       if (cek === "version") continue; // skip the version entry
-      for (let [tek, te] of Object.entries(ce as any)) {
-        for (let [stek, ste] of Object.entries(te as any)) {
-          for (let [eek, ee] of Object.entries(ste as any)) {
+      for (let te of Object.values(ce as any)) {
+        for (let ste of Object.values(te as any)) {
+          for (let ee of Object.values(ste as any)) {
             if (!requiredPlayLists[(ee as any).playlistName]) {
               requiredPlayLists[(ee as any).playlistName] = new Set();
             }

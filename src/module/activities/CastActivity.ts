@@ -3,7 +3,6 @@ import { adoptActivityType } from "./graft.js";
 import { Activity, ActivityUseConfiguration, RollDialogConfig, RollMessageConfig } from "../../globals.js";
 import { debugEnabled, GameSystemConfig, warn } from "../../midi-qol.js";
 import { Workflow } from "../Workflow.js";
-import { configSettings } from "../settings.js";
 import { MidiActivityMixin, MidiActivityMixinSheet } from "./MidiActivityMixin.js";
 
 export let MidiCastActivity: ReturnType<typeof defineMidiCastActivityClass>;

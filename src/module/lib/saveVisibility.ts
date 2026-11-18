@@ -1,5 +1,4 @@
 import { cardSourceActor } from "./cardState.js";
-import { MODULE_ID } from "../../midi-qol.js";
 import { configSettings, safeGetGameSetting } from "../settings.js";
 
 /**

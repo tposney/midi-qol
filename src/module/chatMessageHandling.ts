@@ -1,4 +1,4 @@
-import { debug, warn, error, debugEnabled, MODULE_ID } from "../midi-qol.js";
+import { debug, warn, debugEnabled, MODULE_ID } from "../midi-qol.js";
 import { nsaFlag, coloredBorders, forceHideRoll } from "./settings.js";
 import { playerForActor, doOverTimeEffect, isInCombat, dnd5eRollType, speakerFor } from "./utils.js";
 import { TroubleShooter } from "./apps/TroubleShooter.js";

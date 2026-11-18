@@ -14,7 +14,7 @@ import { MODULE_ID, MQDamageRollTypes } from "../../midi-qol.js";
 import { Workflow } from "../Workflow.js";
 import { followUpButtons } from "../followUps.js";
 import { NOTE_MESSAGE_TYPE, noteCard, notesOf } from "./CardNoteMessage.js";
-import { attributionMap, cardMidi, rollTypeOf, rollsOfType, cardStateSchema, recordFor, recordList, type CardRecord, type CardRecords } from "../lib/cardState.js";
+import { attributionMap, cardMidi, rollTypeOf, rollsOfType, cardStateSchema, recordFor, recordList, type CardRecord } from "../lib/cardState.js";
 import { DamageRules, applyDamageRules, copyDamageOptions, hasDamageRule, mergeDamageRules } from "../lib/damageRules.js";
 
 /** Renderer per roll-backed section; damage renderers aggregate the section's rolls into one block. */

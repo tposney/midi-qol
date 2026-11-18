@@ -4,7 +4,6 @@ import { Activity, RollDialogConfig, RollMessageConfig, RollProcessConfig } from
 import { debugEnabled, i18n, warn, error, GameSystemConfig } from "../../midi-qol.js";
 import { Workflow } from "../Workflow.js";
 import { TroubleShooter } from "../apps/TroubleShooter.js";
-import { configSettings } from "../settings.js";
 import { heldKeys } from "../lib/rollKeys.js";
 import { areMidiKeysPressed, callActivityHooks, isAutoFastForward, setMessageTargets } from "../utils.js";
 import { MidiActivityMixin, MidiActivityMixinSheet } from "./MidiActivityMixin.js";

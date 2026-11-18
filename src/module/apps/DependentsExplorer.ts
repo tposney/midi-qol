@@ -242,7 +242,7 @@ export class DependentsExplorer extends HandlebarsApplicationMixin(ApplicationV2
       }
     }
     // If it's a dependent, rebuild that dependent's info in all entries that contain it
-    for (const [parentUuid, entry] of this.#entriesCache.entries()) {
+    for (const entry of this.#entriesCache.values()) {
       const depIndex = entry.dependents.findIndex(d => d.uuid === uuid);
       if (depIndex !== -1) {
         const newDepInfo = this.#buildDependentInfo(uuid);

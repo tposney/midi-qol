@@ -4,14 +4,13 @@ import { initHiding } from "./lib/hiding.js";
 import { log, i18n, error, i18nFormat, warn, debugEnabled, GameSystemConfig, MODULE_ID, gameStats, getStaticID, MIDI_IMPLYING_STATUSES } from "../midi-qol.js";
 import { saveDisplayMode } from "./lib/saveVisibility.js";
 import { configSettings, checkRule, checkMechanic, safeGetGameSetting, safeSetGameSetting, playerControlsInvisibleTokens } from "./settings.js";
-import { bonusDialog, createConditionData, displayDSNForRoll, expireRollEffect, getCriticalDamage, getDeadStatus, getOptionalCountRemainingShortFlag, getUnconsciousStatus, getVitalityDeadStatus, getWoundedStatus, hasUsedAction, hasUsedBonusAction, hasUsedReaction, midiRenderRoll, notificationNotify, removeActionUsed, removeBonusActionUsed, removeReactionUsed, tokenForActor, expireEffects, DSNMarkDiceDisplayed, evalAllConditionsAsync, hasCondition, areMidiKeysPressed, MidiOptions, getVitalityItem, checkMagicResistanceAndVulnerability, isAutoFastForward, FastForwardRollType, buildRollChoices, selectBestRollChoice, getTokenPerimeterPolygon, closestPointOnPerimeter, measurePointDistance, setUserInitiatedTarget, dnd5eRollType, updateUserTargets, isEffectExpired, processTurnOverTime, toggleStatus, isActivityType, getTokenDocument, speakerFor, isMessageMode } from "./utils.js";
+import { bonusDialog, createConditionData, displayDSNForRoll, expireRollEffect, getCriticalDamage, getDeadStatus, getOptionalCountRemainingShortFlag, getUnconsciousStatus, getVitalityDeadStatus, getWoundedStatus, hasUsedAction, hasUsedBonusAction, hasUsedReaction, midiRenderRoll, notificationNotify, removeActionUsed, removeBonusActionUsed, removeReactionUsed, tokenForActor, expireEffects, DSNMarkDiceDisplayed, evalAllConditionsAsync, hasCondition, MidiOptions, getVitalityItem, checkMagicResistanceAndVulnerability, isAutoFastForward, FastForwardRollType, buildRollChoices, selectBestRollChoice, getTokenPerimeterPolygon, closestPointOnPerimeter, measurePointDistance, setUserInitiatedTarget, dnd5eRollType, updateUserTargets, isEffectExpired, processTurnOverTime, toggleStatus, isActivityType, getTokenDocument, speakerFor, isMessageMode } from "./utils.js";
 import { computeActivityTemplateTargets } from "./activities/activityHelpers.js";
 import { installedModules } from "./setupModules.js";
 import { OnUseMacro, OnUseMacros } from "./apps/Item.js";
 import { initHiddenGroundCue } from "./lib/hiddenGroundCue.js";
 import { initConditionRules } from "./lib/conditionRules.js";
 import { TroubleShooter } from "./apps/TroubleShooter.js";
-import { MidiAttackActivity } from "./activities/AttackActivity.js";
 import { MidiActivityChoiceDialog } from "./apps/MidiActivityChoiceDialog.js";
 import { MidiRollChoiceDialog, PreComputedAdvantage } from "./apps/MidiRollChoiceDialog.js";
 import Token = foundry.canvas.placeables.Token;
@@ -23,7 +22,7 @@ import { activityPolicy } from "./activities/activityPrototype.js";
 import { preferredActiveGM, socketlibSocket } from "./GMAction.js";
 import { MidiDependentsRegistry, MidiDependentDocumentMixin, actorEmbeddedByPath } from "./lib/MidiDependentsRegistry.js";
 import { ADVANTAGE, DISADVANTAGE, NORMAL, decideRollDialog, heldKeys, keyMode } from "./lib/rollKeys.js";
-import { RollModifierTracker, computeAdvantageFlags, computeRollModifiers, applyRollModifiers, RollModifierFlags, RollModifierResult, AdvantageFlags, applyTrackerAdvantage } from "./lib/RollModifierTracker.js";
+import { RollModifierTracker, computeAdvantageFlags, computeRollModifiers, applyRollModifiers, RollModifierFlags, AdvantageFlags, applyTrackerAdvantage } from "./lib/RollModifierTracker.js";
 
 let libWrapper;
 

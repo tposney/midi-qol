@@ -8,7 +8,7 @@
 
 import { MODULE_ID } from "../../midi-qol.js";
 import { socketlibSocket } from "../GMAction.js";
-import { configSettings, safeGetGameSetting } from "../settings.js";
+import { configSettings } from "../settings.js";
 
 /** midi's own kinds; other modules may use their own. */
 export type WaitKind = "save" | "check" | "defence" | "reaction" | "bonus" | "contest" | (string & {});

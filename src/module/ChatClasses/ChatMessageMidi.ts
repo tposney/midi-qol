@@ -3,7 +3,7 @@ import { MESSAGE_TYPES, MODULE_ID, MQDamageRollTypes, debugEnabled, error, i18n,
 import { TroubleShooter } from "../apps/TroubleShooter.js";
 import { Dnd5eSystem } from "../../globals.js";
 import { configSettings, forceHideRoll, safeGetGameSetting } from "../settings.js";
-import { createDamageDetail, displayTokenName, getToken, isDnd5eRollMessage } from "../utils.js";
+import { displayTokenName, getToken, isDnd5eRollMessage } from "../utils.js";
 import { damageDetailToObject, Workflow } from "../Workflow.js";
 import { renameMarkedTokens } from "../lib/tokenNames.js";
 import { attackRollOf, cardHitResult, cardHitsPending, cardMidi, rollsOfType, cardMidiState, cardSourceActor, recordList, storedMidiFlag } from "../lib/cardState.js";

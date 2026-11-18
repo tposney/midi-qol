@@ -1,7 +1,6 @@
 import { adoptActivityType } from "./graft.js";
 import { Activity } from "../../globals.js";
 import { debugEnabled, GameSystemConfig, warn } from "../../midi-qol.js";
-import { configSettings } from "../settings.js";
 import { getTokenDocument } from "../utils.js";
 import { MidiActivityMixin, MidiActivityMixinSheet } from "./MidiActivityMixin.js";
 

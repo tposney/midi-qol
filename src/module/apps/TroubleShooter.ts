@@ -531,7 +531,7 @@ export class TroubleShooter extends HandlebarsApplicationMixin(ApplicationV2) {
       }
     }
 
-    for (const [moduleId, moduleEntry] of Object.entries(data.modules) as [string, any][]) {
+    for (const moduleId of Object.keys(data.modules)) {
       switch (moduleId) {
         case "ATL":
           foundry.utils.setProperty(data.modules[moduleId], "settings", TroubleShooter.getDetailedSettings(moduleId));

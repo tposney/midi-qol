@@ -7,8 +7,8 @@
  * (playerWaitShowPlayers).
  */
 
-import { MODULE_ID, i18n, i18nFormat } from "../../midi-qol.js";
-import { configSettings, safeGetGameSetting } from "../settings.js";
+import { i18n, i18nFormat } from "../../midi-qol.js";
+import { configSettings } from "../settings.js";
 import { playerForActor } from "../utils.js";
 import { knownPlayerWaits, onPlayerWaitsChanged, settlePlayerWait, WaitInfo } from "./playerWaits.js";
 

@@ -1,5 +1,5 @@
 
-import { debug, debugEnabled, error, log, warn, busyWait, MODULE_ID } from "../midi-qol.js";
+import { debugEnabled, error, log, warn, busyWait, MODULE_ID } from "../midi-qol.js";
 import { socketlibSocket, unTimedExecuteAsGM } from "./GMAction.js";
 import { configSettings } from "./settings.js";
 import { getConcentrationEffect, isReactionItem } from "./utils.js";

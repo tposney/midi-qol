@@ -6,7 +6,7 @@ import { Workflow } from "../Workflow.js";
 import { TargetConfirmationDialog, TargetConfirmationOptions } from "../apps/TargetConfirmation.js";
 import { configSettings, targetConfirmation } from "../settings.js";
 import { installedModules } from "../setupModules.js";
-import { collisionLevel, getFlankingEffect, CERemoveEffect, sumRolls, computeTemplateShapeDistance, getToken, getTokenDocument, checkActivityRange, checkDefeated, checkIncapacitated, getCoverBonus, hasWallBlockingCondition, isValidTarget, tokenForActor, activityHasAreaTarget, activityHasAutoPlaceTemplate, activityHasEmanationNoTemplate, getActivityAutoTargetAction, getAoETargetType, updateUserTargets, rangeToSceneUnits, tokenSourcePosition, tokenSourceCenter, tokenSourceElevation, getTokenVisionElevation, userTargetsKeepingUndrawn, convertLengthTo, MidiOptions } from "../utils.js";
+import { collisionLevel, getFlankingEffect, CERemoveEffect, sumRolls, computeTemplateShapeDistance, getToken, getTokenDocument, checkActivityRange, checkDefeated, checkIncapacitated, getCoverBonus, hasWallBlockingCondition, isValidTarget, tokenForActor, activityHasAreaTarget, activityHasAutoPlaceTemplate, activityHasEmanationNoTemplate, getActivityAutoTargetAction, getAoETargetType, updateUserTargets, rangeToSceneUnits, tokenSourcePosition, tokenSourceCenter, getTokenVisionElevation, userTargetsKeepingUndrawn, convertLengthTo, MidiOptions } from "../utils.js";
 import { allAttackTypes } from "../../midi-qol.js";
 import Token = foundry.canvas.placeables.Token;
 

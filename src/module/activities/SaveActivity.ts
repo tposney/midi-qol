@@ -1,13 +1,10 @@
 import { adoptActivityType } from "./graft.js";
 import { registerCardActions } from "./cardActions.js";
-import { AnyMutableObject } from "fvtt-types/utils";
 import { Activity, ActivityUseConfiguration, RollDialogConfig, RollMessageConfig, RollProcessConfig } from "../../globals.js";
 import { debugEnabled, warn, i18n, GameSystemConfig } from "../../midi-qol.js";
 import { Workflow } from "../Workflow.js";
-import { configSettings, safeGetGameSetting } from "../settings.js";
-import { getTokenDocument, isAutoFastForward } from "../utils.js";
+import { isAutoFastForward } from "../utils.js";
 import { MidiActivityMixin, MidiActivityMixinSheet } from "./MidiActivityMixin.js";
-import { getSceneTargets } from "./activityHelpers.js";
 
 export let MidiSaveActivity: ReturnType<typeof defineMidiSaveActivityClass>;
 export let MidiSaveSheet: ReturnType<typeof defineMidiSaveSheetClass>;

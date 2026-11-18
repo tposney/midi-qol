@@ -1,10 +1,8 @@
 import { checkRange, type RangeCheckResult } from "./services/range/service.js";
 import { computeDistance } from "./services/distance/provider.js";
-import { getDistance, measureTokens } from "./services/distance/service.js";
+import { getDistance } from "./services/distance/service.js";
 import { computeFlankedStatus, computeFlankingStatus } from "./services/flanking/service.js";
 import { getHexCentroid } from "./services/flanking/provider.js";
-import { isFlanked, isFlanking } from "./services/flanking/service.js";
-import { measureDistance } from "./services/distance/service.js";
 import { bonusPromptService } from "./services/rollBonuses/prompt.js";
 import { applyOfferedBonus, collectBonusCandidates, type BonusCost, type BonusPhase, type OfferedBonus, type RollBonusQuery } from "./services/rollBonuses/service.js";
 import { addCosts as addBonusCosts, canAfford as canAffordBonus } from "./services/rollBonuses/rules.js";
@@ -33,7 +31,6 @@ import { Activity, ActivityUseConfiguration, CalcDamageOptions, MidiChangeData, 
 
 import Token = foundry.canvas.placeables.Token;
 import { AnyMutableObject, AnyObject } from "fvtt-types/utils";
-import { rendersFromModel } from "./ChatClasses/UsageCardMessage.js";
 import { contestedRoll } from "./lib/contestedRoll.js";
 import { addCardNote } from "./lib/cardNotes.js";
 
