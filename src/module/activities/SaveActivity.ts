@@ -1,6 +1,6 @@
 import { adoptActivityType } from "./graft.js";
 import { registerCardActions } from "./cardActions.js";
-import { Activity, ActivityUseConfiguration, RollDialogConfig, RollMessageConfig, RollProcessConfig } from "../../globals.js";
+import { Activity, RollDialogConfig, RollMessageConfig, RollProcessConfig } from "../../globals.js";
 import { debugEnabled, warn, i18n, GameSystemConfig } from "../../midi-qol.js";
 import { Workflow } from "../Workflow.js";
 import { isAutoFastForward } from "../utils.js";
@@ -45,10 +45,6 @@ let defineMidiSaveActivityClass = <T extends Activity>(ActivityClass: T) => {
 
 
 
-
-    use(config: ActivityUseConfiguration = {}, dialog: RollDialogConfig = {}, message: RollMessageConfig = {}) {
-      return super.use(config, dialog, message);
-    }
 
     async _triggerSubsequentActions(config, results) {
     }
