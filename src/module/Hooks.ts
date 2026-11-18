@@ -1,3 +1,4 @@
+import { applyDamageModifierStage } from "./services/damageModifiers.js";
 import { warn, error, debug, i18n, debugEnabled, overTimeEffectsToDelete, savedOverTimeEffectsToDelete, log, gameStats, GameSystemConfig, MODULE_ID, getStaticID, MIDI_IMPLYING_STATUSES } from "../midi-qol.js";
 import { excludeRegionSourceEffect, moveRegionsOnTurnChange } from "./regionBehaviors/MidiRegionActivityBehaviorType.js";
 import { colorChatMessageHandler, nsaMessageHandler, hideStuffHandler, hideRollUpdate, hideRollRender, checkOverTimeSaves } from "./chatMessageHandling.js";
@@ -1555,6 +1556,14 @@ function calculateTotalDamage({ damages, options }: DamageCalcParams): number {
   }, 0);
 }
 
+/** Entries a damageModifiers change may touch: damage, not healing, temp HP, display-only or absorbed entries. */
+function countsAsDamage(actor: Actor.Implementation, options: DamageApplicationOptions) {
+  // @ts-expect-error no dnd5e-types
+  const traits: AbsorptionTraits = actor.system?.traits ?? {};
+  return (damage: DamageDescription) => !isDRType(damage.type) && !damage.active?.inlined && !GameSystemConfig.healingTypes[damage.type]
+    && !["temphp", "maximum", "vitality"].includes(damage.type) && !isAbsorbed(traits, damage, options);
+}
+
 function preCalculateDamageHandler(actor: Actor.Implementation, damages: DamageDescription[], options: DamageApplicationOptions) {
   try {
     if (options.midi?.noCalc) return true;
@@ -1568,6 +1577,7 @@ function preCalculateDamageHandler(actor: Actor.Implementation, damages: DamageD
     computeSourceIgnores(params);
     dropUnmatchedOtherDamage(params);
     applyUncannyDodge(params);
+    applyDamageModifierStage("bonus", actor, sourceActor, damages, options, countsAsDamage(actor, options));
 
     // Apply saves and/or DR based on order setting
     if (saveDROrder === "DRSaveDr") {
@@ -1579,6 +1589,7 @@ function preCalculateDamageHandler(actor: Actor.Implementation, damages: DamageD
       }
     }
 
+    applyDamageModifierStage("flatReduction", actor, sourceActor, damages, options, countsAsDamage(actor, options));
     noteAbsorbedDamage(params);
     foundry.utils.setProperty(options, "midi.totalDamage", calculateTotalDamage(params));
     if (Hooks.call("midi-qol.dnd5ePreCalculateDamage", actor, damages, options) === false) return false;
@@ -1609,12 +1620,14 @@ function calculateDamageHandler(actor: Actor.Implementation, damages: DamageDesc
 
     applyTraitMultipliers(params);
     applyCustomResistances(params);
+    applyDamageModifierStage("percentReduction", actor, sourceActor, damages, options, countsAsDamage(actor, options));
 
     // Apply DR if not already done
     if (saveDROrder === "SaveDrDR") {
       if (!applyDamageReduction(params)) return false;
     }
 
+    applyDamageModifierStage("complete", actor, sourceActor, damages, options, countsAsDamage(actor, options));
     recalculateTotals(params);
     if (Hooks.call("midi-qol.dnd5eCalculateDamage", actor, damages, options) === false) return false;
   } catch (err) {
