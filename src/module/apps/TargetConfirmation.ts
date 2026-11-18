@@ -1,7 +1,8 @@
+import { computeFlankedStatus, computeFlankingStatus } from "../services/flanking/service.js";
 import { Activity } from "../../globals.js";
 import { i18n, error, i18nFormat } from "../../midi-qol.js";
 import { checkMechanic, checkRule, configSettings, targetConfirmation } from "../settings.js";
-import { TOTAL_COVER, HALF_COVER, THREE_QUARTERS_COVER, activityHasAreaTarget, checkActivityRange, getCoverBonus, computeFlankingStatus, getToken, isInCombat, isValidTarget, markFlanking, tokenForActor, updateUserTargets, getTokenName } from "../utils.js";
+import { TOTAL_COVER, HALF_COVER, THREE_QUARTERS_COVER, activityHasAreaTarget, checkActivityRange, getCoverBonus, getToken, isInCombat, isValidTarget, markFlanking, tokenForActor, updateUserTargets, getTokenName } from "../utils.js";
 import { shouldEnforceSingleTarget } from "../activities/activityHelpers.js";
 import { getTokenPlayerName } from "../utils.js";
 import { TroubleShooter } from "./TroubleShooter.js";

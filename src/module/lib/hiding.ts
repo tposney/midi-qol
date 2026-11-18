@@ -1,6 +1,6 @@
 import { MODULE_ID } from "../../midi-qol.js";
 import { checkRule, configSettings } from "../settings.js";
-import { isHiddenFrom } from "../services/perception.js";
+import { isHiddenFrom } from "../services/perception/service.js";
 
 /**
  * dnd5e's Hiding status works as Invisible towards the creatures that don't perceive the hider. While Foundry (or

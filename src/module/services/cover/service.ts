@@ -1,8 +1,8 @@
-import { Activity } from "../../globals.js";
-import { defineService } from "../api/services.js";
-import { configSettings } from "../settings.js";
-import { installedModules } from "../setupModules.js";
-import { autoCoverTier, calcTokenCover, CoverPosition, HALF_COVER, hasCoverTotal, THREE_QUARTERS_COVER, TOTAL_COVER, wallsGiveTotalCover } from "../utils.js";
+import { Activity } from "../../../globals.js";
+import { defineService } from "../../api/services.js";
+import { configSettings } from "../../settings.js";
+import { installedModules } from "../../setupModules.js";
+import { autoCoverTier, calcTokenCover, CoverPosition, HALF_COVER, hasCoverTotal, THREE_QUARTERS_COVER, TOTAL_COVER, wallsGiveTotalCover } from "../../utils.js";
 
 /*
  * The cover service: how much cover a target has from an attacker, or from a point (a template's origin).
@@ -120,7 +120,7 @@ const tokenCover: CoverProvider = {
   }
 };
 
-declare module "../api/services.js" {
+declare module "../../api/services.js" {
   interface MidiServices { cover: CoverProvider }
 }
 

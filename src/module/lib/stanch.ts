@@ -1,5 +1,6 @@
+import { computeDistance } from "../services/distance/provider.js";
 import { MODULE_ID } from "../../midi-qol.js";
-import { computeDistance, convertLengthTo, itemIsMagical, itemIsSpell } from "../utils.js";
+import { convertLengthTo, itemIsMagical, itemIsSpell } from "../utils.js";
 import { unTimedExecuteAsGM } from "../GMAction.js";
 import type { DamageApplicationOptions, Dnd5eChatMessage } from "../../globals.js";
 import Token = foundry.canvas.placeables.Token;

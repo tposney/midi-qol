@@ -1,4 +1,4 @@
-import { afterDamageApplied, applyCalculatedDamage, applyDamageWithOptions } from "./services/damageApplication.js";
+import { afterDamageApplied, applyCalculatedDamage, applyDamageWithOptions } from "./damage/application.js";
 import { ALL_DAMAGE_KEY, checkRule, configSettings } from "./settings.js";
 import { _closePlayerRollDialogs, playerWaitHandlers } from "./lib/playerWaits.js";
 import { DialogCountdown, dialogCountdownOptions } from "./lib/dialogCountdown.js";

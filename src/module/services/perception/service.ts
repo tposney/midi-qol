@@ -1,6 +1,6 @@
-import { defineService } from "../api/services.js";
-import { midiHiddenFrom } from "../lib/hiding.js";
-import { _canSenseModes } from "../utils.js";
+import { defineService } from "../../api/services.js";
+import { midiHiddenFrom } from "../../lib/hiding.js";
+import { _canSenseModes } from "../../utils.js";
 
 /*
  * The perception service: which detection modes an observer senses a target with, whether a hiding target is hidden
@@ -69,7 +69,7 @@ export const midiPerception: MidiPerceptionProvider = {
   }
 };
 
-declare module "../api/services.js" {
+declare module "../../api/services.js" {
   interface MidiServices { perception: PerceptionProvider }
 }
 

@@ -1,8 +1,8 @@
-import type { Activity } from "../../globals.js";
-import { defineService, entries, reportServiceProblem } from "../api/services.js";
-import type { Workflow } from "../Workflow.js";
-import type { RollModifierTracker } from "../lib/RollModifierTracker.js";
-import { applyRollModifiers, RollKind, RollModifier } from "../rules/rollModifiers.js";
+import type { Activity } from "../../../globals.js";
+import { defineService, entries, reportServiceProblem } from "../../api/services.js";
+import type { Workflow } from "../../Workflow.js";
+import type { RollModifierTracker } from "../../lib/RollModifierTracker.js";
+import { applyRollModifiers, RollKind, RollModifier } from "../../rules/rollModifiers.js";
 
 /*
  * rollModifiers (contributors): every registered contributor is asked about each d20 roll midi handles (attacks in a
@@ -12,7 +12,7 @@ import { applyRollModifiers, RollKind, RollModifier } from "../rules/rollModifie
  *   MidiQOL.services.register("rollModifiers", "my-module.help", { for(query) { return [{ effect: "advantage", label: "Help" }]; } });
  */
 
-export type { RollKind, RollModifier, RollModifierEffect } from "../rules/rollModifiers.js";
+export type { RollKind, RollModifier, RollModifierEffect } from "../../rules/rollModifiers.js";
 
 export interface RollQuery {
   kind: RollKind;
@@ -34,7 +34,7 @@ export interface RollModifierContributor {
   for(query: RollQuery): readonly RollModifier[] | undefined | Promise<readonly RollModifier[] | undefined>;
 }
 
-declare module "../api/services.js" {
+declare module "../../api/services.js" {
   interface MidiServices { rollModifiers: RollModifierContributor }
 }
 

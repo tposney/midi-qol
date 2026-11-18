@@ -8,9 +8,7 @@ import { midiButtonHidden } from "../activities/usageButtons.js";
 import { error } from "../../midi-qol.js";
 import { Activity, ChatMessageRenderOptions, DamageApplicationOptions, Dnd5eChatMessage } from "../../globals.js";
 import { checkRule, configSettings, safeGetGameSetting } from "../settings.js";
-import { getRemoveAllButtons, getRemoveAttackButtons, getRemoveDamageButtons, midiRenderAttackRoll,
-  midiRenderDamageRolls, midiRenderOtherDamageRolls, midiRenderBonusDamageRolls, midiRenderFormulaRoll, renderRollAttributionIcon, renderSaveRollHTML,
-  getAdvantageModeTitle, getTokenName, renderAttributionTooltip, tokenPortrait, activityHasAreaTarget, isActivityType } from "../utils.js";
+import { getRemoveAllButtons, getRemoveAttackButtons, getRemoveDamageButtons, midiRenderAttackRoll, midiRenderDamageRolls, midiRenderOtherDamageRolls, midiRenderBonusDamageRolls, midiRenderFormulaRoll, renderRollAttributionIcon, renderSaveRollHTML, getAdvantageModeTitle, getTokenName, renderAttributionTooltip, tokenPortrait, activityHasAreaTarget, isActivityType } from "../utils.js";
 import { saveDisplayMode } from "../lib/saveVisibility.js";
 import { MODULE_ID, MQDamageRollTypes } from "../../midi-qol.js";
 import { Workflow } from "../Workflow.js";

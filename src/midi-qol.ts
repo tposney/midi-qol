@@ -1,3 +1,5 @@
+import { computeDistance, midiDistance } from "./module/services/distance/provider.js";
+import { UNMEASURABLE_DISTANCE, getDistance, measureTokens } from "./module/services/distance/service.js";
 import { rollFieldLocalizations, rollFieldMappings } from "./module/rollFields.js";
 import "./module/damageAbsorption.js";
 import { registerSettings, fetchParams, configSettings, checkRule, enableWorkflow, fetchSoundSettings, midiSoundSettingsBackup, readySettingsSetup, collectSettingData, exportSettingsToJSON, importSettingsFromJSON, safeGetGameSetting, shouldDisplaySaveDC, triggeredActivityTargetOptions, triggeredActivityRollAsOptions, resetConfigSettingsToDefaults, setTokenDocumentSets } from './module/settings.js';
@@ -13,7 +15,7 @@ import { setupMagicSight, drawnMagicSight } from './module/magicSight.js';
 import { SaferSocket, initGMActionSetup, setupSocket, socketlibSocket, unTimedExecuteAsGM } from './module/GMAction.js';
 import { setupSheetQol } from './module/sheetQOL.js';
 import { TrapWorkflow, DamageOnlyWorkflow, Workflow, DummyWorkflow, UserWorkflow } from './module/Workflow.js';
-import { addConcentrationDependent, addRollTo, addRollToAsync, applyTokenDamage, applyTokenDamageMany, canSee, canSense, canSenseModes, checkDistance, measureTokens, UNMEASURABLE_DISTANCE, checkIncapacitated, checkNearby, chooseEffect, completeItemUse, computeCoverBonus, getCoverBonus, tokenAtPosition, createConditionData, throttledUpdate, displayDSNForRoll, doConcentrationCheck, doOverTimeEffect, evalAllConditions, evalCondition, findNearby, findNearbyCount, getCachedDocument, getChanges, getConcentrationEffect, getTokenDocument, midiDistance, midiFlankedStatus, midiFlankingStatus, getOrCreateTokenForActor, getOrCreateTokenForActorAsSet, getTokenPlayerName, getTokenPlayerNameForUser, getTraitMult, hasCondition, hasUsedBonusAction, hasUsedReaction, isValidTarget, midiRenderAttackRoll, midiRenderBonusDamageRoll, midiRenderDamageRoll, midiRenderOtherDamageRoll, midiRenderRoll, fromActorUuid, playerFor, playerForActor, raceOrType, reactionDialog, removeHiddenCondition, removeInvisibleCondition, removeReactionUsed, setActionUsed, setBonusActionUsed, setReactionUsed, hasUsedAction, tokenForActor, typeOrRace, validRollAbility, actorFromUuid, removeActionUsed, removeBonusActionUsed, getCheckRollModeFor, getSaveRollModeFor, completeActivityUse, checkActivityRange, unseenTargets, totalCoverTargets, modifyDamageBy, computeDistance, convertDuration, splitOvertimeSpec, isRangeCheckable, activityRanges, getDistance, getItemFromEffectOrigin, addDependent, updatesCache, createDamageDetail, activityHasEmanationNoTemplate, getVitalityItem, getVitalityValue, getVitalityMax, hasVitalitySystem, resolveItemMacro, resolveActivityMacro, setupMidiFlagTypes, initCoverConstants, ReactionDialog, RollModifyDialog, sizeNumeric, restoreWorkflowTokenSets, setupMarkerChecks, setupCheckVision, toggleStatus } from './module/utils.js';
+import { addConcentrationDependent, addRollTo, addRollToAsync, applyTokenDamage, applyTokenDamageMany, canSee, canSense, canSenseModes, checkDistance, checkIncapacitated, checkNearby, chooseEffect, completeItemUse, computeCoverBonus, getCoverBonus, tokenAtPosition, createConditionData, throttledUpdate, displayDSNForRoll, doConcentrationCheck, doOverTimeEffect, evalAllConditions, evalCondition, findNearby, findNearbyCount, getCachedDocument, getChanges, getConcentrationEffect, getTokenDocument, getOrCreateTokenForActor, getOrCreateTokenForActorAsSet, getTokenPlayerName, getTokenPlayerNameForUser, getTraitMult, hasCondition, hasUsedBonusAction, hasUsedReaction, isValidTarget, midiRenderAttackRoll, midiRenderBonusDamageRoll, midiRenderDamageRoll, midiRenderOtherDamageRoll, midiRenderRoll, fromActorUuid, playerFor, playerForActor, raceOrType, reactionDialog, removeHiddenCondition, removeInvisibleCondition, removeReactionUsed, setActionUsed, setBonusActionUsed, setReactionUsed, hasUsedAction, tokenForActor, typeOrRace, validRollAbility, actorFromUuid, removeActionUsed, removeBonusActionUsed, getCheckRollModeFor, getSaveRollModeFor, completeActivityUse, checkActivityRange, unseenTargets, totalCoverTargets, modifyDamageBy, convertDuration, splitOvertimeSpec, isRangeCheckable, activityRanges, getItemFromEffectOrigin, addDependent, updatesCache, createDamageDetail, activityHasEmanationNoTemplate, getVitalityItem, getVitalityValue, getVitalityMax, hasVitalitySystem, resolveItemMacro, resolveActivityMacro, setupMidiFlagTypes, initCoverConstants, ReactionDialog, RollModifyDialog, sizeNumeric, restoreWorkflowTokenSets, setupMarkerChecks, setupCheckVision, toggleStatus } from "./module/utils.js";
 import { addFollowUp } from './module/followUps.js';
 import { highlightTokens } from './module/lib/tokenHighlight.js';
 import { ConfigPanel } from './module/apps/ConfigPanel.js';
@@ -443,9 +445,11 @@ Hooks.once('init', async function () {
   defineTargetConfirmationService(resolveTargetConfirmation);
   defineChooseTokensService();
   defineRollBonusesService();
-  defineFlankingService(midiFlankingStatus, midiFlankedStatus);
-  defineDistanceService(midiDistance, token => getTokenDocument(token as Token.Implementation | TokenDocument.Implementation | string));
+  defineFlankingService();
+  defineDistanceService();
   defineBonusPromptService(() => `midi-qol.${safeGetGameSetting("midi-qol", "BonusPrompt") ?? "phased"}`);
+  // Registered here, not in services/rollBonuses/prompt.ts: BonusPromptApp extends utils' RollModifyDialog and utils
+  // imports prompt.ts, so prompt.ts importing the app would evaluate the class before its base exists
   bonusPromptService.register("midi-qol.phased", { open: data => new BonusPromptApp(data) }, { label: "Phased (tick and apply)" });
   bonusPromptService.register("midi-qol.classic", { open: data => new RollModifyDialog(data) }, { label: "Classic (one button per bonus)" });
   setServiceProblemReporter((serviceId, providerId, message, err) => {
@@ -1023,19 +1027,19 @@ import { DamageApplicationElementMidi } from './module/ChatClasses/DamageApplica
 import { fillRulesText } from "./module/lib/rulesText.js";
 import { MIDI_API_VERSION, isRunning, markRunning } from "./module/api/contract.js";
 import { refreshServices, servicesApi, setServiceProblemReporter } from "./module/api/services.js";
-import { coverFor, defineCoverService } from "./module/services/cover.js";
-import { definePerceptionService, isImprecise } from "./module/services/perception.js";
-import { defineRollModifiersService } from "./module/services/rollModifiers.js";
-import { registerAttackRollRules } from "./module/services/attackRollRules.js";
-import { defineDamageModifiersService } from "./module/services/damageModifiers.js";
-import { defineTargetConfirmationService } from "./module/services/targetConfirmation.js";
-import { chooseTokens, defineChooseTokensService } from "./module/services/chooseTokens.js";
-import { defineRollBonusesService } from "./module/services/rollBonuses.js";
-import { defineDistanceService } from "./module/services/distance.js";
-import { defineFlankingService } from "./module/services/flanking.js";
-import { applyCalculatedDamage, registerDamageApplication } from "./module/services/damageApplication.js";
-import { bonusPromptService, defineBonusPromptService } from "./module/services/bonusPrompt.js";
-import { BonusPromptApp } from "./module/apps/BonusPrompt.js";
+import { coverFor, defineCoverService } from "./module/services/cover/service.js";
+import { definePerceptionService, isImprecise } from "./module/services/perception/service.js";
+import { defineRollModifiersService } from "./module/services/rollModifiers/service.js";
+import { registerAttackRollRules } from "./module/services/rollModifiers/attackRules.js";
+import { defineDamageModifiersService } from "./module/services/damageModifiers/service.js";
+import { defineTargetConfirmationService } from "./module/services/targetConfirmation/service.js";
+import { chooseTokens, defineChooseTokensService } from "./module/services/targetConfirmation/chooseTokens.js";
+import { defineRollBonusesService } from "./module/services/rollBonuses/service.js";
+import { defineDistanceService } from "./module/services/distance/service.js";
+import { defineFlankingService } from "./module/services/flanking/service.js";
+import { applyCalculatedDamage, registerDamageApplication } from "./module/damage/application.js";
+import { bonusPromptService, defineBonusPromptService } from "./module/services/rollBonuses/prompt.js";
+import { BonusPromptApp } from "./module/services/rollBonuses/promptApp.js";
 
 // Add any additional hooks if necessary
 // Phase 2: setup hook — properties that depend on CONFIG, settings, i18n, or game state

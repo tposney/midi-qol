@@ -1,4 +1,4 @@
-import { confirmTargets } from "../services/targetConfirmation.js";
+import { confirmTargets } from "../services/targetConfirmation/service.js";
 import { TokenDocumentSet, memberCount } from "../lib/tokenDocumentSet.js";
 import { Activity, ActivityUseConfiguration, RollMessageConfig, TokenOrDocument } from "../../globals.js";
 import { MODULE_ID, debugEnabled, warn, i18n, GameSystemConfig } from "../../midi-qol.js";

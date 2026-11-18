@@ -1,8 +1,8 @@
-import type { Activity } from "../../globals.js";
-import { defineService, entries, reportServiceProblem } from "../api/services.js";
-import type { Workflow } from "../Workflow.js";
-import { addRollToAsync, setBonusActionUsed, setReactionUsed, setActionUsed } from "../utils.js";
-import { canAfford, type BonusCost, type BonusEffect, type BonusPhase, type BonusRollKind, type Outcome } from "../rules/rollBonuses.js";
+import type { Activity } from "../../../globals.js";
+import { defineService, entries, reportServiceProblem } from "../../api/services.js";
+import type { Workflow } from "../../Workflow.js";
+import { addRollToAsync, setBonusActionUsed, setReactionUsed, setActionUsed } from "../../utils.js";
+import { canAfford, type BonusCost, type BonusEffect, type BonusPhase, type BonusRollKind, type Outcome } from "./rules.js";
 
 /*
  * rollBonuses (contributors): optional (or automatic) bonuses a module offers on a roll, in phases (design:
@@ -15,7 +15,7 @@ import { canAfford, type BonusCost, type BonusEffect, type BonusPhase, type Bonu
  *   });
  */
 
-export type { BonusCost, BonusEffect, BonusPhase, BonusRollKind, Outcome } from "../rules/rollBonuses.js";
+export type { BonusCost, BonusEffect, BonusPhase, BonusRollKind, Outcome } from "./rules.js";
 
 export interface RollBonusQuery {
   kind: BonusRollKind;
@@ -69,7 +69,7 @@ export interface RollBonusContributor {
   for(query: RollBonusQuery): readonly BonusCandidate[] | undefined | Promise<readonly BonusCandidate[] | undefined>;
 }
 
-declare module "../api/services.js" {
+declare module "../../api/services.js" {
   interface MidiServices { rollBonuses: RollBonusContributor }
 }
 

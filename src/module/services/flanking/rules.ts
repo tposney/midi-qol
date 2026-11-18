@@ -38,3 +38,6 @@ export function opposedByAngle(centre: Point, a: Point, b: Point, minDegrees = 1
   if (diff > Math.PI) diff = 2 * Math.PI - diff;
   return diff >= (minDegrees / 180) * Math.PI;
 }
+
+/** The Check flanking settings whose rule is "the target is flanked" (rather than "the attacker is flanking"). */
+export const FLANKED_MODES: readonly string[] = ["ceflanked", "ceflankedNoconga", "midiFlanked", "midiFlankedNoConga"];

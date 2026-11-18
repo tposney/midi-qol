@@ -1,5 +1,5 @@
-import { afterDamageApplied, consumeDamageApplication, runAfterDamageApplied, stampDamageApplication } from "./services/damageApplication.js";
-import { applyDamageModifierStage } from "./services/damageModifiers.js";
+import { afterDamageApplied, consumeDamageApplication, runAfterDamageApplied, stampDamageApplication } from "./damage/application.js";
+import { applyDamageModifierStage } from "./services/damageModifiers/service.js";
 import { warn, error, debug, i18n, debugEnabled, overTimeEffectsToDelete, savedOverTimeEffectsToDelete, log, gameStats, GameSystemConfig, MODULE_ID, getStaticID, MIDI_IMPLYING_STATUSES } from "../midi-qol.js";
 import { excludeRegionSourceEffect, moveRegionsOnTurnChange } from "./regionBehaviors/MidiRegionActivityBehaviorType.js";
 import { colorChatMessageHandler, nsaMessageHandler, hideStuffHandler, hideRollUpdate, hideRollRender, checkOverTimeSaves } from "./chatMessageHandling.js";

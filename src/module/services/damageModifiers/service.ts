@@ -1,6 +1,6 @@
-import type { DamageApplicationOptions, DamageDescription } from "../../globals.js";
-import { defineService, entries, reportServiceProblem } from "../api/services.js";
-import { applyDamageChange, DamageChange, DamageStage } from "../rules/damageModifiers.js";
+import type { DamageApplicationOptions, DamageDescription } from "../../../globals.js";
+import { defineService, entries, reportServiceProblem } from "../../api/services.js";
+import { applyDamageChange, DamageChange, DamageStage } from "./rules.js";
 
 /*
  * damageModifiers (contributors): changes to the damage one target takes, in stages, inside dnd5e's damage calculation.
@@ -13,7 +13,7 @@ import { applyDamageChange, DamageChange, DamageStage } from "../rules/damageMod
  *   });
  */
 
-export type { DamageChange, DamageStage } from "../rules/damageModifiers.js";
+export type { DamageChange, DamageStage } from "./rules.js";
 
 export interface DamageQuery {
   stage: DamageStage;
@@ -33,7 +33,7 @@ export interface DamageModifierContributor {
   for(query: DamageQuery): readonly DamageChange[] | undefined;
 }
 
-declare module "../api/services.js" {
+declare module "../../api/services.js" {
   interface MidiServices { damageModifiers: DamageModifierContributor }
 }
 

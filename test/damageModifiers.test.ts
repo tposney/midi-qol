@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { applyDamageChange, type DamagePart } from "../src/module/rules/damageModifiers.js";
+import { applyDamageChange, type DamagePart } from "../src/module/services/damageModifiers/rules.js";
 
 const parts = (...p: [string, number][]): DamagePart[] => p.map(([type, value]) => ({ type, value }));
 const total = (p: DamagePart[]) => p.reduce((s, x) => s + x.value, 0);

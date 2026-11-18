@@ -1,9 +1,9 @@
-import { i18n, log, warn, debugEnabled, MODULE_ID } from "../../midi-qol.js";
-import { checkRule, configSettings, safeGetGameSetting } from "../settings.js";
-import { installedModules } from "../setupModules.js";
-import { checkDistance, checkNearby, createConditionData, evalAllConditionsAsync, getToken, hasCondition, midiFlag } from "../utils.js";
-import { Workflow } from "../Workflow.js";
-import { rollModifiersService, type RollModifier, type RollModifierContributor, type RollQuery } from "./rollModifiers.js";
+import { i18n, log, warn, debugEnabled, MODULE_ID } from "../../../midi-qol.js";
+import { checkRule, configSettings, safeGetGameSetting } from "../../settings.js";
+import { installedModules } from "../../setupModules.js";
+import { checkDistance, checkNearby, createConditionData, evalAllConditionsAsync, getToken, hasCondition, midiFlag } from "../../utils.js";
+import { Workflow } from "../../Workflow.js";
+import { rollModifiersService, type RollModifier, type RollModifierContributor, type RollQuery } from "./service.js";
 
 /*
  * midi's own attack-roll rules as rollModifiers contributors (previously inline in Workflow.checkAttackAdvantage), so

@@ -1,6 +1,7 @@
-import { i18n } from "../../midi-qol.js";
-import { defineService } from "../api/services.js";
-import { getDistance } from "../utils.js";
+import { getDistance } from "../distance/service.js";
+import { i18n } from "../../../midi-qol.js";
+import { defineService } from "../../api/services.js";
+
 
 /*
  * chooseTokens (single): "pick N of these tokens", for macros and modules (cleave, a summon's command, a reaction's
@@ -91,7 +92,7 @@ const midiChooser: ChooseTokensProvider = {
   }
 };
 
-declare module "../api/services.js" {
+declare module "../../api/services.js" {
   interface MidiServices { chooseTokens: ChooseTokensProvider }
 }
 

@@ -1,4 +1,4 @@
-import { defineService } from "../api/services.js";
+import { defineService } from "../../api/services.js";
 
 /*
  * bonusPrompt (single): the window a roll's optional bonuses are offered in. The client setting "Bonus prompt" picks
@@ -10,7 +10,7 @@ export interface BonusPromptProvider {
   open(data: object): { render(options?: object): unknown };
 }
 
-declare module "../api/services.js" {
+declare module "../../api/services.js" {
   interface MidiServices { bonusPrompt: BonusPromptProvider }
 }
 

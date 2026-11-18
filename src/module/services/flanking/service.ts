@@ -1,9 +1,12 @@
-import { defineService, reportServiceProblem } from "../api/services.js";
+import { defineService, reportServiceProblem } from "../../api/services.js";
+import { checkRule } from "../../settings.js";
+import { midiFlankedStatus, midiFlankingStatus } from "./provider.js";
+import { FLANKED_MODES } from "./rules.js";
 
 /*
  * flanking (single): whether an attacker flanks a target, and whether a target is flanked, for midi's flanking rules.
  * midi's "Check flanking" setting still decides whether flanking applies and in which mode; the provider decides the
- * geometry. midi's (square grids, gridless; its rules/flanking.ts) is the default provider; another module can
+ * geometry. midi's (square grids, gridless; provider.ts over rules.ts) is the default provider; another module can
  * provide its own (hex grids, 3D, a variant rule).
  *
  *   MidiQOL.services.register("flanking", "my-module", {
@@ -32,23 +35,32 @@ export interface FlankingProvider {
   flanked?(query: FlankedQuery): Answer;
 }
 
-declare module "../api/services.js" {
+declare module "../../api/services.js" {
   interface MidiServices { flanking: FlankingProvider }
 }
 
 export let flankingService: ReturnType<typeof defineService<FlankingProvider>>;
-let midiFlanking: ((attacker: Token.Implementation, target: Token.Implementation) => Promise<boolean>) | undefined;
-let midiFlanked: ((target: Token.Implementation) => Promise<boolean>) | undefined;
 
-/** midi's geometry is passed in (keeps this module free of an import cycle with utils). */
-export function defineFlankingService(flanking: typeof midiFlanking & {}, flanked: typeof midiFlanked & {}) {
-  midiFlanking = flanking;
-  midiFlanked = flanked;
+export function defineFlankingService() {
   flankingService = defineService<FlankingProvider>("flanking", {
     kind: "single",
     description: "Whether an attacker flanks a target, and whether a target is flanked"
   });
-  flankingService.register("midi-qol", { flanking: ({ attacker, target }) => flanking(attacker, target), flanked: ({ target }) => flanked(target) }, { label: "Midi-QOL" });
+  flankingService.register("midi-qol", { flanking: ({ attacker, target }) => midiFlankingStatus(attacker, target), flanked: ({ target }) => midiFlankedStatus(target) }, { label: "Midi-QOL" });
+}
+
+/** Is `target` flanked: midi's setting decides whether the flanked rule applies, the provider decides. */
+export async function computeFlankedStatus(target: Token.Implementation): Promise<boolean> {
+  if (!checkRule("checkFlanking") || !FLANKED_MODES.includes(checkRule("checkFlanking") as string)) return false;
+  if (!canvas || !target) return false;
+  return isFlanked(target);
+}
+
+/** Does `token` flank `target`: midi's setting decides whether flanking applies, the provider decides. */
+export async function computeFlankingStatus(token: Token.Implementation, target: Token.Implementation): Promise<boolean> {
+  if (!checkRule("checkFlanking") || checkRule("checkFlanking") === "off") return false;
+  if (!canvas || !token || !target) return false;
+  return isFlanking(token, target);
 }
 
 async function ask(question: "flanking" | "flanked", query: FlankingQuery | FlankedQuery): Promise<boolean | undefined> {
@@ -66,9 +78,9 @@ async function ask(question: "flanking" | "flanked", query: FlankingQuery | Flan
 
 /** The active provider's answer, or midi's geometry when it has none. */
 export async function isFlanking(attacker: Token.Implementation, target: Token.Implementation): Promise<boolean> {
-  return (await ask("flanking", { attacker, target })) ?? (await midiFlanking?.(attacker, target)) ?? false;
+  return (await ask("flanking", { attacker, target })) ?? (await midiFlankingStatus(attacker, target));
 }
 
 export async function isFlanked(target: Token.Implementation): Promise<boolean> {
-  return (await ask("flanked", { target })) ?? (await midiFlanked?.(target)) ?? false;
+  return (await ask("flanked", { target })) ?? (await midiFlankedStatus(target));
 }

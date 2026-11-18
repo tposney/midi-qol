@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { addCosts, canAfford, fitSelection, maxScaling, orderForApplication, shouldPrompt, type BonusCost, type BonusEffect } from "../src/module/rules/rollBonuses.js";
+import { addCosts, canAfford, fitSelection, maxScaling, orderForApplication, shouldPrompt, type BonusCost, type BonusEffect } from "../src/module/services/rollBonuses/rules.js";
 import { countCost, defaultPhase, flagPhase, flagValueFor, parseFlagValue } from "../src/module/rules/optionalFlags.js";
 
 const uses = (cost: number, available: number): BonusCost => ({ itemUses: { "Item.lucky": { cost, available } } });

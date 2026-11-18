@@ -1,6 +1,6 @@
-import type { Activity } from "../../globals.js";
-import { defineService } from "../api/services.js";
-import type { TargetConfirmationOptions } from "../apps/TargetConfirmation.js";
+import type { Activity } from "../../../globals.js";
+import { defineService } from "../../api/services.js";
+import type { TargetConfirmationOptions } from "../../apps/TargetConfirmation.js";
 
 /*
  * targetConfirmation (single): the UI that lets a user confirm or change a use's targets before it goes on. The
@@ -21,7 +21,7 @@ export interface TargetConfirmationProvider {
   confirm(request: TargetConfirmationRequest): Promise<boolean>;
 }
 
-declare module "../api/services.js" {
+declare module "../../api/services.js" {
   interface MidiServices { targetConfirmation: TargetConfirmationProvider }
 }
 

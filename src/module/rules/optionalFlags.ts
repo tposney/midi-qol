@@ -1,7 +1,7 @@
 /*
  * midi's flags.midi-qol.optional.NAME.* read as roll bonuses. Pure: no Foundry globals.
  */
-import type { BonusEffect, BonusPhase, ResourceType } from "./rollBonuses.js";
+import type { BonusEffect, BonusPhase, ResourceType } from "../services/rollBonuses/rules.js";
 
 /** A flag value: a roll change, or a macro to run instead. */
 export type ParsedFlagValue = { effect: BonusEffect } | { macro: string };

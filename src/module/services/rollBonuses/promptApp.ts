@@ -1,4 +1,4 @@
-import { RollModifyDialog } from "../utils.js";
+import { RollModifyDialog } from "../../utils.js";
 
 /*
  * midi's phased bonus prompt: the same bonuses as the classic dialog (flags.midi-qol.optional and rollBonuses

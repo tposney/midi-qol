@@ -1,5 +1,5 @@
-import { collectRollModifiers } from "./services/rollModifiers.js";
-import { collectBonusCandidates, type BonusRollKind, type RollBonusQuery } from "./services/rollBonuses.js";
+import { collectRollModifiers } from "./services/rollModifiers/service.js";
+import { collectBonusCandidates, type BonusRollKind, type RollBonusQuery } from "./services/rollBonuses/service.js";
 import { initHiding } from "./lib/hiding.js";
 import { log, i18n, error, i18nFormat, warn, debugEnabled, GameSystemConfig, MODULE_ID, gameStats, getStaticID, MIDI_IMPLYING_STATUSES } from "../midi-qol.js";
 import { saveDisplayMode } from "./lib/saveVisibility.js";
