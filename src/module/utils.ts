@@ -1,4 +1,5 @@
-import { applyOfferedBonus, collectBonusCandidates, type BonusPhase, type OfferedBonus, type RollBonusQuery } from "./services/rollBonuses.js";
+import { applyOfferedBonus, collectBonusCandidates, type BonusCost, type BonusPhase, type OfferedBonus, type RollBonusQuery } from "./services/rollBonuses.js";
+import { addCosts as addBonusCosts, canAfford as canAffordBonus } from "./rules/rollBonuses.js";
 import { crossesOppositeSides, opposedByAngle } from "./rules/flanking.js";
 import { DialogCountdown } from "./lib/dialogCountdown.js";
 import { coverBetween, coverFor } from "./services/cover.js";
@@ -5646,12 +5647,18 @@ export async function bonusDialog(
   }
   const bonusRollData = (this.activity ?? this.item ?? this.actor)?.getRollData() ?? {};
   const candidateContext = (current: Roll) => ({ query: bonusQuery!, phase: bonusPhase, roll: current });
+  // What chosen bonuses have spent this roll: a later one drawing on the same pool must still fit
+  let bonusSpent: BonusCost = {};
+  const stillAffordable = () => { optionalCandidates = optionalCandidates.filter(c => canAffordBonus(c.cost, bonusSpent)); };
   if (bonusQuery && automaticCandidates.length) {
     const before = roll;
     for (const candidate of automaticCandidates) {
+      if (!canAffordBonus(candidate.cost, bonusSpent)) continue;
       roll = newRoll = await applyOfferedBonus(candidate, candidateContext(roll), bonusRollData);
+      bonusSpent = addBonusCosts(bonusSpent, candidate.cost);
       usedLabels.push(candidate.label);
     }
+    stillAffordable();
     if (showRoll && lastForceFlag === "" && roll !== before) {
       DSNMarkDiceDisplayed(roll);
       //@ts-expect-error
@@ -5666,7 +5673,9 @@ export async function bonusDialog(
     newRoll = await applyOfferedBonus(candidate, candidateContext(newRoll), bonusRollData);
     roll = newRoll;
     usedLabels.push(candidate.label);
+    bonusSpent = addBonusCosts(bonusSpent, candidate.cost);
     optionalCandidates = optionalCandidates.filter(c => c.id !== candidate.id);
+    stillAffordable();
     dialog.data.candidates = optionalCandidates;
     if (validFlags.length === 0 && optionalCandidates.length === 0) {
       dialog.close();

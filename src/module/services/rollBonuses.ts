@@ -1,7 +1,7 @@
 import type { Activity } from "../../globals.js";
 import { defineService, entries, reportServiceProblem } from "../api/services.js";
 import type { Workflow } from "../Workflow.js";
-import { addRollToAsync } from "../utils.js";
+import { addRollToAsync, setBonusActionUsed, setReactionUsed, setActionUsed } from "../utils.js";
 import { canAfford, type BonusCost, type BonusEffect, type BonusPhase, type BonusRollKind, type Outcome } from "../rules/rollBonuses.js";
 
 /*
@@ -51,8 +51,10 @@ export interface BonusCandidate {
   /** False: applied without asking. */
   optional: boolean;
   priority?: number;
-  /** Declared costs; a candidate whose cost does not fit what is available is not offered. */
+  /** Declared costs; a candidate whose cost does not fit what is available is not offered. midi spends them when chosen. */
   cost?: BonusCost;
+  /** Its onChosen spends the cost itself (as CAT's bonuses do): midi only checks it. */
+  spendsOwnCost?: boolean;
   /** Offered on a natural 1 (attack fumble). */
   onFumble?: boolean;
   /** True, or why it is not offered now. */
@@ -158,6 +160,53 @@ export async function applyBonusEffect(roll: Roll, effect: BonusEffect, rollData
   }
 }
 
+/**
+ * Spends a declared cost from `actor`: actions through midi's economy markers, item/activity uses, spell slots, an
+ * attribute, hit dice. effectCount and oncePer are midi-flag bookkeeping (the flags spend their own); material is not
+ * spent (reported).
+ */
+export async function spendBonusCost(actor: Actor.Implementation, cost: BonusCost | undefined, label: string): Promise<void> {
+  if (!cost) return;
+  const report = (message: string) => reportServiceProblem("rollBonuses", "midi-qol", `${label}: ${message}`);
+  for (const [key, entry] of Object.entries(cost.actions ?? {})) {
+    if (!entry.cost) continue;
+    if (key === "reaction") await setReactionUsed(actor);
+    else if (key === "bonus") await setBonusActionUsed(actor);
+    else if (key === "action") await setActionUsed(actor);
+    else report(`unknown action cost "${key}"`);
+  }
+  for (const [uuid, entry] of Object.entries(cost.itemUses ?? {})) {
+    const item = fromUuidSync(uuid);
+    if (!(item instanceof Item)) { report(`no item ${uuid}`); continue; }
+    // @ts-expect-error no dnd5e-types
+    await item.update({ "system.uses.spent": (item.system.uses?.spent ?? 0) + entry.cost });
+  }
+  for (const [uuid, entry] of Object.entries(cost.activityUses ?? {})) {
+    const activity = fromUuidSync(uuid) as { uses?: { spent?: number }, update?: (data: object) => Promise<unknown> } | null;
+    if (!activity?.update) { report(`no activity ${uuid}`); continue; }
+    await activity.update({ "uses.spent": (activity.uses?.spent ?? 0) + entry.cost });
+  }
+  for (const [slot, entry] of Object.entries(cost.spellSlots ?? {})) {
+    const value = foundry.utils.getProperty(actor, `system.spells.${slot}.value`);
+    if (typeof value !== "number") { report(`no spell slot ${slot}`); continue; }
+    await actor.update({ [`system.spells.${slot}.value`]: Math.max(0, value - entry.cost) });
+  }
+  for (const [path, entry] of Object.entries(cost.attribute ?? {})) {
+    const value = foundry.utils.getProperty(actor, path);
+    if (typeof value !== "number") { report(`no number at ${path}`); continue; }
+    await actor.update({ [path]: value - entry.cost });
+  }
+  for (const [die, entry] of Object.entries(cost.hitDice ?? {})) {
+    // A class whose hit die is `die` with enough left
+    // @ts-expect-error no dnd5e-types
+    const cls = actor.items.find(i => i.type === "class" && i.system.hd?.denomination === die && (i.system.hd?.value ?? 0) >= entry.cost);
+    if (!cls) { report(`no ${die} hit die left`); continue; }
+    // @ts-expect-error no dnd5e-types
+    await cls.update({ "system.hd.spent": (cls.system.hd.spent ?? 0) + entry.cost });
+  }
+  if (Object.keys(cost.material ?? {}).length) report("material costs are not spent by midi");
+}
+
 /** Applies a bonus and runs its onChosen; a failure is reported and leaves the roll unchanged. */
 export async function applyOfferedBonus(bonus: OfferedBonus, ctx: BonusContext, rollData: object): Promise<Roll> {
   let roll = ctx.roll;
@@ -166,6 +215,7 @@ export async function applyOfferedBonus(bonus: OfferedBonus, ctx: BonusContext, 
     const used: string[] = foundry.utils.getProperty(roll, "flags.midi-qol.optionalsUsed") as string[] ?? [];
     used.push(bonus.id);
     foundry.utils.setProperty(roll, "flags.midi-qol.optionalsUsed", used);
+    if (!bonus.spendsOwnCost) await spendBonusCost(ctx.query.actor, bonus.cost, bonus.label);
     await bonus.onChosen?.({ ...ctx, roll });
   } catch (err) {
     reportServiceProblem("rollBonuses", bonus.contributor, `${bonus.label}: applying it failed`, err);
