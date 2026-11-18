@@ -1,3 +1,4 @@
+import { confirmTargets } from "../services/targetConfirmation.js";
 import { TokenDocumentSet, memberCount } from "../lib/tokenDocumentSet.js";
 import { Activity, ActivityUseConfiguration, RollMessageConfig, TokenOrDocument } from "../../globals.js";
 import { MODULE_ID, debugEnabled, warn, i18n, GameSystemConfig } from "../../midi-qol.js";
@@ -256,7 +257,7 @@ export function requiresTargetConfirmation(activity: Activity, options: MidiOpti
 export async function preTemplateTargets(activity: Activity, options: MidiOptions): Promise<boolean> {
   if (activityRequiresPostTemplateConfirmation(activity)) return true;
   if (requiresTargetConfirmation(activity, options))
-    return await resolveTargetConfirmation(activity, options) === true;
+    return await confirmTargets(activity, "preTemplate", options);
   return true;
 }
 
@@ -271,7 +272,7 @@ export async function postTemplateConfirmTargets(activity: Activity, options: Mi
   // already handled confirmation and we just need to sync targets.
   if (activityRequiresPostTemplateConfirmation(activity) && requiresTargetConfirmation(activity, options)) {
     await workflow.flushCardWrites(); // a person decides next
-    const result = await resolveTargetConfirmation(activity, options);
+    const result = await confirmTargets(activity, "postTemplate", options);
     if (result && game.user?.targets) {
       await updateTargets();
     }

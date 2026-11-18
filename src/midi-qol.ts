@@ -203,6 +203,7 @@ Object.assign(globalThis.MidiQOL, {
   apiVersion: MIDI_API_VERSION,
   isRunning,
   services: servicesApi,
+  chooseTokens,
   registerActivityPolicy,
   activityPolicy,
   registerCardAction,
@@ -436,6 +437,8 @@ Hooks.once('init', async function () {
   defineRollModifiersService();
   registerAttackRollRules();
   defineDamageModifiersService();
+  defineTargetConfirmationService(resolveTargetConfirmation);
+  defineChooseTokensService();
   Hooks.on("midi-qol.ConfigSettingsChanged", refreshServices);
   Hooks.callAll("midi-qol.registerServices", servicesApi);
   setupCATIntegration();
@@ -1010,6 +1013,8 @@ import { definePerceptionService, isImprecise } from "./module/services/percepti
 import { defineRollModifiersService } from "./module/services/rollModifiers.js";
 import { registerAttackRollRules } from "./module/services/attackRollRules.js";
 import { defineDamageModifiersService } from "./module/services/damageModifiers.js";
+import { defineTargetConfirmationService } from "./module/services/targetConfirmation.js";
+import { chooseTokens, defineChooseTokensService } from "./module/services/chooseTokens.js";
 
 // Add any additional hooks if necessary
 // Phase 2: setup hook — properties that depend on CONFIG, settings, i18n, or game state

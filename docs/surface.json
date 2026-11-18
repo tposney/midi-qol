@@ -29,6 +29,7 @@
     "checkNearby",
     "checkRule",
     "chooseEffect",
+    "chooseTokens",
     "collectSettingData",
     "completeActivityUse",
     "completeItemUse",
@@ -317,9 +318,11 @@
     "UseWeakReferences"
   ],
   "services": [
+    "chooseTokens",
     "cover",
     "damageModifiers",
     "perception",
-    "rollModifiers"
+    "rollModifiers",
+    "targetConfirmation"
   ]
 }
