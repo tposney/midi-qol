@@ -1286,11 +1286,13 @@ function applyCardRollOptions(actor: Actor.Implementation, kind: D20RollKind, co
   if (!card || !cardActivity || !activityPolicy(cardActivity).automated) return;
   // v14 message-mode strings (CONFIG.ChatMessage.modes keys) so the value matches the roll dialog's options
   const messageConfig: AnyMutableObject = message;
-  if (["none", "allShow"].includes(configSettings.autoCheckSaves) || actor.hasPlayerOwner) messageConfig.rollMode = safeGetGameSetting("core", "messageMode");
-  else messageConfig.rollMode = "gm";
-  if (!game.user?.isGM) {
-    const playerModes: Record<string, string> = { noneDialogPublic: "public", noneDialogPrivate: "gm", noneDialogSelf: "self", noneDialogBlind: "blind" };
-    messageConfig.rollMode = playerModes[configSettings.playerRollSaves] ?? safeGetGameSetting("core", "messageMode");
+  // dnd5e's card buttons pass no mode; a caller that chose one (a blind save from a macro) keeps it
+  if (messageConfig.rollMode === undefined && messageConfig.messageMode === undefined) {
+    if (!game.user?.isGM) {
+      const playerModes: Record<string, string> = { noneDialogPublic: "public", noneDialogPrivate: "gm", noneDialogSelf: "self", noneDialogBlind: "blind" };
+      messageConfig.rollMode = playerModes[configSettings.playerRollSaves] ?? safeGetGameSetting("core", "messageMode");
+    } else if (["none", "allShow"].includes(configSettings.autoCheckSaves) || actor.hasPlayerOwner) messageConfig.rollMode = safeGetGameSetting("core", "messageMode");
+    else messageConfig.rollMode = "gm";
   }
   if (kind.rollType !== "save") return;
   const workflow = Workflow.findWorkflow(card.uuid);
