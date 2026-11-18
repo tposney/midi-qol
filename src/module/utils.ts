@@ -2607,6 +2607,8 @@ export type MidiOptions = {
   activityId?: string;
   /** Rolled for a player by someone who can't act for them (a player, with no GM connected): no optional-bonus prompts */
   unattended?: boolean;
+  /** A save asked through the request core (lib/requests.ts): its roll is the one that claims the request */
+  requestClaim?: string;
   cardNote?: SaveDetails["cardNote"];
   activityIdentifier?: string;
   advantage?: boolean;

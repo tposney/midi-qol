@@ -13,7 +13,8 @@ import { decodeWorkflowOptions, encodeWorkflowOptions, inheritableWorkflowOption
 import { eventModifiers } from "./lib/rollKeys.js";
 import { TokenDocumentSet, hookTarget, tokenOf } from "./lib/tokenDocumentSet.js";
 import { CardRecords, RECORD_SETS, RecordSet, RecordFacts, STATE_KEYS, StateKey, attributionMap, attributionTriples, cardMidi, rollTypeOf, cardOtherConsumption, cardPreSelected, messagesFrom, recordList, recordPath, recordPathOfUuid, storedMidiFlag } from "./lib/cardState.js";
-import { preferredActiveGM, socketlibSocket, timedAwaitExecuteAsGM, timedExecuteAsGM, unTimedExecuteAsGM } from "./GMAction.js";
+import { preferredActiveGM, rollAbility, SAVE_REQUEST, socketlibSocket, timedAwaitExecuteAsGM, timedExecuteAsGM, unTimedExecuteAsGM } from "./GMAction.js";
+import { askUser } from "./lib/requests.js";
 import { beginPlayerWait, rollDialogsFor, trackPlayerWait } from "./lib/playerWaits.js";
 import { installedModules } from "./setupModules.js";
 import { offerFollowUps } from "./followUps.js";
@@ -6572,7 +6573,8 @@ export class Workflow {
     const queued = this.queueTargetSaveRollRequest(options);
     const { target, saveDetails, rollInfo, displayOptions, playerInfo: { player } } = options;
     const queuedPromise = queued.promise;
-    if (!queuedPromise || queued.friendly || !player || player.isGM) return { promise: queuedPromise, requestCard: queued.requestCard };
+    // Asked through the request core: it put the request on the player list itself
+    if (!queuedPromise || queued.friendly || queued.asked || !player || player.isGM) return { promise: queuedPromise, requestCard: queued.requestCard };
     // The GM can answer for a player who hasn't rolled (the player list): rolled for them, or on the GM's screen
     const rollForThem = (fastForward: boolean, mode?: "advantage" | "disadvantage") => unTimedExecuteAsGM("rollAbility", {
       saveDetails: mode ? { ...saveDetails, advantage: mode === "advantage", disadvantage: mode === "disadvantage" } : saveDetails,
@@ -6606,7 +6608,7 @@ export class Workflow {
     return { promise, requestCard: queued.requestCard };
   }
 
-  queueTargetSaveRollRequest(options: QueueSaveRollOptions): { promise: Promise<Roll[] | Roll | null> | null, requestCard: Promise<ChatMessage | undefined> | undefined, friendly?: boolean } {
+  queueTargetSaveRollRequest(options: QueueSaveRollOptions): { promise: Promise<Roll[] | Roll | null> | null, requestCard: Promise<ChatMessage | undefined> | undefined, friendly?: boolean, asked?: boolean } {
     const { target, saveDetails, rollInfo, isMagicSave, displayOptions, playerInfo, moduleFlags, moduleRequests } = options;
     const { type: rollType, abilities: rollAbilities, skills: rollSkills, tools: rollTools, action: rollAction } = rollInfo;
     const { whisper, showRoll, showRollDialog, simulate } = displayOptions;
@@ -6666,11 +6668,56 @@ export class Workflow {
       return { promise: result.promise, requestCard: result.requestCard };
     }
 
+    // A connected player's creature: asked through the request core, which also gives the GM's choices
+    if (player && !player.isGM && player.active) {
+      return { promise: this.askPlayerSave(target, player, saveDetails, rollInfo, displayOptions), requestCard: undefined, asked: true };
+    }
+
     // Standard socketlib roll
     const promise = this.createStandardSaveRoll(
       target, saveDetails, whisper, showRoll, showRollDialog, simulate
     );
     return { promise, requestCard: undefined };
+  }
+
+  /**
+   * A player's save through the request core (M3 stage 5; rules: ~/Documents/midi-request-redesign-plan-2026-11-10.md).
+   * Their roll dialog shows this client's deadline (Player save timeout); confirming it claims the request, after which
+   * the roll is waited for. A GM answers from the player list. When the deadline passes the save is made without them,
+   * non-interactively: here if this client owns the creature, else by a GM, shown as the player's roll would have
+   * been; with no GM connected, here unattended (no prompts).
+   */
+  askPlayerSave(target: TokenOrDocument, player: User.Implementation, saveDetails: SaveDetails,
+    rollInfo: QueueSaveRollOptions["rollInfo"], displayOptions: QueueSaveRollOptions["displayOptions"]): Promise<Roll[] | Roll | null> {
+    const rollMode = this.playerSaveMessageMode();
+    const rollFor = (fastForward: boolean, mode?: "advantage" | "disadvantage", unattended?: boolean) => ({
+      saveDetails: mode ? { ...saveDetails, advantage: mode === "advantage", disadvantage: mode === "disadvantage" } : saveDetails,
+      displayOptions: { fastForward, chatMessage: displayOptions.showRoll, rollMode, showTargetDC: true, forUserId: player.id!, unattended }
+    });
+    const withoutPlayer = async (): Promise<Roll[] | Roll | null> => {
+      if (target.actor?.isOwner) return await rollAbility(rollFor(true)) as Roll[] | Roll | null;
+      if (preferredActiveGM()) return unTimedExecuteAsGM("rollAbility", rollFor(true));
+      return await rollAbility(rollFor(true, undefined, true)) as Roll[] | Roll | null;
+    };
+    const what = [...rollInfo.abilities, ...rollInfo.skills, ...rollInfo.tools].map(key => key.toUpperCase()).join("/");
+    return askUser<Roll[] | Roll | null>(player, {
+      type: SAVE_REQUEST,
+      data: { saveDetails, displayOptions: { fastForward: displayOptions.simulate || !displayOptions.showRollDialog, chatMessage: true, rollMode, showTargetDC: true } },
+      kind: rollInfo.type === "save" ? "save" : "check",
+      actorUuid: target.actor?.uuid ?? undefined,
+      tokenUuid: getTokenDocument(target)?.uuid ?? undefined,
+      label: i18nFormat("midi-qol.PlayerWaits.SaveLabel", {
+        what, type: i18n(rollInfo.type === "save" ? "DND5E.SavingThrow" : "DND5E.AbilityCheck"), item: this.item?.name ?? ""
+      }),
+      timeoutMs: (configSettings.playerSaveTimeout ?? 0) * 1000,
+      fallback: withoutPlayer,
+      gmChoices: {
+        roll: { label: "midi-qol.PlayerWaits.Choice.normal", value: () => unTimedExecuteAsGM("rollAbility", rollFor(true)) },
+        advantage: { label: "midi-qol.PlayerWaits.Choice.advantage", value: () => unTimedExecuteAsGM("rollAbility", rollFor(true, "advantage")) },
+        disadvantage: { label: "midi-qol.PlayerWaits.Choice.disadvantage", value: () => unTimedExecuteAsGM("rollAbility", rollFor(true, "disadvantage")) },
+        gmRoll: () => unTimedExecuteAsGM("rollAbility", rollFor(false))
+      }
+    }).settled.then(settled => settled.value);
   }
 
   /**

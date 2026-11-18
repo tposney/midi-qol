@@ -33,6 +33,8 @@ export let setupSocket = () => {
   // The reacting client's answer to a reaction request (utils doReactions): the reaction dialog, its countdown the requester's
   registerRequestHandler(REACTIONS_REQUEST, (data: Parameters<typeof localDoReactions>[0], incoming: IncomingRequest) =>
     localDoReactions({ ...data, options: { ...data.options, incoming } }));
+  // A player's save asked through the request core (Workflow#askPlayerSave): their roll dialog
+  registerRequestHandler(SAVE_REQUEST, (data: Parameters<typeof rollAbility>[0], incoming: IncomingRequest) => rollAbility(data, incoming));
   for (const [name, handler] of Object.entries(playerWaitHandlers)) socketlibSocket.register(name, handler);
   socketlibSocket.register("completeItemUse", _completeItemUse);
   socketlibSocket.register("completeItemUseV2", _completeItemUse);
@@ -704,7 +706,10 @@ export function whisperRollToPlayer(message: ChatMessage.Implementation) {
   message.updateSource({ whisper: [...message.whisper, userId] });
 }
 
-async function rollAbility(data: {
+/** The request type a player's client answers with its roll dialog (rollAbility with the request) */
+export const SAVE_REQUEST = "midi-qol.save";
+
+export async function rollAbility(data: {
   saveDetails: SaveDetails;
   displayOptions?: {
     fastForward?: boolean;
@@ -713,6 +718,8 @@ async function rollAbility(data: {
     showTargetDC?: boolean;
     /** Rolled for this player by someone else: shown to them as their own roll would have been */
     forUserId?: string;
+    /** Rolled for another player's creature with no GM connected: nobody here may answer its prompts */
+    unattended?: boolean;
   };
   // Legacy fields from pre-13.0.44 callers
   request?: string;
@@ -730,7 +737,7 @@ async function rollAbility(data: {
   workflowOptions?: object;
   workflowId?: string;
   rollMode?: string;
-}) {
+}, request?: IncomingRequest) {
   // Backward compatibility: migrate pre-13.0.44 flat argument format to new structure
   if (!data.saveDetails && data.targetUuid) {
     foundry.utils.logCompatibilityWarning(
@@ -820,6 +827,7 @@ async function rollAbility(data: {
     advantage,
     disadvantage,
     cardNote: sd.cardNote,
+    unattended: disp?.unattended,
   };
 
   let config: RollProcessConfig = {
@@ -920,6 +928,28 @@ async function rollAbility(data: {
         _closePlayerRollDialogs({ actorUuid: actor.uuid });
       }).catch(fail);
     };
+    if (request) {
+      // Asked through the request core (Workflow.askPlayerSave): the requester owns the deadline and decides what
+      // happens when it passes; the roll dialog shows it. Confirming the roll claims the request (no limit after);
+      // answered for the player meanwhile (a GM, the time-out): the dialog closes, and a roll not yet made isn't.
+      const claim = foundry.utils.randomID();
+      midiOptions.requestClaim = claim;
+      const countdown = request.countdown();
+      if (countdown && dialog.configure !== false) dialog.options = { ...(dialog.options ?? {}), ...dialogCountdownOptions(countdown) };
+      const hookId = Hooks.on("dnd5e.postRollConfiguration", (_rolls, rollConfig) => {
+        if (rollConfig.midiOptions?.requestClaim !== claim) return;
+        Hooks.off("dnd5e.postRollConfiguration", hookId);
+        if (request.settledHow) return false;
+        void request.claim();
+      });
+      const done = (result?: Roll[] | Roll) => { Hooks.off("dnd5e.postRollConfiguration", hookId); settle(result); };
+      request.onSettled(() => {
+        _closePlayerRollDialogs({ actorUuid: actor.uuid });
+        done();
+      });
+      performRoll().then(done).catch(err => { Hooks.off("dnd5e.postRollConfiguration", hookId); fail(err); });
+      return;
+    }
     if (configSettings.playerSaveTimeout > 0) {
       if (dialog.configure !== false) {
         // The player sees the time left on the roll dialog, and can pause it
