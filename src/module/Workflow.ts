@@ -2824,6 +2824,7 @@ export class Workflow {
     if (this.hitTargets?.count || this.hitTargetsEC?.count) expireMyEffects.bind(this)(["1Hit"]);
     expireMyEffects.bind(this)(["1Action", "1Attack", "1Spell", "1Critical", "1Fumble"]);
     await this.displayDamageRolls();
+    await this.createDamageMessages();
 
     if (this.isFumble) {
       this.failedSaves = new Set();
@@ -7513,6 +7514,55 @@ export class Workflow {
   /** The damage dice of this use's damage step, thrown together (Dice So Nice): set while collecting */
   #damageThrow: Roll[] | undefined;
 
+  /** This use's damage messages (createDamageMessages), by contribution role */
+  #damageMessageIds: Record<string, string> = {};
+
+  /**
+   * M2 stage 8: the use's damage as dnd5e damage messages, one per contribution (the activity's, the other activity's or
+   * the ammunition's, bonus damage), origin the use card, so dnd5e and other modules find them
+   * (getAssociatedRolls("damage"), damage message readers). They are folded into the use card (an empty summary, the
+   * card shows the damage as before) and hidden in the log; with dnd5e's chat card summaries off none are made (they
+   * would show as cards beside midi's). A contribution changed later (a bonus after the saves) updates its message.
+   */
+  async createDamageMessages(): Promise<void> {
+    const card = this.chatCard;
+    if (!this.ownsCard || !card?.id || !game.settings.get("dnd5e", "chatCardSummary")) return;
+    const TargetsField = globalThis.dnd5e?.dataModels?.chatMessage?.fields?.TargetsField;
+    const targets = TargetsField ? TargetsField.getDescriptors(this.hitTargets.documents) : [];
+    const other = this.otherDamageRolls ?? [];
+    const contributions = [
+      { role: "activity", rolls: this.damageRolls ?? [] },
+      { role: other.some(roll => foundry.utils.getProperty(roll, "options.midiAmmunition")) ? "ammunition" : "other", rolls: other },
+      { role: "bonus", rolls: this.bonusDamageRolls ?? [] }
+    ].filter(c => c.rolls.length);
+    // Their dice were thrown with the damage step (copies marked shown, so the messages don't throw them again)
+    const markShown = (data: unknown): void => {
+      if (Array.isArray(data)) { data.forEach(markShown); return; }
+      if (!data || typeof data !== "object") return;
+      const results = (data as { results?: unknown }).results;
+      if (Array.isArray(results)) for (const result of results) if (result && typeof result === "object") (result as { hidden?: boolean }).hidden = true;
+      Object.values(data).forEach(markShown);
+    };
+    const shown = (rolls: Roll[]) => rolls.map(roll => { const json = foundry.utils.deepClone(roll.toJSON()); markShown(json); return json; });
+    const creates: object[] = [];
+    for (const { role, rolls } of contributions) {
+      const id = this.#damageMessageIds[role];
+      const existing = id ? game.messages?.get(id) : undefined;
+      if (existing) await existing.update({ rolls: shown(rolls) } as ChatMessage.UpdateData);
+      else creates.push({
+        type: "damage", rolls: shown(rolls), speaker: card.speaker, whisper: card.whisper, blind: card.blind, author: game.user?.id,
+        system: { ...(this.activity?.messageSources ?? {}), origin: card.id, targets },
+        flags: { [MODULE_ID]: { damage: { role } } }
+      });
+    }
+    if (!creates.length) return;
+    const created = await ChatMessage.implementation.createDocuments(creates as ChatMessage.CreateData[]);
+    for (const message of created ?? []) {
+      const role = foundry.utils.getProperty(message, `flags.${MODULE_ID}.damage.role`) as string | undefined;
+      if (role && message.id) this.#damageMessageIds[role] = message.id;
+    }
+  }
+
   /** Start collecting the damage step's dice (the activity's, the other activity's, bonus damage) for one throw */
   beginDamageThrow(): void {
     this.#damageThrow ??= [];
@@ -7563,6 +7613,7 @@ export class Workflow {
       rolls[0] = newRoll;
       await this.setDamageRolls(rolls);
       await this.displayDamageRolls();
+      await this.createDamageMessages();
     }
   }
 

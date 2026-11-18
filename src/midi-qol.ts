@@ -541,6 +541,7 @@ Hooks.once('init', async function () {
   // Register custom sheets (if any)
   initPatching();
   registerDamageApplication();
+  registerDamageMessageSummary();
   addDiceTermModifiers();
   globalThis.MidiKeyManager = new MidiKeyManager();
   globalThis.MidiKeyManager.initKeyMappings();
@@ -1045,6 +1046,7 @@ import { allFlows, coarseStepOf, getFlow } from "./module/steps/flows.js";
 import { defineRangeService } from "./module/services/range/service.js";
 import { damageCalculationOrder, getDamageCalculationStep, registerDamageCalculationStep, removeDamageCalculationStep } from "./module/steps/damageCalculation.js";
 import { registerBonusApprovalQuery } from "./module/services/rollBonuses/approval.js";
+import { registerDamageMessageSummary } from "./module/damage/messages.js";
 import { defineFlankingService } from "./module/services/flanking/service.js";
 import { applyCalculatedDamage, registerDamageApplication } from "./module/damage/application.js";
 import { bonusPromptService, defineBonusPromptService } from "./module/services/rollBonuses/prompt.js";
