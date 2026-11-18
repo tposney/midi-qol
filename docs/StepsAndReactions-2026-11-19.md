@@ -84,8 +84,8 @@ listed in midi's TroubleShooter, as is a replacement whose `writes` leaves out a
 
 A use's changes are worked out at its first step and stored on its chat card. A use rebuilt after a reload keeps them;
 if a step it needs isn't registered on that client (your module isn't active there), it stops and says which step.
-A rebuilt use resumes where its card says it waits (one of midi's own steps), not inside a step you inserted: an
-inserted step that was suspended when the page reloaded isn't run again.
+A use waiting in a step you inserted (it returned `"midi-qol.Suspend"`) is rebuilt waiting there: resuming runs that
+step again, then the rest of the inserts, then the step the use was going to.
 
 ## Reactions
 
