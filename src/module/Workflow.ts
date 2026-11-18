@@ -1,3 +1,4 @@
+import { allSteps, stepForMethod } from "./steps/steps.js";
 import { getDistance } from "./services/distance/service.js";
 import { computeFlankedStatus, computeFlankingStatus } from "./services/flanking/service.js";
 import { speakerFor } from "./utils.js";
@@ -94,7 +95,6 @@ export type WorkflowOutcome = "ok" | "allMissed" | "invalid" | "split" | "manual
 
 // The states whose end is a chat card milestone (Workflow#performState). Cleanup's end is the use's completion
 // (postCleanup, which completeActivityUse waits for): callers then read a written card.
-const MILESTONE_STATES = new Set(["WorkflowState_AttackRollComplete", "WorkflowState_WaitForSaves", "WorkflowState_AllRollsComplete", "WorkflowState_Cleanup"]);
 
 const RECORD_VALUES = ["otherDamage", "ammunitionDamage", "preSelected"] as const;
 
@@ -278,6 +278,13 @@ class CardStateStore {
     if (this.#cache.get("workflowClass") === name) return;
     this.#cache.set("workflowClass", name);
     this.#write({ "system.midi.state.workflowClass": name });
+  }
+
+  /** The step the workflow is in (M2): written with the card's next flush */
+  setStep(id: string | undefined): void {
+    if (!id || this.#cache.get("step") === id) return;
+    this.#cache.set("step", id);
+    this.#write({ "system.midi.state.step": id });
   }
 
   /** The records' save attribution, keyed by token uuid as the workflow uses it */
@@ -943,8 +950,9 @@ export class Workflow {
   }
   set currentAction(currentAction: WorkflowState) {
     this.#currentAction = currentAction;
-    // The state is not stored: a rebuilt workflow works out where it waits from its card (cardResumePoint)
     this.#persisted.setClass(this.constructor.name);
+    // Recorded for M2's flows; a rebuilt workflow still works out where it waits from its card (cardResumePoint)
+    this.#persisted.setStep(stepForMethod(currentAction?.name)?.id);
   }
 
   /**
@@ -2025,10 +2033,10 @@ export class Workflow {
     return table;
   }
 
+  /** The pre/post hooks and onUse passes of every step (steps/steps.ts), as the item sheet lists them */
   public static get stateHooks(): Record<string, string> {
     const hooks = {};
-    for (let state of Object.values(this.stateTable)) {
-      const name = this.nameForState(state);
+    for (const { name } of allSteps()) {
       hooks[`pre${name}`] = `before ${name} (S*)`;
       hooks[`post${name}`] = `after ${name} (S*)`;
     }
@@ -2344,7 +2352,7 @@ export class Workflow {
         } finally {
           this.#queueingWrites -= 1;
         }
-        if (nextState === this.WorkflowState_Suspend || MILESTONE_STATES.has(this.currentAction?.name ?? "")) await this.flushCardWrites();
+        if (nextState === this.WorkflowState_Suspend || stepForMethod(this.currentAction?.name)?.flush) await this.flushCardWrites();
         else if (chatCardUpdates === "everyStep") await this.flushCardWrites(true);
 
         if (nextState === this.WorkflowState_Suspend) {
