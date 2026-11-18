@@ -17,7 +17,7 @@ declare let defineMidiAttackSheetClass: (baseClass: any) => {
         _onRender(context: any, options: any): Promise<void>;
     };
     PARTS: any;
-    DEFAULT_OPTIONS: any;
+    DEFAULT_OPTIONS: foundry.applications.api.ApplicationV2.DefaultOptions;
     CLEAN_ARRAYS: any[];
 };
 declare let defineMidiAttackActivityClass: <T extends Activity>(ActivityClass: T) => {
@@ -1792,7 +1792,7 @@ declare let defineMidiAttackActivityClass: <T extends Activity>(ActivityClass: T
                 _onRender(context: any, options: any): Promise<void>;
             };
             PARTS: any;
-            DEFAULT_OPTIONS: any;
+            DEFAULT_OPTIONS: foundry.applications.api.ApplicationV2.DefaultOptions;
             CLEAN_ARRAYS: any[];
         };
         readonly midiTitle: "midi-qol.ATTACK.Title.one";

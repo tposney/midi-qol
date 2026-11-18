@@ -48,23 +48,7 @@ export declare class TargetConfirmationConfig extends TargetConfirmationConfig_b
             template: string;
         };
     };
-    static DEFAULT_OPTIONS: {
-        id: string;
-        window: {
-            title: string;
-            contentClasses: string[];
-        };
-        position: {
-            width: number;
-            height: "auto";
-        };
-        form: {
-            closeOnSubmit: boolean;
-        };
-        actions: {
-            submit: typeof TargetConfirmationConfig.__#399@#onSubmit;
-        };
-    };
+    static DEFAULT_OPTIONS: foundry.applications.api.ApplicationV2.DefaultOptions;
     _onRender(context: any, options: any): Promise<void>;
     get title(): string;
     _prepareContext(options: any): Promise<any>;

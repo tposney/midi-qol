@@ -19,23 +19,7 @@ export declare class MidiRegionBehaviorConfig extends RegionBehaviorConfig {
         action: string;
         targetUuid: string;
     }>;
-    static DEFAULT_OPTIONS: {
-        classes: string[];
-        window: {
-            contentClasses: string[];
-            icon: string | undefined;
-        };
-        position: {
-            width: number;
-        };
-        form: {
-            closeOnSubmit: boolean;
-        };
-        actions: {
-            addRule: typeof MidiRegionBehaviorConfig.__#401@#onAddRule;
-            deleteRule: typeof MidiRegionBehaviorConfig.__#401@#onDeleteRule;
-        };
-    };
+    static DEFAULT_OPTIONS: foundry.applications.api.ApplicationV2.DefaultOptions;
     static PARTS: {
         form: {
             template: string;

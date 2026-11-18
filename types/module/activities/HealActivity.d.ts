@@ -1748,7 +1748,7 @@ declare let defineMidiHealActivityClass: <T extends Activity>(ActivityClass: T) 
                 _preparePartContext(partId: any, context: any, options: any): Promise<any>;
                 _onRender(context: any, options: any): Promise<void>;
             };
-            DEFAULT_OPTIONS: any;
+            DEFAULT_OPTIONS: foundry.applications.api.ApplicationV2.DefaultOptions;
             CLEAN_ARRAYS: any[];
             PARTS: any;
         };
@@ -1764,7 +1764,7 @@ export declare function defineMidiHealSheetClass(baseClass: any): {
         _preparePartContext(partId: any, context: any, options: any): Promise<any>;
         _onRender(context: any, options: any): Promise<void>;
     };
-    DEFAULT_OPTIONS: any;
+    DEFAULT_OPTIONS: foundry.applications.api.ApplicationV2.DefaultOptions;
     CLEAN_ARRAYS: any[];
     PARTS: any;
 };

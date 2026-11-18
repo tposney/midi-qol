@@ -379,7 +379,7 @@ export class ConditionEditor extends HandlebarsApplicationMixin(ApplicationV2) {
     this.submitted = false;
   }
 
-  static override DEFAULT_OPTIONS = {
+  static override DEFAULT_OPTIONS: foundry.applications.api.ApplicationV2.DefaultOptions = {
     id: "midi-qol-condition-editor",
     window: {
       title: "midi-qol.ConditionEditor.Title",

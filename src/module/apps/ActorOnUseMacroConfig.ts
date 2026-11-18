@@ -22,7 +22,7 @@ export class ActorOnUseMacrosConfig extends HandlebarsApplicationMixin(Applicati
   }
 
   // TODO: dragDrop? dropSelector .key
-  static override DEFAULT_OPTIONS = {
+  static override DEFAULT_OPTIONS: foundry.applications.api.ApplicationV2.DefaultOptions = {
     window: {
       resizable: false,
       title: "midi-qol.ActorOnUseMacros"
@@ -32,8 +32,8 @@ export class ActorOnUseMacrosConfig extends HandlebarsApplicationMixin(Applicati
       width: 550
     },
     form: {
-      closeOnSubmit: false,
-      submitOnClose: true
+      // ApplicationV2 has no submitOnClose (only the v1 sheets read it): closing doesn't save
+      closeOnSubmit: false
     },
     actions: {
       add: this.#onAddMacro,

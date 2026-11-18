@@ -19,7 +19,7 @@ export class MidiRegionBehaviorConfig extends RegionBehaviorConfig {
   /** Local working copy of rules, synced from document on first render. */
   declare _workingRules: Array<{ trigger: string; action: string; targetUuid: string }>;
 
-  static override DEFAULT_OPTIONS = {
+  static override DEFAULT_OPTIONS: foundry.applications.api.ApplicationV2.DefaultOptions = {
     classes: ["region-behavior-config", "midi-region-behavior-config"],
     window: {
       contentClasses: ["standard-form"],

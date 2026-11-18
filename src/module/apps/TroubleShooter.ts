@@ -54,7 +54,7 @@ export class TroubleShooter extends HandlebarsApplicationMixin(ApplicationV2) {
   //   return this;
   // }
 
-  static override DEFAULT_OPTIONS = {
+  static override DEFAULT_OPTIONS: foundry.applications.api.ApplicationV2.DefaultOptions = {
     id: "midi-trouble-shooter",
     classes: ["midi-trouble-shooter"],
     window: {

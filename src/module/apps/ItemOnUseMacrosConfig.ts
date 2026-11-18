@@ -16,7 +16,7 @@ export class ItemOnUseMacrosConfig extends HandlebarsApplicationMixin(DocumentSh
     }
   };
 
-  static override DEFAULT_OPTIONS = {
+  static override DEFAULT_OPTIONS: foundry.applications.api.ApplicationV2.DefaultOptions = {
     form: {
       handler: this.#onSubmit,
       submitOnChange: true,

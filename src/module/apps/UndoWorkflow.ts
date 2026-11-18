@@ -22,7 +22,7 @@ export class UndoWorkflow extends HandlebarsApplicationMixin(ApplicationV2) {
     main: { template: "modules/midi-qol/templates/apps/UndoWorkflow/undo-workflow.hbs" },
   };
   
-  static override DEFAULT_OPTIONS = {
+  static override DEFAULT_OPTIONS: foundry.applications.api.ApplicationV2.DefaultOptions = {
     id: "midi-qol-undo-workflow",
     window: {
       title: "midi-qol.UndoWorkflow.title",

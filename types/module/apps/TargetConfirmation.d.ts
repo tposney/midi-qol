@@ -29,26 +29,7 @@ export declare class TargetConfirmationDialog extends TargetConfirmationDialog_b
             template: string;
         };
     };
-    static DEFAULT_OPTIONS: {
-        id: string;
-        window: {
-            title: string;
-            resizable: boolean;
-            contentClasses: string[];
-        };
-        classes: string[];
-        position: {
-            width: number;
-            height: "auto";
-            left: number;
-            top: number;
-        };
-        actions: {
-            roll: typeof TargetConfirmationDialog.__#384@#onRoll;
-            cancel: typeof TargetConfirmationDialog.__#384@#onCancel;
-            clearTargets: typeof TargetConfirmationDialog.__#384@#onClearTargets;
-        };
-    };
+    static DEFAULT_OPTIONS: foundry.applications.api.ApplicationV2.DefaultOptions;
     validateAndUpdateTargets(): void;
     /** Remove a token's overlay sprite; the shared texture is kept. */
     removeNotAllowedOverlay(token: Token.Implementation | undefined): void;

@@ -20,7 +20,7 @@ export class TargetConfirmationConfig extends HandlebarsApplicationMixin(Applica
     main: { template: "modules/midi-qol/templates/apps/TargetConfirmationConfig/targetConfirmationConfig.hbs" }
   };
 
-  static override DEFAULT_OPTIONS = {
+  static override DEFAULT_OPTIONS: foundry.applications.api.ApplicationV2.DefaultOptions = {
     id: "midi-qol-target-confirmation-config",
     window: {
       title: "midi-qol.ConfigTitle",

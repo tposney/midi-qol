@@ -37,7 +37,7 @@ export class OverTimeEditor extends HandlebarsApplicationMixin(ApplicationV2) {
     this.originalRemaining = { saves: this.currentData.savesRemaining, fails: this.currentData.failsRemaining };
   }
 
-  static override DEFAULT_OPTIONS = {
+  static override DEFAULT_OPTIONS: foundry.applications.api.ApplicationV2.DefaultOptions = {
     id: "midi-qol-overtime-editor",
     tag: "form" as const,
     window: {

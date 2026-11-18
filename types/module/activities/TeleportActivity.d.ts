@@ -1888,7 +1888,7 @@ declare let defineMidiTeleportActivityClass: <T extends Activity>(ActivityClass:
                 _onRender(context: any, options: any): Promise<void>;
             };
             PARTS: any;
-            DEFAULT_OPTIONS: any;
+            DEFAULT_OPTIONS: foundry.applications.api.ApplicationV2.DefaultOptions;
             CLEAN_ARRAYS: any[];
         };
         readonly usage: {
@@ -1909,7 +1909,7 @@ declare let defineMidiTeleportSheetClass: (baseClass: any) => {
         _onRender(context: any, options: any): Promise<void>;
     };
     PARTS: any;
-    DEFAULT_OPTIONS: any;
+    DEFAULT_OPTIONS: foundry.applications.api.ApplicationV2.DefaultOptions;
     CLEAN_ARRAYS: any[];
 };
 /** The card's Teleport button: the tokens its targets list shows, ticked, in the Targeted or Selected view. */

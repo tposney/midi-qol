@@ -24,7 +24,7 @@ export class ModuleReviewDialog extends HandlebarsApplicationMixin(ApplicationV2
     this.savedModules = savedModules;
   }
 
-  static override DEFAULT_OPTIONS = {
+  static override DEFAULT_OPTIONS: foundry.applications.api.ApplicationV2.DefaultOptions = {
     id: "midi-module-review",
     classes: ["midi-module-review"],
     window: {

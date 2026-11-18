@@ -606,7 +606,7 @@ export declare let MidiActivityMixinSheet: (Base: any) => {
         _onRender(context: any, options: any): Promise<void>;
     };
     [x: string]: any;
-    DEFAULT_OPTIONS: any;
+    DEFAULT_OPTIONS: foundry.applications.api.ApplicationV2.DefaultOptions;
     CLEAN_ARRAYS: any[];
     "__#private@#addMidiStatus"(): void;
     "__#private@#deleteMidiStatus"(event: PointerEvent, target: HTMLElement): void;

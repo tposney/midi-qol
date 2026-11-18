@@ -4,28 +4,7 @@ export declare class SoundConfigPanel extends SoundConfigPanel_base {
     static defaultPlaylist: string | undefined;
     static defaultSound: string | undefined;
     get title(): string;
-    static DEFAULT_OPTIONS: {
-        id: string;
-        window: {
-            title: string;
-            resizable: boolean;
-            contentClasses: string[];
-        };
-        position: {
-            height: "auto";
-            width: number;
-        };
-        actions: {
-            add: typeof SoundConfigPanel.__#398@#onAdd;
-            delete: typeof SoundConfigPanel.__#398@#onDelete;
-            save: any;
-        };
-        form: {
-            submitOnChange: boolean;
-            closeOnSubmit: boolean;
-        };
-        tag: string;
-    };
+    static DEFAULT_OPTIONS: foundry.applications.api.ApplicationV2.DefaultOptions;
     static PARTS: {
         tabs: {
             template: string;

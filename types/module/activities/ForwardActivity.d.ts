@@ -12,7 +12,7 @@ declare let defineMidiForwardSheetClass: (baseClass: any) => {
         _onRender(context: any, options: any): Promise<void>;
     };
     PARTS: any;
-    DEFAULT_OPTIONS: any;
+    DEFAULT_OPTIONS: foundry.applications.api.ApplicationV2.DefaultOptions;
     CLEAN_ARRAYS: any[];
 };
 declare let defineMidiForwardActivityClass: <T extends Activity>(ActivityClass: T) => {
@@ -1762,7 +1762,7 @@ declare let defineMidiForwardActivityClass: <T extends Activity>(ActivityClass: 
                 _onRender(context: any, options: any): Promise<void>;
             };
             PARTS: any;
-            DEFAULT_OPTIONS: any;
+            DEFAULT_OPTIONS: foundry.applications.api.ApplicationV2.DefaultOptions;
             CLEAN_ARRAYS: any[];
         };
         readonly usage: {};

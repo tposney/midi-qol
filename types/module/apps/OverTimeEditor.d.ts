@@ -22,28 +22,7 @@ export declare class OverTimeEditor extends OverTimeEditor_base {
         fails: number;
     };
     constructor(editorOptions: OverTimeEditorOptions, appOptions?: Partial<foundry.applications.api.ApplicationV2.Configuration>);
-    static DEFAULT_OPTIONS: {
-        id: string;
-        tag: "form";
-        window: {
-            title: string;
-            resizable: boolean;
-            contentClasses: string[];
-        };
-        position: {
-            width: number;
-            height: number;
-        };
-        form: {
-            closeOnSubmit: boolean;
-            submitOnChange: boolean;
-            handler: any;
-        };
-        actions: {
-            save: typeof OverTimeEditor.__#400@#onSave;
-            cancel: typeof OverTimeEditor.__#400@#onCancel;
-        };
-    };
+    static DEFAULT_OPTIONS: foundry.applications.api.ApplicationV2.DefaultOptions;
     static PARTS: {
         form: {
             template: string;

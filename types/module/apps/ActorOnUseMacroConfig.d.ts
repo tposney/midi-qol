@@ -13,24 +13,7 @@ export declare class ActorOnUseMacrosConfig extends ActorOnUseMacrosConfig_base 
             template: string;
         };
     };
-    static DEFAULT_OPTIONS: {
-        window: {
-            resizable: boolean;
-            title: string;
-        };
-        position: {
-            height: "auto";
-            width: number;
-        };
-        form: {
-            closeOnSubmit: boolean;
-            submitOnClose: boolean;
-        };
-        actions: {
-            add: typeof ActorOnUseMacrosConfig.__#403@#onAddMacro;
-            delete: typeof ActorOnUseMacrosConfig.__#403@#onDeleteMacro;
-        };
-    };
+    static DEFAULT_OPTIONS: foundry.applications.api.ApplicationV2.DefaultOptions;
     get isEditable(): boolean;
     _prepareContext(options: any): Promise<any>;
     _onDragStart(ev: any): void;

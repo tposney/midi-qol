@@ -8,18 +8,7 @@ export declare class UndoWorkflow extends UndoWorkflow_base {
             template: string;
         };
     };
-    static DEFAULT_OPTIONS: {
-        id: string;
-        window: {
-            title: string;
-            resizable: boolean;
-            contentClasses: string[];
-        };
-        position: {
-            width: number;
-            height: number;
-        };
-    };
+    static DEFAULT_OPTIONS: foundry.applications.api.ApplicationV2.DefaultOptions;
     _prepareContext(options: any): Promise<any>;
     _onRender(context: any, options: any): Promise<void>;
     get title(): string;

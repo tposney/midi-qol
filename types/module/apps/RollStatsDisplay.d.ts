@@ -9,28 +9,7 @@ export declare class RollStatsDisplay extends RollStatsDisplay_base {
     expandedItems: Record<string, boolean>;
     showLifetime: Record<string, boolean>;
     constructor(options?: any);
-    static DEFAULT_OPTIONS: {
-        id: string;
-        window: {
-            title: string;
-            resizable: boolean;
-            contentClasses: string[];
-        };
-        position: {
-            width: number;
-            height: number;
-        };
-        actions: {
-            clearStats: typeof RollStatsDisplay.__#397@#onClearStats;
-            exportJSON: typeof RollStatsDisplay.__#397@#onExportJSON;
-            exportCSV: typeof RollStatsDisplay.__#397@#onExportCSV;
-            endSession: typeof RollStatsDisplay.__#397@#onEndSession;
-            removeStats: typeof RollStatsDisplay.__#397@#onRemoveStats;
-            toggleExpand: typeof RollStatsDisplay.__#397@#onToggleExpand;
-            toggleItems: typeof RollStatsDisplay.__#397@#onToggleItems;
-            togglePeriod: typeof RollStatsDisplay.__#397@#onTogglePeriod;
-        };
-    };
+    static DEFAULT_OPTIONS: foundry.applications.api.ApplicationV2.DefaultOptions;
     static PARTS: {
         tabs: {
             template: string;

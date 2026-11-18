@@ -11,7 +11,7 @@ export class SoundConfigPanel extends HandlebarsApplicationMixin(ApplicationV2) 
     return i18n("midi-qol.ConfigTitle") ?? "Sound Config";
   }
 
-  static override DEFAULT_OPTIONS = {
+  static override DEFAULT_OPTIONS: foundry.applications.api.ApplicationV2.DefaultOptions = {
     id: "midi-qol-sound-config",
     window: {
       title: "midi-qol.SoundSettings.Name",

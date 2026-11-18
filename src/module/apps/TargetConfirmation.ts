@@ -98,7 +98,7 @@ export class TargetConfirmationDialog extends HandlebarsApplicationMixin(Applica
     footer: { template: "templates/generic/form-footer.hbs" }
   };
 
-  static override DEFAULT_OPTIONS = {
+  static override DEFAULT_OPTIONS: foundry.applications.api.ApplicationV2.DefaultOptions = {
     id: "midi-qol-targetConfirmation",
     window: {
       title: "midi-qol.TargetConfirmation.Name",

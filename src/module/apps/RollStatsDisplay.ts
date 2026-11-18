@@ -33,7 +33,7 @@ export class RollStatsDisplay extends HandlebarsApplicationMixin(ApplicationV2) 
     });
   }
 
-  static override DEFAULT_OPTIONS = {
+  static override DEFAULT_OPTIONS: foundry.applications.api.ApplicationV2.DefaultOptions = {
     id: "midi-qol-statistics",
     window: {
       title: "midi-qol.StatsTitle",

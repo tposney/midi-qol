@@ -16,30 +16,7 @@ export declare class TroubleShooter extends TroubleShooter_base {
     get nextFixerId(): number;
     _hookId: any;
     constructor(...args: any[]);
-    static DEFAULT_OPTIONS: {
-        id: string;
-        classes: string[];
-        window: {
-            title: string;
-            resizable: boolean;
-            contentClasses: string[];
-        };
-        position: {
-            height: "auto";
-            width: number;
-        };
-        form: {
-            closeOnSubmit: boolean;
-        };
-        actions: {
-            export: typeof TroubleShooter.__#377@#onExport;
-            import: typeof TroubleShooter.__#377@#onImport;
-            refresh: typeof TroubleShooter.__#377@#onRefresh;
-            clear: typeof TroubleShooter.__#377@#onClear;
-            overwrite: typeof TroubleShooter.__#377@#onOverwrite;
-            reviewModules: typeof TroubleShooter.__#377@#onReviewModules;
-        };
-    };
+    static DEFAULT_OPTIONS: foundry.applications.api.ApplicationV2.DefaultOptions;
     static PARTS: {
         tabs: {
             template: string;

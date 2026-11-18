@@ -4376,7 +4376,7 @@ export class RollModifyDialog extends HandlebarsApplicationMixin(ApplicationV2) 
     }
   };
 
-  static DEFAULT_OPTIONS = {
+  static DEFAULT_OPTIONS: foundry.applications.api.ApplicationV2.DefaultOptions = {
     window: {
       resizable: true
     },
@@ -5995,7 +5995,7 @@ export class ReactionDialog extends HandlebarsApplicationMixin(ApplicationV2) {
     }
   };
 
-  static DEFAULT_OPTIONS = {
+  static DEFAULT_OPTIONS: foundry.applications.api.ApplicationV2.DefaultOptions = {
     position: {
       width: 400,
       height: "auto" as "auto"

@@ -25,5 +25,7 @@
 		"newLine": "lf",
 		"skipLibCheck": true, /* Skip type checking of declaration files. */
 		"forceConsistentCasingInFileNames": true /* Disallow inconsistently-cased references to the same file. */
-	}
+	},
+	// Generated output: the declarations are built from src, never read back
+	"exclude": [ "node_modules", "types", "dist", "stage" ]
 }

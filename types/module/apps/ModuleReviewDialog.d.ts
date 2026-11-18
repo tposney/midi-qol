@@ -9,24 +9,7 @@ export declare class ModuleReviewDialog extends ModuleReviewDialog_base {
         compatibility?: string;
     }>;
     constructor(savedModules: Record<string, any>, options?: {});
-    static DEFAULT_OPTIONS: {
-        id: string;
-        classes: string[];
-        window: {
-            title: string;
-            resizable: boolean;
-            contentClasses: string[];
-        };
-        position: {
-            width: number;
-            height: number;
-        };
-        actions: {
-            selectAll: typeof ModuleReviewDialog.__#376@#onSelectAll;
-            deselectAll: typeof ModuleReviewDialog.__#376@#onDeselectAll;
-            applyModules: typeof ModuleReviewDialog.__#376@#onApply;
-        };
-    };
+    static DEFAULT_OPTIONS: foundry.applications.api.ApplicationV2.DefaultOptions;
     static PARTS: {
         modules: {
             template: string;

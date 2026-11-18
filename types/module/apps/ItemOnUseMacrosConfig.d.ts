@@ -8,22 +8,7 @@ export declare class ItemOnUseMacrosConfig extends ItemOnUseMacrosConfig_base<It
             template: string;
         };
     };
-    static DEFAULT_OPTIONS: {
-        form: {
-            handler: typeof ItemOnUseMacrosConfig.__#394@#onSubmit;
-            submitOnChange: boolean;
-            closeOnSubmit: boolean;
-        };
-        position: {
-            width: number;
-        };
-        tag: string;
-        actions: {
-            addMacro: typeof ItemOnUseMacrosConfig.__#394@#onAddMacro;
-            deleteMacro: typeof ItemOnUseMacrosConfig.__#394@#onDeleteMacro;
-            editMacro: typeof ItemOnUseMacrosConfig.__#394@#onEditMacro;
-        };
-    };
+    static DEFAULT_OPTIONS: foundry.applications.api.ApplicationV2.DefaultOptions;
     _prepareContext(options: any): Promise<import("fvtt-types/src/foundry/client/applications/api/document-sheet.mjs").default.RenderContext<any>>;
 }
 export {};

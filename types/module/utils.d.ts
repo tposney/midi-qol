@@ -843,15 +843,7 @@ export declare class RollModifyDialog extends RollModifyDialog_base {
             template: string;
         };
     };
-    static DEFAULT_OPTIONS: {
-        window: {
-            resizable: boolean;
-        };
-        position: {
-            height: "auto";
-            width: number;
-        };
-    };
+    static DEFAULT_OPTIONS: foundry.applications.api.ApplicationV2.DefaultOptions;
     get title(): string;
     _onRender(context: any, options: any): Promise<void>;
     _prepareContext(options: any): Promise<{
@@ -1006,12 +998,7 @@ export declare class ReactionDialog extends ReactionDialog_base {
             template: string;
         };
     };
-    static DEFAULT_OPTIONS: {
-        position: {
-            width: number;
-            height: "auto";
-        };
-    };
+    static DEFAULT_OPTIONS: foundry.applications.api.ApplicationV2.DefaultOptions;
     get title(): string;
     _onRender(context: any, options: any): Promise<void>;
     _prepareContext(options: any): Promise<{

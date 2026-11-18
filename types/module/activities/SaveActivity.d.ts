@@ -1752,7 +1752,7 @@ declare let defineMidiSaveActivityClass: <T extends Activity>(ActivityClass: T) 
                 _onRender(context: any, options: any): Promise<void>;
             };
             PARTS: any;
-            DEFAULT_OPTIONS: any;
+            DEFAULT_OPTIONS: foundry.applications.api.ApplicationV2.DefaultOptions;
             CLEAN_ARRAYS: any[];
         };
         readonly usage: {
@@ -1771,7 +1771,7 @@ declare let defineMidiSaveSheetClass: (baseClass: any) => {
         _onRender(context: any, options: any): Promise<void>;
     };
     PARTS: any;
-    DEFAULT_OPTIONS: any;
+    DEFAULT_OPTIONS: foundry.applications.api.ApplicationV2.DefaultOptions;
     CLEAN_ARRAYS: any[];
 };
 export declare function cardRollDamage(this: Activity, event: PointerEvent, target: HTMLElement, message: ChatMessage.Implementation): Promise<void | Roll<import("fvtt-types/utils").EmptyObject>[]> | undefined;

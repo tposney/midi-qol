@@ -4,22 +4,7 @@ export declare class ConfigPanel extends ConfigPanel_base {
     configHookId: number | undefined;
     activeTab: string;
     constructor(options?: any);
-    static DEFAULT_OPTIONS: {
-        id: string;
-        tag: string;
-        window: {
-            title: string;
-            contentClasses: string[];
-        };
-        position: {
-            width: number;
-            height: "auto";
-        };
-        form: {
-            closeOnSubmit: boolean;
-            handler: any;
-        };
-    };
+    static DEFAULT_OPTIONS: foundry.applications.api.ApplicationV2.DefaultOptions;
     static PARTS: {
         tabs: {
             template: string;

@@ -19,22 +19,7 @@ export declare class ConditionEditor extends ConditionEditor_base {
     onCancelCallback: () => void;
     submitted: boolean;
     constructor(editorOptions: ConditionEditorOptions, appOptions?: Partial<foundry.applications.api.ApplicationV2.Configuration>);
-    static DEFAULT_OPTIONS: {
-        id: string;
-        window: {
-            title: string;
-            resizable: boolean;
-            contentClasses: string[];
-        };
-        position: {
-            width: number;
-            height: number;
-        };
-        actions: {
-            save: typeof ConditionEditor.__#383@#onSave;
-            cancel: typeof ConditionEditor.__#383@#onCancel;
-        };
-    };
+    static DEFAULT_OPTIONS: foundry.applications.api.ApplicationV2.DefaultOptions;
     static PARTS: {
         form: {
             template: string;

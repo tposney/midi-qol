@@ -17,7 +17,7 @@ export class RegionBehaviorEditor extends HandlebarsApplicationMixin(Application
     }));
   }
 
-  static override DEFAULT_OPTIONS = {
+  static override DEFAULT_OPTIONS: foundry.applications.api.ApplicationV2.DefaultOptions = {
     id: "midi-qol-region-behavior-editor",
     tag: "form" as const,
     window: {

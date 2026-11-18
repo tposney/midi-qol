@@ -1747,7 +1747,7 @@ declare let defineMidiEnchantActivityClass: <T extends Activity>(ActivityClass: 
                 _preparePartContext(partId: any, context: any, options: any): Promise<any>;
                 _onRender(context: any, options: any): Promise<void>;
             };
-            DEFAULT_OPTIONS: any;
+            DEFAULT_OPTIONS: foundry.applications.api.ApplicationV2.DefaultOptions;
             CLEAN_ARRAYS: any[];
             PARTS: any;
         };
@@ -1765,7 +1765,7 @@ export declare function defineMidiEnchantSheetClass(baseClass: any): {
         _preparePartContext(partId: any, context: any, options: any): Promise<any>;
         _onRender(context: any, options: any): Promise<void>;
     };
-    DEFAULT_OPTIONS: any;
+    DEFAULT_OPTIONS: foundry.applications.api.ApplicationV2.DefaultOptions;
     CLEAN_ARRAYS: any[];
     PARTS: any;
 };

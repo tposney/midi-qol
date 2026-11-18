@@ -8,29 +8,7 @@ export declare class RegionBehaviorEditor extends RegionBehaviorEditor_base {
         targetId: string;
     }>;
     constructor(activity: any, appOptions?: Partial<foundry.applications.api.ApplicationV2.Configuration>);
-    static DEFAULT_OPTIONS: {
-        id: string;
-        tag: "form";
-        window: {
-            title: string;
-            resizable: boolean;
-            contentClasses: string[];
-        };
-        position: {
-            width: number;
-            height: "auto";
-        };
-        form: {
-            closeOnSubmit: boolean;
-            submitOnChange: boolean;
-        };
-        actions: {
-            save: typeof RegionBehaviorEditor.__#385@#onSave;
-            cancel: typeof RegionBehaviorEditor.__#385@#onCancel;
-            addRule: typeof RegionBehaviorEditor.__#385@#onAddRule;
-            deleteRule: typeof RegionBehaviorEditor.__#385@#onDeleteRule;
-        };
-    };
+    static DEFAULT_OPTIONS: foundry.applications.api.ApplicationV2.DefaultOptions;
     static PARTS: {
         form: {
             template: string;

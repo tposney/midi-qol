@@ -69,7 +69,7 @@ export class DependentsExplorer extends HandlebarsApplicationMixin(ApplicationV2
   // Debounced search render to avoid cursor issues
   #debouncedSearchRender = foundry.utils.debounce(() => this.#renderSearchResults(), SEARCH_DEBOUNCE_MS);
 
-  static override DEFAULT_OPTIONS = {
+  static override DEFAULT_OPTIONS: foundry.applications.api.ApplicationV2.DefaultOptions = {
     id: "midi-qol-dependents-explorer",
     window: {
       title: "midi-qol.DependentsExplorer.Title",
