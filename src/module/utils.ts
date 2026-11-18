@@ -5385,7 +5385,7 @@ export async function doReactions(targetRef: TokenOrDocument | string, triggerTo
     try {
       // The reactions service's contributors (midi's own: services/reactions/provider.ts), each candidate once, only
       // those that could change the result
-      const found = await collectReactions({ workflow: options.workflow, target, actor: target.actor, triggerType, trigger: reactionTriggerLabelFor(triggerType), triggeringRoll, usedReaction, options });
+      const found = await collectReactions({ workflow: options.workflow, target: target.document, actor: target.actor, triggerType, trigger: reactionTriggerLabelFor(triggerType), triggeringRoll, usedReaction, options });
       for (const { candidate } of found) {
         const activity = fromUuidSync(candidate.activityUuid, { strict: false }) as unknown as Activity | null;
         if (activity) reactions.push(activity);
@@ -5479,7 +5479,11 @@ export async function doReactions(targetRef: TokenOrDocument | string, triggerTo
         }
       }
     });
-    let result: any = (await request.settled).value;
+    // A request that couldn't be settled (its fallback failed too) is no reaction
+    let result: any = await request.settled.then(settled => settled.value, err => {
+      TroubleShooter.recordError(err, `doReactions | ${triggerType} for ${target.name}`);
+      return noResult;
+    });
     if (chatMessage) void chatMessage.delete();
     if (result?.name) {
       let count = 100;

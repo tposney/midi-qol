@@ -6717,7 +6717,13 @@ export class Workflow {
         disadvantage: { label: "midi-qol.PlayerWaits.Choice.disadvantage", value: () => unTimedExecuteAsGM("rollAbility", rollFor(true, "disadvantage")) },
         gmRoll: () => unTimedExecuteAsGM("rollAbility", rollFor(false))
       }
-    }).settled.then(settled => settled.value);
+    }).settled.then(settled => settled.value, async err => {
+      // Nobody could make the save (the player's answer and the save made without them both failed): it fails, as the
+      // other save paths' unanswered requests do, rather than failing every target's save
+      TroubleShooter.recordError(err, `${this.workflowName} | save for ${target.name} could not be made`);
+      //@ts-expect-error CONFIG.Dice.BasicRoll: no dnd5e-types
+      return [await new CONFIG.Dice.BasicRoll("-1").evaluate()];
+    });
   }
 
   /**

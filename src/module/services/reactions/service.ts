@@ -13,8 +13,8 @@ import { defineService, entries, reportServiceProblem } from "../../api/services
 
 export interface ReactionQuery {
   workflow: any;
-  /** The reacting creature's token. */
-  target: Token.Implementation;
+  /** The reacting creature's token (a document: midi-next passes TokenDocuments). */
+  target: TokenDocument.Implementation;
   actor: Actor.Implementation;
   /** midi's trigger type (reaction, reactionattacked, reactiondamage...). */
   triggerType: string;
