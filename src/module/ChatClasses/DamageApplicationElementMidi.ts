@@ -89,13 +89,13 @@ export class DamageApplicationElementMidi extends globalThis.dnd5e.applications.
     event.preventDefault();
     const message = this.chatMessage as ChatMessage.Implementation | undefined;
     // The card's workflow runs the damage hooks; another user's card only names the attacker (a read-only copy)
-    const workflow = message ? Workflow.findWorkflow(message.uuid) : undefined;
-    const source = workflow ?? (message ? Workflow.cardView(message.uuid) : undefined);
+    const workflow = message?.uuid ? Workflow.findWorkflow(message.uuid) : undefined;
+    const source = workflow ?? (message?.uuid ? Workflow.cardView(message.uuid) : undefined);
     const damageList: DamageListEntry[] = [];
     for (const option of Array.from<HTMLOptionElement>(this.targetList.querySelectorAll("option"))) {
-      const token = fromUuidSync(option.value) as TokenDocument.Implementation | null;
+      const token = fromUuidSync(option.value) as TokenDocument.Stored | null;
       const actor = token?.actor;
-      if (!token?.isOwner || !actor) continue;
+      if (!token?.isOwner || !actor?.uuid) continue;
       const calcDamageOptions = this.getMergedOptions(option.value);
       const combinedDamage: DamageDescription[] = foundry.utils.deepClone(actor.calculateDamage(this.damages, calcDamageOptions) || []);
       const midiOptions = (calcDamageOptions.midi ?? {}) as { saved?: boolean, superSaver?: boolean, semiSuperSaver?: boolean };

@@ -443,7 +443,7 @@ Hooks.once('init', async function () {
   setupMagicSight();
 
   // Register custom RegionBehaviorType for region activities (emanation auras)
-  CONFIG.RegionBehavior.dataModels[`${MODULE_ID}.regionActivity`] = MidiRegionActivityBehaviorType as any;
+  CONFIG.RegionBehavior.dataModels[`${MODULE_ID}.regionActivity`] = MidiRegionActivityBehaviorType;
   CONFIG.RegionBehavior.typeLabels![`${MODULE_ID}.regionActivity`] = `BEHAVIOR.TYPES.${MODULE_ID}.regionActivity.label`;
   CONFIG.RegionBehavior.typeIcons[`${MODULE_ID}.regionActivity`] = "fa-solid fa-hat-wizard";
 
@@ -923,7 +923,7 @@ Hooks.once('ready', function () {
     }
     const oldVersion = game.settings.get(MODULE_ID, "last-run-version") as number | string;
     const newVersion = game.modules.get(MODULE_ID)?.version;
-    if (foundry.utils.isNewerVersion(newVersion, oldVersion)) {
+    if (newVersion && foundry.utils.isNewerVersion(newVersion, oldVersion)) {
       console.warn(`midi-qol | instance ${game.settings.get(MODULE_ID, "instanceId")} version change from ${oldVersion} to ${newVersion}`);
       game.settings.set(MODULE_ID, "last-run-version", newVersion);
       // look at sending a new version has been installed.
@@ -1913,7 +1913,6 @@ export function addMidiStatusEffects(statusEffects: typeof CONFIG.statusEffects 
         ]
       },
       img: "modules/midi-qol/icons/bonus-action.svg",
-      // @ts-expect-error fvtt-types v14 duration
       duration: { expiry: "targetStart" },
       flags: { dae: { specialDuration: ["combatEnd", "shortRest"] } }
     });
@@ -1930,7 +1929,6 @@ export function addMidiStatusEffects(statusEffects: typeof CONFIG.statusEffects 
         ]
       },
       img: "modules/midi-qol/icons/reaction.svg",
-      // @ts-expect-error fvtt-types v14 duration
       duration: { expiry: "targetStart" },
       flags: { dae: { specialDuration: ["combatEnd", "shortRest"] } }
     });
@@ -1956,7 +1954,6 @@ export function addMidiStatusEffects(statusEffects: typeof CONFIG.statusEffects 
       name: i18n("midi-qol.Flanking"),
       system: { changes: getFlankingStatusChanges() },
       img: "icons/svg/sword.svg",
-      // @ts-expect-error fvtt-types v14 duration
       duration: { expiry: "combatEnd" }
     });
   }
@@ -1967,7 +1964,6 @@ export function addMidiStatusEffects(statusEffects: typeof CONFIG.statusEffects 
       name: i18n("midi-qol.Flanked"),
       system: { changes: getFlankedStatusChanges() },
       img: "modules/midi-qol/icons/encirclement.svg",
-      // @ts-expect-error fvtt-types v14 duration
       duration: { expiry: "combatEnd" }
     });
   }
@@ -2063,7 +2059,7 @@ function removeFlankingStatuses(): Promise<void> {
 
 async function removeFlankingStatusesNow() {
   // A linked actor has a token on several scenes: take each actor's statuses off once
-  const actors = new Map<string, Actor.Implementation>();
+  const actors = new Map<string | null, Actor.Implementation>();
   for (const scene of game.scenes ?? []) {
     for (const tokenDocument of scene.tokens) {
       const actor = tokenDocument.actor;

@@ -691,11 +691,16 @@ declare global {
     }
   }
 
+  interface RegExpConstructor { escape(value: string): string } // ES2025, not in TypeScript 5.9's lib
+
   /** fvtt-types brands module sub-types, so midi's message types need declaring to be assignable. */
   interface DataModelConfig {
     ChatMessage: {
       "midi-qol.damage": typeof import("./module/ChatClasses/DamageCardMessage.js").MidiDamageMessageData;
       "midi-qol.note": typeof import("./module/ChatClasses/CardNoteMessage.js").MidiNoteMessageData;
+    };
+    RegionBehavior: {
+      "midi-qol.regionActivity": typeof import("./module/regionBehaviors/MidiRegionActivityBehaviorType.js").MidiRegionActivityBehaviorType;
     };
   }
 

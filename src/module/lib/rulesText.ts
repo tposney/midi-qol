@@ -18,7 +18,7 @@ type IndexEntry = { _id: string; name: string; type: string; system?: { identifi
 // Each pack's index, being read or read (concurrent fills share one read); a failed read isn't kept
 const indexes = new Map<string, Promise<IndexEntry[] | null>>();
 // Items being filled: one fill at a time per item, so concurrent triggers can't add the text twice
-const filling = new Set<string>();
+const filling = new Set<string | null>();
 
 export function registerRulesTextSettings() {
   Hooks.on("createItem", (item: Item.Implementation, _options: unknown, userId: string) => {
@@ -140,7 +140,6 @@ function packIndex(pack: CompendiumCollection<"Item">): Promise<IndexEntry[] | n
 async function readIndex(pack: CompendiumCollection<"Item">): Promise<IndexEntry[] | null> {
   try {
     // system.source as a whole: a few packs store it as a number, which fails a system.source.rules index
-    // @ts-expect-error no dnd5e-types
     const index = await pack.getIndex({ fields: ["system.identifier", "system.source"] });
     return [...index.values()] as unknown as IndexEntry[];
   } catch (err) {

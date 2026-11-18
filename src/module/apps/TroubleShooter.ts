@@ -910,7 +910,6 @@ export class TroubleShooter extends HandlebarsApplicationMixin(ApplicationV2) {
           }
           // @ts-expect-error
           await game.settings.set("itemacro", "charsheet", false);
-          //@ts-expect-error
           foundry.applications.settings.SettingsConfig.reloadConfirm({ world: true });
         },
         fixerId: -1

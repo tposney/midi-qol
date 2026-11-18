@@ -93,7 +93,6 @@ function sharedFields(): Fields {
       dispositionFilter: new NumberField({ initial: -1, choices: { [-1]: "Enemies", [0]: "All", [1]: "Allies" } }),
       excludeSource: new BooleanField({ initial: true }),
       oncePerTurn: new BooleanField({ initial: true }),
-      // @ts-expect-error fvtt-types missing EDGE_RESTRICTION_TYPES (v14 regions use EDGE not WALL)
       wallRestriction: new StringField({ initial: "none", choices: ["none", ...CONST.EDGE_RESTRICTION_TYPES] }),
       regionVisibility: new NumberField({ initial: CONST.REGION_VISIBILITY.ALWAYS, choices: Object.values(CONST.REGION_VISIBILITY) }),
       // "default" leaves the region stationary. "caster" attaches it to the caster's token;

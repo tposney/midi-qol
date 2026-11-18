@@ -2,7 +2,7 @@ import { initHiding } from "./lib/hiding.js";
 import { log, i18n, error, i18nFormat, warn, debugEnabled, GameSystemConfig, MODULE_ID, gameStats, getStaticID, MIDI_IMPLYING_STATUSES } from "../midi-qol.js";
 import { saveDisplayMode } from "./lib/saveVisibility.js";
 import { configSettings, checkRule, checkMechanic, safeGetGameSetting, safeSetGameSetting, playerControlsInvisibleTokens } from "./settings.js";
-import { bonusDialog, createConditionData, displayDSNForRoll, expireRollEffect, getCriticalDamage, getDeadStatus, getOptionalCountRemainingShortFlag, getUnconsciousStatus, getVitalityDeadStatus, getWoundedStatus, hasUsedAction, hasUsedBonusAction, hasUsedReaction, midiRenderRoll, notificationNotify, removeActionUsed, removeBonusActionUsed, removeReactionUsed, tokenForActor, expireEffects, DSNMarkDiceDisplayed, evalAllConditionsAsync, hasCondition, areMidiKeysPressed, MidiOptions, getVitalityItem, checkMagicResistanceAndVulnerability, isAutoFastForward, FastForwardRollType, buildRollChoices, selectBestRollChoice, getTokenPerimeterPolygon, closestPointOnPerimeter, measurePointDistance, setUserInitiatedTarget, dnd5eRollType, updateUserTargets, isEffectExpired, processTurnOverTime, toggleStatus, isActivityType, getTokenDocument } from "./utils.js";
+import { bonusDialog, createConditionData, displayDSNForRoll, expireRollEffect, getCriticalDamage, getDeadStatus, getOptionalCountRemainingShortFlag, getUnconsciousStatus, getVitalityDeadStatus, getWoundedStatus, hasUsedAction, hasUsedBonusAction, hasUsedReaction, midiRenderRoll, notificationNotify, removeActionUsed, removeBonusActionUsed, removeReactionUsed, tokenForActor, expireEffects, DSNMarkDiceDisplayed, evalAllConditionsAsync, hasCondition, areMidiKeysPressed, MidiOptions, getVitalityItem, checkMagicResistanceAndVulnerability, isAutoFastForward, FastForwardRollType, buildRollChoices, selectBestRollChoice, getTokenPerimeterPolygon, closestPointOnPerimeter, measurePointDistance, setUserInitiatedTarget, dnd5eRollType, updateUserTargets, isEffectExpired, processTurnOverTime, toggleStatus, isActivityType, getTokenDocument, speakerFor, isMessageMode } from "./utils.js";
 import { computeActivityTemplateTargets } from "./activities/activityHelpers.js";
 import { installedModules } from "./setupModules.js";
 import { OnUseMacro, OnUseMacros } from "./apps/Item.js";
@@ -29,23 +29,23 @@ const NumericTerm = foundry.dice.terms.NumericTerm;
 
 // Module-level Set to track actors that should skip concentration checks
 // Used instead of actor flags to avoid database writes and orphaned flags
-export const skipConcentrationActorUuids = new Set<string>();
+export const skipConcentrationActorUuids = new Set<string | null>();
 
 // Per-actor semaphores to prevent race conditions in checkWounded
 // Multiple concurrent updateActor hooks can fire for the same actor, causing duplicate status effects
-const actorWoundedSemaphores = new Map<string, foundry.utils.Semaphore>();
+const actorWoundedSemaphores = new Map<string | null, foundry.utils.Semaphore>();
 
 /** A workflow is waiting on a save or check from this actor (its requests are keyed by the token's id or the actor's uuid). */
 function awaitedByWorkflow(actor: Actor.Implementation): boolean {
   const tokenIds = actor.getActiveTokens(false, true).map(t => t.id);
   for (const workflow of Workflow.workflows.values()) {
     const requests = workflow.saveRequests;
-    if (requests && (requests[actor.uuid] || tokenIds.some(id => id && requests[id]))) return true;
+    if (requests && ((actor.uuid && requests[actor.uuid]) || tokenIds.some(id => id && requests[id]))) return true;
   }
   return false;
 }
 
-export function getActorWoundedSemaphore(actorUuid: string): foundry.utils.Semaphore {
+export function getActorWoundedSemaphore(actorUuid: string | null): foundry.utils.Semaphore {
   if (!actorWoundedSemaphores.has(actorUuid)) {
     actorWoundedSemaphores.set(actorUuid, new foundry.utils.Semaphore(1));
   }
@@ -263,12 +263,9 @@ export function initPatching() {
 function _updateOccludedSurfacesWrapper(this: any, wrapped: Function, flags: any) {
   wrapped(flags);
   if (configSettings.optionalRules.surfaceOcclusion === false) return;
-  // @ts-expect-error v14 canvas.level not in fvtt-types
   if (!canvas?.scene || !canvas.level) return;
-  // @ts-expect-error v14 scene.levels not in fvtt-types
   if ((canvas.scene.levels?.size ?? 0) <= 1) return;
 
-  // @ts-expect-error v14 canvas.level not in fvtt-types
   const levelTop = canvas.level.elevation.top;
   if (!Number.isFinite(levelTop)) return;
 
@@ -959,7 +956,7 @@ async function combatPreUpdate(this: Combat.Implementation, wrapped, changed: Co
 }
 
 /** dnd5e recovers uses "on initiative" when it rolls initiative; do the same for midi's reroll, once the round has advanced. */
-async function recoverRerolledInitiativeUses(combat: Combat.Implementation, changed: Combat.UpdateData, options: Combat.Database.UpdateOptions, userId: string) {
+async function recoverRerolledInitiativeUses(combat: Combat.Implementation, changed: Combat.UpdateData, options: Combat.Database.OnUpdateOptions, userId: string) {
   const rerolled = (options as { midiRerolledInitiative?: string[] }).midiRerolledInitiative;
   if (userId !== game.user?.id || !rerolled?.length) return;
   for (const id of rerolled) {
@@ -983,9 +980,9 @@ async function rerollInitiativeInUpdate(combat: Combat.Implementation, changed: 
       initiative = roll.total ?? 0;
       byGroup.set(group, initiative);
       // Private for hidden combatants, as core's rollInitiative.
-      const messageOptions = { messageMode: combatant.hidden ? "gm" : undefined, create: false as const };
+      const messageOptions = { messageMode: combatant.hidden ? "gm" as const : undefined, create: false as const };
       const chatData: any = await roll.toMessage({
-        speaker: ChatMessage.implementation.getSpeaker({ actor: combatant.actor, token: combatant.token, alias: combatant.name }),
+        speaker: speakerFor({ actor: combatant.actor, token: combatant.token, alias: combatant.name }),
         flavor: game.i18n?.format("COMBAT.RollsInitiative", { name: foundry.utils.escapeHTML(combatant.name ?? "") }),
         flags: { core: { initiativeRoll: true } }
       }, messageOptions);
@@ -1474,9 +1471,9 @@ async function doD20Roll(this: Actor.Implementation, wrapped, kind: D20RollKind,
 
     if (message.create !== false && foundry.utils.getProperty(result, "flags.midi-qol.chatMessageShown") !== true) {
       const messageData: any = foundry.utils.mergeObject({ sound: CONFIG.sounds.dice }, message.data ?? {});
-      messageData.speaker = ChatMessage.getSpeaker({ actor: this, token: this.token ?? undefined });
+      messageData.speaker = speakerFor({ actor: this, token: this.token ?? undefined });
       messageData.rolls = [...result];
-      const chatMsg = await ChatMessage.create(messageData, { messageMode: rollMode });
+      const chatMsg = await ChatMessage.create(messageData, { messageMode: isMessageMode(rollMode) ? rollMode : undefined });
       // dnd5e sets roll.parent in buildPost; replicate here since we bypass buildPost
       if (chatMsg) result.forEach(r => (r as any).parent = chatMsg);
     }
@@ -2457,7 +2454,7 @@ export function getItemEffectsToDelete(args: { actor: Actor.Implementation, orig
     effectsToDelete = actorEffects?.filter(ef => {
       if (isEffectExpired(ef)) return false;
       return ef.origin === origin
-        && !ignore.includes(ef.uuid)
+        && !(ef.uuid !== null && ignore.includes(ef.uuid))
         && (!ignoreTransfer || ef.flags?.dae?.transfer !== true)
     }).map(ef => ef.id!);
     warn("getItemEffectsToDelete: effectsToDelete ", actor.name, effectsToDelete, options);
@@ -2470,7 +2467,7 @@ export function getItemEffectsToDelete(args: { actor: Actor.Implementation, orig
   }
 }
 
-export async function zeroHPExpiry(actor: Actor.Implementation, update: Actor.UpdateData, options: Actor.Database.UpdateOptions, user: string) {
+export async function zeroHPExpiry(actor: Actor.Implementation, update: Actor.UpdateData, options: Actor.Database.OnUpdateOptions, user: string) {
   const hpUpdate = foundry.utils.getProperty(update, "system.attributes.hp.value");
   if (hpUpdate !== 0) return;
   const expiredEffects: ActiveEffect[] = [];
@@ -2485,7 +2482,7 @@ export async function zeroHPExpiry(actor: Actor.Implementation, update: Actor.Up
  * Called from Hooks.ts updateItem handler for vitality changes.
  * @deprecated Use processWoundedStatus directly for new code.
  */
-export async function checkWounded(actor: Actor.Implementation, _update: Actor.UpdateData, _options: Actor.Database.UpdateOptions, _user: string, _vitalityValue?: number) {
+export async function checkWounded(actor: Actor.Implementation, _update: Actor.UpdateData, _options: Actor.Database.OnUpdateOptions, _user: string, _vitalityValue?: number) {
   // Use the per-actor semaphore to serialize with actorOnUpdate
   const semaphore = getActorWoundedSemaphore(actor.uuid);
   await semaphore.add(async () => {
@@ -2513,7 +2510,7 @@ async function setDeadStatus(actor: Actor.Implementation, options: { effect: CON
 
   // Only update defeated status if the toggle actually changed something
   if (useDefeated && result !== undefined) {
-    const combatants = game.combat?.getCombatantsByActor(actor) ?? [];
+    const combatants = (actor.id ? game.combat?.getCombatantsByActor(actor.id) : undefined) ?? [];
     for (let combatant of combatants) await combatant.update({ defeated: makeDead }, {});
   }
 }
@@ -2558,7 +2555,7 @@ export async function challengeConcentration(this: Actor.Implementation, wrapped
       <div><span class="hidden-dc">${enrichers.createRollLabel({ ...dataset, ...config, hideDC: true })} ${i18n("DND5E.Roll")}</span></div>
       </div>`,
       whisper: game.users?.filter(user => this.testUserPermission(user, "OWNER")).map(user => user.id),
-      speaker: ChatMessage.implementation.getSpeaker({ actor: this })
+      speaker: speakerFor({ actor: this })
     });
   }
   // item rolls are picked up when the damage is updated in dnd5e.damageActor
@@ -2576,10 +2573,11 @@ export async function checkDeleteTemplate(templateDocument: MeasuredTemplateDocu
   // v14: Region and MeasuredTemplate share the same ID but have different UUIDs.
   // Dependents may be tracked under either UUID (e.g., addDependent(template, ...) uses the
   // MeasuredTemplate UUID), so cascade under both the Region UUID and the MeasuredTemplate UUID.
-  if (preferredActiveGM()?.isSelf) {
-    await MidiDependentsRegistry.deleteDependents(templateDocument.uuid);
-    const altUuid = templateDocument.uuid.replace(".Region.", ".MeasuredTemplate.");
-    if (altUuid !== templateDocument.uuid) {
+  const templateUuid = templateDocument.uuid;
+  if (preferredActiveGM()?.isSelf && templateUuid) {
+    await MidiDependentsRegistry.deleteDependents(templateUuid);
+    const altUuid = templateUuid.replace(".Region.", ".MeasuredTemplate.");
+    if (altUuid !== templateUuid) {
       await MidiDependentsRegistry.deleteDependents(altUuid);
     }
   }
@@ -2604,7 +2602,7 @@ export async function checkDeleteTemplate(templateDocument: MeasuredTemplateDocu
     }
   }
 };
-const endingParents = new Set<string>();
+const endingParents = new Set<string | null>();
 
 // This is done as a wrapper so that there is no race condition when hp reaches 0 also trying to remove condition
 // This version will always fire first, remove concentration if needed and complete before the hp update is processed.
@@ -2771,12 +2769,18 @@ function actorGetRollData(this: Actor.Implementation, wrapped, ...args) {
 // dnd5e resolves dependentOn with fromUuidSync during item preparation. For an item on an unlinked token that goes back
 // through the token's lazy delta while it is being built (Foundry 14.369) and recurses, so resolve UUIDs inside the
 // item's own token actor from the actor.
+function isStoredItem(item: Item.Implementation): item is Item.Stored {
+  return item.id !== null;
+}
+
 function itemDependentOrigin(this: Item.Implementation, wrapped) {
   const uuid = this.flags.dnd5e?.dependentOn;
   const actor = this.actor;
-  if (uuid && actor?.isToken) {
-    const resolved = foundry.utils.parseUuid(uuid, { relative: this })?.uuid;
-    if (resolved?.startsWith(`${actor.uuid}.`)) return actorEmbeddedByPath(actor, resolved.slice(actor.uuid.length + 1)) ?? null;
+  const actorUuid = actor?.uuid;
+  const item = this;
+  if (uuid && actor?.isToken && actorUuid && isStoredItem(item)) {
+    const resolved = foundry.utils.parseUuid(uuid, { relative: item })?.uuid;
+    if (resolved?.startsWith(`${actorUuid}.`)) return actorEmbeddedByPath(actor, resolved.slice(actorUuid.length + 1)) ?? null;
   }
   return wrapped();
 }

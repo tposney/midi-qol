@@ -64,7 +64,7 @@ const warnGMOnly = () => foundry.utils.logCompatibilityWarning("midi-qol | a usa
   { since: "14.6.9", until: "14.8.0", once: true });
 
 /** The old keys as getters reading the card's workflow (Workflow.cardView), each read warning that it is deprecated */
-function defineLegacyCardFlags(flags: Record<string, unknown>, cardUuid: string) {
+function defineLegacyCardFlags(flags: Record<string, unknown>, cardUuid: string | null) {
   for (const [key, [name, read]] of Object.entries(LEGACY_CARD_FLAGS)) {
     if (Object.prototype.hasOwnProperty.call(flags, key)) continue;
     const warn = () => foundry.utils.logCompatibilityWarning(`midi-qol | a usage card's flags.midi-qol.${key} is deprecated: use MidiQOL.Workflow.getWorkflow(card.uuid).${name} (read-only for users other than the card's author).`,
@@ -77,7 +77,7 @@ function defineLegacyCardFlags(flags: Record<string, unknown>, cardUuid: string)
         warn();
         readingLegacyFlag = true;
         try {
-          const workflow = Workflow.cardView(cardUuid);
+          const workflow = cardUuid ? Workflow.cardView(cardUuid) : undefined;
           return workflow ? read(workflow) : undefined;
         } finally {
           readingLegacyFlag = false;

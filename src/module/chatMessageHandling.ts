@@ -1,8 +1,8 @@
 import { debug, warn, error, debugEnabled, MODULE_ID } from "../midi-qol.js";
 import { nsaFlag, coloredBorders, forceHideRoll } from "./settings.js";
-import { playerForActor, doOverTimeEffect, isInCombat, dnd5eRollType } from "./utils.js";
+import { playerForActor, doOverTimeEffect, isInCombat, dnd5eRollType, speakerFor } from "./utils.js";
 import { TroubleShooter } from "./apps/TroubleShooter.js";
-export let colorChatMessageHandler = (message: ChatMessage.Implementation, html: HTMLElement, data: ChatMessage.MessageData) => {
+export let colorChatMessageHandler = (message: ChatMessage.Implementation, html: HTMLElement, data: ChatMessage.MessageData | undefined) => {
   if (coloredBorders === "none") return true;
   let userId = message.author?.id ?? "";
   let actor = message.speakerActor;
@@ -23,12 +23,12 @@ export let colorChatMessageHandler = (message: ChatMessage.Implementation, html:
 
 // TODO think about monks tb on preUpdateChatMessage?
 // Also should ideally be async.
-export function checkOverTimeSaves(message: ChatMessage.Implementation, data: ChatMessage.CreateData, options: ChatMessage.Database.CreateOptions, user: string) {
+export function checkOverTimeSaves(message: ChatMessage.Implementation, data: ChatMessage.CreateData, options: ChatMessage.Database.PreCreateOptions, user: string) {
   // "death" is deliberately excluded: 6.0 files death saves under the "save" sub-type, where the old
   // flag gave them their own string, so testing the sub-type alone would newly trigger over-time
   // effects on death saves.
   if (!message.rolls?.length || !["skill", "save", "ability", "tool"].includes(dnd5eRollType(message) ?? "")) return true;
-  let actor = message.speakerActor;
+  let actor: Actor.Implementation | null = message.speakerActor;
   if (message.speaker.token) {
     actor = game.scenes?.get(message.speaker?.scene ?? "")?.tokens?.get(message.speaker.token)?.actor ?? actor;
   }
@@ -43,7 +43,7 @@ export function checkOverTimeSaves(message: ChatMessage.Implementation, data: Ch
   }
   // Check that it is the actor's turn
   let activeCombatants = game.combats?.combats.map(combat => combat.combatant?.token?.id)
-  const isTurn = activeCombatants?.includes(ChatMessage.getSpeaker({ actor })?.token);
+  const isTurn = activeCombatants?.includes(speakerFor({ actor })?.token);
   const inCombat = isInCombat(actor);
   if (!isTurn && inCombat) {
     return true;
@@ -83,7 +83,7 @@ export let nsaMessageHandler = (message: ChatMessage.Implementation, data: ChatM
   return true;
 }
 
-export let hideRollRender = (msg: ChatMessage.Implementation, html: HTMLElement, data: ChatMessage.MessageData) => {
+export let hideRollRender = (msg: ChatMessage.Implementation, html: HTMLElement, data: ChatMessage.MessageData | undefined) => {
   if (forceHideRoll && (msg.whisper.length > 0 || msg?.blind)) {
     if (!game.user?.isGM && !msg.isAuthor && msg.whisper.indexOf(game.user?.id ?? "") === -1) {
       if (debugEnabled > 0) warn("hideRollRender | hiding message", msg.whisper);
@@ -97,7 +97,7 @@ export let hideRollRender = (msg: ChatMessage.Implementation, html: HTMLElement,
 
 
 
-export let hideRollUpdate = (message: ChatMessage.Implementation, data: ChatMessage.UpdateData, options: ChatMessage.Database.UpdateOptions, id: string) => {
+export let hideRollUpdate = (message: ChatMessage.Implementation, data: ChatMessage.UpdateData, options: ChatMessage.Database.OnUpdateOptions, id: string) => {
   return true;
   /*
   if (forceHideRoll && (message.whisper.length > 0 || message.blind)) {
@@ -115,7 +115,7 @@ export let hideRollUpdate = (message: ChatMessage.Implementation, data: ChatMess
   */
 };
 
-export let hideStuffHandler = (message: ChatMessage.Implementation, html: HTMLElement, data: ChatMessage.MessageData) => {
+export let hideStuffHandler = (message: ChatMessage.Implementation, html: HTMLElement, data: ChatMessage.MessageData | undefined) => {
   if (debugEnabled > 1) debug("hideStuffHandler message: ", message.id, message)
   // A roll forced blind by midi's settings is not shown to players at all
   if (foundry.utils.getProperty(message, "flags.midi-qol.forcedBlind") && !game.user?.isGM) {

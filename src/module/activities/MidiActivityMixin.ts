@@ -86,8 +86,7 @@ import {
   toMessageMode,
   rollModeToMessageMode,
   tokenSourceCenter,
-  isActivityType
-} from "../utils.js";
+  isActivityType, speakerFor } from "../utils.js";
 import { activityHasScaledTargetCount, attachTokenOptions, templateOriginOptions, createActivityTemplateRegions, preTemplateTargets, removeFlanking, requiresTargetConfirmation, selectTargetsFromTemplates, setDamageRollMinTerms, shouldEnforceSingleTarget } from "./activityHelpers.js";
 
 export class MidiConditionField extends globalThis.dnd5e.dataModels.fields.FormulaField {
@@ -309,7 +308,7 @@ export let MidiActivityMixin = Base => {
         const choosesCreatures = !this.target?.template?.type && (!!this.attack || !["", "self", undefined].includes(this.target?.affects?.type));
         if (offScene === "viewed" && choosesCreatures) usage.midiOptions.workflowOptions.targetConfirmation ??= "always";
         // Capture current targets before template placement can replace them
-        usage.midiOptions.workflowOptions.preSelectedTargetUuids ??= Array.from(game.user?.targets ?? []).map(t => t.document.uuid);
+        usage.midiOptions.workflowOptions.preSelectedTargetUuids ??= Array.from(game.user?.targets ?? []).map(t => t.document.uuid).filter((uuid): uuid is string => !!uuid);
         if (debugEnabled > 0) warn("MidiQOL | MidiActivity | use | Called", usage, dialog, message);
         let item = this.item.clone({}, { keepId: true });
         // @ts-expect-error no dnd5e-types
@@ -326,8 +325,8 @@ export let MidiActivityMixin = Base => {
         if (!(usage.workflow instanceof TrapWorkflow)) { 
           //TODO stupidly the constructor for TrapWorkflow is not compatible with the workflow constructor - will need to clean that up
           if (configSettings.savesBeforeDamage)
-          usage.workflow = new SavesFirstWorkflow(activity.actor ?? null, activity, ChatMessage.getSpeaker({ actor: activity.item.actor }), null, { workflowOptions });
-          else usage.workflow = new workflowClass(activity.actor ?? null, activity, ChatMessage.getSpeaker({ actor: activity.item.actor }), null, { workflowOptions });
+          usage.workflow = new SavesFirstWorkflow(activity.actor ?? null, activity, speakerFor({ actor: activity.item.actor }), null, { workflowOptions });
+          else usage.workflow = new workflowClass(activity.actor ?? null, activity, speakerFor({ actor: activity.item.actor }), null, { workflowOptions });
         }
         Workflow.setUse(activity, usage.workflow!);
         usage.workflow!.sequenceId = usage.sequenceId;
@@ -1160,7 +1159,7 @@ export let MidiActivityMixin = Base => {
       }
       // remove selection of un-targetable targets TODO
       if (canvas.scene) {
-        const tokensIdsToUse: Array<string> = workflow.targets.tokens.filter(t => isValidTarget(t)).map(t => t.id);
+        const tokensIdsToUse: Array<string | null> = workflow.targets.tokens.filter(t => isValidTarget(t)).map(t => t.id);
         updateUserTargets(tokensIdsToUse);
       }
       return true;
@@ -1295,7 +1294,7 @@ export let MidiActivityMixin = Base => {
       // Classified unless the caller says otherwise; follows checkReaction when not given. An attack per target's
       // per-target uses check no reactions (the first use did) but classify every target.
       if (inReactionContext && reactingActor && (options.checkAoO ?? options.checkReaction)) {
-        const isTurn = game.combat?.combatant === game.combat?.getCombatantsByActor(reactingActor)[0];
+        const isTurn = game.combat?.combatant === (reactingActor.id ? game.combat?.getCombatantsByActor(reactingActor.id) : undefined)?.[0];
         if (!isTurn && needsAOOCheck(reactingActor) && this.attack && this.effectiveActivationType !== "special")
           workflow.AoO = true;
       }

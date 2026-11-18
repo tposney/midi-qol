@@ -221,7 +221,7 @@ function closePlayerRollDialogs(info: WaitInfo) {
 }
 
 /** dnd5e's roll dialogs open on this client for the actor. */
-export function rollDialogsFor(actorUuid: string): foundry.applications.api.ApplicationV2[] {
+export function rollDialogsFor(actorUuid: string | null): foundry.applications.api.ApplicationV2[] {
   const RollConfigurationDialog = globalThis.dnd5e?.applications?.dice?.RollConfigurationDialog;
   if (!RollConfigurationDialog) return [];
   return [...foundry.applications.instances.values()].filter(app => {
@@ -232,7 +232,7 @@ export function rollDialogsFor(actorUuid: string): foundry.applications.api.Appl
 }
 
 /** Close dnd5e's roll dialogs open on this client for the actor (as cancelled; the roll is no longer wanted). */
-export function _closePlayerRollDialogs({ actorUuid }: { actorUuid: string }) {
+export function _closePlayerRollDialogs({ actorUuid }: { actorUuid: string | null }) {
   for (const app of rollDialogsFor(actorUuid)) app.close();
 }
 

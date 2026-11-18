@@ -102,7 +102,7 @@ let defineMidiTransformActivityClass = <T extends Activity>(ActivityClass: T) =>
         //@ts-expect-error transformInto - dnd5e method
         const transformedTokens: TokenDocument[] | TokenDocument | undefined = await actor.transformInto(source, this.settings);
         if (transformedTokens) {
-          transformedActorUuids.push(originalActorUuid);
+          if (originalActorUuid) transformedActorUuids.push(originalActorUuid);
           if (transformedTokens instanceof Array && transformedTokens[0]?.actor)
             transformedActors.push(transformedTokens[0].actor);
           else if (transformedTokens instanceof TokenDocument && transformedTokens.actor)

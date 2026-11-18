@@ -102,7 +102,6 @@ export class MidiRollChoiceDialog extends D20RollConfigurationDialog {
     if (choiceType === "skill" || choiceType === "tool") {
       context.fields.unshift({
         field: new foundry.data.fields.StringField({
-          //@ts-expect-error no dnd5e-types
           required: true, blank: false, label: game.i18n.localize("DND5E.Abilities")
         }),
         name: "ability",
