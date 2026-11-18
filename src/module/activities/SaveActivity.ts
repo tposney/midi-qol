@@ -88,7 +88,7 @@ let defineMidiSaveSheetClass = (baseClass: any) => {
       }
     };
 
-    static DEFAULT_OPTIONS = {
+    static DEFAULT_OPTIONS: foundry.applications.api.ApplicationV2.DefaultOptions = {
       ...super.DEFAULT_OPTIONS,
       classes: ["save-activity", "damage-activity"]
     }

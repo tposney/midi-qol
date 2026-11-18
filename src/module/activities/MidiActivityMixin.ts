@@ -1813,7 +1813,7 @@ export let MidiActivityMixin = Base => {
 export let MidiActivityMixinSheet = Base => {
   return class MidiActivitySheet extends Base {
 
-    static DEFAULT_OPTIONS = {
+    static DEFAULT_OPTIONS: foundry.applications.api.ApplicationV2.DefaultOptions = {
       ...super.DEFAULT_OPTIONS,
       actions: {
         ...super.DEFAULT_OPTIONS.actions,
