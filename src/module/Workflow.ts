@@ -1,7 +1,8 @@
-import { allSteps, getStep, globalStepChangesFor, stepForMethod } from "./steps/steps.js";
-import { assembleSteps, stepAfterInFlow, type AssembledSteps } from "./steps/assembly.js";
+import { allSteps, getStep, stepForMethod } from "./steps/steps.js";
+import { assembleSteps, stepAfterInFlow, type AssembledSteps, type StepChange, type StepChangeInput } from "./steps/assembly.js";
+import { missingSteps, reportAssembly, useStepChanges } from "./steps/api.js";
 import { getFlow } from "./steps/flows.js";
-import { runSteps, SUSPEND, type EngineHost, type StepMove } from "./steps/engine.js";
+import { ABORT, runSteps, SUSPEND, type EngineHost, type StepMove } from "./steps/engine.js";
 import type { PortName, WorkflowPorts } from "./steps/ports.js";
 import { getDistance } from "./services/distance/service.js";
 import { computeFlankedStatus, computeFlankingStatus } from "./services/flanking/service.js";
@@ -970,7 +971,8 @@ export class Workflow {
     return this.methodForStep(this.#currentStep);
   }
   set currentAction(currentAction: WorkflowState | string) {
-    this.#currentStep = Workflow.stepIdOf(currentAction);
+    // A step id that isn't registered here is kept: running it stops the use with a message (#runStep)
+    this.#currentStep = Workflow.stepIdOf(currentAction) ?? (typeof currentAction === "string" ? currentAction : undefined);
     if (this.#currentStep === "midi-qol.SavesComplete") this.#savesResolved = true;
     this.#persisted.setClass(this.constructor.name);
     // Recorded for M2's flows; a rebuilt workflow still works out where it waits from its card (cardResumePoint)
@@ -1969,6 +1971,7 @@ export class Workflow {
   /** A rebuilt workflow's values that are worked out from its card and the canvas, not stored */
   #restoreFromCard() {
     this.suspended = true;
+    this.#fromCard = true;
     this.itemUseComplete = true;
     if (this.#persisted.scalar("isCritical", false)) this.attackRollModifierTracker.critical.setOverride(true, "restored", "Restored from chat card");
     if (this.#persisted.scalar("isFumble", false)) this.attackRollModifierTracker.fumble.setOverride(true, "restored", "Restored from chat card");
@@ -2461,9 +2464,35 @@ export class Workflow {
   /** A move with inserted steps under way (steps/engine.ts), kept across runs */
   #stepMove: StepMove | undefined;
   #assembledSteps: AssembledSteps | undefined;
-  /** This use's changes to its flow (steps/assembly.ts), from the global layer (registered changes whose when applies) */
+  /** Rebuilt from its card: its flow changes are the ones stored when it started */
+  #fromCard = false;
+  /**
+   * This use's changes to its flow (steps/assembly.ts): the global changes whose `when` applies and its call's
+   * (`workflowOptions.steps`), worked out when it first runs a step and stored on the card for a rebuild.
+   */
   get assembledSteps(): AssembledSteps {
-    return this.#assembledSteps ??= assembleSteps(globalStepChangesFor(this));
+    if (this.#assembledSteps) return this.#assembledSteps;
+    let changes: StepChange[];
+    if (this.#fromCard) changes = this.#persisted.scalar<StepChange[] | undefined>("stepChanges", undefined) ?? [];
+    else {
+      changes = useStepChanges(this, this.workflowOptions?.steps);
+      if (changes.length && !this.readOnly) this.#persisted.setScalar("stepChanges", changes);
+    }
+    this.#assembledSteps = assembleSteps(changes);
+    reportAssembly(this.#assembledSteps);
+    const missing = missingSteps(changes);
+    if (missing.length) this.#reportMissingSteps(missing);
+    return this.#assembledSteps;
+  }
+
+  #missingReported = false;
+  /** A step the use needs isn't registered here (its module isn't active on this client, or it changed): said once */
+  #reportMissingSteps(missing: string[]) {
+    if (this.#missingReported) return;
+    this.#missingReported = true;
+    const text = `${this.workflowName}: this use needs the step${missing.length > 1 ? "s" : ""} ${missing.join(", ")}, not registered on this client (is the module that adds ${missing.length > 1 ? "them" : "it"} active?)`;
+    ui.notifications?.error(`midi-qol | ${text}`);
+    TroubleShooter.recordError(new Error(text), "steps");
   }
 
   /** Run one step: its replacement if the use has one, inside its wrappers; midi's steps by their method, a module's by its run */
@@ -2471,6 +2500,11 @@ export class Workflow {
     if (!id) throw new Error(`${this.workflowName}: no step to run`);
     const anchor = this.assembledSteps.anchors[id];
     const target = anchor?.replacement ?? id;
+    const missing = [target, ...(anchor?.wraps ?? [])].filter(step => !getStep(step));
+    if (missing.length) {
+      this.#reportMissingSteps(missing);
+      return ABORT;
+    }
     let run = (): Promise<string | undefined> => this.#runOwn(target);
     for (const wrapperId of [...(anchor?.wraps ?? [])].reverse()) {
       const wrapper = getStep(wrapperId);
@@ -9437,6 +9471,8 @@ export type WorkflowOptions = InexactPartial<{
   versatile: boolean;
   workflowName: string;
   castUsesReaction: boolean;
+  /** This use's changes to its flow (steps/api.ts): the call layer, winning over modules' global changes */
+  steps: StepChangeInput[];
   castUsesBonusAction: boolean;
   coverOrigin: { x: number, y: number, elevation?: number };
   templateUuid: string;

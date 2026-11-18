@@ -35,6 +35,13 @@ export const COARSE_STEPS: Readonly<Record<string, readonly string[]>> = {
 const coarseOf = new Map<string, string>();
 for (const [coarse, fine] of Object.entries(COARSE_STEPS)) for (const name of fine) coarseOf.set(`midi-qol.${name}`, coarse);
 
+/** A step an insert anchors on: a coarse step's first fine step (before) or last (after); a fine step itself. */
+export function insertAnchor(id: string, side: "before" | "after"): string {
+  const fine = COARSE_STEPS[id];
+  if (!fine?.length) return id;
+  return `midi-qol.${side === "before" ? fine[0] : fine[fine.length - 1]}`;
+}
+
 /** The coarse step a fine step belongs to. */
 export function coarseStepOf(stepId: string): string | undefined {
   return coarseOf.get(stepId);
@@ -64,9 +71,9 @@ const TAIL = ["AllRollsComplete", "ApplyDynamicEffects", "RollFinished", "Cleanu
 /** Every flow can abort or be cancelled. */
 export const ABORT_STEPS: readonly string[] = ids("Abort", "Cancel");
 
-registerFlow({ id: "midi-qol.standard", label: "Standard", steps: ids(...PREAMBLE, ...UTILITY, ...ATTACK, ...SAVES, ...DAMAGE_ROLL, ...TAIL) });
+registerFlow({ id: "midi-qol.standard", label: "Standard", steps: ids(...PREAMBLE, ...UTILITY, ...ATTACK, ...DAMAGE_ROLL, ...SAVES, ...TAIL) });
 registerFlow({ id: "midi-qol.savesFirst", label: "Saves before damage", steps: ids(...PREAMBLE, ...UTILITY, ...ATTACK, ...SAVES, ...DAMAGE_ROLL, ...TAIL) });
-registerFlow({ id: "midi-qol.activeDefence", label: "Active defence", steps: ids(...PREAMBLE, ...UTILITY, ...ATTACK, ...SAVES, ...DAMAGE_ROLL, ...TAIL) });
+registerFlow({ id: "midi-qol.activeDefence", label: "Active defence", steps: ids(...PREAMBLE, ...UTILITY, ...ATTACK, ...DAMAGE_ROLL, ...SAVES, ...TAIL) });
 registerFlow({ id: "midi-qol.damageOnly", label: "Damage only", steps: ids("NoAction", "Start", ...TAIL) });
 registerFlow({ id: "midi-qol.damageReroll", label: "Damage reroll", steps: ids("NoAction", ...DAMAGE_ROLL, ...SAVES, ...TAIL) });
 registerFlow({ id: "midi-qol.trap", label: "Trap",

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { assembleSteps, stepAfterInFlow } from "../src/module/steps/assembly.js";
+import { assembleSteps, normaliseChanges, previewSteps, stepAfterInFlow, stepsUsed } from "../src/module/steps/assembly.js";
 
 describe("assembleSteps", () => {
   it("inserts before and after their anchors: global before call, then priority, then order", () => {
@@ -55,5 +55,44 @@ describe("assembleSteps", () => {
     expect(stepAfterInFlow(["a", "b", "c"], "b")).toBe("c");
     expect(stepAfterInFlow(["a", "b"], "b")).toBeUndefined();
     expect(stepAfterInFlow(["a"], "z")).toBeUndefined();
+  });
+});
+
+describe("normaliseChanges / previewSteps", () => {
+  const options = { insertAnchor: (id: string, side: "before" | "after") => id === "c.damage" ? (side === "before" ? "D1" : "D2") : id, isCoarse: (id: string) => id === "c.damage" };
+
+  it("anchors inserts on a coarse step's first or last fine step; sets the layer", () => {
+    const { changes, problems } = normaliseChanges([{ kind: "insert", step: "x", after: "c.damage" }, { kind: "insert", step: "y", before: "c.damage" }], "call", options);
+    expect(problems).toEqual([]);
+    expect(changes).toEqual([
+      { kind: "insert", step: "x", before: undefined, after: "D2", layer: "call", priority: undefined, source: undefined },
+      { kind: "insert", step: "y", before: "D1", after: undefined, layer: "call", priority: undefined, source: undefined }
+    ]);
+  });
+
+  it("drops what isn't a change, and replace/wrap/remove on a coarse step", () => {
+    const { changes, problems } = normaliseChanges([{ kind: "insert", step: "x" }, { kind: "replace", target: "c.damage", step: "r" }, { kind: "nope" }, null, { kind: "wrap", target: "A" }], "global", options);
+    expect(changes).toEqual([]);
+    expect(problems).toHaveLength(5);
+  });
+
+  it("previewSteps shows inserts, replacements, wraps; leaves removed steps out", () => {
+    const assembled = assembleSteps([
+      { kind: "insert", step: "i", after: "A", layer: "global" },
+      { kind: "replace", target: "B", step: "r", layer: "call" },
+      { kind: "wrap", target: "B", wrapper: "w", layer: "global" },
+      { kind: "remove", target: "C", layer: "global" }
+    ]);
+    expect(previewSteps(["A", "B", "C", "D"], assembled)).toEqual(["A", "i", "[w](B -> r)", "D"]);
+  });
+
+  it("stepsUsed lists inserted, replacement and wrapper steps once", () => {
+    expect(stepsUsed([
+      { kind: "insert", step: "i", after: "A", layer: "global" },
+      { kind: "insert", step: "i", before: "B", layer: "call" },
+      { kind: "replace", target: "B", step: "r", layer: "call" },
+      { kind: "wrap", target: "B", wrapper: "w", layer: "global" },
+      { kind: "remove", target: "C", layer: "global" }
+    ])).toEqual(["i", "r", "w"]);
   });
 });

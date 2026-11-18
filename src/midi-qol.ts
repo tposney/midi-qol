@@ -279,7 +279,12 @@ Object.assign(globalThis.MidiQOL, {
   getDistance,
   measureTokens,
   applyCalculatedDamage,
-  flows: { get: getFlow, list: allFlows, coarseStepOf },
+  flows: {
+    get: getFlow, list: allFlows, coarseStepOf,
+    /** What a use of `activity` would run (steps/api.ts previewFlow); `flow` defaults to the one the settings pick. */
+    preview: (activity: Activity, options: { flow?: string, steps?: unknown[] } = {}) =>
+      previewFlow(activity, options, configSettings.savesBeforeDamage ? "midi-qol.savesFirst" : "midi-qol.standard")
+  },
   steps: stepsApi,
   damageCalculation: { get: getDamageCalculationStep, register: registerDamageCalculationStep, remove: removeDamageCalculationStep, order: damageCalculationOrder },
   UNMEASURABLE_DISTANCE,
@@ -1050,7 +1055,8 @@ import { damageCalculationOrder, getDamageCalculationStep, registerDamageCalcula
 import { registerBonusApprovalQuery } from "./module/services/rollBonuses/approval.js";
 import { registerDamageMessageSummary } from "./module/damage/messages.js";
 import { defineDamageContributionsService } from "./module/services/damageContributions/service.js";
-import { stepsApi } from "./module/steps/api.js";
+import { previewFlow, stepsApi } from "./module/steps/api.js";
+import type { Activity } from "./globals.js";
 import { defineFlankingService } from "./module/services/flanking/service.js";
 import { applyCalculatedDamage, registerDamageApplication } from "./module/damage/application.js";
 import { bonusPromptService, defineBonusPromptService } from "./module/services/rollBonuses/prompt.js";

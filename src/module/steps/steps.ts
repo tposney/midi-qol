@@ -24,6 +24,9 @@ export interface Step {
   flush?: boolean;
   /** A marker, not run: Suspend. */
   marker?: boolean;
+  /** Its contract: the workflow fields it reads and writes (midi's steps: SHARED_FIELDS). */
+  reads?: readonly string[];
+  writes?: readonly string[];
 }
 
 export interface StepContext {
@@ -60,9 +63,23 @@ export function removeStepChanges(match: string | GlobalStepChange): number {
   return before - globalChanges.length;
 }
 
-/** The global changes that apply to a use (a `when` that throws: not applied). */
+/** The global changes that apply to a use (a `when` that throws: not applied), as data. */
 export function globalStepChangesFor(workflow: unknown): StepChange[] {
-  return globalChanges.filter(change => { try { return change.when?.(workflow) ?? true; } catch { return false; } });
+  return globalChanges
+    .filter(change => { try { return change.when?.(workflow) ?? true; } catch { return false; } })
+    .map(({ when: _when, ...change }) => change as StepChange);
+}
+
+/** The fields a step promises to write: declared, and for midi's steps those SHARED_FIELDS lists it as writing. */
+export function stepWrites(id: string): string[] {
+  const shared = Object.entries(SHARED_FIELDS).filter(([, f]) => f.writers.includes(id)).map(([field]) => field);
+  return [...new Set([...(getStep(id)?.writes ?? []), ...shared])];
+}
+
+/** What a replacement leaves out of the step it replaces: the fields that step writes and the replacement doesn't declare. */
+export function contractGaps(target: string, replacement: string): string[] {
+  const writes = new Set(stepWrites(replacement));
+  return stepWrites(target).filter(field => !writes.has(field));
 }
 
 export function getStep(id: string): Step | undefined {

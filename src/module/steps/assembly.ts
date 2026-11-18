@@ -87,6 +87,73 @@ export function assembleSteps(changes: readonly StepChange[]): AssembledSteps {
   return { anchors, conflicts };
 }
 
+/** A change as a module or a call gives it: no layer (the caller sets it). */
+export type StepChangeInput = { [K in StepChange["kind"]]: Omit<Extract<StepChange, { kind: K }>, "layer"> }[StepChange["kind"]];
+
+/**
+ * Checked and normalised changes for a layer: inserts anchored on a coarse step go before its first fine step or after
+ * its last (`insertAnchor`); replace, wrap and remove need a fine step. A change that isn't one is dropped and described.
+ */
+export function normaliseChanges(input: readonly unknown[], layer: StepLayer, options: {
+  insertAnchor?: (id: string, side: "before" | "after") => string,
+  isCoarse?: (id: string) => boolean
+} = {}): { changes: StepChange[], problems: string[] } {
+  const changes: StepChange[] = [];
+  const problems: string[] = [];
+  const str = (value: unknown): value is string => typeof value === "string" && value.length > 0;
+  for (const raw of input) {
+    const change = raw as Record<string, unknown> | null;
+    const priority = typeof change?.priority === "number" ? change.priority : undefined;
+    const source = str(change?.source) ? change.source : undefined;
+    const describe = () => { try { return JSON.stringify(raw); } catch { return String(raw); } };
+    switch (change?.kind) {
+      case "insert": {
+        if (!str(change.step) || (!str(change.before) && !str(change.after))) { problems.push(`insert needs step and before or after: ${describe()}`); continue; }
+        const before = str(change.before) ? options.insertAnchor?.(change.before, "before") ?? change.before : undefined;
+        const after = str(change.after) ? options.insertAnchor?.(change.after, "after") ?? change.after : undefined;
+        changes.push({ kind: "insert", step: change.step, before, after, layer, priority, source });
+        continue;
+      }
+      case "replace": case "wrap": case "remove": {
+        const step = change.kind === "replace" ? change.step : change.kind === "wrap" ? change.wrapper : "-";
+        if (!str(change.target) || !str(step)) { problems.push(`${change.kind} needs target${change.kind === "remove" ? "" : change.kind === "wrap" ? " and wrapper" : " and step"}: ${describe()}`); continue; }
+        if (options.isCoarse?.(change.target)) { problems.push(`${change.kind} needs a step, not the coarse step ${change.target}: ${describe()}`); continue; }
+        if (change.kind === "replace") changes.push({ kind: "replace", target: change.target, step, layer, priority, source });
+        else if (change.kind === "wrap") changes.push({ kind: "wrap", target: change.target, wrapper: step, layer, priority, source });
+        else changes.push({ kind: "remove", target: change.target, layer, priority, source });
+        continue;
+      }
+      default:
+        problems.push(`not a step change: ${describe()}`);
+    }
+  }
+  return { changes, problems };
+}
+
+/** Every step a use's changes run (inserted, replacements, wrappers). */
+export function stepsUsed(changes: readonly StepChange[]): string[] {
+  return [...new Set(changes.flatMap(c => c.kind === "insert" || c.kind === "replace" ? [c.step] : c.kind === "wrap" ? [c.wrapper] : []))];
+}
+
+/**
+ * A use's steps in the order they'd run if every step went on to the next in `flow`: inserts around their anchors,
+ * replacements in their place (`a -> b` for b replacing a), wraps as `[w1, w2](step)`, removed steps left out.
+ */
+export function previewSteps(flow: readonly string[], assembled: AssembledSteps): string[] {
+  const list: string[] = [];
+  for (const id of flow) {
+    const anchor = assembled.anchors[id];
+    if (!anchor) { list.push(id); continue; }
+    list.push(...anchor.before);
+    if (!anchor.removed) {
+      const shown = anchor.replacement ? `${id} -> ${anchor.replacement}` : id;
+      list.push(anchor.wraps.length ? `[${anchor.wraps.join(", ")}](${shown})` : shown);
+    }
+    list.push(...anchor.after);
+  }
+  return list;
+}
+
 /** The step after `step` in a flow's list (where a removed step's use goes on to). */
 export function stepAfterInFlow(flow: readonly string[], step: string): string | undefined {
   const index = flow.indexOf(step);
