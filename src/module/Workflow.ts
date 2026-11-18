@@ -8795,8 +8795,8 @@ export class DamageOnlyWorkflow extends Workflow {
     this.effectTargets = new TokenDocumentSet(this.targets);
     // TODO change this to the new apply token damage call - sigh
     //this.damageList = await applyTokenDamage(this.rawDamageDetail, this.damageTotal, this.targets, this.item, new Set(), { existingDamage: this.damageList, superSavers: new Set(), semiSuperSavers: new Set(), workflow: this, updateContext: undefined, forceApply: false })
-    const result = await this.WorkflowState_AllRollsComplete()
-    return result;
+    // Returned, not called: the dispatcher fires AllRollsComplete's pre/post hooks and passes
+    return this.WorkflowState_AllRollsComplete;
   }
 }
 
