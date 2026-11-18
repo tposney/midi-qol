@@ -296,6 +296,7 @@
     "acknowledgedOverlaps",
     "AutoFastForwardAbilityRolls",
     "AutoRemoveTargets",
+    "BonusPrompt",
     "ChatCardUpdates",
     "ColoredBorders",
     "ConfigSettings",
@@ -320,6 +321,7 @@
     "UseWeakReferences"
   ],
   "services": [
+    "bonusPrompt",
     "chooseTokens",
     "cover",
     "damageModifiers",

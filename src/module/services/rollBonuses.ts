@@ -212,7 +212,8 @@ export async function applyOfferedBonus(bonus: OfferedBonus, ctx: BonusContext, 
   let roll = ctx.roll;
   try {
     roll = await applyBonusEffect(ctx.roll, bonus.effect, rollData, bonus.label);
-    const used: string[] = foundry.utils.getProperty(roll, "flags.midi-qol.optionalsUsed") as string[] ?? [];
+    // A changed roll is a new object: carry forward what was used on the roll it came from
+    const used: string[] = [...(foundry.utils.getProperty(ctx.roll, "flags.midi-qol.optionalsUsed") as string[] ?? [])];
     used.push(bonus.id);
     foundry.utils.setProperty(roll, "flags.midi-qol.optionalsUsed", used);
     if (!bonus.spendsOwnCost) await spendBonusCost(ctx.query.actor, bonus.cost, bonus.label);

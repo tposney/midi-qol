@@ -1,0 +1,12 @@
+<div class="midi-qol-bonus-prompt">
+    <div class="midi-qol-bonus-roll">{{{content}}}</div>
+    <ul class="midi-qol-bonus-list" style="list-style: none; padding: 0; margin: 0.5em 0;">
+        {{#each entries}}
+        <li><label style="display: flex; align-items: center; gap: 6px;"><input type="checkbox" name="bonus" value="{{id}}"> {{{icon}}} <span>{{{label}}}</span></label></li>
+        {{/each}}
+    </ul>
+    <div class="dialog-buttons midi-qol-dialog-buttons">
+        <button type="button" data-bonus-action="apply"><i class="fas fa-check"></i> {{localize "midi-qol.BonusPrompt.Apply"}}</button>
+        <button type="button" data-bonus-action="skip"><i class="fas fa-xmark"></i> {{localize "midi-qol.BonusPrompt.Skip"}}</button>
+    </div>
+</div>

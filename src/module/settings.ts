@@ -1691,6 +1691,16 @@ export const registerSettings = function () {
   registerChatCardSummariesSetting();
   registerRulesTextSettings();
 
+  game.settings.register("midi-qol", "BonusPrompt", {
+    name: "midi-qol.BonusPrompt.Name",
+    hint: "midi-qol.BonusPrompt.Hint",
+    scope: "client",
+    default: "phased",
+    config: true,
+    type: String,
+    choices: { phased: "midi-qol.BonusPrompt.Phased", classic: "midi-qol.BonusPrompt.Classic" }
+  });
+
   game.settings.register("midi-qol", "EnableWorkflow", {
     name: "midi-qol.EnableWorkflow.Name",
     hint: "midi-qol.EnableWorkflow.Hint",

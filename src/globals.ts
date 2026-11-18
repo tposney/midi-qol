@@ -182,6 +182,7 @@ declare module "fvtt-types/configuration" {
     "midi-qol.AutoRemoveTargets": string;
     "midi-qol.ForceHideRoll": boolean;
     "midi-qol.EnableWorkflow": boolean;
+    "midi-qol.BonusPrompt": string;
     "midi-qol.hiddenGroundCue": boolean;
     "midi-qol.ownChatCardSummary": string;
     "midi-qol.hiddenGroundCueStyle": string;

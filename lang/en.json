@@ -2432,5 +2432,11 @@
   "midi-qol.ChooseTokens.Title": "Choose",
   "midi-qol.ChooseTokens.Count": "Choose {min} to {max}",
   "midi-qol.ChooseTokens.Confirm": "Confirm",
-  "midi-qol.ChooseTokens.Cancel": "Cancel"
+  "midi-qol.ChooseTokens.Cancel": "Cancel",
+  "midi-qol.BonusPrompt.Name": "Bonus prompt",
+  "midi-qol.BonusPrompt.Hint": "How optional roll bonuses are offered: tick the ones you want and apply them together, or the classic dialog with one button per bonus (kept for one release line).",
+  "midi-qol.BonusPrompt.Phased": "Tick and apply",
+  "midi-qol.BonusPrompt.Classic": "Classic (one button per bonus)",
+  "midi-qol.BonusPrompt.Apply": "Apply",
+  "midi-qol.BonusPrompt.Skip": "Skip"
 }

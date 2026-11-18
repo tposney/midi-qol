@@ -442,6 +442,9 @@ Hooks.once('init', async function () {
   defineTargetConfirmationService(resolveTargetConfirmation);
   defineChooseTokensService();
   defineRollBonusesService();
+  defineBonusPromptService(() => `midi-qol.${safeGetGameSetting("midi-qol", "BonusPrompt") ?? "phased"}`);
+  bonusPromptService.register("midi-qol.phased", { open: data => new BonusPromptApp(data) }, { label: "Phased (tick and apply)" });
+  bonusPromptService.register("midi-qol.classic", { open: data => new RollModifyDialog(data) }, { label: "Classic (one button per bonus)" });
   setServiceProblemReporter((serviceId, providerId, message, err) => {
     const text = `midi-qol | ${serviceId} | ${providerId}: ${message}`;
     console.warn(text, err ?? "");
@@ -1024,6 +1027,8 @@ import { defineDamageModifiersService } from "./module/services/damageModifiers.
 import { defineTargetConfirmationService } from "./module/services/targetConfirmation.js";
 import { chooseTokens, defineChooseTokensService } from "./module/services/chooseTokens.js";
 import { defineRollBonusesService } from "./module/services/rollBonuses.js";
+import { bonusPromptService, defineBonusPromptService } from "./module/services/bonusPrompt.js";
+import { BonusPromptApp } from "./module/apps/BonusPrompt.js";
 
 // Add any additional hooks if necessary
 // Phase 2: setup hook — properties that depend on CONFIG, settings, i18n, or game state

@@ -1,3 +1,4 @@
+import { bonusPromptService } from "./services/bonusPrompt.js";
 import { applyOfferedBonus, collectBonusCandidates, type BonusCost, type BonusPhase, type OfferedBonus, type RollBonusQuery } from "./services/rollBonuses.js";
 import { addCosts as addBonusCosts, canAfford as canAffordBonus } from "./rules/rollBonuses.js";
 import { crossesOppositeSides, opposedByAngle } from "./rules/flanking.js";
@@ -5327,6 +5328,11 @@ async function displayBeforeAfterRolls(data: {
 
 /** The optional AC bonus keys: added to the target's AC, `acOnAttack` when attacked, `acOnHit` once the attack hits */
 const OPTIONAL_AC_KEYS = ["acOnAttack", "acOnHit"];
+/** The window the bonus prompt service picks (the classic dialog when none is registered). */
+function openBonusPrompt(data: object): { render(options?: object): unknown } {
+  return bonusPromptService?.get()?.open(data) ?? new RollModifyDialog(data);
+}
+
 export async function bonusDialog(
   bonusFlags: string[],
   flagSelector: string,
@@ -5711,7 +5717,7 @@ export async function bonusDialog(
       if (["public", "gm", "self"].includes(toMessageMode(rollMode))) content = rollHTML;
       else content = "Hidden Roll";
     }
-    new RollModifyDialog(
+    openBonusPrompt(
       {
         actor: this.actor,
         flags: validFlags,
