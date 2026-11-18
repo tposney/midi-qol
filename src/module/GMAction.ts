@@ -4,7 +4,8 @@ import { _closePlayerRollDialogs, playerWaitHandlers } from "./lib/playerWaits.j
 import { DialogCountdown, dialogCountdownOptions } from "./lib/dialogCountdown.js";
 import { withWorkflowOptionsCodec } from "./lib/workflowOptionsCodec.js";
 import { i18n, log, warn, gameStats, getCanvas, error, debugEnabled, debug, GameSystemConfig, MODULE_ID } from "../midi-qol.js";
-import { damageActiveHas, damageChangeHas, _pauseReactionTimer, _closeReactionDialog, calculateDamageAmounts, hpChangeFromDetail, getToken, getTokenDocument, gmOverTimeEffect, fromActorUuid, promptReactions, hasUsedAction, hasUsedBonusAction, removeActionUsed, removeBonusActionUsed, removeReactionUsed, ReactionItemReference, isEffectExpired, expireEffects, deleteAppliedEffects, getAppliedEffects, CERemoveEffect, CEAddEffectWith, getActor, completeItemUse, completeActivityUse, localActivityOverTimeEffect, isValidTarget, validTargetTokens, hasUsedAnyReaction, getVitalityItem, MidiOptions, tokenSourceCenter, toggleStatus, withDeprecatedDamageFields, speakerFor } from "./utils.js";
+import { damageActiveHas, damageChangeHas, REACTIONS_REQUEST, calculateDamageAmounts, hpChangeFromDetail, getToken, getTokenDocument, gmOverTimeEffect, fromActorUuid, promptReactions, hasUsedAction, hasUsedBonusAction, removeActionUsed, removeBonusActionUsed, removeReactionUsed, ReactionItemReference, isEffectExpired, expireEffects, deleteAppliedEffects, getAppliedEffects, CERemoveEffect, CEAddEffectWith, getActor, completeItemUse, completeActivityUse, localActivityOverTimeEffect, isValidTarget, validTargetTokens, hasUsedAnyReaction, getVitalityItem, MidiOptions, tokenSourceCenter, toggleStatus, withDeprecatedDamageFields, speakerFor } from "./utils.js";
+import { registerRequestHandler, type IncomingRequest } from "./lib/requests.js";
 import { DAMAGE_MESSAGE_TYPE } from "./ChatClasses/DamageCardMessage.js";
 import { DamageDescriptionObject, Workflow } from "./Workflow.js";
 import { applyFailedDeathSaves, bonusCheck, revertFailedDeathSaves } from "./patching.js";
@@ -29,9 +30,10 @@ export let setupSocket = () => {
   socketlibSocket.register("applyEffects", _applyEffects);
   socketlibSocket.register("bonusCheck", _bonusCheck);
   socketlibSocket.register("chooseReactions", localDoReactions);
-  socketlibSocket.register("pauseReactionTimer", _pauseReactionTimer);
+  // The reacting client's answer to a reaction request (utils doReactions): the reaction dialog, its countdown the requester's
+  registerRequestHandler(REACTIONS_REQUEST, (data: Parameters<typeof localDoReactions>[0], incoming: IncomingRequest) =>
+    localDoReactions({ ...data, options: { ...data.options, incoming } }));
   for (const [name, handler] of Object.entries(playerWaitHandlers)) socketlibSocket.register(name, handler);
-  socketlibSocket.register("closeReactionDialog", _closeReactionDialog);
   socketlibSocket.register("completeItemUse", _completeItemUse);
   socketlibSocket.register("completeItemUseV2", _completeItemUse);
   socketlibSocket.register("completeActivityUse", _completeActivityUse);
@@ -596,11 +598,13 @@ async function _addDependent(data: { documentUuid: string, dependentUuid: string
   return dependent.setFlag("dnd5e", "dependentOn", data.documentUuid);
 }
 
+/** Also the socketlib handler "chooseReactions", kept for other modules (MidiQOL.socket()); midi asks through REACTIONS_REQUEST */
 async function localDoReactions(data: { tokenUuid: string; reactionActivityList: ReactionItemReference[], triggerTokenUuid: string, reactionFlavor: string; triggerType: string; options: any }) {
   if (data.options.itemUuid) {
     data.options.item = fromUuidSync(data.options.itemUuid);
   }
-  if (data.options.activity && data.options.item) {
+  if (data.options.activityUuid) data.options.activity = fromUuidSync(data.options.activityUuid);
+  else if (data.options.activity && data.options.item) {
     data.options.activity = data.options.item.system.activities.get(data.options.activity._id);
   }
   // reactionItemUuidList can't used since magic items don't have a uuid, so must always look them up locally.

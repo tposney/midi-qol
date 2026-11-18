@@ -19,9 +19,9 @@ import { rollBonusLabel } from "./activities/AttackActivity.js";
 import { debug, i18n, error, warn, busyWait, allAttackTypes, debugEnabled, overTimeEffectsToDelete, getStaticID, savedOverTimeEffectsToDelete, GameSystemConfig, systemConcentrationId, MQItemMacroLabel, MODULE_ID, midiReactionEffect, midiBonusActionEffect, MQActivityMacroLabel, ceInterface, i18nFormat } from "../midi-qol.js";
 import { configSettings, autoRemoveTargets, checkRule, criticalDamage, criticalDamageGM, checkMechanic, safeGetGameSetting, autoRollDamageOptions, showReactionAttackRollOptions, shouldDisplaySaveDC, DOWNGRADE_IMMUNITY_KEY, ALL_DAMAGE_KEY } from "./settings.js";
 import { log } from "../midi-qol.js";
-import { AttributionEntry, AttributionMap, AttributionType, AugmentedEvent, DummyWorkflow, Workflow, WorkflowOptions, WorkflowRollOptions } from "./Workflow.js";
+import { AttributionEntry, AttributionMap, AttributionType, AugmentedEvent, DummyWorkflow, jsonSafe, Workflow, WorkflowOptions, WorkflowRollOptions } from "./Workflow.js";
 import { preferredActiveGM, prepareDamageListToJSON, socketlibSocket, timedAwaitExecuteAsGM, unTimedExecuteAsGM } from "./GMAction.js";
-import { claimPlayerWait, trackPlayerWait } from "./lib/playerWaits.js";
+import { askUser, type IncomingRequest } from "./lib/requests.js";
 import { dice3dEnabled, installedModules } from "./setupModules.js";
 import { concentrationCheckItemDisplayName } from "./Hooks.js";
 
@@ -5485,7 +5485,7 @@ export async function doReactions(targetRef: TokenOrDocument | string, triggerTo
     // The reacting player sees the card as it is now
     await workflow?.flushCardWrites();
 
-    let chatMessage: ChatMessage.Implementation;
+    let chatMessage: ChatMessage.Implementation | undefined;
     const reactionFlavor = game.i18n?.format(reactionPromptFor(triggerType), { itemName: (options.item?.name ?? "unknown"), actorName: target.name });
     const chatData: ChatMessage.CreateData = {
       content: reactionFlavor,
@@ -5519,31 +5519,25 @@ export async function doReactions(targetRef: TokenOrDocument | string, triggerTo
       }
     }
 
-    // set a timeout for taking over the roll; the reacting client pauses it while it waits on its user (placement)
-    const request = { id: foundry.utils.randomID(), userId: game.user!.id };
-    options.reactionRequest = request;
+    // Asked through the request core (lib/requests.ts): its deadline is the reaction timeout, a claim (a reaction chosen)
+    // stops it, a GM answers from the player list, a time-out or disconnect is "no reaction"
     const reactingUser = player;
-    let result: any = await trackPlayerWait({
-      kind: "reaction", userId: reactingUser.id!, actorUuid: target.actor.uuid ?? undefined, tokenUuid: target.document.uuid ?? undefined, label: content ?? "",
-      choices: {
+    const data = reactionRequestData(target, triggerTokenUuid, content ?? "", triggerType, reactionActivityList, options);
+    const request = askUser<ReactionResult>(reactingUser, {
+      type: REACTIONS_REQUEST, data, kind: "reaction", actorUuid: target.actor.uuid ?? undefined, tokenUuid: target.document.uuid ?? undefined,
+      label: content ?? "", timeoutMs: (configSettings.reactionTimeout ?? defaultTimeout) * 1000, fallback: () => noResult,
+      gmChoices: {
         none: () => noResult,
         // The GM picks the reaction on their own screen, as for a creature with no player
-        choose: async () => (await unTimedExecuteAsGM("chooseReactions", {
-          tokenUuid: target.document.uuid, reactionFlavor: content ?? "", triggerTokenUuid, triggerType, reactionActivityList,
-          options: { ...options, reactionWait: undefined }
-        })) ?? noResult
-      },
-      onSettled: () => {
-        endReactionTimer(request.id);
-        if (options.reactionWait) socketlibSocket.executeAsUser("closeReactionDialog", reactingUser.id, { id: options.reactionWait.id })?.catch?.(() => { });
+        choose: async () => {
+          const gm = preferredActiveGM();
+          if (!gm) return noResult;
+          return (await askUser<ReactionResult>(gm, { type: REACTIONS_REQUEST, data, kind: "reaction", label: content ?? "", timeoutMs: 0, fallback: () => noResult }).settled).value;
+        }
       }
-    }, (wait) => new Promise((resolve) => {
-      startReactionTimer(request.id, (configSettings.reactionTimeout ?? defaultTimeout) * 1000 * 2, () => resolve(noResult));
-      options.reactionWait = wait;
-      requestReactions(target, reactingUser, triggerTokenUuid, content ?? "", triggerType, reactionActivityList, resolve, chatMessage, options).then(() => {
-        endReactionTimer(request.id);
-      });
-    }));
+    });
+    let result: any = (await request.settled).value;
+    if (chatMessage) void chatMessage.delete();
     if (result?.name) {
       let count = 100;
       do {
@@ -5562,99 +5556,26 @@ export async function doReactions(targetRef: TokenOrDocument | string, triggerTo
   }
 }
 
-type ReactionTimer = { remaining: number, started: number, timeoutId?: ReturnType<typeof setTimeout>, onTimeout: () => void };
-const reactionTimers = new Map<string, ReactionTimer>();
+export type ReactionResult = { name?: string, uuid?: string, ac?: number, itemName?: string, itemUuid?: string };
 
-function startReactionTimer(id: string, ms: number, onTimeout: () => void) {
-  const timer: ReactionTimer = { remaining: ms, started: Date.now(), onTimeout };
-  timer.timeoutId = setTimeout(() => { reactionTimers.delete(id); onTimeout(); }, ms);
-  reactionTimers.set(id, timer);
-}
-
-function endReactionTimer(id: string) {
-  const timer = reactionTimers.get(id);
-  if (timer?.timeoutId) clearTimeout(timer.timeoutId);
-  reactionTimers.delete(id);
-}
-
-/** Pause (or resume, with the time that was left) a reaction request's timeout, on the requesting client. */
-export function _pauseReactionTimer({ id, pause }: { id: string, pause: boolean }) {
-  const timer = reactionTimers.get(id);
-  if (!timer) return;
-  if (pause) {
-    if (!timer.timeoutId) return;
-    clearTimeout(timer.timeoutId);
-    timer.timeoutId = undefined;
-    timer.remaining = Math.max(0, timer.remaining - (Date.now() - timer.started));
-  } else if (!timer.timeoutId) {
-    timer.started = Date.now();
-    timer.timeoutId = setTimeout(() => { reactionTimers.delete(id); timer.onTimeout(); }, timer.remaining);
-  }
-}
+/** The request type a reacting client answers (GMAction registers its handler) */
+export const REACTIONS_REQUEST = "midi-qol.reactions";
 
 /**
- * A reaction being used waits on its user (e.g. placing a teleport): pause the requesting client's timeout, which
- * would otherwise give up on the reaction, and resume it afterwards.
+ * What the reacting client needs: the workflow, item and activity as ids and uuids, and only plain data (jsonSafe). The
+ * options reach the reaction's own use, so a class instance in them (CAT's bonus session in workflowOptions.cat) would
+ * arrive as a plain copy that the reaction's use then treats as its own.
  */
-export async function pauseReactionTimeout(request: { id: string, userId: string }, pause: boolean) {
-  if (request.userId === game.user?.id) return _pauseReactionTimer({ id: request.id, pause });
-  return socketlibSocket.executeAsUser("pauseReactionTimer", request.userId, { id: request.id, pause });
-}
-
-export async function requestReactions(
-  target: Token.Implementation,
-  player: User.Implementation,
-  triggerTokenUuid: string | undefined,
-  reactionFlavor: string,
-  triggerType: string,
-  reactionActivityList: ReactionItemReference[],
-  resolve: ({ }) => void,
-  chatPromptMessage: ChatMessage.Implementation,
-  options: any = {}
-) {
-  try {
-    const startTime = Date.now();
-    if (options.item && options.item instanceof CONFIG.Item.documentClass) {
-      options.itemUuid = options.item.uuid;
-      delete options.item;
-    }
-
-    if (options.workflow) {
-      options.workflowId = options.workflow.id;
-      options.itemCardUuid ??= options.workflow.itemCardUuid;
-      delete options.workflow;
-    }
-
-    let result;
-    if (player.isGM) {
-      result = await unTimedExecuteAsGM("chooseReactions", {
-        tokenUuid: target.document.uuid,
-        reactionFlavor,
-        triggerTokenUuid,
-        triggerType,
-        options,
-        reactionActivityList
-      });
-    } else {
-      result = await socketlibSocket.executeAsUser("chooseReactions", player.id, {
-        tokenUuid: target.document.uuid,
-        reactionFlavor,
-        triggerTokenUuid,
-        triggerType,
-        options,
-        reactionActivityList
-      });
-    }
-    const endTime = Date.now();
-    if (debugEnabled > 0) warn("requestReactions | returned after ", endTime - startTime, result);
-    resolve(result);
-    if (chatPromptMessage) chatPromptMessage.delete();
-  } catch (err) {
-    const message = `requestReactions | error ${triggerType} for ${target?.name} ${triggerTokenUuid}`;
-    TroubleShooter.recordError(err, message);
-    error(message, err)
-    throw err;
+function reactionRequestData(target: Token.Implementation, triggerTokenUuid: string | undefined, reactionFlavor: string, triggerType: string, reactionActivityList: ReactionItemReference[], options: any) {
+  const { workflow, item, activity, ...rest } = options ?? {};
+  const sent: any = jsonSafe(rest) ?? {};
+  if (item instanceof CONFIG.Item.documentClass) sent.itemUuid = item.uuid;
+  if (activity?.uuid) sent.activityUuid = activity.uuid;
+  if (workflow) {
+    sent.workflowId = workflow.id;
+    sent.itemCardUuid ??= workflow.itemCardUuid;
   }
+  return { tokenUuid: target.document.uuid, reactionFlavor, triggerTokenUuid, triggerType, reactionActivityList, options: sent };
 }
 
 export async function promptReactions(
@@ -5812,13 +5733,12 @@ export async function confirmUseOffScene(actor: Actor.Implementation | null | un
  * A GM using a reaction for a token on a scene they aren't viewing: view that scene first (targeting, placement and
  * animations need it), use the reaction anyway, or don't use it. The requesting client's timeout is held meanwhile.
  */
-async function confirmReactionScene(tokenUuid: string | undefined, request?: { id: string, userId: string }): Promise<boolean> {
+async function confirmReactionScene(tokenUuid: string | undefined): Promise<boolean> {
   if (!game.user?.isGM || !tokenUuid) return true;
   const token = fromUuidSync(tokenUuid) as TokenDocument.Implementation | null;
   const scene = token?.parent;
   if (!scene || scene.id === canvas?.scene?.id) return true;
-  if (request) pauseReactionTimeout(request, true);
-  try {
+  {
     const choice = await foundry.applications.api.DialogV2.wait({
       window: { title: i18n("midi-qol.ReactionScene.Title") },
       position: { width: 420 },
@@ -5835,21 +5755,7 @@ async function confirmReactionScene(tokenUuid: string | undefined, request?: { i
       return true;
     }
     return choice === "run";
-  } finally {
-    if (request) pauseReactionTimeout(request, false);
   }
-}
-
-/** Reaction dialogs open on this client for a tracked wait, by wait id, so the GM answering can close them. */
-const openReactionDialogs = new Map<string, { close: () => unknown, closedForGM?: boolean }>();
-
-/** The GM answered for this player: close their reaction dialog, which then answers "no reaction" locally. */
-export function _closeReactionDialog({ id }: { id: string }) {
-  const dialog = openReactionDialogs.get(id);
-  openReactionDialogs.delete(id);
-  if (!dialog) return;
-  dialog.closedForGM = true;
-  dialog.close();
 }
 
 export async function reactionDialog(
@@ -5865,10 +5771,10 @@ export async function reactionDialog(
     let timeout = (options.timeout ?? configSettings.reactionTimeout ?? defaultTimeout);
     return new Promise((resolve, reject) => {
       const callback = async function (dialog, button) {
-        if (options.reactionWait?.id) openReactionDialogs.delete(options.reactionWait.id);
         const activity = reactionActivities.find(i => i.uuid === button.key);
-        // The GM may have answered for this player already: their reaction is not used too
-        if (activity && !(await claimPlayerWait(options.reactionWait))) {
+        // Claimed: the requester's deadline stops. Refused: a GM or the time-out answered already, so it isn't used too
+        const incoming: IncomingRequest | undefined = options.incoming;
+        if (activity && incoming && !(await incoming.claim())) {
           resolve(noResult);
           return;
         }
@@ -5891,7 +5797,7 @@ export async function reactionDialog(
           // Targeting another creature, placing an area or teleporting needs the reacting token's scene; a self-only
           // reaction (Shield) is used from any scene
           const needsScene = effectiveTargetType !== "self" || !!activity.target?.template?.type || isActivityType(activity, "teleport");
-          if (needsScene && !(await confirmReactionScene(options.tokenUuid, options.reactionRequest))) {
+          if (needsScene && !(await confirmReactionScene(options.tokenUuid))) {
             resolve(noResult);
             return;
           }
@@ -5903,14 +5809,8 @@ export async function reactionDialog(
             isReaction: true,
             workflowOptions: { targetConfirmation: "none" },
             ignoreUserTargets: true
-          }, options);
-
-          let useTimeoutId = setTimeout(() => {
-            clearTimeout(useTimeoutId);
-            resolve({})
-          }, ((timeout) - 1) * 1000);
+          }, (({ incoming: _incoming, ...rest }) => rest)(options));
           let result: any = noResult;
-          clearTimeout(useTimeoutId);
           if (activity.item instanceof CONFIG.Item.documentClass) { // a nomral item}
             const config = { midiOptions: itemRollOptions };
             result = await completeActivityUse(activity, config, {}, { systemCard: false });
@@ -5923,11 +5823,8 @@ export async function reactionDialog(
         // actor.reset();
         resolve(noResult)
       };
-      const noReaction = async function (closeInfo?: { closedForGM?: boolean }) {
-        if (options.reactionWait?.id) openReactionDialogs.delete(options.reactionWait.id);
-        // The player declined (button, close, timeout): their answer wins over the GM's, as a chosen reaction does.
-        // Closed because the GM took over: the GM's answer stands.
-        if (!closeInfo?.closedForGM) await claimPlayerWait(options.reactionWait);
+      // Declined (button, close), or closed because the request was answered for the player: no reaction from here
+      const noReaction = async function () {
         resolve(noResult);
       }
       const dialog = new ReactionDialog({
@@ -5940,11 +5837,13 @@ export async function reactionDialog(
         callback,
         close: noReaction,
         timeout,
-        // Pausing the countdown also pauses the requesting client's timeout, which would otherwise give up on the reaction
-        onPause: (paused: boolean) => { if (options.reactionRequest) pauseReactionTimeout(options.reactionRequest, paused); }
+        // Asked by another client (or this one) through the request core: its deadline, shown; it decides time-outs
+        countdown: options.incoming ? options.incoming.countdown() ?? null : undefined
       });
-
-      if (options.reactionWait?.id) openReactionDialogs.set(options.reactionWait.id, dialog);
+      (options.incoming as IncomingRequest | undefined)?.onSettled(() => {
+        dialog.closedForGM = true;
+        void dialog.close();
+      });
       dialog.render({ force: true });
     });
   } catch (err) {
@@ -5959,7 +5858,7 @@ export class ReactionDialog extends HandlebarsApplicationMixin(ApplicationV2) {
   closedForGM?: boolean;
   startTime: number;
   endTime: number;
-  countdown: DialogCountdown;
+  countdown: DialogCountdown | undefined;
   timeRemaining: number;
 
   data: {
@@ -5970,12 +5869,13 @@ export class ReactionDialog extends HandlebarsApplicationMixin(ApplicationV2) {
     title: string,
     content: HTMLElement,
     callback: () => {},
-    close: (args0: any) => {},
+    close: () => void,
     buttons: any,
     completed: boolean,
     timeout: number,
     timeRemaining: number,
-    onPause?: (paused: boolean) => void
+    /** The request's display-only countdown; null: the request has no deadline; undefined: its own (a direct call) */
+    countdown?: DialogCountdown | null
   }
 
   constructor(data) {
@@ -5984,7 +5884,9 @@ export class ReactionDialog extends HandlebarsApplicationMixin(ApplicationV2) {
     this.timeRemaining = this.data.timeout;
     this.startTime = this.endTime = Date.now();
     this.data.completed = false;
-    this.countdown = new DialogCountdown({ seconds: this.data.timeout ?? 0, onExpire: () => this.close(), onPause: this.data.onPause });
+    this.countdown = this.data.countdown === undefined
+      ? new DialogCountdown({ seconds: this.data.timeout ?? 0, onExpire: () => this.close() })
+      : this.data.countdown ?? undefined;
   }
 
   static PARTS = {
@@ -6013,7 +5915,7 @@ export class ReactionDialog extends HandlebarsApplicationMixin(ApplicationV2) {
     for (const button of Array.from(this.element.querySelectorAll(".dialog-button"))) {
       button.addEventListener("click", this._onClickButton.bind(this));
     }
-    this.countdown.attach(this.element);
+    this.countdown?.attach(this.element);
   }
 
   async _prepareContext(options) {
@@ -6058,7 +5960,7 @@ export class ReactionDialog extends HandlebarsApplicationMixin(ApplicationV2) {
 
   async submit(button) {
     try {
-      this.countdown.stop();
+      this.countdown?.stop();
       debug("ReactionDialog submit", Date.now() - this.startTime, button.callback)
       if (button.callback) {
         this.data.completed = true;
@@ -6080,7 +5982,7 @@ export class ReactionDialog extends HandlebarsApplicationMixin(ApplicationV2) {
     this.countdown?.stop();
     debug("Reaction Dialog close ", Date.now() - this.startTime, this.data.completed)
     if (!this.data.completed && this.data.close) {
-      this.data.close({ name: "Close", uuid: undefined, closedForGM: this.closedForGM });
+      this.data.close();
     }
     return super.close();
   }

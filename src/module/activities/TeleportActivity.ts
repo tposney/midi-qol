@@ -4,7 +4,7 @@ import { Activity, RollMessageConfig } from "../../globals.js";
 import { debugEnabled, GameSystemConfig, i18n, i18nFormat, warn, moveToken } from "../../midi-qol.js";
 import { configSettings } from "../settings.js";
 import { Workflow } from "../Workflow.js";
-import { callActivityHooks, collisionLevel, completeActivityUse, convertLengthTo, getToken, pauseReactionTimeout, isActivityType, measureGridPath } from "../utils.js";
+import { callActivityHooks, collisionLevel, completeActivityUse, convertLengthTo, getToken, isActivityType, measureGridPath } from "../utils.js";
 import { MidiActivityMixin, MidiActivityMixinSheet } from "./MidiActivityMixin.js";
 import { highlightTokens, TokenHighlight } from "../lib/tokenHighlight.js";
 
@@ -182,9 +182,7 @@ let defineMidiTeleportActivityClass = <T extends Activity>(ActivityClass: T) => 
       const option = workflow?.workflowOptions?.teleport as TeleportOption | undefined;
       const destinations = typeof option === "object" ? option.destinations : undefined;
       const highlight = highlightTokens(kept.map(m => m.token));
-      // The caster is still answering a reaction prompt while placing: the requester's timeout waits.
-      const reactionRequest = workflow?.workflowOptions?.reactionRequest;
-      if (reactionRequest) await pauseReactionTimeout(reactionRequest, true);
+      // Placing for a reaction needs no pause: the reaction was claimed when chosen, which stopped its deadline
       let plans: (TeleportPlan[] & { failed?: boolean }) | undefined;
       try {
         plans = this.midiTeleport?.movers === "swap"
@@ -192,7 +190,6 @@ let defineMidiTeleportActivityClass = <T extends Activity>(ActivityClass: T) => 
           : await this._midiPlanMovers(kept, config.maxDistance, highlight, destinations);
       } finally {
         highlight.remove();
-        if (reactionRequest) await pauseReactionTimeout(reactionRequest, false);
       }
       if (!plans?.length) return;
       if (Hooks.call("dnd5e.teleport", this, plans.map(p => ({ token: p.token, plan: p.plan }))) === false) return;

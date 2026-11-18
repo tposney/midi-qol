@@ -110,7 +110,8 @@ const RECORD_VALUES = ["otherDamage", "ammunitionDamage", "preSelected"] as cons
  * The card is read only when the workflow is rebuilt from it (load). Writing undefined forgets the value.
  */
 /** `value` with only what survives JSON (primitives, arrays and plain objects of them); undefined if nothing does */
-function jsonSafe(value: unknown): unknown {
+/** Plain data only (primitives, arrays of them, plain objects): class instances (an Event, a module's session object) are left out */
+export function jsonSafe(value: unknown): unknown {
   if (value === null || ["string", "number", "boolean"].includes(typeof value)) return value;
   if (Array.isArray(value)) return value.every(v => jsonSafe(v) === v) ? value : undefined;
   // A plain object only: getType calls any class instance (an Event) "Object"
