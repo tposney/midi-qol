@@ -38,7 +38,19 @@ export interface EngineHost {
   /** A cancel or abort by a pass or hook (console). */
   note(message: string): void;
   name(step: string | undefined): string;
+  /** The use's assembled changes for a step (steps/assembly.ts): inserted before/after, removed. Replacements and wraps are the host's run's business. */
+  changes?(step: string): { before: readonly string[], after: readonly string[], removed: boolean } | undefined;
+  /** Where the use goes on to past a removed step (the next step in its flow). */
+  flowNext?(step: string): string | undefined;
+  /** A move with inserted steps under way, kept across runs (an inserted step can suspend). */
+  move?: StepMove;
 }
+
+/** Inserted steps still to run in a move, the step it was going to, and whether the step running came from the queue. */
+export interface StepMove { queue: string[], then: string | undefined, inserted: boolean }
+
+/** An inserted step that returns this, or nothing, lets the move it was inserted into go on. */
+export const CONTINUE = "midi-qol.Continue";
 
 /** Runs from `start`; returns why it stopped. */
 export async function runSteps(host: EngineHost, start: string | undefined): Promise<"suspended" | "undefined" | "limit"> {
@@ -46,6 +58,16 @@ export async function runSteps(host: EngineHost, start: string | undefined): Pro
   let isAborting = host.aborted;
   while (host.countTransition()) {
     const current = host.currentStep;
+    // A removed step: on to the step after it in the flow
+    for (let guard = 0; next !== undefined && guard < 50 && host.changes?.(next)?.removed; guard++) next = host.flowNext?.(next);
+    // Starting a move from one step to another: its "after" inserts and the next one's "before" inserts run first
+    if (!host.move && next !== undefined && next !== SUSPEND && current !== next) {
+      const queue = [...(current !== undefined ? host.changes?.(current)?.after ?? [] : []), ...(host.changes?.(next)?.before ?? [])];
+      if (queue.length) {
+        host.move = { queue, then: next, inserted: true };
+        next = host.move.queue.shift();
+      }
+    }
     host.suspended = false;
     isAborting ||= host.aborted || next === ABORT;
     if (next === undefined) {
@@ -61,10 +83,12 @@ export async function runSteps(host: EngineHost, start: string | undefined): Pro
           host.note(`${host.name(current)} -> ${host.name(next)} aborted by post ${host.name(current)} Hook`);
           if (!host.aborted) host.cancelled();
           next = host.aborted ? ABORT : FINISHED;
+          host.move = undefined;
         }
         if (!isAborting && host.aborted) {
           host.note(`${host.name(current)} -> ${host.name(next)} aborted by pre ${host.name(current)} macro pass`);
           next = ABORT;
+          host.move = undefined;
           continue;
         }
       }
@@ -73,16 +97,31 @@ export async function runSteps(host: EngineHost, start: string | undefined): Pro
         host.note(`${host.name(current)} -> ${host.name(next)} aborted by pre ${host.name(next)} Hook`);
         if (!host.aborted) host.cancelled();
         next = host.aborted ? ABORT : FINISHED;
+        host.move = undefined;
         continue;
       }
       if (host.aborted && !isAborting) {
         host.note(`${host.name(current)} -> ${host.name(next)} aborted by pre ${host.name(next)} macro pass`);
         next = ABORT;
+        host.move = undefined;
         continue;
       }
       host.currentStep = next;
+      // The move reached the step it was going to
+      if (host.move && !host.move.inserted && next === host.move.then) host.move = undefined;
     }
-    const after = await host.run(host.currentStep);
+    let after = await host.run(host.currentStep);
+    const move = host.move;
+    if (move?.inserted && after !== SUSPEND) {
+      if (after === undefined || after === CONTINUE) {
+        // On with the move: the next inserted step, or the step it was going to
+        if (move.queue.length) after = move.queue.shift();
+        else { after = move.then; move.inserted = false; }
+      } else {
+        // An inserted step branched: the move is over
+        host.move = undefined;
+      }
+    }
     await host.stepEnded(host.currentStep, after);
     if (after === SUSPEND) {
       host.suspended = true;

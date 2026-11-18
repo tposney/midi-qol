@@ -1,6 +1,7 @@
-import { allSteps, getStep, stepForMethod } from "./steps/steps.js";
-import "./steps/flows.js";
-import { runSteps, SUSPEND, type EngineHost } from "./steps/engine.js";
+import { allSteps, getStep, globalStepChangesFor, stepForMethod } from "./steps/steps.js";
+import { assembleSteps, stepAfterInFlow, type AssembledSteps } from "./steps/assembly.js";
+import { getFlow } from "./steps/flows.js";
+import { runSteps, SUSPEND, type EngineHost, type StepMove } from "./steps/engine.js";
 import type { PortName, WorkflowPorts } from "./steps/ports.js";
 import { getDistance } from "./services/distance/service.js";
 import { computeFlankedStatus, computeFlankingStatus } from "./services/flanking/service.js";
@@ -2109,7 +2110,7 @@ export class Workflow {
     return this.allHooks;
   }
 
-  async callHooksForAction(prePost: ("pre" | "post"), action: WorkflowState): Promise<boolean | undefined> {
+  async callHooksForAction(prePost: ("pre" | "post"), action: WorkflowState | string): Promise<boolean | undefined> {
     if (!action) {
       console.warn("midi-qol | callPreHooksForAction | No action");
       return true;
@@ -2117,7 +2118,7 @@ export class Workflow {
     if (debugEnabled > 1) log(`callHooksForAction | ${prePost} ${this.nameForState(action)}`)
     return this.callCancellableHooks(`midi-qol.${prePost}${this.nameForState(action)}`);
   }
-  async callOnUseMacrosForAction(prePost: ("pre" | "post"), action: WorkflowState): Promise<(DamageBonusMacroResult | any)[]> {
+  async callOnUseMacrosForAction(prePost: ("pre" | "post"), action: WorkflowState | string): Promise<(DamageBonusMacroResult | any)[]> {
     if (!configSettings.allowUseMacro || this.workflowOptions.noOnUseMacro === true) {
       warn(`Calling ${prePost}${this.nameForState(action)} disabled due to macro call settings`);
       return [];
@@ -2135,12 +2136,13 @@ export class Workflow {
 
   };
 
-  public static nameForState(state: WorkflowState): string {
+  public static nameForState(state: WorkflowState | string): string {
     if (state === undefined) return "undefined";
+    if (typeof state === "string") return getStep(state)?.name ?? state;
     return state.name.replace(/^WorkflowState_/, "") ?? state.name;
   }
 
-  public nameForState(state: WorkflowState): string {
+  public nameForState(state: WorkflowState | string): string {
     return Workflow.nameForState(state);
   }
 
@@ -2394,8 +2396,13 @@ export class Workflow {
         set currentStep(id) { workflow.currentAction = id; },
         get aborted() { return workflow.aborted; },
         cancelled: () => { this.outcome = "cancelled"; },
-        pass: (prePost, step) => this.callOnUseMacrosForAction(prePost, this.methodForStep(step)),
-        hook: (prePost, step) => this.callHooksForAction(prePost, this.methodForStep(step)),
+        // Named after the step (midi's or a module's): a module's step has hooks and passes as midi's do
+        pass: (prePost, step) => this.callOnUseMacrosForAction(prePost, step as string),
+        hook: (prePost, step) => this.callHooksForAction(prePost, step as string),
+        changes: step => this.assembledSteps.anchors[step],
+        flowNext: step => stepAfterInFlow(getFlow(this.flowId)?.steps ?? [], step),
+        get move() { return workflow.#stepMove; },
+        set move(value) { workflow.#stepMove = value; },
         run: async step => {
           this.#queueingWrites += 1;
           try {
@@ -2451,11 +2458,35 @@ export class Workflow {
     }
   }
 
-  /** Run one step: the flow's implementation of it for this workflow (in M2 stage 2, its class's method) */
-  async #runStep(id: string | undefined): Promise<WorkflowState | string> {
-    const run = this.methodForStep(id);
-    if (!run) throw new Error(`${this.workflowName}: no step ${id}`);
-    return run.call(this);
+  /** A move with inserted steps under way (steps/engine.ts), kept across runs */
+  #stepMove: StepMove | undefined;
+  #assembledSteps: AssembledSteps | undefined;
+  /** This use's changes to its flow (steps/assembly.ts), from the global layer (registered changes whose when applies) */
+  get assembledSteps(): AssembledSteps {
+    return this.#assembledSteps ??= assembleSteps(globalStepChangesFor(this));
+  }
+
+  /** Run one step: its replacement if the use has one, inside its wrappers; midi's steps by their method, a module's by its run */
+  async #runStep(id: string | undefined): Promise<WorkflowState | string | undefined> {
+    if (!id) throw new Error(`${this.workflowName}: no step to run`);
+    const anchor = this.assembledSteps.anchors[id];
+    const target = anchor?.replacement ?? id;
+    let run = (): Promise<string | undefined> => this.#runOwn(target);
+    for (const wrapperId of [...(anchor?.wraps ?? [])].reverse()) {
+      const wrapper = getStep(wrapperId);
+      if (!wrapper?.run) { reportServiceProblem("steps", wrapperId, `wraps ${id} but isn't a registered step with run`); continue; }
+      const inner = run;
+      run = async () => Workflow.stepIdOf(await wrapper.run!({ workflow: this, next: inner }) ?? undefined);
+    }
+    return run();
+  }
+
+  async #runOwn(id: string): Promise<string | undefined> {
+    const step = getStep(id);
+    if (step?.run) return Workflow.stepIdOf(await step.run({ workflow: this, next: async () => undefined }) ?? undefined);
+    const method = this.methodForStep(id);
+    if (!method) throw new Error(`${this.workflowName}: no step ${id}`);
+    return Workflow.stepIdOf(await method.call(this));
   }
 
   async WorkflowState_Suspend(): Promise<WorkflowState> {

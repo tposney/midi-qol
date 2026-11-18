@@ -280,6 +280,7 @@ Object.assign(globalThis.MidiQOL, {
   measureTokens,
   applyCalculatedDamage,
   flows: { get: getFlow, list: allFlows, coarseStepOf },
+  steps: stepsApi,
   damageCalculation: { get: getDamageCalculationStep, register: registerDamageCalculationStep, remove: removeDamageCalculationStep, order: damageCalculationOrder },
   UNMEASURABLE_DISTANCE,
   getItemFromEffectOrigin,
@@ -1049,6 +1050,7 @@ import { damageCalculationOrder, getDamageCalculationStep, registerDamageCalcula
 import { registerBonusApprovalQuery } from "./module/services/rollBonuses/approval.js";
 import { registerDamageMessageSummary } from "./module/damage/messages.js";
 import { defineDamageContributionsService } from "./module/services/damageContributions/service.js";
+import { stepsApi } from "./module/steps/api.js";
 import { defineFlankingService } from "./module/services/flanking/service.js";
 import { applyCalculatedDamage, registerDamageApplication } from "./module/damage/application.js";
 import { bonusPromptService, defineBonusPromptService } from "./module/services/rollBonuses/prompt.js";

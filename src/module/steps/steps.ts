@@ -1,4 +1,5 @@
 import { Registry } from "../api/registry.js";
+import type { StepChange } from "./assembly.js";
 
 /*
  * The steps of a use's flow (M2; plan ~/Documents/midi-next-M2-plan-2026-11-18.md). Stage 1: each step is one of the
@@ -12,12 +13,23 @@ export interface Step {
   id: string;
   /** The hook and pass name: `pre<name>` / `post<name>`. */
   name: string;
-  /** The workflow method that runs it (stage 1). */
-  method: string;
+  /** The workflow method that runs it (midi's steps). */
+  method?: string;
+  /**
+   * A module's step: runs with the workflow; returns the step to go to, or nothing to go on with the move it was
+   * inserted into. A wrapper calls `ctx.next()` to run what it wraps; a replacement returns the step to go to.
+   */
+  run?: (ctx: StepContext) => Promise<string | undefined | void> | string | undefined | void;
   /** The card's queued writes are written when the step ends (a milestone: the card shows its result). */
   flush?: boolean;
   /** A marker, not run: Suspend. */
   marker?: boolean;
+}
+
+export interface StepContext {
+  workflow: any;
+  /** For a wrapper: run the step it wraps (and what that returns). */
+  next(): Promise<string | undefined>;
 }
 
 const steps = new Registry<Step>();
@@ -25,7 +37,32 @@ const byMethod = new Map<string, Step>();
 
 export function registerStep(step: Step): void {
   steps.set(step.id, step);
-  byMethod.set(step.method, step);
+  if (step.method) byMethod.set(step.method, step);
+}
+
+export function unregisterStep(id: string): boolean {
+  return steps.delete(id);
+}
+
+/** A change to every use's flow (the global layer), optionally only where `when` says. */
+export type GlobalStepChange = StepChange & { when?: (workflow: any) => boolean };
+const globalChanges: GlobalStepChange[] = [];
+
+export function addStepChange(change: GlobalStepChange): void {
+  globalChanges.push(change);
+}
+
+/** Remove the global changes a source made (by `source`), or one change. */
+export function removeStepChanges(match: string | GlobalStepChange): number {
+  const before = globalChanges.length;
+  for (let i = globalChanges.length - 1; i >= 0; i--)
+    if (typeof match === "string" ? globalChanges[i].source === match : globalChanges[i] === match) globalChanges.splice(i, 1);
+  return before - globalChanges.length;
+}
+
+/** The global changes that apply to a use (a `when` that throws: not applied). */
+export function globalStepChangesFor(workflow: unknown): StepChange[] {
+  return globalChanges.filter(change => { try { return change.when?.(workflow) ?? true; } catch { return false; } });
 }
 
 export function getStep(id: string): Step | undefined {
