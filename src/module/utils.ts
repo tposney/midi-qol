@@ -310,7 +310,7 @@ export async function applyTokenDamage(
         isHit: true,
         superSaver,
         semiSuperSaver,
-        sourceActorUuid: actor?.uuid,
+        sourceActorUuid: (workflow?.actor ?? item?.actor)?.uuid ?? undefined,
         // @ts-expect-error no dnd5e-types
         uncannyDodge: foundry.utils.getProperty(actor, `flags.${MODULE_ID}.uncanny-dodge`) && item?.hasAttack,
         // some options for ripper's module
@@ -395,7 +395,7 @@ export async function applyTokenDamageMany(
         isHit: true,
         superSaver: false,
         semiSuperSaver: false,
-        sourceActorUuid: actor?.uuid,
+        sourceActorUuid: (workflow?.actor ?? item?.actor)?.uuid ?? undefined,
         uncannyDodge: false,
         save: false,
         targetUuid: getTokenDocument(entry.token)?.uuid ?? "",
