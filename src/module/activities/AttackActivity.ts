@@ -517,6 +517,8 @@ let defineMidiAttackActivityClass = <T extends Activity>(ActivityClass: T) => {
         if (config.event && areMidiKeysPressed(config.event, "Versatile") && this.item.isVersatile) {
           config.attackMode = "twoHanded";
         }
+        // rollBonuses' automatic preRoll bonuses join the formula (attackRollParts)
+        if (workflow) await workflow.collectPreRollBonuses("attack");
         // @ts-expect-error weirdness with how I did the types
         const rollAttack = (): Promise<Roll[] | null> => super.rollAttack(config, dialog, message);
         rolls = workflow ? await workflow.keepRollMessageFlags(this, rollAttack) : await rollAttack();
@@ -553,6 +555,7 @@ let defineMidiAttackActivityClass = <T extends Activity>(ActivityClass: T) => {
           if (configSettings.allowUseMacro) {
             workflow.ammunitionOnUseMacros = workflow.ammunition?.flags?.[MODULE_ID]?.onUseMacroParts ?? new OnUseMacros();
           }
+          await workflow.settlePreRollBonuses("attack", rolls[0]);
           if (workflow.workflowOptions?.attackRollDSN !== false) await displayDSNForRoll(rolls[0], "attackRollD20", undefined, undefined, workflow?.actor);
           await workflow?.setAttackRoll(rolls[0]);
           rolls[0] = await workflow.processAttackRollBonusFlags();

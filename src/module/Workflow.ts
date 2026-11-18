@@ -21,7 +21,8 @@ import { createDamageDetail, processDamageRoll, untargetDeadTokens, checkIncapac
 import { OnUseMacros } from "./apps/Item.js";
 import { bonusCheck, collectBonusFlags, defaultRollOptions, buildPreComputedAdvantageMap, checkActivityAbilities } from "./patching.js";
 import { collectRollModifiers } from "./services/rollModifiers/service.js";
-import { collectBonusCandidates, type RollBonusQuery } from "./services/rollBonuses/service.js";
+import { collectBonusCandidates, spendBonusCost, type OfferedBonus, type RollBonusQuery } from "./services/rollBonuses/service.js";
+import { reportServiceProblem } from "./api/services.js";
 import { saveTargetsUndoData, saveUndoData } from "./undo.js";
 import { TroubleShooter } from "./apps/TroubleShooter.js";
 import { restoredUse, useChangesJson } from "./lib/useChanges.js";
@@ -397,7 +398,8 @@ class CardStateStore {
 }
 
 /** A reason shown on the attack roll: a bonus part (value) or the source of advantage. */
-export interface AttackModifier { kind: "flanking" | "flanked" | "granted", label: string, value?: string, advantage?: boolean }
+/** A reason the attack roll shows: flanking, a target-granted bonus, or a roll bonus added to the formula (rollBonuses preRoll) */
+export interface AttackModifier { kind: "flanking" | "flanked" | "granted" | "bonus", label: string, value?: string, advantage?: boolean }
 
 /** The workflow's own copy of an assigned set: a TokenDocumentSet is kept, so sets assigned from one another stay shared */
 function asTokenDocumentSet(tokens: Set<TokenOrDocument> | undefined | null): TokenDocumentSet | undefined {
@@ -4241,6 +4243,12 @@ export class Workflow {
     const parts: string[] = [];
     const modifiers: AttackModifier[] = [];
     this.grantedAttackBonusInRollUuid = undefined;
+    // rollBonuses' automatic preRoll bonuses (collectPreRollBonuses): parts of the formula, labelled
+    for (const bonus of this.#preRollBonuses.attack ?? []) {
+      if (bonus.effect.kind !== "add") continue;
+      parts.push(`${bonus.effect.formula}[${bonus.label}]`);
+      modifiers.push({ kind: "bonus", label: bonus.label, value: `+${bonus.effect.formula}` });
+    }
     if (this.flankingAdvantageKind)
       modifiers.push({ kind: this.flankingAdvantageKind, label: i18n(this.flankingAdvantageKind === "flanked" ? "midi-qol.Flanked" : "midi-qol.Flanking"), advantage: true });
     if (this.targets.count !== 1) return { parts, modifiers };
@@ -7501,6 +7509,36 @@ export class Workflow {
       }
     }
     return { keys, owners };
+  }
+
+  #preRollBonuses: { attack?: OfferedBonus[] } = {};
+
+  /**
+   * rollBonuses' preRoll phase (stage 7): automatic bonuses that add to the formula are collected before the roll and
+   * become parts of it (attackRollParts), so they show in the roll and dnd5e doubles their dice on a critical. Optional
+   * preRoll bonuses are not offered yet (the prompt opens after the roll).
+   */
+  async collectPreRollBonuses(kind: "attack"): Promise<void> {
+    const offered = await collectBonusCandidates(this.rollBonusQuery(kind), "preRoll", new Roll("0"));
+    this.#preRollBonuses[kind] = offered.filter(candidate => !candidate.optional && candidate.effect.kind === "add");
+  }
+
+  /** After the roll: the preRoll bonuses it carries are recorded as used, their costs spent and their onChosen run. */
+  async settlePreRollBonuses(kind: "attack", roll: Roll): Promise<void> {
+    const applied = this.#preRollBonuses[kind] ?? [];
+    this.#preRollBonuses[kind] = undefined;
+    if (!applied.length) return;
+    const used: string[] = foundry.utils.getProperty(roll, `flags.${MODULE_ID}.optionalsUsed`) as string[] ?? [];
+    for (const bonus of applied) {
+      used.push(bonus.id);
+      try {
+        if (!bonus.spendsOwnCost) await spendBonusCost(this.actor, bonus.cost, bonus.label);
+        await bonus.onChosen?.({ query: this.rollBonusQuery(kind), phase: "preRoll", roll });
+      } catch (err) {
+        reportServiceProblem("rollBonuses", bonus.contributor, `${bonus.label}: applying it failed`, err);
+      }
+    }
+    foundry.utils.setProperty(roll, `flags.${MODULE_ID}.optionalsUsed`, used);
   }
 
   /** What rollBonuses contributors are told about this use's attack or damage roll. */

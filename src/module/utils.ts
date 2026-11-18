@@ -7428,7 +7428,7 @@ export async function midiRenderTemplateRoll(roll: Roll | undefined, template: s
     ? `<i class="fas fa-bolt ${cls}"${attrs}></i>`
     // The SVG as a mask, coloured by the text colour (core's icons carry their own fill); an absolute route, as a
     // url() in a custom property resolves against the stylesheet that uses it
-    : `<span class="${cls} midi-attack-reason-mask" style="--midi-reason-icon: url('${foundry.utils.getRoute(m.kind === "flanked" ? "modules/midi-qol/icons/encirclement.svg" : "icons/svg/sword.svg")}')" role="img" aria-label="${foundry.utils.escapeHTML(m.label)}"${attrs}></span>`;
+    : `<span class="${cls} midi-attack-reason-mask" style="--midi-reason-icon: url('${foundry.utils.getRoute(m.kind === "flanked" ? "modules/midi-qol/icons/encirclement.svg" : m.kind === "bonus" ? "icons/svg/upgrade.svg" : "icons/svg/sword.svg")}')" role="img" aria-label="${foundry.utils.escapeHTML(m.label)}"${attrs}></span>`;
   const attackReasons = attackModifiers.map(m => reasonIcon(m, `midi-attack-reason ${reasonSign(m)}`, ` data-tooltip="${foundry.utils.escapeHTML(describeReason(m))}"`));
   // Effects behind the roll bonus (Bless and the like) by their own image, outlined green or red; the weapon's own
   // make-up (ability, proficiency, magic, ammunition) is the usual and gets none
