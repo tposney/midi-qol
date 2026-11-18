@@ -1,5 +1,5 @@
 ### 14.7.0
-midi 14.7.0 requires dnd5e 6.1 and DAE 14.6.10. Worlds on dnd5e 6.0 stay on midi 14.6.x: Foundry warns before updating them to 14.7.0, and the last 14.6 release installs from https://github.com/tposney/midi-qol/releases/download/v14.6.13/module.json. midi's CAT integration requires Coven's Automation Toolkit 0.1.8.
+midi 14.7.0 requires dnd5e 6.1 and DAE 14.6.10. Worlds on dnd5e 6.0 stay on midi 14.6.x: Foundry warns before updating them to 14.7.0, and the last 14.6 release installs from https://github.com/tposney/midi-qol/releases/download/v14.6.14/module.json. midi's CAT integration requires Coven's Automation Toolkit 0.1.8.
 
 **What dnd5e 6.1 changes**
 
