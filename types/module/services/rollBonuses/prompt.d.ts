@@ -1,10 +1,10 @@
-import { defineService } from "../api/services.js";
+import { defineService } from "../../api/services.js";
 export interface BonusPromptProvider {
     open(data: object): {
         render(options?: object): unknown;
     };
 }
-declare module "../api/services.js" {
+declare module "../../api/services.js" {
     interface MidiServices {
         bonusPrompt: BonusPromptProvider;
     }

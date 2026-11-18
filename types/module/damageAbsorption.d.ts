@@ -1,1 +1,0 @@
-declare function extendActorTraits(): void;

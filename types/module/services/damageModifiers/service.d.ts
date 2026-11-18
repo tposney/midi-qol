@@ -1,7 +1,7 @@
-import type { DamageApplicationOptions, DamageDescription } from "../../globals.js";
-import { defineService } from "../api/services.js";
-import { DamageChange, DamageStage } from "../rules/damageModifiers.js";
-export type { DamageChange, DamageStage } from "../rules/damageModifiers.js";
+import type { DamageApplicationOptions, DamageDescription } from "../../../globals.js";
+import { defineService } from "../../api/services.js";
+import { DamageChange, DamageStage } from "./rules.js";
+export type { DamageChange, DamageStage } from "./rules.js";
 export interface DamageQuery {
     stage: DamageStage;
     /** The actor taking the damage. */
@@ -22,7 +22,7 @@ export interface DamageModifierContributor {
     stage: DamageStage | readonly DamageStage[];
     for(query: DamageQuery): readonly DamageChange[] | undefined;
 }
-declare module "../api/services.js" {
+declare module "../../api/services.js" {
     interface MidiServices {
         damageModifiers: DamageModifierContributor;
     }

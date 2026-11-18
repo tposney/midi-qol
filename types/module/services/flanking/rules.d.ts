@@ -15,3 +15,5 @@ export declare function segmentsIntersect(a: Point, b: Point, c: Point, d: Point
 export declare function crossesOppositeSides(box: Box, p1: Point, p2: Point): boolean;
 /** Whether a and b stand at least `minDegrees` apart around `centre`. */
 export declare function opposedByAngle(centre: Point, a: Point, b: Point, minDegrees?: number): boolean;
+/** The Check flanking settings whose rule is "the target is flanked" (rather than "the attacker is flanking"). */
+export declare const FLANKED_MODES: readonly string[];
