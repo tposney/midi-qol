@@ -65,13 +65,37 @@ export async function applyCalculatedDamage(actor: Actor.Implementation, summary
   return actor.applyDamage(summary.damages, applyOptions);
 }
 
-/** From midi's dnd5e.preApplyDamage handler (registered first): stamps the update an application of midi's makes. */
-export function stampDamageApplication(updates: Record<string, unknown>, options: DamageOptions | undefined) {
-  const application = options?.[UPDATE_OPTIONS] as CalculatedDamageApplication | undefined;
-  if (!application) return;
+/**
+ * From midi's dnd5e.preApplyDamage handler, after its own work: stamps the update when the application is midi's or
+ * midi's handler wants update options of its own on it (`extraOptions`).
+ */
+export function stampDamageApplication(updates: Record<string, unknown>, options: DamageOptions | undefined, extraOptions?: Record<string, unknown>) {
+  const given = options?.[UPDATE_OPTIONS] as CalculatedDamageApplication | undefined;
+  if (!given && !extraOptions) return;
+  const application: CalculatedDamageApplication = { ...given };
+  if (extraOptions) application.updateOptions = foundry.utils.mergeObject(application.updateOptions ?? {}, extraOptions, { inplace: false });
   const id = foundry.utils.randomID();
   pending.set(id, { ...application, timer: setTimeout(() => pending.delete(id), ABANDONED_MS) });
   updates[MARKER] = id;
+}
+
+const AFTER_APPLIED = Symbol("midi-qol.afterDamageApplied");
+
+/** Runs `step` once the actor update of this applyDamage call has been made (from dnd5e.applyDamage); not if it is cancelled. */
+export function afterDamageApplied(options: DamageOptions, step: () => Promise<unknown>) {
+  const steps = (options[AFTER_APPLIED] as (() => Promise<unknown>)[] | undefined) ?? [];
+  if (!steps.length) Object.defineProperty(options, AFTER_APPLIED, { value: steps, enumerable: false, configurable: true });
+  steps.push(step);
+}
+
+/** From midi's dnd5e.applyDamage handler. */
+export async function runAfterDamageApplied(options: DamageOptions | undefined) {
+  const steps = options?.[AFTER_APPLIED] as (() => Promise<unknown>)[] | undefined;
+  if (!steps?.length) return;
+  delete options![AFTER_APPLIED];
+  for (const step of steps) {
+    try { await step(); } catch (err) { console.error("midi-qol | after damage applied", err); }
+  }
 }
 
 /** From midi's preUpdateActor handler (first): swaps the stamp for the recorded options and pinned values. */

@@ -1,4 +1,4 @@
-import { consumeDamageApplication, stampDamageApplication } from "./services/damageApplication.js";
+import { afterDamageApplied, consumeDamageApplication, runAfterDamageApplied, stampDamageApplication } from "./services/damageApplication.js";
 import { applyDamageModifierStage } from "./services/damageModifiers.js";
 import { warn, error, debug, i18n, debugEnabled, overTimeEffectsToDelete, savedOverTimeEffectsToDelete, log, gameStats, GameSystemConfig, MODULE_ID, getStaticID, MIDI_IMPLYING_STATUSES } from "../midi-qol.js";
 import { excludeRegionSourceEffect, moveRegionsOnTurnChange } from "./regionBehaviors/MidiRegionActivityBehaviorType.js";
@@ -1639,7 +1639,7 @@ function calculateDamageHandler(actor: Actor.Implementation, damages: DamageDesc
 }
 
 Hooks.on("dnd5e.preApplyDamage", (actor, amount, updates, options) => {
-  stampDamageApplication(updates, options);
+  let extraUpdateOptions: Record<string, unknown> | undefined;
   if (updates["system.attributes.hp.temp"]) updates["system.attributes.hp.temp"] = Math.floor(updates["system.attributes.hp.temp"]);
 
   // Handle vitality overflow when HP reaches 0 (for actor.applyDamage() calls)
@@ -1663,27 +1663,24 @@ Hooks.on("dnd5e.preApplyDamage", (actor, amount, updates, options) => {
       const maxUses = vitalityItem.system.uses?.max ?? 0;
       const newSpent = Math.min(maxUses, currentSpent + overflowDamage);
 
-      // Mark that vitality was handled to prevent double-counting in preUpdateActor
       options.midiVitalityHandled = true;
-      // Flag that vitality update is pending so updateActor hook skips checkWounded
-      options.midiVitalityUpdatePending = true;
-
-      // Queue vitality item update (will execute after actor update)
-      // Use setTimeout to ensure it happens after the actor update completes
-      // Note: checkWounded is called by the updateItem hook when vitality changes,
-      // so we don't need to call it explicitly here
-      setTimeout(async () => {
-        // @ts-expect-error item update for uses.spent
-        await vitalityItem.update({ "system.uses.spent": newSpent });
-      }, 100);
+      // On the actor update, so its updateActor wounded check is skipped: the vitality item's update does it
+      extraUpdateOptions = { midiVitalityUpdatePending: true };
+      // @ts-expect-error item update for uses.spent
+      afterDamageApplied(options, () => vitalityItem.update({ "system.uses.spent": newSpent }));
     }
   }
+  stampDamageApplication(updates, options, extraUpdateOptions);
 
   if (options.midi) {
     foundry.utils.setProperty(options, "midi.amount", amount);
     foundry.utils.setProperty(options, "midi.updates", updates);
   }
   return true;
+});
+
+Hooks.on("dnd5e.applyDamage", (actor, amount, options) => {
+  runAfterDamageApplied(options);
 });
 
 Hooks.on("dnd5e.preRollConcentration", (rollConfig, dialogConfig, messageConfig) => {
