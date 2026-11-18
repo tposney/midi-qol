@@ -2438,5 +2438,7 @@
   "midi-qol.BonusPrompt.Phased": "Tick and apply",
   "midi-qol.BonusPrompt.Classic": "Classic (one button per bonus)",
   "midi-qol.BonusPrompt.Apply": "Apply",
-  "midi-qol.BonusPrompt.Skip": "Skip"
+  "midi-qol.BonusPrompt.Skip": "Skip",
+  "midi-qol.BonusApproval.Title": "Use your bonus?",
+  "midi-qol.BonusApproval.Content": "{requester} asks to use {label} ({actor})."
 }

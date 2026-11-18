@@ -448,6 +448,7 @@ Hooks.once('init', async function () {
   defineTargetConfirmationService(resolveTargetConfirmation);
   defineChooseTokensService();
   defineRollBonusesService();
+  registerBonusApprovalQuery();
   defineFlankingService();
   defineDistanceService();
   defineRangeService();
@@ -1043,6 +1044,7 @@ import { defineDistanceService } from "./module/services/distance/service.js";
 import { allFlows, coarseStepOf, getFlow } from "./module/steps/flows.js";
 import { defineRangeService } from "./module/services/range/service.js";
 import { damageCalculationOrder, getDamageCalculationStep, registerDamageCalculationStep, removeDamageCalculationStep } from "./module/steps/damageCalculation.js";
+import { registerBonusApprovalQuery } from "./module/services/rollBonuses/approval.js";
 import { defineFlankingService } from "./module/services/flanking/service.js";
 import { applyCalculatedDamage, registerDamageApplication } from "./module/damage/application.js";
 import { bonusPromptService, defineBonusPromptService } from "./module/services/rollBonuses/prompt.js";

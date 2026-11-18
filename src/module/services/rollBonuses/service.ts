@@ -2,6 +2,7 @@ import type { Activity } from "../../../globals.js";
 import { defineService, entries, reportServiceProblem } from "../../api/services.js";
 import type { Workflow } from "../../Workflow.js";
 import { addRollToAsync, setBonusActionUsed, setReactionUsed, setActionUsed } from "../../utils.js";
+import { approveBonus } from "./approval.js";
 import { canAfford, type BonusCost, type BonusEffect, type BonusPhase, type BonusRollKind, type Outcome } from "./rules.js";
 
 /*
@@ -60,6 +61,10 @@ export interface BonusCandidate {
    * chosen and added to just those targets' damage (the damageModifiers bonus stage); the damage roll is unchanged.
    */
   targets?: readonly string[];
+  /** Asked before the bonus is applied (a third party's consent); false or a throw: not applied. */
+  approve?: (ctx: BonusContext) => boolean | Promise<boolean>;
+  /** An actor whose player is asked (BONUS_APPROVAL_QUERY) before the bonus is applied. */
+  approver?: string;
   /** Offered on a natural 1 (attack fumble). */
   onFumble?: boolean;
   /** True, or why it is not offered now. */
@@ -215,6 +220,7 @@ export async function spendBonusCost(actor: Actor.Implementation, cost: BonusCos
 /** Applies a bonus and runs its onChosen; a failure is reported and leaves the roll unchanged. */
 export async function applyOfferedBonus(bonus: OfferedBonus, ctx: BonusContext, rollData: object): Promise<Roll> {
   let roll = ctx.roll;
+  if (!(await approveBonus(bonus, ctx))) return roll;
   try {
     if (bonus.targets?.length && ctx.query.kind === "damage" && bonus.effect.kind === "add" && ctx.query.workflow) {
       const extra = await new Roll(bonus.effect.formula, { ...ctx.roll.data, ...rollData }).evaluate();

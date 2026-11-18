@@ -696,6 +696,13 @@ declare global {
 
   interface RegExpConstructor { escape(value: string): string } // ES2025, not in TypeScript 5.9's lib
 
+  /** midi's Foundry queries (User#query): a player approves a bonus of theirs (services/rollBonuses/approval.ts) */
+  namespace CONFIG {
+    interface Queries {
+      "midi-qol.bonusApproval": (data: { label: string, actorName: string, requester: string }) => Promise<boolean>;
+    }
+  }
+
   /** fvtt-types brands module sub-types, so midi's message types need declaring to be assignable. */
   interface DataModelConfig {
     ChatMessage: {

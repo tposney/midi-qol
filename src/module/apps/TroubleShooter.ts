@@ -1,3 +1,4 @@
+import { entries } from "../api/services.js";
 import { chooseJsonFile } from "../lib/fileDialogs.js";
 import { i18n, i18nFormat, systemConcentrationId } from "../../midi-qol.js";
 import { ModuleReviewDialog } from "./ModuleReviewDialog.js";
@@ -726,6 +727,20 @@ export class TroubleShooter extends HandlebarsApplicationMixin(ApplicationV2) {
     }
   }
 
+  /** CAT prompts for its own optional bonuses unless it offers them through midi's rollBonuses service: two prompts on one roll */
+  public static checkRollBonusPrompts(data: TroubleShooterData) {
+    if (!game.modules.get("cat")?.active) return;
+    const catContributes = entries("rollBonuses").some(({ id }) => id.startsWith("cat."));
+    if (catContributes) return;
+    data.problems.push({
+      moduleId: "cat",
+      severity: "Warn",
+      problemSummary: "Coven's Automation Toolkit offers its optional bonuses in its own dialog: a roll can show two bonus prompts (CAT's and midi's)",
+      problemDetail: "When CAT registers its bonuses with midi's rollBonuses service they appear in midi's one prompt. The adapter is described in midi's docs (docs/cat-rollBonuses-adapter.md).",
+      fixer: "Update CAT when it offers its bonuses through midi; until then both prompts appear"
+    });
+  }
+
   public static checkMidiCoverSettings(data: TroubleShooterData) {
     switch (configSettings.optionalRules.wallsBlockRange) {
       case "none":
@@ -938,6 +953,7 @@ export class TroubleShooter extends HandlebarsApplicationMixin(ApplicationV2) {
     data.problems.push(...featureOverlapProblems());
     this.checkMidiSettings(data);
     this.checkMidiCoverSettings(data)
+    this.checkRollBonusPrompts(data);
     this.checkMidiSaveSettings(data);
     this.checkNoActorTokens(data);
     this.checkConcentrationStatusEffects(data);
