@@ -1,4 +1,5 @@
-export type StepLayer = "global" | "call";
+/** Narrowest wins: a module's global change, then the item's, the activity's, the call's (completeActivityUse). */
+export type StepLayer = "global" | "item" | "activity" | "call";
 export type StepChange = 
 /** Run `step` before or after the anchor step. */
 {
@@ -58,5 +59,29 @@ export interface AssembledSteps {
     conflicts: StepConflict[];
 }
 export declare function assembleSteps(changes: readonly StepChange[]): AssembledSteps;
+/** A change as a module or a call gives it: no layer (the caller sets it). */
+export type StepChangeInput = {
+    [K in StepChange["kind"]]: Omit<Extract<StepChange, {
+        kind: K;
+    }>, "layer">;
+}[StepChange["kind"]];
+/**
+ * Checked and normalised changes for a layer: inserts anchored on a coarse step go before its first fine step or after
+ * its last (`insertAnchor`); replace, wrap and remove need a fine step. A change that isn't one is dropped and described.
+ */
+export declare function normaliseChanges(input: readonly unknown[], layer: StepLayer, options?: {
+    insertAnchor?: (id: string, side: "before" | "after") => string;
+    isCoarse?: (id: string) => boolean;
+}): {
+    changes: StepChange[];
+    problems: string[];
+};
+/** Every step a use's changes run (inserted, replacements, wrappers). */
+export declare function stepsUsed(changes: readonly StepChange[]): string[];
+/**
+ * A use's steps in the order they'd run if every step went on to the next in `flow`: inserts around their anchors,
+ * replacements in their place (`a -> b` for b replacing a), wraps as `[w1, w2](step)`, removed steps left out.
+ */
+export declare function previewSteps(flow: readonly string[], assembled: AssembledSteps): string[];
 /** The step after `step` in a flow's list (where a removed step's use goes on to). */
 export declare function stepAfterInFlow(flow: readonly string[], step: string): string | undefined;

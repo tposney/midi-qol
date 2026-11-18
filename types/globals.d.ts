@@ -19,6 +19,7 @@ import * as distanceService from "./module/services/distance/service";
 import * as distanceProvider from "./module/services/distance/provider";
 import * as cardNotes from "./module/lib/cardNotes";
 import * as playerWaits from "./module/lib/playerWaits";
+import type * as requestCore from "./module/lib/requests/core";
 import * as tokenNames from "./module/lib/tokenNames";
 import * as contestedRollModule from "./module/lib/contestedRoll";
 import * as tokenHighlight from "./module/lib/tokenHighlight";
@@ -98,6 +99,9 @@ declare module "fvtt-types/configuration" {
                 choice?: string;
                 claimed?: boolean;
             }) => void;
+            /** lib/requests.ts: a request this client holds was sent, or settled (how) */
+            "midi-qol.requestStarted": (request: requestCore.RequestView) => void;
+            "midi-qol.requestSettled": (request: requestCore.RequestView, how: requestCore.SettledHow) => void;
             "midi-qol.playerWaitsChanged": (waits: playerWaits.WaitInfo[]) => void;
             /** A service's providers or wrappers changed (api/services.ts) */
             "midi-qol.servicesChanged": (serviceId: string) => void;
@@ -783,7 +787,7 @@ declare global {
     interface RegExpConstructor {
         escape(value: string): string;
     }
-    /** midi's Foundry queries (User#query): a player approves a bonus of theirs (services/rollBonuses/approval.ts) */
+    /** midi's Foundry queries (User#query): bonus approval (services/rollBonuses/approval.ts), requests (lib/requests.ts) */
     namespace CONFIG {
         interface Queries {
             "midi-qol.bonusApproval": (data: {
@@ -791,6 +795,25 @@ declare global {
                 actorName: string;
                 requester: string;
             }) => Promise<boolean>;
+            /** lib/requests.ts: the asked client runs the request's handler; its answer settles the request */
+            "midi-qol.request": (data: {
+                type: string;
+                id: string;
+                holderId: string;
+                remaining: number;
+                data: object;
+            }) => Promise<unknown>;
+            /** lib/requests.ts: pause/resume/claim to the requester, settled/paused/resumed to the asked client */
+            "midi-qol.requestEvent": (data: {
+                to: "holder" | "asked";
+                id: string;
+                event: string;
+                how?: string;
+                remaining?: number;
+            }) => {
+                ok: boolean;
+                remaining?: number;
+            };
         }
     }
     /** fvtt-types brands module sub-types, so midi's message types need declaring to be assignable. */

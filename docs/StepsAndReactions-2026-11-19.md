@@ -84,6 +84,8 @@ listed in midi's TroubleShooter, as is a replacement whose `writes` leaves out a
 
 A use's changes are worked out at its first step and stored on its chat card. A use rebuilt after a reload keeps them;
 if a step it needs isn't registered on that client (your module isn't active there), it stops and says which step.
+A rebuilt use resumes where its card says it waits (one of midi's own steps), not inside a step you inserted: an
+inserted step that was suspended when the page reloaded isn't run again.
 
 ## Reactions
 
@@ -152,6 +154,14 @@ Hooks: `midi-qol.requestStarted(request)`, `midi-qol.requestSettled(request, how
 
 ## Still socketlib
 
-`MidiQOL.socket()` and its handler names stay for modules that call them (`chooseReactions` among them); midi itself no
-longer uses socketlib for reactions or for players' saves through their roll dialog. Chat-card saves and Monk's
-TokenBar, Flash Rolls and Epic Rolls keep their own routes for now.
+`MidiQOL.socket()` and its handler names stay for modules that call them (`chooseReactions` among them). midi asks
+reactions, and a connected player's save through their roll dialog, with Foundry queries; when a GM answers from the
+player list, or the save is made without the player, that roll is still run on the GM's client through socketlib.
+Chat-card saves, Monk's TokenBar, Flash Rolls, Epic Rolls and midi's other GM actions keep their socketlib routes for
+now.
+
+## Ports
+
+`workflow.ports` (`askReactions`, `requestSaves`, `applyDamageCard`; `workflow.setPort` for one use) are the lower-level
+hooks M2 added for waits. Prefer the reaction steps and the `reactions` service above: the ports may go once a
+`saveRequests` service exists.

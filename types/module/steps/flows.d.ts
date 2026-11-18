@@ -6,6 +6,8 @@ export interface Flow {
 }
 /** Coarse steps: what a module inserts around, each a group of fine steps. */
 export declare const COARSE_STEPS: Readonly<Record<string, readonly string[]>>;
+/** A step an insert anchors on: a coarse step's first fine step (before) or last (after); a fine step itself. */
+export declare function insertAnchor(id: string, side: "before" | "after"): string;
 /** The coarse step a fine step belongs to. */
 export declare function coarseStepOf(stepId: string): string | undefined;
 export declare function registerFlow(flow: Flow): void;

@@ -220,14 +220,15 @@ function closePlayerRollDialogs(info: WaitInfo) {
   socketlibSocket?.executeAsUser("closePlayerRollDialogs", info.userId, { actorUuid: info.actorUuid })?.catch?.(() => { });
 }
 
-/** dnd5e's roll dialogs open on this client for the actor. */
-export function rollDialogsFor(actorUuid: string | null): foundry.applications.api.ApplicationV2[] {
+/** dnd5e's roll dialogs open on this client for the actor; with `requestClaim`, only the one a request opened (lib/requests.ts). */
+export function rollDialogsFor(actorUuid: string | null, requestClaim?: string): foundry.applications.api.ApplicationV2[] {
   const RollConfigurationDialog = globalThis.dnd5e?.applications?.dice?.RollConfigurationDialog;
   if (!RollConfigurationDialog) return [];
   return [...foundry.applications.instances.values()].filter(app => {
     if (!(app instanceof RollConfigurationDialog)) return false;
-    const subject = (app as unknown as { config?: { subject?: { uuid?: string, parent?: { uuid?: string } } } }).config?.subject;
-    return (subject?.uuid ?? subject?.parent?.uuid) === actorUuid;
+    const config = (app as unknown as { config?: { subject?: { uuid?: string, parent?: { uuid?: string } }, midiOptions?: { requestClaim?: string } } }).config;
+    if (requestClaim !== undefined && config?.midiOptions?.requestClaim !== requestClaim) return false;
+    return (config?.subject?.uuid ?? config?.subject?.parent?.uuid) === actorUuid;
   });
 }
 

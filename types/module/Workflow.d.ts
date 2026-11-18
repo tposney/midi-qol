@@ -1,8 +1,10 @@
-import "./steps/flows.js";
+import { type StepContext } from "./steps/steps.js";
+import { type AssembledSteps, type StepChangeInput } from "./steps/assembly.js";
 import type { PortName, WorkflowPorts } from "./steps/ports.js";
 import { TeleportOption } from "./activities/TeleportActivity.js";
 import { TokenDocumentSet } from "./lib/tokenDocumentSet.js";
-import { getOrCreateTokenForActor, type SaveRequestKind } from "./utils.js";
+import { type WaitChoiceSpec } from "./lib/playerWaits.js";
+import { type ReactionResult, getOrCreateTokenForActor, type SaveRequestKind } from "./utils.js";
 import { OnUseMacros } from "./apps/Item.js";
 import { type RollBonusQuery } from "./services/rollBonuses/service.js";
 import { type MidiCardSection, type SectionName } from "./ChatClasses/UsageCardMessage.js";
@@ -43,6 +45,13 @@ export type WorkflowState = undefined | (() => Promise<WorkflowState>);
 /** What a suspended workflow is woken by (Workflow#resume) */
 export type WorkflowEvent = "attackRolled" | "damageRolled" | "noDamage" | "utilityRolled";
 export type WorkflowOutcome = "ok" | "allMissed" | "invalid" | "split" | "manualSaves" | "cancelled" | "aborted";
+/**
+ * The workflow's stored fields: kept in memory, written to its card (lib/cardState.ts) through the card's update cache.
+ * The card is read only when the workflow is rebuilt from it (load). Writing undefined forgets the value.
+ */
+/** `value` with only what survives JSON (primitives, arrays and plain objects of them); undefined if nothing does */
+/** Plain data only (primitives, arrays of them, plain objects): class instances (an Event, a module's session object) are left out */
+export declare function jsonSafe(value: unknown): unknown;
 /** A reason shown on the attack roll: a bonus part (value) or the source of advantage. */
 /** A reason the attack roll shows: flanking, a target-granted bonus, or a roll bonus added to the formula (rollBonuses preRoll) */
 export interface AttackModifier {
@@ -580,14 +589,17 @@ export declare class Workflow {
     }): Promise<void | import("fvtt-types/src/foundry/common/abstract/document.mjs").default.Any | ChatMessage<"base" | import("fvtt-types/src/foundry/common/abstract/document.mjs").default.ModuleSubType | "midi-qol.damage" | "midi-qol.note">>;
     static removeWorkflow(id: string | undefined): Promise<void>;
     static get stateTable(): Record<string, WorkflowState>;
-    /** The pre/post hooks and onUse passes of every step (steps/steps.ts), as the item sheet lists them */
+    /**
+     * The pre/post hooks and onUse passes of midi's engine-run steps (steps/steps.ts), as the item sheet lists them; not
+     * the inline reaction steps, which fire none
+     */
     static get stateHooks(): Record<string, string>;
     static get allHooks(): Record<string, string>;
     static get allMacroPasses(): Record<string, string>;
-    callHooksForAction(prePost: ("pre" | "post"), action: WorkflowState): Promise<boolean | undefined>;
-    callOnUseMacrosForAction(prePost: ("pre" | "post"), action: WorkflowState): Promise<(DamageBonusMacroResult | any)[]>;
-    static nameForState(state: WorkflowState): string;
-    nameForState(state: WorkflowState): string;
+    callHooksForAction(prePost: ("pre" | "post"), action: WorkflowState | string): Promise<boolean | undefined>;
+    callOnUseMacrosForAction(prePost: ("pre" | "post"), action: WorkflowState | string): Promise<(DamageBonusMacroResult | any)[]>;
+    static nameForState(state: WorkflowState | string): string;
+    nameForState(state: WorkflowState | string): string;
     /** Wake a suspended workflow; without an event it re-runs the state it waits in */
     resume(event?: WorkflowEvent): Promise<void | import("fvtt-types/src/foundry/common/abstract/document.mjs").default.Any | ChatMessage<"base" | import("fvtt-types/src/foundry/common/abstract/document.mjs").default.ModuleSubType | "midi-qol.damage" | "midi-qol.note">>;
     /** A step is awaiting a roll it started (M2 stage 5): the roll's resume is the step's answer */
@@ -611,6 +623,18 @@ export declare class Workflow {
      * step: the old step's post pass and hook, then the new step's pre pass and hook (either can cancel or abort).
      */
     performState(newState: WorkflowState | string): Promise<void>;
+    /**
+     * This use's changes to its flow (steps/assembly.ts): the global changes whose `when` applies and its call's
+     * (`workflowOptions.steps`), worked out when it first runs a step and stored on the card for a rebuild.
+     */
+    get assembledSteps(): AssembledSteps;
+    /**
+     * An inline step (a reaction trigger: steps.ts `inline`): `own` is what it does; the use's changes apply. Inserted
+     * steps fire their pre/post hooks and passes; their results are ignored (no branching from here).
+     */
+    runInlineStep<T>(id: string, own: () => Promise<T>, extra?: Partial<StepContext>): Promise<T | undefined>;
+    /** A reaction trigger: the reaction step for `triggerType` (REACTION_STEPS), whose default asks through the askReactions port */
+    askReactionsStep(target: TokenOrDocument | string, triggerTokenUuid: string | null | undefined, triggeringRoll: Roll | null | undefined, triggerType: string, options?: any): Promise<ReactionResult>;
     WorkflowState_Suspend(): Promise<WorkflowState>;
     WorkflowState_NoAction(): Promise<WorkflowState>;
     WorkflowState_Start(): Promise<WorkflowState>;
@@ -834,6 +858,8 @@ export declare class Workflow {
                 versatile: boolean;
                 workflowName: string;
                 castUsesReaction: boolean;
+                /** This use's changes to its flow (steps/api.ts): the call layer, winning over modules' global changes */
+                steps: StepChangeInput[];
                 castUsesBonusAction: boolean;
                 coverOrigin: {
                     x: number;
@@ -844,10 +870,6 @@ export declare class Workflow {
                 preSelectedTargetUuids: string[];
                 overTimeEffectUuid: string;
                 teleport: TeleportOption;
-                reactionRequest: {
-                    id: string;
-                    userId: string;
-                };
             }>;
             context: {
                 damageComponents: {};
@@ -1144,7 +1166,22 @@ export declare class Workflow {
         promise: Promise<Roll[] | Roll | null> | null;
         requestCard: Promise<ChatMessage | undefined> | undefined;
         friendly?: boolean;
+        asked?: boolean;
     };
+    /**
+     * What the GM can answer a player's save with from the player list: rolled for them (normal, with advantage or
+     * disadvantage), or on the GM's screen; shown as the player's own roll would have been (their roll mode; private and
+     * self whispered to them, blind not). Both the chat-card path and askPlayerSave offer these.
+     */
+    gmSaveChoices(saveDetails: SaveDetails, player: User, showRoll: boolean): Record<"roll" | "advantage" | "disadvantage" | "gmRoll", WaitChoiceSpec<Roll[] | Roll | null>>;
+    /**
+     * A player's save through the request core (M3 stage 5; rules: ~/Documents/midi-request-redesign-plan-2026-11-10.md).
+     * Their roll dialog shows this client's deadline (Player save timeout); confirming it claims the request, after which
+     * the roll is waited for. A GM answers from the player list. When the deadline passes the save is made without them,
+     * non-interactively: here if this client owns the creature, else by a GM, shown as the player's roll would have
+     * been; with no GM connected, here unattended (no prompts).
+     */
+    askPlayerSave(target: TokenOrDocument, player: User.Implementation, saveDetails: SaveDetails, rollInfo: QueueSaveRollOptions["rollInfo"], displayOptions: QueueSaveRollOptions["displayOptions"]): Promise<Roll[] | Roll | null>;
     /**
      * Process a single target's save result - determine if saved, apply bonuses, update tracking sets
      */
@@ -1463,6 +1500,8 @@ export type WorkflowOptions = InexactPartial<{
     versatile: boolean;
     workflowName: string;
     castUsesReaction: boolean;
+    /** This use's changes to its flow (steps/api.ts): the call layer, winning over modules' global changes */
+    steps: StepChangeInput[];
     castUsesBonusAction: boolean;
     coverOrigin: {
         x: number;
@@ -1473,10 +1512,6 @@ export type WorkflowOptions = InexactPartial<{
     preSelectedTargetUuids: string[];
     overTimeEffectUuid: string;
     teleport: TeleportOption;
-    reactionRequest: {
-        id: string;
-        userId: string;
-    };
 }>;
 export type WorkflowRollOptions = InexactPartial<{
     event: AugmentedEvent;

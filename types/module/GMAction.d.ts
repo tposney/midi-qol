@@ -1,5 +1,6 @@
+import { type IncomingRequest } from "./lib/requests.js";
 import { DamageDescriptionObject } from "./Workflow.js";
-import { DamageApplicationOptions, DamageDescription, DamageListEntry, DamageModDisplay } from "../globals.js";
+import { DamageApplicationOptions, DamageDescription, DamageListEntry, DamageModDisplay, SaveDetails } from "../globals.js";
 export declare let socketlibSocket: any;
 export declare let setupSocket: () => void;
 /**
@@ -34,6 +35,36 @@ export declare function initGMActionSetup(): void;
  * roll in that mode, so a private or self roll is whispered to them too; a blind or public one is left as it is.
  */
 export declare function whisperRollToPlayer(message: ChatMessage.Implementation): void;
+/** The request type a player's client answers with its roll dialog (rollAbility with the request) */
+export declare const SAVE_REQUEST = "midi-qol.save";
+export declare function rollAbility(data: {
+    saveDetails: SaveDetails;
+    displayOptions?: {
+        fastForward?: boolean;
+        chatMessage?: boolean;
+        rollMode?: string;
+        showTargetDC?: boolean;
+        /** Rolled for this player by someone else: shown to them as their own roll would have been */
+        forUserId?: string;
+        /** Rolled for another player's creature with no GM connected: nobody here may answer its prompts */
+        unattended?: boolean;
+    };
+    request?: string;
+    targetUuid?: string;
+    ability?: string;
+    skill?: string;
+    tool?: string;
+    options?: any;
+    advantage?: boolean;
+    disadvantage?: boolean;
+    isMagicSave?: boolean;
+    isConcentrationCheck?: boolean;
+    rollDC?: number;
+    saveItemUuid?: string;
+    workflowOptions?: object;
+    workflowId?: string;
+    rollMode?: string;
+}, request?: IncomingRequest): Promise<unknown>;
 export interface DamageListContextEntry {
     isCharacter: boolean;
     isNpc: boolean;

@@ -1,6 +1,6 @@
 import { afterDamageApplied, applyCalculatedDamage, applyDamageWithOptions } from "./damage/application.js";
 import { ALL_DAMAGE_KEY, checkRule, configSettings } from "./settings.js";
-import { _closePlayerRollDialogs, playerWaitHandlers } from "./lib/playerWaits.js";
+import { _closePlayerRollDialogs, playerWaitHandlers, rollDialogsFor } from "./lib/playerWaits.js";
 import { DialogCountdown, dialogCountdownOptions } from "./lib/dialogCountdown.js";
 import { withWorkflowOptionsCodec } from "./lib/workflowOptionsCodec.js";
 import { i18n, log, warn, gameStats, getCanvas, error, debugEnabled, debug, GameSystemConfig, MODULE_ID } from "../midi-qol.js";
@@ -940,11 +940,14 @@ export async function rollAbility(data: {
         if (rollConfig.midiOptions?.requestClaim !== claim) return;
         Hooks.off("dnd5e.postRollConfiguration", hookId);
         if (request.settledHow) return false;
+        // Hooks can't wait: the roll goes ahead while the claim travels. A claim that loses to the time-out leaves this
+        // roll unused (the redesign's rule 7: a late player roll is ignored), its message shown beside the fallback's
         void request.claim();
       });
       const done = (result?: Roll[] | Roll) => { Hooks.off("dnd5e.postRollConfiguration", hookId); settle(result); };
       request.onSettled(() => {
-        _closePlayerRollDialogs({ actorUuid: actor.uuid });
+        // This request's dialog only: another use may have its own roll dialog open for the actor
+        for (const app of rollDialogsFor(actor.uuid, claim)) void app.close();
         done();
       });
       performRoll().then(done).catch(err => { Hooks.off("dnd5e.postRollConfiguration", hookId); fail(err); });

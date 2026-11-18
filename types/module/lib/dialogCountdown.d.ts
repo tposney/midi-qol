@@ -17,8 +17,11 @@ export declare class DialogCountdown {
     constructor(options: CountdownOptions);
     get paused(): boolean;
     get secondsLeft(): number;
-    pause(): void;
-    resume(): void;
+    /** `notify` false: the requester paused it (lib/requests.ts), so onPause isn't told again. */
+    pause(notify?: boolean): void;
+    resume(notify?: boolean): void;
+    /** Show the time another client's deadline has left (it owns the expiry: lib/requests.ts). */
+    sync(remainingMs: number): void;
     /** The dialog was answered or closed: no more ticking, and no expiry. */
     stop(): void;
     /** Show the countdown at the top of the dialog's content (again after a re-render). */

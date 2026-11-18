@@ -322,6 +322,8 @@ export type MidiOptions = {
     activityId?: string;
     /** Rolled for a player by someone who can't act for them (a player, with no GM connected): no optional-bonus prompts */
     unattended?: boolean;
+    /** A save asked through the request core (lib/requests.ts): its roll is the one that claims the request */
+    requestClaim?: string;
     cardNote?: SaveDetails["cardNote"];
     activityIdentifier?: string;
     advantage?: boolean;
@@ -873,6 +875,7 @@ export declare function getOptionalCountRemainingShortFlag(actor: Actor.Implemen
 export declare function getOptionalCountRemaining(actor: Actor.Implementation, flag: string, owner?: any): any;
 export declare function removeEffectGranting(actor: Actor.Implementation, changeKey: string): Promise<any>;
 export declare function hasEffectGranting(actor: Actor.Implementation, key: string, selector: string, owner?: any): {} | null;
+export declare function maxCastLevel(actor: Actor.Implementation): any;
 export declare const reactionTypes: {
     reaction: {
         prompt: string;
@@ -939,20 +942,15 @@ export declare function doReactions(targetRef: TokenOrDocument | string, trigger
     ac?: number;
     itemName?: string;
 }>;
-/** Pause (or resume, with the time that was left) a reaction request's timeout, on the requesting client. */
-export declare function _pauseReactionTimer({ id, pause }: {
-    id: string;
-    pause: boolean;
-}): void;
-/**
- * A reaction being used waits on its user (e.g. placing a teleport): pause the requesting client's timeout, which
- * would otherwise give up on the reaction, and resume it afterwards.
- */
-export declare function pauseReactionTimeout(request: {
-    id: string;
-    userId: string;
-}, pause: boolean): Promise<any>;
-export declare function requestReactions(target: Token.Implementation, player: User.Implementation, triggerTokenUuid: string | undefined, reactionFlavor: string, triggerType: string, reactionActivityList: ReactionItemReference[], resolve: ({}: {}) => void, chatPromptMessage: ChatMessage.Implementation, options?: any): Promise<void>;
+export type ReactionResult = {
+    name?: string;
+    uuid?: string;
+    ac?: number;
+    itemName?: string;
+    itemUuid?: string;
+};
+/** The request type a reacting client answers (GMAction registers its handler) */
+export declare const REACTIONS_REQUEST = "midi-qol.reactions";
 export declare function promptReactions(tokenUuid: string, reactionActivityList: ReactionItemReference[], triggerTokenUuid: string | undefined, reactionFlavor: string, triggerType: string, options?: any): Promise<any>;
 export declare function playerFor(target?: TokenOrDocument | null): User | null | undefined;
 export declare function playerForActor(actor?: Actor | null): User | undefined;
@@ -962,10 +960,6 @@ export declare function playerForActor(actor?: Actor | null): User | undefined;
  * use it anyway ("use"), or don't ("cancel"); "here" when there is nothing to ask.
  */
 export declare function confirmUseOffScene(actor: Actor.Implementation | null | undefined): Promise<"here" | "viewed" | "use" | "cancel">;
-/** The GM answered for this player: close their reaction dialog, which then answers "no reaction" locally. */
-export declare function _closeReactionDialog({ id }: {
-    id: string;
-}): void;
 export declare function reactionDialog(actor: Actor.Implementation, triggerTokenUuid: string | undefined, reactionActivities: Activity[], rollFlavor: string, triggerType: string, options?: any): Promise<unknown>;
 declare const ReactionDialog_base: import("fvtt-types/src/foundry/client/applications/api/handlebars-application.mjs").default.Mix<typeof import("fvtt-types/src/foundry/client/applications/api/application.mjs").default>;
 export declare class ReactionDialog extends ReactionDialog_base {
@@ -973,7 +967,7 @@ export declare class ReactionDialog extends ReactionDialog_base {
     closedForGM?: boolean;
     startTime: number;
     endTime: number;
-    countdown: DialogCountdown;
+    countdown: DialogCountdown | undefined;
     timeRemaining: number;
     data: {
         actor: Actor.Implementation;
@@ -983,12 +977,13 @@ export declare class ReactionDialog extends ReactionDialog_base {
         title: string;
         content: HTMLElement;
         callback: () => {};
-        close: (args0: any) => {};
+        close: () => void;
         buttons: any;
         completed: boolean;
         timeout: number;
         timeRemaining: number;
-        onPause?: (paused: boolean) => void;
+        /** The request's display-only countdown; null: the request has no deadline; undefined: its own (a direct call) */
+        countdown?: DialogCountdown | null;
     };
     constructor(data: any);
     static PARTS: {

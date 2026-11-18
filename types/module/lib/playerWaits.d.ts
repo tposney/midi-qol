@@ -94,8 +94,8 @@ export declare function beginPlayerWait<T>(spec: WaitSpec<T>): PlayerWait<T> | u
  * the choice the GM (or a disconnect) settles it with, whichever comes first.
  */
 export declare function trackPlayerWait<T>(spec: WaitSpec<T>, start: (ref: WaitRef | undefined) => Promise<T>): Promise<T>;
-/** dnd5e's roll dialogs open on this client for the actor. */
-export declare function rollDialogsFor(actorUuid: string | null): foundry.applications.api.ApplicationV2[];
+/** dnd5e's roll dialogs open on this client for the actor; with `requestClaim`, only the one a request opened (lib/requests.ts). */
+export declare function rollDialogsFor(actorUuid: string | null, requestClaim?: string): foundry.applications.api.ApplicationV2[];
 /** Close dnd5e's roll dialogs open on this client for the actor (as cancelled; the roll is no longer wanted). */
 export declare function _closePlayerRollDialogs({ actorUuid }: {
     actorUuid: string | null;

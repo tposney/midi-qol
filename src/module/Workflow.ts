@@ -15,7 +15,7 @@ import { TokenDocumentSet, hookTarget, tokenOf } from "./lib/tokenDocumentSet.js
 import { RECORD_SETS, RecordSet, RecordFacts, STATE_KEYS, StateKey, attributionMap, attributionTriples, cardMidi, rollTypeOf, cardOtherConsumption, cardPreSelected, messagesFrom, recordList, recordPath, recordPathOfUuid, storedMidiFlag } from "./lib/cardState.js";
 import { preferredActiveGM, rollAbility, SAVE_REQUEST, socketlibSocket, timedAwaitExecuteAsGM, timedExecuteAsGM, unTimedExecuteAsGM } from "./GMAction.js";
 import { askUser } from "./lib/requests.js";
-import { beginPlayerWait, rollDialogsFor, trackPlayerWait } from "./lib/playerWaits.js";
+import { beginPlayerWait, rollDialogsFor, trackPlayerWait, type WaitChoiceSpec } from "./lib/playerWaits.js";
 import { installedModules } from "./setupModules.js";
 import { offerFollowUps } from "./followUps.js";
 import { configSettings, autoRemoveTargets, checkRule, checkMechanic, safeGetGameSetting, useWeakReferences, onUseMacroOptions, chatCardUpdates } from "./settings.js";
@@ -2509,17 +2509,26 @@ export class Workflow {
       this.#reportMissingSteps(missing);
       return ABORT;
     }
-    let run = (): Promise<string | undefined> => this.#runOwn(target);
+    const flowNext = () => stepAfterInFlow(getFlow(this.flowId)?.steps ?? [], id);
+    // A replacement that names no step: on to the step after the one it replaced in the flow
+    let run = anchor?.replacement
+      ? async (): Promise<string | undefined> => (await this.#runOwn(target)) ?? flowNext()
+      : (): Promise<string | undefined> => this.#runOwn(target);
     for (const wrapperId of [...(anchor?.wraps ?? [])].reverse()) {
       const wrapper = getStep(wrapperId);
       if (!wrapper?.run) { reportServiceProblem("steps", wrapperId, `wraps ${id} but isn't a registered step with run`); continue; }
       const inner = run;
-      run = async () => Workflow.#asStepId(await wrapper.run!({ workflow: this, next: inner }));
+      // A wrapper that names no step keeps what the step it wrapped said (its Suspend included); one that never
+      // ran it stands in for it, and goes on to the flow's next step
+      run = async () => {
+        let called = false;
+        let innerAnswer: string | undefined;
+        const next = async () => { called = true; return innerAnswer = await inner(); };
+        const answer = Workflow.#asStepId(await wrapper.run!({ workflow: this, next }));
+        return answer ?? (called ? innerAnswer : flowNext());
+      };
     }
-    const goTo = await run();
-    // A replacement or wrapper that names no step: on to the step after this one in the flow
-    if (goTo === undefined && (anchor?.replacement || anchor?.wraps.length)) return stepAfterInFlow(getFlow(this.flowId)?.steps ?? [], id) ?? goTo;
-    return goTo;
+    return run();
   }
 
   /** What a module's step returned, as a step to go to (anything but a step id: go on) */
@@ -6574,12 +6583,6 @@ export class Workflow {
     const queuedPromise = queued.promise;
     // Asked through the request core: it put the request on the player list itself
     if (!queuedPromise || queued.friendly || queued.asked || !player || player.isGM) return { promise: queuedPromise, requestCard: queued.requestCard };
-    // The GM can answer for a player who hasn't rolled (the player list): rolled for them, or on the GM's screen
-    const rollForThem = (fastForward: boolean, mode?: "advantage" | "disadvantage") => unTimedExecuteAsGM("rollAbility", {
-      saveDetails: mode ? { ...saveDetails, advantage: mode === "advantage", disadvantage: mode === "disadvantage" } : saveDetails,
-      // As the player's own roll would have been shown (their roll mode; private and self whispered to them, blind not)
-      displayOptions: { fastForward, chatMessage: displayOptions.showRoll, rollMode: this.playerSaveMessageMode(), showTargetDC: true, forUserId: player.id }
-    });
     const requestIds = [target.id, target.actor?.uuid].filter((id): id is string => !!id);
     const what = [...rollInfo.abilities, ...rollInfo.skills, ...rollInfo.tools].map(key => key.toUpperCase()).join("/");
     const promise = trackPlayerWait<Roll[] | Roll | null>({
@@ -6590,12 +6593,7 @@ export class Workflow {
       label: i18nFormat("midi-qol.PlayerWaits.SaveLabel", {
         what, type: i18n(rollInfo.type === "save" ? "DND5E.SavingThrow" : "DND5E.AbilityCheck"), item: this.item?.name ?? ""
       }),
-      choices: {
-        roll: { label: "midi-qol.PlayerWaits.Choice.normal", value: () => rollForThem(true) },
-        advantage: { label: "midi-qol.PlayerWaits.Choice.advantage", value: () => rollForThem(true, "advantage") },
-        disadvantage: { label: "midi-qol.PlayerWaits.Choice.disadvantage", value: () => rollForThem(true, "disadvantage") },
-        gmRoll: () => rollForThem(false)
-      },
+      choices: this.gmSaveChoices(saveDetails, player, displayOptions.showRoll),
       onSettled: () => {
         for (const id of requestIds) {
           delete this.saveRequests[id];
@@ -6680,6 +6678,24 @@ export class Workflow {
   }
 
   /**
+   * What the GM can answer a player's save with from the player list: rolled for them (normal, with advantage or
+   * disadvantage), or on the GM's screen; shown as the player's own roll would have been (their roll mode; private and
+   * self whispered to them, blind not). Both the chat-card path and askPlayerSave offer these.
+   */
+  gmSaveChoices(saveDetails: SaveDetails, player: User, showRoll: boolean): Record<"roll" | "advantage" | "disadvantage" | "gmRoll", WaitChoiceSpec<Roll[] | Roll | null>> {
+    const rollForThem = (fastForward: boolean, mode?: "advantage" | "disadvantage") => unTimedExecuteAsGM("rollAbility", {
+      saveDetails: mode ? { ...saveDetails, advantage: mode === "advantage", disadvantage: mode === "disadvantage" } : saveDetails,
+      displayOptions: { fastForward, chatMessage: showRoll, rollMode: this.playerSaveMessageMode(), showTargetDC: true, forUserId: player.id }
+    });
+    return {
+      roll: { label: "midi-qol.PlayerWaits.Choice.normal", value: () => rollForThem(true) },
+      advantage: { label: "midi-qol.PlayerWaits.Choice.advantage", value: () => rollForThem(true, "advantage") },
+      disadvantage: { label: "midi-qol.PlayerWaits.Choice.disadvantage", value: () => rollForThem(true, "disadvantage") },
+      gmRoll: () => rollForThem(false)
+    };
+  }
+
+  /**
    * A player's save through the request core (M3 stage 5; rules: ~/Documents/midi-request-redesign-plan-2026-11-10.md).
    * Their roll dialog shows this client's deadline (Player save timeout); confirming it claims the request, after which
    * the roll is waited for. A GM answers from the player list. When the deadline passes the save is made without them,
@@ -6710,12 +6726,7 @@ export class Workflow {
       }),
       timeoutMs: (configSettings.playerSaveTimeout ?? 0) * 1000,
       fallback: withoutPlayer,
-      gmChoices: {
-        roll: { label: "midi-qol.PlayerWaits.Choice.normal", value: () => unTimedExecuteAsGM("rollAbility", rollFor(true)) },
-        advantage: { label: "midi-qol.PlayerWaits.Choice.advantage", value: () => unTimedExecuteAsGM("rollAbility", rollFor(true, "advantage")) },
-        disadvantage: { label: "midi-qol.PlayerWaits.Choice.disadvantage", value: () => unTimedExecuteAsGM("rollAbility", rollFor(true, "disadvantage")) },
-        gmRoll: () => unTimedExecuteAsGM("rollAbility", rollFor(false))
-      }
+      gmChoices: this.gmSaveChoices(saveDetails, player, displayOptions.showRoll)
     }).settled.then(settled => settled.value, async err => {
       // Nobody could make the save (the player's answer and the save made without them both failed): it fails, as the
       // other save paths' unanswered requests do, rather than failing every target's save

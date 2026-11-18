@@ -1,4 +1,4 @@
-import { Activity, RollDialogConfig, RollMessageConfig, RollProcessConfig } from "../../globals.js";
+import { Activity } from "../../globals.js";
 export declare let MidiForwardActivity: ReturnType<typeof defineMidiForwardActivityClass>;
 export declare let MidiForwardSheet: ReturnType<typeof defineMidiForwardSheetClass>;
 export declare function setupForwardActivity(): void;
@@ -58,7 +58,7 @@ declare let defineMidiForwardActivityClass: <T extends Activity>(ActivityClass: 
             };
             sequenceId: string;
             activity: Activity;
-        }>, dialog?: RollDialogConfig, message?: RollMessageConfig): any;
+        }>, dialog?: import("../../globals.js").RollDialogConfig, message?: import("../../globals.js").RollMessageConfig): any;
         use(usage?: import("fvtt-types/src/utils/index.mjs").InexactPartial<{
             create: {
                 measuredTemplate?: boolean;
@@ -95,14 +95,14 @@ declare let defineMidiForwardActivityClass: <T extends Activity>(ActivityClass: 
             };
             sequenceId: string;
             activity: Activity;
-        }>, dialog?: RollDialogConfig, message?: RollMessageConfig): any;
+        }>, dialog?: import("../../globals.js").RollDialogConfig, message?: import("../../globals.js").RollMessageConfig): any;
         hasConsumption(): boolean;
         shouldAutoConsume(workflow?: import("../Workflow.js").Workflow): boolean;
-        checkAutoConsume(usage: import("../../globals.js").ActivityUseConfiguration, dialog?: RollDialogConfig): Promise<boolean>;
-        rollDamage(config: RollProcessConfig, dialog?: RollDialogConfig, message?: RollMessageConfig): Promise<any>;
-        _midiRollDamage(config: RollProcessConfig, dialog?: RollDialogConfig, message?: RollMessageConfig): Promise<any>;
-        deferOtherDamage(config: RollProcessConfig, dialog: RollDialogConfig): boolean;
-        rollOtherDamage(config: RollProcessConfig, dialog: RollDialogConfig): Promise<Roll[] | undefined>;
+        checkAutoConsume(usage: import("../../globals.js").ActivityUseConfiguration, dialog?: import("../../globals.js").RollDialogConfig): Promise<boolean>;
+        rollDamage(config: import("../../globals.js").RollProcessConfig, dialog?: import("../../globals.js").RollDialogConfig, message?: import("../../globals.js").RollMessageConfig): Promise<any>;
+        _midiRollDamage(config: import("../../globals.js").RollProcessConfig, dialog?: import("../../globals.js").RollDialogConfig, message?: import("../../globals.js").RollMessageConfig): Promise<any>;
+        deferOtherDamage(config: import("../../globals.js").RollProcessConfig, dialog: import("../../globals.js").RollDialogConfig): boolean;
+        rollOtherDamage(config: import("../../globals.js").RollProcessConfig, dialog: import("../../globals.js").RollDialogConfig): Promise<Roll[] | undefined>;
         _rollOtherDamageSource(source: {
             [x: string]: any;
             doConfirmation(actionToCall: string, event: PointerEvent, target: HTMLElement, message: ChatMessage.Implementation): Promise<void>;
@@ -144,7 +144,7 @@ declare let defineMidiForwardActivityClass: <T extends Activity>(ActivityClass: 
                 };
                 sequenceId: string;
                 activity: Activity;
-            }>, dialog?: RollDialogConfig, message?: RollMessageConfig): any;
+            }>, dialog?: import("../../globals.js").RollDialogConfig, message?: import("../../globals.js").RollMessageConfig): any;
             use(usage?: import("fvtt-types/src/utils/index.mjs").InexactPartial<{
                 create: {
                     measuredTemplate?: boolean;
@@ -181,7 +181,7 @@ declare let defineMidiForwardActivityClass: <T extends Activity>(ActivityClass: 
                 };
                 sequenceId: string;
                 activity: Activity;
-            }>, dialog?: RollDialogConfig, message?: RollMessageConfig): any;
+            }>, dialog?: import("../../globals.js").RollDialogConfig, message?: import("../../globals.js").RollMessageConfig): any;
             hasConsumption(): boolean;
             shouldAutoConsume(workflow?: import("../Workflow.js").Workflow): boolean;
             checkAutoConsume(usage: import("fvtt-types/src/utils/index.mjs").InexactPartial<{
@@ -220,17 +220,17 @@ declare let defineMidiForwardActivityClass: <T extends Activity>(ActivityClass: 
                 };
                 sequenceId: string;
                 activity: Activity;
-            }>, dialog?: RollDialogConfig): Promise<boolean>;
-            rollDamage(config: RollProcessConfig, dialog?: RollDialogConfig, message?: RollMessageConfig): Promise<any>;
-            _midiRollDamage(config: RollProcessConfig, dialog?: RollDialogConfig, message?: RollMessageConfig): Promise<any>;
-            deferOtherDamage(config: RollProcessConfig, dialog: RollDialogConfig): boolean;
-            rollOtherDamage(config: RollProcessConfig, dialog: RollDialogConfig): Promise<Roll[] | undefined>;
-            _rollOtherDamageSource(source: /*elided*/ any, isAmmunition: boolean, otherConfig: RollProcessConfig, dialog: RollDialogConfig, config: RollProcessConfig): Promise<Roll[] | undefined>;
-            configureDamageRoll(config: RollProcessConfig): void;
-            getDamageConfig(config?: RollProcessConfig): any;
+            }>, dialog?: import("../../globals.js").RollDialogConfig): Promise<boolean>;
+            rollDamage(config: import("../../globals.js").RollProcessConfig, dialog?: import("../../globals.js").RollDialogConfig, message?: import("../../globals.js").RollMessageConfig): Promise<any>;
+            _midiRollDamage(config: import("../../globals.js").RollProcessConfig, dialog?: import("../../globals.js").RollDialogConfig, message?: import("../../globals.js").RollMessageConfig): Promise<any>;
+            deferOtherDamage(config: import("../../globals.js").RollProcessConfig, dialog: import("../../globals.js").RollDialogConfig): boolean;
+            rollOtherDamage(config: import("../../globals.js").RollProcessConfig, dialog: import("../../globals.js").RollDialogConfig): Promise<Roll[] | undefined>;
+            _rollOtherDamageSource(source: /*elided*/ any, isAmmunition: boolean, otherConfig: import("../../globals.js").RollProcessConfig, dialog: import("../../globals.js").RollDialogConfig, config: import("../../globals.js").RollProcessConfig): Promise<Roll[] | undefined>;
+            configureDamageRoll(config: import("../../globals.js").RollProcessConfig): void;
+            getDamageConfig(config?: import("../../globals.js").RollProcessConfig): any;
             getDamageRollModifiers(roll: Roll): string[];
-            createDamageRollModifiers(this: Activity, rollConfig: RollProcessConfig): void;
-            postProcessDamageRoll(config: RollProcessConfig, result: Array<Roll>): Promise<Array<Roll>>;
+            createDamageRollModifiers(this: Activity, rollConfig: import("../../globals.js").RollProcessConfig): void;
+            postProcessDamageRoll(config: import("../../globals.js").RollProcessConfig, result: Array<Roll>): Promise<Array<Roll>>;
             setupCanSeeSense(usage: {
                 workflow?: import("../Workflow.js").Workflow;
             }): Promise<void>;
@@ -270,7 +270,7 @@ declare let defineMidiForwardActivityClass: <T extends Activity>(ActivityClass: 
                 };
                 sequenceId: string;
                 activity: Activity;
-            }>, dialog: RollDialogConfig, message: RollMessageConfig): Promise<boolean>;
+            }>, dialog: import("../../globals.js").RollDialogConfig, message: import("../../globals.js").RollMessageConfig): Promise<boolean>;
             confirmTargets(): Promise<void>;
             preTargetingChecks(usage: import("fvtt-types/src/utils/index.mjs").InexactPartial<{
                 create: {
@@ -308,7 +308,7 @@ declare let defineMidiForwardActivityClass: <T extends Activity>(ActivityClass: 
                 };
                 sequenceId: string;
                 activity: Activity;
-            }>, dialog: RollDialogConfig, message: RollMessageConfig, optionsConfig?: any): Promise<boolean>;
+            }>, dialog: import("../../globals.js").RollDialogConfig, message: import("../../globals.js").RollMessageConfig, optionsConfig?: any): Promise<boolean>;
             preChatChecks(usage: import("fvtt-types/src/utils/index.mjs").InexactPartial<{
                 create: {
                     measuredTemplate?: boolean;
@@ -345,7 +345,7 @@ declare let defineMidiForwardActivityClass: <T extends Activity>(ActivityClass: 
                 };
                 sequenceId: string;
                 activity: Activity;
-            }>, dialog: RollDialogConfig, message: RollMessageConfig, optionsConfig?: any): Promise<boolean>;
+            }>, dialog: import("../../globals.js").RollDialogConfig, message: import("../../globals.js").RollMessageConfig, optionsConfig?: any): Promise<boolean>;
             postChatCardChecks(usage: import("fvtt-types/src/utils/index.mjs").InexactPartial<{
                 create: {
                     measuredTemplate?: boolean;
@@ -382,7 +382,7 @@ declare let defineMidiForwardActivityClass: <T extends Activity>(ActivityClass: 
                 };
                 sequenceId: string;
                 activity: Activity;
-            }>, dialog: RollDialogConfig, message: RollMessageConfig, optionsConfig?: any): Promise<boolean>;
+            }>, dialog: import("../../globals.js").RollDialogConfig, message: import("../../globals.js").RollMessageConfig, optionsConfig?: any): Promise<boolean>;
             _pendingRegionUpdate: Record<string, any> | undefined;
             _resolveAttachTokenId(workflow: import("../Workflow.js").Workflow | undefined, mode: "caster" | "target"): Promise<string | undefined>;
             _promptAttachTargetPicker(targets: Token.Implementation[]): Promise<string | undefined>;
@@ -588,7 +588,7 @@ declare let defineMidiForwardActivityClass: <T extends Activity>(ActivityClass: 
             }>[] | undefined>;
             _attachRegionActivityBehavior(regionDoc: RegionDocument.Implementation, workflow: import("../Workflow.js").Workflow, overTimeActivity: any, castLevel?: number): Promise<void>;
             _midiUsageContext(message: any): Promise<import("../../globals.js").MidiUsageChatContext>;
-            _createUsageMessage(message?: RollMessageConfig): Promise<any>;
+            _createUsageMessage(message?: import("../../globals.js").RollMessageConfig): Promise<any>;
             get actionType(): string;
             _ammunitionActivity: /*elided*/ any | null | undefined;
             isLike(type: string): boolean;
@@ -700,8 +700,8 @@ declare let defineMidiForwardActivityClass: <T extends Activity>(ActivityClass: 
             };
             refund: (consumed: unknown) => Promise<void>;
             getRollData: () => import("fvtt-types/src/utils/index.mjs").AnyMutableObject;
-            rollAttack?(config: RollProcessConfig, dialog: RollDialogConfig, message: RollMessageConfig): Promise<Roll[] | null>;
-            rollFormula?(config: RollProcessConfig, dialog: RollDialogConfig, message: RollMessageConfig): Promise<Roll[] | void>;
+            rollAttack?(config: import("../../globals.js").RollProcessConfig, dialog: import("../../globals.js").RollDialogConfig, message: import("../../globals.js").RollMessageConfig): Promise<Roll[] | null>;
+            rollFormula?(config: import("../../globals.js").RollProcessConfig, dialog: import("../../globals.js").RollDialogConfig, message: import("../../globals.js").RollMessageConfig): Promise<Roll[] | void>;
             canScale?: boolean;
             _prepareUsageConfig: (config: object) => object;
             _prepareUsageUpdates: (config: object, options?: {
@@ -799,20 +799,20 @@ declare let defineMidiForwardActivityClass: <T extends Activity>(ActivityClass: 
                     onSave: boolean;
                 }[];
             };
-        }, isAmmunition: boolean, otherConfig: RollProcessConfig, dialog: RollDialogConfig, config: RollProcessConfig): Promise<Roll[] | undefined>;
-        configureDamageRoll(config: RollProcessConfig): void;
-        getDamageConfig(config?: RollProcessConfig): any;
+        }, isAmmunition: boolean, otherConfig: import("../../globals.js").RollProcessConfig, dialog: import("../../globals.js").RollDialogConfig, config: import("../../globals.js").RollProcessConfig): Promise<Roll[] | undefined>;
+        configureDamageRoll(config: import("../../globals.js").RollProcessConfig): void;
+        getDamageConfig(config?: import("../../globals.js").RollProcessConfig): any;
         getDamageRollModifiers(roll: Roll): string[];
-        createDamageRollModifiers(this: Activity, rollConfig: RollProcessConfig): void;
-        postProcessDamageRoll(config: RollProcessConfig, result: Array<Roll>): Promise<Array<Roll>>;
+        createDamageRollModifiers(this: Activity, rollConfig: import("../../globals.js").RollProcessConfig): void;
+        postProcessDamageRoll(config: import("../../globals.js").RollProcessConfig, result: Array<Roll>): Promise<Array<Roll>>;
         setupCanSeeSense(usage: {
             workflow?: import("../Workflow.js").Workflow;
         }): Promise<void>;
-        setupTargets(config: import("../../globals.js").ActivityUseConfiguration, dialog: RollDialogConfig, message: RollMessageConfig): Promise<boolean>;
+        setupTargets(config: import("../../globals.js").ActivityUseConfiguration, dialog: import("../../globals.js").RollDialogConfig, message: import("../../globals.js").RollMessageConfig): Promise<boolean>;
         confirmTargets(): Promise<void>;
-        preTargetingChecks(usage: import("../../globals.js").ActivityUseConfiguration, dialog: RollDialogConfig, message: RollMessageConfig, optionsConfig?: any): Promise<boolean>;
-        preChatChecks(usage: import("../../globals.js").ActivityUseConfiguration, dialog: RollDialogConfig, message: RollMessageConfig, optionsConfig?: any): Promise<boolean>;
-        postChatCardChecks(usage: import("../../globals.js").ActivityUseConfiguration, dialog: RollDialogConfig, message: RollMessageConfig, optionsConfig?: any): Promise<boolean>;
+        preTargetingChecks(usage: import("../../globals.js").ActivityUseConfiguration, dialog: import("../../globals.js").RollDialogConfig, message: import("../../globals.js").RollMessageConfig, optionsConfig?: any): Promise<boolean>;
+        preChatChecks(usage: import("../../globals.js").ActivityUseConfiguration, dialog: import("../../globals.js").RollDialogConfig, message: import("../../globals.js").RollMessageConfig, optionsConfig?: any): Promise<boolean>;
+        postChatCardChecks(usage: import("../../globals.js").ActivityUseConfiguration, dialog: import("../../globals.js").RollDialogConfig, message: import("../../globals.js").RollMessageConfig, optionsConfig?: any): Promise<boolean>;
         _pendingRegionUpdate: Record<string, any> | undefined;
         _resolveAttachTokenId(workflow: import("../Workflow.js").Workflow | undefined, mode: "caster" | "target"): Promise<string | undefined>;
         _promptAttachTargetPicker(targets: Token.Implementation[]): Promise<string | undefined>;
@@ -1018,7 +1018,7 @@ declare let defineMidiForwardActivityClass: <T extends Activity>(ActivityClass: 
         }>[] | undefined>;
         _attachRegionActivityBehavior(regionDoc: RegionDocument.Implementation, workflow: import("../Workflow.js").Workflow, overTimeActivity: any, castLevel?: number): Promise<void>;
         _midiUsageContext(message: any): Promise<import("../../globals.js").MidiUsageChatContext>;
-        _createUsageMessage(message?: RollMessageConfig): Promise<any>;
+        _createUsageMessage(message?: import("../../globals.js").RollMessageConfig): Promise<any>;
         get actionType(): string;
         _ammunitionActivity: {
             [x: string]: any;
@@ -1061,7 +1061,7 @@ declare let defineMidiForwardActivityClass: <T extends Activity>(ActivityClass: 
                 };
                 sequenceId: string;
                 activity: Activity;
-            }>, dialog?: RollDialogConfig, message?: RollMessageConfig): any;
+            }>, dialog?: import("../../globals.js").RollDialogConfig, message?: import("../../globals.js").RollMessageConfig): any;
             use(usage?: import("fvtt-types/src/utils/index.mjs").InexactPartial<{
                 create: {
                     measuredTemplate?: boolean;
@@ -1098,28 +1098,28 @@ declare let defineMidiForwardActivityClass: <T extends Activity>(ActivityClass: 
                 };
                 sequenceId: string;
                 activity: Activity;
-            }>, dialog?: RollDialogConfig, message?: RollMessageConfig): any;
+            }>, dialog?: import("../../globals.js").RollDialogConfig, message?: import("../../globals.js").RollMessageConfig): any;
             hasConsumption(): boolean;
             shouldAutoConsume(workflow?: import("../Workflow.js").Workflow): boolean;
-            checkAutoConsume(usage: import("../../globals.js").ActivityUseConfiguration, dialog?: RollDialogConfig): Promise<boolean>;
-            rollDamage(config: RollProcessConfig, dialog?: RollDialogConfig, message?: RollMessageConfig): Promise<any>;
-            _midiRollDamage(config: RollProcessConfig, dialog?: RollDialogConfig, message?: RollMessageConfig): Promise<any>;
-            deferOtherDamage(config: RollProcessConfig, dialog: RollDialogConfig): boolean;
-            rollOtherDamage(config: RollProcessConfig, dialog: RollDialogConfig): Promise<Roll[] | undefined>;
-            _rollOtherDamageSource(source: /*elided*/ any, isAmmunition: boolean, otherConfig: RollProcessConfig, dialog: RollDialogConfig, config: RollProcessConfig): Promise<Roll[] | undefined>;
-            configureDamageRoll(config: RollProcessConfig): void;
-            getDamageConfig(config?: RollProcessConfig): any;
+            checkAutoConsume(usage: import("../../globals.js").ActivityUseConfiguration, dialog?: import("../../globals.js").RollDialogConfig): Promise<boolean>;
+            rollDamage(config: import("../../globals.js").RollProcessConfig, dialog?: import("../../globals.js").RollDialogConfig, message?: import("../../globals.js").RollMessageConfig): Promise<any>;
+            _midiRollDamage(config: import("../../globals.js").RollProcessConfig, dialog?: import("../../globals.js").RollDialogConfig, message?: import("../../globals.js").RollMessageConfig): Promise<any>;
+            deferOtherDamage(config: import("../../globals.js").RollProcessConfig, dialog: import("../../globals.js").RollDialogConfig): boolean;
+            rollOtherDamage(config: import("../../globals.js").RollProcessConfig, dialog: import("../../globals.js").RollDialogConfig): Promise<Roll[] | undefined>;
+            _rollOtherDamageSource(source: /*elided*/ any, isAmmunition: boolean, otherConfig: import("../../globals.js").RollProcessConfig, dialog: import("../../globals.js").RollDialogConfig, config: import("../../globals.js").RollProcessConfig): Promise<Roll[] | undefined>;
+            configureDamageRoll(config: import("../../globals.js").RollProcessConfig): void;
+            getDamageConfig(config?: import("../../globals.js").RollProcessConfig): any;
             getDamageRollModifiers(roll: Roll): string[];
-            createDamageRollModifiers(this: Activity, rollConfig: RollProcessConfig): void;
-            postProcessDamageRoll(config: RollProcessConfig, result: Array<Roll>): Promise<Array<Roll>>;
+            createDamageRollModifiers(this: Activity, rollConfig: import("../../globals.js").RollProcessConfig): void;
+            postProcessDamageRoll(config: import("../../globals.js").RollProcessConfig, result: Array<Roll>): Promise<Array<Roll>>;
             setupCanSeeSense(usage: {
                 workflow?: import("../Workflow.js").Workflow;
             }): Promise<void>;
-            setupTargets(config: import("../../globals.js").ActivityUseConfiguration, dialog: RollDialogConfig, message: RollMessageConfig): Promise<boolean>;
+            setupTargets(config: import("../../globals.js").ActivityUseConfiguration, dialog: import("../../globals.js").RollDialogConfig, message: import("../../globals.js").RollMessageConfig): Promise<boolean>;
             confirmTargets(): Promise<void>;
-            preTargetingChecks(usage: import("../../globals.js").ActivityUseConfiguration, dialog: RollDialogConfig, message: RollMessageConfig, optionsConfig?: any): Promise<boolean>;
-            preChatChecks(usage: import("../../globals.js").ActivityUseConfiguration, dialog: RollDialogConfig, message: RollMessageConfig, optionsConfig?: any): Promise<boolean>;
-            postChatCardChecks(usage: import("../../globals.js").ActivityUseConfiguration, dialog: RollDialogConfig, message: RollMessageConfig, optionsConfig?: any): Promise<boolean>;
+            preTargetingChecks(usage: import("../../globals.js").ActivityUseConfiguration, dialog: import("../../globals.js").RollDialogConfig, message: import("../../globals.js").RollMessageConfig, optionsConfig?: any): Promise<boolean>;
+            preChatChecks(usage: import("../../globals.js").ActivityUseConfiguration, dialog: import("../../globals.js").RollDialogConfig, message: import("../../globals.js").RollMessageConfig, optionsConfig?: any): Promise<boolean>;
+            postChatCardChecks(usage: import("../../globals.js").ActivityUseConfiguration, dialog: import("../../globals.js").RollDialogConfig, message: import("../../globals.js").RollMessageConfig, optionsConfig?: any): Promise<boolean>;
             _pendingRegionUpdate: Record<string, any> | undefined;
             _resolveAttachTokenId(workflow: import("../Workflow.js").Workflow | undefined, mode: "caster" | "target"): Promise<string | undefined>;
             _promptAttachTargetPicker(targets: Token.Implementation[]): Promise<string | undefined>;
@@ -1325,7 +1325,7 @@ declare let defineMidiForwardActivityClass: <T extends Activity>(ActivityClass: 
             }>[] | undefined>;
             _attachRegionActivityBehavior(regionDoc: RegionDocument.Implementation, workflow: import("../Workflow.js").Workflow, overTimeActivity: any, castLevel?: number): Promise<void>;
             _midiUsageContext(message: any): Promise<import("../../globals.js").MidiUsageChatContext>;
-            _createUsageMessage(message?: RollMessageConfig): Promise<any>;
+            _createUsageMessage(message?: import("../../globals.js").RollMessageConfig): Promise<any>;
             get actionType(): string;
             _ammunitionActivity: /*elided*/ any | null | undefined;
             isLike(type: string): boolean;
@@ -1437,8 +1437,8 @@ declare let defineMidiForwardActivityClass: <T extends Activity>(ActivityClass: 
             };
             refund: (consumed: unknown) => Promise<void>;
             getRollData: () => import("fvtt-types/src/utils/index.mjs").AnyMutableObject;
-            rollAttack?(config: RollProcessConfig, dialog: RollDialogConfig, message: RollMessageConfig): Promise<Roll[] | null>;
-            rollFormula?(config: RollProcessConfig, dialog: RollDialogConfig, message: RollMessageConfig): Promise<Roll[] | void>;
+            rollAttack?(config: import("../../globals.js").RollProcessConfig, dialog: import("../../globals.js").RollDialogConfig, message: import("../../globals.js").RollMessageConfig): Promise<Roll[] | null>;
+            rollFormula?(config: import("../../globals.js").RollProcessConfig, dialog: import("../../globals.js").RollDialogConfig, message: import("../../globals.js").RollMessageConfig): Promise<Roll[] | void>;
             canScale?: boolean;
             _prepareUsageConfig: (config: object) => object;
             _prepareUsageUpdates: (config: object, options?: {
@@ -1646,8 +1646,8 @@ declare let defineMidiForwardActivityClass: <T extends Activity>(ActivityClass: 
         };
         refund: (consumed: unknown) => Promise<void>;
         getRollData: () => import("fvtt-types/src/utils/index.mjs").AnyMutableObject;
-        rollAttack?(config: RollProcessConfig, dialog: RollDialogConfig, message: RollMessageConfig): Promise<Roll[] | null>;
-        rollFormula?(config: RollProcessConfig, dialog: RollDialogConfig, message: RollMessageConfig): Promise<Roll[] | void>;
+        rollAttack?(config: import("../../globals.js").RollProcessConfig, dialog: import("../../globals.js").RollDialogConfig, message: import("../../globals.js").RollMessageConfig): Promise<Roll[] | null>;
+        rollFormula?(config: import("../../globals.js").RollProcessConfig, dialog: import("../../globals.js").RollDialogConfig, message: import("../../globals.js").RollMessageConfig): Promise<Roll[] | void>;
         canScale?: boolean;
         _prepareUsageConfig: (config: object) => object;
         _prepareUsageUpdates: (config: object, options?: {
