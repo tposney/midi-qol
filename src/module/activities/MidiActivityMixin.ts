@@ -669,7 +669,8 @@ export let MidiActivityMixin = Base => {
         if (config.workflow && config.midiOptions?.updateWorkflow !== false && !config.workflow.aborted) {
           ui.notifications?.error(i18nFormat("midi-qol.DamageRollFailed", { item: this.item?.name ?? "", error: (err as Error)?.message ?? String(err) }));
           config.workflow.aborted = true;
-          await config.workflow.performState(config.workflow.WorkflowState_Abort);
+          // A step awaiting this roll goes to Abort itself; otherwise start the abort here
+          if (!config.workflow.inStepRoll) await config.workflow.performState(config.workflow.WorkflowState_Abort);
         }
       } finally {
         if (preRollDamageHookId) Hooks.off("dnd5e.preRollDamage", preRollDamageHookId);

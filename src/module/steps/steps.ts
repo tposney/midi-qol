@@ -55,3 +55,19 @@ for (const entry of BUILT_IN) {
   const [name, extra] = typeof entry === "string" ? [entry, {}] : entry;
   registerStep({ id: `midi-qol.${name}`, name, method: `WorkflowState_${name}`, ...extra });
 }
+
+/**
+ * Workflow fields more than one step writes or reads, and which (from the M2 state inventory). M3's step contracts
+ * check a replacement step against these; until then they record who owns what. "use" is the code before the first
+ * step (MidiActivityMixin.use), "GM" the GM's card actions.
+ */
+export const SHARED_FIELDS: Readonly<Record<string, { writers: readonly string[], readers: readonly string[] }>> = {
+  outcome: { writers: ["dispatcher", "midi-qol.ValidateRoll", "midi-qol.AttackRollComplete", "midi-qol.WaitForSaves", "midi-qol.Abort"], readers: ["midi-qol.RollFinished", "midi-qol.Completed"] },
+  aborted: { writers: ["dispatcher", "macros", "midi-qol.Abort", "ActiveDefence checkHits"], readers: ["dispatcher", "stateAfter", "midi-qol.WaitForUtilityRoll"] },
+  whisperAttackCard: { writers: ["midi-qol.WaitForAttackRoll", "midi-qol.AttackRollComplete", "midi-qol.WaitForDamageRoll"], readers: ["midi-qol.AttackRollComplete"] },
+  hitDisplayData: { writers: ["midi-qol.AttackRollComplete", "GM"], readers: ["midi-qol.AttackRollComplete", "GM"] },
+  effectTargets: { writers: ["midi-qol.WaitForSaves", "midi-qol.ApplyDynamicEffects"], readers: ["midi-qol.ApplyDynamicEffects"] },
+  otherConsumed: { writers: ["midi-qol.WaitForSaves", "midi-qol.AllRollsComplete", "midi-qol.ApplyDynamicEffects"], readers: ["midi-qol.WaitForSaves", "midi-qol.AllRollsComplete", "midi-qol.ApplyDynamicEffects"] },
+  damageList: { writers: ["midi-qol.AllRollsComplete"], readers: ["midi-qol.ApplyDynamicEffects", "midi-qol.RollFinished"] },
+  deferredConcentration: { writers: ["use"], readers: ["midi-qol.PreambleComplete"] }
+};

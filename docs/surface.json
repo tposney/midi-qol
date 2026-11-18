@@ -47,6 +47,7 @@
     "createConditionData",
     "createDamageDetail",
     "createEffects",
+    "damageCalculation",
     "DamageOnlyWorkflow",
     "debouncedUpdate",
     "debug",
@@ -324,6 +325,7 @@
     "distance",
     "flanking",
     "perception",
+    "range",
     "rollBonuses",
     "rollModifiers",
     "targetConfirmation"

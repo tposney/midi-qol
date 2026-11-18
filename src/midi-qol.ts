@@ -280,6 +280,7 @@ Object.assign(globalThis.MidiQOL, {
   measureTokens,
   applyCalculatedDamage,
   flows: { get: getFlow, list: allFlows, coarseStepOf },
+  damageCalculation: { get: getDamageCalculationStep, register: registerDamageCalculationStep, remove: removeDamageCalculationStep, order: damageCalculationOrder },
   UNMEASURABLE_DISTANCE,
   getItemFromEffectOrigin,
   getTokenPlayerName,
@@ -448,6 +449,7 @@ Hooks.once('init', async function () {
   defineRollBonusesService();
   defineFlankingService();
   defineDistanceService();
+  defineRangeService();
   defineBonusPromptService(() => `midi-qol.${safeGetGameSetting("midi-qol", "BonusPrompt") ?? "phased"}`);
   // Registered here, not in services/rollBonuses/prompt.ts: BonusPromptApp extends utils' RollModifyDialog and utils
   // imports prompt.ts, so prompt.ts importing the app would evaluate the class before its base exists
@@ -1038,6 +1040,8 @@ import { chooseTokens, defineChooseTokensService } from "./module/services/targe
 import { defineRollBonusesService } from "./module/services/rollBonuses/service.js";
 import { defineDistanceService } from "./module/services/distance/service.js";
 import { allFlows, coarseStepOf, getFlow } from "./module/steps/flows.js";
+import { defineRangeService } from "./module/services/range/service.js";
+import { damageCalculationOrder, getDamageCalculationStep, registerDamageCalculationStep, removeDamageCalculationStep } from "./module/steps/damageCalculation.js";
 import { defineFlankingService } from "./module/services/flanking/service.js";
 import { applyCalculatedDamage, registerDamageApplication } from "./module/damage/application.js";
 import { bonusPromptService, defineBonusPromptService } from "./module/services/rollBonuses/prompt.js";

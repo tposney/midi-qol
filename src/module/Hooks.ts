@@ -1,3 +1,4 @@
+import { registerDamageCalculationStep, runDamageCalculation } from "./steps/damageCalculation.js";
 import { afterDamageApplied, consumeDamageApplication, runAfterDamageApplied, stampDamageApplication } from "./damage/application.js";
 import { applyDamageModifierStage } from "./services/damageModifiers/service.js";
 import { warn, error, debug, i18n, debugEnabled, overTimeEffectsToDelete, savedOverTimeEffectsToDelete, log, gameStats, GameSystemConfig, MODULE_ID, getStaticID, MIDI_IMPLYING_STATUSES } from "../midi-qol.js";
@@ -1566,6 +1567,23 @@ function countsAsDamage(actor: Actor.Implementation, options: DamageApplicationO
     && !["temphp", "maximum", "vitality"].includes(damage.type) && !isAbsorbed(traits, damage, options);
 }
 
+/** midi's damage calculation steps, by id (steps/damageCalculation.ts runs them in the setting's order) */
+const modifierStage = (stage: Parameters<typeof applyDamageModifierStage>[0]) => ({ actor, sourceActor, damages, options }: DamageCalcParams) =>
+  applyDamageModifierStage(stage, actor, sourceActor, damages, options, countsAsDamage(actor, options));
+registerDamageCalculationStep<DamageCalcParams>("midi-qol.sourceIgnores", computeSourceIgnores);
+registerDamageCalculationStep<DamageCalcParams>("midi-qol.dropUnmatchedOtherDamage", dropUnmatchedOtherDamage);
+registerDamageCalculationStep<DamageCalcParams>("midi-qol.uncannyDodge", applyUncannyDodge);
+registerDamageCalculationStep<DamageCalcParams>("midi-qol.modifiers.bonus", modifierStage("bonus"));
+registerDamageCalculationStep<DamageCalcParams>("midi-qol.saves", applySaves);
+registerDamageCalculationStep<DamageCalcParams>("midi-qol.damageReduction", applyDamageReduction);
+registerDamageCalculationStep<DamageCalcParams>("midi-qol.modifiers.flatReduction", modifierStage("flatReduction"));
+registerDamageCalculationStep<DamageCalcParams>("midi-qol.absorption", noteAbsorbedDamage);
+registerDamageCalculationStep<DamageCalcParams>("midi-qol.restoreAbsorption", restoreAbsorbedDamage);
+registerDamageCalculationStep<DamageCalcParams>("midi-qol.traitMultipliers", applyTraitMultipliers);
+registerDamageCalculationStep<DamageCalcParams>("midi-qol.customResistances", applyCustomResistances);
+registerDamageCalculationStep<DamageCalcParams>("midi-qol.modifiers.percentReduction", modifierStage("percentReduction"));
+registerDamageCalculationStep<DamageCalcParams>("midi-qol.modifiers.complete", modifierStage("complete"));
+
 function preCalculateDamageHandler(actor: Actor.Implementation, damages: DamageDescription[], options: DamageApplicationOptions) {
   try {
     if (options.midi?.noCalc) return true;
@@ -1575,24 +1593,8 @@ function preCalculateDamageHandler(actor: Actor.Implementation, damages: DamageD
       : undefined;
     const params = { actor, sourceActor, damages, options };
 
-    const saveDROrder = configSettings.saveDROrder;
-    computeSourceIgnores(params);
-    dropUnmatchedOtherDamage(params);
-    applyUncannyDodge(params);
-    applyDamageModifierStage("bonus", actor, sourceActor, damages, options, countsAsDamage(actor, options));
-
-    // Apply saves and/or DR based on order setting
-    if (saveDROrder === "DRSaveDr") {
-      if (!applyDamageReduction(params)) return false;
-    } else if (["SaveDrDR", "SaveDRDr"].includes(saveDROrder)) {
-      applySaves(params);
-      if (saveDROrder === "SaveDRDr") {
-        if (!applyDamageReduction(params)) return false;
-      }
-    }
-
-    applyDamageModifierStage("flatReduction", actor, sourceActor, damages, options, countsAsDamage(actor, options));
-    noteAbsorbedDamage(params);
+    // midi's calculation steps (steps/damageCalculation.ts), in the order the save / DR order setting picks
+    if (!runDamageCalculation("pre", configSettings.saveDROrder, params)) return false;
     foundry.utils.setProperty(options, "midi.totalDamage", calculateTotalDamage(params));
     if (Hooks.call("midi-qol.dnd5ePreCalculateDamage", actor, damages, options) === false) return false;
   } catch (err) {
@@ -1612,24 +1614,7 @@ function calculateDamageHandler(actor: Actor.Implementation, damages: DamageDesc
       : undefined;
     const params = { actor, sourceActor, damages, options };
 
-    const saveDROrder = configSettings.saveDROrder;
-    restoreAbsorbedDamage(params);
-
-    // Apply saves if not already done
-    if (saveDROrder === "DRSaveDr") {
-      applySaves(params);
-    }
-
-    applyTraitMultipliers(params);
-    applyCustomResistances(params);
-    applyDamageModifierStage("percentReduction", actor, sourceActor, damages, options, countsAsDamage(actor, options));
-
-    // Apply DR if not already done
-    if (saveDROrder === "SaveDrDR") {
-      if (!applyDamageReduction(params)) return false;
-    }
-
-    applyDamageModifierStage("complete", actor, sourceActor, damages, options, countsAsDamage(actor, options));
+    if (!runDamageCalculation("calculate", configSettings.saveDROrder, params)) return false;
     recalculateTotals(params);
     if (Hooks.call("midi-qol.dnd5eCalculateDamage", actor, damages, options) === false) return false;
   } catch (err) {

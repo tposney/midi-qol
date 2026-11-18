@@ -9,6 +9,7 @@ import { describe, expect, it } from "vitest";
  */
 const RULES = "src/module/rules";
 const SERVICES = "src/module/services";
+const STEPS = "src/module/steps";
 const FORBIDDEN = /\b(game|canvas|Hooks|ui|CONFIG|foundry|fromUuid|fromUuidSync|ChatMessage|libWrapper|socketlib)\s*[.(]/;
 
 function files(dir: string): string[] {
@@ -21,7 +22,9 @@ function files(dir: string): string[] {
 function rulesFiles(): string[] {
   const shared = existsSync(RULES) ? files(RULES) : [];
   const features = existsSync(SERVICES) ? files(SERVICES).filter(path => path.endsWith("/rules.ts")) : [];
-  return [...shared, ...features];
+  // The step engine, registry and flows are pure too (Vitest drives the engine)
+  const steps = existsSync(STEPS) ? files(STEPS) : [];
+  return [...shared, ...features, ...steps];
 }
 
 describe("rules are pure", () => {

@@ -1,5 +1,7 @@
 import { allSteps, getStep, stepForMethod } from "./steps/steps.js";
 import "./steps/flows.js";
+import { runSteps, SUSPEND, type EngineHost } from "./steps/engine.js";
+import type { PortName, WorkflowPorts } from "./steps/ports.js";
 import { getDistance } from "./services/distance/service.js";
 import { computeFlankedStatus, computeFlankingStatus } from "./services/flanking/service.js";
 import { speakerFor } from "./utils.js";
@@ -788,7 +790,9 @@ export class Workflow {
     return this.activity?.actor!;
   }
 
-  abort: boolean | undefined = false;
+  /** @deprecated (M2): the same flag as `aborted`; the two used to be separate and read in different places */
+  get abort(): boolean { return this.aborted; }
+  set abort(value: boolean | undefined) { this.aborted = !!value; }
 
   itemUseComplete: boolean | undefined = false;
 
@@ -987,6 +991,23 @@ export class Workflow {
     return (this.constructor as typeof Workflow).flowId;
   }
   static flowId = "midi-qol.standard";
+
+  /** How waits are carried out (steps/ports.ts): midi's own code, which a module may replace */
+  static defaultPorts: WorkflowPorts = {
+    requestSaves: (workflow, ...args) => (workflow as Workflow).checkSaves(...(args as [boolean?, boolean?])),
+    askReactions: (...args) => doReactions(...(args as Parameters<typeof doReactions>)),
+    applyDamageCard: data => timedAwaitExecuteAsGM("createReverseDamageCard", data)
+  };
+  #portOverrides: Partial<WorkflowPorts> = {};
+  /** This use's ports: the defaults with any set for this use */
+  get ports(): WorkflowPorts {
+    return { ...Workflow.defaultPorts, ...this.#portOverrides };
+  }
+  /** Carry out one kind of wait differently for this use */
+  setPort<K extends PortName>(name: K, port: WorkflowPorts[K] | undefined): void {
+    if (port) this.#portOverrides[name] = port;
+    else delete this.#portOverrides[name];
+  }
 
   /**
    * The state a workflow rebuilt from `card` waits in, worked out from the card: what has been placed, rolled and
@@ -2135,6 +2156,11 @@ export class Workflow {
 
   /** Wake a suspended workflow; without an event it re-runs the state it waits in */
   public async resume(event?: WorkflowEvent) {
+    // The roll a step started and awaits: the step goes on itself (#rollInStep)
+    if (this.#stepRoll) {
+      this.#stepRoll.event = event;
+      return;
+    }
     if (!this.suspended) {
       if (this.executingStates > 0 && this.#awaits(event)) this.#pendingEvent = { step: this.#currentStep, event };
       return;
@@ -2144,6 +2170,27 @@ export class Workflow {
     this.suspended = false;
     Workflow.#holdRunning(this);
     return this.performState(event ? this.stateAfter(event) : this.currentAction);
+  }
+
+  #stepRoll: { event?: WorkflowEvent } | undefined;
+  /** A step is awaiting a roll it started (M2 stage 5): the roll's resume is the step's answer */
+  get inStepRoll(): boolean { return !!this.#stepRoll; }
+
+  /**
+   * Start a roll and wait for it inside the step (an auto roll). The roll's resume(event) answers the step instead of
+   * resuming the workflow; the step goes on to `stateAfter(event)`, or waits (Suspend) when the roll was cancelled.
+   */
+  /** @internal */
+  async rollInStep(roll: () => unknown): Promise<WorkflowState> {
+    const stepRoll: { event?: WorkflowEvent } = {};
+    this.#stepRoll = stepRoll;
+    try {
+      await roll();
+    } finally {
+      this.#stepRoll = undefined;
+    }
+    if (this.aborted) return this.WorkflowState_Abort;
+    return stepRoll.event ? this.stateAfter(stepRoll.event) : this.WorkflowState_Suspend;
   }
 
   /** Where a suspended workflow goes when `event` arrives: by the state it waits in, else that state again */
@@ -2322,8 +2369,8 @@ export class Workflow {
    * step: the old step's post pass and hook, then the new step's pre pass and hook (either can cancel or abort).
    */
   public async performState(newState: WorkflowState | string) {
-    const SUSPEND = "midi-qol.Suspend", ABORT = "midi-qol.Abort", FINISHED = "midi-qol.RollFinished", COMPLETED = "midi-qol.Completed";
-    let next: string | undefined = Workflow.stepIdOf(newState);
+    const workflow = this;
+    const next: string | undefined = Workflow.stepIdOf(newState);
     // The workflow moved on: a roll it waited on its player for is done
     if (next !== SUSPEND && this.#rollWait) {
       this.#rollWait.end();
@@ -2334,85 +2381,54 @@ export class Workflow {
       return;
     }
     if (this.stateTransitionCount === undefined) this.stateTransitionCount = 0;
-    let isAborting = this.aborted;
     this.executingStates += 1;
     const nameOf = (id: string | undefined) => (id && getStep(id)?.name) ?? String(id);
 
     try {
-      while (this.stateTransitionCount < (this.maxTransitionCount)) {
-        const current = this.#currentStep;
-        const currentName = nameOf(current);
-        this.suspended = false;
-        this.stateTransitionCount += 1;
-        isAborting ||= this.aborted || (next === ABORT);
-        if (next === undefined) {
-          const message = `${this.workflowName} Perform state called with undefined action - previous state was ${currentName}`
-          error(message);
-          TroubleShooter.recordError(new Error(message), message);
-          this.suspended = true;
-          break;
-        }
-        const name = nameOf(next);
-        // TODO: Is this necessary?
-        await busyWait(1);
-        if (current !== next) {
-          if (!isAborting || current === COMPLETED) {
-            await this.callOnUseMacrosForAction("post", this.methodForStep(current));
-            if (await this.callHooksForAction("post", this.methodForStep(current)) === false && !isAborting) {
-              console.warn(`${this.workflowName}${this.id} ${currentName} -> ${name} aborted by post ${currentName} Hook`)
-              if (!this.aborted) this.outcome = "cancelled";
-              next = this.aborted ? ABORT : FINISHED;
-            }
-            if (debugEnabled > 0) warn(`${this.workflowName} ${this.id} finished ${currentName}`);
-            if (debugEnabled > 0) warn(`${this.workflowName} ${this.id} transition ${currentName} -> ${name}`);
-
-            if (!isAborting && this.aborted) {
-              console.warn(`${this.workflowName} ${this.id} ${currentName} -> ${name} aborted by pre ${currentName} macro pass`)
-              next = ABORT;
-              continue;
-            }
+      const host: EngineHost = {
+        get currentStep() { return workflow.#currentStep; },
+        set currentStep(id) { workflow.currentAction = id; },
+        get aborted() { return workflow.aborted; },
+        cancelled: () => { this.outcome = "cancelled"; },
+        pass: (prePost, step) => this.callOnUseMacrosForAction(prePost, this.methodForStep(step)),
+        hook: (prePost, step) => this.callHooksForAction(prePost, this.methodForStep(step)),
+        run: async step => {
+          this.#queueingWrites += 1;
+          try {
+            return Workflow.stepIdOf(await this.#runStep(step));
+          } finally {
+            this.#queueingWrites -= 1;
           }
-          await this.callOnUseMacrosForAction("pre", this.methodForStep(next));
-          if (await this.callHooksForAction("pre", this.methodForStep(next)) === false && !isAborting) {
-            console.warn(`${this.workflowName} ${this.id} ${currentName} -> ${name} aborted by pre ${nameOf(next)} Hook`)
-            if (!this.aborted) this.outcome = "cancelled";
-            next = this.aborted ? ABORT : FINISHED;
-            continue;
-          }
-          if (this.aborted && !isAborting) {
-            console.warn(`${this.workflowName} ${currentName} ${this.id} -> ${name} aborted by pre ${nameOf(next)} macro pass`)
-            next = ABORT;
-            continue;
-          }
-          this.currentAction = next;
-        }
-        let returned: WorkflowState | string;
-        this.#queueingWrites += 1;
-        try {
-          returned = await this.#runStep(this.#currentStep);
-        } finally {
-          this.#queueingWrites -= 1;
-        }
-        const after = Workflow.stepIdOf(returned);
-        if (after === SUSPEND || getStep(this.#currentStep ?? "")?.flush) await this.flushCardWrites();
-        else if (chatCardUpdates === "everyStep") await this.flushCardWrites(true);
-
-        if (after === SUSPEND) {
-          this.suspended = true;
-          if (debugEnabled > 0) warn(`${this.workflowName} ${nameOf(this.#currentStep)} -> suspended Workflow ${this.id}`);
+        },
+        stepEnded: async (step, after) => {
+          if (after === SUSPEND || getStep(step ?? "")?.flush) await this.flushCardWrites();
+          else if (chatCardUpdates === "everyStep") await this.flushCardWrites(true);
+          if (after === SUSPEND && debugEnabled > 0) warn(`${this.workflowName} ${nameOf(step)} -> suspended Workflow ${this.id}`);
+        },
+        pendingNext: step => {
           const pending = this.#pendingEvent;
           this.#pendingEvent = undefined;
-          if (pending && pending.step === this.#currentStep) {
-            this.suspended = false;
-            next = Workflow.stepIdOf(this.stateAfter(pending.event!));
-            continue;
-          }
-          break;
-        }
-        next = after;
-      }
-
-      if (this.stateTransitionCount >= this.maxTransitionCount) {
+          return pending && pending.step === step ? Workflow.stepIdOf(this.stateAfter(pending.event!)) : undefined;
+        },
+        countTransition: () => {
+          const count = this.stateTransitionCount ?? 0;
+          if (count >= this.maxTransitionCount) return false;
+          this.stateTransitionCount = count + 1;
+          return true;
+        },
+        get suspended() { return workflow.suspended; },
+        set suspended(value) { workflow.suspended = value; },
+        tick: async () => { await busyWait(1); },
+        report: message => {
+          const text = `${this.workflowName} ${message}`;
+          error(text);
+          TroubleShooter.recordError(new Error(text), text);
+        },
+        note: message => console.warn(`${this.workflowName} ${this.id} ${message}`),
+        name: nameOf
+      };
+      const stopped = await runSteps(host, next);
+      if (stopped === "limit") {
         const message = `performState | ${this.workflowName} Workflow ${this.id} exceeded ${this.maxTransitionCount} iterations`;
         error(message);
         TroubleShooter.recordError(new Error(message), message);
@@ -2656,7 +2672,7 @@ export class Workflow {
     if (!autoRollAttack || !isFastRoll) this.waitOnPlayerRoll("attack");
     if (autoRollAttack) {
       this.rollOptions.fastForwardAttack ||= isFastRoll;
-      this.activity.rollAttack!({ event: this.rollOptions.event, workflow: this, midiOptions: { ...this.rollOptions, workflowOptions: this.workflowOptions } }, {}, {});
+      return this.rollInStep(() => this.activity.rollAttack!({ event: this.rollOptions.event, workflow: this, midiOptions: { ...this.rollOptions, workflowOptions: this.workflowOptions } }, {}, {}));
     }
     return this.WorkflowState_Suspend;
   }
@@ -2761,8 +2777,7 @@ export class Workflow {
       this.rollOptions.isCritical = this.isCritical;
       this.rollOptions.fastForwardDamage = isAutoFastForward("damage", { workflow: this });
       if (!this.rollOptions.fastForwardDamage) this.waitOnPlayerRoll("damage");
-      this.activity.rollDamage({ workflow: this, midiOptions: { ...this.rollOptions, workflowOptions: this.workflowOptions } }, {}, { create: false });
-      return this.WorkflowState_Suspend;
+      return this.rollInStep(() => this.activity.rollDamage({ workflow: this, midiOptions: { ...this.rollOptions, workflowOptions: this.workflowOptions } }, {}, { create: false }));
     }
     this.waitOnPlayerRoll("damage");
     const chatMessage = this.chatCard;
@@ -2821,7 +2836,8 @@ export class Workflow {
     if (!this.activity.roll?.formula) return this.WorkflowState_UtilityRollComplete;
     this.waitOnPlayerRoll("utility");
     if (getAutoRollDamage(this) !== "none") {
-      const rolls = await this.activity.rollFormula!({ event: this.rollOptions.event, workflow: this, midiOptions: { ...this.rollOptions, workflowOptions: this.workflowOptions } }, {}, { create: false });
+      let rolls: unknown;
+      await this.rollInStep(async () => { rolls = await this.activity.rollFormula!({ event: this.rollOptions.event, workflow: this, midiOptions: { ...this.rollOptions, workflowOptions: this.workflowOptions } }, {}, { create: false }); });
       if (!rolls || this.abort) {
         return this.WorkflowState_Abort;
       }
@@ -2881,7 +2897,7 @@ export class Workflow {
       let flashId = Hooks.on("flash-rolls-5e.rollComplete", this.flashSavingCheck.bind(this));
       try {
         const saveDisplay = saveDisplayMode();
-        await this.checkSaves(saveDisplay !== "allShow");
+        await this.ports.requestSaves(this, saveDisplay !== "allShow");
       } catch (err) {
         const message = ("midi-qol | checkSaves error")
         TroubleShooter.recordError(err, message);
@@ -6581,9 +6597,9 @@ export class Workflow {
 
     if (!this.item.flags?.[MODULE_ID]?.noProvokeReaction && !this.workflowOptions.noProvokeReaction) {
       if (saved)
-        await doReactions(target, this.tokenUuid, this.attackRoll, "reactionsavesuccess", { workflow: this, activity: this.activity, item: this.item })
+        await this.ports.askReactions(target, this.tokenUuid, this.attackRoll, "reactionsavesuccess", { workflow: this, activity: this.activity, item: this.item })
       else
-        await doReactions(target, this.tokenUuid, this.attackRoll, "reactionsavefail", { workflow: this, activity: this.activity, item: this.item })
+        await this.ports.askReactions(target, this.tokenUuid, this.attackRoll, "reactionsavefail", { workflow: this, activity: this.activity, item: this.item })
     }
     if (isCritical) this.criticalSaves = this.criticalSaves.add(target);
 
@@ -6893,7 +6909,7 @@ export class Workflow {
         // shows in the log or folds into the card.
         const showRoll = !simulate;
         if (!this.item.flags?.[MODULE_ID]?.noProvokeReaction && !this.workflowOptions.noProvokeReaction) {
-          await doReactions(target, this.tokenUuid, this.attackRoll ?? new Roll(""), "reactionsave", { workflow: this, activity: this.activity, item: this.item })
+          await this.ports.askReactions(target, this.tokenUuid, this.attackRoll ?? new Roll(""), "reactionsave", { workflow: this, activity: this.activity, item: this.item })
         }
 
         // Build save details for this target
@@ -7706,7 +7722,7 @@ export class Workflow {
         else {
           if (this.attackRoll && !this.item.flags?.[MODULE_ID]?.noProvokeReaction && !this.workflowOptions.noProvokeReaction) {
             const workflowOptions = foundry.utils.mergeObject(this.workflowOptions, { sourceActorUuid: this.actor.uuid, sourceItemUuid: this.item.uuid }, { inplace: false, overwrite: true });
-            const result = await doReactions(targetToken, this.tokenUuid, this.attackRoll, "reactionattacked", { activity: this.activity, item: this.item, workflow: this, workflowOptions });
+            const result = await this.ports.askReactions(targetToken, this.tokenUuid, this.attackRoll, "reactionattacked", { activity: this.activity, item: this.item, workflow: this, workflowOptions });
             if (result?.ac && isFinite(targetAC)) { // result.ac is a newAC total from optional bonus dialog; don't override total cover (Infinity)
               //@ts-expect-error no dnd5e-types
               const preReactionRawAC: number = targetToken.actor?.system.attributes.ac?.value ?? 10;
@@ -7741,7 +7757,7 @@ export class Workflow {
           // reaction is the same as reactionhit to accomodate the existing reaction workflow
           let result;
           if (!this.item.flags?.[MODULE_ID]?.noProvokeReaction && !this.workflowOptions.noProvokeReaction) {
-            result = await doReactions(targetToken, this.tokenUuid, this.attackRoll, "reaction", { activity: this.activity, item: this.item, workflow: this, workflowOptions });
+            result = await this.ports.askReactions(targetToken, this.tokenUuid, this.attackRoll, "reaction", { activity: this.activity, item: this.item, workflow: this, workflowOptions });
           }
           if (!Workflow.findWorkflow(this.id)) // workflow has been removed - bail out
             return;
@@ -7774,7 +7790,7 @@ export class Workflow {
         } else if ((!isHit && !isHitEC) && this.activity.attack && this.attackRoll && targetToken !== null && !foundry.utils.getProperty(this, `item.flags.${MODULE_ID}.noProvokeReaction`)) {
           const workflowOptions = foundry.utils.mergeObject(this.workflowOptions, { sourceActorUuid: this.actor.uuid, sourceItemUuid: this.item.uuid }, { inplace: false, overwrite: true });
           if (!this.item.flags?.[MODULE_ID]?.noProvokeReaction && !this.workflowOptions.noProvokeReaction) {
-            await doReactions(targetToken, this.tokenUuid, this.attackRoll, "reactionmissed", { activity: this.activity, item: this.item, workflow: this, workflowOptions });
+            await this.ports.askReactions(targetToken, this.tokenUuid, this.attackRoll, "reactionmissed", { activity: this.activity, item: this.item, workflow: this, workflowOptions });
           }
           // TODO what else to do once rolled
         }
@@ -8514,7 +8530,7 @@ export class ActiveDefenceWorkflow extends Workflow {
       /*
                   if (this.attackRoll && !this.item.flags?.[MODULE_ID]?.noProvokeReaction && !this.workflowOptions.noProvokeReaction) {
                     const workflowOptions = foundry.utils.mergeObject(this.workflowOptions, { sourceActorUuid: this.actor.uuid, sourceItemUuid: this.item.uuid }, { inplace: false, overwrite: true });
-                    const result = await doReactions(targetToken, this.tokenUuid, this.attackRoll, "reactionattacked", { activity: this.activity, item: this.item, workflow: this, workflowOptions });
+                    const result = await this.ports.askReactions(targetToken, this.tokenUuid, this.attackRoll, "reactionattacked", { activity: this.activity, item: this.item, workflow: this, workflowOptions });
                     // TODO what else to do once rolled
                     // @ts-expect-error no dnd5e-types
                     targetAC = Number.parseInt(targetActor.system.attributes.ac.value ?? 10) + bonusAC + descriptorMod;
@@ -8600,7 +8616,7 @@ export class ActiveDefenceWorkflow extends Workflow {
         if (!this.item.flags?.[MODULE_ID]?.noProvokeReaction && !this.workflowOptions.noProvokeReaction) {
           //@ts-expect-error no dnd5e-types
           const savedAC = target.actor.system.attributes.ac.value;
-          reaction = await doReactions(target, this.tokenUuid, this.attackRoll, "reaction", { activity: this.activity, item: this.item, workflow: this, workflowOptions });
+          reaction = await this.ports.askReactions(target, this.tokenUuid, this.attackRoll, "reaction", { activity: this.activity, item: this.item, workflow: this, workflowOptions });
           //@ts-expect-error no dnd5e-types
           const acChange = target.actor.system.attributes.ac.value - savedAC;
           rollTotal += (reaction.ac ?? 0) + acChange; // deal with bonus ac if any.
@@ -8617,7 +8633,7 @@ export class ActiveDefenceWorkflow extends Workflow {
             name?: string;
             uuid?: string;
             ac?: number;
-          } = await doReactions(target, this.tokenUuid, this.attackRoll, "reactionmissed", { activity: this.activity, item: this.item, workflow: this, workflowOptions });
+          } = await this.ports.askReactions(target, this.tokenUuid, this.attackRoll, "reactionmissed", { activity: this.activity, item: this.item, workflow: this, workflowOptions });
           //@ts-expect-error no dnd5e-types
           const acChange = target.actor.system.attributes.ac.value - savedAC;
           rollTotal += (reaction.ac ?? 0) + acChange; // deal with bonus ac if any.
@@ -8971,7 +8987,7 @@ export class TrapWorkflow extends Workflow {
     let flashId = Hooks.on("flash-rolls-5e.rollComplete", this.flashSavingCheck.bind(this));
     try {
       const saveDisplay = saveDisplayMode();
-      await this.checkSaves(saveDisplay !== "allShow");
+      await this.ports.requestSaves(this, saveDisplay !== "allShow");
     } catch (err) {
       TroubleShooter.recordError(err, "checkSaves");
     } finally {
@@ -8998,8 +9014,7 @@ export class TrapWorkflow extends Workflow {
     }
     if (debugEnabled > 1) debug("TrapWorkflow: Rolling damage ", this.rollOptions.event, this.spellLevel, this.workflowOptions.versatile, this.targets, this.hitTargets);
     this.rollOptions.fastForward = true;
-    this.activity.rollDamage({ workflow: this, midiOptions: { ...this.rollOptions, workflowOptions: this.workflowOptions } }, {}, {});
-    return this.WorkflowState_Suspend; // wait for a damage roll to advance the state.
+    return this.rollInStep(() => this.activity.rollDamage({ workflow: this, midiOptions: { ...this.rollOptions, workflowOptions: this.workflowOptions } }, {}, {}));
   }
   async WorkflowState_DamageRollComplete(): Promise<WorkflowState> {
     // If the item does damage, use the same damage type as the item
