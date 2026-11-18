@@ -8999,7 +8999,8 @@ export class TrapWorkflow extends Workflow {
         game.user?.targets.add(t)
       }
     }
-    return super.WorkflowState_RollFinished
+    // Run the base step here: returning the base method made it a separate state, firing RollFinished's hooks twice
+    return super.WorkflowState_RollFinished();
   }
 }
 
