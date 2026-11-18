@@ -4117,20 +4117,13 @@ export class Workflow {
     if (this.workflowOptions?.disadvantage) {
       this.attackRollModifierTracker.disadvantage.add("workflowOptions", i18n("midi-qol.WorkflowOptions"));
     }
-    // Long range disadvantage (set in WorkflowState_ValidateRoll)
-    if (this.longRangeAttack) {
-      this.attackRollModifierTracker.disadvantage.add('range', 'Long Range');
-    }
-
+    // Sets this.flankingAdvantage, which the midi-qol.flanking rollModifiers contributor reads
     await this.checkFlankingAdvantage();
-    if (this.flankingAdvantage) this.attackRollModifierTracker.advantage.add('flanking', i18n("midi-qol.Flanking"));
 
     // This should never happen
     if (!this.actor) return;
 
     const actType = this.activity.actionType || "none";
-    // Sight and nearby foes are measured to the first target with a canvas token
-    const firstTarget = this.targets.tokens[0];
 
     // Determine ability for weapon attacks (mwak/rwak use str/dex)
     let attackAbility: string | undefined;
@@ -4150,115 +4143,8 @@ export class Workflow {
       this.attackRollModifierTracker
     );
 
-    let conditionData;
-    // TODO Hidden should check the target to see if they notice them?
-    if (checkRule("invisAdvantage") && checkRule("invisAdvantage") !== "none" && firstTarget) {
-      // if we are using a proxy token to attack use that for hidden invisible
-      const invisibleToken = this.token ? hasCondition(this.token.actor as Actor, "invisible") : false;
-      const invisibleTarget = hasCondition(firstTarget.actor as Actor, "invisible");
-
-      // RAW 2014: Invisible condition explicitly grants adv/disadv; canSense used for non-invisible "unseen" cases
-      // RAW 2024: Only "can you see the creature?" matters (blindsight/truesight = can see; tremorsense = cannot see)
-      const isRAW2014 = checkRule("invisAdvantage") === "RAW2014";
-      const tokenCanPerceive = isRAW2014 ? this.tokenCanSense?.has(firstTarget) : this.tokenCanSee?.has(firstTarget);
-      const targetCanPerceive = isRAW2014
-        ? (this.token && this.targetsCanSense?.has(this.token))
-        : (this.token && this.targetsCanSee?.has(this.token));
-
-      const invisAdvantage = isRAW2014 ? invisibleToken || !targetCanPerceive : !targetCanPerceive;
-      if (invisAdvantage) {
-        if (!targetCanPerceive) {
-          this.attackRollModifierTracker.advantage.add('Attacker not detected', 'Attacker not detected');
-          foundry.utils.setProperty(this.actor, "flags.midi.evaluated.advantage.attack.invisible", { value: true, effects: ["Attacker not detected"] });
-        }
-
-        if (invisibleToken && isRAW2014) {
-          this.attackRollModifierTracker.advantage.add('Attacker invisible', 'Attacker invisible');
-          foundry.utils.setProperty(this.actor, "flags.midi.evaluated.advantage.attack.invisible", { value: true, effects: ["Invisible Attacker"] });
-        }
-      }
-
-      const invisDisadvantage = isRAW2014 ? invisibleTarget || !tokenCanPerceive : !tokenCanPerceive;
-      if (invisDisadvantage) {
-        // Attacker can't see target so disadvantage
-        log(`Disadvantage given to ${this.actor.name} due to invisible target`, invisibleTarget, tokenCanPerceive);
-        if (invisibleTarget && isRAW2014) {
-          this.attackRollModifierTracker.disadvantage.add('invisible foe', 'Invisible foe');
-          foundry.utils.setProperty(this.actor, "flags.midi.evaluated.disadvantage.attack.invisible", { value: true, effects: ["Invisible Defender"] });
-        }
-        if (!tokenCanPerceive) {
-          this.attackRollModifierTracker.disadvantage.add('Defender not detected', 'Defender not detected');
-          foundry.utils.setProperty(this.actor, "flags.midi.evaluated.disadvantage.attack.invisible", { value: true, effects: ["Defender not detected"] });
-        }
-      }
-    }
-
-    // Check hidden
-    if (checkRule("hiddenAdvantage") && checkRule("hiddenAdvantage") !== "none" && firstTarget) {
-      // TODO: Perceptive could become an async hiddenFrom provider of the perception service
-      if (checkRule("hiddenAdvantage") === "perceptive" && installedModules.get("perceptive")) {
-        //@ts-expect-error .api
-        const perceptiveApi = game.modules.get("perceptive")?.api;
-        const tokenSpotted = await perceptiveApi?.isSpottedby(this.token, firstTarget, { LOS: false, Range: true, Effects: true, Hidden: false, canbeSpotted: true }) ?? true;
-        const targetSpotted = await perceptiveApi?.isSpottedby(firstTarget, this.token, { LOS: false, Range: true, Effects: true, Hidden: false, canbeSpotted: true }) ?? true;
-        if (!tokenSpotted) {
-          this.attackRollModifierTracker.advantage.add('Attacker hidden', 'Attacker hidden');
-          foundry.utils.setProperty(this.actor, "flags.midi.evaluated.advantage.attack.hidden", { value: true, effects: ["Hidden Attacker"] });
-        }
-        if (!targetSpotted) {
-          this.attackRollModifierTracker.disadvantage.add('Hidden foe', 'Hidden foe');
-          foundry.utils.setProperty(this.actor, "flags.midi.evaluated.disadvantage.attack.hidden", { value: true, effects: ["Hidden Defender"] });
-        }
-      }
-    }
-
-    // Nearby foe gives disadvantage on ranged attacks
-    if (checkRule("nearbyFoe")) {
-      conditionData ??= createConditionData({ workflow: this, target: firstTarget, actor: this.actor });
-      const ignoreNearbyFoes = await evalAllConditionsAsync(this.actor, midiFlag(`ignoreNearbyFoes`), conditionData);
-      // @ts-expect-error no dnd5e-types
-      if (!ignoreNearbyFoes && (["rwak", "rsak"].includes(actType) || (this.item.system.properties?.has("thr") && actType == "mwak"))) {
-        let nearbyFoe: boolean = false;
-        if (this.token) {
-          if (actType !== "mwak") { // one of rwak/rsak
-            nearbyFoe = checkNearby(-1, getToken(this.token), configSettings.optionalRules.nearbyFoe, { includeIncapacitated: false, canSee: true });
-            // @ts-expect-error no dnd5e-types
-          } else if (this.item.system.properties?.has("thr")) {
-            // @ts-expect-error no dnd5e-types
-            const meleeRange = this.item.system.range.reach ?? 5;
-            if (checkDistance(this.token, firstTarget, meleeRange, { wallsBlock: false })) nearbyFoe = false;
-            else nearbyFoe = checkNearby(-1, getToken(this.token), configSettings.optionalRules.nearbyFoe, { includeIncapacitated: false, canSee: true });
-          }
-          if (nearbyFoe) {
-            if (debugEnabled > 0) warn(`checkAttackAdvantage | Ranged attack by ${this.actor.name} at disadvantage due to nearby foe`);
-            this.attackRollModifierTracker.disadvantage.add('nearbyFoe', 'Nearby foe');
-            foundry.utils.setProperty(this.actor, "flags.midi.evaluated.disadvantage.attack.nearbyFoe", { value: true, effects: ["Nearby Foe"] });
-          }
-        }
-      }
-    }
-
-    // @ts-expect-error no dnd5e-types
-    if (this.item.system.properties?.has("hvy")) {
-      const failDisadvantageHeavy = this.actor.flags?.[MODULE_ID]?.fail?.disadvantage?.heavy;
-      if (failDisadvantageHeavy) conditionData ??= createConditionData({ workflow: this, target: firstTarget, actor: this.actor });
-      if (!failDisadvantageHeavy || !await evalAllConditionsAsync(this.actor, midiFlag(`fail.disadvantage.heavy`), conditionData)) {
-        if (safeGetGameSetting("dnd5e", "rulesVersion") === "modern") {
-          // @ts-expect-error no dnd5e-types
-          if ((this.activity.actionType === "mwak" && this.actor.system.abilities?.str.value < 13) ||
-            // @ts-expect-error no dnd5e-types
-            (this.activity.actionType === "rwak" && this.actor.system.abilities?.dex.value < 13)) {
-            this.attackRollModifierTracker.disadvantage.add('heavy weapon', 'Heavy weapon');
-          }
-        } else if (safeGetGameSetting("dnd5e", "rulesVersion") === "legacy") {
-          // @ts-expect-error no dnd5e-types
-          if (["tiny", "sm"].includes(this.actor.system.traits?.size)) {
-            this.attackRollModifierTracker.disadvantage.add('small', 'Small creature');
-          }
-        }
-      }
-    }
     await this.checkTargetAdvantage();
+    // Long range, flanking, unseen/invisible/hidden, nearby foe and heavy weapon are midi's rollModifiers contributors (services/attackRollRules.ts)
     await collectRollModifiers({
       kind: "attack", actor: this.actor, token: getTokenDocument(this.token), target: this.targets.documents[0],
       activity: this.activity, item: this.item, workflow: this

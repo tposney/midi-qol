@@ -434,6 +434,7 @@ Hooks.once('init', async function () {
   defineCoverService();
   definePerceptionService();
   defineRollModifiersService();
+  registerAttackRollRules();
   Hooks.on("midi-qol.ConfigSettingsChanged", refreshServices);
   Hooks.callAll("midi-qol.registerServices", servicesApi);
   setupCATIntegration();
@@ -1006,6 +1007,7 @@ import { refreshServices, servicesApi } from "./module/api/services.js";
 import { defineCoverService } from "./module/services/cover.js";
 import { definePerceptionService, isImprecise } from "./module/services/perception.js";
 import { defineRollModifiersService } from "./module/services/rollModifiers.js";
+import { registerAttackRollRules } from "./module/services/attackRollRules.js";
 
 // Add any additional hooks if necessary
 // Phase 2: setup hook — properties that depend on CONFIG, settings, i18n, or game state

@@ -18,6 +18,8 @@ export interface RollModifier {
   label: string;
   /** What gave it (an effect's uuid, a rule's name); attribution is per provider + source. */
   source?: string;
+  /** The exact attribution key instead of provider:source, for a key other modules already rely on (midi's own rules). */
+  key?: string;
 }
 
 interface SideTracker { add(source?: string, displayName?: string): void; suppress(source?: string, displayName?: string): void }
@@ -42,7 +44,7 @@ export interface ModifierTarget {
 export function applyRollModifiers(tracker: ModifierTarget, modifiers: readonly RollModifier[], providerId: string): string[] {
   const problems: string[] = [];
   for (const modifier of modifiers) {
-    const source = `${providerId}:${modifier.source ?? modifier.label}`;
+    const source = modifier.key ?? `${providerId}:${modifier.source ?? modifier.label}`;
     const label = modifier.label;
     switch (modifier.effect) {
       case "advantage": tracker.advantage.add(source, label); break;

@@ -57,6 +57,12 @@ describe("applyRollModifiers", () => {
     ]);
   });
 
+  it("uses an exact key in place of provider:source when given", () => {
+    const { tracker, calls } = recorder();
+    applyRollModifiers(tracker, [{ effect: "disadvantage", key: "nearbyFoe", label: "Nearby foe" }], "midi-qol.nearbyFoe");
+    expect(calls).toEqual(["disadvantage.add nearbyFoe Nearby foe"]);
+  });
+
   it("skips and reports min/max without a number and unknown effects, applying the rest", () => {
     const { tracker, calls } = recorder();
     const problems = applyRollModifiers(tracker, [
