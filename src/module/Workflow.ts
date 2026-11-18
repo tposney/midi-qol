@@ -5760,11 +5760,11 @@ export class Workflow {
   ): Promise<{ saveRoll: Roll, saveRollTotal: number, saved: boolean } | null> {
     if (!this.item.flags?.[MODULE_ID]?.isConcentrationCheck) return null;
 
-    // Only reached when set on the actor directly; effects are mapped by DAE. Remove in 14.6.10.
+    // Only reached when set on the actor directly; effects are mapped by DAE. Remove in 14.8.0.
     const checkBonus = target.actor?.flags?.[MODULE_ID]?.concentrationSaveBonus;
     if (!checkBonus) return null;
     foundry.utils.logCompatibilityWarning(
-      "midi-qol | flags.midi-qol.concentrationSaveBonus is deprecated; use system.attributes.concentration.roll.bonus. Setting it on an actor directly stops working in 14.6.10.",
+      "midi-qol | flags.midi-qol.concentrationSaveBonus is deprecated; use system.attributes.concentration.roll.bonus. Setting it on an actor directly stops working in 14.8.0.",
       { once: true });
 
     //@ts-expect-error

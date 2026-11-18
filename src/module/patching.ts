@@ -1553,10 +1553,10 @@ async function rollDeathSave(this: Actor.Implementation, wrapped, config: RollPr
   if (advantage !== undefined) options.advantage = advantage;
   if (disadvantage !== undefined) options.disadvantage = disadvantage;
 
-  // Only reached when set on the actor directly; effects are mapped by DAE to system.attributes.death.roll.bonus. Remove in 14.6.10.
+  // Only reached when set on the actor directly; effects are mapped by DAE to system.attributes.death.roll.bonus. Remove in 14.8.0.
   if (deathSaveBonus) {
     foundry.utils.logCompatibilityWarning(
-      "midi-qol | flags.midi-qol.deathSaveBonus is deprecated; use system.attributes.death.roll.bonus. Setting it on an actor directly stops working in 14.6.10.",
+      "midi-qol | flags.midi-qol.deathSaveBonus is deprecated; use system.attributes.death.roll.bonus. Setting it on an actor directly stops working in 14.8.0.",
       { once: true });
     const conditionData = createConditionData({ workflow: undefined, target: undefined, actor: this });
     let bonus: any;

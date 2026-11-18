@@ -1346,8 +1346,8 @@ No damage on save (normal damage on fail). Registered as **BooleanFormula** fiel
 
 | Flag | Access | Description |
 |------|--------|-------------|
-| `flags.midi-qol.concentrationSaveBonus` | Mapped | **Deprecated.** Add bonus to concentration saves. Effects are mapped to `system.attributes.concentration.roll.bonus`; use that field. Set on an actor directly it still works with a warning, until 14.6.10 |
-| `flags.midi-qol.deathSaveBonus` | Mapped | **Deprecated:** an effect using it sets `system.attributes.death.roll.bonus` (accepts dice); use that field. Set on an actor directly, it still works (as a JavaScript expression) with a warning, until 14.6.10 |
+| `flags.midi-qol.concentrationSaveBonus` | Mapped | **Deprecated.** Add bonus to concentration saves. Effects are mapped to `system.attributes.concentration.roll.bonus`; use that field. Set on an actor directly it still works with a warning, until 14.8.0 |
+| `flags.midi-qol.deathSaveBonus` | Mapped | **Deprecated:** an effect using it sets `system.attributes.death.roll.bonus` (accepts dice); use that field. Set on an actor directly, it still works (as a JavaScript expression) with a warning, until 14.8.0 |
 | `flags.midi-qol.noDeathSaveFailureFromDamage` | Boolean | Damage at 0 HP adds no death save failures (with the *Enforce death saves* setting) |
 
 `flags.midi-qol.save.fail.*` is not read. For a bonus offered when a save fails, use [`flags.midi-qol.optional.NAME.save.fail.*`](#save-fail-bonuses).
