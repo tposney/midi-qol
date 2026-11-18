@@ -1,5 +1,5 @@
-2026/11/17-17:52:03.055401 729eecfec6c0 Delete type=3 #1
-2026/11/17-17:52:03.055985 729ed77fe6c0 Level-0 table #5: started
-2026/11/17-17:52:03.056712 729ed77fe6c0 Level-0 table #5: 4936 bytes OK
-2026/11/17-17:52:03.057488 729ed77fe6c0 Delete type=0 #3
-2026/11/17-17:52:03.057526 729ed77fe6c0 Manual compaction at level-0 from '!effects!midiCrouchingFx0' @ 72057594037927935 : 1 .. '!folders!midiTokenFxFldr0' @ 0 : 0; will stop at (end)
+2026/11/18-13:53:16.645665 7847cefee6c0 Delete type=3 #1
+2026/11/18-13:53:16.646279 7847ccbff6c0 Level-0 table #5: started
+2026/11/18-13:53:16.646994 7847ccbff6c0 Level-0 table #5: 4936 bytes OK
+2026/11/18-13:53:16.647758 7847ccbff6c0 Delete type=0 #3
+2026/11/18-13:53:16.647794 7847ccbff6c0 Manual compaction at level-0 from '!effects!midiCrouchingFx0' @ 72057594037927935 : 1 .. '!folders!midiTokenFxFldr0' @ 0 : 0; will stop at (end)

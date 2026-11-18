@@ -1,5 +1,5 @@
-2026/11/17-17:52:03.024875 729eecfec6c0 Delete type=3 #1
-2026/11/17-17:52:03.031846 729ed77fe6c0 Level-0 table #5: started
-2026/11/17-17:52:03.036174 729ed77fe6c0 Level-0 table #5: 554733 bytes OK
-2026/11/17-17:52:03.037077 729ed77fe6c0 Delete type=0 #3
-2026/11/17-17:52:03.037333 729ed77fe6c0 Manual compaction at level-0 from '!folders!5Ok9Jbl5nOokCkqf' @ 72057594037927935 : 1 .. '!items.effects!vowOfEnmity00000.vowTargetMark000' @ 0 : 0; will stop at (end)
+2026/11/18-13:53:16.618752 7847cefee6c0 Delete type=3 #1
+2026/11/18-13:53:16.624252 7847ccbff6c0 Level-0 table #5: started
+2026/11/18-13:53:16.628323 7847ccbff6c0 Level-0 table #5: 554733 bytes OK
+2026/11/18-13:53:16.629091 7847ccbff6c0 Delete type=0 #3
+2026/11/18-13:53:16.629285 7847ccbff6c0 Manual compaction at level-0 from '!folders!5Ok9Jbl5nOokCkqf' @ 72057594037927935 : 1 .. '!items.effects!vowOfEnmity00000.vowTargetMark000' @ 0 : 0; will stop at (end)
