@@ -124,6 +124,7 @@ import {
 } from "./utils.js"
 import { OnUseMacros } from "./apps/Item.js";
 import { bonusCheck, collectBonusFlags, defaultRollOptions, buildPreComputedAdvantageMap, checkActivityAbilities } from "./patching.js";
+import { collectRollModifiers } from "./services/rollModifiers.js";
 import { saveTargetsUndoData, saveUndoData } from "./undo.js";
 import { TroubleShooter } from "./apps/TroubleShooter.js";
 import { restoredUse, useChangesJson } from "./lib/useChanges.js";
@@ -4258,6 +4259,10 @@ export class Workflow {
       }
     }
     await this.checkTargetAdvantage();
+    await collectRollModifiers({
+      kind: "attack", actor: this.actor, token: getTokenDocument(this.token), target: this.targets.documents[0],
+      activity: this.activity, item: this.item, workflow: this
+    }, this.attackRollModifierTracker);
   }
 
   async processCriticalFlags() {

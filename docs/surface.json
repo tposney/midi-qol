@@ -318,6 +318,7 @@
   ],
   "services": [
     "cover",
-    "perception"
+    "perception",
+    "rollModifiers"
   ]
 }

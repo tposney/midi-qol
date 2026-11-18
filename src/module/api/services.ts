@@ -124,6 +124,12 @@ export function all<P>(serviceId: string): P[] {
   return [...service.providers.values()].filter(isAvailable).sort((a, b) => (b.priority ?? 0) - (a.priority ?? 0)).map(p => p.provider);
 }
 
+/** Every available provider of a contributors service with its id, highest priority first (for attributing answers). */
+export function entries<P>(serviceId: string): { id: string, provider: P }[] {
+  const service = entry<P>(serviceId);
+  return [...service.providers.values()].filter(isAvailable).sort((a, b) => (b.priority ?? 0) - (a.priority ?? 0)).map(p => ({ id: p.id, provider: p.provider }));
+}
+
 /** Whether `providerId` is the provider midi uses for a single service, e.g. for a module to stand down its own automation. */
 export function isProvider(serviceId: string, providerId: string): boolean {
   return services.has(serviceId) && activeProviderId(serviceId) === providerId;
@@ -144,4 +150,4 @@ export function refreshServices() {
   for (const service of services.values()) changed(service);
 }
 
-export const servicesApi = { register, unregister, wrap, unwrap, get, all, isProvider, providers, list, activeProviderId };
+export const servicesApi = { register, unregister, wrap, unwrap, get, all, entries, isProvider, providers, list, activeProviderId };

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { activeProviderId, all, defineService, get, isProvider, providers, register, unregister, unwrap, wrap } from "../src/module/api/services.js";
+import { activeProviderId, all, defineService, entries, get, isProvider, providers, register, unregister, unwrap, wrap } from "../src/module/api/services.js";
 import { hookCalls } from "./setup.js";
 
 type Answer = () => string;
@@ -86,6 +86,14 @@ describe("contributor services", () => {
     register<Answer>(id, "off", () => "off", { available: () => false });
     register<Answer>(id, "high", () => "high", { priority: 5 });
     expect(all<Answer>(id).map(p => p())).toEqual(["high", "midi", "low"]);
+  });
+
+  it("entries() gives each available contributor with its id, highest priority first", () => {
+    const id = fresh("contributors");
+    register<Answer>(id, "low", () => "low", { priority: -1 });
+    register<Answer>(id, "off", () => "off", { available: () => false });
+    register<Answer>(id, "high", () => "high", { priority: 5 });
+    expect(entries<Answer>(id).map(e => [e.id, e.provider()])).toEqual([["high", "high"], ["low", "low"]]);
   });
 
   it("refuses get(), which is for single services", () => {

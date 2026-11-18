@@ -1,3 +1,4 @@
+import { collectRollModifiers } from "./services/rollModifiers.js";
 import { initHiding } from "./lib/hiding.js";
 import { log, i18n, error, i18nFormat, warn, debugEnabled, GameSystemConfig, MODULE_ID, gameStats, getStaticID, MIDI_IMPLYING_STATUSES } from "../midi-qol.js";
 import { saveDisplayMode } from "./lib/saveVisibility.js";
@@ -1553,6 +1554,7 @@ async function rollDeathSave(this: Actor.Implementation, wrapped, config: RollPr
       ...config.midiOptions,
       grantsActor: config.midiOptions.workflow?.actor
     }, rollModifierTracker);
+    await collectRollModifiers({ kind: "death", actor: this, workflow: config.midiOptions.workflow }, rollModifierTracker);
     applyTrackerAdvantage(config, rollModifierTracker);
   }
 
@@ -1755,6 +1757,7 @@ export async function computeAbilityAdvantage(actor: Actor.Implementation, rollT
     ...effectiveOptions,
     grantsActor: effectiveOptions.workflow?.actor
   }, tracker);
+  await collectRollModifiers({ kind: rollKind === "concentration" ? "concentration" : rollType === "save" ? "save" : "check", actor, ability: abilityId, workflow: options.workflow }, tracker);
   return { tracker: tracker, magicResistance, magicVulnerability };
 }
 
@@ -2017,6 +2020,7 @@ export async function computeSkillAdvantage(actor: Actor.Implementation, skillId
     ...options,
     grantsActor: options.workflow?.actor
   }, tracker);
+  await collectRollModifiers({ kind: "skill", actor, skill: skillId, ability, workflow: options.workflow }, tracker);
   return tracker;
 }
 
@@ -2075,6 +2079,7 @@ export async function computeToolAdvantage(actor: Actor.Implementation, toolId: 
     ...options,
     grantsActor: options.workflow?.actor
   }, tracker);
+  await collectRollModifiers({ kind: "tool", actor, tool: toolId, ability: abilityId, workflow: options.workflow }, tracker);
   return tracker;
 }
 
