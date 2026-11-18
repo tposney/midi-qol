@@ -33,7 +33,7 @@ import {
 import { installedModules } from "../setupModules.js";
 import { saveUndoData } from "../undo.js";
 import { isRelaunched, takeRelaunch, useRelaunchSpike } from "./useRelaunch.js";
-import { activityHasAreaTarget, callActivityHooks, canSee, canSense, checkActivityRange, checkTargetsSeen, checkTotalCover, checkIncapacitated, createConditionData, displayDSNForRoll, evalActivationCondition, evalCondition, getAutoRollAttack, getAutoRollDamage, getRemoveAttackButtons, getRemoveDamageButtons, getSpeaker, getToken, activityHasAutoPlaceTemplate, confirmUseOffScene, hasUsedBonusAction, hasUsedReaction, autoConsumeResource, isInCombat, logIncapacitatedCheckResult, needsBonusActionCheck, needsReactionCheck, setBonusActionUsed, setReactionUsed, sumRolls, getOrCreateTokenForActor, validTargetTokens, userTargetsKeepingUndrawn, itemMagicAvailable, hasNoReactionsMarker, HEALING_BUTTON_KEY, activityHasEmanationNoTemplate, getActivityAutoTargetAction, areMidiKeysPressed, getActor, setRangedTargets, updateUserTargets, isValidTarget, needsAOOCheck, addRollTo, pushTargetSave, popTargetSave, clearTargetSave, getConsumptionData, toMessageMode, rollModeToMessageMode, tokenSourceCenter, isActivityType, speakerFor } from "../utils.js";
+import { activityHasAreaTarget, callActivityHooks, canSee, canSense, checkActivityRange, checkTargetsSeen, checkTotalCover, checkIncapacitated, createConditionData, displayDSNForRoll, evalActivationCondition, evalCondition, getAutoRollAttack, getAutoRollDamage, getRemoveAttackButtons, getRemoveDamageButtons, getSpeaker, getToken, activityHasAutoPlaceTemplate, confirmUseOffScene, hasUsedBonusAction, hasUsedReaction, autoConsumeResource, isInCombat, logIncapacitatedCheckResult, needsBonusActionCheck, needsReactionCheck, setBonusActionUsed, setReactionUsed, sumRolls, getOrCreateTokenForActor, validTargetTokens, userTargetsKeepingUndrawn, itemMagicAvailable, hasNoReactionsMarker, HEALING_BUTTON_KEY, activityHasEmanationNoTemplate, getActivityAutoTargetAction, areMidiKeysPressed, getActor, setRangedTargets, updateUserTargets, isValidTarget, needsAOOCheck, addRollTo, pushTargetSave, popTargetSave, clearTargetSave, getConsumptionData, toMessageMode, rollModeToMessageMode, tokenSourceCenter, isActivityType, speakerFor, setMessageTargets } from "../utils.js";
 import { activityHasScaledTargetCount, attachTokenOptions, templateOriginOptions, createActivityTemplateRegions, preTemplateTargets, removeFlanking, requiresTargetConfirmation, selectTargetsFromTemplates, setDamageRollMinTerms, shouldEnforceSingleTarget } from "./activityHelpers.js";
 
 export class MidiConditionField extends globalThis.dnd5e.dataModels.fields.FormulaField {
@@ -255,7 +255,9 @@ export let MidiActivityMixin = Base => {
         const choosesCreatures = !this.target?.template?.type && (!!this.attack || !["", "self", undefined].includes(this.target?.affects?.type));
         if (offScene === "viewed" && choosesCreatures) usage.midiOptions.workflowOptions.targetConfirmation ??= "always";
         // Capture current targets before template placement can replace them
-        usage.midiOptions.workflowOptions.preSelectedTargetUuids ??= Array.from(game.user?.targets ?? []).map(t => t.document.uuid).filter((uuid): uuid is string => !!uuid);
+        // The player's targets as the use starts (a use told to ignore them has none from the player)
+        usage.midiOptions.workflowOptions.preSelectedTargetUuids ??= (usage.midiOptions.ignoreUserTargets ? [] : Array.from(game.user?.targets ?? []))
+          .map(t => t.document.uuid).filter((uuid): uuid is string => !!uuid);
         if (debugEnabled > 0) warn("MidiQOL | MidiActivity | use | Called", usage, dialog, message);
         let item = this.item.clone({}, { keepId: true });
         // @ts-expect-error no dnd5e-types
@@ -362,21 +364,13 @@ export let MidiActivityMixin = Base => {
         const isSelfTarget = this.target?.affects?.type === "self"
           // @ts-expect-error item.type includes "tool" at runtime
           || (this.item.type === "tool" && !this.target?.affects?.type);
-        if (isSelfTarget) {
-          pushTargetSave();
-          usage.workflow!.selfTargeted = true;
-        } else {
-          clearTargetSave();
-        }
+        // Self-targeting no longer writes the player's targets (M2 stage 7), so there is nothing to save and restore
+        if (isSelfTarget) usage.workflow!.selfTargeted = true;
         if (!await activity.setupTargets(usage, dialog, message)) {
-          if (isSelfTarget) { popTargetSave(); usage.workflow!.selfTargeted = false; }
           ui.notifications?.warn(i18n("midi-qol.noTargets"));
           return false;
         }
-        if (!await activity.preChatChecks(usage, dialog, message)) {
-          if (isSelfTarget) { popTargetSave(); usage.workflow!.selfTargeted = false; }
-          return false;
-        }
+        if (!await activity.preChatChecks(usage, dialog, message)) return false;
         // If midiOptions.spellLevel is provided, set the spell slot key so that
         // dnd5e's _prepareUsageScaling derives the correct scaling from it.
         // @ts-expect-error item.type includes "spell" at runtime
@@ -385,6 +379,8 @@ export let MidiActivityMixin = Base => {
           usage.spell.slot = `spell${usage.midiOptions.spellLevel}`;
         }
         try {
+          // The usage card describes the use's targets, not the player's (which an automated use leaves alone)
+          message = setMessageTargets(message ?? {}, usage.workflow);
           useResults = await super.use.bind(activity)(usage, dialog, message);
         } catch (err) {
           error("MidiQOL | MidiActivity | use | Error in super.use", err);
@@ -634,6 +630,7 @@ export let MidiActivityMixin = Base => {
               config.workflow.isCritical = rolls[0].options.isCritical;
           });
           message.create ??= false;
+          setMessageTargets(message, config.workflow);
           result = config.workflow ? await config.workflow.keepRollMessageFlags(this, () => super.rollDamage(config, dialog, message))
             : await super.rollDamage(config, dialog, message);
           if (!result) { // user backed out of roll 
@@ -1000,8 +997,11 @@ export let MidiActivityMixin = Base => {
 
         if (this.actionType === "heal" && !Object.keys(GameSystemConfig.healingTypes).includes(config.workflow.defaultDamageType ?? "")) config.workflow.defaultDamageType = "healing";
         if (config.workflow?.workflowOptions?.damageRollDSN !== false) {
-          let promises = result.map(r => displayDSNForRoll(r, "damageRoll", undefined, undefined, this.actor));
-          await Promise.all(promises);
+          // Thrown with the rest of the damage step's dice (Workflow.flushDamageThrow)
+          if (config.workflow && config.midiOptions?.updateWorkflow !== false) {
+            config.workflow.beginDamageThrow();
+            await config.workflow.throwDamageDice(result);
+          } else await Promise.all(result.map(r => displayDSNForRoll(r, "damageRoll", undefined, undefined, this.actor)));
         }
         if (config.midiOptions?.addOptionalBonuses !== false) {
           result = await config.workflow.processDamageRollBonusFlags(result);
@@ -1065,16 +1065,19 @@ export let MidiActivityMixin = Base => {
       }
       const workflow = config.workflow;
       const hasTargetsToUse = memberCount(config.midiOptions?.targetsToUse) > 0 && !activityHasAreaTarget(this);
-      // If targetsToUse was provided (e.g. from completeActivityUse, OverTime effects),
-      // pre-populate game.user.targets so any confirmation dialog shows the right selection.
-      if (hasTargetsToUse) {
-        const given = config.midiOptions!.targetsToUse!;
-        const tokenIds = (given instanceof TokenDocumentSet ? given.documents : Array.from(given)).map(t => (t as Token | TokenDocument).id).filter((id): id is string => !!id);
-        updateUserTargets(tokenIds);
-      }
       const isSelfTargetActivity = this.target?.affects?.type === "self";
+      // The player's targets are the use's targets only where the player decides (confirmation) or the use took the
+      // player's targets: an automated use (given its targets) and self-targeting leave them alone (M2 stage 7)
+      let syncUserTargets = false;
       if (!isSelfTargetActivity && (requiresTargetConfirmation(this, config.midiOptions ?? {})
         || configSettings.enforceSingleWeaponTarget)) {
+        syncUserTargets = true;
+        // The confirmation dialog shows the player's targets: the given ones, when the use was given some
+        if (hasTargetsToUse) {
+          const given = config.midiOptions!.targetsToUse!;
+          const tokenIds = (given instanceof TokenDocumentSet ? given.documents : Array.from(given)).map(t => (t as Token | TokenDocument).id).filter((id): id is string => !!id);
+          updateUserTargets(tokenIds);
+        }
         if (!(await preTemplateTargets(this, config.midiOptions ?? {})))
           return false;
         // Confirmation was shown: the user's final selection, keeping given targets with no canvas token (it can't show them)
@@ -1092,11 +1095,14 @@ export let MidiActivityMixin = Base => {
         if (this.item.type === "tool" && !this.target?.affects.type)
           selfTarget = true;
         if (!selfTarget) {
+          // The use took the player's targets (unless told to ignore them)
+          syncUserTargets = !config.midiOptions?.ignoreUserTargets;
           // Use the target snapshot captured at the start of use() (before any await points)
           // to avoid a race condition where concurrent workflows clear game.user.targets
           // via updateUserTargets([]) during async gaps.
           const snapshotUuids = config.midiOptions?.workflowOptions?.preSelectedTargetUuids;
-          const userTargets = snapshotUuids?.length ? new TokenDocumentSet(snapshotUuids) : new Set(game.user?.targets);
+          const ignoreUser = config.midiOptions?.ignoreUserTargets;
+          const userTargets = snapshotUuids?.length ? new TokenDocumentSet(snapshotUuids) : ignoreUser ? new Set<Token.Implementation>() : new Set(game.user?.targets);
           workflow.setTargets(validTargetTokens(userTargets));
         } else {
           foundry.utils.setProperty(config, "midiOptions.workflowOptions.targetConfirmation", "none");
@@ -1106,7 +1112,7 @@ export let MidiActivityMixin = Base => {
         }
       }
       // remove selection of un-targetable targets TODO
-      if (canvas.scene) {
+      if (canvas.scene && syncUserTargets) {
         const tokensIdsToUse: Array<string | null> = workflow.targets.tokens.filter(t => isValidTarget(t)).map(t => t.id);
         updateUserTargets(tokensIdsToUse);
       }

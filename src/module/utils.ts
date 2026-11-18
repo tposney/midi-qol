@@ -2497,17 +2497,10 @@ export async function completeActivityUse(activityRef: Activity | string | undef
   if (localRoll) {
     return await new Promise((resolve) => {
       const maxWait = 90; // If the activity usage doesn't complete in 90 seconds then we have a problem
-      // Local save of current targets — restored on cleanup
-      const localSavedTargetIds = Array.from(game.user?.targets ?? []).map(t => t.id);
-      if (usage.midiOptions!.ignoreUserTargets) updateUserTargets([]);
+      // The use's targets travel with the use; the player's targets are left alone (M2 stage 7)
       if (game.user && memberCount(targetsToUse) === 0 && activity.target?.affects?.type === "self") {
         const selfTarget = getToken(activity.item.actor);
-        if (selfTarget) {
-          updateUserTargets([selfTarget.id]);
-          targetsToUse = new TokenDocumentSet([selfTarget]);
-        } else {
-          updateUserTargets([]);
-        }
+        if (selfTarget) targetsToUse = new TokenDocumentSet([selfTarget]);
       } else if (memberCount(targetsToUse) === 0 && !usage.midiOptions!.ignoreUserTargets) {
         targetsToUse = new TokenDocumentSet(game.user?.targets);
       }
@@ -2528,7 +2521,7 @@ export async function completeActivityUse(activityRef: Activity | string | undef
         completeHookName = "midi-qol.postCleanup";
       }
 
-      // Both hooks and the timeout do the same cleanup: unregister hooks, restore targets, resolve.
+      // Both hooks and the timeout do the same cleanup: unregister hooks, resolve.
       let timeoutId: ReturnType<typeof setTimeout> | undefined;
       const cleanupAndResolve = (result: any, source?: string) => {
         if (timeoutId !== undefined) { clearTimeout(timeoutId); timeoutId = undefined; }
@@ -2537,14 +2530,6 @@ export async function completeActivityUse(activityRef: Activity | string | undef
         //@ts-expect-error dynamic hook name
         Hooks.off(completeHookName, completeHookId);
         if (source && debugEnabled > 0) warn(`completeActivityUse ${source}: ${activity?.item?.name} ${completeHookName}`);
-        // Put back the targets saved at the start only if the user's are still the ones this use left: another use
-        // (or the player) may have targeted since, and restoring would take its targets away.
-        // Those with a canvas token: the user's targets are Tokens
-        const ownTargets = (result as Workflow | undefined)?.targets ?? new TokenDocumentSet(targetsToUse);
-        // midi's own token for an actor with none on the scene has no id and is never a user target
-        const own = new Set(ownTargets.tokens.map(t => t.id).filter(id => id));
-        const current = new Set([...(game.user?.targets ?? [])].map(t => t.id));
-        if (current.size === own.size && [...current].every(id => own.has(id))) updateUserTargets(localSavedTargetIds);
         resolve(result);
       };
 
@@ -9583,4 +9568,18 @@ async function applyStatus(actor: Actor.Implementation, statusId: string,
     if (options.active === false && /does not exist/.test(message)) return false;
     throw err;
   }
+}
+
+/**
+ * The use's targets as the message's targets (dnd5e's TargetsField descriptors), so dnd5e's use and rolls describe the
+ * use's targets rather than reading the player's (M2 stage 7: automated uses don't write game.user.targets). Targets the
+ * caller put in the message stay.
+ */
+export function setMessageTargets<M extends object>(message: M, workflow: { targets?: TokenDocumentSet } | undefined): M {
+  if (!workflow?.targets) return message;
+  if (foundry.utils.getProperty(message, "data.system.targets") !== undefined) return message;
+  const TargetsField = globalThis.dnd5e?.dataModels?.chatMessage?.fields?.TargetsField;
+  if (!TargetsField) return message;
+  foundry.utils.setProperty(message, "data.system.targets", TargetsField.getDescriptors(workflow.targets.documents));
+  return message;
 }

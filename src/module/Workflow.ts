@@ -17,7 +17,7 @@ import { installedModules } from "./setupModules.js";
 import { offerFollowUps } from "./followUps.js";
 import { configSettings, autoRemoveTargets, checkRule, checkMechanic, safeGetGameSetting, useWeakReferences, onUseMacroOptions, chatCardUpdates } from "./settings.js";
 import { challengeVisibleToPlayers, saveDisplayMode } from "./lib/saveVisibility.js";
-import { createDamageDetail, processDamageRoll, untargetDeadTokens, checkIncapacitated, getAutoRollDamage, isAutoFastForward, getAutoRollAttack, getRemoveDamageButtons, getRemoveAttackButtons, checkNearby, hasCondition, expireMyEffects, validTargetTokens, userTargetsKeepingUndrawn, HEALING_BUTTON_KEY, isActivityType, getOrCreateTokenForActorAsSet, doReactions, playerFor, requestPCActiveDefence, evalActivationCondition, asyncHooksCallAll, asyncHooksCall, renderSaveRollHTML, markFlanking, tokenForActor, getOrCreateTokenForActor, createConditionData, evalCondition, computeCoverBonus, computeTargetAC, TOTAL_COVER, THREE_QUARTERS_COVER, HALF_COVER, hasCoverTotal, isInCombat, displayDSNForRoll, setActionUsed, getTokenDocument, getToken, activityHasAutoPlaceTemplate, addRollTo, sumRolls, midiRenderAttackRoll, midiRenderDamageRoll, midiRenderBonusDamageRoll, midiRenderOtherDamageRoll, midiRenderFormulaRoll, throttledUpdate, getCachedDocument, getUpdatesCache, clearUpdatesCache, getDamageType, getTokenName, tokenPortrait, setRollOperatorEvaluated, evalAllConditions, evalAllConditionsAsync, getAppliedEffects, CEAddEffectWith, getCEEffectByName, CEHasEffectApplied, CERemoveEffect, CEToggleEffect, getActivityDefaultDamageType, activityHasAreaTarget, expectedTemplateCount, getSaveMultiplierForActivity, checkActivityRange, isRangeCheckable, checkDistance, getActivityAutoTargetAction, activityHasEmanationNoTemplate, completeActivityUse, getActor, getConcentrationEffect, convertDuration, getRemoveAllButtons, requestPCSave, pcSaveOptions, addUpdatesCache, addUpdatesCacheFlags, MidiOptions, getOptionalCountRemainingShortFlag, bonusDialog, getTargetDescriptor, queueUpdate, addAttribution, renderAttributionTooltip, getAdvantageModeTitle, resolveItemMacro, resolveActivityMacro, midiFlag, updateUserTargets, popTargetSave, clearTargetSave, getConsumptionData, toMessageMode, toLegacyRollMode, isDnd5eRollMessage, rollAnswersRequest, type SaveRequestKind, dnd5eRollType, tokenSourceElevation, applyStatusCondition, deleteCardAfterWrites } from "./utils.js";
+import { createDamageDetail, processDamageRoll, untargetDeadTokens, checkIncapacitated, getAutoRollDamage, isAutoFastForward, getAutoRollAttack, getRemoveDamageButtons, getRemoveAttackButtons, checkNearby, hasCondition, expireMyEffects, validTargetTokens, userTargetsKeepingUndrawn, HEALING_BUTTON_KEY, isActivityType, getOrCreateTokenForActorAsSet, doReactions, playerFor, requestPCActiveDefence, evalActivationCondition, asyncHooksCallAll, asyncHooksCall, renderSaveRollHTML, markFlanking, tokenForActor, getOrCreateTokenForActor, createConditionData, evalCondition, computeCoverBonus, computeTargetAC, TOTAL_COVER, THREE_QUARTERS_COVER, HALF_COVER, hasCoverTotal, isInCombat, displayDSNForRoll, setActionUsed, getTokenDocument, getToken, activityHasAutoPlaceTemplate, addRollTo, sumRolls, midiRenderAttackRoll, midiRenderDamageRoll, midiRenderBonusDamageRoll, midiRenderOtherDamageRoll, midiRenderFormulaRoll, throttledUpdate, getCachedDocument, getUpdatesCache, clearUpdatesCache, getDamageType, getTokenName, tokenPortrait, setRollOperatorEvaluated, evalAllConditions, evalAllConditionsAsync, getAppliedEffects, CEAddEffectWith, getCEEffectByName, CEHasEffectApplied, CERemoveEffect, CEToggleEffect, getActivityDefaultDamageType, activityHasAreaTarget, DSNMarkDiceDisplayed, expectedTemplateCount, getSaveMultiplierForActivity, checkActivityRange, isRangeCheckable, checkDistance, getActivityAutoTargetAction, activityHasEmanationNoTemplate, completeActivityUse, getActor, getConcentrationEffect, convertDuration, getRemoveAllButtons, requestPCSave, pcSaveOptions, addUpdatesCache, addUpdatesCacheFlags, MidiOptions, getOptionalCountRemainingShortFlag, bonusDialog, getTargetDescriptor, queueUpdate, addAttribution, renderAttributionTooltip, getAdvantageModeTitle, resolveItemMacro, resolveActivityMacro, midiFlag, updateUserTargets, popTargetSave, clearTargetSave, getConsumptionData, toMessageMode, toLegacyRollMode, isDnd5eRollMessage, rollAnswersRequest, type SaveRequestKind, dnd5eRollType, tokenSourceElevation, applyStatusCondition, deleteCardAfterWrites } from "./utils.js";
 import { OnUseMacros } from "./apps/Item.js";
 import { bonusCheck, collectBonusFlags, defaultRollOptions, buildPreComputedAdvantageMap, checkActivityAbilities } from "./patching.js";
 import { collectRollModifiers } from "./services/rollModifiers/service.js";
@@ -2470,10 +2470,6 @@ export class Workflow {
   }
 
   async WorkflowState_Start(): Promise<WorkflowState> {
-    // Self-target push/clear is handled in MidiActivityMixin.use() before setupTargets()
-    if (!this.selfTargeted) {
-      clearTargetSave();
-    }
     if (this.rangeTargeting) {
       // Targets have already been set in activity.use
       return this.WorkflowState_AoETargetConfirmation;
@@ -2812,10 +2808,13 @@ export class Workflow {
       if (debugEnabled > 0) warn("damageRollStarted | for non auto target area effects spells", this)
     }
     await this.rollAllBonusDamage();
+    // The damage step's dice, the activity's, the other activity's and the bonus damage's, in one throw
+    await this.flushDamageThrow();
     return this.WorkflowState_DamageRollComplete;
   }
 
   async WorkflowState_DamageRollComplete(): Promise<WorkflowState> {
+    await this.flushDamageThrow();
     if (configSettings.allowUseMacro && this.workflowOptions.noOnUseMacro !== true) { //
       await this.callMacros(this.item, this.onUseMacros?.getMacros("postDamageRoll"), "OnUse", "postDamageRoll");
       if (this.ammunition) await this.callMacros(this.ammunition, this.ammunitionOnUseMacros?.getMacros("postDamageRoll"), "OnUse", "postDamageRoll");
@@ -3627,7 +3626,6 @@ export class Workflow {
     }
 
     // Restore user targets if this was a self-target workflow
-    if (this.selfTargeted) popTargetSave();
 
     return this.WorkflowState_Completed;
   }
@@ -4626,9 +4624,7 @@ export class Workflow {
     if (!validRolls.length) return;
     setDamageRollMinTerms(validRolls);
     await this.setBonusDamageRolls(validRolls);
-    if (this.workflowOptions?.damageRollDSN !== false) {
-      await displayDSNForRoll(this.bonusDamageRolls!, "damageRoll", undefined, undefined, this.actor);
-    }
+    if (this.workflowOptions?.damageRollDSN !== false) await this.throwDamageDice(this.bonusDamageRolls!);
   }
 
   // TODO: Kill?
@@ -7514,6 +7510,36 @@ export class Workflow {
   }
 
   #preRollBonuses: { attack?: OfferedBonus[] } = {};
+  /** The damage dice of this use's damage step, thrown together (Dice So Nice): set while collecting */
+  #damageThrow: Roll[] | undefined;
+
+  /** Start collecting the damage step's dice (the activity's, the other activity's, bonus damage) for one throw */
+  beginDamageThrow(): void {
+    this.#damageThrow ??= [];
+  }
+
+  /** Throw these damage dice now, or with the rest of the damage step's when it is collecting */
+  async throwDamageDice(rolls: Roll | Roll[]): Promise<void> {
+    const list = rolls instanceof Array ? rolls : [rolls];
+    if (this.#damageThrow) {
+      this.#damageThrow.push(...list);
+      return;
+    }
+    await Promise.all(list.map(roll => displayDSNForRoll(roll, "damageRoll", undefined, undefined, this.actor)));
+  }
+
+  /** The damage step's dice in one throw: one roll of all their terms (damage-type flavours kept for DSN's colours) */
+  async flushDamageThrow(): Promise<void> {
+    const rolls = this.#damageThrow;
+    this.#damageThrow = undefined;
+    if (!rolls?.length) return;
+    if (rolls.length === 1) return displayDSNForRoll(rolls[0], "damageRoll", undefined, undefined, this.actor);
+    // Joined without rolling any dice again (addRollTo joins the evaluated terms)
+    const combined = rolls.slice(1).reduce((joined, roll) => addRollTo(joined, roll), rolls[0]);
+    await displayDSNForRoll(combined, "damageRoll", undefined, undefined, this.actor);
+    // The rolls' own messages, when created, are already shown
+    DSNMarkDiceDisplayed(rolls);
+  }
   #savesResolved = false;
   #deferredDamageBonuses = false;
 

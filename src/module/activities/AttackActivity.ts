@@ -6,7 +6,7 @@ import { unTimedExecuteAsGM } from "../GMAction.js";
 import { Workflow } from "../Workflow.js";
 import { decideRollDialog, dialogShown, heldKeys } from "../lib/rollKeys.js";
 import { RollModifierTracker, AdvantageFlags, computeAdvantageFlags, computeRollModifiers, applyRollModifiers, RollModifierFlags, applyTrackerAdvantage } from "../lib/RollModifierTracker.js";
-import { MidiOptions } from "../utils.js";
+import { MidiOptions, setMessageTargets } from "../utils.js";
 import { configSettings, confirmTargetOptions, ammunitionPerTargetOptions } from "../settings.js";
 import { addAttribution, areMidiKeysPressed, callActivityHooks, addUpdatesCache, displayDSNForRoll, getSpeaker, isAutoFastForward, updateUserTargets, validTargetTokens, getToken, tokenSourceCenter } from "../utils.js";
 import { MidiActivityMixin, MidiActivityMixinSheet, findAmmunitionActivity } from "./MidiActivityMixin.js";
@@ -517,6 +517,7 @@ let defineMidiAttackActivityClass = <T extends Activity>(ActivityClass: T) => {
         if (config.event && areMidiKeysPressed(config.event, "Versatile") && this.item.isVersatile) {
           config.attackMode = "twoHanded";
         }
+        setMessageTargets(message, workflow);
         // rollBonuses' automatic preRoll bonuses join the formula (attackRollParts)
         if (workflow) await workflow.collectPreRollBonuses("attack");
         // @ts-expect-error weirdness with how I did the types

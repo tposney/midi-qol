@@ -6,7 +6,7 @@ import { Workflow } from "../Workflow.js";
 import { TroubleShooter } from "../apps/TroubleShooter.js";
 import { configSettings } from "../settings.js";
 import { heldKeys } from "../lib/rollKeys.js";
-import { areMidiKeysPressed, callActivityHooks, isAutoFastForward } from "../utils.js";
+import { areMidiKeysPressed, callActivityHooks, isAutoFastForward, setMessageTargets } from "../utils.js";
 import { MidiActivityMixin, MidiActivityMixinSheet } from "./MidiActivityMixin.js";
 import { displayDSNForRoll } from "../utils.js";
 
@@ -105,6 +105,7 @@ let defineMidiUtilityActivityClass = <T extends Activity>(ActivityClass: T) => {
       if (workflow) workflow.rollOptions.rollToggle = rollToggle;
       if (rollToggle) dialog.configure = !!!dialog.configure;
       message.create ??= false;
+      message = setMessageTargets(message ?? {}, workflow);
       let result = await super.rollFormula!(config, dialog, message) as Roll[] | undefined;
       if (result && workflow.workflowOptions?.formulaDSN !== false) await displayDSNForRoll(result[0], "formulaD20", undefined, undefined, workflow?.actor);
 
