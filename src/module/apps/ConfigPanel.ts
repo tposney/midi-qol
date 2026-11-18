@@ -253,7 +253,6 @@ export class ConfigPanel extends HandlebarsApplicationMixin(ApplicationV2) {
       ColorOptions: colorList.reduce((acc, c) => { acc[c] = c; return acc }, { "Delete": "Delete" }),
       DoConcentrationCheckOptions: doConcentrationCheckOptions,
       ActivationAutomationOptions: activationAutomationOptions,
-      // @ts-expect-error fvtt-types lacks v14 CONFIG.ChatMessage.modes
       messageModes: Object.fromEntries(Object.entries(CONFIG.ChatMessage.modes).filter(([mode]) => mode !== "ic").map(([mode, { label }]) => [mode, label])),
       fastForwardOptions: {
         attack: i18n("midi-qol.fastForwardOptions.attack"),
@@ -326,7 +325,7 @@ export class ConfigPanel extends HandlebarsApplicationMixin(ApplicationV2) {
     // Don't think this was doing anything
     // html.find(".playlist").change(this._playList.bind(this));
     this.element.querySelector(".itemTypeListEdit")?.addEventListener("click", event => {
-      const options = Object.entries(CONFIG.Item.typeLabels).filter(kv => !["backpack", "base"].includes(kv[0])).map(([k, v]) => ({ value: k, label: i18n(v), selected: configSettings.itemTypeList?.includes(k) }));
+      const options = Object.entries(CONFIG.Item.typeLabels).filter(kv => !["backpack", "base"].includes(kv[0])).map(([k, v]) => ({ value: k, label: i18n(v ?? k), selected: configSettings.itemTypeList?.includes(k) }));
       options.sort((a, b) => a.label.compare(b.label));
       DialogV2.prompt<foundry.applications.api.DialogV2.PromptConfig>({
         id: "midi-qol-item-selector",
@@ -418,7 +417,6 @@ export class ConfigPanel extends HandlebarsApplicationMixin(ApplicationV2) {
     let newSettings = foundry.utils.mergeObject(configSettings, realData, { overwrite: true, inplace: false });
     if (game.user?.can("SETTINGS_MODIFY")) {
       await game.settings.set("midi-qol", "ConfigSettings", newSettings);
-      //@ts-expect-error v13 stubby
       if (needReload) foundry.applications.settings.SettingsConfig.reloadConfirm({world: true});
     }
   }

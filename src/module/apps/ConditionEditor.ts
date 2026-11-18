@@ -448,7 +448,7 @@ export class ConditionEditor extends HandlebarsApplicationMixin(ApplicationV2) {
     return this.#getCurrentValue() !== this.originalValue;
   }
 
-  override async close(options?: foundry.applications.api.ApplicationV2.ClosingOptions): Promise<this> {
+  override async close(options?: foundry.applications.api.ApplicationV2.ClosingOptions): Promise<this | void> {
     if (!this.submitted && this.hasUnsavedChanges) {
       const confirmed = await foundry.applications.api.DialogV2.confirm({
         window: { title: i18n("midi-qol.OverTimeEditor.UnsavedTitle") },

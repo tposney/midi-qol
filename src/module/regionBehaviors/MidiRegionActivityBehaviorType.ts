@@ -78,7 +78,6 @@ export class MidiRegionActivityBehaviorType extends foundry.data.regionBehaviors
         label: `BEHAVIOR.TYPES.${MODULE_ID}.regionActivity.FIELDS.moveTiming.label` }),
       wallRestriction: new StringField({
         initial: "none",
-        // @ts-expect-error fvtt-types missing EDGE_RESTRICTION_TYPES (v14 regions use EDGE not WALL)
         choices: ["none", ...CONST.EDGE_RESTRICTION_TYPES],
         label: `BEHAVIOR.TYPES.${MODULE_ID}.regionActivity.FIELDS.wallRestriction.label`,
         hint: `BEHAVIOR.TYPES.${MODULE_ID}.regionActivity.FIELDS.wallRestriction.hint`,
@@ -289,14 +288,15 @@ export class MidiRegionActivityBehaviorType extends foundry.data.regionBehaviors
     const castLevel = self.castLevel as number;
     const sourceActorUuid = self.sourceActorUuid as string;
 
-    if (!activityUuid) return;
+    const tokenUuid = token.uuid;
+    if (!activityUuid || !tokenUuid) return;
     // dnd5e 6.1's antimagic status: a magical area does nothing to a creature inside an antimagic area
     const sourceItem = (fromUuidSync(activityUuid) as { item?: Item.Implementation } | null)?.item;
     if (itemIsMagical(sourceItem) && token.actor?.statuses.has("antimagic")) return;
 
     const triggerData = {
       activityUuid,
-      targetUuids: [token.uuid],
+      targetUuids: [tokenUuid],
       castLevel,
       sourceActorUuid,
     };

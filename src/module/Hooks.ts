@@ -21,7 +21,6 @@ export var concentrationCheckItemDisplayName = "Concentration Check";
 
 export let readyHooks = async () => {
   // Handle removing effects when the token is moved.
-  // @ts-expect-error not yet typed in fvtt-types
   Hooks.on("moveToken", (tokenDocument: TokenDocument.Implementation, movement, operation, user: User.Implementation) => {
     if (!user.isSelf) return;
     const actor = tokenDocument.actor;
@@ -97,7 +96,6 @@ export let readyHooks = async () => {
     if (userId !== game.user?.id) return true;
 
     const shouldCheckTempHP = configSettings.tempHPDamageConcentrationCheck;
-    // @ts-expect-error no dnd5e-types
     const relevantHpChange = changes.system?.attributes?.hp;
 
     const isHpChangeInvalid =
@@ -179,7 +177,6 @@ export let readyHooks = async () => {
         if (origin instanceof ActiveEffect && !options.noConcentrationCheck && configSettings.removeConcentrationEffects !== "none") {
           // @ts-expect-error no dnd5e-types
           if (origin.statuses?.has(CONFIG.specialStatusEffects.CONCENTRATING) && origin.getDependents()?.length === 0) {
-            // @ts-expect-error duration.remaining
             if ((origin?.duration?.remaining ?? 1) > 0) { // an expired origin is DAE's to remove
               await origin.delete();
             }
@@ -256,14 +253,14 @@ export let readyHooks = async () => {
   Hooks.on("deleteActor", (deletedActor: Actor.Implementation, options: any, user) => {
     if (!preferredActiveGM()?.isSelf) return;
     if (options.undo) return;
-    MidiDependentsRegistry.deleteDependents(deletedActor.uuid);
+    if (deletedActor.uuid) MidiDependentsRegistry.deleteDependents(deletedActor.uuid);
   });
 
   // Handle deletion of Items - cascade delete dependents via MidiDependentsRegistry
   Hooks.on("deleteItem", (deletedItem: Item.Implementation, options: any, user) => {
     if (!preferredActiveGM()?.isSelf) return;
     if (options.undo) return;
-    MidiDependentsRegistry.deleteDependents(deletedItem.uuid);
+    if (deletedItem.uuid) MidiDependentsRegistry.deleteDependents(deletedItem.uuid);
   });
 
   // Handle deletion of AmbientLights - cascade delete dependents via MidiDependentsRegistry
@@ -354,7 +351,6 @@ export function initHooks() {
     hideRollUpdate(message, update, options, user);
     if (!update.content) return;
     const updateChatMessageStart = Date.now();
-    //@ts-expect-error fvtt-isAtBottom
     if (message.content && (ui.chat?.isAtBottom)) {
       throttledScrollBottom();
     }
@@ -1842,7 +1838,7 @@ Hooks.on("dnd5e.preConfigureInitiative", (actor, rollConfig) => {
 });
 
 /** Status documents midi is deleting together with the statuses that carry them. */
-const carrierDeletes = new Set<string>();
+const carrierDeletes = new Set<string | null>();
 
 /**
  * Deleting a status while one of midi's statuses carries it (Invisible while the self-ending Invisible is on, from the

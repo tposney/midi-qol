@@ -3,7 +3,8 @@ import { Activity, ActivityUseConfiguration, RollDialogConfig, RollMessageConfig
 import { debugEnabled, warn, i18n, GameSystemConfig } from "../../midi-qol.js";
 import { Workflow } from "../Workflow.js";
 import { configSettings, safeGetGameSetting } from "../settings.js";
-import { getTokenDocument, isAutoFastForward } from "../utils.js";
+import { getTokenDocument, isAutoFastForward, speakerFor } from "../utils.js";
+import { activityBonusRoll } from "../patching.js";
 import { MidiActivityMixin, MidiActivityMixinSheet } from "./MidiActivityMixin.js";
 import { getSceneTargets } from "./activityHelpers.js";
 
@@ -88,6 +89,7 @@ let defineMidiSaveActivityClass = <T extends Activity>(ActivityClass: T) => {
     static async #rollSave(this: Activity, event: PointerEvent, target: HTMLElement, message: ChatMessage.Implementation) {
       const workflow = Workflow.findWorkflow(message?.uuid);
       const activity = workflow ? workflow.activityFor(this) : this;
+      const cardId = message?.id;
       // return ActivityClass.#rollSave.bind(this)(event, target, message);
       // Can't call ActivityClass.#rollSave.bind(this)(event, target, message) as it's private
       // As dnd5e 6: the card's targets (honouring its targeted/selected toggle) and the clicked button's data from
@@ -100,11 +102,12 @@ let defineMidiSaveActivityClass = <T extends Activity>(ActivityClass: T) => {
       // @ts-expect-error no dnd5e-types
       const button: Record<string, string | number | undefined> = message?.system?.getButton?.(target)?.dataset ?? target.dataset;
       const dc = (button.dc === undefined || button.dc === "") ? NaN : Number(button.dc);
+      const bonusRoll = activityBonusRoll(activity, "save");
       for (const token of targets) {
         const actor = token instanceof Actor ? token : token.actor;
         const tokenDocument = token instanceof foundry.canvas.placeables.Token ? token.document : token instanceof TokenDocument ? token : null;
-        const speaker = ChatMessage.getSpeaker({ actor, scene: canvas.scene, token: tokenDocument });
-        const message: AnyMutableObject = { data: { speaker } };
+        const speaker = speakerFor({ actor, scene: canvas.scene, token: tokenDocument });
+        const message: AnyMutableObject = { data: { speaker, system: { ...activity.messageSources, origin: cardId } } };
         // if (!actor?.hasPlayerOwner && workflow) message.create = false - this breaks save checking from chat card
         if (token instanceof foundry.canvas.placeables.Token) foundry.utils.setProperty(message, "flags.midi-qol.requestId", token.document.uuid);
         else foundry.utils.setProperty(message, "flags.midi-qol.requestId", token?.uuid);
@@ -127,6 +130,7 @@ let defineMidiSaveActivityClass = <T extends Activity>(ActivityClass: T) => {
         await actor?.rollSavingThrow({
           event,
           workflow,
+          ...(bonusRoll ? { rolls: [{ ...bonusRoll }] } : {}),
           //@ts-expect-error this has been bound to an activity
           ability: button.ability ?? activity.save.ability.first(),
           //@ts-expect-error this has been bound to an activity

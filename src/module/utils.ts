@@ -128,8 +128,7 @@ export function getOrCreateTokenForActor(actor?: Actor.Implementation) {
   if (actor.token?.object) return actor.token.object; //actor.token is a token document.
   const token = tokenForActor(actor);
   if (token) return token;
-  const tokenData = actor.prototypeToken.toObject();
-  tokenData.actorId = actor.id!;
+  const tokenData = { ...actor.prototypeToken.toObject(), actorId: actor.id };
   const cls = globalThis.getDocumentClass("Token");
   // TODO check this - not sure if actor is set correctly
   const tokenDocument = new cls(tokenData, { parent: canvas.scene });
@@ -288,7 +287,7 @@ export async function applyTokenDamage(
   const semiSuperSavers = new TokenDocumentSet(options.semiSuperSavers);
   for (let token of new TokenDocumentSet(theTargets).documents) {
     const actor = token.actor;
-    if (!actor) continue;
+    if (!actor?.uuid) continue;
     const isHit = true;
     const saved = savers.has(token);
     const superSaver = superSavers.has(token);
@@ -376,7 +375,7 @@ export async function applyTokenDamageMany(
 
   for (const entry of targetDamages) {
     const actor = entry.token.actor;
-    if (!actor) continue;
+    if (!actor?.uuid) continue;
     const damageDetail = entry.damageDetail.map(de => ({ ...de, value: (de.value ?? de.damage) }));
     const calcDamageOptions = {
       invertHealing: true,
@@ -595,7 +594,7 @@ export async function processDamageRoll(workflow: Workflow, defaultDamageType: s
     // Reactions need a Token: drawn, or midi's for an actor with none on the scene
     const token = workflow.targets.placeableOf(tokenDocument);
     const actor = tokenDocument.actor;
-    if (!actor) continue;
+    if (!actor?.uuid) continue;
     let challengeModeScale = 1;
     let challengeModeAR = 0;
     if (["scale", "scaleNoAR"].includes(checkRule("challengeModeArmor") as string) && workflow.attackRoll && workflow.hitTargetsEC?.has(tokenDocument)) {
@@ -626,7 +625,7 @@ export async function processDamageRoll(workflow: Workflow, defaultDamageType: s
       semiSuperSaver,
       superSaver,
       totalDamage,
-      targetUuid: tokenDocument?.uuid,
+      targetUuid: tokenDocument?.uuid ?? "",
     };
     if (!foundry.utils.getProperty(workflow.activity.item, `flags.${MODULE_ID}.noProvokeReaction`) && !workflow?.workflowOptions?.noProvokeReaction) {
       if (token && totalDamage !== 0 && (workflow.hitTargets.has(tokenDocument) || workflow.hitTargetsEC.has(tokenDocument) || workflow.hasSave)) {
@@ -664,10 +663,10 @@ export async function processDamageRoll(workflow: Workflow, defaultDamageType: s
           saved: hasSaved,
           saveMultiplier, // default
           semiSuperSaver,
-          sourceActorUuid: workflow.actor.uuid,
+          sourceActorUuid: workflow.actor.uuid ?? undefined,
           itemCardUuid: workflow.itemCardUuid,
           superSaver,
-          targetUuid: tokenDocument.uuid,
+          targetUuid: tokenDocument.uuid ?? undefined,
           // @ts-expect-error no dnd5e-types
           uncannyDodge: actor.flags?.[MODULE_ID]?.["uncanny-dodge"] && workflow.item?.hasAttack,
           uncannyDodgeIcon: uncannyDodgeSourceIcon(actor)
@@ -785,7 +784,7 @@ export async function processDamageRoll(workflow: Workflow, defaultDamageType: s
     workflow.damageList = [];
     for (const tokenDocument of theTargets) {
       const actor = tokenDocument.actor;
-      if (!actor) continue;
+      if (!actor?.uuid) continue;
       const target = damagePerActor[actor.uuid];
       if (!target?.options) continue;
       const damageEntry = setupDamageDetails({
@@ -796,7 +795,7 @@ export async function processDamageRoll(workflow: Workflow, defaultDamageType: s
       }, actor);
       if (damageEntry) {
         workflow.damageList.push(damageEntry);
-        (workflow.targetDamage[tokenDocument.uuid] ??= []).push(damageEntry);
+        if (tokenDocument.uuid) (workflow.targetDamage[tokenDocument.uuid] ??= []).push(damageEntry);
         await workflow?.callDamageHooksAndMacros(damageEntry, tokenDocument);
       }
     }
@@ -1124,7 +1123,10 @@ export function setupMidiFlagTypes() {
   }
 }
 
-export function midiCustomEffect(actor: Actor.Implementation, change: MidiChangeData & { effect?: ActiveEffect.Implementation }, current: unknown, delta: unknown, changes: unknown) {
+export function midiCustomEffect(target: foundry.abstract.DataModel.Any, change: MidiChangeData & { effect?: ActiveEffect.Implementation }, current: unknown, delta: unknown, changes: unknown) {
+  // Foundry 14 applies effects to any data model; midi's keys belong on actors and items (enchantments)
+  if (!(target instanceof Actor) && !(target instanceof Item)) return true;
+  const actor = target;
   if (!change.key) return true;
   if (typeof change?.key !== "string") return true;
   // For passive effects originUuid should point to the parent item, rather than the original item.
@@ -1261,7 +1263,7 @@ export function midiCustomEffect(actor: Actor.Implementation, change: MidiChange
          foundry.utils.setProperty(actor, change.key, macroString)
        } else foundry.utils.setProperty(actor, change.key, change.value);
      } */
-  } else if (deferredEvaluation.some(k => change.key.startsWith(k))) {
+  } else if (deferredEvaluation.some(k => change.key?.startsWith(k))) {
     // v14 AnyField stores values as-is (no auto-coercion), but v13 backward-compat shim's
     // migrateChangeValue ran JSON.parse converting "0"→0, "1"→1, etc. Handle both.
     const changeValue = change.value as string | number | boolean;
@@ -1449,7 +1451,7 @@ export async function localActivityOverTimeEffect(actor: Actor.Implementation, e
     if (token) targetsToUse = new Set([token]);
 
     const overTimeWorkflow: Workflow = await completeActivityUse(overTimeActivity,
-      { midiOptions: { targetsToUse, checkGMstatus, workflowOptions: { noProvokeReaction: true, autoConsumeResource: "both", overTimeEffectUuid: effect.uuid } } },
+      { midiOptions: { targetsToUse, checkGMstatus, workflowOptions: { noProvokeReaction: true, autoConsumeResource: "both", overTimeEffectUuid: effect.uuid ?? undefined } } },
       { configure: overTimeActivity.consumption?.spellSlot === true },
       { create: true }) as Workflow;
 
@@ -1726,7 +1728,7 @@ async function handleActionSaveDialog(ctx: ActionSaveContext): Promise<boolean> 
 
   // Build SaveDetails with ALL abilities — doRollAbility/setupChoiceDialog handles the choice UI
   const saveDetails: SaveDetails = {
-    actorUuid: actor.uuid,
+    actorUuid: actor.uuid ?? "",
     advantage: undefined,
     disadvantage: undefined,
     modifierTracker: undefined,
@@ -1820,7 +1822,7 @@ async function handleActionSaveRollRequest(ctx: ActionSaveContext, changeTurnEnd
   const { actor, effect, details, owner, messageFlavor } = ctx;
   const { saveAbility, saveDC, rollMode, label, rollTypeString } = details;
   // A save just rolled from the last card may have ended the effect (handleActionSaveRollResponse): nothing to ask for
-  const ended = () => !effect.id || !effect.parent?.effects.has(effect.id) || endingEffects.has(effect.uuid);
+  const ended = () => !effect.id || !effect.parent?.effects.has(effect.id) || (!!effect.uuid && endingEffects.has(effect.uuid));
   if (ended()) return effect.id;
 
   const MessageClass = getDocumentClass("ChatMessage");
@@ -1835,14 +1837,13 @@ async function handleActionSaveRollRequest(ctx: ActionSaveContext, changeTurnEnd
     ...(rollTypeString === "skill" ? { skill: id, ability: GameSystemConfig.skills[id]?.ability }
       : rollTypeString === "tool" ? { tool: id, ability: GameSystemConfig.tools[id]?.ability } : { ability: id })
   }));
-  const chatCard = await MessageClass.create({
-    // @ts-expect-error no dnd5e-types
-    type: "prompt",
+  const chatCard = await MessageClass.create<ChatMessage.CreateData>({
     whisper: whisper.map(u => u.id ?? ""),
     flavor: `Action: ${label ?? effect.name} ${i18n(messageFlavor[details.rollType])}`,
-    speaker: MessageClass.getSpeaker({ actor }),
-    system: { broadcast: false, buttons },
-    flags: { [MODULE_ID]: { overtimeActorUuid: actor.uuid, overtimeRollMode: rollMode } }
+    speaker: speakerFor({ actor }),
+    // @ts-expect-error no dnd5e-types
+    type: "prompt", system: { broadcast: false, buttons },
+    flags: { [MODULE_ID]: { overtimeActorUuid: actor.uuid ?? undefined, overtimeRollMode: rollMode } }
   });
   if (chatCard) chatCardUuids.push(chatCard.uuid);
   if (ended()) {
@@ -2363,7 +2364,7 @@ export async function gmOverTimeEffect(actor: Actor.Implementation, effect: Acti
       ownedItem.prepareFinalAttributes();
       // Register effect for save/fail count tracking if either is specified
       // Skip registration if effect is already permanent (no save processing needed)
-      if (!actionSave && !isPermanent && (saveCount || failCount) && saveDC > -1) {
+      if (!actionSave && !isPermanent && (saveCount || failCount) && saveDC > -1 && effect.uuid) {
         // @ts-expect-error no dnd5e-types
         const activityUuid = ownedItem.system.activities.contents[0].uuid;
         savedOverTimeEffectsToDelete[activityUuid] = {
@@ -2378,7 +2379,7 @@ export async function gmOverTimeEffect(actor: Actor.Implementation, effect: Acti
       }
 
       if (details.removeCondition) {
-        if (await overTimeRemoveConditionMet(details.removeCondition, rollData)) {
+        if (effect.uuid && await overTimeRemoveConditionMet(details.removeCondition, rollData)) {
           // @ts-expect-error no dnd5e-types
           const otKey = ownedItem.system.activities.contents[0].uuid;
           overTimeEffectsToDelete[otKey] = { uuid: effect.uuid }
@@ -2397,7 +2398,7 @@ export async function gmOverTimeEffect(actor: Actor.Implementation, effect: Acti
           targetsToUse: new Set([theTargetToken]),
           // targetUuids: [theTargetUuid],
           ignoreUserTargets: true,
-          workflowOptions: { targetConfirmation: "none", isOverTime: true, allowIncapacitated, overTimeEffectUuid: effect.uuid },
+          workflowOptions: { targetConfirmation: "none", isOverTime: true, allowIncapacitated, overTimeEffectUuid: effect.uuid ?? undefined },
           flags: {
             dnd5e: { "itemData": ownedItem.toObject() },
           }
@@ -2567,7 +2568,7 @@ export async function completeActivityUse(activityRef: Activity | string | undef
     const newUsage = foundry.utils.deepClone(usage) as unknown as { sequenceId?: string; workflow?: Workflow; midiOptions: SerializedMidiOptions };
     newUsage.midiOptions ??= {};
     newUsage.midiOptions.targetsToUse = targetsToUse.uuids;
-    if (usage.midiOptions.rollAs) newUsage.midiOptions.rollAs = usage.midiOptions.rollAs.uuid;
+    if (usage.midiOptions.rollAs) newUsage.midiOptions.rollAs = usage.midiOptions.rollAs.uuid ?? undefined;
     const data = {
       activityUuid: activity.uuid,
       actorUuid: activity.item.parent?.uuid,
@@ -2888,7 +2889,7 @@ export function distancePointToken({ x, y, elevation = 0 }, token, wallblocking 
       const yBase = yStep * canvas.grid.size + tokenCenter.y;
       ({ x: xc, y: yc } = canvas.grid.getCenterPoint({ x: xBase, y: yBase }) || { x: 0, y: 0 });
       // ({ x: xc, y: yc } = canvas.grid.getCenterPoint.bind(canvas.grid)({ x, y }) || { x: 0, y: 0 });
-      const newDistance = canvas.grid.measurePath([new PIXI.Point(x, y), { x: xc, y: yc }], {}).distance;
+      const newDistance = measureGridPath(canvas.grid, [new PIXI.Point(x, y), { x: xc, y: yc }])?.distance ?? Infinity;
       if (newDistance < 1) {
         coverACBonus += 1;
         tokenTileACBonus += 1;
@@ -2923,7 +2924,6 @@ export function getTokenPerimeterPolygon(token: Token): PIXI.Polygon {
   if (shape instanceof PIXI.Polygon) {
     polygon = shape;
   } else if (shape instanceof PIXI.Circle) {
-    //@ts-expect-error Foundry extends PIXI.Circle with toPolygon()
     polygon = shape.toPolygon();
   } else if (shape instanceof PIXI.Ellipse) {
     polygon = ellipseToPolygon(shape);
@@ -3109,10 +3109,10 @@ function checkSurfaceCollision(
   ];
   for (const [oElev, dElev] of elevPairs) {
     if (oElev === dElev) return false;
-    // @ts-expect-error testSurfaceCollision not in fvtt-types
     const blocked = !!canvas.scene?.testSurfaceCollision?.(
       { x: origin.x, y: origin.y, elevation: oElev },
       { x: dest.x, y: dest.y, elevation: dElev },
+      // @ts-expect-error fvtt-types: level is optional at runtime (every level is tested)
       { type: "move", mode: "any" }
     );
     if (!blocked) return false;
@@ -3348,11 +3348,11 @@ export function computePerimeterDistance(
     // Gridless with griddedGridless: use proxy to treat as SquareGrid
     // measurePath on the proxy will use SquareGrid's _measurePath which respects diagonal mode
     const canvasGridProxy = createSquareGridProxy();
-    const result = canvasGridProxy.measurePath([origin, dest], {});
+    const result = measureGridPath(canvasGridProxy, [origin, dest]);
     distance = result?.distance ?? 0;
   } else {
     // Gridded scene: measurePath calculates distance respecting diagonal mode
-    const result = canvas.grid.measurePath([origin, dest], {});
+    const result = measureGridPath(canvas.grid, [origin, dest]);
     distance = result?.distance ?? 0;
   }
 
@@ -3375,9 +3375,9 @@ export function measurePointDistance(p1: { x: number, y: number }, p2: { x: numb
   const isGridless = canvas.grid.isGridless;
   if (isGridless && configSettings.griddedGridless) {
     const proxy = createSquareGridProxy();
-    return proxy.measurePath([p1, p2], {})?.distance ?? 0;
+    return measureGridPath(proxy, [p1, p2])?.distance ?? 0;
   }
-  return canvas.grid.measurePath([p1, p2], {})?.distance ?? 0;
+  return measureGridPath(canvas.grid, [p1, p2])?.distance ?? 0;
 }
 
 /**
@@ -3601,8 +3601,7 @@ export function getDistance(t1: any, t2: any, options: DistanceOptions = {}): nu
       }
     }
     // Committed centres, not the animated ones - see tokenSourceCenter.
-    const result = canvas.grid.measurePath(
-      [tokenSourceCenter(token1), tokenSourceCenter(token2)], {});
+    const result = measureGridPath(canvas.grid, [tokenSourceCenter(token1), tokenSourceCenter(token2)]);
     distance = Math.max(0, (result?.distance ?? 0) - fudgeFactor);
   } else if (measurementMode === "center") {
     distance = computeDistance(t1, t2, { wallsBlock, includeCover, includeElevation });
@@ -4662,7 +4661,7 @@ function getPlayerNPCNameHideNPCNAmes(token: TokenOrDocument): string | undefine
 }
 
 export function getSpeaker(actor: Actor.Implementation) {
-  const speaker = ChatMessage.getSpeaker({ actor });
+  const speaker = speakerFor({ actor });
   if (!configSettings.useTokenNames) return speaker;
   let token = actor.token;
   if (!token) token = actor.getActiveTokens(false, true)[0];
@@ -5276,6 +5275,17 @@ export function rollModeToMessageMode(rollMode?: string): string | undefined {
 
 // Normalize any stored/legacy rollMode to a v14 message mode for INTERNAL use. Legacy strings map
 // across; "roll"/undefined → the core messageMode default; v14 values pass through unchanged.
+/** ChatMessage.getSpeaker for any actor or token: Foundry handles unsaved ones, fvtt-types only declares stored documents. */
+export function speakerFor(options: { actor?: Actor.Implementation | null, token?: TokenDocument.Implementation | Token.Implementation | null, scene?: Scene.Implementation | null, alias?: string }): ChatMessage.SpeakerData {
+  // @ts-expect-error fvtt-types: getSpeaker accepts unsaved documents
+  return ChatMessage.implementation.getSpeaker(options);
+}
+
+/** Whether a message mode is one of Foundry 14's (CONFIG.ChatMessage.modes); a legacy roll-mode name is not. */
+export function isMessageMode(mode: string | undefined): mode is ChatMessage.Mode {
+  return !!mode && mode in CONFIG.ChatMessage.modes;
+}
+
 export function toMessageMode(mode?: string): string {
   if (mode === "roll" || mode === undefined || mode === "default") return (safeGetGameSetting("core", "messageMode") as string) ?? "public";
   return rollModeToMessageMode(mode) ?? "public";
@@ -5314,7 +5324,7 @@ async function displayBeforeAfterRolls(data: {
   const originalRollHTML = await midiRenderRoll(originalRoll);
   const chatData: any = foundry.utils.mergeObject(messageData, {
     flavor: `${title}`,
-    speaker: ChatMessage.getSpeaker({ actor: actor }),
+    speaker: speakerFor({ actor: actor }),
     content: `${originalRollHTML}<br>${newRollHTML}`,
     whisper: [player?.id ?? ""],
     rolls: [originalRoll, newRoll],
@@ -5340,7 +5350,7 @@ async function displayBeforeAfterRolls(data: {
     const note = await addCardNote(card, html, { anchor, whisper });
     if (note) return note;
   }
-  return await ChatMessage.create(chatData);
+  return await ChatMessage.create<ChatMessage.CreateData>(chatData);
 }
 
 /** The optional AC bonus keys: added to the target's AC, `acOnAttack` when attacked, `acOnHit` once the attack hits */
@@ -5963,7 +5973,8 @@ export function reactionTriggerLabelFor(triggerType: string): string {
 const optionalACKey = (triggerType: string): "acOnAttack" | "acOnHit" | undefined =>
   triggerType === "reactionattacked" ? "acOnAttack" : triggerType === "reaction" ? "acOnHit" : undefined;
 
-export async function doReactions(targetRef: TokenOrDocument | string, triggerTokenUuid: string | undefined, triggeringRoll: Roll | null | undefined, triggerType: string, options: any = {}): Promise<{ name?: string, uuid?: string, ac?: number, itemName?: string }> {
+export async function doReactions(targetRef: TokenOrDocument | string, triggerTokenRef: string | null | undefined, triggeringRoll: Roll | null | undefined, triggerType: string, options: any = {}): Promise<{ name?: string, uuid?: string, ac?: number, itemName?: string }> {
+  const triggerTokenUuid = triggerTokenRef ?? undefined;
   const target = getToken(targetRef);
   try {
     const noResult = { name: undefined, uuid: undefined, ac: undefined };
@@ -6123,7 +6134,7 @@ export async function doReactions(targetRef: TokenOrDocument | string, triggerTo
     options.reactionRequest = request;
     const reactingUser = player;
     let result: any = await trackPlayerWait({
-      kind: "reaction", userId: reactingUser.id!, actorUuid: target.actor.uuid, tokenUuid: target.document.uuid, label: content ?? "",
+      kind: "reaction", userId: reactingUser.id!, actorUuid: target.actor.uuid ?? undefined, tokenUuid: target.document.uuid ?? undefined, label: content ?? "",
       choices: {
         none: () => noResult,
         // The GM picks the reaction on their own screen, as for a creature with no player
@@ -7367,7 +7378,7 @@ export function ConvenientEffectsHasEffect(effectName: string, actor: Actor.Impl
 export function isInCombat(actor: Actor.Implementation) {
   const actorUuid = actor.uuid;
   let combats: Combat[] | undefined;
-  if (actorUuid.startsWith("Scene")) { // actor is a token synthetic actor
+  if (actorUuid?.startsWith("Scene")) { // actor is a token synthetic actor
     const tokenId = actorUuid.split(".")[3]
     combats = game.combats?.combats.filter(combat =>
       combat.combatants.filter(combatant => combatant?.tokenId === tokenId).length !== 0
@@ -7433,15 +7444,12 @@ export async function setReactionUsed(actor: Actor.Implementation, active: boole
     "system.changes": reactionChanges(actor, newCount)
   });
   if (actions?.reactionsReset === "eachTurn") {
-    // @ts-expect-error fvtt-types v14 duration
     effect.updateSource({ duration: { value: 1, units: "turns" } })
   }
   if (actions?.reactionsReset === "rest") {
-    // @ts-expect-error fvtt-types v14 duration
     effect.updateSource({ duration: { expiry: null }, flags: { dae: { specialDuration: ["shortRest"] } } });
   }
   if (actions?.reactionsReset === "never") {
-    // @ts-expect-error fvtt-types v14 duration
     effect.updateSource({ duration: { expiry: null }, flags: { dae: { specialDuration: [] } } });
   }
   if (await asyncHooksCall("midi-qol.preSetReactionUsed", actor, effect) === false) return;
@@ -7462,15 +7470,12 @@ export async function setBonusActionUsed(actor: Actor.Implementation) {
     "system.changes": bonusActionChanges(actor, newCount)
   });
   if (actions?.bonusActionsReset === "eachTurn") {
-    // @ts-expect-error fvtt-types v14 duration
     effect.updateSource({ duration: { value: 1, units: "turns" } })
   }
   if (actions?.bonusActionsReset === "rest") {
-    // @ts-expect-error fvtt-types v14 duration
     effect.updateSource({ duration: { expiry: null }, flags: { dae: { specialDuration: ["shortRest"] } } });
   }
   if (actions?.bonusActionsReset === "never") {
-    // @ts-expect-error fvtt-types v14 duration
     effect.updateSource({ duration: { expiry: null }, flags: { dae: { specialDuration: [] } } });
   }
   effect.origin = actor.uuid;
@@ -7491,7 +7496,6 @@ export async function removeReactionUsed(actor: Actor.Implementation, force = fa
     await queueActorEffects(actor, () => deleteEffectIfPresent(actor, getStaticID("reaction"))); // reaction always non-transfer
   }
   // safety net unset of flags - just in case.
-  // @ts-expect-error the flag types do not allow a ForcedDeletion
   if (actor.flags?.[MODULE_ID]?.actions?.reaction) await actor.update({ flags: { [MODULE_ID]: { actions: { reactionsUsed: 0, reactionCombatRound: new foundry.data.operators.ForcedDeletion() } } } });
 }
 
@@ -7517,8 +7521,8 @@ export function hasUsedAnyReaction(actor: Actor.Implementation) {
 
 export async function expirePerTurnBonusActions(
   combat: Combat.Implementation,
-  data: { round: number; turn: number | null },
-  options: { advanceTime: number; direction: number }
+  data: Combat.RoundUpdateData | Combat.TurnUpdateData,
+  _options?: Combat.RoundUpdateOptions | Combat.TurnUpdateOptions
 ) {
   const optionalFlagRe = /flags.midi-qol.optional.[^.]+.(count|countAlt)$/;
   for (let combatant of (combat.turns ?? [])) { // monks combat details does not pass the combat as it should so put in a guard
@@ -7555,7 +7559,6 @@ export async function removeBonusActionUsed(actor: Actor.Implementation, force =
     await queueActorEffects(actor, () => deleteEffectIfPresent(actor, getStaticID("bonusaction")));
   }
   // Safety net flag reset just in case
-  // @ts-expect-error the flag types do not allow a ForcedDeletion
   if (force) await actor.update({ flags: { [MODULE_ID]: { actions: { bonusActionsUsed: 0, bonus: false, bonusActionCombatRound: new foundry.data.operators.ForcedDeletion() } } } });
 }
 
@@ -7627,14 +7630,13 @@ export async function asyncHooksCallAll(hook: string, ...args): Promise<boolean 
  * base, .item.uuid, .activity.uuid, and premades equivalents.
  * Returns false if any hook returns false (short-circuits).
  */
-export async function callActivityHooks(activity: { uuid: string; item: { uuid: string } }, hookName: string, ...args): Promise<boolean> {
-  if (await asyncHooksCall(hookName, ...args) === false) return false;
-  if (await asyncHooksCall(`${hookName}.${activity.item.uuid}`, ...args) === false) return false;
-  if (await asyncHooksCall(`${hookName}.${activity.uuid}`, ...args) === false) return false;
-  const premadesHook = hookName.replace("midi-qol.", "midi-qol.premades.");
-  if (await asyncHooksCall(premadesHook, ...args) === false) return false;
-  if (await asyncHooksCall(`${premadesHook}.${activity.item.uuid}`, ...args) === false) return false;
-  if (await asyncHooksCall(`${premadesHook}.${activity.uuid}`, ...args) === false) return false;
+export async function callActivityHooks(activity: { uuid: string | null; item: { uuid: string | null } }, hookName: string, ...args): Promise<boolean> {
+  // A temporary item or activity has no uuid, so no uuid-scoped hook
+  const scopes = [activity.item.uuid, activity.uuid].filter((uuid): uuid is string => !!uuid);
+  for (const hook of [hookName, hookName.replace("midi-qol.", "midi-qol.premades.")]) {
+    if (await asyncHooksCall(hook, ...args) === false) return false;
+    for (const scope of scopes) if (await asyncHooksCall(`${hook}.${scope}`, ...args) === false) return false;
+  }
   return true;
 }
 
@@ -8584,7 +8586,6 @@ export async function updateFlankingHighlight(): Promise<void> {
 
   // Adjacency distance — matches computeFlankingStatus logic
   let maxDist = gridDist;
-  // @ts-expect-error not in types yet
   if (game.settings.get("core", "gridDiagonals") === 1) maxDist *= Math.sqrt(2);
 
   // Get target's occupied offsets and their centers for adjacency checks
@@ -8630,7 +8631,7 @@ export async function updateFlankingHighlight(): Promise<void> {
       const ty = token.center.y + y * gridH;
       let closeEnough = false;
       for (const tc of targetCellCenters) {
-        const d = canvas.grid.measurePath([{ x: tx, y: ty }, tc], {}).distance;
+        const d = measureGridPath(canvas.grid, [{ x: tx, y: ty }, tc])?.distance ?? Infinity;
         if (d <= tokenMaxDist) { closeEnough = true; break; }
       }
       if (!closeEnough) continue;
@@ -8656,7 +8657,7 @@ export async function updateFlankingHighlight(): Promise<void> {
       // Add small tolerance (1ft) for floating-point imprecision in hex center coordinates
       let isAdjacent = false;
       for (const tc of targetCellCenters) {
-        const d = canvas.grid.measurePath([cellCenter, tc], {}).distance;
+        const d = measureGridPath(canvas.grid, [cellCenter, tc])?.distance ?? Infinity;
         if (d > 0 && d <= maxDist + 1) { isAdjacent = true; break; }
       }
       if (!isAdjacent) continue;
@@ -8786,8 +8787,8 @@ export function setupCheckVision() {
 function checkDetectionModes(tk: Token.Implementation) {
   const modes = Object.fromEntries(Object.entries(tk.detectionModes));
   if (!tk.hasSight) {
-    modes.lightPerception ??= { id: "lightPerception", enabled: true, range: Infinity };
-    modes.basicSight ??= { id: "basicSight", enabled: true, range: tk.document.sight.range };
+    modes.lightPerception ??= { enabled: true, range: Infinity };
+    modes.basicSight ??= { enabled: true, range: tk.document.sight.range };
   }
   return modes;
 }
@@ -8834,7 +8835,6 @@ export function _canSenseModes(token: Token.Implementation, target: Token.Implem
   // Use Foundry's getVisibilityTestPoints() which returns constrained test points
   // (removes points behind walls/surfaces from the target's own movement origin).
   // This matches what Foundry's rendering pipeline uses for visibility determination.
-  // @ts-expect-error getVisibilityTestPoints not in fvtt-types
   const visTestPoints: Array<{x: number, y: number, elevation?: number}> = target.document.getVisibilityTestPoints?.() ?? [target.center];
   // @ts-expect-error no dnd5e-types for document.level / scene.levels
   const targetLevel = canvas.scene.levels?.get(target.document.level) ?? canvas.level;
@@ -8850,7 +8850,6 @@ export function _canSenseModes(token: Token.Implementation, target: Token.Implem
 
   // Pre-populate the LOS cache by ray casting in the token's level: core tests 360° vision against the
   // vision polygon (misses narrow gaps between walls), and in the level the GM is viewing.
-  // @ts-expect-error no dnd5e-types for document.level
   const sameLevel = token.document.level === target.document.level;
   if (vision) {
     const origin = { x: vision.x, y: vision.y };
@@ -8868,11 +8867,11 @@ export function _canSenseModes(token: Token.Implementation, target: Token.Implem
         const originElev = vision.elevation;
         const destElev = test.point.elevation;
         if (originElev !== destElev) {
-          // @ts-expect-error testSurfaceCollision not in fvtt-types
           const surfaceBlocked = !!canvas.scene?.testSurfaceCollision?.(
             { x: origin.x, y: origin.y, elevation: originElev },
             { x: test.point.x, y: test.point.y, elevation: destElev },
-            { type: "sight", mode: "any" }
+            // @ts-expect-error fvtt-types: level is optional at runtime (every level is tested)
+      { type: "sight", mode: "any" }
           );
           if (surfaceBlocked) hasLOS = false;
         }
@@ -8892,7 +8891,6 @@ export function _canSenseModes(token: Token.Implementation, target: Token.Implem
 
   const lightPerception = (tokenDetectionModes as Record<string, any>).lightPerception;
   if (lightPerception && ["lightPerception", "all"].some(mode => validModes.has(mode))) {
-    // @ts-expect-error DetectionMode somehow different from TokenDetectionMode?
     const result = (lightPerception && vision) ? modes.lightPerception.testVisibility(vision, lightPerception, config) : false;
     if (result === true)
       matchedModes.add(detectionModes.lightPerception?.id ?? DetectionModeCONST.BASIC_MODE_ID);
@@ -8900,7 +8898,6 @@ export function _canSenseModes(token: Token.Implementation, target: Token.Implem
 
   const basic = tokenDetectionModes[DetectionModeCONST.BASIC_MODE_ID];
   if (basic && ["basicSight", "all"].some(mode => validModes.has(mode))) {
-    // @ts-expect-error DetectionMode somehow different from TokenDetectionMode?
     const result = vision ? modes.basicSight.testVisibility(vision, basic, config) : false;
     if (result === true)
       matchedModes.add(detectionModes.basicSight?.id ?? DetectionModeCONST.BASIC_MODE_ID);
@@ -8910,7 +8907,6 @@ export function _canSenseModes(token: Token.Implementation, target: Token.Implem
     if (!detectionMode.enabled) continue;
     const dm = modes[modeId];
     if (validModes.has("all") || validModes.has(modeId)) {
-      // @ts-expect-error DetectionMode somehow different from TokenDetectionMode?
       const result = vision ? dm?.testVisibility(vision, detectionMode, config) : false;
       if (result === true) {
         matchedModes.add(modeId);
@@ -9067,7 +9063,7 @@ export async function displayDSNForRoll(rolls?: Roll | Roll[], rollType?: string
   },*/
   const promises: Promise<any>[] = [];
   // The actor's dice appearance comes from the speaker; no message id, as DSN would then recompute visibility from it
-  const speaker = actor ? ChatMessage.getSpeaker({ actor, token: actor.token ?? undefined }) : null;
+  const speaker = actor ? speakerFor({ actor, token: actor.token ?? undefined }) : null;
   const diceUser = dsnDiceUser(actor);
 
   for (let roll of rolls) {
@@ -9349,6 +9345,14 @@ export function getTokenNameExact(entity?: TokenOrDocument): string | undefined 
  * Used for griddedGridless mode to apply square grid measurement rules to gridless scenes.
  * @returns A proxy that redirects grid methods to SquareGrid.prototype
  */
+/** fvtt-types' BaseGrid#measurePath accepts nothing: measure with the core grid class the grid is */
+export function measureGridPath(grid: foundry.grid.BaseGrid, waypoints: Canvas.Point[]): foundry.grid.BaseGrid.MeasurePathResult | undefined {
+  if (grid instanceof foundry.grid.SquareGrid) return grid.measurePath(waypoints, {});
+  if (grid instanceof foundry.grid.HexagonalGrid) return grid.measurePath(waypoints, {});
+  if (grid instanceof foundry.grid.GridlessGrid) return grid.measurePath(waypoints, {});
+  return undefined;
+}
+
 export function createSquareGridProxy(): foundry.grid.BaseGrid {
   if (!canvas.grid) throw new Error("createSquareGridProxy called without canvas.grid");
   const diagonals = safeGetGameSetting("core", "gridDiagonals");
@@ -9373,7 +9377,7 @@ export function midiMeasureDistances(segments: { ray: Ray }[], options: any = {}
   // The fudge applies on every scene and grid type, not only the gridded-gridless path below.
   // Floored at 0: a zero gap stays zero, only perimeter measurement floors at one grid unit.
   if (!isGridless || !options.gridSpaces || !configSettings.griddedGridless || !canvas.grid) {
-    return segments.map(s => canvas.grid?.measurePath([s.ray.A, s.ray.B], {}))
+    return segments.map(s => canvas.grid ? measureGridPath(canvas.grid, [s.ray.A, s.ray.B]) : undefined)
       .map(d => Math.max(0, (d?.distance ?? 0) - fudgeFactor));
   }
   if (!canvas.grid) return [0];
@@ -9391,8 +9395,9 @@ export function midiMeasureDistances(segments: { ray: Ray }[], options: any = {}
       return { ray: new foundry.canvas.geometry.Ray(aCenter, bCenter) };
     });
   }
-  let distances = segments.map(s => canvasGridProxy.measurePath([s.ray.A, s.ray.B], {}));
+  let distances = segments.map(s => measureGridPath(canvasGridProxy, [s.ray.A, s.ray.B]));
   return distances.map(d => {
+    if (!d) return 0;
     let distance = d.distance;
     switch (diagonals) {
       case GridDiagonals.EQUIDISTANT:
@@ -9402,13 +9407,11 @@ export function midiMeasureDistances(segments: { ray: Ray }[], options: any = {}
         break;
       case GridDiagonals.EXACT:
       case GridDiagonals.RECTILINEAR:
-        // @ts-expect-error yes it does
         if (d.diagonals > 0)
           distance = Math.max(0, d.distance - (Math.SQRT2 * fudgeFactor));
         else distance = Math.max(0, d.distance - fudgeFactor);
         break;
       case GridDiagonals.APPROXIMATE:
-        // @ts-expect-error yes it does
         if (d.diagonals > 0)
           distance = Math.max(0, d.distance - fudgeFactor);
         break;
@@ -9641,8 +9644,8 @@ function rollsMatch(current: readonly unknown[] | undefined, incoming: readonly 
 }
 
 async function _updateAction(document: foundry.abstract.Document.Any, updates: ChatMessage.UpdateData) {
-  const baseDocument = fromUuidSync(document.uuid) as ChatMessage.Implementation;
-  if (deletingCards.has(document.uuid)) return document;
+  const baseDocument = document.uuid ? fromUuidSync(document.uuid) as ChatMessage.Stored : null;
+  if (document.uuid && deletingCards.has(document.uuid)) return document;
   if (!baseDocument) {
     console.warn(`midi-qol | _updateAction | baseDocument not found for ${document.uuid}`);
     return document;
@@ -9766,7 +9769,7 @@ function declaredField(model: foundry.abstract.DataModel.Any | undefined, path: 
 
 /** Queue changes for a card's next write: only what changes the card or its queued changes */
 export function queueUpdate(document: ChatMessage.Implementation, updates: ChatMessage.UpdateData): void {
-  if (!document) return;
+  if (!document?.uuid) return;
   updates = foundry.utils.expandObject(updates) as typeof updates;
   if (typeof updates.content === "string") updates.content = compactCardContent(updates.content);
   // Rolls are compared when written (rollsMatch): the card stores them as strings, so a diff never matches
@@ -9782,9 +9785,11 @@ export function queueUpdate(document: ChatMessage.Implementation, updates: ChatM
  */
 export async function throttledUpdate(document: ChatMessage.Implementation, updates: ChatMessage.UpdateData) {
   if (!document) return; // ChatCard was removed already?;
+  const uuid = document.uuid;
+  // A temporary card: nothing to write
+  if (!uuid) return document;
   queueUpdate(document, updates);
   // One write per card at a time: a write waits for the one in flight, then sends what is still queued
-  const uuid = document.uuid;
   const write = (cardWrites.get(uuid) ?? Promise.resolve())
     .then(() => _updateAction(document, foundry.utils.duplicate(updatesCache[uuid] ?? {}) as ChatMessage.UpdateData));
   const settled = write.catch(() => undefined);
@@ -9847,8 +9852,8 @@ export function getCachedDocument(uuid: string | undefined | null) {
   if (foundry.utils.isEmpty(updates)) return document;
   if (!cardClonesHooked) {
     cardClonesHooked = true;
-    Hooks.on("updateChatMessage", (message: ChatMessage.Implementation) => { cardClones.delete(message.uuid); });
-    Hooks.on("deleteChatMessage", (message: ChatMessage.Implementation) => { cardClones.delete(message.uuid); });
+    Hooks.on("updateChatMessage", (message: ChatMessage.Implementation) => { if (message.uuid) cardClones.delete(message.uuid); });
+    Hooks.on("deleteChatMessage", (message: ChatMessage.Implementation) => { if (message.uuid) cardClones.delete(message.uuid); });
   }
   const kept = cardClones.get(uuid);
   if (kept && kept.document === document && kept.updates === updates) return kept.clone;
@@ -9860,7 +9865,6 @@ export function getCachedDocument(uuid: string | undefined | null) {
 
 export function isEffectExpired(effect: ActiveEffect.Implementation): boolean {
   if (typeof globalThis.DAE?.isEffectExpired === "function") return globalThis.DAE.isEffectExpired(effect);
-  // @ts-expect-error types doesn't realize
   return effect.duration.remaining <= 0;
 }
 
@@ -9874,14 +9878,14 @@ export async function expireEffects(actor: Actor.Implementation, effects: Active
   for (const effect of effects) {
     // another expiry (e.g. a concurrent one for a different key) may have removed it
     if (!effect.id || !effect.parent?.effects.has(effect.id)) continue;
-    endingEffects.add(effect.uuid);
+    if (effect.uuid) endingEffects.add(effect.uuid);
     try {
       await globalThis.DAE.expireEffect(effect, options);
       expired.push(effect.id);
     } catch (err) {
       console.warn(`midi-qol | expireEffects: ${effect.name} (${effect.uuid})`, err);
     } finally {
-      endingEffects.delete(effect.uuid);
+      if (effect.uuid) endingEffects.delete(effect.uuid);
     }
   }
   return { expired };
@@ -9897,7 +9901,7 @@ export async function deleteAppliedEffects(actor: Actor.Implementation, effects:
   const effectsToDisable: ActiveEffect[] = [];
   for (let effect of effects) {
     if (!effect.id) continue;
-    if (!fromUuidSync(effect.uuid)) continue;
+    if (!effect.uuid || !fromUuidSync(effect.uuid)) continue;
     // @ts-expect-error no dnd5e-types
     if (effect.parent instanceof Item && effect.type === "enchantment") {
       // an applied enchantment; never an enchantment's own definition
@@ -10049,21 +10053,21 @@ export function getAppliedEffects(actor: Actor.Implementation | null | undefined
 export function getCEEffectByName(name: string) {
   return ceInterface?.findEffect({ effectName: name });
 }
-export async function CEAddEffectWith(options: { uuid: string, effectName?: string, effectId?: string, origin?: any, effectData?: any, overlay: boolean }) {
-  return ceInterface?.addEffect(options);
+export async function CEAddEffectWith(options: { uuid: string | null | undefined, effectName?: string, effectId?: string, origin?: any, effectData?: any, overlay: boolean }) {
+  return ceInterface?.addEffect({ ...options, uuid: options.uuid ?? undefined });
 }
 
-export async function CERemoveEffect(options: { effectName: string, uuid: string, effectId?: string, origin?: string }) {
-  return ceInterface?.removeEffect(options);
+export async function CERemoveEffect(options: { effectName: string, uuid: string | null | undefined, effectId?: string, origin?: string | null }) {
+  return ceInterface?.removeEffect({ ...options, uuid: options.uuid ?? undefined });
 }
 
-export async function CEToggleEffect(options: { effectName?: string, uuid: string, effectId?: string, origin?: string, overlay?: boolean }) {
+export async function CEToggleEffect(options: { effectName?: string, uuid: string, effectId?: string, origin?: string | null, overlay?: boolean }) {
   const { effectName, uuid, effectId, origin, overlay } = options;
   return ceInterface?.toggleEffect({ uuids: [uuid], effectName, effectId, origin, overlay });
 }
 
-export function CEHasEffectApplied(options: { effectName: string, uuid: string, effectId?: string, origin?: string }): boolean {
-  return !!ceInterface?.hasEffectApplied(options);
+export function CEHasEffectApplied(options: { effectName: string, uuid: string | null | undefined, effectId?: string, origin?: string }): boolean {
+  return !!ceInterface?.hasEffectApplied({ ...options, uuid: options.uuid ?? undefined });
 }
 
 export function isConvenientEffect(effect: ActiveEffect.Implementation): boolean {
@@ -10273,7 +10277,7 @@ export function setRangedTargets(tokenToUse: Token.Implementation, targetDetails
         inRange = inRange && distance >= 0 && distance <= Number(minDist);
       }
       if (inRange) {
-        target.setTarget(true, { user: game.user, releaseOthers: false });
+        target.setTarget(true, { releaseOthers: false });
         if (target.document.id) targetIds.push(target.document.id);
       }
     }
@@ -10285,9 +10289,8 @@ export function setRangedTargets(tokenToUse: Token.Implementation, targetDetails
 
 // --- Target save/restore ---
 
-export function updateUserTargets(targetIds: string[]) {
-  // @ts-expect-error not in v13 yet
-  canvas.tokens?.setTargets(targetIds);
+export function updateUserTargets(targetIds: (string | null | undefined)[]) {
+  canvas.tokens?.setTargets(targetIds.filter((id): id is string => !!id));
 }
 
 /**
@@ -10302,7 +10305,7 @@ export function updateUserTargets(targetIds: string[]) {
  * (registered in patching.ts). These set _userInitiatedTarget = true before
  * the wrapped call, and the targetToken hook checks this flag.
  */
-let _savedTargetIds: string[] | null = null;
+let _savedTargetIds: (string | null)[] | null = null;
 let _targetSaveDepth = 0;
 
 /** Set by libWrapper patches in patching.ts around user-initiated targeting actions. */
@@ -10349,7 +10352,6 @@ export function getItemFromEffectOrigin(origin: string, alreadyVisited: string[]
   if (alreadyVisited.includes(origin)) return;
   const originDoc = fromUuidSync(origin) as ActiveEffect.Implementation | Item.Implementation | Activity | undefined;
   if (originDoc instanceof Item) return originDoc;
-  //@ts-expect-error no dnd5e types - Activity has .item getter
   if (originDoc?.item instanceof Item) return originDoc.item;
   if (originDoc?.parent instanceof Item) {
     originItem = originDoc.parent;
@@ -10546,12 +10548,11 @@ export function getTargetDescriptor<T extends DND5ETargetDescriptor>(uuid: strin
 }
 
 export const throttledScrollBottom = foundry.utils.throttle(() => {
-  //@ts-expect-error fvtt-missing scrollBottom
   ui.chat?.scrollBottom({ waitImages: true });
 }, 150);
 
 /** Per actor, midi's latest fixed-id effect change. */
-const actorEffectQueues = new Map<string, Promise<unknown>>();
+const actorEffectQueues = new Map<string | null, Promise<unknown>>();
 
 /** Runs `fn` after midi's earlier fixed-id effect changes for the actor (concurrent ones fail). `fn` must not queue for the same actor. */
 export async function queueActorEffects<T>(actor: Actor.Implementation, fn: () => Promise<T>): Promise<T> {

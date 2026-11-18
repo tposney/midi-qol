@@ -724,7 +724,7 @@ export async function createActivityTemplateRegions(
   activity: any,
   placements: { x: number, y: number, direction?: number, token?: TokenDocument.Implementation }[],
   extraFlags: Record<string, unknown> = {}
-): Promise<RegionDocument.Implementation[]> {
+): Promise<RegionDocument.Stored[]> {
   const scene = canvas?.scene;
   if (!scene || !placements.length) return [];
   const target = activity?.target?.template ?? {};
@@ -787,7 +787,7 @@ export async function createActivityTemplateRegions(
   }, { flags: { [MODULE_ID]: { ...midiTemplateFlags(activity), ...extraFlags, ...(placed ? { band: true, area: placed.area ?? null, reach: placed.reach } : {}) } } });
   });
 
-  return await scene.createEmbeddedDocuments("Region", regionData as unknown as RegionDocument.CreateData[]) as unknown as RegionDocument.Implementation[];
+  return await scene.createEmbeddedDocuments("Region", regionData as unknown as RegionDocument.CreateData[]) as unknown as RegionDocument.Stored[];
 }
 
 export function selectTargetsFromTemplates(
@@ -1139,7 +1139,6 @@ function isTokenInsideRegion(
       // but MeasuredTemplate.shape.contains was boundary-inclusive. Tolerance of 1px matches that behavior.
       // Note: Foundry v14's token.testInsideRegion() uses tolerance 0.75 — we intentionally use 1 here
       // to maintain parity with the legacy isTokenInside() boundary-inclusive behavior.
-      // @ts-expect-error polygonTree.testPoint accepts optional distance param not in type defs
       let contains = regionDoc.polygonTree.testPoint({ x: testX, y: testY }, 1);
 
       if (contains && wallsBlockTargeting) {

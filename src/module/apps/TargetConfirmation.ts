@@ -120,7 +120,7 @@ export class TargetConfirmationDialog extends HandlebarsApplicationMixin(Applica
 
   validateAndUpdateTargets() {
     const targets = Array.from(game.user?.targets ?? []);
-    let validTargets: Array<string> = [];
+    let validTargets: Array<string | null> = [];
     for (let target of targets) {
       // Skip invalid targets
       if (!isValidTarget(target)) continue;
@@ -227,7 +227,7 @@ export class TargetConfirmationDialog extends HandlebarsApplicationMixin(Applica
         displayedDisposition?: string;
         details: string;
         hasDetails: boolean;
-        uuid: string;
+        uuid: string | null;
       })[]
     } = { ...this.data, ...await super._prepareContext(options) };
     const targets = Array.from(game.user?.targets ?? []);
@@ -367,7 +367,7 @@ export class TargetConfirmationDialog extends HandlebarsApplicationMixin(Applica
         i.closest(".midi-qol-box")?.addEventListener("contextmenu", (event) => {
           const token = getToken(i.id);
           if (token) {
-            token.setTarget(false, { user: game.user, releaseOthers: false, groupSelection: true });
+            token.setTarget(false, { releaseOthers: false });
             this.render();
           }
         });

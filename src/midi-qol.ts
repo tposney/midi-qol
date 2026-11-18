@@ -907,7 +907,7 @@ Hooks.once('ready', function () {
     }
     const oldVersion = game.settings.get(MODULE_ID, "last-run-version") as number | string;
     const newVersion = game.modules.get(MODULE_ID)?.version;
-    if (foundry.utils.isNewerVersion(newVersion, oldVersion)) {
+    if (newVersion && foundry.utils.isNewerVersion(newVersion, oldVersion)) {
       console.warn(`midi-qol | instance ${game.settings.get(MODULE_ID, "instanceId")} version change from ${oldVersion} to ${newVersion}`);
       game.settings.set(MODULE_ID, "last-run-version", newVersion);
       // look at sending a new version has been installed.
@@ -985,7 +985,6 @@ function setupMidiQOLApi() {
 
   const detectionModes = CONFIG.Canvas.detectionModes;
   const InvisibleDisadvantageVisionModes = Object.keys(detectionModes)
-    //@ts-expect-error I think imprecise is added by a module - TODO Check
     .filter(dm => !detectionModes[dm].imprecise);
 
   const humanoid = ["human", "humanoid", "elven", "elf", "half-elf", "drow", "dwarf", "dwarven", "halfling", "gnome", "tiefling", "orc", "dragonborn", "half-orc"];
@@ -1890,7 +1889,6 @@ export function addMidiStatusEffects(statusEffects: typeof CONFIG.statusEffects 
         ]
       },
       img: "modules/midi-qol/icons/bonus-action.svg",
-      // @ts-expect-error fvtt-types v14 duration
       duration: { expiry: "targetStart" },
       flags: { dae: { specialDuration: ["combatEnd", "shortRest"] } }
     });
@@ -1907,7 +1905,6 @@ export function addMidiStatusEffects(statusEffects: typeof CONFIG.statusEffects 
         ]
       },
       img: "modules/midi-qol/icons/reaction.svg",
-      // @ts-expect-error fvtt-types v14 duration
       duration: { expiry: "targetStart" },
       flags: { dae: { specialDuration: ["combatEnd", "shortRest"] } }
     });
@@ -1933,7 +1930,6 @@ export function addMidiStatusEffects(statusEffects: typeof CONFIG.statusEffects 
       name: i18n("midi-qol.Flanking"),
       system: { changes: getFlankingStatusChanges() },
       img: "icons/svg/sword.svg",
-      // @ts-expect-error fvtt-types v14 duration
       duration: { expiry: "combatEnd" }
     });
   }
@@ -1944,7 +1940,6 @@ export function addMidiStatusEffects(statusEffects: typeof CONFIG.statusEffects 
       name: i18n("midi-qol.Flanked"),
       system: { changes: getFlankedStatusChanges() },
       img: "modules/midi-qol/icons/encirclement.svg",
-      // @ts-expect-error fvtt-types v14 duration
       duration: { expiry: "combatEnd" }
     });
   }
@@ -2040,7 +2035,7 @@ function removeFlankingStatuses(): Promise<void> {
 
 async function removeFlankingStatusesNow() {
   // A linked actor has a token on several scenes: take each actor's statuses off once
-  const actors = new Map<string, Actor.Implementation>();
+  const actors = new Map<string | null, Actor.Implementation>();
   for (const scene of game.scenes ?? []) {
     for (const tokenDocument of scene.tokens) {
       const actor = tokenDocument.actor;

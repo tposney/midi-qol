@@ -83,7 +83,7 @@ export class OverTimeEditor extends HandlebarsApplicationMixin(ApplicationV2) {
     return this.#serializeCurrentData() !== this.originalSerialized;
   }
 
-  override async close(options?: foundry.applications.api.ApplicationV2.ClosingOptions): Promise<this> {
+  override async close(options?: foundry.applications.api.ApplicationV2.ClosingOptions): Promise<this | void> {
     if (!this.submitted && this.hasUnsavedChanges) {
       const confirmed = await foundry.applications.api.DialogV2.confirm({
         window: { title: i18n("midi-qol.OverTimeEditor.UnsavedTitle") },

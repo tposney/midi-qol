@@ -292,10 +292,10 @@ function refresh() {
 /** Right-click on a player: answer everything pending for them with each wait's default. */
 function addContextOption(_app: unknown, options: foundry.applications.ux.ContextMenu.Entry<HTMLElement>[]) {
   options.push({
-    name: "midi-qol.PlayerWaits.SkipAll",
+    label: "midi-qol.PlayerWaits.SkipAll",
     icon: '<i class="fa-solid fa-forward"></i>',
-    condition: (li: HTMLElement) => !!game.user?.isGM && !!configSettings.playerWaitGM && waitsFor(li.dataset.userId ?? "").length > 0,
-    callback: async (li: HTMLElement) => {
+    visible: (li: HTMLElement) => !!game.user?.isGM && !!configSettings.playerWaitGM && waitsFor(li.dataset.userId ?? "").length > 0,
+    onClick: async (_event: PointerEvent, li: HTMLElement) => {
       for (const wait of waitsFor(li.dataset.userId ?? "")) await settlePlayerWait(wait.id, wait.choices[0].id);
     }
   });

@@ -1,6 +1,7 @@
 import { Activity, ActivityUseConfiguration, RollDialogConfig, RollMessageConfig } from "../../globals.js";
 import { debugEnabled, GameSystemConfig, warn } from "../../midi-qol.js";
 import { Workflow } from "../Workflow.js";
+import { speakerFor } from "../utils.js";
 import { configSettings } from "../settings.js";
 import { MidiActivityMixin, MidiActivityMixinSheet } from "./MidiActivityMixin.js";
 
@@ -69,7 +70,7 @@ let defineMidiCastActivityClass =  <T extends Activity>(ActivityClass: T) => {
       usage.midiOptions.proceedChecks ??= {};
 
       // Create a temporary workflow so pre-checks (hooks, macros, reaction/bonus enforcement) can run
-      const speaker = ChatMessage.getSpeaker({ actor: this.item.actor });
+      const speaker = speakerFor({ actor: this.item.actor });
       const tempWorkflow = new Workflow(this.actor ?? null, this, speaker, null, { storeWorkflow: false });
       usage.workflow = tempWorkflow;
 

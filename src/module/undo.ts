@@ -69,15 +69,15 @@ export async function saveUndoData(workflow: Workflow): Promise<boolean> {
     id: workflow.id,
     userId: game.user?.id,
     itemName: workflow.item.name,
-    itemUuid: workflow.item.uuid,
+    itemUuid: workflow.item.uuid ?? undefined,
     userName: game.user?.name,
-    tokendocUuid: workflow.token?.document.uuid,
-    actorUuid: workflow.actor.uuid,
+    tokendocUuid: workflow.token?.document.uuid ?? undefined,
+    actorUuid: workflow.actor.uuid ?? "",
     actorName: workflow.actor.name,
     chatCardUuids: [],
     isReaction: workflow.workflowOptions?.isReaction || isReactionItem(workflow.item),
     templateUuids: [],
-    sequencerUuid: workflow.item.uuid,
+    sequencerUuid: workflow.item.uuid ?? undefined,
   };
   if (!await unTimedExecuteAsGM("startUndoWorkflow", workflow.undoData)) {
     error("Could not startUndoWorkflow");
@@ -90,7 +90,7 @@ export async function saveUndoData(workflow: Workflow): Promise<boolean> {
  * Each actor's items and effects as last snapshotted: an unchanged one is shared by the next snapshot rather than
  * copied, so a fight's entries hold each actor's items about once.
  */
-const lastSnapshots = new Map<string, { items: Map<string, Item.Source>, effects: Map<string, ActiveEffect.Source> }>();
+const lastSnapshots = new Map<string | null, { items: Map<string, Item.Source>, effects: Map<string, ActiveEffect.Source> }>();
 
 /** The actor's source for undo; items and effects unchanged since its last snapshot are that snapshot's (shared, never mutated). */
 function snapshotActor(actor: Actor.Implementation | null | undefined): Actor.Source | undefined {
@@ -119,7 +119,7 @@ function snapshotToken(tokenDoc: TokenDocument.Implementation | null | undefined
   return data;
 }
 
-export function createTargetData(tokenUuid: string) {
+export function createTargetData(tokenUuid: string | null) {
   if (!tokenUuid) return undefined;
   const tokenDoc = fromUuidSync(tokenUuid) as TokenDocument.Implementation | undefined;
   if (!tokenDoc) {
@@ -181,7 +181,7 @@ export async function saveTargetsUndoData(workflow: Workflow) {
   workflow.undoData.targets = [];
   workflow.targets.documents.forEach(tokenDoc => {
     if (tokenDoc.actor?.uuid === workflow.actor.uuid) return;
-    workflow.undoData!.targets!.push({ tokenUuid: tokenDoc.uuid, actorUuid: tokenDoc.actor?.uuid ?? "" });
+    workflow.undoData!.targets!.push({ tokenUuid: tokenDoc.uuid ?? "", actorUuid: tokenDoc.actor?.uuid ?? "" });
   });
   workflow.undoData.serverTime = game.time?.serverTime;
   workflow.undoData.itemCardUuid = workflow.itemCardUuid;

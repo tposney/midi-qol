@@ -12,7 +12,7 @@ type Ring = MagicSight["entries"][number]["rings"][number];
 
 const RING_GAP = 7;
 const FADE_MS = 600;
-const drawn = new Map<string, { container: PIXI.Container; tokens: Map<string, PIXI.Graphics> }>();
+const drawn = new Map<string | null, { container: PIXI.Container; tokens: Map<string | null, PIXI.Graphics> }>();
 let layer: PIXI.Container | undefined;
 
 const magicSightOf = (effect: ActiveEffect.Implementation) => effect.flags?.[MODULE_ID]?.magicSight;
@@ -70,7 +70,7 @@ function draw(effect: ActiveEffect.Implementation) {
   if (!sight || !canvas?.ready || !canView(effect) || sight.expires <= Date.now()) return;
   remove(effect.uuid, false);
   const container = new PIXI.Container();
-  const tokens = new Map<string, PIXI.Graphics>();
+  const tokens = new Map<string | null, PIXI.Graphics>();
   for (const entry of sight.entries) {
     const doc = fromUuidSync(entry.tokenUuid ?? entry.regionUuid ?? "", { strict: false });
     if (doc instanceof TokenDocument && doc.parent === canvas.scene && doc.object) {
@@ -87,12 +87,12 @@ function draw(effect: ActiveEffect.Implementation) {
   if (game.users?.activeGM?.isSelf) setTimeout(() => end(effect.uuid), Math.max(0, sight.expires - Date.now()));
 }
 
-function end(uuid: string) {
+function end(uuid: string | null) {
   const effect = fromUuidSync(uuid, { strict: false });
   if (effect instanceof ActiveEffect) effect.delete().catch(() => null);
 }
 
-function remove(uuid: string, fade = true) {
+function remove(uuid: string | null, fade = true) {
   const entry = drawn.get(uuid);
   if (!entry) return;
   drawn.delete(uuid);

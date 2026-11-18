@@ -121,7 +121,7 @@ export class TokenDocumentSet extends Set<TokenSetMember> {
 
   /** Every member's uuid (a token never created has none) */
   get uuids(): string[] {
-    return this.documents.filter(document => document.id).map(document => document.uuid);
+    return this.documents.flatMap(document => document.id && document.uuid ? [document.uuid] : []);
   }
 
   /** A member's Token now, if any (tokens) */
@@ -178,12 +178,16 @@ export class TokenDocumentSet extends Set<TokenSetMember> {
     return new TokenDocumentSet([...this.documents, ...documentsOf(other)]);
   }
 
-  override intersection<U>(other: ReadonlySetLike<U>): TokenDocumentSet {
+  override intersection(other: ReadonlySetLike<TokenMember>): TokenDocumentSet;
+  override intersection<U>(other: ReadonlySetLike<U>): Set<TokenSetMember & U>;
+  override intersection(other: ReadonlySetLike<unknown>): TokenDocumentSet {
     const theirs = new Set(documentsOf(other));
     return new TokenDocumentSet(this.documents.filter(document => theirs.has(document)));
   }
 
-  override difference<U>(other: ReadonlySetLike<U>): TokenDocumentSet {
+  override difference(other: ReadonlySetLike<TokenMember>): TokenDocumentSet;
+  override difference<U>(other: ReadonlySetLike<U>): Set<TokenSetMember>;
+  override difference(other: ReadonlySetLike<unknown>): TokenDocumentSet {
     const theirs = new Set(documentsOf(other));
     return new TokenDocumentSet(this.documents.filter(document => !theirs.has(document)));
   }
@@ -208,21 +212,29 @@ export class TokenDocumentSet extends Set<TokenSetMember> {
   override isDisjointFrom(other: ReadonlySetLike<unknown>): boolean {
     return !documentsOf(other).some(document => this.has(document));
   }
-
-  /** Foundry's Set#filter over what reading gives (the mode's view), keeping the members that pass */
-  override filter(test: (value: TokenSetMember, index: number, set: TokenDocumentSet) => boolean): TokenDocumentSet {
-    return new TokenDocumentSet([...this.values()].filter((member, index) => test(member, index, this)));
-  }
-
-  /** Foundry's Set#equals, over every member */
-  equals(other: unknown): boolean {
-    if (!(other instanceof Set)) return false;
-    const theirs = new Set(documentsOf(other));
-    // A member of theirs that is no token makes the sets differ
-    if (!(other instanceof TokenDocumentSet) && [...other].some(member => !toDocument(member))) return false;
-    return theirs.size === super.size && [...theirs].every(document => this.has(document));
-  }
 }
+
+// Foundry's Set#filter and Set#equals are typed as properties of Set, so they are installed here rather than declared as methods.
+Object.defineProperties(TokenDocumentSet.prototype, {
+  /** Over what reading gives (the mode's view), keeping the members that pass; a TokenDocumentSet */
+  filter: {
+    configurable: true, writable: true,
+    value: function (this: TokenDocumentSet, test: (value: TokenSetMember, index: number, set: Set<TokenSetMember>) => boolean): TokenDocumentSet {
+      return new TokenDocumentSet([...this.values()].filter((member, index) => test(member, index, this)));
+    }
+  },
+  /** Over every member, with a canvas token or not */
+  equals: {
+    configurable: true, writable: true,
+    value: function (this: TokenDocumentSet, other: unknown): boolean {
+      if (!(other instanceof Set)) return false;
+      const theirs = new Set(documentsOf(other));
+      // A member of theirs that is no token makes the sets differ
+      if (!(other instanceof TokenDocumentSet) && [...other].some(member => !toDocument(member))) return false;
+      return theirs.size === this.count && [...theirs].every(document => this.has(document));
+    }
+  }
+});
 
 /** How many members a set has: every member of a TokenDocumentSet (with a canvas token or not), else the Set's size */
 export function memberCount(set: ReadonlySetLike<unknown> | undefined | null): number {

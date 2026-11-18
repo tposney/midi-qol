@@ -3,7 +3,7 @@ import { _closePlayerRollDialogs, playerWaitHandlers } from "./lib/playerWaits.j
 import { DialogCountdown, dialogCountdownOptions } from "./lib/dialogCountdown.js";
 import { withWorkflowOptionsCodec } from "./lib/workflowOptionsCodec.js";
 import { i18n, log, warn, gameStats, getCanvas, error, debugEnabled, debug, GameSystemConfig, MODULE_ID } from "../midi-qol.js";
-import { damageActiveHas, damageChangeHas, _pauseReactionTimer, _closeReactionDialog, calculateDamageAmounts, hpChangeFromDetail, getToken, getTokenDocument, gmOverTimeEffect, fromActorUuid, promptReactions, hasUsedAction, hasUsedBonusAction, removeActionUsed, removeBonusActionUsed, removeReactionUsed, ReactionItemReference, isEffectExpired, expireEffects, deleteAppliedEffects, getAppliedEffects, CERemoveEffect, CEAddEffectWith, getActor, completeItemUse, completeActivityUse, localActivityOverTimeEffect, isValidTarget, validTargetTokens, hasUsedAnyReaction, getVitalityItem, MidiOptions, tokenSourceCenter, toggleStatus, withDeprecatedDamageFields } from "./utils.js";
+import { damageActiveHas, damageChangeHas, _pauseReactionTimer, _closeReactionDialog, calculateDamageAmounts, hpChangeFromDetail, getToken, getTokenDocument, gmOverTimeEffect, fromActorUuid, promptReactions, hasUsedAction, hasUsedBonusAction, removeActionUsed, removeBonusActionUsed, removeReactionUsed, ReactionItemReference, isEffectExpired, expireEffects, deleteAppliedEffects, getAppliedEffects, CERemoveEffect, CEAddEffectWith, getActor, completeItemUse, completeActivityUse, localActivityOverTimeEffect, isValidTarget, validTargetTokens, hasUsedAnyReaction, getVitalityItem, MidiOptions, tokenSourceCenter, toggleStatus, withDeprecatedDamageFields, speakerFor } from "./utils.js";
 import { DAMAGE_MESSAGE_TYPE } from "./ChatClasses/DamageCardMessage.js";
 import { DamageDescriptionObject, Workflow } from "./Workflow.js";
 import { applyFailedDeathSaves, bonusCheck, revertFailedDeathSaves } from "./patching.js";
@@ -473,7 +473,7 @@ async function updateActor(data: { actorUuid: string, updates?: Actor.UpdateData
   if (data.updates) await actor.update(data.updates);
 }
 
-async function createActor(data: { actorData: Actor.CreateData | Actor.CreateData[], context: Actor.Database.CreateOperation<false> }) {
+async function createActor(data: { actorData: Actor.CreateData | Actor.CreateData[], context: Actor.Database.CreateDocumentsOperation }) {
   let actorsData = data.actorData instanceof Array ? data.actorData : [data.actorData];
   const actors = await CONFIG.Actor.documentClass.createDocuments(actorsData, data.context ?? {});
   return actors?.length ? actors.map(a => a.id) : false;
@@ -668,7 +668,7 @@ async function _D20Roll(params: { request: string, targetUuid: string, formula: 
     const message = {
       create: true,
       data: { flavor: params.flavor },
-      speaker: ChatMessage.getSpeaker({ actor }),
+      speaker: speakerFor({ actor }),
       rollMode: params.rollMode,
     }
     const rolls = await D20Roll.build(config, dialog, message)
@@ -2320,7 +2320,7 @@ async function _moveToken(data: { tokenUuid: string, newCenter: { x: number, y: 
 async function _moveTokenAwayFromPoint(data: { targetUuid: string, point: { x: number, y: number }, distance: number, options?: MoveTokenOptions }): Promise<void> {
   const targetToken = getToken(data.targetUuid);
   const targetTokenDocument = getTokenDocument(targetToken);
-  if (!canvas || !canvas.dimensions || !canvas.grid || !targetToken || !data.point || !targetTokenDocument) {
+  if (!canvas || !canvas.dimensions || !canvas.grid || !targetToken || !data.point || !targetTokenDocument?.uuid) {
     const message = `moveTokenAwayFromPoint | token not found or canvas not ready: ${data.targetUuid}`;
     error(message);
     TroubleShooter.recordError(new Error("moveTokenAwayFromPoint failed"), message);

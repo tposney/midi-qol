@@ -2,7 +2,7 @@ import { Activity, RollMessageConfig } from "../../globals.js";
 import { debugEnabled, GameSystemConfig, i18n, i18nFormat, warn, moveToken } from "../../midi-qol.js";
 import { configSettings } from "../settings.js";
 import { Workflow } from "../Workflow.js";
-import { callActivityHooks, collisionLevel, completeActivityUse, convertLengthTo, getToken, pauseReactionTimeout, isActivityType } from "../utils.js";
+import { callActivityHooks, collisionLevel, completeActivityUse, convertLengthTo, getToken, pauseReactionTimeout, isActivityType, measureGridPath } from "../utils.js";
 import { MidiActivityMixin, MidiActivityMixinSheet } from "./MidiActivityMixin.js";
 import { highlightTokens, TokenHighlight } from "../lib/tokenHighlight.js";
 
@@ -69,7 +69,6 @@ function viewedLevel(): { id: string, elevation: { base: number } } | undefined 
 
 /** A token's level id (Foundry 14). */
 function tokenLevel(document: TokenDocument.Implementation): string | undefined {
-  // @ts-expect-error v14 token level not in fvtt-types
   return document._source.level ?? undefined;
 }
 
@@ -284,7 +283,10 @@ let defineMidiTeleportActivityClass = <T extends Activity>(ActivityClass: T) => 
       const plans: TeleportPlan[] & { failed?: boolean } = [];
       const caster = this.casterToken;
       const fail = this.midiTeleport?.blocked === "fail";
-      const given = (token: Token.Implementation) => destinations?.[token.document.uuid];
+      const given = (token: Token.Implementation) => {
+        const uuid = token.document.uuid;
+        return uuid ? destinations?.[uuid] : undefined;
+      };
       let anchor: Space | undefined;
       for (const mover of movers.filter(m => m.method === "plan")) {
         highlight.setActive(mover.token);
@@ -474,7 +476,6 @@ let defineMidiTeleportActivityClass = <T extends Activity>(ActivityClass: T) => 
 
     /** A wall between two points on `levelId`'s level (default: the token's). */
     #collides(origin: { x: number, y: number }, destination: { x: number, y: number }, type: "move" | "sight", token: Token.Implementation, levelId?: string): boolean {
-      // @ts-expect-error no dnd5e-types for document.level / scene.levels
       const level = (levelId && canvas?.scene?.levels?.get(levelId)) || collisionLevel(token);
       // @ts-expect-error v14 collision level not in fvtt-types
       return !!CONFIG.Canvas.polygonBackends[type].testCollision(origin, destination, { type, mode: "any", level });
@@ -547,7 +548,7 @@ let defineMidiTeleportActivityClass = <T extends Activity>(ActivityClass: T) => 
         let best = Infinity;
         for (const ca of a.cells) {
           for (const cb of b.cells) {
-            best = Math.min(best, grid.measurePath([grid.getCenterPoint(ca), grid.getCenterPoint(cb)], {}).distance);
+            best = Math.min(best, measureGridPath(grid, [grid.getCenterPoint(ca), grid.getCenterPoint(cb)])?.distance ?? Infinity);
           }
         }
         return best;
@@ -560,7 +561,7 @@ let defineMidiTeleportActivityClass = <T extends Activity>(ActivityClass: T) => 
     /** The distance a token's own teleport covers, as the grid measures it. */
     #travel(token: Token.Implementation, from: Position, to: Position): number {
       const centre = (p: Position) => ({ x: p.x + token.w / 2, y: p.y + token.h / 2 });
-      return canvas!.grid!.measurePath([centre(from), centre(to)], {}).distance;
+      return measureGridPath(canvas!.grid!, [centre(from), centre(to)])?.distance ?? Infinity;
     }
 
     async #move({ token, plan }: TeleportPlan): Promise<boolean> {
@@ -586,7 +587,7 @@ let defineMidiTeleportActivityClass = <T extends Activity>(ActivityClass: T) => 
       const damage = this.item.system.activities.find(a => isActivityType(a, "damage") && a.id !== this.id);
       if (!damage) return;
       // The travellers are the targets: nothing to confirm.
-      await completeActivityUse(damage, { midiOptions: { targetUuids: travellers.map(t => t.document.uuid), ignoreUserTargets: true,
+      await completeActivityUse(damage, { midiOptions: { targetUuids: travellers.map(t => t.document.uuid).filter((uuid): uuid is string => !!uuid), ignoreUserTargets: true,
         workflowOptions: { targetConfirmation: "none" } } }, { configure: false }, {});
     }
   }

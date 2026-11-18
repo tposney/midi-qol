@@ -35,7 +35,7 @@ export const USEFUL_MODULE_VERSIONS = {
   "walledtemplates": "0.0.0",
   "wjmais": "0.0.0",
 };
-export let installedModules = new Map<string, boolean>();
+export let installedModules = new Map<string, boolean | undefined>();
 
 export function getModuleVersion(moduleName: string): string {
   let modVer = game.modules.get(moduleName)?.version || "0.0.0";

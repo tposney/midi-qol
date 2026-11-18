@@ -6,6 +6,8 @@ import { autoCheckSavesOptions, configSettings, safeGetGameSetting } from "../se
 import { MidiActivityMixin, MidiActivityMixinSheet } from "./MidiActivityMixin.js";
 import { MidiSaveActivity } from "./SaveActivity.js";
 import { getSceneTargets } from "./activityHelpers.js";
+import { activityBonusRoll } from "../patching.js";
+import { speakerFor } from "../utils.js";
 
 export let MidiCheckActivity: ReturnType<typeof defineMidiCheckActivityClass>;
 export let MidiCheckSheet: ReturnType<typeof defineMidiCheckSheetClass>;
@@ -99,14 +101,16 @@ let defineMidiCheckActivityClass = <T extends Activity>(ActivityClass: T) => {
       const check = activity.check;
       const item = activity.item;
       const rollData: AnyMutableObject = { event, target: Number.isFinite(dc) ? dc : check!.dc.value };
+      const bonusRoll = activityBonusRoll(activity, "check");
       if (ability && (ability in globalThis.dnd5e.config.abilities)) rollData.ability = ability;
 
       for (const token of targets) {
         const actor = token instanceof Actor ? token : token.actor;
         const tokenDocument = token instanceof foundry.canvas.placeables.Token ? token.document : token instanceof TokenDocument ? token : null;
-        const speaker = ChatMessage.getSpeaker({ actor, scene: canvas.scene, token: tokenDocument });
-        const messageData: AnyMutableObject = { data: { speaker } };
+        const speaker = speakerFor({ actor, scene: canvas.scene, token: tokenDocument });
+        const messageData: AnyMutableObject = { data: { speaker, system: { ...activity.messageSources, origin: message?.id } } };
         if (!actor) continue;
+        if (bonusRoll) rollData.rolls = [{ ...bonusRoll }];
         // v14 message-mode strings (CONFIG.ChatMessage.modes keys) so the value matches the roll dialog's options
         if (["none", "allShow"].includes(configSettings.autoCheckSaves) || actor?.hasPlayerOwner) messageData.rollMode = safeGetGameSetting("core", "messageMode");
         else messageData.rollMode = "gm";

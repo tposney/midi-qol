@@ -272,7 +272,7 @@ export function actorEmbeddedByPath(actor: Actor.Implementation | null | undefin
  * doesn't point into another copy of it. A token's actor only re-points flags into another token: its base actor's
  * items depend on the base actor.
  */
-export function repointedDependentOn(flag: unknown, actorUuid: string, isToken: boolean, has: (path: string) => boolean): string | undefined {
+export function repointedDependentOn(flag: unknown, actorUuid: string | null, isToken: boolean, has: (path: string) => boolean): string | undefined {
   if (typeof flag !== "string" || flag.startsWith(".") || flag.startsWith(`${actorUuid}.`)) return undefined;
   const i = flag.lastIndexOf("Actor.");
   if (i < 0 || (i > 0 && flag[i - 1] !== ".")) return undefined;

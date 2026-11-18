@@ -75,7 +75,6 @@ export class MidiSounds {
     const packname = GameSystemConfig.sourcePacks.ITEMS;
     if (packname) {
       const packObject = game.packs?.get(packname);
-      // @ts-expect-error no dnd5e-types
       await packObject?.getIndex({ fields: ["system.armor.type", "system.toolType", "system.weaponType", "img"] });
 
       const weaponTypes = Object.keys(GameSystemConfig.weaponTypes);

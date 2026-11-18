@@ -583,7 +583,6 @@ export async function importSettingsFromJSON(json) {
   }
 
   if (requiresReload) {
-  //@ts-expect-error
     foundry.applications.settings.SettingsConfig.reloadConfirm({ world: true });
   }
 }
@@ -1978,6 +1977,5 @@ export function shouldDisplaySaveDC(actor?: Actor): boolean {
 /** Turn workflow token sets' document mode on or off (a world setting: every client, after a reload) */
 export async function setTokenDocumentSets(enabled: boolean, { reload = true }: { reload?: boolean } = {}) {
   await game.settings.set("midi-qol", "tokenDocumentSets", !!enabled);
-  //@ts-expect-error reloadConfirm not in fvtt-types
   if (reload) await foundry.applications.settings.SettingsConfig.reloadConfirm({ world: true });
 }
