@@ -19,6 +19,9 @@ export function setupCheckActivity() {
   MidiCheckSheet = defineMidiCheckSheetClass(game.system.applications.activity.CheckSheet);
   MidiCheckActivity = defineMidiCheckActivityClass(GameSystemConfig.activityTypes.check.documentClass as Activity);
   adoptActivityType("check", MidiCheckActivity, MidiCheckSheet);
+  registerCardActions(["check"], {
+    rollDamage: cardRollDamage
+  });
 }
 
 let defineMidiCheckActivityClass = <T extends Activity>(ActivityClass: T) => {
@@ -104,6 +107,3 @@ export function defineMidiCheckSheetClass(baseClass: any) {
   }
 }
 
-registerCardActions(["check"], {
-  rollDamage: cardRollDamage
-});

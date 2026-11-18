@@ -19,6 +19,9 @@ export function setupSaveActivity() {
   MidiSaveActivity = defineMidiSaveActivityClass(GameSystemConfig.activityTypes.save.documentClass as Activity);
   adoptActivityType("save", MidiSaveActivity, MidiSaveSheet);
   // Localization.localizeDataModel(MidiSaveActivity);
+  registerCardActions(["save"], {
+    rollDamage: cardRollDamage
+  });
 }
 
 let defineMidiSaveActivityClass = <T extends Activity>(ActivityClass: T) => {
@@ -109,6 +112,3 @@ export function cardRollDamage(this: Activity, event: PointerEvent, target: HTML
   return activity.rollDamage({ event, workflow }, {}, {});
 }
 
-registerCardActions(["save"], {
-  rollDamage: cardRollDamage
-});

@@ -1,4 +1,5 @@
 import { Activity } from "../../globals.js";
+import { Registry } from "../api/registry.js";
 import { configSettings } from "../settings.js";
 import { findAmmunitionActivity } from "./MidiActivityMixin.js";
 
@@ -29,7 +30,7 @@ const DEFAULT_POLICY: ActivityPolicy = { automated: false, possibleOtherActivity
 const none = () => false;
 const automated = (policy: Partial<ActivityPolicy> = {}): Partial<ActivityPolicy> => ({ automated: true, ...policy });
 
-const policies: Record<string, Partial<ActivityPolicy>> = {
+const midiPolicies: Record<string, Partial<ActivityPolicy>> = {
   attack: automated({ neverOtherActivity: true, subsequentActions: none }),
   cast: automated({ forcedTargetConfirmation: "never", subsequentActions: none }),
   check: automated({ possibleOtherActivity: true, subsequentActions: none }),
@@ -48,14 +49,18 @@ const policies: Record<string, Partial<ActivityPolicy>> = {
   utility: automated({ possibleOtherActivity: true, subsequentActions: none }),
 };
 
+// By activity type (registry.ts); a registration is merged over what the type already has
+const policies = new Registry<Partial<ActivityPolicy>>();
+for (const [type, policy] of Object.entries(midiPolicies)) policies.set(type, policy);
+
 /** For a module's own activity type: how midi treats it. Merged over what is registered. */
 export function registerActivityPolicy(type: string, policy: Partial<ActivityPolicy>) {
-  policies[type] = { ...policies[type], ...policy };
+  policies.set(type, { ...policies.get(type)?.value, ...policy });
 }
 
 export function activityPolicy(activityOrType: { type?: string } | string | undefined): ActivityPolicy {
   const type = typeof activityOrType === "string" ? activityOrType : activityOrType?.type;
-  return { ...DEFAULT_POLICY, ...(type ? policies[type] : undefined) };
+  return { ...DEFAULT_POLICY, ...(type ? policies.get(type)?.value : undefined) };
 }
 
 /*

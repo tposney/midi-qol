@@ -21,6 +21,10 @@ export interface TargetConfirmationProvider {
   confirm(request: TargetConfirmationRequest): Promise<boolean>;
 }
 
+declare module "../api/services.js" {
+  interface MidiServices { targetConfirmation: TargetConfirmationProvider }
+}
+
 export let targetConfirmationService: ReturnType<typeof defineService<TargetConfirmationProvider>>;
 let midiDefault: TargetConfirmationProvider | undefined;
 

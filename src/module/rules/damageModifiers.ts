@@ -6,6 +6,9 @@
  * - flatReduction: a fixed amount off the matching parts, before resistances (spread proportionally, never below 0);
  * - percentReduction: the matching parts scaled, after resistances;
  * - complete: a last flat or scaled change, after everything else.
+ *
+ * Parts are not rounded here: a spread or scaled part may be fractional, as dnd5e's own halved parts are, and dnd5e
+ * rounds the target's total once (down for damage). A change says either an amount or a multiplier, never both.
  */
 
 export type DamageStage = "bonus" | "flatReduction" | "percentReduction" | "complete";
@@ -52,6 +55,7 @@ function distribute(parts: DamagePart[], amount: number): number {
 export function applyDamageChange(stage: DamageStage, parts: DamagePart[], change: DamageChange, counts: (part: DamagePart) => boolean = () => true): ChangeResult {
   const matching = parts.filter(p => counts(p) && (!change.types || change.types.includes(p.type)));
   const { amount, multiplier } = change;
+  if (amount !== undefined && multiplier !== undefined) return { applied: 0, problem: "a change gives an amount or a multiplier, not both" };
   switch (stage) {
     case "bonus": {
       if (!finite(amount) || amount <= 0) return { applied: 0, problem: "a bonus needs a positive amount" };

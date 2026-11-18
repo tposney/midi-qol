@@ -1,5 +1,5 @@
 import type { DamageApplicationOptions, DamageDescription } from "../../globals.js";
-import { defineService, entries } from "../api/services.js";
+import { defineService, entries, reportServiceProblem } from "../api/services.js";
 import { applyDamageChange, DamageChange, DamageStage } from "../rules/damageModifiers.js";
 
 /*
@@ -31,6 +31,10 @@ export interface DamageModifierContributor {
   /** The stage or stages it answers for. */
   stage: DamageStage | readonly DamageStage[];
   for(query: DamageQuery): readonly DamageChange[] | undefined;
+}
+
+declare module "../api/services.js" {
+  interface MidiServices { damageModifiers: DamageModifierContributor }
 }
 
 export let damageModifiersService: ReturnType<typeof defineService<DamageModifierContributor>>;
@@ -67,18 +71,18 @@ export function applyDamageModifierStage(stage: DamageStage, actor: Actor.Implem
         damage: damages.filter(counts).map(d => ({ type: d.type, value: d.value, properties: new Set(d.properties ?? []) }))
       });
     } catch (err) {
-      console.warn(`midi-qol | damageModifiers | ${id} failed at ${stage}`, err);
+      reportServiceProblem("damageModifiers", id, `failed at ${stage}`, err);
       continue;
     }
     if (changes instanceof Promise) {
-      console.warn(`midi-qol | damageModifiers | ${id} answered with a promise; damage is calculated synchronously, so it is ignored`);
+      reportServiceProblem("damageModifiers", id, "answered with a promise; damage is calculated synchronously, so it is ignored");
       continue;
     }
     if (!Array.isArray(changes)) continue;
     for (const change of changes as DamageChange[]) {
       const result = applyDamageChange(stage, damages, change, part => counts(part as DamageDescription));
       if (result.problem) {
-        console.warn(`midi-qol | damageModifiers | ${id}: ${change.label}: ${result.problem}`);
+        reportServiceProblem("damageModifiers", id, `${change.label}: ${result.problem}`);
         continue;
       }
       if (result.added) damages.push({ type: result.added.type, value: result.added.value, properties: new Set(), allActives: [change.label] });

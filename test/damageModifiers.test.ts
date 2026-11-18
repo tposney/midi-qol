@@ -38,6 +38,15 @@ describe("applyDamageChange", () => {
     expect(applyDamageChange("complete", p, { label: "Nothing" }).problem).toBeDefined();
   });
 
+  it("a change gives an amount or a multiplier, not both; spread parts stay fractional", () => {
+    const p = parts(["fire", 10]);
+    expect(applyDamageChange("complete", p, { amount: -2, multiplier: 0.5, label: "Both" }).problem).toMatch(/not both/);
+    expect(total(p)).toBe(10);
+    const q = parts(["slashing", 5], ["fire", 5], ["cold", 5]);
+    expect(applyDamageChange("flatReduction", q, { amount: -4, label: "DR" }).applied).toBe(-4);
+    expect(q.map(part => part.value)).toEqual([5 - 4 / 3, 5 - 4 / 3, 5 - 4 / 3]);
+  });
+
   it("only touches parts `counts` allows", () => {
     const p = parts(["healing", 10], ["fire", 10]);
     applyDamageChange("flatReduction", p, { amount: -4, label: "DR" }, part => part.type !== "healing");

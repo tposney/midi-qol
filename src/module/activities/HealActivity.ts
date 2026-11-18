@@ -16,6 +16,9 @@ export function setupHealActivity() {
   MidiHealSheet = defineMidiHealSheetClass(game.system.applications.activity.HealSheet);
   MidiHealActivity = defineMidiHealActivityClass(GameSystemConfig.activityTypes.heal.documentClass as Activity);
   adoptActivityType("heal", MidiHealActivity, MidiHealSheet);
+  registerCardActions(["heal"], {
+    rollHealing: cardRollHealing
+  });
 }
 
 let defineMidiHealActivityClass = <T extends Activity>(ActivityClass: T) => {
@@ -70,6 +73,3 @@ function cardRollHealing(this: Activity, event: PointerEvent, target: HTMLElemen
   return activity.rollDamage({event, workflow}, {}, {});
 }
 
-registerCardActions(["heal"], {
-  rollHealing: cardRollHealing
-});

@@ -10,7 +10,70 @@ import { GameSystemConfig } from "../../midi-qol.js";
  * calling `super.use(...)` still reaches dnd5e's. Members are installed lowest layer first, so a type's own override
  * wins over the shared mixin's, as with the subclasses. midi's classes must not have instance #private members
  * (they only exist on objects the class constructed).
+ *
+ * Methods other modules wrap (`use`) are installed through libWrapper instead, as a chained OVERRIDE: midi's method
+ * stays next to dnd5e's, a wrap registered before midi is kept (defineProperty would replace libWrapper's accessor
+ * and drop it without a report), and a second override is reported as a conflict. midi's `super.use()` then continues
+ * libWrapper's chain.
+ *
+ * Temporary: the roadmap's M10, M13 and M14 take the remaining members out, and this file goes with M14.
  */
+
+/** Prototype methods installed through libWrapper when a path to the class is given. */
+const WRAPPED_METHODS = ["use"];
+
+type AnyFunction = (this: unknown, ...args: unknown[]) => unknown;
+type LibWrapperLike = { register(packageId: string, target: string, fn: AnyFunction, type: string, options?: { chain?: boolean }): unknown };
+
+// The `wrapped` of each call in progress, per object and method, for midi's super call to continue
+const callsInProgress = new WeakMap<object, Map<string, AnyFunction[]>>();
+
+function isThenable(value: unknown): value is PromiseLike<unknown> {
+  return !!value && (typeof value === "object" || typeof value === "function") && "then" in value && typeof value.then === "function";
+}
+
+/**
+ * Installs `method` (midi's, from its layers) as `name` on the class at `path` through libWrapper. `snapshot` is what
+ * midi's lowest layer has as super: its `name` is pointed at the chain's `wrapped` while a call is in progress.
+ * False when libWrapper is absent or refuses (another package's override): the caller installs it directly.
+ */
+function installThroughLibWrapper(path: string, name: string, method: AnyFunction, snapshot: object): boolean {
+  const libWrapper: LibWrapperLike | undefined = "libWrapper" in globalThis ? (globalThis as { libWrapper?: LibWrapperLike }).libWrapper : undefined;
+  if (!libWrapper) return false;
+  const original: unknown = Reflect.get(snapshot, name);
+  const wrapper: AnyFunction = function (wrapped: unknown, ...args: unknown[]) {
+    const self = this;
+    if (typeof self !== "object" || self === null || typeof wrapped !== "function") return method.apply(self, args);
+    const next = wrapped as AnyFunction;
+    let byName = callsInProgress.get(self);
+    if (!byName) callsInProgress.set(self, byName = new Map());
+    const stack = byName.get(name) ?? [];
+    byName.set(name, stack);
+    stack.push(next);
+    const done = () => { const index = stack.lastIndexOf(next); if (index >= 0) stack.splice(index, 1); };
+    let result: unknown;
+    try { result = method.apply(self, args); }
+    catch (err) { done(); throw err; }
+    if (!isThenable(result)) { done(); return result; }
+    return Promise.resolve(result).finally(done);
+  } as AnyFunction;
+  try {
+    libWrapper.register("midi-qol", `${path}.${name}`, wrapper, "OVERRIDE", { chain: true });
+  } catch (err) {
+    console.warn(`midi-qol | ${path}.${name} could not be registered with libWrapper (another module overrides it?); installed directly`, err);
+    return false;
+  }
+  Object.defineProperty(snapshot, name, {
+    configurable: true, writable: true,
+    value: function (this: unknown, ...args: unknown[]) {
+      const stack = typeof this === "object" && this !== null ? callsInProgress.get(this)?.get(name) : undefined;
+      const next = stack?.[stack.length - 1];
+      if (next) return next(...args);
+      return typeof original === "function" ? original.apply(this, args) : undefined;
+    }
+  });
+  return true;
+}
 
 type ClassLike = { prototype: object };
 
@@ -33,8 +96,12 @@ function layers(top: ClassLike, base: ClassLike): { protos: object[], ctors: obj
   return { protos, ctors };
 }
 
-/** Installs the members `top` and its parents down to `base` define (midi's layers) on `base` itself. */
-export function graftOnto(top: ClassLike, base: ClassLike) {
+/**
+ * Installs the members `top` and its parents down to `base` define (midi's layers) on `base` itself.
+ * `prototypePath` is a global path to `base.prototype` (CONFIG.DND5E.activityTypes.<type>.documentClass.prototype):
+ * with it, WRAPPED_METHODS go through libWrapper.
+ */
+export function graftOnto(top: ClassLike, base: ClassLike, prototypePath?: string) {
   const { protos, ctors } = layers(top, base);
   if (!protos.length) return;
   // midi's super calls reach dnd5e's members as they were before midi's were installed
@@ -45,9 +112,17 @@ export function graftOnto(top: ClassLike, base: ClassLike) {
   const staticSnapshot = Object.create(Object.getPrototypeOf(base), statics);
   Object.setPrototypeOf(ctors[0], staticSnapshot);
 
+  // midi's method for each libWrapper-installed name: the highest layer's
+  const throughLibWrapper = new Set<string>();
+  if (prototypePath) {
+    for (const name of WRAPPED_METHODS) {
+      const method = [...protos].reverse().map(proto => Object.getOwnPropertyDescriptor(proto, name)?.value).find(value => typeof value === "function");
+      if (method && installThroughLibWrapper(prototypePath, name, method, protoSnapshot)) throughLibWrapper.add(name);
+    }
+  }
   for (const proto of protos) {
     for (const [name, descriptor] of Object.entries(Object.getOwnPropertyDescriptors(proto))) {
-      if (name !== "constructor") Object.defineProperty(base.prototype, name, descriptor);
+      if (name !== "constructor" && !throughLibWrapper.has(name)) Object.defineProperty(base.prototype, name, descriptor);
     }
   }
   for (const ctor of ctors) {
@@ -75,7 +150,7 @@ export function adoptActivityType(type: string, midiClass: ClassLike, midiSheet?
   if (!base) return undefined;
   const baseSheet = base.metadata?.sheetClass;
   if (midiSheet && baseSheet) graftOnto(midiSheet, baseSheet);
-  graftOnto(midiClass, base);
+  graftOnto(midiClass, base, `CONFIG.DND5E.activityTypes.${type}.documentClass.prototype`);
   // midi's metadata named its sheet subclass: the sheet is dnd5e's, with midi's sheet members
   if (baseSheet && base.metadata?.sheetClass !== baseSheet)
     Object.defineProperty(base, "metadata", {

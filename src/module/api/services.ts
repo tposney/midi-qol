@@ -9,7 +9,36 @@
  * through `MidiQOL.services`. Names are listed in docs/surface.json.
  */
 
+import { isAvailable, Registry } from "./registry.js";
+
 export type ServiceKind = "single" | "contributors";
+
+/**
+ * The provider type of each service, by id. A service's file adds its entry by declaration merging, so
+ * `MidiQOL.services.get("cover")` is typed; another module's own service does the same from its types.
+ */
+// eslint-disable-next-line @typescript-eslint/no-empty-object-type
+export interface MidiServices {}
+type ServiceId = keyof MidiServices & string;
+
+/** Where a provider's or contributor's failure is reported (midi sets the TroubleShooter; the console otherwise). */
+let problemReporter: (serviceId: string, providerId: string, message: string, err?: unknown) => void =
+  (serviceId, providerId, message, err) => console.warn(`midi-qol | ${serviceId} | ${providerId}: ${message}`, err ?? "");
+
+export function setServiceProblemReporter(reporter: typeof problemReporter) { problemReporter = reporter; }
+
+/** A provider or contributor failed or gave an answer midi could not use: it is skipped, and the problem recorded. */
+export function reportServiceProblem(serviceId: string, providerId: string, message: string, err?: unknown) {
+  try { problemReporter(serviceId, providerId, message, err); }
+  catch { console.warn(`midi-qol | ${serviceId} | ${providerId}: ${message}`, err ?? ""); }
+}
+
+export interface WrapperOptions {
+  /** Higher wraps outermost (is asked first); equal priorities keep registration order. Default 0. */
+  priority?: number;
+  /** Also called when no provider is selected or available, with `next` undefined, so it can answer on its own. */
+  whenAbsent?: boolean;
+}
 
 export interface ProviderOptions {
   /** Higher wins among available providers when no selector picks one; midi's own providers use 0. */
@@ -20,19 +49,14 @@ export interface ProviderOptions {
   label?: string;
 }
 
-interface ProviderEntry<P> extends ProviderOptions {
-  id: string;
-  provider: P;
-}
-
 interface ServiceEntry<P> {
   id: string;
   kind: ServiceKind;
   description: string;
   /** For a single service: the provider id the configuration picks (e.g. a midi setting), or undefined. */
   selector?: () => string | undefined;
-  providers: Map<string, ProviderEntry<P>>;
-  wrappers: { id: string, wrap: (next: P) => P }[];
+  providers: Registry<P, { label?: string }>;
+  wrappers: Registry<(next: P) => P, { whenAbsent: boolean }>;
   resolved?: P | null;
   /** The selector's value `resolved` was chosen for: settings can change in memory without a hook */
   resolvedFor?: string;
@@ -54,7 +78,11 @@ function changed(service: { id: string, resolved?: unknown }) {
 /** midi only: declare a service. */
 export function defineService<P>(id: string, options: { kind: ServiceKind, description: string, selector?: () => string | undefined }) {
   if (services.has(id)) throw new Error(`midi-qol | service "${id}" is already defined`);
-  services.set(id, { id, kind: options.kind, description: options.description, selector: options.selector, providers: new Map(), wrappers: [] });
+  const service: ServiceEntry<unknown> = {
+    id, kind: options.kind, description: options.description, selector: options.selector,
+    providers: new Registry(() => changed(service)), wrappers: new Registry(() => changed(service))
+  };
+  services.set(id, service);
   return {
     register: (providerId: string, provider: P, providerOptions?: ProviderOptions) => register<P>(id, providerId, provider, providerOptions),
     get: () => get<P>(id),
@@ -62,35 +90,34 @@ export function defineService<P>(id: string, options: { kind: ServiceKind, descr
   };
 }
 
+export function register<K extends ServiceId>(serviceId: K, providerId: string, provider: MidiServices[K], options?: ProviderOptions): void;
+export function register<P>(serviceId: string, providerId: string, provider: P, options?: ProviderOptions): void;
 export function register<P>(serviceId: string, providerId: string, provider: P, options: ProviderOptions = {}) {
   const service = entry<P>(serviceId);
-  service.providers.set(providerId, { id: providerId, provider, ...options });
-  changed(service);
+  service.providers.set(providerId, provider, options, { label: options.label });
 }
 
 export function unregister(serviceId: string, providerId: string) {
   const service = entry(serviceId);
-  if (service.providers.delete(providerId)) changed(service);
+  service.providers.delete(providerId);
 }
 
-/** Wrap a single service's active provider: `wrap` gets it and returns the provider to use instead. */
-export function wrap<P>(serviceId: string, wrapperId: string, wrapFn: (next: P) => P) {
+/**
+ * Wrap a single service's active provider: `wrap` gets it and returns the provider to use instead.
+ * With `whenAbsent` the wrapper also runs when there is no provider (`next` is then undefined).
+ */
+export function wrap<K extends ServiceId>(serviceId: K, wrapperId: string, wrapFn: (next: MidiServices[K]) => MidiServices[K], options?: WrapperOptions): void;
+export function wrap<P>(serviceId: string, wrapperId: string, wrapFn: (next: P) => P, options?: WrapperOptions): void;
+export function wrap<P>(serviceId: string, wrapperId: string, wrapFn: (next: P) => P, options: WrapperOptions = {}) {
   const service = entry<P>(serviceId);
-  service.wrappers = service.wrappers.filter(w => w.id !== wrapperId);
-  service.wrappers.push({ id: wrapperId, wrap: wrapFn });
-  changed(service);
+  // A wrapper registered again goes last among its priority (outermost), as a new one would
+  if (service.wrappers.has(wrapperId)) service.wrappers.delete(wrapperId);
+  service.wrappers.set(wrapperId, wrapFn, { priority: options.priority }, { whenAbsent: !!options.whenAbsent });
 }
 
 export function unwrap(serviceId: string, wrapperId: string) {
   const service = entry(serviceId);
-  const before = service.wrappers.length;
-  service.wrappers = service.wrappers.filter(w => w.id !== wrapperId);
-  if (service.wrappers.length !== before) changed(service);
-}
-
-function isAvailable(provider: ProviderEntry<unknown>): boolean {
-  try { return provider.available?.() ?? true; }
-  catch { return false; }
+  service.wrappers.delete(wrapperId);
 }
 
 /** The id of a single service's active provider, before wrappers. */
@@ -101,33 +128,45 @@ export function activeProviderId(serviceId: string): string | undefined {
     const chosen = service.providers.get(selected);
     return chosen && isAvailable(chosen) ? chosen.id : undefined;
   }
-  return [...service.providers.values()].filter(isAvailable).sort((a, b) => (b.priority ?? 0) - (a.priority ?? 0))[0]?.id;
+  return service.providers.entries()[0]?.id;
 }
 
 /** A single service's active provider with its wrappers applied, or undefined when none is available. */
+export function get<K extends ServiceId>(serviceId: K): MidiServices[K] | undefined;
+export function get<P>(serviceId: string): P | undefined;
 export function get<P>(serviceId: string): P | undefined {
   const service = entry<P>(serviceId);
   if (service.kind !== "single") throw new Error(`midi-qol | service "${serviceId}" has contributors: use all()`);
   const selected = service.selector?.();
   if (service.resolved !== undefined && service.resolvedFor === selected) return service.resolved ?? undefined;
   const id = activeProviderId(serviceId);
-  let provider = id ? service.providers.get(id)?.provider : undefined;
-  if (provider) for (const { wrap } of service.wrappers) provider = wrap(provider);
+  let provider = id ? service.providers.get(id)?.value : undefined;
+  // Applied innermost first: lowest priority, and among equals the first registered
+  const innermostFirst = service.wrappers.list().map((w, index) => ({ w, index })).sort((a, b) => a.w.priority - b.w.priority || a.index - b.index).map(e => e.w);
+  for (const { id: wrapperId, value: wrap, meta } of innermostFirst) {
+    if (!provider && !meta.whenAbsent) continue;
+    try { provider = wrap(provider as P) ?? provider; }
+    catch (err) { reportServiceProblem(serviceId, wrapperId, "its wrapper failed and is skipped", err); }
+  }
   service.resolved = provider ?? null;
   service.resolvedFor = selected;
   return provider;
 }
 
 /** Every available provider of a contributors service, highest priority first. */
+export function all<K extends ServiceId>(serviceId: K): MidiServices[K][];
+export function all<P>(serviceId: string): P[];
 export function all<P>(serviceId: string): P[] {
   const service = entry<P>(serviceId);
-  return [...service.providers.values()].filter(isAvailable).sort((a, b) => (b.priority ?? 0) - (a.priority ?? 0)).map(p => p.provider);
+  return service.providers.entries().map(p => p.value);
 }
 
 /** Every available provider of a contributors service with its id, highest priority first (for attributing answers). */
+export function entries<K extends ServiceId>(serviceId: K): { id: string, provider: MidiServices[K] }[];
+export function entries<P>(serviceId: string): { id: string, provider: P }[];
 export function entries<P>(serviceId: string): { id: string, provider: P }[] {
   const service = entry<P>(serviceId);
-  return [...service.providers.values()].filter(isAvailable).sort((a, b) => (b.priority ?? 0) - (a.priority ?? 0)).map(p => ({ id: p.id, provider: p.provider }));
+  return service.providers.entries().map(p => ({ id: p.id, provider: p.value }));
 }
 
 /** Whether `providerId` is the provider midi uses for a single service, e.g. for a module to stand down its own automation. */
@@ -138,7 +177,7 @@ export function isProvider(serviceId: string, providerId: string): boolean {
 export function providers(serviceId: string): { id: string, label?: string, priority: number, available: boolean, active: boolean }[] {
   const service = entry(serviceId);
   const active = service.kind === "single" ? activeProviderId(serviceId) : undefined;
-  return [...service.providers.values()].map(p => ({ id: p.id, label: p.label, priority: p.priority ?? 0, available: isAvailable(p), active: p.id === active }));
+  return service.providers.list().map(p => ({ id: p.id, label: p.meta.label, priority: p.priority, available: isAvailable(p), active: p.id === active }));
 }
 
 export function list(): { id: string, kind: ServiceKind, description: string }[] {
@@ -150,4 +189,4 @@ export function refreshServices() {
   for (const service of services.values()) changed(service);
 }
 
-export const servicesApi = { register, unregister, wrap, unwrap, get, all, entries, isProvider, providers, list, activeProviderId };
+export const servicesApi = { register, unregister, wrap, unwrap, get, all, entries, isProvider, providers, list, activeProviderId, reportProblem: reportServiceProblem };

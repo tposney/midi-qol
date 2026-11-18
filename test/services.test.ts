@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { activeProviderId, all, defineService, entries, get, isProvider, providers, register, unregister, unwrap, wrap } from "../src/module/api/services.js";
+import { activeProviderId, all, defineService, entries, get, isProvider, providers, register, reportServiceProblem, setServiceProblemReporter, unregister, unwrap, wrap } from "../src/module/api/services.js";
 import { hookCalls } from "./setup.js";
 
 type Answer = () => string;
@@ -109,3 +109,36 @@ describe("definitions", () => {
     expect(() => get("test.nothing")).toThrow(/no service/);
   });
 });
+
+describe("wrappers: priority, no provider, failures", () => {
+  it("a higher priority wrapper is outermost whatever the registration order", () => {
+    const id = fresh();
+    register<Answer>(id, "midi", () => "midi");
+    wrap<Answer>(id, "outer", next => () => `outer(${next()})`, { priority: 10 });
+    wrap<Answer>(id, "inner", next => () => `inner(${next()})`);
+    expect(get<Answer>(id)?.()).toBe("outer(inner(midi))");
+  });
+
+  it("a whenAbsent wrapper answers when no provider is selected; others are not called", () => {
+    const id = fresh("single", () => "none");
+    register<Answer>(id, "midi", () => "midi");
+    wrap<Answer>(id, "plain", next => () => `plain(${next()})`);
+    expect(get<Answer>(id)).toBeUndefined();
+    // Innermost (lower priority) so the plain wrapper has something to wrap
+    wrap<Answer | undefined>(id, "own", next => () => `own(${next?.() ?? "nothing"})`, { whenAbsent: true, priority: -1 });
+    expect(get<Answer>(id)?.()).toBe("plain(own(nothing))");
+  });
+
+  it("a wrapper that throws is skipped and reported", () => {
+    const id = fresh();
+    const problems: string[] = [];
+    setServiceProblemReporter((serviceId, providerId, message) => problems.push(`${serviceId}|${providerId}|${message}`));
+    register<Answer>(id, "midi", () => "midi");
+    wrap<Answer>(id, "broken", () => { throw new Error("no"); });
+    expect(get<Answer>(id)?.()).toBe("midi");
+    expect(problems).toEqual([`${id}|broken|its wrapper failed and is skipped`]);
+    reportServiceProblem("s", "p", "m");
+    expect(problems).toHaveLength(2);
+  });
+});
+

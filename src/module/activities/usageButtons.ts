@@ -4,6 +4,8 @@ import { midiButtonVisibility } from "../ChatClasses/UsageCardMessage.js";
 import { cardMidi, cardOtherConsumption } from "../lib/cardState.js";
 import { configSettings } from "../settings.js";
 import { activityHasAutoPlaceTemplate, activityHasEmanationNoTemplate } from "../utils.js";
+import { Registry, type RegistryOptions } from "../api/registry.js";
+import { reportServiceProblem } from "../api/services.js";
 import { activityPolicy } from "./activityPrototype.js";
 
 /*
@@ -82,6 +84,22 @@ export function midiUsageButtons(activity: Activity, message: object, base: Usag
   return activity.type === "check" ? [...checkButtons(activity, buttons), ...buttons] : buttons;
 }
 
+/** Whether a card button is hidden: true hides it, false shows it, undefined leaves it to the next rule. */
+export type CardButtonRule = (button: UsageButton, message: ChatMessage.Implementation, activity: Activity | undefined) => boolean | undefined;
+
+const buttonRules = new Map<string, Registry<CardButtonRule>>();
+
+/**
+ * A hide rule for the card buttons with `action` (another module's own button, or one of midi's). Rules for an action
+ * are asked before midi's own rule, higher priority first, then in registration order; the first answer that is not
+ * undefined decides. Not asked once the card's buttons are all removed (a finished use).
+ */
+export function registerCardButtonRule(action: string, id: string, rule: CardButtonRule, options: RegistryOptions = {}) {
+  let rules = buttonRules.get(action);
+  if (!rules) buttonRules.set(action, rules = new Registry());
+  rules.set(id, rule, options);
+}
+
 /**
  * midi's decision for a button of the card (one not visible to all): true hides it, false shows it, undefined leaves
  * it to dnd5e's own `shouldHideChatButton`.
@@ -92,6 +110,14 @@ export function midiButtonHidden(button: UsageButton, message: ChatMessage.Imple
   // The same rule midi's own buttons are drawn by, so the two cannot disagree
   const visible = midiButtonVisibility(message, activity);
   if (visible.allRemoved) return true;
+  for (const { id, value: rule } of buttonRules.get(action ?? "")?.entries() ?? []) {
+    try {
+      const hidden = rule(button, message, activity);
+      if (hidden !== undefined) return hidden;
+    } catch (err) {
+      reportServiceProblem("cardButtons", id, `its rule for "${action}" failed and is skipped`, err);
+    }
+  }
   const { consumed } = cardOtherConsumption(message);
   switch (action) {
     // midi draws its own attack and damage controls; dnd5e's stay stored for a card midi did not draw

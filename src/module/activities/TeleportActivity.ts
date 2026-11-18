@@ -21,6 +21,9 @@ export function setupTeleportActivity() {
   MidiTeleportSheet = defineMidiTeleportSheetClass(sheet);
   MidiTeleportActivity = defineMidiTeleportActivityClass(base as Activity);
   adoptActivityType("teleport", MidiTeleportActivity, MidiTeleportSheet);
+  registerCardActions(["teleport"], {
+    planTeleport: cardPlanTeleport
+  });
 }
 
 export const teleportMoverModes = ["default", "caster", "casterAndTargets", "targets", "swap"] as const;
@@ -591,6 +594,3 @@ function cardPlanTeleport(this: Activity, event: PointerEvent, target: HTMLEleme
   return planTeleport.call(this, { message, listed });
 }
 
-registerCardActions(["teleport"], {
-  planTeleport: cardPlanTeleport
-});

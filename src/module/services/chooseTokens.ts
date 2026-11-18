@@ -91,6 +91,10 @@ const midiChooser: ChooseTokensProvider = {
   }
 };
 
+declare module "../api/services.js" {
+  interface MidiServices { chooseTokens: ChooseTokensProvider }
+}
+
 export let chooseTokensService: ReturnType<typeof defineService<ChooseTokensProvider>>;
 
 export function defineChooseTokensService() {

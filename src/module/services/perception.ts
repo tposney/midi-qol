@@ -21,8 +21,11 @@ export interface SenseQuery {
 }
 
 export interface PerceptionProvider {
-  /** Detection mode ids the observer senses the target with ([] = none), or undefined when it can't judge. */
-  senses(observer: Token.Implementation, target: Token.Implementation, query: SenseQuery): string[] | undefined;
+  /**
+   * Detection mode ids the observer senses the target with ([] = none), or undefined when it can't judge.
+   * Token documents, as everywhere in midi's services; a provider that needs the canvas token reads `document.object`.
+   */
+  senses(observer: TokenDocument.Implementation, target: TokenDocument.Implementation, query: SenseQuery): string[] | undefined;
   /** Whether a hiding target is hidden from the observer; runs inside detection tests, so it must not change either token. */
   hiddenFrom?(target: TokenDocument.Implementation, observer: TokenDocument.Implementation): boolean | undefined;
   imprecise?(modeId: string): boolean | undefined;
@@ -47,14 +50,16 @@ function modeList(modes: SenseModes | undefined): string[] {
 
 /** midi's provider always answers */
 interface MidiPerceptionProvider extends PerceptionProvider {
-  senses(observer: Token.Implementation, target: Token.Implementation, query: SenseQuery): string[];
+  senses(observer: TokenDocument.Implementation, target: TokenDocument.Implementation, query: SenseQuery): string[];
   hiddenFrom(target: TokenDocument.Implementation, observer: TokenDocument.Implementation): boolean;
   imprecise(modeId: string): boolean;
 }
 
 export const midiPerception: MidiPerceptionProvider = {
+  // Foundry's detection tests work on canvas tokens: a token that is not drawn senses, and is sensed by, nothing
   senses(observer, target, { modes, forceVision }) {
-    return _canSenseModes(observer, target, modeList(modes), { forceVision });
+    if (!observer.object || !target.object) return [];
+    return _canSenseModes(observer.object, target.object, modeList(modes), { forceVision });
   },
   hiddenFrom: (target, observer) => midiHiddenFrom(target, observer),
   // vision-5e marks its imprecise modes (blindsight, tremorsense...)
@@ -63,6 +68,10 @@ export const midiPerception: MidiPerceptionProvider = {
     return !!mode && "imprecise" in mode && !!mode.imprecise;
   }
 };
+
+declare module "../api/services.js" {
+  interface MidiServices { perception: PerceptionProvider }
+}
 
 export let perceptionService: ReturnType<typeof defineService<PerceptionProvider>> | undefined;
 
@@ -78,7 +87,7 @@ function provider(): PerceptionProvider | undefined {
   return perceptionService?.get();
 }
 
-export function sensesModes(observer: Token.Implementation, target: Token.Implementation, query: SenseQuery): string[] {
+export function sensesModes(observer: TokenDocument.Implementation, target: TokenDocument.Implementation, query: SenseQuery): string[] {
   return provider()?.senses(observer, target, query) ?? midiPerception.senses(observer, target, query);
 }
 

@@ -20,6 +20,9 @@ export function setupUtilityActivity() {
 
   MidiUtilityActivity = defineMidiUtilityActivityClass(GameSystemConfig.activityTypes.utility.documentClass as Activity);
   adoptActivityType("utility", MidiUtilityActivity, MidiUtilitySheet);
+  registerCardActions(["utility"], {
+    rollFormula: cardRollFormula
+  });
 }
 
 let defineMidiUtilityActivityClass = <T extends Activity>(ActivityClass: T) => {
@@ -130,6 +133,3 @@ function cardRollFormula(this: Activity, event: PointerEvent, target: HTMLElemen
   return activity.rollFormula?.({ event, workflow }, {}, {});
 }
 
-registerCardActions(["utility"], {
-  rollFormula: cardRollFormula
-});

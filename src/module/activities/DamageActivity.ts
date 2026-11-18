@@ -17,6 +17,9 @@ export function setupDamageActivity() {
   MidiDamageSheet = defineMidiDamageSheetClass(game.system.applications.activity.DamageSheet);
   MidiDamageActivity = defineMidiDamageActivityClass(GameSystemConfig.activityTypes.damage.documentClass as Activity);
   adoptActivityType("damage", MidiDamageActivity, MidiDamageSheet);
+  registerCardActions(["damage"], {
+    rollDamage: cardRollDamage
+  });
 }
 
 let defineMidiDamageActivityClass = <T extends Activity>(ActivityClass: T) => {
@@ -61,6 +64,3 @@ function cardRollDamage(this: Activity, event: PointerEvent, target: HTMLElement
   activity.rollDamage({ event, workflow }, {}, {});
 }
 
-registerCardActions(["damage"], {
-  rollDamage: cardRollDamage
-});

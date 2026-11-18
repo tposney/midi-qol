@@ -2194,7 +2194,23 @@ export function setupMidiActivityMixin() {
   }
   //@ts-expect-error
   Hooks.on("renderActivitySheet", renderActivitySheetHook);
-
+  registerCardActions(undefined, {
+    placeTemplate: cardPlaceTemplate,
+    rollDamage: cardRollDamage,
+    rollDamageNoCritical: cardRollDamageNoCritical,
+    rollDamageCritical: cardRollDamageCritical,
+    confirmDamageRollCancel: cardConfirmDamageRollCancel,
+    confirmDamageRollComplete: cardConfirmDamageRollComplete,
+    confirmDamageRollCompleteHit: cardConfirmDamageRollCompleteHit,
+    confirmDamageRollCompleteMiss: cardConfirmDamageRollCompleteMiss,
+    midiApplyEffects: cardApplyEffects,
+    midiFollowUp: cardFollowUp,
+    refundOtherActivity: cardRefundOtherActivity,
+    consumeOtherActivity: cardConsumeOtherActivity
+  });
+  // Only where the activity type has no handler of its own: save and check activities keep theirs.
+  registerCardAction("rollSave", cardRollOtherSave, { whenAbsent: true });
+  registerCardAction("rollCheck", cardRollOtherSave, { whenAbsent: true });
 }
 
 /**
@@ -2392,20 +2408,3 @@ async function cardRollOtherSave(this: Activity, event: PointerEvent, target: HT
   }
 }
 
-registerCardActions(undefined, {
-  placeTemplate: cardPlaceTemplate,
-  rollDamage: cardRollDamage,
-  rollDamageNoCritical: cardRollDamageNoCritical,
-  rollDamageCritical: cardRollDamageCritical,
-  confirmDamageRollCancel: cardConfirmDamageRollCancel,
-  confirmDamageRollComplete: cardConfirmDamageRollComplete,
-  confirmDamageRollCompleteHit: cardConfirmDamageRollCompleteHit,
-  confirmDamageRollCompleteMiss: cardConfirmDamageRollCompleteMiss,
-  midiApplyEffects: cardApplyEffects,
-  midiFollowUp: cardFollowUp,
-  refundOtherActivity: cardRefundOtherActivity,
-  consumeOtherActivity: cardConsumeOtherActivity
-});
-// Only where the activity type has no handler of its own: save and check activities keep theirs.
-registerCardAction("rollSave", cardRollOtherSave, { whenAbsent: true });
-registerCardAction("rollCheck", cardRollOtherSave, { whenAbsent: true });

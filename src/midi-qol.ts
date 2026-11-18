@@ -203,10 +203,12 @@ Object.assign(globalThis.MidiQOL, {
   apiVersion: MIDI_API_VERSION,
   isRunning,
   services: servicesApi,
+  coverFor,
   chooseTokens,
   registerActivityPolicy,
   activityPolicy,
   registerCardAction,
+  registerCardButtonRule,
   fillRulesText,
   activityHasEmanationNoTemplate,
   addDependent,
@@ -439,6 +441,11 @@ Hooks.once('init', async function () {
   defineDamageModifiersService();
   defineTargetConfirmationService(resolveTargetConfirmation);
   defineChooseTokensService();
+  setServiceProblemReporter((serviceId, providerId, message, err) => {
+    const text = `midi-qol | ${serviceId} | ${providerId}: ${message}`;
+    console.warn(text, err ?? "");
+    TroubleShooter.recordError(err instanceof Error ? err : new Error(message), text);
+  });
   Hooks.on("midi-qol.ConfigSettingsChanged", refreshServices);
   Hooks.callAll("midi-qol.registerServices", servicesApi);
   setupCATIntegration();
@@ -996,7 +1003,7 @@ import { MidiActivityMixin, setupActivityTitles, setupMidiActivityMixin } from '
 import { initUseRelaunch, useRelaunchSpike } from './module/activities/useRelaunch.js';
 import { installActivitySchema } from './module/activities/activitySchema.js';
 import { installCardActions, registerCardAction } from './module/activities/cardActions.js';
-import { installUsageButtons } from './module/activities/usageButtons.js';
+import { installUsageButtons, registerCardButtonRule } from './module/activities/usageButtons.js';
 import { installActivityPrototype, registerActivityPolicy, activityPolicy } from './module/activities/activityPrototype.js';
 import { MidiForwardActivity, setupForwardActivity } from './module/activities/ForwardActivity.js';
 import { MidiEnchantActivity, setupEnchantActivity } from './module/activities/EnchantActivity.js';
@@ -1007,8 +1014,8 @@ import { MoveTokenOptions, TeleportTokenDestination, TokenOrDocument, SelectOpti
 import { DamageApplicationElementMidi } from './module/ChatClasses/DamageApplicationElementMidi.js';
 import { fillRulesText } from "./module/lib/rulesText.js";
 import { MIDI_API_VERSION, isRunning, markRunning } from "./module/api/contract.js";
-import { refreshServices, servicesApi } from "./module/api/services.js";
-import { defineCoverService } from "./module/services/cover.js";
+import { refreshServices, servicesApi, setServiceProblemReporter } from "./module/api/services.js";
+import { coverFor, defineCoverService } from "./module/services/cover.js";
 import { definePerceptionService, isImprecise } from "./module/services/perception.js";
 import { defineRollModifiersService } from "./module/services/rollModifiers.js";
 import { registerAttackRollRules } from "./module/services/attackRollRules.js";

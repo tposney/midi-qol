@@ -113,6 +113,14 @@ export function setupAttackActivity() {
   MidiAttackSheet = defineMidiAttackSheetClass(game.system.applications.activity.AttackSheet);
   MidiAttackActivity = defineMidiAttackActivityClass(GameSystemConfig.activityTypes.attack.documentClass as Activity);
   adoptActivityType("attack", MidiAttackActivity, MidiAttackSheet);
+  registerCardActions(["attack"], {
+    rollAttack: cardRollAttack,
+    rollAttackAdvantage: cardRollAttackAdvantage,
+    rollAttackDisadvantage: cardRollAttackDisadvantage,
+    rollDamage: cardRollDamage,
+    rollDamageNoCritical: cardRollDamageNoCritical,
+    rollDamageCritical: cardRollDamageCritical
+  });
 }
 
 let defineMidiAttackSheetClass = (baseClass: any) => {
@@ -978,11 +986,3 @@ function cardRollDamageCritical(this: Activity, event: PointerEvent, target: HTM
   return activity.rollDamage({ event, workflow, midiOptions: { isCritical: true } }, {}, message);
 }
 
-registerCardActions(["attack"], {
-  rollAttack: cardRollAttack,
-  rollAttackAdvantage: cardRollAttackAdvantage,
-  rollAttackDisadvantage: cardRollAttackDisadvantage,
-  rollDamage: cardRollDamage,
-  rollDamageNoCritical: cardRollDamageNoCritical,
-  rollDamageCritical: cardRollDamageCritical
-});

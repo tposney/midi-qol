@@ -1,6 +1,6 @@
 import { crossesOppositeSides, opposedByAngle } from "./rules/flanking.js";
 import { DialogCountdown } from "./lib/dialogCountdown.js";
-import { coverBetween } from "./services/cover.js";
+import { coverBetween, coverFor } from "./services/cover.js";
 import { sensesModes } from "./services/perception.js";
 import { applyDamageRules, collectDamageRules, copyDamageOptions } from "./lib/damageRules.js";
 import type { AttackModifier } from "./Workflow.js";
@@ -4149,12 +4149,14 @@ export function hasCoverTotal(actor: Actor | null | undefined): boolean {
  * Returns the higher of the dnd5e status-based cover and the module-computed cover.
  */
 export function getCoverBonus(attacker: TokenOrDocument, target: TokenOrDocument, activity?: Activity): number {
-  const targetActor = target instanceof TokenDocument ? target.actor : (target as Token)?.actor;
-  if (hasCoverTotal(targetActor)) return TOTAL_COVER;
-  //@ts-expect-error no dnd5e-types
-  const statusCoverBonus: number = targetActor?.system?.attributes?.ac?.cover ?? 0;
-  const moduleCoverBonus = computeCoverBonus(attacker, target, activity);
-  return Math.max(statusCoverBonus, moduleCoverBonus);
+  try {
+    return coverFor(attacker, target, { activity: activity instanceof Item ? undefined : activity }).bonus;
+  } catch (err) {
+    const message = "Error in getCoverBonus";
+    error(message, err);
+    TroubleShooter.recordError(err, message);
+    return 0;
+  }
 }
 
 /**
@@ -4253,9 +4255,10 @@ export function autoCoverTier(attacker: TokenOrDocument | undefined, target: Tok
 
 export function computeCoverBonus(attackerIn: TokenOrDocument | undefined, targetIn: TokenOrDocument, activity?: Activity,
   options: { position?: CoverPosition, origin?: CoverPosition } = {}): number {
-  let attacker = attackerIn instanceof TokenDocument ? attackerIn.object : attackerIn;
-  const target = targetIn instanceof TokenDocument ? targetIn.object : targetIn;
-  if (attacker && options.position) attacker = tokenAtPosition(attacker, options.position);
+  let attacker = getTokenDocument(attackerIn);
+  const target = getTokenDocument(targetIn);
+  // As if the attacker stood at `position`: a document at that place, whose canvas token is there too
+  if (attacker?.object && options.position) attacker = tokenAtPosition(attacker.object, options.position).document;
   if (activity instanceof Item) {
     activity = undefined;
     foundry.utils.logCompatibilityWarning("computeCoverBonus(attacker, target, item) is deprecated in favor of computeCoverBonus(attacker, target, activity)");
@@ -8665,7 +8668,7 @@ export function canSenseModes(tokenEntity: TokenOrDocument | string, targetEntit
   const token = getToken(tokenEntity);
   const target = getToken(targetEntity);
   if (!token || !target) return [];
-  return sensesModes(token, target, { modes: validModes, forceVision: options.forceVision });
+  return sensesModes(token.document, target.document, { modes: validModes, forceVision: options.forceVision });
 }
 const newCheckVisionSource = (tk: Token.Implementation) => new CONFIG.Canvas.visionSourceClass({ sourceId: `${tk.sourceId}.midiCheck`, object: tk });
 type CheckVisionSource = ReturnType<typeof newCheckVisionSource> | NonNullable<Token.Implementation["vision"]>;
@@ -9514,7 +9517,7 @@ export function canSee(tokenEntity: TokenOrDocument, targetEntity: TokenOrDocume
   const token = getToken(tokenEntity);
   const target = getToken(targetEntity);
   if (!token || !target) return false;
-  return sensesModes(token, target, { modes: "sight", forceVision: options.forceVision }).length > 0;
+  return sensesModes(token.document, target.document, { modes: "sight", forceVision: options.forceVision }).length > 0;
 }
 
 export function sumRolls(rolls: Array<Roll> | undefined = [], countHealing?: "ignore" | "negative" | "positive" | "negativeIgnoreTemp" | "positiveIgnoreTemp"): number {

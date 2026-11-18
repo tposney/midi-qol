@@ -1,4 +1,6 @@
-import { defineService, entries } from "../api/services.js";
+import type { Activity } from "../../globals.js";
+import { defineService, entries, reportServiceProblem } from "../api/services.js";
+import type { Workflow } from "../Workflow.js";
 import type { RollModifierTracker } from "../lib/RollModifierTracker.js";
 import { applyRollModifiers, RollKind, RollModifier } from "../rules/rollModifiers.js";
 
@@ -19,17 +21,21 @@ export interface RollQuery {
   token?: TokenDocument.Implementation;
   /** For an attack: the target it is checked against (the first target). */
   target?: TokenDocument.Implementation;
-  activity?: unknown;
+  activity?: Activity;
   item?: Item.Implementation;
   ability?: string;
   skill?: string;
   tool?: string;
   /** The workflow the roll belongs to, if any. */
-  workflow?: unknown;
+  workflow?: Workflow;
 }
 
 export interface RollModifierContributor {
   for(query: RollQuery): readonly RollModifier[] | undefined | Promise<readonly RollModifier[] | undefined>;
+}
+
+declare module "../api/services.js" {
+  interface MidiServices { rollModifiers: RollModifierContributor }
 }
 
 export let rollModifiersService: ReturnType<typeof defineService<RollModifierContributor>>;
@@ -49,9 +55,9 @@ export async function collectRollModifiers(query: RollQuery, tracker: RollModifi
       const modifiers = await provider.for(query);
       if (!modifiers?.length) continue;
       const problems = applyRollModifiers(tracker, modifiers, id);
-      if (problems.length) console.warn(`midi-qol | rollModifiers | ${id}: ${problems.join("; ")}`);
+      if (problems.length) reportServiceProblem("rollModifiers", id, problems.join("; "));
     } catch (err) {
-      console.warn(`midi-qol | rollModifiers | ${id} failed for a ${query.kind} roll`, err);
+      reportServiceProblem("rollModifiers", id, `failed for a ${query.kind} roll`, err);
     }
   }
 }
