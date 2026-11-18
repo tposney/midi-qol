@@ -444,6 +444,7 @@ Hooks.once('init', async function () {
   defineRollModifiersService();
   registerAttackRollRules();
   defineDamageModifiersService();
+  defineDamageContributionsService();
   damageModifiersService.register("midi-qol.targetedBonuses", targetedDamageBonusContributor, { label: "Midi-QOL: bonuses for particular targets" });
   defineTargetConfirmationService(resolveTargetConfirmation);
   defineChooseTokensService();
@@ -1047,6 +1048,7 @@ import { defineRangeService } from "./module/services/range/service.js";
 import { damageCalculationOrder, getDamageCalculationStep, registerDamageCalculationStep, removeDamageCalculationStep } from "./module/steps/damageCalculation.js";
 import { registerBonusApprovalQuery } from "./module/services/rollBonuses/approval.js";
 import { registerDamageMessageSummary } from "./module/damage/messages.js";
+import { defineDamageContributionsService } from "./module/services/damageContributions/service.js";
 import { defineFlankingService } from "./module/services/flanking/service.js";
 import { applyCalculatedDamage, registerDamageApplication } from "./module/damage/application.js";
 import { bonusPromptService, defineBonusPromptService } from "./module/services/rollBonuses/prompt.js";

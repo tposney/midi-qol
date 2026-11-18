@@ -321,6 +321,7 @@
     "bonusPrompt",
     "chooseTokens",
     "cover",
+    "damageContributions",
     "damageModifiers",
     "distance",
     "flanking",

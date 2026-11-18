@@ -21,6 +21,7 @@ import { createDamageDetail, processDamageRoll, untargetDeadTokens, checkIncapac
 import { OnUseMacros } from "./apps/Item.js";
 import { bonusCheck, collectBonusFlags, defaultRollOptions, buildPreComputedAdvantageMap, checkActivityAbilities } from "./patching.js";
 import { collectRollModifiers } from "./services/rollModifiers/service.js";
+import { collectDamageContributions } from "./services/damageContributions/service.js";
 import { collectBonusCandidates, spendBonusCost, type OfferedBonus, type RollBonusQuery } from "./services/rollBonuses/service.js";
 import { reportServiceProblem } from "./api/services.js";
 import { saveTargetsUndoData, saveUndoData } from "./undo.js";
@@ -2808,6 +2809,7 @@ export class Workflow {
       if (debugEnabled > 0) warn("damageRollStarted | for non auto target area effects spells", this)
     }
     await this.rollAllBonusDamage();
+    await this.rollDamageContributions();
     // The damage step's dice, the activity's, the other activity's and the bonus damage's, in one throw
     await this.flushDamageThrow();
     return this.WorkflowState_DamageRollComplete;
@@ -7514,6 +7516,35 @@ export class Workflow {
   /** The damage dice of this use's damage step, thrown together (Dice So Nice): set while collecting */
   #damageThrow: Roll[] | undefined;
 
+  /** damageContributions' rolls this use, each its own damage message (the untargeted ones are also bonus damage) */
+  #contributions: { role: string, rolls: Roll[] }[] = [];
+
+  /**
+   * The damageContributions service's damage (M2 stage 8): each contribution rolled with the use's roll data; without
+   * targets it joins the bonus damage (every target hit), with targets it goes to those targets only
+   * (addTargetedDamageBonus); each is its own damage message (createDamageMessages).
+   */
+  async rollDamageContributions(): Promise<void> {
+    const found = await collectDamageContributions({ workflow: this, actor: this.actor, item: this.item, activity: this.activity });
+    if (!found.length) return;
+    const rollData = (this.activity ?? this.item ?? this.actor)?.getRollData() ?? {};
+    const untargeted: Roll[] = [];
+    for (const { contributor, contribution } of found) {
+      try {
+        const type = contribution.damageType ?? this.damageRolls?.[0]?.options?.type ?? MidiQOL.MQdefaultDamageType;
+        // @ts-expect-error no dnd5e-types
+        const roll: Roll = await new CONFIG.Dice.DamageRoll(contribution.formula, rollData, { type, flavor: contribution.label }).evaluate();
+        if (contribution.targets?.length) this.addTargetedDamageBonus({ targets: [...contribution.targets], amount: roll.total ?? 0, type, label: contribution.label });
+        else untargeted.push(roll);
+        this.#contributions.push({ role: contribution.role, rolls: [roll] });
+        if (this.workflowOptions?.damageRollDSN !== false) await this.throwDamageDice(roll);
+      } catch (err) {
+        reportServiceProblem("damageContributions", contributor, `${contribution.label}: rolling it failed`, err);
+      }
+    }
+    if (untargeted.length) await this.setBonusDamageRolls([...(this.bonusDamageRolls ?? []), ...untargeted]);
+  }
+
   /** This use's damage messages (createDamageMessages), by contribution role */
   #damageMessageIds: Record<string, string> = {};
 
@@ -7533,7 +7564,9 @@ export class Workflow {
     const contributions = [
       { role: "activity", rolls: this.damageRolls ?? [] },
       { role: other.some(roll => foundry.utils.getProperty(roll, "options.midiAmmunition")) ? "ammunition" : "other", rolls: other },
-      { role: "bonus", rolls: this.bonusDamageRolls ?? [] }
+      // Bonus damage without the contributions' rolls, which have their own messages
+      { role: "bonus", rolls: (this.bonusDamageRolls ?? []).filter(roll => !this.#contributions.some(c => c.rolls.includes(roll))) },
+      ...this.#contributions
     ].filter(c => c.rolls.length);
     // Their dice were thrown with the damage step (copies marked shown, so the messages don't throw them again)
     const markShown = (data: unknown): void => {
