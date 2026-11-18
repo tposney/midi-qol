@@ -58,11 +58,18 @@ export async function runSteps(host: EngineHost, start: string | undefined): Pro
   let isAborting = host.aborted;
   while (host.countTransition()) {
     const current = host.currentStep;
-    // A removed step: on to the step after it in the flow
-    for (let guard = 0; next !== undefined && guard < 50 && host.changes?.(next)?.removed; guard++) next = host.flowNext?.(next);
-    // Starting a move from one step to another: its "after" inserts and the next one's "before" inserts run first
+    // A removed step: on to the step after it in the flow; the steps inserted around it still run
+    const aroundRemoved: string[] = [];
+    for (let guard = 0; !host.move && next !== undefined && guard < 50 && host.changes?.(next)?.removed; guard++) {
+      const removed = host.changes?.(next);
+      aroundRemoved.push(...(removed?.before ?? []), ...(removed?.after ?? []));
+      next = host.flowNext?.(next);
+    }
+    // Starting a move from one step to another: its "after" inserts and the next one's "before" inserts run first.
+    // A step that aborts is not followed by its "after" inserts.
     if (!host.move && next !== undefined && next !== SUSPEND && current !== next) {
-      const queue = [...(current !== undefined ? host.changes?.(current)?.after ?? [] : []), ...(host.changes?.(next)?.before ?? [])];
+      const leaving = current !== undefined && next !== ABORT && !host.aborted ? host.changes?.(current)?.after ?? [] : [];
+      const queue = [...leaving, ...aroundRemoved, ...(host.changes?.(next)?.before ?? [])];
       if (queue.length) {
         host.move = { queue, then: next, inserted: true };
         next = host.move.queue.shift();
@@ -86,7 +93,7 @@ export async function runSteps(host: EngineHost, start: string | undefined): Pro
           host.move = undefined;
         }
         if (!isAborting && host.aborted) {
-          host.note(`${host.name(current)} -> ${host.name(next)} aborted by pre ${host.name(current)} macro pass`);
+          host.note(`${host.name(current)} -> ${host.name(next)} aborted by post ${host.name(current)} macro pass`);
           next = ABORT;
           host.move = undefined;
           continue;

@@ -100,6 +100,8 @@ export interface RequestSpec<T> {
   fallback: () => T | Promise<T>;
   /** Clean-up and notifications once settled (any way). */
   onSettled?: (settled: Settled<T>) => void;
+  /** Clean-up when it could not be settled: the answer and the fallback both failed, and `settled` rejects. */
+  onFailed?: (err: unknown) => void;
 }
 
 /** A request without its value type (hooks, lists): what it is, who and what it waits on, where it is. */
@@ -114,13 +116,14 @@ export class MidiRequest<T> {
   readonly deadline: Deadline;
   readonly settled: Promise<Settled<T>>;
   #resolve!: (settled: Settled<T>) => void;
+  #reject!: (reason: unknown) => void;
   #phase: "deciding" | "using" | "settled" = "deciding";
   #how: SettledHow | undefined;
 
   constructor(spec: RequestSpec<T>, options: { id?: string, clock?: Clock } = {}) {
     this.id = options.id ?? `request-${++nextId}`;
     this.spec = spec;
-    this.settled = new Promise(resolve => this.#resolve = resolve);
+    this.settled = new Promise((resolve, reject) => { this.#resolve = resolve; this.#reject = reject; });
     this.deadline = new Deadline(spec.timeoutMs, () => { void this.settleWith(spec.fallback, "timeout"); }, options.clock);
   }
 
@@ -142,7 +145,16 @@ export class MidiRequest<T> {
     void (async () => {
       let value: T;
       try { value = await make(); }
-      catch (err) { console.error(`midi-qol | request ${this.id} (${this.spec.kind}): settling ${how}`, err); value = await this.spec.fallback(); }
+      catch (err) {
+        console.error(`midi-qol | request ${this.id} (${this.spec.kind}): settling ${how}`, err);
+        try { value = await this.spec.fallback(); }
+        catch (fallbackErr) {
+          // Nothing to answer with: the requester is told rather than left waiting
+          try { this.spec.onFailed?.(fallbackErr); } catch (cleanUpErr) { console.error(`midi-qol | request ${this.id} clean-up`, cleanUpErr); }
+          this.#reject(fallbackErr);
+          return;
+        }
+      }
       const settled = { value, how };
       try { this.spec.onSettled?.(settled); } catch (err) { console.error(`midi-qol | request ${this.id} clean-up`, err); }
       this.#resolve(settled);
@@ -169,7 +181,8 @@ export class RequestRegistry {
 
   add<T>(request: MidiRequest<T>): MidiRequest<T> {
     this.#byId.set(request.id, request as MidiRequest<unknown>);
-    void request.settled.then(() => this.#byId.delete(request.id));
+    const leave = () => { this.#byId.delete(request.id); };
+    void request.settled.then(leave, leave);
     return request;
   }
 

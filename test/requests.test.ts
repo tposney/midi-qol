@@ -139,3 +139,18 @@ describe("RequestRegistry", () => {
     expect(reg.get(a.id)).toBeUndefined();
   });
 });
+
+describe("MidiRequest without an answer", () => {
+  it("rejects when the answer and the fallback both fail, and leaves the registry", async () => {
+    const { clock } = fakeClock();
+    let failed = 0;
+    const registry = new RequestRegistry();
+    const request = registry.add(new MidiRequest<string>({ kind: "test", timeoutMs: 0, fallback: () => { throw new Error("no fallback"); }, onFailed: () => failed++ }, { clock }));
+    const outcome = request.settled.then(() => "settled", () => "rejected");
+    request.settleWith(() => { throw new Error("no answer"); }, "gm");
+    expect(await outcome).toBe("rejected");
+    await flush();
+    expect(failed).toBe(1);
+    expect(registry.get(request.id)).toBeUndefined();
+  });
+});

@@ -2182,7 +2182,8 @@ export class Workflow {
     if (event === "damageRolled" && this.currentAction === this.WorkflowState_WaitForSaves) return this.displayDamageRolls();
     this.suspended = false;
     Workflow.#holdRunning(this);
-    return this.performState(event ? this.stateAfter(event) : this.currentAction);
+    // A module's step has no state method: it waits in its step id and is run again
+    return this.performState((event ? this.stateAfter(event) : this.currentAction) ?? this.#currentStep!);
   }
 
   #stepRoll: { event?: WorkflowEvent } | undefined;

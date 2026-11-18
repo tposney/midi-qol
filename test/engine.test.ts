@@ -127,6 +127,20 @@ describe("runSteps with a use's changes", () => {
     expect(runs(h)).toEqual(["A", "C"]);
   });
 
+  it("the steps inserted around a removed step still run", async () => {
+    const h = host({ A: "B", "my.x": undefined, "my.y": undefined, C: SUSPEND }, { flow: ["A", "B", "C"], changes: [
+      { kind: "insert", step: "my.x", before: "B", layer: "global" }, { kind: "insert", step: "my.y", after: "B", layer: "global" },
+      { kind: "remove", target: "B", layer: "global" }] });
+    await runSteps(h, "A");
+    expect(runs(h)).toEqual(["A", "my.x", "my.y", "C"]);
+  });
+
+  it("a step that aborts is not followed by its after inserts", async () => {
+    const h = host({ A: ABORT, "my.x": undefined, [ABORT]: SUSPEND }, { changes: [{ kind: "insert", step: "my.x", after: "A", layer: "global" }] });
+    await runSteps(h, "A");
+    expect(runs(h)).toEqual(["A", ABORT]);
+  });
+
   it("an inserted step that suspends keeps the move: resumed, it goes on to the step the move was going to", async () => {
     let waited = false;
     const h = host({ A: "B", "my.wait": () => (waited ? undefined : (waited = true, SUSPEND)), B: SUSPEND },

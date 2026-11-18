@@ -137,11 +137,10 @@ export async function applyBonusEffect(roll: Roll, effect: BonusEffect, rollData
     }
     case "reroll": {
       const options = effect.dice === "max" ? { maximize: true } : effect.dice === "min" ? { minimize: true } : {};
-      let rerolled: Roll = await roll.reroll(options);
-      if (effect.addFormula) {
-        const RollClass = roll.constructor as typeof Roll;
-        rerolled = await new RollClass(`${roll.formula} ${effect.addFormula}`, { ...roll.data, ...rollData }, roll.options).evaluate();
-      }
+      const RollClass = roll.constructor as typeof Roll;
+      const rerolled: Roll = effect.addFormula
+        ? await new RollClass(`${roll.formula} ${effect.addFormula}`, { ...roll.data, ...rollData }, roll.options).evaluate(options)
+        : await roll.reroll(options);
       if (effect.keep === "higher") return (rerolled.total ?? 0) >= (roll.total ?? 0) ? rerolled : roll;
       if (effect.keep === "lower") return (rerolled.total ?? 0) <= (roll.total ?? 0) ? rerolled : roll;
       return rerolled;
@@ -151,8 +150,8 @@ export async function applyBonusEffect(roll: Roll, effect: BonusEffect, rollData
       return new RollClass(effect.formula, { ...roll.data, ...rollData }, roll.options).evaluate();
     }
     case "outcome": {
-      const changed = await roll.clone().evaluate();
-      foundry.utils.setProperty(changed, "options", foundry.utils.duplicate(roll.options));
+      // A copy with the same dice (clone() would roll them again)
+      const changed = (roll.constructor as typeof Roll).fromData(JSON.parse(JSON.stringify(roll))) as Roll;
       foundry.utils.setProperty(changed, "options.success", effect.success);
       return changed;
     }

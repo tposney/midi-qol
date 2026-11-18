@@ -86,6 +86,12 @@ describe("normaliseChanges / previewSteps", () => {
     expect(previewSteps(["A", "B", "C", "D"], assembled)).toEqual(["A", "i", "[w](B -> r)", "D"]);
   });
 
+  it("an insert with before and after is refused", () => {
+    const { changes, problems } = normaliseChanges([{ kind: "insert", step: "x", before: "B", after: "A" }], "call");
+    expect(changes).toEqual([]);
+    expect(problems[0]).toContain("not both");
+  });
+
   it("stepsUsed lists inserted, replacement and wrapper steps once", () => {
     expect(stepsUsed([
       { kind: "insert", step: "i", after: "A", layer: "global" },

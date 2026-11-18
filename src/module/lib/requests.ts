@@ -77,8 +77,14 @@ export function askUser<T>(user: User.Implementation, spec: AskSpec<T>): MidiReq
       waits.get(request.id)?.end();
       if (how !== "player") void sendEvent(user.id!, { to: "asked", id: request.id, event: "settled", how });
       Hooks.callAll("midi-qol.requestSettled", request, how);
+    },
+    onFailed: () => {
+      waits.get(request.id)?.end();
+      void sendEvent(user.id!, { to: "asked", id: request.id, event: "settled", how: "error" });
+      Hooks.callAll("midi-qol.requestSettled", request, "error");
     }
   }, { id: foundry.utils.randomID() }));
+  Hooks.callAll("midi-qol.requestStarted", request);
   if (spec.gmChoices) {
     const wait = beginPlayerWait<T>({
       kind: spec.kind, userId: user.id!, actorUuid: spec.actorUuid, tokenUuid: spec.tokenUuid, label: spec.label,
@@ -86,7 +92,8 @@ export function askUser<T>(user: User.Implementation, spec: AskSpec<T>): MidiReq
     });
     if (wait) {
       waits.set(request.id, wait);
-      void request.settled.then(() => waits.delete(request.id));
+      const forget = () => { waits.delete(request.id); };
+      void request.settled.then(forget, forget);
       void wait.settled.then(({ value }) => request.settle(value, "gm"));
     }
   }
@@ -103,7 +110,6 @@ export function askUser<T>(user: User.Implementation, spec: AskSpec<T>): MidiReq
       console.warn(`midi-qol | request ${spec.type} to ${user.name} failed`, err);
       request.settleWith(spec.fallback, "error");
     });
-  Hooks.callAll("midi-qol.requestStarted", request);
   return request;
 }
 

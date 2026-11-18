@@ -109,6 +109,7 @@ export function normaliseChanges(input: readonly unknown[], layer: StepLayer, op
     switch (change?.kind) {
       case "insert": {
         if (!str(change.step) || (!str(change.before) && !str(change.after))) { problems.push(`insert needs step and before or after: ${describe()}`); continue; }
+        if (str(change.before) && str(change.after)) { problems.push(`insert takes before or after, not both: ${describe()}`); continue; }
         const before = str(change.before) ? options.insertAnchor?.(change.before, "before") ?? change.before : undefined;
         const after = str(change.after) ? options.insertAnchor?.(change.after, "after") ?? change.after : undefined;
         changes.push({ kind: "insert", step: change.step, before, after, layer, priority, source });
