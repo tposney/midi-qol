@@ -55,22 +55,34 @@ export class DialogCountdown {
     this.#options.onExpire();
   }
 
-  pause() {
+  /** `notify` false: the requester paused it (lib/requests.ts), so onPause isn't told again. */
+  pause(notify = true) {
     if (this.#paused || this.#done || !this.#total) return;
     this.#remaining = Math.max(0, this.#deadline - Date.now());
     window.clearInterval(this.#interval);
     this.#interval = undefined;
     this.#paused = true;
     this.#draw();
-    this.#options.onPause?.(true);
+    if (notify) this.#options.onPause?.(true);
   }
 
-  resume() {
+  resume(notify = true) {
     if (!this.#paused || this.#done) return;
     this.#paused = false;
     this.#start();
     this.#draw();
-    this.#options.onPause?.(false);
+    if (notify) this.#options.onPause?.(false);
+  }
+
+  /** Show the time another client's deadline has left (it owns the expiry: lib/requests.ts). */
+  sync(remainingMs: number) {
+    if (this.#done || !this.#total) return;
+    this.#remaining = Math.min(this.#total, Math.max(0, remainingMs));
+    if (!this.#paused) {
+      window.clearInterval(this.#interval);
+      this.#start();
+    }
+    this.#draw();
   }
 
   /** The dialog was answered or closed: no more ticking, and no expiry. */

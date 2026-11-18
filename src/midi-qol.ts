@@ -286,6 +286,7 @@ Object.assign(globalThis.MidiQOL, {
       previewFlow(activity, options, configSettings.savesBeforeDamage ? "midi-qol.savesFirst" : "midi-qol.standard")
   },
   steps: stepsApi,
+  requests: requestsApi,
   damageCalculation: { get: getDamageCalculationStep, register: registerDamageCalculationStep, remove: removeDamageCalculationStep, order: damageCalculationOrder },
   UNMEASURABLE_DISTANCE,
   getItemFromEffectOrigin,
@@ -472,6 +473,7 @@ Hooks.once('init', async function () {
   Hooks.on("midi-qol.ConfigSettingsChanged", refreshServices);
   Hooks.callAll("midi-qol.registerServices", servicesApi);
   setupCATIntegration();
+  setupRequests();
   setupPlayerWaits();
   setupPlayerWaitsUI();
   setupDialogCountdowns();
@@ -1056,6 +1058,7 @@ import { registerBonusApprovalQuery } from "./module/services/rollBonuses/approv
 import { registerDamageMessageSummary } from "./module/damage/messages.js";
 import { defineDamageContributionsService } from "./module/services/damageContributions/service.js";
 import { previewFlow, stepsApi } from "./module/steps/api.js";
+import { requestsApi, setupRequests } from "./module/lib/requests.js";
 import type { Activity } from "./globals.js";
 import { defineFlankingService } from "./module/services/flanking/service.js";
 import { applyCalculatedDamage, registerDamageApplication } from "./module/damage/application.js";
