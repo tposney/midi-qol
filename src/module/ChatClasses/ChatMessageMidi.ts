@@ -145,7 +145,20 @@ export function setupChatMessageMidi() {
   // doing both listed `midi-damage-application` twice (harmless, but it mutates the system's array).
 }
 
-export function defineChatMessageMidiClass(baseClass: ChatMessage.ImplementationClass) {
+/** What ChatMessageMidi adds to dnd5e's chat message (dnd5e's own methods it overrides keep their types) */
+export interface ChatMessageMidiMembers {
+  maskAttackRolls(html: HTMLElement): void;
+  applyChatVisibility(html: HTMLElement): void;
+  noDiceClicks(event: Event): void;
+}
+
+/**
+ * The class defineChatMessageMidiClass returns. Declared rather than inferred: TypeScript 5.9 crashes writing the
+ * inferred class type over fvtt-types' ChatMessage into the declarations (npm run generate:types).
+ */
+export type ChatMessageMidiClass = new (...args: ConstructorParameters<ChatMessage.ImplementationClass>) => ChatMessage.Implementation & ChatMessageMidiMembers;
+
+export function defineChatMessageMidiClass(baseClass: ChatMessage.ImplementationClass): ChatMessageMidiClass {
   return class ChatMessageMidi extends baseClass /*globalThis.dnd5e.documents.ChatMessage5e*/ {
 
     /**
