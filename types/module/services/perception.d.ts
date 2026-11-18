@@ -1,4 +1,4 @@
-import { defineService } from "../../api/services.js";
+import { defineService } from "../api/services.js";
 /** "sight": the sight detection modes and blindsight; "all": every mode the observer has. */
 export type SenseModes = "sight" | "all" | string[];
 export interface SenseQuery {
@@ -23,7 +23,7 @@ interface MidiPerceptionProvider extends PerceptionProvider {
     imprecise(modeId: string): boolean;
 }
 export declare const midiPerception: MidiPerceptionProvider;
-declare module "../../api/services.js" {
+declare module "../api/services.js" {
     interface MidiServices {
         perception: PerceptionProvider;
     }

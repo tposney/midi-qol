@@ -1,6 +1,6 @@
-import { Activity } from "../../../globals.js";
-import { defineService } from "../../api/services.js";
-import { CoverPosition } from "../../utils.js";
+import { Activity } from "../../globals.js";
+import { defineService } from "../api/services.js";
+import { CoverPosition } from "../utils.js";
 export type CoverLevel = "none" | "half" | "threeQuarters" | "total";
 /**
  * Tokens are token documents, as everywhere in midi's services. A provider that needs the canvas token reads
@@ -32,7 +32,7 @@ export interface CoverProvider {
     walls?: "midi" | "provider";
 }
 export declare function coverAnswer(level: CoverLevel): CoverAnswer;
-declare module "../../api/services.js" {
+declare module "../api/services.js" {
     interface MidiServices {
         cover: CoverProvider;
     }

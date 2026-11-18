@@ -1,9 +1,9 @@
-import type { Activity } from "../../../globals.js";
-import { defineService } from "../../api/services.js";
-import type { Workflow } from "../../Workflow.js";
-import type { RollModifierTracker } from "../../lib/RollModifierTracker.js";
-import { RollKind, RollModifier } from "../../rules/rollModifiers.js";
-export type { RollKind, RollModifier, RollModifierEffect } from "../../rules/rollModifiers.js";
+import type { Activity } from "../../globals.js";
+import { defineService } from "../api/services.js";
+import type { Workflow } from "../Workflow.js";
+import type { RollModifierTracker } from "../lib/RollModifierTracker.js";
+import { RollKind, RollModifier } from "../rules/rollModifiers.js";
+export type { RollKind, RollModifier, RollModifierEffect } from "../rules/rollModifiers.js";
 export interface RollQuery {
     kind: RollKind;
     actor: Actor.Implementation;
@@ -22,7 +22,7 @@ export interface RollQuery {
 export interface RollModifierContributor {
     for(query: RollQuery): readonly RollModifier[] | undefined | Promise<readonly RollModifier[] | undefined>;
 }
-declare module "../../api/services.js" {
+declare module "../api/services.js" {
     interface MidiServices {
         rollModifiers: RollModifierContributor;
     }

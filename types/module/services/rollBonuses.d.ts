@@ -1,8 +1,8 @@
-import type { Activity } from "../../../globals.js";
-import { defineService } from "../../api/services.js";
-import type { Workflow } from "../../Workflow.js";
-import { type BonusCost, type BonusEffect, type BonusPhase, type BonusRollKind, type Outcome } from "./rules.js";
-export type { BonusCost, BonusEffect, BonusPhase, BonusRollKind, Outcome } from "./rules.js";
+import type { Activity } from "../../globals.js";
+import { defineService } from "../api/services.js";
+import type { Workflow } from "../Workflow.js";
+import { type BonusCost, type BonusEffect, type BonusPhase, type BonusRollKind, type Outcome } from "../rules/rollBonuses.js";
+export type { BonusCost, BonusEffect, BonusPhase, BonusRollKind, Outcome } from "../rules/rollBonuses.js";
 export interface RollBonusQuery {
     kind: BonusRollKind;
     actor: Actor.Implementation;
@@ -53,7 +53,7 @@ export interface RollBonusContributor {
     kinds?: readonly BonusRollKind[];
     for(query: RollBonusQuery): readonly BonusCandidate[] | undefined | Promise<readonly BonusCandidate[] | undefined>;
 }
-declare module "../../api/services.js" {
+declare module "../api/services.js" {
     interface MidiServices {
         rollBonuses: RollBonusContributor;
     }

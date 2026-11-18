@@ -1,6 +1,6 @@
-import type { Activity } from "../../../globals.js";
-import { defineService } from "../../api/services.js";
-import type { TargetConfirmationOptions } from "../../apps/TargetConfirmation.js";
+import type { Activity } from "../../globals.js";
+import { defineService } from "../api/services.js";
+import type { TargetConfirmationOptions } from "../apps/TargetConfirmation.js";
 export interface TargetConfirmationRequest {
     activity: Activity;
     /** "preTemplate": before the use; "postTemplate": after an area was placed. */
@@ -10,7 +10,7 @@ export interface TargetConfirmationRequest {
 export interface TargetConfirmationProvider {
     confirm(request: TargetConfirmationRequest): Promise<boolean>;
 }
-declare module "../../api/services.js" {
+declare module "../api/services.js" {
     interface MidiServices {
         targetConfirmation: TargetConfirmationProvider;
     }
