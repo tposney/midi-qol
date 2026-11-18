@@ -31,6 +31,13 @@ for (const line of output.split("\n")) {
 
 if (tolerated) console.log(`generate-types: tolerated ${tolerated} known fvtt-types portability errors (${[...TOLERATED].join("/")}).`);
 
+// tsc exiting non-zero without any diagnostic means it crashed (a stack trace, declarations half written)
+if (res.status !== 0 && !realErrors.length && !tolerated) {
+  console.error(`generate-types: tsc failed without diagnostics (exit ${res.status ?? res.signal}); declarations are incomplete:`);
+  console.error(output.split("\n").slice(0, 12).join("\n"));
+  process.exit(1);
+}
+
 if (realErrors.length) {
   console.error(`generate-types: ${realErrors.length} non-tolerated declaration error(s):`);
   console.error(realErrors.join("\n"));
