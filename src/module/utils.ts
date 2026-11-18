@@ -1,3 +1,4 @@
+import { crossesOppositeSides, opposedByAngle } from "./rules/flanking.js";
 import { DialogCountdown } from "./lib/dialogCountdown.js";
 import { coverBetween } from "./services/cover.js";
 import { sensesModes } from "./services/perception.js";
@@ -8174,12 +8175,7 @@ function isAngleFlanking(
   const referencePoint = canvas?.grid?.isHexagonal ? getHexCentroid(target) : tokenSourceCenter(target);
   const tokenCenter = tokenSourceCenter(token);
   const allyCenter = tokenSourceCenter(ally);
-  const angleToken = Math.atan2(tokenCenter.y - referencePoint.y, tokenCenter.x - referencePoint.x);
-  const angleAlly = Math.atan2(allyCenter.y - referencePoint.y, allyCenter.x - referencePoint.x);
-  let diff = Math.abs(angleToken - angleAlly);
-  if (diff > Math.PI) diff = 2 * Math.PI - diff; // normalize to [0, π]
-  const MIN_FLANKING_ANGLE = (150 / 180) * Math.PI; // 150° in radians
-  return diff >= MIN_FLANKING_ANGLE;
+  return opposedByAngle(referencePoint, tokenCenter, allyCenter);
 }
 
 
@@ -8195,14 +8191,7 @@ export async function computeFlankedStatus(target: Token.Implementation): Promis
   const targetPos = tokenSourcePosition(target);
   const targetX = targetPos.x;
   const targetY = targetPos.y;
-  const tl = { x: targetX, y: targetY };
-  const tr = { x: targetX + targetPos.width * gridW, y: targetY };
-  const bl = { x: targetX, y: targetY + targetPos.height * gridH };
-  const br = { x: targetX + targetPos.width * gridW, y: targetY + targetPos.height * gridH };
-  const top: [x0: number, y0: number, x1: number, y1: number] = [tl.x, tl.y, tr.x, tr.y];
-  const bottom: [x0: number, y0: number, x1: number, y1: number] = [bl.x, bl.y, br.x, br.y];
-  const left: [x0: number, y0: number, x1: number, y1: number] = [tl.x, tl.y, bl.x, bl.y];
-  const right: [x0: number, y0: number, x1: number, y1: number] = [tr.x, tr.y, br.x, br.y];
+  const targetBox = { x: targetX, y: targetY, width: targetPos.width * gridW, height: targetPos.height * gridH };
 
   while (allies.length > 1) {
     const token = allies.pop();
@@ -8275,12 +8264,7 @@ export async function computeFlankedStatus(target: Token.Implementation): Promis
           const p1 = canvas.grid?.getCenterPoint(tokenPoint)
           const p2 = canvas.grid?.getCenterPoint(allyPoint);
           if (!p1 || !p2) continue;
-          const rayToCheck = new foundry.canvas.geometry.Ray(p1, p2);
-          const flankingTop = rayToCheck.intersectSegment(top) && rayToCheck.intersectSegment(bottom);
-          const flankingLeft = rayToCheck.intersectSegment(left) && rayToCheck.intersectSegment(right);
-          if (flankingLeft || flankingTop) {
-            return true;
-          }
+          if (crossesOppositeSides(targetBox, p1, p2)) return true;
         }
       }
     }
@@ -8315,14 +8299,7 @@ export async function computeFlankingStatus(token: Token.Implementation, target:
   const targetPos = tokenSourcePosition(target);
   const targetX = targetPos.x;
   const targetY = targetPos.y;
-  const tl = { x: targetX, y: targetY };
-  const tr = { x: targetX + targetPos.width * gridW, y: targetY };
-  const bl = { x: targetX, y: targetY + targetPos.height * gridH };
-  const br = { x: targetX + targetPos.width * gridW, y: targetY + targetPos.height * gridH };
-  const top: [x0: number, y0: number, x1: number, y1: number] = [tl.x, tl.y, tr.x, tr.y];
-  const bottom: [x0: number, y0: number, x1: number, y1: number] = [bl.x, bl.y, br.x, br.y];
-  const left: [x0: number, y0: number, x1: number, y1: number] = [tl.x, tl.y, bl.x, bl.y];
-  const right: [x0: number, y0: number, x1: number, y1: number] = [tr.x, tr.y, br.x, br.y];
+  const targetBox = { x: targetX, y: targetY, width: targetPos.width * gridW, height: targetPos.height * gridH };
 
   // Loop through each square covered by attacker and ally
   // Use geometric bounding-box adjacency instead of distancePointToken to avoid
@@ -8377,12 +8354,7 @@ export async function computeFlankingStatus(token: Token.Implementation, target:
         const p1 = canvas.grid?.getCenterPoint(tokenPoint)
         const p2 = canvas.grid?.getCenterPoint(allyPoint);
         if (!p1 || !p2) continue;
-        const rayToCheck = new foundry.canvas.geometry.Ray(p1, p2);
-        const flankingTop = rayToCheck.intersectSegment(top) && rayToCheck.intersectSegment(bottom);
-        const flankingLeft = rayToCheck.intersectSegment(left) && rayToCheck.intersectSegment(right);
-        if (flankingLeft || flankingTop) {
-          return true;
-        }
+        if (crossesOppositeSides(targetBox, p1, p2)) return true;
       }
     }
   }
@@ -8555,22 +8527,9 @@ export async function updateFlankingHighlight(): Promise<void> {
   };
   const [i0, j0, i1, j1] = canvas.grid.getOffsetRange(bounds);
 
-  // Build target edge segments for square grid ray testing
-  let top: [number, number, number, number] | undefined;
-  let bottom: [number, number, number, number] | undefined;
-  let left: [number, number, number, number] | undefined;
-  let right: [number, number, number, number] | undefined;
-
-  if (!canvas.grid.isHexagonal) {
-    const tl = { x: target.x, y: target.y };
-    const tr = { x: target.x + target.document.width * gridW, y: target.y };
-    const bl = { x: target.x, y: target.y + target.document.height * gridH };
-    const br = { x: target.x + target.document.width * gridW, y: target.y + target.document.height * gridH };
-    top = [tl.x, tl.y, tr.x, tr.y];
-    bottom = [bl.x, bl.y, br.x, br.y];
-    left = [tl.x, tl.y, bl.x, bl.y];
-    right = [tr.x, tr.y, br.x, br.y];
-  }
+  // The target's box for the square-grid opposite-sides test
+  const targetBox = canvas.grid.isHexagonal ? undefined
+    : { x: target.x, y: target.y, width: target.document.width * gridW, height: target.document.height * gridH };
 
   // Build token grid points (same multi-square logic as computeFlankingStatus)
   // Use measurePath against target cell centers for hex-grid compatibility
@@ -8595,7 +8554,6 @@ export async function updateFlankingHighlight(): Promise<void> {
 
   // Hex flanking uses centroid + angle
   const centroid = canvas.grid.isHexagonal ? getHexCentroid(target) : undefined;
-  const MIN_FLANKING_ANGLE = (150 / 180) * Math.PI;
 
   // Collect valid cell positions
   const validCells: { i: number; j: number }[] = [];
@@ -8620,25 +8578,15 @@ export async function updateFlankingHighlight(): Promise<void> {
       if (canvas.grid.isHexagonal && centroid) {
         // Hex flanking: check angle from centroid
         for (const tp of tokenPoints) {
-          const tokenCenter = canvas.grid.getCenterPoint(tp);
-          const angleToken = Math.atan2(tokenCenter.y - centroid.y, tokenCenter.x - centroid.x);
-          const angleCandidate = Math.atan2(cellCenter.y - centroid.y, cellCenter.x - centroid.x);
-          let diff = Math.abs(angleToken - angleCandidate);
-          if (diff > Math.PI) diff = 2 * Math.PI - diff;
-          if (diff >= MIN_FLANKING_ANGLE) {
+          if (opposedByAngle(centroid, canvas.grid.getCenterPoint(tp), cellCenter)) {
             isValid = true;
             break;
           }
         }
-      } else if (top && bottom && left && right) {
-        // Square grid: ray through opposite edges test
+      } else if (targetBox) {
+        // Square grid: a line through opposite sides
         for (const tp of tokenPoints) {
-          const p1 = canvas.grid.getCenterPoint(tp);
-          const p2 = cellCenter;
-          const ray = new foundry.canvas.geometry.Ray(p1, p2);
-          const throughTopBottom = ray.intersectSegment(top) && ray.intersectSegment(bottom);
-          const throughLeftRight = ray.intersectSegment(left) && ray.intersectSegment(right);
-          if (throughTopBottom || throughLeftRight) {
+          if (crossesOppositeSides(targetBox, canvas.grid.getCenterPoint(tp), cellCenter)) {
             isValid = true;
             break;
           }
