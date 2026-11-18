@@ -1,8 +1,9 @@
 ### 14.6.14
 * Fixed: *Activity Prefix* off still named midi's activities "Midi …" (since 14.6.9), and Boss Loot FX no longer turned the prefix off, so its animations by activity name didn't play.
-* Fixed: with Simple Cover chosen for *Walls block ranged attacks* or to calculate cover, total cover followed sight walls: a curtain blocked an attack and a window didn't. Total cover from walls is now midi's (walls that block movement) whichever module is chosen; Simple Cover and Alternative Token Cover supply partial cover. AutoCover is unchanged.
+* Fixed: with Simple Cover chosen for *Walls block ranged attacks* or to calculate cover, total cover followed sight walls: a curtain blocked an attack and a window didn't. Total cover from walls is now midi's (walls that block movement) whichever module is chosen; Simple Cover supplies partial cover. AutoCover is unchanged.
 * Fixed: target confirmation for a target in cover ignored a cover status on the target.
-* Fixed: with Alternative Token Cover, a DEX save's cover against an area was measured from the caster, not the area's origin.
+* Fixed: a save or check activity's own bonus was left out of saves and checks midi rolls for a use and of those rolled from the card's Save and Check buttons; rolls from those buttons were not linked to the card.
+* Alternative Token Cover 14.0.1 (Foundry 14) is supported. With it: cover is measured from the attacker, including a save against an area; total cover follows walls that block sight; in a scene with levels a wall assigned to no level gives no cover; cover is recalculated when the attacker moves, not when walls change.
 * Changed: a stored *Alternative Token Visibility* choice for walls or cover (it did nothing) becomes *Centre* / *None*.
 
 ### 14.6.13

@@ -1303,6 +1303,7 @@ export type DamageListEntry = PreSetupDamageListEntry & {
 // Temporary, so that I can at least type them to _something_
 export type ActivitySave = {
   ability: Set<string>;
+  bonus?: string;
   dc: {
     calculation: string;
     formula: string;
@@ -1313,6 +1314,7 @@ export type ActivitySave = {
 export type ActivityCheck = {
   ability: string;
   associated: Set<string>;
+  bonus?: string;
   dc: {
     calculation: string;
     formula: string;
@@ -1445,6 +1447,9 @@ export interface Activity extends AnyMutableObject {
   };
   refund: (consumed: unknown) => Promise<void>;
   getRollData: () => AnyMutableObject;
+  /** Source data dnd5e puts on a message made for this activity */
+  messageSources: Record<string, unknown>;
+  spellcastingAbility?: string;
   rollAttack?(config: RollProcessConfig, dialog: RollDialogConfig, message: RollMessageConfig): Promise<Roll[] | null>;
   rollDamage(config: RollProcessConfig, dialog: RollDialogConfig, message: RollMessageConfig): Promise<Roll[] | void>;
   rollFormula?(config: RollProcessConfig, dialog: RollDialogConfig, message: RollMessageConfig): Promise<Roll[] | void>;
@@ -1593,7 +1598,7 @@ export type DamageDescription = {
   midiAbsorbed?: { value: number; active?: DamageDescription["active"] };
 };
 
-type BasicRollConfig = {
+export type BasicRollConfig = {
   parts?: string[];
   data?: AnyObject;
   situational?: boolean;
