@@ -61,12 +61,23 @@ export function registerDamageApplication() {
  */
 export async function applyCalculatedDamage(actor: Actor.Implementation, summary: DamageSummary,
   application: CalculatedDamageApplication = {}, options: Record<string, unknown> = {}): Promise<Actor.Implementation> {
+  return applyThroughDnd5e(actor, summary.damages, summary, application, options);
+}
+
+/** dnd5e's applyDamage with its own calculation (the card's ×N), `application` reaching the update. */
+export async function applyDamageWithOptions(actor: Actor.Implementation, damages: object[],
+  application: CalculatedDamageApplication = {}, options: Record<string, unknown> = {}): Promise<Actor.Implementation> {
+  return applyThroughDnd5e(actor, damages, undefined, application, options);
+}
+
+async function applyThroughDnd5e(actor: Actor.Implementation, damages: object[], summary: DamageSummary | undefined,
+  application: CalculatedDamageApplication, options: Record<string, unknown>): Promise<Actor.Implementation> {
   const applyOptions = options as DamageOptions;
-  Object.defineProperty(applyOptions, PRECALCULATED, { value: summary, enumerable: false, configurable: true });
+  if (summary) Object.defineProperty(applyOptions, PRECALCULATED, { value: summary, enumerable: false, configurable: true });
   Object.defineProperty(applyOptions, UPDATE_OPTIONS, { value: application, enumerable: false, configurable: true });
   try {
     // @ts-expect-error no dnd5e-types
-    return await actor.applyDamage(summary.damages, applyOptions);
+    return await actor.applyDamage(damages, applyOptions);
   } finally {
     delete applyOptions[PRECALCULATED];
     delete applyOptions[UPDATE_OPTIONS];

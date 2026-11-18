@@ -1,4 +1,4 @@
-import { afterDamageApplied, applyCalculatedDamage } from "./services/damageApplication.js";
+import { afterDamageApplied, applyCalculatedDamage, applyDamageWithOptions } from "./services/damageApplication.js";
 import { ALL_DAMAGE_KEY, checkRule, configSettings } from "./settings.js";
 import { _closePlayerRollDialogs, playerWaitHandlers } from "./lib/playerWaits.js";
 import { DialogCountdown, dialogCountdownOptions } from "./lib/dialogCountdown.js";
@@ -992,6 +992,20 @@ function flashTokenBarSaves(data: {
  * Attached non-enumerable, on the options object itself: hook handlers' changes still reach the actor update, and the
  * card is not copied into the undo data midi stores.
  */
+/**
+ * The damage card's stored values (apply, "=", reverse) set through dnd5e's applyDamage: dnd5e fires preApplyDamage,
+ * modifyTokenAttribute and applyDamage and makes the update. `updates` (absolute values) are what later
+ * preApplyDamage handlers see and may change, as when midi fired the hook itself. True when the update was made (no
+ * handler cancelled it).
+ */
+async function applyStoredHP(actor: Actor.Implementation, amount: number, updates: Record<string, unknown>,
+  hookOptions: Record<string, unknown>, updateOptions: Record<string, unknown>): Promise<boolean> {
+  let applied = false;
+  afterDamageApplied(hookOptions, async () => { applied = true; });
+  await applyCalculatedDamage(actor, { damages: [], amount, temp: 0, tempMax: 0 }, { updateOptions, updates }, hookOptions);
+  return applied;
+}
+
 function withDamageOrigin<T>(options: T, undo = false): T {
   const uuid = foundry.utils.getProperty(options as object, "midi.itemCardUuid");
   const card = typeof uuid === "string" ? fromUuidSync(uuid) : undefined;
@@ -1723,21 +1737,18 @@ export let processUndoDamageCard = (message: ChatMessage.Implementation, html: H
           await vitalityItem.update({ "system.uses.spent": undoItem.oldVitalitySpent });
           vitalityUpdated = true;
         }
-        if (actor?.isOwner && Hooks.call("dnd5e.preApplyDamage", actor, newHP - oldHP, updates, withDamageOrigin(calcDamageOptions as DamageApplicationOptions, true)) !== false) {
-          // The actor update - when no changes are made will update the passed options with a target
+        if (actor?.isOwner) {
           // Set midiVitalityUpdatePending if vitality was updated to prevent double checkWounded calls
-          const mergedOptions = foundry.utils.mergeObject(calcDamageOptions, updateOptions ?? {}, { inplace: false }) as any;
+          const mergedOptions = foundry.utils.mergeObject(calcDamageOptions ?? {}, updateOptions ?? {}, { inplace: false }) as Record<string, unknown>;
           if (vitalityUpdated) mergedOptions.midiVitalityUpdatePending = true;
-          await actor.update(updates, mergedOptions)
-            .then(updatedActor => {
-              Hooks.callAll("dnd5e.applyDamage", updatedActor ?? actor, newHP - oldHP, withDamageOrigin(calcDamageOptions as DamageApplicationOptions));
-              // Update display to show what apply would do (original damage display)
-              if (undoItem) updateDamageCardDisplay(html, actorUuid, undoItem, false);
-              // Update HP status for this target (reversed = not applied)
-              updateHPStatusHeader(html, actorUuid, false);
-              return updatedActor;
-            })
-          await syncFailedDeathSaves(actor, newDeathFailures, oldDeathFailures);
+          const hookOptions = withDamageOrigin((calcDamageOptions ?? {}) as Record<string, unknown>, true);
+          if (await applyStoredHP(actor, newHP - oldHP, updates as Record<string, unknown>, hookOptions, mergedOptions)) {
+            // Update display to show what apply would do (original damage display)
+            if (undoItem) updateDamageCardDisplay(html, actorUuid, undoItem, false);
+            // Update HP status for this target (reversed = not applied)
+            updateHPStatusHeader(html, actorUuid, false);
+            await syncFailedDeathSaves(actor, newDeathFailures, oldDeathFailures);
+          }
         }
         ev.stopPropagation();
       }
@@ -1778,15 +1789,11 @@ export let processUndoDamageCard = (message: ChatMessage.Implementation, html: H
         const options = foundry.utils.mergeObject(calcDamageOptions ?? {}, updateOptions ?? {}, { inplace: false }) as any;
         // The card's vitality is set here: the vitality overflow handling must not add to it
         if (vitalityUpdated) options.midiVitalityUpdatePending = options.midiVitalityHandled = true;
-        if (actor?.isOwner && Hooks.call("dnd5e.preApplyDamage", actor, amount, update, withDamageOrigin(options as DamageApplicationOptions)) !== false) {
-          await actor.update(update, options).then(updatedActor => {
-            Hooks.callAll("dnd5e.applyDamage", actor, amount, withDamageOrigin(options));
-            // Update display to show what undo would do (undo mode)
-            if (applyItem) updateDamageCardDisplay(html, actorUuid, applyItem, true);
-            // Update HP status for this target (applied = true)
-            updateHPStatusHeader(html, actorUuid, true);
-            return updatedActor;
-          });
+        if (actor?.isOwner && await applyStoredHP(actor, amount, update as Record<string, unknown>, withDamageOrigin(options as Record<string, unknown>), options)) {
+          // Update display to show what undo would do (undo mode)
+          if (applyItem) updateDamageCardDisplay(html, actorUuid, applyItem, true);
+          // Update HP status for this target (applied = true)
+          updateHPStatusHeader(html, actorUuid, true);
           await syncFailedDeathSaves(actor, oldDeathFailures, newDeathFailures);
         }
         ev.stopPropagation();
@@ -1833,20 +1840,18 @@ export let processUndoDamageCard = (message: ChatMessage.Implementation, html: H
           await vitalityItem.update({ "system.uses.spent": oldVitalitySpent });
           vitalityUpdated = true;
         }
-        if (actor?.isOwner && Hooks.call("dnd5e.preApplyDamage", actor, amount, updates, withDamageOrigin(calcDamageOptions as DamageApplicationOptions, true)) !== false) {
-          // The actor update - when no changes are made will update the passed options with a target
+        if (actor?.isOwner) {
           // Set midiVitalityUpdatePending if vitality was updated to prevent double checkWounded calls
-          const options = foundry.utils.mergeObject(calcDamageOptions ?? {}, updateOptions ?? {}, { inplace: false }) as any;
+          const options = foundry.utils.mergeObject(calcDamageOptions ?? {}, updateOptions ?? {}, { inplace: false }) as Record<string, unknown>;
           if (vitalityUpdated) options.midiVitalityUpdatePending = true;
-          await actor.update(updates, options).then(updatedActor => {
-            Hooks.callAll("dnd5e.applyDamage", actor, amount, withDamageOrigin(calcDamageOptions as DamageApplicationOptions));
+          const hookOptions = withDamageOrigin((calcDamageOptions ?? {}) as Record<string, unknown>, true);
+          if (await applyStoredHP(actor, amount, updates as Record<string, unknown>, hookOptions, options)) {
             // Update display to show what apply would do (original damage display)
             updateDamageCardDisplay(html, actorUuid, undoEntry, false);
             // Update HP status for this target (reversed = not applied)
             updateHPStatusHeader(html, actorUuid, false);
-            return updatedActor;
-          })
-          await syncFailedDeathSaves(actor, undoEntry.newDeathFailures, undoEntry.oldDeathFailures);
+            await syncFailedDeathSaves(actor, undoEntry.newDeathFailures, undoEntry.oldDeathFailures);
+          }
         }
         ev.stopPropagation();
       })();
@@ -1889,15 +1894,11 @@ export let processUndoDamageCard = (message: ChatMessage.Implementation, html: H
           const options = foundry.utils.mergeObject(calcDamageOptions ?? {}, updateOptions ?? {}, { inplace: false }) as any;
           // The card's vitality is set here: the vitality overflow handling must not add to it
           if (vitalityUpdated) options.midiVitalityUpdatePending = options.midiVitalityHandled = true;
-          if (actor?.isOwner && Hooks.call("dnd5e.preApplyDamage", actor, amount, updates, withDamageOrigin(options as DamageApplicationOptions)) !== false) {
-            await actor.update(updates, options).then(updatedActor => {
-              Hooks.callAll("dnd5e.applyDamage", actor, amount, withDamageOrigin(calcDamageOptions as DamageApplicationOptions));
-              // Update display to show what undo would do (undo mode)
-              updateDamageCardDisplay(html, actorUuid, undoEntry, true);
-              // Update HP status for this target (applied = true)
-              updateHPStatusHeader(html, actorUuid, true);
-              return updatedActor;
-            });
+          if (actor?.isOwner && await applyStoredHP(actor, amount, updates as Record<string, unknown>, withDamageOrigin(options as Record<string, unknown>), options)) {
+            // Update display to show what undo would do (undo mode)
+            updateDamageCardDisplay(html, actorUuid, undoEntry, true);
+            // Update HP status for this target (applied = true)
+            updateHPStatusHeader(html, actorUuid, true);
             await syncFailedDeathSaves(actor, oldDeathFailures, newDeathFailures);
           }
         } else {
@@ -1993,30 +1994,32 @@ export let processUndoDamageCard = (message: ChatMessage.Implementation, html: H
             critical: false, vitality: !!vitalityItem   // the stored entry does not say whether the hit was critical
           }) : undefined;
 
+          if (!actor) return;
           // Apply HP damage (excluding vitality) with flag to prevent hook from also updating vitality
           applyOptions.midiVitalityHandled = true;
-          // @ts-expect-error no dnd5e-types
-          await actor?.applyDamage(hpDamageDetail, applyOptions);
-          if (actor && deathFailures) {
+          const vitalityChanges = !!vitalityItem && newSpent !== currentSpent;
+          // One update: the death save failures and the max HP reduction (from the stored value, as dnd5e) with the HP
+          const updates: Record<string, unknown> = {};
+          if (deathFailures) updates["system.attributes.death.failure"] = deathFailures.to;
+          if (multipliedTempMaxDamage !== 0) {
+            // @ts-expect-error no dnd5e types
+            updates["system.attributes.hp.tempmax"] = (actor.system._source?.attributes?.hp?.tempmax ?? 0) - multipliedTempMaxDamage;
+          }
+          const forwarded: Record<string, unknown> = { ...(updateOptions ?? {}) };
+          // The vitality item's update does the wounded check
+          if (vitalityChanges) forwarded.midiVitalityUpdatePending = true;
+          let applied = false;
+          afterDamageApplied(applyOptions as unknown as Record<string, unknown>, async () => { applied = true; });
+          await applyDamageWithOptions(actor, hpDamageDetail, { updateOptions: forwarded, updates }, applyOptions as unknown as Record<string, unknown>);
+          if (!applied) return;
+          if (deathFailures) {
             undoEntry.oldDeathFailures ??= deathFailures.from;
             undoEntry.newDeathFailures = deathFailures.to;
-            // @ts-expect-error no dnd5e types
-            await actor.update({ "system.attributes.death.failure": deathFailures.to });
             await syncFailedDeathSaves(actor, deathFailures.from, deathFailures.to);
           }
-
-          // Now update vitality if there was any change
-          if (vitalityItem && newSpent !== currentSpent) {
+          if (vitalityChanges) {
             // @ts-expect-error item update for uses.spent
             await vitalityItem.update({ "system.uses.spent": newSpent });
-          }
-
-          // Apply tempMax (max HP reduction) if there was any maximum damage
-          if (multipliedTempMaxDamage !== 0 && actor) {
-            // @ts-expect-error no dnd5e types
-            const currentTempMax = actor.system.attributes.hp.tempmax ?? 0;
-            // @ts-expect-error no dnd5e types for hp.tempmax
-            await actor.update({ "system.attributes.hp.tempmax": currentTempMax - multipliedTempMaxDamage });
           }
 
           // Update display to show what undo would do (undo mode)
