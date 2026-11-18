@@ -325,6 +325,7 @@
     "chooseTokens",
     "cover",
     "damageModifiers",
+    "distance",
     "perception",
     "rollBonuses",
     "rollModifiers",

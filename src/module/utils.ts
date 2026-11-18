@@ -1,3 +1,5 @@
+import { rangeBand, rangeInGridUnits } from "./rules/range.js";
+import { measureDistance } from "./services/distance.js";
 import { bonusPromptService } from "./services/bonusPrompt.js";
 import { applyOfferedBonus, collectBonusCandidates, type BonusCost, type BonusPhase, type OfferedBonus, type RollBonusQuery } from "./services/rollBonuses.js";
 import { addCosts as addBonusCosts, canAfford as canAffordBonus } from "./rules/rollBonuses.js";
@@ -3568,8 +3570,16 @@ export function measureTokens(t1: unknown, t2: unknown, options: DistanceOptions
   return distance < 0 ? { ok: false, reason: "blocked" } : { ok: true, distance };
 }
 
-/** -1 when walls block; UNMEASURABLE_DISTANCE (Infinity) when the tokens can't be measured (measureTokens says why) */
+/**
+ * -1 when walls block; UNMEASURABLE_DISTANCE (Infinity) when the tokens can't be measured (measureTokens says why).
+ * Asks the distance service's provider (midi's own measure, midiDistance, unless another module provides one).
+ */
 export function getDistance(t1: any, t2: any, options: DistanceOptions = {}): number {
+  return measureDistance(t1, t2, options);
+}
+
+/** midi's measurement: the "midi-qol" provider of the distance service */
+export function midiDistance(t1: any, t2: any, options: DistanceOptions = {}): number {
   if (unmeasurable(t1, t2)) return UNMEASURABLE_DISTANCE;
   t1 = spaceToken(getPlaceable(t1) ?? t1);
   t2 = spaceToken(getPlaceable(t2) ?? t2);
@@ -3911,26 +3921,8 @@ export function checkActivityRange(activityIn: Activity, tokenRef: TokenOrDocume
     }
     if (longRange > 0 && longRange < range) longRange = range;
     if (activity.range?.units) {
-      switch (activity.range.units) {
-        case "mi": // miles - assume grid units are feet or miles - ignore furlongs/chains whatever
-          if (["feet", "ft"].includes(canvas.scene?.grid.units?.toLocaleLowerCase())) {
-            range *= 5280;
-            longRange *= 5280;
-          } else if (["yards", "yd", "yds"].includes(canvas.scene?.grid.units?.toLocaleLowerCase())) {
-            range *= 1760;
-            longRange *= 1760;
-          }
-          break;
-        case "km": // kilometers - assume grid units are meters or kilometers
-          if (["meter", "m", "meters", "metre", "metres"].includes(canvas.scene?.grid.units?.toLocaleLowerCase())) {
-            range *= 1000;
-            longRange *= 1000;
-          }
-          break;
-        // "none" "self" "ft" "m" "any" "spec" undefined
-        default:
-          break;
-      }
+      range = rangeInGridUnits(range, activity.range.units, canvas.scene?.grid.units);
+      longRange = rangeInGridUnits(longRange, activity.range.units, canvas.scene?.grid.units);
     }
     if (range < longRange && activity.actionType === "rwak" &&
       (actor?.flags?.dnd5e?.sharpShooter || actor?.flags?.[MODULE_ID]?.sharpShooter)) {
@@ -4007,7 +3999,8 @@ export function checkActivityRange(activityIn: Activity, tokenRef: TokenOrDocume
       // Fudge factor is applied in getDistance - no additional adjustment needed here
       const distance = Math.max(0, parseFloat(measured.distance.toFixed(isMetric ? 1 : 0)));
 
-      if ((longRange !== 0 && distance > longRange) || (distance > range && longRange === 0)) {
+      const band = rangeBand(distance, range, longRange);
+      if (band === "beyond") {
         log(`${target.name} is too far ${distance} from your character you cannot hit`)
         if (checkMechanic("checkRange") === "longdisadv" && isRangeCheckable(activity)) {
           return {
@@ -4025,7 +4018,7 @@ export function checkActivityRange(activityIn: Activity, tokenRef: TokenOrDocume
           }
         }
       }
-      if (distance > range) return {
+      if (band === "long") return {
         result: "dis",
         reason: `${actor?.name}'s target is ${Math.round(distance * 10) / 10} away and your range is only ${longRange || range}`,
         range,
