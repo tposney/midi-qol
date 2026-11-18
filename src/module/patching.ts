@@ -1,4 +1,5 @@
 import { collectRollModifiers } from "./services/rollModifiers.js";
+import { collectBonusCandidates, type BonusRollKind, type RollBonusQuery } from "./services/rollBonuses.js";
 import { initHiding } from "./lib/hiding.js";
 import { log, i18n, error, i18nFormat, warn, debugEnabled, GameSystemConfig, MODULE_ID, gameStats, getStaticID, MIDI_IMPLYING_STATUSES } from "../midi-qol.js";
 import { saveDisplayMode } from "./lib/saveVisibility.js";
@@ -627,7 +628,19 @@ export function collectBonusFlags(actor: Actor.Implementation, category: string,
 export async function bonusCheck(actor: Actor.Implementation, result: Roll, category: string, detail = "", messageData: any = {}): Promise<Roll> {
   detail ||= dnd5eRollType(messageData) ?? ""; // death saves -> "death", tool checks -> "tool"
   let bonusFlags = collectBonusFlags(actor, category, detail);
-  if (bonusFlags.length > 0) {
+  // rollBonuses contributors: before the result, or after a failure ("fail.<subject>")
+  const failure = detail.startsWith("fail");
+  const subject = failure ? detail.split(".")[1] ?? "all" : detail;
+  const kind: BonusRollKind = subject === "death" ? "death" : category.startsWith("skill") ? "skill"
+    : subject === "tool" || category.startsWith("tool") ? "tool" : category.startsWith("save") ? "save" : "check";
+  const bonusQuery: RollBonusQuery = {
+    kind, actor,
+    ability: kind === "save" || kind === "check" ? (subject !== "all" ? subject : undefined) : undefined,
+    skill: kind === "skill" && subject !== "all" ? subject : undefined
+  };
+  const bonusPhase = failure ? "postResult" : "preResult";
+  const candidates = await collectBonusCandidates(bonusQuery, bonusPhase, result, failure ? { success: false } : undefined);
+  if (bonusFlags.length > 0 || candidates.length > 0) {
     const data = {
       actor,
       roll: result,
@@ -668,7 +681,7 @@ export async function bonusCheck(actor: Actor.Implementation, result: Roll, cate
       data.roll,
       "roll",
       // A save or check rolled for a use card is linked to it; the bonus is shown there
-      { messageData, card: game.messages?.get(messageData?.system?.origin?.id ?? messageData?.system?.origin ?? ""), anchor: "saves" }
+      { messageData, card: game.messages?.get(messageData?.system?.origin?.id ?? messageData?.system?.origin ?? ""), anchor: "saves", bonusQuery, bonusPhase, candidates }
     );
     if (newRoll) result = newRoll;
   }
@@ -1446,11 +1459,10 @@ async function doD20Roll(this: Actor.Implementation, wrapped, kind: D20RollKind,
       // @ts-expect-error no dnd5e-types
       if (bonus.failBonuses && Number.isNumeric(result[0].options.target) && result[0].isSuccess === false) {
         // A failed roll with optional fail bonuses (flags.midi-qol.optional.NAME.<type>.fail) offers them
+        // bonusCheck also asks rollBonuses contributors, so it runs with or without fail flags
         const hasSpecific = collectBonusFlags(this, kind.rollType, `fail.${rollId}`).length > 0;
-        if (hasSpecific || collectBonusFlags(this, kind.rollType, "fail.all").length) {
-          result[0] = await bonusCheck(this, result[0], kind.rollType, hasSpecific ? `fail.${rollId}` : "fail.all", message.data);
-          DSNMarkDiceDisplayed(result);
-        }
+        result[0] = await bonusCheck(this, result[0], kind.rollType, hasSpecific ? `fail.${rollId}` : "fail.all", message.data);
+        DSNMarkDiceDisplayed(result);
       }
     }
     const chosenTracker = advantageMap[rollId ?? ""]?.tracker;

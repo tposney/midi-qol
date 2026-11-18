@@ -6733,7 +6733,12 @@ export class Workflow {
     const failFlagsLength = collectBonusFlags(target.actor!, rollType, "fail.all").length;
     const failAbilityFlagsLength = collectBonusFlags(target.actor!, rollType, `fail.${rollAbility}`).length;
 
-    if (!failFlagsLength && !failAbilityFlagsLength) return null;
+    if (!failFlagsLength && !failAbilityFlagsLength) {
+      // Without fail flags, only when a rollBonuses contributor offers something after this failure
+      const kind = rollType.startsWith("save") ? "save" : rollType.startsWith("skill") ? "skill" : "check";
+      const offered = await collectBonusCandidates({ kind, actor: target.actor!, ability: rollAbility || undefined }, "postResult", result[0], { success: false });
+      if (!offered.length) return null;
+    }
 
     // If the roll fails and there is a flags.midi-qol.save.fail then apply the bonus
     let owner = playerFor(target);

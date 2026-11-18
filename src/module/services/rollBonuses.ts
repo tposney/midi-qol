@@ -28,6 +28,10 @@ export interface RollBonusQuery {
   item?: Item.Implementation;
   /** mwak, rsak, save, heal... */
   actionType?: string;
+  /** Saves and checks: the ability; skills: the skill (when the roll names one). */
+  ability?: string;
+  skill?: string;
+  tool?: string;
 }
 
 export interface BonusContext {
