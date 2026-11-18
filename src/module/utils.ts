@@ -8465,6 +8465,8 @@ async function _updateAction(document: foundry.abstract.Document.Any, updates: C
   } catch (err) {
     // A rejected write would be sent again with every later one: its changes are dropped
     delete updatesCache[baseDocument.uuid];
+    // The card was deleted while the write was on its way (deleted by hand, a chat clear): nothing to report
+    if (!fromUuidSync(baseDocument.uuid)) return document;
     TroubleShooter.recordError(err, `_updateAction | the card ${baseDocument.uuid} rejected an update; its queued changes were dropped`);
     error(`_updateAction | ${baseDocument.uuid} rejected`, updates, err);
     return document;

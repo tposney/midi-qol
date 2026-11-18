@@ -1981,6 +1981,13 @@ export class Workflow {
     const isState = (value: unknown): value is WorkflowState => typeof value === "function";
     if (isState(action)) this.#currentStep = Workflow.stepIdOf(action);
     else error(`${this.workflowName} | no state ${resumePoint} to resume in`);
+    // Waiting in a step a module inserted: there, with the rest of its move (the card can't tell that from its rolls)
+    const move = this.#persisted.scalar<StepMove | undefined>("stepMove", undefined);
+    const step: string | undefined = cardMidi(this.#ownCard()).state?.step;
+    if (move?.inserted && step && !getStep(step)?.method) {
+      this.#stepMove = { queue: [...(move.queue ?? [])], then: move.then, inserted: true };
+      this.#currentStep = step;
+    }
     if (!this.#item) error(`${this.workflowName} | could not find the item of card ${this.itemCardUuid}`);
     this.#mergeWorkflowOptions(this.workflowOptions);
     if (this.workflowOptions.preSelectedTargetUuids?.length) this.preSelectedTargets = this.#preSelectedTargets();
@@ -2168,9 +2175,11 @@ export class Workflow {
 
   /** Wake a suspended workflow; without an event it re-runs the state it waits in */
   public async resume(event?: WorkflowEvent) {
-    // The roll a step started and awaits: the step goes on itself (#rollInStep)
+    // The roll a step started and awaits: the step goes on itself (#rollInStep). Only the event that step waits for
+    // answers it (its own roll's); another (a button for a different roll meanwhile) is dropped, as for a running step
     if (this.#stepRoll) {
-      this.#stepRoll.event = event;
+      if (this.#awaits(event)) this.#stepRoll.event = event;
+      else if (debugEnabled > 0) warn(`${this.workflowName} | resume(${event}) while ${this.nameForState(this.currentAction)} awaits its own roll: ignored`);
       return;
     }
     if (!this.suspended) {
@@ -2409,7 +2418,11 @@ export class Workflow {
         changes: step => this.assembledSteps.anchors[step],
         flowNext: step => stepAfterInFlow(getFlow(this.flowId)?.steps ?? [], step),
         get move() { return workflow.#stepMove; },
-        set move(value) { workflow.#stepMove = value; },
+        set move(value) {
+          workflow.#stepMove = value;
+          // On the card, so a use rebuilt while an inserted step waits resumes in it
+          if (!workflow.readOnly) workflow.#persisted.setScalar("stepMove", value ? { ...value, queue: [...value.queue] } : undefined);
+        },
         run: async step => {
           this.#queueingWrites += 1;
           try {
@@ -7696,7 +7709,8 @@ export class Workflow {
   #damageThrow: Roll[] | undefined;
 
   /** damageContributions' rolls this use, each its own damage message (the untargeted ones are also bonus damage) */
-  #contributions: { role: string, rolls: Roll[] }[] = [];
+  /** The damageContributions rolled for this use: key = contributor and its position (roles can repeat), role = its message's label */
+  #contributions: { key: string, role: string, rolls: Roll[] }[] = [];
 
   /**
    * The damageContributions service's damage (M2 stage 8): each contribution rolled with the use's roll data; without
@@ -7708,14 +7722,16 @@ export class Workflow {
     if (!found.length) return;
     const rollData = (this.activity ?? this.item ?? this.actor)?.getRollData() ?? {};
     const untargeted: Roll[] = [];
+    const counts: Record<string, number> = {};
     for (const { contributor, contribution } of found) {
+      const key = `${contributor}#${counts[contributor] = (counts[contributor] ?? 0) + 1}`;
       try {
         const type = contribution.damageType ?? this.damageRolls?.[0]?.options?.type ?? MidiQOL.MQdefaultDamageType;
         // @ts-expect-error no dnd5e-types
         const roll: Roll = await new CONFIG.Dice.DamageRoll(contribution.formula, rollData, { type, flavor: contribution.label }).evaluate();
         if (contribution.targets?.length) this.addTargetedDamageBonus({ targets: [...contribution.targets], amount: roll.total ?? 0, type, label: contribution.label });
         else untargeted.push(roll);
-        this.#contributions.push({ role: contribution.role, rolls: [roll] });
+        this.#contributions.push({ key, role: contribution.role, rolls: [roll] });
         if (this.workflowOptions?.damageRollDSN !== false) await this.throwDamageDice(roll);
       } catch (err) {
         reportServiceProblem("damageContributions", contributor, `${contribution.label}: rolling it failed`, err);
@@ -7724,7 +7740,7 @@ export class Workflow {
     if (untargeted.length) await this.setBonusDamageRolls([...(this.bonusDamageRolls ?? []), ...untargeted]);
   }
 
-  /** This use's damage messages (createDamageMessages), by contribution role */
+  /** This use's damage messages (createDamageMessages), by contribution key */
   #damageMessageIds: Record<string, string> = {};
 
   /**
@@ -7740,11 +7756,13 @@ export class Workflow {
     const TargetsField = globalThis.dnd5e?.dataModels?.chatMessage?.fields?.TargetsField;
     const targets = TargetsField ? TargetsField.getDescriptors(this.hitTargets.documents) : [];
     const other = this.otherDamageRolls ?? [];
+    const otherRole = other.some(roll => foundry.utils.getProperty(roll, "options.midiAmmunition")) ? "ammunition" : "other";
+    // midi's own damage is keyed by its role; a module's contributions by contributor (two may share a role)
     const contributions = [
-      { role: "activity", rolls: this.damageRolls ?? [] },
-      { role: other.some(roll => foundry.utils.getProperty(roll, "options.midiAmmunition")) ? "ammunition" : "other", rolls: other },
+      { key: "activity", role: "activity", rolls: this.damageRolls ?? [] },
+      { key: "other", role: otherRole, rolls: other },
       // Bonus damage without the contributions' rolls, which have their own messages
-      { role: "bonus", rolls: (this.bonusDamageRolls ?? []).filter(roll => !this.#contributions.some(c => c.rolls.includes(roll))) },
+      { key: "bonus", role: "bonus", rolls: (this.bonusDamageRolls ?? []).filter(roll => !this.#contributions.some(c => c.rolls.includes(roll))) },
       ...this.#contributions
     ].filter(c => c.rolls.length);
     // Their dice were thrown with the damage step (copies marked shown, so the messages don't throw them again)
@@ -7757,21 +7775,21 @@ export class Workflow {
     };
     const shown = (rolls: Roll[]) => rolls.map(roll => { const json = foundry.utils.deepClone(roll.toJSON()); markShown(json); return json; });
     const creates: object[] = [];
-    for (const { role, rolls } of contributions) {
-      const id = this.#damageMessageIds[role];
+    for (const { key, role, rolls } of contributions) {
+      const id = this.#damageMessageIds[key];
       const existing = id ? game.messages?.get(id) : undefined;
       if (existing) await existing.update({ rolls: shown(rolls) } as ChatMessage.UpdateData);
       else creates.push({
         type: "damage", rolls: shown(rolls), speaker: card.speaker, whisper: card.whisper, blind: card.blind, author: game.user?.id,
         system: { ...(this.activity?.messageSources ?? {}), origin: card.id, targets },
-        flags: { [MODULE_ID]: { damage: { role } } }
+        flags: { [MODULE_ID]: { damage: { role, key } } }
       });
     }
     if (!creates.length) return;
     const created = await ChatMessage.implementation.createDocuments(creates as ChatMessage.CreateData[]);
     for (const message of created ?? []) {
-      const role = foundry.utils.getProperty(message, `flags.${MODULE_ID}.damage.role`) as string | undefined;
-      if (role && message.id) this.#damageMessageIds[role] = message.id;
+      const key = foundry.utils.getProperty(message, `flags.${MODULE_ID}.damage.key`) as string | undefined;
+      if (key && message.id) this.#damageMessageIds[key] = message.id;
     }
   }
 

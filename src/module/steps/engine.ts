@@ -46,8 +46,11 @@ export interface EngineHost {
   move?: StepMove;
 }
 
-/** Inserted steps still to run in a move, the step it was going to, and whether the step running came from the queue. */
-export interface StepMove { queue: string[], then: string | undefined, inserted: boolean }
+/**
+ * Inserted steps still to run in a move, the step it was going to, and whether the step running came from the queue.
+ * The engine never changes one in place: it gives the host a new move whenever it changes (the host stores it).
+ */
+export interface StepMove { readonly queue: readonly string[], readonly then: string | undefined, readonly inserted: boolean }
 
 /** An inserted step that returns this, or nothing, lets the move it was inserted into go on. */
 export const CONTINUE = "midi-qol.Continue";
@@ -77,8 +80,10 @@ export async function runSteps(host: EngineHost, start: string | undefined): Pro
       const leaving = current !== undefined && next !== ABORT && !host.aborted ? host.changes?.(current)?.after ?? [] : [];
       const queue = [...leaving, ...aroundRemoved, ...(host.changes?.(next)?.before ?? [])];
       if (queue.length) {
-        host.move = { queue, then: next, inserted: true };
-        next = host.move.queue.shift();
+        // A move is never changed in place: the host keeps (and stores) each new one
+        const [first, ...rest] = queue;
+        host.move = { queue: rest, then: next, inserted: true };
+        next = first;
       }
     }
     host.suspended = false;
@@ -128,8 +133,14 @@ export async function runSteps(host: EngineHost, start: string | undefined): Pro
     if (move?.inserted && after !== SUSPEND) {
       if (after === undefined || after === CONTINUE) {
         // On with the move: the next inserted step, or the step it was going to
-        if (move.queue.length) after = move.queue.shift();
-        else { after = move.then; move.inserted = false; }
+        if (move.queue.length) {
+          const [first, ...rest] = move.queue;
+          after = first;
+          host.move = { ...move, queue: rest };
+        } else {
+          after = move.then;
+          host.move = { ...move, inserted: false };
+        }
       } else {
         // An inserted step branched: the move is over
         host.move = undefined;

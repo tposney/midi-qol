@@ -130,8 +130,12 @@ export function requestsFor(actorUuid: string): MidiRequest<unknown>[] {
 export class IncomingRequest {
   readonly id: string;
   readonly holderId: string;
-  readonly #receivedRemaining: number;
-  readonly #receivedAt = Date.now();
+  /** Time left as last told by the requester (on asking, then on each pause and resume), and when */
+  #toldRemaining: number;
+  #toldAt = Date.now();
+  #paused = false;
+  /** The request had a deadline when asked (none: no countdown) */
+  readonly #hasDeadline: boolean;
   #countdowns: DialogCountdown[] = [];
   #closers: ((how: SettledHow) => void)[] = [];
   #settledHow: SettledHow | undefined;
@@ -139,24 +143,29 @@ export class IncomingRequest {
   constructor(id: string, holderId: string, remaining: number) {
     this.id = id;
     this.holderId = holderId;
-    this.#receivedRemaining = remaining;
+    this.#toldRemaining = remaining;
+    this.#hasDeadline = remaining > 0;
   }
 
-  /** The time left as of now (by the requester's remaining time when it asked; synced on pause and resume). */
-  get remaining(): number { return Math.max(0, this.#receivedRemaining - (Date.now() - this.#receivedAt)); }
+  /** The time left as of now, by what the requester last said (on asking, pause, resume); paused: it doesn't run down. */
+  get remaining(): number { return this.#paused ? this.#toldRemaining : Math.max(0, this.#toldRemaining - (Date.now() - this.#toldAt)); }
+  get paused(): boolean { return this.#paused; }
   /** Answered for the player (a GM, the time-out, a disconnect): how, else undefined. */
   get settledHow(): SettledHow | undefined { return this.#settledHow; }
 
   /** A countdown for this request's dialog: display only, the requester decides when time is up. Pausing asks it. */
   countdown(): DialogCountdown | undefined {
-    if (this.#receivedRemaining <= 0) return undefined;
+    if (!this.#hasDeadline) return undefined;
     const countdown: DialogCountdown = new DialogCountdown({
       seconds: this.remaining / 1000,
       onExpire: () => { },
       onPause: paused => {
         void sendEvent(this.holderId, { to: "holder", id: this.id, event: paused ? "pause" : "resume" }).then(answer => {
           if (!answer.ok && paused) countdown.resume(false);
-          else if (answer.remaining !== undefined) countdown.sync(answer.remaining);
+          else if (answer.remaining !== undefined) {
+            if (answer.ok) { this.#toldRemaining = answer.remaining; this.#toldAt = Date.now(); this.#paused = paused; }
+            countdown.sync(answer.remaining);
+          }
         });
       }
     });
@@ -188,6 +197,9 @@ export class IncomingRequest {
   }
 
   _sync(paused: boolean, remaining: number) {
+    this.#toldRemaining = remaining;
+    this.#toldAt = Date.now();
+    this.#paused = paused;
     for (const countdown of this.#countdowns) {
       countdown.sync(remaining);
       if (paused) countdown.pause(false);

@@ -557,6 +557,8 @@ declare module "fvtt-types/configuration" {
         undoDamage?: StoredUndoEntry[];
         /** Damage card format (GMAction DAMAGE_RECORD_VERSION), written from 14.7.0; not read */
         damageRecord?: number;
+        /** A use's damage message folded into its card (Workflow.createDamageMessages): its role, and its contribution's key */
+        damage?: { role: string, key?: string };
         /** Damage card from 14.7.0: the raw damage lists its entries point to (rawIndex), each once */
         rawDamage?: DamageDescriptionObject[][];
         /** The workflow was undone: the card is drawn with the undo colour */

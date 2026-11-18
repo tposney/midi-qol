@@ -34,7 +34,9 @@ export const STATE_KEYS = [
   // dnd5e 6.1's attacker ignore/downgrade rules from the use's damage rolls (lib/damageRules.ts), as arrays
   "damageRules",
   // The changes to the use's flow (steps/assembly.ts) as they were when it started: a rebuilt use keeps them
-  "stepChanges"
+  "stepChanges",
+  // A move through inserted steps under way (steps/engine.ts StepMove): a use rebuilt while one of them waits resumes it
+  "stepMove"
 ] as const;
 export type StateKey = typeof STATE_KEYS[number];
 
@@ -88,6 +90,7 @@ export function cardStateSchema() {
       // The flow and step the workflow is in (M2, steps/flows.ts, steps/steps.ts); not yet read on rebuild
       flow: str(), step: str(),
       stepChanges: new ArrayField(new ObjectField(), unset),
+      stepMove: new ObjectField({ ...unset, nullable: true }),
       isCritical: bool(), isFumble: bool(),
       templateUuids: new ArrayField(new StringField(), unset),
       workflowOptions: new ObjectField(unset),
