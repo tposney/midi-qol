@@ -1,7 +1,7 @@
 import { reportServiceProblem } from "../api/services.js";
 import { assembleSteps, normaliseChanges, previewSteps, stepsUsed, type AssembledSteps, type StepChange, type StepChangeInput, type StepConflict } from "./assembly.js";
 import { COARSE_STEPS, getFlow, insertAnchor } from "./flows.js";
-import { addStepChange, contractGaps, getStep, globalStepChangesFor, registerStep, removeStepChanges, unregisterStep, type Step, type StepContext } from "./steps.js";
+import { addStepChange, contractGaps, getStep, globalStepChangesFor, isMidiStep, registerStep, removeStepChanges, unregisterStep, type Step, type StepContext } from "./steps.js";
 
 /*
  * MidiQOL.steps (M3): a module registers its steps and changes every use's flow (the global layer; `when` limits a
@@ -30,11 +30,11 @@ function addGlobal(change: StepChangeInput & When): void {
 export const stepsApi = {
   /** A module's step: `run` returns the step to go to, or nothing to go on with the move it was inserted into. */
   register(step: { id: string, name?: string, reads?: string[], writes?: string[], run: (ctx: StepContext) => unknown }): void {
-    if (getStep(step.id)?.method) throw new Error(`midi-qol | steps: ${step.id} is one of midi's steps`);
+    if (isMidiStep(step.id)) throw new Error(`midi-qol | steps: ${step.id} is one of midi's steps`);
     registerStep({ id: step.id, name: step.name ?? step.id, reads: step.reads, writes: step.writes, run: step.run as Step["run"] });
   },
   unregister(id: string): boolean {
-    if (getStep(id)?.method) return false;
+    if (isMidiStep(id)) return false;
     return unregisterStep(id);
   },
   insert(change: { step: string, before?: string, after?: string } & When): void {

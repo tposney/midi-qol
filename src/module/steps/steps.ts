@@ -19,11 +19,17 @@ export interface Step {
    * A module's step: runs with the workflow; returns the step to go to, or nothing to go on with the move it was
    * inserted into. A wrapper calls `ctx.next()` to run what it wraps; a replacement returns the step to go to.
    */
-  run?: (ctx: StepContext) => Promise<string | undefined | void> | string | undefined | void;
+  run?: (ctx: StepContext) => unknown;
   /** The card's queued writes are written when the step ends (a milestone: the card shows its result). */
   flush?: boolean;
   /** A marker, not run: Suspend. */
   marker?: boolean;
+  /**
+   * Run where something happens inside another step (a reaction trigger), not by the engine: the use's changes apply
+   * (insert around, replace, wrap, remove); midi's own fire no hooks (batch 110's order), inserted steps fire theirs.
+   * Its result is what the step gives (a reaction's), not a step to go to.
+   */
+  inline?: boolean;
   /** Its contract: the workflow fields it reads and writes (midi's steps: SHARED_FIELDS). */
   reads?: readonly string[];
   writes?: readonly string[];
@@ -32,7 +38,9 @@ export interface Step {
 export interface StepContext {
   workflow: any;
   /** For a wrapper: run the step it wraps (and what that returns). */
-  next(): Promise<string | undefined>;
+  next(): Promise<unknown>;
+  /** At a reaction step: who reacts to what (utils doReactions' arguments). */
+  reaction?: { target: unknown, triggerTokenUuid?: string | null, triggeringRoll?: unknown, triggerType: string, options: unknown };
 }
 
 const steps = new Registry<Step>();
@@ -104,6 +112,29 @@ const BUILT_IN: readonly (string | [string, Partial<Step>])[] = [
   ["WaitForSaves", { flush: true }], "SavesComplete", ["AllRollsComplete", { flush: true }], "ApplyDynamicEffects",
   ["Cleanup", { flush: true }], "Completed", "Abort", "Cancel", "RollFinished"
 ];
+
+/** Reaction steps (inline), by midi's trigger type: run where the reaction is asked (Workflow#askReactionsStep). */
+export const REACTION_STEPS: Readonly<Record<string, string>> = {
+  reactionpreattack: "midi-qol.reaction.preAttack",
+  reactionattacked: "midi-qol.reaction.attacked",
+  reaction: "midi-qol.reaction.hit",
+  reactionmissed: "midi-qol.reaction.missed",
+  reactiondamage: "midi-qol.reaction.damaged",
+  reactionheal: "midi-qol.reaction.healed",
+  reactionsave: "midi-qol.reaction.save",
+  reactionsavesuccess: "midi-qol.reaction.saveSuccess",
+  reactionsavefail: "midi-qol.reaction.saveFail"
+};
+for (const id of Object.values(REACTION_STEPS)) {
+  const name = id.replace("midi-qol.reaction.", "");
+  registerStep({ id, name: `Reaction${name[0].toUpperCase()}${name.slice(1)}`, inline: true });
+}
+
+/** midi's own steps (engine-run or inline): a module can't register over them */
+export function isMidiStep(id: string): boolean {
+  const step = getStep(id);
+  return !!step && (!!step.method || !!step.inline || !!step.marker);
+}
 
 for (const entry of BUILT_IN) {
   const [name, extra] = typeof entry === "string" ? [entry, {}] : entry;

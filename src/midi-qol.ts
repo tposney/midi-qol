@@ -452,6 +452,8 @@ Hooks.once('init', async function () {
   registerAttackRollRules();
   defineDamageModifiersService();
   defineDamageContributionsService();
+  defineReactionsService();
+  reactionsService.register("midi-qol.items", midiItemReactions, { label: "Midi-QOL: reaction items" });
   damageModifiersService.register("midi-qol.targetedBonuses", targetedDamageBonusContributor, { label: "Midi-QOL: bonuses for particular targets" });
   defineTargetConfirmationService(resolveTargetConfirmation);
   defineChooseTokensService();
@@ -1057,6 +1059,8 @@ import { damageCalculationOrder, getDamageCalculationStep, registerDamageCalcula
 import { registerBonusApprovalQuery } from "./module/services/rollBonuses/approval.js";
 import { registerDamageMessageSummary } from "./module/damage/messages.js";
 import { defineDamageContributionsService } from "./module/services/damageContributions/service.js";
+import { defineReactionsService, reactionsService } from "./module/services/reactions/service.js";
+import { midiItemReactions } from "./module/services/reactions/provider.js";
 import { previewFlow, stepsApi } from "./module/steps/api.js";
 import { requestsApi, setupRequests } from "./module/lib/requests.js";
 import type { Activity } from "./globals.js";

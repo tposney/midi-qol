@@ -22,6 +22,7 @@ import { log } from "../midi-qol.js";
 import { AttributionEntry, AttributionMap, AttributionType, AugmentedEvent, DummyWorkflow, jsonSafe, Workflow, WorkflowOptions, WorkflowRollOptions } from "./Workflow.js";
 import { preferredActiveGM, prepareDamageListToJSON, socketlibSocket, timedAwaitExecuteAsGM, unTimedExecuteAsGM } from "./GMAction.js";
 import { askUser, type IncomingRequest } from "./lib/requests.js";
+import { collectReactions } from "./services/reactions/service.js";
 import { dice3dEnabled, installedModules } from "./setupModules.js";
 import { concentrationCheckItemDisplayName } from "./Hooks.js";
 
@@ -643,7 +644,7 @@ export async function processDamageRoll(workflow: Workflow, defaultDamageType: s
     if (!foundry.utils.getProperty(workflow.activity.item, `flags.${MODULE_ID}.noProvokeReaction`) && !workflow?.workflowOptions?.noProvokeReaction) {
       if (token && totalDamage !== 0 && (workflow.hitTargets.has(tokenDocument) || workflow.hitTargetsEC.has(tokenDocument) || workflow.hasSave)) {
         const isHealing = ("heal" === workflow.activity.actionType) || totalDamage < 0;
-        await workflow.ports.askReactions(token, workflow.tokenUuid, workflow.damageRoll ?? workflow.bonusDamageRoll ?? workflow.otherDamageRoll ?? new Roll("0"), !isHealing ? "reactiondamage" : "reactionheal", { activity: workflow.activity, item: workflow.item, workflow, workflowOptions: { damageDetail: workflow.rawDamageDetail, damageTotal: totalDamage, sourceActorUuid: workflow.actor.uuid, sourceItemUuid: workflow.item.uuid, sourceAmmoUuid: workflow.ammunition?.uuid } });
+        await workflow.askReactionsStep(token, workflow.tokenUuid, workflow.damageRoll ?? workflow.bonusDamageRoll ?? workflow.otherDamageRoll ?? new Roll("0"), !isHealing ? "reactiondamage" : "reactionheal", { activity: workflow.activity, item: workflow.item, workflow, workflowOptions: { damageDetail: workflow.rawDamageDetail, damageTotal: totalDamage, sourceActorUuid: workflow.actor.uuid, sourceItemUuid: workflow.item.uuid, sourceAmmoUuid: workflow.ammunition?.uuid } });
       }
     }
     const damageBuckets: [DamageDescription[], "defaultDamage" | "otherDamage" | "bonusDamage"][] = [
@@ -5304,7 +5305,7 @@ export function hasEffectGranting(actor: Actor.Implementation, key: string, sele
   return false;
 }
 
-function maxCastLevel(actor: Actor.Implementation) {
+export function maxCastLevel(actor: Actor.Implementation) {
   if (configSettings.ignoreSpellReactionRestriction) return 9;
   // @ts-expect-error no dnd5e-types
   const spells = actor.system.spells;
@@ -5375,78 +5376,18 @@ export async function doReactions(targetRef: TokenOrDocument | string, triggerTo
     if (getReactionSetting(player) === "none") return noResult;
     if (!player || !player.active) player = ChatMessage.getWhisperRecipients("GM").find(u => u.active);
     if (!player) return noResult;
-    const maxLevel = maxCastLevel(target.actor);
     // enableNotifications(false);
     let reactions: ReactionItem[] = [];
     let reactionCount = 0;
     let reactionActivityList: ReactionItemReference[] = [];
     try {
-      const items = target.actor.items;
-      for (let item of items) {
-        // @ts-expect-error no clue when this can happen
-        const theItem: Item.Implementation = item instanceof Item ? item : item.baseItem;
-        // @ts-expect-error no dnd5e-types
-        if (!theItem.system.activities) continue;
-        // If the spell is a proxy for a cast ativity skip
-        if (!!item.getFlag("dnd5e", "cachedFor")) continue;
-        // @ts-expect-error no dnd5e-types
-        for (let activity of theItem.system.activities) {
-          const activationType = activity.effectiveActivationType ?? activity.activation?.type;
-          if (!activationType?.includes("reaction")) continue;
-          // What dnd5e would refuse (a spell under 6.1's antimagic status, its own visibility rules) isn't offered
-          if (activity.canUse === false) continue;
-          if (activationType !== "reaction") {
-            console.warn(`midi-qol | itemReaction | item ${item.name} ${activity.name} has a reaction type of ${activationType} which is deprecated - please update to reaction and reaction conditions`)
-          }
-          // Item uses a reaction and actor has used a reaction.
-          if ((activity.activation?.value ?? 1) > 0 && usedReaction) continue; // TODO can't specify 0 cost reactions in dnd5e 4.x - have to find another way
-          // @ts-expect-error no dnd5e-types
-          if (!item.system.attuned && item.system.attunement === "required") continue;
-          let reactionCondition = activity.reactionCondition;
-          // For cast activities, also check the spell's reaction condition from the activity that will be used
-          if (isActivityType(activity, "cast") && activity.cachedSpell) {
-            const spell = activity.cachedSpell;
-            // Get the first usable activity - this is what spell.use() will use
-            const spellActivity = spell.system?.activities?.filter((a: any) => a.canUse)?.[0];
-            const spellCondition = spellActivity?.reactionCondition || "";
-            if (reactionCondition && spellCondition) {
-              reactionCondition = `(${reactionCondition}) && (${spellCondition})`;
-            } else {
-              reactionCondition = reactionCondition || spellCondition;
-            }
-          }
-          // @ts-expect-error no dnd5e-types
-          const isSpell = item.type === "spell";
-          if (isSpell) {
-            if (configSettings.ignoreSpellReactionRestriction) {
-              // Skip all validation for spells when this setting is enabled
-              reactions.push(activity);
-              continue;
-            }
-            // Filter out unprepared spells
-            // @ts-expect-error no dnd5e-types
-            if (item.system.prepared === 0 && item.system.method === "spell") continue;
-            // Filter spells that can't be cast due to no available slots of required level
-            // @ts-expect-error no dnd5e-types
-            if (item.system.level > 0 && !["atwill", "innate"].includes(item.system.method) && item.system.level > maxLevel) continue;
-          }
-
-          // Use dnd5e's consumption checks for all items/spells
-          const config = activity._prepareUsageConfig({ create: false });
-          if (isSpell) foundry.utils.setProperty(config, "consume.spellSlot", false);
-          const canUse = await activity._prepareUsageUpdates(config, { returnErrors: true });
-          if (canUse instanceof Array) continue; // insufficient uses available
-          // If no condition is specified, default to requiring isHit
-          if (!reactionCondition) {
-            reactionCondition = 'reaction === "isHit"';
-          }
-          const returnvalue = await evalReactionActivationCondition(options.workflow, reactionCondition, target, { async: true, extraData: { reaction: reactionTriggerLabelFor(triggerType) } });
-          if (debugEnabled > 0) warn(`for ${target.actor.name} ${theItem.name} using condition ${reactionCondition} condition ${returnvalue}`, options.workflow?.conditionData);
-          if (!returnvalue) continue;
-          reactions.push(activity);
-        }
-      };
-
+      // The reactions service's contributors (midi's own: services/reactions/provider.ts), each candidate once, only
+      // those that could change the result
+      const found = await collectReactions({ workflow: options.workflow, target, actor: target.actor, triggerType, trigger: reactionTriggerLabelFor(triggerType), triggeringRoll, usedReaction, options });
+      for (const { candidate } of found) {
+        const activity = fromUuidSync(candidate.activityUuid, { strict: false }) as unknown as Activity | null;
+        if (activity) reactions.push(activity);
+      }
       if (debugEnabled > 0)
         warn(`doReactions ${triggerType} for ${target.actor.name} ${target.name}`, reactions);
       reactionActivityList = reactions.map(activity => {

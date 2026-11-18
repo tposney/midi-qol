@@ -6,7 +6,7 @@ import { Workflow } from "../Workflow.js";
 import { TargetConfirmationDialog, TargetConfirmationOptions } from "../apps/TargetConfirmation.js";
 import { configSettings, targetConfirmation } from "../settings.js";
 import { installedModules } from "../setupModules.js";
-import { collisionLevel, getFlankingEffect, CERemoveEffect, sumRolls, computeTemplateShapeDistance, getToken, getTokenDocument, checkActivityRange, checkDefeated, checkIncapacitated, getCoverBonus, hasWallBlockingCondition, isValidTarget, tokenForActor, activityHasAreaTarget, activityHasAutoPlaceTemplate, activityHasEmanationNoTemplate, getActivityAutoTargetAction, getAoETargetType, doReactions, updateUserTargets, rangeToSceneUnits, tokenSourcePosition, tokenSourceCenter, tokenSourceElevation, getTokenVisionElevation, userTargetsKeepingUndrawn, convertLengthTo, MidiOptions } from "../utils.js";
+import { collisionLevel, getFlankingEffect, CERemoveEffect, sumRolls, computeTemplateShapeDistance, getToken, getTokenDocument, checkActivityRange, checkDefeated, checkIncapacitated, getCoverBonus, hasWallBlockingCondition, isValidTarget, tokenForActor, activityHasAreaTarget, activityHasAutoPlaceTemplate, activityHasEmanationNoTemplate, getActivityAutoTargetAction, getAoETargetType, updateUserTargets, rangeToSceneUnits, tokenSourcePosition, tokenSourceCenter, tokenSourceElevation, getTokenVisionElevation, userTargetsKeepingUndrawn, convertLengthTo, MidiOptions } from "../utils.js";
 import { allAttackTypes } from "../../midi-qol.js";
 import Token = foundry.canvas.placeables.Token;
 
@@ -83,7 +83,7 @@ export async function doActivityReactions(activity: Activity, workflow: Workflow
   if (!foundry.utils.getProperty(activity, `flags.${MODULE_ID}.noProvokeReaction`) && !workflow?.workflowOptions.noProvokeReaction) {
     for (let targetToken of workflow.targets.tokens) {
       promises.push((async () => {
-        const result = await doReactions(targetToken, workflow.tokenUuid, null, "reactionpreattack", { item: activity.item, workflow, workflowOptions: foundry.utils.mergeObject(workflow.workflowOptions, { sourceActorUuid: activity.actor?.uuid, sourceItemUuid: activity.item?.uuid }, { inplace: false, overwrite: true }) });
+        const result = await workflow.askReactionsStep(targetToken, workflow.tokenUuid, null, "reactionpreattack", { item: activity.item, workflow, workflowOptions: foundry.utils.mergeObject(workflow.workflowOptions, { sourceActorUuid: activity.actor?.uuid, sourceItemUuid: activity.item?.uuid }, { inplace: false, overwrite: true }) });
         if (result.name) {
           targetToken.actor?.reset();
           workflow.actor.reset();

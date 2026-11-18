@@ -1,4 +1,4 @@
-import { allSteps, getStep, stepForMethod } from "./steps/steps.js";
+import { allSteps, getStep, REACTION_STEPS, stepForMethod, type StepContext } from "./steps/steps.js";
 import { assembleSteps, stepAfterInFlow, type AssembledSteps, type StepChange, type StepChangeInput } from "./steps/assembly.js";
 import { missingSteps, reportAssembly, useStepChanges } from "./steps/api.js";
 import { getFlow } from "./steps/flows.js";
@@ -19,7 +19,7 @@ import { installedModules } from "./setupModules.js";
 import { offerFollowUps } from "./followUps.js";
 import { configSettings, autoRemoveTargets, checkRule, checkMechanic, safeGetGameSetting, useWeakReferences, onUseMacroOptions, chatCardUpdates } from "./settings.js";
 import { challengeVisibleToPlayers, saveDisplayMode } from "./lib/saveVisibility.js";
-import { createDamageDetail, processDamageRoll, untargetDeadTokens, checkIncapacitated, getAutoRollDamage, isAutoFastForward, getAutoRollAttack, getRemoveDamageButtons, getRemoveAttackButtons, checkNearby, hasCondition, expireMyEffects, validTargetTokens, userTargetsKeepingUndrawn, HEALING_BUTTON_KEY, isActivityType, getOrCreateTokenForActorAsSet, doReactions, playerFor, requestPCActiveDefence, evalActivationCondition, asyncHooksCallAll, asyncHooksCall, renderSaveRollHTML, markFlanking, tokenForActor, getOrCreateTokenForActor, createConditionData, evalCondition, computeCoverBonus, computeTargetAC, TOTAL_COVER, THREE_QUARTERS_COVER, HALF_COVER, hasCoverTotal, isInCombat, displayDSNForRoll, setActionUsed, getTokenDocument, getToken, activityHasAutoPlaceTemplate, addRollTo, sumRolls, midiRenderAttackRoll, midiRenderDamageRoll, midiRenderBonusDamageRoll, midiRenderOtherDamageRoll, midiRenderFormulaRoll, throttledUpdate, getCachedDocument, getUpdatesCache, clearUpdatesCache, getDamageType, getTokenName, tokenPortrait, setRollOperatorEvaluated, evalAllConditions, evalAllConditionsAsync, getAppliedEffects, CEAddEffectWith, getCEEffectByName, CEHasEffectApplied, CERemoveEffect, CEToggleEffect, getActivityDefaultDamageType, activityHasAreaTarget, DSNMarkDiceDisplayed, expectedTemplateCount, getSaveMultiplierForActivity, checkActivityRange, isRangeCheckable, checkDistance, getActivityAutoTargetAction, activityHasEmanationNoTemplate, completeActivityUse, getActor, getConcentrationEffect, convertDuration, getRemoveAllButtons, requestPCSave, pcSaveOptions, addUpdatesCache, addUpdatesCacheFlags, MidiOptions, getOptionalCountRemainingShortFlag, bonusDialog, getTargetDescriptor, queueUpdate, addAttribution, renderAttributionTooltip, getAdvantageModeTitle, resolveItemMacro, resolveActivityMacro, midiFlag, updateUserTargets, popTargetSave, clearTargetSave, getConsumptionData, toMessageMode, toLegacyRollMode, isDnd5eRollMessage, rollAnswersRequest, type SaveRequestKind, dnd5eRollType, tokenSourceElevation, applyStatusCondition, deleteCardAfterWrites } from "./utils.js";
+import { createDamageDetail, processDamageRoll, untargetDeadTokens, checkIncapacitated, getAutoRollDamage, isAutoFastForward, getAutoRollAttack, getRemoveDamageButtons, getRemoveAttackButtons, checkNearby, hasCondition, expireMyEffects, validTargetTokens, userTargetsKeepingUndrawn, HEALING_BUTTON_KEY, isActivityType, getOrCreateTokenForActorAsSet, doReactions, type ReactionResult, playerFor, requestPCActiveDefence, evalActivationCondition, asyncHooksCallAll, asyncHooksCall, renderSaveRollHTML, markFlanking, tokenForActor, getOrCreateTokenForActor, createConditionData, evalCondition, computeCoverBonus, computeTargetAC, TOTAL_COVER, THREE_QUARTERS_COVER, HALF_COVER, hasCoverTotal, isInCombat, displayDSNForRoll, setActionUsed, getTokenDocument, getToken, activityHasAutoPlaceTemplate, addRollTo, sumRolls, midiRenderAttackRoll, midiRenderDamageRoll, midiRenderBonusDamageRoll, midiRenderOtherDamageRoll, midiRenderFormulaRoll, throttledUpdate, getCachedDocument, getUpdatesCache, clearUpdatesCache, getDamageType, getTokenName, tokenPortrait, setRollOperatorEvaluated, evalAllConditions, evalAllConditionsAsync, getAppliedEffects, CEAddEffectWith, getCEEffectByName, CEHasEffectApplied, CERemoveEffect, CEToggleEffect, getActivityDefaultDamageType, activityHasAreaTarget, DSNMarkDiceDisplayed, expectedTemplateCount, getSaveMultiplierForActivity, checkActivityRange, isRangeCheckable, checkDistance, getActivityAutoTargetAction, activityHasEmanationNoTemplate, completeActivityUse, getActor, getConcentrationEffect, convertDuration, getRemoveAllButtons, requestPCSave, pcSaveOptions, addUpdatesCache, addUpdatesCacheFlags, MidiOptions, getOptionalCountRemainingShortFlag, bonusDialog, getTargetDescriptor, queueUpdate, addAttribution, renderAttributionTooltip, getAdvantageModeTitle, resolveItemMacro, resolveActivityMacro, midiFlag, updateUserTargets, popTargetSave, clearTargetSave, getConsumptionData, toMessageMode, toLegacyRollMode, isDnd5eRollMessage, rollAnswersRequest, type SaveRequestKind, dnd5eRollType, tokenSourceElevation, applyStatusCondition, deleteCardAfterWrites } from "./utils.js";
 import { OnUseMacros } from "./apps/Item.js";
 import { bonusCheck, collectBonusFlags, defaultRollOptions, buildPreComputedAdvantageMap, checkActivityAbilities } from "./patching.js";
 import { collectRollModifiers } from "./services/rollModifiers/service.js";
@@ -2096,10 +2096,13 @@ export class Workflow {
     return table;
   }
 
-  /** The pre/post hooks and onUse passes of every step (steps/steps.ts), as the item sheet lists them */
+  /**
+   * The pre/post hooks and onUse passes of midi's engine-run steps (steps/steps.ts), as the item sheet lists them; not
+   * the inline reaction steps, which fire none
+   */
   public static get stateHooks(): Record<string, string> {
     const hooks = {};
-    for (const { name } of allSteps()) {
+    for (const { name } of allSteps().filter(step => step.method)) {
       hooks[`pre${name}`] = `before ${name} (S*)`;
       hooks[`post${name}`] = `after ${name} (S*)`;
     }
@@ -2511,14 +2514,60 @@ export class Workflow {
       const wrapper = getStep(wrapperId);
       if (!wrapper?.run) { reportServiceProblem("steps", wrapperId, `wraps ${id} but isn't a registered step with run`); continue; }
       const inner = run;
-      run = async () => Workflow.stepIdOf(await wrapper.run!({ workflow: this, next: inner }) ?? undefined);
+      run = async () => Workflow.#asStepId(await wrapper.run!({ workflow: this, next: inner }));
     }
     return run();
   }
 
+  /** What a module's step returned, as a step to go to (anything but a step id: go on) */
+  static #asStepId(value: unknown): string | undefined {
+    return typeof value === "string" ? Workflow.stepIdOf(value) ?? value : undefined;
+  }
+
+  /**
+   * An inline step (a reaction trigger: steps.ts `inline`): `own` is what it does; the use's changes apply. Inserted
+   * steps fire their pre/post hooks and passes; their results are ignored (no branching from here).
+   */
+  async runInlineStep<T>(id: string, own: () => Promise<T>, extra: Partial<StepContext> = {}): Promise<T | undefined> {
+    const anchor = this.assembledSteps.anchors[id];
+    if (!anchor) return own();
+    const runModule = async (stepId: string, next: () => Promise<unknown>): Promise<unknown> => {
+      const step = getStep(stepId);
+      if (!step?.run) { this.#reportMissingSteps([stepId]); return undefined; }
+      return step.run({ ...extra, workflow: this, next });
+    };
+    const inserted = async (stepId: string) => {
+      await this.callOnUseMacrosForAction("pre", stepId);
+      if (await this.callHooksForAction("pre", stepId) === false) return;
+      await runModule(stepId, async () => undefined);
+      await this.callOnUseMacrosForAction("post", stepId);
+      await this.callHooksForAction("post", stepId);
+    };
+    for (const stepId of anchor.before) await inserted(stepId);
+    let result: T | undefined;
+    if (!anchor.removed) {
+      let run: () => Promise<unknown> = anchor.replacement ? () => runModule(anchor.replacement!, async () => undefined) : own;
+      for (const wrapperId of [...anchor.wraps].reverse()) {
+        const inner = run;
+        run = () => runModule(wrapperId, inner);
+      }
+      result = await run() as T | undefined;
+    }
+    for (const stepId of anchor.after) await inserted(stepId);
+    return result;
+  }
+
+  /** A reaction trigger: the reaction step for `triggerType` (REACTION_STEPS), whose default asks through the askReactions port */
+  async askReactionsStep(target: TokenOrDocument | string, triggerTokenUuid: string | null | undefined, triggeringRoll: Roll | null | undefined, triggerType: string, options: any = {}): Promise<ReactionResult> {
+    const id = REACTION_STEPS[triggerType];
+    const ask = () => this.ports.askReactions(target, triggerTokenUuid, triggeringRoll, triggerType, options) as Promise<ReactionResult>;
+    if (!id) return ask();
+    return (await this.runInlineStep(id, ask, { reaction: { target, triggerTokenUuid, triggeringRoll, triggerType, options } })) ?? {};
+  }
+
   async #runOwn(id: string): Promise<string | undefined> {
     const step = getStep(id);
-    if (step?.run) return Workflow.stepIdOf(await step.run({ workflow: this, next: async () => undefined }) ?? undefined);
+    if (step?.run) return Workflow.#asStepId(await step.run({ workflow: this, next: async () => undefined }));
     const method = this.methodForStep(id);
     if (!method) throw new Error(`${this.workflowName}: no step ${id}`);
     return Workflow.stepIdOf(await method.call(this));
@@ -6672,9 +6721,9 @@ export class Workflow {
 
     if (!this.item.flags?.[MODULE_ID]?.noProvokeReaction && !this.workflowOptions.noProvokeReaction) {
       if (saved)
-        await this.ports.askReactions(target, this.tokenUuid, this.attackRoll, "reactionsavesuccess", { workflow: this, activity: this.activity, item: this.item })
+        await this.askReactionsStep(target, this.tokenUuid, this.attackRoll, "reactionsavesuccess", { workflow: this, activity: this.activity, item: this.item })
       else
-        await this.ports.askReactions(target, this.tokenUuid, this.attackRoll, "reactionsavefail", { workflow: this, activity: this.activity, item: this.item })
+        await this.askReactionsStep(target, this.tokenUuid, this.attackRoll, "reactionsavefail", { workflow: this, activity: this.activity, item: this.item })
     }
     if (isCritical) this.criticalSaves = this.criticalSaves.add(target);
 
@@ -6984,7 +7033,7 @@ export class Workflow {
         // shows in the log or folds into the card.
         const showRoll = !simulate;
         if (!this.item.flags?.[MODULE_ID]?.noProvokeReaction && !this.workflowOptions.noProvokeReaction) {
-          await this.ports.askReactions(target, this.tokenUuid, this.attackRoll ?? new Roll(""), "reactionsave", { workflow: this, activity: this.activity, item: this.item })
+          await this.askReactionsStep(target, this.tokenUuid, this.attackRoll ?? new Roll(""), "reactionsave", { workflow: this, activity: this.activity, item: this.item })
         }
 
         // Build save details for this target
@@ -7972,7 +8021,7 @@ export class Workflow {
         else {
           if (this.attackRoll && !this.item.flags?.[MODULE_ID]?.noProvokeReaction && !this.workflowOptions.noProvokeReaction) {
             const workflowOptions = foundry.utils.mergeObject(this.workflowOptions, { sourceActorUuid: this.actor.uuid, sourceItemUuid: this.item.uuid }, { inplace: false, overwrite: true });
-            const result = await this.ports.askReactions(targetToken, this.tokenUuid, this.attackRoll, "reactionattacked", { activity: this.activity, item: this.item, workflow: this, workflowOptions });
+            const result = await this.askReactionsStep(targetToken, this.tokenUuid, this.attackRoll, "reactionattacked", { activity: this.activity, item: this.item, workflow: this, workflowOptions });
             if (result?.ac && isFinite(targetAC)) { // result.ac is a newAC total from optional bonus dialog; don't override total cover (Infinity)
               //@ts-expect-error no dnd5e-types
               const preReactionRawAC: number = targetToken.actor?.system.attributes.ac?.value ?? 10;
@@ -8007,7 +8056,7 @@ export class Workflow {
           // reaction is the same as reactionhit to accomodate the existing reaction workflow
           let result;
           if (!this.item.flags?.[MODULE_ID]?.noProvokeReaction && !this.workflowOptions.noProvokeReaction) {
-            result = await this.ports.askReactions(targetToken, this.tokenUuid, this.attackRoll, "reaction", { activity: this.activity, item: this.item, workflow: this, workflowOptions });
+            result = await this.askReactionsStep(targetToken, this.tokenUuid, this.attackRoll, "reaction", { activity: this.activity, item: this.item, workflow: this, workflowOptions });
           }
           if (!Workflow.findWorkflow(this.id)) // workflow has been removed - bail out
             return;
@@ -8040,7 +8089,7 @@ export class Workflow {
         } else if ((!isHit && !isHitEC) && this.activity.attack && this.attackRoll && targetToken !== null && !foundry.utils.getProperty(this, `item.flags.${MODULE_ID}.noProvokeReaction`)) {
           const workflowOptions = foundry.utils.mergeObject(this.workflowOptions, { sourceActorUuid: this.actor.uuid, sourceItemUuid: this.item.uuid }, { inplace: false, overwrite: true });
           if (!this.item.flags?.[MODULE_ID]?.noProvokeReaction && !this.workflowOptions.noProvokeReaction) {
-            await this.ports.askReactions(targetToken, this.tokenUuid, this.attackRoll, "reactionmissed", { activity: this.activity, item: this.item, workflow: this, workflowOptions });
+            await this.askReactionsStep(targetToken, this.tokenUuid, this.attackRoll, "reactionmissed", { activity: this.activity, item: this.item, workflow: this, workflowOptions });
           }
           // TODO what else to do once rolled
         }
@@ -8780,7 +8829,7 @@ export class ActiveDefenceWorkflow extends Workflow {
       /*
                   if (this.attackRoll && !this.item.flags?.[MODULE_ID]?.noProvokeReaction && !this.workflowOptions.noProvokeReaction) {
                     const workflowOptions = foundry.utils.mergeObject(this.workflowOptions, { sourceActorUuid: this.actor.uuid, sourceItemUuid: this.item.uuid }, { inplace: false, overwrite: true });
-                    const result = await this.ports.askReactions(targetToken, this.tokenUuid, this.attackRoll, "reactionattacked", { activity: this.activity, item: this.item, workflow: this, workflowOptions });
+                    const result = await this.askReactionsStep(targetToken, this.tokenUuid, this.attackRoll, "reactionattacked", { activity: this.activity, item: this.item, workflow: this, workflowOptions });
                     // TODO what else to do once rolled
                     // @ts-expect-error no dnd5e-types
                     targetAC = Number.parseInt(targetActor.system.attributes.ac.value ?? 10) + bonusAC + descriptorMod;
@@ -8866,7 +8915,7 @@ export class ActiveDefenceWorkflow extends Workflow {
         if (!this.item.flags?.[MODULE_ID]?.noProvokeReaction && !this.workflowOptions.noProvokeReaction) {
           //@ts-expect-error no dnd5e-types
           const savedAC = target.actor.system.attributes.ac.value;
-          reaction = await this.ports.askReactions(target, this.tokenUuid, this.attackRoll, "reaction", { activity: this.activity, item: this.item, workflow: this, workflowOptions });
+          reaction = await this.askReactionsStep(target, this.tokenUuid, this.attackRoll, "reaction", { activity: this.activity, item: this.item, workflow: this, workflowOptions });
           //@ts-expect-error no dnd5e-types
           const acChange = target.actor.system.attributes.ac.value - savedAC;
           rollTotal += (reaction.ac ?? 0) + acChange; // deal with bonus ac if any.
@@ -8883,7 +8932,7 @@ export class ActiveDefenceWorkflow extends Workflow {
             name?: string;
             uuid?: string;
             ac?: number;
-          } = await this.ports.askReactions(target, this.tokenUuid, this.attackRoll, "reactionmissed", { activity: this.activity, item: this.item, workflow: this, workflowOptions });
+          } = await this.askReactionsStep(target, this.tokenUuid, this.attackRoll, "reactionmissed", { activity: this.activity, item: this.item, workflow: this, workflowOptions });
           //@ts-expect-error no dnd5e-types
           const acChange = target.actor.system.attributes.ac.value - savedAC;
           rollTotal += (reaction.ac ?? 0) + acChange; // deal with bonus ac if any.
