@@ -327,6 +327,7 @@
     "cover",
     "damageModifiers",
     "distance",
+    "flanking",
     "perception",
     "rollBonuses",
     "rollModifiers",

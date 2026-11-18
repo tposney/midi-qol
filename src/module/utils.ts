@@ -1,3 +1,4 @@
+import { isFlanked, isFlanking } from "./services/flanking.js";
 import { rangeBand, rangeInGridUnits } from "./rules/range.js";
 import { measureDistance } from "./services/distance.js";
 import { bonusPromptService } from "./services/bonusPrompt.js";
@@ -8264,8 +8265,18 @@ function isAngleFlanking(
 
 
 // TODO: Can definitely probably clean this up some
+const FLANKED_MODES = ["ceflanked", "ceflankedNoconga", "midiFlanked", "midiFlankedNoConga"];
+
+/** Is `target` flanked: midi's setting decides whether the flanked rule applies, the flanking service's provider decides. */
 export async function computeFlankedStatus(target: Token.Implementation): Promise<boolean> {
-  if (!checkRule("checkFlanking") || !["ceflanked", "ceflankedNoconga", "midiFlanked", "midiFlankedNoConga"].includes(checkRule("checkFlanking") as string)) return false;
+  if (!checkRule("checkFlanking") || !FLANKED_MODES.includes(checkRule("checkFlanking") as string)) return false;
+  if (!canvas || !target) return false;
+  return isFlanked(target);
+}
+
+/** midi's flanked geometry: the "midi-qol" provider of the flanking service */
+export async function midiFlankedStatus(target: Token.Implementation): Promise<boolean> {
+  if (!checkRule("checkFlanking") || !FLANKED_MODES.includes(checkRule("checkFlanking") as string)) return false;
   if (!canvas || !target) return false;
   const allies = findPotentialFlankers(target);
   if (allies.length <= 1) return false; // length 1 means no other allies nearby
@@ -8357,7 +8368,15 @@ export async function computeFlankedStatus(target: Token.Implementation): Promis
 }
 
 // TODO Can definitely probably clean this up
+/** Does `token` flank `target`: midi's setting decides whether flanking applies, the flanking service's provider decides. */
 export async function computeFlankingStatus(token: Token.Implementation, target: Token.Implementation): Promise<boolean> {
+  if (!checkRule("checkFlanking") || checkRule("checkFlanking") === "off") return false;
+  if (!canvas || !token || !target) return false;
+  return isFlanking(token, target);
+}
+
+/** midi's flanking geometry: the "midi-qol" provider of the flanking service */
+export async function midiFlankingStatus(token: Token.Implementation, target: Token.Implementation): Promise<boolean> {
   if (!checkRule("checkFlanking") || checkRule("checkFlanking") === "off") return false;
   if (!canvas) return false;
   if (!token) return false;
