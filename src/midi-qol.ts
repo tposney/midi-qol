@@ -276,6 +276,7 @@ Object.assign(globalThis.MidiQOL, {
   getConcentrationEffect,
   getDistance,
   measureTokens,
+  applyCalculatedDamage,
   UNMEASURABLE_DISTANCE,
   getItemFromEffectOrigin,
   getTokenPlayerName,
@@ -529,6 +530,7 @@ Hooks.once('init', async function () {
   preloadTemplates();
   // Register custom sheets (if any)
   initPatching();
+  registerDamageApplication();
   addDiceTermModifiers();
   globalThis.MidiKeyManager = new MidiKeyManager();
   globalThis.MidiKeyManager.initKeyMappings();
@@ -1029,6 +1031,7 @@ import { defineTargetConfirmationService } from "./module/services/targetConfirm
 import { chooseTokens, defineChooseTokensService } from "./module/services/chooseTokens.js";
 import { defineRollBonusesService } from "./module/services/rollBonuses.js";
 import { defineDistanceService } from "./module/services/distance.js";
+import { applyCalculatedDamage, registerDamageApplication } from "./module/services/damageApplication.js";
 import { bonusPromptService, defineBonusPromptService } from "./module/services/bonusPrompt.js";
 import { BonusPromptApp } from "./module/apps/BonusPrompt.js";
 

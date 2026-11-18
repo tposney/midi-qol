@@ -15,6 +15,7 @@
     "addRollToAsync",
     "addUndoChatMessage",
     "apiVersion",
+    "applyCalculatedDamage",
     "applyTokenDamage",
     "applyTokenDamageMany",
     "apps",

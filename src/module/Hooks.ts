@@ -1,3 +1,4 @@
+import { consumeDamageApplication, stampDamageApplication } from "./services/damageApplication.js";
 import { applyDamageModifierStage } from "./services/damageModifiers.js";
 import { warn, error, debug, i18n, debugEnabled, overTimeEffectsToDelete, savedOverTimeEffectsToDelete, log, gameStats, GameSystemConfig, MODULE_ID, getStaticID, MIDI_IMPLYING_STATUSES } from "../midi-qol.js";
 import { excludeRegionSourceEffect, moveRegionsOnTurnChange } from "./regionBehaviors/MidiRegionActivityBehaviorType.js";
@@ -94,6 +95,7 @@ export let readyHooks = async () => {
   // Note: Vitality overflow for direct HP edits is NOT handled because the value is clamped before application.
   // Vitality is only affected through damage application (GMAction.ts or actor.applyDamage()) which has explicit damage amounts.
   Hooks.on("preUpdateActor", (actor, changes, options: any, userId) => {
+    consumeDamageApplication(changes, options);
     if (userId !== game.user?.id) return true;
 
     const shouldCheckTempHP = configSettings.tempHPDamageConcentrationCheck;
@@ -1637,6 +1639,7 @@ function calculateDamageHandler(actor: Actor.Implementation, damages: DamageDesc
 }
 
 Hooks.on("dnd5e.preApplyDamage", (actor, amount, updates, options) => {
+  stampDamageApplication(updates, options);
   if (updates["system.attributes.hp.temp"]) updates["system.attributes.hp.temp"] = Math.floor(updates["system.attributes.hp.temp"]);
 
   // Handle vitality overflow when HP reaches 0 (for actor.applyDamage() calls)
