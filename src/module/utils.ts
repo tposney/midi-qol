@@ -1,4 +1,4 @@
-import { applyOfferedBonus, type BonusPhase, type OfferedBonus, type RollBonusQuery } from "./services/rollBonuses.js";
+import { applyOfferedBonus, collectBonusCandidates, type BonusPhase, type OfferedBonus, type RollBonusQuery } from "./services/rollBonuses.js";
 import { crossesOppositeSides, opposedByAngle } from "./rules/flanking.js";
 import { DialogCountdown } from "./lib/dialogCountdown.js";
 import { coverBetween, coverFor } from "./services/cover.js";
@@ -5984,6 +5984,20 @@ export function reactionTriggerLabelFor(triggerType: string): string {
 const optionalACKey = (triggerType: string): "acOnAttack" | "acOnHit" | undefined =>
   triggerType === "reactionattacked" ? "acOnAttack" : triggerType === "reaction" ? "acOnHit" : undefined;
 
+/** rollBonuses contributors' AC bonuses for a defender: acOnAttack before the attack's result, acOnHit after a hit. */
+async function acBonusCandidates(actor: Actor.Implementation, tokenUuid: string | undefined, triggerTokenUuid: string | null | undefined,
+  triggerType: string, acRoll: Roll, options: any = {}): Promise<{ query: RollBonusQuery, phase: BonusPhase, candidates: OfferedBonus[] } | undefined> {
+  const acKey = optionalACKey(triggerType);
+  if (!acKey) return undefined;
+  const phase: BonusPhase = acKey === "acOnAttack" ? "preResult" : "postResult";
+  const query: RollBonusQuery = {
+    kind: "ac", actor, token: tokenUuid ? getTokenDocument(tokenUuid) : undefined,
+    target: triggerTokenUuid ? getTokenDocument(triggerTokenUuid) : undefined,
+    workflow: options.workflow instanceof Workflow ? options.workflow : undefined, activity: options.activity, item: options.item
+  };
+  return { query, phase, candidates: await collectBonusCandidates(query, phase, acRoll) };
+}
+
 export async function doReactions(targetRef: TokenOrDocument | string, triggerTokenRef: string | null | undefined, triggeringRoll: Roll | null | undefined, triggerType: string, options: any = {}): Promise<{ name?: string, uuid?: string, ac?: number, itemName?: string }> {
   const triggerTokenUuid = triggerTokenRef ?? undefined;
   const target = getToken(targetRef);
@@ -6098,7 +6112,10 @@ export async function doReactions(targetRef: TokenOrDocument | string, triggerTo
           if (!(acKey && midiFlags?.optional?.[flag][acKey])) return false;
           if (!midiFlags?.optional[flag].count) return true;
           return getOptionalCountRemainingShortFlag(target.actor!, flag) > 0;
-        }).length
+        }).length;
+      // @ts-expect-error no dnd5e-types
+      const acNow = await new Roll(`${target.actor.system.attributes.ac.value}`).roll();
+      reactionCount += (await acBonusCandidates(target.actor, getTokenDocument(target)?.uuid ?? undefined, triggerTokenRef, triggerType, acNow, options))?.candidates.length ?? 0;
     }
 
     if (reactionCount <= 0) return noResult;
@@ -6330,9 +6347,11 @@ export async function promptReactions(
         if (!midiFlags.optional[flag].count) return true;
         return getOptionalCountRemainingShortFlag(actor, flag) > 0;
       }).map(flag => `flags.${MODULE_ID}.optional.${flag}`);
-    if (validFlags.length > 0 && acKey) {
-      // @ts-expect-error no dnd5e-types
-      let acRoll = await new Roll(`${actor.system.attributes.ac.value}`).roll();
+    // @ts-expect-error no dnd5e-types
+    const acNow = await new Roll(`${actor.system.attributes.ac.value}`).roll();
+    const acBonuses = await acBonusCandidates(actor, tokenUuid, triggerTokenUuid, triggerType, acNow, options);
+    if ((validFlags.length > 0 || acBonuses?.candidates.length) && acKey) {
+      let acRoll = acNow;
       const data = {
         actor,
         tokenUuid,
@@ -6345,7 +6364,7 @@ export async function promptReactions(
       let displayBonusRolls: boolean | undefined = validFlags.reduce((acc: boolean | undefined, flag: string) => (acc || (foundry.utils.getProperty(actor ?? {}, `${flag}.displayBonusRolls`) as boolean)), undefined);
       if (!displayBonusRolls) displayBonusRolls = checkMechanic("displayBonusRolls") as boolean;
       // @ts-expect-error no dnd5e-types
-      const newAC = await bonusDialog.bind(data)(validFlags, acKey, displayBonusRolls !== false, `${actor.name} - ${i18n("DND5E.AC")} ${actor.system.attributes.ac.value}`, acRoll, "roll", { card: options.itemCardUuid, anchor: "hits" });
+      const newAC = await bonusDialog.bind(data)(validFlags, acKey, displayBonusRolls !== false, `${actor.name} - ${i18n("DND5E.AC")} ${actor.system.attributes.ac.value}`, acRoll, "roll", { card: options.itemCardUuid, anchor: "hits", bonusQuery: acBonuses?.query, bonusPhase: acBonuses?.phase, candidates: acBonuses?.candidates });
       const endTime = Date.now();
       if (debugEnabled > 0) warn("promptReactions | returned via bonus dialog ", endTime - startTime)
       // Only return the AC result if the user actually used an optional bonus (AC changed)
