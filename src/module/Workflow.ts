@@ -969,6 +969,7 @@ export class Workflow {
   }
   set currentAction(currentAction: WorkflowState | string) {
     this.#currentStep = Workflow.stepIdOf(currentAction);
+    if (this.#currentStep === "midi-qol.SavesComplete") this.#savesResolved = true;
     this.#persisted.setClass(this.constructor.name);
     // Recorded for M2's flows; a rebuilt workflow still works out where it waits from its card (cardResumePoint)
     this.#persisted.setStep(this.#currentStep);
@@ -2942,6 +2943,7 @@ export class Workflow {
   }
 
   async WorkflowState_AllRollsComplete(): Promise<WorkflowState> {
+    await this.offerDeferredDamageBonuses();
 
     // Skip other damage processing entirely if consumption was already declined
     if (this.otherConsumed === false) {
@@ -7512,6 +7514,31 @@ export class Workflow {
   }
 
   #preRollBonuses: { attack?: OfferedBonus[] } = {};
+  #savesResolved = false;
+  #deferredDamageBonuses = false;
+
+  /**
+   * rollBonuses decision 4: a use with saves offers contributors' damage bonuses once the saves are known (here, as
+   * the damage is calculated), so a bonus can depend on who saved; the damage is worked out again with the new roll.
+   */
+  async offerDeferredDamageBonuses(): Promise<void> {
+    if (!this.#deferredDamageBonuses) return;
+    this.#deferredDamageBonuses = false;
+    const roll = this.damageRolls?.[0];
+    if (!roll) return;
+    const bonusQuery = this.rollBonusQuery("damage");
+    const candidates = await collectBonusCandidates(bonusQuery, "postResult", roll);
+    if (!candidates.length) return;
+    await this.flushCardWrites(); // a person decides next
+    const newRoll = await bonusDialog.bind(this)([], "damage.all", false, `${this.actor.name} - ${i18n("DND5E.Damage")} ${i18n("DND5E.Roll")}`, roll, "damageRoll",
+      { damageRolls: this.damageRolls, bonusQuery, bonusPhase: "postResult", candidates });
+    if (newRoll && newRoll !== roll) {
+      const rolls = [...this.damageRolls!];
+      rolls[0] = newRoll;
+      await this.setDamageRolls(rolls);
+      await this.displayDamageRolls();
+    }
+  }
 
   /** rollBonuses' damage bonuses for particular targets (stage 9), added to those targets' damage by midi's damageModifiers contributor */
   targetedDamageBonuses: { targets: string[], amount: number, type: string, label: string }[] = [];
@@ -7637,7 +7664,10 @@ export class Workflow {
       })
       .map(flag => midiFlag(`optional.${flag}`));
     const bonusQuery = this.rollBonusQuery("damage");
-    const candidates = damageRolls[0] ? await collectBonusCandidates(bonusQuery, "postResult", damageRolls[0]) : [];
+    // Contributors' damage bonuses wait until the saves are known (offerDeferredDamageBonuses); flags keep their timing
+    const deferContributors = this.hasSave && !this.#savesResolved;
+    if (deferContributors) this.#deferredDamageBonuses = true;
+    const candidates = damageRolls[0] && !deferContributors ? await collectBonusCandidates(bonusQuery, "postResult", damageRolls[0]) : [];
     if (bonusFlags.length > 0 || candidates.length > 0) {
       // this.damamgeRollHTML = $(this.damageRolHTML).find(".dice-roll").remove();
       // TODO dnd3 work out what this means for multiple rolls
