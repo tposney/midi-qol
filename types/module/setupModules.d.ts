@@ -1,14 +1,14 @@
-export declare const DAE_REQUIRED_VERSION = "13.0.19";
+export declare const DAE_REQUIRED_VERSION = "14.6.7";
 export declare const USEFUL_MODULE_VERSIONS: {
     "about-time": string;
     ActiveAuras: string;
     anonymous: string;
     auraeffects: string;
     autoanimations: string;
+    cat: string;
     "chris-premades": string;
     "condition-lab-triggler": string;
     dae: string;
-    "ddb-game-log": string;
     "dfreds-convenient-effects": string;
     "dice-so-nice": string;
     "epic-rolls-5e": string;
@@ -24,18 +24,15 @@ export declare const USEFUL_MODULE_VERSIONS: {
     "monks-tokenbar": string;
     "multilevel-tokens": string;
     perceptive: string;
-    "ready-set-roll-5e": string;
     "seasons-and-stars": string;
-    "simbuls-cover-calculator": string;
     simplecover5e: string;
     socketlib: string;
-    "times-up": string;
     tokencover: string;
     "vision-5e": string;
     walledtemplates: string;
     wjmais: string;
 };
-export declare let installedModules: Map<string, boolean>;
+export declare let installedModules: Map<string, boolean | undefined>;
 export declare function getModuleVersion(moduleName: string): string;
 export declare let setupModules: () => void;
 export declare function dice3dEnabled(): boolean;

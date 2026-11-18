@@ -14,6 +14,8 @@ export interface RollModifierFlags {
     successFlags: string[];
     maxFlags: string[];
     minFlags: string[];
+    /** dnd5e roll fields (e.g. "abilities.dex.save.roll") whose fail/success conditions apply to the roll */
+    fieldPaths?: string[];
 }
 export interface CriticalModifierFlags {
     criticalFlags: string[];
@@ -31,75 +33,52 @@ export interface AdvantageFlags {
     advantageFlags: string[];
     disadvantageFlags: string[];
     systemRollModeFields: string[];
+    systemRules?: {
+        category: "save" | "check" | "attack";
+        rollData: object;
+        item?: Item.Implementation;
+    };
     noAdvantageFlags?: string[];
     noDisadvantageFlags?: string[];
     sourceAdvantageFlags?: string[];
     sourceDisadvantageFlags?: string[];
     sourceNoAdvantageFlags?: string[];
     sourceNoDisadvantageFlags?: string[];
-    deprecatedFlags?: Set<string>;
 }
 export declare function getFlagDisplayName(flag: string): string;
 type AdvantageType = 'ADV' | 'DIS';
 /**
- * Tracks a single advantage or disadvantage state with attribution.
+ * One side (advantage or disadvantage) of a roll: midi's sources for it as dnd5e counts them (sources, a suppression,
+ * an override), with attribution. Whether the roll has the side is the owning tracker's verdict.
  */
 export declare class AdvantageDisadvantageTracker {
     #private;
-    constructor(type: AdvantageType, addAttribution: AttributionCallback);
-    /** Get complete state snapshot */
+    constructor(type: AdvantageType, addAttribution: AttributionCallback, verdict: () => boolean);
     get get(): Readonly<{
         active: boolean;
+        count: number;
         suppressed: boolean;
         override: boolean;
     }>;
     /** Whether at least one source has been added */
     get isAdded(): boolean;
-    /** Whether suppressed by a blocking flag */
+    get count(): number;
     get isSuppressed(): boolean;
-    /** Whether override is set (bypasses suppression) */
     get hasOverride(): boolean;
-    /**
-     * Computed final state.
-     * Returns true if active and not suppressed (or if override is set).
-     * Returns undefined if not active or if suppressed.
-     */
+    /** Whether the roll has this side */
     get isActive(): true | undefined;
-    /**
-     * Add a source of advantage/disadvantage.
-     * @param source - Optional source identifier for attribution
-     * @param displayName - Optional human-readable display name
-     */
     add(source?: string, displayName?: string): void;
-    /**
-     * Clear active state.
-     * Preserves suppression state.
-     */
+    /** Remove every source; a suppression or override stays */
     clear(): void;
-    /**
-     * Suppress this modifier.
-     * When suppressed, isActive returns undefined.
-     * @param source - Optional source identifier for attribution
-     * @param displayName - Optional human-readable display name
-     */
     suppress(source?: string, displayName?: string): void;
-    /**
-     * Force this modifier, bypassing suppression.
-     * @param source - Optional source identifier for attribution
-     * @param displayName - Optional human-readable display name
-     */
+    /** Force this side, as a dnd5e override does: a suppression of it still applies */
     setOverride(source?: string, displayName?: string): void;
-    /**
-     * Clear override state.
-     */
     clearOverride(): void;
-    /**
-     * Reset all state to initial values.
-     */
     reset(): void;
-    /** Restore state from serialized data */
+    /** Restore from toJSON's `get`; older data has `active` instead of a count */
     restore(state: {
-        active: boolean;
+        active?: boolean;
+        count?: number;
         suppressed: boolean;
         override: boolean;
     }): void;
@@ -262,11 +241,28 @@ export declare class RollModifierTracker {
     get legacyAttribution(): Set<string>;
     /** Get legacy Set format for adv-reminder: "${type}:${source}" */
     get advReminderAttribution(): Set<string>;
-    /**
-     * Get the combined advantage/disadvantage mode.
-     * @returns ADV_MODE.ADVANTAGE, ADV_MODE.DISADVANTAGE, or ADV_MODE.NORMAL
-     */
+    /** midi's sources as dnd5e's advantage counts */
+    get counts(): AdvantageCounts;
+    /** The roll's dnd5e roll mode fields and advantage rules take part in the verdict */
+    useDnd5eSources(actor: Actor.Implementation, fields: string[], rules?: AdvantageFlags["systemRules"]): void;
+    /** dnd5e's verdict on midi's sources with the roll's own, before held keys: what midi gives the roll config */
+    get dnd5eVerdict(): {
+        advantage: boolean;
+        disadvantage: boolean;
+    };
+    /** The sides any of the roll's known sources (midi's, its dnd5e roll mode fields and rules) asks for, before suppression */
+    get claims(): {
+        advantage: boolean;
+        disadvantage: boolean;
+    };
+    /** ADV_MODE: ADVANTAGE, DISADVANTAGE or NORMAL */
     get advantageMode(): number;
+    /**
+     * The roll as made, where it differs from the verdict: dnd5e adds held keys to the roll after everything else, and
+     * the roll dialog's choice replaces it.
+     */
+    reconcileWithRoll(mode: number | undefined, dialogShown: boolean): void;
+    setFinalMode(mode: number, source: string, displayName: string): void;
     /** Check if there's effective advantage */
     get hasAdvantage(): true | undefined;
     /** Check if there's effective disadvantage */
@@ -283,14 +279,25 @@ export declare class RollModifierTracker {
     toJSON(): object;
     /** Restore tracker state from serialized data */
     restore(data: ReturnType<RollModifierTracker["toJSON"]> & Record<string, any>): void;
-    processKeys(config?: RollProcessConfig): void;
 }
 /**
- * Centralized function for processing advantage/disadvantage flags.
- * Handles both actor flags and source actor grants flags.
- * Populates and returns a RollModifierTracker instance with attribution tracking.
+ * The roll's advantage sources on a tracker: midi's flags (each kind's first that holds), the opponent's grants, and
+ * the roll's dnd5e roll mode fields and advantage rules, which dnd5e combines with them.
  */
 export declare function computeAdvantageFlags(actor: Actor.Implementation, flags: AdvantageFlags, options: MidiOptions, tracker?: RollModifierTracker): Promise<RollModifierTracker>;
+/** computeAdvantageFlags for a synchronous hook (initiative); conditions are evaluated synchronously */
+export declare function computeAdvantageFlagsSync(actor: Actor.Implementation, flags: AdvantageFlags, options: MidiOptions, tracker?: RollModifierTracker): RollModifierTracker;
+type AdvantageCounts = {
+    override: number | null;
+    advantages: {
+        count: number;
+        suppressed: boolean;
+    };
+    disadvantages: {
+        count: number;
+        suppressed: boolean;
+    };
+};
 /**
  * Evaluate roll modifier flags and populate the tracker with autoFail/autoSuccess/min/max.
  * This is the flag evaluation step - call applyRollModifiers afterwards to apply to config.
@@ -342,6 +349,21 @@ export declare function computeCriticalModifiers(actor: Actor.Implementation, fl
  */
 export declare function computeTargetCriticalModifiers(targetActor: Actor.Implementation, targetName: string, flags: CriticalModifierFlags, tracker: RollModifierTracker, options?: {
     workflow?: any;
-    sourceActor?: Actor.Implementation;
+    grantsActor?: Actor.Implementation;
 }): Promise<void>;
+/**
+ * Hand midi's advantage verdict to dnd5e without discarding the system's own.
+ *
+ * dnd5e 6.0 derives advantage from `D20RollModificationField` and then merges the caller's config
+ * over the top, so writing a falsy value here silently erases native advantage. midi's tracker has
+ * three states and only two are ours to assert: granted, denied (a `noAdvantage`/`noDisadvantage`
+ * flag), and no opinion.
+ *
+ * No opinion must leave the key completely untouched. Assigning `undefined` is not neutral —
+ * `mergeObject` treats it as an own key and it overwrites native advantage as surely as `false`.
+ * Deleting is not neutral either: called from a `preRoll*` hook the key already holds the value
+ * dnd5e derived, and before the call it may hold an explicit request from the caller. Either way
+ * it is not ours to discard.
+ */
+export declare function applyTrackerAdvantage(config: RollProcessConfig, tracker: RollModifierTracker): void;
 export {};

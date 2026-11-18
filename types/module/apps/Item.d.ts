@@ -1,7 +1,13 @@
+import type { Activity } from "../../globals.js";
 export declare class OnUseMacros {
     items: OnUseMacro[];
     constructor(onUseMacros?: any);
     static parseParts(parts: any): OnUseMacros;
+    /**
+     * Blank macro names stand for the item's own macro: the activity's (activityMacroName, "ActivityMacro" for the activity
+     * being used) if it has one, else the item's. A blank name with neither is dropped.
+     */
+    static withDefaults(macros: OnUseMacros | undefined, item: Item.Implementation | undefined, activity: Activity | undefined, activityMacroName?: string): OnUseMacros;
     getMacros(currentOption: string | undefined): string;
     toString(): string;
 }

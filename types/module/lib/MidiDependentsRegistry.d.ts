@@ -78,18 +78,59 @@ export declare class MidiDependentsRegistry {
  * @returns The extended document class with midi-qol dependent tracking
  * @mixin
  */
-export declare function MidiDependentDocumentMixin<T extends new (...args: any[]) => any>(Base: T): {
+/** Minimal interface for document instances used by the mixin — uuid, flags, and name are present on all Foundry documents */
+interface MixinDocumentInstance {
+    uuid: string;
+    name: string;
+    flags: Record<string, any>;
+    prepareData(): void;
+    _onCreate(data: object, options: object, userId: string): void;
+    _preUpdate(changed: object, options: object, user: User): Promise<any>;
+    _onUpdate(changed: object, options: object, userId: string): void;
+    _onDelete(options: object, userId: string): void;
+}
+export declare function MidiDependentDocumentMixin<T extends new (...args: any[]) => MixinDocumentInstance>(Base: T): {
     new (...args: any[]): {
-        [x: string]: any;
         /** @inheritDoc */
         prepareData(): void;
         /** @inheritDoc */
-        _onCreate(data: object, options: object, userId: string): any;
+        _onCreate(data: object, options: object, userId: string): void;
         /** @inheritDoc */
         _preUpdate(changed: object, options: object, user: User): Promise<any>;
         /** @inheritDoc */
         _onUpdate(changed: object, options: object, userId: string): void;
         /** @inheritDoc */
         _onDelete(options: object, userId: string): void;
+        uuid: string;
+        name: string;
+        flags: Record<string, any>;
     };
 } & T;
+/** The item, actor effect or item effect at `path` (e.g. "Item.<id>.ActiveEffect.<id>") inside an actor. */
+export declare function actorEmbeddedByPath(actor: Actor.Implementation | null | undefined, path: string): Item.Implementation | ActiveEffect.Implementation | undefined;
+/**
+ * A copied token, actor or scene keeps its embedded ids but gets a new UUID, so a dependentOn that pointed inside the
+ * original still does. Returns the same item or effect's UUID in the copy (actorUuid), or undefined if the flag
+ * doesn't point into another copy of it. A token's actor only re-points flags into another token: its base actor's
+ * items depend on the base actor.
+ */
+export declare function repointedDependentOn(flag: unknown, actorUuid: string | null, isToken: boolean, has: (path: string) => boolean): string | undefined;
+type DependentSource = {
+    _id?: string | null;
+    flags?: {
+        dnd5e?: {
+            dependentOn?: string;
+        };
+    } | null;
+    effects?: DependentSource[] | null;
+};
+/** Re-point dependentOn flags in a copied actor (or token's actor) at its own items and effects. */
+export declare function repointCopiedDependents(actor: Actor.Implementation | null | undefined): Promise<void>;
+/** As repointCopiedDependents, for an unlinked token's delta before the token is created (midi's teleport). */
+export declare function repointCopiedDependentsSource(delta: {
+    items?: DependentSource[] | null;
+    effects?: DependentSource[] | null;
+} | null | undefined, actorUuid: string, has: (path: string) => boolean): void;
+/** Whether an unlinked token's delta has a dependentOn anywhere, so its actor is worth building to re-point it. */
+export declare function tokenHasDependents(token: TokenDocument.Implementation): boolean;
+export {};

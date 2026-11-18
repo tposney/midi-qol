@@ -1,4 +1,4 @@
-import { RollModifierTracker } from "../lib/RollModifierTracker.js";
+import { PreComputedAdvantageData } from "../../globals.js";
 /**
  * A choice entry for the dropdown in the roll dialog.
  */
@@ -7,22 +7,8 @@ export interface RollChoice {
     label: string;
     modifier: string;
 }
-/**
- * Pre-computed advantage data for a specific choice, keyed by ability or skill ID.
- *
- * trackerData: Serialized RollModifierTracker (via toJSON()) for socketlib transfer.
- * tracker: The deserialized RollModifierTracker instance (populated by GMAction).
- *
- * Class instances don't survive socketlib serialization, so Workflow.ts serializes
- * to trackerData, and GMAction deserializes back to tracker before calling doRollAbility.
- */
-export interface PreComputedAdvantage {
-    hasAdvantage: boolean;
-    hasDisadvantage: boolean;
-    defaultButton: "advantage" | "disadvantage" | "normal";
-    trackerData?: object;
-    tracker?: RollModifierTracker;
-}
+/** Re-export for backward compatibility - canonical type is PreComputedAdvantageData in globals.ts */
+export type PreComputedAdvantage = PreComputedAdvantageData;
 /**
  * Custom D20 roll dialog that adds a filtered choice dropdown when multiple
  * abilities or skills are available for a save/check. Follows the same pattern as
@@ -40,12 +26,23 @@ export declare class MidiRollChoiceDialog extends D20RollConfigurationDialog {
     get config(): any;
     get message(): any;
     get rolls(): any;
+    /** Typed access to our custom options (ApplicationV2 options are untyped) */
+    get midiOptions(): {
+        rollChoices: RollChoice[];
+        choiceType: string;
+        advantageByChoice?: Record<string, PreComputedAdvantage>;
+        abilityForChoice?: (id: string) => string | undefined;
+    };
+    /** Typed wrapper for ApplicationV2._updateFrame (protected method) */
+    private _midiUpdateFrame;
+    /** Typed wrapper for ApplicationV2.render with parts */
+    private _midiRenderParts;
     /** Mutable default button override — options are frozen by ApplicationV2, so we track it here instead */
     _midiDefaultButton: string | undefined;
     /** @override */
     static DEFAULT_OPTIONS: {
         rollChoices: RollChoice[];
-        advantageByChoice: Map<string, PreComputedAdvantage>;
+        advantageByChoice: Record<string, PreComputedAdvantage>;
         choiceType: "ability" | "skill" | "tool";
     };
     /** @override — restore focus to autofocus button after partial re-render of buttons part */
@@ -68,20 +65,25 @@ export declare class MidiRollChoiceDialog extends D20RollConfigurationDialog {
      * that D20Roll.fromConfig → configureModifiers() produces the correct formula.
      */
     static applyPreComputedAdvantage(rollConfig: any, preComputed: PreComputedAdvantage | undefined): void;
-    static createSaveBuildConfig(actor: Actor.Implementation, advantageByChoice?: Map<string, PreComputedAdvantage>): (processConfig: any, rollConfig: any, formData: FormData | null, index: number) => void;
     /**
-     * Factory to create a buildConfig callback for rebuilding skill roll parts
-     * when the player changes the skill dropdown.
+     * Unified factory to create a buildConfig callback for rebuilding roll parts
+     * when the player changes the dropdown selection.
      *
-     * Mirrors dnd5e's `_buildSkillToolConfig` callback but for skill-to-skill changes.
-     */
-    static createSkillBuildConfig(actor: Actor.Implementation, advantageByChoice?: Map<string, PreComputedAdvantage>): (processConfig: any, rollConfig: any, formData: FormData | null, index: number) => void;
-    /**
-     * Factory to create a buildConfig callback for rebuilding tool roll parts
-     * when the player changes the tool dropdown.
+     * - skill/tool: Delegates to dnd5e's actor._buildSkillToolConfig()
+     * - save/check: Custom implementation (dnd5e has no public method for this)
      *
-     * Mirrors dnd5e's `_buildSkillToolConfig` callback but for tool-to-tool changes.
+     * @param actor - The actor making the roll
+     * @param rollType - "save", "check", "skill", or "tool"
+     * @param advantageByChoice - Pre-computed advantage data keyed by choice ID
      */
-    static createToolBuildConfig(actor: Actor.Implementation, advantageByChoice?: Map<string, PreComputedAdvantage>): (processConfig: any, rollConfig: any, formData: FormData | null, index: number) => void;
+    static createBuildConfig(actor: Actor.Implementation, rollType: "save" | "check" | "skill" | "tool", advantageByChoice?: Record<string, PreComputedAdvantage>): (processConfig: any, rollConfig: any, formData: FormData | null, index: number) => void;
+    /** @deprecated Use createBuildConfig(actor, "save", advantageByChoice) instead */
+    static createSaveBuildConfig(actor: Actor.Implementation, advantageByChoice?: Record<string, PreComputedAdvantage>): (processConfig: any, rollConfig: any, formData: FormData | null, index: number) => void;
+    /** @deprecated Use createBuildConfig(actor, "check", advantageByChoice) instead */
+    static createCheckBuildConfig(actor: Actor.Implementation, advantageByChoice?: Record<string, PreComputedAdvantage>): (processConfig: any, rollConfig: any, formData: FormData | null, index: number) => void;
+    /** @deprecated Use createBuildConfig(actor, "skill", advantageByChoice) instead */
+    static createSkillBuildConfig(actor: Actor.Implementation, advantageByChoice?: Record<string, PreComputedAdvantage>): (processConfig: any, rollConfig: any, formData: FormData | null, index: number) => void;
+    /** @deprecated Use createBuildConfig(actor, "tool", advantageByChoice) instead */
+    static createToolBuildConfig(actor: Actor.Implementation, advantageByChoice?: Record<string, PreComputedAdvantage>): (processConfig: any, rollConfig: any, formData: FormData | null, index: number) => void;
 }
 export {};
