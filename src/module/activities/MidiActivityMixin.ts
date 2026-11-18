@@ -31,7 +31,7 @@ import {
 } from "../settings.js";
 import { installedModules } from "../setupModules.js";
 import { saveUndoData } from "../undo.js";
-import { clearAbandonedUse, isRelaunched, takeRelaunch, type UseState } from "./useRelaunch.js";
+import { clearAbandonedUse, isRelaunched, noteCall, takeRelaunch, type UseState } from "./useRelaunch.js";
 import { activityHasAreaTarget, callActivityHooks, canSee, canSense, checkActivityRange, checkTargetsSeen, checkTotalCover, checkIncapacitated, createConditionData, displayDSNForRoll, evalActivationCondition, evalCondition, getAutoRollAttack, getAutoRollDamage, getRemoveAttackButtons, getRemoveDamageButtons, getSpeaker, getToken, activityHasAutoPlaceTemplate, confirmUseOffScene, hasUsedBonusAction, hasUsedReaction, autoConsumeResource, isInCombat, logIncapacitatedCheckResult, needsBonusActionCheck, needsReactionCheck, setBonusActionUsed, setReactionUsed, sumRolls, getOrCreateTokenForActor, validTargetTokens, userTargetsKeepingUndrawn, itemMagicAvailable, hasNoReactionsMarker, HEALING_BUTTON_KEY, activityHasEmanationNoTemplate, getActivityAutoTargetAction, areMidiKeysPressed, getActor, setRangedTargets, updateUserTargets, isValidTarget, needsAOOCheck, addRollTo, getConsumptionData, toMessageMode, rollModeToMessageMode, tokenSourceCenter, isActivityType, speakerFor, setMessageTargets } from "../utils.js";
 import { activityHasScaledTargetCount, attachTokenOptions, templateOriginOptions, createActivityTemplateRegions, preTemplateTargets, removeFlanking, requiresTargetConfirmation, selectTargetsFromTemplates, setDamageRollMinTerms, shouldEnforceSingleTarget } from "./activityHelpers.js";
 
@@ -220,8 +220,9 @@ export let MidiActivityMixin = Base => {
     async use(usage: ActivityUseConfiguration = {}, dialog: RollDialogConfig = {}, message: RollMessageConfig = {}) {
       if (isRelaunched(usage)) return super.use(usage, dialog, message);
       const useKey = foundry.utils.randomID();
+      noteCall(useKey, usage, dialog, message);
       const first = await super.use({ ...usage, useRelaunch: { useKey } }, dialog, message);
-      return first ?? await takeRelaunch(useKey, usage);
+      return first ?? await takeRelaunch(useKey);
     }
 
     /**
@@ -328,7 +329,9 @@ export let MidiActivityMixin = Base => {
       const deferConcentration = activity.requiresConcentration
         && !safeGetGameSetting("dnd5e", "disableConcentration")
         && !(isActivityType(activity, "transform") && activity.transform?.mode === "form");
-      if (!await activity.preTargetingChecks(usage, dialog, message)) return stop(false);
+      // Stopped after the workflow was made: the caller's config is left without it, so a resubmitted config starts afresh
+      const abandon = () => { clearAbandonedUse(usage); return stop(false); };
+      if (!await activity.preTargetingChecks(usage, dialog, message)) return abandon();
       // Save/clear targets BEFORE setupTargets changes game.user.targets for self-targeting
       const isSelfTarget = this.target?.affects?.type === "self"
         // @ts-expect-error item.type includes "tool" at runtime
@@ -337,9 +340,9 @@ export let MidiActivityMixin = Base => {
       if (isSelfTarget) usage.workflow!.selfTargeted = true;
       if (!await activity.setupTargets(usage, dialog, message)) {
         ui.notifications?.warn(i18n("midi-qol.noTargets"));
-        return stop(false);
+        return abandon();
       }
-      if (!await activity.preChatChecks(usage, dialog, message)) return stop(false);
+      if (!await activity.preChatChecks(usage, dialog, message)) return abandon();
       // If midiOptions.spellLevel is provided, set the spell slot key so that
       // dnd5e's _prepareUsageScaling derives the correct scaling from it.
       // @ts-expect-error item.type includes "spell" at runtime

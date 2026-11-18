@@ -54,32 +54,35 @@ export function clearAbandonedUse(...configs: (ActivityUseConfiguration | undefi
   }
 }
 
-/** A restart under way, by the key of the call it replaced; `workflow` once its pre-use work made one */
-interface Restart { promise: Promise<unknown>, workflow?: unknown }
-const restarts = new Map<string, Restart>();
+/**
+ * What a call to midi's use was given, by its use key: the restart runs midi's pre-use work on these, as midi's use
+ * always did, not on dnd5e's prepared copies (which carry dnd5e's defaults: `configure: true`, the user's targets on
+ * the message). The caller's usage gets the use's workflow from it, as before (macros read `config.workflow`).
+ */
+interface CallerConfigs { usage: ActivityUseConfiguration, dialog: RollDialogConfig, message: RollMessageConfig }
+const callers = new Map<string, CallerConfigs>();
+const restarts = new Map<string, Promise<unknown>>();
 /** The uses in dnd5e's (marked) use now, by their workflow: what the permanent listeners act for */
 const running = new Map<object, UseState>();
 
-/**
- * For midi's use(): the restart its call to dnd5e's use started (none: dnd5e's use wasn't cancelled by midi). The
- * caller's usage gets the use's workflow, as midi's use always set it (macros read `config.workflow` after `use`).
- */
-export async function takeRelaunch(useKey: string, callerUsage?: ActivityUseConfiguration): Promise<unknown> {
-  const entry = restarts.get(useKey);
-  restarts.delete(useKey);
-  if (!entry) return undefined;
-  const result = await entry.promise;
-  if (callerUsage && result && entry.workflow) callerUsage.workflow = entry.workflow as ActivityUseConfiguration["workflow"];
-  return result;
+/** midi's use, before calling dnd5e's: what it was given, for the restart its key starts. */
+export function noteCall(useKey: string, usage: ActivityUseConfiguration, dialog: RollDialogConfig, message: RollMessageConfig): void {
+  callers.set(useKey, { usage, dialog, message });
 }
 
-async function restart(entry: Restart, activity: RestartableActivity, usageConfig: ActivityUseConfiguration, dialog: RollDialogConfig, message: RollMessageConfig): Promise<unknown> {
-  const { useRelaunch: _key, ...usage } = usageConfig;
+/** For midi's use(): the restart its call to dnd5e's use started (none: dnd5e's use wasn't cancelled by midi). */
+export async function takeRelaunch(useKey: string): Promise<unknown> {
+  callers.delete(useKey);
+  const restart = restarts.get(useKey);
+  restarts.delete(useKey);
+  return restart;
+}
+
+async function restart(activity: RestartableActivity, { usage, dialog, message }: CallerConfigs): Promise<unknown> {
   const prepared = await activity.prepareUse(usage, dialog, message);
   if (prepared.done) return prepared.result;
   const state = prepared.state;
   const workflow = state.usage.workflow;
-  entry.workflow = workflow;
   if (workflow) running.set(workflow, state);
   let results: unknown;
   try {
@@ -100,7 +103,7 @@ async function restart(entry: Restart, activity: RestartableActivity, usageConfi
 
 let listenerId: number | undefined;
 
-function onPreUseActivity(activity: Activity, usageConfig: AnyMutableObject & ActivityUseConfiguration, dialogConfig: AnyMutableObject, messageConfig: AnyMutableObject) {
+function onPreUseActivity(activity: Activity, usageConfig: AnyMutableObject & ActivityUseConfiguration) {
   // The restarted use: this use's own handling (the scaled activity, dnd5e's copy of the usage)
   if (isRelaunched(usageConfig)) {
     const state = usageConfig.workflow ? running.get(usageConfig.workflow) : undefined;
@@ -108,10 +111,10 @@ function onPreUseActivity(activity: Activity, usageConfig: AnyMutableObject & Ac
   }
   // Only a call midi's use made (its key): not Cast's delegation, not another type's
   const key = usageConfig.useRelaunch?.useKey;
-  if (!key || !isRestartable(activity)) return true;
-  const entry: Restart = { promise: Promise.resolve() };
-  entry.promise = restart(entry, activity, usageConfig, dialogConfig as RollDialogConfig, messageConfig as RollMessageConfig);
-  restarts.set(key, entry);
+  const caller = key ? callers.get(key) : undefined;
+  if (!key || !caller || !isRestartable(activity)) return true;
+  callers.delete(key);
+  restarts.set(key, restart(activity, caller));
   return false;
 }
 
