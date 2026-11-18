@@ -142,6 +142,18 @@ export function findAmmunitionActivity(ammunitionItem: any): any | undefined {
 
 export let MidiActivityMixin = Base => {
   interface MidiActivityMixin extends Activity { };
+  /** One use's working state between midi's pre-use work, dnd5e's use and midi's post-use work (prepareUse/finishUse) */
+  interface UseState {
+    usage: ActivityUseConfiguration;
+    dialog: RollDialogConfig;
+    message: RollMessageConfig;
+    /** The clone midi works on, the one dnd5e's use is called on */
+    activity: MidiActivityMixin;
+    deferConcentration: boolean;
+    /** dnd5e's copy of the usage (preUseActivity) and the one consumption ran with (activityConsumption) */
+    dnd5eUsageConfig?: ActivityUseConfiguration;
+    usageData?: ActivityUseConfiguration;
+  }
   class MidiActivityMixin extends Base {
 
 
@@ -227,242 +239,255 @@ export let MidiActivityMixin = Base => {
         const first = await super.use({ ...usage, useRelaunch: { useKey } }, dialog, message);
         return first ?? await takeRelaunch(useKey);
       }
-      if (usage.midiOptions?.rollAs) return this.useAs(usage.midiOptions.rollAs, usage, dialog, message);
-      if (!this.item.isEmbedded) return;
+      const prepared = await this.prepareUse(usage, dialog, message);
+      if (prepared.done) return prepared.result;
+      const state = prepared.state;
+      const preUseActivityHookId = Hooks.on("dnd5e.preUseActivity", (newActivity, usageConfig) => this.onUsePreUse(state, newActivity, usageConfig));
+      const activityConsumptionHookId = Hooks.on("dnd5e.activityConsumption", (newActivity, usageConfig) => this.onUseConsumption(state, newActivity, usageConfig));
+      let useResults: any;
+      try {
+        // The usage card describes the use's targets, not the player's (which an automated use leaves alone)
+        state.message = setMessageTargets(state.message ?? {}, usage.workflow);
+        useResults = await super.use.bind(state.activity)(usage, dialog, state.message);
+      } catch (err) {
+        error("MidiQOL | MidiActivity | use | Error in super.use", err);
+        TroubleShooter.recordError(err, "Error in super.use");
+        Workflow.removeWorkflow(usage.workflow?.id);
+        clearAbandonedUse(usage, state.dnd5eUsageConfig);
+        return false;
+      } finally {
+        // The rest of use() can outlive the workflow, and these match by the use's workflow, so a following use of the
+        // same activity would otherwise be handled by this use's hooks.
+        Hooks.off("dnd5e.preUseActivity", preUseActivityHookId);
+        Hooks.off("dnd5e.activityConsumption", activityConsumptionHookId);
+      }
+      return this.finishUse(state, useResults);
+    }
+
+    /**
+     * midi's work before dnd5e's use (M10 stage 1): rollAs, ownership, the off-scene check, the workflow, targets and
+     * the checks before the card, dialog and message settings. `done` with the result to return when the use stops
+     * here (or was handed to another actor); otherwise the use's state for dnd5e's use and finishUse.
+     */
+    async prepareUse(usage: ActivityUseConfiguration, dialog: RollDialogConfig, message: RollMessageConfig): Promise<{ done: true, result: unknown } | { done: false, state: UseState }> {
+      const stop = (result?: unknown) => ({ done: true as const, result });
+      if (usage.midiOptions?.rollAs) return stop(await this.useAs(usage.midiOptions.rollAs, usage, dialog, message));
+      if (!this.item.isEmbedded) return stop();
       if (!this.item.isOwner) {
         ui.notifications?.error("DND5E.DocumentUseWarn", { localize: true });
-        return;
+        return stop();
       }
       if (!this.canUse) {
         ui.notifications?.error("DND5E.ACTIVITY.Warning.UsageNotAllowed", { localize: true });
-        return;
+        return stop();
       }
       // A GM's own use (a click, not a macro, reaction or another module's call)
       const interactive = !!usage.event && !usage.workflow && !usage.midiOptions?.workflowOptions?.forceCompletion;
       const offScene = interactive ? await confirmUseOffScene(this.actor) : "here";
-      if (offScene === "cancel") return;
-      let preUseActivityHookId: number | undefined;
-      // dnd5e's copy of `usage`, which midi annotates.
-      let dnd5eUsageConfig: ActivityUseConfiguration | undefined;
-      let activityConsumptionHookId: number | undefined;
-      try {
-        // Copies: a caller may reuse one options object across uses, and this snapshot belongs to this use alone.
-        usage.midiOptions = { ...usage.midiOptions };
-        usage.midiOptions.workflowOptions = { ...usage.midiOptions.workflowOptions };
-        // The view moved to the creature's scene, which clears the user's targets: an attack or creature targets (not an
-        // area or self) are confirmed there
-        const choosesCreatures = !this.target?.template?.type && (!!this.attack || !["", "self", undefined].includes(this.target?.affects?.type));
-        if (offScene === "viewed" && choosesCreatures) usage.midiOptions.workflowOptions.targetConfirmation ??= "always";
-        // Capture current targets before template placement can replace them
-        // The player's targets as the use starts (a use told to ignore them has none from the player)
-        usage.midiOptions.workflowOptions.preSelectedTargetUuids ??= (usage.midiOptions.ignoreUserTargets ? [] : Array.from(game.user?.targets ?? []))
-          .map(t => t.document.uuid).filter((uuid): uuid is string => !!uuid);
-        if (debugEnabled > 0) warn("MidiQOL | MidiActivity | use | Called", usage, dialog, message);
-        let item = this.item.clone({}, { keepId: true });
-        // @ts-expect-error no dnd5e-types
-        let activity = item.system.activities.get(this.id) as MidiActivityMixin;
-        let workflowClass = usage?.midi?.workflowClass ?? globalThis.MidiQOL.workflowClass;
-        if (game.user?.isGM && checkRule("activeDefence")) {
-          workflowClass = ActiveDefenceWorkflow;
-        }
-        if (!(workflowClass.prototype instanceof Workflow)) workflowClass = Workflow;
-        const workflowOptions = { ...usage.midiOptions, ...(usage.midiOptions?.workflowOptions ?? {}), event: usage.event as AugmentedEvent | undefined };
-        delete workflowOptions.workflowOptions;
-        if (usage.workflow)
-          usage.midiOptions.workflowOptions.autoRollAttack = true;
-        if (!(usage.workflow instanceof TrapWorkflow)) { 
-          //TODO stupidly the constructor for TrapWorkflow is not compatible with the workflow constructor - will need to clean that up
-          if (configSettings.savesBeforeDamage)
-          usage.workflow = new SavesFirstWorkflow(activity.actor ?? null, activity, speakerFor({ actor: activity.item.actor }), null, { workflowOptions });
-          else usage.workflow = new workflowClass(activity.actor ?? null, activity, speakerFor({ actor: activity.item.actor }), null, { workflowOptions });
-        }
-        Workflow.setUse(activity, usage.workflow!);
-        usage.workflow!.sequenceId = usage.sequenceId;
-        usage.workflow!.systemCard = message.systemCard;
-        if ((activity.midiProperties?.rollMode ?? "default") !== "default") message.rollMode = toMessageMode(activity.midiProperties!.rollMode) as keyof CONFIG.Dice.RollModes;
-        if (activity.midiProperties?.skipConcentrationCheck && this.actor &&
-            activity.consumption.targets.some(t => t.target === "attributes.hp.value"))
-          skipConcentrationActorUuids.add(this.actor.uuid);
-        if (item.parent) await removeFlanking(item.parent);
-        // config.midiOptions.workflowOptions.targetConfirmation ??= this.forcedTargetConfirmation;
-        if (!usage.workflow) return undefined;
-        if (usage.midiOptions.isCritical) {
-          usage.workflow.isCritical = true;
-          usage.workflow.attackRollModifierTracker.addAttribution("CRIT", "activity.use", i18n("midi-qol.ActivityUse"));
-        }
-        if (usage.midiOptions.isFumble) {
-          usage.workflow.isFumble = true;
-          usage.workflow.attackRollModifierTracker.addAttribution("FUMBLE", "activity.use", i18n("midi-qol.ActivityUse"));
-        }
-        const autoCreateTemplate = activityHasAutoPlaceTemplate(activity);
-        const emanationNoTemplate = activityHasEmanationNoTemplate(activity);
-        const isTrapWorkflow = usage.workflow instanceof TrapWorkflow;
-        if (autoCreateTemplate || emanationNoTemplate || isTrapWorkflow) {
-          usage.create ??= {};
-          usage.create.measuredTemplate = false;
-        }
-
-        foundry.utils.setProperty(message, "data.flags.midi-qol.messageType", "attack");
-        if (usage.midiOptions?.configureDialog === false) dialog.configure = false;
-        if (!await activity.checkAutoConsume(usage, dialog)) {
-          if (this.midiProperties?.forceConsumeDialog === "always") dialog.configure = true;
-          else if (this.midiProperties?.forceConsumeDialog === "never") dialog.configure = false;
-        }
-        const rollToggle = areMidiKeysPressed(usage.event as AugmentedEvent, "RollToggle");
-        if (rollToggle && usage.workflow) {
-          foundry.utils.setProperty(usage.workflow, "rollOptions.rollToggle", true);
-          dialog.configure = !dialog.configure; // toggle the configure dialog
-        }
-        // if (rollToggle) dialog.configure = !dialog.configure; Should this always be looked at
-        // Synthetic items can't be resolved by uuid, so the card keeps a snapshot to rebuild them from.
-        // Not dnd5e's `item.data` flag: dnd5e 6 moves that into `system.deltas.deleted`, and a refund
-        // recreates everything listed there on the actor.
-        if (!activity.item._id || foundry.utils.getProperty(activity.item, `flags.${MODULE_ID}.syntheticItem`))
-          foundry.utils.setProperty(message, `data.flags.${MODULE_ID}.itemData`, activity.item.toObject());
-
-        let useResults: any;
-        preUseActivityHookId = Hooks.on("dnd5e.preUseActivity", (newActivity, usageConfig) => {
-          // Only this use's: dnd5e's copy of `usage` keeps its workflow (deepClone keeps class instances). Another use of the
-          // same activity running meanwhile has its own hook, which would otherwise take this use's activity and config.
-          if (usageConfig.workflow !== usage.workflow) return true;
-          dnd5eUsageConfig = usageConfig;
-          // newActivity will be the scaled activity to use that instead of what we have
-          usage.workflow!.activity = newActivity;
-          Workflow.setUse(newActivity, usage.workflow!);
-          return true;
-        });
-        let usageData: ActivityUseConfiguration | undefined;
-        /*
-         * Activity#use begins concentration, and ends the one it replaces, before midi's checks run,
-         * so a use midi then cancels would cost the caster their existing concentration. Take the
-         * player's choice from dnd5e's working copy of the config - after the dialog and dnd5e's own
-         * concentration validation - and begin it once the use can no longer be backed out of
-         * (Workflow#beginDeferredConcentration).
-         * Transform-to-form links the new form to the concentration effect inside Activity#use, so
-         * it is left to dnd5e.
-         */
-        const deferConcentration = activity.requiresConcentration
-          && !safeGetGameSetting("dnd5e", "disableConcentration")
-          && !(isActivityType(activity, "transform") && activity.transform?.mode === "form");
-        activityConsumptionHookId = Hooks.on("dnd5e.activityConsumption", (newActivity, usageConfig, messageConfig) => {
-          if (usageConfig.workflow !== usage.workflow) return;
-          usageData = usageConfig;
-          usageConfig.workflow!.activity = newActivity;
-          usageConfig.activity = newActivity;
-          // Scaling (an upcast) rebuilds the item's activities: consumption and the card run on this new object, so
-          // Workflow.workflowFor needs it too (emanation placement, the early filing under the card, template flags)
-          Workflow.setUse(newActivity, usage.workflow!);
-          if (deferConcentration && usageConfig.concentration?.begin) {
-            usage.workflow!.deferredConcentration = { scaling: usageConfig.scaling || undefined, end: usageConfig.concentration.end ?? undefined };
-            usageConfig.concentration.begin = false;
-          }
-        });
-
-        if (!await activity.preTargetingChecks(usage, dialog, message)) return false;
-        // Save/clear targets BEFORE setupTargets changes game.user.targets for self-targeting
-        const isSelfTarget = this.target?.affects?.type === "self"
-          // @ts-expect-error item.type includes "tool" at runtime
-          || (this.item.type === "tool" && !this.target?.affects?.type);
-        // Self-targeting no longer writes the player's targets (M2 stage 7), so there is nothing to save and restore
-        if (isSelfTarget) usage.workflow!.selfTargeted = true;
-        if (!await activity.setupTargets(usage, dialog, message)) {
-          ui.notifications?.warn(i18n("midi-qol.noTargets"));
-          return false;
-        }
-        if (!await activity.preChatChecks(usage, dialog, message)) return false;
-        // If midiOptions.spellLevel is provided, set the spell slot key so that
-        // dnd5e's _prepareUsageScaling derives the correct scaling from it.
-        // @ts-expect-error item.type includes "spell" at runtime
-        if (usage.midiOptions?.spellLevel && activity.item?.type === "spell") {
-          usage.spell ??= {} as { slot: string };
-          usage.spell.slot = `spell${usage.midiOptions.spellLevel}`;
-        }
-        try {
-          // The usage card describes the use's targets, not the player's (which an automated use leaves alone)
-          message = setMessageTargets(message ?? {}, usage.workflow);
-          useResults = await super.use.bind(activity)(usage, dialog, message);
-        } catch (err) {
-          error("MidiQOL | MidiActivity | use | Error in super.use", err);
-          TroubleShooter.recordError(err, "Error in super.use");
-          Workflow.removeWorkflow(usage.workflow?.id);
-          clearAbandonedUse(usage, dnd5eUsageConfig);
-          return false;
-        } finally {
-          // The rest of use() can outlive the workflow, and these match by activity uuid, so a
-          // following use of the same activity would otherwise be handled by this use's hooks.
-          if (preUseActivityHookId) Hooks.off("dnd5e.preUseActivity", preUseActivityHookId);
-          if (activityConsumptionHookId) Hooks.off("dnd5e.activityConsumption", activityConsumptionHookId);
-          preUseActivityHookId = activityConsumptionHookId = undefined;
-        }
-        // Cleanup skipConcentrationCheck flag in case workflow was interrupted before concentration check
-        if (this.actor) skipConcentrationActorUuids.delete(this.actor.uuid);
-        if (!useResults) { // activity use was aborted
-          Workflow.removeWorkflow(usage.workflow?.id);
-          clearAbandonedUse(usage, dnd5eUsageConfig);
-          return false;
-        }
-        // A use's workflow is registered only once its card exists, under the card's uuid.
-        // Force a few values to be added to the updates cache now we have the chat card.
-        usage.workflow.itemCardUuid = useResults.message.uuid;
-        usage.workflow.id = useResults.message.uuid ?? usage.workflow.id;
-        usage.workflow.activity = usage.workflow.activity;
-        usage.workflow.item = usage.workflow!.activity?.item;
-        activity = usage.workflow!.activity! as MidiActivityMixin;
-        Workflow.addWorkflow(usage.workflow);
-        try {
-          if (await activity.postChatCardChecks(usage, dialog, message) !== true) return;
-          await activity.setupCanSeeSense(usage)
-          // if (autoCreateTemplate || emanationNoTemplate) if (!await activity.setupTargets(usage, dialog, message)) return;
-          if (activity.templates) { // TODO find a better place to store this
-            useResults.templates = activity.templates;
-            delete activity.templates;
-          }
-          // Process any templates placed (via dialog checkbox or emanation auto-placement)
-          // processPlacedTemplates handles validation, cleanup if incomplete, and workflow integration
-          const allTemplates = (useResults.templates ?? []).flat() as MeasuredTemplateDocument[];
-          if (allTemplates.length > 0) {
-            await usage.workflow.processPlacedTemplates(allTemplates, activity);
-          }
-          if (configSettings.undoWorkflow) await saveUndoData(usage.workflow);
-        } catch (err) {
-          // The card exists and the workflow waits for this use: stop it rather than leave it suspended
-          TroubleShooter.recordError(err, `${this.item?.name} use`);
-          error(`${this.item?.name} use failed`, err);
-          ui.notifications?.error(i18nFormat("midi-qol.UseFailed", { item: this.item?.name ?? "", error: (err as Error)?.message ?? String(err) }));
-          const concentration = usage.workflow.concentrationId ? this.actor?.effects.get(usage.workflow.concentrationId) : undefined;
-          if (!usage.workflow.aborted) {
-            usage.workflow.aborted = true;
-            await usage.workflow.performState(usage.workflow.WorkflowState_Abort);
-          }
-          await concentration?.delete();
-          return false;
-        }
-
-        usage.workflow.itemUseComplete = true;
-
-        usage.workflow.id = useResults.message.uuid;
-        if ((usage.workflow.itemUsesReaction || usage.midiOptions?.workflowOptions?.castUsesReaction) && this.actor && !hasUsedReaction(this.actor))
-          await setReactionUsed(this.actor);
-        if ((usage.workflow.itemUsesBonusAction || usage.midiOptions?.workflowOptions?.castUsesBonusAction) && this.actor && !hasUsedBonusAction(this.actor))
-          await setBonusActionUsed(this.actor);
-        // @ts-expect-error no dnd5e-types
-        if (activity.item?.type === "spell" || activity.item.flags?.dnd5e?.spellLevel) {
-          usage.workflow.castData = {
-            // @ts-expect-error no dnd5e-types
-            baseLevel: activity.item.system.level ?? activity.item.flags?.dnd5e?.spellLevel?.base,
-            // @ts-expect-error no dnd5e-types
-            castLevel: activity.item.system.level !== undefined ? activity.item.system.level + (usageData?.scaling ?? 0) : activity.item.flags?.dnd5e?.spellLevel?.value,
-            scaling: (usageData?.scaling ?? activity.item.flags?.dnd5e?.scaling) || 0,
-            itemUuid: activity.item.uuid
-          };
-        }
-        // Scaling is now handled by the workflow's activity getter (reads from chat card flags).
-        await usage.workflow.performState((usage.workflow as Workflow).WorkflowState_Start);
-        return useResults;
-      } finally {
-        if (preUseActivityHookId) Hooks.off("dnd5e.preUseActivity", preUseActivityHookId);
-        if (activityConsumptionHookId) Hooks.off("dnd5e.activityConsumption", activityConsumptionHookId);
+      if (offScene === "cancel") return stop();
+      // Copies: a caller may reuse one options object across uses, and this snapshot belongs to this use alone.
+      usage.midiOptions = { ...usage.midiOptions };
+      usage.midiOptions.workflowOptions = { ...usage.midiOptions.workflowOptions };
+      // The view moved to the creature's scene, which clears the user's targets: an attack or creature targets (not an
+      // area or self) are confirmed there
+      const choosesCreatures = !this.target?.template?.type && (!!this.attack || !["", "self", undefined].includes(this.target?.affects?.type));
+      if (offScene === "viewed" && choosesCreatures) usage.midiOptions.workflowOptions.targetConfirmation ??= "always";
+      // Capture current targets before template placement can replace them
+      // The player's targets as the use starts (a use told to ignore them has none from the player)
+      usage.midiOptions.workflowOptions.preSelectedTargetUuids ??= (usage.midiOptions.ignoreUserTargets ? [] : Array.from(game.user?.targets ?? []))
+        .map(t => t.document.uuid).filter((uuid): uuid is string => !!uuid);
+      if (debugEnabled > 0) warn("MidiQOL | MidiActivity | use | Called", usage, dialog, message);
+      let item = this.item.clone({}, { keepId: true });
+      // @ts-expect-error no dnd5e-types
+      let activity = item.system.activities.get(this.id) as MidiActivityMixin;
+      let workflowClass = usage?.midi?.workflowClass ?? globalThis.MidiQOL.workflowClass;
+      if (game.user?.isGM && checkRule("activeDefence")) {
+        workflowClass = ActiveDefenceWorkflow;
       }
+      if (!(workflowClass.prototype instanceof Workflow)) workflowClass = Workflow;
+      const workflowOptions = { ...usage.midiOptions, ...(usage.midiOptions?.workflowOptions ?? {}), event: usage.event as AugmentedEvent | undefined };
+      delete workflowOptions.workflowOptions;
+      if (usage.workflow)
+        usage.midiOptions.workflowOptions.autoRollAttack = true;
+      if (!(usage.workflow instanceof TrapWorkflow)) {
+        //TODO stupidly the constructor for TrapWorkflow is not compatible with the workflow constructor - will need to clean that up
+        if (configSettings.savesBeforeDamage)
+          usage.workflow = new SavesFirstWorkflow(activity.actor ?? null, activity, speakerFor({ actor: activity.item.actor }), null, { workflowOptions });
+        else usage.workflow = new workflowClass(activity.actor ?? null, activity, speakerFor({ actor: activity.item.actor }), null, { workflowOptions });
+      }
+      Workflow.setUse(activity, usage.workflow!);
+      usage.workflow!.sequenceId = usage.sequenceId;
+      usage.workflow!.systemCard = message.systemCard;
+      if ((activity.midiProperties?.rollMode ?? "default") !== "default") message.rollMode = toMessageMode(activity.midiProperties!.rollMode) as keyof CONFIG.Dice.RollModes;
+      if (activity.midiProperties?.skipConcentrationCheck && this.actor &&
+          activity.consumption.targets.some(t => t.target === "attributes.hp.value"))
+        skipConcentrationActorUuids.add(this.actor.uuid);
+      if (item.parent) await removeFlanking(item.parent);
+      if (!usage.workflow) return stop(undefined);
+      if (usage.midiOptions.isCritical) {
+        usage.workflow.isCritical = true;
+        usage.workflow.attackRollModifierTracker.addAttribution("CRIT", "activity.use", i18n("midi-qol.ActivityUse"));
+      }
+      if (usage.midiOptions.isFumble) {
+        usage.workflow.isFumble = true;
+        usage.workflow.attackRollModifierTracker.addAttribution("FUMBLE", "activity.use", i18n("midi-qol.ActivityUse"));
+      }
+      const autoCreateTemplate = activityHasAutoPlaceTemplate(activity);
+      const emanationNoTemplate = activityHasEmanationNoTemplate(activity);
+      const isTrapWorkflow = usage.workflow instanceof TrapWorkflow;
+      if (autoCreateTemplate || emanationNoTemplate || isTrapWorkflow) {
+        usage.create ??= {};
+        usage.create.measuredTemplate = false;
+      }
+
+      foundry.utils.setProperty(message, "data.flags.midi-qol.messageType", "attack");
+      if (usage.midiOptions?.configureDialog === false) dialog.configure = false;
+      if (!await activity.checkAutoConsume(usage, dialog)) {
+        if (this.midiProperties?.forceConsumeDialog === "always") dialog.configure = true;
+        else if (this.midiProperties?.forceConsumeDialog === "never") dialog.configure = false;
+      }
+      const rollToggle = areMidiKeysPressed(usage.event as AugmentedEvent, "RollToggle");
+      if (rollToggle && usage.workflow) {
+        foundry.utils.setProperty(usage.workflow, "rollOptions.rollToggle", true);
+        dialog.configure = !dialog.configure; // toggle the configure dialog
+      }
+      // Synthetic items can't be resolved by uuid, so the card keeps a snapshot to rebuild them from.
+      // Not dnd5e's `item.data` flag: dnd5e 6 moves that into `system.deltas.deleted`, and a refund
+      // recreates everything listed there on the actor.
+      if (!activity.item._id || foundry.utils.getProperty(activity.item, `flags.${MODULE_ID}.syntheticItem`))
+        foundry.utils.setProperty(message, `data.flags.${MODULE_ID}.itemData`, activity.item.toObject());
+      /*
+       * Activity#use begins concentration, and ends the one it replaces, before midi's checks run,
+       * so a use midi then cancels would cost the caster their existing concentration. Take the
+       * player's choice from dnd5e's working copy of the config - after the dialog and dnd5e's own
+       * concentration validation - and begin it once the use can no longer be backed out of
+       * (Workflow#beginDeferredConcentration).
+       * Transform-to-form links the new form to the concentration effect inside Activity#use, so
+       * it is left to dnd5e.
+       */
+      const deferConcentration = activity.requiresConcentration
+        && !safeGetGameSetting("dnd5e", "disableConcentration")
+        && !(isActivityType(activity, "transform") && activity.transform?.mode === "form");
+      if (!await activity.preTargetingChecks(usage, dialog, message)) return stop(false);
+      // Save/clear targets BEFORE setupTargets changes game.user.targets for self-targeting
+      const isSelfTarget = this.target?.affects?.type === "self"
+        // @ts-expect-error item.type includes "tool" at runtime
+        || (this.item.type === "tool" && !this.target?.affects?.type);
+      // Self-targeting no longer writes the player's targets (M2 stage 7), so there is nothing to save and restore
+      if (isSelfTarget) usage.workflow!.selfTargeted = true;
+      if (!await activity.setupTargets(usage, dialog, message)) {
+        ui.notifications?.warn(i18n("midi-qol.noTargets"));
+        return stop(false);
+      }
+      if (!await activity.preChatChecks(usage, dialog, message)) return stop(false);
+      // If midiOptions.spellLevel is provided, set the spell slot key so that
+      // dnd5e's _prepareUsageScaling derives the correct scaling from it.
+      // @ts-expect-error item.type includes "spell" at runtime
+      if (usage.midiOptions?.spellLevel && activity.item?.type === "spell") {
+        usage.spell ??= {} as { slot: string };
+        usage.spell.slot = `spell${usage.midiOptions.spellLevel}`;
+      }
+      return { done: false, state: { usage, dialog, message, activity, deferConcentration } };
+    }
+
+    /** dnd5e's preUseActivity for this use (its workflow): the scaled activity dnd5e uses, and dnd5e's copy of the usage */
+    onUsePreUse(state: UseState, newActivity: Activity, usageConfig: ActivityUseConfiguration): boolean {
+      // Only this use's: dnd5e's copy of `usage` keeps its workflow (deepClone keeps class instances). Another use of the
+      // same activity running meanwhile has its own state.
+      if (usageConfig.workflow !== state.usage.workflow) return true;
+      state.dnd5eUsageConfig = usageConfig;
+      state.usage.workflow!.activity = newActivity;
+      Workflow.setUse(newActivity, state.usage.workflow!);
+      return true;
+    }
+
+    /** dnd5e's activityConsumption for this use: the activity consumption and the card run on, deferred concentration */
+    onUseConsumption(state: UseState, newActivity: Activity, usageConfig: ActivityUseConfiguration): void {
+      if (usageConfig.workflow !== state.usage.workflow) return;
+      state.usageData = usageConfig;
+      usageConfig.workflow!.activity = newActivity;
+      usageConfig.activity = newActivity;
+      // Scaling (an upcast) rebuilds the item's activities: consumption and the card run on this new object, so
+      // Workflow.workflowFor needs it too (emanation placement, the early filing under the card, template flags)
+      Workflow.setUse(newActivity, state.usage.workflow!);
+      if (state.deferConcentration && usageConfig.concentration?.begin) {
+        state.usage.workflow!.deferredConcentration = { scaling: usageConfig.scaling || undefined, end: usageConfig.concentration.end ?? undefined };
+        usageConfig.concentration.begin = false;
+      }
+    }
+
+    /**
+     * midi's work after dnd5e's use (M10 stage 1): the card's workflow, the checks after the card, templates, undo data,
+     * the reaction and bonus action markers, cast data, then the workflow's first step. Returns what use() returns.
+     */
+    async finishUse(state: UseState, useResults: any): Promise<unknown> {
+      const { usage, dialog, message } = state;
+      // Cleanup skipConcentrationCheck flag in case workflow was interrupted before concentration check
+      if (this.actor) skipConcentrationActorUuids.delete(this.actor.uuid);
+      if (!usage.workflow) return false;
+      if (!useResults) { // activity use was aborted
+        Workflow.removeWorkflow(usage.workflow?.id);
+        clearAbandonedUse(usage, state.dnd5eUsageConfig);
+        return false;
+      }
+      // A use's workflow is registered only once its card exists, under the card's uuid.
+      // Force a few values to be added to the updates cache now we have the chat card.
+      usage.workflow.itemCardUuid = useResults.message.uuid;
+      usage.workflow.id = useResults.message.uuid ?? usage.workflow.id;
+      usage.workflow.activity = usage.workflow.activity;
+      usage.workflow.item = usage.workflow!.activity?.item;
+      const activity = usage.workflow!.activity! as MidiActivityMixin;
+      Workflow.addWorkflow(usage.workflow);
+      try {
+        if (await activity.postChatCardChecks(usage, dialog, message) !== true) return;
+        await activity.setupCanSeeSense(usage)
+        if (activity.templates) { // TODO find a better place to store this
+          useResults.templates = activity.templates;
+          delete activity.templates;
+        }
+        // Process any templates placed (via dialog checkbox or emanation auto-placement)
+        // processPlacedTemplates handles validation, cleanup if incomplete, and workflow integration
+        const allTemplates = (useResults.templates ?? []).flat() as MeasuredTemplateDocument[];
+        if (allTemplates.length > 0) {
+          await usage.workflow.processPlacedTemplates(allTemplates, activity);
+        }
+        if (configSettings.undoWorkflow) await saveUndoData(usage.workflow);
+      } catch (err) {
+        // The card exists and the workflow waits for this use: stop it rather than leave it suspended
+        TroubleShooter.recordError(err, `${this.item?.name} use`);
+        error(`${this.item?.name} use failed`, err);
+        ui.notifications?.error(i18nFormat("midi-qol.UseFailed", { item: this.item?.name ?? "", error: (err as Error)?.message ?? String(err) }));
+        const concentration = usage.workflow.concentrationId ? this.actor?.effects.get(usage.workflow.concentrationId) : undefined;
+        if (!usage.workflow.aborted) {
+          usage.workflow.aborted = true;
+          await usage.workflow.performState(usage.workflow.WorkflowState_Abort);
+        }
+        await concentration?.delete();
+        return false;
+      }
+
+      usage.workflow.itemUseComplete = true;
+
+      usage.workflow.id = useResults.message.uuid;
+      if ((usage.workflow.itemUsesReaction || usage.midiOptions?.workflowOptions?.castUsesReaction) && this.actor && !hasUsedReaction(this.actor))
+        await setReactionUsed(this.actor);
+      if ((usage.workflow.itemUsesBonusAction || usage.midiOptions?.workflowOptions?.castUsesBonusAction) && this.actor && !hasUsedBonusAction(this.actor))
+        await setBonusActionUsed(this.actor);
+      const usageData = state.usageData;
+      // @ts-expect-error no dnd5e-types
+      if (activity.item?.type === "spell" || activity.item.flags?.dnd5e?.spellLevel) {
+        usage.workflow.castData = {
+          // @ts-expect-error no dnd5e-types
+          baseLevel: activity.item.system.level ?? activity.item.flags?.dnd5e?.spellLevel?.base,
+          // @ts-expect-error no dnd5e-types
+          castLevel: activity.item.system.level !== undefined ? activity.item.system.level + (usageData?.scaling ?? 0) : activity.item.flags?.dnd5e?.spellLevel?.value,
+          scaling: (usageData?.scaling ?? activity.item.flags?.dnd5e?.scaling) || 0,
+          itemUuid: activity.item.uuid
+        };
+      }
+      // Scaling is now handled by the workflow's activity getter (reads from chat card flags).
+      await usage.workflow.performState((usage.workflow as Workflow).WorkflowState_Start);
+      return useResults;
     }
 
     /**
