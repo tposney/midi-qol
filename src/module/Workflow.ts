@@ -2411,19 +2411,6 @@ export class Workflow {
     return this.WorkflowState_AoETargetConfirmation;
   }
 
-  async WorkflowState_AwaitItemCard(): Promise<WorkflowState> {
-    if (this.needItemCard || !this.itemUseComplete) {
-      if (debugEnabled > 0) warn("WorkflowState_AwaitItemCard suspending because needItemCard/itemUseComplete", this.needItemCard, this.itemUseComplete);
-      return this.WorkflowState_Suspend;
-    }
-    if (this.needTemplate) {
-      if (debugEnabled > 0) warn("WorkflowState_AwaitItemCard  needTemplate -> await template");
-      return this.WorkflowState_AwaitTemplate;
-    }
-    if (debugEnabled > 0) warn("WorkflowState_AwaitItemCard  -> TemplatePlaced");
-    return this.WorkflowState_TemplatePlaced;
-  }
-
   async WorkflowState_AwaitTemplate(): Promise<WorkflowState> {
     if (debugEnabled > 0) warn("WorkflowState_AwaitTemplate started");
     if (this.templateUuids.length >= this.expectedTemplateCount) {
@@ -2791,12 +2778,6 @@ export class Workflow {
       this.displayUtilityRolls();
     }
     return this.WorkflowState_WaitForDamageRoll;
-  }
-  async WorkflowState_DamageRollCompleteCancelled(): Promise<WorkflowState> {
-    if (configSettings.undoWorkflow) {
-
-    }
-    return this.WorkflowState_Suspend;
   }
   async WorkflowState_WaitForSaves(): Promise<WorkflowState> {
     if (this.damageOnly) return this.WorkflowState_AllRollsComplete;
@@ -3986,7 +3967,6 @@ export class Workflow {
       await setActionUsed(this.actor);
     }
   }
-  async WorkflowState_Default(): Promise<WorkflowState> { return this.WorkflowState_Suspend };
 
   initSaveResults() {
     this.saves = new Set();
