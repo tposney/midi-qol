@@ -9,7 +9,7 @@ import { computeFlankedStatus, computeFlankingStatus } from "./services/flanking
 import { speakerFor } from "./utils.js";
 import { warn, debug, log, i18n, i18nFormat, busyWait, error, debugEnabled, MQItemMacroLabel, GameSystemConfig, MODULE_ID, MQActivityMacroLabel, gameStats, MQDamageRollTypes } from "../midi-qol.js";
 import { TeleportOption } from "./activities/TeleportActivity.js";
-import { decodeWorkflowOptions, encodeWorkflowOptions, inheritableWorkflowOptions } from "./lib/workflowOptionsCodec.js";
+import { cardWorkflowOptions, decodeWorkflowOptions, inheritableWorkflowOptions } from "./lib/workflowOptionsCodec.js";
 import { eventModifiers } from "./lib/rollKeys.js";
 import { TokenDocumentSet, hookTarget, tokenOf } from "./lib/tokenDocumentSet.js";
 import { RECORD_SETS, RecordSet, RecordFacts, STATE_KEYS, StateKey, attributionMap, attributionTriples, cardMidi, rollTypeOf, cardOtherConsumption, cardPreSelected, messagesFrom, recordList, recordPath, recordPathOfUuid, storedMidiFlag } from "./lib/cardState.js";
@@ -812,7 +812,7 @@ export class Workflow {
     this.#callerOptions = { ...this.#callerOptions, ...foundry.utils.diffObject(this.#mergedOptions, workflowOptions) };
     this.#mergedOptions = foundry.utils.deepClone(workflowOptions);
     const callerOptions = this.#callerOptions;
-    this.#persisted.setWorkflowOptions(workflowOptions, () => encodeWorkflowOptions(callerOptions));
+    this.#persisted.setWorkflowOptions(workflowOptions, () => cardWorkflowOptions(callerOptions));
   }
   #callerOptions: WorkflowOptions = {};
   /**
@@ -825,7 +825,7 @@ export class Workflow {
     if (!changed || foundry.utils.isEmpty(changed)) return;
     this.#callerOptions = foundry.utils.mergeObject(foundry.utils.deepClone(this.#callerOptions), changed) as WorkflowOptions;
     const callerOptions = this.#callerOptions;
-    this.#persisted.setWorkflowOptions(this.workflowOptions, () => encodeWorkflowOptions(callerOptions));
+    this.#persisted.setWorkflowOptions(this.workflowOptions, () => cardWorkflowOptions(callerOptions));
   }
   // As last merged or assigned: a change made in place since is found by comparing with it
   #mergedOptions: WorkflowOptions = {};
@@ -1108,8 +1108,23 @@ export class Workflow {
     return this.attackRollModifierTracker.critical.isSuppressed;
   }
 
-  // These from the attack roll, worked out again when the workflow is rebuilt (#restoreFromCard)
-  d20AttackRoll: number = -1;
+  /*
+   * Worked out from the stored rolls, so a rebuilt workflow has them and an edit to a roll shows. Assigning one sets it
+   * until its roll is replaced (TrapWorkflow's attack total, a damage-only workflow's given total).
+   */
+  #assigned = new Map<string, { basis: unknown, value: number | undefined }>();
+  #derived(key: string, basis: unknown, compute: () => number | undefined): number | undefined {
+    const assigned = this.#assigned.get(key);
+    return assigned && assigned.basis === basis ? assigned.value : compute();
+  }
+  #assign(key: string, basis: unknown, value: number | undefined) { this.#assigned.set(key, { basis, value }); }
+
+  /** The attack's d20 result (-1 with no attack roll, or none counting as a d20) */
+  get d20AttackRoll(): number {
+    const roll = this.attackRoll;
+    return this.#derived("d20AttackRoll", roll, () => (roll ? Workflow.d20Of(roll) : undefined) ?? -1) ?? -1;
+  }
+  set d20AttackRoll(value: number) { this.#assign("d20AttackRoll", this.attackRoll, value); }
 
   get hitTargets(): TokenDocumentSet { return this.#persisted.tokenSet("hit"); }
   set hitTargets(hitTargets: Set<TokenOrDocument> | undefined) { this.#persisted.setTokenSet("hit", hitTargets); }
@@ -1184,8 +1199,18 @@ export class Workflow {
     this.#persisted.setRoll("attackRoll", attackRoll);
   }
 
-  diceRoll: number = 0;
-  attackTotal: number = 0;
+  /** The value the attack's d20 counts as (a minimum or maximum applied) */
+  get diceRoll(): number {
+    const roll = this.attackRoll;
+    return this.#derived("diceRoll", roll, () => roll ? Workflow.diceRollOf(roll) : 0) ?? 0;
+  }
+  set diceRoll(value: number) { this.#assign("diceRoll", this.attackRoll, value); }
+
+  get attackTotal(): number {
+    const roll = this.attackRoll;
+    return this.#derived("attackTotal", roll, () => roll ? roll.total ?? 0 : minAttackTotal) ?? minAttackTotal;
+  }
+  set attackTotal(value: number) { this.#assign("attackTotal", this.attackRoll, value); }
 
 
   get attackRollCount() { return this.#persisted.scalar("attackRollCount", 0); }
@@ -1435,8 +1460,13 @@ export class Workflow {
     this.#persisted.setRolls("utilityRolls", utilityRolls);
   }
 
+  get damageTotal(): number {
+    const rolls = this.#persisted.rolls("damageRolls");
+    return this.#derived("damageTotal", rolls, () => sumRolls(rolls ?? [], "positive")) ?? 0;
+  }
+  set damageTotal(value: number) { this.#assign("damageTotal", this.#persisted.rolls("damageRolls"), value); }
+
   // These from the damage rolls, worked out again when the workflow is rebuilt (#restoreFromCard)
-  damageTotal: number = 0;
   rawDamageDetail: DamageDescription[] = [];
   rawOtherDamageDetail: DamageDescription[] = [];
   rawBonusDamageDetail: DamageDescription[] = [];
@@ -1494,10 +1524,13 @@ export class Workflow {
   set fumbleSaves(fumbleSaves: Set<TokenOrDocument> | undefined) { this.#persisted.setTokenSet("fumbleSave", fumbleSaves); }
   get criticalSaves(): TokenDocumentSet { return this.#persisted.tokenSet("criticalSave"); }
   set criticalSaves(criticalSaves: Set<TokenOrDocument> | undefined) { this.#persisted.setTokenSet("criticalSave", criticalSaves); }
-  get advantageSaves(): TokenDocumentSet { return this.#persisted.tokenSet("advantageSave"); }
-  set advantageSaves(advantageSaves: Set<TokenOrDocument> | undefined) { this.#persisted.setTokenSet("advantageSave", advantageSaves); }
-  get disadvantageSaves(): TokenDocumentSet { return this.#persisted.tokenSet("disadvantageSave"); }
-  set disadvantageSaves(disadvantageSaves: Set<TokenOrDocument> | undefined) { this.#persisted.setTokenSet("disadvantageSave", disadvantageSaves); }
+  // Not stored: each target's record has its save's advantage mode (saveMode), which a rebuilt workflow reads (#restoreFromCard)
+  #advantageSaves = new TokenDocumentSet();
+  #disadvantageSaves = new TokenDocumentSet();
+  get advantageSaves(): TokenDocumentSet { return this.#advantageSaves; }
+  set advantageSaves(advantageSaves: Set<TokenOrDocument> | undefined) { this.#advantageSaves = new TokenDocumentSet(advantageSaves ?? []); }
+  get disadvantageSaves(): TokenDocumentSet { return this.#disadvantageSaves; }
+  set disadvantageSaves(disadvantageSaves: Set<TokenOrDocument> | undefined) { this.#disadvantageSaves = new TokenDocumentSet(disadvantageSaves ?? []); }
   saveRequests: Record<string, (value: any) => void>;
   /** What each chat-card save request asks for, by its key in saveRequests */
   saveRequestKinds: Record<string, SaveRequestKind>;
@@ -1759,8 +1792,16 @@ export class Workflow {
   #otherEffectTargetsOnSave: TokenDocumentSet | undefined;
   get otherEffectTargetsOnSave(): TokenDocumentSet | undefined { return this.#otherEffectTargetsOnSave; }
   set otherEffectTargetsOnSave(tokens: Set<TokenOrDocument> | undefined) { this.#otherEffectTargetsOnSave = asTokenDocumentSet(tokens); }
-  otherDamageTotal: number | undefined;
-  bonusDamageTotal: number | undefined;
+  get otherDamageTotal(): number | undefined {
+    const rolls = this.#persisted.rolls("otherDamageRolls");
+    return this.#derived("otherDamageTotal", rolls, () => rolls ? sumRolls(rolls, "positive") : undefined);
+  }
+  set otherDamageTotal(value: number | undefined) { this.#assign("otherDamageTotal", this.#persisted.rolls("otherDamageRolls"), value); }
+  get bonusDamageTotal(): number | undefined {
+    const rolls = this.#persisted.rolls("bonusDamageRolls");
+    return this.#derived("bonusDamageTotal", rolls, () => rolls ? sumRolls(rolls, "positive") : undefined);
+  }
+  set bonusDamageTotal(value: number | undefined) { this.#assign("bonusDamageTotal", this.#persisted.rolls("bonusDamageRolls"), value); }
   needsHitTargetsDisplayed: boolean = true;
   // TODO: Type this
   conditionData: any | undefined;
@@ -1775,7 +1816,8 @@ export class Workflow {
   tag: string | undefined;
   activeDefenceDC: number | undefined;
   /** What midi's damage calculation actually applied, per target uuid. Set by `processDamageRoll`. */
-  midiTargetDetail: Record<string, Record<string, unknown>> | undefined;
+  /** What the damage calculation applied that the card shows, by token uuid (set once it has run) */
+  midiTargetDetail: Record<string, { uncannyDodge?: unknown, uncannyDodgeIcon?: unknown }> | undefined;
   /** Each target's damage entries, one per damage list (other damage may have its own), by token uuid (processDamageRoll); not stored */
   targetDamage: Record<string, DamageListEntry[]> | undefined;
   targetSaveDetails: Record<string, SaveDetails> | undefined;  // Per-target SaveDetails for attribution tracking
@@ -1870,7 +1912,6 @@ export class Workflow {
       this.hitTargets = new Set();
       this.hitTargetsEC = new Set();
       this.initSaveResults();
-      this.attackTotal = minAttackTotal;
       // isCritical/isFumble default to false via tracker — no explicit reset needed
       this.currentAction = this.WorkflowState_NoAction;
       this.suspended = true;
@@ -1942,7 +1983,7 @@ export class Workflow {
    * and later changes (assigned, or made in place: #syncWorkflowOptions), and a rebuilt workflow merges them again.
    */
   #mergeWorkflowOptions(callerOptions: WorkflowOptions): void {
-    const stored = () => encodeWorkflowOptions(callerOptions);
+    const stored = () => cardWorkflowOptions(callerOptions);
     // The auto-roll settings give way to the caller's options, read from the workflow
     this.#persisted.setWorkflowOptions(callerOptions, stored);
     const merged: WorkflowOptions = foundry.utils.mergeObject(defaultRollOptions, {
@@ -1992,15 +2033,12 @@ export class Workflow {
     this.#mergeWorkflowOptions(this.workflowOptions);
     if (this.workflowOptions.preSelectedTargetUuids?.length) this.preSelectedTargets = this.#preSelectedTargets();
     if (!this.hasSave) this.failedSaves = this.activity.attack ? this.hitTargets.union(this.hitTargetsEC) : new TokenDocumentSet(this.targets);
+    const records = recordList(cardMidi(this.#ownCard()).records);
+    this.#advantageSaves = new TokenDocumentSet(records.filter(record => record.saveMode === 1).map(record => record.uuid));
+    this.#disadvantageSaves = new TokenDocumentSet(records.filter(record => record.saveMode === -1).map(record => record.uuid));
     const speaker = this.chatCard?.speaker;
     const speakerToken = speaker?.token ? game.scenes?.get(speaker.scene ?? "")?.tokens.get(speaker.token)?.object : undefined;
     this.token = speakerToken ?? getOrCreateTokenForActor(this.actor) ?? undefined;
-    const attack = this.attackRoll;
-    this.attackTotal = attack?.total ?? minAttackTotal;
-    if (attack) {
-      this.diceRoll = Workflow.diceRollOf(attack);
-      this.d20AttackRoll = Workflow.d20Of(attack) ?? -1;
-    }
     if (this.damageRolls?.length) this.deriveDamage();
     if (this.bonusDamageRolls?.length) this.deriveBonusDamage();
     if (this.otherDamageRolls?.length) this.deriveOtherDamage();
@@ -5265,8 +5303,6 @@ export class Workflow {
 
       // Success/failure/critical/fumble classes are applied at render time
       // by ChatMessageMidi._applyAttackRollHighlight, not baked into content.
-      const d20 = this.attackRoll ? Workflow.d20Of(this.attackRoll) : undefined;
-      if (d20 !== undefined) this.d20AttackRoll = d20;
       if (debugEnabled > 0) warn("displayAttackRoll |", this.attackRoll)
     }
     // The damage button is already showing, so it takes its label with the roll that decides a critical.
@@ -7499,7 +7535,6 @@ export class Workflow {
   async processAttackRoll() {
     if (!this.attackRoll) return;
     const terms = this.attackRoll.terms;
-    this.diceRoll = Workflow.diceRollOf(this.attackRoll);
 
     // Critical/fumble from the value the die counts as (a min/max such as rolls.attack.min 20 counts), as dnd5e does;
     // midi's auto-success/fail (min99/max1) force hit/miss without implying a natural crit/fumble, so they use the face.
@@ -7602,7 +7637,6 @@ export class Workflow {
     // The tracker decides: override > noCritical/noFumble > forceCritical/forceFumble > natural
     this.#persistAttackTracker();
 
-    this.attackTotal = this.attackRoll.total ?? 0;
     if (debugEnabled > 1) debug("processAttackRoll: ", this.diceRoll, this.attackTotal, this.isCritical, this.isFumble);
 
     // The roll's attribution when a crit/fumble occurred
@@ -8438,7 +8472,6 @@ export class Workflow {
     this.attackRoll = roll;
     foundry.utils.setProperty(roll, "options.midi-qol.rollType", "attack");
     this.#linkRollToCard(roll, "attack");
-    this.attackTotal = roll.total ?? 0;
   }
 
   async setUtilityRolls(rolls: Array<Roll> | Roll | undefined | null) {
@@ -8495,21 +8528,18 @@ export class Workflow {
     return;
   }
 
-  /** Totals and detail from the damage rolls; also how a rebuilt workflow gets them back */
+  /** Detail from the damage rolls; also how a rebuilt workflow gets it back */
   deriveDamage() {
-    this.damageTotal = sumRolls(this.damageRolls, "positive");
     this.rawDamageDetail = createDamageDetail({ roll: this.damageRolls, activity: this.activity, defaultType: this.defaultDamageType });
   }
 
   deriveBonusDamage() {
     const rolls = this.bonusDamageRolls ?? [];
-    this.bonusDamageTotal = sumRolls(rolls, "positive");
     this.rawBonusDamageDetail = createDamageDetail({ roll: rolls, activity: this.activity, defaultType: this.defaultDamageType });
   }
 
   deriveOtherDamage() {
     const rolls = this.otherDamageRolls ?? [];
-    this.otherDamageTotal = sumRolls(rolls, "positive");
     const isAmmunition = (roll: Roll) => !!foundry.utils.getProperty(roll, `options.${MODULE_ID}.ammunition`);
     const detailOf = (rolls: Roll[]) => rolls.length ? createDamageDetail({ roll: rolls, activity: this.activity, defaultType: this.defaultDamageType }) : [];
     // The ammunition's damage marked as such

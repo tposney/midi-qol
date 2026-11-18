@@ -4,7 +4,8 @@
  * model's source (a Set becomes an array) and rebuilds it on receipt (the SetField makes it a Set again).
  *
  * Keys a schema does not declare are per-use state: they are not transmitted, persisted or passed to child
- * workflows. Namespaces nobody registered pass through unchanged.
+ * workflows. Namespaces nobody registered pass through unchanged; on the card they are stored with a deprecation
+ * warning for now (cardWorkflowOptions).
  */
 
 type FieldMap = foundry.data.fields.DataSchema;
@@ -52,6 +53,62 @@ export const encodeWorkflowOptions = <T>(options: T): T => convert(options, true
 export const decodeWorkflowOptions = <T>(options: T): T => convert(options, false);
 /** What a child workflow inherits: exactly what transmission would carry. */
 export const inheritableWorkflowOptions = <T>(options: T): T => decodeWorkflowOptions(encodeWorkflowOptions(options));
+
+/**
+ * midi's own option keys (WorkflowOptions, MidiOptions, and what midi reads from either). Any other key is another
+ * module's: stored on the card through a registered schema (its namespace), or, for now, as it is.
+ */
+const MIDI_OPTION_KEYS = new Set([
+  "activityId", "activityIdentifier", "addOptionalBonuses", "advantage", "allowIncapacitated", "asUser", "attackMode",
+  "attackPerTarget", "attackRollDSN", "attackSplit", "autoConsumeResource", "autoFastAttack", "autoRollAttack",
+  "autoRollDamage", "cardNote", "castUsesBonusAction", "castUsesReaction", "chatMessage", "checkGMStatus", "checkGMstatus",
+  "configureDialog", "coverOrigin", "createWorkflow", "critical", "damageRollDSN", "disadvantage", "event", "excludeTargets",
+  "fastForward", "fastForwardAbility", "fastForwardAttack", "fastForwardDamage", "fastForwardHeal", "fastForwardSet",
+  "forceCompletion", "forceTemplateTargeting", "formulaDSN", "fumble", "grantsActor", "grantsToken", "ignoreUserTargets",
+  "includeTargets", "isConcentrationCheck", "isCritical", "isDummy", "isFumble", "isMagicSave", "isOverTime", "isReaction",
+  "isTriggered", "item", "itemCardUuid", "itemUuid", "noConcentrationCheck", "noOnUseMacro", "noProvokeReaction",
+  "noTargetOnUseMacro", "noUseWarning", "notBonusAction", "notReaction", "onlyOnUseItemMacros", "other",
+  "overTimeEffectUuid", "parts", "powerLevel", "preSelectedTargetUuids", "proceedChecks", "recomputeAdvantage",
+  "requestClaim", "rollAs", "rollAttackPerTarget", "rollOptions", "rollToggle", "rollType", "saveActivityUuid", "saveDC",
+  "saveItem", "saveItemUuid", "simulate", "sourceActorUuid", "spellLevel", "steps", "target", "targetConfirmation",
+  "targets", "targetsToUse", "targetUuids", "teleport", "templateUuid", "triggeredActivity", "triggeringActivityUuid",
+  "triggeringWorkflowId", "unattended", "updateWorkflow", "versatile", "workflowName", "workflowOptions"
+]);
+
+/**
+ * Whether options no module registered are stored on the card. True while other modules move to
+ * registerWorkflowOptionsSchema (they warn meanwhile); false then: only midi's keys and registered namespaces are
+ * stored, and other keys last for the use only.
+ */
+let storeUnregistered = true;
+/** Internal: the change of rule above, when its time comes (and for tests) */
+export function setStoreUnregisteredWorkflowOptions(value: boolean): void { storeUnregistered = value; }
+
+const warned = new Set<string>();
+
+/**
+ * The options as a card stores them for a rebuilt workflow: registered namespaces as their schema's data; other
+ * modules' keys as they are (with a deprecation warning, once per key) or, once that ends, not at all.
+ */
+export function cardWorkflowOptions<T>(options: T): T {
+  const encoded = encodeWorkflowOptions(options);
+  if (!isPlainObject(encoded)) return encoded;
+  let out: Record<string, unknown> | undefined;
+  for (const key of Object.keys(encoded)) {
+    if (MIDI_OPTION_KEYS.has(key) || models.has(key) || encoded[key] === undefined) continue;
+    if (!storeUnregistered) {
+      delete (out ??= { ...encoded })[key];
+      continue;
+    }
+    if (warned.has(key)) continue;
+    warned.add(key);
+    foundry.utils.logCompatibilityWarning(`midi-qol | workflowOptions.${key} is kept on the use's chat card for a workflow rebuilt from it, `
+      + `but nothing registered it. A module keeping data there should put it under its own namespace and declare it with `
+      + `MidiQOL.registerWorkflowOptionsSchema("<namespace>", schema); options nobody registered will stop being stored.`,
+      { since: "15.0.0", once: true });
+  }
+  return (out ?? encoded) as T;
+}
 
 /** Applies `fn` to every `workflowOptions` object in a socket payload, copying only the path to what changed. */
 function mapPayload(value: unknown, fn: (options: object) => object, depth = 0): unknown {

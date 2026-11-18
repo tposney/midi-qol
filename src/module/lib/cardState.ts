@@ -40,7 +40,10 @@ export const STATE_KEYS = [
 ] as const;
 export type StateKey = typeof STATE_KEYS[number];
 
-/** Workflow token sets: record field, and its old flag name (a uuid array; `targets` was `{uuid, name}`). Macros change them, so they are stored. */
+/**
+ * Workflow token sets: record field, and its old flag name (a uuid array; `targets` was `{uuid, name}`). Macros change them, so they are stored.
+ * Not the save advantage sets: a rebuilt workflow has them from the records' `saveMode`.
+ */
 export const RECORD_SETS = {
   targets: "targets",
   hit: "hitTargetUuids",
@@ -50,10 +53,7 @@ export const RECORD_SETS = {
   semiSuperSaver: "semiSuperSaverUuids",
   failedSave: "failedSaveUuids",
   fumbleSave: "fumbleSaveUuids",
-  criticalSave: "criticalSaveUuids",
-  advantageSave: "advantageSaveUuids",
-  // From 14.7.0: never a flag
-  disadvantageSave: "disadvantageSaveUuids"
+  criticalSave: "criticalSaveUuids"
 } as const;
 export type RecordSet = keyof typeof RECORD_SETS;
 

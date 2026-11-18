@@ -692,7 +692,8 @@ export async function processDamageRoll(workflow: Workflow, defaultDamageType: s
        */
       if (tokenDocument?.uuid) {
         workflow.midiTargetDetail ??= {};
-        workflow.midiTargetDetail[tokenDocument.uuid] = foundry.utils.deepClone(calcDamageOptions.midi);
+        const { uncannyDodge, uncannyDodgeIcon } = calcDamageOptions.midi ?? {};
+        workflow.midiTargetDetail[tokenDocument.uuid] = { uncannyDodge, uncannyDodgeIcon };
       }
       const categories: Record<string, string> = { "idi": "immunity", "idr": "resistance", "idv": "vulnerability", "ida": "absorption", "idm": "modification" };
       const ignoreTraits = workflow?.activity?.midiProperties?.ignoreTraits;
@@ -2409,12 +2410,8 @@ export async function gmOverTimeEffect(actor: Actor.Implementation, effect: Acti
           targetsToUse: new Set([theTargetToken]),
           // targetUuids: [theTargetUuid],
           ignoreUserTargets: true,
-          workflowOptions: { targetConfirmation: "none", isOverTime: true, allowIncapacitated, overTimeEffectUuid: effect.uuid ?? undefined },
-          flags: {
-            dnd5e: { "itemData": ownedItem.toObject() },
-          }
+          workflowOptions: { targetConfirmation: "none", isOverTime: true, allowIncapacitated, overTimeEffectUuid: effect.uuid ?? undefined }
         };
-        foundry.utils.setProperty(options, `flags.${MODULE_ID}.isOverTime`, true);
         await completeItemUse(ownedItem, { midiOptions: options }, { configure: false }, { rollMode: rollMode as keyof CONFIG.Dice.RollModes | undefined, systemCard: false }); // worried about multiple effects in flight so do one at a time
         if (actionSaveSuccess) {
           await expireEffects(actor, [effect], { "expiry-reason": "midi-qol:overTime:actionSave" });

@@ -32,12 +32,20 @@ function strip(diff: Record<string, unknown>) {
   }
 }
 
+function activityKey(itemSource: Record<string, any>, id: string | null | undefined): string | undefined {
+  if (!id) return undefined;
+  const activities = (itemSource.system?.activities ?? {}) as Record<string, { _id?: string }>;
+  return Object.entries(activities).find(([, data]) => data?._id === id)?.[0] ?? id;
+}
+
 /** The use's changes as stored, or undefined for none */
 export function useChangesJson(card: ChatMessage.Implementation, item: Item.Implementation, activity: Activity): string | undefined {
   const base = cardActivity(card);
   if (!base?.item) return undefined;
   const used = item.toObject() as Record<string, any>;
-  if (activity?.id) foundry.utils.setProperty(used, `system.activities.${activity.id}`, activity.toObject());
+  // Under the key the item holds it by: a synthetic item's key need not be its activity's id
+  const key = activityKey(used, activity?.id);
+  if (key) foundry.utils.setProperty(used, `system.activities.${key}`, activity.toObject());
   const diff = foundry.utils.diffObject(base.item.toObject(), used) as Record<string, unknown>;
   strip(diff);
   const changes: UseChanges = {};
