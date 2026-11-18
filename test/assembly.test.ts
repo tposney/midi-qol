@@ -102,3 +102,34 @@ describe("normaliseChanges / previewSteps", () => {
     ])).toEqual(["i", "r", "w"]);
   });
 });
+
+describe("four layers (stage 2b)", () => {
+  it("a replacement: call over activity over item over global, whatever the priority", () => {
+    const changes = (layers: ("global" | "item" | "activity" | "call")[]) => layers.map((layer, i) => ({ kind: "replace" as const, target: "x", step: layer, layer, priority: 10 - i }));
+    expect(assembleSteps(changes(["global", "item"])).anchors.x.replacement).toBe("item");
+    expect(assembleSteps(changes(["item", "activity"])).anchors.x.replacement).toBe("activity");
+    expect(assembleSteps(changes(["activity", "call", "global", "item"])).anchors.x.replacement).toBe("call");
+  });
+
+  it("inserts and wraps run broadest first: global, item, activity, call", () => {
+    const { anchors } = assembleSteps([
+      { kind: "insert", step: "c", after: "x", layer: "call" },
+      { kind: "insert", step: "a", after: "x", layer: "activity" },
+      { kind: "insert", step: "i", after: "x", layer: "item" },
+      { kind: "insert", step: "g", after: "x", layer: "global" },
+      { kind: "wrap", target: "x", wrapper: "wa", layer: "activity" },
+      { kind: "wrap", target: "x", wrapper: "wi", layer: "item" }
+    ]);
+    expect(anchors.x.after).toEqual(["g", "i", "a", "c"]);
+    expect(anchors.x.wraps).toEqual(["wi", "wa"]);
+  });
+
+  it("an activity's remove beats an item's replace; the item's is reported", () => {
+    const { anchors, conflicts } = assembleSteps([
+      { kind: "replace", target: "x", step: "r", layer: "item", source: "item-src" },
+      { kind: "remove", target: "x", layer: "activity", source: "activity-src" }
+    ]);
+    expect(anchors.x.removed).toBe(true);
+    expect(conflicts[0]).toMatchObject({ winner: "activity-src", losers: ["item-src"] });
+  });
+});

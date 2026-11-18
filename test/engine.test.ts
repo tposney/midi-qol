@@ -20,7 +20,7 @@ function host(script: Record<string, string | undefined | ((h: FakeHost) => stri
     countTransition() { return h.transitions++ < (options.limit ?? 250); },
     async tick() { },
     report(message) { h.log.push(`report:${message}`); },
-    note() { },
+    note(message) { h.log.push(`note:${message}`); },
     name(step) { return String(step); },
     changes(step) { return assembled.anchors[step]; },
     flowNext(step) { return stepAfterInFlow(options.flow ?? [], step); }
@@ -119,6 +119,13 @@ describe("runSteps with a use's changes", () => {
     const h = host({ A: "B", "my.x": "C", B: SUSPEND, C: SUSPEND }, { changes: [{ kind: "insert", step: "my.x", after: "A", layer: "global" }] });
     await runSteps(h, "A");
     expect(runs(h)).toEqual(["A", "my.x", "C"]);
+  });
+
+  it("a removed step not followed by one in the flow's list runs, with a note", async () => {
+    const h = host({ A: "B", B: SUSPEND }, { changes: [{ kind: "remove", target: "B", layer: "global" }], flow: ["A"] });
+    await runSteps(h, "A");
+    expect(runs(h)).toEqual(["A", "B"]);
+    expect(h.log.some(line => line.includes("isn't followed"))).toBe(true);
   });
 
   it("a removed step is passed over to the step after it in the flow", async () => {

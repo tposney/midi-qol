@@ -2481,7 +2481,7 @@ export class Workflow {
     let changes: StepChange[];
     if (this.#fromCard) changes = this.#persisted.scalar<StepChange[] | undefined>("stepChanges", undefined) ?? [];
     else {
-      changes = useStepChanges(this, this.workflowOptions?.steps);
+      changes = useStepChanges(this, this.workflowOptions?.steps, { item: this.item, activity: this.activity });
       if (changes.length && !this.readOnly) this.#persisted.setScalar("stepChanges", changes);
     }
     this.#assembledSteps = assembleSteps(changes);
@@ -2518,7 +2518,10 @@ export class Workflow {
       const inner = run;
       run = async () => Workflow.#asStepId(await wrapper.run!({ workflow: this, next: inner }));
     }
-    return run();
+    const goTo = await run();
+    // A replacement or wrapper that names no step: on to the step after this one in the flow
+    if (goTo === undefined && (anchor?.replacement || anchor?.wraps.length)) return stepAfterInFlow(getFlow(this.flowId)?.steps ?? [], id) ?? goTo;
+    return goTo;
   }
 
   /** What a module's step returned, as a step to go to (anything but a step id: go on) */

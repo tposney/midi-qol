@@ -13,7 +13,7 @@ import { teleportMoverModes, teleportPlanModes } from "./TeleportActivity.js";
 type Fields = Record<string, object>;
 
 function sharedFields(): Fields {
-  const { StringField, ArrayField, BooleanField, SchemaField, NumberField, ColorField, SetField } = foundry.data.fields;
+  const { StringField, ArrayField, BooleanField, SchemaField, NumberField, ColorField, SetField, ObjectField } = foundry.data.fields;
   return {
     useConditionText: new MidiConditionField({ name: "useCondition", initial: "" }),
     useConditionReason: new StringField({ name: "useConditionReason", initial: "" }),
@@ -78,6 +78,8 @@ function sharedFields(): Fields {
       }), { initial: [] }),
     }),
     isOverTimeFlag: new BooleanField({ name: "isOverTimeFlag", initial: false }),
+    // The activity's changes to its use's steps (steps/api.ts, the activity layer), as data; left out unless set
+    midiSteps: new ArrayField(new ObjectField(), { required: false, initial: undefined }),
     overTimeProperties: new SchemaField({
       // `default` is not a field option, so no initial value: unset reads as "start" (kept as stored data has it)
       turnChoice: new StringField({ blank: false, choices: ["start", "end"], default: "start" }),

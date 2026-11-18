@@ -61,9 +61,15 @@ export async function runSteps(host: EngineHost, start: string | undefined): Pro
     // A removed step: on to the step after it in the flow; the steps inserted around it still run
     const aroundRemoved: string[] = [];
     for (let guard = 0; !host.move && next !== undefined && guard < 50 && host.changes?.(next)?.removed; guard++) {
+      const goesOn = host.flowNext?.(next);
+      // Not in the flow's list: nowhere to go on to, so it runs
+      if (goesOn === undefined) {
+        host.note(`${host.name(next)} is removed but isn't followed by a step in the flow's list: it runs`);
+        break;
+      }
       const removed = host.changes?.(next);
       aroundRemoved.push(...(removed?.before ?? []), ...(removed?.after ?? []));
-      next = host.flowNext?.(next);
+      next = goesOn;
     }
     // Starting a move from one step to another: its "after" inserts and the next one's "before" inserts run first.
     // A step that aborts is not followed by its "after" inserts.

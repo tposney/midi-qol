@@ -1,12 +1,13 @@
 /*
  * Step assembly (M3 stage 1; plan ~/Documents/midi-next-M3-plan-2026-11-18.md): a use's changes to its flow, per
- * anchor step, from the layers that ask for them. Two layers (the 2026-11-18 review): global changes (registered by
- * modules, with a `when` already evaluated by the caller) and the call (completeActivityUse's `steps`). Narrowest wins:
- * the call over global. Within a layer, the higher priority first, then the order the changes were made. Pure.
+ * anchor step, from the layers that ask for them: global changes (registered by modules, with a `when` already
+ * evaluated by the caller), the item's and the activity's (stored data, stage 2b) and the call (completeActivityUse's
+ * `steps`). Narrowest wins. Within a layer, the higher priority first, then the order the changes were made. Pure.
  */
 
-export type StepLayer = "global" | "call";
-const LAYER_RANK: Record<StepLayer, number> = { global: 0, call: 1 };
+/** Narrowest wins: a module's global change, then the item's, the activity's, the call's (completeActivityUse). */
+export type StepLayer = "global" | "item" | "activity" | "call";
+const LAYER_RANK: Record<StepLayer, number> = { global: 0, item: 1, activity: 2, call: 3 };
 
 export type StepChange =
   /** Run `step` before or after the anchor step. */
