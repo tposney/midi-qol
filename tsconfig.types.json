@@ -4,6 +4,10 @@
     "declaration": true,
     "emitDeclarationOnly": true,
     "outDir": "types",
+    // fvtt-types exports only its entry points; mapping its sources lets declarations name the types midi's inferred
+    // return types use (else TS2742 and no declarations for the file)
+    "baseUrl": ".",
+    "paths": { "fvtt-types/src/*": ["./node_modules/fvtt-types/src/*"] }
   },
   "include": ["src/**/*"]
 }

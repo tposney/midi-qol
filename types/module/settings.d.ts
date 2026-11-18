@@ -1,9 +1,10 @@
+import type { SelectOptions } from "../globals.js";
 /** @deprecated Removed in favor of granular configSettings.autoFastForward[] and configSettings.gmAutoFastForward[] arrays */
 export declare let autoRemoveTargets: string;
 export declare let coloredBorders: string;
 export declare let criticalDamage: string;
 export declare let criticalDamageGM: string;
-export declare let debounceInterval: number;
+export declare let chatCardUpdates: string;
 export declare let dragDropTargeting: boolean;
 export declare let enableWorkflow: boolean;
 export declare let forceHideRoll: boolean;
@@ -12,10 +13,8 @@ export declare let midiSoundSettings: any;
 export declare let midiSoundSettingsBackup: any;
 export declare let nsaFlag: boolean;
 export declare let playerControlsInvisibleTokens: boolean;
-export declare let replaceDefaultActivities: boolean;
 export declare let saveRequests: {};
 export declare let saveTimeouts: {};
-export declare let saveToChatCard: boolean;
 export declare let targetConfirmation: typeof defaultTargetConfirmationSettings;
 export declare let useWeakReferences: boolean;
 export declare const defaultTargetConfirmationSettings: {
@@ -37,12 +36,14 @@ export declare const defaultTargetConfirmationSettings: {
     };
 };
 declare class ConfigSettings {
-    addChatDamageButtons: string;
     addDead: string;
     addFakeDice: boolean;
     addWounded: number;
     addWoundedStyle: string;
     activityNamePrefix: boolean;
+    conditionEditorEnabled: boolean;
+    rulesTextFill: boolean;
+    rulesTextCompendium: string;
     activationAutomation: string;
     midiWoundedCondition: string;
     midiDeadCondition: string;
@@ -53,82 +54,76 @@ declare class ConfigSettings {
     autoApplyDamage: string;
     playerDamageCard: string;
     playerCardDamageDifferent: boolean;
-    hidePlayerDamageCard: boolean;
     autoCEEffects: string;
     autoCheckHit: string;
     autoCheckSaves: string;
+    saveSummaryStyle: string;
+    chatCardSummaries: string;
     autoFastForward: string[];
     autoItemEffects: string;
     autoRemoveSummonedCreature: boolean;
     autoUndoTransformations: boolean;
     autoRemoveTemplate: boolean;
     autoRemoveInstantaneousTemplate: boolean;
+    constrainTemplatePlacement: boolean;
+    templateSnapping: string;
     autoRollAttack: boolean;
     autoRollDamage: string;
     autoCompleteWorkflow: boolean;
     saveDROrder: string;
     autoTarget: string;
+    defaultOtherActivity: string;
     averageDamage: string;
-    checkSaveText: boolean;
     checkTwoHanded: boolean;
-    chooseAmmunition: boolean;
     collapsibleTargets: boolean;
     coloredBorders: string;
     concentrationAutomation: boolean;
     confirmAmmunition: boolean;
     gmConfirmAmmunition: boolean;
     consumeResource: string;
-    convenientEffectsReaction: string;
     criticalDamage: string;
     criticalDamageGM: string;
-    criticalSound: string;
-    customSoundsPlaylist: string;
     damageImmunities: string;
     damageImmunityMultiplier: number;
     damageResistanceMultiplier: number;
     damageVulnerabilityMultiplier: number;
-    defaultSaveMultiplier: number;
-    diceSound: string;
-    displaySaveAdvantage: boolean;
+    defaultSaveMult: number;
     doConcentrationCheck: string;
     griddedGridless: boolean;
     gridlessFudge: number | undefined;
     doReactions: string;
-    enableDDBGL: boolean;
     enforceReactions: string;
     enforceBonusActions: string;
     enforceSingleWeaponTarget: boolean;
-    fixStickyKeys: boolean;
-    fumbleSound: string;
-    ghostRolls: boolean;
+    gmAttackDisplay: string;
+    gmDamageDisplay: string;
+    gmAttackDsn: string;
+    gmDamageDsn: string;
     gmAttackDamageCards: boolean;
+    /** The GM sees who midi waits for in the player list and can answer for them; a disconnect leaves it to the GM */
+    playerWaitGM: boolean;
+    /** Players see, read-only, which players midi waits for and on what kind of prompt */
+    playerWaitShowPlayers: boolean;
+    /** Gambit's Premades reaction prompts mirrored to the GM are listed on their player's row, hidden until the GM shows one */
+    playerWaitGambit: boolean;
     gmAutoAttack: boolean;
     gmAutoDamage: string;
     gmAutoFastForward: string[];
     gmConsumeResource: string;
     gmDoReactions: string;
-    gmHide3dDice: boolean;
     gmRemoveButtons: string;
     preferredGM: string;
-    hideRollDetails: string;
     ignoreSpellReactionRestriction: boolean;
     itemTypeList: string[] | undefined;
-    itemUseSound: string;
     keepRollStats: boolean;
-    keyMapping: {
-        "DND5E.Advantage": string;
-        "DND5E.Disadvantage": string;
-        "DND5E.Critical": string;
-        "DND5E.Versatile": string;
-    };
     mergeCardCondensed: boolean;
     addSheetButtons: boolean;
     mergeCardMulti: boolean;
-    mergeCardMultiDamage: boolean;
     displayProperties: boolean;
     midiPropertiesTabRole: number;
     confirmAttackDamage: string;
     highlightSuccess: boolean;
+    showAttackRollDetails: boolean;
     highLightCriticalAttackOnly: boolean;
     markPlayerDefeated: boolean;
     markNonPlayerDefeated: boolean;
@@ -137,10 +132,7 @@ declare class ConfigSettings {
     playerRollSaves: string;
     playerSaveTimeout: number;
     playerStatsOnly: boolean;
-    potionUseSound: string;
-    quickSettings: boolean;
     rangeTarget: string;
-    useTemplateRangedTargeting: boolean;
     reactionTimeout: number;
     recordAOO: string;
     removeButtons: string;
@@ -155,48 +147,48 @@ declare class ConfigSettings {
     rollChecksBlind: string[];
     rollSavesBlind: string[];
     rollSkillsBlind: string[];
+    blindRollDisplay: string;
     savesBeforeDamage: boolean;
     saveStatsEvery: number;
-    showDSN: boolean;
     showFastForward: boolean;
     showItemDetails: string;
     showReactionAttackRoll: string;
     showReactionChatMessage: boolean;
     singleConcentrationRoll: boolean;
-    skillAbilityCheckAdvantage: boolean;
-    spellHitSound: string;
-    spellUseSound: string;
-    spellUseSoundRanged: string;
+    singleDamageCalculation: boolean;
     tempHPDamageConcentrationCheck: boolean;
     concentrationIncapacitatedConditionCheck: boolean;
-    toggleOptionalRules: boolean;
     useCustomSounds: boolean;
     usePlayerPortrait: boolean;
     useTokenNames: boolean;
+    hideNPCNames: string;
     undoChatColor: string;
     undoWorkflow: boolean;
-    useDamageDetail: boolean;
     waitForDamageApplication: boolean;
-    weaponHitSound: string;
-    weaponUseSound: string;
-    weaponUseSoundRanged: string;
+    enforceDeathSaves: boolean;
     rollAlternate: string;
     optionalRules: {
         actionSpecialDurationImmediate: boolean;
         activeDefence: boolean;
         activeDefenceModifier: number;
         activeDefenceShow: string;
-        ActiveDefenceDC: boolean;
+        activeDefenceDC: boolean;
         autoRerollInitiative: boolean;
         challengeModeArmor: string;
         checkFlanking: string;
+        flankingBonus: string;
+        flankingRequiresVisibility: boolean;
+        showFlankingHighlight: boolean;
         checkRange: string;
+        targetMustBeSeen: string;
+        conditionRules: boolean;
         coverCalculation: string;
         criticalNat20: boolean;
         criticalSaves: boolean;
         displayBonusRolls: boolean;
         distanceIncludesHeight: boolean;
-        DRAllPerDamageDetail: boolean;
+        distanceMeasurement: string;
+        mountedUseMountSpace: boolean;
         hiddenAdvantage: string;
         incapacitated: string;
         invisAdvantage: string;
@@ -205,10 +197,13 @@ declare class ConfigSettings {
         nearbyAllyRanged: number;
         nearbyFoe: number;
         optionalCritRule: number;
-        removeHiddenInvis: boolean;
         vitalityItem: string;
         vitalityDeadCondition: string;
         vitalityDeathRequires: string;
+        visionTestHeight: string;
+        templateOriginHeight: string;
+        templatePlacedOrigin: string;
+        surfaceOcclusion: boolean;
         wallsBlockRange: string;
     };
 }
@@ -226,12 +221,14 @@ export declare const checkedModuleList: (string | RegExp)[];
 export declare const CheckedAuthorsList: string[];
 export declare function collectSettingData(): {
     configSettings: {
-        addChatDamageButtons: string;
         addDead: string;
         addFakeDice: boolean;
         addWounded: number;
         addWoundedStyle: string;
         activityNamePrefix: boolean;
+        conditionEditorEnabled: boolean;
+        rulesTextFill: boolean;
+        rulesTextCompendium: string;
         activationAutomation: string;
         midiWoundedCondition: string;
         midiDeadCondition: string;
@@ -242,82 +239,76 @@ export declare function collectSettingData(): {
         autoApplyDamage: string;
         playerDamageCard: string;
         playerCardDamageDifferent: boolean;
-        hidePlayerDamageCard: boolean;
         autoCEEffects: string;
         autoCheckHit: string;
         autoCheckSaves: string;
+        saveSummaryStyle: string;
+        chatCardSummaries: string;
         autoFastForward: string[];
         autoItemEffects: string;
         autoRemoveSummonedCreature: boolean;
         autoUndoTransformations: boolean;
         autoRemoveTemplate: boolean;
         autoRemoveInstantaneousTemplate: boolean;
+        constrainTemplatePlacement: boolean;
+        templateSnapping: string;
         autoRollAttack: boolean;
         autoRollDamage: string;
         autoCompleteWorkflow: boolean;
         saveDROrder: string;
         autoTarget: string;
+        defaultOtherActivity: string;
         averageDamage: string;
-        checkSaveText: boolean;
         checkTwoHanded: boolean;
-        chooseAmmunition: boolean;
         collapsibleTargets: boolean;
         coloredBorders: string;
         concentrationAutomation: boolean;
         confirmAmmunition: boolean;
         gmConfirmAmmunition: boolean;
         consumeResource: string;
-        convenientEffectsReaction: string;
         criticalDamage: string;
         criticalDamageGM: string;
-        criticalSound: string;
-        customSoundsPlaylist: string;
         damageImmunities: string;
         damageImmunityMultiplier: number;
         damageResistanceMultiplier: number;
         damageVulnerabilityMultiplier: number;
-        defaultSaveMultiplier: number;
-        diceSound: string;
-        displaySaveAdvantage: boolean;
+        defaultSaveMult: number;
         doConcentrationCheck: string;
         griddedGridless: boolean;
         gridlessFudge: number | undefined;
         doReactions: string;
-        enableDDBGL: boolean;
         enforceReactions: string;
         enforceBonusActions: string;
         enforceSingleWeaponTarget: boolean;
-        fixStickyKeys: boolean;
-        fumbleSound: string;
-        ghostRolls: boolean;
+        gmAttackDisplay: string;
+        gmDamageDisplay: string;
+        gmAttackDsn: string;
+        gmDamageDsn: string;
         gmAttackDamageCards: boolean;
+        /** The GM sees who midi waits for in the player list and can answer for them; a disconnect leaves it to the GM */
+        playerWaitGM: boolean;
+        /** Players see, read-only, which players midi waits for and on what kind of prompt */
+        playerWaitShowPlayers: boolean;
+        /** Gambit's Premades reaction prompts mirrored to the GM are listed on their player's row, hidden until the GM shows one */
+        playerWaitGambit: boolean;
         gmAutoAttack: boolean;
         gmAutoDamage: string;
         gmAutoFastForward: string[];
         gmConsumeResource: string;
         gmDoReactions: string;
-        gmHide3dDice: boolean;
         gmRemoveButtons: string;
         preferredGM: string;
-        hideRollDetails: string;
         ignoreSpellReactionRestriction: boolean;
         itemTypeList: string[] | undefined;
-        itemUseSound: string;
         keepRollStats: boolean;
-        keyMapping: {
-            "DND5E.Advantage": string;
-            "DND5E.Disadvantage": string;
-            "DND5E.Critical": string;
-            "DND5E.Versatile": string;
-        };
         mergeCardCondensed: boolean;
         addSheetButtons: boolean;
         mergeCardMulti: boolean;
-        mergeCardMultiDamage: boolean;
         displayProperties: boolean;
         midiPropertiesTabRole: number;
         confirmAttackDamage: string;
         highlightSuccess: boolean;
+        showAttackRollDetails: boolean;
         highLightCriticalAttackOnly: boolean;
         markPlayerDefeated: boolean;
         markNonPlayerDefeated: boolean;
@@ -326,10 +317,7 @@ export declare function collectSettingData(): {
         playerRollSaves: string;
         playerSaveTimeout: number;
         playerStatsOnly: boolean;
-        potionUseSound: string;
-        quickSettings: boolean;
         rangeTarget: string;
-        useTemplateRangedTargeting: boolean;
         reactionTimeout: number;
         recordAOO: string;
         removeButtons: string;
@@ -344,48 +332,48 @@ export declare function collectSettingData(): {
         rollChecksBlind: string[];
         rollSavesBlind: string[];
         rollSkillsBlind: string[];
+        blindRollDisplay: string;
         savesBeforeDamage: boolean;
         saveStatsEvery: number;
-        showDSN: boolean;
         showFastForward: boolean;
         showItemDetails: string;
         showReactionAttackRoll: string;
         showReactionChatMessage: boolean;
         singleConcentrationRoll: boolean;
-        skillAbilityCheckAdvantage: boolean;
-        spellHitSound: string;
-        spellUseSound: string;
-        spellUseSoundRanged: string;
+        singleDamageCalculation: boolean;
         tempHPDamageConcentrationCheck: boolean;
         concentrationIncapacitatedConditionCheck: boolean;
-        toggleOptionalRules: boolean;
         useCustomSounds: boolean;
         usePlayerPortrait: boolean;
         useTokenNames: boolean;
+        hideNPCNames: string;
         undoChatColor: string;
         undoWorkflow: boolean;
-        useDamageDetail: boolean;
         waitForDamageApplication: boolean;
-        weaponHitSound: string;
-        weaponUseSound: string;
-        weaponUseSoundRanged: string;
+        enforceDeathSaves: boolean;
         rollAlternate: string;
         optionalRules: {
             actionSpecialDurationImmediate: boolean;
             activeDefence: boolean;
             activeDefenceModifier: number;
             activeDefenceShow: string;
-            ActiveDefenceDC: boolean;
+            activeDefenceDC: boolean;
             autoRerollInitiative: boolean;
             challengeModeArmor: string;
             checkFlanking: string;
+            flankingBonus: string;
+            flankingRequiresVisibility: boolean;
+            showFlankingHighlight: boolean;
             checkRange: string;
+            targetMustBeSeen: string;
+            conditionRules: boolean;
             coverCalculation: string;
             criticalNat20: boolean;
             criticalSaves: boolean;
             displayBonusRolls: boolean;
             distanceIncludesHeight: boolean;
-            DRAllPerDamageDetail: boolean;
+            distanceMeasurement: string;
+            mountedUseMountSpace: boolean;
             hiddenAdvantage: string;
             incapacitated: string;
             invisAdvantage: string;
@@ -394,10 +382,13 @@ export declare function collectSettingData(): {
             nearbyAllyRanged: number;
             nearbyFoe: number;
             optionalCritRule: number;
-            removeHiddenInvis: boolean;
             vitalityItem: string;
             vitalityDeadCondition: string;
             vitalityDeathRequires: string;
+            visionTestHeight: string;
+            templateOriginHeight: string;
+            templatePlacedOrigin: string;
+            surfaceOcclusion: boolean;
             wallsBlockRange: string;
         };
     };
@@ -407,14 +398,12 @@ export declare function collectSettingData(): {
     coloredBorders: string;
     criticalDamage: string;
     criticalDamageGM: string;
-    debounceInterval: number;
+    chatCardUpdates: string;
     dragDropTargeting: boolean;
     enableWorkflow: boolean;
     forceHideRoll: boolean;
     nsaFlag: boolean;
-    saveToChatCard: boolean;
     playerControlsInvisibleTokens: boolean;
-    replaceDefaultActivities: boolean;
     targetConfirmation: {
         enabled: boolean;
         always: boolean;
@@ -436,89 +425,44 @@ export declare function collectSettingData(): {
     useWeakReferences: boolean;
     flags: {};
 };
+export declare function collectModuleData(): Record<string, any>;
 export declare function exportSettingsToJSON(): void;
 export declare function importSettingsFromJSON(json: any): Promise<void>;
 export declare let fetchSoundSettings: () => void;
 export declare let fetchParams: () => void;
 export declare function readySettingsSetup(): void;
-export declare const criticalDamageChoices: {
-    [k: string]: string;
-};
-export declare const addChatDamageButtonsOptions: {
-    [k: string]: string;
-};
-export declare const coloredBordersOptions: {
-    [k: string]: string;
-};
-export declare const autoRemoveTargetsOptions: {
-    [k: string]: string;
-};
-export declare const debugOptions: {
-    [k: string]: string;
-};
-export declare const autoRollDamageOptions: {
-    [k: string]: string;
-};
-export declare const autoCheckHitOptions: {
-    [k: string]: string;
-};
-export declare const clickOptions: {
-    [k: string]: string;
-};
-export declare const autoTargetOptions: {
-    [k: string]: string;
-};
-export declare const autoCheckSavesOptions: {
-    [k: string]: string;
-};
-export declare const rangeTargetOptions: {
-    [k: string]: string;
-};
-export declare const autoApplyDamageOptions: {
-    [k: string]: string;
-};
-export declare const playerDamageCardOptions: {
-    [k: string]: string;
-};
-export declare const removeButtonsOptions: {
-    [k: string]: string;
-};
-export declare const damageImmunitiesOptions: {
-    [k: string]: string;
-};
-export declare const showItemDetailsOptions: {
-    [k: string]: string;
-};
-export declare const rollNPCSavesOptions: {
-    [k: string]: string;
-};
-export declare const playerRollSavesOptions: {
-    [k: string]: string;
-};
-export declare const playerRollSavesOptionsReduced: {
-    [k: string]: string;
-};
-export declare const hideRollDetailsOptions: {
-    [k: string]: string;
-};
-export declare const rollOtherDamageOptions: {
-    [k: string]: string;
-};
-export declare const showReactionAttackRollOptions: {
-    [k: string]: string;
-};
-export declare const onUseMacroOptions: {
-    [k: string]: string;
-};
-export declare const confirmTargetOptions: {
-    [k: string]: string;
-};
-export declare const triggeredActivityTargetOptions: {
-    [k: string]: string;
-};
-export declare const triggeredActivityRollAsOptions: {
-    [k: string]: string;
-};
+export declare const criticalDamageChoices: Record<string, string>;
+export declare const coloredBordersOptions: Record<string, string>;
+export declare const autoRemoveTargetsOptions: Record<string, string>;
+export declare const debugOptions: Record<string, string>;
+export declare const autoRollDamageOptions: SelectOptions;
+export declare const autoCheckHitOptions: SelectOptions;
+export declare const autoTargetOptions: SelectOptions;
+export declare const saveSummaryStyleOptions: SelectOptions;
+export declare const chatCardSummariesOptions: SelectOptions;
+export declare const autoCheckSavesOptions: SelectOptions;
+export declare const rangeTargetOptions: SelectOptions;
+export declare const autoApplyDamageOptions: SelectOptions;
+export declare const playerDamageCardOptions: SelectOptions;
+export declare const removeButtonsOptions: Record<string, string>;
+export declare const damageImmunitiesOptions: SelectOptions;
+export declare const showItemDetailsOptions: SelectOptions;
+export declare const rollNPCSavesOptions: SelectOptions;
+export declare const playerRollSavesOptions: SelectOptions;
+export declare const gmAttackDisplayOptions: SelectOptions;
+export declare const gmDamageDisplayOptions: SelectOptions;
+export declare const gmDsnDisplayOptions: SelectOptions;
+export declare const blindRollDisplayOptions: SelectOptions;
+export declare const showReactionAttackRollOptions: SelectOptions;
+export declare const onUseMacroOptions: SelectOptions;
+export declare const ammunitionPerTargetOptions: Record<string, string>;
+export declare const confirmTargetOptions: Record<string, string>;
+export declare const triggeredActivityTargetOptions: Record<string, string>;
+export declare const triggeredActivityRollAsOptions: Record<string, string>;
+/** Key for "downgrade immunity to resistance". Lives alongside the ignore keys in the same set. */
+export declare const DOWNGRADE_IMMUNITY_KEY = "ddi";
+/** dnd5e's trait value for "All Damage". Not a member of CONFIG.DND5E.damageTypes. */
+export declare const ALL_DAMAGE_KEY = "ALL";
 export declare const ignoreTraitsOptionsBase: {
     idi: {
         label: string;
@@ -537,6 +481,10 @@ export declare const ignoreTraitsOptionsBase: {
         hint: string;
     };
     idm: {
+        label: string;
+        hint: string;
+    };
+    ddi: {
         label: string;
         hint: string;
     };
@@ -562,6 +510,10 @@ export declare const ignoreTraitsOptions: {
         label: string;
         hint: string;
     };
+    ddi: {
+        label: string;
+        hint: string;
+    };
 };
 export declare const ignoreTraitsCategoryLabels: {
     idi: string;
@@ -569,6 +521,7 @@ export declare const ignoreTraitsCategoryLabels: {
     idv: string;
     ida: string;
     idm: string;
+    ddi: string;
 };
 /**
  * Get ignore traits options including damage-type specific options.
@@ -580,105 +533,52 @@ export declare function getIgnoreTraitsOptions(): {
     label: string;
     group?: string;
 }[];
-export declare const aoeTargetTypeOptions: {
-    [k: string]: string;
+export declare const aoeTargetTypeOptions: Record<string, string>;
+export declare const autoCEEffectsOptions: SelectOptions;
+export declare const visionTestHeightOptions: SelectOptions;
+export declare const templatePlacedOriginOptions: SelectOptions;
+export declare const templateOriginHeightOptions: SelectOptions;
+export declare const wallsBlockRangeOptionsNew: SelectOptions;
+export declare const coverCalculationOptions: SelectOptions;
+export declare const hiddenAdvantageOptions: SelectOptions;
+export declare const addDeadOptions: SelectOptions;
+export declare const requiresTargetsOptions: SelectOptions;
+export declare const doReactionsOptions: SelectOptions;
+export declare const gmDoReactionsOptions: SelectOptions;
+export declare const recordAOOOptions: SelectOptions;
+export declare const EnforceReactionsOptions: SelectOptions;
+export declare const autoEffectsOptions: SelectOptions;
+export declare const requireMagicalOptions: SelectOptions;
+export declare const checkFlankingOptions: SelectOptions;
+export declare const flankingBonusOptions: {
+    advantage: string;
+    "1": string;
+    "2": string;
+    "3": string;
+    "4": string;
+    "5": string;
 };
-export declare const autoCEEffectsOptions: {
-    [k: string]: string;
-};
-export declare const wallsBlockRangeOptionsNew: {
-    [k: string]: string;
-};
-export declare const coverCalculationOptions: {
-    [k: string]: string;
-};
-export declare const hiddenAdvantageOptions: {
-    [k: string]: string;
-};
-export declare const addDeadOptions: {
-    [k: string]: string;
-};
-export declare const quickSettingsBlurb: {
-    [k: string]: string;
-};
-export declare const requiresTargetsOptions: {
-    [k: string]: string;
-};
-export declare const doReactionsOptions: {
-    [k: string]: string;
-};
-export declare const gmDoReactionsOptions: {
-    [k: string]: string;
-};
-export declare const recordAOOOptions: {
-    [k: string]: string;
-};
-export declare const EnforceReactionsOptions: {
-    [k: string]: string;
-};
-export declare const autoEffectsOptions: {
-    [k: string]: string;
-};
-export declare const requireMagicalOptions: {
-    [k: string]: string;
-};
-export declare const checkFlankingOptions: {
-    [k: string]: string;
-};
-export declare const hideRollDetailsHintLongOptions: {
-    [k: string]: string;
-};
-export declare const rollAlternateOptions: {
-    [k: string]: string;
-};
-export declare const consumeResourceOptions: {
-    [k: string]: string;
-};
-export declare const averageDamageOptions: {
-    [k: string]: string;
-};
-export declare const removeConcentrationEffectsOptions: {
-    [k: string]: string;
-};
-export declare const incapacitatedOptions: {
-    [k: string]: string;
-};
-export declare const checkRangeOptions: {
-    [k: string]: string;
-};
-export declare const invisAdvantageOptions: {
-    [k: string]: string;
-};
-export declare const confirmAttackDamageOptions: {
-    [k: string]: string;
-};
-export declare const challengeModeArmorOptions: {
-    [k: string]: string;
-};
-export declare const saveDROrderOptions: {
-    [k: string]: string;
-};
-export declare const doConcentrationCheckOptions: {
-    [k: string]: string;
-};
-export declare const activationAutomationOptions: {
-    [k: string]: string;
-};
-export declare const soundSettingsBlurb: {
-    [k: string]: string;
-};
-export declare const rollConfigOptions: {
-    [k: string]: string;
-};
-export declare const damageConfigOptions: {
-    [k: string]: string;
-};
-export declare const consumeConfigOptions: {
-    [k: string]: string;
-};
+export declare const rollAlternateOptions: SelectOptions;
+export declare const consumeResourceOptions: SelectOptions;
+export declare const averageDamageOptions: SelectOptions;
+export declare const removeConcentrationEffectsOptions: SelectOptions;
+export declare const incapacitatedOptions: SelectOptions;
+export declare const targetMustBeSeenOptions: SelectOptions;
+export declare const checkRangeOptions: SelectOptions;
+export declare const distanceMeasurementOptions: SelectOptions;
+export declare const invisAdvantageOptions: SelectOptions;
+export declare const confirmAttackDamageOptions: SelectOptions;
+export declare const challengeModeArmorOptions: SelectOptions;
+export declare const defaultOtherActivityOptions: SelectOptions;
+export declare const saveDROrderOptions: SelectOptions;
+export declare const doConcentrationCheckOptions: SelectOptions;
+export declare const activationAutomationOptions: Record<string, string>;
+export declare const rollConfigOptions: Record<string, string>;
+export declare const damageConfigOptions: Record<string, string>;
+export declare const consumeConfigOptions: Record<string, string>;
 export declare const registerSettings: () => void;
-export declare function disableWorkflowAutomation(): void;
 export declare function safeGetGameSetting(moduleName: string, settingName: string): any | undefined;
+export declare function safeSetGameSetting(moduleName: string, settingName: string, value: unknown): Promise<unknown> | undefined;
 /**
  * Helper to check if save DCs should be displayed, based on dnd5e's challengeVisibility setting.
  * Replaces the deprecated midi-qol displaySaveDC setting.
@@ -687,4 +587,8 @@ export declare function safeGetGameSetting(moduleName: string, settingName: stri
  * @returns true if DCs should be shown, false if hidden
  */
 export declare function shouldDisplaySaveDC(actor?: Actor): boolean;
+/** Turn workflow token sets' document mode on or off (a world setting: every client, after a reload) */
+export declare function setTokenDocumentSets(enabled: boolean, { reload }?: {
+    reload?: boolean;
+}): Promise<void>;
 export {};

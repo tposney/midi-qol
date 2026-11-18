@@ -1,3 +1,4 @@
+import "./module/damageAbsorption.js";
 import { RollStats } from './module/RollStats.js';
 export declare function getCanvas(): foundry.canvas.Canvas | undefined;
 export declare let ceInterface: {
@@ -40,14 +41,16 @@ export declare let debug: (...args: any[]) => void;
 export declare let log: (...args: any[]) => void;
 export declare let warn: (...args: any[]) => void;
 export declare let error: (...args: any[]) => void;
-export declare let timelog: (...args: any[]) => void;
 export declare const MODULE_ID = "midi-qol";
-export declare let i18n: (key: string) => string;
+export declare let i18n: (key: SelectOptionValue) => string;
 export declare let i18nFormat: (key: string, data?: {}) => string;
 export declare function getStaticID(id: string): string;
 export declare let setDebugLevel: (debugText: string) => void;
 export declare function busyWait(milliSeconds: number): Promise<unknown>;
-export declare let midiFlags: string[];
+export declare let midiFlags: {
+    name: string;
+    type?: string;
+}[];
 export declare let allAttackTypes: string[];
 export declare let gameStats: RollStats;
 export declare let overTimeEffectsToDelete: Record<string, {
@@ -80,16 +83,21 @@ export declare const MESSAGE_TYPES: {
     ITEM: number;
 };
 export declare let MQDamageRollTypes: string[];
-import { TokenOrDocument } from './globals.js';
+/** DAE's special durations with midi's, for choosing them outside DAE's effect sheet (activity statuses). */
+export declare let specialDurationChoices: Record<string, string>;
+import { MoveTokenOptions, TeleportTokenDestination, TokenOrDocument, SelectOptionValue } from './globals.js';
 export declare function testfunc(...args: any[]): void;
 export declare function moveToken(tokenRef: TokenOrDocument | string, newCenter: {
     x: number;
     y: number;
-}, animate?: boolean): Promise<any>;
+    elevation?: number;
+    level?: string;
+}, options?: MoveTokenOptions | boolean, legacyOptions?: MoveTokenOptions): Promise<any>;
 export declare function moveTokenAwayFromPoint(targetRef: TokenOrDocument | string, distance: number, point: {
     x: number;
     y: number;
-}, animate?: boolean, checkCollision?: boolean): Promise<any>;
+}, options?: MoveTokenOptions | boolean, legacyCheckCollision?: boolean, legacyOptions?: MoveTokenOptions): Promise<any>;
+export declare function teleportToken(tokenRef: TokenOrDocument | string, destination: TeleportTokenDestination): Promise<any>;
 export declare function createEffects(data: {
     actorUuid: string;
     effects: ActiveEffect.CreateData[];
@@ -106,4 +114,9 @@ export declare function updateEffects(data: {
     updates: ActiveEffect.UpdateData[];
 }): Promise<any>;
 export declare function createMidiMacros(): Promise<void>;
+/** midi's statuses that also carry another status: the self-ending Invisible carries invisible. */
+export declare const MIDI_IMPLYING_STATUSES: Record<string, string>;
+/** midi's statuses, added to `statusEffects` where missing. */
+export declare function addMidiStatusEffects(statusEffects?: typeof CONFIG.statusEffects): void;
 export declare function setupMidiStatusEffects(): void;
+export declare function updateFlankingStatusEffects(): void;
