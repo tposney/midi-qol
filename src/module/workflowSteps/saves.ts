@@ -68,7 +68,7 @@ export function registerSavesSteps(): void {
         //@ts-expect-error flash-rolls-5e custom hook
         Hooks.off("flash-rolls-5e.rollComplete", flashId);
       }
-      if (debugEnabled > 1) debug("Check Saves: ", workflow.saveRequests, workflow.saveTimeouts, workflow.saves);
+      if (debugEnabled > 1) debug("Check Saves: ", workflow.pendingSaves.keys(), workflow.saves);
       if (debugEnabled > 1) debug("Check Saves: renderChat message hooks length ", Hooks.events["renderChatMessageHTML"]?.length)
       await workflow.callMidiHooks("midi-qol.postCheckSaves");
       if (workflow.aborted) return "midi-qol.Abort";

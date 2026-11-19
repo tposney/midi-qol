@@ -1066,8 +1066,9 @@ import { registerBonusApprovalQuery } from "./module/services/rollBonuses/approv
 import { registerDamageMessageSummary } from "./module/damage/messages.js";
 import { defineDamageContributionsService } from "./module/services/damageContributions/service.js";
 import { defineReactionsService, reactionsService } from "./module/services/reactions/service.js";
-import { defineSaveRequestsService } from "./module/services/saveRequests/service.js";
-import { registerMidiSaveProviders } from "./module/services/saveRequests/providers.js";
+import { defineSaveRequestsService, MIDI_SAVE_PROVIDERS, requestSaves, settingsProviderFor } from "./module/services/saveRequests/service.js";
+import { midiSaveProviders, registerMidiSaveProviders } from "./module/services/saveRequests/providers.js";
+import { PendingSaves } from "./module/services/saveRequests/pending.js";
 import { midiItemReactions } from "./module/services/reactions/provider.js";
 import { previewFlow, stepsApi } from "./module/steps/api.js";
 import { requestsApi, setupRequests } from "./module/lib/requests.js";
@@ -1092,6 +1093,8 @@ function setupMidiQOLApi() {
     configSettings: () => { return configSettings },
     /** The 14.x release whose deprecation state midi-next matches (M5's compatibility line) */
     compatibilityLine,
+    /** How targets' saves are asked (M5b): the provider midi's settings pick for a request, the service call, midi's own providers */
+    saveRequests: { providerFor: settingsProviderFor, request: requestSaves, midiProvider: (id: string) => midiSaveProviders[id], providers: MIDI_SAVE_PROVIDERS, PendingSaves },
     debouncedUpdate: (document: ChatMessage.Implementation, updates: ChatMessage.UpdateData) => {
       if (!deprecation("midi-qol | MidiQOL.debouncedUpdate is deprecated and will be removed in 14.8.0: use ChatMessage#update.", { since: "14.6.9", until: "14.8.0", once: true }))
         throw removedError("MidiQOL.debouncedUpdate", "14.8.0", "use ChatMessage#update");

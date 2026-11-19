@@ -36,13 +36,9 @@ export const skipConcentrationActorUuids = new Set<string | null>();
 // Multiple concurrent updateActor hooks can fire for the same actor, causing duplicate status effects
 const actorWoundedSemaphores = new Map<string | null, foundry.utils.Semaphore>();
 
-/** A workflow is waiting on a save or check from this actor (its requests are keyed by the token's id or the actor's uuid). */
+/** A workflow is waiting on a save or check from this actor (by any of its tokens) */
 function awaitedByWorkflow(actor: Actor.Implementation): boolean {
-  const tokenIds = actor.getActiveTokens(false, true).map(t => t.id);
-  for (const workflow of Workflow.workflows.values()) {
-    const requests = workflow.saveRequests;
-    if (requests && ((actor.uuid && requests[actor.uuid]) || tokenIds.some(id => id && requests[id]))) return true;
-  }
+  for (const workflow of Workflow.workflows.values()) if (workflow.pendingSaves?.awaitsActor(actor)) return true;
   return false;
 }
 

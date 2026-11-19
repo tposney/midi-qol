@@ -7,9 +7,9 @@ import { type SaveRequest, type SaveRequestContext, type SaveRequestEntry, type 
  * request builders; settings pick them (service.ts settingsProviderFor).
  */
 
-/** A save answered by a module that rolls a batch: its resolver kept where the module's answer is matched */
-function pending(workflow: Workflow, key: string | null | undefined): Promise<Roll[] | Roll | null> {
-  return new Promise(resolve => { workflow.saveRequests[key ?? foundry.utils.randomID()] = resolve; });
+/** A save answered by a module that rolls a batch: waited for until the module's answer matches it (by token) */
+function pending(workflow: Workflow, request: SaveRequest): Promise<Roll[] | Roll | null> {
+  return workflow.pendingSaves.wait(request.target).promise;
 }
 
 /** The batch's shared details, from its first request (every request of one use asks the same roll) */
@@ -30,7 +30,7 @@ const split = <T>(requests: SaveRequest[], build: (request: SaveRequest) => T) =
  */
 const monks: SaveRequestProvider = {
   request(requests, { workflow }) {
-    const entries = requests.map(r => ({ promise: pending(workflow, r.target.id ?? undefined) }));
+    const entries = requests.map(r => ({ promise: pending(workflow, r) }));
     const { player, gm } = split(requests, r => workflow.buildMonksTokenBarRequest(r.target, r.saveDetails));
     const s = shared(requests);
     workflow.dispatchMonksTokenBarSaves(player, gm, s.rollType, s.abilities, s.skills, s.dc, s.whisper);
@@ -40,7 +40,7 @@ const monks: SaveRequestProvider = {
 
 const flash: SaveRequestProvider = {
   request(requests, { workflow }) {
-    const entries = requests.map(r => ({ promise: pending(workflow, r.target.actor?.uuid) }));
+    const entries = requests.map(r => ({ promise: pending(workflow, r) }));
     const { player, gm } = split(requests, r => workflow.buildFlashRollsRequest(r.target, r.saveDetails));
     const s = shared(requests);
     workflow.dispatchFlashRollsSaves(player, gm, s.rollType, s.abilities, s.skills, s.tools, s.dc);
@@ -50,7 +50,7 @@ const flash: SaveRequestProvider = {
 
 const epic: SaveRequestProvider = {
   request(requests, { workflow }) {
-    const entries = requests.map(r => ({ promise: pending(workflow, r.target.actor?.uuid) }));
+    const entries = requests.map(r => ({ promise: pending(workflow, r) }));
     const { player, gm } = split(requests, r => workflow.buildEpicRollsRequest(r.target, r.saveDetails));
     const s = shared(requests);
     workflow.dispatchEpicRollsSaves(player, gm, s.rollType, s.dc);
@@ -80,6 +80,12 @@ const roll: SaveRequestProvider = {
     return requests.map(r => ({ promise: workflow.createStandardSaveRoll(r.target, r.saveDetails, r.displayOptions.whisper, r.displayOptions.showRoll,
       r.displayOptions.showRollDialog, r.displayOptions.simulate) }));
   }
+};
+
+/** midi's own providers, by id: another module that claims some targets can hand others to one of these */
+export const midiSaveProviders: Record<string, SaveRequestProvider> = {
+  [MIDI_SAVE_PROVIDERS.roll]: roll, [MIDI_SAVE_PROVIDERS.player]: player, [MIDI_SAVE_PROVIDERS.chat]: chat,
+  [MIDI_SAVE_PROVIDERS.monks]: monks, [MIDI_SAVE_PROVIDERS.flash]: flash, [MIDI_SAVE_PROVIDERS.epic]: epic
 };
 
 export function registerMidiSaveProviders() {

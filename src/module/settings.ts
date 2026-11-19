@@ -50,8 +50,6 @@ export let midiSoundSettings: any = {};
 export let midiSoundSettingsBackup: any = undefined;
 export let nsaFlag: boolean;
 export let playerControlsInvisibleTokens: boolean = false;
-export let saveRequests = {};
-export let saveTimeouts = {};
 export let targetConfirmation: typeof defaultTargetConfirmationSettings;
 export let useWeakReferences: boolean = false;
 

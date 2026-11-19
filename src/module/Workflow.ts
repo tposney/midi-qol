@@ -1,5 +1,6 @@
 import { allSteps, getStep, REACTION_STEPS, stepForMethod, type StepContext } from "./steps/steps.js";
 import { MIDI_SAVE_PROVIDERS, requestSaves, settingsProviderFor, type SaveRequest, type SaveRequestEntry } from "./services/saveRequests/service.js";
+import { PendingSaves } from "./services/saveRequests/pending.js";
 import { deprecation, removedError } from "./lib/compatLine.js";
 import { assembleSteps, stepAfterInFlow, type AssembledSteps, type StepChange, type StepChangeInput } from "./steps/assembly.js";
 import { missingSteps, reportAssembly, useStepChanges } from "./steps/api.js";
@@ -1605,10 +1606,8 @@ export class Workflow {
   set advantageSaves(advantageSaves: Set<TokenOrDocument> | undefined) { this.#advantageSaves = new TokenDocumentSet(advantageSaves ?? []); }
   get disadvantageSaves(): TokenDocumentSet { return this.#disadvantageSaves; }
   set disadvantageSaves(disadvantageSaves: Set<TokenOrDocument> | undefined) { this.#disadvantageSaves = new TokenDocumentSet(disadvantageSaves ?? []); }
-  saveRequests: Record<string, (value: any) => void>;
-  /** What each chat-card save request asks for, by its key in saveRequests */
-  saveRequestKinds: Record<string, SaveRequestKind>;
-  saveTimeouts: Record<string, NodeJS.Timeout>;
+  /** The saves this use waits for, by token uuid (M5b: the saveRequests providers' and the chat card's answers) */
+  pendingSaves = new PendingSaves();
   defenceRequests: Record<string, (value: any) => void>;
   defenceTimeouts: Record<string, NodeJS.Timeout>;
 
@@ -2013,10 +2012,8 @@ export class Workflow {
       if (this.speaker.scene) this.speaker.scene = canvas.scene?.id ?? "";
     }
 
-    this.saveRequests = {};
-    this.saveRequestKinds = {};
+    this.pendingSaves = new PendingSaves();
     this.defenceRequests = {};
-    this.saveTimeouts = {};
     this.defenceTimeouts = {}
     this.forceApplyEffects = false;
     if (options.rollOptions) this.rollOptions = options.rollOptions;
@@ -5914,19 +5911,14 @@ export class Workflow {
       const failed = () => new BasicRoll("-1").evaluateSync({ strict: false });
       if (!rerResult.canceled) {
         for (const rerRoll of rerResult.results) {
-          const actorUuid = rerRoll.actor?.uuid;
-          const fn = actorUuid ? this.saveRequests[actorUuid] : undefined;
-          if (!fn || !rerRoll.roll) continue;
-          delete this.saveRequests[actorUuid!];
-          fn(Roll.fromJSON(JSON.stringify(rerRoll.roll)));
+          // An actor's roll answers one of its tokens' saves (two tokens of one linked actor each get one)
+          const [key] = this.pendingSaves.keysForActor(rerRoll.actor?.uuid);
+          if (!key || !rerRoll.roll) continue;
+          this.pendingSaves.answer(key, Roll.fromJSON(JSON.stringify(rerRoll.roll)));
         }
       }
-      for (const uuid of rerRequest.actors) {
-        const fn = this.saveRequests[uuid];
-        if (!fn) continue;
-        delete this.saveRequests[uuid];
-        fn(failed());
-      }
+      for (const uuid of rerRequest.actors)
+        for (const key of this.pendingSaves.keysForActor(uuid)) this.pendingSaves.answer(key, failed());
     });
   }
 
@@ -5953,19 +5945,15 @@ export class Workflow {
     //@ts-expect-error
     const BasicRoll = CONFIG.Dice.BasicRoll as typeof Roll;
 
-    const requestId = target?.id ?? foundry.utils.randomID();
     const saveDisplay = saveDisplayMode();
-
-    const promise = new Promise<Roll[] | Roll | null>((resolve) => {
-      this.saveRequests[requestId] = resolve;
-      this.saveRequestKinds[requestId] = { rollType, abilities: rollAbilities, skills: rollSkills, tools: rollTools };
-
+    const { key: requestId, promise } = this.pendingSaves.wait(target, { rollType, abilities: rollAbilities, skills: rollSkills, tools: rollTools });
+    {
       // Set a timeout for taking over the roll
       if (configSettings.playerSaveTimeout > 0) {
-        this.saveTimeouts[requestId] = setTimeout(async () => {
-          if (this.saveRequests[requestId]) {
-            delete this.saveRequests[requestId];
-            delete this.saveTimeouts[requestId];
+        this.pendingSaves.setTimeout(requestId, setTimeout(async () => {
+          // Taken: a late roll by the player doesn't answer it meanwhile
+          const resolve = this.pendingSaves.take(requestId);
+          if (resolve) {
             let result: Roll[] | null;
 
             // The DC goes on the roll so dnd5e can tell success from failure; who sees it is decided when the card is shown.
@@ -5984,6 +5972,8 @@ export class Workflow {
                   forUserId: player.id
                 }
               });
+              // The GM's roll answers it (it used to be dropped, leaving the save waiting)
+              resolve(result);
             } else {
               let config: AnyMutableObject = {
                 target: showTargetDC ? rollDC : undefined,
@@ -6032,9 +6022,9 @@ export class Workflow {
               resolve(result);
             }
           }
-        }, (configSettings.playerSaveTimeout || 1) * 1000);
+        }, (configSettings.playerSaveTimeout || 1) * 1000));
       }
-    });
+    }
 
     const requestCard = requestPCSave(
       rollAbility ?? "",
@@ -6124,23 +6114,12 @@ export class Workflow {
     });
   }
 
-  /**
-   * Queue a target's save roll to the appropriate handler based on settings
-   * Returns the promise and optionally adds to module-specific request arrays
-   */
-  queueTargetSaveRoll(options: QueueSaveRollOptions): { promise: Promise<Roll[] | Roll | null> | null, requestCard: Promise<ChatMessage | undefined> | undefined } {
-    const queued = this.queueTargetSaveRollRequest(options);
-    if (queued.friendly) return { promise: queued.promise, requestCard: queued.requestCard };
-    return { promise: this.withSavePlayerWait(options, queued), requestCard: queued.requestCard };
-  }
-
   /** A player's save that wasn't asked through the request core goes on the player list, with the GM's choices (the GM answers for them) */
   withSavePlayerWait(options: SaveRequest, queued: SaveRequestEntry): Promise<Roll[] | Roll | null> | null {
     const { target, saveDetails, rollInfo, displayOptions, playerInfo: { player } } = options;
     const queuedPromise = queued.promise;
     // Asked through the request core: it put the request on the player list itself
     if (!queuedPromise || queued.asked || !player || player.isGM) return queuedPromise;
-    const requestIds = [target.id, target.actor?.uuid].filter((id): id is string => !!id);
     const what = [...rollInfo.abilities, ...rollInfo.skills, ...rollInfo.tools].map(key => key.toUpperCase()).join("/");
     return trackPlayerWait<Roll[] | Roll | null>({
       kind: rollInfo.type === "save" ? "save" : "check",
@@ -6151,86 +6130,8 @@ export class Workflow {
         what, type: i18n(rollInfo.type === "save" ? "DND5E.SavingThrow" : "DND5E.AbilityCheck"), item: this.item?.name ?? ""
       }),
       choices: this.gmSaveChoices(saveDetails, player, displayOptions.showRoll),
-      onSettled: () => {
-        for (const id of requestIds) {
-          delete this.saveRequests[id];
-          clearTimeout(this.saveTimeouts[id]);
-          delete this.saveTimeouts[id];
-        }
-      }
+      onSettled: () => this.pendingSaves.cancel(getTokenDocument(target)?.uuid)
     }, () => queuedPromise);
-  }
-
-  queueTargetSaveRollRequest(options: QueueSaveRollOptions): { promise: Promise<Roll[] | Roll | null> | null, requestCard: Promise<ChatMessage | undefined> | undefined, friendly?: boolean, asked?: boolean } {
-    const { target, saveDetails, rollInfo, isMagicSave, displayOptions, playerInfo, moduleFlags, moduleRequests } = options;
-    const { type: rollType, abilities: rollAbilities, skills: rollSkills, tools: rollTools, action: rollAction } = rollInfo;
-    const { whisper, showRoll, showRollDialog, simulate } = displayOptions;
-    const { player, GMprompt, playerChat } = playerInfo;
-    const { playerMonksTB, playerFlashTB, playerEpicRolls, gmMonksTB, gmFlashTB, gmRER } = moduleFlags;
-    // Check for friendly roll first
-    const friendlyRoll = this.getFriendlyTargetRoll(saveDetails as { isFriendly: boolean });
-    if (friendlyRoll) {
-      return { promise: friendlyRoll, requestCard: undefined, friendly: true };
-    }
-
-    // Monks Token Bar
-    if ((!player?.isGM && playerMonksTB) || (player?.isGM && gmMonksTB)) {
-      const promise = new Promise<Roll[] | Roll | null>((resolve) => {
-        let requestId = target.id ?? foundry.utils.randomID();
-        this.saveRequests[requestId] = resolve;
-      });
-
-      const requests = player?.isGM ? moduleRequests.monks.gm : moduleRequests.monks.player;
-      requests.push(this.buildMonksTokenBarRequest(target, saveDetails));
-      return { promise, requestCard: undefined };
-    }
-
-    // Flash Rolls 5e
-    if ((!player?.isGM && playerFlashTB) || (player?.isGM && gmFlashTB)) {
-      const promise = new Promise<Roll[] | Roll | null>((resolve) => {
-        let requestId = target.actor?.uuid ?? foundry.utils.randomID();
-        this.saveRequests[requestId] = resolve;
-      });
-
-      const requests = player?.isGM ? moduleRequests.flash.gm : moduleRequests.flash.player;
-      requests.push(this.buildFlashRollsRequest(target, saveDetails));
-      return { promise, requestCard: undefined };
-    }
-
-    // Epic Rolls 5e
-    if ((!player?.isGM && playerEpicRolls) || (player?.isGM && gmRER)) {
-      const promise = new Promise<Roll[] | Roll | null>((resolve) => {
-        let requestId = target.actor?.uuid ?? foundry.utils.randomID();
-        this.saveRequests[requestId] = resolve;
-      });
-
-      const requests = player?.isGM ? moduleRequests.epic.gm : moduleRequests.epic.player;
-      requests.push(this.buildEpicRollsRequest(target, saveDetails));
-      return { promise, requestCard: undefined };
-    }
-
-    // Player Chat save request
-    if ((player?.active && playerChat) || (player?.isGM && GMprompt === "none")) {
-      if (debugEnabled > 0) {
-        warn(`checkSaves | Player ${player?.name} controls actor ${(target.actor as Actor).name} - requesting ${rollAbilities[0]} ${rollType}`);
-      }
-      const result = this.createPlayerChatSaveRequest(
-        target, player!, saveDetails, rollType, rollAbilities, rollSkills, rollTools, saveDetails.rollDC as number | undefined,
-        showRoll, GMprompt, isMagicSave, rollAction
-      );
-      return { promise: result.promise, requestCard: result.requestCard };
-    }
-
-    // A connected player's creature: asked through the request core, which also gives the GM's choices
-    if (player && !player.isGM && player.active) {
-      return { promise: this.askPlayerSave(target, player, saveDetails, rollInfo, displayOptions), requestCard: undefined, asked: true };
-    }
-
-    // Standard socketlib roll
-    const promise = this.createStandardSaveRoll(
-      target, saveDetails, whisper, showRoll, showRollDialog, simulate
-    );
-    return { promise, requestCard: undefined };
   }
 
   /**
@@ -6739,7 +6640,7 @@ export class Workflow {
       if (entry.requestCard) requestCards.push(entry.requestCard);
     }
 
-    if (debugEnabled > 1) debug("check saves: requests are ", this.saveRequests)
+    if (debugEnabled > 1) debug("check saves: waiting for ", this.pendingSaves.keys())
     const rawResults = await Promise.all(promises);
     (await Promise.all(requestCards)).forEach(chatMessage => chatMessage?.delete());
     if (toAsk.some(request => settingsProviderFor(request) === MIDI_SAVE_PROVIDERS.epic)) await busyWait(10);
@@ -6857,17 +6758,15 @@ export class Workflow {
       if (!mflags[key].roll) continue;
       const requestId = key.replace("token", "");
       if (!mflags[key].reveal) continue; // Must be showing the roll
-      if (this.saveRequests[requestId]) {
+      const pendingKey = this.pendingSaves.keyForTokenId(requestId);
+      if (pendingKey) {
         let roll: Roll.Any;
         try {
           roll = Roll.fromJSON(JSON.stringify(mflags[key].roll));
         } catch (err) {
           roll = foundry.utils.deepClone(mflags[key].roll);
         }
-
-        const func = this.saveRequests[requestId];
-        delete this.saveRequests[requestId];
-        func(roll)
+        this.pendingSaves.answer(pendingKey, roll);
       }
     }
     return true;
@@ -6875,20 +6774,19 @@ export class Workflow {
 
   flashSavingCheck(data: { actorUuid: string; roll: Roll.Any; total: number }) {
     if (debugEnabled > 0) debug(`flashSavingCheck | Received roll for ${data.actorUuid}`, data);
-    if (debugEnabled > 0) debug(`flashSavingCheck | Available saveRequests keys:`, Object.keys(this.saveRequests));
+    if (debugEnabled > 0) debug(`flashSavingCheck | Waiting for:`, this.pendingSaves.keys());
 
     const requestId = data.actorUuid;
-    if (!this.saveRequests[requestId]) {
+    // An actor's roll answers one of its tokens' saves (two tokens of one linked actor each get one)
+    const [key] = this.pendingSaves.keysForActor(requestId);
+    if (!key) {
       if (debugEnabled > 0) debug(`flashSavingCheck | No pending request for ${requestId}`);
       return;
     }
-
-    const func = this.saveRequests[requestId];
-    delete this.saveRequests[requestId];
     if (debugEnabled > 0) debug(`flashSavingCheck | Resolving save for ${requestId} with roll total ${data.total}`);
     // Kept on the card: Flash Rolls may delete its save messages once rolled
     foundry.utils.setProperty(data.roll, `options.${MODULE_ID}.external`, "flash-rolls-5e");
-    func(data.roll);
+    this.pendingSaves.answer(key, data.roll);
   }
 
   async callDamageHooksAndMacros(damages: DamageListEntry, token: TokenOrDocument) {
@@ -6936,7 +6834,7 @@ export class Workflow {
   processDefenceRoll(message: ChatMessage.Implementation, _html: HTMLElement, _data?: ChatMessage.MessageData) {
     if (!this.defenceRequests) return true;
     const requestId = message?.speakerActor?.uuid;
-    if (debugEnabled > 0) warn("processDefenceRoll |", requestId, this.saveRequests)
+    if (debugEnabled > 0) warn("processDefenceRoll |", requestId, this.defenceRequests)
 
     if (!requestId) return true;
     if (!this.defenceRequests[requestId]) return true;
@@ -6952,28 +6850,17 @@ export class Workflow {
   }
 
   processSaveRoll(message: ChatMessage.Implementation, _html: HTMLElement | ChatMessage.Database.OnCreateOptions, _dataOrUserId?: ChatMessage.MessageData | string) {
-    if (!this.saveRequests) return {};
     // An initiative roll by the same token is not the save being waited for
     const isRoll = isDnd5eRollMessage(message) && dnd5eRollType(message) !== "initiative";
-    const requestId = message?.speaker?.token;
-    if (debugEnabled > 0) warn("processSaveRoll |", requestId, this.saveRequests)
-    if (!requestId) return true;
-
-    if (!this.saveRequests[requestId] || !isRoll) return true;
+    const key = this.pendingSaves.keyForTokenId(message?.speaker?.token);
+    if (debugEnabled > 0) warn("processSaveRoll |", key, this.pendingSaves.keys())
+    if (!key || !isRoll) return true;
     // Only the kind of roll asked for answers it: another roll by the same token (a different save, an attack) doesn't
-    const kind = this.saveRequestKinds[requestId];
+    const kind = this.pendingSaves.kindOf(key);
     if (kind && !rollAnswersRequest(message, kind)) return true;
-
-    if (this.saveRequests[requestId]) {
-      clearTimeout(this.saveTimeouts[requestId]);
-      const handler = this.saveRequests[requestId]
-      delete this.saveRequests[requestId];
-      delete this.saveRequestKinds[requestId];
-      delete this.saveTimeouts[requestId];
-      // A save another module rolled may not be linked to the card: record it for undo.
-      if (configSettings.undoWorkflow && this.undoData) unTimedExecuteAsGM("addUndoChatCards", { id: this.undoData.id, chatCardUuids: [message.uuid] });
-      handler(message.rolls[0])
-    }
+    // A save another module rolled may not be linked to the card: record it for undo.
+    if (configSettings.undoWorkflow && this.undoData) unTimedExecuteAsGM("addUndoChatCards", { id: this.undoData.id, chatCardUuids: [message.uuid] });
+    this.pendingSaves.answer(key, message.rolls[0]);
     return true;
   }
 
@@ -8452,7 +8339,7 @@ export class ActiveDefenceWorkflow extends Workflow {
         );
       }
     }
-    if (debugEnabled > 1) debug("check saves: requests are ", this.saveRequests)
+    if (debugEnabled > 1) debug("check saves: waiting for ", this.pendingSaves.keys())
     var results = await Promise.all(promises);
     let i = 0;
     for (let target of this.targets.tokens) {

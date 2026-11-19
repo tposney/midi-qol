@@ -154,6 +154,7 @@
     "restoreWorkflowTokenSets",
     "RollModifierTracker",
     "safeGetGameSetting",
+    "saveRequests",
     "selectTargetsFromTemplates",
     "services",
     "setActionUsed",
