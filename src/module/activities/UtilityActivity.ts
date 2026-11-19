@@ -62,8 +62,8 @@ let defineMidiUtilityActivityClass = <T extends Activity>(ActivityClass: T) => {
 
 
     
-    async _midiUsageContext(message) {
-      const context = await super._midiUsageContext(message);
+    _midiUsageContext(message) {
+      const context = super._midiUsageContext(message);
       context.hasRollFormula = true; // TODO fix this when able to do a proper card !!this.roll?.formula;
       return context;
     }

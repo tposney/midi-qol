@@ -1,3 +1,4 @@
+import { MODULE_ID } from "../../midi-qol.js";
 import { Activity } from "../../globals.js";
 import { Registry } from "../api/registry.js";
 import { configSettings } from "../settings.js";
@@ -36,9 +37,10 @@ const midiPolicies: Record<string, Partial<ActivityPolicy>> = {
   check: automated({ possibleOtherActivity: true, subsequentActions: none }),
   damage: automated({ possibleOtherActivity: true, subsequentActions: none }),
   enchant: automated(),
-  forward: automated({ triggerable: false, forcedTargetConfirmation: "never" }),
+  // dnd5e 6.1's Forward and Save have no follow-up action: none (midi's empty overrides went in M14)
+  forward: automated({ triggerable: false, forcedTargetConfirmation: "never", subsequentActions: none }),
   heal: automated({ possibleOtherActivity: true, subsequentActions: none }),
-  save: automated({ possibleOtherActivity: true }),
+  save: automated({ possibleOtherActivity: true, subsequentActions: none }),
   summon: automated({ subsequentActions: none }),
   teleport: automated(),
   // dnd5e applies a chosen form (form mode) itself
@@ -77,6 +79,7 @@ interface MidiActivityLike extends Activity {
   _ammunitionActivity?: MidiActivityLike | null;
   isOtherActivityCompatible?: boolean;
   identifier?: string;
+  _source?: { name?: string };
   useConditionText?: string;
   effectConditionText?: string;
   prepareData(): void;
@@ -104,7 +107,12 @@ const getters: Record<string, (this: MidiActivityLike) => unknown> = {
   validProperties() { return new Set(["idi", "idr", "idv", "ida"]); },
   identifier() {
     if (this.midiProperties?.identifier) return this.midiProperties.identifier;
-    return this.name.slugify();
+    // An activity with no name of its own (dnd5e fills it in with its type's title as it prepares it) is identified by
+    // dnd5e's title for its type ("save"), as midi's prepareData did before dnd5e's (M14)
+    if (this._source?.name) return this.name.slugify();
+    const metadata = (this.constructor as { metadata?: { dnd5eTitle?: string, title?: string } }).metadata;
+    const title = metadata?.dnd5eTitle ?? metadata?.title;
+    return title ? game.i18n?.localize(title).slugify() ?? "" : "";
   },
   otherSaveSource() {
     return [this.otherActivity, this.ammunitionActivity]
@@ -182,3 +190,18 @@ export function installActivityPrototype() {
   });
   for (const [name, value] of Object.entries(methods)) Object.defineProperty(proto, name, { value, writable: true, configurable: true });
 }
+
+/**
+ * A new activity (an item's add button, `Item5e#createActivity`) pairs with no other activity unless the data says so:
+ * `otherActivityId: "none"`. Stored activities without the field keep "unset" (midi works out the pairing). A wrap,
+ * not a hook (M14 D2): by `preUpdateItem` the activity's data always has the field, so a duplicated or copied activity
+ * set to unset couldn't be told from a new one; here the caller's data is still as given.
+ */
+export function installActivityCreation(types: Set<string>) {
+  globalThis.libWrapper.register(MODULE_ID, "CONFIG.Item.documentClass.prototype.createActivity",
+    function (this: Item.Implementation, wrapped: (...args: unknown[]) => unknown, type: string, data: Record<string, unknown> = {}, ...rest: unknown[]) {
+      if (types.has(type) && !("otherActivityId" in data)) data = { ...data, otherActivityId: "none" };
+      return wrapped(type, data, ...rest);
+    }, "WRAPPER");
+}
+

@@ -449,6 +449,7 @@ function setupActivities() {
   installDamageRolls(adoptedActivityTypes);
   installAttackRolls();
   installFormulaAndPlacement();
+  installActivityCreation(adoptedActivityTypes);
 }
 
 Hooks.once('init', async function () {
@@ -1050,7 +1051,7 @@ import { registerMidiSteps } from './module/workflowSteps/index.js';
 import { installActivitySchema } from './module/activities/activitySchema.js';
 import { installCardActions, registerCardAction } from './module/activities/cardActions.js';
 import { installUsageButtons, registerCardButtonRule } from './module/activities/usageButtons.js';
-import { installActivityPrototype, registerActivityPolicy, activityPolicy } from './module/activities/activityPrototype.js';
+import { installActivityPrototype, installActivityCreation, registerActivityPolicy, activityPolicy } from './module/activities/activityPrototype.js';
 import { setupForwardActivity } from './module/activities/ForwardActivity.js';
 import { setupEnchantActivity } from './module/activities/EnchantActivity.js';
 import { setupTransformActivity } from './module/activities/TransformActivity.js';

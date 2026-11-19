@@ -40,24 +40,6 @@ let defineMidiTransformActivityClass = <T extends Activity>(ActivityClass: T) =>
         },
       }, { inplace: false, insertKeys: true, insertValues: true });
 
-    async _finalizeUsage(config, results) {
-      // Select Form has no actor to transform into: dnd5e applies the form's effect in its subsequent actions.
-      if (this.transform.mode === "form") return super._finalizeUsage(config, results);
-      // Nasty kludge since TransformActivity._finalizeUsage does not wait result.message.update
-      const profile = this.profiles.find(p => p._id === config.transform?.profile);
-      if (profile) {
-        const uuid = !this.transform.mode ? profile.uuid : await this.queryActor(profile);
-        if (uuid) {
-          if (results.message instanceof ChatMessage) await results.message.setFlag("dnd5e", "transform.uuid", uuid);
-          else foundry.utils.setProperty(results.message, "flags.dnd5e.transform.uuid", uuid);
-        }
-      }
-      // since we are skipping the TransformActivity _finalizeUsage call, the grandparent _finalizeUsage needs to be called
-      const grandParent = Object.getPrototypeOf(ActivityClass);
-      await grandParent.prototype._finalizeUsage.call(this, config, results);
-      return this.transformActor(config, results.message);
-    }
-
     async transformActor(config: ActivityUseConfiguration, message: ChatMessage) {
       // Every given target, with a canvas token or not (only their actors are used)
       const given = config.midiOptions?.targetsToUse ?? config.workflow?.targets ?? new Set();

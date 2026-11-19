@@ -123,9 +123,38 @@ function onActivityConsumption(activity: Activity, usageConfig: ActivityUseConfi
   state?.activity.onUseConsumption(state, activity, usageConfig);
 }
 
+/**
+ * A Cast activity's use (M14: was Cast's own `use` override): midi's use calls dnd5e's Cast use with a use key; this
+ * cancels it and restarts it, marked, after midi's checks (castPreChecks). The marked run goes on to the spell, whose own
+ * use is a new one: the mark is taken off the usage before dnd5e hands it on.
+ */
+function onPreUseLinkedSpell(activity: Activity, usageConfig: AnyMutableObject & ActivityUseConfiguration) {
+  if (isRelaunched(usageConfig)) {
+    delete usageConfig.useRelaunch;
+    return true;
+  }
+  const key = usageConfig.useRelaunch?.useKey;
+  const caller = key ? callers.get(key) : undefined;
+  if (!key || !caller || !isRestartable(activity)) return true;
+  callers.delete(key);
+  restarts.set(key, (async () => {
+    if (!await castChecks?.(activity, caller.usage, caller.dialog, caller.message)) return false;
+    return activity.use({ ...caller.usage, useRelaunch: { relaunched: true } }, caller.dialog, caller.message);
+  })());
+  return false;
+}
+
+type CastChecks = (activity: Activity, usage: ActivityUseConfiguration, dialog: RollDialogConfig, message: RollMessageConfig) => Promise<boolean>;
+let castChecks: CastChecks | undefined;
+/** The Cast activity's checks (CastActivity.ts), given here so this file needn't import the activity classes */
+export function setCastChecks(checks: CastChecks) {
+  castChecks = checks;
+}
+
 /** At init, before other modules' listeners where possible: a listener before midi's would see each use twice. */
 export function initUseRelaunch() {
   listenerId = Hooks.on("dnd5e.preUseActivity", onPreUseActivity);
+  Hooks.on("dnd5e.preUseLinkedSpell", onPreUseLinkedSpell);
   Hooks.on("dnd5e.activityConsumption", onActivityConsumption);
   Hooks.once("ready", () => {
     const first = Hooks.events["dnd5e.preUseActivity"]?.[0];

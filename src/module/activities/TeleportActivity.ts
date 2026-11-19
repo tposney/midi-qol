@@ -24,6 +24,19 @@ export function setupTeleportActivity() {
   registerCardActions(["teleport"], {
     planTeleport: cardPlanTeleport
   });
+  // A caster-only teleport lists the caster on its card
+  Hooks.on("dnd5e.preCreateUsageMessage", (activity: Activity, messageConfig: object) => {
+    if (!isTeleportActivity(activity)) return;
+    const caster = activity.casterToken;
+    const TargetsField = globalThis.dnd5e?.dataModels?.chatMessage?.fields?.TargetsField;
+    if (activity.midiTeleport?.movers === "caster" && caster && TargetsField)
+      foundry.utils.setProperty(messageConfig, "data.system.targets", TargetsField.getDescriptors([caster]));
+  });
+}
+
+/** dnd5e's teleport activity, with midi's members (graft.ts until M14 stage 2): dnd5e constructs its own class */
+function isTeleportActivity(activity: Activity): activity is InstanceType<typeof MidiTeleportActivity> {
+  return activity?.type === "teleport";
 }
 
 export const teleportMoverModes = ["default", "caster", "casterAndTargets", "targets", "swap"] as const;
@@ -97,14 +110,6 @@ let defineMidiTeleportActivityClass = <T extends Activity>(ActivityClass: T) => 
 
 
 
-    /** A caster-only teleport lists the caster on its card. */
-    async _createUsageMessage(message: RollMessageConfig = {}) {
-      const caster = this.casterToken;
-      const TargetsField = globalThis.dnd5e?.dataModels?.chatMessage?.fields?.TargetsField;
-      if (this.midiTeleport?.movers === "caster" && caster && TargetsField)
-        foundry.utils.setProperty(message, "data.system.targets", TargetsField.getDescriptors([caster]));
-      return super._createUsageMessage(message);
-    }
 
     /** Plan: auto. The workflow's teleport, after its effects and damage, unless the use leaves it to the button. */
     async autoTeleport(workflow: Workflow) {

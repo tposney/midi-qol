@@ -190,18 +190,7 @@ export let MidiActivityMixin = Base => {
 
 
 
-    _preCreate(data) {
-      super._preCreate(data);
-      if (!("otherActivityId" in data)) {
-        this.updateSource({ otherActivityId: "none" });
-      }
-    }
 
-    prepareData() {
-      //@ts-expect-error
-      if (!this.midiProperties.identifier && !this.name) this.midiProperties.identifier = i18n(this.constructor.metadata.dnd5eTitle).slugify();
-      super.prepareData();
-    }
 
 
     async useAs(actor: Actor.Implementation | null | undefined, usage: ActivityUseConfiguration = {}, dialog: RollDialogConfig = {}, message: RollMessageConfig = {}) {
@@ -432,11 +421,7 @@ export let MidiActivityMixin = Base => {
       try {
         if (await activity.postChatCardChecks(usage, dialog, message) !== true) return;
         await activity.setupCanSeeSense(usage)
-        if (activity.templates) { // TODO find a better place to store this
-          useResults.templates = activity.templates;
-          delete activity.templates;
-        }
-        // Process any templates placed (via dialog checkbox or emanation auto-placement)
+        // Process any templates placed (via the dialog's checkbox; an emanation is placed by the PlaceEmanation step)
         // processPlacedTemplates handles validation, cleanup if incomplete, and workflow integration
         const allTemplates = (useResults.templates ?? []).flat() as MeasuredTemplateDocument[];
         if (allTemplates.length > 0) {
@@ -476,6 +461,11 @@ export let MidiActivityMixin = Base => {
           itemUuid: activity.item.uuid
         };
       }
+      // midi transforms the use's targets (dnd5e's _finalizeUsage has recorded the chosen form); a chosen form
+      // (form mode) is dnd5e's subsequent action. Here, before the workflow starts, as when it was a _finalizeUsage
+      // override (M14)
+      if (isActivityType(activity, "transform") && activity.transform?.mode !== "form" && useResults.message instanceof ChatMessage)
+        await activity.transformActor(usage, useResults.message);
       // Scaling is now handled by the workflow's activity getter (reads from chat card flags).
       await usage.workflow.performState("midi-qol.Start");
       return useResults;
@@ -1212,25 +1202,12 @@ export let MidiActivityMixin = Base => {
     }
 
     /** midi's additions to the usage context; not named `_usageChatContext`, which would keep dnd5e's legacy content path. */
-    async _midiUsageContext(message) {
+    _midiUsageContext(message) {
       const workflow = Workflow.workflowFor(this);
       let systemCard = message.systemCard ?? false;
       const minimalCard = false;
 
-      // Insert targets as required for emanation templates and emanationNoTemplate
-      // This is the wrong spot, but there is no other good spot for it.
-      const tokenToUse = getToken(this.item.parent);
-      const autoCreateTemplate = activityHasAutoPlaceTemplate(this);
-      const emanationNoTemplate = activityHasEmanationNoTemplate(this);
-      // If emanationTemplate or emanationNoTemplate setup game.user?.targets.
-      if (tokenToUse && autoCreateTemplate) {
-        this.templates = await this._placeEmanationTemplate(workflow);
-      }
-      if (tokenToUse && emanationNoTemplate) {
-        setRangedTargets(tokenToUse, this.target);
-        workflow?.setTargets(validTargetTokens(new Set(game.user?.targets)));
-        foundry.utils.setProperty(message.data, "system.targets", globalThis.dnd5e.dataModels.chatMessage.fields.TargetsField.getDescriptors());
-      }
+      // An emanation is placed once the card exists, by the PlaceEmanation step (M14 D1)
       if (debugEnabled > 0) warn("show item card ", this, this.actor, this.actor?.token, systemCard, workflow);
       let needAttackButton = !getRemoveAttackButtons(this) || configSettings.mergeCardMulti
         || configSettings.confirmAttackDamage !== "none" ||
@@ -1246,8 +1223,12 @@ export let MidiActivityMixin = Base => {
       const hideItemDetails = (["none", "cardOnly"].includes(configSettings.showItemDetails) || (configSettings.showItemDetails === "pc" && !isPlayerOwned))
         || !configSettings.itemTypeList?.includes(this.item.type);
       // Are there any potential effects to apply
+      // Read without waiting (the card's creation hook is synchronous): a compendium effect not loaded is its index entry,
+      // counted as an effect to apply
       const effects = workflow?.workflowType === "BaseWorkflow"
-        ? await Promise.all(((this.effects ?? []) as ActivityEffectData[]).map(profile => profile.getEffect())) : [];
+        ? ((this.effects ?? []) as (ActivityEffectData & { uuid?: string, _id?: string })[]).map(profile => profile.uuid
+          ? fromUuidSync(profile.uuid, { strict: false }) as ActiveEffect.Implementation | null
+          : this.item.effects.get(profile._id ?? "")) : [];
       let hasEffects = effects.some(effect => effect && !effect.transfer && !effect.flags?.dae?.dontApply);
       // if target type is not blank or there are targets only set hasEffects if we are not going to remove the button later
       if (this.target?.affects.type !== "" || workflow?.targets.count !== 0)
@@ -1282,50 +1263,6 @@ export let MidiActivityMixin = Base => {
       return midiContextData;
     }
 
-    /**
-     * Settle the card's rendering decisions into the message's system data.
-     *
-     * They depend on the workflow, which exists here and is gone by the time the card is rendered
-     * again after a reload — so they are decided once, now, and stored. `MidiUsageMessageData` reads
-     * them back; see the schema there for why they cannot live in the template's context alone.
-     *
-     * The decisions themselves are not recomputed: `_usageChatContext` already works them out at
-     * exactly this moment, so this takes what it produced rather than keeping a second copy of the
-     * reasoning that would drift from it.
-     */
-    async _createUsageMessage(message: RollMessageConfig = {}) {
-      try {
-        const context: MidiUsageChatContext = await this._midiUsageContext(message);
-        // Only what is set: the schema reads an absent flag as false, absent displayProperties as true
-        const flags = ["hasAttack", "hasDamage", "hasEffects", "condensed", "mergeCardMulti",
-          "confirmAttackDamage", "hideItemDetails"] as const;
-        const midi: Record<string, unknown> = Object.fromEntries(flags.filter(key => context[key]).map(key => [key, true]));
-        if (!context.displayProperties) midi.displayProperties = false;
-        if (context.dmgBtnText) midi.dmgBtnText = context.dmgBtnText;
-        // A use started from inside another of the actor's workflows is linked to its card, as dnd5e links saves.
-        const origin = this.actor ? Workflow.executingCardFor(this.actor)?.id ?? null : null;
-        message = foundry.utils.mergeObject({ data: { system: { midi, ...(origin ? { origin } : {}) } } }, message ?? {},
-                                            { inplace: false });
-      } catch (err) {
-        // A card that cannot describe itself is still better than no card at all.
-        console.error(`${MODULE_ID} | could not record usage card state`, err);
-      }
-      const card = await super._createUsageMessage(message);
-      const workflow = Workflow.workflowFor(this);
-      if (card instanceof ChatMessage && workflow && !workflow.itemCardUuid) {
-        // The use's workflow is its card's from now on: filed under the card's uuid before dnd5e places the use's
-        // templates and calls postUseActivity, not only when use() returns
-        workflow.itemCardUuid = card.uuid;
-        workflow.id = card.uuid;
-        Workflow.addWorkflow(workflow);
-        // An emanation midi placed while the card was drawn (_midiUsageContext) names the card now it exists
-        for (const region of this.templates ?? []) {
-          if (region?.flags?.[MODULE_ID]?.activityTemplate && !region.flags[MODULE_ID].itemCardUuid)
-            await region.update({ [`flags.${MODULE_ID}`]: { workflowId: card.uuid, itemCardUuid: card.uuid } });
-        }
-      }
-      return card;
-    }
 
     get actionType() { // the default actionType method in dnd5e mixin returns this.metadata.data instead of this.metadata.type
       return this.metadata.type;
@@ -1682,6 +1619,7 @@ export function setupMidiActivityMixin() {
   }
   //@ts-expect-error
   Hooks.on("renderActivitySheet", renderActivitySheetHook);
+  registerUsageMessageHooks();
   registerCardActions(undefined, {
     placeTemplate: cardPlaceTemplate,
     rollDamage: cardRollDamage,
@@ -1894,5 +1832,45 @@ async function cardRollOtherSave(this: Activity, event: PointerEvent, target: HT
   } finally {
     if (workflow && activity) workflow.activity = activity;
   }
+}
+
+/**
+ * midi's part of a use card's creation, on dnd5e's hooks (M14; was an override of `_createUsageMessage`).
+ * Before: the card's rendering decisions, settled into its system data. They depend on the workflow, which exists now
+ * and is gone by the time the card is drawn again after a reload, so they are decided once and stored
+ * (`MidiUsageMessageData` reads them back); `_midiUsageContext` works them out. A use started from inside another of the
+ * actor's workflows is linked to its card, as dnd5e links saves.
+ * After: the use's workflow is its card's from now on, filed under the card's uuid before dnd5e places the use's
+ * templates and calls postUseActivity (not only when use() returns).
+ */
+/** An activity midi has adopted (graft.ts until M14 stage 2): it works out its card's context */
+type UsageCardActivity = Activity & { _midiUsageContext?: (message: unknown) => MidiUsageChatContext };
+
+export function registerUsageMessageHooks() {
+  Hooks.on("dnd5e.preCreateUsageMessage", (activity: UsageCardActivity, messageConfig: { data?: Record<string, unknown> }) => {
+    if (typeof activity?._midiUsageContext !== "function") return;
+    try {
+      const context = activity._midiUsageContext(messageConfig);
+      // Only what is set: the schema reads an absent flag as false, absent displayProperties as true
+      const flags = ["hasAttack", "hasDamage", "hasEffects", "condensed", "mergeCardMulti",
+        "confirmAttackDamage", "hideItemDetails"] as const;
+      const midi: Record<string, unknown> = Object.fromEntries(flags.filter(key => context[key]).map(key => [key, true]));
+      if (!context.displayProperties) midi.displayProperties = false;
+      if (context.dmgBtnText) midi.dmgBtnText = context.dmgBtnText;
+      const origin = activity.actor ? Workflow.executingCardFor(activity.actor)?.id ?? null : null;
+      messageConfig.data ??= {};
+      foundry.utils.mergeObject(messageConfig.data, { system: { midi, ...(origin ? { origin } : {}) } });
+    } catch (err) {
+      // A card that cannot describe itself is still better than no card at all
+      console.error(`${MODULE_ID} | could not record usage card state`, err);
+    }
+  });
+  Hooks.on("dnd5e.postCreateUsageMessage", (activity: Activity, card: ChatMessage.Implementation | object) => {
+    const workflow = Workflow.workflowFor(activity);
+    if (!(card instanceof ChatMessage) || !workflow || workflow.itemCardUuid) return;
+    workflow.itemCardUuid = card.uuid;
+    workflow.id = card.uuid;
+    Workflow.addWorkflow(workflow);
+  });
 }
 

@@ -121,14 +121,9 @@ let defineMidiAttackActivityClass = <T extends Activity>(ActivityClass: T) => {
         },
       }, { inplace: false, insertKeys: true, insertValues: true })
 
-    prepareData() {
-      super.prepareData();
-      if (this.otherActivityUuid && this.otherActivityUuid !== "") {
-        console.warn(`midi-qol | otherActivityUuid is deprecated. Edit ${this.actor?.name ?? ""} ${this.item?.name ?? ""} ${this.name} and reset other activity. Currently ${this.otherActivityUuid}`);
-      }
-    }
-    async _midiUsageContext(message) {
-      const context = await super._midiUsageContext(message);
+
+    _midiUsageContext(message) {
+      const context = super._midiUsageContext(message);
 
       context.hasAttack = !!this.attack; // && !minimalCard && (systemCard || needAttackButton || configSettings.confirmAttackDamage !== "none"),
       return context;

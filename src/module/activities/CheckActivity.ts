@@ -50,9 +50,6 @@ let defineMidiCheckActivityClass = <T extends Activity>(ActivityClass: T) => {
 
 
 
-    prepareFinalData(rollData) {
-      super.prepareFinalData(rollData);
-    }
 
   }
 

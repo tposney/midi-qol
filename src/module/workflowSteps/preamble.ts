@@ -3,9 +3,44 @@ import { activityHasScaledTargetCount, postTemplateConfirmTargets } from "../act
 import { TroubleShooter } from "../apps/TroubleShooter.js";
 import { checkMechanic, configSettings, safeGetGameSetting } from "../settings.js";
 import { saveTargetsUndoData } from "../undo.js";
-import { activityHasAreaTarget, checkActivityRange, checkIncapacitated, getActivityAutoTargetAction, getAutoRollAttack, getToken, isActivityType, isRangeCheckable, validTargetTokens } from "../utils.js";
+import { activityHasAreaTarget, activityHasAutoPlaceTemplate, activityHasEmanationNoTemplate, checkActivityRange, checkIncapacitated, getActivityAutoTargetAction, getAutoRollAttack, getToken, isActivityType, isRangeCheckable, setRangedTargets, validTargetTokens } from "../utils.js";
 import { setStepRun } from "../steps/steps.js";
 import { Workflow, workflowStepHost, type WorkflowState } from "../Workflow.js";
+
+/** The use places an emanation around its token (activityHasAutoPlaceTemplate / activityHasEmanationNoTemplate) */
+function needsEmanation(workflow: Workflow): boolean {
+  const activity = workflow.activity;
+  if (!activity || !(workflow.token ?? getToken(activity.item?.parent))) return false;
+  return activityHasAutoPlaceTemplate(activity) || activityHasEmanationNoTemplate(activity);
+}
+
+async function placeEmanation(workflow: Workflow): Promise<void> {
+  const activity = workflow.activity;
+  const token = workflow.token ?? getToken(activity.item?.parent);
+  if (!token) return;
+  if (activityHasAutoPlaceTemplate(activity)) {
+    // @ts-expect-error _placeEmanationTemplate is midi's (MidiActivityMixin)
+    const templates = await activity._placeEmanationTemplate(workflow);
+    if (templates?.length) await workflow.processPlacedTemplates(templates, activity);
+  }
+  if (activityHasEmanationNoTemplate(activity)) {
+    setRangedTargets(token, activity.target);
+    workflow.setTargets(validTargetTokens(new Set(game.user?.targets)));
+    // dnd5e's targets on the card (its effects tray), as the card would have had them
+    const card = workflow.chatCard;
+    const TargetsField = globalThis.dnd5e?.dataModels?.chatMessage?.fields?.TargetsField;
+    if (card && TargetsField) await workflow.performThrottledUpdate(card, { "system.targets": TargetsField.getDescriptors() } as ChatMessage.UpdateData);
+  }
+}
+
+/** Start's next step: targets from the emanation, a template to wait for, or straight to confirming targets */
+function afterStart(workflow: Workflow): WorkflowState {
+  // Targets from an emanation with no template: set
+  if (workflow.rangeTargeting) return "midi-qol.AoETargetConfirmation";
+  if (debugEnabled > 1) debug("WORKFLOW NONE", getActivityAutoTargetAction(workflow.activity), activityHasAreaTarget(workflow.activity));
+  if (workflow.tempTargetConfirmation) return "midi-qol.AwaitTemplate";
+  return "midi-qol.AoETargetConfirmation";
+}
 
 /** midi's steps (M5): the preamble: from a new workflow to the end of its pre-roll checks. Moved from Workflow's WorkflowState_<name> methods; `this` is `workflow`. */
 export function registerPreambleSteps(): void {
@@ -22,17 +57,15 @@ export function registerPreambleSteps(): void {
   });
 
   setStepRun("midi-qol.Start", async ({ workflow }: { workflow: Workflow }): Promise<WorkflowState> => {
-    if (workflow.rangeTargeting) {
-      // Targets have already been set in activity.use
-      return "midi-qol.AoETargetConfirmation";
-    }
+    if (needsEmanation(workflow)) return "midi-qol.PlaceEmanation";
+    return afterStart(workflow);
+  });
 
-    if (debugEnabled > 1) debug("WORKFLOW NONE", getActivityAutoTargetAction(workflow.activity), activityHasAreaTarget(workflow.activity));
-    if (workflow.tempTargetConfirmation) {
-      return "midi-qol.AwaitTemplate";
-    }
-
-    return "midi-qol.AoETargetConfirmation";
+  // An emanation (a template or range targets around the user) placed once the card exists (M14 D1: a step, not the
+  // card's creation, so it can be changed like any step)
+  setStepRun("midi-qol.PlaceEmanation", async ({ workflow }: { workflow: Workflow }): Promise<WorkflowState> => {
+    await placeEmanation(workflow);
+    return afterStart(workflow);
   });
 
   setStepRun("midi-qol.AwaitTemplate", async ({ workflow }: { workflow: Workflow }): Promise<WorkflowState> => {

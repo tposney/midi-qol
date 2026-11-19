@@ -4,6 +4,7 @@ import { Activity, ActivityUseConfiguration, RollDialogConfig, RollMessageConfig
 import { debugEnabled, GameSystemConfig, warn } from "../../midi-qol.js";
 import { Workflow } from "../Workflow.js";
 import { MidiActivityMixin, MidiActivityMixinSheet } from "./MidiActivityMixin.js";
+import { setCastChecks } from "./useRelaunch.js";
 
 export let MidiCastActivity: ReturnType<typeof defineMidiCastActivityClass>;
 export let MidiCastSheet: ReturnType<typeof defineMidiCastSheetClass>;
@@ -14,6 +15,7 @@ export function setupCastActivity() {
   MidiCastSheet = defineMidiCastSheetClass(game.system.applications.activity.CastSheet);
   MidiCastActivity = defineMidiCastActivityClass(GameSystemConfig.activityTypes.cast.documentClass as Activity);
   adoptActivityType("cast", MidiCastActivity, MidiCastSheet);
+  setCastChecks(async (activity, usage, dialog, message) => !isCheckedCast(activity) || castPreChecks(activity, usage, dialog, message));
 }
 let defineMidiCastSheetClass = (baseClass: any) => {
   return class MidiCastSheet extends MidiActivityMixinSheet(baseClass) {
@@ -59,63 +61,52 @@ let defineMidiCastActivityClass =  <T extends Activity>(ActivityClass: T) => {
       return this.item?.system?.activation?.type ?? this.activation?.type;
     }
 
-    async use(usage: ActivityUseConfiguration = {}, dialog: RollDialogConfig = {}, message: RollMessageConfig = {}) {
-      if (!this.item.isEmbedded || !this.item.isOwner || !this.canUse) {
-        // @ts-expect-error
-        return ActivityClass.prototype.use.bind(this)(usage, dialog, message);
-      }
 
-      usage.midiOptions ??= {};
-      usage.midiOptions.workflowOptions ??= {};
-      usage.midiOptions.proceedChecks ??= {};
 
-      // Create a temporary workflow so pre-checks (hooks, macros, reaction/bonus enforcement) can run
-      const speaker = speakerFor({ actor: this.item.actor });
-      const tempWorkflow = new Workflow(this.actor ?? null, this, speaker, null, { storeWorkflow: false });
-      usage.workflow = tempWorkflow;
-
-      try {
-        // Run preTargetingChecks (incapacitated, preTargeting hooks/macros)
-        if (!await this.preTargetingChecks(usage, dialog, message)) return false;
-
-        // Run preChatChecks for the Cast activity (hooks, macros, reaction/bonus enforcement)
-        // Skip spell component checks — those apply to the spell, not the Cast activity
-        if (!await this.preChatChecks(usage, dialog, message, { checkComponents: false })) return false;
-
-        // Extract reaction/bonus action state determined by preChatChecks
-        const castUsesReaction = tempWorkflow.itemUsesReaction;
-        const castUsesBonusAction = tempWorkflow.itemUsesBonusAction;
-
-        // Clean up the temporary workflow before delegating to dnd5e CastActivity
-        Workflow.removeWorkflow(tempWorkflow.id);
-        delete usage.workflow;
-
-        // Tell the downstream spell activity's preChatChecks to skip reaction/bonus re-checking
-        usage.midiOptions.proceedChecks.checkReaction = false;
-        usage.midiOptions.proceedChecks.checkBonusAction = false;
-
-        // Pass Cast activity's enforcement results so the spell workflow can mark them as used
-        usage.midiOptions.workflowOptions.castUsesReaction = castUsesReaction;
-        usage.midiOptions.workflowOptions.castUsesBonusAction = castUsesBonusAction;
-      } catch (err) {
-        Workflow.removeWorkflow(tempWorkflow.id);
-        delete usage.workflow;
-        throw err;
-      }
-      // Delegate to dnd5e CastActivity.use() which fetches/creates the cached spell and calls spell.use()
-      // @ts-expect-error
-      return ActivityClass.prototype.use.bind(this)(usage, dialog, message);
-    }
-
-    prepareFinalData(rollData: any) {
-      super.prepareFinalData(rollData);
-      // dnd5e handles CastActivity overrides via an enchantment effect on the cached spell
-      // (see getSpellChanges/getCachedSpellData) — no need to copy spell values onto the
-      // CastActivity here. The spell's own workflow uses the spell's activity data directly.
-    }
 
 
 
     
   }
 }
+
+/** A Cast activity as midi uses it: its pre-checks are midi's (MidiActivityMixin) */
+interface CheckedCastActivity extends Activity {
+  preTargetingChecks(usage: ActivityUseConfiguration, dialog: RollDialogConfig, message: RollMessageConfig): Promise<boolean>;
+  preChatChecks(usage: ActivityUseConfiguration, dialog: RollDialogConfig, message: RollMessageConfig, options?: object): Promise<boolean>;
+}
+
+function isCheckedCast(activity: Activity): activity is CheckedCastActivity {
+  return typeof (activity as Partial<CheckedCastActivity>).preTargetingChecks === "function"
+    && typeof (activity as Partial<CheckedCastActivity>).preChatChecks === "function";
+}
+
+/**
+ * midi's checks before a Cast activity hands its use to the spell (M14: were an override of Cast's `use`; run from
+ * `dnd5e.preUseLinkedSpell` through the restart, useRelaunch.ts): the hooks, macros and reaction/bonus action
+ * enforcement of the Cast activity itself, on a temporary workflow. The spell's own workflow then marks the reaction
+ * or bonus action as used and skips checking them again. False: the use stops.
+ */
+export async function castPreChecks(activity: CheckedCastActivity, usage: ActivityUseConfiguration, dialog: RollDialogConfig, message: RollMessageConfig): Promise<boolean> {
+  if (!activity.item.isEmbedded || !activity.item.isOwner || !activity.canUse) return true;
+  usage.midiOptions ??= {};
+  usage.midiOptions.workflowOptions ??= {};
+  usage.midiOptions.proceedChecks ??= {};
+  const speaker = speakerFor({ actor: activity.item.actor });
+  const tempWorkflow = new Workflow(activity.actor ?? null, activity, speaker, null, { storeWorkflow: false });
+  usage.workflow = tempWorkflow;
+  try {
+    if (!await activity.preTargetingChecks(usage, dialog, message)) return false;
+    // Spell component checks are the spell's, not the Cast activity's
+    if (!await activity.preChatChecks(usage, dialog, message, { checkComponents: false })) return false;
+    usage.midiOptions.proceedChecks.checkReaction = false;
+    usage.midiOptions.proceedChecks.checkBonusAction = false;
+    usage.midiOptions.workflowOptions.castUsesReaction = tempWorkflow.itemUsesReaction;
+    usage.midiOptions.workflowOptions.castUsesBonusAction = tempWorkflow.itemUsesBonusAction;
+    return true;
+  } finally {
+    Workflow.removeWorkflow(tempWorkflow.id);
+    delete usage.workflow;
+  }
+}
+
