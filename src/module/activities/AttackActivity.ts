@@ -316,7 +316,7 @@ let defineMidiAttackActivityClass = <T extends Activity>(ActivityClass: T) => {
     async rollAttack(config: RollProcessConfig = {}, dialog: RollDialogConfig = {}, message: RollMessageConfig = {}): Promise<Roll[] | null> {
       const workflow = config.workflow;
       if (!workflow) return this._midiRollAttack(config, dialog, message);
-      if (workflow.currentAction === workflow.WorkflowState_Completed || workflow.currentAction === workflow.WorkflowState_Abort) {
+      if (workflow.currentStep === "midi-qol.Completed" || workflow.currentStep === "midi-qol.Abort") {
         const usage = await MidiAttackActivity.attackAgain(this, workflow, config.event);
         config.workflow = usage.workflow;
         // Not fast-forwarded, the new use waits at its attack button: its roll, once made
@@ -595,7 +595,7 @@ let defineMidiAttackActivityClass = <T extends Activity>(ActivityClass: T) => {
         await workflow.triggerTargetMacros(["isPreAttacked"]);
         if (workflow.aborted) {
           console.warn(`midi-qol | item ${workflow.item.name ?? ""} roll blocked by isPreAttacked macro`);
-          await workflow.performState(workflow.WorkflowState_Abort);
+          await workflow.performState("midi-qol.Abort");
           return false;
         }
       }
@@ -881,7 +881,7 @@ export function rollBonusSources(activity: any, ability: string | undefined, act
 function cardRollAttack(this: Activity, event: PointerEvent, target: HTMLElement, message: ChatMessage.Implementation) {
   const workflow = Workflow.findWorkflow(message?.uuid);
 
-  if (!message || !workflow || (workflow.currentAction && [workflow.WorkflowState_Abort, workflow.WorkflowState_Completed].includes(workflow.currentAction))) {
+  if (!message || !workflow || (workflow.currentStep && ["midi-qol.Abort", "midi-qol.Completed"].includes(workflow.currentStep ?? ""))) {
     MidiAttackActivity.attackAgain(this, workflow, event);
   } else {
     const attackConfig: ActivityUseConfiguration = { workflow };
@@ -903,7 +903,7 @@ function cardRollAttack(this: Activity, event: PointerEvent, target: HTMLElement
 
 function cardRollAttackAdvantage(this: Activity, event: PointerEvent, target: HTMLElement, message: ChatMessage.Implementation) {
   const workflow = Workflow.findWorkflow(message?.uuid);
-  if (!message || !workflow || (workflow.currentAction && [workflow.WorkflowState_Abort, workflow.WorkflowState_Completed].includes(workflow.currentAction))) {
+  if (!message || !workflow || (workflow.currentStep && ["midi-qol.Abort", "midi-qol.Completed"].includes(workflow.currentStep ?? ""))) {
     if (workflow?.itemCardUuid) Workflow.removeItemCardButtons(workflow.itemCardUuid, { removeAllButtons: true });
     const attackConfig: any = { event, workflow };
     attackConfig.midiOptions = workflow?.rollOptions ?? {};
@@ -935,7 +935,7 @@ function cardRollAttackAdvantage(this: Activity, event: PointerEvent, target: HT
 
 function cardRollAttackDisadvantage(this: Activity, event: PointerEvent, target: HTMLElement, message: ChatMessage.Implementation) {
   const workflow = Workflow.findWorkflow(message?.uuid);
-  if (!message || !workflow || (workflow.currentAction && [workflow.WorkflowState_Abort, workflow.WorkflowState_Completed].includes(workflow.currentAction))) {
+  if (!message || !workflow || (workflow.currentStep && ["midi-qol.Abort", "midi-qol.Completed"].includes(workflow.currentStep ?? ""))) {
     if (workflow?.itemCardUuid) Workflow.removeItemCardButtons(workflow.itemCardUuid, { removeAllButtons: true });
     const attackConfig: ActivityUseConfiguration = { event, workflow };
     attackConfig.midiOptions = workflow?.rollOptions ?? {};

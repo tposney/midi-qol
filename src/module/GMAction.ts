@@ -156,7 +156,7 @@ export async function cancelWorkflow(data: { workflowId: string, itemCardUuid: s
     if (itemCard) itemCard.delete();
     return undefined;
   }
-  if (workflow) return workflow.performState(workflow.WorkflowState_Cancel);
+  if (workflow) return workflow.performState("midi-qol.Cancel");
   return undefined;
 }
 
@@ -169,8 +169,8 @@ async function confirmDamageRollComplete(data: { workflowId: string, activityUui
     return undefined;
   }
   const hasHits = workflow.hitTargets.count > 0 || workflow.hitTargetsEC.count > 0;
-  if ((workflow.currentAction === workflow.WorkflowState_AttackRollComplete) || (hasHits &&
-    activity?.hasDamage && (!workflow.damageRoll || workflow.currentAction !== workflow.WorkflowState_ConfirmRoll))) {
+  if ((workflow.currentStep === "midi-qol.AttackRollComplete") || (hasHits &&
+    activity?.hasDamage && (!workflow.damageRoll || workflow.currentStep !== "midi-qol.ConfirmRoll"))) {
     return "midi-qol | You must roll damage before completing the roll - you can only confirm miss until then";
   }
   if (workflow.hitTargets.count === 0 && workflow.hitTargetsEC.count === 0) {
@@ -178,7 +178,7 @@ async function confirmDamageRollComplete(data: { workflowId: string, activityUui
     return confirmDamageRollCompleteMiss(data);
   }
 
-  return workflow.performState(workflow.WorkflowState_RollConfirmed)
+  return workflow.performState("midi-qol.RollConfirmed")
 }
 
 async function confirmDamageRollCompleteHit(data: { workflowId: string, activityUuid: string, itemCardUuid: string }) {
@@ -189,12 +189,12 @@ async function confirmDamageRollCompleteHit(data: { workflowId: string, activity
     return undefined;
   }
   if ((activity?.hasDamage && !workflow.damageRoll) ||
-    workflow.currentAction !== workflow.WorkflowState_ConfirmRoll) {
+    workflow.currentStep !== "midi-qol.ConfirmRoll") {
     return "midi-qol | You must roll damage before completing the roll - you can only confirm miss until then";
   }
   // TODO make sure this needs to be awaited
   if (workflow.hitTargets.count === workflow.targets.count) {
-    return workflow.performState(workflow.WorkflowState_RollConfirmed)
+    return workflow.performState("midi-qol.RollConfirmed")
     // TODO confirm this needs to be awaited
 
   }
@@ -209,7 +209,7 @@ async function confirmDamageRollCompleteHit(data: { workflowId: string, activity
     }
   }
   await workflow.displayHits(workflow.whisperAttackCard, true);
-  return await workflow.performState(workflow.WorkflowState_RollConfirmed);
+  return await workflow.performState("midi-qol.RollConfirmed");
 }
 
 async function confirmDamageRollCompleteMiss(data: { workflowId: string, activityUuid: string, itemCardUuid: string }) {
@@ -233,7 +233,7 @@ async function confirmDamageRollCompleteMiss(data: { workflowId: string, activit
     await workflow.displayHits(workflow.whisperAttackCard, true);
   }
   // Make sure this needs to be awaited
-  return workflow.performState(workflow.WorkflowState_RollConfirmed).then(() => Workflow.removeWorkflow(workflow?.id));
+  return workflow.performState("midi-qol.RollConfirmed").then(() => Workflow.removeWorkflow(workflow?.id));
 }
 
 function paranoidCheck(action: string, actor: any, data: any): boolean {
@@ -421,7 +421,7 @@ async function _applyEffects(data: { workflowId: string, targets: string[] }) {
     if (!workflow) throw new Error(`_applyEffects | workflowId: ${data.workflowId} - workflow not found`);
     // As the button does for the author: effects go to the use's targets; the requester's only confirm the request
     workflow.forceApplyEffects = true;
-    if (data.targets.length > 0) result = await workflow.performState(workflow.WorkflowState_ApplyDynamicEffects);
+    if (data.targets.length > 0) result = await workflow.performState("midi-qol.ApplyDynamicEffects");
     return result;
   } catch (err) {
     const message = `_applyEffects | remote apply effects error`;

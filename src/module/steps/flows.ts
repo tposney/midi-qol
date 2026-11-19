@@ -49,6 +49,23 @@ export function coarseStepOf(stepId: string): string | undefined {
 
 const flows = new Registry<Flow>();
 
+/**
+ * A flow's own implementation of a step (M5): the same step id, hooks, passes and module changes, another `run`.
+ * `base()` runs the step's own implementation, as `super.WorkflowState_<name>()` did in the subclass that overrode it.
+ */
+export type FlowVariant = (ctx: { workflow: any, base(): Promise<unknown> }) => unknown;
+const variants = new Map<string, Map<string, FlowVariant>>();
+
+export function registerFlowVariant(flowId: string, stepId: string, run: FlowVariant): void {
+  let forFlow = variants.get(flowId);
+  if (!forFlow) variants.set(flowId, forFlow = new Map());
+  forFlow.set(stepId, run);
+}
+
+export function flowVariant(flowId: string | undefined, stepId: string): FlowVariant | undefined {
+  return flowId ? variants.get(flowId)?.get(stepId) : undefined;
+}
+
 export function registerFlow(flow: Flow): void {
   flows.set(flow.id, flow);
 }

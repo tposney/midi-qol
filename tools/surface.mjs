@@ -44,8 +44,10 @@ const apiVersion = contract.match(/MIDI_API_VERSION\s*=\s*"([^"]+)"/)?.[1];
 const hooks = new Set();
 const callers = /(?:Hooks\.callAll|Hooks\.call|callMidiHooks|callCancellableHooks|asyncHooksCallAll|asyncHooksCall|callActivityHooks)\(\s*(?:[^"'`(),]+,\s*)?["'`](midi-qol\.[A-Za-z][\w]*)["'`]/g;
 for (const text of Object.values(sources).map(stripComments)) for (const m of text.matchAll(callers)) hooks.add(m[1]);
-const workflow = sources[path.join("module", "Workflow.ts")] ?? "";
-for (const m of workflow.matchAll(/async\s+WorkflowState_([A-Za-z]+)\s*\(/g)) { hooks.add(`midi-qol.pre${m[1]}`); hooks.add(`midi-qol.post${m[1]}`); }
+// Each of midi's steps fires pre<name>/post<name> (steps/steps.ts BUILT_IN; their bodies are in workflowSteps/, M5)
+const stepsSource = sources[path.join("module", "steps", "steps.ts")] ?? "";
+const builtIn = stepsSource.match(/const BUILT_IN[^=]*=\s*\[([\s\S]*?)\];/)?.[1] ?? "";
+for (const m of builtIn.matchAll(/(?:^|[\[,]\s*)\[?\s*"([A-Za-z]+)"/g)) { hooks.add(`midi-qol.pre${m[1]}`); hooks.add(`midi-qol.post${m[1]}`); }
 
 // Settings
 const settings = new Set();

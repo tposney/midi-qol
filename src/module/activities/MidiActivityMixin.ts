@@ -423,7 +423,7 @@ export let MidiActivityMixin = Base => {
         const concentration = usage.workflow.concentrationId ? this.actor?.effects.get(usage.workflow.concentrationId) : undefined;
         if (!usage.workflow.aborted) {
           usage.workflow.aborted = true;
-          await usage.workflow.performState(usage.workflow.WorkflowState_Abort);
+          await usage.workflow.performState("midi-qol.Abort");
         }
         await concentration?.delete();
         return false;
@@ -449,7 +449,7 @@ export let MidiActivityMixin = Base => {
         };
       }
       // Scaling is now handled by the workflow's activity getter (reads from chat card flags).
-      await usage.workflow.performState((usage.workflow as Workflow).WorkflowState_Start);
+      await usage.workflow.performState("midi-qol.Start");
       return useResults;
     }
 
@@ -527,9 +527,9 @@ export let MidiActivityMixin = Base => {
       if (!config?.workflow) {
         return super.rollDamage(config, dialog, message);
       }
-      if (config.workflow.currentAction === config.workflow.WorkflowState_Abort) return this.use(config, dialog, {});
+      if (config.workflow.currentStep === "midi-qol.Abort") return this.use(config, dialog, {});
       // Damage again for a completed use: a damage roll of its own, as dnd5e's
-      if (config.workflow.readOnly || config.workflow.currentAction === config.workflow.WorkflowState_Completed)
+      if (config.workflow.readOnly || config.workflow.currentStep === "midi-qol.Completed")
         return Workflow.rerollDamage(config.workflow, this, config, dialog, message);
       // TODO: This is odd. `midiOptions` should have `workflowOptions` _in_ it, not be assigned it
       config.midiOptions ??= config.workflow.workflowOptions ?? {};
@@ -621,7 +621,7 @@ export let MidiActivityMixin = Base => {
           result = config.workflow ? await config.workflow.keepRollMessageFlags(this, () => super.rollDamage(config, dialog, message))
             : await super.rollDamage(config, dialog, message);
           if (!result) { // user backed out of roll 
-            config.workflow.currentAction = config.workflow.WorkflowState_WaitForDamageRoll;
+            config.workflow.currentAction = "midi-qol.WaitForDamageRoll";
             // config.workflow.suspend();
             return;
           }
@@ -654,7 +654,7 @@ export let MidiActivityMixin = Base => {
           ui.notifications?.error(i18nFormat("midi-qol.DamageRollFailed", { item: this.item?.name ?? "", error: (err as Error)?.message ?? String(err) }));
           config.workflow.aborted = true;
           // A step awaiting this roll goes to Abort itself; otherwise start the abort here
-          if (!config.workflow.inStepRoll) await config.workflow.performState(config.workflow.WorkflowState_Abort);
+          if (!config.workflow.inStepRoll) await config.workflow.performState("midi-qol.Abort");
         }
       } finally {
         if (preRollDamageHookId) Hooks.off("dnd5e.preRollDamage", preRollDamageHookId);
@@ -807,15 +807,15 @@ export let MidiActivityMixin = Base => {
 
         if (workflow.workflowType === "TrapWorkflow") workflow.rollOptions.fastForward = true;
 
-        if (workflow.currentAction !== workflow.WorkflowState_WaitForDamageRoll && workflow.noAutoAttack) {
+        if (workflow.currentStep !== "midi-qol.WaitForDamageRoll" && workflow.noAutoAttack) {
           // TODO NW check this allow damage roll to go ahead if it's an ordinary roll
-          workflow.currentAction = workflow.WorkflowState_WaitForDamageRoll;
+          workflow.currentAction = "midi-qol.WaitForDamageRoll";
         }
 
-        if (workflow.currentAction !== workflow.WorkflowState_WaitForDamageRoll) {
-          if (workflow.currentAction === workflow.WorkflowState_AwaitTemplate)
+        if (workflow.currentStep !== "midi-qol.WaitForDamageRoll") {
+          if (workflow.currentStep === "midi-qol.AwaitTemplate")
             return ui.notifications?.warn(i18n("midi-qol.noTemplateSeen")) as void;
-          else if (workflow.currentAction === workflow.WorkflowState_WaitForAttackRoll)
+          else if (workflow.currentStep === "midi-qol.WaitForAttackRoll")
             return ui.notifications?.warn(i18n("midi-qol.noAttackRoll")) as void;
         }
 
@@ -1163,7 +1163,7 @@ export let MidiActivityMixin = Base => {
         if (hookAbort || workflow.aborted) {
           console.warn("midi-qol | attack roll blocked by preItemRoll hook");
           workflow.aborted = true;
-          await workflow.performState(workflow.WorkflowState_Abort)
+          await workflow.performState("midi-qol.Abort")
           return removeWorkflow(workflow);
         }
       }
@@ -1173,7 +1173,7 @@ export let MidiActivityMixin = Base => {
         if (workflow.aborted || results.some(i => i === false)) {
           console.warn("midi-qol | item roll blocked by preItemRoll macro");
           workflow.aborted = true;
-          await workflow.performState(workflow.WorkflowState_Abort)
+          await workflow.performState("midi-qol.Abort")
           return removeWorkflow(workflow);
         }
       }
@@ -1257,7 +1257,7 @@ export let MidiActivityMixin = Base => {
             content: i18n("midi-qol.EnforceReactions.Content")
           });
           if (!shouldRoll) {
-            await workflow.performState(workflow.WorkflowState_Abort);
+            await workflow.performState("midi-qol.Abort");
             return removeWorkflow(usage.workflow); // user aborted roll TODO should the workflow be deleted?
           }
         }
@@ -1280,7 +1280,7 @@ export let MidiActivityMixin = Base => {
             content: i18n("midi-qol.EnforceBonusActions.Content")
           });
           if (!shouldRoll) {
-            await workflow.performState(workflow.WorkflowState_Abort); // user aborted roll TODO should the workflow be deleted?
+            await workflow.performState("midi-qol.Abort"); // user aborted roll TODO should the workflow be deleted?
             return removeWorkflow(usage.workflow);
           }
         }
@@ -2267,7 +2267,7 @@ async function cardApplyEffects(this: Activity, event: PointerEvent, target: HTM
   } else {
     // Forced: effects go to the use's targets; the user's only confirm the request
     workflow.forceApplyEffects = true;
-    if (game.user?.targets.size) await workflow.performState(workflow.WorkflowState_ApplyDynamicEffects)
+    if (game.user?.targets.size) await workflow.performState("midi-qol.ApplyDynamicEffects")
   }
 }
 

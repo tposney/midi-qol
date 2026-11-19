@@ -5756,7 +5756,7 @@ export async function reactionDialog(
             const config = { midiOptions: itemRollOptions };
             result = await completeActivityUse(activity, config, {}, { systemCard: false });
             const workflow = result;  // completeActivityUse returns a workflow when called locally which for reactions it always is
-            if (workflow && workflow.currentAction !== workflow.WorkflowState_Cleanup) resolve(noResult);
+            if (workflow && workflow.currentStep !== "midi-qol.Cleanup") resolve(noResult);
             else if (workflow) resolve({ name: workflow.activity.name, uuid: workflow.activity.uuid, itemName: workflow.activity.item.name, itemUuid: activity.item.uuid })
             else resolve(noResult);
           }

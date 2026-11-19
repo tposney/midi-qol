@@ -13,7 +13,7 @@ export interface Step {
   id: string;
   /** The hook and pass name: `pre<name>` / `post<name>`. */
   name: string;
-  /** The workflow method that runs it (midi's steps). */
+  /** midi's steps: the name of its `Workflow#WorkflowState_<name>` forwarder (old callers), as their method was. */
   method?: string;
   /**
    * A module's step: runs with the workflow; returns the step to go to, or nothing to go on with the move it was
@@ -49,6 +49,13 @@ const byMethod = new Map<string, Step>();
 export function registerStep(step: Step): void {
   steps.set(step.id, step);
   if (step.method) byMethod.set(step.method, step);
+}
+
+/** midi's own step gets its implementation (M5: the workflow's step modules, workflowSteps/), keeping its id and method name */
+export function setStepRun(id: string, run: NonNullable<Step["run"]>): void {
+  const step = getStep(id);
+  if (!step) throw new Error(`midi-qol | no step ${id} to implement`);
+  step.run = run;
 }
 
 export function unregisterStep(id: string): boolean {

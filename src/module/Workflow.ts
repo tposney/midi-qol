@@ -1,7 +1,7 @@
 import { allSteps, getStep, REACTION_STEPS, stepForMethod, type StepContext } from "./steps/steps.js";
 import { assembleSteps, stepAfterInFlow, type AssembledSteps, type StepChange, type StepChangeInput } from "./steps/assembly.js";
 import { missingSteps, reportAssembly, useStepChanges } from "./steps/api.js";
-import { getFlow } from "./steps/flows.js";
+import { flowVariant, getFlow } from "./steps/flows.js";
 import { ABORT, runSteps, SUSPEND, type EngineHost, type StepMove } from "./steps/engine.js";
 import type { PortName, WorkflowPorts } from "./steps/ports.js";
 import { getDistance } from "./services/distance/service.js";
@@ -94,7 +94,10 @@ type DamageBonusMacroSingleResult = {
 };
 type DamageBonusMacroResult = DamageBonusMacroSingleResult[] | DamageBonusMacroSingleResult;
 
-export type WorkflowState = undefined | (() => Promise<WorkflowState>);
+/** Where a step goes: a step id (`"midi-qol.WaitForSaves"`), or for old callers a state method */
+export type WorkflowState = undefined | string | StateMethod;
+/** A step's `WorkflowState_<name>` method */
+export type StateMethod = () => Promise<WorkflowState>;
 /** What a suspended workflow is woken by (Workflow#resume) */
 export type WorkflowEvent = "attackRolled" | "damageRolled" | "noDamage" | "utilityRolled";
 export type WorkflowOutcome = "ok" | "allMissed" | "invalid" | "split" | "manualSaves" | "cancelled" | "aborted";
@@ -416,7 +419,70 @@ function targetMacroOptions(target: TokenOrDocument) {
   return { actor: target.actor, token: tokenOf(tokenDocument) ?? null, tokenDocument };
 }
 
+/** What midi's step modules (workflowSteps/) use of a workflow's internals. Not part of MidiQOL's API. */
+export interface WorkflowStepHost {
+  damageButtonText(): string;
+  setOtherConsumption(consumed: object | false, scaling?: number | false): void;
+  targetsUpdate(): Record<string, unknown>;
+  fileFinished(): void;
+}
+let stepHostOf: (workflow: Workflow) => WorkflowStepHost;
+/** The generated WorkflowState_<name> forwarders: never a step's own implementation */
+const stepForwarders = new WeakSet<Function>();
+export function workflowStepHost(workflow: Workflow): WorkflowStepHost { return stepHostOf(workflow); }
+
 export class Workflow {
+  /*
+   * M5 (plan ~/Documents/midi-next-M5-steps-as-data-plan-2026-11-19.md): midi's steps are registered steps with a run
+   * of their own (workflowSteps/). `WorkflowState_<name>` is each one's forwarder, for old callers: it runs the step
+   * (the flow's variant, if it has one) and returns the next step's forwarder, as the method did. One function per
+   * name, so comparing `currentAction` with it still works.
+   */
+  declare WorkflowState_Suspend: StateMethod;
+  declare WorkflowState_NoAction: StateMethod;
+  declare WorkflowState_Start: StateMethod;
+  declare WorkflowState_AwaitTemplate: StateMethod;
+  declare WorkflowState_TemplatePlaced: StateMethod;
+  declare WorkflowState_AoETargetConfirmation: StateMethod;
+  declare WorkflowState_ValidateRoll: StateMethod;
+  declare WorkflowState_PreambleComplete: StateMethod;
+  declare WorkflowState_WaitForAttackRoll: StateMethod;
+  declare WorkflowState_AttackRollComplete: StateMethod;
+  declare WorkflowState_WaitForDamageRoll: StateMethod;
+  declare WorkflowState_ConfirmRoll: StateMethod;
+  declare WorkflowState_RollConfirmed: StateMethod;
+  declare WorkflowState_DamageRollStarted: StateMethod;
+  declare WorkflowState_DamageRollComplete: StateMethod;
+  declare WorkflowState_WaitForUtilityRoll: StateMethod;
+  declare WorkflowState_UtilityRollComplete: StateMethod;
+  declare WorkflowState_WaitForSaves: StateMethod;
+  declare WorkflowState_SavesComplete: StateMethod;
+  declare WorkflowState_AllRollsComplete: StateMethod;
+  declare WorkflowState_ApplyDynamicEffects: StateMethod;
+  declare WorkflowState_RollFinished: StateMethod;
+  declare WorkflowState_Cleanup: StateMethod;
+  declare WorkflowState_Completed: StateMethod;
+  declare WorkflowState_Abort: StateMethod;
+  declare WorkflowState_Cancel: StateMethod;
+  static {
+    stepHostOf = workflow => ({
+      damageButtonText: () => workflow.#damageButtonText(),
+      setOtherConsumption: (consumed, scaling) => workflow.#setOtherConsumption(consumed, scaling),
+      targetsUpdate: () => workflow.#targetsUpdate(),
+      fileFinished: () => Workflow.#fileFinished(workflow)
+    });
+    for (const step of allSteps()) {
+      if (!step.method || Object.prototype.hasOwnProperty.call(Workflow.prototype, step.method)) continue;
+      const id = step.id;
+      const forwarder = async function (this: Workflow): Promise<WorkflowState> {
+        const next = await this.#runOwn(id);
+        return next ? (this.methodForStep(next) ?? next) : undefined;
+      };
+      Object.defineProperty(forwarder, "name", { value: step.method });
+      stepForwarders.add(forwarder);
+      Object.defineProperty(Workflow.prototype, step.method, { value: forwarder, writable: true, configurable: true });
+    }
+  }
 
   static get forceCreate(): boolean { return true };
 
@@ -625,7 +691,7 @@ export class Workflow {
     workflow.isCritical = first.isCritical;
     Workflow.addWorkflow(workflow);
     if (configSettings.undoWorkflow) await saveUndoData(workflow);
-    workflow.currentAction = workflow.WorkflowState_WaitForDamageRoll;
+    workflow.currentAction = "midi-qol.WaitForDamageRoll";
     workflow.suspended = true;
     return activity.rollDamage({ ...config, workflow }, dialog, message);
   }
@@ -647,7 +713,7 @@ export class Workflow {
     const rebuilt = Workflow.fromChatCardUuid(id, options);
     if (!rebuilt) return undefined;
     Workflow.addWorkflow(rebuilt);
-    if (rebuilt.currentAction === rebuilt.WorkflowState_Completed) Workflow.#fileFinished(rebuilt);
+    if (rebuilt.currentStep === "midi-qol.Completed") Workflow.#fileFinished(rebuilt);
     return rebuilt;
   }
 
@@ -967,7 +1033,7 @@ export class Workflow {
     return this.#currentStep;
   }
   /** The current step's method: compatible with comparing against `workflow.WorkflowState_<name>` */
-  get currentAction(): WorkflowState {
+  get currentAction(): StateMethod | undefined {
     return this.methodForStep(this.#currentStep);
   }
   set currentAction(currentAction: WorkflowState | string) {
@@ -987,7 +1053,7 @@ export class Workflow {
   }
 
   /** The method that runs a step on this workflow (its class's override, if it has one) */
-  methodForStep(id: string | undefined): WorkflowState {
+  methodForStep(id: string | undefined): StateMethod | undefined {
     const method = id ? getStep(id)?.method : undefined;
     return method ? (this as any)[method] : undefined;
   }
@@ -1913,7 +1979,7 @@ export class Workflow {
       this.hitTargetsEC = new Set();
       this.initSaveResults();
       // isCritical/isFumble default to false via tracker — no explicit reset needed
-      this.currentAction = this.WorkflowState_NoAction;
+      this.currentAction = "midi-qol.NoAction";
       this.suspended = true;
       this.aborted = false;
       if (!this.activity || this instanceof DummyWorkflow) {
@@ -2120,7 +2186,7 @@ export class Workflow {
 
   static async #removeCardButtons(workflow: Workflow) {
     if (workflow.ownsCard) {
-      if (workflow.currentAction === workflow.WorkflowState_ConfirmRoll) {
+      if (workflow.currentStep === "midi-qol.ConfirmRoll") {
         await Workflow.deleteAbortedCard(workflow.chatCard);
         clearUpdatesCache(workflow.itemCardUuid);
       } else {
@@ -2202,11 +2268,11 @@ export class Workflow {
 
   /** The state that waits for `event`, if the workflow is in it */
   #awaits(event: WorkflowEvent | undefined): boolean {
-    const waiting = this.currentAction;
+    const waiting = this.currentStep;
     switch (event) {
-      case "attackRolled": return waiting === this.WorkflowState_WaitForAttackRoll;
-      case "damageRolled": case "noDamage": return waiting === this.WorkflowState_WaitForDamageRoll;
-      case "utilityRolled": return waiting === this.WorkflowState_WaitForUtilityRoll;
+      case "attackRolled": return waiting === "midi-qol.WaitForAttackRoll";
+      case "damageRolled": case "noDamage": return waiting === "midi-qol.WaitForDamageRoll";
+      case "utilityRolled": return waiting === "midi-qol.WaitForUtilityRoll";
       default: return false;
     }
   }
@@ -2225,7 +2291,7 @@ export class Workflow {
       return;
     }
     // New damage while saves are awaited is shown, and the saves keep waiting
-    if (event === "damageRolled" && this.currentAction === this.WorkflowState_WaitForSaves) return this.displayDamageRolls();
+    if (event === "damageRolled" && this.currentStep === "midi-qol.WaitForSaves") return this.displayDamageRolls();
     this.suspended = false;
     Workflow.#holdRunning(this);
     // A module's step has no state method: it waits in its step id and is run again
@@ -2249,28 +2315,28 @@ export class Workflow {
     } finally {
       this.#stepRoll = undefined;
     }
-    if (this.aborted) return this.WorkflowState_Abort;
-    return stepRoll.event ? this.stateAfter(stepRoll.event) : this.WorkflowState_Suspend;
+    if (this.aborted) return "midi-qol.Abort";
+    return stepRoll.event ? this.stateAfter(stepRoll.event) : "midi-qol.Suspend";
   }
 
   /** Where a suspended workflow goes when `event` arrives: by the state it waits in, else that state again */
   stateAfter(event: WorkflowEvent): WorkflowState {
-    const waiting = this.currentAction;
+    const waiting = this.currentStep;
     switch (event) {
       case "attackRolled":
-        if (waiting === this.WorkflowState_WaitForAttackRoll) return this.abort ? this.WorkflowState_Abort : this.WorkflowState_AttackRollComplete;
+        if (waiting === "midi-qol.WaitForAttackRoll") return this.abort ? "midi-qol.Abort" : "midi-qol.AttackRollComplete";
         // A re-rolled attack
-        if (waiting === this.WorkflowState_WaitForDamageRoll || waiting === this.WorkflowState_ConfirmRoll || waiting === this.WorkflowState_Completed)
-          return this.WorkflowState_AttackRollComplete;
+        if (waiting === "midi-qol.WaitForDamageRoll" || waiting === "midi-qol.ConfirmRoll" || waiting === "midi-qol.Completed")
+          return "midi-qol.AttackRollComplete";
         break;
       case "damageRolled":
-        if (waiting === this.WorkflowState_WaitForDamageRoll || waiting === this.WorkflowState_Completed) return this.WorkflowState_ConfirmRoll;
+        if (waiting === "midi-qol.WaitForDamageRoll" || waiting === "midi-qol.Completed") return "midi-qol.ConfirmRoll";
         break;
       case "noDamage":
-        if (waiting === this.WorkflowState_WaitForDamageRoll) return this.WorkflowState_WaitForSaves;
+        if (waiting === "midi-qol.WaitForDamageRoll") return "midi-qol.WaitForSaves";
         break;
       case "utilityRolled":
-        if (waiting === this.WorkflowState_WaitForUtilityRoll || waiting === this.WorkflowState_Completed) return this.WorkflowState_UtilityRollComplete;
+        if (waiting === "midi-qol.WaitForUtilityRoll" || waiting === "midi-qol.Completed") return "midi-qol.UtilityRollComplete";
         break;
     }
     return waiting;
@@ -2318,7 +2384,7 @@ export class Workflow {
         await activity._attachRegionActivityBehavior?.(regionDoc, this, overTimeActivity, this.spellLevel);
       }
     }
-    if (this.suspended && this.currentAction === this.WorkflowState_AwaitTemplate) {
+    if (this.suspended && this.currentStep === "midi-qol.AwaitTemplate") {
       this.resume();
     }
     return true;
@@ -2629,134 +2695,21 @@ export class Workflow {
   }
 
   async #runOwn(id: string): Promise<string | undefined> {
-    const step = getStep(id);
-    if (step?.run) return Workflow.#asStepId(await step.run({ workflow: this, next: async () => undefined }));
-    const method = this.methodForStep(id);
-    if (!method) throw new Error(`${this.workflowName}: no step ${id}`);
-    return Workflow.stepIdOf(await method.call(this));
+    const own = async (): Promise<unknown> => {
+      const step = getStep(id);
+      if (step?.run) return step.run({ workflow: this, next: async () => undefined });
+      const method = this.methodForStep(id);
+      if (!method || stepForwarders.has(method)) throw new Error(`${this.workflowName}: no step ${id}`);
+      return method.call(this);
+    };
+    // The flow's own implementation of the step (a trap's, saves first's...), which may run the step's own
+    const variant = flowVariant(this.flowId, id);
+    const result = variant ? await variant({ workflow: this, base: own }) : await own();
+    return typeof result === "string" ? Workflow.#asStepId(result) : Workflow.stepIdOf(result as WorkflowState);
   }
 
-  async WorkflowState_Suspend(): Promise<WorkflowState> {
-    const message = `${this.workflowName} Workflow ${this.id} suspend should never be called`;
-    error(message);
-    TroubleShooter.recordError(new Error(message), message);
-    return undefined;
-  }
-
-  async WorkflowState_NoAction(): Promise<WorkflowState> {
-    if (debugEnabled > 0) warn("WorkflowState_NoAction");
-    return this.WorkflowState_Suspend;
-  }
-
-  async WorkflowState_Start(): Promise<WorkflowState> {
-    if (this.rangeTargeting) {
-      // Targets have already been set in activity.use
-      return this.WorkflowState_AoETargetConfirmation;
-    }
-
-    if (debugEnabled > 1) debug("WORKFLOW NONE", getActivityAutoTargetAction(this.activity), activityHasAreaTarget(this.activity));
-    if (this.tempTargetConfirmation) {
-      return this.WorkflowState_AwaitTemplate;
-    }
-
-    return this.WorkflowState_AoETargetConfirmation;
-  }
-
-  async WorkflowState_AwaitTemplate(): Promise<WorkflowState> {
-    if (debugEnabled > 0) warn("WorkflowState_AwaitTemplate started");
-    if (this.templateUuids.length >= this.expectedTemplateCount) {
-      if (debugEnabled > 0) warn("WorkflowState_AwaitTemplate context - template placed", "needTemplate", this.needTemplate, "needItemCard", this.needItemCard, "itemUseComplete", this.itemUseComplete);
-      return this.WorkflowState_TemplatePlaced;
-    }
-    if (!this.needTemplate) {
-      if (debugEnabled > 0) warn("WorkflowState_AwaitTemplate no template needed", "needTemplate", this.needTemplate, "needItemCard", this.needItemCard, "itemUseComplete", this.itemUseComplete);
-      return this.WorkflowState_AoETargetConfirmation;
-    }
-    if (debugEnabled > 0) warn("WorkflowState_AwaitTemplate suspending", "needTemplate", this.needTemplate, "needItemCard", this.needItemCard, "itemUseComplete", this.itemUseComplete);
-    return this.WorkflowState_Suspend;
-  }
-
-  async WorkflowState_TemplatePlaced(): Promise<WorkflowState> {
-    if (configSettings.allowUseMacro && this.workflowOptions.noOnUseMacro !== true) {
-      await this.callMacros(this.item, this.onUseMacros?.getMacros("templatePlaced"), "OnUse", "templatePlaced");
-      if (this.ammunition) await this.callMacros(this.ammunition, this.ammunitionOnUseMacros?.getMacros("templatePlaced"), "OnUse", "templatePlaced");
-    }
-    if (!this.itemCardUuid) return this.WorkflowState_AoETargetConfirmation;
-
-    const chatMessage = this.chatCard;
-    if (!chatMessage) return this.WorkflowState_AoETargetConfirmation;
-    this.targets = validTargetTokens(this.targets);
-    this.hitTargets = new Set()
-    this.hitTargetsEC = new Set();
-    return this.WorkflowState_AoETargetConfirmation;
-  }
-
-  async WorkflowState_AoETargetConfirmation(): Promise<WorkflowState> {
-    // postTemplateConfirmTargets uses requiresTargetConfirmation to decide whether to show
-    // the confirmation dialog — covers AoE templates, scaled counts, activity/global settings,
-    // and workflowOptions.targetConfirmation overrides.
-    if (!await postTemplateConfirmTargets(this.activity, { workflowOptions: this.workflowOptions }, this)) {
-      await this.refundConsumption();
-      return this.WorkflowState_Abort;
-    }
-    const hasScaledTargetCount = activityHasScaledTargetCount(this.activity);
-    if (hasScaledTargetCount) {
-      const allowedTargets = Number(this.activity.target?.affects?.count);
-      if (allowedTargets && this.targets.count > allowedTargets) {
-        ui.notifications?.warn(i18nFormat("midi-qol.wrongNumberTargets", { allowedTargets }));
-        await this.refundConsumption();
-        return this.WorkflowState_Abort;
-      }
-    }
-    return this.WorkflowState_ValidateRoll;
-  }
-
-  async WorkflowState_ValidateRoll(): Promise<WorkflowState> {
-    if (configSettings.allowUseMacro && this.workflowOptions.noTargetOnUseMacro !== true) {
-      await this.triggerTargetMacros(["isTargeted"]);
-      if (this.aborted) return this.WorkflowState_Abort;
-    }
-
-    // Range: melee weapons too (a thrown weapon is mwak; checkActivityRange keeps the long range only for those)
-    if (checkMechanic("checkRange") !== "none" && !this.AoO && isRangeCheckable(this.activity) && this.tokenUuid) {
-      const { result, attackingToken } = checkActivityRange(this.activity, getToken(this.token) ?? "invalid", new Set(this.targets.tokens));
-      switch (result) {
-        case "fail": this.outcome = "invalid"; return this.WorkflowState_RollFinished;
-        case "dis": this.longRangeAttack = true;
-      }
-      if (attackingToken && this.token !== attackingToken) {
-        // changed the attacking token so update the canSee data
-        this.token = attackingToken;
-        await this.activity.setupCanSeeSense({ workflow: this });
-      }
-    }
-    if (!this.workflowOptions.allowIncapacitated && checkMechanic("incapacitated") !== "nothing" && checkIncapacitated(this.actor, debugEnabled > 0, true)) {
-      if (checkMechanic("incapacitated") === "enforce") { this.outcome = "invalid"; return this.WorkflowState_RollFinished; }
-    }
-    return this.WorkflowState_PreambleComplete;
-  }
-
-  async WorkflowState_PreambleComplete(): Promise<WorkflowState> {
-    if (configSettings.undoWorkflow) await saveTargetsUndoData(this);
-    this.effectsAlreadyExpired = [];
-
-    if (await this.callCancellableHooks("midi-qol.targetingComplete") === false) {
-      ui.notifications?.warn(`midi-qol | Targeting complete hook cancelled roll`);
-      return this.WorkflowState_Abort;
-    }
-    await this.beginDeferredConcentration();
-    if ((!getAutoRollAttack(this) && this.activity.attack) || isActivityType(this.activity, "transform")) {
-      // Not auto rolling so display targets
-      const rollMode = safeGetGameSetting("core", "messageMode") as string;
-      this.whisperAttackCard = configSettings.autoCheckHit === "whisper" || rollMode === "blind" || rollMode === "gm";
-      if (this.activity.target?.affects?.type !== "self") {
-        await this.displayHitTargets(this.whisperAttackCard);
-      }
-    }
-    return this.WorkflowState_WaitForAttackRoll;
-  }
   get postAttackRollState(): WorkflowState {
-    return this.WorkflowState_WaitForDamageRoll
+    return "midi-qol.WaitForDamageRoll"
   }
 
   /** A roll this player's workflow waits for them to make, shown to the GM (the player list) to roll for them. */
@@ -2802,124 +2755,6 @@ export class Workflow {
     }
   }
 
-  async WorkflowState_WaitForAttackRoll(): Promise<WorkflowState> {
-    // Attack per target: this use has its targets (template, confirmation) and its cost; each target gets its own use
-    if (isActivityType(this.activity, "attack") && this.activity.attacksEachTarget
-      && this.targets.count > 1 && !this.workflowOptions?.attackSplit) {
-      if (this.chatCard) await this.performThrottledUpdate(this.chatCard, { "system.midi.progress.attacksSplit": true } as ChatMessage.UpdateData);
-      // The targets, filled in with each one's hit or miss as its own use resolves (addSplitAttackResult)
-      const rollMode = safeGetGameSetting("core", "messageMode") as string;
-      this.whisperAttackCard = configSettings.autoCheckHit === "whisper" || rollMode === "blind" || rollMode === "gm";
-      if (configSettings.autoCheckHit !== "none") await this.displayHitTargets(this.whisperAttackCard);
-      this.needsHitTargetsDisplayed = false;
-      const attackEachTarget: unknown = this.activity.attackEachTarget;
-      if (typeof attackEachTarget === "function") await attackEachTarget.call(this.activity, this);
-      this.outcome = "split";
-      return this.WorkflowState_RollFinished;
-    }
-    if (!this.activity.attack) {
-      this.hitTargets = new TokenDocumentSet(this.targets);
-      this.hitTargetsEC = new Set();
-      if (this.hasSave) {
-        this.needsHitTargetsDisplayed = false;
-      } else if (this.targets.count > 0 && this.activity.target?.affects?.type !== "self") {
-        await this.displayHitTargets(false);
-      }
-      if (this.activity.roll?.formula) return this.WorkflowState_WaitForUtilityRoll;
-      return this.postAttackRollState;
-    }
-
-    const isFastRoll = this.rollOptions.fastForwardAttack ?? this.workflowOptions.fastForwardAttack ?? isAutoFastForward("attack", { workflow: this });
-    this.rollOptions.fastForwardAttack ||= isFastRoll;
-    const autoRollAttack = getAutoRollAttack(this);
-    if (!autoRollAttack) {
-      const chatMessage = this.chatCard;
-      if (!chatMessage) {
-        const message = `WaitForAttackRoll | no chat message`;
-        error(message);
-        TroubleShooter.recordError(new Error(message), message);
-      } else if (!isFastRoll) {
-        const hasAdvantage = this.advantage && !this.disadvantage;
-        const hasDisadvantage = this.disadvantage && !this.advantage;
-        const attackBtnText = i18n(hasAdvantage ? "DND5E.Advantage" : hasDisadvantage ? "DND5E.Disadvantage" : "DND5E.Attack");
-        await this.performThrottledUpdate(chatMessage, { "system.midi.attackBtnText": attackBtnText } as ChatMessage.UpdateData);
-      }
-    }
-
-    if (this.activity.roll?.formula) return this.WorkflowState_WaitForUtilityRoll;
-    if (!autoRollAttack || !isFastRoll) this.waitOnPlayerRoll("attack");
-    if (autoRollAttack) {
-      this.rollOptions.fastForwardAttack ||= isFastRoll;
-      return this.rollInStep(() => this.activity.rollAttack!({ event: this.rollOptions.event, workflow: this, midiOptions: { ...this.rollOptions, workflowOptions: this.workflowOptions } }, {}, {}));
-    }
-    return this.WorkflowState_Suspend;
-  }
-
-  async WorkflowState_AttackRollComplete(): Promise<WorkflowState> {
-    if (configSettings.allowUseMacro && this.workflowOptions.noTargetOnUseMacro !== true) await this.triggerTargetMacros(["isAttacked"]);
-    await this.processAttackRoll();
-    await this.callMidiHooks("midi-qol.preCheckHits");
-    if (this.aborted) return this.WorkflowState_Abort;
-
-    if (configSettings.allowUseMacro && this.workflowOptions.noOnUseMacro !== true) {
-      await this.callMacros(this.item, this.onUseMacros?.getMacros("preCheckHits"), "OnUse", "preCheckHits");
-      if (this.ammunition) await this.callMacros(this.ammunition, this.ammunitionOnUseMacros?.getMacros("preCheckHits"), "OnUse", "preCheckHits");
-    }
-
-    await this.processAttackRoll();
-    this.recordAttackStats();
-
-    if (configSettings.autoCheckHit !== "none") {
-      await this.displayAttackRoll({ GMOnlyAttackRoll: true });
-      this.recordTargetACModifiers();
-      await this.checkHits();
-      await this.displayAttackRoll();
-      const rollMode = safeGetGameSetting("core", "messageMode") as string;
-      this.whisperAttackCard = configSettings.autoCheckHit === "whisper" || rollMode === "blind" || rollMode === "gm";
-      await this.callMidiHooks("midi-qol.hitsChecked");
-      if (this.aborted) return this.WorkflowState_Abort;
-      await this.displayHits(this.whisperAttackCard);
-    } else {
-      await this.displayAttackRoll();
-    }
-    await this.expireTargetEffects(["isAttacked"]);
-
-    await this.callMidiHooks("midi-qol.AttackRollComplete");
-    if (this.aborted) return this.WorkflowState_Abort;
-
-    if (configSettings.allowUseMacro && this.workflowOptions.noOnUseMacro !== true) {
-      await this.callMacros(this.item, this.onUseMacros?.getMacros("postAttackRoll"), "OnUse", "postAttackRoll");
-      if (this.ammunition) await this.callMacros(this.ammunition, this.ammunitionOnUseMacros?.getMacros("postAttackRoll"), "OnUse", "postAttackRoll");
-      if (this.aborted) return this.WorkflowState_Abort;
-    }
-
-    if (configSettings.autoCheckHit === "none") {
-      this.hitTargets = new Set();
-      this.hitTargetsEC = new Set();
-      if (this.targets.count > 0 && this.activity.target?.affects?.type !== "self") {
-        await this.displayHitTargets(false);
-      }
-      return this.postAttackRollState;
-    }
-    if (getAutoRollDamage(this) === "always") return this.postAttackRollState;
-    const noHits = this.hitTargets.count === 0 && this.hitTargetsEC.count === 0;
-    const allMissed = noHits && this.targets.count !== 0;
-    if (!allMissed && this.outcome === "allMissed") this.outcome = "ok"; // a re-rolled attack that hits
-    if (allMissed) {
-      this.outcome = "allMissed";
-      if (configSettings.confirmAttackDamage !== "none" && !this.workflowOptions.forceCompletion)
-        return this.WorkflowState_ConfirmRoll;
-      if (this.workflowOptions.forceCompletion || configSettings.autoCompleteWorkflow) {
-        expireMyEffects.bind(this)(["1Attack", "1Action", "1Spell", "1Critical", "1Fumble"])
-        // Nothing to roll, but the effects stage still runs: "apply to self always" effects, its macro passes and hooks
-        return this.WorkflowState_ApplyDynamicEffects;
-      }
-      // if (configSettings.autoRollDamage !== "always") return this.WorkflowState_RollFinished;
-      // else return this.WorkflowState_WaitForDamageRoll;
-    }
-    return this.postAttackRollState;
-  }
-
   _formatAttackTargets() {
     const targets = new Map<string, { name: string; img?: string | null; uuid: string; ac: number | string }>();
     for (const token of this.targets.documents) {
@@ -2930,226 +2765,6 @@ export class Workflow {
       if (uuid && Number.isNumeric(ac)) targets.set(uuid, { name, img, uuid, ac: ac });
     }
     return Array.from(targets.values());
-  }
-
-  async WorkflowState_WaitForDamageRoll(): Promise<WorkflowState> {
-    const hasDamageRoll = this.activity.hasDamage || this.otherActivity?.hasDamage || this.activity.hasHealing || this.otherActivity?.hasHealing;
-    if (!hasDamageRoll) return this.WorkflowState_WaitForSaves;
-    if (debugEnabled > 1) debug(`wait for damage roll has damage roll ${hasDamageRoll} isFumble ${this.isFumble}`);
-
-    if (checkMechanic("actionSpecialDurationImmediate"))
-      expireMyEffects.bind(this)(["1Attack", "1Action", "1Spell"]);
-    if (checkMechanic("actionSpecialDurationImmediate") && this.hitTargets.count)
-      expireMyEffects.bind(this)(["1Hit"]);
-    if (checkMechanic("actionSpecialDurationImmediate")) {
-      expireMyEffects.bind(this)(["1Critical", "1Fumble"])
-    }
-
-    if (configSettings.allowUseMacro && this.workflowOptions.noOnUseMacro !== true) {
-      await this.callMacros(this.item, this.onUseMacros?.getMacros("preDamageRoll"), "OnUse", "preDamageRoll");
-      if (this.ammunition) await this.callMacros(this.ammunition, this.ammunitionOnUseMacros?.getMacros("preDamageRoll"), "OnUse", "preDamageRoll");
-    }
-
-    if (this.shouldRollDamage) {
-      if (debugEnabled > 0) warn("waitForDamageRoll | rolling damage ", this.rollOptions.event, configSettings.autoRollAttack, configSettings.autoFastForward)
-      this.rollOptions.isCritical = this.isCritical;
-      this.rollOptions.fastForwardDamage = isAutoFastForward("damage", { workflow: this });
-      if (!this.rollOptions.fastForwardDamage) this.waitOnPlayerRoll("damage");
-      return this.rollInStep(() => this.activity.rollDamage({ workflow: this, midiOptions: { ...this.rollOptions, workflowOptions: this.workflowOptions } }, {}, { create: false }));
-    }
-    this.waitOnPlayerRoll("damage");
-    const chatMessage = this.chatCard;
-    if (chatMessage) {
-      await this.performThrottledUpdate(chatMessage, { "system.midi.dmgBtnText": this.#damageButtonText() } as ChatMessage.UpdateData);
-    }
-    return this.WorkflowState_Suspend; // wait for a damage roll to advance the state.
-  }
-  async WorkflowState_ConfirmRoll(): Promise<WorkflowState> {
-    if (configSettings.confirmAttackDamage !== "none" && (this.activity.attack || this.activity.damage)) {
-      await this.displayDamageRolls();
-      return this.WorkflowState_Suspend; // wait for the confirm button
-    }
-    return this.WorkflowState_DamageRollStarted;
-  }
-  async WorkflowState_RollConfirmed(): Promise<WorkflowState> {
-    expireMyEffects.bind(this)(["1Attack", "1Action", "1Spell"])
-    return this.WorkflowState_DamageRollStarted;
-  }
-  async WorkflowState_DamageRollStarted(): Promise<WorkflowState> {
-    if (this.ownsCard) {
-      await Workflow.removeItemCardButtons(this.itemCardUuid, { removeConfirmButtons: true });
-    }
-    if (!this.damageOnly && getActivityAutoTargetAction(this.activity) === "none" && activityHasAreaTarget(this.activity) && !this.activity.attack) {
-      // The user's targets, keeping those of the use with no canvas token (another level or scene; a macro's): they can't be the user's
-      this.targets = validTargetTokens(userTargetsKeepingUndrawn(this.targets));
-      this.hitTargets = new TokenDocumentSet(this.targets);
-      this.hitTargetsEC = new Set();
-      if (debugEnabled > 0) warn("damageRollStarted | for non auto target area effects spells", this)
-    }
-    await this.rollAllBonusDamage();
-    await this.rollDamageContributions();
-    // The damage step's dice, the activity's, the other activity's and the bonus damage's, in one throw
-    await this.flushDamageThrow();
-    return this.WorkflowState_DamageRollComplete;
-  }
-
-  async WorkflowState_DamageRollComplete(): Promise<WorkflowState> {
-    await this.flushDamageThrow();
-    if (configSettings.allowUseMacro && this.workflowOptions.noOnUseMacro !== true) { //
-      await this.callMacros(this.item, this.onUseMacros?.getMacros("postDamageRoll"), "OnUse", "postDamageRoll");
-      if (this.ammunition) await this.callMacros(this.ammunition, this.ammunitionOnUseMacros?.getMacros("postDamageRoll"), "OnUse", "postDamageRoll");
-    }
-    await this.callMidiHooks("midi-qol.DamageRollComplete");
-    if (this.aborted) return this.WorkflowState_Abort;
-    if (this.hitTargets?.count || this.hitTargetsEC?.count) expireMyEffects.bind(this)(["1Hit"]);
-    expireMyEffects.bind(this)(["1Action", "1Attack", "1Spell", "1Critical", "1Fumble"]);
-    await this.displayDamageRolls();
-    await this.createDamageMessages();
-
-    if (this.isFumble) {
-      this.failedSaves = new Set();
-      this.hitTargets = new Set();
-      this.hitTargetsEC = new Set();
-      return this.WorkflowState_ApplyDynamicEffects;
-    }
-    return this.WorkflowState_WaitForSaves;
-  }
-
-  async WorkflowState_WaitForUtilityRoll(): Promise<WorkflowState> {
-    if (!this.activity.roll?.formula) return this.WorkflowState_UtilityRollComplete;
-    this.waitOnPlayerRoll("utility");
-    if (getAutoRollDamage(this) !== "none") {
-      let rolls: unknown;
-      await this.rollInStep(async () => { rolls = await this.activity.rollFormula!({ event: this.rollOptions.event, workflow: this, midiOptions: { ...this.rollOptions, workflowOptions: this.workflowOptions } }, {}, { create: false }); });
-      if (!rolls || this.abort) {
-        return this.WorkflowState_Abort;
-      }
-      return this.WorkflowState_UtilityRollComplete;
-    }
-    return this.WorkflowState_Suspend;
-  }
-
-  async WorkflowState_UtilityRollComplete(): Promise<WorkflowState> {
-    if (this.itemCardUuid) {
-      this.displayUtilityRolls();
-    }
-    return this.WorkflowState_WaitForDamageRoll;
-  }
-  async WorkflowState_WaitForSaves(): Promise<WorkflowState> {
-    if (this.damageOnly) return this.WorkflowState_AllRollsComplete;
-    // If the save is from the other activity, check consumption first
-    // If consumption fails or is cancelled, skip the save entirely
-    if (this.saveActivity === this.otherActivity && this.otherActivity) {
-      // For attacks, skip other activity if nothing was hit (don't consume resources for a miss)
-      if (this.activity.attack && this.hitTargets.count === 0 && this.hitTargetsEC.count === 0) {
-        this.#setOtherConsumption(false);
-        this.rawOtherDamageDetail = [];
-        this.initSaveResults();
-        return this.WorkflowState_SavesComplete;
-      }
-      const consumptionSuccess = await this.checkOtherActivityConsumption();
-      if (!consumptionSuccess) {
-        this.initSaveResults();
-        return this.WorkflowState_SavesComplete;
-      }
-    }
-
-    if (configSettings.allowUseMacro) {
-      if (this.workflowOptions.noOnUseMacro !== true) await this.callMacros(this.item, this.onUseMacros?.getMacros("preSave"), "OnUse", "preSave");
-      if (this.workflowOptions.noTargetOnUseMacro !== true) await this.triggerTargetMacros(["isAboutToSave"]); // ??
-      if (this.ammunition && this.workflowOptions.noOnUseMacro !== true) await this.callMacros(this.ammunition, this.ammunitionOnUseMacros?.getMacros("preSave"), "OnUse", "preSave");
-    }
-    if (this.workflowType === "BaseWorkflow" && !this.workflowOptions.ignoreUserTargets && !this.activity.attack && this.activity.target?.affects.type !== "self") { // Allow editing of targets if there is no attack that has already been processed.
-      this.targets = userTargetsKeepingUndrawn(this.targets);
-      this.hitTargets = new TokenDocumentSet(this.targets);
-    }
-    this.failedSaves = new TokenDocumentSet(this.hitTargets);
-    if (!this.hasSave) {
-      this.initSaveResults();  // Ensure saveResults is initialized even without a save
-      return this.WorkflowState_SavesComplete;
-    }
-    await this.displaySaveTargets();
-    this.initSaveResults();
-    if (configSettings.autoCheckSaves !== "none") {
-      await this.callMidiHooks("midi-qol.preCheckSaves");
-      if (this.aborted) return this.WorkflowState_Abort;
-      if (debugEnabled > 1) debug("Check Saves: renderChat message hooks length ", Hooks.events["renderChatMessageHTML"]?.length)
-      let hookId = Hooks.on("renderChatMessageHTML", this.processSaveRoll.bind(this));
-      let monksId = Hooks.on("updateChatMessage", this.monksSavingCheck.bind(this));
-      //@ts-expect-error flash-rolls-5e custom hook
-      let flashId = Hooks.on("flash-rolls-5e.rollComplete", this.flashSavingCheck.bind(this));
-      try {
-        const saveDisplay = saveDisplayMode();
-        await this.ports.requestSaves(this, saveDisplay !== "allShow");
-      } catch (err) {
-        const message = ("midi-qol | checkSaves error")
-        TroubleShooter.recordError(err, message);
-        error(message, err)
-      } finally {
-        Hooks.off("renderChatMessageHTML", hookId);
-        Hooks.off("updateChatMessage", monksId);
-        //@ts-expect-error flash-rolls-5e custom hook
-        Hooks.off("flash-rolls-5e.rollComplete", flashId);
-      }
-      if (debugEnabled > 1) debug("Check Saves: ", this.saveRequests, this.saveTimeouts, this.saves);
-      if (debugEnabled > 1) debug("Check Saves: renderChat message hooks length ", Hooks.events["renderChatMessageHTML"]?.length)
-      await this.callMidiHooks("midi-qol.postCheckSaves");
-      if (this.aborted) return this.WorkflowState_Abort;
-      const saveDisplay = saveDisplayMode();
-      if (this.ownsCard) await Workflow.removeItemCardButtons(this.itemCardUuid, { removeDnd5eSaveButtons: configSettings.autoCheckSaves !== "none" });
-      await this.displaySaves(saveDisplay === "whisper");
-    } else {// has saves but we are not checking so do nothing with the damage
-      this.effectTargets = this.failedSaves;
-      this.outcome = "manualSaves";
-      return this.WorkflowState_RollFinished;
-    }
-    return this.WorkflowState_SavesComplete;
-  }
-  async WorkflowState_SavesComplete(): Promise<WorkflowState> {
-    expireMyEffects.bind(this)(["1Action", "1Spell"]);
-    if (configSettings.allowUseMacro && this.workflowOptions.noOnUseMacro !== true) {
-      await this.callMacros(this.item, this.onUseMacros?.getMacros("postSave"), "OnUse", "postSave");
-      if (this.ammunition) await this.callMacros(this.ammunition, this.ammunitionOnUseMacros?.getMacros("postSave"), "OnUse", "postSave");
-    }
-    if (configSettings.keepRollStats && this.item && this.hasSave) {
-      gameStats.addSaveResult(
-        this.saves.count + this.failedSaves.count,
-        this.saves.count,
-        this.failedSaves.count,
-        this.item
-      );
-    }
-    return this.WorkflowState_AllRollsComplete;
-  }
-
-  async WorkflowState_AllRollsComplete(): Promise<WorkflowState> {
-    await this.offerDeferredDamageBonuses();
-
-    // Skip other damage processing entirely if consumption was already declined
-    if (this.otherConsumed === false) {
-      // Consumption was declined - the other activity's damage is dropped, the ammunition's kept
-      this.dropOtherActivityDamage();
-    } else {
-      // Process consumption for other activity if it will be applied
-      await this.buildOtherDamageMatches();
-      if (this.otherDamageMatches!.count > 0 && !this.damageOnly) {
-        await this.checkOtherActivityConsumption();
-      }
-    }
-    // Build the matches not yet built (no-op if rollOtherDamage already built them)
-    await this.buildOtherDamageMatches();
-
-    if (this.rawDamageDetail && (this.rawDamageDetail?.length || this.rawOtherDamageDetail?.length)) await processDamageRoll(this, this.rawDamageDetail[0]?.type ?? this.defaultDamageType)
-    // Now that the damage calculation has run, the card can report what it applied.
-    if (this.ownsCard && this.chatCard && this.midiTargetDetail) {
-      await this.performThrottledUpdate(this.chatCard, this.#targetsUpdate() as ChatMessage.UpdateData);
-    }
-    this.recordDamageStats();
-    // If a damage card is going to be created don't call the isDamaged macro - wait for the damage card calculations to do a better job
-    if (configSettings.allowUseMacro && this.workflowOptions.noTargetOnUseMacro !== true && !configSettings.autoApplyDamage.includes("Card"))
-      await this.triggerTargetMacros(["isDamaged"], this.hitTargets);
-    if (debugEnabled > 1) debug("all rolls complete ", foundry.utils.duplicate(this.rawDamageDetail));
-    return this.WorkflowState_ApplyDynamicEffects;
   }
 
   // Never read by midi or any known module: kept for macros, worked out when asked. Remove in 14.8.0.
@@ -3317,38 +2932,6 @@ export class Workflow {
       if (concentrationUuid) foundry.utils.setProperty(effectData, "flags.dnd5e.dependentOn", concentrationUuid);
     };
     for (const entry of entries) await applyStatusCondition(token.actor, entry.id, { specialDuration: entry.specialDuration, prepare });
-  }
-
-  /*
-   * The effects stage, step by step. The state keeps its name, order, hooks, macro passes and exits; each step is
-   * one job of the old single method, moved unchanged, and returns what later steps need.
-   */
-  async WorkflowState_ApplyDynamicEffects(): Promise<WorkflowState> {
-    const ammo = await this.effectsMatchTargets();
-    // once attacked, the attack keys too: an attack without damage never reaches the damage roll states that expire them
-    expireMyEffects.bind(this)(["1Action", "1Spell", ...(this.attackRoll ? ["1Attack", "1Hit", "1Critical", "1Fumble"] : [])]);
-    const ammoTargets = await this.effectsSelectTargets(ammo);
-    // Do special expiries
-    const specialExpiries = [
-      "isDamaged",
-      "isHealed",
-      "isSaveSuccess",
-      "isSaveFailure",
-      "isSave",
-      "isHit"
-    ];
-    await this.expireTargetEffects(specialExpiries);
-    if (this.damageOnly || !await this.effectsMayApply()) return this.WorkflowState_RollFinished;
-    // no item, not auto effects or not module skip
-    if (!this.activity.item) return this.WorkflowState_RollFinished;
-    const fx = await this.effectsResolve(ammo.ammunition, ammoTargets.ammunitionEffectTargets);
-    const data = this.effectsApplicationData();
-    await this.applyTargetEffects(fx, ammo, ammoTargets, data);
-    // Perhaps this should use this.effectTargets
-    if (configSettings.allowUseMacro && this.workflowOptions.noTargetOnUseMacro !== true) await this.triggerTargetMacros(["postTargetEffectApplication"], this.targets);
-    const selfEffects = await this.applySelfEffects(fx, ammo, ammoTargets, data);
-    await this.applyCESelfEffect(fx, data, selfEffects);
-    return this.WorkflowState_RollFinished;
   }
 
   /** effectsSelectTargets has run: its target sets are set for the steps after it */
@@ -3778,50 +3361,6 @@ export class Workflow {
       }
     }
   }
-  async WorkflowState_Cleanup(): Promise<WorkflowState> {
-    const blfxActive = game.modules.get("boss-loot-assets-premium")?.active ||
-      game.modules.get("boss-loot-assets-free")?.active;
-    const AAActive = game.modules.get("autoanimations")?.active;
-    const elapsedTimeRequired = 5000;
-    if (configSettings.autoRemoveInstantaneousTemplate && this.templateUuids.length > 0 && this.activity.duration?.units === "inst") {
-      for (const tUuid of this.templateUuids) {
-        if (!blfxActive) {
-          const elapsed = Date.now() - (this.workflowStartTime ?? 0);
-          // if auto animations is active we need to allow enough time for it to have grabbed the template data before deleting it.
-          let timeout = AAActive ? Math.max(elapsedTimeRequired - elapsed, 1) : 1;
-          timeout = Math.max(elapsedTimeRequired, timeout);
-          setTimeout(() => {
-            (fromUuidSync(tUuid) as MeasuredTemplateDocument | null)?.delete()
-          }, timeout);
-        } else {
-          setTimeout(() => {
-            (fromUuidSync(tUuid) as MeasuredTemplateDocument | null)?.delete()
-          }, elapsedTimeRequired);
-          log("Not auto removing instantaneous template because boss loot assets active")
-        }
-      }
-    }
-    if (this.postSummonHookId) Hooks.off("dnd5e.postSummon", this.postSummonHookId);
-    if (this.activity.target?.affects.type !== "" || this.targets.count !== 0) {
-      // moved inside RollFinished if (configSettings.autoItemEffects === "applyRemove") await this.removeEffectsButton();
-    }
-
-    // Restore user targets if this was a self-target workflow
-
-    return this.WorkflowState_Completed;
-  }
-
-  async WorkflowState_Completed(): Promise<WorkflowState> {
-    await this.completeCard();
-    if (debugEnabled > 0) warn("Workflow complete ", this.id, "elapsed time", Date.now() - (this.workflowStartTime ?? 0));
-
-    if (!this.damageOnly) {
-      await offerFollowUps(this);
-      await this.runTriggeredActivity();
-    }
-    Workflow.#fileFinished(this);
-    return this.WorkflowState_Suspend;
-  }
 
   /** The card's buttons removed as the workflow is finished */
   /** Only the card's own workflow finishes it: a damage-only workflow adding to another use's card leaves that card alone */
@@ -3975,68 +3514,6 @@ export class Workflow {
         }
       }
     }
-  }
-
-  async WorkflowState_Abort(): Promise<WorkflowState> {
-    this.aborted = true;
-    this.outcome = "aborted";
-    if (this.postSummonHookId) Hooks.off("dnd5e.postSummon", this.postSummonHookId);
-    if (this.itemCardUuid && fromUuidSync(this.itemCardUuid)) {
-      await Workflow.deleteAbortedCard(this.chatCard);
-      clearUpdatesCache(this.itemCardUuid);
-    }
-
-    for (const tUuid of this.templateUuids) {
-      const templateToDelete = await fromUuid(tUuid) as MeasuredTemplateDocument | undefined;
-      if (templateToDelete) await templateToDelete.delete();
-    }
-    return this.WorkflowState_Cleanup;
-  }
-
-  async WorkflowState_Cancel(): Promise<WorkflowState> {
-    // cancel will undo the workflow if it exists
-    if (configSettings.undoWorkflow) await unTimedExecuteAsGM("undoTillWorkflow", this.uuid, true, true);
-    return this.WorkflowState_Abort
-  }
-
-  /*
-   * The end of the roll, step by step. The state keeps its name, order, hooks, macro passes and exits; each step is
-   * one job of the old single method, moved unchanged.
-   */
-  async WorkflowState_RollFinished(): Promise<WorkflowState> {
-    if (this.aborted) {
-      const message = `${this.workflowName} Workflow ${this.id} RollFinished called when aborted`;
-      error(message);
-      TroubleShooter.recordError(new Error(message), message);
-    }
-    // A teleport planned with the workflow: after its effects and damage, before RollComplete
-    const autoTeleport: unknown = this.activity?.autoTeleport;
-    if (!this.aborted && !this.damageOnly && isActivityType(this.activity, "teleport") && typeof autoTeleport === "function") await autoTeleport.call(this.activity, this);
-    const specialExpiries = [
-      "isDamaged",
-      "isHealed",
-      "1Reaction",
-    ];
-    await this.expireTargetEffects(specialExpiries)
-    let selfTarget = this.token ?? getOrCreateTokenForActor(this.actor);
-    await this.finishHitDisplay();
-    await this.finishCardProgress();
-    await this.finishSummonedCreatures(selfTarget);
-    await this.finishTransformations(selfTarget);
-    if (!this.damageOnly) {
-      await this.callMidiHooks("midi-qol.postActiveEffects");
-      // Call onUseMacro if not already called
-      if (configSettings.allowUseMacro && this.workflowOptions.noOnUseMacro !== true) {
-        await this.callMacros(this.item, this.onUseMacros?.getMacros("postActiveEffects"), "OnUse", "postActiveEffects");
-        if (this.ammunition) await this.callMacros(this.ammunition, this.ammunitionOnUseMacros?.getMacros("postActiveEffects"), "OnUse", "postActiveEffects");
-      }
-      if (this.aborted) return this.WorkflowState_Abort;  // TODO This is wrong
-    }
-
-    await this.callMidiHooks("midi-qol.RollComplete");
-    if (this.aborted) return this.WorkflowState_Abort;  // TODO This is wrong
-    if (!this.damageOnly) await this.finishTurnBookkeeping();
-    return this.WorkflowState_Cleanup;
   }
 
   /** For an activity with effects, every target shown as affected on the card */
@@ -7643,7 +7120,7 @@ export class Workflow {
     if (this.isCritical || this.isFumble) addAttribution(this.attackRoll, this.attackAttribution);
   }
 
-  protected recordAttackStats() {
+  recordAttackStats() {
     if (!configSettings.keepRollStats || !this.item || !this.attackRoll) return;
     // @ts-expect-error CONFIG.Dice.D20Roll.ADV_MODE not typed
     const ADV_MODE = CONFIG.Dice.D20Roll.ADV_MODE;
@@ -7656,7 +7133,7 @@ export class Workflow {
     }, this.item);
   }
 
-  protected recordDamageStats() {
+  recordDamageStats() {
     if (!configSettings.keepRollStats || !this.item || !this.damageList?.length) return;
     // Only count actual damage (positive hpDamage), not healing
     const totalHpDamage = this.damageList.reduce((sum, dl) => sum + Math.max(0, dl.hpDamage ?? 0), 0);
@@ -8677,73 +8154,22 @@ export class Workflow {
 export class SavesFirstWorkflow extends Workflow {
   static flowId = "midi-qol.savesFirst";
   get postAttackRollState(): WorkflowState {
-    return this.WorkflowState_WaitForSaves;
+    return "midi-qol.WaitForSaves";
   }
 
-  async WorkflowState_WaitForSaves(): Promise<WorkflowState> {
-    await super.WorkflowState_WaitForSaves();
-    return this.WorkflowState_SavesComplete;
-  }
-
-  async WorkflowState_SavesComplete(): Promise<WorkflowState> {
-    expireMyEffects.bind(this)(["1Action", "1Spell"]);
-    if (configSettings.allowUseMacro && this.workflowOptions.noOnUseMacro !== true) {
-      await this.callMacros(this.item, this.onUseMacros?.getMacros("postSave"), "OnUse", "postSave");
-      if (this.ammunition) await this.callMacros(this.ammunition, this.ammunitionOnUseMacros?.getMacros("postSave"), "OnUse", "postSave");
-    }
-    const hasDamageRoll = this.activity.hasDamage || this.otherActivity?.hasDamage || this.activity.hasHealing || this.otherActivity?.hasHealing;
-    if (!hasDamageRoll) return this.WorkflowState_AllRollsComplete;
-    if (getAutoRollDamage(this) === "always") return this.WorkflowState_WaitForDamageRoll;
-    const noHits = this.hitTargets.count === 0 && this.hitTargetsEC.count === 0;
-    // With hits not checked there are no hit targets, which is not a miss.
-    const allMissed = configSettings.autoCheckHit !== "none" && noHits && this.targets.count !== 0;
-    if (!allMissed && this.outcome === "allMissed") this.outcome = "ok"; // a re-rolled attack that hits
-    if (allMissed) {
-      this.outcome = "allMissed";
-      if (configSettings.confirmAttackDamage !== "none" && !this.workflowOptions.forceCompletion)
-        return this.WorkflowState_ConfirmRoll;
-      if (this.workflowOptions.forceCompletion || configSettings.autoCompleteWorkflow) {
-        expireMyEffects.bind(this)(["1Attack", "1Action", "1Spell", "1Critical", "1Fumble"])
-        // Nothing to roll, but the effects stage still runs: "apply to self always" effects, its macro passes and hooks
-        return this.WorkflowState_ApplyDynamicEffects;
-      }
-    }
-    return this.WorkflowState_WaitForDamageRoll;
-  }
-
-  async WorkflowState_WaitForDamageRoll(): Promise<WorkflowState> {
-    const hasDamageRoll = this.activity.hasDamage || this.otherActivity?.hasDamage || this.activity.hasHealing || this.otherActivity?.hasHealing;
-    if (!hasDamageRoll) return this.WorkflowState_AllRollsComplete;
-    return super.WorkflowState_WaitForDamageRoll();
-  }
-
-  async WorkflowState_DamageRollComplete(): Promise<WorkflowState> {
-    await super.WorkflowState_DamageRollComplete();
-    return this.WorkflowState_AllRollsComplete;
-  }
 }
 
 export class ActiveDefenceWorkflow extends Workflow {
   static flowId = "midi-qol.activeDefence";
-  async WorkflowState_WaitForAttackRoll(): Promise<WorkflowState> {
-    this.workflowOptions.attackRollDSN = false;
-    return super.WorkflowState_WaitForAttackRoll();
-  }
   async processAttackRoll() {
     return super.processAttackRoll();
-  }
-
-  async WorkflowState_AttackRollComplete(): Promise<WorkflowState> {
-    const attackBonus = (this.attackRoll?.total ?? 0) - (this.attackRoll?.dice[0]?.total ?? 0); // TODO see if there is a better way to work out roll plusses
-    this.activeDefenceDC = configSettings.optionalRules.activeDefenceModifier + attackBonus;
-    return super.WorkflowState_AttackRollComplete();
   }
 
   async checkHits() {
     if (!this.attackRoll || !this.item) return;
     if (!this.attackRoll?.total) {
       this.abort = true;
-      return this.performState(this.WorkflowState_Abort);
+      return this.performState("midi-qol.Abort");
     }
 
     this.displayHitTargets(false);
@@ -9200,70 +8626,13 @@ export class DamageOnlyWorkflow extends Workflow {
       if (!this.useOther) this.damageTotal = damageTotal;
       this.isCritical = options.isCritical ?? false;
       this.suspended = false;
-      await this.performState(this.WorkflowState_Start);
+      await this.performState("midi-qol.Start");
     });
     return this;
   }
   static get forceCreate() { return false; }
   get otherDamageFlavor() {
     return this.useOther && this.flavor ? this.flavor : super.otherDamageFlavor;
-  }
-  async WorkflowState_Start(): Promise<WorkflowState> {
-    this.effectsAlreadyExpired = [];
-
-    if (this.itemCardUuid === "new" || !fromUuidSync(this.itemCardUuid)) {
-      const message = {}
-      const messageConfig = foundry.utils.mergeObject({
-        create: true,
-        data: {
-          system: { effects: this.activity?.applicableEffects?.map(e => e.relativeUUID) },
-          rolls: this.damageRolls,
-          // The synthetic item is on no actor: the card keeps it (getAssociatedItem), so the workflow can be rebuilt
-          flags: { [MODULE_ID]: { itemData: this.item?.toObject() } }
-        },
-        hasConsumption: false
-      }, message);
-      // @ts-expect-error no dnd5e-types
-      const itemCard = await this.activity._createUsageMessage(messageConfig);
-      // Its own card: filed under it, its state and records stored there
-      if (itemCard) {
-        this.id = itemCard.uuid;
-        this.itemCardUuid = itemCard.uuid;
-        Workflow.addWorkflow(this);
-        if (configSettings.undoWorkflow) await saveUndoData(this);
-      }
-    }
-    const whisperCard = configSettings.autoCheckHit === "whisper" || safeGetGameSetting("core", "messageMode") === "blind";
-    // No dnd5e damage roll: the attacker's rules as dnd5e would collect them for one (stored with the use). Not when
-    // the only actor there is was a target's (the constructor's fallback): its rules aren't the damage's.
-    const ruleSource = this.item?.actor ?? this.actor;
-    if (ruleSource && !this.targets.documents.some(t => t.actor?.uuid === ruleSource.uuid))
-      this.addDamageRules(collectDamageRules(ruleSource, this.item));
-    if (this.actor) { // Hacky process bonus flags
-      // TODO come back and fix this for dnd3
-      if (this.useOther) await this.setOtherDamageRolls(await this.processDamageRollBonusFlags(this.otherDamageRolls ?? []));
-      else await this.setDamageRolls(await this.processDamageRollBonusFlags(this.damageRolls));
-    }
-
-    if (this.itemCardUuid) {
-      this.isFumble = false;
-      this.attackTotal = 9999;
-      this.recordTargetACModifiers();
-      await this.checkHits(this.workflowOptions);
-      this.hitTargets = new TokenDocumentSet(this.targets);
-      // Another workflow's card keeps its hits and targets: only the damage is added
-      if (this.ownsCard) await this.displayHits(whisperCard, false);
-      await this.displayDamageRolls();
-    } else {
-      await this.damageRoll?.toMessage({ flavor: this.flavor });
-    }
-    this.hitTargets = new TokenDocumentSet(this.targets);
-    this.hitTargetsEC = new Set();
-    this.effectTargets = new TokenDocumentSet(this.targets);
-    // TODO change this to the new apply token damage call - sigh
-    //this.damageList = await applyTokenDamage(this.rawDamageDetail, this.damageTotal, this.targets, this.item, new Set(), { existingDamage: this.damageList, superSavers: new Set(), semiSuperSavers: new Set(), workflow: this, updateContext: undefined, forceApply: false })
-    // Returned, not called: the dispatcher fires AllRollsComplete's pre/post hooks and passes
-    return this.WorkflowState_AllRollsComplete;
   }
 }
 
@@ -9301,174 +8670,21 @@ export class TrapWorkflow extends Workflow {
     this.suspended = false;
     // @ts-expect-error no dnd5e-types
     this.activity.use({ configure: false, workflow: this, midiOptions: { workflowOptions: this.workflowOptions } }, {}, {})
-    // this.performState(this.WorkflowState_Start);
+    // this.performState("midi-qol.Start");
     return this;
   }
 
   get workflowType() { return "TrapWorkflow" }
 
-  async WorkflowState_Start(): Promise<WorkflowState> {
-    this.saveTargets = validTargetTokens(new Set(game.user?.targets));
-    this.effectsAlreadyExpired = [];
-    if (debugEnabled > 1) debug(" Trapworkflow | WorkflowState_Start ", this.item, getActivityAutoTargetAction(this.activity), activityHasAreaTarget(this.activity), this.targets);
-    // don't support the placement of a template
-    return this.WorkflowState_AwaitTemplate
-  }
-  async WorkflowState_AwaitTemplate(): Promise<WorkflowState> {
-    if (activityHasEmanationNoTemplate(this.activity)) {
-      // Targets have already been set in activity.use
-      return this.WorkflowState_TemplatePlaced;
-    }
-    if (!activityHasAreaTarget(this.activity) || !this.templateLocation) {
-      return this.WorkflowState_TemplatePlaced;
-    }
-    // Regions directly — the deprecated AbilityTemplate skipped dnd5e's unit conversion, which is
-    // why trap templates came out the wrong size.
-    const templates = await createActivityTemplateRegions(this.activity, [{
-      x: this.templateLocation?.x || 0,
-      y: this.templateLocation?.y || 0,
-      direction: this.templateLocation?.direction || 0
-    }]);
-    if (templates?.length) {
-      for (const docToStore of templates) {
-        if (!docToStore?.uuid) continue;
-        this.templateUuid = docToStore.uuid;
-        await this.setupTemplateCleanup(docToStore);
-      }
-      this.placedTemplateCount = templates.length;
-      this.selectAllTemplateTargets();
-      if (this.templateLocation?.removeDelay) {
-        const ids: string[] = templates.map(td => td.id as string);
-        // Template cleanup may already have removed them; delete only what is left.
-        setTimeout(() => {
-          const left = ids.filter(id => canvas.scene?.regions.has(id));
-          if (left.length) canvas.scene?.deleteEmbeddedDocuments("Region", left).catch(() => { });
-        }, this.templateLocation.removeDelay * 1000);
-      }
-    }
-    return this.WorkflowState_TemplatePlaced
-  }
-  async WorkflowState_TemplatePlaced(): Promise<WorkflowState> {
-    return this.WorkflowState_ValidateRoll;
-  }
-  async WorkflowState_ValidateRoll(): Promise<WorkflowState> {
-    // do pre roll checks
-    return this.WorkflowState_WaitForAttackRoll
-  }
-
   override stateAfter(event: WorkflowEvent): WorkflowState {
-    if (this.currentAction === this.WorkflowState_WaitForAttackRoll && event === "attackRolled") return this.WorkflowState_AttackRollComplete;
-    if (this.currentAction === this.WorkflowState_WaitForDamageRoll) return event === "damageRolled" ? this.WorkflowState_DamageRollComplete : this.currentAction;
+    if (this.currentStep === "midi-qol.WaitForAttackRoll" && event === "attackRolled") return "midi-qol.AttackRollComplete";
+    if (this.currentStep === "midi-qol.WaitForDamageRoll") return event === "damageRolled" ? "midi-qol.DamageRollComplete" : this.currentAction;
     return super.stateAfter(event);
-  }
-  async WorkflowState_WaitForAttackRoll(): Promise<WorkflowState> {
-    if (!this.activity.attack && !this.activity.hasAttack) {
-      // No attack on activity, all targets are hit
-      this.hitTargets = new TokenDocumentSet(this.targets);
-      this.hitTargetsEC = new Set();
-      return this.WorkflowState_WaitForSaves;
-    }
-    warn("TrapWorkflow | WaitForAttackRoll rolling attack for", this.activity.name, "hasAttack:", this.activity.hasAttack, "attack:", this.activity.attack);
-    // TrapWorkflow has no event - dialog skipping is controlled via rollOptions.fastForwardAttack
-    this.activity.rollAttack?.({ workflow: this, midiOptions: { workflowOptions: this.workflowOptions } }, {}, {});
-    return this.WorkflowState_Suspend;
-  }
-  async WorkflowState_AttackRollComplete(): Promise<WorkflowState> {
-    await this.processAttackRoll();
-    this.recordAttackStats();
-    await this.displayAttackRoll();
-    this.recordTargetACModifiers();
-    await this.checkHits(this.workflowOptions);
-    const whisperCard = configSettings.autoCheckHit === "whisper" || safeGetGameSetting("core", "messageMode") === "blind";
-    await this.displayHits(whisperCard);
-    return this.WorkflowState_WaitForSaves;
   }
   setDescriptorACModifiers() {
     throw new Error("Method not implemented.");
   }
-  async WorkflowState_WaitForSaves(): Promise<WorkflowState> {
-    if (!this.activityHasSave) {
-      this.saves = new Set(); // no saving throw, so no-one saves
-      this.failedSaves = this.hitTargets.union(this.hitTargetsEC);
-      return this.WorkflowState_WaitForDamageRoll;
-    }
-    let hookId = Hooks.on("createChatMessage", this.processSaveRoll.bind(this));
-    let monksId = Hooks.on("updateChatMessage", this.monksSavingCheck.bind(this));
-    //@ts-expect-error flash-rolls-5e custom hook
-    let flashId = Hooks.on("flash-rolls-5e.rollComplete", this.flashSavingCheck.bind(this));
-    try {
-      const saveDisplay = saveDisplayMode();
-      await this.ports.requestSaves(this, saveDisplay !== "allShow");
-    } catch (err) {
-      TroubleShooter.recordError(err, "checkSaves");
-    } finally {
-      Hooks.off("createChatMessage", hookId);
-      Hooks.off("updateChatMessage", monksId);
-      //@ts-expect-error flash-rolls-5e custom hook
-      Hooks.off("flash-rolls-5e.rollComplete", flashId);
-    }
-    if (debugEnabled > 1) debug("Check Saves: renderChat message hooks length ", Hooks.events["renderChatMessageHTML"]?.length);
-    const saveDisplay = saveDisplayMode();
-    await this.displaySaves(saveDisplay === "whisper");
-    return this.WorkflowState_SavesComplete;
-  }
-  async WorkflowState_SavesComplete(): Promise<WorkflowState> {
-    return this.WorkflowState_WaitForDamageRoll
-  }
 
-  async WorkflowState_WaitForDamageRoll(): Promise<WorkflowState> {
-    if (!this.activity.hasDamage && !this.activity.hasHealing) return this.WorkflowState_AllRollsComplete;
-
-    if (this.isFumble) {
-      // fumble means no trap damage/effects
-      return this.WorkflowState_RollFinished;
-    }
-    if (debugEnabled > 1) debug("TrapWorkflow: Rolling damage ", this.rollOptions.event, this.spellLevel, this.workflowOptions.versatile, this.targets, this.hitTargets);
-    this.rollOptions.fastForward = true;
-    return this.rollInStep(() => this.activity.rollDamage({ workflow: this, midiOptions: { ...this.rollOptions, workflowOptions: this.workflowOptions } }, {}, {}));
-  }
-  async WorkflowState_DamageRollComplete(): Promise<WorkflowState> {
-    // If the item does damage, use the same damage type as the item
-    /*
-    let defaultDamageType = getActivityDefaultDamageType(this) ?? this.defaultDamageType
-    this.rawDamageDetail = createDamageDetail({ roll: this.damageRolls, activity: this.activity, defaultType: defaultDamageType });
-    if (this.bonusDamageRolls)
-      this.rawBonusDamageDetail = createDamageDetail({ roll: this.bonusDamageRolls, activity: this.activity, defaultType: defaultDamageType });
-    else
-      this.rawBonusDamageDetail = [];
-    if (this.otherDamageRolls)
-      this.rawOtherDamageDetail = createDamageDetail({ roll: this.otherDamageRolls, activity: this.activity, defaultType: defaultDamageType });
-    else
-      this.rawOtherDamageDetail = [];
-    */
-    // apply damage to targets plus saves plus immunities
-    await this.displayDamageRolls();
-    if (this.isFumble) {
-      return this.WorkflowState_ApplyDynamicEffects
-    }
-    return this.WorkflowState_AllRollsComplete;
-  }
-  async WorkflowState_AllRollsComplete(): Promise<WorkflowState> {
-    if (debugEnabled > 1) debug("all rolls complete ", foundry.utils.duplicate(this.rawDamageDetail))
-    if (this.rawDamageDetail?.length) await processDamageRoll(this, this.rawDamageDetail[0].type)
-    this.recordDamageStats();
-    return this.WorkflowState_ApplyDynamicEffects;
-  }
-  async WorkflowState_RollFinished(): Promise<WorkflowState> {
-    // area effect trap, put back the targets the way they were
-    if (this.saveTargets && activityHasAreaTarget(this.activity)) {
-      game.user?.targets.forEach(t => {
-        t.setTarget(false, { releaseOthers: false });
-      });
-      game.user?.targets.clear();
-      for (const t of this.saveTargets.tokens) {
-        t.setTarget(true, { releaseOthers: false })
-        game.user?.targets.add(t)
-      }
-    }
-    // Run the base step here: returning the base method made it a separate state, firing RollFinished's hooks twice
-    return super.WorkflowState_RollFinished();
-  }
 }
 
 export class DummyWorkflow extends Workflow {
@@ -9489,7 +8705,7 @@ export class DummyWorkflow extends Workflow {
   }
 
   async performState(newState: WorkflowState) {
-    return super.performState(this.WorkflowState_Suspend);
+    return super.performState("midi-qol.Suspend");
   }
   async simulateSave(targets: Token.Implementation[]) {
     this.targets = new Set(targets);

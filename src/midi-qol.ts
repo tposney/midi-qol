@@ -409,6 +409,7 @@ function setupActivities() {
   installActivityPrototype();
   setupMidiActivityMixin();
   initUseRelaunch();
+  registerMidiSteps();
   setupAttackActivity();
   globalThis.MidiQOL.activityTypes["attack"] = GameSystemConfig.activityTypes.attack;
   setupDamageActivity();
@@ -1029,6 +1030,7 @@ import { setupHealActivity } from './module/activities/HealActivity.js';
 import { computeTargetsFromTemplates, requiresTargetConfirmation, resolveTargetConfirmation, selectTargetsFromTemplates, showItemInfo } from './module/activities/activityHelpers.js';
 import { MidiActivityMixin, setupActivityTitles, setupMidiActivityMixin } from './module/activities/MidiActivityMixin.js';
 import { initUseRelaunch } from './module/activities/useRelaunch.js';
+import { registerMidiSteps } from './module/workflowSteps/index.js';
 import { installActivitySchema } from './module/activities/activitySchema.js';
 import { installCardActions, registerCardAction } from './module/activities/cardActions.js';
 import { installUsageButtons, registerCardButtonRule } from './module/activities/usageButtons.js';
