@@ -159,11 +159,16 @@ Hooks: `midi-qol.requestStarted(request)`, `midi-qol.requestSettled(request, how
 
 ## Still socketlib
 
-`MidiQOL.socket()` and its handler names stay for modules that call them (`chooseReactions` among them). midi asks
-reactions, and a connected player's save through their roll dialog, with Foundry queries; when a GM answers from the
-player list, or the save is made without the player, that roll is still run on the GM's client through socketlib.
-Chat-card saves, Monk's TokenBar, Flash Rolls, Epic Rolls and midi's other GM actions keep their socketlib routes for
-now.
+`MidiQOL.socket()` and its handler names stay for modules that call them (`chooseReactions` among them). midi itself
+uses Foundry queries:
+- for reactions and a connected player's save through their roll dialog (the request core);
+- for its GM actions (effects, flags, moves, teleport, regions, undo, stats, combat round...) and the commands it sends
+  one user's client (cancel or remove a workflow, complete a use, apply effects, the player waits), through one
+  query, `midi-qol.call`, naming the handler.
+
+A player's own rolls that midi asks for still go through socketlib: the GM-side save roll, Active Defence's roll,
+concentration, `bonusCheck`, over-time saves. So do chat-card saves, Monk's TokenBar, Flash Rolls and Epic Rolls.
+These move to the request core next (`saveRequests`).
 
 ## Ports
 

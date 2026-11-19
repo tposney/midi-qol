@@ -1,6 +1,7 @@
 import { MODULE_ID, i18n, error } from "../../midi-qol.js";
+import { queryUser } from "../lib/midiQueries.js";
 import { completeActivityUse, fromActorUuid, getToken, isValidTarget, itemIsMagical, playerForActor } from "../utils.js";
-import { preferredActiveGM, socketlibSocket } from "../GMAction.js";
+import { preferredActiveGM, unTimedExecuteAsGM } from "../GMAction.js";
 import { V14RegionDocument, Activity } from "../../globals.js";
 import { lineOfEffectClear, withinAreaReach } from "../activities/activityHelpers.js";
 
@@ -311,11 +312,11 @@ export class MidiRegionActivityBehaviorType extends foundry.data.regionBehaviors
     if (asUser?.active && asUser.id === game.user?.id) {
       await MidiRegionActivityBehaviorType._executeTriggerActivity(triggerData);
     } else if (asUser?.active) {
-      await socketlibSocket.executeAsUser("midiRegionTriggerActivity", asUser.id, triggerData);
+      await queryUser(asUser, "midiRegionTriggerActivity", triggerData);
     } else if (game.user?.isGM) {
       await MidiRegionActivityBehaviorType._executeTriggerActivity(triggerData);
     } else {
-      await socketlibSocket.executeAsGM("midiRegionTriggerActivity", triggerData);
+      await unTimedExecuteAsGM("midiRegionTriggerActivity", triggerData);
     }
   }
 
@@ -479,7 +480,7 @@ async function moveRegion(region: V14RegionDocument, unit: { x: number, y: numbe
       return moved._source;
     });
     if (game.user?.isGM) await region.update({ shapes });
-    else await socketlibSocket.executeAsGM("setupRegion", { regionUuid: region.uuid, update: { shapes } });
+    else await unTimedExecuteAsGM("setupRegion", { regionUuid: region.uuid, update: { shapes } });
     // Let the tokens' region membership catch up, so each step's entries fire.
     if (i < steps) await new Promise(resolve => setTimeout(resolve, 250));
   }

@@ -7,7 +7,7 @@
  */
 
 import { MODULE_ID } from "../../midi-qol.js";
-import { socketlibSocket } from "../GMAction.js";
+import { queryEach, queryUser } from "./midiQueries.js";
 import { configSettings } from "../settings.js";
 
 /** midi's own kinds; other modules may use their own. */
@@ -114,12 +114,12 @@ function applyChange({ op, info }: { op: "add" | "update" | "remove", info: Wait
 
 function announce(op: "add" | "update" | "remove", info: WaitInfo) {
   applyChange({ op, info });
-  socketlibSocket?.executeForOtherGMs("playerWaitChanged", { op, info })?.catch?.(() => { });
+  queryEach(game.users?.filter(user => user.isGM && !user.isSelf) ?? [], "playerWaitChanged", { op, info });
   // A remove goes to every player, so none keeps a wait after the setting is turned off
   const everyone = op === "remove" || configSettings.playerWaitShowPlayers;
   const players = game.users?.filter(user => user.active && !user.isGM && user.id !== game.user?.id
-    && (everyone || user.id === info.userId)).map(user => user.id) ?? [];
-  if (players.length) socketlibSocket?.executeForUsers("playerWaitChanged", players, { op, info: redact(info) })?.catch?.(() => { });
+    && (everyone || user.id === info.userId)) ?? [];
+  queryEach(players, "playerWaitChanged", { op, info: redact(info) });
 }
 
 /** What a request sent to a player carries so the player's client can claim the wait (claimPlayerWait). */
@@ -217,7 +217,7 @@ export function trackPlayerWait<T>(spec: WaitSpec<T>, start: (ref: WaitRef | und
 function closePlayerRollDialogs(info: WaitInfo) {
   if (!info.actorUuid || !game.users?.get(info.userId)?.active) return;
   if (info.userId === game.user?.id) return _closePlayerRollDialogs({ actorUuid: info.actorUuid });
-  socketlibSocket?.executeAsUser("closePlayerRollDialogs", info.userId, { actorUuid: info.actorUuid })?.catch?.(() => { });
+  queryUser(game.users?.get(info.userId), "closePlayerRollDialogs", { actorUuid: info.actorUuid }).catch(() => { });
 }
 
 /** dnd5e's roll dialogs open on this client for the actor; with `requestClaim`, only the one a request opened (lib/requests.ts). */
@@ -241,7 +241,7 @@ export function _closePlayerRollDialogs({ actorUuid }: { actorUuid: string | nul
 export async function settlePlayerWait(id: string, choice: WaitChoice): Promise<boolean> {
   const info = knownWaits.get(id);
   if (localWaits.has(id) || !info) return _settlePlayerWait({ id, choice });
-  return socketlibSocket.executeAsUser("settlePlayerWait", info.holderId, { id, choice });
+  return queryUser(game.users?.get(info.holderId), "settlePlayerWait", { id, choice });
 }
 
 export async function _settlePlayerWait({ id, choice }: { id: string, choice: WaitChoice }): Promise<boolean> {
@@ -255,7 +255,7 @@ export async function _settlePlayerWait({ id, choice }: { id: string, choice: Wa
 export async function claimPlayerWait(ref: WaitRef | undefined): Promise<boolean> {
   if (!ref) return true;
   if (ref.holderId === game.user?.id) return _claimPlayerWait({ id: ref.id });
-  return socketlibSocket.executeAsUser("claimPlayerWait", ref.holderId, { id: ref.id });
+  return queryUser(game.users?.get(ref.holderId), "claimPlayerWait", { id: ref.id });
 }
 
 export function _claimPlayerWait({ id }: { id: string }): boolean {
@@ -305,7 +305,7 @@ export function _announcePlayerWaits() {
 export function setupPlayerWaits() {
   Hooks.on("userConnected", onUserConnected);
   Hooks.once("ready", () => {
-    socketlibSocket?.executeForOthers("announcePlayerWaits")?.catch?.(() => { });
+    queryEach(game.users?.filter(user => !user.isSelf) ?? [], "announcePlayerWaits");
   });
 }
 

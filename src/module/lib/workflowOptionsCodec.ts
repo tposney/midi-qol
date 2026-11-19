@@ -111,7 +111,7 @@ export function cardWorkflowOptions<T>(options: T): T {
 }
 
 /** Applies `fn` to every `workflowOptions` object in a socket payload, copying only the path to what changed. */
-function mapPayload(value: unknown, fn: (options: object) => object, depth = 0): unknown {
+export function mapPayload(value: unknown, fn: (options: object) => object, depth = 0): unknown {
   if (depth > 6) return value;
   if (Array.isArray(value)) {
     const mapped = value.map(v => mapPayload(v, fn, depth + 1));

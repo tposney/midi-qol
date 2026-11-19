@@ -1,4 +1,5 @@
 import { getDistance } from "../services/distance/service.js";
+import { queryUser } from "../lib/midiQueries.js";
 import { registerCardAction, registerCardActions } from "./cardActions.js";
 import { cardOtherConsumption } from "../lib/cardState.js";
 import { heldKeys } from "../lib/rollKeys.js";
@@ -166,7 +167,7 @@ export let MidiActivityMixin = Base => {
         return;
       }
       if (message.author?.active) {
-        const result = await socketlibSocket.executeAsUser(actionToCall, message.author.id, { workflowId: message.uuid, activityUuid: this.uuid, itemCardUuid: message.uuid });
+        const result = await queryUser(message.author, actionToCall, { workflowId: message.uuid, activityUuid: this.uuid, itemCardUuid: message.uuid });
         if (typeof result === "string") ui.notifications?.warn(result);
       } else {
         await Workflow.removeItemCardButtons(message.uuid, { removeConfirmButtons: true });
@@ -2214,7 +2215,7 @@ async function cardConfirmDamageRollCancel(this: Activity, event: PointerEvent, 
   */
   const user = game.users?.get(authorId);
   if (user?.active) {
-    await socketlibSocket.executeAsUser("cancelWorkflow", authorId, { workflowId, itemCardUuid: message.uuid }).then(result => {
+    await queryUser(game.users?.get(authorId ?? ""), "cancelWorkflow", { workflowId, itemCardUuid: message.uuid }).then(result => {
       if (typeof result === "string") ui.notifications?.warn(result);
     });
   } else {
@@ -2260,7 +2261,7 @@ async function cardApplyEffects(this: Activity, event: PointerEvent, target: HTM
       ui.notifications?.warn(i18n("midi-qol.noTargets"));
       return;
     }
-    await socketlibSocket.executeAsUser("applyEffects", authorId, {
+    await queryUser(game.users?.get(authorId ?? ""), "applyEffects", {
       workflowId: message.uuid,
       targets: Array.from(game.user?.targets).map(t => t.document.uuid)
     });

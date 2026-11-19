@@ -1,4 +1,5 @@
 
+import { queryUser } from "./lib/midiQueries.js";
 import { debugEnabled, error, log, warn, busyWait, MODULE_ID } from "../midi-qol.js";
 import { socketlibSocket, unTimedExecuteAsGM } from "./GMAction.js";
 import { configSettings } from "./settings.js";
@@ -286,7 +287,7 @@ export async function undoTillWorkflow(workflowId: string, undoTarget: boolean, 
       const undoData = undoDataQueue.shift();
       if (undoData) {
         // This should be unneeded as removing the chat card should trigger removal of the workflow
-        socketlibSocket.executeAsUser("removeWorkflow", undoData.userId, undoData.id);
+        queryUser(game.users?.get(undoData.userId ?? ""), "removeWorkflow", undoData.id).catch(err => console.warn("midi-qol | removeWorkflow", err));
       }
     }
   } finally {

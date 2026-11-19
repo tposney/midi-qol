@@ -1,4 +1,5 @@
 import { checkRange, type RangeCheckResult } from "./services/range/service.js";
+import { queryUser } from "./lib/midiQueries.js";
 import { computeDistance } from "./services/distance/provider.js";
 import { getDistance } from "./services/distance/service.js";
 import { computeFlankedStatus, computeFlankingStatus } from "./services/flanking/service.js";
@@ -2570,7 +2571,7 @@ export async function completeActivityUse(activityRef: Activity | string | undef
       message
     }
     if (asUser)
-      return restoreWorkflowTokenSets(await socketlibSocket.executeAsUser("completeActivityUse", asUser.id, data));
+      return restoreWorkflowTokenSets(await queryUser(asUser, "completeActivityUse", data));
     else
       return restoreWorkflowTokenSets(await timedAwaitExecuteAsGM("completeActivityUse", data));
   }

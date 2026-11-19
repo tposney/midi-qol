@@ -1,4 +1,5 @@
 import { afterDamageApplied, applyCalculatedDamage, applyDamageWithOptions } from "./damage/application.js";
+import { type MidiQueryHandler, queryUser, registerMidiQuery } from "./lib/midiQueries.js";
 import { ALL_DAMAGE_KEY, checkRule, configSettings } from "./settings.js";
 import { _closePlayerRollDialogs, playerWaitHandlers, rollDialogsFor } from "./lib/playerWaits.js";
 import { DialogCountdown, dialogCountdownOptions } from "./lib/dialogCountdown.js";
@@ -23,70 +24,72 @@ let traitList = { di: "", dr: "", dv: "", dm: "", da: "" };
 
 export let setupSocket = () => {
   socketlibSocket = withWorkflowOptionsCodec(globalThis.socketlib.registerModule(MODULE_ID));
-  socketlibSocket.register("_gmSetFlag", _gmSetFlag);
-  socketlibSocket.register("_gmUnsetFlag", _gmUnsetFlag);
-  socketlibSocket.register("addConvenientEffect", addConvenientEffect);
-  socketlibSocket.register("addDependent", _addDependent);
-  socketlibSocket.register("applyEffects", _applyEffects);
-  socketlibSocket.register("bonusCheck", _bonusCheck);
-  socketlibSocket.register("chooseReactions", localDoReactions);
+  // Each also a Foundry query (M5): midi's own calls use the queries, other modules' MidiQOL.socket() calls socketlib
+  const registerSocketAndQuery = (name: string, handler: MidiQueryHandler) => { socketlibSocket.register(name, handler); registerMidiQuery(name, handler); };
+  registerSocketAndQuery("_gmSetFlag", _gmSetFlag);
+  registerSocketAndQuery("_gmUnsetFlag", _gmUnsetFlag);
+  registerSocketAndQuery("addConvenientEffect", addConvenientEffect);
+  registerSocketAndQuery("addDependent", _addDependent);
+  registerSocketAndQuery("applyEffects", _applyEffects);
+  registerSocketAndQuery("bonusCheck", _bonusCheck);
+  registerSocketAndQuery("chooseReactions", localDoReactions);
   // The reacting client's answer to a reaction request (utils doReactions): the reaction dialog, its countdown the requester's
   registerRequestHandler(REACTIONS_REQUEST, (data: Parameters<typeof localDoReactions>[0], incoming: IncomingRequest) =>
     localDoReactions({ ...data, options: { ...data.options, incoming } }));
   // A player's save asked through the request core (Workflow#askPlayerSave): their roll dialog
   registerRequestHandler(SAVE_REQUEST, (data: Parameters<typeof rollAbility>[0], incoming: IncomingRequest) => rollAbility(data, incoming));
-  for (const [name, handler] of Object.entries(playerWaitHandlers)) socketlibSocket.register(name, handler);
-  socketlibSocket.register("completeItemUse", _completeItemUse);
-  socketlibSocket.register("completeItemUseV2", _completeItemUse);
-  socketlibSocket.register("completeActivityUse", _completeActivityUse);
-  socketlibSocket.register("confirmDamageRollComplete", confirmDamageRollComplete);
-  socketlibSocket.register("confirmDamageRollCompleteHit", confirmDamageRollCompleteHit);
-  socketlibSocket.register("confirmDamageRollCompleteMiss", confirmDamageRollCompleteMiss);
-  socketlibSocket.register("cancelWorkflow", cancelWorkflow);
-  socketlibSocket.register("createActor", createActor);
-  socketlibSocket.register("createChatMessage", _createChatMessage);
-  socketlibSocket.register("createEffects", createEffects);
-  socketlibSocket.register("createReverseDamageCard", createReverseDamageCard);
-  socketlibSocket.register("D20Roll", _D20Roll);
-  socketlibSocket.register("deleteEffects", deleteEffects);
-  socketlibSocket.register("deleteEffectsByUuid", deleteEffectsByUuid);
-  socketlibSocket.register("deleteItemEffects", deleteItemEffects);
-  socketlibSocket.register("deleteToken", deleteToken);
-  socketlibSocket.register("toggleTokenHidden", toggleTokenHidden);
-  socketlibSocket.register("gmOverTimeEffect", _gmOverTimeEffect);
-  socketlibSocket.register("localActivityOverTimeEffect", _localActivityOverTimeEffect);
-  socketlibSocket.register("monksTokenBarSaves", monksTokenBarSaves);
-  socketlibSocket.register("flashTokenBarSaves", flashTokenBarSaves);
-  socketlibSocket.register("moveToken", _moveToken);
-  socketlibSocket.register("moveTokenAwayFromPoint", _moveTokenAwayFromPoint);
-  socketlibSocket.register("teleportToken", _teleportToken);
-  socketlibSocket.register("queueUndoData", queueUndoData);
-  socketlibSocket.register("queueUndoDataDirect", _queueUndoDataDirect);
-  socketlibSocket.register("removeEffect", _removeEffect);
-  socketlibSocket.register("removeCEEffect", _removeCEEffect);
-  socketlibSocket.register("removeEffects", removeEffects);
-  socketlibSocket.register("removeEffectUuids", removeEffectUuids);
-  socketlibSocket.register("removeMostRecentWorkflow", _removeMostRecentWorkflow);
-  socketlibSocket.register("removeStatsForActorId", removeActorStats);
-  socketlibSocket.register("removeWorkflow", _removeWorkflow);
-  socketlibSocket.register("rollAbility", rollAbility);
-  socketlibSocket.register("rollAbilityV2", rollAbility);
-  socketlibSocket.register("rollConcentration", rollConcentration);
-  socketlibSocket.register("startUndoWorkflow", startUndoWorkflow);
-  socketlibSocket.register("undoMostRecentWorkflow", _undoMostRecentWorkflow);
-  socketlibSocket.register("undoTillWorkflow", undoTillWorkflow);
-  socketlibSocket.register("updateActor", updateActor);
-  socketlibSocket.register("updateEffects", updateEffects);
-  socketlibSocket.register("updateItems", updateItems);
-  socketlibSocket.register("recordStats", GMrecordStats)
-  socketlibSocket.register("saveAllStats", GMsaveAllStats)
-  socketlibSocket.register("addUndoChatCards", addUndoChatCards);
-  socketlibSocket.register("removeActionBonusReaction", removeActionBonusReaction);
-  socketlibSocket.register("rollActionSave", rollActionSave);
-  socketlibSocket.register("toggleStatusEffect", _toggleStatusEffect);
-  socketlibSocket.register("midiRegionTriggerActivity", _midiRegionTriggerActivity);
-  socketlibSocket.register("setupRegion", _setupRegion);
-  socketlibSocket.register("advanceCombatRound", _advanceCombatRound);
+  for (const [name, handler] of Object.entries(playerWaitHandlers)) registerSocketAndQuery(name, handler);
+  registerSocketAndQuery("completeItemUse", _completeItemUse);
+  registerSocketAndQuery("completeItemUseV2", _completeItemUse);
+  registerSocketAndQuery("completeActivityUse", _completeActivityUse);
+  registerSocketAndQuery("confirmDamageRollComplete", confirmDamageRollComplete);
+  registerSocketAndQuery("confirmDamageRollCompleteHit", confirmDamageRollCompleteHit);
+  registerSocketAndQuery("confirmDamageRollCompleteMiss", confirmDamageRollCompleteMiss);
+  registerSocketAndQuery("cancelWorkflow", cancelWorkflow);
+  registerSocketAndQuery("createActor", createActor);
+  registerSocketAndQuery("createChatMessage", _createChatMessage);
+  registerSocketAndQuery("createEffects", createEffects);
+  registerSocketAndQuery("createReverseDamageCard", createReverseDamageCard);
+  registerSocketAndQuery("D20Roll", _D20Roll);
+  registerSocketAndQuery("deleteEffects", deleteEffects);
+  registerSocketAndQuery("deleteEffectsByUuid", deleteEffectsByUuid);
+  registerSocketAndQuery("deleteItemEffects", deleteItemEffects);
+  registerSocketAndQuery("deleteToken", deleteToken);
+  registerSocketAndQuery("toggleTokenHidden", toggleTokenHidden);
+  registerSocketAndQuery("gmOverTimeEffect", _gmOverTimeEffect);
+  registerSocketAndQuery("localActivityOverTimeEffect", _localActivityOverTimeEffect);
+  registerSocketAndQuery("monksTokenBarSaves", monksTokenBarSaves);
+  registerSocketAndQuery("flashTokenBarSaves", flashTokenBarSaves);
+  registerSocketAndQuery("moveToken", _moveToken);
+  registerSocketAndQuery("moveTokenAwayFromPoint", _moveTokenAwayFromPoint);
+  registerSocketAndQuery("teleportToken", _teleportToken);
+  registerSocketAndQuery("queueUndoData", queueUndoData);
+  registerSocketAndQuery("queueUndoDataDirect", _queueUndoDataDirect);
+  registerSocketAndQuery("removeEffect", _removeEffect);
+  registerSocketAndQuery("removeCEEffect", _removeCEEffect);
+  registerSocketAndQuery("removeEffects", removeEffects);
+  registerSocketAndQuery("removeEffectUuids", removeEffectUuids);
+  registerSocketAndQuery("removeMostRecentWorkflow", _removeMostRecentWorkflow);
+  registerSocketAndQuery("removeStatsForActorId", removeActorStats);
+  registerSocketAndQuery("removeWorkflow", _removeWorkflow);
+  registerSocketAndQuery("rollAbility", rollAbility);
+  registerSocketAndQuery("rollAbilityV2", rollAbility);
+  registerSocketAndQuery("rollConcentration", rollConcentration);
+  registerSocketAndQuery("startUndoWorkflow", startUndoWorkflow);
+  registerSocketAndQuery("undoMostRecentWorkflow", _undoMostRecentWorkflow);
+  registerSocketAndQuery("undoTillWorkflow", undoTillWorkflow);
+  registerSocketAndQuery("updateActor", updateActor);
+  registerSocketAndQuery("updateEffects", updateEffects);
+  registerSocketAndQuery("updateItems", updateItems);
+  registerSocketAndQuery("recordStats", GMrecordStats)
+  registerSocketAndQuery("saveAllStats", GMsaveAllStats)
+  registerSocketAndQuery("addUndoChatCards", addUndoChatCards);
+  registerSocketAndQuery("removeActionBonusReaction", removeActionBonusReaction);
+  registerSocketAndQuery("rollActionSave", rollActionSave);
+  registerSocketAndQuery("toggleStatusEffect", _toggleStatusEffect);
+  registerSocketAndQuery("midiRegionTriggerActivity", _midiRegionTriggerActivity);
+  registerSocketAndQuery("setupRegion", _setupRegion);
+  registerSocketAndQuery("advanceCombatRound", _advanceCombatRound);
 }
 async function _removeWorkflow(workflowId: string) {
   return Workflow.removeWorkflow(workflowId);
@@ -344,8 +347,8 @@ export function preferredActiveGM() {
   return game.users?.activeGM ?? null;
 }
 
-export async function unTimedExecuteAsGM(toDo: string, ...args) {
-  if (!socketlibSocket) return undefined;
+/** Run a GM action on a GM's client (a Foundry query, M5): the preferred GM on the caller's scene, the caller if a GM there, a GM there, the preferred GM, else the active GM */
+export async function unTimedExecuteAsGM(toDo: string, ...args: unknown[]) {
   const myScene = game.user?.viewedScene;
   const preferredGMId = configSettings.preferredGM ?? "";
   let preferredGM = game.users?.get(preferredGMId);
@@ -357,9 +360,11 @@ export async function unTimedExecuteAsGM(toDo: string, ...args) {
   if (preferredGM?.viewedScene === myScene) gmOnScene = [preferredGM];
   else if (game.user?.isGM && game.user?.viewedScene === myScene) gmOnScene = [game.user];
   else gmOnScene = game.users?.filter(u => u.active && u.isGM && u.viewedScene === myScene);
-  if (gmOnScene && gmOnScene.length > 0) return socketlibSocket.executeAsUser(toDo, gmOnScene[0].id, ...args);
-  if (preferredGM) return socketlibSocket.executeAsUser(toDo, preferredGM.id, ...args);
-  return socketlibSocket.executeAsGM(toDo, ...args);
+  if (gmOnScene && gmOnScene.length > 0) return queryUser(gmOnScene[0], toDo, ...args);
+  if (preferredGM) return queryUser(preferredGM, toDo, ...args);
+  const gm = game.users?.activeGM;
+  if (!gm) throw new Error(`midi-qol | ${toDo}: no GM is connected`);
+  return queryUser(gm, toDo, ...args);
 }
 
 export async function timedAwaitExecuteAsGM(toDo: string, data: any) {

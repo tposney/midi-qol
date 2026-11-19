@@ -19,7 +19,7 @@ import { Activity, ActivityUseConfiguration, RollDialogConfig, RollMessageConfig
 import { Workflow } from "./Workflow.js";
 import type { Dnd5eChatMessage } from "../globals.js";
 import { activityPolicy } from "./activities/activityPrototype.js";
-import { preferredActiveGM, socketlibSocket } from "./GMAction.js";
+import { preferredActiveGM, unTimedExecuteAsGM } from "./GMAction.js";
 import { MidiDependentsRegistry, MidiDependentDocumentMixin, actorEmbeddedByPath } from "./lib/MidiDependentsRegistry.js";
 import { ADVANTAGE, DISADVANTAGE, NORMAL, decideRollDialog, heldKeys, keyMode } from "./lib/rollKeys.js";
 import { RollModifierTracker, computeAdvantageFlags, computeRollModifiers, applyRollModifiers, RollModifierFlags, AdvantageFlags, applyTrackerAdvantage } from "./lib/RollModifierTracker.js";
@@ -960,7 +960,7 @@ async function combatPreUpdate(this: Combat.Implementation, wrapped, changed: Co
   if (!checkMechanic("autoRerollInitiative") || !this.combatants.size) return allowed;
   if (typeof changed.round !== "number" || changed.round <= (this.current.round ?? 0)) return allowed;
   if (!game.user?.isGM) {
-    socketlibSocket.executeAsGM("advanceCombatRound", { combatUuid: this.uuid, changed: { round: changed.round, turn: changed.turn },
+    unTimedExecuteAsGM("advanceCombatRound", { combatUuid: this.uuid, changed: { round: changed.round, turn: changed.turn },
       options: { direction: options.direction, worldTime: options.worldTime } });
     return false;
   }

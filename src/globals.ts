@@ -711,6 +711,8 @@ declare global {
       "midi-qol.request": (data: { type: string, id: string, holderId: string, remaining: number, data: object }) => Promise<unknown>;
       /** lib/requests.ts: pause/resume/claim to the requester, settled/paused/resumed to the asked client */
       "midi-qol.requestEvent": (data: { to: "holder" | "asked", id: string, event: string, how?: string, remaining?: number }) => { ok: boolean, remaining?: number };
+      /** lib/midiQueries.ts: one of midi's GM actions or commands to a user (a socketlib handler's name), in place of socketlib */
+      "midi-qol.call": (data: { name: string, args: unknown[], userId?: string }) => Promise<unknown>;
     }
   }
 
