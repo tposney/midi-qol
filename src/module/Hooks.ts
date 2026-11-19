@@ -1,4 +1,5 @@
 import { registerDamageCalculationStep, runDamageCalculation } from "./steps/damageCalculation.js";
+import { deprecation } from "./lib/compatLine.js";
 import { afterDamageApplied, consumeDamageApplication, runAfterDamageApplied, stampDamageApplication } from "./damage/application.js";
 import { applyDamageModifierStage } from "./services/damageModifiers/service.js";
 import { warn, error, debug, i18n, debugEnabled, overTimeEffectsToDelete, savedOverTimeEffectsToDelete, log, gameStats, GameSystemConfig, MODULE_ID, getStaticID, MIDI_IMPLYING_STATUSES } from "../midi-qol.js";
@@ -1057,12 +1058,13 @@ function computeSourceIgnores({ sourceActor, damages, options }: DamageCalcParam
     // Already ignored wholesale
     if (options.ignore?.[category] === true) continue;
 
+    // Gone in 14.9.0 (the compatibility line): the old source traits ignore nothing
+    if (traitCode in DEPRECATED_SOURCE_TRAITS && !deprecation(`midi-qol | system.traits.${traitCode}.value is deprecated: use dnd5e's ${DEPRECATED_SOURCE_TRAITS[traitCode]} effect change (DAE migrates it)`,
+      { since: "14.7.0", until: "14.9.0", once: true })) continue;
+
     if (!options.ignore?.[category]) {
       foundry.utils.setProperty(options, `ignore.${category}`, new Set());
     }
-
-    if (traitCode in DEPRECATED_SOURCE_TRAITS) foundry.utils.logCompatibilityWarning(`midi-qol | system.traits.${traitCode}.value is deprecated: use dnd5e's ${DEPRECATED_SOURCE_TRAITS[traitCode]} effect change (DAE migrates it)`,
-      { since: "14.7.0", until: "14.9.0", once: true });
 
     for (const dt of Object.keys(GameSystemConfig.damageTypes)) {
       if (!trait.value.has(dt) && !trait.value.has("ALL") && !trait.all) continue;

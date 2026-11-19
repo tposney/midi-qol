@@ -493,6 +493,12 @@ The hook `midi-qol.workflowRebuilt` (workflow, card, `{ readOnly }`) fires when 
 
 ## Deprecated and removed
 
+midi-next keeps midi 14.x's deprecations with their 14.x dates. It matches one 14.x release's state, its
+compatibility line (`MidiQOL.compatibilityLine()`, now `"14.7.0"`): a deprecation whose "Until" is a later
+release warns; one whose "Until" the line has reached is gone, as in that release (a field reads `undefined`, a
+function throws an error naming its replacement). From 14.8.0 token sets give TokenDocuments whatever
+`setTokenDocumentSets` says; from 14.9.0 a TokenDocument has no `document`.
+
 Still present, deprecated:
 
 | Field | Use | Until |

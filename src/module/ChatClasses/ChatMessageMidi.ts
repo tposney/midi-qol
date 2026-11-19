@@ -1,4 +1,5 @@
 import type { TokenDocumentSet } from "../lib/tokenDocumentSet.js";
+import { deprecation } from "../lib/compatLine.js";
 import { MESSAGE_TYPES, MODULE_ID, MQDamageRollTypes, debugEnabled, error, i18n, log } from "../../midi-qol.js";
 import { TroubleShooter } from "../apps/TroubleShooter.js";
 import { Dnd5eSystem } from "../../globals.js";
@@ -60,21 +61,22 @@ const LEGACY_CARD_FLAGS: Record<string, [string, (workflow: Workflow) => unknown
 // A workflow built for a getter must not read the flags it is building
 let readingLegacyFlag = false;
 
-const warnGMOnly = () => foundry.utils.logCompatibilityWarning("midi-qol | a usage card's flags.midi-qol.GMOnlyAttackRoll is deprecated: the attack is shown to the GM only while MidiQOL.Workflow.getWorkflow(card.uuid) checks hits.",
+const warnGMOnly = () => deprecation("midi-qol | a usage card's flags.midi-qol.GMOnlyAttackRoll is deprecated: the attack is shown to the GM only while MidiQOL.Workflow.getWorkflow(card.uuid) checks hits.",
   { since: "14.6.9", until: "14.8.0", once: true });
 
 /** The old keys as getters reading the card's workflow (Workflow.cardView), each read warning that it is deprecated */
 function defineLegacyCardFlags(flags: Record<string, unknown>, cardUuid: string | null) {
   for (const [key, [name, read]] of Object.entries(LEGACY_CARD_FLAGS)) {
     if (Object.prototype.hasOwnProperty.call(flags, key)) continue;
-    const warn = () => foundry.utils.logCompatibilityWarning(`midi-qol | a usage card's flags.midi-qol.${key} is deprecated: use MidiQOL.Workflow.getWorkflow(card.uuid).${name} (read-only for users other than the card's author).`,
+    const warn = () => deprecation(`midi-qol | a usage card's flags.midi-qol.${key} is deprecated: use MidiQOL.Workflow.getWorkflow(card.uuid).${name} (read-only for users other than the card's author).`,
       { since: "14.6.9", until: "14.8.0", once: true });
     Object.defineProperty(flags, key, {
       configurable: true, enumerable: false,
       get() {
         // Read while building the workflow for another read: not a reader's
         if (readingLegacyFlag) return undefined;
-        warn();
+        // Gone in 14.8.0 (the compatibility line): the old flag reads as unset
+        if (!warn()) return undefined;
         readingLegacyFlag = true;
         try {
           const workflow = cardUuid ? Workflow.cardView(cardUuid) : undefined;
@@ -193,7 +195,7 @@ export function defineChatMessageMidiClass(baseClass: ChatMessage.Implementation
         // Read by crlngn-ui to hide the attack from players until the hits are checked
         if (!Object.prototype.hasOwnProperty.call(flags, "GMOnlyAttackRoll"))
           Object.defineProperty(flags, "GMOnlyAttackRoll", { configurable: true, enumerable: false, get: () => {
-            warnGMOnly();
+            if (!warnGMOnly()) return undefined;
             return cardHitsPending(this, configSettings.autoCheckHit);
           }, set: (value: unknown) => {
             warnGMOnly();

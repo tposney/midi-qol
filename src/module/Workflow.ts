@@ -1,4 +1,5 @@
 import { allSteps, getStep, REACTION_STEPS, stepForMethod, type StepContext } from "./steps/steps.js";
+import { deprecation, removedError } from "./lib/compatLine.js";
 import { assembleSteps, stepAfterInFlow, type AssembledSteps, type StepChange, type StepChangeInput } from "./steps/assembly.js";
 import { missingSteps, reportAssembly, useStepChanges } from "./steps/api.js";
 import { flowVariant, getFlow } from "./steps/flows.js";
@@ -133,7 +134,7 @@ function addedByOther(roll: Roll, workflowId: string): boolean {
 class WorkflowsCopy extends Map<string, Workflow> {
   #filled = false;
   #warn() {
-    if (this.#filled) foundry.utils.logCompatibilityWarning("midi-qol | Workflow.workflows is a copy: changing it changes nothing. Use MidiQOL.Workflow.addWorkflow / removeWorkflow.", { since: "14.6.9", until: "14.8.0", once: true });
+    if (this.#filled) deprecation("midi-qol | Workflow.workflows is a copy: changing it changes nothing. Use MidiQOL.Workflow.addWorkflow / removeWorkflow.", { since: "14.6.9", until: "14.8.0", once: true });
   }
   filled(): this { this.#filled = true; return this; }
   override set(key: string, value: Workflow): this { this.#warn(); return super.set(key, value); }
@@ -624,7 +625,7 @@ export class Workflow {
     const workflow = Workflow.findWorkflow(id);
     if (workflow || !id) return workflow;
     if (/\.Activity\.[^.]+$/.test(id)) {
-      foundry.utils.logCompatibilityWarning("midi-qol | Workflow.getWorkflow is given a card's uuid; an activity's finds nothing: use MidiQOL.Workflow.workflowFor(activity) during a use, MidiQOL.Workflow.getWorkflow(cardUuid) once its card exists.", { since: "14.6.9", until: "14.8.0", once: true });
+      deprecation("midi-qol | Workflow.getWorkflow is given a card's uuid; an activity's finds nothing: use MidiQOL.Workflow.workflowFor(activity) during a use, MidiQOL.Workflow.getWorkflow(cardUuid) once its card exists.", { since: "14.6.9", until: "14.8.0", once: true });
       return undefined;
     }
     const card = fromUuidSync(id);
@@ -724,7 +725,8 @@ export class Workflow {
 
   /** @deprecated workflows are not found by activity uuid: Workflow.workflowFor(activity) during a use, getWorkflow(cardUuid) after */
   static getWorkflowByActivityUuid(_activityUuid?: string): Workflow | undefined {
-    foundry.utils.logCompatibilityWarning("midi-qol | Workflow.getWorkflowByActivityUuid is deprecated and finds nothing: use MidiQOL.Workflow.workflowFor(activity) during a use, MidiQOL.Workflow.getWorkflow(cardUuid) once its card exists.", { since: "14.6.9", until: "14.8.0", once: true });
+    if (!deprecation("midi-qol | Workflow.getWorkflowByActivityUuid is deprecated and finds nothing: use MidiQOL.Workflow.workflowFor(activity) during a use, MidiQOL.Workflow.getWorkflow(cardUuid) once its card exists.", { since: "14.6.9", until: "14.8.0", once: true }))
+      throw removedError("Workflow.getWorkflowByActivityUuid", "14.8.0", "use MidiQOL.Workflow.workflowFor(activity) during a use, MidiQOL.Workflow.getWorkflow(cardUuid) after");
     return undefined;
   }
   static deleteWorkflow(id: string | null) {
@@ -1559,11 +1561,11 @@ export class Workflow {
 
   /** @deprecated since 14.6.9: has no effect (use workflowOptions.autoRollDamage, or return false from preDamageRollConfig) */
   get noAutoDamage(): undefined {
-    foundry.utils.logCompatibilityWarning("midi-qol | Workflow#noAutoDamage is deprecated and has no effect: set workflowOptions.autoRollDamage to \"none\", or return false from a preDamageRollConfig macro.", { since: "14.6.9", until: "14.8.0", once: true });
+    deprecation("midi-qol | Workflow#noAutoDamage is deprecated and has no effect: set workflowOptions.autoRollDamage to \"none\", or return false from a preDamageRollConfig macro.", { since: "14.6.9", until: "14.8.0", once: true });
     return undefined;
   }
   set noAutoDamage(_value: boolean | undefined) {
-    foundry.utils.logCompatibilityWarning("midi-qol | Workflow#noAutoDamage is deprecated and has no effect: set workflowOptions.autoRollDamage to \"none\", or return false from a preDamageRollConfig macro.", { since: "14.6.9", until: "14.8.0", once: true });
+    deprecation("midi-qol | Workflow#noAutoDamage is deprecated and has no effect: set workflowOptions.autoRollDamage to \"none\", or return false from a preDamageRollConfig macro.", { since: "14.6.9", until: "14.8.0", once: true });
   }
 
   #consumptionRefunded = false;
@@ -1680,12 +1682,12 @@ export class Workflow {
   }
 
   /** @deprecated since 14.6.9: has no effect (optional rules follow the Optional rules setting) */
-  get noOptionalRules(): boolean {
-    foundry.utils.logCompatibilityWarning("midi-qol | Workflow#noOptionalRules is deprecated and has no effect: optional rules follow the Optional rules setting.", { since: "14.6.9", until: "14.8.0", once: true });
+  get noOptionalRules(): boolean | undefined {
+    if (!deprecation("midi-qol | Workflow#noOptionalRules is deprecated and has no effect: optional rules follow the Optional rules setting.", { since: "14.6.9", until: "14.8.0", once: true })) return undefined;
     return !configSettings.optionalRulesEnabled;
   }
-  set noOptionalRules(_value: boolean) {
-    foundry.utils.logCompatibilityWarning("midi-qol | Workflow#noOptionalRules is deprecated and has no effect: optional rules follow the Optional rules setting.", { since: "14.6.9", until: "14.8.0", once: true });
+  set noOptionalRules(_value: boolean | undefined) {
+    deprecation("midi-qol | Workflow#noOptionalRules is deprecated and has no effect: optional rules follow the Optional rules setting.", { since: "14.6.9", until: "14.8.0", once: true });
   }
   undoData: UndoData | undefined; // Way too big to store. Undos are blanked on reload
 
@@ -2349,7 +2351,8 @@ export class Workflow {
 
   /** @deprecated since 14.6.9: use resume(event) */
   public async unSuspend(context: WorkflowContext = {}) {
-    foundry.utils.logCompatibilityWarning("Workflow#unSuspend is deprecated: use Workflow#resume(event), event one of attackRolled, damageRolled, noDamage, utilityRolled.", { since: "14.6.9", until: "14.8.0" });
+    if (!deprecation("Workflow#unSuspend is deprecated: use Workflow#resume(event), event one of attackRolled, damageRolled, noDamage, utilityRolled.", { since: "14.6.9", until: "14.8.0" }))
+      throw removedError("Workflow#unSuspend", "14.8.0", "use Workflow#resume(event)");
     const event: WorkflowEvent | undefined = context.attackRoll ? "attackRolled" : context.damageRoll || context.otherDamageRoll ? "damageRolled"
       : context.noDamage ? "noDamage" : context.utilityRolls ? "utilityRolled" : undefined;
     return this.resume(event);
@@ -2773,14 +2776,15 @@ export class Workflow {
   }
 
   // Never read by midi or any known module: kept for macros, worked out when asked. Remove in 14.8.0.
-  static #deprecatedField(name: string) {
-    foundry.utils.logCompatibilityWarning(`midi-qol | workflow.${name} is deprecated and will be removed in 14.8.0`, { since: "14.6.9", until: "14.8.0", once: true });
+  /** Whether a deprecated field is still served (warning) or, on a line at or past 14.8.0, gone */
+  static #deprecatedField(name: string): boolean {
+    return deprecation(`midi-qol | workflow.${name} is deprecated and will be removed in 14.8.0`, { since: "14.6.9", until: "14.8.0", once: true });
   }
-  get healingAdjustedDamageTotal() { Workflow.#deprecatedField("healingAdjustedDamageTotal"); return sumRolls(this.damageRolls, "negativeIgnoreTemp"); }
-  get healingAdjustedBonusDamageTotal() { Workflow.#deprecatedField("healingAdjustedBonusDamageTotal"); return sumRolls(this.bonusDamageRolls ?? [], "negativeIgnoreTemp"); }
-  get healingAdjustedOtherDamageTotal() { Workflow.#deprecatedField("healingAdjustedOtherDamageTotal"); return sumRolls(this.otherDamageRolls ?? [], "negativeIgnoreTemp"); }
-  get saveTargetsDisplayed() { Workflow.#deprecatedField("saveTargetsDisplayed"); return !!this.saveDisplayData?.length; }
-  get allOtherEffectTargets() { Workflow.#deprecatedField("allOtherEffectTargets"); return new TokenDocumentSet(this.targets); }
+  get healingAdjustedDamageTotal() { return Workflow.#deprecatedField("healingAdjustedDamageTotal") ? sumRolls(this.damageRolls, "negativeIgnoreTemp") : undefined; }
+  get healingAdjustedBonusDamageTotal() { return Workflow.#deprecatedField("healingAdjustedBonusDamageTotal") ? sumRolls(this.bonusDamageRolls ?? [], "negativeIgnoreTemp") : undefined; }
+  get healingAdjustedOtherDamageTotal() { return Workflow.#deprecatedField("healingAdjustedOtherDamageTotal") ? sumRolls(this.otherDamageRolls ?? [], "negativeIgnoreTemp") : undefined; }
+  get saveTargetsDisplayed() { return Workflow.#deprecatedField("saveTargetsDisplayed") ? !!this.saveDisplayData?.length : undefined; }
+  get allOtherEffectTargets() { return Workflow.#deprecatedField("allOtherEffectTargets") ? new TokenDocumentSet(this.targets) : undefined; }
 
   /** The ammunition as it was when its last piece was spent and deleted (on the card); cards before 14.6.9 kept a flag */
   get spentAmmunitionData(): Item.CreateData | undefined {
@@ -8509,7 +8513,7 @@ export class DamageOnlyWorkflow extends Workflow {
   static flowId = "midi-qol.damageOnly";
   /** @deprecated use itemCardUuid */
   get itemCard(): ChatMessage.Implementation | undefined {
-    foundry.utils.logCompatibilityWarning("midi-qol | DamageOnlyWorkflow#itemCard is deprecated and will be removed in 14.8.0: use itemCardUuid.", { since: "14.6.9", until: "14.8.0", once: true });
+    if (!deprecation("midi-qol | DamageOnlyWorkflow#itemCard is deprecated and will be removed in 14.8.0: use itemCardUuid.", { since: "14.6.9", until: "14.8.0", once: true })) return undefined;
     return this.itemCardUuid ? fromUuidSync(this.itemCardUuid) as ChatMessage.Implementation | undefined : undefined;
   }
   ready!: Promise<void>;

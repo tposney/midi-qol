@@ -1,4 +1,5 @@
 import { computeDistance } from "./module/services/distance/provider.js";
+import { compatibilityLine, deprecation, isRemoved, removedError, setupCompatibilityLine } from './module/lib/compatLine.js';
 import { UNMEASURABLE_DISTANCE, getDistance, measureTokens } from "./module/services/distance/service.js";
 import { rollFieldLocalizations, rollFieldMappings } from "./module/rollFields.js";
 import "./module/damageAbsorption.js";
@@ -535,7 +536,9 @@ Hooks.once('init', async function () {
 
   // Register custom module settings
   registerSettings();
-  setupTokenSetMode(!!game.settings.get("midi-qol", "tokenDocumentSets"));
+  setupCompatibilityLine();
+  // From 14.8.0 token sets give TokenDocuments whatever the setting says
+  setupTokenSetMode(isRemoved("14.8.0") || !!game.settings.get("midi-qol", "tokenDocumentSets"));
   fetchParams();
   fetchSoundSettings();
   // This seems to cause problems for localisation for the items compendium (at least for french)
@@ -1083,8 +1086,11 @@ function setupMidiQOLApi() {
     collectSettingData,
     computeTargetsFromTemplates,
     configSettings: () => { return configSettings },
+    /** The 14.x release whose deprecation state midi-next matches (M5's compatibility line) */
+    compatibilityLine,
     debouncedUpdate: (document: ChatMessage.Implementation, updates: ChatMessage.UpdateData) => {
-      foundry.utils.logCompatibilityWarning("midi-qol | MidiQOL.debouncedUpdate is deprecated and will be removed in 14.8.0: use ChatMessage#update.", { since: "14.6.9", until: "14.8.0", once: true });
+      if (!deprecation("midi-qol | MidiQOL.debouncedUpdate is deprecated and will be removed in 14.8.0: use ChatMessage#update.", { since: "14.6.9", until: "14.8.0", once: true }))
+        throw removedError("MidiQOL.debouncedUpdate", "14.8.0", "use ChatMessage#update");
       return throttledUpdate(document, updates);
     },
     enableWorkflow,

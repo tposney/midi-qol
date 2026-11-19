@@ -1,4 +1,5 @@
 import Token = foundry.canvas.placeables.Token;
+import { isRemoved } from "./compatLine.js";
 
 type TokenMember = Token.Implementation | TokenDocument.Implementation | string;
 /** What reading a token set gives: TokenDocuments, or canvas tokens with document mode off */
@@ -13,7 +14,8 @@ export function tokenSetDocumentMode(): boolean {
 /** Read once at init: a change takes effect on reload. TokenDocument#document is patched in either mode */
 export function setupTokenSetMode(enabled: boolean) {
   documentMode = enabled;
-  if (Object.getOwnPropertyDescriptor(TokenDocument.prototype, "document")) return;
+  // Gone in 14.9.0 (the compatibility line): a TokenDocument has no `document`
+  if (isRemoved("14.9.0") || Object.getOwnPropertyDescriptor(TokenDocument.prototype, "document")) return;
   // Code written for sets of Tokens reads `member.document`: a TokenDocument is its own document, with a warning once per
   // reading line, named even when it is midi's own (Foundry's `once` keys on the whole stack, so one line reached from many
   // places would warn many times)

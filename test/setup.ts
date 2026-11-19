@@ -18,6 +18,18 @@ function deepClone<T>(value: T): T {
   return value;
 }
 
+/** As foundry.utils.isNewerVersion for dotted numeric versions: v1 newer than v0 */
+function isNewerVersion(v1: string | number, v0: string | number): boolean {
+  const a = String(v1).split(".").map(Number), b = String(v0).split(".").map(Number);
+  for (let i = 0; i < Math.max(a.length, b.length); i++) {
+    if ((a[i] ?? 0) > (b[i] ?? 0)) return true;
+    if ((a[i] ?? 0) < (b[i] ?? 0)) return false;
+  }
+  return false;
+}
+/** foundry.utils.logCompatibilityWarning's calls */
+export const compatibilityWarnings: { message: string, options?: object }[] = [];
+
 /** foundry.utils.mergeObject for plain objects: `inplace` and deep merge only. */
 function mergeObject(original: Record<string, unknown>, other: Record<string, unknown> = {}, { inplace = true } = {}) {
   const target = inplace ? original : deepClone(original);
@@ -38,5 +50,6 @@ Object.assign(globalThis, {
       return true;
     },
   },
-  foundry: { utils: { mergeObject, isEmpty: (v: object) => Object.keys(v ?? {}).length === 0 } },
+  foundry: { utils: { mergeObject, isEmpty: (v: object) => Object.keys(v ?? {}).length === 0, isNewerVersion,
+    logCompatibilityWarning: (message: string, options?: object) => { compatibilityWarnings.push({ message, options }); } } },
 });
