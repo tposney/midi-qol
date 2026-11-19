@@ -23,7 +23,7 @@ import { installedModules } from "./setupModules.js";
 import { offerFollowUps } from "./followUps.js";
 import { configSettings, autoRemoveTargets, checkRule, checkMechanic, safeGetGameSetting, useWeakReferences, onUseMacroOptions, chatCardUpdates } from "./settings.js";
 import { challengeVisibleToPlayers, saveDisplayMode } from "./lib/saveVisibility.js";
-import { createDamageDetail, processDamageRoll, untargetDeadTokens, checkIncapacitated, getAutoRollDamage, isAutoFastForward, getAutoRollAttack, checkNearby, expireMyEffects, validTargetTokens, userTargetsKeepingUndrawn, HEALING_BUTTON_KEY, isActivityType, getOrCreateTokenForActorAsSet, doReactions, type ReactionResult, playerFor, requestPCActiveDefence, evalActivationCondition, asyncHooksCallAll, asyncHooksCall, renderSaveRollHTML, markFlanking, tokenForActor, getOrCreateTokenForActor, createConditionData, evalCondition, computeCoverBonus, computeTargetAC, TOTAL_COVER, THREE_QUARTERS_COVER, HALF_COVER, hasCoverTotal, isInCombat, displayDSNForRoll, setActionUsed, getTokenDocument, getToken, addRollTo, sumRolls, throttledUpdate, getCachedDocument, getUpdatesCache, clearUpdatesCache, getDamageType, getTokenName, tokenPortrait, setRollOperatorEvaluated, evalAllConditions, evalAllConditionsAsync, getAppliedEffects, CEAddEffectWith, getCEEffectByName, CEHasEffectApplied, CERemoveEffect, CEToggleEffect, getActivityDefaultDamageType, activityHasAreaTarget, DSNMarkDiceDisplayed, expectedTemplateCount, getSaveMultiplierForActivity, checkActivityRange, isRangeCheckable, getActivityAutoTargetAction, activityHasEmanationNoTemplate, completeActivityUse, getActor, getConcentrationEffect, convertDuration, getRemoveAllButtons, requestPCSave, pcSaveOptions, addUpdatesCache, MidiOptions, getOptionalCountRemainingShortFlag, bonusDialog, getTargetDescriptor, queueUpdate, addAttribution, renderAttributionTooltip, getAdvantageModeTitle, resolveItemMacro, resolveActivityMacro, midiFlag, updateUserTargets, getConsumptionData, toMessageMode, toLegacyRollMode, isDnd5eRollMessage, rollAnswersRequest, type SaveRequestKind, dnd5eRollType, tokenSourceElevation, applyStatusCondition, deleteCardAfterWrites } from "./utils.js";
+import { BONUS_REQUEST, createDamageDetail, processDamageRoll, untargetDeadTokens, checkIncapacitated, getAutoRollDamage, isAutoFastForward, getAutoRollAttack, checkNearby, expireMyEffects, validTargetTokens, userTargetsKeepingUndrawn, HEALING_BUTTON_KEY, isActivityType, getOrCreateTokenForActorAsSet, doReactions, type ReactionResult, playerFor, requestPCActiveDefence, evalActivationCondition, asyncHooksCallAll, asyncHooksCall, renderSaveRollHTML, markFlanking, tokenForActor, getOrCreateTokenForActor, createConditionData, evalCondition, computeCoverBonus, computeTargetAC, TOTAL_COVER, THREE_QUARTERS_COVER, HALF_COVER, hasCoverTotal, isInCombat, displayDSNForRoll, setActionUsed, getTokenDocument, getToken, addRollTo, sumRolls, throttledUpdate, getCachedDocument, getUpdatesCache, clearUpdatesCache, getDamageType, getTokenName, tokenPortrait, setRollOperatorEvaluated, evalAllConditions, evalAllConditionsAsync, getAppliedEffects, CEAddEffectWith, getCEEffectByName, CEHasEffectApplied, CERemoveEffect, CEToggleEffect, getActivityDefaultDamageType, activityHasAreaTarget, DSNMarkDiceDisplayed, expectedTemplateCount, getSaveMultiplierForActivity, checkActivityRange, isRangeCheckable, getActivityAutoTargetAction, activityHasEmanationNoTemplate, completeActivityUse, getActor, getConcentrationEffect, convertDuration, getRemoveAllButtons, requestPCSave, pcSaveOptions, addUpdatesCache, MidiOptions, getOptionalCountRemainingShortFlag, bonusDialog, getTargetDescriptor, queueUpdate, addAttribution, renderAttributionTooltip, getAdvantageModeTitle, resolveItemMacro, resolveActivityMacro, midiFlag, updateUserTargets, getConsumptionData, toMessageMode, toLegacyRollMode, isDnd5eRollMessage, rollAnswersRequest, type SaveRequestKind, dnd5eRollType, tokenSourceElevation, applyStatusCondition, deleteCardAfterWrites } from "./utils.js";
 import { OnUseMacros } from "./apps/Item.js";
 import { bonusCheck, collectBonusFlags, defaultRollOptions, buildPreComputedAdvantageMap, checkActivityAbilities } from "./patching.js";
 import { collectRollModifiers } from "./services/rollModifiers/service.js";
@@ -6343,21 +6343,24 @@ export class Workflow {
     if (!owner?.active) owner = game.users?.find((u: User) => u.isGM && u.active);
     if (!owner) return null;
 
+    // The ability's own fail flags when it has any, else the general ones (one rule for both paths: the player's used
+    // to prefer fail.all when an actor had both)
+    const selector = failAbilityFlagsLength ? `fail.${rollAbility}` : "fail.all";
     let newRoll: Roll;
     if (owner?.isGM && game.user?.isGM) {
-      newRoll = await bonusCheck(target.actor!, result[0], rollType, failAbilityFlagsLength ? `fail.${rollAbility}` : "fail.all", { system: { origin: this.itemCardId } });
+      newRoll = await bonusCheck(target.actor!, result[0], rollType, selector, { system: { origin: this.itemCardId } });
     } else {
-      // The GM can answer for a player who hasn't decided (the player list): the roll stands
-      newRoll = await trackPlayerWait<Roll>({
-        kind: "bonus", userId: owner.id!, actorUuid: target.actor?.uuid ?? undefined, tokenUuid: getTokenDocument(target)?.uuid ?? undefined,
+      // Asked through the request core (M5b): its deadline, after which (or on the GM's "skip" from the player list, or a
+      // disconnect) the roll stands
+      newRoll = await askUser<Roll>(owner, {
+        type: BONUS_REQUEST,
+        data: { actorUuid: (target.actor as Actor).uuid, result: JSON.stringify(result[0].toJSON()), rollType, selector },
+        kind: "bonus", actorUuid: target.actor?.uuid ?? undefined, tokenUuid: getTokenDocument(target)?.uuid ?? undefined,
         label: i18nFormat("midi-qol.PlayerWaits.BonusLabel", { item: this.item?.name ?? "" }),
-        choices: { skip: () => result[0] }
-      }, () => socketlibSocket.executeAsUser("bonusCheck", owner?.id, {
-        actorUuid: (target.actor as Actor).uuid,
-        result: JSON.stringify(result[0].toJSON()),
-        rollType,
-        selector: failFlagsLength ? "fail.all" : `fail.${rollAbility}`
-      }));
+        timeoutMs: (configSettings.playerSaveTimeout ?? 0) * 1000,
+        fallback: () => result[0],
+        gmChoices: { skip: () => result[0] }
+      }).settled.then(settled => settled.value ?? result[0], () => result[0]);
     }
 
     const updatedSaveRolls = [...saveRolls];

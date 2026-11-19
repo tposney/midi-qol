@@ -84,6 +84,7 @@
   "midi-qol.PlayerWaits.DefenceLabel": "Active Defence: {item}",
   "midi-qol.PlayerWaits.BonusLabel": "Failed roll bonus: {item}",
   "midi-qol.PlayerWaits.ContestLabel": "{flavor}",
+  "midi-qol.PlayerWaits.ConcentrationLabel": "Concentration: DC {dc}",
   "midi-qol.PlayerWaits.Elapsed": "{seconds}s",
   "midi-qol.PlayerWaits.Choice.roll": "Roll for them",
   "midi-qol.PlayerWaits.Choice.gmRoll": "Roll on my screen",

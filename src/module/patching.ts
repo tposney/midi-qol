@@ -1,3 +1,4 @@
+import type { IncomingRequest } from "./lib/requests.js";
 import { collectRollModifiers } from "./services/rollModifiers/service.js";
 import { collectBonusCandidates, type BonusRollKind, type RollBonusQuery } from "./services/rollBonuses/service.js";
 import { initHiding } from "./lib/hiding.js";
@@ -620,7 +621,7 @@ export function collectBonusFlags(actor: Actor.Implementation, category: string,
   return bonusFlags;
 }
 
-export async function bonusCheck(actor: Actor.Implementation, result: Roll, category: string, detail = "", messageData: any = {}): Promise<Roll> {
+export async function bonusCheck(actor: Actor.Implementation, result: Roll, category: string, detail = "", messageData: any = {}, prompt: { request?: IncomingRequest } = {}): Promise<Roll> {
   detail ||= dnd5eRollType(messageData) ?? ""; // death saves -> "death", tool checks -> "tool"
   let bonusFlags = collectBonusFlags(actor, category, detail);
   // rollBonuses contributors: before the result, or after a failure ("fail.<subject>")
@@ -676,7 +677,7 @@ export async function bonusCheck(actor: Actor.Implementation, result: Roll, cate
       data.roll,
       "roll",
       // A save or check rolled for a use card is linked to it; the bonus is shown there
-      { messageData, card: game.messages?.get(messageData?.system?.origin?.id ?? messageData?.system?.origin ?? ""), anchor: "saves", bonusQuery, bonusPhase, candidates }
+      { messageData, card: game.messages?.get(messageData?.system?.origin?.id ?? messageData?.system?.origin ?? ""), anchor: "saves", bonusQuery, bonusPhase, candidates, request: prompt.request }
     );
     if (newRoll) result = newRoll;
   }

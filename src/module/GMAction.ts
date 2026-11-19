@@ -5,7 +5,7 @@ import { _closePlayerRollDialogs, playerWaitHandlers, rollDialogsFor } from "./l
 import { DialogCountdown, dialogCountdownOptions } from "./lib/dialogCountdown.js";
 import { withWorkflowOptionsCodec } from "./lib/workflowOptionsCodec.js";
 import { i18n, log, warn, gameStats, getCanvas, error, debugEnabled, debug, GameSystemConfig, MODULE_ID } from "../midi-qol.js";
-import { damageActiveHas, damageChangeHas, DEFENCE_REQUEST, REACTIONS_REQUEST, calculateDamageAmounts, hpChangeFromDetail, getToken, getTokenDocument, gmOverTimeEffect, fromActorUuid, promptReactions, hasUsedAction, hasUsedBonusAction, removeActionUsed, removeBonusActionUsed, removeReactionUsed, ReactionItemReference, isEffectExpired, expireEffects, deleteAppliedEffects, getAppliedEffects, CERemoveEffect, CEAddEffectWith, getActor, completeItemUse, completeActivityUse, localActivityOverTimeEffect, validTargetTokens, hasUsedAnyReaction, getVitalityItem, MidiOptions, tokenSourceCenter, toggleStatus, withDeprecatedDamageFields, speakerFor } from "./utils.js";
+import { BONUS_REQUEST, CONCENTRATION_REQUEST, damageActiveHas, damageChangeHas, DEFENCE_REQUEST, REACTIONS_REQUEST, calculateDamageAmounts, hpChangeFromDetail, getToken, getTokenDocument, gmOverTimeEffect, fromActorUuid, promptReactions, hasUsedAction, hasUsedBonusAction, removeActionUsed, removeBonusActionUsed, removeReactionUsed, ReactionItemReference, isEffectExpired, expireEffects, deleteAppliedEffects, getAppliedEffects, CERemoveEffect, CEAddEffectWith, getActor, completeItemUse, completeActivityUse, localActivityOverTimeEffect, validTargetTokens, hasUsedAnyReaction, getVitalityItem, MidiOptions, tokenSourceCenter, toggleStatus, withDeprecatedDamageFields, speakerFor } from "./utils.js";
 import { registerRequestHandler, type IncomingRequest } from "./lib/requests.js";
 import { DAMAGE_MESSAGE_TYPE } from "./ChatClasses/DamageCardMessage.js";
 import { DamageDescriptionObject, Workflow } from "./Workflow.js";
@@ -40,6 +40,10 @@ export let setupSocket = () => {
   registerRequestHandler(SAVE_REQUEST, (data: Parameters<typeof rollAbility>[0], incoming: IncomingRequest) => rollAbility(data, incoming));
   // A player's Active Defence roll asked through the request core (utils requestPCActiveDefence): their D20Roll dialog
   registerRequestHandler(DEFENCE_REQUEST, (data: Parameters<typeof _D20Roll>[0], incoming: IncomingRequest) => _D20Roll(data, incoming));
+  // A failed save's optional bonuses asked through the request core (Workflow.applyFailedSaveBonuses): the bonus dialog
+  registerRequestHandler(BONUS_REQUEST, (data: Parameters<typeof _bonusCheck>[0], incoming: IncomingRequest) => _bonusCheck(data, incoming));
+  // A concentration roll asked through the request core (utils processConcentrationRequestMessage): their roll dialog
+  registerRequestHandler(CONCENTRATION_REQUEST, (data: Parameters<typeof rollConcentration>[0], incoming: IncomingRequest) => rollConcentration(data, incoming));
   for (const [name, handler] of Object.entries(playerWaitHandlers)) registerSocketAndQuery(name, handler);
   registerSocketAndQuery("completeItemUse", _completeItemUse);
   registerSocketAndQuery("completeItemUseV2", _completeItemUse);
@@ -413,12 +417,16 @@ async function _localActivityOverTimeEffect(data: { actorUuid: string, effectUui
   return localActivityOverTimeEffect(actor, effect, data.startTurn, data.options)
 }
 
-async function _bonusCheck(data: { actorUuid: string, result: string, rollType: string, selector: string }) {
+async function _bonusCheck(data: { actorUuid: string, result: string, rollType: string, selector: string }, request?: IncomingRequest) {
   const tokenOrActor = await fromUuid(data.actorUuid) as Actor.Implementation | TokenDocument.Implementation | undefined;
   const actor = tokenOrActor instanceof Actor ? tokenOrActor : tokenOrActor?.actor;
   const roll = Roll.fromJSON(data.result);
-  if (actor) return await bonusCheck(actor, roll as Roll, data.rollType, data.selector);
-  else return null;
+  if (!actor) return null;
+  // Its dialog shows the request's countdown (with the pause button) and closes when the request is answered for the player
+  const chosen = await bonusCheck(actor, roll as Roll, data.rollType, data.selector, {}, { request });
+  // Asked through the request core: answered for the player meanwhile (the time-out, the GM's "skip"), the choice isn't used
+  if (request && (request.settledHow || !await request.claim())) return undefined;
+  return chosen;
 }
 
 async function _applyEffects(data: { workflowId: string, targets: string[] }) {
@@ -706,14 +714,33 @@ async function _D20Roll(params: { request?: string, targetUuid: string, formula:
     resolve(rolls[0] ?? {})
   });
 }
-async function rollConcentration(data: { actorUuid: string, target: number, whisper: string[], create: boolean, rollMode: string }) {
+async function rollConcentration(data: { actorUuid: string, target: number, whisper?: string[], create: boolean, rollMode: string }, request?: IncomingRequest) {
   const actor = fromUuidSync(data.actorUuid) as Actor.Implementation | null;
   if (!actor) {
     error(`GMAction.rollConcentration | no actor for ${data.actorUuid}`)
     return {};
   }
+  const messageConfig = { create: data.create, whisper: data.whisper, rollMode: data.rollMode };
   //@ts-expect-error no dnd5e types
-  return actor.rollConcentration({ target: data.target, legacy: false }, {}, { create: data.create, whisper: data.whisper, rollMode: data.rollMode });
+  if (!request) return actor.rollConcentration({ target: data.target, legacy: false }, {}, messageConfig);
+  // Asked through the request core: the dialog shows the requester's deadline; confirming claims the request; a roll
+  // confirmed after it was answered for the player is cancelled, and the dialog closes when it is
+  const claim = foundry.utils.randomID();
+  const countdown = request.countdown();
+  const dialog = countdown ? { options: dialogCountdownOptions(countdown) } : {};
+  const hookId = Hooks.on("dnd5e.postRollConfiguration", (_rolls: unknown, rollConfig: { midiOptions?: { requestClaim?: string } }) => {
+    if (rollConfig.midiOptions?.requestClaim !== claim) return;
+    Hooks.off("dnd5e.postRollConfiguration", hookId);
+    if (request.settledHow) return false;
+    void request.claim();
+  });
+  request.onSettled(() => { for (const app of rollDialogsFor(actor.uuid, claim)) void app.close(); });
+  try {
+    //@ts-expect-error no dnd5e types
+    return await actor.rollConcentration({ target: data.target, legacy: false, midiOptions: { requestClaim: claim } }, dialog, messageConfig);
+  } finally {
+    Hooks.off("dnd5e.postRollConfiguration", hookId);
+  }
 }
 
 /**

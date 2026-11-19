@@ -4357,7 +4357,9 @@ export class RollModifyDialog extends HandlebarsApplicationMixin(ApplicationV2) 
     flagOwners?: Record<string, any>,
     /** rollBonuses contributors' optional bonuses, shown after the flag buttons */
     candidates?: OfferedBonus[],
-    onCandidate?: (dialog: RollModifyDialog, button: { candidate: OfferedBonus }) => Promise<void>
+    onCandidate?: (dialog: RollModifyDialog, button: { candidate: OfferedBonus }) => Promise<void>,
+    /** Asked through the request core (M5b): the requester's deadline is shown (its pause asks the requester), and the dialog closes when it is answered for the player */
+    request?: IncomingRequest
   }
 
   constructor(data) {
@@ -4366,7 +4368,9 @@ export class RollModifyDialog extends HandlebarsApplicationMixin(ApplicationV2) 
     this.timeRemaining = this.data.timeout;
     this.rollExpanded = false;
     if (!data.rollMode) data.rollMode = safeGetGameSetting("core", "messageMode");
-    this.countdown = new DialogCountdown({ seconds: this.data.timeout ?? 0, onExpire: () => this.close() });
+    // The request's deadline when asked through the request core, else this dialog's own
+    this.countdown = data.request?.countdown() ?? new DialogCountdown({ seconds: this.data.timeout ?? 0, onExpire: () => this.close() });
+    data.request?.onSettled(() => { void this.close(); });
   }
 
   static PARTS = {
@@ -5083,7 +5087,8 @@ export async function bonusDialog(
         workflow: this instanceof Workflow ? this : undefined,
         flagOwners,
         candidates: optionalCandidates,
-        onCandidate
+        onCandidate,
+        request: options.request
       }).render({ force: true });
   });
 }
@@ -5507,6 +5512,10 @@ export type ReactionResult = { name?: string, uuid?: string, ac?: number, itemNa
 export const REACTIONS_REQUEST = "midi-qol.reactions";
 /** A player's Active Defence roll, asked through the request core (M5b; GMAction._D20Roll answers it) */
 export const DEFENCE_REQUEST = "midi-qol.defence";
+/** Optional bonuses after a failed save, asked of the actor's player through the request core (M5b; GMAction._bonusCheck) */
+export const BONUS_REQUEST = "midi-qol.bonus";
+/** A concentration roll asked of the concentrating creature's player through the request core (M5b; GMAction.rollConcentration) */
+export const CONCENTRATION_REQUEST = "midi-qol.concentration";
 
 /**
  * What the reacting client needs: the workflow, item and activity as ids and uuids, and only plain data (jsonSafe). The
@@ -8736,10 +8745,21 @@ export async function processConcentrationRequestMessage(message: ChatMessage.Im
         concentrationRequestsHandled.add(message.id!);
         await message.setFlag(MODULE_ID, "concentrationRolled", true);
         const user = playerForActor(actor);
-        if (user?.active) {
-          socketlibSocket.executeAsUser("rollConcentration", user.id, { actorUuid: actor.uuid, target: dc, create: true, rollMode: "gm" });
-          // @ts-expect-error no dnd5e-types
-        } else actor.rollConcentration({ legacy: false, target: dc }, {}, { create: true, rollMode: "gm" });
+        // @ts-expect-error no dnd5e-types
+        const gmRoll = () => actor.rollConcentration({ legacy: false, target: dc }, { configure: false }, { create: true, rollMode: "gm" });
+        // The player's roll through the request core (M5b): their dialog shows the deadline; on time-out, disconnect or the
+        // GM's choice the GM rolls it here, and a roll the player confirms after that is cancelled (dnd5e's
+        // rollConcentration hook ends concentration wherever it's rolled, so two rolls could both count)
+        if (user?.active && !user.isSelf) void askUser<unknown>(user, {
+          type: CONCENTRATION_REQUEST, data: { actorUuid: actor.uuid, target: dc, create: true, rollMode: "gm" },
+          kind: "concentration", actorUuid: actor.uuid ?? undefined, tokenUuid: token?.document?.uuid ?? undefined,
+          label: i18nFormat("midi-qol.PlayerWaits.ConcentrationLabel", { dc }),
+          timeoutMs: (configSettings.playerSaveTimeout ?? 0) * 1000,
+          fallback: gmRoll,
+          gmChoices: { roll: { label: "midi-qol.PlayerWaits.Choice.normal", value: gmRoll } }
+        }).settled.catch(err => error("concentration | the roll could not be made", err));
+        // @ts-expect-error no dnd5e-types
+        else actor.rollConcentration({ legacy: false, target: dc }, {}, { create: true, rollMode: "gm" });
       }
     }
   }
