@@ -103,7 +103,20 @@ const getters: Record<string, (this: MidiActivityLike) => unknown> = {
     if (this.target?.affects?.type === "self") return "never";
     return undefined;
   },
-  effectiveActivationType() { return this.activation?.type; },
+  effectiveActivationType() {
+    if (this.type !== "cast") return this.activation?.type;
+    // A Cast activity (M14: was its class's getter): its own activation when it overrides it, else the linked spell's
+    // first usable activity's, else the item's
+    // @ts-expect-error no dnd5e-types
+    if (this.activation?.override) return this.activation.type;
+    // @ts-expect-error no dnd5e-types
+    const activities = this.cachedSpell?.system?.activities;
+    const list: { canUse?: boolean, activation?: { type?: string } }[] = activities instanceof Collection ? activities.contents : Object.values(activities ?? {});
+    const spellActivity = list.find(a => a.canUse) ?? list[0];
+    if (spellActivity?.activation?.type) return spellActivity.activation.type;
+    // @ts-expect-error no dnd5e-types
+    return this.item?.system?.activation?.type ?? this.activation?.type;
+  },
   validProperties() { return new Set(["idi", "idr", "idv", "ida"]); },
   identifier() {
     if (this.midiProperties?.identifier) return this.midiProperties.identifier;

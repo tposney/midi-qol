@@ -62,11 +62,6 @@ let defineMidiUtilityActivityClass = <T extends Activity>(ActivityClass: T) => {
 
 
     
-    _midiUsageContext(message) {
-      const context = super._midiUsageContext(message);
-      context.hasRollFormula = true; // TODO fix this when able to do a proper card !!this.roll?.formula;
-      return context;
-    }
   }
 }
 

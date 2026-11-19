@@ -3,6 +3,8 @@ import type { Activity, ActivityUseConfiguration, RollDialogConfig, RollMessageC
 import { reportServiceProblem } from "../api/services.js";
 import { setMessageTargets } from "../utils.js";
 import { Workflow } from "../Workflow.js";
+import { MODULE_ID } from "../../midi-qol.js";
+import { finishUse, onUseConsumption, onUsePreUse, prepareUse, type MidiActivity } from "./MidiActivityMixin.js";
 
 /*
  * M10: a use goes through the restart (plan ~/Documents/midi-next-M10-plan-2026-11-19.md; spike
@@ -28,17 +30,35 @@ export interface UseState {
 
 type Prepared = { done: true, result: unknown } | { done: false, state: UseState };
 
-/** An activity with midi's use (MidiActivityMixin). */
-export interface RestartableActivity extends Activity {
-  prepareUse(usage: ActivityUseConfiguration, dialog: RollDialogConfig, message: RollMessageConfig): Promise<Prepared>;
-  onUsePreUse(state: UseState, newActivity: Activity, usageConfig: ActivityUseConfiguration): boolean;
-  onUseConsumption(state: UseState, newActivity: Activity, usageConfig: ActivityUseConfiguration): void;
-  finishUse(state: UseState, results: unknown): Promise<unknown>;
+/** An activity of a type midi uses (installUse) */
+export type RestartableActivity = MidiActivity & {
   use(usage?: ActivityUseConfiguration, dialog?: RollDialogConfig, message?: RollMessageConfig): Promise<unknown>;
+};
+
+/** The activity types midi's use is installed on */
+const useTypes = new Set<string>();
+
+function isRestartable(activity: Activity | undefined): activity is RestartableActivity {
+  return !!activity?.type && useTypes.has(activity.type);
 }
 
-function isRestartable(activity: unknown): activity is RestartableActivity {
-  return !!activity && typeof (activity as Partial<RestartableActivity>).prepareUse === "function";
+/**
+ * midi's use (M14: was MidiActivityMixin's `use`, installed by graft.ts): calls dnd5e's use with a use key, so midi's
+ * preUseActivity listener can cancel it and restart it after midi's pre-use work; returns the restart's result. A
+ * chained OVERRIDE, as graft.ts installed it: midi's is next to dnd5e's, so other modules' wraps see each use once.
+ */
+export function installUse(types: Iterable<string>) {
+  for (const type of types) {
+    useTypes.add(type);
+    globalThis.libWrapper.register(MODULE_ID, `CONFIG.DND5E.activityTypes.${type}.documentClass.prototype.use`,
+      async function (this: Activity, wrapped: (...args: unknown[]) => Promise<unknown>, usage: ActivityUseConfiguration = {}, dialog: RollDialogConfig = {}, message: RollMessageConfig = {}) {
+        if (isRelaunched(usage)) return wrapped(usage, dialog, message);
+        const useKey = foundry.utils.randomID();
+        noteCall(useKey, usage, dialog, message);
+        const first = await wrapped({ ...usage, useRelaunch: { useKey } }, dialog, message);
+        return first ?? await takeRelaunch(useKey);
+      }, "OVERRIDE", { chain: true });
+  }
 }
 
 export function isRelaunched(usage: ActivityUseConfiguration | undefined): boolean {
@@ -79,7 +99,7 @@ export async function takeRelaunch(useKey: string): Promise<unknown> {
 }
 
 async function restart(activity: RestartableActivity, { usage, dialog, message }: CallerConfigs): Promise<unknown> {
-  const prepared = await activity.prepareUse(usage, dialog, message);
+  const prepared = await prepareUse(activity, usage, dialog, message);
   if (prepared.done) return prepared.result;
   const state = prepared.state;
   const workflow = state.usage.workflow;
@@ -98,7 +118,7 @@ async function restart(activity: RestartableActivity, { usage, dialog, message }
   } finally {
     if (workflow) running.delete(workflow);
   }
-  return activity.finishUse(state, results);
+  return finishUse(activity, state, results);
 }
 
 let listenerId: number | undefined;
@@ -107,7 +127,7 @@ function onPreUseActivity(activity: Activity, usageConfig: AnyMutableObject & Ac
   // The restarted use: this use's own handling (the scaled activity, dnd5e's copy of the usage)
   if (isRelaunched(usageConfig)) {
     const state = usageConfig.workflow ? running.get(usageConfig.workflow) : undefined;
-    return state ? state.activity.onUsePreUse(state, activity, usageConfig) : true;
+    return state ? onUsePreUse(state.activity, state, activity, usageConfig) : true;
   }
   // Only a call midi's use made (its key): not Cast's delegation, not another type's
   const key = usageConfig.useRelaunch?.useKey;
@@ -120,7 +140,7 @@ function onPreUseActivity(activity: Activity, usageConfig: AnyMutableObject & Ac
 
 function onActivityConsumption(activity: Activity, usageConfig: ActivityUseConfiguration) {
   const state = usageConfig.workflow ? running.get(usageConfig.workflow) : undefined;
-  state?.activity.onUseConsumption(state, activity, usageConfig);
+  if (state) onUseConsumption(state.activity, state, activity, usageConfig);
 }
 
 /**

@@ -1,4 +1,5 @@
 import { confirmTargets } from "../services/targetConfirmation/service.js";
+import { isMidiActivityType, setupCanSeeSense } from "./MidiActivityMixin.js";
 import { TokenDocumentSet, memberCount } from "../lib/tokenDocumentSet.js";
 import { Activity, ActivityUseConfiguration, RollMessageConfig, TokenOrDocument } from "../../globals.js";
 import { MODULE_ID, debugEnabled, warn, i18n, GameSystemConfig } from "../../midi-qol.js";
@@ -265,7 +266,7 @@ export async function postTemplateConfirmTargets(activity: Activity, options: Mi
   const updateTargets = async () => {
     const needCanSeeSense = game.user?.targets && !workflow.targets.equals(new Set(game.user?.targets));
     workflow.setTargets(userTargetsKeepingUndrawn(workflow.targets));
-    if (needCanSeeSense) await workflow.activity.setupCanSeeSense({ workflow });
+    if (needCanSeeSense && isMidiActivityType(workflow.activity)) await setupCanSeeSense(workflow.activity, { workflow });
   }
   // Only show confirmation here if the activity deferred from pre-template
   // (i.e. it has a template or scaled target count). Otherwise preTemplateTargets

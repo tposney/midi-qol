@@ -1,4 +1,5 @@
 import { isRollOf } from "./rolls/common.js";
+import { attachRegionActivityBehavior, hasConsumption, isMidiActivityType, setupCanSeeSense, shouldAutoConsume } from "./activities/MidiActivityMixin.js";
 import { rollOtherDamage } from "./rolls/damage.js";
 import { allSteps, getStep, REACTION_STEPS, stepForMethod, type StepContext } from "./steps/steps.js";
 import { MIDI_SAVE_PROVIDERS, requestSaves, settingsProviderFor, type SaveRequest, type SaveRequestEntry } from "./services/saveRequests/service.js";
@@ -2200,7 +2201,7 @@ export class Workflow {
     // The other activity's use declined: its damage dropped, the ammunition's kept
     if (this.otherConsumed === false) this.dropOtherActivityDamage();
     // A read-only copy is for reading the card: it doesn't recompute sight (asynchronous, so not there to read anyway)
-    if (!this.readOnly) void this.activity?.setupCanSeeSense?.({ workflow: this });
+    if (!this.readOnly && isMidiActivityType(this.activity)) void setupCanSeeSense(this.activity, { workflow: this });
     const saves = this.targets.documents.flatMap(t => t.uuid ? [[t.uuid, cardSaveRoll(this.chatCard, t.uuid)] as const] : []).filter(([, roll]) => !!roll);
     if (saves.length) this.#restoredSaves = Object.fromEntries(saves) as Record<string, Roll>;
   }
@@ -2437,7 +2438,7 @@ export class Workflow {
     return this.resume(event);
   }
 
-  async processPlacedTemplates(templates: MeasuredTemplateDocument[], activity?: Activity): Promise<boolean> {
+  async processPlacedTemplates(templates: (MeasuredTemplateDocument | RegionDocument)[], activity?: Activity): Promise<boolean> {
     if (!templates || templates.length === 0) return false;
     const expectedCount = Number(activity?.target?.template?.count) || 1;
     if (templates.length < expectedCount) {
@@ -2467,8 +2468,7 @@ export class Workflow {
           ? activity
           // @ts-expect-error no dnd5e types for activities iterable
           : activity.item?.system?.activities?.find((a: any) => a.isOverTimeFlag);
-        // @ts-expect-error _attachRegionActivityBehavior is defined on MidiActivityMixin
-        await activity._attachRegionActivityBehavior?.(regionDoc, this, overTimeActivity, this.spellLevel);
+        if (isMidiActivityType(activity)) await attachRegionActivityBehavior(activity, regionDoc, this, overTimeActivity, this.spellLevel);
       }
     }
     if (this.suspended && this.currentStep === "midi-qol.AwaitTemplate") {
@@ -2902,14 +2902,14 @@ export class Workflow {
   }
 
   async checkOtherActivityConsumption(): Promise<boolean> {
-    if (!this.otherActivity || !this.otherActivity.hasConsumption()) {
+    if (!isMidiActivityType(this.otherActivity) || !hasConsumption(this.otherActivity)) {
       return true;
     }
 
     const existing = this.otherConsumed;
     if (existing !== undefined) return existing !== false;
 
-    const shouldShowDialog = !this.otherActivity.shouldAutoConsume(this);
+    const shouldShowDialog = !shouldAutoConsume(this.otherActivity, this);
     let otherUsageConfig: ActivityUseConfiguration = this.otherActivity._prepareUsageConfig({
       consume: { resources: true, spellSlot: false, action: false }
     }) as ActivityUseConfiguration;
@@ -3131,7 +3131,7 @@ export class Workflow {
       if (otherConsumedFlag === false) {
         // Consumption was already declined - skip other effects
         this.otherEffectTargets = new TokenDocumentSet();
-      } else if (otherConsumedFlag === undefined && this.otherActivity.hasConsumption()) {
+      } else if (otherConsumedFlag === undefined && isMidiActivityType(this.otherActivity) && hasConsumption(this.otherActivity)) {
         // Consumption not yet checked and other activity has consumption - check now
         const consumptionSuccess = await this.checkOtherActivityConsumption();
         if (!consumptionSuccess) {

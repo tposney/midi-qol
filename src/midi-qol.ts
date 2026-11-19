@@ -1,3 +1,6 @@
+import { installUse } from "./module/activities/useRelaunch.js";
+import { useAs, confirmTargets, setupTargets, attachRegionActivityBehavior } from "./module/activities/MidiActivityMixin.js";
+import { planTeleport } from "./module/activities/TeleportActivity.js";
 import { cardDamageRolls } from "./module/lib/cardState.js";
 import { installFormulaAndPlacement } from "./module/rolls/formula.js";
 import { installAttackRolls } from "./module/rolls/attack.js";
@@ -267,6 +270,10 @@ Object.assign(globalThis.MidiQOL, {
   createDamageDetail,
   // A use card's damage rolls of some types: from its damage messages (M13 stage 3; the card holds none of their damage)
   cardDamageRolls,
+  // midi's activity functions (M14 D3: were methods on midi's activity classes): the activity first
+  useAs, confirmTargets, setupTargets,
+  // An activity's region behaviours on a region (the use's template does this); a teleport's plan, as its card button
+  attachRegionActivityBehavior, planTeleport,
   decodeWorkflowOptions,
   encodeWorkflowOptions,
   createEffects,
@@ -450,6 +457,7 @@ function setupActivities() {
   installAttackRolls();
   installFormulaAndPlacement();
   installActivityCreation(adoptedActivityTypes);
+  installUse(adoptedActivityTypes);
 }
 
 Hooks.once('init', async function () {

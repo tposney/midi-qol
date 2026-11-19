@@ -1,4 +1,5 @@
 import type { Activity } from "../../globals.js";
+import { hasConsumption, isMidiActivityType } from "./MidiActivityMixin.js";
 import { i18n } from "../../midi-qol.js";
 import { midiButtonVisibility } from "../ChatClasses/UsageCardMessage.js";
 import { cardMidi, cardOtherConsumption } from "../lib/cardState.js";
@@ -66,8 +67,7 @@ export function midiUsageButtons(activity: Activity, message: object, base: Usag
   if (saveSource && !activity.save && !activity.check && savesRolledFromChat())
     buttons.push(...typeButtons(saveSource, message).filter(b => ["rollSave", "rollCheck"].includes(actionOf(b) ?? "")));
   const otherActivity = activity.otherActivity as Activity | undefined;
-  const hasConsumption: unknown = otherActivity?.hasConsumption;
-  if (otherActivity && typeof hasConsumption === "function" && hasConsumption.call(otherActivity)) {
+  if (isMidiActivityType(otherActivity) && hasConsumption(otherActivity)) {
     // The label is a key: card-buttons.hbs localizes it at render
     buttons.push({
       action: "consumeOtherActivity",

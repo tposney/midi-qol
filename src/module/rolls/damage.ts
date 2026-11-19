@@ -1,4 +1,5 @@
 import type { Activity, DND5ETargetDescriptor, Dnd5eSystem, RollDialogConfig, RollMessageConfig, RollProcessConfig } from "../../globals.js";
+import { hasConsumption, isMidiActivityType } from "../activities/MidiActivityMixin.js";
 import { GameSystemConfig, MODULE_ID, debugEnabled, error, i18n, i18nFormat, warn } from "../../midi-qol.js";
 import { TroubleShooter } from "../apps/TroubleShooter.js";
 import { cardOtherConsumption } from "../lib/cardState.js";
@@ -200,7 +201,7 @@ export function dialogByProperty(activity: Activity, config: RollProcessConfig):
 function deferOtherDamage(activity: Activity, config: RollProcessConfig, dialog: RollDialogConfig): boolean {
   const workflow = config.workflow;
   if (!activity.otherActivity || !workflow) return false;
-  if (!activity.otherActivity.hasConsumption()) return false;
+  if (!isMidiActivityType(activity.otherActivity) || !hasConsumption(activity.otherActivity)) return false;
   const checkingHits = activity.attack && configSettings.autoCheckHit !== "none";
   const checkingSaves = (activity.otherActivity.save || activity.otherActivity.check) && configSettings.autoCheckSaves !== "none";
   if (!checkingHits && !checkingSaves) return false;

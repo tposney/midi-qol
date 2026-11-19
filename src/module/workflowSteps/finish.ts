@@ -1,4 +1,5 @@
 import { debugEnabled, error, log, warn } from "../../midi-qol.js";
+import { autoTeleport, isTeleportActivity } from "../activities/TeleportActivity.js";
 import { TroubleShooter } from "../apps/TroubleShooter.js";
 import { offerFollowUps } from "../followUps.js";
 import { configSettings } from "../settings.js";
@@ -19,8 +20,7 @@ export function registerFinishSteps(): void {
       TroubleShooter.recordError(new Error(message), message);
     }
     // A teleport planned with the workflow: after its effects and damage, before RollComplete
-    const autoTeleport: unknown = workflow.activity?.autoTeleport;
-    if (!workflow.aborted && !workflow.damageOnly && isActivityType(workflow.activity, "teleport") && typeof autoTeleport === "function") await autoTeleport.call(workflow.activity, workflow);
+    if (!workflow.aborted && !workflow.damageOnly && isTeleportActivity(workflow.activity)) await autoTeleport(workflow.activity, workflow);
     const specialExpiries = [
       "isDamaged",
       "isHealed",

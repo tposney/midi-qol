@@ -1,4 +1,6 @@
 import { debug, debugEnabled, error, i18nFormat, warn } from "../../midi-qol.js";
+import { isTransformActivity, transformActor } from "../activities/TransformActivity.js";
+import { isMidiActivityType, placeEmanationTemplate, setupCanSeeSense } from "../activities/MidiActivityMixin.js";
 import { activityHasScaledTargetCount, postTemplateConfirmTargets } from "../activities/activityHelpers.js";
 import { TroubleShooter } from "../apps/TroubleShooter.js";
 import { checkMechanic, configSettings, safeGetGameSetting } from "../settings.js";
@@ -8,20 +10,10 @@ import { setStepRun } from "../steps/steps.js";
 import type { Activity, ActivityUseConfiguration } from "../../globals.js";
 import { Workflow, workflowStepHost, type WorkflowState } from "../Workflow.js";
 
-/** A Transform activity with midi's transformActor (TransformActivity.ts) */
-interface TransformingActivity extends Activity {
-  transform?: { mode?: string };
-  transformActor(config: ActivityUseConfiguration, message: ChatMessage.Implementation): Promise<void>;
-}
-
-function isTransforming(activity: Activity | undefined): activity is TransformingActivity {
-  return isActivityType(activity, "transform") && typeof (activity as Partial<TransformingActivity>).transformActor === "function";
-}
-
 /** A Transform activity transforms its targets (midi's); a chosen form (form mode) is dnd5e's subsequent action */
 function needsTransform(workflow: Workflow): boolean {
   const activity = workflow.activity;
-  return isTransforming(activity) && activity.transform?.mode !== "form";
+  return isTransformActivity(activity) && activity.transform?.mode !== "form";
 }
 
 /** The use places an emanation around its token (activityHasAutoPlaceTemplate / activityHasEmanationNoTemplate) */
@@ -36,8 +28,7 @@ async function placeEmanation(workflow: Workflow): Promise<void> {
   const token = workflow.token ?? getToken(activity.item?.parent);
   if (!token) return;
   if (activityHasAutoPlaceTemplate(activity)) {
-    // @ts-expect-error _placeEmanationTemplate is midi's (MidiActivityMixin)
-    const templates = await activity._placeEmanationTemplate(workflow);
+    const templates = isMidiActivityType(activity) ? await placeEmanationTemplate(activity, workflow) : undefined;
     if (templates?.length) await workflow.processPlacedTemplates(templates, activity);
   }
   if (activityHasEmanationNoTemplate(activity)) {
@@ -84,7 +75,7 @@ export function registerPreambleSteps(): void {
   setStepRun("midi-qol.Transform", async ({ workflow }: { workflow: Workflow }): Promise<WorkflowState> => {
     const activity = workflow.activity;
     const card = workflow.chatCard;
-    if (isTransforming(activity) && card) await activity.transformActor({ workflow }, card);
+    if (isTransformActivity(activity) && card) await transformActor(activity, { workflow }, card);
     if (needsEmanation(workflow)) return "midi-qol.PlaceEmanation";
     return afterStart(workflow);
   });
@@ -161,7 +152,7 @@ export function registerPreambleSteps(): void {
       if (attackingToken && workflow.token !== attackingToken) {
         // changed the attacking token so update the canSee data
         workflow.token = attackingToken;
-        await workflow.activity.setupCanSeeSense({ workflow: workflow });
+        if (isMidiActivityType(workflow.activity)) await setupCanSeeSense(workflow.activity, { workflow });
       }
     }
     if (!workflow.workflowOptions.allowIncapacitated && checkMechanic("incapacitated") !== "nothing" && checkIncapacitated(workflow.actor, debugEnabled > 0, true)) {

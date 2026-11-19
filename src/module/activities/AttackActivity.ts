@@ -122,12 +122,6 @@ let defineMidiAttackActivityClass = <T extends Activity>(ActivityClass: T) => {
       }, { inplace: false, insertKeys: true, insertValues: true })
 
 
-    _midiUsageContext(message) {
-      const context = super._midiUsageContext(message);
-
-      context.hasAttack = !!this.attack; // && !minimalCard && (systemCard || needAttackButton || configSettings.confirmAttackDamage !== "none"),
-      return context;
-    }
   }
 }
 
