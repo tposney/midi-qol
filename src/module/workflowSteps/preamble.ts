@@ -5,7 +5,24 @@ import { checkMechanic, configSettings, safeGetGameSetting } from "../settings.j
 import { saveTargetsUndoData } from "../undo.js";
 import { activityHasAreaTarget, activityHasAutoPlaceTemplate, activityHasEmanationNoTemplate, checkActivityRange, checkIncapacitated, getActivityAutoTargetAction, getAutoRollAttack, getToken, isActivityType, isRangeCheckable, setRangedTargets, validTargetTokens } from "../utils.js";
 import { setStepRun } from "../steps/steps.js";
+import type { Activity, ActivityUseConfiguration } from "../../globals.js";
 import { Workflow, workflowStepHost, type WorkflowState } from "../Workflow.js";
+
+/** A Transform activity with midi's transformActor (TransformActivity.ts) */
+interface TransformingActivity extends Activity {
+  transform?: { mode?: string };
+  transformActor(config: ActivityUseConfiguration, message: ChatMessage.Implementation): Promise<void>;
+}
+
+function isTransforming(activity: Activity | undefined): activity is TransformingActivity {
+  return isActivityType(activity, "transform") && typeof (activity as Partial<TransformingActivity>).transformActor === "function";
+}
+
+/** A Transform activity transforms its targets (midi's); a chosen form (form mode) is dnd5e's subsequent action */
+function needsTransform(workflow: Workflow): boolean {
+  const activity = workflow.activity;
+  return isTransforming(activity) && activity.transform?.mode !== "form";
+}
 
 /** The use places an emanation around its token (activityHasAutoPlaceTemplate / activityHasEmanationNoTemplate) */
 function needsEmanation(workflow: Workflow): boolean {
@@ -57,6 +74,17 @@ export function registerPreambleSteps(): void {
   });
 
   setStepRun("midi-qol.Start", async ({ workflow }: { workflow: Workflow }): Promise<WorkflowState> => {
+    if (needsTransform(workflow)) return "midi-qol.Transform";
+    if (needsEmanation(workflow)) return "midi-qol.PlaceEmanation";
+    return afterStart(workflow);
+  });
+
+  // A Transform activity transforms the use's targets (M14: was a _finalizeUsage override). First, where it ran
+  // before; a step, so it can be moved later in the flow (after saves, say)
+  setStepRun("midi-qol.Transform", async ({ workflow }: { workflow: Workflow }): Promise<WorkflowState> => {
+    const activity = workflow.activity;
+    const card = workflow.chatCard;
+    if (isTransforming(activity) && card) await activity.transformActor({ workflow }, card);
     if (needsEmanation(workflow)) return "midi-qol.PlaceEmanation";
     return afterStart(workflow);
   });

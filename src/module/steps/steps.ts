@@ -114,7 +114,7 @@ export function allSteps(): Step[] {
 
 /** midi's steps, in the order the standard flow meets them. */
 const BUILT_IN: readonly (string | [string, Partial<Step>])[] = [
-  ["Suspend", { marker: true }], "NoAction", "Start", "PlaceEmanation", "AwaitTemplate", "TemplatePlaced", "AoETargetConfirmation",
+  ["Suspend", { marker: true }], "NoAction", "Start", "Transform", "PlaceEmanation", "AwaitTemplate", "TemplatePlaced", "AoETargetConfirmation",
   "ValidateRoll", "PreambleComplete", "WaitForAttackRoll", ["AttackRollComplete", { flush: true }], "WaitForDamageRoll",
   "ConfirmRoll", "RollConfirmed", "DamageRollStarted", "DamageRollComplete", "WaitForUtilityRoll", "UtilityRollComplete",
   ["WaitForSaves", { flush: true }], "SavesComplete", ["AllRollsComplete", { flush: true }], "ApplyDynamicEffects",

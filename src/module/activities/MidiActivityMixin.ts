@@ -461,11 +461,6 @@ export let MidiActivityMixin = Base => {
           itemUuid: activity.item.uuid
         };
       }
-      // midi transforms the use's targets (dnd5e's _finalizeUsage has recorded the chosen form); a chosen form
-      // (form mode) is dnd5e's subsequent action. Here, before the workflow starts, as when it was a _finalizeUsage
-      // override (M14)
-      if (isActivityType(activity, "transform") && activity.transform?.mode !== "form" && useResults.message instanceof ChatMessage)
-        await activity.transformActor(usage, useResults.message);
       // Scaling is now handled by the workflow's activity getter (reads from chat card flags).
       await usage.workflow.performState("midi-qol.Start");
       return useResults;
