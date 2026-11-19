@@ -36,7 +36,9 @@ export const STATE_KEYS = [
   // The changes to the use's flow (steps/assembly.ts) as they were when it started: a rebuilt use keeps them
   "stepChanges",
   // A move through inserted steps under way (steps/engine.ts StepMove): a use rebuilt while one of them waits resumes it
-  "stepMove"
+  "stepMove",
+  // The use's damage messages by contribution key (M13 stage 2): a rebuilt use loads its damage from them
+  "damageMessages"
 ] as const;
 export type StateKey = typeof STATE_KEYS[number];
 
@@ -104,6 +106,8 @@ export function cardStateSchema() {
       inCombat: bool(), isTurn: bool(),
       deferredConcentration: new ObjectField({ ...unset, nullable: true }),
       useChanges: new StringField({ ...unset, blank: true, nullable: true }),
+      // The use's damage messages by contribution key (M13 stage 2)
+      damageMessages: new TypedObjectField(new StringField({ blank: false }), unset),
       damageRules: new SchemaField({
         downgrade: new ArrayField(new StringField(), unset),
         ignore: new SchemaField(Object.fromEntries(RULE_IGNORES.map(category => [category, new ArrayField(new StringField(), unset)])), unset)

@@ -115,6 +115,8 @@ export function registerFlowVariants(): void {
       // Another workflow's card keeps its hits and targets: only the damage is added
       if (workflow.ownsCard) await workflow.displayHits(whisperCard, false);
       await workflow.displayDamageRolls();
+      // Its damage messages too, on its own card or (user, M13 D2) the use's it adds to: the flow has no damage step
+      await workflow.createDamageMessages();
     } else {
       await workflow.damageRoll?.toMessage({ flavor: workflow.flavor });
     }

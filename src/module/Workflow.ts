@@ -146,6 +146,9 @@ class WorkflowsCopy extends Map<string, Workflow> {
   override clear(): void { this.#warn(); super.clear(); }
 }
 
+/** A damageContributions contribution of a use: its key (contributor#n), its message's role and its rolls */
+interface DamageContribution { key: string, role: string, rolls: Roll[] }
+
 class CardStateStore {
   #cache = new Map<string, unknown>();
   #write: (updates: Record<string, unknown>) => void;
@@ -204,6 +207,34 @@ class CardStateStore {
       if (key === "attackRoll") { if (!this.#cache.has(key)) this.#cache.set(key, roll); }
       else this.#cache.set(key, [...((this.#cache.get(key) as Roll[] | undefined) ?? []), roll]);
     }
+    this.#loadDamageMessages(state.damageMessages as Record<string, string> | undefined);
+  }
+
+  /** The damage contributions read back from their messages (loadDamageMessages), for the workflow's ledger */
+  loadedContributions: DamageContribution[] = [];
+
+  /**
+   * M13 stage 2: the use's damage from its contributions' messages, when every one still exists (else the card's rolls:
+   * a card from before them, a message deleted, a use rebuilt before they were made). Copies: the messages' rolls are
+   * theirs. A contribution's untargeted rolls were also bonus damage.
+   */
+  #loadDamageMessages(ids: Record<string, string> | undefined): void {
+    const entries = Object.entries(ids ?? {});
+    if (!entries.length) return;
+    const messages = entries.map(([key, id]) => [key, game.messages?.get(id)] as const);
+    if (messages.some(([, message]) => !message)) return;
+    const copy = (rolls: Roll[]) => rolls.map(roll => Roll.fromJSON(JSON.stringify(roll)) as Roll);
+    const rollsOf = (key: string) => copy((messages.find(([k]) => k === key)?.[1]?.rolls ?? []) as Roll[]);
+    const own: Record<string, string> = { activity: "damageRolls", other: "otherDamageRolls", bonus: "bonusDamageRolls" };
+    for (const [key, field] of Object.entries(own)) {
+      if (ids?.[key]) this.#cache.set(field, rollsOf(key));
+      else this.#cache.delete(field);
+    }
+    this.loadedContributions = messages.filter(([key]) => !own[key]).map(([key, message]) => ({
+      key, role: String(foundry.utils.getProperty(message!, `flags.${MODULE_ID}.damage.role`) ?? "module"), rolls: rollsOf(key)
+    }));
+    const untargeted = this.loadedContributions.flatMap(c => c.rolls.filter(roll => !foundry.utils.getProperty(roll, `options.${MODULE_ID}.contribution.targeted`)));
+    if (untargeted.length) this.#cache.set("bonusDamageRolls", [...((this.#cache.get("bonusDamageRolls") as Roll[] | undefined) ?? []), ...untargeted]);
   }
 
   scalar<T>(key: StateKey | "attackRollCount" | "damageRollCount", dflt: T): T {
@@ -1986,6 +2017,8 @@ export class Workflow {
       const card = this.#ownCard();
       if (card) {
         this.#persisted.load(card);
+        // The damage contributions' rolls, from their messages (M13 stage 2)
+        this.#contributions = this.#persisted.loadedContributions;
         // The use's item and activity, scaled, with what the use changed in them: the activity's item is the item
         const use = restoredUse(card);
         this.#activity = use.activity;
@@ -7172,7 +7205,7 @@ export class Workflow {
 
   /** damageContributions' rolls this use, each its own damage message (the untargeted ones are also bonus damage) */
   /** The damageContributions rolled for this use: key = contributor and its position (roles can repeat), role = its message's label */
-  #contributions: { key: string, role: string, rolls: Roll[] }[] = [];
+  #contributions: DamageContribution[] = [];
 
   /**
    * The damageContributions service's damage (M2 stage 8): each contribution rolled with the use's roll data; without
@@ -7193,6 +7226,8 @@ export class Workflow {
         const roll: Roll = await new CONFIG.Dice.DamageRoll(contribution.formula, rollData, { type, flavor: contribution.label }).evaluate();
         if (contribution.targets?.length) this.addTargetedDamageBonus({ targets: [...contribution.targets], amount: roll.total ?? 0, type, label: contribution.label });
         else untargeted.push(roll);
+        // Tagged: told apart from other bonus damage by the tag, not by object (a rebuilt use's rolls are copies)
+        foundry.utils.setProperty(roll, `options.${MODULE_ID}.contribution`, { key, targeted: !!contribution.targets?.length });
         this.#contributions.push({ key, role: contribution.role, rolls: [roll] });
         if (this.workflowOptions?.damageRollDSN !== false) await this.throwDamageDice(roll);
       } catch (err) {
@@ -7202,8 +7237,23 @@ export class Workflow {
     if (untargeted.length) await this.setBonusDamageRolls([...(this.bonusDamageRolls ?? []), ...untargeted]);
   }
 
-  /** This use's damage messages (createDamageMessages), by contribution key */
-  #damageMessageIds: Record<string, string> = {};
+  /** This use's damage messages (createDamageMessages), by contribution key: on its card's state, so a rebuilt use finds them */
+  get #damageMessageIds(): Record<string, string> { return this.#persisted.scalar("damageMessages", {} as Record<string, string>); }
+  set #damageMessageIds(ids: Record<string, string>) { this.#persisted.setScalar("damageMessages", ids); }
+  /** A damage-only workflow's messages on another use's card (D2): kept here, the card's state is that use's */
+  #foreignDamageMessageIds: Record<string, string> = {};
+  #damageMessagesSync: Promise<void> | undefined;
+
+  /** The damage rolls changed once their messages exist (a macro, a later bonus): the messages follow, once per change burst */
+  syncDamageMessages(): void {
+    if (this.readOnly || this.#damageMessagesSync) return;
+    const ids = this.ownsCard ? this.#damageMessageIds : this.#foreignDamageMessageIds;
+    if (foundry.utils.isEmpty(ids)) return;
+    this.#damageMessagesSync = Promise.resolve().then(() => {
+      this.#damageMessagesSync = undefined;
+      return this.createDamageMessages();
+    }).catch(err => error(`${this.workflowName} | updating the damage messages failed`, err));
+  }
 
   /**
    * M2 stage 8: the use's damage as dnd5e damage messages, one per contribution (the activity's, the other activity's or
@@ -7214,7 +7264,11 @@ export class Workflow {
    */
   async createDamageMessages(): Promise<void> {
     const card = this.chatCard;
-    if (!this.ownsCard || !card?.id || !game.settings.get("dnd5e", "chatCardSummary")) return;
+    if (this.readOnly || !card?.id || !game.settings.get("dnd5e", "chatCardSummary")) return;
+    // A damage-only workflow adding to another use's card adds its own messages to it (user, M13 D2): keyed by the
+    // workflow, role module, kept here (the card's state is the other use's)
+    const owns = this.ownsCard;
+    const ids = owns ? { ...this.#damageMessageIds } : this.#foreignDamageMessageIds;
     const TargetsField = globalThis.dnd5e?.dataModels?.chatMessage?.fields?.TargetsField;
     const targets = TargetsField ? TargetsField.getDescriptors(this.hitTargets.documents) : [];
     const other = this.otherDamageRolls ?? [];
@@ -7225,9 +7279,10 @@ export class Workflow {
       { key: "activity", role: "activity", rolls: this.damageRolls ?? [] },
       { key: "other", role: otherRole, rolls: other },
       // Bonus damage without the contributions' rolls, which have their own messages
-      { key: "bonus", role: "bonus", rolls: (this.bonusDamageRolls ?? []).filter(roll => !this.#contributions.some(c => c.rolls.includes(roll))) },
+      { key: "bonus", role: "bonus", rolls: (this.bonusDamageRolls ?? []).filter(roll => !foundry.utils.getProperty(roll, `options.${MODULE_ID}.contribution`)) },
       ...this.#contributions
-    ].filter(c => c.rolls.length);
+    ].filter(c => c.rolls.length)
+      .map(c => owns ? c : { ...c, key: `workflow:${this.id}:${c.key}`, role: "module" });
     // Their dice were thrown with the damage step (copies marked shown, so the messages don't throw them again)
     const markShown = (data: unknown): void => {
       if (Array.isArray(data)) { data.forEach(markShown); return; }
@@ -7239,7 +7294,7 @@ export class Workflow {
     const shown = (rolls: Roll[]) => rolls.map(roll => { const json = foundry.utils.deepClone(roll.toJSON()); markShown(json); return json; });
     const creates: object[] = [];
     for (const { key, role, rolls } of contributions) {
-      const id = this.#damageMessageIds[key];
+      const id = ids[key];
       const existing = id ? game.messages?.get(id) : undefined;
       if (existing) await existing.update({ rolls: shown(rolls) } as ChatMessage.UpdateData);
       else creates.push({
@@ -7252,8 +7307,9 @@ export class Workflow {
     const created = await ChatMessage.implementation.createDocuments(creates as ChatMessage.CreateData[]);
     for (const message of created ?? []) {
       const key = foundry.utils.getProperty(message, `flags.${MODULE_ID}.damage.key`) as string | undefined;
-      if (key && message.id) this.#damageMessageIds[key] = message.id;
+      if (key && message.id) ids[key] = message.id;
     }
+    if (owns) this.#damageMessageIds = ids;
   }
 
   /** Start collecting the damage step's dice (the activity's, the other activity's, bonus damage) for one throw */
@@ -7954,6 +8010,7 @@ export class Workflow {
     }
     this.deriveDamage();
     this.damageDetail = foundry.utils.deepClone(this.rawDamageDetail);
+    this.syncDamageMessages();
     return;
   }
 
@@ -8005,6 +8062,7 @@ export class Workflow {
     this.flavor = i18n("DND5E.Damage");
     this.deriveDamage();
     this.damageDetail = foundry.utils.deepClone(this.rawDamageDetail);
+    this.syncDamageMessages();
     return;
   }
 
@@ -8031,6 +8089,7 @@ export class Workflow {
     }
     this.deriveBonusDamage();
     this.bonusDamageDetail = foundry.utils.deepClone(this.rawBonusDamageDetail);
+    this.syncDamageMessages();
     return;
   }
 
@@ -8061,6 +8120,7 @@ export class Workflow {
     }
     this.deriveOtherDamage();
     this.otherDamageDetail = foundry.utils.deepClone(this.rawOtherDamageDetail);
+    this.syncDamageMessages();
     return;
   }
 
