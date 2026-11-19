@@ -1,4 +1,5 @@
 import type { AnyMutableObject } from "fvtt-types/utils";
+import { activityPolicy, onActivityTypeAdopted } from "./activityPrototype.js";
 import type { Activity, ActivityUseConfiguration, RollDialogConfig, RollMessageConfig } from "../../globals.js";
 import { reportServiceProblem } from "../api/services.js";
 import { setMessageTargets } from "../utils.js";
@@ -48,8 +49,10 @@ function isRestartable(activity: Activity | undefined): activity is RestartableA
  * preUseActivity listener can cancel it and restart it after midi's pre-use work; returns the restart's result. A
  * chained OVERRIDE, as graft.ts installed it: midi's is next to dnd5e's, so other modules' wraps see each use once.
  */
-export function installUse(types: Iterable<string>) {
-  for (const type of types) {
+export function installUse() {
+  onActivityTypeAdopted(type => {
+    // A type whose use bypasses dnd5e's base use: no workflow (its policy says so)
+    if (activityPolicy(type).useRestart === false) return;
     useTypes.add(type);
     globalThis.libWrapper.register(MODULE_ID, `CONFIG.DND5E.activityTypes.${type}.documentClass.prototype.use`,
       async function (this: Activity, wrapped: (...args: unknown[]) => Promise<unknown>, usage: ActivityUseConfiguration = {}, dialog: RollDialogConfig = {}, message: RollMessageConfig = {}) {
@@ -59,7 +62,7 @@ export function installUse(types: Iterable<string>) {
         const first = await wrapped({ ...usage, useRelaunch: { useKey } }, dialog, message);
         return first ?? await takeRelaunch(useKey);
       }, "OVERRIDE", { chain: true });
-  }
+  });
 }
 
 export function isRelaunched(usage: ActivityUseConfiguration | undefined): boolean {

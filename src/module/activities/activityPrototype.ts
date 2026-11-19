@@ -24,16 +24,22 @@ export interface ActivityPolicy {
   forcedTargetConfirmation?: string;
   /** whether dnd5e runs the type's follow-up action after a use (e.g. placing an enchantment), midi doing the rest */
   subsequentActions: (activity: Activity) => boolean;
+  /**
+   * How midi runs its workflow for a use (useRelaunch.ts): "preUseActivity", the type's use goes through dnd5e's base
+   * use (the default); "preUseLinkedSpell", it hands its use to a spell (Cast); false, its use bypasses dnd5e's base use
+   * and midi runs no workflow for it.
+   */
+  useRestart: "preUseActivity" | "preUseLinkedSpell" | false;
 }
 
 const DEFAULT_POLICY: ActivityPolicy = { automated: false, possibleOtherActivity: false, neverOtherActivity: false, triggerable: true, selfTriggerableOnly: false,
-  subsequentActions: () => true };
+  subsequentActions: () => true, useRestart: "preUseActivity" };
 const none = () => false;
 const automated = (policy: Partial<ActivityPolicy> = {}): Partial<ActivityPolicy> => ({ automated: true, ...policy });
 
 const midiPolicies: Record<string, Partial<ActivityPolicy>> = {
   attack: automated({ neverOtherActivity: true, subsequentActions: none }),
-  cast: automated({ forcedTargetConfirmation: "never", subsequentActions: none }),
+  cast: automated({ forcedTargetConfirmation: "never", subsequentActions: none, useRestart: "preUseLinkedSpell" }),
   check: automated({ possibleOtherActivity: true, subsequentActions: none }),
   damage: automated({ possibleOtherActivity: true, subsequentActions: none }),
   enchant: automated(),
@@ -58,6 +64,8 @@ for (const [type, policy] of Object.entries(midiPolicies)) policies.set(type, po
 /** For a module's own activity type: how midi treats it. Merged over what is registered. */
 export function registerActivityPolicy(type: string, policy: Partial<ActivityPolicy>) {
   policies.set(type, { ...policies.get(type)?.value, ...policy });
+  // After midi's setup: an automated type is adopted now (its wraps, sheet and card buttons installed)
+  if (adoptionOpen && activityPolicy(type).automated) adoptActivityType(type);
 }
 
 export function activityPolicy(activityOrType: { type?: string } | string | undefined): ActivityPolicy {
@@ -234,14 +242,36 @@ const LOCALIZATION: Record<string, { before?: string[], after: string[] }> = {
     .map(type => [type, { before: [`midi-qol.${type.toUpperCase()}`], after: ["midi-qol.SHARED"] }]))
 };
 
-/** midi uses dnd5e's activity type `type`: its localization prefixes; the rest is installed for adoptedActivityTypes */
+/** What midi installs for an adopted type (wraps, sheet parts, card buttons, a type's own setup): each told of every type */
+type AdoptionListener = (type: string) => void;
+const adoptionListeners: AdoptionListener[] = [];
+/** midi's setup has run: a policy registered from now on adopts its type at once */
+let adoptionOpen = false;
+
+/** Install something for every adopted type: those adopted already, and each one adopted later */
+export function onActivityTypeAdopted(listener: AdoptionListener): void {
+  adoptionListeners.push(listener);
+  for (const type of adoptedActivityTypes) listener(type);
+}
+
+/**
+ * Every dnd5e activity type whose policy is automated: midi's own (midiPolicies) and any a module registered (M14:
+ * adoption follows the policy, not a list of type names). A type with no policy is not automated.
+ */
+export function adoptAutomatedTypes(): void {
+  adoptionOpen = true;
+  for (const type of Object.keys(CONFIG.DND5E.activityTypes ?? {})) if (activityPolicy(type).automated) adoptActivityType(type);
+}
+
+/** midi uses dnd5e's activity type `type`: its localization prefixes, then what each installer adds (onActivityTypeAdopted) */
 export function adoptActivityType(type: string): void {
   // @ts-expect-error no dnd5e-types
   const cls: { LOCALIZATION_PREFIXES?: string[] } | undefined = CONFIG.DND5E.activityTypes[type]?.documentClass;
-  if (!cls) return;
+  if (!cls || adoptedActivityTypes.has(type)) return;
   adoptedActivityTypes.add(type);
   const prefixes = LOCALIZATION[type] ?? { after: ["midi-qol.SHARED"] };
   Object.defineProperty(cls, "LOCALIZATION_PREFIXES", { configurable: true, writable: true,
     value: [...(prefixes.before ?? []), ...(cls.LOCALIZATION_PREFIXES ?? []), ...prefixes.after] });
+  for (const listener of adoptionListeners) listener(type);
 }
 

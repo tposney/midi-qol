@@ -1,4 +1,3 @@
-import { adoptActivityType } from "./activityPrototype.js";
 import { TokenDocumentSet } from "../lib/tokenDocumentSet.js";
 import { Activity } from "../../globals.js";
 import { isActivityType } from "../utils.js";
@@ -9,7 +8,6 @@ import type { ActivityUseConfiguration } from "../../globals.js";
 
 export function setupTransformActivity() {
   if (debugEnabled > 0) warn("MidiQOL | TransformActivity | setupTransformActivity | Called");
-  adoptActivityType("transform");
 }
 
 

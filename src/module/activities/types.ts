@@ -1,7 +1,7 @@
 import { attackAgain } from "../rolls/attack.js";
 import { registerSheetExtras, type ActivitySheetApp } from "./activitySheets.js";
 import type { AnyMutableObject } from "fvtt-types/utils";
-import { adoptActivityType } from "./activityPrototype.js";
+import { onActivityTypeAdopted } from "./activityPrototype.js";
 import { registerCardActions } from "./cardActions.js";
 import { warn, error, GameSystemConfig, i18n, MODULE_ID } from "../../midi-qol.js";
 import { Workflow } from "../Workflow.js";
@@ -85,15 +85,17 @@ const TYPES: Record<string, TypeSetup> = {
   utility: { actions: { rollFormula: cardRollFormula } }
 };
 
-/** midi's activity types: each adopted, with its card buttons, sheet extras and setup (teleport.ts and transform.ts have their own) */
+/**
+ * midi's additions for its own types, applied as each is adopted (adoption follows the policy: activityPrototype.ts).
+ * Card buttons and sheet extras are registered first, so the card-action and sheet installers find them. A type of a
+ * module's, or one dnd5e adds later, gets midi's shared additions with no entry here.
+ */
 export function setupActivityTypes() {
-  for (const [type, { actions, sheet, setup }] of Object.entries(TYPES)) {
-    if (!CONFIG.DND5E.activityTypes[type]) continue;
-    adoptActivityType(type);
+  for (const [type, { actions, sheet }] of Object.entries(TYPES)) {
     if (actions) registerCardActions([type], actions);
     if (sheet) registerSheetExtras(type, sheet);
-    setup?.();
   }
+  onActivityTypeAdopted(type => TYPES[type]?.setup?.());
 }
 
 /** Attack's sheet data (was midi's Attack sheet's _prepareEffectContext) */

@@ -427,12 +427,18 @@ function setupActivities() {
   setupUsageCard();
   initUseRelaunch();
   registerMidiSteps();
+  // Registrations first (each type's card buttons, sheet extras), then the installers, which act on each adopted type
   setupActivityTypes();
   setupTransformActivity();
   setupTeleportActivity();
+  installDamageRolls();
+  installUse();
+  installActivitySheets();
+  installActivityCreation(adoptedActivityTypes);
   // dnd5e's classes, as midi uses them (were midi's classes until M14)
-  for (const type of ["attack", "damage", "cast", "save", "check", "enchant", "heal", "summon", "transform", "utility", "forward"])
-    globalThis.MidiQOL.activityTypes[type] = GameSystemConfig.activityTypes[type];
+  onActivityTypeAdopted(type => { globalThis.MidiQOL.activityTypes[type] = GameSystemConfig.activityTypes[type]; });
+  // Every type whose policy is automated (midi's, a module's); a policy registered later adopts its type then
+  adoptAutomatedTypes();
   // midi's activity classes are gone (M14): their mixin is kept as a deprecated pass-through
   Object.defineProperty(globalThis.MidiQOL.activityTypes, "MidiActivityMixin", { configurable: true, enumerable: false, get: () => {
     deprecation("midi-qol | MidiQOL.activityTypes.MidiActivityMixin is deprecated: midi's behaviour is on dnd5e's own activity classes; for a type of your own use MidiQOL.registerActivityPolicy",
@@ -440,15 +446,15 @@ function setupActivities() {
     return <T>(Base: T) => Base;
   } });
   installCardActions(GameSystemConfig.activityTypes);
+  // A type adopted after setup gets its card buttons too
+  onActivityTypeAdopted(() => { if (activityTypesInstalled) installCardActions(GameSystemConfig.activityTypes); });
+  activityTypesInstalled = true;
   installUsageButtons();
-  // midi's rolls as wraps of dnd5e's methods (M13), on the types adopted above
-  installDamageRolls(adoptedActivityTypes);
+  // midi's attack, formula and summon placement wraps (M13): those types' own methods
   installAttackRolls();
   installFormulaAndPlacement();
-  installActivityCreation(adoptedActivityTypes);
-  installUse(adoptedActivityTypes);
-  installActivitySheets(adoptedActivityTypes);
 }
+let activityTypesInstalled = false;
 
 Hooks.once('init', async function () {
   GameSystemConfig = CONFIG.DND5E;
@@ -1043,7 +1049,7 @@ import { registerMidiSteps } from './module/workflowSteps/index.js';
 import { installActivitySchema } from './module/activities/activitySchema.js';
 import { installCardActions, registerCardAction } from './module/activities/cardActions.js';
 import { installUsageButtons, registerCardButtonRule } from './module/activities/usageButtons.js';
-import { installActivityPrototype, installActivityCreation, registerActivityPolicy, activityPolicy } from './module/activities/activityPrototype.js';
+import { installActivityPrototype, installActivityCreation, registerActivityPolicy, activityPolicy, adoptAutomatedTypes, onActivityTypeAdopted } from './module/activities/activityPrototype.js';
 import { setupTransformActivity } from './module/activities/transform.js';
 import { setupTeleportActivity } from './module/activities/teleport.js';
 import { MidiCombat5e } from './module/MidiCombat5e.js';

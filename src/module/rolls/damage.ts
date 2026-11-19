@@ -1,4 +1,5 @@
 import type { Activity, DND5ETargetDescriptor, Dnd5eSystem, RollDialogConfig, RollMessageConfig, RollProcessConfig } from "../../globals.js";
+import { onActivityTypeAdopted } from "../activities/activityPrototype.js";
 import { hasConsumption } from "../activities/use.js";
 import { isMidiActivityType } from "../activities/midiActivity.js";
 import { GameSystemConfig, MODULE_ID, debugEnabled, error, i18n, i18nFormat, warn } from "../../midi-qol.js";
@@ -477,10 +478,9 @@ async function postProcessDamageRoll(activity: Activity, config: RollProcessConf
 type LibWrapperRegister = { register(packageId: string, target: string, fn: (...args: never[]) => unknown, type: string): unknown };
 
 /** midi's damage roll on each type it adopted, and its damage configuration; once, from setupActivities */
-export function installDamageRolls(types: Iterable<string>): void {
+export function installDamageRolls(): void {
   const libWrapper = (globalThis as { libWrapper?: LibWrapperRegister }).libWrapper;
-  for (const type of types) {
-    libWrapper?.register("midi-qol", `CONFIG.DND5E.activityTypes.${type}.documentClass.prototype.rollDamage`, rollDamageWrapper(type), "MIXED");
-  }
+  onActivityTypeAdopted(type =>
+    libWrapper?.register("midi-qol", `CONFIG.DND5E.activityTypes.${type}.documentClass.prototype.rollDamage`, rollDamageWrapper(type), "MIXED"));
   Hooks.on("dnd5e.preRollDamage", configureDamageRoll);
 }

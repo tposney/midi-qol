@@ -1,4 +1,3 @@
-import { adoptActivityType } from "./activityPrototype.js";
 import { registerSheetExtras } from "./activitySheets.js";
 import type { MidiActivity } from "./midiActivity.js";
 import { registerCardActions } from "./cardActions.js";
@@ -17,7 +16,6 @@ export function setupTeleportActivity() {
   const sheet = game.system.applications.activity.TeleportSheet;
   if (!base || !sheet) return;
   if (debugEnabled > 0) warn("MidiQOL | TeleportActivity | setupTeleportActivity | Called");
-  adoptActivityType("teleport");
   // dnd5e lists the card's targets (Targeted/Selected): who teleports, apart from the caster (was midi's class metadata)
   const metadata: unknown = Reflect.get(base, "metadata");
   Object.defineProperty(base, "metadata", { configurable: true, writable: true,

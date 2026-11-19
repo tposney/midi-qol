@@ -1,4 +1,5 @@
 import type { AnyMutableObject } from "fvtt-types/utils";
+import { onActivityTypeAdopted } from "./activityPrototype.js";
 import { i18n, specialDurationChoices } from "../../midi-qol.js";
 import { ConditionEditor } from "../apps/ConditionEditor.js";
 import { RegionBehaviorEditor } from "../apps/RegionBehaviorEditor.js";
@@ -64,17 +65,18 @@ function setStatic(cls: object, name: string, value: unknown) {
 }
 
 /** midi's parts, actions and clean arrays on the sheet classes of `types`; the hooks that add its tab and data */
-export function installActivitySheets(types: Iterable<string>) {
+export function installActivitySheets() {
   // @ts-expect-error no dnd5e-types
   const ActivitySheet: ClassStatics = game.system.applications.activity.ActivitySheet;
   // ApplicationV2 merges each class's own DEFAULT_OPTIONS down its chain: midi's actions on dnd5e's base sheet
   setStatic(ActivitySheet, "DEFAULT_OPTIONS", foundry.utils.mergeObject(ActivitySheet.DEFAULT_OPTIONS ?? {}, {
     actions: { addMacro, openConditionEditor, openRegionBehaviorEditor, addMidiStatus, deleteMidiStatus, deleteMidiStatusDuration }
   }, { inplace: false }));
-  for (const type of types) {
+  // Each adopted type's sheet: midi's parts and clean arrays
+  onActivityTypeAdopted(type => {
     // @ts-expect-error no dnd5e-types
     const sheet: ClassStatics | undefined = CONFIG.DND5E.activityTypes[type]?.documentClass?.metadata?.sheetClass;
-    if (!sheet?.PARTS) continue;
+    if (!sheet?.PARTS) return;
     const extras = sheetExtras.get(type) ?? {};
     const parts = { ...sheet.PARTS };
     if (!extras.keepActivation && parts.activation) parts.activation = {
@@ -87,7 +89,7 @@ export function installActivitySheets(types: Iterable<string>) {
     setStatic(sheet, "PARTS", parts);
     setStatic(sheet, "CLEAN_ARRAYS", [...(sheet.CLEAN_ARRAYS ?? []), "midiProperties.statuses"]);
     if (extras.classes) setStatic(sheet, "DEFAULT_OPTIONS", foundry.utils.mergeObject(Object.hasOwn(sheet, "DEFAULT_OPTIONS") ? sheet.DEFAULT_OPTIONS ?? {} : {}, { classes: extras.classes }, { inplace: false }));
-  }
+  });
   Hooks.on("preRenderActivitySheet", (app, context) => {
     if (!isMidiSheet(app)) return;
     addMidiTab(app, context);
