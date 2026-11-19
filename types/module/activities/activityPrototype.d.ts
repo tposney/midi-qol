@@ -26,3 +26,14 @@ export declare function activityPolicy(activityOrType: {
     type?: string;
 } | string | undefined): ActivityPolicy;
 export declare function installActivityPrototype(): void;
+/**
+ * A new activity (an item's add button, `Item5e#createActivity`) pairs with no other activity unless the data says so:
+ * `otherActivityId: "none"`. Stored activities without the field keep "unset" (midi works out the pairing). A wrap,
+ * not a hook (M14 D2): by `preUpdateItem` the activity's data always has the field, so a duplicated or copied activity
+ * set to unset couldn't be told from a new one; here the caller's data is still as given.
+ */
+export declare function installActivityCreation(types: Set<string>): void;
+/** The dnd5e activity types midi uses (its wraps, hooks and sheet additions are on these) */
+export declare const adoptedActivityTypes: Set<string>;
+/** midi uses dnd5e's activity type `type`: its localization prefixes; the rest is installed for adoptedActivityTypes */
+export declare function adoptActivityType(type: string): void;

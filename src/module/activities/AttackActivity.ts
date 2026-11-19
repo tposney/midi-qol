@@ -1,5 +1,7 @@
 import { attackAgain } from "../rolls/attack.js";
-import { adoptActivityType } from "./graft.js";
+import { registerSheetExtras, type ActivitySheetApp } from "./activitySheets.js";
+import type { AnyMutableObject } from "fvtt-types/utils";
+import { adoptActivityType } from "./activityPrototype.js";
 import { registerCardActions } from "./cardActions.js";
 import { TokenDocumentSet } from "../lib/tokenDocumentSet.js";
 import { debugEnabled, warn, error, busyWait, GameSystemConfig, debug, i18n, MODULE_ID, i18nFormat } from "../../midi-qol.js";
@@ -9,23 +11,18 @@ import { RollModifierTracker, AdvantageFlags, computeAdvantageFlags, computeRoll
 import { MidiOptions, setMessageTargets } from "../utils.js";
 import { configSettings, confirmTargetOptions, ammunitionPerTargetOptions } from "../settings.js";
 import { addAttribution, areMidiKeysPressed, callActivityHooks, displayDSNForRoll, getSpeaker, isAutoFastForward, updateUserTargets, validTargetTokens, getToken, tokenSourceCenter } from "../utils.js";
-import { MidiActivityMixin, MidiActivityMixinSheet, findAmmunitionActivity } from "./MidiActivityMixin.js";
+import { findAmmunitionActivity } from "./MidiActivityMixin.js";
 import { doActivityReactions } from "./activityHelpers.js";
 import { OnUseMacros } from "../apps/Item.js";
 import { USAGE_MESSAGE_TYPE } from "../ChatClasses/UsageCardMessage.js";
 import { Activity, ActivityUseConfiguration, DND5ETargetDescriptor, RollDialogConfig, RollMessageConfig, RollProcessConfig } from "../../globals.js";
 
-export let MidiAttackSheet: ReturnType<typeof defineMidiAttackSheetClass>;
-export let MidiAttackActivity: ReturnType<typeof defineMidiAttackActivityClass>;
 // export let MidiAttackActivityData;
 
 export function setupAttackActivity() {
   if (debugEnabled > 0) warn("MidiQOL | AttackActivity | setupAttackActivity | Called");
 
-  //@ts-expect-error
-  MidiAttackSheet = defineMidiAttackSheetClass(game.system.applications.activity.AttackSheet);
-  MidiAttackActivity = defineMidiAttackActivityClass(GameSystemConfig.activityTypes.attack.documentClass as Activity);
-  adoptActivityType("attack", MidiAttackActivity, MidiAttackSheet);
+  adoptActivityType("attack");
   registerCardActions(["attack"], {
     rollAttack: cardRollAttack,
     rollAttackAdvantage: cardRollAttackAdvantage,
@@ -34,96 +31,47 @@ export function setupAttackActivity() {
     rollDamageNoCritical: cardRollDamageNoCritical,
     rollDamageCritical: cardRollDamageCritical
   });
+  registerSheetExtras("attack", {
+    effect: { template: "modules/midi-qol/templates/activity/attack-effect.hbs", templates: ["modules/midi-qol/templates/activity/parts/attack-extras.hbs"] },
+    context: attackSheetContext
+  });
+  // The one sheet wrap (user, 2026-11-20): dnd5e builds the damage parts' type lists while drawing the effect part
+  globalThis.libWrapper.register(MODULE_ID, "dnd5e.applications.activity.AttackSheet.prototype._prepareEffectContext", healingDamageTypes, "WRAPPER");
 }
 
-let defineMidiAttackSheetClass = (baseClass: any) => {
-  return class MidiAttackActivitySheet extends MidiActivityMixinSheet(baseClass) {
-
-    static PARTS = {
-      ...super.PARTS,
-      effect: {
-        template: "modules/midi-qol/templates/activity/attack-effect.hbs",
-        templates: [
-          ...super.PARTS.effect.templates,
-          "modules/midi-qol/templates/activity/parts/attack-extras.hbs",
-        ]
-      }
-    }
-
-    async _prepareEffectContext(context) {
-      const activity = this.activity;
-      context = await super._prepareEffectContext(context);
-      context.attackModeOptions = this.item.system.attackModes;
-      context.hasAmmunition = this.item.system.properties.has("amm");
-      context.ammunitionOptions = this.item.system.ammunitionOptions ?? [];
-      context.ammunitionOptions?.forEach(option => {
-        option.selected = option.value === this.activity.ammunition;
-      });
-      if (activity.otherActivityUuid) {
-        ui.notifications?.warn("Please update other activity. otherActivityUuid is deprecated");
-        activity.otherActivityUuid = undefined;
-      }
-      // Add healing types to the existing damageParts typeOptions (dnd5e only includes damageTypes)
-      if (context.damageParts?.length) {
-        const healingTypes = Object.entries(GameSystemConfig.healingTypes).map(([value, config]) => ({
-          value, label: config.label, selected: false
-        }));
-        for (const part of context.damageParts) {
-          // Mark existing healing type selections (types may be a Set or undefined)
-          const typesSet = part.data?.types instanceof Set ? part.data.types : new Set();
-          for (const healingType of healingTypes) {
-            healingType.selected = typesSet.has(healingType.value);
-          }
-          // Add healing types to the end of typeOptions
-          part.typeOptions = [...(part.typeOptions ?? []), ...healingTypes.map(h => ({ ...h }))];
-        }
-      }
-      context.ConfirmTargetOptions = Object.entries(confirmTargetOptions).map(([value, label]) => ({ value, label }));
-      context.AmmunitionPerTargetOptions = Object.entries(ammunitionPerTargetOptions).map(([value, label]) => ({ value, label }));
-
-      if (debugEnabled > 0) {
-        warn(("prepareEffectContext | context"), context);
-      }
-      return context;
-    }
-
-    _prepareSubmitData(event, formData) {
-      let submitData = super._prepareSubmitData(event, formData);
-      submitData.otherActivityUuid = "";
-      return submitData;
-    }
-
+/** Attack's sheet data (was midi's Attack sheet's _prepareEffectContext) */
+function attackSheetContext(app: ActivitySheetApp, context: AnyMutableObject) {
+  const item = app.item;
+  // @ts-expect-error no dnd5e-types
+  context.attackModeOptions = item.system.attackModes;
+  // @ts-expect-error no dnd5e-types
+  context.hasAmmunition = item.system.properties?.has("amm");
+  // @ts-expect-error no dnd5e-types
+  const ammunitionOptions: { value: string, selected?: boolean }[] = item.system.ammunitionOptions ?? [];
+  for (const option of ammunitionOptions) option.selected = option.value === app.activity.ammunition;
+  context.ammunitionOptions = ammunitionOptions;
+  if (app.activity.otherActivityUuid) {
+    ui.notifications?.warn("Please update other activity. otherActivityUuid is deprecated");
+    app.activity.otherActivityUuid = undefined;
   }
+  context.ConfirmTargetOptions = Object.entries(confirmTargetOptions).map(([value, label]) => ({ value, label }));
+  context.AmmunitionPerTargetOptions = Object.entries(ammunitionPerTargetOptions).map(([value, label]) => ({ value, label }));
 }
 
-let defineMidiAttackActivityClass = <T extends Activity>(ActivityClass: T) => {
-  return class MidiAttackActivity extends MidiActivityMixin(ActivityClass) {
-    _otherActivity: Activity | undefined;
+type DamagePartContext = { data?: { types?: Set<string> }, typeOptions?: { value: string, label: string, selected: boolean }[] };
 
-    static LOCALIZATION_PREFIXES = [...super.LOCALIZATION_PREFIXES, "midi-qol.ATTACK"];
-
-    static metadata =
-      foundry.utils.mergeObject(
-        super.metadata, {
-        sheetClass: MidiAttackSheet,
-        midiTitle: "midi-qol.ATTACK.Title.one",
-        dnd5eTitle: ActivityClass.metadata.title,
-        usage: {
-          /*
-           * No `chatCard`. Supplying one puts the activity on dnd5e's legacy content path
-           * (`activity/mixin.mjs#legacyUsageContent`), which renders the template into
-           * `message.content` — and `usage-card.hbs` short-circuits on `content`, so the system's own
-           * card face never runs. That is what cost the card its background, its colours and the
-           * damage tray. The card is now rendered by `MidiUsageMessageData` from stored state.
-           *
-           * `usage.chatCard` is deprecated in dnd5e 6.0 and removed in 6.2, so this had to go anyway.
-           */
-        },
-      }, { inplace: false, insertKeys: true, insertValues: true })
-
-
+/** The healing types after the damage types in each damage part's type list (dnd5e lists damage types only) */
+async function healingDamageTypes(this: unknown, wrapped: (...args: unknown[]) => Promise<{ damageParts?: DamagePartContext[] }>, ...args: unknown[]) {
+  const context = await wrapped(...args);
+  for (const part of context.damageParts ?? []) {
+    const types = part.data?.types instanceof Set ? part.data.types : new Set<string>();
+    const healing = Object.entries(GameSystemConfig.healingTypes).map(([value, config]) => ({ value, label: config.label, selected: types.has(value) }));
+    part.typeOptions = [...(part.typeOptions ?? []), ...healing];
   }
+  return context;
 }
+
+
 
 /**
  * Compute attack advantage/disadvantage from actor flags and target grants flags.

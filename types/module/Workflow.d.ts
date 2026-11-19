@@ -119,6 +119,15 @@ export declare class Workflow {
         workflowId?: string;
         itemCardUuid?: string;
     };
+    /**
+     * This user's use of `activity` stopped for that roll, the most recent if several: a roll started without a use (a
+     * sheet button, a macro, another module) is its roll, as the card's button would make it (14.6.15/14.7.1; midi-next:
+     * the roll wraps, attack, damage and utility alike). Matched before the roll, so midi's advantage, bonuses, ammunition
+     * and pre-roll macros apply. Not while a roll dialog is open for the actor: that roll is already under way.
+     */
+    static awaitingRoll(activity: {
+        uuid?: string | null;
+    }, kind: "attack" | "damage" | "utility"): Workflow | undefined;
     /** The item's workflow that is executing now (a macro inside its use), the most recently filed if several */
     static runningFor(item: Item.Implementation): Workflow | undefined;
     /**
@@ -170,7 +179,7 @@ export declare class Workflow {
         readOnly?: boolean;
         anyAuthor?: boolean;
     }): Workflow | undefined;
-    performThrottledUpdate(chatCard: ChatMessage.Implementation, updates: ChatMessage.UpdateData): Promise<void | ChatMessage<"base" | import("fvtt-types/src/foundry/common/abstract/document.mjs").default.ModuleSubType | "midi-qol.damage" | "midi-qol.note"> | import("fvtt-types/src/foundry/common/abstract/document.mjs").default.Any>;
+    performThrottledUpdate(chatCard: ChatMessage.Implementation, updates: ChatMessage.UpdateData): Promise<void | import("fvtt-types/src/foundry/common/abstract/document.mjs").default.Any | ChatMessage<"base" | import("fvtt-types/src/foundry/common/abstract/document.mjs").default.ModuleSubType | "midi-qol.damage" | "midi-qol.note">>;
     flushCardWrites(displayOnly?: boolean): Promise<void>;
     /** Write one section of the card (system.midi.sections), with the workflow's rolls */
     setCardSection(name: SectionName, section: MidiCardSection, extraUpdates?: Record<string, unknown>): Promise<void>;
@@ -628,14 +637,14 @@ export declare class Workflow {
     constructor(actor: Actor.Implementation | null, activity: Activity | null, speaker: ChatMessage.SpeakerData | null, targets: Set<TokenOrDocument> | TokenOrDocument[] | null, options?: WorkflowConstructorOptions);
     someEventKeySet(): boolean | undefined;
     someAutoRollEventKeySet(): boolean | undefined;
-    static removeItemCardConfirmRollButton(itemCardUuid: string): Promise<void | ChatMessage<"base" | import("fvtt-types/src/foundry/common/abstract/document.mjs").default.ModuleSubType | "midi-qol.damage" | "midi-qol.note"> | import("fvtt-types/src/foundry/common/abstract/document.mjs").default.Any>;
+    static removeItemCardConfirmRollButton(itemCardUuid: string): Promise<void | import("fvtt-types/src/foundry/common/abstract/document.mjs").default.Any | ChatMessage<"base" | import("fvtt-types/src/foundry/common/abstract/document.mjs").default.ModuleSubType | "midi-qol.damage" | "midi-qol.note">>;
     static removeItemCardButtons(itemCardUuid: string | null | undefined, { removeAllButtons, removeConfirmButtons, removeAllDnd5eButtons, removeDnd5eSaveButtons, finished }?: {
         removeAllButtons?: boolean | undefined;
         removeConfirmButtons?: boolean | undefined;
         removeAllDnd5eButtons?: boolean | undefined;
         removeDnd5eSaveButtons?: boolean | undefined;
         finished?: boolean | undefined;
-    }): Promise<void | ChatMessage<"base" | import("fvtt-types/src/foundry/common/abstract/document.mjs").default.ModuleSubType | "midi-qol.damage" | "midi-qol.note"> | import("fvtt-types/src/foundry/common/abstract/document.mjs").default.Any>;
+    }): Promise<void | import("fvtt-types/src/foundry/common/abstract/document.mjs").default.Any | ChatMessage<"base" | import("fvtt-types/src/foundry/common/abstract/document.mjs").default.ModuleSubType | "midi-qol.damage" | "midi-qol.note">>;
     static removeWorkflow(id: string | undefined): Promise<void>;
     static get stateTable(): Record<string, WorkflowState>;
     /**
@@ -650,7 +659,7 @@ export declare class Workflow {
     static nameForState(state: WorkflowState | string): string;
     nameForState(state: WorkflowState | string): string;
     /** Wake a suspended workflow; without an event it re-runs the state it waits in */
-    resume(event?: WorkflowEvent): Promise<void | ChatMessage<"base" | import("fvtt-types/src/foundry/common/abstract/document.mjs").default.ModuleSubType | "midi-qol.damage" | "midi-qol.note"> | import("fvtt-types/src/foundry/common/abstract/document.mjs").default.Any>;
+    resume(event?: WorkflowEvent): Promise<void | import("fvtt-types/src/foundry/common/abstract/document.mjs").default.Any | ChatMessage<"base" | import("fvtt-types/src/foundry/common/abstract/document.mjs").default.ModuleSubType | "midi-qol.damage" | "midi-qol.note">>;
     /** A step is awaiting a roll it started (M2 stage 5): the roll's resume is the step's answer */
     get inStepRoll(): boolean;
     /**
@@ -662,8 +671,8 @@ export declare class Workflow {
     /** Where a suspended workflow goes when `event` arrives: by the state it waits in, else that state again */
     stateAfter(event: WorkflowEvent): WorkflowState;
     /** @deprecated since 14.6.9: use resume(event) */
-    unSuspend(context?: WorkflowContext): Promise<void | ChatMessage<"base" | import("fvtt-types/src/foundry/common/abstract/document.mjs").default.ModuleSubType | "midi-qol.damage" | "midi-qol.note"> | import("fvtt-types/src/foundry/common/abstract/document.mjs").default.Any>;
-    processPlacedTemplates(templates: MeasuredTemplateDocument[], activity?: Activity): Promise<boolean>;
+    unSuspend(context?: WorkflowContext): Promise<void | import("fvtt-types/src/foundry/common/abstract/document.mjs").default.Any | ChatMessage<"base" | import("fvtt-types/src/foundry/common/abstract/document.mjs").default.ModuleSubType | "midi-qol.damage" | "midi-qol.note">>;
+    processPlacedTemplates(templates: (MeasuredTemplateDocument | RegionDocument)[], activity?: Activity): Promise<boolean>;
     /**
      * A person drives this use, so its template's targets are shown as the player's (user-targets plan stage 2). Not a
      * use given its targets, one started by completeActivityUse or attack per target (a sequence), a trap or over-time.
@@ -698,6 +707,10 @@ export declare class Workflow {
      * them, with the choices the roll dialog offers. Not for a GM's own use.
      */
     waitOnPlayerRoll(kind: "attack" | "damage" | "utility"): void;
+    /** The roll is made, or no longer expected: the wait is no longer shown. The use itself is unchanged. */
+    endRollWait(): void;
+    /** Ends the roll waits of uses left unrolled: a deleted card, another use by the actor (not a turn change: user, 2026-11-19). */
+    static endRollWaits(matches?: (workflow: Workflow) => boolean): void;
     /** Roll for the player as their roll dialog would: press its button when it is open, else roll without it. */
     rollForPlayer(kind: "attack" | "damage" | "utility", mode: string): Promise<void>;
     _formatAttackTargets(): {
@@ -1021,12 +1034,12 @@ export declare class Workflow {
      * Call a macro by name, resolving the macro type and executing it.
      */
     callMacro(item: Item.Implementation | undefined, macroName: string, macroData: MidiMacroData, options: AnyObject): Promise<any>;
-    removeEffectsButton(): Promise<void | ChatMessage<"base" | import("fvtt-types/src/foundry/common/abstract/document.mjs").default.ModuleSubType | "midi-qol.damage" | "midi-qol.note"> | import("fvtt-types/src/foundry/common/abstract/document.mjs").default.Any>;
+    removeEffectsButton(): Promise<void | import("fvtt-types/src/foundry/common/abstract/document.mjs").default.Any | ChatMessage<"base" | import("fvtt-types/src/foundry/common/abstract/document.mjs").default.ModuleSubType | "midi-qol.damage" | "midi-qol.note">>;
     displayUtilityRolls(): Promise<void>;
     displayAttackRoll(_displayOptions?: {
         GMOnlyAttackRoll?: boolean;
     }): Promise<void>;
-    displayDamageRolls(): Promise<void | ChatMessage<"base" | import("fvtt-types/src/foundry/common/abstract/document.mjs").default.ModuleSubType | "midi-qol.damage" | "midi-qol.note"> | import("fvtt-types/src/foundry/common/abstract/document.mjs").default.Any>;
+    displayDamageRolls(): Promise<void | import("fvtt-types/src/foundry/common/abstract/document.mjs").default.Any | ChatMessage<"base" | import("fvtt-types/src/foundry/common/abstract/document.mjs").default.ModuleSubType | "midi-qol.damage" | "midi-qol.note">>;
     /** Attack per target: one target's hit or miss, from its own use, on this use's card */
     addSplitAttackResult(split: Workflow): Promise<void>;
     displayHitTargets(whisper?: boolean): Promise<void>;

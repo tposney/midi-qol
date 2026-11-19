@@ -1,5 +1,5 @@
 import { getDistance } from "../services/distance/service.js";
-import { adoptedActivityTypes } from "./graft.js";
+import { adoptedActivityTypes } from "./activityPrototype.js";
 import { queryUser } from "../lib/midiQueries.js";
 import { registerCardAction, registerCardActions } from "./cardActions.js";
 import { cardOtherConsumption } from "../lib/cardState.js";
@@ -143,314 +143,7 @@ export function findAmmunitionActivity(ammunitionItem: any): any | undefined {
 }
 
 
-export let MidiActivityMixin = Base => {
-  interface MidiActivityMixin extends Activity { };
 
-  class MidiActivityMixin extends Base {
-    static LOCALIZATION_PREFIXES = [...super.LOCALIZATION_PREFIXES, "midi-qol.SHARED"];
-
-
-
-
-
-
-
-
-
-
-
-    static metadata = foundry.utils.mergeObject(
-      super.metadata, {
-      usage: {
-        dialog: MidiActivityUsageDialog,
-      },
-    }, { inplace: false, insertValues: true, insertKeys: true });
-  }
-  return MidiActivityMixin;
-}
-
-export let MidiActivityMixinSheet = Base => {
-  return class MidiActivitySheet extends Base {
-
-    static DEFAULT_OPTIONS: foundry.applications.api.ApplicationV2.DefaultOptions = {
-      ...super.DEFAULT_OPTIONS,
-      actions: {
-        ...super.DEFAULT_OPTIONS.actions,
-        addMacro: MidiActivitySheet.#addMacro,
-        openConditionEditor: MidiActivitySheet.#openConditionEditor,
-        openRegionBehaviorEditor: MidiActivitySheet.#openRegionBehaviorEditor,
-        addMidiStatus: MidiActivitySheet.#addMidiStatus,
-        deleteMidiStatus: MidiActivitySheet.#deleteMidiStatus,
-        deleteMidiStatusDuration: MidiActivitySheet.#deleteMidiStatusDuration,
-      }
-    }
-
-    static CLEAN_ARRAYS = [...super.CLEAN_ARRAYS, "midiProperties.statuses"];
-
-    static #addMidiStatus() {
-      const statuses = this.activity.toObject().midiProperties?.statuses ?? [];
-      this.activity.update({ "midiProperties.statuses": [...statuses, { id: "", specialDuration: [], onSave: false }] });
-    }
-
-    static #deleteMidiStatus(event: PointerEvent, target: HTMLElement) {
-      const statuses = this.activity.toObject().midiProperties?.statuses ?? [];
-      statuses.splice(Number(target.dataset.index), 1);
-      this.activity.update({ "midiProperties.statuses": statuses });
-    }
-
-    static #deleteMidiStatusDuration(event: PointerEvent, target: HTMLElement) {
-      const statuses = this.activity.toObject().midiProperties?.statuses ?? [];
-      const entry = statuses[Number(target.dataset.index)];
-      if (!entry) return;
-      entry.specialDuration = entry.specialDuration.filter(key => key !== target.dataset.key);
-      this.activity.update({ "midiProperties.statuses": statuses });
-    }
-
-    /** A special duration chosen from a status's "add" list joins that status's durations. */
-    _midiOnAddMidiStatusDuration(event: Event) {
-      // Not a form field: the form must not submit the status list before this update.
-      event.stopPropagation();
-      const select = event.currentTarget as HTMLSelectElement;
-      const statuses = this.activity.toObject().midiProperties?.statuses ?? [];
-      const entry = statuses[Number(select.dataset.midiStatusDuration)];
-      if (!entry || !select.value || entry.specialDuration.includes(select.value)) return;
-      entry.specialDuration.push(select.value);
-      this.activity.update({ "midiProperties.statuses": statuses });
-    }
-    static #addMacro() {
-      const Editor = globalThis.DAE?.DIMEditor;
-      if (Editor) new Editor({ document: this.activity }).render({ force: true });
-      else ui.notifications?.error("DIMEditor not available - install Dynamic Active Effects");
-    }
-
-    static #openConditionEditor(event: PointerEvent, target: HTMLElement) {
-      const fieldName = target.dataset.fieldName ?? "";
-      const fieldLabel = target.dataset.fieldLabel ?? fieldName;
-      const input = target.closest(".midi-condition-field-wrapper")?.querySelector("input") as HTMLInputElement | null;
-      if (!input) return;
-
-      new ConditionEditor({
-        value: input.value,
-        key: fieldName,
-        label: fieldLabel,
-        parent: this.activity?.item ?? null,
-        onSubmit: (newValue: string) => {
-          input.value = newValue;
-          input.dispatchEvent(new Event("change", { bubbles: true }));
-        },
-        onCancel: () => { }
-      }).render({ force: true });
-    }
-
-    static #openRegionBehaviorEditor() {
-      new RegionBehaviorEditor(this.activity).render({ force: true });
-    }
-
-    static PARTS = {
-      ...super.PARTS,
-      activation: {
-        template: "modules/midi-qol/templates/activity/activation.hbs",
-        templates: [
-          ...super.PARTS.activation.templates,
-          "modules/midi-qol/templates/activity/parts/region-behavior-targeting.hbs",
-          "modules/midi-qol/templates/activity/parts/midi-targeting.hbs",
-        ]
-      },
-      "midi-qol": {
-        template: "modules/midi-qol/templates/activity/parts/midi-activity-tab.hbs",
-      }
-    }
-
-    _getTabs() {
-      const midiSubTabs = ["modConditions", "workflowSettings", "activityManagement", "overtime", "activityMacro"];
-      if (!midiSubTabs.includes(this.tabGroups["midi-qol"])) {
-        this.tabGroups["midi-qol"] = "modConditions";
-      }
-
-      let tabs = super._getTabs();
-      tabs = {
-        ...tabs,
-        "midi-qol": {
-          id: "midi-qol",
-          group: "sheet",
-          icon: "fa-solid fa-sun",
-          label: "midi-qol",
-          tabs: {
-            modConditions: {
-              id: "modConditions",
-              group: "midi-qol",
-              icon: "fa-solid fa-filter",
-              label: i18n("midi-qol.ActivitySheetTabs.modConditions")
-            },
-            workflowSettings: {
-              id: "workflowSettings",
-              group: "midi-qol",
-              icon: "fa-solid fa-gears",
-              label: i18n("midi-qol.ActivitySheetTabs.workflowSettings")
-            },
-            activityManagement: {
-              id: "activityManagement",
-              group: "midi-qol",
-              icon: "fa-solid fa-sitemap",
-              label: i18n("midi-qol.ActivitySheetTabs.activityManagement")
-            },
-            overtime: {
-              id: "overtime",
-              group: "midi-qol",
-              icon: "fa-solid fa-clock",
-              label: i18n("midi-qol.ActivitySheetTabs.overtime")
-            },
-            activityMacro: {
-              id: "activityMacro",
-              group: "midi-qol",
-              icon: "fa-solid fa-file-pen",
-              label: i18n("midi-qol.ActivitySheetTabs.activityMacro")
-            }
-          }
-        }
-      }
-      return super._markTabs(tabs);
-    }
-
-    async _prepareMidiQolContext(context) {
-      context.midiStatuses = (this.activity.toObject().midiProperties?.statuses ?? []).map(entry => ({ ...entry,
-        durations: entry.specialDuration.map(key => ({ key, label: specialDurationChoices[key] ?? key }))
-      }));
-      context.midiStatusOptions = Object.fromEntries(CONFIG.statusEffects.map(status => [status.id, i18n(status.name ?? status.id)])
-        .sort((a, b) => a[1].localeCompare(b[1], game.i18n?.lang)));
-      context.specialDurationOptions = specialDurationChoices;
-      // context = await super._prepareEffectContext(context);
-      context.ConfirmTargetOptions = Object.entries(confirmTargetOptions).map(([value, label]) => ({ value, label }));
-      if (this.activity.forcedTargetConfirmation) {
-        context.ConfirmTargetOptions = context.ConfirmTargetOptions.filter(o => o.value === this.activity.forcedTargetConfirmation);
-        // Show the effective value, not the stored one, and stop it being edited: the stored value
-        // has no effect while the activity forces a result.
-        context.confirmTargetsForced = true;
-        context.confirmTargetsValue = this.activity.forcedTargetConfirmation;
-      }
-      // v14 message-mode values (was legacy CONST.DICE_ROLL_MODES). Stored legacy values are migrated
-      // to v14 below so the picker matches and re-saves the new value.
-      context.RollModeOptions = [
-        { value: "default", label: i18n("Default") },
-        { value: "public", label: i18n("CHAT.RollPublic") },
-        { value: "gm", label: i18n("CHAT.RollPrivate") },
-        { value: "blind", label: i18n("CHAT.RollBlind") },
-        { value: "self", label: i18n("CHAT.RollSelf") }
-      ];
-      // Migrate-on-edit: normalize a legacy stored rollMode to its v14 equivalent for display + save.
-      const srcMidi = (context as any).source?.midiProperties;
-      if (srcMidi && srcMidi.rollMode && srcMidi.rollMode !== "default")
-        srcMidi.rollMode = rollModeToMessageMode(srcMidi.rollMode) ?? srcMidi.rollMode;
-      context.RemoveChatButtonsOptions = Object.entries(foundry.utils.mergeObject({ "default": i18n("midi-qol.MidiSettings") }, removeButtonsOptions))
-        .map(([value, label]) => ({ value, label }));
-      context.placeholderIdentifier = context.activity.identifier;
-      const midiProperties = context.activity.midiProperties;
-
-      context.ConsumeDialogOptions = Object.entries(consumeConfigOptions).map(([value, label]) => {
-        return { value, label, selected: midiProperties.forceConsumeDialog === value }
-      });;
-      context.RollDialogOptions = Object.entries(rollConfigOptions).map(([value, label]) => {
-        return { value, label, selected: midiProperties.forceRollDialog === value }
-      })
-      context.DamageDialogOptions = Object.entries(damageConfigOptions).map(([value, label]) => {
-        return { value, label, selected: midiProperties.forceDamageDialog === value }
-      });
-      context.otherActivityOptions = this.item.system.activities
-        .filter(a => a.id !== this.activity.id && a.isOtherActivityCompatible)
-        .reduce((ret, a) => {
-          const identifierString = a.identifier === a.name.slugify() ? "" : ` (${a.identifier})`;
-          ret.push({ label: `${a.name}${identifierString}`, value: a.identifier, id: a.id });
-          return ret
-        }, [{ label: "Default", value: "" }, { label: "None", value: "none" }]);
-      const selectedOtherActivity = this.activity.otherActivityId ?? "";
-      context.otherActivityOptions?.forEach(option => { option.selected = option.value === selectedOtherActivity || option.id === selectedOtherActivity });
-      context.triggeredActivityOptions = this.item.system.activities
-        .filter(a => a.id !== this.activity.id && a.isTriggerableActivity !== false)
-        .reduce((ret, a) => {
-          // Another module's activity has no identifier; it is chosen by id.
-          const identifierString = !a.identifier || a.identifier === a.name.slugify() ? "" : ` (${a.identifier})`;
-          ret.push({ label: `${a.name}${identifierString}`, value: a.identifier ?? a.id, id: a.id }); return ret
-        }, [{ label: "None", value: "none" }]);
-      context.triggeredActivityOptions?.filter(option => { option.selected = option.value === this.activity.midiProperties.triggeredActivityId || option.id === this.activity.midiProperties.triggeredActivityId });
-      let activity = context.activity;
-      let triggeredActivity = await context.activity.getTriggeredActivity();
-      const triggerList: String[] = [activity.name];
-      while (triggeredActivity) {
-        triggerList.push(triggeredActivity.name);
-        if (triggeredActivity.id === activity.id) {
-          ui.notifications?.error(`midi-qol | Circular activity call detected ${triggerList.join("->")}`);
-          break;
-        }
-        triggeredActivity = await triggeredActivity.getTriggeredActivity?.();
-      }
-      context.triggeredActivityTargetOptions = Object.entries(triggeredActivityTargetOptions).map(([value, label]) => {
-        return { value, label, selected: midiProperties.triggeredActivityTargets === value }
-      })
-      context.triggeredActivityRollAsOptions = Object.entries(triggeredActivityRollAsOptions).map(([value, label]) => {
-        return { value, label, selected: midiProperties.triggeredActivityRollAs === value }
-      });
-      if ((await context.activity.getTriggeredActivity())?.isSelfTriggerableOnly) {
-        context.triggeredActivityRollAsOptions = context.triggeredActivityRollAsOptions.filter(o => o.value === "self");
-        // adjust target list
-      }
-      context.ignoreTraitsOptions = getIgnoreTraitsOptions().map((option) => {
-        return { ...option, selected: this.activity.midiProperties.ignoreTraits.has(option.value) }
-      });
-      context.AutoTargetTypeOptions = Object.entries(aoeTargetTypeOptions).map(([value, label]) => ({ value, label }));
-      const AutoCEEffectsOptions = Object.entries(autoCEEffectsOptions).map(([value, opt]) => ({ value, label: typeof opt === "string" ? opt : opt.label }));
-      context.AutoCEEffectsOptions = [{ value: "default", label: i18n("midi-qol.MidiSettings") }, ...AutoCEEffectsOptions];
-      const defaultAction = { "default": i18n("midi-qol.MidiSettings") };
-      context.AutoTargetActionOptions = Object.entries(foundry.utils.mergeObject(defaultAction, autoTargetOptions)).map(([value, opt]) => ({ value, label: typeof opt === "string" ? opt : opt.label }));
-      context.possibleOtherActivity = this.activity.possibleOtherActivity;
-      context.turnChoiceOptions = [{ value: "start", label: i18n("midi-qol.OVERTIME.FIELDS.turnChoice.start") }, { value: "end", label: i18n("midi-qol.OVERTIME.FIELDS.turnChoice.end") }];
-      context.overTimeRollAsOptions = [{ value: "target", label: i18n("midi-qol.OVERTIME.FIELDS.rollAs.target") }, { value: "source", label: i18n("midi-qol.OVERTIME.FIELDS.rollAs.source") }];
-      context.CEActive = installedModules.get("dfreds-convenient-effects");
-      return context;
-    }
-
-    async _preparePartContext(partId, context, options) {
-      context = await super._preparePartContext(partId, context, options);
-      context.hasDamage = this.activity.damage;
-      context.isSummons = isActivityType(this.activity, "summon");
-      context.consumesHP = this.activity.consumption?.targets?.some(t => t.target === "attributes.hp.value");
-      context.hasAreaTarget = !!this.activity.target?.template?.type;
-      if (partId === "midi-qol") {
-        context.tab = context.tabs["midi-qol"];
-        return this._prepareMidiQolContext(context);
-      }
-      if (partId === "activation") {
-        // Region-behavior panel only renders for real AoE/emanation templates — matches
-        // GameSystemConfig.areaTargetTypes, so emanationNoTemplate (no template at all) is excluded.
-        context.showRegionBehaviorPanel = activityHasAreaTarget(this.activity);
-        context.attachTokenOptions = attachTokenOptions(this.activity.regionBehavior?.attachToken ?? "default");
-        context.templateOriginOptions = templateOriginOptions(this.activity.regionBehavior?.templateOrigin ?? "default");
-      }
-      return context;
-    }
-
-    async _onRender(context, options) {
-      await super._onRender(context, options);
-      this.element.querySelectorAll("select[data-midi-status-duration]")
-        .forEach(select => select.addEventListener("change", this._midiOnAddMidiStatusDuration.bind(this)));
-
-      // Auto-set target.override when region behaviour is enabled. The form-rendered
-      // checkbox lives in the activation tab via region-behavior-targeting.hbs.
-      if (!activityHasAreaTarget(this.activity)) return;
-      const enabledCheckbox = this.element.querySelector(
-        'input[name="regionBehavior.enabled"]'
-      ) as HTMLInputElement | null;
-      if (!enabledCheckbox) return;
-      if (this.activity.regionBehavior?.enabled && !this.activity.target?.override) {
-        this.activity.update({ "target.override": true });
-      }
-      enabledCheckbox.addEventListener("change", async () => {
-        if (enabledCheckbox.checked && !this.activity.target?.override) {
-          await this.activity.update({ "target.override": true });
-        }
-      });
-    }
-  }
-}
 
 function renderActivitySheetHook(app, [elem]) {
   const Editor = globalThis.DAE?.DIMEditor;
@@ -472,39 +165,8 @@ function renderActivitySheetHook(app, [elem]) {
   closeButton.parentNode.insertBefore(daeButton, closeButton);
 }
 
-export let MidiActivityUsageDialog;
-/**
- * Each midi activity type's title (its `midiTitle`, else dnd5e's), chosen by the Activity Prefix setting when it is read:
- * the classes are defined before midi's settings load, and Boss Loot FX turns the prefix off as they do.
- */
-export function setupActivityTitles() {
-  for (const config of Object.values(GameSystemConfig.activityTypes)) {
-    const cls = config?.documentClass;
-    const metadata: unknown = cls && "metadata" in cls ? cls.metadata : undefined;
-    if (typeof metadata !== "object" || metadata === null || !("midiTitle" in metadata) || typeof metadata.midiTitle !== "string") continue;
-    const midiTitle = metadata.midiTitle;
-    const dnd5eTitle = "dnd5eTitle" in metadata ? metadata.dnd5eTitle : undefined;
-    Object.defineProperty(metadata, "title", {
-      get: () => configSettings.activityNamePrefix ? midiTitle : dnd5eTitle,
-      configurable: true,
-      enumerable: true
-    });
-  }
-}
 
 export function setupMidiActivityMixin() {
-  //@ts-expect-error
-  const ActivityUsageDialog = game.system.applications.activity.ActivityUsageDialog;
-  MidiActivityUsageDialog = class MidiActivityUsageDialog extends ActivityUsageDialog {
-    async _prepareCreationContext(context, options) {
-      context = await super._prepareCreationContext(context, options);
-      //@ts-expect-error
-      if (activityHasAutoPlaceTemplate(this.activity) || activityHasEmanationNoTemplate(this.activity)) {
-        context.hasCreation = false;
-      }
-      return context;
-    }
-  }
   //@ts-expect-error
   Hooks.on("renderActivitySheet", renderActivitySheetHook);
   registerUsageMessageHooks();
@@ -730,7 +392,7 @@ async function cardRollOtherSave(this: Activity, event: PointerEvent, target: HT
  * After: the use's workflow is its card's from now on, filed under the card's uuid before dnd5e places the use's
  * templates and calls postUseActivity (not only when use() returns).
  */
-/** An activity midi has adopted (graft.ts until M14 stage 2): it works out its card's context */
+/** An activity of a type midi uses: it works out its card's context */
 type UsageCardActivity = Activity & { midiUsageContext?: (message: unknown) => MidiUsageChatContext };
 
 export function registerUsageMessageHooks() {
@@ -761,7 +423,7 @@ export function registerUsageMessageHooks() {
   });
 }
 
-/** An activity of a type midi uses (graft.ts's adopted types until M14 stage 3): midi's functions apply to it */
+/** An activity of a type midi uses (adoptActivityType): midi's functions apply to it */
 export function isMidiActivityType(activity: Activity | null | undefined): activity is MidiActivity {
   return !!activity?.type && adoptedActivityTypes.has(activity.type);
 }
@@ -908,6 +570,8 @@ export async function prepareUse(used: MidiActivity, usage: ActivityUseConfigura
   if (autoCreateTemplate || emanationNoTemplate || isTrapWorkflow) {
     usage.create ??= {};
     usage.create.measuredTemplate = false;
+    // dnd5e's usage dialog doesn't offer it either (M14: was midi's dialog class): its display option for the section
+    dialog.options = foundry.utils.mergeObject(dialog.options ?? {}, { display: { create: { measuredTemplate: false } } }, { inplace: false });
   }
 
   foundry.utils.setProperty(message, "data.flags.midi-qol.messageType", "attack");

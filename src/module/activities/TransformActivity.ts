@@ -1,48 +1,17 @@
-import { adoptActivityType } from "./graft.js";
+import { adoptActivityType } from "./activityPrototype.js";
 import { TokenDocumentSet } from "../lib/tokenDocumentSet.js";
 import { Activity } from "../../globals.js";
 import { isActivityType } from "../utils.js";
 import { debugEnabled, GameSystemConfig, i18nFormat, warn } from "../../midi-qol.js";
-import { MidiActivityMixin, MidiActivityMixinSheet, type MidiActivity } from "./MidiActivityMixin.js";
+import { type MidiActivity } from "./MidiActivityMixin.js";
 import type { ActivityUseConfiguration } from "../../globals.js";
 
-export let MidiTransformActivity: ReturnType<typeof defineMidiTransformActivityClass>;
-export let MidiTransformSheet: ReturnType<typeof defineMidiTransformSheetClass>;
 
 export function setupTransformActivity() {
   if (debugEnabled > 0) warn("MidiQOL | TransformActivity | setupTransformActivity | Called");
-  //@ts-expect-error
-  MidiTransformSheet = defineMidiTransformSheetClass(game.system.applications.activity.TransformSheet);
-  MidiTransformActivity = defineMidiTransformActivityClass(GameSystemConfig.activityTypes.transform.documentClass as Activity);
-  adoptActivityType("transform", MidiTransformActivity, MidiTransformSheet);
-}
-let defineMidiTransformSheetClass = (baseClass: any) => {
-  return class MidiTransformSheet extends MidiActivityMixinSheet(baseClass) {
-  }
+  adoptActivityType("transform");
 }
 
-let defineMidiTransformActivityClass = <T extends Activity>(ActivityClass: T) => {
-  return class MidiTransformActivity extends MidiActivityMixin(ActivityClass) {
-    static LOCALIZATION_PREFIXES = ["midi-qol.TRANSFORM", ...super.LOCALIZATION_PREFIXES];
-    static metadata =
-      foundry.utils.mergeObject(
-        super.metadata, {
-        midiTitle: "midi-qol.TRANSFORM.Title.one",
-        dnd5eTitle: ActivityClass.metadata.title,
-        sheetClass: MidiTransformSheet,
-        usage: {
-          /*
-           * No `chatCard`. Supplying one keeps the activity on dnd5e's legacy content path — the
-           * system renders the template into `message.content` and `MidiUsageMessageData`'s own
-           * template short-circuits on it, so the card face never runs. Deprecated in dnd5e 6.0 and
-           * removed in 6.2 (`activity/mixin.mjs#legacyUsageContent`) regardless. See AttackActivity.
-           */
-          dialog: ActivityClass.metadata.usage.dialog
-        },
-      }, { inplace: false, insertKeys: true, insertValues: true });
-
-  }
-}
 
 /** midi transforms the use's targets (the Transform step; M14 stage 2: was a method of midi's Transform class) */
 /** dnd5e's transform activity: its profiles, settings and mode */

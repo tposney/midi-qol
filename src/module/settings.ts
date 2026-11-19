@@ -597,7 +597,6 @@ export let fetchSoundSettings = () => {
 let warnedRollAlternate = false;
 export let fetchParams = () => {
   if (debugEnabled > 1) debug("Fetch Params Loading");
-  const blfxActive = game.modules.get("boss-loot-assets-premium")?.active || game.modules.get("boss-loot-assets-free")?.active;
 
   const showedAttackRollDetails = configSettings?.showAttackRollDetails ?? true;
   configSettings = game.settings.get("midi-qol", "ConfigSettings");
@@ -940,12 +939,6 @@ export let fetchParams = () => {
   if (configSettings.gridlessFudge === undefined) configSettings.gridlessFudge = 0;
   if (configSettings.concentrationIncapacitatedConditionCheck === undefined) configSettings.concentrationIncapacitatedConditionCheck = false;
   if (configSettings.activationAutomation === undefined) configSettings.activationAutomation = "chat";
-  if (configSettings.activityNamePrefix === undefined) configSettings.activityNamePrefix = true;
-  if (blfxActive && configSettings.activityNamePrefix) {
-    TroubleShooter.recordError({}, "Boss Loot FX is active - disabling activity name prefix");
-    console.warn("midiqol | Boss Loot FX is active - disabling activity name prefix");
-    configSettings.activityNamePrefix = false;
-  }
   if (targetConfirmation === undefined || typeof targetConfirmation === "string" || targetConfirmation instanceof String) targetConfirmation = {
     enabled: false,
     always: false,

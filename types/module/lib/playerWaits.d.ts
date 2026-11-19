@@ -35,6 +35,8 @@ export interface WaitSpec<T> {
     source?: string;
     /** Leave the player's open roll dialog for the creature alone when settled (the choice uses it). */
     keepDialogs?: boolean;
+    /** What began the wait (a workflow): its waits end with it (endPlayerWaitsOwnedBy). */
+    owner?: object;
 }
 export interface WaitInfo {
     id: string;
@@ -100,6 +102,10 @@ export declare function rollDialogsFor(actorUuid: string | null, requestClaim?: 
 export declare function _closePlayerRollDialogs({ actorUuid }: {
     actorUuid: string | null;
 }): void;
+/** End the waits an owner (a workflow) began and no longer needs: it was removed before they were answered. */
+export declare function endPlayerWaitsOwnedBy(owner: object): void;
+/** A wait of this client's own that its player may dismiss (a roll they won't make). */
+export declare function ownDismissable(id: string): boolean;
 /** Settle a wait on the client holding it. */
 export declare function settlePlayerWait(id: string, choice: WaitChoice): Promise<boolean>;
 export declare function _settlePlayerWait({ id, choice }: {

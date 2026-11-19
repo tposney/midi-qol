@@ -1864,19 +1864,19 @@ export declare function cardStateSchema(): {
             readonly choices: readonly ["half", "threeQuarters", "total"];
             readonly required: boolean;
             readonly initial: undefined;
-        }, import("fvtt-types/src/foundry/common/data/fields.mjs").DataField.DerivedAssignmentType<"total" | "half" | "threeQuarters", import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.DefaultOptionsWhenChoicesProvided, import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.MergedOptions<{
+        }, import("fvtt-types/src/foundry/common/data/fields.mjs").DataField.DerivedAssignmentType<"half" | "threeQuarters" | "total", import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.DefaultOptionsWhenChoicesProvided, import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.MergedOptions<{
             readonly choices: readonly ["half", "threeQuarters", "total"];
             readonly required: boolean;
             readonly initial: undefined;
         }>>, {
             initial: undefined;
-        }>>, import("fvtt-types/src/foundry/common/data/fields.mjs").DataField.DerivedInitializedType<"total" | "half" | "threeQuarters", import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.DefaultOptionsWhenChoicesProvided, import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.MergedOptions<{
+        }>>, import("fvtt-types/src/foundry/common/data/fields.mjs").DataField.DerivedInitializedType<"half" | "threeQuarters" | "total", import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.DefaultOptionsWhenChoicesProvided, import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.MergedOptions<{
             readonly choices: readonly ["half", "threeQuarters", "total"];
             readonly required: boolean;
             readonly initial: undefined;
         }>>, {
             initial: undefined;
-        }>>, import("fvtt-types/src/foundry/common/data/fields.mjs").DataField.DerivedInitializedType<"total" | "half" | "threeQuarters", import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.DefaultOptionsWhenChoicesProvided, import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.MergedOptions<{
+        }>>, import("fvtt-types/src/foundry/common/data/fields.mjs").DataField.DerivedInitializedType<"half" | "threeQuarters" | "total", import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.DefaultOptionsWhenChoicesProvided, import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.MergedOptions<{
             readonly choices: readonly ["half", "threeQuarters", "total"];
             readonly required: boolean;
             readonly initial: undefined;
@@ -2089,19 +2089,19 @@ export declare function cardStateSchema(): {
             readonly choices: readonly ["half", "threeQuarters", "total"];
             readonly required: boolean;
             readonly initial: undefined;
-        }, import("fvtt-types/src/foundry/common/data/fields.mjs").DataField.DerivedAssignmentType<"total" | "half" | "threeQuarters", import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.DefaultOptionsWhenChoicesProvided, import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.MergedOptions<{
+        }, import("fvtt-types/src/foundry/common/data/fields.mjs").DataField.DerivedAssignmentType<"half" | "threeQuarters" | "total", import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.DefaultOptionsWhenChoicesProvided, import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.MergedOptions<{
             readonly choices: readonly ["half", "threeQuarters", "total"];
             readonly required: boolean;
             readonly initial: undefined;
         }>>, {
             initial: undefined;
-        }>>, import("fvtt-types/src/foundry/common/data/fields.mjs").DataField.DerivedInitializedType<"total" | "half" | "threeQuarters", import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.DefaultOptionsWhenChoicesProvided, import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.MergedOptions<{
+        }>>, import("fvtt-types/src/foundry/common/data/fields.mjs").DataField.DerivedInitializedType<"half" | "threeQuarters" | "total", import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.DefaultOptionsWhenChoicesProvided, import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.MergedOptions<{
             readonly choices: readonly ["half", "threeQuarters", "total"];
             readonly required: boolean;
             readonly initial: undefined;
         }>>, {
             initial: undefined;
-        }>>, import("fvtt-types/src/foundry/common/data/fields.mjs").DataField.DerivedInitializedType<"total" | "half" | "threeQuarters", import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.DefaultOptionsWhenChoicesProvided, import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.MergedOptions<{
+        }>>, import("fvtt-types/src/foundry/common/data/fields.mjs").DataField.DerivedInitializedType<"half" | "threeQuarters" | "total", import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.DefaultOptionsWhenChoicesProvided, import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.MergedOptions<{
             readonly choices: readonly ["half", "threeQuarters", "total"];
             readonly required: boolean;
             readonly initial: undefined;
@@ -2274,7 +2274,7 @@ export declare function cardStateSchema(): {
             readonly required: boolean;
             readonly initial: undefined;
         }>;
-        saveCover: import("fvtt-types/src/foundry/common/data/fields.mjs").DataField.DerivedInitializedType<"total" | "half" | "threeQuarters", import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.DefaultOptionsWhenChoicesProvided, import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.MergedOptions<{
+        saveCover: import("fvtt-types/src/foundry/common/data/fields.mjs").DataField.DerivedInitializedType<"half" | "threeQuarters" | "total", import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.DefaultOptionsWhenChoicesProvided, import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.MergedOptions<{
             readonly choices: readonly ["half", "threeQuarters", "total"];
             readonly required: boolean;
             readonly initial: undefined;
@@ -2334,7 +2334,7 @@ export declare function cardStateSchema(): {
             readonly required: boolean;
             readonly initial: undefined;
         }>;
-        saveCover: import("fvtt-types/src/foundry/common/data/fields.mjs").DataField.DerivedInitializedType<"total" | "half" | "threeQuarters", import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.DefaultOptionsWhenChoicesProvided, import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.MergedOptions<{
+        saveCover: import("fvtt-types/src/foundry/common/data/fields.mjs").DataField.DerivedInitializedType<"half" | "threeQuarters" | "total", import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.DefaultOptionsWhenChoicesProvided, import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.MergedOptions<{
             readonly choices: readonly ["half", "threeQuarters", "total"];
             readonly required: boolean;
             readonly initial: undefined;
@@ -2434,19 +2434,19 @@ export declare function cardStateSchema(): {
             readonly choices: readonly ["half", "threeQuarters", "total"];
             readonly required: boolean;
             readonly initial: undefined;
-        }, import("fvtt-types/src/foundry/common/data/fields.mjs").DataField.DerivedAssignmentType<"total" | "half" | "threeQuarters", import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.DefaultOptionsWhenChoicesProvided, import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.MergedOptions<{
+        }, import("fvtt-types/src/foundry/common/data/fields.mjs").DataField.DerivedAssignmentType<"half" | "threeQuarters" | "total", import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.DefaultOptionsWhenChoicesProvided, import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.MergedOptions<{
             readonly choices: readonly ["half", "threeQuarters", "total"];
             readonly required: boolean;
             readonly initial: undefined;
         }>>, {
             initial: undefined;
-        }>>, import("fvtt-types/src/foundry/common/data/fields.mjs").DataField.DerivedInitializedType<"total" | "half" | "threeQuarters", import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.DefaultOptionsWhenChoicesProvided, import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.MergedOptions<{
+        }>>, import("fvtt-types/src/foundry/common/data/fields.mjs").DataField.DerivedInitializedType<"half" | "threeQuarters" | "total", import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.DefaultOptionsWhenChoicesProvided, import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.MergedOptions<{
             readonly choices: readonly ["half", "threeQuarters", "total"];
             readonly required: boolean;
             readonly initial: undefined;
         }>>, {
             initial: undefined;
-        }>>, import("fvtt-types/src/foundry/common/data/fields.mjs").DataField.DerivedInitializedType<"total" | "half" | "threeQuarters", import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.DefaultOptionsWhenChoicesProvided, import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.MergedOptions<{
+        }>>, import("fvtt-types/src/foundry/common/data/fields.mjs").DataField.DerivedInitializedType<"half" | "threeQuarters" | "total", import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.DefaultOptionsWhenChoicesProvided, import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.MergedOptions<{
             readonly choices: readonly ["half", "threeQuarters", "total"];
             readonly required: boolean;
             readonly initial: undefined;
@@ -2659,19 +2659,19 @@ export declare function cardStateSchema(): {
             readonly choices: readonly ["half", "threeQuarters", "total"];
             readonly required: boolean;
             readonly initial: undefined;
-        }, import("fvtt-types/src/foundry/common/data/fields.mjs").DataField.DerivedAssignmentType<"total" | "half" | "threeQuarters", import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.DefaultOptionsWhenChoicesProvided, import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.MergedOptions<{
+        }, import("fvtt-types/src/foundry/common/data/fields.mjs").DataField.DerivedAssignmentType<"half" | "threeQuarters" | "total", import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.DefaultOptionsWhenChoicesProvided, import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.MergedOptions<{
             readonly choices: readonly ["half", "threeQuarters", "total"];
             readonly required: boolean;
             readonly initial: undefined;
         }>>, {
             initial: undefined;
-        }>>, import("fvtt-types/src/foundry/common/data/fields.mjs").DataField.DerivedInitializedType<"total" | "half" | "threeQuarters", import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.DefaultOptionsWhenChoicesProvided, import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.MergedOptions<{
+        }>>, import("fvtt-types/src/foundry/common/data/fields.mjs").DataField.DerivedInitializedType<"half" | "threeQuarters" | "total", import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.DefaultOptionsWhenChoicesProvided, import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.MergedOptions<{
             readonly choices: readonly ["half", "threeQuarters", "total"];
             readonly required: boolean;
             readonly initial: undefined;
         }>>, {
             initial: undefined;
-        }>>, import("fvtt-types/src/foundry/common/data/fields.mjs").DataField.DerivedInitializedType<"total" | "half" | "threeQuarters", import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.DefaultOptionsWhenChoicesProvided, import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.MergedOptions<{
+        }>>, import("fvtt-types/src/foundry/common/data/fields.mjs").DataField.DerivedInitializedType<"half" | "threeQuarters" | "total", import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.DefaultOptionsWhenChoicesProvided, import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.MergedOptions<{
             readonly choices: readonly ["half", "threeQuarters", "total"];
             readonly required: boolean;
             readonly initial: undefined;
@@ -2844,7 +2844,7 @@ export declare function cardStateSchema(): {
             readonly required: boolean;
             readonly initial: undefined;
         }>;
-        saveCover: import("fvtt-types/src/foundry/common/data/fields.mjs").DataField.DerivedInitializedType<"total" | "half" | "threeQuarters", import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.DefaultOptionsWhenChoicesProvided, import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.MergedOptions<{
+        saveCover: import("fvtt-types/src/foundry/common/data/fields.mjs").DataField.DerivedInitializedType<"half" | "threeQuarters" | "total", import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.DefaultOptionsWhenChoicesProvided, import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.MergedOptions<{
             readonly choices: readonly ["half", "threeQuarters", "total"];
             readonly required: boolean;
             readonly initial: undefined;
@@ -2904,7 +2904,7 @@ export declare function cardStateSchema(): {
             readonly required: boolean;
             readonly initial: undefined;
         }>;
-        saveCover: import("fvtt-types/src/foundry/common/data/fields.mjs").DataField.DerivedInitializedType<"total" | "half" | "threeQuarters", import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.DefaultOptionsWhenChoicesProvided, import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.MergedOptions<{
+        saveCover: import("fvtt-types/src/foundry/common/data/fields.mjs").DataField.DerivedInitializedType<"half" | "threeQuarters" | "total", import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.DefaultOptionsWhenChoicesProvided, import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.MergedOptions<{
             readonly choices: readonly ["half", "threeQuarters", "total"];
             readonly required: boolean;
             readonly initial: undefined;
@@ -2965,7 +2965,7 @@ export declare function cardStateSchema(): {
                 readonly required: boolean;
                 readonly initial: undefined;
             }>;
-            saveCover: import("fvtt-types/src/foundry/common/data/fields.mjs").DataField.DerivedInitializedType<"total" | "half" | "threeQuarters", import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.DefaultOptionsWhenChoicesProvided, import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.MergedOptions<{
+            saveCover: import("fvtt-types/src/foundry/common/data/fields.mjs").DataField.DerivedInitializedType<"half" | "threeQuarters" | "total", import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.DefaultOptionsWhenChoicesProvided, import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.MergedOptions<{
                 readonly choices: readonly ["half", "threeQuarters", "total"];
                 readonly required: boolean;
                 readonly initial: undefined;
@@ -3027,7 +3027,7 @@ export declare function cardStateSchema(): {
                 readonly required: boolean;
                 readonly initial: undefined;
             }>;
-            saveCover: import("fvtt-types/src/foundry/common/data/fields.mjs").DataField.DerivedInitializedType<"total" | "half" | "threeQuarters", import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.DefaultOptionsWhenChoicesProvided, import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.MergedOptions<{
+            saveCover: import("fvtt-types/src/foundry/common/data/fields.mjs").DataField.DerivedInitializedType<"half" | "threeQuarters" | "total", import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.DefaultOptionsWhenChoicesProvided, import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.MergedOptions<{
                 readonly choices: readonly ["half", "threeQuarters", "total"];
                 readonly required: boolean;
                 readonly initial: undefined;
@@ -3130,19 +3130,19 @@ export declare function cardStateSchema(): {
             readonly choices: readonly ["half", "threeQuarters", "total"];
             readonly required: boolean;
             readonly initial: undefined;
-        }, import("fvtt-types/src/foundry/common/data/fields.mjs").DataField.DerivedAssignmentType<"total" | "half" | "threeQuarters", import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.DefaultOptionsWhenChoicesProvided, import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.MergedOptions<{
+        }, import("fvtt-types/src/foundry/common/data/fields.mjs").DataField.DerivedAssignmentType<"half" | "threeQuarters" | "total", import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.DefaultOptionsWhenChoicesProvided, import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.MergedOptions<{
             readonly choices: readonly ["half", "threeQuarters", "total"];
             readonly required: boolean;
             readonly initial: undefined;
         }>>, {
             initial: undefined;
-        }>>, import("fvtt-types/src/foundry/common/data/fields.mjs").DataField.DerivedInitializedType<"total" | "half" | "threeQuarters", import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.DefaultOptionsWhenChoicesProvided, import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.MergedOptions<{
+        }>>, import("fvtt-types/src/foundry/common/data/fields.mjs").DataField.DerivedInitializedType<"half" | "threeQuarters" | "total", import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.DefaultOptionsWhenChoicesProvided, import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.MergedOptions<{
             readonly choices: readonly ["half", "threeQuarters", "total"];
             readonly required: boolean;
             readonly initial: undefined;
         }>>, {
             initial: undefined;
-        }>>, import("fvtt-types/src/foundry/common/data/fields.mjs").DataField.DerivedInitializedType<"total" | "half" | "threeQuarters", import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.DefaultOptionsWhenChoicesProvided, import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.MergedOptions<{
+        }>>, import("fvtt-types/src/foundry/common/data/fields.mjs").DataField.DerivedInitializedType<"half" | "threeQuarters" | "total", import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.DefaultOptionsWhenChoicesProvided, import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.MergedOptions<{
             readonly choices: readonly ["half", "threeQuarters", "total"];
             readonly required: boolean;
             readonly initial: undefined;
@@ -3355,19 +3355,19 @@ export declare function cardStateSchema(): {
             readonly choices: readonly ["half", "threeQuarters", "total"];
             readonly required: boolean;
             readonly initial: undefined;
-        }, import("fvtt-types/src/foundry/common/data/fields.mjs").DataField.DerivedAssignmentType<"total" | "half" | "threeQuarters", import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.DefaultOptionsWhenChoicesProvided, import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.MergedOptions<{
+        }, import("fvtt-types/src/foundry/common/data/fields.mjs").DataField.DerivedAssignmentType<"half" | "threeQuarters" | "total", import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.DefaultOptionsWhenChoicesProvided, import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.MergedOptions<{
             readonly choices: readonly ["half", "threeQuarters", "total"];
             readonly required: boolean;
             readonly initial: undefined;
         }>>, {
             initial: undefined;
-        }>>, import("fvtt-types/src/foundry/common/data/fields.mjs").DataField.DerivedInitializedType<"total" | "half" | "threeQuarters", import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.DefaultOptionsWhenChoicesProvided, import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.MergedOptions<{
+        }>>, import("fvtt-types/src/foundry/common/data/fields.mjs").DataField.DerivedInitializedType<"half" | "threeQuarters" | "total", import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.DefaultOptionsWhenChoicesProvided, import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.MergedOptions<{
             readonly choices: readonly ["half", "threeQuarters", "total"];
             readonly required: boolean;
             readonly initial: undefined;
         }>>, {
             initial: undefined;
-        }>>, import("fvtt-types/src/foundry/common/data/fields.mjs").DataField.DerivedInitializedType<"total" | "half" | "threeQuarters", import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.DefaultOptionsWhenChoicesProvided, import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.MergedOptions<{
+        }>>, import("fvtt-types/src/foundry/common/data/fields.mjs").DataField.DerivedInitializedType<"half" | "threeQuarters" | "total", import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.DefaultOptionsWhenChoicesProvided, import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.MergedOptions<{
             readonly choices: readonly ["half", "threeQuarters", "total"];
             readonly required: boolean;
             readonly initial: undefined;
@@ -3540,7 +3540,7 @@ export declare function cardStateSchema(): {
             readonly required: boolean;
             readonly initial: undefined;
         }>;
-        saveCover: import("fvtt-types/src/foundry/common/data/fields.mjs").DataField.DerivedInitializedType<"total" | "half" | "threeQuarters", import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.DefaultOptionsWhenChoicesProvided, import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.MergedOptions<{
+        saveCover: import("fvtt-types/src/foundry/common/data/fields.mjs").DataField.DerivedInitializedType<"half" | "threeQuarters" | "total", import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.DefaultOptionsWhenChoicesProvided, import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.MergedOptions<{
             readonly choices: readonly ["half", "threeQuarters", "total"];
             readonly required: boolean;
             readonly initial: undefined;
@@ -3600,7 +3600,7 @@ export declare function cardStateSchema(): {
             readonly required: boolean;
             readonly initial: undefined;
         }>;
-        saveCover: import("fvtt-types/src/foundry/common/data/fields.mjs").DataField.DerivedInitializedType<"total" | "half" | "threeQuarters", import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.DefaultOptionsWhenChoicesProvided, import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.MergedOptions<{
+        saveCover: import("fvtt-types/src/foundry/common/data/fields.mjs").DataField.DerivedInitializedType<"half" | "threeQuarters" | "total", import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.DefaultOptionsWhenChoicesProvided, import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.MergedOptions<{
             readonly choices: readonly ["half", "threeQuarters", "total"];
             readonly required: boolean;
             readonly initial: undefined;
@@ -3700,19 +3700,19 @@ export declare function cardStateSchema(): {
             readonly choices: readonly ["half", "threeQuarters", "total"];
             readonly required: boolean;
             readonly initial: undefined;
-        }, import("fvtt-types/src/foundry/common/data/fields.mjs").DataField.DerivedAssignmentType<"total" | "half" | "threeQuarters", import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.DefaultOptionsWhenChoicesProvided, import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.MergedOptions<{
+        }, import("fvtt-types/src/foundry/common/data/fields.mjs").DataField.DerivedAssignmentType<"half" | "threeQuarters" | "total", import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.DefaultOptionsWhenChoicesProvided, import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.MergedOptions<{
             readonly choices: readonly ["half", "threeQuarters", "total"];
             readonly required: boolean;
             readonly initial: undefined;
         }>>, {
             initial: undefined;
-        }>>, import("fvtt-types/src/foundry/common/data/fields.mjs").DataField.DerivedInitializedType<"total" | "half" | "threeQuarters", import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.DefaultOptionsWhenChoicesProvided, import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.MergedOptions<{
+        }>>, import("fvtt-types/src/foundry/common/data/fields.mjs").DataField.DerivedInitializedType<"half" | "threeQuarters" | "total", import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.DefaultOptionsWhenChoicesProvided, import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.MergedOptions<{
             readonly choices: readonly ["half", "threeQuarters", "total"];
             readonly required: boolean;
             readonly initial: undefined;
         }>>, {
             initial: undefined;
-        }>>, import("fvtt-types/src/foundry/common/data/fields.mjs").DataField.DerivedInitializedType<"total" | "half" | "threeQuarters", import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.DefaultOptionsWhenChoicesProvided, import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.MergedOptions<{
+        }>>, import("fvtt-types/src/foundry/common/data/fields.mjs").DataField.DerivedInitializedType<"half" | "threeQuarters" | "total", import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.DefaultOptionsWhenChoicesProvided, import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.MergedOptions<{
             readonly choices: readonly ["half", "threeQuarters", "total"];
             readonly required: boolean;
             readonly initial: undefined;
@@ -3925,19 +3925,19 @@ export declare function cardStateSchema(): {
             readonly choices: readonly ["half", "threeQuarters", "total"];
             readonly required: boolean;
             readonly initial: undefined;
-        }, import("fvtt-types/src/foundry/common/data/fields.mjs").DataField.DerivedAssignmentType<"total" | "half" | "threeQuarters", import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.DefaultOptionsWhenChoicesProvided, import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.MergedOptions<{
+        }, import("fvtt-types/src/foundry/common/data/fields.mjs").DataField.DerivedAssignmentType<"half" | "threeQuarters" | "total", import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.DefaultOptionsWhenChoicesProvided, import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.MergedOptions<{
             readonly choices: readonly ["half", "threeQuarters", "total"];
             readonly required: boolean;
             readonly initial: undefined;
         }>>, {
             initial: undefined;
-        }>>, import("fvtt-types/src/foundry/common/data/fields.mjs").DataField.DerivedInitializedType<"total" | "half" | "threeQuarters", import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.DefaultOptionsWhenChoicesProvided, import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.MergedOptions<{
+        }>>, import("fvtt-types/src/foundry/common/data/fields.mjs").DataField.DerivedInitializedType<"half" | "threeQuarters" | "total", import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.DefaultOptionsWhenChoicesProvided, import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.MergedOptions<{
             readonly choices: readonly ["half", "threeQuarters", "total"];
             readonly required: boolean;
             readonly initial: undefined;
         }>>, {
             initial: undefined;
-        }>>, import("fvtt-types/src/foundry/common/data/fields.mjs").DataField.DerivedInitializedType<"total" | "half" | "threeQuarters", import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.DefaultOptionsWhenChoicesProvided, import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.MergedOptions<{
+        }>>, import("fvtt-types/src/foundry/common/data/fields.mjs").DataField.DerivedInitializedType<"half" | "threeQuarters" | "total", import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.DefaultOptionsWhenChoicesProvided, import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.MergedOptions<{
             readonly choices: readonly ["half", "threeQuarters", "total"];
             readonly required: boolean;
             readonly initial: undefined;
@@ -4110,7 +4110,7 @@ export declare function cardStateSchema(): {
             readonly required: boolean;
             readonly initial: undefined;
         }>;
-        saveCover: import("fvtt-types/src/foundry/common/data/fields.mjs").DataField.DerivedInitializedType<"total" | "half" | "threeQuarters", import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.DefaultOptionsWhenChoicesProvided, import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.MergedOptions<{
+        saveCover: import("fvtt-types/src/foundry/common/data/fields.mjs").DataField.DerivedInitializedType<"half" | "threeQuarters" | "total", import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.DefaultOptionsWhenChoicesProvided, import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.MergedOptions<{
             readonly choices: readonly ["half", "threeQuarters", "total"];
             readonly required: boolean;
             readonly initial: undefined;
@@ -4170,7 +4170,7 @@ export declare function cardStateSchema(): {
             readonly required: boolean;
             readonly initial: undefined;
         }>;
-        saveCover: import("fvtt-types/src/foundry/common/data/fields.mjs").DataField.DerivedInitializedType<"total" | "half" | "threeQuarters", import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.DefaultOptionsWhenChoicesProvided, import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.MergedOptions<{
+        saveCover: import("fvtt-types/src/foundry/common/data/fields.mjs").DataField.DerivedInitializedType<"half" | "threeQuarters" | "total", import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.DefaultOptionsWhenChoicesProvided, import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.MergedOptions<{
             readonly choices: readonly ["half", "threeQuarters", "total"];
             readonly required: boolean;
             readonly initial: undefined;
@@ -4231,7 +4231,7 @@ export declare function cardStateSchema(): {
                 readonly required: boolean;
                 readonly initial: undefined;
             }>;
-            saveCover: import("fvtt-types/src/foundry/common/data/fields.mjs").DataField.DerivedInitializedType<"total" | "half" | "threeQuarters", import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.DefaultOptionsWhenChoicesProvided, import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.MergedOptions<{
+            saveCover: import("fvtt-types/src/foundry/common/data/fields.mjs").DataField.DerivedInitializedType<"half" | "threeQuarters" | "total", import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.DefaultOptionsWhenChoicesProvided, import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.MergedOptions<{
                 readonly choices: readonly ["half", "threeQuarters", "total"];
                 readonly required: boolean;
                 readonly initial: undefined;
@@ -4293,7 +4293,7 @@ export declare function cardStateSchema(): {
                 readonly required: boolean;
                 readonly initial: undefined;
             }>;
-            saveCover: import("fvtt-types/src/foundry/common/data/fields.mjs").DataField.DerivedInitializedType<"total" | "half" | "threeQuarters", import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.DefaultOptionsWhenChoicesProvided, import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.MergedOptions<{
+            saveCover: import("fvtt-types/src/foundry/common/data/fields.mjs").DataField.DerivedInitializedType<"half" | "threeQuarters" | "total", import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.DefaultOptionsWhenChoicesProvided, import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.MergedOptions<{
                 readonly choices: readonly ["half", "threeQuarters", "total"];
                 readonly required: boolean;
                 readonly initial: undefined;
@@ -4358,7 +4358,7 @@ export declare function cardStateSchema(): {
                     readonly required: boolean;
                     readonly initial: undefined;
                 }>;
-                saveCover: import("fvtt-types/src/foundry/common/data/fields.mjs").DataField.DerivedInitializedType<"total" | "half" | "threeQuarters", import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.DefaultOptionsWhenChoicesProvided, import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.MergedOptions<{
+                saveCover: import("fvtt-types/src/foundry/common/data/fields.mjs").DataField.DerivedInitializedType<"half" | "threeQuarters" | "total", import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.DefaultOptionsWhenChoicesProvided, import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.MergedOptions<{
                     readonly choices: readonly ["half", "threeQuarters", "total"];
                     readonly required: boolean;
                     readonly initial: undefined;
@@ -4422,7 +4422,7 @@ export declare function cardStateSchema(): {
                     readonly required: boolean;
                     readonly initial: undefined;
                 }>;
-                saveCover: import("fvtt-types/src/foundry/common/data/fields.mjs").DataField.DerivedInitializedType<"total" | "half" | "threeQuarters", import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.DefaultOptionsWhenChoicesProvided, import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.MergedOptions<{
+                saveCover: import("fvtt-types/src/foundry/common/data/fields.mjs").DataField.DerivedInitializedType<"half" | "threeQuarters" | "total", import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.DefaultOptionsWhenChoicesProvided, import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.MergedOptions<{
                     readonly choices: readonly ["half", "threeQuarters", "total"];
                     readonly required: boolean;
                     readonly initial: undefined;

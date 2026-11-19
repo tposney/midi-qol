@@ -1,4 +1,5 @@
-import { adoptActivityType } from "./graft.js";
+import { adoptActivityType } from "./activityPrototype.js";
+import { registerSheetExtras } from "./activitySheets.js";
 import type { MidiActivity } from "./MidiActivityMixin.js";
 import { registerCardActions } from "./cardActions.js";
 import { Activity, RollMessageConfig } from "../../globals.js";
@@ -6,11 +7,8 @@ import { debugEnabled, GameSystemConfig, i18n, i18nFormat, warn, moveToken } fro
 import { configSettings } from "../settings.js";
 import { Workflow } from "../Workflow.js";
 import { callActivityHooks, collisionLevel, completeActivityUse, convertLengthTo, getToken, isActivityType, measureGridPath } from "../utils.js";
-import { MidiActivityMixin, MidiActivityMixinSheet } from "./MidiActivityMixin.js";
 import { highlightTokens, TokenHighlight } from "../lib/tokenHighlight.js";
 
-export let MidiTeleportActivity: ReturnType<typeof defineMidiTeleportActivityClass>;
-export let MidiTeleportSheet: ReturnType<typeof defineMidiTeleportSheetClass>;
 
 /** dnd5e 6's teleport activity, given a midi workflow. Not present on dnd5e 5.x. */
 export function setupTeleportActivity() {
@@ -19,12 +17,16 @@ export function setupTeleportActivity() {
   const sheet = game.system.applications.activity.TeleportSheet;
   if (!base || !sheet) return;
   if (debugEnabled > 0) warn("MidiQOL | TeleportActivity | setupTeleportActivity | Called");
-  MidiTeleportSheet = defineMidiTeleportSheetClass(sheet);
-  MidiTeleportActivity = defineMidiTeleportActivityClass(base as Activity);
-  adoptActivityType("teleport", MidiTeleportActivity, MidiTeleportSheet);
+  adoptActivityType("teleport");
+  // dnd5e lists the card's targets (Targeted/Selected): who teleports, apart from the caster (was midi's class metadata)
+  const metadata: unknown = Reflect.get(base, "metadata");
+  Object.defineProperty(base, "metadata", { configurable: true, writable: true,
+    value: { ...(metadata && typeof metadata === "object" ? metadata : {}), targetPhase: "pre" } });
   registerCardActions(["teleport"], {
     planTeleport: cardPlanTeleport
   });
+  registerSheetExtras("teleport", { effect: { template: "modules/midi-qol/templates/activity/teleport-effect.hbs",
+    templates: ["modules/midi-qol/templates/activity/parts/teleport-midi.hbs"] } });
   // A caster-only teleport lists the caster on its card
   Hooks.on("dnd5e.preCreateUsageMessage", (activity: Activity, messageConfig: object) => {
     if (!isTeleportActivity(activity)) return;
@@ -96,45 +98,7 @@ function tokenLevel(document: TokenDocument.Implementation): string | undefined 
   return document._source.level ?? undefined;
 }
 
-let defineMidiTeleportActivityClass = <T extends Activity>(ActivityClass: T) => {
-  return class MidiTeleportActivity extends MidiActivityMixin(ActivityClass) {
-    static LOCALIZATION_PREFIXES = ["midi-qol.TELEPORT", ...super.LOCALIZATION_PREFIXES];
 
-    static metadata =
-      foundry.utils.mergeObject(
-        super.metadata, {
-        midiTitle: "midi-qol.TELEPORT.Title.one",
-        dnd5eTitle: ActivityClass.metadata.title,
-        sheetClass: MidiTeleportSheet,
-        // No `chatCard` (see UtilityActivity). The card's Teleport button runs midi's planning.
-        usage: { actions: { planTeleport: cardPlanTeleport } },
-        // dnd5e lists the card's targets (Targeted/Selected): who teleports, apart from the caster.
-        targetPhase: "pre"
-      }, { inplace: false, insertKeys: true, insertValues: true });
-
-
-
-
-
-
-    /** Plan: auto. The workflow's teleport, after its effects and damage, unless the use leaves it to the button. */
-  }
-}
-
-let defineMidiTeleportSheetClass = (baseClass: any) => {
-  return class MidiTeleportSheet extends MidiActivityMixinSheet(baseClass) {
-    static PARTS = {
-      ...super.PARTS,
-      effect: {
-        template: "modules/midi-qol/templates/activity/teleport-effect.hbs",
-        templates: [
-          ...super.PARTS.effect.templates,
-          "modules/midi-qol/templates/activity/parts/teleport-midi.hbs"
-        ]
-      }
-    };
-  }
-}
 
 /** The card's Teleport button: the tokens its targets list shows, ticked, in the Targeted or Selected view. */
 function cardPlanTeleport(this: Activity, event: PointerEvent, target: HTMLElement, message: ChatMessage.Implementation) {

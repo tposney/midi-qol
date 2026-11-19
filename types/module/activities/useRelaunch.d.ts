@@ -1,4 +1,5 @@
 import type { Activity, ActivityUseConfiguration, RollDialogConfig, RollMessageConfig } from "../../globals.js";
+import { type MidiActivity } from "./MidiActivityMixin.js";
 /** One use's working state between midi's pre-use work, dnd5e's use and midi's post-use work. */
 export interface UseState {
     usage: ActivityUseConfiguration;
@@ -11,21 +12,16 @@ export interface UseState {
     dnd5eUsageConfig?: ActivityUseConfiguration;
     usageData?: ActivityUseConfiguration;
 }
-type Prepared = {
-    done: true;
-    result: unknown;
-} | {
-    done: false;
-    state: UseState;
-};
-/** An activity with midi's use (MidiActivityMixin). */
-export interface RestartableActivity extends Activity {
-    prepareUse(usage: ActivityUseConfiguration, dialog: RollDialogConfig, message: RollMessageConfig): Promise<Prepared>;
-    onUsePreUse(state: UseState, newActivity: Activity, usageConfig: ActivityUseConfiguration): boolean;
-    onUseConsumption(state: UseState, newActivity: Activity, usageConfig: ActivityUseConfiguration): void;
-    finishUse(state: UseState, results: unknown): Promise<unknown>;
+/** An activity of a type midi uses (installUse) */
+export type RestartableActivity = MidiActivity & {
     use(usage?: ActivityUseConfiguration, dialog?: RollDialogConfig, message?: RollMessageConfig): Promise<unknown>;
-}
+};
+/**
+ * midi's use (M14: was MidiActivityMixin's `use`, installed by graft.ts): calls dnd5e's use with a use key, so midi's
+ * preUseActivity listener can cancel it and restart it after midi's pre-use work; returns the restart's result. A
+ * chained OVERRIDE, as graft.ts installed it: midi's is next to dnd5e's, so other modules' wraps see each use once.
+ */
+export declare function installUse(types: Iterable<string>): void;
 export declare function isRelaunched(usage: ActivityUseConfiguration | undefined): boolean;
 /** Clears a cancelled use's state, so a resubmitted config starts afresh. */
 export declare function clearAbandonedUse(...configs: (ActivityUseConfiguration | undefined)[]): void;
@@ -33,6 +29,9 @@ export declare function clearAbandonedUse(...configs: (ActivityUseConfiguration 
 export declare function noteCall(useKey: string, usage: ActivityUseConfiguration, dialog: RollDialogConfig, message: RollMessageConfig): void;
 /** For midi's use(): the restart its call to dnd5e's use started (none: dnd5e's use wasn't cancelled by midi). */
 export declare function takeRelaunch(useKey: string): Promise<unknown>;
+type CastChecks = (activity: Activity, usage: ActivityUseConfiguration, dialog: RollDialogConfig, message: RollMessageConfig) => Promise<boolean>;
+/** The Cast activity's checks (CastActivity.ts), given here so this file needn't import the activity classes */
+export declare function setCastChecks(checks: CastChecks): void;
 /** At init, before other modules' listeners where possible: a listener before midi's would see each use twice. */
 export declare function initUseRelaunch(): void;
 export {};

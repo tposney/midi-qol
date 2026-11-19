@@ -218,3 +218,30 @@ export function installActivityCreation(types: Set<string>) {
     }, "WRAPPER");
 }
 
+/** The dnd5e activity types midi uses (its wraps, hooks and sheet additions are on these) */
+export const adoptedActivityTypes = new Set<string>();
+
+/**
+ * The labels of midi's fields on each type's sheet: midi's localization prefixes around dnd5e's own, in the order
+ * midi's activity classes gave them (M14: the classes are gone; their LOCALIZATION_PREFIXES are set on dnd5e's).
+ */
+const LOCALIZATION: Record<string, { before?: string[], after: string[] }> = {
+  attack: { after: ["midi-qol.SHARED", "midi-qol.ATTACK"] },
+  check: { after: ["midi-qol.SHARED", "midi-qol.SAVE", "midi-qol.CHECK", "DND5E.DAMAGE"] },
+  damage: { after: ["midi-qol.SHARED"] },
+  save: { after: ["midi-qol.SHARED", "DND5E.DAMAGE", "midi-qol.SAVE"] },
+  ...Object.fromEntries(["cast", "enchant", "forward", "heal", "summon", "teleport", "transform", "utility"]
+    .map(type => [type, { before: [`midi-qol.${type.toUpperCase()}`], after: ["midi-qol.SHARED"] }]))
+};
+
+/** midi uses dnd5e's activity type `type`: its localization prefixes; the rest is installed for adoptedActivityTypes */
+export function adoptActivityType(type: string): void {
+  // @ts-expect-error no dnd5e-types
+  const cls: { LOCALIZATION_PREFIXES?: string[] } | undefined = CONFIG.DND5E.activityTypes[type]?.documentClass;
+  if (!cls) return;
+  adoptedActivityTypes.add(type);
+  const prefixes = LOCALIZATION[type] ?? { after: ["midi-qol.SHARED"] };
+  Object.defineProperty(cls, "LOCALIZATION_PREFIXES", { configurable: true, writable: true,
+    value: [...(prefixes.before ?? []), ...(cls.LOCALIZATION_PREFIXES ?? []), ...prefixes.after] });
+}
+

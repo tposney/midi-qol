@@ -5,7 +5,7 @@ import { cardDamageRolls } from "./module/lib/cardState.js";
 import { installFormulaAndPlacement } from "./module/rolls/formula.js";
 import { installAttackRolls } from "./module/rolls/attack.js";
 import { installDamageRolls } from "./module/rolls/damage.js";
-import { adoptedActivityTypes } from "./module/activities/graft.js";
+import { adoptedActivityTypes } from "./module/activities/activityPrototype.js";
 import { computeDistance } from "./module/services/distance/provider.js";
 import { compatibilityLine, deprecation, isRemoved, removedError, setupCompatibilityLine } from './module/lib/compatLine.js';
 import { UNMEASURABLE_DISTANCE, getDistance, measureTokens } from "./module/services/distance/service.js";
@@ -448,16 +448,21 @@ function setupActivities() {
   globalThis.MidiQOL.activityTypes["utility"] = GameSystemConfig.activityTypes.utility;
   setupForwardActivity();
   globalThis.MidiQOL.activityTypes["forward"] = GameSystemConfig.activityTypes.forward;
-  globalThis.MidiQOL.activityTypes["MidiActivityMixin"] = MidiActivityMixin;
+  // midi's activity classes are gone (M14): their mixin is kept as a deprecated pass-through
+  Object.defineProperty(globalThis.MidiQOL.activityTypes, "MidiActivityMixin", { configurable: true, enumerable: false, get: () => {
+    deprecation("midi-qol | MidiQOL.activityTypes.MidiActivityMixin is deprecated: midi's behaviour is on dnd5e's own activity classes; for a type of your own use MidiQOL.registerActivityPolicy",
+      { since: "15.0.0", until: "15.1.0", once: true });
+    return <T>(Base: T) => Base;
+  } });
   installCardActions(GameSystemConfig.activityTypes);
   installUsageButtons();
-  setupActivityTitles();
   // midi's rolls as wraps of dnd5e's methods (M13), on the types adopted above
   installDamageRolls(adoptedActivityTypes);
   installAttackRolls();
   installFormulaAndPlacement();
   installActivityCreation(adoptedActivityTypes);
   installUse(adoptedActivityTypes);
+  installActivitySheets(adoptedActivityTypes);
 }
 
 Hooks.once('init', async function () {
@@ -1053,7 +1058,8 @@ import { setupCastActivity } from './module/activities/CastActivity.js';
 import { setupCheckActivity } from './module/activities/CheckActivity.js';
 import { setupHealActivity } from './module/activities/HealActivity.js';
 import { computeTargetsFromTemplates, requiresTargetConfirmation, resolveTargetConfirmation, selectTargetsFromTemplates, showItemInfo } from './module/activities/activityHelpers.js';
-import { MidiActivityMixin, setupActivityTitles, setupMidiActivityMixin } from './module/activities/MidiActivityMixin.js';
+import { setupMidiActivityMixin } from './module/activities/MidiActivityMixin.js';
+import { installActivitySheets } from './module/activities/activitySheets.js';
 import { initUseRelaunch } from './module/activities/useRelaunch.js';
 import { registerMidiSteps } from './module/workflowSteps/index.js';
 import { installActivitySchema } from './module/activities/activitySchema.js';

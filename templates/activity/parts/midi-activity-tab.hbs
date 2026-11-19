@@ -1,8 +1,8 @@
-<section class="tab midi-qol mid-qol-{{ tab.id }} {{ tab.cssClass }}" data-tab="{{ tab.id }}" data-group="{{ tab.group }}">
-  {{> "templates/generic/tab-navigation.hbs" tabs=tab.tabs }}
+<section class="tab midi-qol mid-qol-{{ @root.midiTab.id }} {{ @root.midiTab.cssClass }}" data-tab="{{ @root.midiTab.id }}" data-group="{{ @root.midiTab.group }}">
+  {{> "templates/generic/tab-navigation.hbs" tabs=@root.midiTab.tabs }}
 
-  <section class="tab activity-{{ tab.tabs.modConditions.id }} {{ tab.tabs.modConditions.cssClass }}"
-    data-tab="{{ tab.tabs.modConditions.id }}" data-group="{{ tab.tabs.modConditions.group }}">
+  <section class="tab activity-{{ @root.midiTab.tabs.modConditions.id }} {{ @root.midiTab.tabs.modConditions.cssClass }}"
+    data-tab="{{ @root.midiTab.tabs.modConditions.id }}" data-group="{{ @root.midiTab.tabs.modConditions.group }}">
     <fieldset>
       {{ formField fields.useConditionText value=source.useConditionText }}
       {{ formField fields.useConditionReason value=source.useConditionReason }}
@@ -82,8 +82,8 @@
     </fieldset>
   </section>
 
-  <section class="tab activity-{{ tab.tabs.workflowSettings.id }} {{ tab.tabs.workflowSettings.cssClass }}"
-    data-tab="{{ tab.tabs.workflowSettings.id }}" data-group="{{ tab.tabs.workflowSettings.group }}">
+  <section class="tab activity-{{ @root.midiTab.tabs.workflowSettings.id }} {{ @root.midiTab.tabs.workflowSettings.cssClass }}"
+    data-tab="{{ @root.midiTab.tabs.workflowSettings.id }}" data-group="{{ @root.midiTab.tabs.workflowSettings.group }}">
     <fieldset>
       {{#with fields.midiProperties.fields as |fields|}}
         {{ formField fields.rollMode value=../source.midiProperties.rollMode options=../RollModeOptions localize=true}}
@@ -125,8 +125,8 @@
     </fieldset>
   </section>
 
-  <section class="tab activity-{{ tab.tabs.activityManagement.id }} {{ tab.tabs.activityManagement.cssClass }}"
-    data-tab="{{ tab.tabs.activityManagement.id }}" data-group="{{ tab.tabs.activityManagement.group }}">
+  <section class="tab activity-{{ @root.midiTab.tabs.activityManagement.id }} {{ @root.midiTab.tabs.activityManagement.cssClass }}"
+    data-tab="{{ @root.midiTab.tabs.activityManagement.id }}" data-group="{{ @root.midiTab.tabs.activityManagement.group }}">
     {{#if (ne fields.otherActivityId undefined)}}
       <fieldset>
         {{ formField fields.otherActivityId value=source.otherActivityId options=otherActivityOptions}}
@@ -157,8 +157,8 @@
     </fieldset>
   </section>
 
-  <section class="tab activity-{{ tab.tabs.overtime.id }} {{ tab.tabs.overtime.cssClass }}"
-    data-tab="{{ tab.tabs.overtime.id }}" data-group="{{ tab.tabs.overtime.group }}">
+  <section class="tab activity-{{ @root.midiTab.tabs.overtime.id }} {{ @root.midiTab.tabs.overtime.cssClass }}"
+    data-tab="{{ @root.midiTab.tabs.overtime.id }}" data-group="{{ @root.midiTab.tabs.overtime.group }}">
     <fieldset>
       {{ formField fields.isOverTimeFlag value=source.isOverTimeFlag input=@root.inputs.createCheckboxInput }}
       {{#if source.isOverTimeFlag}}
@@ -174,8 +174,8 @@
     </fieldset>
   </section>
 
-  <section class="tab activity-{{ tab.tabs.activityMacro.id }} {{ tab.tabs.activityMacro.cssClass }}"
-    data-tab="{{ tab.tabs.activityMacro.id }}" data-group="{{ tab.tabs.activityMacro.group }}">
+  <section class="tab activity-{{ @root.midiTab.tabs.activityMacro.id }} {{ @root.midiTab.tabs.activityMacro.cssClass }}"
+    data-tab="{{ @root.midiTab.tabs.activityMacro.id }}" data-group="{{ @root.midiTab.tabs.activityMacro.group }}">
     <fieldset>
       <label> {{ localize 'midi-qol.SHARED.FIELDS.ActivityMacro.label' }}
         <button type="button" class="unbutton control-button" data-action="addMacro"

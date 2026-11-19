@@ -282,17 +282,17 @@ export declare class MidiRegionActivityBehaviorType extends foundry.data.regionB
             readonly choices: readonly ["none", "light", "darkness", "sight", "sound", "move"];
             readonly label: "BEHAVIOR.TYPES.midi-qol.regionActivity.FIELDS.wallRestriction.label";
             readonly hint: "BEHAVIOR.TYPES.midi-qol.regionActivity.FIELDS.wallRestriction.hint";
-        }, import("fvtt-types/src/foundry/common/data/fields.mjs").DataField.DerivedAssignmentType<"none" | "sound" | "light" | "sight" | "darkness" | "move", import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.DefaultOptionsWhenChoicesProvided, import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.MergedOptions<{
+        }, import("fvtt-types/src/foundry/common/data/fields.mjs").DataField.DerivedAssignmentType<"darkness" | "light" | "sight" | "move" | "sound" | "none", import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.DefaultOptionsWhenChoicesProvided, import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.MergedOptions<{
             readonly initial: "none";
             readonly choices: readonly ["none", "light", "darkness", "sight", "sound", "move"];
             readonly label: "BEHAVIOR.TYPES.midi-qol.regionActivity.FIELDS.wallRestriction.label";
             readonly hint: "BEHAVIOR.TYPES.midi-qol.regionActivity.FIELDS.wallRestriction.hint";
-        }>>>, import("fvtt-types/src/foundry/common/data/fields.mjs").DataField.DerivedInitializedType<"none" | "sound" | "light" | "sight" | "darkness" | "move", import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.DefaultOptionsWhenChoicesProvided, import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.MergedOptions<{
+        }>>>, import("fvtt-types/src/foundry/common/data/fields.mjs").DataField.DerivedInitializedType<"darkness" | "light" | "sight" | "move" | "sound" | "none", import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.DefaultOptionsWhenChoicesProvided, import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.MergedOptions<{
             readonly initial: "none";
             readonly choices: readonly ["none", "light", "darkness", "sight", "sound", "move"];
             readonly label: "BEHAVIOR.TYPES.midi-qol.regionActivity.FIELDS.wallRestriction.label";
             readonly hint: "BEHAVIOR.TYPES.midi-qol.regionActivity.FIELDS.wallRestriction.hint";
-        }>>>, import("fvtt-types/src/foundry/common/data/fields.mjs").DataField.DerivedInitializedType<"none" | "sound" | "light" | "sight" | "darkness" | "move", import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.DefaultOptionsWhenChoicesProvided, import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.MergedOptions<{
+        }>>>, import("fvtt-types/src/foundry/common/data/fields.mjs").DataField.DerivedInitializedType<"darkness" | "light" | "sight" | "move" | "sound" | "none", import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.DefaultOptionsWhenChoicesProvided, import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.MergedOptions<{
             readonly initial: "none";
             readonly choices: readonly ["none", "light", "darkness", "sight", "sound", "move"];
             readonly label: "BEHAVIOR.TYPES.midi-qol.regionActivity.FIELDS.wallRestriction.label";
@@ -339,6 +339,11 @@ export declare class MidiRegionActivityBehaviorType extends foundry.data.regionB
     static _onTokenExit(this: MidiRegionActivityBehaviorType, event: any): Promise<void>;
     static _onTokenTurnStart(this: MidiRegionActivityBehaviorType, event: any): Promise<void>;
     static _onTokenTurnEnd(this: MidiRegionActivityBehaviorType, event: any): Promise<void>;
+    /** The copies of an effect this behaviour applied to an actor. */
+    _appliedEffects(actor: Actor.Implementation, effectUuid: string): ActiveEffect.Implementation[];
+    /** Applies an effect as dnd5e's apply-effect behaviour does (origin, changes resolved for the target), once per actor. */
+    _applyEffect(token: TokenDocument.Implementation, effectUuid: string): Promise<void>;
+    _removeEffect(token: TokenDocument.Implementation, effectUuid: string): Promise<void>;
     _triggerActivity(token: TokenDocument.Implementation, activityUuid: string): Promise<void>;
     static _executeTriggerActivity(data: {
         activityUuid: string;

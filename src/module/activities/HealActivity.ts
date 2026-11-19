@@ -1,50 +1,19 @@
-import { adoptActivityType } from "./graft.js";
+import { adoptActivityType } from "./activityPrototype.js";
 import { registerCardActions } from "./cardActions.js";
 import { Activity, RollDialogConfig, RollMessageConfig, RollProcessConfig } from "../../globals.js";
 import { debugEnabled, GameSystemConfig, warn } from "../../midi-qol.js";
 import { Workflow } from "../Workflow.js";
-import { MidiActivityMixin, MidiActivityMixinSheet } from "./MidiActivityMixin.js";
 
-export let MidiHealActivity: ReturnType<typeof defineMidiHealActivityClass>;
-export let MidiHealSheet: ReturnType<typeof defineMidiHealSheetClass>;
 
 export function setupHealActivity() {
   if (debugEnabled > 0) warn("MidiQOL | HealActivity | setupHealActivity | Called");
-  //@ts-expect-error
-  MidiHealSheet = defineMidiHealSheetClass(game.system.applications.activity.HealSheet);
-  MidiHealActivity = defineMidiHealActivityClass(GameSystemConfig.activityTypes.heal.documentClass as Activity);
-  adoptActivityType("heal", MidiHealActivity, MidiHealSheet);
+  adoptActivityType("heal");
   registerCardActions(["heal"], {
     rollHealing: cardRollHealing
   });
 }
 
-let defineMidiHealActivityClass = <T extends Activity>(ActivityClass: T) => {
-  return class MidiHealActivity extends MidiActivityMixin(ActivityClass) {
-    static LOCALIZATION_PREFIXES = ["midi-qol.HEAL", ...super.LOCALIZATION_PREFIXES];
-    static metadata =
-      foundry.utils.mergeObject(
-        super.metadata, {
-        midiTitle: "midi-qol.HEAL.Title.one",
-        dnd5eTitle: ActivityClass.metadata.title,
-        sheetClass: MidiHealSheet,
-        usage: {
-          /*
-           * No `chatCard`. Supplying one keeps the activity on dnd5e's legacy content path — the
-           * system renders the template into `message.content` and `MidiUsageMessageData`'s own
-           * template short-circuits on it, so the card face never runs. Deprecated in dnd5e 6.0 and
-           * removed in 6.2 (`activity/mixin.mjs#legacyUsageContent`) regardless. See AttackActivity.
-           */
-        },
-      }, { inplace: false, insertKeys: true, insertValues: true })
 
-    
-  }
-}
-
-export function defineMidiHealSheetClass(baseClass: any) {
-  return class MidiHealSheet extends MidiActivityMixinSheet(baseClass) {};
-}
 
 function cardRollHealing(this: Activity, event: PointerEvent, target: HTMLElement, message: ChatMessage.Implementation) {
   const workflow = Workflow.forDamageButton(message);

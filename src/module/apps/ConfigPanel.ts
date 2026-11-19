@@ -404,7 +404,6 @@ export class ConfigPanel extends HandlebarsApplicationMixin(ApplicationV2) {
     if (realData.enforceBonusActions !== "none" && configSettings.enforceBonusActions !== realData.enforceBonusActions) {
       needReload = true;
     }
-    if (configSettings.activityNamePrefix !== realData.activityNamePrefix) needReload = true;
 
     // Handle dnd5e attackRollVisibility setting separately
     if (realData.dnd5eAttackRollVisibility !== undefined) {

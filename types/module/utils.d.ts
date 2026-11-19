@@ -194,6 +194,7 @@ export declare function requestPCActiveDefence(player: User.Implementation, acto
     coverBonus: number;
     rollOptions: any;
     rollForThem: () => Promise<Roll>;
+    owner?: object;
 }): Promise<Roll | {}>;
 export declare var midiFlagTypes: Record<string, string>;
 export declare function setupMidiFlagTypes(): void;
@@ -1092,7 +1093,7 @@ export declare function computeTemplateShapeDistance(templateDocument: MeasuredT
     shape: undefined;
     distance: number;
 } | {
-    shape: import("fvtt-types/src/types/augments/pixi.mjs").Polygon | import("fvtt-types/src/types/augments/pixi.mjs").Rectangle | import("fvtt-types/src/types/augments/pixi.mjs").Circle;
+    shape: import("fvtt-types/src/types/augments/pixi.mjs").Rectangle | import("fvtt-types/src/types/augments/pixi.mjs").Polygon | import("fvtt-types/src/types/augments/pixi.mjs").Circle;
     distance: number;
 };
 export declare function notificationNotify(wrapped: any, ...args: any[]): any;
@@ -1286,7 +1287,7 @@ export declare function queueUpdate(document: ChatMessage.Implementation, update
  * Write `updates` and the card's queued changes. A workflow queues its card's changes while a state runs and writes them
  * once (Workflow#performThrottledUpdate).
  */
-export declare function throttledUpdate(document: ChatMessage.Implementation, updates: ChatMessage.UpdateData): Promise<ChatMessage<"base" | import("fvtt-types/src/foundry/common/abstract/document.mjs").default.ModuleSubType | "midi-qol.damage" | "midi-qol.note"> | import("fvtt-types/src/foundry/common/abstract/document.mjs").default.Any | undefined>;
+export declare function throttledUpdate(document: ChatMessage.Implementation, updates: ChatMessage.UpdateData): Promise<import("fvtt-types/src/foundry/common/abstract/document.mjs").default.Any | ChatMessage<"base" | import("fvtt-types/src/foundry/common/abstract/document.mjs").default.ModuleSubType | "midi-qol.damage" | "midi-qol.note"> | undefined>;
 /**
  * A card about to be deleted, by any client-side delete (ChatMessageMidi._preDeleteOperation): its write in flight lands
  * first, its queued writes are dropped and no new ones sent
@@ -1373,8 +1374,8 @@ export declare function convertDuration(durationData: {
     units: string;
     value: number;
 } | undefined, inCombat: boolean): ConvertedDuration;
-export declare function getSaveRollModeFor(abilityId: string): "public" | "gm" | "blind";
-export declare function getCheckRollModeFor(abilityId: string): "public" | "gm" | "blind";
+export declare function getSaveRollModeFor(abilityId: string): "gm" | "public" | "blind";
+export declare function getCheckRollModeFor(abilityId: string): "gm" | "public" | "blind";
 /** Whether `action`'s keybinding (midi-qol's by default, or another namespace's such as dnd5e's) is held for `event`. */
 export declare function areMidiKeysPressed(event: AugmentedEvent | undefined, action: string, namespace?: string): boolean;
 export declare function setRangedTargets(tokenToUse: Token.Implementation, targetDetails: Activity["target"]): boolean;

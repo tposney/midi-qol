@@ -1,4 +1,4 @@
-import { Activity, ActivityEffectData, ActivityUseConfiguration, RollDialogConfig, RollMessageConfig, RollProcessConfig, MidiUsageChatContext } from "../../globals.js";
+import { Activity, ActivityUseConfiguration, RollDialogConfig, RollMessageConfig, MidiUsageChatContext } from "../../globals.js";
 import { Workflow } from "../Workflow.js";
 import { type UseState } from "./useRelaunch.js";
 export declare class MidiConditionField extends globalThis.dnd5e.dataModels.fields.FormulaField {
@@ -23,644 +23,304 @@ export declare class MidiConditionField extends globalThis.dnd5e.dataModels.fiel
  * and midi reconstructs it from the chat card.
  */
 export declare function findAmmunitionActivity(ammunitionItem: any): any | undefined;
-export declare let MidiActivityMixin: (Base: any) => {
-    new (): {
-        [x: string]: any;
-        doConfirmation(actionToCall: string, event: PointerEvent, target: HTMLElement, message: ChatMessage.Implementation): Promise<void>;
-        _preCreate(data: any): void;
-        prepareData(): void;
-        useAs(actor: Actor.Implementation | null | undefined, usage?: import("fvtt-types/src/utils/index.mjs").InexactPartial<{
-            create: {
-                measuredTemplate?: boolean;
-            };
-            concentration: {
-                begin: boolean;
-                end: string | null;
-            };
-            consume: {
-                action: boolean;
-                resources: boolean | number[];
-                spellSlot: boolean;
-            };
-            event: Event;
-            scaling: false | number;
-            spell: {
-                slot: string;
-            };
-            subsequentActions?: boolean;
-            cause: {
-                activity: string;
-                resources: boolean | number[];
-            };
-            workflow: Workflow;
-            midiOptions: import("../utils.js").MidiOptions;
-            advantage: boolean;
-            disadvantage: boolean;
-            midi: {
-                workflowClass: typeof Workflow;
-            };
-            useRelaunch: {
-                relaunched?: boolean;
-                useKey?: string;
-            };
-            sequenceId: string;
-            activity: Activity;
-        }>, dialog?: RollDialogConfig, message?: RollMessageConfig): Promise<any>;
-        /**
-         * midi's use (M10, activities/useRelaunch.ts): calls dnd5e's use with a use key, which midi's preUseActivity
-         * listener cancels and restarts after midi's pre-use work; returns the restart's result. The restarted call
-         * (marked) is dnd5e's use itself, so other listeners see one use.
-         */
-        use(usage?: import("fvtt-types/src/utils/index.mjs").InexactPartial<{
-            create: {
-                measuredTemplate?: boolean;
-            };
-            concentration: {
-                begin: boolean;
-                end: string | null;
-            };
-            consume: {
-                action: boolean;
-                resources: boolean | number[];
-                spellSlot: boolean;
-            };
-            event: Event;
-            scaling: false | number;
-            spell: {
-                slot: string;
-            };
-            subsequentActions?: boolean;
-            cause: {
-                activity: string;
-                resources: boolean | number[];
-            };
-            workflow: Workflow;
-            midiOptions: import("../utils.js").MidiOptions;
-            advantage: boolean;
-            disadvantage: boolean;
-            midi: {
-                workflowClass: typeof Workflow;
-            };
-            useRelaunch: {
-                relaunched?: boolean;
-                useKey?: string;
-            };
-            sequenceId: string;
-            activity: Activity;
-        }>, dialog?: RollDialogConfig, message?: RollMessageConfig): Promise<any>;
-        /**
-         * midi's work before dnd5e's use (M10 stage 1): rollAs, ownership, the off-scene check, the workflow, targets and
-         * the checks before the card, dialog and message settings. `done` with the result to return when the use stops
-         * here (or was handed to another actor); otherwise the use's state for dnd5e's use and finishUse.
-         */
-        prepareUse(usage: import("fvtt-types/src/utils/index.mjs").InexactPartial<{
-            create: {
-                measuredTemplate?: boolean;
-            };
-            concentration: {
-                begin: boolean;
-                end: string | null;
-            };
-            consume: {
-                action: boolean;
-                resources: boolean | number[];
-                spellSlot: boolean;
-            };
-            event: Event;
-            scaling: false | number;
-            spell: {
-                slot: string;
-            };
-            subsequentActions?: boolean;
-            cause: {
-                activity: string;
-                resources: boolean | number[];
-            };
-            workflow: Workflow;
-            midiOptions: import("../utils.js").MidiOptions;
-            advantage: boolean;
-            disadvantage: boolean;
-            midi: {
-                workflowClass: typeof Workflow;
-            };
-            useRelaunch: {
-                relaunched?: boolean;
-                useKey?: string;
-            };
-            sequenceId: string;
-            activity: Activity;
-        }>, dialog: RollDialogConfig, message: RollMessageConfig): Promise<{
-            done: true;
-            result: unknown;
-        } | {
-            done: false;
-            state: UseState;
-        }>;
-        /** dnd5e's preUseActivity for this use (its workflow): the scaled activity dnd5e uses, and dnd5e's copy of the usage */
-        onUsePreUse(state: UseState, newActivity: Activity, usageConfig: ActivityUseConfiguration): boolean;
-        /** dnd5e's activityConsumption for this use: the activity consumption and the card run on, deferred concentration */
-        onUseConsumption(state: UseState, newActivity: Activity, usageConfig: ActivityUseConfiguration): void;
-        /**
-         * midi's work after dnd5e's use (M10 stage 1): the card's workflow, the checks after the card, templates, undo data,
-         * the reaction and bonus action markers, cast data, then the workflow's first step. Returns what use() returns.
-         */
-        finishUse(state: UseState, useResults: any): Promise<unknown>;
-        /**
-         * Check if this activity has consumption configured.
-         * @returns true if this activity has consumption targets configured
-         */
-        hasConsumption(): boolean;
-        /**
-         * Determines whether this activity should auto-consume resources without showing a dialog.
-         * @param workflow - The workflow for getting auto-consume settings
-         * @returns true if consumption should be automatic, false if a dialog should be shown
-         */
-        shouldAutoConsume(workflow?: Workflow): boolean;
-        checkAutoConsume(usage: ActivityUseConfiguration, dialog?: RollDialogConfig): Promise<boolean>;
-        setupCanSeeSense(usage: {
-            workflow?: Workflow;
-        }): Promise<void>;
-        setupTargets(config: ActivityUseConfiguration, dialog: RollDialogConfig, message: RollMessageConfig): Promise<boolean>;
-        confirmTargets(): Promise<void>;
-        preTargetingChecks(usage: ActivityUseConfiguration, dialog: RollDialogConfig, message: RollMessageConfig, optionsConfig?: any): Promise<boolean>;
-        preChatChecks(usage: ActivityUseConfiguration, dialog: RollDialogConfig, message: RollMessageConfig, optionsConfig?: any): Promise<boolean>;
-        postChatCardChecks(usage: ActivityUseConfiguration, dialog: RollDialogConfig, message: RollMessageConfig, optionsConfig?: any): Promise<boolean>;
-        _pendingRegionUpdate: Record<string, any> | undefined;
-        _resolveAttachTokenId(workflow: Workflow | undefined, mode: "caster" | "target"): Promise<string | undefined>;
-        _promptAttachTargetPicker(targets: Token.Implementation[]): Promise<string | undefined>;
-        _placeEmanationTemplate(workflow: Workflow | undefined): Promise<import("fvtt-types/src/utils/index.mjs")._Override<RegionDocument, {
-            readonly id: string;
-            _id: string;
-            readonly uuid: string;
-            _source: import("fvtt-types/src/utils/index.mjs")._Override<{
-                _id: import("fvtt-types/src/foundry/common/data/fields.mjs").DocumentIdField.InitializedType<import("fvtt-types/src/foundry/common/data/fields.mjs").DocumentIdField.DefaultOptions>;
-                name: string;
-                color: string;
-                shapes: import("fvtt-types/src/foundry/common/data/fields.mjs").TypedSchemaField.PersistedType<import("fvtt-types/src/foundry/common/data/data.mjs").BaseShapeData.Types, import("fvtt-types/src/foundry/common/data/fields.mjs").TypedSchemaField.DefaultOptions>[];
-                elevation: {
-                    bottom: import("fvtt-types/src/foundry/common/data/fields.mjs").ExtendedNumberField.PersistedType<{
-                        required: true;
-                        extension: number;
-                    }>;
-                    top: import("fvtt-types/src/foundry/common/data/fields.mjs").ExtendedNumberField.PersistedType<{
-                        required: true;
-                        extension: number;
-                    }>;
-                    topInclusive: import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.InitializedType<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.DefaultOptions, import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.DefaultOptions>>;
-                };
-                levels: string[];
-                restriction: {
-                    enabled: import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.InitializedType<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.DefaultOptions, import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.DefaultOptions>>;
-                    type: "sound" | "light" | "sight" | "darkness" | "move";
-                    priority: number;
-                };
-                attachment: {
-                    token: import("fvtt-types/src/foundry/common/data/fields.mjs").ForeignDocumentField.PersistedType<{
-                        idOnly: true;
-                        nullable: true;
-                        initial: null;
-                    }>;
-                };
-                behaviors: {
-                    system: any;
-                    _id: import("fvtt-types/src/foundry/common/data/fields.mjs").DocumentIdField.InitializedType<import("fvtt-types/src/foundry/common/data/fields.mjs").DocumentIdField.DefaultOptions>;
-                    name: string;
-                    type: import("fvtt-types/src/foundry/common/data/fields.mjs").DataField.DerivedInitializedType<"adjustDarknessLevel" | "applyActiveEffect" | "changeLevel" | "defineSurface" | "displayScrollingText" | "executeMacro" | "executeScript" | "modifyMovementCost" | "pauseGame" | "suppressWeather" | "teleportToken" | "toggleBehavior" | (`${string}.${string}` & import("fvtt-types/src/utils/index.mjs").Branded<"Document.ModuleSubtype">) | "midi-qol.regionActivity", import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.DefaultOptionsWhenChoicesProvided, import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.MergedOptions<import("fvtt-types/src/foundry/common/data/fields.mjs").DocumentTypeField.MergedOptions<typeof import("fvtt-types/src/foundry/common/documents/region-behavior.mjs").default, import("fvtt-types/src/foundry/common/data/fields.mjs").DocumentTypeField.DefaultOptions>>>, {
-                        initial: undefined;
-                    }>>;
-                    disabled: import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.InitializedType<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.DefaultOptions, import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.DefaultOptions>>;
-                    flags: import("fvtt-types/src/foundry/common/data/fields.mjs").DocumentFlagsField._TwoLevelPartial<import("fvtt-types/src/utils/index.mjs").InterfaceToObject<import("fvtt-types/src/foundry/common/abstract/document.mjs").default.CoreFlags>>;
-                    _stats: {
-                        coreVersion: import("fvtt-types/src/foundry/common/data/fields.mjs").DataField.DerivedInitializedType<string, import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.DefaultOptions, import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.MergedOptions<{
-                            required: true;
-                            blank: false;
-                            nullable: true;
-                            initial: () => string;
-                        }>>>;
-                        systemId: import("fvtt-types/src/foundry/common/data/fields.mjs").DataField.DerivedInitializedType<string, import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.DefaultOptions, import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.MergedOptions<{
-                            required: true;
-                            blank: false;
-                            nullable: true;
-                            initial: () => string | null;
-                        }>>>;
-                        systemVersion: import("fvtt-types/src/foundry/common/data/fields.mjs").DataField.DerivedInitializedType<string, import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.DefaultOptions, import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.MergedOptions<{
-                            required: true;
-                            blank: false;
-                            nullable: true;
-                            initial: () => string | null;
-                        }>>>;
-                        createdTime: import("fvtt-types/src/foundry/common/data/fields.mjs").NumberField.InitializedType<import("fvtt-types/src/foundry/common/data/fields.mjs").NumberField.DefaultOptions>;
-                        modifiedTime: import("fvtt-types/src/foundry/common/data/fields.mjs").NumberField.InitializedType<import("fvtt-types/src/foundry/common/data/fields.mjs").NumberField.DefaultOptions>;
-                        lastModifiedBy: import("fvtt-types/src/foundry/common/data/fields.mjs").ForeignDocumentField.PersistedType<{
-                            idOnly: true;
-                        }>;
-                        compendiumSource: import("fvtt-types/src/foundry/common/data/fields.mjs").DocumentUUIDField.InitializedType<import("fvtt-types/src/foundry/common/data/fields.mjs").DocumentUUIDField.DefaultOptions>;
-                        duplicateSource: import("fvtt-types/src/foundry/common/data/fields.mjs").DocumentUUIDField.InitializedType<import("fvtt-types/src/foundry/common/data/fields.mjs").DocumentUUIDField.DefaultOptions>;
-                        exportSource: import("fvtt-types/src/foundry/common/data/fields.mjs").SchemaField.Internal.PersistedType<import("fvtt-types/src/foundry/common/data/fields.mjs").DocumentStatsField.ExportSourceSchema, {
-                            nullable: true;
-                        }>;
-                    };
-                }[];
-                visibility: CONST.REGION_VISIBILITY | null;
-                highlightMode: keyof RegionDocument.HighlightModeChoices;
-                displayMeasurements: import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.InitializedType<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.DefaultOptions, import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.DefaultOptions>>;
-                hidden: import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.InitializedType<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.DefaultOptions, import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.DefaultOptions>>;
-                locked: import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.InitializedType<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.DefaultOptions, import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.DefaultOptions>>;
-                ownership: Record<string, CONST.DOCUMENT_OWNERSHIP_LEVELS>;
-                flags: import("fvtt-types/src/foundry/common/data/fields.mjs").DocumentFlagsField._TwoLevelPartial<{
-                    "midi-qol"?: {
-                        magical?: boolean;
-                        magicSchool?: string;
-                        activityTemplate?: boolean;
-                        itemUuid?: string;
-                        actorUuid?: string;
-                        sourceTokenUuid?: string;
-                        maxRange?: number;
-                        workflowId?: string;
-                        itemCardUuid?: string;
-                    };
-                } & import("fvtt-types/src/utils/index.mjs").InterfaceToObject<import("fvtt-types/src/foundry/common/abstract/document.mjs").default.CoreFlags>>;
-                _shapeConstraints: import("fvtt-types/src/foundry/common/data/fields.mjs").ArrayField.PersistedType<number[], {
-                    nullable: true;
-                    initial: null;
-                }>;
-            }, {
-                _id: string;
-            }>;
-            toJSON(): import("fvtt-types/src/utils/index.mjs")._Override<{
-                _id: import("fvtt-types/src/foundry/common/data/fields.mjs").DocumentIdField.InitializedType<import("fvtt-types/src/foundry/common/data/fields.mjs").DocumentIdField.DefaultOptions>;
-                name: string;
-                color: string;
-                shapes: import("fvtt-types/src/foundry/common/data/fields.mjs").TypedSchemaField.PersistedType<import("fvtt-types/src/foundry/common/data/data.mjs").BaseShapeData.Types, import("fvtt-types/src/foundry/common/data/fields.mjs").TypedSchemaField.DefaultOptions>[];
-                elevation: {
-                    bottom: import("fvtt-types/src/foundry/common/data/fields.mjs").ExtendedNumberField.PersistedType<{
-                        required: true;
-                        extension: number;
-                    }>;
-                    top: import("fvtt-types/src/foundry/common/data/fields.mjs").ExtendedNumberField.PersistedType<{
-                        required: true;
-                        extension: number;
-                    }>;
-                    topInclusive: import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.InitializedType<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.DefaultOptions, import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.DefaultOptions>>;
-                };
-                levels: string[];
-                restriction: {
-                    enabled: import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.InitializedType<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.DefaultOptions, import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.DefaultOptions>>;
-                    type: "sound" | "light" | "sight" | "darkness" | "move";
-                    priority: number;
-                };
-                attachment: {
-                    token: import("fvtt-types/src/foundry/common/data/fields.mjs").ForeignDocumentField.PersistedType<{
-                        idOnly: true;
-                        nullable: true;
-                        initial: null;
-                    }>;
-                };
-                behaviors: {
-                    system: any;
-                    _id: import("fvtt-types/src/foundry/common/data/fields.mjs").DocumentIdField.InitializedType<import("fvtt-types/src/foundry/common/data/fields.mjs").DocumentIdField.DefaultOptions>;
-                    name: string;
-                    type: import("fvtt-types/src/foundry/common/data/fields.mjs").DataField.DerivedInitializedType<"adjustDarknessLevel" | "applyActiveEffect" | "changeLevel" | "defineSurface" | "displayScrollingText" | "executeMacro" | "executeScript" | "modifyMovementCost" | "pauseGame" | "suppressWeather" | "teleportToken" | "toggleBehavior" | (`${string}.${string}` & import("fvtt-types/src/utils/index.mjs").Branded<"Document.ModuleSubtype">) | "midi-qol.regionActivity", import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.DefaultOptionsWhenChoicesProvided, import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.MergedOptions<import("fvtt-types/src/foundry/common/data/fields.mjs").DocumentTypeField.MergedOptions<typeof import("fvtt-types/src/foundry/common/documents/region-behavior.mjs").default, import("fvtt-types/src/foundry/common/data/fields.mjs").DocumentTypeField.DefaultOptions>>>, {
-                        initial: undefined;
-                    }>>;
-                    disabled: import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.InitializedType<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.DefaultOptions, import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.DefaultOptions>>;
-                    flags: import("fvtt-types/src/foundry/common/data/fields.mjs").DocumentFlagsField._TwoLevelPartial<import("fvtt-types/src/utils/index.mjs").InterfaceToObject<import("fvtt-types/src/foundry/common/abstract/document.mjs").default.CoreFlags>>;
-                    _stats: {
-                        coreVersion: import("fvtt-types/src/foundry/common/data/fields.mjs").DataField.DerivedInitializedType<string, import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.DefaultOptions, import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.MergedOptions<{
-                            required: true;
-                            blank: false;
-                            nullable: true;
-                            initial: () => string;
-                        }>>>;
-                        systemId: import("fvtt-types/src/foundry/common/data/fields.mjs").DataField.DerivedInitializedType<string, import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.DefaultOptions, import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.MergedOptions<{
-                            required: true;
-                            blank: false;
-                            nullable: true;
-                            initial: () => string | null;
-                        }>>>;
-                        systemVersion: import("fvtt-types/src/foundry/common/data/fields.mjs").DataField.DerivedInitializedType<string, import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.DefaultOptions, import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.MergedOptions<{
-                            required: true;
-                            blank: false;
-                            nullable: true;
-                            initial: () => string | null;
-                        }>>>;
-                        createdTime: import("fvtt-types/src/foundry/common/data/fields.mjs").NumberField.InitializedType<import("fvtt-types/src/foundry/common/data/fields.mjs").NumberField.DefaultOptions>;
-                        modifiedTime: import("fvtt-types/src/foundry/common/data/fields.mjs").NumberField.InitializedType<import("fvtt-types/src/foundry/common/data/fields.mjs").NumberField.DefaultOptions>;
-                        lastModifiedBy: import("fvtt-types/src/foundry/common/data/fields.mjs").ForeignDocumentField.PersistedType<{
-                            idOnly: true;
-                        }>;
-                        compendiumSource: import("fvtt-types/src/foundry/common/data/fields.mjs").DocumentUUIDField.InitializedType<import("fvtt-types/src/foundry/common/data/fields.mjs").DocumentUUIDField.DefaultOptions>;
-                        duplicateSource: import("fvtt-types/src/foundry/common/data/fields.mjs").DocumentUUIDField.InitializedType<import("fvtt-types/src/foundry/common/data/fields.mjs").DocumentUUIDField.DefaultOptions>;
-                        exportSource: import("fvtt-types/src/foundry/common/data/fields.mjs").SchemaField.Internal.PersistedType<import("fvtt-types/src/foundry/common/data/fields.mjs").DocumentStatsField.ExportSourceSchema, {
-                            nullable: true;
-                        }>;
-                    };
-                }[];
-                visibility: CONST.REGION_VISIBILITY | null;
-                highlightMode: keyof RegionDocument.HighlightModeChoices;
-                displayMeasurements: import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.InitializedType<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.DefaultOptions, import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.DefaultOptions>>;
-                hidden: import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.InitializedType<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.DefaultOptions, import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.DefaultOptions>>;
-                locked: import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.InitializedType<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.DefaultOptions, import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.DefaultOptions>>;
-                ownership: Record<string, CONST.DOCUMENT_OWNERSHIP_LEVELS>;
-                flags: import("fvtt-types/src/foundry/common/data/fields.mjs").DocumentFlagsField._TwoLevelPartial<{
-                    "midi-qol"?: {
-                        magical?: boolean;
-                        magicSchool?: string;
-                        activityTemplate?: boolean;
-                        itemUuid?: string;
-                        actorUuid?: string;
-                        sourceTokenUuid?: string;
-                        maxRange?: number;
-                        workflowId?: string;
-                        itemCardUuid?: string;
-                    };
-                } & import("fvtt-types/src/utils/index.mjs").InterfaceToObject<import("fvtt-types/src/foundry/common/abstract/document.mjs").default.CoreFlags>>;
-                _shapeConstraints: import("fvtt-types/src/foundry/common/data/fields.mjs").ArrayField.PersistedType<number[], {
-                    nullable: true;
-                    initial: null;
-                }>;
-            }, {
-                _id: string;
-            }>;
-            parent: Scene;
-            parentCollection: "regions";
-            collection: import("fvtt-types/src/foundry/common/abstract/embedded-collection.mjs").default<import("fvtt-types/src/utils/index.mjs")._Override<RegionDocument, /*elided*/ any>, Scene, import("fvtt-types/src/foundry/common/abstract/embedded-collection.mjs").default.Methods<import("fvtt-types/src/utils/index.mjs")._Override<RegionDocument, /*elided*/ any>>>;
-            readonly inCompendium: boolean;
-            readonly compendium: CompendiumCollection<"Scene"> | null;
-        }>[] | undefined>;
-        /**
-         * Attach a MidiRegionActivityBehaviorType to a RegionDocument.
-         * If `regionBehavior.enabled` is set on this activity, uses the stored config.
-         * Otherwise falls back to auto-deriving from the overtime sibling activity.
-         * @param regionDoc The Region to attach the behavior to
-         * @param workflow The current workflow
-         * @param overTimeActivity The activity with isOverTimeFlag (may differ from `this` if `this` is the Cast activity)
-         * @param castLevel The spell level from the usage message (set by dnd5e's _prepareUsageScaling before _usageChatContext)
-         */
-        _attachRegionActivityBehavior(regionDoc: RegionDocument.Implementation, workflow: Workflow, overTimeActivity: any, castLevel?: number): Promise<void>;
-        /** midi's additions to the usage context; not named `_usageChatContext`, which would keep dnd5e's legacy content path. */
-        _midiUsageContext(message: any): Promise<MidiUsageChatContext>;
-        /**
-         * Settle the card's rendering decisions into the message's system data.
-         *
-         * They depend on the workflow, which exists here and is gone by the time the card is rendered
-         * again after a reload — so they are decided once, now, and stored. `MidiUsageMessageData` reads
-         * them back; see the schema there for why they cannot live in the template's context alone.
-         *
-         * The decisions themselves are not recomputed: `_usageChatContext` already works them out at
-         * exactly this moment, so this takes what it produced rather than keeping a second copy of the
-         * reasoning that would drift from it.
-         */
-        _createUsageMessage(message?: RollMessageConfig): Promise<any>;
-        get actionType(): string;
-        _ammunitionActivity: /*elided*/ any | null | undefined;
-        isLike(type: string): boolean;
-        readonly applicableEffects: ActivityEffectData[] | null;
-        relevantLevel: number;
-        actor?: Actor.Implementation;
-        item: Item.Implementation;
-        ammunitionItem?: Item.Implementation;
-        name: string;
-        uses: {
-            spent: number;
-            max: number;
-            get value(): number;
-            recovery: unknown[];
-        };
-        consumption: {
-            scaling: {
-                allowed: boolean;
-                max: string;
-            };
-            spellSlot: boolean;
-            targets: {
-                type: string;
-                target: string;
-                value: string;
-                scaling: {
-                    mode: string;
-                    formula: string;
-                };
-            }[];
-        };
-        effects: ActivityEffectData[];
-        attack?: {
-            ability: string;
-            bonus: string;
-            critical: {
-                threshold: number;
-            };
-            flat: boolean;
-            type: {
-                value: string;
-                classification: string;
-            };
-            damage: {};
-        };
-        damage?: {
-            critical: {
-                allow: boolean;
-                bonus: string;
-            };
-            parts: {
-                number: number;
-                denomination: number;
-                bonus: string;
-                types: Set<string>;
-                custom: {
-                    enabled: boolean;
-                    formula: string;
-                };
-                scaling: {
-                    mode: string;
-                    number: number;
-                    formula: string;
-                };
-            }[];
-            onSave: string;
-        };
-        range?: {
-            units?: string;
-            reach?: number;
-            value?: number;
-            long?: number;
-        };
-        healing?: {
-            number: number;
-            denomination: number;
-            bonus: string;
-            types: Set<string>;
-            custom: {
-                enabled: boolean;
-                formula: string;
-            };
-            scaling: {
-                mode: string;
-                number: number;
-                formula: string;
-            };
-        };
-        overTimeProperties?: {
-            turnChoice?: string;
-            saveRemoves?: boolean;
-            rollAs?: string;
-            preRemoveConditionText?: string;
-            postRemoveConditionText?: string;
-            removeConditionBeforeActivity?: boolean;
-            removeConditionText?: string;
-        };
-        metadata: {
-            title: string;
-            img: string;
-            label: string;
-            name: string;
-            type: string;
-            usage: {
-                actions: unknown;
-                chatCard: string;
-                dialog: unknown;
-            };
-        };
-        refund: (consumed: unknown) => Promise<void>;
-        getRollData: () => import("fvtt-types/src/utils/index.mjs").AnyMutableObject;
-        rollAttack?(config: RollProcessConfig, dialog: RollDialogConfig, message: RollMessageConfig): Promise<Roll[] | null>;
-        rollDamage(config: RollProcessConfig, dialog: RollDialogConfig, message: RollMessageConfig): Promise<Roll[] | void>;
-        rollFormula?(config: RollProcessConfig, dialog: RollDialogConfig, message: RollMessageConfig): Promise<Roll[] | void>;
-        canScale?: boolean;
-        _prepareUsageConfig: (config: object) => object;
-        _prepareUsageUpdates: (config: object, options?: {
-            returnErrors?: boolean;
-        }) => Promise<any>;
-        consume: (usageConfig: object, messageConfig: object) => Promise<object | false>;
-        roll?: {
-            formula?: string;
-            name: string;
-            prompt: boolean;
-            visible: boolean;
-        };
-        duration: {
-            concentration?: boolean;
-            override?: boolean;
-            scalar?: boolean;
-            special: string;
-            units: string;
-            value: number;
-        };
-        target: {
-            template: {
-                count: string;
-                contiguous: boolean;
-                type: string;
-                size: string;
-                width: string;
-                height: string;
-                units: string;
-                stationary?: boolean;
-            };
-            affects: {
-                count: string;
-                type: string;
-                choice: boolean;
-                special: string;
-            };
-        };
-        activation: {
-            type: string;
-            value: number;
-            condition: string;
-            cost?: number;
-        };
-        save?: import("../../globals.js").ActivitySave;
-        check?: import("../../globals.js").ActivityCheck;
-        getAbility?: (associated: string) => string | null;
-        hasDamage: boolean;
-        hasHealing: boolean;
-        id: string;
-        uuid: string;
-        toObject(source?: boolean): import("fvtt-types/src/utils/index.mjs").AnyMutableObject;
-        otherActivity?: Activity | null;
-        type: string;
-        useCondition: string;
-        effectCondition: string;
-        getTriggeredActivity: () => Promise<Activity | undefined>;
-        macro: Macro.Implementation;
-        midiProperties?: {
-            ignoreTraits: Set<string>;
-            triggeredActivityId: string;
-            triggeredActivityConditionText?: string;
-            followUp?: boolean;
-            followUpCondition?: string;
-            followUpTargets?: string;
-            triggeredActivityTargets: string;
-            triggeredActivityRollAs?: string;
-            triggeredActivityConsume?: boolean;
-            triggeredActivityConfigure?: boolean;
-            autoConsume: boolean;
-            forceConsumeDialog?: string;
-            forceRollDialog?: string;
-            forceDamageDialog?: string;
-            confirmTargets: string;
-            autoTargetType: string;
-            autoTargetAction?: string;
-            automationOnly?: boolean;
-            otherActivityCompatible?: boolean;
-            identifier?: string;
-            displayActivityName?: boolean;
-            rollMode: keyof CONFIG.Dice.RollModes;
-            chooseEffects?: boolean;
-            toggleEffect?: boolean;
-            ignoreFullCover?: boolean;
-            targetMustBeSeen?: boolean;
-            removeChatButtons: string;
-            magicEffect?: boolean;
-            magicDamage?: boolean;
-            noConcentrationCheck?: boolean;
-            skipConcentrationCheck?: boolean;
-            autoCEEffects: string;
-            statuses?: {
-                id: string;
-                specialDuration: string[];
-                onSave: boolean;
-            }[];
-        };
-        deferOtherDamage: (config: RollProcessConfig, dialog: RollDialogConfig) => boolean;
-        rollOtherDamage: (config: RollProcessConfig, dialog: RollDialogConfig) => Promise<Roll[] | undefined>;
-    };
-    [x: string]: any;
-    LOCALIZATION_PREFIXES: any[];
-    metadata: import("fvtt-types/src/foundry/common/utils/helpers.mjs").InsertKeys<{
-        [x: string]: any;
-    }, {
-        readonly usage: {
-            readonly dialog: any;
-        };
-    }>;
-};
-export declare let MidiActivityMixinSheet: (Base: any) => {
-    new (): {
-        [x: string]: any;
-        /** A special duration chosen from a status's "add" list joins that status's durations. */
-        _midiOnAddMidiStatusDuration(event: Event): void;
-        _getTabs(): any;
-        _prepareMidiQolContext(context: any): Promise<any>;
-        _preparePartContext(partId: any, context: any, options: any): Promise<any>;
-        _onRender(context: any, options: any): Promise<void>;
-    };
-    [x: string]: any;
-    DEFAULT_OPTIONS: foundry.applications.api.ApplicationV2.DefaultOptions;
-    CLEAN_ARRAYS: any[];
-    "__#private@#addMidiStatus"(): void;
-    "__#private@#deleteMidiStatus"(event: PointerEvent, target: HTMLElement): void;
-    "__#private@#deleteMidiStatusDuration"(event: PointerEvent, target: HTMLElement): void;
-    "__#private@#addMacro"(): void;
-    "__#private@#openConditionEditor"(event: PointerEvent, target: HTMLElement): void;
-    "__#private@#openRegionBehaviorEditor"(): void;
-    PARTS: any;
-};
-export declare let MidiActivityUsageDialog: any;
-/**
- * Each midi activity type's title (its `midiTitle`, else dnd5e's), chosen by the Activity Prefix setting when it is read:
- * the classes are defined before midi's settings load, and Boss Loot FX turns the prefix off as they do.
- */
-export declare function setupActivityTitles(): void;
 export declare function setupMidiActivityMixin(): void;
+export declare function registerUsageMessageHooks(): void;
+/** An activity of a type midi uses (adoptActivityType): midi's functions apply to it */
+export declare function isMidiActivityType(activity: Activity | null | undefined): activity is MidiActivity;
+/** midi's region settings on an activity (activitySchema.ts `regionBehavior`) */
+interface ActivityRegionBehavior {
+    enabled: boolean;
+    dispositionFilter: number;
+    excludeSource: boolean;
+    oncePerTurn: boolean;
+    wallRestriction: string;
+    regionVisibility: number;
+    attachToken: string;
+    moveDistance: number;
+    moveDirection: string;
+    moveTiming: string;
+    templateOrigin: string;
+    rules: {
+        trigger: string;
+        action: string;
+        targetId: string;
+    }[];
+}
+/** midi's region light on an activity (activitySchema.ts `regionLight`) */
+interface ActivityRegionLight {
+    enabled: boolean;
+    dim: number;
+    bright: number;
+    color: string | null;
+    alpha: number;
+    luminosity: number;
+    animationType: string | null;
+    animationSpeed: number;
+    animationIntensity: number;
+}
+/** An activity midi uses: dnd5e's, with midi's fields (activitySchema.ts) and getters (activityPrototype.ts) */
+export type MidiActivity = Activity & {
+    regionBehavior?: ActivityRegionBehavior;
+    regionLight?: ActivityRegionLight;
+    effectiveActivationType?: string;
+    isSelfTriggerableOnly?: boolean;
+    use?(usage?: ActivityUseConfiguration, dialog?: RollDialogConfig, message?: RollMessageConfig): Promise<unknown>;
+};
+export declare function doConfirmation(activity: MidiActivity, actionToCall: string, event: PointerEvent, target: HTMLElement, message: ChatMessage.Implementation): Promise<void>;
+export declare function useAs(used: MidiActivity, actor: Actor.Implementation | null | undefined, usage?: ActivityUseConfiguration, dialog?: RollDialogConfig, message?: RollMessageConfig): Promise<any>;
+/**
+ * midi's use (M10, activities/useRelaunch.ts): calls dnd5e's use with a use key, which midi's preUseActivity
+ * listener cancels and restarts after midi's pre-use work; returns the restart's result. The restarted call
+ * (marked) is dnd5e's use itself, so other listeners see one use.
+ */
+export declare function prepareUse(used: MidiActivity, usage: ActivityUseConfiguration, dialog: RollDialogConfig, message: RollMessageConfig): Promise<{
+    done: true;
+    result: unknown;
+} | {
+    done: false;
+    state: UseState;
+}>;
+/** dnd5e's preUseActivity for used use (its workflow): the scaled activity dnd5e uses, and dnd5e's copy of the usage */
+export declare function onUsePreUse(activity: MidiActivity, state: UseState, newActivity: Activity, usageConfig: ActivityUseConfiguration): boolean;
+/** dnd5e's activityConsumption for activity use: the activity consumption and the card run on, deferred concentration */
+export declare function onUseConsumption(activity: MidiActivity, state: UseState, newActivity: Activity, usageConfig: ActivityUseConfiguration): void;
+/**
+ * midi's work after dnd5e's use (M10 stage 1): the card's workflow, the checks after the card, templates, undo data,
+ * the reaction and bonus action markers, cast data, then the workflow's first step. Returns what use() returns.
+ */
+export declare function finishUse(used: MidiActivity, state: UseState, useResults: any): Promise<unknown>;
+/**
+ * Check if used activity has consumption configured.
+ * @returns true if used activity has consumption targets configured
+ */
+export declare function hasConsumption(activity: MidiActivity): boolean;
+/**
+ * Determines whether activity activity should auto-consume resources without showing a dialog.
+ * @param workflow - The workflow for getting auto-consume settings
+ * @returns true if consumption should be automatic, false if a dialog should be shown
+ */
+export declare function shouldAutoConsume(activity: MidiActivity, workflow?: Workflow): boolean;
+export declare function checkAutoConsume(activity: MidiActivity, usage: ActivityUseConfiguration, dialog?: RollDialogConfig): Promise<boolean>;
+export declare function setupCanSeeSense(activity: MidiActivity, usage: {
+    workflow?: Workflow;
+}): Promise<void>;
+export declare function setupTargets(activity: MidiActivity, config: ActivityUseConfiguration, dialog: RollDialogConfig, message: RollMessageConfig): Promise<boolean>;
+export declare function confirmTargets(activity: MidiActivity): Promise<void>;
+export declare function preTargetingChecks(activity: MidiActivity, usage: ActivityUseConfiguration, dialog: RollDialogConfig, message: RollMessageConfig, optionsConfig?: any): Promise<boolean>;
+export declare function preChatChecks(activity: MidiActivity, usage: ActivityUseConfiguration, dialog: RollDialogConfig, message: RollMessageConfig, optionsConfig?: any): Promise<boolean>;
+export declare function postChatCardChecks(activity: MidiActivity, usage: ActivityUseConfiguration, dialog: RollDialogConfig, message: RollMessageConfig, optionsConfig?: any): Promise<boolean>;
+export declare function resolveAttachTokenId(activity: MidiActivity, workflow: Workflow | undefined, mode: "caster" | "target"): Promise<string | undefined>;
+export declare function promptAttachTargetPicker(activity: MidiActivity, targets: Token.Implementation[]): Promise<string | undefined>;
+export declare function placeEmanationTemplate(activity: MidiActivity, workflow: Workflow | undefined): Promise<import("fvtt-types/src/utils/index.mjs")._Override<RegionDocument, {
+    readonly id: string;
+    _id: string;
+    readonly uuid: string;
+    _source: import("fvtt-types/src/utils/index.mjs")._Override<{
+        _id: import("fvtt-types/src/foundry/common/data/fields.mjs").DocumentIdField.InitializedType<import("fvtt-types/src/foundry/common/data/fields.mjs").DocumentIdField.DefaultOptions>;
+        name: string;
+        color: string;
+        shapes: import("fvtt-types/src/foundry/common/data/fields.mjs").TypedSchemaField.PersistedType<import("fvtt-types/src/foundry/common/data/data.mjs").BaseShapeData.Types, import("fvtt-types/src/foundry/common/data/fields.mjs").TypedSchemaField.DefaultOptions>[];
+        elevation: {
+            bottom: import("fvtt-types/src/foundry/common/data/fields.mjs").ExtendedNumberField.PersistedType<{
+                required: true;
+                extension: number;
+            }>;
+            top: import("fvtt-types/src/foundry/common/data/fields.mjs").ExtendedNumberField.PersistedType<{
+                required: true;
+                extension: number;
+            }>;
+            topInclusive: import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.InitializedType<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.DefaultOptions, import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.DefaultOptions>>;
+        };
+        levels: string[];
+        restriction: {
+            enabled: import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.InitializedType<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.DefaultOptions, import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.DefaultOptions>>;
+            type: "darkness" | "light" | "sight" | "move" | "sound";
+            priority: number;
+        };
+        attachment: {
+            token: import("fvtt-types/src/foundry/common/data/fields.mjs").ForeignDocumentField.PersistedType<{
+                idOnly: true;
+                nullable: true;
+                initial: null;
+            }>;
+        };
+        behaviors: {
+            system: any;
+            _id: import("fvtt-types/src/foundry/common/data/fields.mjs").DocumentIdField.InitializedType<import("fvtt-types/src/foundry/common/data/fields.mjs").DocumentIdField.DefaultOptions>;
+            name: string;
+            type: import("fvtt-types/src/foundry/common/data/fields.mjs").DataField.DerivedInitializedType<"adjustDarknessLevel" | "applyActiveEffect" | "changeLevel" | "defineSurface" | "displayScrollingText" | "executeMacro" | "executeScript" | "modifyMovementCost" | "pauseGame" | "suppressWeather" | "teleportToken" | "toggleBehavior" | (`${string}.${string}` & import("fvtt-types/src/utils/index.mjs").Branded<"Document.ModuleSubtype">) | "midi-qol.regionActivity", import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.DefaultOptionsWhenChoicesProvided, import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.MergedOptions<import("fvtt-types/src/foundry/common/data/fields.mjs").DocumentTypeField.MergedOptions<typeof import("fvtt-types/src/foundry/common/documents/region-behavior.mjs").default, import("fvtt-types/src/foundry/common/data/fields.mjs").DocumentTypeField.DefaultOptions>>>, {
+                initial: undefined;
+            }>>;
+            disabled: import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.InitializedType<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.DefaultOptions, import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.DefaultOptions>>;
+            flags: import("fvtt-types/src/foundry/common/data/fields.mjs").DocumentFlagsField._TwoLevelPartial<import("fvtt-types/src/utils/index.mjs").InterfaceToObject<import("fvtt-types/src/foundry/common/abstract/document.mjs").default.CoreFlags>>;
+            _stats: {
+                coreVersion: import("fvtt-types/src/foundry/common/data/fields.mjs").DataField.DerivedInitializedType<string, import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.DefaultOptions, import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.MergedOptions<{
+                    required: true;
+                    blank: false;
+                    nullable: true;
+                    initial: () => string;
+                }>>>;
+                systemId: import("fvtt-types/src/foundry/common/data/fields.mjs").DataField.DerivedInitializedType<string, import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.DefaultOptions, import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.MergedOptions<{
+                    required: true;
+                    blank: false;
+                    nullable: true;
+                    initial: () => string | null;
+                }>>>;
+                systemVersion: import("fvtt-types/src/foundry/common/data/fields.mjs").DataField.DerivedInitializedType<string, import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.DefaultOptions, import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.MergedOptions<{
+                    required: true;
+                    blank: false;
+                    nullable: true;
+                    initial: () => string | null;
+                }>>>;
+                createdTime: import("fvtt-types/src/foundry/common/data/fields.mjs").NumberField.InitializedType<import("fvtt-types/src/foundry/common/data/fields.mjs").NumberField.DefaultOptions>;
+                modifiedTime: import("fvtt-types/src/foundry/common/data/fields.mjs").NumberField.InitializedType<import("fvtt-types/src/foundry/common/data/fields.mjs").NumberField.DefaultOptions>;
+                lastModifiedBy: import("fvtt-types/src/foundry/common/data/fields.mjs").ForeignDocumentField.PersistedType<{
+                    idOnly: true;
+                }>;
+                compendiumSource: import("fvtt-types/src/foundry/common/data/fields.mjs").DocumentUUIDField.InitializedType<import("fvtt-types/src/foundry/common/data/fields.mjs").DocumentUUIDField.DefaultOptions>;
+                duplicateSource: import("fvtt-types/src/foundry/common/data/fields.mjs").DocumentUUIDField.InitializedType<import("fvtt-types/src/foundry/common/data/fields.mjs").DocumentUUIDField.DefaultOptions>;
+                exportSource: import("fvtt-types/src/foundry/common/data/fields.mjs").SchemaField.Internal.PersistedType<import("fvtt-types/src/foundry/common/data/fields.mjs").DocumentStatsField.ExportSourceSchema, {
+                    nullable: true;
+                }>;
+            };
+        }[];
+        visibility: CONST.REGION_VISIBILITY | null;
+        highlightMode: keyof RegionDocument.HighlightModeChoices;
+        displayMeasurements: import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.InitializedType<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.DefaultOptions, import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.DefaultOptions>>;
+        hidden: import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.InitializedType<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.DefaultOptions, import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.DefaultOptions>>;
+        locked: import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.InitializedType<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.DefaultOptions, import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.DefaultOptions>>;
+        ownership: Record<string, CONST.DOCUMENT_OWNERSHIP_LEVELS>;
+        flags: import("fvtt-types/src/foundry/common/data/fields.mjs").DocumentFlagsField._TwoLevelPartial<{
+            "midi-qol"?: {
+                magical?: boolean;
+                magicSchool?: string;
+                activityTemplate?: boolean;
+                itemUuid?: string;
+                actorUuid?: string;
+                sourceTokenUuid?: string;
+                maxRange?: number;
+                workflowId?: string;
+                itemCardUuid?: string;
+            };
+        } & import("fvtt-types/src/utils/index.mjs").InterfaceToObject<import("fvtt-types/src/foundry/common/abstract/document.mjs").default.CoreFlags>>;
+        _shapeConstraints: import("fvtt-types/src/foundry/common/data/fields.mjs").ArrayField.PersistedType<number[], {
+            nullable: true;
+            initial: null;
+        }>;
+    }, {
+        _id: string;
+    }>;
+    toJSON(): import("fvtt-types/src/utils/index.mjs")._Override<{
+        _id: import("fvtt-types/src/foundry/common/data/fields.mjs").DocumentIdField.InitializedType<import("fvtt-types/src/foundry/common/data/fields.mjs").DocumentIdField.DefaultOptions>;
+        name: string;
+        color: string;
+        shapes: import("fvtt-types/src/foundry/common/data/fields.mjs").TypedSchemaField.PersistedType<import("fvtt-types/src/foundry/common/data/data.mjs").BaseShapeData.Types, import("fvtt-types/src/foundry/common/data/fields.mjs").TypedSchemaField.DefaultOptions>[];
+        elevation: {
+            bottom: import("fvtt-types/src/foundry/common/data/fields.mjs").ExtendedNumberField.PersistedType<{
+                required: true;
+                extension: number;
+            }>;
+            top: import("fvtt-types/src/foundry/common/data/fields.mjs").ExtendedNumberField.PersistedType<{
+                required: true;
+                extension: number;
+            }>;
+            topInclusive: import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.InitializedType<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.DefaultOptions, import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.DefaultOptions>>;
+        };
+        levels: string[];
+        restriction: {
+            enabled: import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.InitializedType<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.DefaultOptions, import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.DefaultOptions>>;
+            type: "darkness" | "light" | "sight" | "move" | "sound";
+            priority: number;
+        };
+        attachment: {
+            token: import("fvtt-types/src/foundry/common/data/fields.mjs").ForeignDocumentField.PersistedType<{
+                idOnly: true;
+                nullable: true;
+                initial: null;
+            }>;
+        };
+        behaviors: {
+            system: any;
+            _id: import("fvtt-types/src/foundry/common/data/fields.mjs").DocumentIdField.InitializedType<import("fvtt-types/src/foundry/common/data/fields.mjs").DocumentIdField.DefaultOptions>;
+            name: string;
+            type: import("fvtt-types/src/foundry/common/data/fields.mjs").DataField.DerivedInitializedType<"adjustDarknessLevel" | "applyActiveEffect" | "changeLevel" | "defineSurface" | "displayScrollingText" | "executeMacro" | "executeScript" | "modifyMovementCost" | "pauseGame" | "suppressWeather" | "teleportToken" | "toggleBehavior" | (`${string}.${string}` & import("fvtt-types/src/utils/index.mjs").Branded<"Document.ModuleSubtype">) | "midi-qol.regionActivity", import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.DefaultOptionsWhenChoicesProvided, import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.MergedOptions<import("fvtt-types/src/foundry/common/data/fields.mjs").DocumentTypeField.MergedOptions<typeof import("fvtt-types/src/foundry/common/documents/region-behavior.mjs").default, import("fvtt-types/src/foundry/common/data/fields.mjs").DocumentTypeField.DefaultOptions>>>, {
+                initial: undefined;
+            }>>;
+            disabled: import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.InitializedType<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.DefaultOptions, import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.DefaultOptions>>;
+            flags: import("fvtt-types/src/foundry/common/data/fields.mjs").DocumentFlagsField._TwoLevelPartial<import("fvtt-types/src/utils/index.mjs").InterfaceToObject<import("fvtt-types/src/foundry/common/abstract/document.mjs").default.CoreFlags>>;
+            _stats: {
+                coreVersion: import("fvtt-types/src/foundry/common/data/fields.mjs").DataField.DerivedInitializedType<string, import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.DefaultOptions, import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.MergedOptions<{
+                    required: true;
+                    blank: false;
+                    nullable: true;
+                    initial: () => string;
+                }>>>;
+                systemId: import("fvtt-types/src/foundry/common/data/fields.mjs").DataField.DerivedInitializedType<string, import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.DefaultOptions, import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.MergedOptions<{
+                    required: true;
+                    blank: false;
+                    nullable: true;
+                    initial: () => string | null;
+                }>>>;
+                systemVersion: import("fvtt-types/src/foundry/common/data/fields.mjs").DataField.DerivedInitializedType<string, import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.DefaultOptions, import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.MergedOptions<{
+                    required: true;
+                    blank: false;
+                    nullable: true;
+                    initial: () => string | null;
+                }>>>;
+                createdTime: import("fvtt-types/src/foundry/common/data/fields.mjs").NumberField.InitializedType<import("fvtt-types/src/foundry/common/data/fields.mjs").NumberField.DefaultOptions>;
+                modifiedTime: import("fvtt-types/src/foundry/common/data/fields.mjs").NumberField.InitializedType<import("fvtt-types/src/foundry/common/data/fields.mjs").NumberField.DefaultOptions>;
+                lastModifiedBy: import("fvtt-types/src/foundry/common/data/fields.mjs").ForeignDocumentField.PersistedType<{
+                    idOnly: true;
+                }>;
+                compendiumSource: import("fvtt-types/src/foundry/common/data/fields.mjs").DocumentUUIDField.InitializedType<import("fvtt-types/src/foundry/common/data/fields.mjs").DocumentUUIDField.DefaultOptions>;
+                duplicateSource: import("fvtt-types/src/foundry/common/data/fields.mjs").DocumentUUIDField.InitializedType<import("fvtt-types/src/foundry/common/data/fields.mjs").DocumentUUIDField.DefaultOptions>;
+                exportSource: import("fvtt-types/src/foundry/common/data/fields.mjs").SchemaField.Internal.PersistedType<import("fvtt-types/src/foundry/common/data/fields.mjs").DocumentStatsField.ExportSourceSchema, {
+                    nullable: true;
+                }>;
+            };
+        }[];
+        visibility: CONST.REGION_VISIBILITY | null;
+        highlightMode: keyof RegionDocument.HighlightModeChoices;
+        displayMeasurements: import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.InitializedType<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.DefaultOptions, import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.DefaultOptions>>;
+        hidden: import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.InitializedType<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.DefaultOptions, import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.DefaultOptions>>;
+        locked: import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.InitializedType<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.DefaultOptions, import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.DefaultOptions>>;
+        ownership: Record<string, CONST.DOCUMENT_OWNERSHIP_LEVELS>;
+        flags: import("fvtt-types/src/foundry/common/data/fields.mjs").DocumentFlagsField._TwoLevelPartial<{
+            "midi-qol"?: {
+                magical?: boolean;
+                magicSchool?: string;
+                activityTemplate?: boolean;
+                itemUuid?: string;
+                actorUuid?: string;
+                sourceTokenUuid?: string;
+                maxRange?: number;
+                workflowId?: string;
+                itemCardUuid?: string;
+            };
+        } & import("fvtt-types/src/utils/index.mjs").InterfaceToObject<import("fvtt-types/src/foundry/common/abstract/document.mjs").default.CoreFlags>>;
+        _shapeConstraints: import("fvtt-types/src/foundry/common/data/fields.mjs").ArrayField.PersistedType<number[], {
+            nullable: true;
+            initial: null;
+        }>;
+    }, {
+        _id: string;
+    }>;
+    parent: Scene;
+    parentCollection: "regions";
+    collection: import("fvtt-types/src/foundry/common/abstract/embedded-collection.mjs").default<import("fvtt-types/src/utils/index.mjs")._Override<RegionDocument, /*elided*/ any>, Scene, import("fvtt-types/src/foundry/common/abstract/embedded-collection.mjs").default.Methods<import("fvtt-types/src/utils/index.mjs")._Override<RegionDocument, /*elided*/ any>>>;
+    readonly inCompendium: boolean;
+    readonly compendium: CompendiumCollection<"Scene"> | null;
+}>[] | undefined>;
+/**
+ * Attach a MidiRegionActivityBehaviorType to a RegionDocument.
+ * If `regionBehavior.enabled` is set on activity activity, uses the stored config.
+ * Otherwise falls back to auto-deriving from the overtime sibling activity.
+ * @param regionDoc The Region to attach the behavior to
+ * @param workflow The current workflow
+ * @param overTimeActivity The activity with isOverTimeFlag (may differ from `activity` if `activity` is the Cast activity)
+ * @param castLevel The spell level from the usage message (set by dnd5e's _prepareUsageScaling before _usageChatContext)
+ */
+export declare function attachRegionActivityBehavior(activity: MidiActivity, regionDoc: RegionDocument.Implementation, workflow: Workflow, overTimeActivity: any, castLevel?: number): Promise<void>;
+/** midi's additions to the usage context; not named `_usageChatContext`, which would keep dnd5e's legacy content path. */
+export declare function midiUsageContext(activity: MidiActivity, message: any): MidiUsageChatContext;
+export {};

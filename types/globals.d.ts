@@ -28,7 +28,6 @@ import * as settings from "./module/settings";
 import { RollStats, Stats } from "./module/RollStats";
 import { checkRule, configSettings, targetConfirmation } from "./module/settings";
 import { SaferSocket, StoredUndoEntry } from "./module/GMAction";
-import { MidiActivityMixin } from "./module/activities/MidiActivityMixin";
 import * as undo from "./module/undo";
 import * as patching from "./module/patching";
 import { ConfigPanel } from "./module/apps/ConfigPanel";
@@ -165,6 +164,11 @@ declare module "fvtt-types/configuration" {
             "dnd5e.preRollTool": (config: RollProcessConfig, dialog: RollDialogConfig, message: RollMessageConfig) => boolean | void;
             "dnd5e.preUseActivity": (activity: Activity, usageConfig: AnyMutableObject, dialogConfig: AnyMutableObject, messageConfig: AnyMutableObject) => boolean | void;
             "dnd5e.preCreateUsageMessage": (activity: Activity, messageConfig: AnyMutableObject) => void;
+            "dnd5e.postCreateUsageMessage": (activity: Activity, card: ChatMessage.Implementation | AnyMutableObject) => void;
+            /** Foundry 14 calls these for each class in an application's chain: dnd5e's activity sheets */
+            "preRenderActivitySheet": (app: unknown, context: AnyMutableObject, options: AnyMutableObject) => void;
+            "renderActivitySheet": (app: unknown, element: HTMLElement, context: AnyMutableObject, options: AnyMutableObject) => void;
+            "dnd5e.preUseLinkedSpell": (activity: Activity, usageConfig: AnyMutableObject, dialogConfig: AnyMutableObject, messageConfig: AnyMutableObject) => boolean | void;
             "dnd5e.restCompleted": (actor: Actor.Implementation, result: {
                 longRest: boolean;
                 newDay: boolean;
@@ -348,6 +352,11 @@ declare module "fvtt-types/configuration" {
             };
             "midi-qol"?: {
                 actionSaveSuccess?: boolean;
+                /** Applied by a midi region rule: the region behaviour and the source effect */
+                regionRule?: {
+                    behavior?: string;
+                    effect?: string;
+                };
                 castData?: {
                     castLevel?: number;
                     baseLevel?: number;
@@ -991,6 +1000,7 @@ declare global {
             settle: typeof playerWaits.settlePlayerWait;
             claim: typeof playerWaits.claimPlayerWait;
             known: typeof playerWaits.knownPlayerWaits;
+            endOwnedBy: typeof playerWaits.endPlayerWaitsOwnedBy;
         };
         addCardNote: typeof cardNotes.addCardNote;
         removeCardNote: typeof cardNotes.removeCardNote;
@@ -1026,7 +1036,8 @@ declare global {
         activityTypes: Record<string, {
             documentClass?: unknown;
         }> & {
-            MidiActivityMixin: typeof MidiActivityMixin;
+            /** Deprecated (15.0.0, until 15.1.0): a pass-through; midi's behaviour is on dnd5e's own classes */
+            MidiActivityMixin: <T>(Base: T) => T;
         };
         activityHasEmanationNoTemplate: typeof utils.activityHasEmanationNoTemplate;
         actorFromUuid: typeof utils.actorFromUuid;
@@ -1078,6 +1089,7 @@ declare global {
             settle: typeof playerWaits.settlePlayerWait;
             claim: typeof playerWaits.claimPlayerWait;
             known: typeof playerWaits.knownPlayerWaits;
+            endOwnedBy: typeof playerWaits.endPlayerWaitsOwnedBy;
         };
         addCardNote: typeof cardNotes.addCardNote;
         removeCardNote: typeof cardNotes.removeCardNote;

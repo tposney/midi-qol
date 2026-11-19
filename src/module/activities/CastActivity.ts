@@ -1,56 +1,18 @@
 import { speakerFor } from "../utils.js";
-import { adoptActivityType } from "./graft.js";
+import { adoptActivityType } from "./activityPrototype.js";
 import { Activity, ActivityUseConfiguration, RollDialogConfig, RollMessageConfig } from "../../globals.js";
 import { debugEnabled, GameSystemConfig, warn } from "../../midi-qol.js";
 import { Workflow } from "../Workflow.js";
-import { MidiActivityMixin, MidiActivityMixinSheet, isMidiActivityType, preChatChecks, preTargetingChecks, type MidiActivity } from "./MidiActivityMixin.js";
+import { isMidiActivityType, preChatChecks, preTargetingChecks, type MidiActivity } from "./MidiActivityMixin.js";
 import { setCastChecks } from "./useRelaunch.js";
 
-export let MidiCastActivity: ReturnType<typeof defineMidiCastActivityClass>;
-export let MidiCastSheet: ReturnType<typeof defineMidiCastSheetClass>;
 
 export function setupCastActivity() {
   if (debugEnabled > 0) warn("MidiQOL | CastActivity | setupCastActivity | Called");
-  //@ts-expect-error
-  MidiCastSheet = defineMidiCastSheetClass(game.system.applications.activity.CastSheet);
-  MidiCastActivity = defineMidiCastActivityClass(GameSystemConfig.activityTypes.cast.documentClass as Activity);
-  adoptActivityType("cast", MidiCastActivity, MidiCastSheet);
+  adoptActivityType("cast");
   setCastChecks(async (activity, usage, dialog, message) => !isMidiActivityType(activity) || castPreChecks(activity, usage, dialog, message));
 }
-let defineMidiCastSheetClass = (baseClass: any) => {
-  return class MidiCastSheet extends MidiActivityMixinSheet(baseClass) {
-  }
-}
 
-let defineMidiCastActivityClass =  <T extends Activity>(ActivityClass: T) => {
-  return class MidiCastActivity extends MidiActivityMixin(ActivityClass) {
-    static LOCALIZATION_PREFIXES = ["midi-qol.CAST", ...super.LOCALIZATION_PREFIXES];
-    static metadata =
-      foundry.utils.mergeObject(
-        super.metadata, {
-        midiTitle: "midi-qol.CAST.Title.one",
-        dnd5eTitle: ActivityClass.metadata.title,
-        sheetClass: MidiCastSheet,
-        usage: {
-          /*
-           * No `chatCard`. Supplying one keeps the activity on dnd5e's legacy content path — the
-           * system renders the template into `message.content` and `MidiUsageMessageData`'s own
-           * template short-circuits on it, so the card face never runs. Deprecated in dnd5e 6.0 and
-           * removed in 6.2 (`activity/mixin.mjs#legacyUsageContent`) regardless. See AttackActivity.
-           */
-          dialog: ActivityClass.metadata.usage.dialog,
-        },
-      }, { inplace: false, insertKeys: true, insertValues: true });
-
-
-
-
-
-
-
-    
-  }
-}
 
 
 /**

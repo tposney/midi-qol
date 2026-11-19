@@ -23,6 +23,8 @@ export interface AskSpec<T> {
     /** What a GM can answer with from the player list (playerWaits); the first is the default. None: the GM can't. */
     gmChoices?: Partial<Record<WaitChoice, WaitChoiceSpec<T>>>;
     source?: string;
+    /** What asked (a workflow): the request's badge ends with it (endPlayerWaitsOwnedBy); the request itself is unchanged */
+    owner?: object;
 }
 /**
  * Ask `user` and hold the request. Settles with the user's answer, a GM's choice from the player list, the fallback
