@@ -128,6 +128,24 @@ export function jsonSafe(value: unknown): unknown {
   return kept.length ? Object.fromEntries(kept) : undefined;
 }
 
+/** diffObject, surviving a value it can't compare (an object with no valueOf): such a key differs unless it is the same object */
+function diffOptions(original: WorkflowOptions, other: WorkflowOptions): WorkflowOptions {
+  try {
+    return foundry.utils.diffObject(original, other) as WorkflowOptions;
+  } catch {
+    const diff: Record<string, unknown> = {};
+    const before = original as Record<string, unknown>;
+    for (const [key, value] of Object.entries(other as Record<string, unknown>)) {
+      try {
+        Object.assign(diff, foundry.utils.diffObject(key in before ? { [key]: before[key] } : {}, { [key]: value }));
+      } catch {
+        if (before[key] !== value) diff[key] = value;
+      }
+    }
+    return diff as WorkflowOptions;
+  }
+}
+
 /** A roll another workflow added to a card (addedBy) */
 function addedByOther(roll: Roll, workflowId: string): boolean {
   const addedBy = foundry.utils.getProperty(roll, `options.${MODULE_ID}.addedBy`);
@@ -919,7 +937,7 @@ export class Workflow {
   }
   // Stored as #mergeWorkflowOptions stores them: the caller's options, with what this assignment changes from the merged ones
   set workflowOptions(workflowOptions: WorkflowOptions) {
-    this.#callerOptions = { ...this.#callerOptions, ...foundry.utils.diffObject(this.#mergedOptions, workflowOptions) };
+    this.#callerOptions = { ...this.#callerOptions, ...diffOptions(this.#mergedOptions, workflowOptions) };
     this.#mergedOptions = foundry.utils.deepClone(workflowOptions);
     const callerOptions = this.#callerOptions;
     this.#persisted.setWorkflowOptions(workflowOptions, () => cardWorkflowOptions(callerOptions));
@@ -930,7 +948,8 @@ export class Workflow {
    * the rest (CAT's activity, the use's event, Sets) is per-use state, never stored.
    */
   #syncWorkflowOptions() {
-    const changed = jsonSafe(foundry.utils.diffObject(this.#mergedOptions, this.workflowOptions)) as WorkflowOptions | undefined;
+    // Only what can be stored is compared: the rest (an event, a module's object) need not be comparable
+    const changed = foundry.utils.diffObject((jsonSafe(this.#mergedOptions) ?? {}) as WorkflowOptions, (jsonSafe(this.workflowOptions) ?? {}) as WorkflowOptions) as WorkflowOptions;
     this.#mergedOptions = foundry.utils.deepClone(this.workflowOptions);
     if (!changed || foundry.utils.isEmpty(changed)) return;
     this.#callerOptions = foundry.utils.mergeObject(foundry.utils.deepClone(this.#callerOptions), changed) as WorkflowOptions;
@@ -3157,6 +3176,10 @@ export class Workflow {
      * applicableEffects: that drops onSave. A profile names a local effect or, by uuid, a standalone
      * one such as a compendium effect, which only resolves asynchronously.
      */
+    // An effect the use's region applies on entry reaches the creatures in the area through the region, not from the use as well
+    const regionBehavior = this.activity.regionBehavior as { enabled?: boolean, rules?: { trigger: string, action: string, targetId: string }[] } | undefined;
+    const regionRules = this.templateUuids.some(uuid => uuid.includes(".Region.")) && regionBehavior?.enabled ? regionBehavior.rules ?? [] : [];
+    const regionEffectIds = new Set<string>(regionRules.filter(rule => rule.action === "applyEffect" && rule.trigger === "entry").map(rule => rule.targetId));
     const resolveEffects = async (activity: Activity | undefined | null) => {
       const resolved = { applied: [] as ActiveEffect.Implementation[], onSave: [] as ActiveEffect.Implementation[] };
       if (!activity) return resolved;
@@ -3169,6 +3192,7 @@ export class Workflow {
         const effect = await profile.getEffect();
         // @ts-expect-error no dnd5e-types
         if (!effect || effect.transfer || effect.type === "enchantment") continue;
+        if (activity === this.activity && effect.id && regionEffectIds.has(effect.id)) continue;
         (profile.onSave === true ? resolved.onSave : resolved.applied).push(effect);
       }
       return resolved;

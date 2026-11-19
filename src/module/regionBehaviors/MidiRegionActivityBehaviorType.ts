@@ -185,7 +185,13 @@ export class MidiRegionActivityBehaviorType extends foundry.data.regionBehaviors
             if (oncePerTurn) await this._markTriggeredThisTurn(token, rule.targetUuid, turn);
             await this._triggerActivity(token, rule.targetUuid);
             break;
-          // applyEffect/removeEffect rules on older regions: effects are now dnd5e's apply-effect behaviour.
+          // On entry, effects are dnd5e's apply-effect behaviour; these are the rules for other moments (a turn's start or end)
+          case "applyEffect":
+            await this._applyEffect(token, rule.targetUuid);
+            break;
+          case "removeEffect":
+            await this._removeEffect(token, rule.targetUuid);
+            break;
         }
       } catch (err) {
         console.error(`MidiRegionActivity._executeRulesForTrigger | error executing rule:`, rule, err);
@@ -283,6 +289,57 @@ export class MidiRegionActivityBehaviorType extends foundry.data.regionBehaviors
   /* ---------------------------------------- */
   /*  Effect & Activity Execution             */
   /* ---------------------------------------- */
+
+  /** The copies of an effect this behaviour applied to an actor. */
+  _appliedEffects(actor: Actor.Implementation, effectUuid: string): ActiveEffect.Implementation[] {
+    const behaviorUuid = (this as unknown as { behavior?: RegionBehavior.Implementation }).behavior?.uuid;
+    return actor.effects.filter(effect => {
+      const applied = effect.flags[MODULE_ID]?.regionRule;
+      return !!behaviorUuid && applied?.behavior === behaviorUuid && applied.effect === effectUuid;
+    });
+  }
+
+  /** Applies an effect as dnd5e's apply-effect behaviour does (origin, changes resolved for the target), once per actor. */
+  async _applyEffect(token: TokenDocument.Implementation, effectUuid: string): Promise<void> {
+    const actor = token.actor;
+    const effect = await fromUuid(effectUuid);
+    const { behavior, region } = this as unknown as { behavior?: RegionBehavior.Implementation, region?: RegionDocument.Implementation };
+    if (!actor || !behavior || !(effect instanceof ActiveEffect) || this._appliedEffects(actor, effectUuid).length) return;
+    const data = effect.toObject();
+    // @ts-expect-error _id is required on the source
+    delete data._id;
+    data.transfer = false;
+    foundry.utils.setProperty(data, `flags.${MODULE_ID}.regionRule`, { behavior: behavior.uuid, effect: effectUuid });
+    // @ts-expect-error no dnd5e-types
+    const activityUuid: string | undefined = region?.flags.dnd5e?.activity;
+    if (data.system.origin) {
+      // @ts-expect-error origin is required on the source
+      delete data.origin;
+      // @ts-expect-error no dnd5e-types
+      data.system.origin = { activity: activityUuid, behavior: behavior.uuid, item: region?.flags.dnd5e?.item };
+    } else data.origin = behavior.uuid;
+    const origin = activityUuid ? await fromUuid(activityUuid) : null;
+    // @ts-expect-error no dnd5e-types
+    data.system.changes = await ActiveEffect.implementation.forApplication(data.system.changes, origin, actor);
+    if (game.user?.isGM) await actor.createEmbeddedDocuments("ActiveEffect", [data]);
+    else await unTimedExecuteAsGM("createEffects", { actorUuid: actor.uuid, effects: [data], options: {} });
+  }
+
+  async _removeEffect(token: TokenDocument.Implementation, effectUuid: string): Promise<void> {
+    const actor = token.actor;
+    if (!actor) return;
+    // The copies this behaviour applied, and those of its region's apply-effect behaviours
+    const region = (this as unknown as { region?: RegionDocument.Implementation }).region;
+    const effectBehaviors = new Set<string>();
+    for (const behavior of region?.behaviors ?? []) if (String(behavior.type) === "dnd5e.applyActiveEffect") effectBehaviors.add(behavior.uuid);
+    const ids = [
+      ...this._appliedEffects(actor, effectUuid),
+      ...actor.effects.filter(e => !!e.origin && effectBehaviors.has(e.origin) && e._stats?.duplicateSource === effectUuid)
+    ].map(e => e.id).filter((id): id is string => !!id);
+    if (!ids.length) return;
+    if (game.user?.isGM) await actor.deleteEmbeddedDocuments("ActiveEffect", ids);
+    else await unTimedExecuteAsGM("removeEffects", { actorUuid: actor.uuid, effects: ids, options: {} });
+  }
 
   async _triggerActivity(token: TokenDocument.Implementation, activityUuid: string): Promise<void> {
     const self = this as any;

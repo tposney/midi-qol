@@ -275,6 +275,8 @@ declare module "fvtt-types/configuration" {
       };
       "midi-qol"?: {
         actionSaveSuccess?: boolean;
+        /** Applied by a midi region rule: the region behaviour and the source effect */
+        regionRule?: { behavior?: string; effect?: string };
         castData?: {
           castLevel?: number;
           baseLevel?: number;
