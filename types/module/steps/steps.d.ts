@@ -21,10 +21,18 @@ export interface Step {
      * Its result is what the step gives (a reaction's), not a step to go to.
      */
     inline?: boolean;
+    /**
+     * What it acts on (M24): the step does its work only for a use whose activity (or its other activity) has one of these;
+     * for others it passes the use on. Absent: every use. Declared for the activity-type table (activityTypeSteps), not
+     * enforced: the step's own run still decides.
+     */
+    actsOn?: readonly ActivityCapability[];
     /** Its contract: the workflow fields it reads and writes (midi's steps: SHARED_FIELDS). */
     reads?: readonly string[];
     writes?: readonly string[];
 }
+/** What an activity can do, from its type's fields (attack, damage...); `area`: its target has a template or emanation */
+export type ActivityCapability = "attack" | "damage" | "healing" | "save" | "check" | "utilityRoll" | "area" | "transform";
 export interface StepContext {
     workflow: any;
     /** For a wrapper: run the step it wraps (and what that returns). */
@@ -50,6 +58,8 @@ export type GlobalStepChange = StepChange & {
 export declare function addStepChange(change: GlobalStepChange): void;
 /** Remove the global changes a source made (by `source`), or one change. */
 export declare function removeStepChanges(match: string | GlobalStepChange): number;
+/** Every global change (the activity-type table shows the inserted steps) */
+export declare function allGlobalStepChanges(): readonly GlobalStepChange[];
 /** The global changes that apply to a use (a `when` that throws: not applied), as data. */
 export declare function globalStepChangesFor(workflow: unknown): StepChange[];
 /** The fields a step promises to write: declared, and for midi's steps those SHARED_FIELDS lists it as writing. */
@@ -65,6 +75,7 @@ export declare function allSteps(): Step[];
 export declare const REACTION_STEPS: Readonly<Record<string, string>>;
 /** midi's own steps (engine-run or inline): a module can't register over them */
 export declare function isMidiStep(id: string): boolean;
+export declare const STEP_ACTS_ON: Readonly<Record<string, readonly ActivityCapability[]>>;
 /**
  * Workflow fields more than one step writes or reads, and which (from the M2 state inventory). M3's step contracts
  * check a replacement step against these; until then they record who owns what. "use" is the code before the first

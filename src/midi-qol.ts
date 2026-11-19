@@ -1,3 +1,4 @@
+import { activityTypeSteps, activityTypeStepsMarkdown } from "./module/activities/activityTypeSteps.js";
 import { settingsApi } from "./module/lib/settingsRegistry.js";
 import { useTrace, saveUseTrace } from "./module/lib/useTrace.js";
 import { installFixedDice, withFixedDice } from "./module/lib/fixedDice.js";
@@ -285,6 +286,8 @@ Object.assign(globalThis.MidiQOL, {
   useTrace, saveUseTrace,
   // The settings registry (M4a): every setting declared once; modules register their own (shown in the panel's Modules tab)
   settings: settingsApi,
+  // The activity-type table (M24): each type's capabilities and the steps that act for it; as Markdown for the guide
+  activityTypeSteps, activityTypeStepsMarkdown,
   decodeWorkflowOptions,
   encodeWorkflowOptions,
   createEffects,

@@ -1,5 +1,5 @@
 import { type AssembledSteps, type StepChange, type StepConflict } from "./assembly.js";
-import { type Step, type StepContext } from "./steps.js";
+import { type ActivityCapability, type Step, type StepContext } from "./steps.js";
 type When = {
     when?: (workflow: any) => boolean;
     priority?: number;
@@ -12,6 +12,7 @@ export declare const stepsApi: {
         name?: string;
         reads?: string[];
         writes?: string[];
+        actsOn?: ActivityCapability[];
         run: (ctx: StepContext) => unknown;
     }): void;
     unregister(id: string): boolean;

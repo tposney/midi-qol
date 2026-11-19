@@ -30,10 +30,19 @@ export interface Step {
    * Its result is what the step gives (a reaction's), not a step to go to.
    */
   inline?: boolean;
+  /**
+   * What it acts on (M24): the step does its work only for a use whose activity (or its other activity) has one of these;
+   * for others it passes the use on. Absent: every use. Declared for the activity-type table (activityTypeSteps), not
+   * enforced: the step's own run still decides.
+   */
+  actsOn?: readonly ActivityCapability[];
   /** Its contract: the workflow fields it reads and writes (midi's steps: SHARED_FIELDS). */
   reads?: readonly string[];
   writes?: readonly string[];
 }
+
+/** What an activity can do, from its type's fields (attack, damage...); `area`: its target has a template or emanation */
+export type ActivityCapability = "attack" | "damage" | "healing" | "save" | "check" | "utilityRoll" | "area" | "transform";
 
 export interface StepContext {
   workflow: any;
@@ -77,6 +86,11 @@ export function removeStepChanges(match: string | GlobalStepChange): number {
   for (let i = globalChanges.length - 1; i >= 0; i--)
     if (typeof match === "string" ? globalChanges[i].source === match : globalChanges[i] === match) globalChanges.splice(i, 1);
   return before - globalChanges.length;
+}
+
+/** Every global change (the activity-type table shows the inserted steps) */
+export function allGlobalStepChanges(): readonly GlobalStepChange[] {
+  return globalChanges;
 }
 
 /** The global changes that apply to a use (a `when` that throws: not applied), as data. */
@@ -133,9 +147,13 @@ export const REACTION_STEPS: Readonly<Record<string, string>> = {
   reactionsavesuccess: "midi-qol.reaction.saveSuccess",
   reactionsavefail: "midi-qol.reaction.saveFail"
 };
+const REACTION_ACTS_ON: Readonly<Record<string, readonly ActivityCapability[]>> = {
+  preAttack: ["attack"], attacked: ["attack"], hit: ["attack"], missed: ["attack"], damaged: ["damage"], healed: ["healing"],
+  save: ["save", "check"], saveSuccess: ["save", "check"], saveFail: ["save", "check"]
+};
 for (const id of Object.values(REACTION_STEPS)) {
   const name = id.replace("midi-qol.reaction.", "");
-  registerStep({ id, name: `Reaction${name[0].toUpperCase()}${name.slice(1)}`, inline: true });
+  registerStep({ id, name: `Reaction${name[0].toUpperCase()}${name.slice(1)}`, inline: true, actsOn: REACTION_ACTS_ON[name] });
 }
 
 /** midi's own steps (engine-run or inline): a module can't register over them */
@@ -144,9 +162,22 @@ export function isMidiStep(id: string): boolean {
   return !!step && (!!step.method || !!step.inline || !!step.marker);
 }
 
+/** What midi's steps act on (M24; from each step's run, workflowSteps/): steps not listed act for every use */
+const ROLLS_DAMAGE: readonly ActivityCapability[] = ["damage", "healing"];
+const SAVES: readonly ActivityCapability[] = ["save", "check"];
+export const STEP_ACTS_ON: Readonly<Record<string, readonly ActivityCapability[]>> = {
+  Transform: ["transform"],
+  PlaceEmanation: ["area"], AwaitTemplate: ["area"], TemplatePlaced: ["area"], AoETargetConfirmation: ["area"],
+  WaitForAttackRoll: ["attack"], AttackRollComplete: ["attack"],
+  WaitForDamageRoll: ROLLS_DAMAGE, ConfirmRoll: ["attack", ...ROLLS_DAMAGE], RollConfirmed: ["attack", ...ROLLS_DAMAGE],
+  DamageRollStarted: ROLLS_DAMAGE, DamageRollComplete: ROLLS_DAMAGE,
+  WaitForUtilityRoll: ["utilityRoll"], UtilityRollComplete: ["utilityRoll"],
+  WaitForSaves: SAVES, SavesComplete: SAVES
+};
+
 for (const entry of BUILT_IN) {
   const [name, extra] = typeof entry === "string" ? [entry, {}] : entry;
-  registerStep({ id: `midi-qol.${name}`, name, method: `WorkflowState_${name}`, ...extra });
+  registerStep({ id: `midi-qol.${name}`, name, method: `WorkflowState_${name}`, actsOn: STEP_ACTS_ON[name], ...extra });
 }
 
 /**

@@ -6,6 +6,8 @@
     "activityPolicy",
     "activityRanges",
     "activityTypes",
+    "activityTypeSteps",
+    "activityTypeStepsMarkdown",
     "actorFromUuid",
     "addCardNote",
     "addConcentrationDependent",
