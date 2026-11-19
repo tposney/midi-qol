@@ -5,7 +5,7 @@ import { _closePlayerRollDialogs, playerWaitHandlers, rollDialogsFor } from "./l
 import { DialogCountdown, dialogCountdownOptions } from "./lib/dialogCountdown.js";
 import { withWorkflowOptionsCodec } from "./lib/workflowOptionsCodec.js";
 import { i18n, log, warn, gameStats, getCanvas, error, debugEnabled, debug, GameSystemConfig, MODULE_ID } from "../midi-qol.js";
-import { damageActiveHas, damageChangeHas, REACTIONS_REQUEST, calculateDamageAmounts, hpChangeFromDetail, getToken, getTokenDocument, gmOverTimeEffect, fromActorUuid, promptReactions, hasUsedAction, hasUsedBonusAction, removeActionUsed, removeBonusActionUsed, removeReactionUsed, ReactionItemReference, isEffectExpired, expireEffects, deleteAppliedEffects, getAppliedEffects, CERemoveEffect, CEAddEffectWith, getActor, completeItemUse, completeActivityUse, localActivityOverTimeEffect, validTargetTokens, hasUsedAnyReaction, getVitalityItem, MidiOptions, tokenSourceCenter, toggleStatus, withDeprecatedDamageFields, speakerFor } from "./utils.js";
+import { damageActiveHas, damageChangeHas, DEFENCE_REQUEST, REACTIONS_REQUEST, calculateDamageAmounts, hpChangeFromDetail, getToken, getTokenDocument, gmOverTimeEffect, fromActorUuid, promptReactions, hasUsedAction, hasUsedBonusAction, removeActionUsed, removeBonusActionUsed, removeReactionUsed, ReactionItemReference, isEffectExpired, expireEffects, deleteAppliedEffects, getAppliedEffects, CERemoveEffect, CEAddEffectWith, getActor, completeItemUse, completeActivityUse, localActivityOverTimeEffect, validTargetTokens, hasUsedAnyReaction, getVitalityItem, MidiOptions, tokenSourceCenter, toggleStatus, withDeprecatedDamageFields, speakerFor } from "./utils.js";
 import { registerRequestHandler, type IncomingRequest } from "./lib/requests.js";
 import { DAMAGE_MESSAGE_TYPE } from "./ChatClasses/DamageCardMessage.js";
 import { DamageDescriptionObject, Workflow } from "./Workflow.js";
@@ -38,6 +38,8 @@ export let setupSocket = () => {
     localDoReactions({ ...data, options: { ...data.options, incoming } }));
   // A player's save asked through the request core (Workflow#askPlayerSave): their roll dialog
   registerRequestHandler(SAVE_REQUEST, (data: Parameters<typeof rollAbility>[0], incoming: IncomingRequest) => rollAbility(data, incoming));
+  // A player's Active Defence roll asked through the request core (utils requestPCActiveDefence): their D20Roll dialog
+  registerRequestHandler(DEFENCE_REQUEST, (data: Parameters<typeof _D20Roll>[0], incoming: IncomingRequest) => _D20Roll(data, incoming));
   for (const [name, handler] of Object.entries(playerWaitHandlers)) registerSocketAndQuery(name, handler);
   registerSocketAndQuery("completeItemUse", _completeItemUse);
   registerSocketAndQuery("completeItemUseV2", _completeItemUse);
@@ -634,7 +636,7 @@ async function _createChatMessage(data: { chatData: ChatMessage.CreateData; }) {
   return await ChatMessage.create(data.chatData);
 }
 
-async function _D20Roll(params: { request: string, targetUuid: string, formula: string, bonus: number, coverBonus: number, flavor: string, midiType: string, rollMode: string, rollOptions: any, messageData: any }) {
+async function _D20Roll(params: { request?: string, targetUuid: string, formula: string, bonus: number, coverBonus: number, flavor: string, midiType: string, rollMode: string, rollOptions: any, messageData: any }, request?: IncomingRequest) {
   const actor = fromActorUuid(params.targetUuid);
   if (!actor || !params.rollOptions) {
     error(`GMAction.D20Roll | no actor for ${params.targetUuid}`)
@@ -651,7 +653,9 @@ async function _D20Roll(params: { request: string, targetUuid: string, formula: 
     let timeoutId;
     //@ts-expect-error D20Roll
     const D20Roll = CONFIG.Dice.D20Roll;
-    if (configSettings.playerSaveTimeout > 0) timeoutId = setTimeout(async () => {
+    // Asked through the request core the requester owns the deadline (shown on the dialog); asked through socketlib
+    // (another module's MidiQOL.socket() call) this client keeps its own
+    if (!request && configSettings.playerSaveTimeout > 0) timeoutId = setTimeout(async () => {
       warn(`Roll request for {actor.name}timed out. Doing roll`);
       params.rollOptions.fastForward = true; // assume player is asleep force roll without dialog
       let result = await new D20Roll(params.formula, {}, params.rollOptions).roll();
@@ -663,19 +667,28 @@ async function _D20Roll(params: { request: string, targetUuid: string, formula: 
     roll.data = data;
     roll.parts = parts;
     roll.options = { ...params.rollOptions };
+    const claim = foundry.utils.randomID();
     const config = {
       advantage: params.rollOptions?.advantageMode === D20Roll.ADV_MODE.ADVANTAGE,
       disadvantage: params.rollOptions?.advantageMode === D20Roll.ADV_MODE.DISADVANTAGE,
       rolls: [roll],
       dialog: true,
+      // Found by rollDialogsFor, to close this dialog once the request is answered for the player
+      subject: actor,
+      midiOptions: { requestClaim: claim }
     };
-    const dialog = {
+    const dialog: { options: Record<string, unknown> } = {
       options: {
         window: {
           title: params.flavor,
           subtitle: actor.name,
         }
       }
+    }
+    if (request) {
+      const countdown = request.countdown();
+      if (countdown) dialog.options = { ...dialog.options, ...dialogCountdownOptions(countdown) };
+      request.onSettled(() => { for (const app of rollDialogsFor(actor.uuid, claim)) void app.close(); });
     }
     const message = {
       create: true,
@@ -687,6 +700,8 @@ async function _D20Roll(params: { request: string, targetUuid: string, formula: 
     // ({ title: data.request, defaultRollMode: data.rollMode, defaultAction: data.options?.advantage });
     // result = await roll.roll();
     if (timeoutId) clearTimeout(timeoutId);
+    // Answered for the player meanwhile (the GM, the time-out): this roll isn't used
+    if (request && (request.settledHow || !rolls?.length || !await request.claim())) return resolve({});
     if (rolls) foundry.utils.setProperty(rolls[0], "flags.midi-qol.rollType", params.midiType)
     resolve(rolls[0] ?? {})
   });

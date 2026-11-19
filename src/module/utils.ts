@@ -1081,33 +1081,31 @@ export function requestPCSave(ability: string, rollType: string | undefined, pla
   }
 }
 
-export function requestPCActiveDefence(player: User, actor: Actor, saveItemName: string, requestId: string, options: { formula: string, bonus: number, coverBonus: number, rollOptions: any, workflow: Workflow }) {
-
-  let rollMode = toMessageMode((checkRule("activeDefenceShow") as string) || "self");
-  // TODO: Right check?
-  let flavor = `${saveItemName} ${configSettings.optionalRules.activeDefence ? "DC " + options.rollOptions.target : ""} ${i18n("midi-qol.ActiveDefenceString")}`;
-  const midiType = "defenceRoll";
-  /*  const options = {
-      criticalSuccess: criticalTarget,
-      criticalFailure: fumbleTarget,
-      advantageMode,
-      target: this.activeDefenceDC
-    };*/
-  socketlibSocket.executeAsUser("D20Roll", player.id, { targetUuid: actor.uuid, formula: options.formula, bonus: options.bonus, coverBonus: options.coverBonus, rollOptions: options.rollOptions, rollMode, midiType, flavor, messageData: { speaker: getSpeaker(actor) } }).then(result => {
-    if (debugEnabled > 1) debug("D20Roll result ", result);
-    log("midi-qol | D20Roll result ", result);
-    const handler = options.workflow.defenceRequests[requestId];
-    if (!handler) // Roll must have timed out so we can ignore the return value;
-      return;
-    delete options.workflow.defenceRequests[requestId];
-    delete options.workflow.defenceTimeouts[requestId];
-    let returnValue;
+/**
+ * A player's Active Defence roll, asked through the request core (M5b): their D20Roll dialog shows the requester's
+ * deadline; on time-out or disconnect, or the GM's "roll for them" from the player list, `rollForThem` makes it.
+ */
+export function requestPCActiveDefence(player: User.Implementation, actor: Actor.Implementation, saveItemName: string, tokenUuid: string | undefined,
+  options: { formula: string, bonus: number, coverBonus: number, rollOptions: any, rollForThem: () => Promise<Roll> }): Promise<Roll | {}> {
+  const rollMode = toMessageMode((checkRule("activeDefenceShow") as string) || "self");
+  const flavor = `${saveItemName} ${configSettings.optionalRules.activeDefence ? "DC " + options.rollOptions.target : ""} ${i18n("midi-qol.ActiveDefenceString")}`;
+  const data = { targetUuid: actor.uuid, formula: options.formula, bonus: options.bonus, coverBonus: options.coverBonus, rollOptions: options.rollOptions,
+    rollMode, midiType: "defenceRoll", flavor, messageData: { speaker: getSpeaker(actor) } };
+  return askUser<unknown>(player, {
+    type: DEFENCE_REQUEST, data, kind: "defence", actorUuid: actor.uuid ?? undefined, tokenUuid,
+    label: i18nFormat("midi-qol.PlayerWaits.DefenceLabel", { item: saveItemName }),
+    timeoutMs: (configSettings.playerSaveTimeout ?? 0) * 1000,
+    fallback: options.rollForThem,
+    gmChoices: { roll: options.rollForThem }
+  }).settled.then(({ value }) => {
+    if (debugEnabled > 1) debug("D20Roll result ", value);
+    if (value instanceof Roll) return value;
+    // The player's roll comes back serialised
     try {
       //@ts-expect-error D20Roll
-      returnValue = CONFIG.Dice.D20Roll.fromJSON(JSON.stringify(result));
-    } catch (err) { returnValue = {} }
-    handler(returnValue);
-  });
+      return CONFIG.Dice.D20Roll.fromJSON(JSON.stringify(value));
+    } catch { return {}; }
+  }, err => { error("requestPCActiveDefence | the defence roll could not be made", err); return {}; });
 }
 
 // ==================== Midi Flag Types ====================
@@ -5507,6 +5505,8 @@ export type ReactionResult = { name?: string, uuid?: string, ac?: number, itemNa
 
 /** The request type a reacting client answers (GMAction registers its handler) */
 export const REACTIONS_REQUEST = "midi-qol.reactions";
+/** A player's Active Defence roll, asked through the request core (M5b; GMAction._D20Roll answers it) */
+export const DEFENCE_REQUEST = "midi-qol.defence";
 
 /**
  * What the reacting client needs: the workflow, item and activity as ids and uuids, and only plain data (jsonSafe). The

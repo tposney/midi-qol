@@ -1608,8 +1608,6 @@ export class Workflow {
   set disadvantageSaves(disadvantageSaves: Set<TokenOrDocument> | undefined) { this.#disadvantageSaves = new TokenDocumentSet(disadvantageSaves ?? []); }
   /** The saves this use waits for, by token uuid (M5b: the saveRequests providers' and the chat card's answers) */
   pendingSaves = new PendingSaves();
-  defenceRequests: Record<string, (value: any) => void>;
-  defenceTimeouts: Record<string, NodeJS.Timeout>;
 
   #onUseMacros: OnUseMacros | undefined;
   get onUseMacros() {
@@ -2013,8 +2011,6 @@ export class Workflow {
     }
 
     this.pendingSaves = new PendingSaves();
-    this.defenceRequests = {};
-    this.defenceTimeouts = {}
     this.forceApplyEffects = false;
     if (options.rollOptions) this.rollOptions = options.rollOptions;
     else this.rollOptions = {};
@@ -6853,24 +6849,6 @@ export class Workflow {
 
   }
 
-  processDefenceRoll(message: ChatMessage.Implementation, _html: HTMLElement, _data?: ChatMessage.MessageData) {
-    if (!this.defenceRequests) return true;
-    const requestId = message?.speakerActor?.uuid;
-    if (debugEnabled > 0) warn("processDefenceRoll |", requestId, this.defenceRequests)
-
-    if (!requestId) return true;
-    if (!this.defenceRequests[requestId]) return true;
-
-    clearTimeout(this.defenceTimeouts[requestId]);
-    const handler = this.defenceRequests[requestId];
-    if (!handler) // the roll must have timed out so ignore this result
-      return true;
-    delete this.defenceRequests[requestId];
-    delete this.defenceTimeouts[requestId];
-    handler(message.rolls[0])
-    return true;
-  }
-
   processSaveRoll(message: ChatMessage.Implementation, _html: HTMLElement | ChatMessage.Database.OnCreateOptions, _dataOrUserId?: ChatMessage.MessageData | string) {
     // An initiative roll by the same token is not the save being waited for
     const isRoll = isDnd5eRollMessage(message) && dnd5eRollType(message) !== "initiative";
@@ -8112,12 +8090,9 @@ export class ActiveDefenceWorkflow extends Workflow {
 
     this.displayHitTargets(false);
     // Roll is d20 + AC - 10
-    let hookId = Hooks.on("renderChatMessageHTML", this.processDefenceRoll.bind(this));
     try {
       this.hitTargets = new Set();
       this.hitTargetsEC = new Set();
-      this.defenceRequests = {};
-      this.defenceTimeouts = {};
       this.activeDefenceRolls = {};
       this.isCritical = false;
       this.isFumble = false;
@@ -8211,8 +8186,6 @@ export class ActiveDefenceWorkflow extends Workflow {
       }
     } catch (err) {
       TroubleShooter.recordError(err, "activeDefence");
-    } finally {
-      Hooks.off("renderChatMessageHTML", hookId);
     }
   }
 
@@ -8325,31 +8298,11 @@ export class ActiveDefenceWorkflow extends Workflow {
             flags: { [MODULE_ID]: { rollFor: player.id } } }, { messageMode: toMessageMode((checkRule("activeDefenceShow") as string) || "self") });
           return result;
         };
-        promises.push(trackPlayerWait({
-          kind: "defence", userId: player.id!, actorUuid: target.actor.uuid ?? undefined, tokenUuid: getTokenDocument(target)?.uuid ?? undefined,
-          label: i18nFormat("midi-qol.PlayerWaits.DefenceLabel", { item: this.item?.name ?? "" }),
-          choices: { roll: rollForThem },
-          onSettled: () => {
-            delete this.defenceRequests[requestId];
-            clearTimeout(this.defenceTimeouts[requestId]);
-            delete this.defenceTimeouts[requestId];
-          }
-        }, () => new Promise((resolve) => {
-          this.defenceRequests[requestId] = resolve;
-          if (player) requestPCActiveDefence(player, target.actor!, this.item.name, requestId, { formula, rollOptions: options, bonus: dcMod, coverBonus, workflow: this })
-          // set a timeout for taking over the roll
-          if (configSettings.playerSaveTimeout > 0) {
-            this.defenceTimeouts[requestId] = setTimeout(async () => {
-              if (this.defenceRequests[requestId]) {
-                delete this.defenceRequests[requestId];
-                delete this.defenceTimeouts[requestId];
-                const result = await (new D20Roll(formula, {}, options)).evaluate();
-                result.toMessage({ flavor: `${this.item.name} ${i18n("midi-qol.ActiveDefenceString")}` });
-                resolve(result);
-              }
-            }, configSettings.playerSaveTimeout * 1000);
-          }
-        })));
+        // Asked through the request core (M5b): its deadline, the GM's "roll for them" from the player list, and on
+        // time-out or disconnect the roll made for them (one way to answer, where there were a socket reply and a
+        // chat listener with a timer each side)
+        promises.push(requestPCActiveDefence(player, target.actor, this.item.name, getTokenDocument(target)?.uuid ?? undefined,
+          { formula, rollOptions: options, bonus: dcMod, coverBonus, rollForThem }));
       } else {  // must be a GM so can do the roll direct
         promises.push(
           new Promise(async (resolve) => {
