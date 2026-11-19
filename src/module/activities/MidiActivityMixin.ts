@@ -284,7 +284,9 @@ export let MidiActivityMixin = Base => {
         usage.midiOptions.workflowOptions.autoRollAttack = true;
       if (!(usage.workflow instanceof TrapWorkflow)) {
         //TODO stupidly the constructor for TrapWorkflow is not compatible with the workflow constructor - will need to clean that up
-        if (configSettings.savesBeforeDamage)
+        // Active Defence wins over saves before damage for an attack (user, 2026-11-19): the defence roll is the attack
+        const activeDefence = workflowClass === ActiveDefenceWorkflow && !!activity.attack;
+        if (configSettings.savesBeforeDamage && !activeDefence)
           usage.workflow = new SavesFirstWorkflow(activity.actor ?? null, activity, speakerFor({ actor: activity.item.actor }), null, { workflowOptions });
         else usage.workflow = new workflowClass(activity.actor ?? null, activity, speakerFor({ actor: activity.item.actor }), null, { workflowOptions });
       }

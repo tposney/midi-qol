@@ -1,3 +1,4 @@
+import { bindRollClaim, registerBonusDecisions } from "./lib/bonusDecisions.js";
 import { afterDamageApplied, applyCalculatedDamage, applyDamageWithOptions } from "./damage/application.js";
 import { type MidiQueryHandler, queryUser, registerMidiQuery } from "./lib/midiQueries.js";
 import { ALL_DAMAGE_KEY, checkRule, configSettings } from "./settings.js";
@@ -44,6 +45,8 @@ export let setupSocket = () => {
   registerRequestHandler(BONUS_REQUEST, (data: Parameters<typeof _bonusCheck>[0], incoming: IncomingRequest) => _bonusCheck(data, incoming));
   // A concentration roll asked through the request core (utils processConcentrationRequestMessage): their roll dialog
   registerRequestHandler(CONCENTRATION_REQUEST, (data: Parameters<typeof rollConcentration>[0], incoming: IncomingRequest) => rollConcentration(data, incoming));
+  // An optional bonus inside a requested roll: decided under the requester's deadline, which a GM can skip
+  registerBonusDecisions();
   for (const [name, handler] of Object.entries(playerWaitHandlers)) registerSocketAndQuery(name, handler);
   registerSocketAndQuery("completeItemUse", _completeItemUse);
   registerSocketAndQuery("completeItemUseV2", _completeItemUse);
@@ -735,11 +738,13 @@ async function rollConcentration(data: { actorUuid: string, target: number, whis
     void request.claim();
   });
   request.onSettled(() => { for (const app of rollDialogsFor(actor.uuid, claim)) void app.close(); });
+  const unbind = bindRollClaim(claim, request);
   try {
     //@ts-expect-error no dnd5e types
     return await actor.rollConcentration({ target: data.target, legacy: false, midiOptions: { requestClaim: claim } }, dialog, messageConfig);
   } finally {
     Hooks.off("dnd5e.postRollConfiguration", hookId);
+    unbind();
   }
 }
 
@@ -981,6 +986,8 @@ export async function rollAbility(data: {
       // answered for the player meanwhile (a GM, the time-out): the dialog closes, and a roll not yet made isn't.
       const claim = foundry.utils.randomID();
       midiOptions.requestClaim = claim;
+      // The roll's optional bonuses are decided under the request's deadline (lib/bonusDecisions.ts)
+      const unbind = bindRollClaim(claim, request);
       const countdown = request.countdown();
       if (countdown && dialog.configure !== false) dialog.options = { ...(dialog.options ?? {}), ...dialogCountdownOptions(countdown) };
       const hookId = Hooks.on("dnd5e.postRollConfiguration", (_rolls, rollConfig) => {
@@ -991,13 +998,13 @@ export async function rollAbility(data: {
         // roll unused (the redesign's rule 7: a late player roll is ignored), its message shown beside the fallback's
         void request.claim();
       });
-      const done = (result?: Roll[] | Roll) => { Hooks.off("dnd5e.postRollConfiguration", hookId); settle(result); };
+      const done = (result?: Roll[] | Roll) => { Hooks.off("dnd5e.postRollConfiguration", hookId); unbind(); settle(result); };
       request.onSettled(() => {
         // This request's dialog only: another use may have its own roll dialog open for the actor
         for (const app of rollDialogsFor(actor.uuid, claim)) void app.close();
         done();
       });
-      performRoll().then(done).catch(err => { Hooks.off("dnd5e.postRollConfiguration", hookId); fail(err); });
+      performRoll().then(done).catch(err => { Hooks.off("dnd5e.postRollConfiguration", hookId); unbind(); fail(err); });
       return;
     }
     if (configSettings.playerSaveTimeout > 0) {

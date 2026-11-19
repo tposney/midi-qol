@@ -1,3 +1,4 @@
+import { askBonusDecision } from "./lib/bonusDecisions.js";
 import { checkRange, type RangeCheckResult } from "./services/range/service.js";
 import { queryUser } from "./lib/midiQueries.js";
 import { computeDistance } from "./services/distance/provider.js";
@@ -5046,7 +5047,13 @@ export async function bonusDialog(
     dialog.render(true);
   };
   let timeout = options.timeout ?? configSettings.reactionTimeout ?? defaultTimeout;
-  return new Promise((resolve, reject) => {
+  // Inside a roll answering a request (a player's requested save): the requester holds the decision, on its deadline and
+  // with the GM's skip (lib/bonusDecisions.ts)
+  const decision = !options.request && options.withinRequest
+    ? await askBonusDecision(options.withinRequest, { actorUuid: this.actor?.uuid, tokenUuid: (this.actor?.token ?? this.actor?.getActiveTokens(false, true)[0])?.uuid, label: title })
+    : undefined;
+  const request: IncomingRequest | undefined = options.request ?? decision?.incoming;
+  const chosen = new Promise<Roll>((resolve, reject) => {
     async function onClose() {
       // The original roll is dsn displayed before the bonus dialog is called so mark it as displayed
       DSNMarkDiceDisplayed(originalRoll);
@@ -5088,9 +5095,10 @@ export async function bonusDialog(
         flagOwners,
         candidates: optionalCandidates,
         onCandidate,
-        request: options.request
+        request
       }).render({ force: true });
   });
+  return chosen.finally(() => decision?.finish());
 }
 
 export function getOptionalCountRemainingShortFlag(actor: Actor.Implementation, flag: string, owner?: any) {

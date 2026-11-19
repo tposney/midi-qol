@@ -1,3 +1,4 @@
+import { requestForRollClaim } from "./lib/bonusDecisions.js";
 import type { IncomingRequest } from "./lib/requests.js";
 import { collectRollModifiers } from "./services/rollModifiers/service.js";
 import { collectBonusCandidates, type BonusRollKind, type RollBonusQuery } from "./services/rollBonuses/service.js";
@@ -621,7 +622,7 @@ export function collectBonusFlags(actor: Actor.Implementation, category: string,
   return bonusFlags;
 }
 
-export async function bonusCheck(actor: Actor.Implementation, result: Roll, category: string, detail = "", messageData: any = {}, prompt: { request?: IncomingRequest } = {}): Promise<Roll> {
+export async function bonusCheck(actor: Actor.Implementation, result: Roll, category: string, detail = "", messageData: any = {}, prompt: { request?: IncomingRequest, withinRequest?: IncomingRequest } = {}): Promise<Roll> {
   detail ||= dnd5eRollType(messageData) ?? ""; // death saves -> "death", tool checks -> "tool"
   let bonusFlags = collectBonusFlags(actor, category, detail);
   // rollBonuses contributors: before the result, or after a failure ("fail.<subject>")
@@ -677,7 +678,7 @@ export async function bonusCheck(actor: Actor.Implementation, result: Roll, cate
       data.roll,
       "roll",
       // A save or check rolled for a use card is linked to it; the bonus is shown there
-      { messageData, card: game.messages?.get(messageData?.system?.origin?.id ?? messageData?.system?.origin ?? ""), anchor: "saves", bonusQuery, bonusPhase, candidates, request: prompt.request }
+      { messageData, card: game.messages?.get(messageData?.system?.origin?.id ?? messageData?.system?.origin ?? ""), anchor: "saves", bonusQuery, bonusPhase, candidates, request: prompt.request, withinRequest: prompt.withinRequest }
     );
     if (newRoll) result = newRoll;
   }
@@ -1450,14 +1451,16 @@ async function doD20Roll(this: Actor.Implementation, wrapped, kind: D20RollKind,
     if (overtimeActorUuid) foundry.utils.setProperty(message.data, "flags.midi-qol.overtimeActorUuid", overtimeActorUuid);
     if (!config.midiOptions.simulate && !config.simulate && !config.midiOptions.unattended) {
       const bonus = kind.bonus(rollId, config);
-      result[0] = await bonusCheck(this, result[0], bonus.category, bonus.detail, message.data);
+      // A roll answering a request (a player's requested save): its bonuses are decided under the request's deadline
+      const withinRequest = requestForRollClaim(config.midiOptions.requestClaim);
+      result[0] = await bonusCheck(this, result[0], bonus.category, bonus.detail, message.data, { withinRequest });
       DSNMarkDiceDisplayed(result);
       // @ts-expect-error no dnd5e-types
       if (bonus.failBonuses && Number.isNumeric(result[0].options.target) && result[0].isSuccess === false) {
         // A failed roll with optional fail bonuses (flags.midi-qol.optional.NAME.<type>.fail) offers them
         // bonusCheck also asks rollBonuses contributors, so it runs with or without fail flags
         const hasSpecific = collectBonusFlags(this, kind.rollType, `fail.${rollId}`).length > 0;
-        result[0] = await bonusCheck(this, result[0], kind.rollType, hasSpecific ? `fail.${rollId}` : "fail.all", message.data);
+        result[0] = await bonusCheck(this, result[0], kind.rollType, hasSpecific ? `fail.${rollId}` : "fail.all", message.data, { withinRequest });
         DSNMarkDiceDisplayed(result);
       }
     }
