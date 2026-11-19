@@ -185,7 +185,7 @@ declare let defineMidiTeleportActivityClass: <T extends Activity>(ActivityClass:
             };
             sequenceId: string;
             activity: Activity;
-        }>, dialog?: import("../../globals.js").RollDialogConfig, message?: RollMessageConfig): any;
+        }>, dialog?: import("../../globals.js").RollDialogConfig, message?: RollMessageConfig): Promise<any>;
         use(usage?: import("fvtt-types/src/utils/index.mjs").InexactPartial<{
             create: {
                 measuredTemplate?: boolean;
@@ -222,7 +222,53 @@ declare let defineMidiTeleportActivityClass: <T extends Activity>(ActivityClass:
             };
             sequenceId: string;
             activity: Activity;
-        }>, dialog?: import("../../globals.js").RollDialogConfig, message?: RollMessageConfig): any;
+        }>, dialog?: import("../../globals.js").RollDialogConfig, message?: RollMessageConfig): Promise<any>;
+        prepareUse(usage: import("fvtt-types/src/utils/index.mjs").InexactPartial<{
+            create: {
+                measuredTemplate?: boolean;
+            };
+            concentration: {
+                begin: boolean;
+                end: string | null;
+            };
+            consume: {
+                action: boolean;
+                resources: boolean | number[];
+                spellSlot: boolean;
+            };
+            event: Event;
+            scaling: false | number;
+            spell: {
+                slot: string;
+            };
+            subsequentActions?: boolean;
+            cause: {
+                activity: string;
+                resources: boolean | number[];
+            };
+            workflow: Workflow;
+            midiOptions: import("../utils.js").MidiOptions;
+            advantage: boolean;
+            disadvantage: boolean;
+            midi: {
+                workflowClass: typeof Workflow;
+            };
+            useRelaunch: {
+                relaunched?: boolean;
+                useKey?: string;
+            };
+            sequenceId: string;
+            activity: Activity;
+        }>, dialog: import("../../globals.js").RollDialogConfig, message: RollMessageConfig): Promise<{
+            done: true;
+            result: unknown;
+        } | {
+            done: false;
+            state: import("./useRelaunch.js").UseState;
+        }>;
+        onUsePreUse(state: import("./useRelaunch.js").UseState, newActivity: Activity, usageConfig: import("../../globals.js").ActivityUseConfiguration): boolean;
+        onUseConsumption(state: import("./useRelaunch.js").UseState, newActivity: Activity, usageConfig: import("../../globals.js").ActivityUseConfiguration): void;
+        finishUse(state: import("./useRelaunch.js").UseState, useResults: any): Promise<unknown>;
         hasConsumption(): boolean;
         shouldAutoConsume(workflow?: Workflow): boolean;
         checkAutoConsume(usage: import("../../globals.js").ActivityUseConfiguration, dialog?: import("../../globals.js").RollDialogConfig): Promise<boolean>;
@@ -271,7 +317,7 @@ declare let defineMidiTeleportActivityClass: <T extends Activity>(ActivityClass:
                 };
                 sequenceId: string;
                 activity: Activity;
-            }>, dialog?: import("../../globals.js").RollDialogConfig, message?: RollMessageConfig): any;
+            }>, dialog?: import("../../globals.js").RollDialogConfig, message?: RollMessageConfig): Promise<any>;
             use(usage?: import("fvtt-types/src/utils/index.mjs").InexactPartial<{
                 create: {
                     measuredTemplate?: boolean;
@@ -308,7 +354,125 @@ declare let defineMidiTeleportActivityClass: <T extends Activity>(ActivityClass:
                 };
                 sequenceId: string;
                 activity: Activity;
-            }>, dialog?: import("../../globals.js").RollDialogConfig, message?: RollMessageConfig): any;
+            }>, dialog?: import("../../globals.js").RollDialogConfig, message?: RollMessageConfig): Promise<any>;
+            prepareUse(usage: import("fvtt-types/src/utils/index.mjs").InexactPartial<{
+                create: {
+                    measuredTemplate?: boolean;
+                };
+                concentration: {
+                    begin: boolean;
+                    end: string | null;
+                };
+                consume: {
+                    action: boolean;
+                    resources: boolean | number[];
+                    spellSlot: boolean;
+                };
+                event: Event;
+                scaling: false | number;
+                spell: {
+                    slot: string;
+                };
+                subsequentActions?: boolean;
+                cause: {
+                    activity: string;
+                    resources: boolean | number[];
+                };
+                workflow: Workflow;
+                midiOptions: import("../utils.js").MidiOptions;
+                advantage: boolean;
+                disadvantage: boolean;
+                midi: {
+                    workflowClass: typeof Workflow;
+                };
+                useRelaunch: {
+                    relaunched?: boolean;
+                    useKey?: string;
+                };
+                sequenceId: string;
+                activity: Activity;
+            }>, dialog: import("../../globals.js").RollDialogConfig, message: RollMessageConfig): Promise<{
+                done: true;
+                result: unknown;
+            } | {
+                done: false;
+                state: import("./useRelaunch.js").UseState;
+            }>;
+            onUsePreUse(state: import("./useRelaunch.js").UseState, newActivity: Activity, usageConfig: import("fvtt-types/src/utils/index.mjs").InexactPartial<{
+                create: {
+                    measuredTemplate?: boolean;
+                };
+                concentration: {
+                    begin: boolean;
+                    end: string | null;
+                };
+                consume: {
+                    action: boolean;
+                    resources: boolean | number[];
+                    spellSlot: boolean;
+                };
+                event: Event;
+                scaling: false | number;
+                spell: {
+                    slot: string;
+                };
+                subsequentActions?: boolean;
+                cause: {
+                    activity: string;
+                    resources: boolean | number[];
+                };
+                workflow: Workflow;
+                midiOptions: import("../utils.js").MidiOptions;
+                advantage: boolean;
+                disadvantage: boolean;
+                midi: {
+                    workflowClass: typeof Workflow;
+                };
+                useRelaunch: {
+                    relaunched?: boolean;
+                    useKey?: string;
+                };
+                sequenceId: string;
+                activity: Activity;
+            }>): boolean;
+            onUseConsumption(state: import("./useRelaunch.js").UseState, newActivity: Activity, usageConfig: import("fvtt-types/src/utils/index.mjs").InexactPartial<{
+                create: {
+                    measuredTemplate?: boolean;
+                };
+                concentration: {
+                    begin: boolean;
+                    end: string | null;
+                };
+                consume: {
+                    action: boolean;
+                    resources: boolean | number[];
+                    spellSlot: boolean;
+                };
+                event: Event;
+                scaling: false | number;
+                spell: {
+                    slot: string;
+                };
+                subsequentActions?: boolean;
+                cause: {
+                    activity: string;
+                    resources: boolean | number[];
+                };
+                workflow: Workflow;
+                midiOptions: import("../utils.js").MidiOptions;
+                advantage: boolean;
+                disadvantage: boolean;
+                midi: {
+                    workflowClass: typeof Workflow;
+                };
+                useRelaunch: {
+                    relaunched?: boolean;
+                    useKey?: string;
+                };
+                sequenceId: string;
+                activity: Activity;
+            }>): void;
+            finishUse(state: import("./useRelaunch.js").UseState, useResults: any): Promise<unknown>;
             hasConsumption(): boolean;
             shouldAutoConsume(workflow?: Workflow): boolean;
             checkAutoConsume(usage: import("fvtt-types/src/utils/index.mjs").InexactPartial<{
@@ -536,7 +700,7 @@ declare let defineMidiTeleportActivityClass: <T extends Activity>(ActivityClass:
                     levels: string[];
                     restriction: {
                         enabled: import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.InitializedType<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.DefaultOptions, import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.DefaultOptions>>;
-                        type: "light" | "sight" | "darkness" | "sound" | "move";
+                        type: "sound" | "light" | "sight" | "darkness" | "move";
                         priority: number;
                     };
                     attachment: {
@@ -631,7 +795,7 @@ declare let defineMidiTeleportActivityClass: <T extends Activity>(ActivityClass:
                     levels: string[];
                     restriction: {
                         enabled: import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.InitializedType<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.DefaultOptions, import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.DefaultOptions>>;
-                        type: "light" | "sight" | "darkness" | "sound" | "move";
+                        type: "sound" | "light" | "sight" | "darkness" | "move";
                         priority: number;
                     };
                     attachment: {
@@ -966,7 +1130,7 @@ declare let defineMidiTeleportActivityClass: <T extends Activity>(ActivityClass:
                 levels: string[];
                 restriction: {
                     enabled: import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.InitializedType<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.DefaultOptions, import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.DefaultOptions>>;
-                    type: "light" | "sight" | "darkness" | "sound" | "move";
+                    type: "sound" | "light" | "sight" | "darkness" | "move";
                     priority: number;
                 };
                 attachment: {
@@ -1061,7 +1225,7 @@ declare let defineMidiTeleportActivityClass: <T extends Activity>(ActivityClass:
                 levels: string[];
                 restriction: {
                     enabled: import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.InitializedType<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.DefaultOptions, import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.DefaultOptions>>;
-                    type: "light" | "sight" | "darkness" | "sound" | "move";
+                    type: "sound" | "light" | "sight" | "darkness" | "move";
                     priority: number;
                 };
                 attachment: {
@@ -1187,7 +1351,7 @@ declare let defineMidiTeleportActivityClass: <T extends Activity>(ActivityClass:
                 };
                 sequenceId: string;
                 activity: Activity;
-            }>, dialog?: import("../../globals.js").RollDialogConfig, message?: RollMessageConfig): any;
+            }>, dialog?: import("../../globals.js").RollDialogConfig, message?: RollMessageConfig): Promise<any>;
             use(usage?: import("fvtt-types/src/utils/index.mjs").InexactPartial<{
                 create: {
                     measuredTemplate?: boolean;
@@ -1224,7 +1388,53 @@ declare let defineMidiTeleportActivityClass: <T extends Activity>(ActivityClass:
                 };
                 sequenceId: string;
                 activity: Activity;
-            }>, dialog?: import("../../globals.js").RollDialogConfig, message?: RollMessageConfig): any;
+            }>, dialog?: import("../../globals.js").RollDialogConfig, message?: RollMessageConfig): Promise<any>;
+            prepareUse(usage: import("fvtt-types/src/utils/index.mjs").InexactPartial<{
+                create: {
+                    measuredTemplate?: boolean;
+                };
+                concentration: {
+                    begin: boolean;
+                    end: string | null;
+                };
+                consume: {
+                    action: boolean;
+                    resources: boolean | number[];
+                    spellSlot: boolean;
+                };
+                event: Event;
+                scaling: false | number;
+                spell: {
+                    slot: string;
+                };
+                subsequentActions?: boolean;
+                cause: {
+                    activity: string;
+                    resources: boolean | number[];
+                };
+                workflow: Workflow;
+                midiOptions: import("../utils.js").MidiOptions;
+                advantage: boolean;
+                disadvantage: boolean;
+                midi: {
+                    workflowClass: typeof Workflow;
+                };
+                useRelaunch: {
+                    relaunched?: boolean;
+                    useKey?: string;
+                };
+                sequenceId: string;
+                activity: Activity;
+            }>, dialog: import("../../globals.js").RollDialogConfig, message: RollMessageConfig): Promise<{
+                done: true;
+                result: unknown;
+            } | {
+                done: false;
+                state: import("./useRelaunch.js").UseState;
+            }>;
+            onUsePreUse(state: import("./useRelaunch.js").UseState, newActivity: Activity, usageConfig: import("../../globals.js").ActivityUseConfiguration): boolean;
+            onUseConsumption(state: import("./useRelaunch.js").UseState, newActivity: Activity, usageConfig: import("../../globals.js").ActivityUseConfiguration): void;
+            finishUse(state: import("./useRelaunch.js").UseState, useResults: any): Promise<unknown>;
             hasConsumption(): boolean;
             shouldAutoConsume(workflow?: Workflow): boolean;
             checkAutoConsume(usage: import("../../globals.js").ActivityUseConfiguration, dialog?: import("../../globals.js").RollDialogConfig): Promise<boolean>;
@@ -1272,7 +1482,7 @@ declare let defineMidiTeleportActivityClass: <T extends Activity>(ActivityClass:
                     levels: string[];
                     restriction: {
                         enabled: import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.InitializedType<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.DefaultOptions, import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.DefaultOptions>>;
-                        type: "light" | "sight" | "darkness" | "sound" | "move";
+                        type: "sound" | "light" | "sight" | "darkness" | "move";
                         priority: number;
                     };
                     attachment: {
@@ -1367,7 +1577,7 @@ declare let defineMidiTeleportActivityClass: <T extends Activity>(ActivityClass:
                     levels: string[];
                     restriction: {
                         enabled: import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.InitializedType<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.DefaultOptions, import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.DefaultOptions>>;
-                        type: "light" | "sight" | "darkness" | "sound" | "move";
+                        type: "sound" | "light" | "sight" | "darkness" | "move";
                         priority: number;
                     };
                     attachment: {

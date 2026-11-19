@@ -1,4 +1,4 @@
-import { Activity, ActivityUseConfiguration, RollDialogConfig, RollMessageConfig, RollProcessConfig } from "../../globals.js";
+import { Activity, RollDialogConfig, RollMessageConfig, RollProcessConfig } from "../../globals.js";
 import { Workflow } from "../Workflow.js";
 export declare let MidiSaveActivity: ReturnType<typeof defineMidiSaveActivityClass>;
 export declare let MidiSaveSheet: ReturnType<typeof defineMidiSaveSheetClass>;
@@ -6,43 +6,6 @@ export declare function setupSaveActivity(): void;
 declare let defineMidiSaveActivityClass: <T extends Activity>(ActivityClass: T) => {
     new (): {
         [x: string]: any;
-        use(config?: import("fvtt-types/src/utils/index.mjs").InexactPartial<{
-            create: {
-                measuredTemplate?: boolean;
-            };
-            concentration: {
-                begin: boolean;
-                end: string | null;
-            };
-            consume: {
-                action: boolean;
-                resources: boolean | number[];
-                spellSlot: boolean;
-            };
-            event: Event;
-            scaling: false | number;
-            spell: {
-                slot: string;
-            };
-            subsequentActions?: boolean;
-            cause: {
-                activity: string;
-                resources: boolean | number[];
-            };
-            workflow: Workflow;
-            midiOptions: import("../utils.js").MidiOptions;
-            advantage: boolean;
-            disadvantage: boolean;
-            midi: {
-                workflowClass: typeof Workflow;
-            };
-            useRelaunch: {
-                relaunched?: boolean;
-                useKey?: string;
-            };
-            sequenceId: string;
-            activity: Activity;
-        }>, dialog?: RollDialogConfig, message?: RollMessageConfig): any;
         _triggerSubsequentActions(config: any, results: any): Promise<void>;
         getDamageConfig(config?: RollProcessConfig): any;
         rollDamage(config?: RollProcessConfig, dialog?: RollDialogConfig, message?: RollMessageConfig): Promise<any>;
@@ -85,10 +48,93 @@ declare let defineMidiSaveActivityClass: <T extends Activity>(ActivityClass: T) 
             };
             sequenceId: string;
             activity: Activity;
-        }>, dialog?: RollDialogConfig, message?: RollMessageConfig): any;
+        }>, dialog?: RollDialogConfig, message?: RollMessageConfig): Promise<any>;
+        use(usage?: import("fvtt-types/src/utils/index.mjs").InexactPartial<{
+            create: {
+                measuredTemplate?: boolean;
+            };
+            concentration: {
+                begin: boolean;
+                end: string | null;
+            };
+            consume: {
+                action: boolean;
+                resources: boolean | number[];
+                spellSlot: boolean;
+            };
+            event: Event;
+            scaling: false | number;
+            spell: {
+                slot: string;
+            };
+            subsequentActions?: boolean;
+            cause: {
+                activity: string;
+                resources: boolean | number[];
+            };
+            workflow: Workflow;
+            midiOptions: import("../utils.js").MidiOptions;
+            advantage: boolean;
+            disadvantage: boolean;
+            midi: {
+                workflowClass: typeof Workflow;
+            };
+            useRelaunch: {
+                relaunched?: boolean;
+                useKey?: string;
+            };
+            sequenceId: string;
+            activity: Activity;
+        }>, dialog?: RollDialogConfig, message?: RollMessageConfig): Promise<any>;
+        prepareUse(usage: import("fvtt-types/src/utils/index.mjs").InexactPartial<{
+            create: {
+                measuredTemplate?: boolean;
+            };
+            concentration: {
+                begin: boolean;
+                end: string | null;
+            };
+            consume: {
+                action: boolean;
+                resources: boolean | number[];
+                spellSlot: boolean;
+            };
+            event: Event;
+            scaling: false | number;
+            spell: {
+                slot: string;
+            };
+            subsequentActions?: boolean;
+            cause: {
+                activity: string;
+                resources: boolean | number[];
+            };
+            workflow: Workflow;
+            midiOptions: import("../utils.js").MidiOptions;
+            advantage: boolean;
+            disadvantage: boolean;
+            midi: {
+                workflowClass: typeof Workflow;
+            };
+            useRelaunch: {
+                relaunched?: boolean;
+                useKey?: string;
+            };
+            sequenceId: string;
+            activity: Activity;
+        }>, dialog: RollDialogConfig, message: RollMessageConfig): Promise<{
+            done: true;
+            result: unknown;
+        } | {
+            done: false;
+            state: import("./useRelaunch.js").UseState;
+        }>;
+        onUsePreUse(state: import("./useRelaunch.js").UseState, newActivity: Activity, usageConfig: import("../../globals.js").ActivityUseConfiguration): boolean;
+        onUseConsumption(state: import("./useRelaunch.js").UseState, newActivity: Activity, usageConfig: import("../../globals.js").ActivityUseConfiguration): void;
+        finishUse(state: import("./useRelaunch.js").UseState, useResults: any): Promise<unknown>;
         hasConsumption(): boolean;
         shouldAutoConsume(workflow?: Workflow): boolean;
-        checkAutoConsume(usage: ActivityUseConfiguration, dialog?: RollDialogConfig): Promise<boolean>;
+        checkAutoConsume(usage: import("../../globals.js").ActivityUseConfiguration, dialog?: RollDialogConfig): Promise<boolean>;
         _midiRollDamage(config: RollProcessConfig, dialog?: RollDialogConfig, message?: RollMessageConfig): Promise<any>;
         deferOtherDamage(config: RollProcessConfig, dialog: RollDialogConfig): boolean;
         rollOtherDamage(config: RollProcessConfig, dialog: RollDialogConfig): Promise<Roll[] | undefined>;
@@ -133,7 +179,7 @@ declare let defineMidiSaveActivityClass: <T extends Activity>(ActivityClass: T) 
                 };
                 sequenceId: string;
                 activity: Activity;
-            }>, dialog?: RollDialogConfig, message?: RollMessageConfig): any;
+            }>, dialog?: RollDialogConfig, message?: RollMessageConfig): Promise<any>;
             use(usage?: import("fvtt-types/src/utils/index.mjs").InexactPartial<{
                 create: {
                     measuredTemplate?: boolean;
@@ -170,7 +216,125 @@ declare let defineMidiSaveActivityClass: <T extends Activity>(ActivityClass: T) 
                 };
                 sequenceId: string;
                 activity: Activity;
-            }>, dialog?: RollDialogConfig, message?: RollMessageConfig): any;
+            }>, dialog?: RollDialogConfig, message?: RollMessageConfig): Promise<any>;
+            prepareUse(usage: import("fvtt-types/src/utils/index.mjs").InexactPartial<{
+                create: {
+                    measuredTemplate?: boolean;
+                };
+                concentration: {
+                    begin: boolean;
+                    end: string | null;
+                };
+                consume: {
+                    action: boolean;
+                    resources: boolean | number[];
+                    spellSlot: boolean;
+                };
+                event: Event;
+                scaling: false | number;
+                spell: {
+                    slot: string;
+                };
+                subsequentActions?: boolean;
+                cause: {
+                    activity: string;
+                    resources: boolean | number[];
+                };
+                workflow: Workflow;
+                midiOptions: import("../utils.js").MidiOptions;
+                advantage: boolean;
+                disadvantage: boolean;
+                midi: {
+                    workflowClass: typeof Workflow;
+                };
+                useRelaunch: {
+                    relaunched?: boolean;
+                    useKey?: string;
+                };
+                sequenceId: string;
+                activity: Activity;
+            }>, dialog: RollDialogConfig, message: RollMessageConfig): Promise<{
+                done: true;
+                result: unknown;
+            } | {
+                done: false;
+                state: import("./useRelaunch.js").UseState;
+            }>;
+            onUsePreUse(state: import("./useRelaunch.js").UseState, newActivity: Activity, usageConfig: import("fvtt-types/src/utils/index.mjs").InexactPartial<{
+                create: {
+                    measuredTemplate?: boolean;
+                };
+                concentration: {
+                    begin: boolean;
+                    end: string | null;
+                };
+                consume: {
+                    action: boolean;
+                    resources: boolean | number[];
+                    spellSlot: boolean;
+                };
+                event: Event;
+                scaling: false | number;
+                spell: {
+                    slot: string;
+                };
+                subsequentActions?: boolean;
+                cause: {
+                    activity: string;
+                    resources: boolean | number[];
+                };
+                workflow: Workflow;
+                midiOptions: import("../utils.js").MidiOptions;
+                advantage: boolean;
+                disadvantage: boolean;
+                midi: {
+                    workflowClass: typeof Workflow;
+                };
+                useRelaunch: {
+                    relaunched?: boolean;
+                    useKey?: string;
+                };
+                sequenceId: string;
+                activity: Activity;
+            }>): boolean;
+            onUseConsumption(state: import("./useRelaunch.js").UseState, newActivity: Activity, usageConfig: import("fvtt-types/src/utils/index.mjs").InexactPartial<{
+                create: {
+                    measuredTemplate?: boolean;
+                };
+                concentration: {
+                    begin: boolean;
+                    end: string | null;
+                };
+                consume: {
+                    action: boolean;
+                    resources: boolean | number[];
+                    spellSlot: boolean;
+                };
+                event: Event;
+                scaling: false | number;
+                spell: {
+                    slot: string;
+                };
+                subsequentActions?: boolean;
+                cause: {
+                    activity: string;
+                    resources: boolean | number[];
+                };
+                workflow: Workflow;
+                midiOptions: import("../utils.js").MidiOptions;
+                advantage: boolean;
+                disadvantage: boolean;
+                midi: {
+                    workflowClass: typeof Workflow;
+                };
+                useRelaunch: {
+                    relaunched?: boolean;
+                    useKey?: string;
+                };
+                sequenceId: string;
+                activity: Activity;
+            }>): void;
+            finishUse(state: import("./useRelaunch.js").UseState, useResults: any): Promise<unknown>;
             hasConsumption(): boolean;
             shouldAutoConsume(workflow?: Workflow): boolean;
             checkAutoConsume(usage: import("fvtt-types/src/utils/index.mjs").InexactPartial<{
@@ -398,7 +562,7 @@ declare let defineMidiSaveActivityClass: <T extends Activity>(ActivityClass: T) 
                     levels: string[];
                     restriction: {
                         enabled: import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.InitializedType<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.DefaultOptions, import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.DefaultOptions>>;
-                        type: "light" | "sight" | "darkness" | "sound" | "move";
+                        type: "sound" | "light" | "sight" | "darkness" | "move";
                         priority: number;
                     };
                     attachment: {
@@ -493,7 +657,7 @@ declare let defineMidiSaveActivityClass: <T extends Activity>(ActivityClass: T) 
                     levels: string[];
                     restriction: {
                         enabled: import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.InitializedType<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.DefaultOptions, import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.DefaultOptions>>;
-                        type: "light" | "sight" | "darkness" | "sound" | "move";
+                        type: "sound" | "light" | "sight" | "darkness" | "move";
                         priority: number;
                     };
                     attachment: {
@@ -796,11 +960,11 @@ declare let defineMidiSaveActivityClass: <T extends Activity>(ActivityClass: T) 
         setupCanSeeSense(usage: {
             workflow?: Workflow;
         }): Promise<void>;
-        setupTargets(config: ActivityUseConfiguration, dialog: RollDialogConfig, message: RollMessageConfig): Promise<boolean>;
+        setupTargets(config: import("../../globals.js").ActivityUseConfiguration, dialog: RollDialogConfig, message: RollMessageConfig): Promise<boolean>;
         confirmTargets(): Promise<void>;
-        preTargetingChecks(usage: ActivityUseConfiguration, dialog: RollDialogConfig, message: RollMessageConfig, optionsConfig?: any): Promise<boolean>;
-        preChatChecks(usage: ActivityUseConfiguration, dialog: RollDialogConfig, message: RollMessageConfig, optionsConfig?: any): Promise<boolean>;
-        postChatCardChecks(usage: ActivityUseConfiguration, dialog: RollDialogConfig, message: RollMessageConfig, optionsConfig?: any): Promise<boolean>;
+        preTargetingChecks(usage: import("../../globals.js").ActivityUseConfiguration, dialog: RollDialogConfig, message: RollMessageConfig, optionsConfig?: any): Promise<boolean>;
+        preChatChecks(usage: import("../../globals.js").ActivityUseConfiguration, dialog: RollDialogConfig, message: RollMessageConfig, optionsConfig?: any): Promise<boolean>;
+        postChatCardChecks(usage: import("../../globals.js").ActivityUseConfiguration, dialog: RollDialogConfig, message: RollMessageConfig, optionsConfig?: any): Promise<boolean>;
         _pendingRegionUpdate: Record<string, any> | undefined;
         _resolveAttachTokenId(workflow: Workflow | undefined, mode: "caster" | "target"): Promise<string | undefined>;
         _promptAttachTargetPicker(targets: Token.Implementation[]): Promise<string | undefined>;
@@ -827,7 +991,7 @@ declare let defineMidiSaveActivityClass: <T extends Activity>(ActivityClass: T) 
                 levels: string[];
                 restriction: {
                     enabled: import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.InitializedType<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.DefaultOptions, import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.DefaultOptions>>;
-                    type: "light" | "sight" | "darkness" | "sound" | "move";
+                    type: "sound" | "light" | "sight" | "darkness" | "move";
                     priority: number;
                 };
                 attachment: {
@@ -922,7 +1086,7 @@ declare let defineMidiSaveActivityClass: <T extends Activity>(ActivityClass: T) 
                 levels: string[];
                 restriction: {
                     enabled: import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.InitializedType<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.DefaultOptions, import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.DefaultOptions>>;
-                    type: "light" | "sight" | "darkness" | "sound" | "move";
+                    type: "sound" | "light" | "sight" | "darkness" | "move";
                     priority: number;
                 };
                 attachment: {
@@ -1049,7 +1213,7 @@ declare let defineMidiSaveActivityClass: <T extends Activity>(ActivityClass: T) 
                 };
                 sequenceId: string;
                 activity: Activity;
-            }>, dialog?: RollDialogConfig, message?: RollMessageConfig): any;
+            }>, dialog?: RollDialogConfig, message?: RollMessageConfig): Promise<any>;
             use(usage?: import("fvtt-types/src/utils/index.mjs").InexactPartial<{
                 create: {
                     measuredTemplate?: boolean;
@@ -1086,10 +1250,56 @@ declare let defineMidiSaveActivityClass: <T extends Activity>(ActivityClass: T) 
                 };
                 sequenceId: string;
                 activity: Activity;
-            }>, dialog?: RollDialogConfig, message?: RollMessageConfig): any;
+            }>, dialog?: RollDialogConfig, message?: RollMessageConfig): Promise<any>;
+            prepareUse(usage: import("fvtt-types/src/utils/index.mjs").InexactPartial<{
+                create: {
+                    measuredTemplate?: boolean;
+                };
+                concentration: {
+                    begin: boolean;
+                    end: string | null;
+                };
+                consume: {
+                    action: boolean;
+                    resources: boolean | number[];
+                    spellSlot: boolean;
+                };
+                event: Event;
+                scaling: false | number;
+                spell: {
+                    slot: string;
+                };
+                subsequentActions?: boolean;
+                cause: {
+                    activity: string;
+                    resources: boolean | number[];
+                };
+                workflow: Workflow;
+                midiOptions: import("../utils.js").MidiOptions;
+                advantage: boolean;
+                disadvantage: boolean;
+                midi: {
+                    workflowClass: typeof Workflow;
+                };
+                useRelaunch: {
+                    relaunched?: boolean;
+                    useKey?: string;
+                };
+                sequenceId: string;
+                activity: Activity;
+            }>, dialog: RollDialogConfig, message: RollMessageConfig): Promise<{
+                done: true;
+                result: unknown;
+            } | {
+                done: false;
+                state: import("./useRelaunch.js").UseState;
+            }>;
+            onUsePreUse(state: import("./useRelaunch.js").UseState, newActivity: Activity, usageConfig: import("../../globals.js").ActivityUseConfiguration): boolean;
+            onUseConsumption(state: import("./useRelaunch.js").UseState, newActivity: Activity, usageConfig: import("../../globals.js").ActivityUseConfiguration): void;
+            finishUse(state: import("./useRelaunch.js").UseState, useResults: any): Promise<unknown>;
             hasConsumption(): boolean;
             shouldAutoConsume(workflow?: Workflow): boolean;
-            checkAutoConsume(usage: ActivityUseConfiguration, dialog?: RollDialogConfig): Promise<boolean>;
+            checkAutoConsume(usage: import("../../globals.js").ActivityUseConfiguration, dialog?: RollDialogConfig): Promise<boolean>;
             rollDamage(config: RollProcessConfig, dialog?: RollDialogConfig, message?: RollMessageConfig): Promise<any>;
             _midiRollDamage(config: RollProcessConfig, dialog?: RollDialogConfig, message?: RollMessageConfig): Promise<any>;
             deferOtherDamage(config: RollProcessConfig, dialog: RollDialogConfig): boolean;
@@ -1103,11 +1313,11 @@ declare let defineMidiSaveActivityClass: <T extends Activity>(ActivityClass: T) 
             setupCanSeeSense(usage: {
                 workflow?: Workflow;
             }): Promise<void>;
-            setupTargets(config: ActivityUseConfiguration, dialog: RollDialogConfig, message: RollMessageConfig): Promise<boolean>;
+            setupTargets(config: import("../../globals.js").ActivityUseConfiguration, dialog: RollDialogConfig, message: RollMessageConfig): Promise<boolean>;
             confirmTargets(): Promise<void>;
-            preTargetingChecks(usage: ActivityUseConfiguration, dialog: RollDialogConfig, message: RollMessageConfig, optionsConfig?: any): Promise<boolean>;
-            preChatChecks(usage: ActivityUseConfiguration, dialog: RollDialogConfig, message: RollMessageConfig, optionsConfig?: any): Promise<boolean>;
-            postChatCardChecks(usage: ActivityUseConfiguration, dialog: RollDialogConfig, message: RollMessageConfig, optionsConfig?: any): Promise<boolean>;
+            preTargetingChecks(usage: import("../../globals.js").ActivityUseConfiguration, dialog: RollDialogConfig, message: RollMessageConfig, optionsConfig?: any): Promise<boolean>;
+            preChatChecks(usage: import("../../globals.js").ActivityUseConfiguration, dialog: RollDialogConfig, message: RollMessageConfig, optionsConfig?: any): Promise<boolean>;
+            postChatCardChecks(usage: import("../../globals.js").ActivityUseConfiguration, dialog: RollDialogConfig, message: RollMessageConfig, optionsConfig?: any): Promise<boolean>;
             _pendingRegionUpdate: Record<string, any> | undefined;
             _resolveAttachTokenId(workflow: Workflow | undefined, mode: "caster" | "target"): Promise<string | undefined>;
             _promptAttachTargetPicker(targets: Token.Implementation[]): Promise<string | undefined>;
@@ -1134,7 +1344,7 @@ declare let defineMidiSaveActivityClass: <T extends Activity>(ActivityClass: T) 
                     levels: string[];
                     restriction: {
                         enabled: import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.InitializedType<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.DefaultOptions, import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.DefaultOptions>>;
-                        type: "light" | "sight" | "darkness" | "sound" | "move";
+                        type: "sound" | "light" | "sight" | "darkness" | "move";
                         priority: number;
                     };
                     attachment: {
@@ -1229,7 +1439,7 @@ declare let defineMidiSaveActivityClass: <T extends Activity>(ActivityClass: T) 
                     levels: string[];
                     restriction: {
                         enabled: import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.InitializedType<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.DefaultOptions, import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.DefaultOptions>>;
-                        type: "light" | "sight" | "darkness" | "sound" | "move";
+                        type: "sound" | "light" | "sight" | "darkness" | "move";
                         priority: number;
                     };
                     attachment: {

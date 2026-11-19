@@ -3,6 +3,7 @@ import { type OfferedBonus } from "./services/rollBonuses/service.js";
 import { DialogCountdown } from "./lib/dialogCountdown.js";
 import { TokenDocumentSet } from "./lib/tokenDocumentSet.js";
 import { AttributionEntry, AttributionMap, AugmentedEvent, Workflow, WorkflowOptions, WorkflowRollOptions } from "./Workflow.js";
+import { type IncomingRequest } from "./lib/requests.js";
 import { Activity, ActivityUseConfiguration, MidiChangeData, DamageDescription, DamageListEntry, PreComputedAdvantageData, PreSetupDamageListEntry, RollDialogConfig, RollMessageConfig, TokenOrDocument, DND5ETargetDescriptor, SaveDetails } from "../globals.js";
 import Token = foundry.canvas.placeables.Token;
 import { AnyObject } from "fvtt-types/utils";
@@ -183,13 +184,17 @@ export declare function selectBestRollChoice(rollChoices: {
     modifier: string;
 } | undefined;
 export declare function requestPCSave(ability: string, rollType: string | undefined, player: string, actor: Actor.Implementation | null, options: pcSaveOptions): Promise<ChatMessage.Implementation | undefined> | undefined;
-export declare function requestPCActiveDefence(player: User, actor: Actor, saveItemName: string, requestId: string, options: {
+/**
+ * A player's Active Defence roll, asked through the request core (M5b): their D20Roll dialog shows the requester's
+ * deadline; on time-out or disconnect, or the GM's "roll for them" from the player list, `rollForThem` makes it.
+ */
+export declare function requestPCActiveDefence(player: User.Implementation, actor: Actor.Implementation, saveItemName: string, tokenUuid: string | undefined, options: {
     formula: string;
     bonus: number;
     coverBonus: number;
     rollOptions: any;
-    workflow: Workflow;
-}): void;
+    rollForThem: () => Promise<Roll>;
+}): Promise<Roll | {}>;
 export declare var midiFlagTypes: Record<string, string>;
 export declare function setupMidiFlagTypes(): void;
 export declare function midiCustomEffect(target: foundry.abstract.DataModel.Any, change: MidiChangeData & {
@@ -836,6 +841,8 @@ export declare class RollModifyDialog extends RollModifyDialog_base {
         onCandidate?: (dialog: RollModifyDialog, button: {
             candidate: OfferedBonus;
         }) => Promise<void>;
+        /** Asked through the request core (M5b): the requester's deadline is shown (its pause asks the requester), and the dialog closes when it is answered for the player */
+        request?: IncomingRequest;
     };
     constructor(data: any);
     static PARTS: {
@@ -951,6 +958,12 @@ export type ReactionResult = {
 };
 /** The request type a reacting client answers (GMAction registers its handler) */
 export declare const REACTIONS_REQUEST = "midi-qol.reactions";
+/** A player's Active Defence roll, asked through the request core (M5b; GMAction._D20Roll answers it) */
+export declare const DEFENCE_REQUEST = "midi-qol.defence";
+/** Optional bonuses after a failed save, asked of the actor's player through the request core (M5b; GMAction._bonusCheck) */
+export declare const BONUS_REQUEST = "midi-qol.bonus";
+/** A concentration roll asked of the concentrating creature's player through the request core (M5b; GMAction.rollConcentration) */
+export declare const CONCENTRATION_REQUEST = "midi-qol.concentration";
 export declare function promptReactions(tokenUuid: string, reactionActivityList: ReactionItemReference[], triggerTokenUuid: string | undefined, reactionFlavor: string, triggerType: string, options?: any): Promise<any>;
 export declare function playerFor(target?: TokenOrDocument | null): User | null | undefined;
 export declare function playerForActor(actor?: Actor | null): User | undefined;
@@ -1274,7 +1287,7 @@ export declare function queueUpdate(document: ChatMessage.Implementation, update
  * Write `updates` and the card's queued changes. A workflow queues its card's changes while a state runs and writes them
  * once (Workflow#performThrottledUpdate).
  */
-export declare function throttledUpdate(document: ChatMessage.Implementation, updates: ChatMessage.UpdateData): Promise<import("fvtt-types/src/foundry/common/abstract/document.mjs").default.Any | ChatMessage<"base" | import("fvtt-types/src/foundry/common/abstract/document.mjs").default.ModuleSubType | "midi-qol.damage" | "midi-qol.note"> | undefined>;
+export declare function throttledUpdate(document: ChatMessage.Implementation, updates: ChatMessage.UpdateData): Promise<ChatMessage<"base" | import("fvtt-types/src/foundry/common/abstract/document.mjs").default.ModuleSubType | "midi-qol.damage" | "midi-qol.note"> | import("fvtt-types/src/foundry/common/abstract/document.mjs").default.Any | undefined>;
 /** Run `deleteCard` once the card's write in flight is done, with its queued writes dropped and no new ones sent */
 export declare function deleteCardAfterWrites(uuid: string, deleteCard: () => Promise<unknown>): Promise<void>;
 export declare function getUpdatesCache(uuid: string | undefined | null): any;

@@ -211,7 +211,10 @@ export function registerFlowVariants(): void {
     // The saveRequests providers listen for their own answers (a trap's chat cards: created, not rendered; M5b)
     try {
       const saveDisplay = saveDisplayMode();
-      await workflow.ports.requestSaves(workflow, saveDisplay !== "allShow");
+      // The saveRequests service (checkSaves); a module may still have replaced the deprecated requestSaves port
+      const replaced = workflow.replacedPort("requestSaves");
+      if (replaced) await replaced(workflow, saveDisplay !== "allShow");
+      else await workflow.checkSaves(saveDisplay !== "allShow");
     } catch (err) {
       TroubleShooter.recordError(err, "checkSaves");
     }

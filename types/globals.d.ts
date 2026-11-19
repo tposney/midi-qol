@@ -275,6 +275,7 @@ declare module "fvtt-types/configuration" {
         "midi-qol.ReplaceDefaultActivities": boolean;
         "midi-qol.UseWeakReferences": boolean;
         "midi-qol.tokenDocumentSets": boolean;
+        "midi-qol.compatibilityLine": string;
         "midi-qol.PreferredGM": string;
         "midi-qol.MidiSoundSettings-backup": Record<string, any>;
         "midi-qol.last-run-version": string;
@@ -644,6 +645,11 @@ declare module "fvtt-types/configuration" {
                 undoDamage?: StoredUndoEntry[];
                 /** Damage card format (GMAction DAMAGE_RECORD_VERSION), written from 14.7.0; not read */
                 damageRecord?: number;
+                /** A use's damage message folded into its card (Workflow.createDamageMessages): its role, and its contribution's key */
+                damage?: {
+                    role: string;
+                    key?: string;
+                };
                 /** Damage card from 14.7.0: the raw damage lists its entries point to (rawIndex), each once */
                 rawDamage?: DamageDescriptionObject[][];
                 /** The workflow was undone: the card is drawn with the undo colour */
@@ -814,6 +820,12 @@ declare global {
                 ok: boolean;
                 remaining?: number;
             };
+            /** lib/midiQueries.ts: one of midi's GM actions or commands to a user (a socketlib handler's name), in place of socketlib */
+            "midi-qol.call": (data: {
+                name: string;
+                args: unknown[];
+                userId?: string;
+            }) => Promise<unknown>;
         }
     }
     /** fvtt-types brands module sub-types, so midi's message types need declaring to be assignable. */

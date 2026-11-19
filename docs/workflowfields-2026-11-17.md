@@ -331,9 +331,7 @@ entry has only the new names.
 | `saveAttribution` | yes | object | Why each save had advantage or disadvantage, by token uuid | always (empty); data from `postWaitForSaves` |
 | `saveDisplayData` | yes | array | The card's saves rows | `preTargeting`; data from `postWaitForSaves` |
 | `saveDisplayFlavor` |  | string | The saves section's heading | `postWaitForSaves` |
-| `saveRequests` |  | object | Pending chat-card save requests, by request key | `preTargeting` (empty); filled while saves are requested |
-| `saveRequestKinds` |  | object | What each pending request asks for | as `saveRequests` |
-| `saveTimeouts` |  | object | Timeouts of pending requests | as `saveRequests` |
+| `pendingSaves` |  | `PendingSaves` | The saves a module or chat card is still to answer, by TokenDocument uuid | `preTargeting` (empty); filled while saves are requested |
 
 `failedSaves` is the targets from `preItemRoll` (hit targets, for an attack, once saves start). When
 saves are rolled it becomes the targets that failed. With no save it stays the hit targets (attack) or
@@ -347,8 +345,10 @@ Every target's save is rolled before any result is processed. `saveResults` is c
 The save sets, `saveDisplayData` and `saveResults` are emptied when saves start (after `preSave` and
 `isAboutToSave`) and when the targets are set.
 
-`saveRequests`, `saveRequestKinds` and `saveTimeouts` hold entries only while a chat-card save is
-awaited. `defenceRequests` and `defenceTimeouts` are the same for active defence rolls.
+`pendingSaves` holds entries only while a save answered by a chat card, Monk's TokenBar, Flash Rolls or
+Epic Rolls is awaited (midi-next M5b; it replaced `saveRequests`, `saveRequestKinds` and `saveTimeouts`).
+A save or Active Defence roll asked of a player goes through the request core and leaves nothing on the
+workflow (`defenceRequests` and `defenceTimeouts` are gone).
 
 ## Effects, templates and other activities
 

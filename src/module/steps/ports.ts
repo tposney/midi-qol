@@ -1,7 +1,7 @@
 /*
- * Ports: how a step's waits are carried out (M2 stage 4). A step asks its workflow's port; midi's own code is the
- * default (Workflow.defaultPorts) and a workflow can be given another for one use (workflow.setPort). M3 turns the
- * replaceable ones into services (saveRequests, reactions). No Foundry here.
+ * Ports (M2 stage 4; deprecated in M5b, until 15.1.0): how a step's waits were carried out. Saves now go through the
+ * saveRequests service, reactions through the reaction steps, and the damage card is a direct call; a port a module
+ * replaced (Workflow.defaultPorts, workflow.setPort) still takes effect with a warning (Workflow#replacedPort). No Foundry here.
  */
 
 export interface WorkflowPorts {

@@ -4,7 +4,8 @@
  * model's source (a Set becomes an array) and rebuilds it on receipt (the SetField makes it a Set again).
  *
  * Keys a schema does not declare are per-use state: they are not transmitted, persisted or passed to child
- * workflows. Namespaces nobody registered pass through unchanged.
+ * workflows. Namespaces nobody registered pass through unchanged; on the card they are stored with a deprecation
+ * warning for now (cardWorkflowOptions).
  */
 type FieldMap = foundry.data.fields.DataSchema;
 type ModelClass = new (source: object) => foundry.abstract.DataModel.Any;
@@ -16,6 +17,15 @@ export declare const encodeWorkflowOptions: <T>(options: T) => T;
 export declare const decodeWorkflowOptions: <T>(options: T) => T;
 /** What a child workflow inherits: exactly what transmission would carry. */
 export declare const inheritableWorkflowOptions: <T>(options: T) => T;
+/** Internal: the change of rule above, when its time comes (and for tests) */
+export declare function setStoreUnregisteredWorkflowOptions(value: boolean): void;
+/**
+ * The options as a card stores them for a rebuilt workflow: registered namespaces as their schema's data; other
+ * modules' keys as they are (with a deprecation warning, once per key) or, once that ends, not at all.
+ */
+export declare function cardWorkflowOptions<T>(options: T): T;
+/** Applies `fn` to every `workflowOptions` object in a socket payload, copying only the path to what changed. */
+export declare function mapPayload(value: unknown, fn: (options: object) => object, depth?: number): unknown;
 /**
  * socketlib with the codec at both ends: calls encode the `workflowOptions` in their arguments, handlers decode them,
  * and results come back the same way. Local calls (to oneself) go through it too, so they see what remote ones do.

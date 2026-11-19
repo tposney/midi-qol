@@ -40,8 +40,9 @@ export declare class IncomingRequest {
     readonly id: string;
     readonly holderId: string;
     constructor(id: string, holderId: string, remaining: number);
-    /** The time left as of now (by the requester's remaining time when it asked; synced on pause and resume). */
+    /** The time left as of now, by what the requester last said (on asking, pause, resume); paused: it doesn't run down. */
     get remaining(): number;
+    get paused(): boolean;
     /** Answered for the player (a GM, the time-out, a disconnect): how, else undefined. */
     get settledHow(): SettledHow | undefined;
     /** A countdown for this request's dialog: display only, the requester decides when time is up. Pausing asks it. */

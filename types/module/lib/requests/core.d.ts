@@ -11,7 +11,7 @@ export declare const realClock: Clock;
 export declare class Deadline {
     #private;
     constructor(ms: number, onExpire: () => void, clock?: Clock);
-    get state(): "expired" | "none" | "paused" | "running" | "stopped";
+    get state(): "none" | "expired" | "paused" | "running" | "stopped";
     get remaining(): number;
     /** False when it has expired or stopped (too late to pause). */
     pause(): boolean;

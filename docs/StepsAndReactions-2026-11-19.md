@@ -157,21 +157,46 @@ const { value, how } = await MidiQOL.requests.ask(user, {
 
 Hooks: `midi-qol.requestStarted(request)`, `midi-qol.requestSettled(request, how)`.
 
+## Saves (the saveRequests service)
+
+Each target's save is rolled by one provider: a module's that claims the target, else the one midi's settings name
+(midi's roll, the player's dialog, a chat card, Monk's TokenBar, Flash Rolls, Epic Rolls). A provider is asked once
+with all of its targets, so a module that rolls a batch sends one request.
+
+```js
+MidiQOL.services.register("saveRequests", "my-module.saves", {
+  claims: request => request.target.actor?.hasPlayerOwner,             // optional: take these targets
+  request: (requests, context) => requests.map(request => ({ promise: myModuleRoll(request) }))
+}, { available: () => game.modules.get("my-module")?.active });
+```
+
+A provider that isn't available, or throws, is replaced by midi's roll and reported to the TroubleShooter. A provider
+that waits for roll messages listens through `context.listen(hook, key, fn)`, removed once every save is in.
+`MidiQOL.saveRequests` has `providerFor(request)` (the settings' choice), `midiProvider(id)` (to hand a target to one of
+midi's) and `providers` (midi's ids). Monk's TokenBar and Flash Rolls have no deadline: the save waits for the
+module's roll, which a GM can make for the player from the chat log.
+
 ## Still socketlib
 
 `MidiQOL.socket()` and its handler names stay for modules that call them (`chooseReactions` among them). midi itself
 uses Foundry queries:
-- for reactions and a connected player's save through their roll dialog (the request core);
+- for what it asks a player through the request core: reactions, saves and checks (the player's dialog, or rolled on
+  their client), Active Defence's roll, a failed save's bonus, concentration in chat mode, contested rolls; a bonus
+  offered inside such a roll runs on the save deadline and a GM can skip it from the player list;
 - for its GM actions (effects, flags, moves, teleport, regions, undo, stats, combat round...) and the commands it sends
   one user's client (cancel or remove a workflow, complete a use, apply effects, the player waits), through one
   query, `midi-qol.call`, naming the handler.
 
-A player's own rolls that midi asks for still go through socketlib: the GM-side save roll, Active Defence's roll,
-concentration, `bonusCheck`, over-time saves. So do chat-card saves, Monk's TokenBar, Flash Rolls and Epic Rolls.
-These move to the request core next (`saveRequests`).
+Over-time saves still go through socketlib (`rollActionSave`, `localActivityOverTimeEffect`); they move to the request
+core in a later wave.
 
-## Ports
+## Ports (deprecated)
 
-`workflow.ports` (`askReactions`, `requestSaves`, `applyDamageCard`; `workflow.setPort` for one use) are the lower-level
-hooks M2 added for waits. Prefer the reaction steps and the `reactions` service above: the ports may go once a
-`saveRequests` service exists.
+`workflow.ports`, `workflow.setPort` and `MidiQOL.Workflow.defaultPorts` (`requestSaves`, `askReactions`,
+`applyDamageCard`) are deprecated since 15.0.0 and go in 15.1.0. A port a module replaced still runs, with a warning:
+
+| Port | Use instead |
+|---|---|
+| `requestSaves` | a `saveRequests` provider (above) |
+| `askReactions` | the reaction steps and the `reactions` service |
+| `applyDamageCard` | `midi-qol.preTargetDamageApplication`, to change a target's damage |

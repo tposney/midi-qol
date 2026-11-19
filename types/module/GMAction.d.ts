@@ -27,7 +27,8 @@ export declare function cancelWorkflow(data: {
 }): Promise<void>;
 export declare function timedExecuteAsGM(toDo: string, data: any): Promise<any>;
 export declare function preferredActiveGM(): User | null;
-export declare function unTimedExecuteAsGM(toDo: string, ...args: any[]): Promise<any>;
+/** Run a GM action on a GM's client (a Foundry query, M5): the preferred GM on the caller's scene, the caller if a GM there, a GM there, the preferred GM, else the active GM */
+export declare function unTimedExecuteAsGM(toDo: string, ...args: unknown[]): Promise<any>;
 export declare function timedAwaitExecuteAsGM(toDo: string, data: any): Promise<any>;
 export declare function initGMActionSetup(): void;
 /**

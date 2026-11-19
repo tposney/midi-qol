@@ -8,9 +8,12 @@ import type { MidiCardSection } from "../ChatClasses/UsageCardMessage.js";
  * Workflow scalars stored in `system.midi.state`: only what a rebuilt workflow cannot work out from its card (rolls,
  * activity) and the canvas, or what other readers need (the damage tray's matches).
  */
-export declare const STATE_KEYS: readonly ["isCritical", "isFumble", "templateUuids", "workflowOptions", "saveMults", "damageOnly", "otherConsumed", "otherDeclined", "otherScaling", "ammunitionData", "inCombat", "isTurn", "deferredConcentration", "useChanges", "damageRules", "stepChanges"];
+export declare const STATE_KEYS: readonly ["isCritical", "isFumble", "templateUuids", "workflowOptions", "saveMults", "damageOnly", "otherConsumed", "otherDeclined", "otherScaling", "ammunitionData", "inCombat", "isTurn", "deferredConcentration", "useChanges", "damageRules", "stepChanges", "stepMove"];
 export type StateKey = typeof STATE_KEYS[number];
-/** Workflow token sets: record field, and its old flag name (a uuid array; `targets` was `{uuid, name}`). Macros change them, so they are stored. */
+/**
+ * Workflow token sets: record field, and its old flag name (a uuid array; `targets` was `{uuid, name}`). Macros change them, so they are stored.
+ * Not the save advantage sets: a rebuilt workflow has them from the records' `saveMode`.
+ */
 export declare const RECORD_SETS: {
     readonly targets: "targets";
     readonly hit: "hitTargetUuids";
@@ -21,8 +24,6 @@ export declare const RECORD_SETS: {
     readonly failedSave: "failedSaveUuids";
     readonly fumbleSave: "fumbleSaveUuids";
     readonly criticalSave: "criticalSaveUuids";
-    readonly advantageSave: "advantageSaveUuids";
-    readonly disadvantageSave: "disadvantageSaveUuids";
 };
 export type RecordSet = keyof typeof RECORD_SETS;
 /** A token's facts on the card besides its sets: its save row, hits row and damage-tray matches, as midi decided them */
@@ -131,6 +132,23 @@ export declare function cardStateSchema(): {
             required: boolean;
             initial: undefined;
         }>, import("fvtt-types/src/utils/index.mjs").AnyMutableObject[], import("fvtt-types/src/utils/index.mjs").AnyMutableObject, import("fvtt-types/src/utils/index.mjs").AnyMutableObject[]>;
+        readonly stepMove: import("fvtt-types/src/foundry/common/data/fields.mjs").ObjectField<{
+            readonly nullable: true;
+            readonly required: boolean;
+            readonly initial: undefined;
+        }, import("fvtt-types/src/foundry/common/data/fields.mjs").ObjectField.AssignmentType<{
+            readonly nullable: true;
+            readonly required: boolean;
+            readonly initial: undefined;
+        }>, import("fvtt-types/src/foundry/common/data/fields.mjs").ObjectField.InitializedType<{
+            readonly nullable: true;
+            readonly required: boolean;
+            readonly initial: undefined;
+        }>, import("fvtt-types/src/foundry/common/data/fields.mjs").ObjectField.InitializedType<{
+            readonly nullable: true;
+            readonly required: boolean;
+            readonly initial: undefined;
+        }>>;
         readonly isCritical: import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField<{
             required: boolean;
             initial: undefined;
@@ -467,6 +485,23 @@ export declare function cardStateSchema(): {
             required: boolean;
             initial: undefined;
         }>, import("fvtt-types/src/utils/index.mjs").AnyMutableObject[], import("fvtt-types/src/utils/index.mjs").AnyMutableObject, import("fvtt-types/src/utils/index.mjs").AnyMutableObject[]>;
+        readonly stepMove: import("fvtt-types/src/foundry/common/data/fields.mjs").ObjectField<{
+            readonly nullable: true;
+            readonly required: boolean;
+            readonly initial: undefined;
+        }, import("fvtt-types/src/foundry/common/data/fields.mjs").ObjectField.AssignmentType<{
+            readonly nullable: true;
+            readonly required: boolean;
+            readonly initial: undefined;
+        }>, import("fvtt-types/src/foundry/common/data/fields.mjs").ObjectField.InitializedType<{
+            readonly nullable: true;
+            readonly required: boolean;
+            readonly initial: undefined;
+        }>, import("fvtt-types/src/foundry/common/data/fields.mjs").ObjectField.InitializedType<{
+            readonly nullable: true;
+            readonly required: boolean;
+            readonly initial: undefined;
+        }>>;
         readonly isCritical: import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField<{
             required: boolean;
             initial: undefined;
@@ -803,6 +838,23 @@ export declare function cardStateSchema(): {
             required: boolean;
             initial: undefined;
         }>, import("fvtt-types/src/utils/index.mjs").AnyMutableObject[], import("fvtt-types/src/utils/index.mjs").AnyMutableObject, import("fvtt-types/src/utils/index.mjs").AnyMutableObject[]>;
+        readonly stepMove: import("fvtt-types/src/foundry/common/data/fields.mjs").ObjectField<{
+            readonly nullable: true;
+            readonly required: boolean;
+            readonly initial: undefined;
+        }, import("fvtt-types/src/foundry/common/data/fields.mjs").ObjectField.AssignmentType<{
+            readonly nullable: true;
+            readonly required: boolean;
+            readonly initial: undefined;
+        }>, import("fvtt-types/src/foundry/common/data/fields.mjs").ObjectField.InitializedType<{
+            readonly nullable: true;
+            readonly required: boolean;
+            readonly initial: undefined;
+        }>, import("fvtt-types/src/foundry/common/data/fields.mjs").ObjectField.InitializedType<{
+            readonly nullable: true;
+            readonly required: boolean;
+            readonly initial: undefined;
+        }>>;
         readonly isCritical: import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField<{
             required: boolean;
             initial: undefined;
@@ -1139,6 +1191,23 @@ export declare function cardStateSchema(): {
             required: boolean;
             initial: undefined;
         }>, import("fvtt-types/src/utils/index.mjs").AnyMutableObject[], import("fvtt-types/src/utils/index.mjs").AnyMutableObject, import("fvtt-types/src/utils/index.mjs").AnyMutableObject[]>;
+        readonly stepMove: import("fvtt-types/src/foundry/common/data/fields.mjs").ObjectField<{
+            readonly nullable: true;
+            readonly required: boolean;
+            readonly initial: undefined;
+        }, import("fvtt-types/src/foundry/common/data/fields.mjs").ObjectField.AssignmentType<{
+            readonly nullable: true;
+            readonly required: boolean;
+            readonly initial: undefined;
+        }>, import("fvtt-types/src/foundry/common/data/fields.mjs").ObjectField.InitializedType<{
+            readonly nullable: true;
+            readonly required: boolean;
+            readonly initial: undefined;
+        }>, import("fvtt-types/src/foundry/common/data/fields.mjs").ObjectField.InitializedType<{
+            readonly nullable: true;
+            readonly required: boolean;
+            readonly initial: undefined;
+        }>>;
         readonly isCritical: import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField<{
             required: boolean;
             initial: undefined;

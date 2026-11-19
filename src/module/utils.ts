@@ -813,7 +813,9 @@ export async function processDamageRoll(workflow: Workflow, defaultDamageType: s
         await workflow?.callDamageHooksAndMacros(damageEntry, tokenDocument);
       }
     }
-    await workflow.ports.applyDamageCard({
+    // A module may still have replaced the deprecated applyDamageCard port
+    const applyDamageCard = workflow.replacedPort("applyDamageCard") ?? (data => timedAwaitExecuteAsGM("createReverseDamageCard", data));
+    await applyDamageCard({
       autoApplyDamage: configSettings.autoApplyDamage,
       actorId: workflow.actor.id,
       actorUuid: workflow.actor.uuid,

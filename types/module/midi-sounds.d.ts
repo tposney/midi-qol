@@ -20,7 +20,7 @@ export declare class MidiSounds {
                 path: import("fvtt-types/src/foundry/common/data/fields.mjs").FilePathField.InitializedType<{
                     categories: ["AUDIO"];
                 }>;
-                channel: "" | import("fvtt-types/src/foundry/common/data/fields.mjs").DataField.DerivedInitializedType<"environment" | "music" | "interface", import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.DefaultOptionsWhenChoicesProvided, import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.MergedOptions<{
+                channel: "" | import("fvtt-types/src/foundry/common/data/fields.mjs").DataField.DerivedInitializedType<"environment" | "interface" | "music", import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.DefaultOptionsWhenChoicesProvided, import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.MergedOptions<{
                     required: true;
                     choices: typeof CONST.AUDIO_CHANNELS;
                     initial: string;
@@ -50,7 +50,7 @@ export declare class MidiSounds {
                 path: import("fvtt-types/src/foundry/common/data/fields.mjs").FilePathField.InitializedType<{
                     categories: ["AUDIO"];
                 }>;
-                channel: "" | import("fvtt-types/src/foundry/common/data/fields.mjs").DataField.DerivedInitializedType<"environment" | "music" | "interface", import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.DefaultOptionsWhenChoicesProvided, import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.MergedOptions<{
+                channel: "" | import("fvtt-types/src/foundry/common/data/fields.mjs").DataField.DerivedInitializedType<"environment" | "interface" | "music", import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.DefaultOptionsWhenChoicesProvided, import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.MergedOptions<{
                     required: true;
                     choices: typeof CONST.AUDIO_CHANNELS;
                     initial: string;

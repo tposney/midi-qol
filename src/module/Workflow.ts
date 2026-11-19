@@ -6,7 +6,7 @@ import { assembleSteps, stepAfterInFlow, type AssembledSteps, type StepChange, t
 import { missingSteps, reportAssembly, useStepChanges } from "./steps/api.js";
 import { flowVariant, getFlow } from "./steps/flows.js";
 import { ABORT, runSteps, SUSPEND, type EngineHost, type StepMove } from "./steps/engine.js";
-import type { PortName, WorkflowPorts } from "./steps/ports.js";
+import { PORT_NAMES, type PortName, type WorkflowPorts } from "./steps/ports.js";
 import { getDistance } from "./services/distance/service.js";
 import { computeFlankedStatus, computeFlankingStatus } from "./services/flanking/service.js";
 import { speakerFor } from "./utils.js";
@@ -1074,21 +1074,50 @@ export class Workflow {
   }
   static flowId = "midi-qol.standard";
 
-  /** How waits are carried out (steps/ports.ts): midi's own code, which a module may replace */
-  static defaultPorts: WorkflowPorts = {
+  /*
+   * The ports (M2 stage 4) are deprecated (M5b): saves go through the saveRequests service, reactions through the reaction
+   * steps, and the damage card is a direct call. A port a module replaced (Workflow.defaultPorts, workflow.setPort)
+   * still takes effect, with a warning, until 15.1.0.
+   */
+  static readonly #builtinPorts: WorkflowPorts = {
     requestSaves: (workflow, ...args) => (workflow as Workflow).checkSaves(...(args as [boolean?, boolean?])),
     askReactions: (...args) => doReactions(...(args as Parameters<typeof doReactions>)),
     applyDamageCard: data => timedAwaitExecuteAsGM("createReverseDamageCard", data)
   };
-  #portOverrides: Partial<WorkflowPorts> = {};
-  /** This use's ports: the defaults with any set for this use */
-  get ports(): WorkflowPorts {
-    return { ...Workflow.defaultPorts, ...this.#portOverrides };
+  static #replacedPorts: Partial<WorkflowPorts> = {};
+  static #portDeprecation(what: string, instead: string): void {
+    deprecation(`midi-qol | ${what} is deprecated: ${instead}`, { since: "15.0.0", until: "15.1.0", once: true });
   }
-  /** Carry out one kind of wait differently for this use */
+  static readonly #portInstead: Record<PortName, string> = {
+    requestSaves: "register a saveRequests provider (MidiQOL.services.register(\"saveRequests\", ...))",
+    askReactions: "replace or extend the reaction steps (MidiQOL.steps)",
+    applyDamageCard: "change a target's damage in midi-qol.preTargetDamageApplication"
+  };
+  /** @deprecated since 15.0.0: see the ports' replacements (#portInstead). Assigning one of its ports still replaces it. */
+  static readonly defaultPorts: WorkflowPorts = Object.defineProperties({} as WorkflowPorts, Object.fromEntries(PORT_NAMES.map(name => [name, {
+    enumerable: true,
+    get: () => Workflow.#replacedPorts[name] ?? Workflow.#builtinPorts[name],
+    set: (port: WorkflowPorts[typeof name]) => {
+      Workflow.#portDeprecation(`Workflow.defaultPorts.${name}`, Workflow.#portInstead[name]);
+      if (port === Workflow.#builtinPorts[name]) delete Workflow.#replacedPorts[name];
+      else (Workflow.#replacedPorts as Record<PortName, unknown>)[name] = port;
+    }
+  }])));
+  #portOverrides: Partial<WorkflowPorts> = {};
+  /** @deprecated since 15.0.0: this use's ports */
+  get ports(): WorkflowPorts {
+    Workflow.#portDeprecation("workflow.ports", "the saves step, the reaction steps and the damage card are no longer ports");
+    return { ...Workflow.#builtinPorts, ...Workflow.#replacedPorts, ...this.#portOverrides };
+  }
+  /** @deprecated since 15.0.0: carry out one kind of wait differently for this use */
   setPort<K extends PortName>(name: K, port: WorkflowPorts[K] | undefined): void {
+    Workflow.#portDeprecation(`workflow.setPort("${name}")`, Workflow.#portInstead[name]);
     if (port) this.#portOverrides[name] = port;
     else delete this.#portOverrides[name];
+  }
+  /** A port a module replaced (deprecated), for this use or for all; undefined: midi's own code runs */
+  replacedPort<K extends PortName>(name: K): WorkflowPorts[K] | undefined {
+    return (this.#portOverrides[name] ?? Workflow.#replacedPorts[name]) as WorkflowPorts[K] | undefined;
   }
 
   /**
@@ -2702,10 +2731,11 @@ export class Workflow {
     return result;
   }
 
-  /** A reaction trigger: the reaction step for `triggerType` (REACTION_STEPS), whose default asks through the askReactions port */
+  /** A reaction trigger: the reaction step for `triggerType` (REACTION_STEPS), whose default asks the target (doReactions) */
   async askReactionsStep(target: TokenOrDocument | string, triggerTokenUuid: string | null | undefined, triggeringRoll: Roll | null | undefined, triggerType: string, options: any = {}): Promise<ReactionResult> {
     const id = REACTION_STEPS[triggerType];
-    const ask = () => this.ports.askReactions(target, triggerTokenUuid, triggeringRoll, triggerType, options) as Promise<ReactionResult>;
+    const replaced = this.replacedPort("askReactions");
+    const ask = () => (replaced ?? doReactions)(target, triggerTokenUuid, triggeringRoll, triggerType, options) as Promise<ReactionResult>;
     if (!id) return ask();
     // A step's context gives TokenDocuments (proposal section 18): the target as given goes only to midi's own ask
     return (await this.runInlineStep(id, ask, { reaction: { target: getTokenDocument(target), triggerTokenUuid, triggeringRoll, triggerType, options } })) ?? {};

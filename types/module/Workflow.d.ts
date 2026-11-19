@@ -1,10 +1,12 @@
 import { type StepContext } from "./steps/steps.js";
+import { type SaveRequest, type SaveRequestEntry } from "./services/saveRequests/service.js";
+import { PendingSaves } from "./services/saveRequests/pending.js";
 import { type AssembledSteps, type StepChangeInput } from "./steps/assembly.js";
-import type { PortName, WorkflowPorts } from "./steps/ports.js";
+import { type PortName, type WorkflowPorts } from "./steps/ports.js";
 import { TeleportOption } from "./activities/TeleportActivity.js";
 import { TokenDocumentSet } from "./lib/tokenDocumentSet.js";
 import { type WaitChoiceSpec } from "./lib/playerWaits.js";
-import { type ReactionResult, getOrCreateTokenForActor, type SaveRequestKind } from "./utils.js";
+import { type ReactionResult, getOrCreateTokenForActor } from "./utils.js";
 import { OnUseMacros } from "./apps/Item.js";
 import { type RollBonusQuery } from "./services/rollBonuses/service.js";
 import { type MidiCardSection, type SectionName } from "./ChatClasses/UsageCardMessage.js";
@@ -41,7 +43,10 @@ type DamageBonusMacroSingleResult = {
     damageType?: string;
 };
 type DamageBonusMacroResult = DamageBonusMacroSingleResult[] | DamageBonusMacroSingleResult;
-export type WorkflowState = undefined | (() => Promise<WorkflowState>);
+/** Where a step goes: a step id (`"midi-qol.WaitForSaves"`), or for old callers a state method */
+export type WorkflowState = undefined | string | StateMethod;
+/** A step's `WorkflowState_<name>` method */
+export type StateMethod = () => Promise<WorkflowState>;
 /** What a suspended workflow is woken by (Workflow#resume) */
 export type WorkflowEvent = "attackRolled" | "damageRolled" | "noDamage" | "utilityRolled";
 export type WorkflowOutcome = "ok" | "allMissed" | "invalid" | "split" | "manualSaves" | "cancelled" | "aborted";
@@ -60,8 +65,42 @@ export interface AttackModifier {
     value?: string;
     advantage?: boolean;
 }
+/** What midi's step modules (workflowSteps/) use of a workflow's internals. Not part of MidiQOL's API. */
+export interface WorkflowStepHost {
+    damageButtonText(): string;
+    setOtherConsumption(consumed: object | false, scaling?: number | false): void;
+    targetsUpdate(): Record<string, unknown>;
+    fileFinished(): void;
+}
+export declare function workflowStepHost(workflow: Workflow): WorkflowStepHost;
 export declare class Workflow {
     #private;
+    WorkflowState_Suspend: StateMethod;
+    WorkflowState_NoAction: StateMethod;
+    WorkflowState_Start: StateMethod;
+    WorkflowState_AwaitTemplate: StateMethod;
+    WorkflowState_TemplatePlaced: StateMethod;
+    WorkflowState_AoETargetConfirmation: StateMethod;
+    WorkflowState_ValidateRoll: StateMethod;
+    WorkflowState_PreambleComplete: StateMethod;
+    WorkflowState_WaitForAttackRoll: StateMethod;
+    WorkflowState_AttackRollComplete: StateMethod;
+    WorkflowState_WaitForDamageRoll: StateMethod;
+    WorkflowState_ConfirmRoll: StateMethod;
+    WorkflowState_RollConfirmed: StateMethod;
+    WorkflowState_DamageRollStarted: StateMethod;
+    WorkflowState_DamageRollComplete: StateMethod;
+    WorkflowState_WaitForUtilityRoll: StateMethod;
+    WorkflowState_UtilityRollComplete: StateMethod;
+    WorkflowState_WaitForSaves: StateMethod;
+    WorkflowState_SavesComplete: StateMethod;
+    WorkflowState_AllRollsComplete: StateMethod;
+    WorkflowState_ApplyDynamicEffects: StateMethod;
+    WorkflowState_RollFinished: StateMethod;
+    WorkflowState_Cleanup: StateMethod;
+    WorkflowState_Completed: StateMethod;
+    WorkflowState_Abort: StateMethod;
+    WorkflowState_Cancel: StateMethod;
     static get forceCreate(): boolean;
     /** The workflows in memory, by id: a new Map on each read (one that has been collected is rebuilt by getWorkflow) */
     static get workflows(): Map<string, Workflow>;
@@ -131,7 +170,7 @@ export declare class Workflow {
         readOnly?: boolean;
         anyAuthor?: boolean;
     }): Workflow | undefined;
-    performThrottledUpdate(chatCard: ChatMessage.Implementation, updates: ChatMessage.UpdateData): Promise<void | import("fvtt-types/src/foundry/common/abstract/document.mjs").default.Any | ChatMessage<"base" | import("fvtt-types/src/foundry/common/abstract/document.mjs").default.ModuleSubType | "midi-qol.damage" | "midi-qol.note">>;
+    performThrottledUpdate(chatCard: ChatMessage.Implementation, updates: ChatMessage.UpdateData): Promise<void | ChatMessage<"base" | import("fvtt-types/src/foundry/common/abstract/document.mjs").default.ModuleSubType | "midi-qol.damage" | "midi-qol.note"> | import("fvtt-types/src/foundry/common/abstract/document.mjs").default.Any>;
     flushCardWrites(displayOnly?: boolean): Promise<void>;
     /** Write one section of the card (system.midi.sections), with the workflow's rolls */
     setCardSection(name: SectionName, section: MidiCardSection, extraUpdates?: Record<string, unknown>): Promise<void>;
@@ -199,21 +238,23 @@ export declare class Workflow {
     suspended: boolean;
     get currentStep(): string | undefined;
     /** The current step's method: compatible with comparing against `workflow.WorkflowState_<name>` */
-    get currentAction(): WorkflowState;
+    get currentAction(): StateMethod | undefined;
     set currentAction(currentAction: WorkflowState | string);
     /** A step's id from a step id or a workflow state method (`this.WorkflowState_<name>`, as callers pass it) */
     static stepIdOf(state: WorkflowState | string | undefined): string | undefined;
     /** The method that runs a step on this workflow (its class's override, if it has one) */
-    methodForStep(id: string | undefined): WorkflowState;
+    methodForStep(id: string | undefined): StateMethod | undefined;
     /** The flow this workflow follows (steps/flows.ts) */
     get flowId(): string;
     static flowId: string;
-    /** How waits are carried out (steps/ports.ts): midi's own code, which a module may replace */
-    static defaultPorts: WorkflowPorts;
-    /** This use's ports: the defaults with any set for this use */
+    /** @deprecated since 15.0.0: see the ports' replacements (#portInstead). Assigning one of its ports still replaces it. */
+    static readonly defaultPorts: WorkflowPorts;
+    /** @deprecated since 15.0.0: this use's ports */
     get ports(): WorkflowPorts;
-    /** Carry out one kind of wait differently for this use */
+    /** @deprecated since 15.0.0: carry out one kind of wait differently for this use */
     setPort<K extends PortName>(name: K, port: WorkflowPorts[K] | undefined): void;
+    /** A port a module replaced (deprecated), for this use or for all; undefined: midi's own code runs */
+    replacedPort<K extends PortName>(name: K): WorkflowPorts[K] | undefined;
     /**
      * The state a workflow rebuilt from `card` waits in, worked out from the card: what has been placed, rolled and
      * confirmed. Undefined for a card with no workflow.
@@ -246,7 +287,9 @@ export declare class Workflow {
      * @deprecated Use workflow.attackRollModifierTracker.critical.isSuppressed instead
      */
     get noCritFlagSet(): boolean;
-    d20AttackRoll: number;
+    /** The attack's d20 result (-1 with no attack roll, or none counting as a d20) */
+    get d20AttackRoll(): number;
+    set d20AttackRoll(value: number);
     get hitTargets(): TokenDocumentSet;
     set hitTargets(hitTargets: Set<TokenOrDocument> | undefined);
     get hitTargetsEC(): TokenDocumentSet;
@@ -275,8 +318,11 @@ export declare class Workflow {
     dropOtherActivityDamage(): void;
     get attackRoll(): Roll | undefined;
     set attackRoll(attackRoll: Roll | undefined);
-    diceRoll: number;
-    attackTotal: number;
+    /** The value the attack's d20 counts as (a minimum or maximum applied) */
+    get diceRoll(): number;
+    set diceRoll(value: number);
+    get attackTotal(): number;
+    set attackTotal(value: number);
     get attackRollCount(): number;
     set attackRollCount(attackRollCount: number);
     get attackRollModifierTracker(): RollModifierTracker;
@@ -395,7 +441,8 @@ export declare class Workflow {
     set otherDamageRolls(otherDamageRolls: Roll[] | undefined);
     get utilityRolls(): Roll[];
     set utilityRolls(utilityRolls: Roll[] | undefined);
-    damageTotal: number;
+    get damageTotal(): number;
+    set damageTotal(value: number);
     rawDamageDetail: DamageDescription[];
     rawOtherDamageDetail: DamageDescription[];
     rawBonusDamageDetail: DamageDescription[];
@@ -437,12 +484,8 @@ export declare class Workflow {
     set advantageSaves(advantageSaves: Set<TokenOrDocument> | undefined);
     get disadvantageSaves(): TokenDocumentSet;
     set disadvantageSaves(disadvantageSaves: Set<TokenOrDocument> | undefined);
-    saveRequests: Record<string, (value: any) => void>;
-    /** What each chat-card save request asks for, by its key in saveRequests */
-    saveRequestKinds: Record<string, SaveRequestKind>;
-    saveTimeouts: Record<string, NodeJS.Timeout>;
-    defenceRequests: Record<string, (value: any) => void>;
-    defenceTimeouts: Record<string, NodeJS.Timeout>;
+    /** The saves this use waits for, by token uuid (M5b: the saveRequests providers' and the chat card's answers) */
+    pendingSaves: PendingSaves;
     get onUseMacros(): OnUseMacros | undefined;
     set onUseMacros(onUseMacros: OnUseMacros | undefined);
     get ammunitionOnUseMacros(): OnUseMacros | undefined;
@@ -457,8 +500,8 @@ export declare class Workflow {
     get advReminderAttackAdvAttribution(): Set<string>;
     set advReminderAttackAdvAttribution(_value: Set<string>);
     /** @deprecated since 14.6.9: has no effect (optional rules follow the Optional rules setting) */
-    get noOptionalRules(): boolean;
-    set noOptionalRules(_value: boolean);
+    get noOptionalRules(): boolean | undefined;
+    set noOptionalRules(_value: boolean | undefined);
     undoData: UndoData | undefined;
     get bonusDamageFlavor(): string;
     get chatCard(): ChatMessage.Implementation;
@@ -529,8 +572,10 @@ export declare class Workflow {
     set effectTargetsOnSave(tokens: Set<TokenOrDocument> | undefined);
     get otherEffectTargetsOnSave(): TokenDocumentSet | undefined;
     set otherEffectTargetsOnSave(tokens: Set<TokenOrDocument> | undefined);
-    otherDamageTotal: number | undefined;
-    bonusDamageTotal: number | undefined;
+    get otherDamageTotal(): number | undefined;
+    set otherDamageTotal(value: number | undefined);
+    get bonusDamageTotal(): number | undefined;
+    set bonusDamageTotal(value: number | undefined);
     needsHitTargetsDisplayed: boolean;
     conditionData: any | undefined;
     flankingAdvantage: boolean | undefined;
@@ -548,7 +593,11 @@ export declare class Workflow {
     tag: string | undefined;
     activeDefenceDC: number | undefined;
     /** What midi's damage calculation actually applied, per target uuid. Set by `processDamageRoll`. */
-    midiTargetDetail: Record<string, Record<string, unknown>> | undefined;
+    /** What the damage calculation applied that the card shows, by token uuid (set once it has run) */
+    midiTargetDetail: Record<string, {
+        uncannyDodge?: unknown;
+        uncannyDodgeIcon?: unknown;
+    }> | undefined;
     /** Each target's damage entries, one per damage list (other damage may have its own), by token uuid (processDamageRoll); not stored */
     targetDamage: Record<string, DamageListEntry[]> | undefined;
     targetSaveDetails: Record<string, SaveDetails> | undefined;
@@ -579,14 +628,14 @@ export declare class Workflow {
     constructor(actor: Actor.Implementation | null, activity: Activity | null, speaker: ChatMessage.SpeakerData | null, targets: Set<TokenOrDocument> | TokenOrDocument[] | null, options?: WorkflowConstructorOptions);
     someEventKeySet(): boolean | undefined;
     someAutoRollEventKeySet(): boolean | undefined;
-    static removeItemCardConfirmRollButton(itemCardUuid: string): Promise<void | import("fvtt-types/src/foundry/common/abstract/document.mjs").default.Any | ChatMessage<"base" | import("fvtt-types/src/foundry/common/abstract/document.mjs").default.ModuleSubType | "midi-qol.damage" | "midi-qol.note">>;
+    static removeItemCardConfirmRollButton(itemCardUuid: string): Promise<void | ChatMessage<"base" | import("fvtt-types/src/foundry/common/abstract/document.mjs").default.ModuleSubType | "midi-qol.damage" | "midi-qol.note"> | import("fvtt-types/src/foundry/common/abstract/document.mjs").default.Any>;
     static removeItemCardButtons(itemCardUuid: string | null | undefined, { removeAllButtons, removeConfirmButtons, removeAllDnd5eButtons, removeDnd5eSaveButtons, finished }?: {
         removeAllButtons?: boolean | undefined;
         removeConfirmButtons?: boolean | undefined;
         removeAllDnd5eButtons?: boolean | undefined;
         removeDnd5eSaveButtons?: boolean | undefined;
         finished?: boolean | undefined;
-    }): Promise<void | import("fvtt-types/src/foundry/common/abstract/document.mjs").default.Any | ChatMessage<"base" | import("fvtt-types/src/foundry/common/abstract/document.mjs").default.ModuleSubType | "midi-qol.damage" | "midi-qol.note">>;
+    }): Promise<void | ChatMessage<"base" | import("fvtt-types/src/foundry/common/abstract/document.mjs").default.ModuleSubType | "midi-qol.damage" | "midi-qol.note"> | import("fvtt-types/src/foundry/common/abstract/document.mjs").default.Any>;
     static removeWorkflow(id: string | undefined): Promise<void>;
     static get stateTable(): Record<string, WorkflowState>;
     /**
@@ -601,7 +650,7 @@ export declare class Workflow {
     static nameForState(state: WorkflowState | string): string;
     nameForState(state: WorkflowState | string): string;
     /** Wake a suspended workflow; without an event it re-runs the state it waits in */
-    resume(event?: WorkflowEvent): Promise<void | import("fvtt-types/src/foundry/common/abstract/document.mjs").default.Any | ChatMessage<"base" | import("fvtt-types/src/foundry/common/abstract/document.mjs").default.ModuleSubType | "midi-qol.damage" | "midi-qol.note">>;
+    resume(event?: WorkflowEvent): Promise<void | ChatMessage<"base" | import("fvtt-types/src/foundry/common/abstract/document.mjs").default.ModuleSubType | "midi-qol.damage" | "midi-qol.note"> | import("fvtt-types/src/foundry/common/abstract/document.mjs").default.Any>;
     /** A step is awaiting a roll it started (M2 stage 5): the roll's resume is the step's answer */
     get inStepRoll(): boolean;
     /**
@@ -613,8 +662,16 @@ export declare class Workflow {
     /** Where a suspended workflow goes when `event` arrives: by the state it waits in, else that state again */
     stateAfter(event: WorkflowEvent): WorkflowState;
     /** @deprecated since 14.6.9: use resume(event) */
-    unSuspend(context?: WorkflowContext): Promise<void | import("fvtt-types/src/foundry/common/abstract/document.mjs").default.Any | ChatMessage<"base" | import("fvtt-types/src/foundry/common/abstract/document.mjs").default.ModuleSubType | "midi-qol.damage" | "midi-qol.note">>;
+    unSuspend(context?: WorkflowContext): Promise<void | ChatMessage<"base" | import("fvtt-types/src/foundry/common/abstract/document.mjs").default.ModuleSubType | "midi-qol.damage" | "midi-qol.note"> | import("fvtt-types/src/foundry/common/abstract/document.mjs").default.Any>;
     processPlacedTemplates(templates: MeasuredTemplateDocument[], activity?: Activity): Promise<boolean>;
+    /**
+     * A person drives this use, so its template's targets are shown as the player's (user-targets plan stage 2). Not a
+     * use given its targets, one started by completeActivityUse or attack per target (a sequence), a trap or over-time.
+     */
+    get showsTargetsToUser(): boolean;
+    /** The use's targets were worked out from its templates (auto-target), not left to the player's selection */
+    templateTargetsComputed: boolean;
+    /** The template's targets are the use's, worked out directly; the player sees them only when they drive the use */
     selectAllTemplateTargets(activity?: Activity): void;
     setupTemplateCleanup(templateDocument: MeasuredTemplateDocument | RegionDocument.Implementation): Promise<boolean>;
     renderAttributionTooltip(): Promise<string>;
@@ -633,16 +690,8 @@ export declare class Workflow {
      * steps fire their pre/post hooks and passes; their results are ignored (no branching from here).
      */
     runInlineStep<T>(id: string, own: () => Promise<T>, extra?: Partial<StepContext>): Promise<T | undefined>;
-    /** A reaction trigger: the reaction step for `triggerType` (REACTION_STEPS), whose default asks through the askReactions port */
+    /** A reaction trigger: the reaction step for `triggerType` (REACTION_STEPS), whose default asks the target (doReactions) */
     askReactionsStep(target: TokenOrDocument | string, triggerTokenUuid: string | null | undefined, triggeringRoll: Roll | null | undefined, triggerType: string, options?: any): Promise<ReactionResult>;
-    WorkflowState_Suspend(): Promise<WorkflowState>;
-    WorkflowState_NoAction(): Promise<WorkflowState>;
-    WorkflowState_Start(): Promise<WorkflowState>;
-    WorkflowState_AwaitTemplate(): Promise<WorkflowState>;
-    WorkflowState_TemplatePlaced(): Promise<WorkflowState>;
-    WorkflowState_AoETargetConfirmation(): Promise<WorkflowState>;
-    WorkflowState_ValidateRoll(): Promise<WorkflowState>;
-    WorkflowState_PreambleComplete(): Promise<WorkflowState>;
     get postAttackRollState(): WorkflowState;
     /**
      * The workflow waits for its player to roll (a card button, or the roll dialog auto-roll opened): let the GM roll for
@@ -651,29 +700,17 @@ export declare class Workflow {
     waitOnPlayerRoll(kind: "attack" | "damage" | "utility"): void;
     /** Roll for the player as their roll dialog would: press its button when it is open, else roll without it. */
     rollForPlayer(kind: "attack" | "damage" | "utility", mode: string): Promise<void>;
-    WorkflowState_WaitForAttackRoll(): Promise<WorkflowState>;
-    WorkflowState_AttackRollComplete(): Promise<WorkflowState>;
     _formatAttackTargets(): {
         name: string;
         img?: string | null;
         uuid: string;
         ac: number | string;
     }[];
-    WorkflowState_WaitForDamageRoll(): Promise<WorkflowState>;
-    WorkflowState_ConfirmRoll(): Promise<WorkflowState>;
-    WorkflowState_RollConfirmed(): Promise<WorkflowState>;
-    WorkflowState_DamageRollStarted(): Promise<WorkflowState>;
-    WorkflowState_DamageRollComplete(): Promise<WorkflowState>;
-    WorkflowState_WaitForUtilityRoll(): Promise<WorkflowState>;
-    WorkflowState_UtilityRollComplete(): Promise<WorkflowState>;
-    WorkflowState_WaitForSaves(): Promise<WorkflowState>;
-    WorkflowState_SavesComplete(): Promise<WorkflowState>;
-    WorkflowState_AllRollsComplete(): Promise<WorkflowState>;
-    get healingAdjustedDamageTotal(): number;
-    get healingAdjustedBonusDamageTotal(): number;
-    get healingAdjustedOtherDamageTotal(): number;
-    get saveTargetsDisplayed(): boolean;
-    get allOtherEffectTargets(): TokenDocumentSet;
+    get healingAdjustedDamageTotal(): number | undefined;
+    get healingAdjustedBonusDamageTotal(): number | undefined;
+    get healingAdjustedOtherDamageTotal(): number | undefined;
+    get saveTargetsDisplayed(): boolean | undefined;
+    get allOtherEffectTargets(): TokenDocumentSet | undefined;
     /** The ammunition as it was when its last piece was spent and deleted (on the card); cards before 14.6.9 kept a flag */
     get spentAmmunitionData(): Item.CreateData | undefined;
     set spentAmmunitionData(data: Item.CreateData | undefined);
@@ -706,7 +743,6 @@ export declare class Workflow {
      * concentration as its effects are: those marked onSave, or the others.
      */
     applyActivityStatuses(activity: Activity | undefined, token: TokenOrDocument, onSave: boolean): Promise<void>;
-    WorkflowState_ApplyDynamicEffects(): Promise<WorkflowState>;
     /** effectsSelectTargets has run: its target sets are set for the steps after it */
     effectTargetsSelected(): asserts this is this & {
         effectTargets: TokenDocumentSet;
@@ -869,6 +905,8 @@ export declare class Workflow {
                 templateUuid: string;
                 preSelectedTargetUuids: string[];
                 overTimeEffectUuid: string;
+                /** An over-time effect's use (utils doOverTimeEffect); CAT reads it too */
+                isOverTime: boolean;
                 teleport: TeleportOption;
             }>;
             context: {
@@ -895,8 +933,6 @@ export declare class Workflow {
     applySelfEffects(fx: Awaited<ReturnType<Workflow["effectsResolve"]>>, ammo: Awaited<ReturnType<Workflow["effectsMatchTargets"]>>, ammoTargets: Awaited<ReturnType<Workflow["effectsSelectTargets"]>>, data: ReturnType<Workflow["effectsApplicationData"]>): Promise<ActiveEffect.Implementation[]>;
     /** The Convenient Effects self effect */
     applyCESelfEffect(fx: Awaited<ReturnType<Workflow["effectsResolve"]>>, data: ReturnType<Workflow["effectsApplicationData"]>, selfEffects: ActiveEffect.Implementation[]): Promise<void>;
-    WorkflowState_Cleanup(): Promise<WorkflowState>;
-    WorkflowState_Completed(): Promise<WorkflowState>;
     /** The card's buttons removed as the workflow is finished */
     /** Only the card's own workflow finishes it: a damage-only workflow adding to another use's card leaves that card alone */
     completeCard(): Promise<void>;
@@ -912,9 +948,6 @@ export declare class Workflow {
      * Same order as Activity#use: begin, record it on the card, then end the one it replaces.
      */
     beginDeferredConcentration(): Promise<void>;
-    WorkflowState_Abort(): Promise<WorkflowState>;
-    WorkflowState_Cancel(): Promise<WorkflowState>;
-    WorkflowState_RollFinished(): Promise<WorkflowState>;
     /** For an activity with effects, every target shown as affected on the card */
     finishHitDisplay(): Promise<void>;
     /** Card progress: effects applied (Apply and Remove), all of the activity's templates placed */
@@ -988,12 +1021,12 @@ export declare class Workflow {
      * Call a macro by name, resolving the macro type and executing it.
      */
     callMacro(item: Item.Implementation | undefined, macroName: string, macroData: MidiMacroData, options: AnyObject): Promise<any>;
-    removeEffectsButton(): Promise<void | import("fvtt-types/src/foundry/common/abstract/document.mjs").default.Any | ChatMessage<"base" | import("fvtt-types/src/foundry/common/abstract/document.mjs").default.ModuleSubType | "midi-qol.damage" | "midi-qol.note">>;
+    removeEffectsButton(): Promise<void | ChatMessage<"base" | import("fvtt-types/src/foundry/common/abstract/document.mjs").default.ModuleSubType | "midi-qol.damage" | "midi-qol.note"> | import("fvtt-types/src/foundry/common/abstract/document.mjs").default.Any>;
     displayUtilityRolls(): Promise<void>;
     displayAttackRoll(_displayOptions?: {
         GMOnlyAttackRoll?: boolean;
     }): Promise<void>;
-    displayDamageRolls(): Promise<void | import("fvtt-types/src/foundry/common/abstract/document.mjs").default.Any | ChatMessage<"base" | import("fvtt-types/src/foundry/common/abstract/document.mjs").default.ModuleSubType | "midi-qol.damage" | "midi-qol.note">>;
+    displayDamageRolls(): Promise<void | ChatMessage<"base" | import("fvtt-types/src/foundry/common/abstract/document.mjs").default.ModuleSubType | "midi-qol.damage" | "midi-qol.note"> | import("fvtt-types/src/foundry/common/abstract/document.mjs").default.Any>;
     /** Attack per target: one target's hit or miss, from its own use, on this use's card */
     addSplitAttackResult(split: Workflow): Promise<void>;
     displayHitTargets(whisper?: boolean): Promise<void>;
@@ -1154,20 +1187,8 @@ export declare class Workflow {
      * Create a standard socketlib save roll
      */
     createStandardSaveRoll(target: TokenOrDocument, saveDetails: SaveDetails, whisper: boolean, showRoll: boolean, showRollDialog: boolean, simulate: boolean): Promise<Roll[] | Roll | null>;
-    /**
-     * Queue a target's save roll to the appropriate handler based on settings
-     * Returns the promise and optionally adds to module-specific request arrays
-     */
-    queueTargetSaveRoll(options: QueueSaveRollOptions): {
-        promise: Promise<Roll[] | Roll | null> | null;
-        requestCard: Promise<ChatMessage | undefined> | undefined;
-    };
-    queueTargetSaveRollRequest(options: QueueSaveRollOptions): {
-        promise: Promise<Roll[] | Roll | null> | null;
-        requestCard: Promise<ChatMessage | undefined> | undefined;
-        friendly?: boolean;
-        asked?: boolean;
-    };
+    /** A player's save that wasn't asked through the request core goes on the player list, with the GM's choices (the GM answers for them) */
+    withSavePlayerWait(options: SaveRequest, queued: SaveRequestEntry): Promise<Roll[] | Roll | null> | null;
     /**
      * What the GM can answer a player's save with from the player list: rolled for them (normal, with advantage or
      * disadvantage), or on the GM's screen; shown as the player's own roll would have been (their roll mode; private and
@@ -1238,8 +1259,7 @@ export declare class Workflow {
         total: number;
     }): void;
     callDamageHooksAndMacros(damages: DamageListEntry, token: TokenOrDocument): Promise<void>;
-    processDefenceRoll(message: ChatMessage.Implementation, _html: HTMLElement, _data?: ChatMessage.MessageData): boolean;
-    processSaveRoll(message: ChatMessage.Implementation, _html: HTMLElement | ChatMessage.Database.OnCreateOptions, _dataOrUserId?: ChatMessage.MessageData | string): {};
+    processSaveRoll(message: ChatMessage.Implementation, _html: HTMLElement | ChatMessage.Database.OnCreateOptions, _dataOrUserId?: ChatMessage.MessageData | string): boolean;
     checkSuperSaver(token: TokenOrDocument, abilities: Set<string> | undefined): Promise<boolean>;
     checkSemiSuperSaver(token: TokenOrDocument, abilities: Set<string> | undefined): Promise<boolean>;
     /** The attack's die as it counts (a min/max such as rolls.attack.min 20 counts) */
@@ -1247,8 +1267,8 @@ export declare class Workflow {
     /** The attack's d20 result, or a die replacing the d20 that dnd5e accepts as one (e.g. Custom D&D 5e's 2d10) */
     static d20Of(roll: Roll): number | undefined;
     processAttackRoll(): Promise<void>;
-    protected recordAttackStats(): void;
-    protected recordDamageStats(): void;
+    recordAttackStats(): void;
+    recordDamageStats(): void;
     private collectOptionalFlagSources;
     /**
      * The damageContributions service's damage (M2 stage 8): each contribution rolled with the use's roll data; without
@@ -1321,7 +1341,7 @@ export declare class Workflow {
     convertRollToDamageRoll(roll: Roll.Any): any;
     setDamageRoll(roll: Roll): Promise<void>;
     addDamageRolls(rolls: Array<Roll> | Roll | undefined | null): Promise<void>;
-    /** Totals and detail from the damage rolls; also how a rebuilt workflow gets them back */
+    /** Detail from the damage rolls; also how a rebuilt workflow gets it back */
     deriveDamage(): void;
     deriveBonusDamage(): void;
     deriveOtherDamage(): void;
@@ -1335,16 +1355,10 @@ export declare class Workflow {
 export declare class SavesFirstWorkflow extends Workflow {
     static flowId: string;
     get postAttackRollState(): WorkflowState;
-    WorkflowState_WaitForSaves(): Promise<WorkflowState>;
-    WorkflowState_SavesComplete(): Promise<WorkflowState>;
-    WorkflowState_WaitForDamageRoll(): Promise<WorkflowState>;
-    WorkflowState_DamageRollComplete(): Promise<WorkflowState>;
 }
 export declare class ActiveDefenceWorkflow extends Workflow {
     static flowId: string;
-    WorkflowState_WaitForAttackRoll(): Promise<WorkflowState>;
     processAttackRoll(): Promise<void>;
-    WorkflowState_AttackRollComplete(): Promise<WorkflowState>;
     checkHits(): Promise<void>;
     checkActiveAttacks(whisper: boolean | undefined, roll: CONFIG.Dice.D20Roll, _coverBonus?: number): Promise<void>;
     displayAttackRoll(): Promise<void>;
@@ -1371,7 +1385,6 @@ export declare class DamageOnlyWorkflow extends Workflow {
     });
     static get forceCreate(): boolean;
     get otherDamageFlavor(): string;
-    WorkflowState_Start(): Promise<WorkflowState>;
 }
 export declare class TrapWorkflow extends Workflow {
     static flowId: string;
@@ -1381,7 +1394,6 @@ export declare class TrapWorkflow extends Workflow {
         direction?: number;
         removeDelay?: number;
     } | undefined;
-    saveTargets: TokenDocumentSet | undefined;
     targetsPassedToConstructor: boolean;
     static get forceCreate(): boolean;
     constructor(actor: Actor, activity: Activity, targets: Array<Token> | undefined, templateLocation?: {
@@ -1394,20 +1406,8 @@ export declare class TrapWorkflow extends Workflow {
         sound: string;
     } | undefined, event?: any, _storeWorkflow?: boolean);
     get workflowType(): string;
-    WorkflowState_Start(): Promise<WorkflowState>;
-    WorkflowState_AwaitTemplate(): Promise<WorkflowState>;
-    WorkflowState_TemplatePlaced(): Promise<WorkflowState>;
-    WorkflowState_ValidateRoll(): Promise<WorkflowState>;
     stateAfter(event: WorkflowEvent): WorkflowState;
-    WorkflowState_WaitForAttackRoll(): Promise<WorkflowState>;
-    WorkflowState_AttackRollComplete(): Promise<WorkflowState>;
     setDescriptorACModifiers(): void;
-    WorkflowState_WaitForSaves(): Promise<WorkflowState>;
-    WorkflowState_SavesComplete(): Promise<WorkflowState>;
-    WorkflowState_WaitForDamageRoll(): Promise<WorkflowState>;
-    WorkflowState_DamageRollComplete(): Promise<WorkflowState>;
-    WorkflowState_AllRollsComplete(): Promise<WorkflowState>;
-    WorkflowState_RollFinished(): Promise<WorkflowState>;
 }
 export declare class DummyWorkflow extends Workflow {
     static get forceCreate(): boolean;
@@ -1511,6 +1511,8 @@ export type WorkflowOptions = InexactPartial<{
     templateUuid: string;
     preSelectedTargetUuids: string[];
     overTimeEffectUuid: string;
+    /** An over-time effect's use (utils doOverTimeEffect); CAT reads it too */
+    isOverTime: boolean;
     teleport: TeleportOption;
 }>;
 export type WorkflowRollOptions = InexactPartial<{

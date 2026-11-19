@@ -53,7 +53,10 @@ export function registerSavesSteps(): void {
       // The saveRequests providers listen for their own answers while the saves are out (M5b)
       try {
         const saveDisplay = saveDisplayMode();
-        await workflow.ports.requestSaves(workflow, saveDisplay !== "allShow");
+        // The saveRequests service (checkSaves); a module may still have replaced the deprecated requestSaves port
+      const replaced = workflow.replacedPort("requestSaves");
+      if (replaced) await replaced(workflow, saveDisplay !== "allShow");
+      else await workflow.checkSaves(saveDisplay !== "allShow");
       } catch (err) {
         const message = ("midi-qol | checkSaves error")
         TroubleShooter.recordError(err, message);

@@ -1,3 +1,4 @@
+import type { IncomingRequest } from "./lib/requests.js";
 import { MidiOptions } from "./utils.js";
 import { PreComputedAdvantage } from "./apps/MidiRollChoiceDialog.js";
 import Token = foundry.canvas.placeables.Token;
@@ -45,7 +46,10 @@ export interface Options {
 }
 export declare const defaultRollOptions: Options;
 export declare function collectBonusFlags(actor: Actor.Implementation, category: string, detail: string): string[];
-export declare function bonusCheck(actor: Actor.Implementation, result: Roll, category: string, detail?: string, messageData?: any): Promise<Roll>;
+export declare function bonusCheck(actor: Actor.Implementation, result: Roll, category: string, detail?: string, messageData?: any, prompt?: {
+    request?: IncomingRequest;
+    withinRequest?: IncomingRequest;
+}): Promise<Roll>;
 export declare function addDiceTermModifiers(): void;
 export declare function averageDice(roll: Roll): Roll<import("fvtt-types/utils").EmptyObject>;
 export declare function rollSavingThrow(this: Actor.Implementation, wrapped: any, config?: RollProcessConfig, dialog?: RollDialogConfig, message?: RollMessageConfig): Promise<any>;

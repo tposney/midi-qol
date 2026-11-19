@@ -13,8 +13,6 @@ export declare let midiSoundSettings: any;
 export declare let midiSoundSettingsBackup: any;
 export declare let nsaFlag: boolean;
 export declare let playerControlsInvisibleTokens: boolean;
-export declare let saveRequests: {};
-export declare let saveTimeouts: {};
 export declare let targetConfirmation: typeof defaultTargetConfirmationSettings;
 export declare let useWeakReferences: boolean;
 export declare const defaultTargetConfirmationSettings: {

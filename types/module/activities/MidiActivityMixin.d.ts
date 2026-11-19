@@ -1,5 +1,6 @@
 import { Activity, ActivityEffectData, ActivityUseConfiguration, RollDialogConfig, RollMessageConfig, RollProcessConfig, MidiUsageChatContext } from "../../globals.js";
 import { Workflow } from "../Workflow.js";
+import { type UseState } from "./useRelaunch.js";
 export declare class MidiConditionField extends globalThis.dnd5e.dataModels.fields.FormulaField {
     _validateType(value: unknown): value is string;
     constructor(options: any);
@@ -64,7 +65,12 @@ export declare let MidiActivityMixin: (Base: any) => {
             };
             sequenceId: string;
             activity: Activity;
-        }>, dialog?: RollDialogConfig, message?: RollMessageConfig): any;
+        }>, dialog?: RollDialogConfig, message?: RollMessageConfig): Promise<any>;
+        /**
+         * midi's use (M10, activities/useRelaunch.ts): calls dnd5e's use with a use key, which midi's preUseActivity
+         * listener cancels and restarts after midi's pre-use work; returns the restart's result. The restarted call
+         * (marked) is dnd5e's use itself, so other listeners see one use.
+         */
         use(usage?: import("fvtt-types/src/utils/index.mjs").InexactPartial<{
             create: {
                 measuredTemplate?: boolean;
@@ -101,7 +107,64 @@ export declare let MidiActivityMixin: (Base: any) => {
             };
             sequenceId: string;
             activity: Activity;
-        }>, dialog?: RollDialogConfig, message?: RollMessageConfig): any;
+        }>, dialog?: RollDialogConfig, message?: RollMessageConfig): Promise<any>;
+        /**
+         * midi's work before dnd5e's use (M10 stage 1): rollAs, ownership, the off-scene check, the workflow, targets and
+         * the checks before the card, dialog and message settings. `done` with the result to return when the use stops
+         * here (or was handed to another actor); otherwise the use's state for dnd5e's use and finishUse.
+         */
+        prepareUse(usage: import("fvtt-types/src/utils/index.mjs").InexactPartial<{
+            create: {
+                measuredTemplate?: boolean;
+            };
+            concentration: {
+                begin: boolean;
+                end: string | null;
+            };
+            consume: {
+                action: boolean;
+                resources: boolean | number[];
+                spellSlot: boolean;
+            };
+            event: Event;
+            scaling: false | number;
+            spell: {
+                slot: string;
+            };
+            subsequentActions?: boolean;
+            cause: {
+                activity: string;
+                resources: boolean | number[];
+            };
+            workflow: Workflow;
+            midiOptions: import("../utils.js").MidiOptions;
+            advantage: boolean;
+            disadvantage: boolean;
+            midi: {
+                workflowClass: typeof Workflow;
+            };
+            useRelaunch: {
+                relaunched?: boolean;
+                useKey?: string;
+            };
+            sequenceId: string;
+            activity: Activity;
+        }>, dialog: RollDialogConfig, message: RollMessageConfig): Promise<{
+            done: true;
+            result: unknown;
+        } | {
+            done: false;
+            state: UseState;
+        }>;
+        /** dnd5e's preUseActivity for this use (its workflow): the scaled activity dnd5e uses, and dnd5e's copy of the usage */
+        onUsePreUse(state: UseState, newActivity: Activity, usageConfig: ActivityUseConfiguration): boolean;
+        /** dnd5e's activityConsumption for this use: the activity consumption and the card run on, deferred concentration */
+        onUseConsumption(state: UseState, newActivity: Activity, usageConfig: ActivityUseConfiguration): void;
+        /**
+         * midi's work after dnd5e's use (M10 stage 1): the card's workflow, the checks after the card, templates, undo data,
+         * the reaction and bonus action markers, cast data, then the workflow's first step. Returns what use() returns.
+         */
+        finishUse(state: UseState, useResults: any): Promise<unknown>;
         /**
          * Check if this activity has consumption configured.
          * @returns true if this activity has consumption targets configured
@@ -173,7 +236,7 @@ export declare let MidiActivityMixin: (Base: any) => {
                 levels: string[];
                 restriction: {
                     enabled: import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.InitializedType<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.DefaultOptions, import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.DefaultOptions>>;
-                    type: "light" | "sight" | "darkness" | "sound" | "move";
+                    type: "sound" | "light" | "sight" | "darkness" | "move";
                     priority: number;
                 };
                 attachment: {
@@ -268,7 +331,7 @@ export declare let MidiActivityMixin: (Base: any) => {
                 levels: string[];
                 restriction: {
                     enabled: import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.InitializedType<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.DefaultOptions, import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.DefaultOptions>>;
-                    type: "light" | "sight" | "darkness" | "sound" | "move";
+                    type: "sound" | "light" | "sight" | "darkness" | "move";
                     priority: number;
                 };
                 attachment: {

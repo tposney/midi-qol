@@ -37,11 +37,14 @@ export interface EngineHost {
     /** A move with inserted steps under way, kept across runs (an inserted step can suspend). */
     move?: StepMove;
 }
-/** Inserted steps still to run in a move, the step it was going to, and whether the step running came from the queue. */
+/**
+ * Inserted steps still to run in a move, the step it was going to, and whether the step running came from the queue.
+ * The engine never changes one in place: it gives the host a new move whenever it changes (the host stores it).
+ */
 export interface StepMove {
-    queue: string[];
-    then: string | undefined;
-    inserted: boolean;
+    readonly queue: readonly string[];
+    readonly then: string | undefined;
+    readonly inserted: boolean;
 }
 /** An inserted step that returns this, or nothing, lets the move it was inserted into go on. */
 export declare const CONTINUE = "midi-qol.Continue";

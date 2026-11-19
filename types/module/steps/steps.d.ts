@@ -4,7 +4,7 @@ export interface Step {
     id: string;
     /** The hook and pass name: `pre<name>` / `post<name>`. */
     name: string;
-    /** The workflow method that runs it (midi's steps). */
+    /** midi's steps: the name of its `Workflow#WorkflowState_<name>` forwarder (old callers), as their method was. */
     method?: string;
     /**
      * A module's step: runs with the workflow; returns the step to go to, or nothing to go on with the move it was
@@ -30,8 +30,9 @@ export interface StepContext {
     /** For a wrapper: run the step it wraps (and what that returns). */
     next(): Promise<unknown>;
     /** At a reaction step: who reacts to what (utils doReactions' arguments). */
+    /** The reacting token is a TokenDocument (proposal section 18, rule 1); undefined if it can't be resolved */
     reaction?: {
-        target: unknown;
+        target: TokenDocument.Implementation | undefined;
         triggerTokenUuid?: string | null;
         triggeringRoll?: unknown;
         triggerType: string;
@@ -39,6 +40,8 @@ export interface StepContext {
     };
 }
 export declare function registerStep(step: Step): void;
+/** midi's own step gets its implementation (M5: the workflow's step modules, workflowSteps/), keeping its id and method name */
+export declare function setStepRun(id: string, run: NonNullable<Step["run"]>): void;
 export declare function unregisterStep(id: string): boolean;
 /** A change to every use's flow (the global layer), optionally only where `when` says. */
 export type GlobalStepChange = StepChange & {
