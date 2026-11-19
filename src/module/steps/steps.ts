@@ -40,7 +40,8 @@ export interface StepContext {
   /** For a wrapper: run the step it wraps (and what that returns). */
   next(): Promise<unknown>;
   /** At a reaction step: who reacts to what (utils doReactions' arguments). */
-  reaction?: { target: unknown, triggerTokenUuid?: string | null, triggeringRoll?: unknown, triggerType: string, options: unknown };
+  /** The reacting token is a TokenDocument (proposal section 18, rule 1); undefined if it can't be resolved */
+  reaction?: { target: TokenDocument.Implementation | undefined, triggerTokenUuid?: string | null, triggeringRoll?: unknown, triggerType: string, options: unknown };
 }
 
 const steps = new Registry<Step>();

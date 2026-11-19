@@ -2713,7 +2713,8 @@ export class Workflow {
     const id = REACTION_STEPS[triggerType];
     const ask = () => this.ports.askReactions(target, triggerTokenUuid, triggeringRoll, triggerType, options) as Promise<ReactionResult>;
     if (!id) return ask();
-    return (await this.runInlineStep(id, ask, { reaction: { target, triggerTokenUuid, triggeringRoll, triggerType, options } })) ?? {};
+    // A step's context gives TokenDocuments (proposal section 18): the target as given goes only to midi's own ask
+    return (await this.runInlineStep(id, ask, { reaction: { target: getTokenDocument(target), triggerTokenUuid, triggeringRoll, triggerType, options } })) ?? {};
   }
 
   async #runOwn(id: string): Promise<string | undefined> {

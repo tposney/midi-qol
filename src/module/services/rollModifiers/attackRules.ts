@@ -1,7 +1,7 @@
 import { i18n, log, warn, debugEnabled, MODULE_ID } from "../../../midi-qol.js";
 import { checkRule, configSettings, safeGetGameSetting } from "../../settings.js";
 import { installedModules } from "../../setupModules.js";
-import { checkDistance, checkNearby, createConditionData, evalAllConditionsAsync, getToken, hasCondition, midiFlag } from "../../utils.js";
+import { checkDistance, checkNearby, createConditionData, evalAllConditionsAsync, hasCondition, midiFlag } from "../../utils.js";
 import { Workflow } from "../../Workflow.js";
 import { rollModifiersService, type RollModifier, type RollModifierContributor, type RollQuery } from "./service.js";
 
@@ -11,11 +11,16 @@ import { rollModifiersService, type RollModifier, type RollModifierContributor, 
  * and label it always had: other modules remove some by key (CAT's removeAttackDisadvantage(workflow, "nearbyFoe")).
  */
 
-/** The workflow of an attack query, with the attacker and the first target with a canvas token. */
+/**
+ * The workflow of an attack query, with the attacker and its first target: as a TokenDocument (proposal section 18), and
+ * its canvas Token for the rules that need the canvas (sight, distance, Perceptive), undefined when it isn't drawn.
+ */
 function attackContext(query: RollQuery) {
   const workflow = query.workflow;
   if (query.kind !== "attack" || !(workflow instanceof Workflow) || !workflow.actor) return undefined;
-  return { workflow, actor: workflow.actor, firstTarget: workflow.targets.tokens[0] as Token.Implementation | undefined };
+  const targetDocument = workflow.targets.documents[0];
+  const firstTarget = targetDocument ? workflow.targets.tokens.find(token => token.document === targetDocument) as Token.Implementation | undefined : undefined;
+  return { workflow, actor: workflow.actor, targetDocument, firstTarget };
 }
 
 const longRange: RollModifierContributor = {
@@ -101,21 +106,21 @@ const nearbyFoe: RollModifierContributor = {
   async for(query) {
     const context = attackContext(query);
     if (!context || !checkRule("nearbyFoe")) return [];
-    const { workflow, actor, firstTarget } = context;
+    const { workflow, actor, targetDocument, firstTarget } = context;
     const actType = workflow.activity.actionType || "none";
     // @ts-expect-error no dnd5e-types
     const thrown: boolean = !!workflow.item.system.properties?.has("thr");
     if (!(["rwak", "rsak"].includes(actType) || (thrown && actType === "mwak")) || !workflow.token) return [];
-    const conditionData = createConditionData({ workflow, target: firstTarget, actor });
+    const conditionData = createConditionData({ workflow, target: targetDocument, actor });
     if (await evalAllConditionsAsync(actor, midiFlag(`ignoreNearbyFoes`), conditionData)) return [];
     let foe = false;
-    if (actType !== "mwak") foe = checkNearby(-1, getToken(workflow.token), configSettings.optionalRules.nearbyFoe, { includeIncapacitated: false, canSee: true });
+    if (actType !== "mwak") foe = checkNearby(-1, workflow.token, configSettings.optionalRules.nearbyFoe, { includeIncapacitated: false, canSee: true });
     else {
       // @ts-expect-error no dnd5e-types
       const meleeRange = workflow.item.system.range.reach ?? 5;
       foe = checkDistance(workflow.token, firstTarget, meleeRange, { wallsBlock: false })
         ? false
-        : checkNearby(-1, getToken(workflow.token), configSettings.optionalRules.nearbyFoe, { includeIncapacitated: false, canSee: true });
+        : checkNearby(-1, workflow.token, configSettings.optionalRules.nearbyFoe, { includeIncapacitated: false, canSee: true });
     }
     if (!foe) return [];
     if (debugEnabled > 0) warn(`checkAttackAdvantage | Ranged attack by ${actor.name} at disadvantage due to nearby foe`);
@@ -130,9 +135,9 @@ const heavyWeapon: RollModifierContributor = {
     const context = attackContext(query);
     // @ts-expect-error no dnd5e-types
     if (!context || !context.workflow.item.system.properties?.has("hvy")) return [];
-    const { workflow, actor, firstTarget } = context;
+    const { workflow, actor, targetDocument } = context;
     if (actor.flags?.[MODULE_ID]?.fail?.disadvantage?.heavy) {
-      const conditionData = createConditionData({ workflow, target: firstTarget, actor });
+      const conditionData = createConditionData({ workflow, target: targetDocument, actor });
       if (await evalAllConditionsAsync(actor, midiFlag(`fail.disadvantage.heavy`), conditionData)) return [];
     }
     const rules = safeGetGameSetting("dnd5e", "rulesVersion");
