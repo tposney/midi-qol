@@ -8733,11 +8733,11 @@ export async function processConcentrationRequestMessage(message: ChatMessage.Im
   if (hasRolled || !preferredActiveGM()?.isSelf || concentrationRequestsHandled.has(message.id!)) return;
   if (elt.length === 1 && !hasRolled) {
     let { action, dc: dcStr, type } = elt[0].dataset;
-    let token: Token.Implementation | undefined, actor: Actor.Implementation | undefined | null;
+    let token: TokenDocument.Implementation | undefined, actor: Actor.Implementation | undefined | null;
     if (action === "concentration" && type === "midi-concentration") {
       let dc = Number(dcStr);
       let { actor: actorId, scene, token: tokenId } = message.speaker;
-      if (scene && tokenId) token = game.scenes?.get(scene)?.tokens.get(tokenId) as Token.Implementation | undefined;
+      if (scene && tokenId) token = game.scenes?.get(scene)?.tokens.get(tokenId);
       if (token) actor = token.actor;
       if (!actor && actorId) actor = game.actors?.get(actorId);
       if (actor) {
@@ -8752,7 +8752,7 @@ export async function processConcentrationRequestMessage(message: ChatMessage.Im
         // rollConcentration hook ends concentration wherever it's rolled, so two rolls could both count)
         if (user?.active && !user.isSelf) void askUser<unknown>(user, {
           type: CONCENTRATION_REQUEST, data: { actorUuid: actor.uuid, target: dc, create: true, rollMode: "gm" },
-          kind: "concentration", actorUuid: actor.uuid ?? undefined, tokenUuid: token?.document?.uuid ?? undefined,
+          kind: "concentration", actorUuid: actor.uuid ?? undefined, tokenUuid: token?.uuid ?? undefined,
           label: i18nFormat("midi-qol.PlayerWaits.ConcentrationLabel", { dc }),
           timeoutMs: (configSettings.playerSaveTimeout ?? 0) * 1000,
           fallback: gmRoll,
