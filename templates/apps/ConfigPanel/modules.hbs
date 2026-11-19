@@ -1,0 +1,25 @@
+<section id="midi-config-modules" class="tab midi-scrollable-list{{#if tab.active}} active{{/if}}" data-group="{{tab.group}}" data-tab="{{tab.id}}">
+  <p class="notes">{{localize "midi-qol.Config.ModulesBlurb"}}</p>
+  {{#each registeredGroups}}
+  <div class="midi-qol-box">
+    <h3>{{this.title}}</h3>
+    {{#each this.settings}}
+    <div class="form-group">
+      <label>{{localize this.label}}</label>
+      {{#if this.choices}}
+      <select name="midiRegistered.{{this.index}}">{{selectOptions this.choices selected=this.value localize=true}}</select>
+      {{else if (eq this.type "boolean")}}
+      <input type="checkbox" name="midiRegistered.{{this.index}}" data-dtype="Boolean" {{checked this.value}} />
+      {{else if (eq this.type "number")}}
+      <input type="number" name="midiRegistered.{{this.index}}" value="{{this.value}}" data-dtype="Number" />
+      {{else}}
+      <input type="text" name="midiRegistered.{{this.index}}" value="{{this.value}}" />
+      {{/if}}
+      {{#if this.hint}}<p class="notes midi-qol-faint">{{localize this.hint}}</p>{{/if}}
+    </div>
+    {{/each}}
+  </div>
+  {{else}}
+  <p>{{localize "midi-qol.Config.NoModuleSettings"}}</p>
+  {{/each}}
+</section>

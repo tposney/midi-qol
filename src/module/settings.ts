@@ -69,7 +69,7 @@ export const defaultTargetConfirmationSettings = {
   gridPosition: { x: 0, y: 0 }
 };
 
-class ConfigSettings {
+export class ConfigSettings {
   // fullAuto: boolean = false;
   addDead: string = "none";
   addFakeDice: boolean = false;

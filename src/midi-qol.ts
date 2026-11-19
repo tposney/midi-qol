@@ -1,3 +1,4 @@
+import { settingsApi } from "./module/lib/settingsRegistry.js";
 import { useTrace, saveUseTrace } from "./module/lib/useTrace.js";
 import { installFixedDice, withFixedDice } from "./module/lib/fixedDice.js";
 import { installUse } from "./module/activities/useRelaunch.js";
@@ -282,6 +283,8 @@ Object.assign(globalThis.MidiQOL, {
   testing: { fixedDice: withFixedDice },
   // A use's trace (M25): its inputs, steps with who changed them, and outcome; saved as a JSON file
   useTrace, saveUseTrace,
+  // The settings registry (M4a): every setting declared once; modules register their own (shown in the panel's Modules tab)
+  settings: settingsApi,
   decodeWorkflowOptions,
   encodeWorkflowOptions,
   createEffects,

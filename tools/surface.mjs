@@ -64,14 +64,17 @@ const services = new Set();
 for (const text of Object.values(sources).map(stripComments)) for (const m of text.matchAll(/defineService(?:<[^>]*>)?\(\s*["']([\w.]+)["']/g)) services.add(m[1]);
 
 const sorted = s => [...s].sort((a, b) => a.localeCompare(b));
-const surface = { apiVersion, api: sorted(api), hooks: sorted(hooks), settings: sorted(settings), services: sorted(services) };
+// midi's declared ConfigSettings keys (M4a, lib/settingsTable.ts)
+const configKeys = new Set();
+for (const m of (sources[path.join("module", "lib", "settingsTable.ts")] ?? "").matchAll(/^  "([\w.]+)": \{ group/gm)) configKeys.add(m[1]);
+const surface = { apiVersion, api: sorted(api), hooks: sorted(hooks), settings: sorted(settings), configSettings: sorted(configKeys), services: sorted(services) };
 const json = JSON.stringify(surface, null, 2) + "\n";
 
 if (process.argv.includes("--check")) {
   const current = fs.existsSync(outFile) ? fs.readFileSync(outFile, "utf8") : "";
   if (current === json) { console.log("docs/surface.json is up to date"); process.exit(0); }
   const old = current ? JSON.parse(current) : {};
-  for (const k of ["api", "hooks", "settings", "services"]) {
+  for (const k of ["api", "hooks", "settings", "configSettings", "services"]) {
     const before = new Set(old[k] ?? []), after = new Set(surface[k]);
     const added = [...after].filter(x => !before.has(x)), removed = [...before].filter(x => !after.has(x));
     if (added.length || removed.length) console.log(`${k}: +${added.join(", +") || "-"}  -${removed.join(", -") || "-"}`);
@@ -82,4 +85,4 @@ if (process.argv.includes("--check")) {
 }
 fs.mkdirSync(path.dirname(outFile), { recursive: true });
 fs.writeFileSync(outFile, json);
-console.log(`docs/surface.json: ${surface.api.length} exports, ${surface.hooks.length} hooks, ${surface.settings.length} settings, ${surface.services.length} services`);
+console.log(`docs/surface.json: ${surface.api.length} exports, ${surface.hooks.length} hooks, ${surface.settings.length} settings, ${surface.configSettings.length} config settings, ${surface.services.length} services`);

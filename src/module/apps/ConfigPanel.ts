@@ -1,4 +1,5 @@
 import { chooseJsonFile } from "../lib/fileDialogs.js";
+import { registeredSettings, settingValue } from "../lib/settingsRegistry.js";
 import { providers as servicesProviders } from "../api/services.js";
 import { rulesTextCompendiumChoices } from "../lib/rulesText.js";
 import { criticalDamage, criticalDamageChoices, coloredBorders, coloredBordersOptions, importSettingsFromJSON, exportSettingsToJSON, enableWorkflow, wallsBlockRangeOptionsNew, visionTestHeightOptions, templateOriginHeightOptions, templatePlacedOriginOptions, coverCalculationOptions, hiddenAdvantageOptions, addDeadOptions, rollNPCSavesOptions, playerRollSavesOptions, autoCheckHitOptions, autoTargetOptions, rangeTargetOptions, requiresTargetsOptions, autoCheckSavesOptions, saveSummaryStyleOptions, chatCardSummariesOptions, autoRollDamageOptions, removeButtonsOptions, autoApplyDamageOptions, playerDamageCardOptions, damageImmunitiesOptions, showItemDetailsOptions, doReactionsOptions, gmDoReactionsOptions, autoCEEffectsOptions, showReactionAttackRollOptions, recordAOOOptions, EnforceReactionsOptions, autoEffectsOptions, requireMagicalOptions, gmAttackDisplayOptions, gmDamageDisplayOptions, gmDsnDisplayOptions, blindRollDisplayOptions, checkFlankingOptions, flankingBonusOptions, rollAlternateOptions, consumeResourceOptions, averageDamageOptions, removeConcentrationEffectsOptions, incapacitatedOptions, checkRangeOptions, targetMustBeSeenOptions, invisAdvantageOptions, confirmAttackDamageOptions, challengeModeArmorOptions, saveDROrderOptions, defaultOtherActivityOptions, doConcentrationCheckOptions, activationAutomationOptions, safeGetGameSetting, distanceMeasurementOptions } from "../settings.js"
@@ -52,6 +53,7 @@ export class ConfigPanel extends HandlebarsApplicationMixin(ApplicationV2) {
     mechanics: { template: "modules/midi-qol/templates/apps/ConfigPanel/mechanics.hbs" },
     rules: { template: "modules/midi-qol/templates/apps/ConfigPanel/rules.hbs" },
     quick: { template: "modules/midi-qol/templates/apps/ConfigPanel/quick.hbs" },
+    modules: { template: "modules/midi-qol/templates/apps/ConfigPanel/modules.hbs" },
     footer: { template: "modules/midi-qol/templates/apps/ConfigPanel/footer.hbs" }
   }
 
@@ -68,6 +70,7 @@ export class ConfigPanel extends HandlebarsApplicationMixin(ApplicationV2) {
         {id: "mechanics"},
         {id: "rules"},
         {id: "quick"},
+        {id: "modules"},
       ],
       initial: "gm",
       labelPrefix: "midi-qol.Config.Tabs"
@@ -271,6 +274,15 @@ export class ConfigPanel extends HandlebarsApplicationMixin(ApplicationV2) {
         return acc;
       }, { "": i18n("None") } as Record<string, string>),
     };
+    // Settings other modules registered (M4a): by module and group, each field named by its place in the list
+    const groups = new Map<string, { title: string, settings: object[] }>();
+    registeredSettings().forEach((declaration, index) => {
+      const title = `${game.modules.get(declaration.module)?.title ?? declaration.module}: ${declaration.group}`;
+      if (!groups.has(title)) groups.set(title, { title, settings: [] });
+      groups.get(title)!.settings.push({ ...declaration, index, label: declaration.label ?? declaration.key,
+        value: settingValue(declaration.module, declaration.key) });
+    });
+    context.registeredGroups = [...groups.values()];
     context = foundry.utils.mergeObject(await super._prepareContext(options), context, { inplace: false });
     context.concentrationDisabled =safeGetGameSetting("dnd5e", "disableConcentration");
     const attackRollVisibility = safeGetGameSetting("dnd5e", "attackRollVisibility") as string;
@@ -397,6 +409,16 @@ export class ConfigPanel extends HandlebarsApplicationMixin(ApplicationV2) {
   static async #onSubmit(event, form, formData) {
     const realData = formData.object;
     let needReload = false;
+    // The modules' registered settings: their own game settings, not midi's config
+    const registeredList = registeredSettings();
+    const flat = foundry.utils.flattenObject(realData);
+    for (const [path, value] of Object.entries(flat)) {
+      const match = /^midiRegistered\.(\d+)$/.exec(path);
+      const declaration = match ? registeredList[Number(match[1])] : undefined;
+      if (declaration && game.user?.can("SETTINGS_MODIFY")) await Reflect.apply(game.settings.set, game.settings, [declaration.module, declaration.key, value]);
+    }
+    delete realData.midiRegistered;
+    for (const path of Object.keys(realData)) if (path.startsWith("midiRegistered.")) delete realData[path];
     realData.itemTypeList = configSettings.itemTypeList;
     if (realData.enforceReactions !== "none" && configSettings.enforceReactions !== realData.enforceReactions) {
       needReload = true;

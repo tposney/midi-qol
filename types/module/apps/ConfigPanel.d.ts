@@ -36,6 +36,9 @@ export declare class ConfigPanel extends ConfigPanel_base {
         quick: {
             template: string;
         };
+        modules: {
+            template: string;
+        };
         footer: {
             template: string;
         };

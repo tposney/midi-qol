@@ -33,7 +33,7 @@ export declare const defaultTargetConfirmationSettings: {
         y: number;
     };
 };
-declare class ConfigSettings {
+export declare class ConfigSettings {
     addDead: string;
     addFakeDice: boolean;
     addWounded: number;
@@ -589,4 +589,3 @@ export declare function shouldDisplaySaveDC(actor?: Actor): boolean;
 export declare function setTokenDocumentSets(enabled: boolean, { reload }?: {
     reload?: boolean;
 }): Promise<void>;
-export {};

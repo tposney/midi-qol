@@ -566,9 +566,12 @@
       "misc": "Misc",
       "mechanics": "Mechanics",
       "rules": "Rules",
-      "quick": "Quick Settings"
+      "quick": "Quick Settings",
+      "modules": "Modules"
     }
   },
+  "midi-qol.Config.ModulesBlurb": "Settings other modules register with midi for their providers and contributors (MidiQOL.settings.register).",
+  "midi-qol.Config.NoModuleSettings": "No module has registered settings.",
   "midi-qol.Targeting": "Targeting",
   "midi-qol.Special": "Specials",
   "midi-qol.Hits": "Hits",
