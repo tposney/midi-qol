@@ -1,6 +1,10 @@
 import { ActivityUseConfiguration, RollDialogConfig, RollMessageConfig } from "../../globals.js";
 import { type MidiActivity } from "./midiActivity.js";
-/** midi's activity types: each adopted, with its card buttons, sheet extras and setup (teleport.ts and transform.ts have their own) */
+/**
+ * midi's additions for its own types, applied as each is adopted (adoption follows the policy: activityPrototype.ts).
+ * Card buttons and sheet extras are registered first, so the card-action and sheet installers find them. A type of a
+ * module's, or one dnd5e adds later, gets midi's shared additions with no entry here.
+ */
 export declare function setupActivityTypes(): void;
 /**
  * midi's checks before a Cast activity hands its use to the spell (M14: were an override of Cast's `use`; run from

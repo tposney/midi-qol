@@ -1,4 +1,5 @@
 import { isRollOf } from "./rolls/common.js";
+import { withFixedDice, type FixedDice } from "./lib/fixedDice.js";
 import { attachRegionActivityBehavior } from "./activities/regions.js";
 import { hasConsumption, shouldAutoConsume } from "./activities/use.js";
 import { isMidiActivityType } from "./activities/midiActivity.js";
@@ -130,6 +131,17 @@ export function jsonSafe(value: unknown): unknown {
   if (prototype !== Object.prototype && prototype !== null) return undefined;
   const kept = Object.entries(value as Record<string, unknown>).map(([key, v]) => [key, jsonSafe(v)] as const).filter(([, v]) => v !== undefined);
   return kept.length ? Object.fromEntries(kept) : undefined;
+}
+
+/** A step a use ran (M25: its trace) */
+export interface TraceStep {
+  step: string;
+  /** The step it went on to (midi-qol.Suspend while it waits) */
+  next?: string;
+  at: number;
+  ms: number;
+  /** The step changes that acted on it, with who made them */
+  changes?: { kind: string, step: string, source?: string, layer: string }[];
 }
 
 /** diffObject, surviving a value it can't compare (an object with no valueOf): such a key differs unless it is the same object */
@@ -683,7 +695,8 @@ export class Workflow {
   async whileExecuting<T>(fn: () => Promise<T>): Promise<T> {
     this.executingStates += 1;
     try {
-      return await fn();
+      // A card button's roll is the use's: its dice fixed with the use's (M25)
+      return await withFixedDice(this.workflowOptions?.fixedDice, fn);
     } finally {
       this.executingStates -= 1;
     }
@@ -2663,10 +2676,13 @@ export class Workflow {
         },
         run: async step => {
           this.#queueingWrites += 1;
+          const at = Date.now();
+          let after: string | undefined;
           try {
-            return Workflow.stepIdOf(await this.#runStep(step));
+            return after = Workflow.stepIdOf(await this.#runStep(step));
           } finally {
             this.#queueingWrites -= 1;
+            if (step) this.#recordStep(step, after, at);
           }
         },
         stepEnded: async (step, after) => {
@@ -2696,7 +2712,7 @@ export class Workflow {
         note: message => console.warn(`${this.workflowName} ${this.id} ${message}`),
         name: nameOf
       };
-      const stopped = await runSteps(host, next);
+      const stopped = await withFixedDice(this.workflowOptions?.fixedDice, () => runSteps(host, next));
       if (stopped === "limit") {
         const message = `performState | ${this.workflowName} Workflow ${this.id} exceeded ${this.maxTransitionCount} iterations`;
         error(message);
@@ -2738,11 +2754,27 @@ export class Workflow {
       changes = useStepChanges(this, this.workflowOptions?.steps, { item: this.item, activity: this.activity });
       if (changes.length && !this.readOnly) this.#persisted.setScalar("stepChanges", changes);
     }
+    this.#stepChangeList = changes;
     this.#assembledSteps = assembleSteps(changes);
     reportAssembly(this.#assembledSteps);
     const missing = missingSteps(changes);
     if (missing.length) this.#reportMissingSteps(missing);
     return this.#assembledSteps;
+  }
+
+  /** The step changes this use was assembled from (for the trace: who changed each step) */
+  #stepChangeList: StepChange[] = [];
+  #trace: TraceStep[] = [];
+  /** The steps this use ran, in order (M25: lib/useTrace.ts builds the whole trace from it and the outcome) */
+  get trace(): readonly TraceStep[] { return this.#trace; }
+
+  /** A step ran: when, how long, where it went on to, and the step changes that acted on it (inserted, replaced, wrapped) */
+  #recordStep(step: string, next: string | undefined, at: number) {
+    const changes = this.#stepChangeList.filter(change =>
+      (change.kind === "insert" && change.step === step) || ((change.kind === "replace" || change.kind === "wrap" || change.kind === "remove") && change.target === step))
+      .map(change => ({ kind: change.kind, step: change.kind === "wrap" ? change.wrapper : change.kind === "remove" ? change.target : change.step, source: change.source, layer: change.layer }));
+    // A run bounded by maxTransitionCount: a trace of at most that many steps per run
+    this.#trace.push({ step, next, at, ms: Date.now() - at, ...(changes.length ? { changes } : {}) });
   }
 
   #missingReported = false;
@@ -8888,6 +8920,8 @@ type WorkflowConstructorOptions = InexactPartial<{
 // `workflowOptions`
 export type WorkflowOptions = InexactPartial<{
   advantage: boolean;
+  /** Every die the use rolls shows this face (M25: tests, examples): "min", "average", "max" or a position 0–1 in the die's range */
+  fixedDice: FixedDice;
   allowIncapacitated: boolean;
   /**
    * Caller-supplied control over per-target attack splitting: true forces it on, false off,

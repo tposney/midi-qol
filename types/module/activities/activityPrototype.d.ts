@@ -19,6 +19,12 @@ export interface ActivityPolicy {
     forcedTargetConfirmation?: string;
     /** whether dnd5e runs the type's follow-up action after a use (e.g. placing an enchantment), midi doing the rest */
     subsequentActions: (activity: Activity) => boolean;
+    /**
+     * How midi runs its workflow for a use (useRelaunch.ts): "preUseActivity", the type's use goes through dnd5e's base
+     * use (the default); "preUseLinkedSpell", it hands its use to a spell (Cast); false, its use bypasses dnd5e's base use
+     * and midi runs no workflow for it.
+     */
+    useRestart: "preUseActivity" | "preUseLinkedSpell" | false;
 }
 /** For a module's own activity type: how midi treats it. Merged over what is registered. */
 export declare function registerActivityPolicy(type: string, policy: Partial<ActivityPolicy>): void;
@@ -35,5 +41,15 @@ export declare function installActivityPrototype(): void;
 export declare function installActivityCreation(types: Set<string>): void;
 /** The dnd5e activity types midi uses (its wraps, hooks and sheet additions are on these) */
 export declare const adoptedActivityTypes: Set<string>;
-/** midi uses dnd5e's activity type `type`: its localization prefixes; the rest is installed for adoptedActivityTypes */
+/** What midi installs for an adopted type (wraps, sheet parts, card buttons, a type's own setup): each told of every type */
+type AdoptionListener = (type: string) => void;
+/** Install something for every adopted type: those adopted already, and each one adopted later */
+export declare function onActivityTypeAdopted(listener: AdoptionListener): void;
+/**
+ * Every dnd5e activity type whose policy is automated: midi's own (midiPolicies) and any a module registered (M14:
+ * adoption follows the policy, not a list of type names). A type with no policy is not automated.
+ */
+export declare function adoptAutomatedTypes(): void;
+/** midi uses dnd5e's activity type `type`: its localization prefixes, then what each installer adds (onActivityTypeAdopted) */
 export declare function adoptActivityType(type: string): void;
+export {};

@@ -36,7 +36,7 @@ export declare function placeEmanationTemplate(activity: MidiActivity, workflow:
         levels: string[];
         restriction: {
             enabled: import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.InitializedType<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.DefaultOptions, import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.DefaultOptions>>;
-            type: "darkness" | "light" | "sight" | "move" | "sound";
+            type: "sound" | "light" | "sight" | "darkness" | "move";
             priority: number;
         };
         attachment: {
@@ -131,7 +131,7 @@ export declare function placeEmanationTemplate(activity: MidiActivity, workflow:
         levels: string[];
         restriction: {
             enabled: import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.InitializedType<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.DefaultOptions, import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.DefaultOptions>>;
-            type: "darkness" | "light" | "sight" | "move" | "sound";
+            type: "sound" | "light" | "sight" | "darkness" | "move";
             priority: number;
         };
         attachment: {

@@ -12,5 +12,5 @@ export declare function dialogByProperty(activity: Activity, config: RollProcess
  */
 export declare function rollOtherDamage(activity: Activity, config: RollProcessConfig, dialog: RollDialogConfig): Promise<Roll[] | undefined>;
 /** midi's damage roll on each type it adopted, and its damage configuration; once, from setupActivities */
-export declare function installDamageRolls(types: Iterable<string>): void;
+export declare function installDamageRolls(): void;
 export {};

@@ -1,3 +1,5 @@
+import { useTrace, saveUseTrace } from "./module/lib/useTrace.js";
+import { installFixedDice, withFixedDice } from "./module/lib/fixedDice.js";
 import { installUse } from "./module/activities/useRelaunch.js";
 import { useAs } from "./module/activities/use.js";
 import { confirmTargets, setupTargets } from "./module/activities/useTargets.js";
@@ -276,6 +278,10 @@ Object.assign(globalThis.MidiQOL, {
   useAs, confirmTargets, setupTargets,
   // An activity's region behaviours on a region (the use's template does this); a teleport's plan, as its card button
   attachRegionActivityBehavior, planTeleport,
+  // The test harness (M25): fixed dice for code outside a use (a use takes workflowOptions.fixedDice)
+  testing: { fixedDice: withFixedDice },
+  // A use's trace (M25): its inputs, steps with who changed them, and outcome; saved as a JSON file
+  useTrace, saveUseTrace,
   decodeWorkflowOptions,
   encodeWorkflowOptions,
   createEffects,
@@ -458,6 +464,7 @@ let activityTypesInstalled = false;
 
 Hooks.once('init', async function () {
   GameSystemConfig = CONFIG.DND5E;
+  installFixedDice();
   initCoverConstants();
   setupMidiFlagTypes();
   log('Initializing midi-qol');

@@ -1,3 +1,4 @@
+import { type FixedDice } from "./lib/fixedDice.js";
 import { type StepContext } from "./steps/steps.js";
 import { type SaveRequest, type SaveRequestEntry } from "./services/saveRequests/service.js";
 import { PendingSaves } from "./services/saveRequests/pending.js";
@@ -57,6 +58,21 @@ export type WorkflowOutcome = "ok" | "allMissed" | "invalid" | "split" | "manual
 /** `value` with only what survives JSON (primitives, arrays and plain objects of them); undefined if nothing does */
 /** Plain data only (primitives, arrays of them, plain objects): class instances (an Event, a module's session object) are left out */
 export declare function jsonSafe(value: unknown): unknown;
+/** A step a use ran (M25: its trace) */
+export interface TraceStep {
+    step: string;
+    /** The step it went on to (midi-qol.Suspend while it waits) */
+    next?: string;
+    at: number;
+    ms: number;
+    /** The step changes that acted on it, with who made them */
+    changes?: {
+        kind: string;
+        step: string;
+        source?: string;
+        layer: string;
+    }[];
+}
 /** A reason shown on the attack roll: a bonus part (value) or the source of advantage. */
 /** A reason the attack roll shows: flanking, a target-granted bonus, or a roll bonus added to the formula (rollBonuses preRoll) */
 export interface AttackModifier {
@@ -179,7 +195,7 @@ export declare class Workflow {
         readOnly?: boolean;
         anyAuthor?: boolean;
     }): Workflow | undefined;
-    performThrottledUpdate(chatCard: ChatMessage.Implementation, updates: ChatMessage.UpdateData): Promise<void | import("fvtt-types/src/foundry/common/abstract/document.mjs").default.Any | ChatMessage<"base" | import("fvtt-types/src/foundry/common/abstract/document.mjs").default.ModuleSubType | "midi-qol.damage" | "midi-qol.note">>;
+    performThrottledUpdate(chatCard: ChatMessage.Implementation, updates: ChatMessage.UpdateData): Promise<void | ChatMessage<"base" | import("fvtt-types/src/foundry/common/abstract/document.mjs").default.ModuleSubType | "midi-qol.damage" | "midi-qol.note"> | import("fvtt-types/src/foundry/common/abstract/document.mjs").default.Any>;
     flushCardWrites(displayOnly?: boolean): Promise<void>;
     /** Write one section of the card (system.midi.sections), with the workflow's rolls */
     setCardSection(name: SectionName, section: MidiCardSection, extraUpdates?: Record<string, unknown>): Promise<void>;
@@ -637,14 +653,14 @@ export declare class Workflow {
     constructor(actor: Actor.Implementation | null, activity: Activity | null, speaker: ChatMessage.SpeakerData | null, targets: Set<TokenOrDocument> | TokenOrDocument[] | null, options?: WorkflowConstructorOptions);
     someEventKeySet(): boolean | undefined;
     someAutoRollEventKeySet(): boolean | undefined;
-    static removeItemCardConfirmRollButton(itemCardUuid: string): Promise<void | import("fvtt-types/src/foundry/common/abstract/document.mjs").default.Any | ChatMessage<"base" | import("fvtt-types/src/foundry/common/abstract/document.mjs").default.ModuleSubType | "midi-qol.damage" | "midi-qol.note">>;
+    static removeItemCardConfirmRollButton(itemCardUuid: string): Promise<void | ChatMessage<"base" | import("fvtt-types/src/foundry/common/abstract/document.mjs").default.ModuleSubType | "midi-qol.damage" | "midi-qol.note"> | import("fvtt-types/src/foundry/common/abstract/document.mjs").default.Any>;
     static removeItemCardButtons(itemCardUuid: string | null | undefined, { removeAllButtons, removeConfirmButtons, removeAllDnd5eButtons, removeDnd5eSaveButtons, finished }?: {
         removeAllButtons?: boolean | undefined;
         removeConfirmButtons?: boolean | undefined;
         removeAllDnd5eButtons?: boolean | undefined;
         removeDnd5eSaveButtons?: boolean | undefined;
         finished?: boolean | undefined;
-    }): Promise<void | import("fvtt-types/src/foundry/common/abstract/document.mjs").default.Any | ChatMessage<"base" | import("fvtt-types/src/foundry/common/abstract/document.mjs").default.ModuleSubType | "midi-qol.damage" | "midi-qol.note">>;
+    }): Promise<void | ChatMessage<"base" | import("fvtt-types/src/foundry/common/abstract/document.mjs").default.ModuleSubType | "midi-qol.damage" | "midi-qol.note"> | import("fvtt-types/src/foundry/common/abstract/document.mjs").default.Any>;
     static removeWorkflow(id: string | undefined): Promise<void>;
     static get stateTable(): Record<string, WorkflowState>;
     /**
@@ -659,7 +675,7 @@ export declare class Workflow {
     static nameForState(state: WorkflowState | string): string;
     nameForState(state: WorkflowState | string): string;
     /** Wake a suspended workflow; without an event it re-runs the state it waits in */
-    resume(event?: WorkflowEvent): Promise<void | import("fvtt-types/src/foundry/common/abstract/document.mjs").default.Any | ChatMessage<"base" | import("fvtt-types/src/foundry/common/abstract/document.mjs").default.ModuleSubType | "midi-qol.damage" | "midi-qol.note">>;
+    resume(event?: WorkflowEvent): Promise<void | ChatMessage<"base" | import("fvtt-types/src/foundry/common/abstract/document.mjs").default.ModuleSubType | "midi-qol.damage" | "midi-qol.note"> | import("fvtt-types/src/foundry/common/abstract/document.mjs").default.Any>;
     /** A step is awaiting a roll it started (M2 stage 5): the roll's resume is the step's answer */
     get inStepRoll(): boolean;
     /**
@@ -671,7 +687,7 @@ export declare class Workflow {
     /** Where a suspended workflow goes when `event` arrives: by the state it waits in, else that state again */
     stateAfter(event: WorkflowEvent): WorkflowState;
     /** @deprecated since 14.6.9: use resume(event) */
-    unSuspend(context?: WorkflowContext): Promise<void | import("fvtt-types/src/foundry/common/abstract/document.mjs").default.Any | ChatMessage<"base" | import("fvtt-types/src/foundry/common/abstract/document.mjs").default.ModuleSubType | "midi-qol.damage" | "midi-qol.note">>;
+    unSuspend(context?: WorkflowContext): Promise<void | ChatMessage<"base" | import("fvtt-types/src/foundry/common/abstract/document.mjs").default.ModuleSubType | "midi-qol.damage" | "midi-qol.note"> | import("fvtt-types/src/foundry/common/abstract/document.mjs").default.Any>;
     processPlacedTemplates(templates: (MeasuredTemplateDocument | RegionDocument)[], activity?: Activity): Promise<boolean>;
     /**
      * A person drives this use, so its template's targets are shown as the player's (user-targets plan stage 2). Not a
@@ -694,6 +710,8 @@ export declare class Workflow {
      * (`workflowOptions.steps`), worked out when it first runs a step and stored on the card for a rebuild.
      */
     get assembledSteps(): AssembledSteps;
+    /** The steps this use ran, in order (M25: lib/useTrace.ts builds the whole trace from it and the outcome) */
+    get trace(): readonly TraceStep[];
     /**
      * An inline step (a reaction trigger: steps.ts `inline`): `own` is what it does; the use's changes apply. Inserted
      * steps fire their pre/post hooks and passes; their results are ignored (no branching from here).
@@ -841,6 +859,8 @@ export declare class Workflow {
             whisper: boolean;
             workflowOptions: InexactPartial<{
                 advantage: boolean;
+                /** Every die the use rolls shows this face (M25: tests, examples): "min", "average", "max" or a position 0–1 in the die's range */
+                fixedDice: FixedDice;
                 allowIncapacitated: boolean;
                 /**
                  * Caller-supplied control over per-target attack splitting: true forces it on, false off,
@@ -1034,12 +1054,12 @@ export declare class Workflow {
      * Call a macro by name, resolving the macro type and executing it.
      */
     callMacro(item: Item.Implementation | undefined, macroName: string, macroData: MidiMacroData, options: AnyObject): Promise<any>;
-    removeEffectsButton(): Promise<void | import("fvtt-types/src/foundry/common/abstract/document.mjs").default.Any | ChatMessage<"base" | import("fvtt-types/src/foundry/common/abstract/document.mjs").default.ModuleSubType | "midi-qol.damage" | "midi-qol.note">>;
+    removeEffectsButton(): Promise<void | ChatMessage<"base" | import("fvtt-types/src/foundry/common/abstract/document.mjs").default.ModuleSubType | "midi-qol.damage" | "midi-qol.note"> | import("fvtt-types/src/foundry/common/abstract/document.mjs").default.Any>;
     displayUtilityRolls(): Promise<void>;
     displayAttackRoll(_displayOptions?: {
         GMOnlyAttackRoll?: boolean;
     }): Promise<void>;
-    displayDamageRolls(): Promise<void | import("fvtt-types/src/foundry/common/abstract/document.mjs").default.Any | ChatMessage<"base" | import("fvtt-types/src/foundry/common/abstract/document.mjs").default.ModuleSubType | "midi-qol.damage" | "midi-qol.note">>;
+    displayDamageRolls(): Promise<void | ChatMessage<"base" | import("fvtt-types/src/foundry/common/abstract/document.mjs").default.ModuleSubType | "midi-qol.damage" | "midi-qol.note"> | import("fvtt-types/src/foundry/common/abstract/document.mjs").default.Any>;
     /** Attack per target: one target's hit or miss, from its own use, on this use's card */
     addSplitAttackResult(split: Workflow): Promise<void>;
     displayHitTargets(whisper?: boolean): Promise<void>;
@@ -1449,6 +1469,8 @@ type WorkflowConstructorOptions = InexactPartial<{
 }>;
 export type WorkflowOptions = InexactPartial<{
     advantage: boolean;
+    /** Every die the use rolls shows this face (M25: tests, examples): "min", "average", "max" or a position 0–1 in the die's range */
+    fixedDice: FixedDice;
     allowIncapacitated: boolean;
     /**
      * Caller-supplied control over per-target attack splitting: true forces it on, false off,

@@ -31,5 +31,5 @@ export interface SheetExtras {
 }
 export declare function registerSheetExtras(type: string, extras: SheetExtras): void;
 /** midi's parts, actions and clean arrays on the sheet classes of `types`; the hooks that add its tab and data */
-export declare function installActivitySheets(types: Iterable<string>): void;
+export declare function installActivitySheets(): void;
 export {};

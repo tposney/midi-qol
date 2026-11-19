@@ -21,7 +21,7 @@ export type RestartableActivity = MidiActivity & {
  * preUseActivity listener can cancel it and restart it after midi's pre-use work; returns the restart's result. A
  * chained OVERRIDE, as graft.ts installed it: midi's is next to dnd5e's, so other modules' wraps see each use once.
  */
-export declare function installUse(types: Iterable<string>): void;
+export declare function installUse(): void;
 export declare function isRelaunched(usage: ActivityUseConfiguration | undefined): boolean;
 /** Clears a cancelled use's state, so a resubmitted config starts afresh. */
 export declare function clearAbandonedUse(...configs: (ActivityUseConfiguration | undefined)[]): void;
