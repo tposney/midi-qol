@@ -2,7 +2,7 @@ import type { Activity, RollDialogConfig, RollMessageConfig, RollProcessConfig }
 import { debugEnabled, warn } from "../../midi-qol.js";
 import { heldKeys } from "../lib/rollKeys.js";
 import { areMidiKeysPressed, callActivityHooks, displayDSNForRoll, isAutoFastForward, setMessageTargets } from "../utils.js";
-import type { Workflow } from "../Workflow.js";
+import { Workflow } from "../Workflow.js";
 import { dialogByProperty } from "./damage.js";
 
 /*
@@ -13,13 +13,18 @@ import { dialogByProperty } from "./damage.js";
 
 type RollFormula = (config?: RollProcessConfig, dialog?: RollDialogConfig, message?: RollMessageConfig) => Promise<Roll[] | undefined>;
 
-async function rollFormulaWrapper(this: Activity, wrapped: RollFormula, config: RollProcessConfig = {}, dialog: RollDialogConfig = {}, message: RollMessageConfig = {}): Promise<Roll[] | undefined> {
+async function rollFormulaWrapper(this: Activity, wrapped: RollFormula, config: RollProcessConfig = {}, dialog: RollDialogConfig = {}, message: RollMessageConfig = {}): Promise<Roll[] | void | undefined> {
   config ??= {};
   dialog ??= {};
   message ??= {};
   if (debugEnabled > 0) warn("rollFormula | Called", config, dialog, message);
   const workflow = config.workflow as Workflow | undefined;
-  if (!workflow) return wrapped(config, dialog, message);
+  if (!workflow) {
+    // No use given (a macro, another module): this user's use waiting for its formula roll takes it, as its card's button
+    const waiting = Workflow.awaitingRoll(this, "utility");
+    if (waiting) return waiting.activityFor(this).rollFormula?.({ event: config.event, workflow: waiting }, {}, {});
+    return wrapped(config, dialog, message);
+  }
   config.midiOptions ??= {};
   config.midiOptions.fastForwardDamage ??= isAutoFastForward("damage", { workflow });
   if (await callActivityHooks(this, "midi-qol.preFormulaRoll", workflow) === false) {

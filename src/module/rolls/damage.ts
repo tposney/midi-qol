@@ -62,7 +62,13 @@ export function rollDamageWrapper(type: string) {
     config.midiOptions ??= {};
     message = BEFORE_ROLL[type]?.(this, config, message ?? {}) ?? message ?? {};
     const workflow = config.workflow as Workflow | undefined;
-    if (!workflow) return wrapped(config, dialog, message);
+    if (!workflow) {
+      // No use given (a sheet button, a macro): this user's use waiting for this damage roll takes it, as its card's button
+      const waiting = Workflow.awaitingRoll(this, "damage");
+      if (waiting) return waiting.activityFor(this).rollDamage({ event: config.event, workflow: waiting,
+        midiOptions: { isCritical: waiting.workflowOptions?.isCritical || waiting.isCritical } }, {}, { create: false });
+      return wrapped(config, dialog, message);
+    }
     return workflow.whileExecuting(() => midiRollDamage(this, wrapped, config, dialog ?? {}, message));
   };
 }

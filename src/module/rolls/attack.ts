@@ -215,7 +215,16 @@ async function rollAttackWrapper(this: AttackActivityLike, wrapped: RollAttack, 
   dialog ??= {};
   message ??= {};
   const workflow = config.workflow as Workflow | undefined;
-  if (!workflow) return midiRollAttack(this, wrapped, config, dialog, message);
+  if (!workflow) {
+    // No use given (a sheet button, a macro): this user's use waiting for this attack takes the roll, as its card's button
+    const waiting = Workflow.awaitingRoll(this, "attack");
+    if (waiting) {
+      waiting.advantage = undefined;
+      waiting.disadvantage = undefined;
+      return waiting.activityFor(this).rollAttack?.({ event: config.event, workflow: waiting }, {}, {}) ?? null;
+    }
+    return midiRollAttack(this, wrapped, config, dialog, message);
+  }
   if (workflow.currentStep === "midi-qol.Completed" || workflow.currentStep === "midi-qol.Abort") {
     const usage = await attackAgain(this, workflow, config.event);
     config.workflow = usage.workflow;

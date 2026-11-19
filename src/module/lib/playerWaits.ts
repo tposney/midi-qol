@@ -38,6 +38,8 @@ export interface WaitSpec<T> {
   source?: string;
   /** Leave the player's open roll dialog for the creature alone when settled (the choice uses it). */
   keepDialogs?: boolean;
+  /** What began the wait (a workflow): its waits end with it (endPlayerWaitsOwnedBy). */
+  owner?: object;
 }
 
 export interface WaitInfo {
@@ -75,6 +77,8 @@ interface LocalWait {
   /** Settled by a choice (the GM's, or a disconnect's default) rather than the player's answer. */
   byChoice?: boolean;
   run: (choice: WaitChoice) => Promise<boolean>;
+  owner?: object;
+  end: () => void;
 }
 
 const localWaits = new Map<string, LocalWait>();
@@ -158,7 +162,7 @@ export function beginPlayerWait<T>(spec: WaitSpec<T>): PlayerWait<T> | undefined
     Hooks.callAll("midi-qol.playerWaitEnded", info, { choice });
   };
   const wait: LocalWait = {
-    info, done: false,
+    info, done: false, owner: spec.owner, end: () => end(),
     run: async (choice) => {
       if (wait.done) return false;
       wait.byChoice = true;
@@ -235,6 +239,17 @@ export function rollDialogsFor(actorUuid: string | null, requestClaim?: string):
 /** Close dnd5e's roll dialogs open on this client for the actor (as cancelled; the roll is no longer wanted). */
 export function _closePlayerRollDialogs({ actorUuid }: { actorUuid: string | null }) {
   for (const app of rollDialogsFor(actorUuid)) app.close();
+}
+
+/** End the waits an owner (a workflow) began and no longer needs: it was removed before they were answered. */
+export function endPlayerWaitsOwnedBy(owner: object) {
+  for (const wait of [...localWaits.values()]) if (wait.owner === owner) wait.end();
+}
+
+/** A wait of this client's own that its player may dismiss (a roll they won't make). */
+export function ownDismissable(id: string): boolean {
+  const wait = localWaits.get(id);
+  return !!wait && !wait.done && wait.info.choices.some(choice => choice.id === "dismiss");
 }
 
 /** Settle a wait on the client holding it. */

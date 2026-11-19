@@ -21,7 +21,7 @@ import { TokenDocumentSet, hookTarget, tokenOf } from "./lib/tokenDocumentSet.js
 import { RECORD_SETS, RecordSet, RecordFacts, STATE_KEYS, StateKey, attributionMap, attributionTriples, cardDamageRolls, cardMidi, rollTypeOf, cardOtherConsumption, cardPreSelected, messagesFrom, recordList, recordPath, recordPathOfUuid, storedMidiFlag } from "./lib/cardState.js";
 import { preferredActiveGM, rollAbility, SAVE_REQUEST, socketlibSocket, timedAwaitExecuteAsGM, timedExecuteAsGM, unTimedExecuteAsGM } from "./GMAction.js";
 import { askUser } from "./lib/requests.js";
-import { beginPlayerWait, rollDialogsFor, trackPlayerWait, type WaitChoiceSpec } from "./lib/playerWaits.js";
+import { beginPlayerWait, endPlayerWaitsOwnedBy, rollDialogsFor, trackPlayerWait, type WaitChoiceSpec } from "./lib/playerWaits.js";
 import { installedModules } from "./setupModules.js";
 import { offerFollowUps } from "./followUps.js";
 import { configSettings, autoRemoveTargets, checkRule, checkMechanic, safeGetGameSetting, useWeakReferences, onUseMacroOptions, chatCardUpdates } from "./settings.js";
@@ -598,6 +598,8 @@ export class Workflow {
     }
     // After the removal, which ends the id
     Workflow.#ended.delete(workflow.id);
+    // The actor's earlier uses still waiting on a roll were left unrolled
+    if (!workflow.readOnly) Workflow.endRollWaits(other => other !== workflow && !!workflow.actor && other.actor?.uuid === workflow.actor.uuid);
     if (useWeakReferences) Workflow.#workflows.set(workflow.id, new WeakRef(workflow));
     else Workflow.#workflows.set(workflow.id, workflow);
   }
@@ -613,6 +615,26 @@ export class Workflow {
   static templateWorkflowFlags(activity: Activity): { workflowId?: string, itemCardUuid?: string } {
     const workflow = Workflow.workflowFor(activity);
     return { workflowId: workflow?.itemCardUuid ? workflow.id : undefined, itemCardUuid: workflow?.itemCardUuid };
+  }
+
+  /**
+   * This user's use of `activity` stopped for that roll, the most recent if several: a roll started without a use (a
+   * sheet button, a macro, another module) is its roll, as the card's button would make it (14.6.15/14.7.1; midi-next:
+   * the roll wraps, attack, damage and utility alike). Matched before the roll, so midi's advantage, bonuses, ammunition
+   * and pre-roll macros apply. Not while a roll dialog is open for the actor: that roll is already under way.
+   */
+  static awaitingRoll(activity: { uuid?: string | null }, kind: "attack" | "damage" | "utility"): Workflow | undefined {
+    const step = kind === "attack" ? "midi-qol.WaitForAttackRoll" : kind === "damage" ? "midi-qol.WaitForDamageRoll" : "midi-qol.WaitForUtilityRoll";
+    let found: Workflow | undefined;
+    for (const entry of Workflow.#workflows.values()) {
+      const workflow = entry instanceof WeakRef ? entry.deref() : entry;
+      if (!workflow || workflow.readOnly || workflow.aborted || !workflow.suspended || !workflow.#activity) continue;
+      if (!activity.uuid || workflow.#activity.uuid !== activity.uuid) continue;
+      if (workflow.chatCard && workflow.chatCard.author?.id !== game.user?.id) continue;
+      if (workflow.currentStep === step) found = workflow;
+    }
+    if (found?.actor?.uuid && rollDialogsFor(found.actor.uuid).length) return undefined;
+    return found;
   }
 
   /** The item's workflow that is executing now (a macro inside its use), the most recently filed if several */
@@ -786,7 +808,15 @@ export class Workflow {
     return undefined;
   }
   static deleteWorkflow(id: string | null) {
-    if (id) Workflow.#workflows.delete(id);
+    if (!id) return;
+    // Its card is gone: nobody is waited for on its behalf
+    const entry = Workflow.#workflows.get(id);
+    const workflow = entry instanceof WeakRef ? entry.deref() : entry;
+    if (workflow) {
+      workflow.endRollWait();
+      endPlayerWaitsOwnedBy(workflow);
+    }
+    Workflow.#workflows.delete(id);
   }
 
   /**
@@ -2262,6 +2292,9 @@ export class Workflow {
       return;
     }
     if (workflow.postSummonHookId) Hooks.off("dnd5e.postSummon", workflow.postSummonHookId);
+    // Nobody is waited for on behalf of a use that is gone
+    workflow.endRollWait();
+    endPlayerWaitsOwnedBy(workflow);
     if (debugEnabled > 0) warn(`removeWorkflow deleting ${id}`, workflow);
     // Remove buttons while the workflow is still filed: removeItemCardButtons finds it by id, and an ended id is not rebuilt
     try {
@@ -2599,10 +2632,7 @@ export class Workflow {
     const workflow = this;
     const next: string | undefined = Workflow.stepIdOf(newState);
     // The workflow moved on: a roll it waited on its player for is done
-    if (next !== SUSPEND && this.#rollWait) {
-      this.#rollWait.end();
-      this.#rollWait = undefined;
-    }
+    if (next !== SUSPEND) this.endRollWait();
     if (this.readOnly) {
       console.warn(`midi-qol | ${this.workflowName} is a read-only copy of another user's workflow: it does not run`);
       return;
@@ -2673,6 +2703,11 @@ export class Workflow {
       const message = `performState | ${this.workflowName} Workflow ${this.id}`;
       error(message, err);
       TroubleShooter.recordError(err, message);
+      // The run failed before it could wait properly: nobody is shown as waited for by a use that has stopped
+      if (!this.suspended) {
+        this.endRollWait();
+        endPlayerWaitsOwnedBy(this);
+      }
     } finally {
       // The run ended (finished, aborted, or an error): nothing stays queued
       try {
@@ -2823,18 +2858,39 @@ export class Workflow {
    * them, with the choices the roll dialog offers. Not for a GM's own use.
    */
   waitOnPlayerRoll(kind: "attack" | "damage" | "utility") {
-    this.#rollWait?.end();
-    this.#rollWait = undefined;
+    this.endRollWait();
     if (!game.user || game.user.isGM || !this.actor) return;
+    // midi isn't checking hits, so it can't know a damage roll is due
+    if (kind === "damage" && this.activity.attack && configSettings.autoCheckHit === "none") return;
+    // The actor's earlier uses still waiting were left unrolled
+    Workflow.endRollWaits(workflow => workflow !== this && workflow.actor?.uuid === this.actor.uuid);
+    const dismiss = { label: "midi-qol.PlayerWaits.Choice.dismiss", value: () => undefined };
     const choice = (mode: string) => ({ label: `midi-qol.PlayerWaits.Choice.${mode}`, value: () => this.rollForPlayer(kind, mode) });
-    const choices = kind === "attack" ? { normal: choice("normal"), advantage: choice("advantage"), disadvantage: choice("disadvantage") }
-      : kind === "damage" ? { normal: choice("normal"), critical: choice("critical") }
-      : { roll: { label: "midi-qol.PlayerWaits.Choice.roll", value: () => this.rollForPlayer(kind, "normal") } };
-    this.#rollWait = beginPlayerWait({
+    const choices = kind === "attack" ? { normal: choice("normal"), advantage: choice("advantage"), disadvantage: choice("disadvantage"), dismiss }
+      : kind === "damage" ? { normal: choice("normal"), critical: choice("critical"), dismiss }
+      : { roll: { label: "midi-qol.PlayerWaits.Choice.roll", value: () => this.rollForPlayer(kind, "normal") }, dismiss };
+    this.#rollWait = beginPlayerWait<unknown>({
       kind, userId: game.user.id!, actorUuid: this.actor.uuid ?? undefined, tokenUuid: this.tokenDocument?.uuid ?? undefined, keepDialogs: true,
       label: i18nFormat(`midi-qol.PlayerWaits.${kind}Label`, { item: this.item?.name ?? "" }),
-      choices
+      choices,
+      onSettled: () => { this.#rollWait = undefined; Workflow.#rollWaiters.delete(this); }
     });
+    if (this.#rollWait) Workflow.#rollWaiters.add(this);
+  }
+
+  /** This client's uses waiting on their player's roll. */
+  static #rollWaiters = new Set<Workflow>();
+
+  /** The roll is made, or no longer expected: the wait is no longer shown. The use itself is unchanged. */
+  endRollWait() {
+    this.#rollWait?.end();
+    this.#rollWait = undefined;
+    Workflow.#rollWaiters.delete(this);
+  }
+
+  /** Ends the roll waits of uses left unrolled: a deleted card, another use by the actor (not a turn change: user, 2026-11-19). */
+  static endRollWaits(matches: (workflow: Workflow) => boolean = () => true) {
+    for (const workflow of [...Workflow.#rollWaiters]) if (matches(workflow)) workflow.endRollWait();
   }
 
   /** Roll for the player as their roll dialog would: press its button when it is open, else roll without it. */
@@ -6201,6 +6257,7 @@ export class Workflow {
     // rolls it here without prompts, so one GM leaving no longer fails every target's save.
     const what = [...rollAbilities, ...(saveDetails.rollSkills ?? []), ...(saveDetails.rollTools ?? [])].map(key => String(key).toUpperCase()).join("/");
     return askUser<Roll[] | Roll | null>(owner, {
+      owner: this,
       type: SAVE_REQUEST,
       data,
       kind: rollType === "save" ? "save" : "check",
@@ -6226,7 +6283,7 @@ export class Workflow {
     if (!queuedPromise || queued.asked || !player || player.isGM) return queuedPromise;
     const what = [...rollInfo.abilities, ...rollInfo.skills, ...rollInfo.tools].map(key => key.toUpperCase()).join("/");
     return trackPlayerWait<Roll[] | Roll | null>({
-      kind: rollInfo.type === "save" ? "save" : "check",
+      kind: rollInfo.type === "save" ? "save" : "check", owner: this,
       userId: player.id!,
       actorUuid: target.actor?.uuid ?? undefined,
       tokenUuid: getTokenDocument(target)?.uuid ?? undefined,
@@ -6277,6 +6334,7 @@ export class Workflow {
     };
     const what = [...rollInfo.abilities, ...rollInfo.skills, ...rollInfo.tools].map(key => key.toUpperCase()).join("/");
     return askUser<Roll[] | Roll | null>(player, {
+      owner: this,
       type: SAVE_REQUEST,
       data: { saveDetails, displayOptions: { fastForward: displayOptions.simulate || !displayOptions.showRollDialog, chatMessage: true, rollMode, showTargetDC: true } },
       kind: rollInfo.type === "save" ? "save" : "check",
@@ -6449,6 +6507,7 @@ export class Workflow {
       // Asked through the request core (M5b): its deadline, after which (or on the GM's "skip" from the player list, or a
       // disconnect) the roll stands
       newRoll = await askUser<Roll>(owner, {
+        owner: this,
         type: BONUS_REQUEST,
         data: { actorUuid: (target.actor as Actor).uuid, result: JSON.stringify(result[0].toJSON()), rollType, selector },
         kind: "bonus", actorUuid: target.actor?.uuid ?? undefined, tokenUuid: getTokenDocument(target)?.uuid ?? undefined,
@@ -8456,7 +8515,7 @@ export class ActiveDefenceWorkflow extends Workflow {
         // time-out or disconnect the roll made for them (one way to answer, where there were a socket reply and a
         // chat listener with a timer each side)
         promises.push(requestPCActiveDefence(player, target.actor, this.item.name, getTokenDocument(target)?.uuid ?? undefined,
-          { formula, rollOptions: options, bonus: dcMod, coverBonus, rollForThem }));
+          { formula, rollOptions: options, bonus: dcMod, coverBonus, rollForThem, owner: this }));
       } else {  // must be a GM so can do the roll direct
         promises.push(
           new Promise(async (resolve) => {

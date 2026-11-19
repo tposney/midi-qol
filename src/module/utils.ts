@@ -1089,13 +1089,13 @@ export function requestPCSave(ability: string, rollType: string | undefined, pla
  * deadline; on time-out or disconnect, or the GM's "roll for them" from the player list, `rollForThem` makes it.
  */
 export function requestPCActiveDefence(player: User.Implementation, actor: Actor.Implementation, saveItemName: string, tokenUuid: string | undefined,
-  options: { formula: string, bonus: number, coverBonus: number, rollOptions: any, rollForThem: () => Promise<Roll> }): Promise<Roll | {}> {
+  options: { formula: string, bonus: number, coverBonus: number, rollOptions: any, rollForThem: () => Promise<Roll>, owner?: object }): Promise<Roll | {}> {
   const rollMode = toMessageMode((checkRule("activeDefenceShow") as string) || "self");
   const flavor = `${saveItemName} ${configSettings.optionalRules.activeDefence ? "DC " + options.rollOptions.target : ""} ${i18n("midi-qol.ActiveDefenceString")}`;
   const data = { targetUuid: actor.uuid, formula: options.formula, bonus: options.bonus, coverBonus: options.coverBonus, rollOptions: options.rollOptions,
     rollMode, midiType: "defenceRoll", flavor, messageData: { speaker: getSpeaker(actor) } };
   return askUser<unknown>(player, {
-    type: DEFENCE_REQUEST, data, kind: "defence", actorUuid: actor.uuid ?? undefined, tokenUuid,
+    type: DEFENCE_REQUEST, data, kind: "defence", owner: options.owner, actorUuid: actor.uuid ?? undefined, tokenUuid,
     label: i18nFormat("midi-qol.PlayerWaits.DefenceLabel", { item: saveItemName }),
     timeoutMs: (configSettings.playerSaveTimeout ?? 0) * 1000,
     fallback: options.rollForThem,
@@ -5479,7 +5479,7 @@ export async function doReactions(targetRef: TokenOrDocument | string, triggerTo
     const reactingUser = player;
     const data = reactionRequestData(target, triggerTokenUuid, content ?? "", triggerType, reactionActivityList, options);
     const request = askUser<ReactionResult>(reactingUser, {
-      type: REACTIONS_REQUEST, data, kind: "reaction", actorUuid: target.actor.uuid ?? undefined, tokenUuid: target.document.uuid ?? undefined,
+      type: REACTIONS_REQUEST, data, kind: "reaction", owner: options.workflow, actorUuid: target.actor.uuid ?? undefined, tokenUuid: target.document.uuid ?? undefined,
       label: content ?? "", timeoutMs: (configSettings.reactionTimeout ?? defaultTimeout) * 1000, fallback: () => noResult,
       gmChoices: {
         none: () => noResult,

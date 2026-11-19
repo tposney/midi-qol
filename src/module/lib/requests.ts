@@ -56,6 +56,8 @@ export interface AskSpec<T> {
   /** What a GM can answer with from the player list (playerWaits); the first is the default. None: the GM can't. */
   gmChoices?: Partial<Record<WaitChoice, WaitChoiceSpec<T>>>;
   source?: string;
+  /** What asked (a workflow): the request's badge ends with it (endPlayerWaitsOwnedBy); the request itself is unchanged */
+  owner?: object;
 }
 
 async function sendEvent(userId: string, event: RequestEvent): Promise<{ ok: boolean, remaining?: number }> {
@@ -88,7 +90,7 @@ export function askUser<T>(user: User.Implementation, spec: AskSpec<T>): MidiReq
   if (spec.gmChoices) {
     const wait = beginPlayerWait<T>({
       kind: spec.kind, userId: user.id!, actorUuid: spec.actorUuid, tokenUuid: spec.tokenUuid, label: spec.label,
-      choices: spec.gmChoices, source: spec.source, keepDialogs: true
+      choices: spec.gmChoices, source: spec.source, keepDialogs: true, owner: spec.owner
     });
     if (wait) {
       waits.set(request.id, wait);

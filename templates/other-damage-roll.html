@@ -6,8 +6,8 @@
     {{#unless tooltipFormula}}
     <div class="dice-formula">{{formula}}</div>
     {{/unless}}
-    <h4 class="dice-total">{{total}}{{#if damageTypes.length}}<div class="midi-damage-icons">{{#each damageTypes}}<dnd5e-icon class="midi-damage-type-icon" src="{{icon}}" aria-label="{{label}}" data-tooltip="{{label}}"></dnd5e-icon>{{/each}}</div>{{/if}}</h4>
     {{{tooltip}}}
+    <h4 class="dice-total">{{total}}{{#if damageTypes.length}}<div class="midi-damage-icons">{{#each damageTypes}}<dnd5e-icon class="midi-damage-type-icon" src="{{icon}}" aria-label="{{label}}" data-tooltip="{{label}}"></dnd5e-icon>{{/each}}</div>{{/if}}</h4>
   </div>
 </div>
 

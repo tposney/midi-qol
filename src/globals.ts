@@ -829,7 +829,7 @@ declare global {
     tokenAtPosition: typeof utils.tokenAtPosition;
     computeDistance: typeof distanceProvider.computeDistance;
     getDistance: typeof distanceService.getDistance;
-    playerWaits: { begin: typeof playerWaits.beginPlayerWait, track: typeof playerWaits.trackPlayerWait, settle: typeof playerWaits.settlePlayerWait, claim: typeof playerWaits.claimPlayerWait, known: typeof playerWaits.knownPlayerWaits };
+    playerWaits: { begin: typeof playerWaits.beginPlayerWait, track: typeof playerWaits.trackPlayerWait, settle: typeof playerWaits.settlePlayerWait, claim: typeof playerWaits.claimPlayerWait, known: typeof playerWaits.knownPlayerWaits, endOwnedBy: typeof playerWaits.endPlayerWaitsOwnedBy };
     addCardNote: typeof cardNotes.addCardNote;
     removeCardNote: typeof cardNotes.removeCardNote;
     registerCardNoteRenderer: typeof cardNotes.registerCardNoteRenderer;
@@ -908,7 +908,7 @@ declare global {
     computeToolAdvantage: typeof patching.computeToolAdvantage;
     ConfigPanel: typeof ConfigPanel;
     configSettings: () => typeof configSettings;
-    playerWaits: { begin: typeof playerWaits.beginPlayerWait, track: typeof playerWaits.trackPlayerWait, settle: typeof playerWaits.settlePlayerWait, claim: typeof playerWaits.claimPlayerWait, known: typeof playerWaits.knownPlayerWaits };
+    playerWaits: { begin: typeof playerWaits.beginPlayerWait, track: typeof playerWaits.trackPlayerWait, settle: typeof playerWaits.settlePlayerWait, claim: typeof playerWaits.claimPlayerWait, known: typeof playerWaits.knownPlayerWaits, endOwnedBy: typeof playerWaits.endPlayerWaitsOwnedBy };
     addCardNote: typeof cardNotes.addCardNote;
     removeCardNote: typeof cardNotes.removeCardNote;
     registerCardNoteRenderer: typeof cardNotes.registerCardNoteRenderer;
