@@ -7,7 +7,7 @@ import { configSettings, forceHideRoll, safeGetGameSetting } from "../settings.j
 import { displayTokenName, forgetDeletingCard, getToken, isDnd5eRollMessage, settleCardWrites } from "../utils.js";
 import { damageDetailToObject, Workflow } from "../Workflow.js";
 import { renameMarkedTokens } from "../lib/tokenNames.js";
-import { attackRollOf, cardHitResult, cardHitsPending, cardMidi, rollsOfType, cardMidiState, cardSourceActor, recordList, storedMidiFlag } from "../lib/cardState.js";
+import { attackRollOf, cardDamageRolls, cardHitResult, cardHitsPending, cardMidi, cardMidiState, cardSourceActor, recordList, storedMidiFlag } from "../lib/cardState.js";
 import { cardSaveRoll } from "./UsageCardMessage.js";
 import { canSeePlayerOutcome, canSeeSaveResult, cardActor, challengeVisible, saveDetail, saveDisplayMode } from "../lib/saveVisibility.js";
 
@@ -288,7 +288,7 @@ export function defineChatMessageMidiClass(baseClass: ChatMessage.Implementation
 
     get canApplyDamage() {
       const damageRolled = (storedMidiFlag(this, "damageDetail")?.length ?? 0) > 0
-        || rollsOfType(this.rolls, MQDamageRollTypes).length > 0;
+        || cardDamageRolls(this, MQDamageRollTypes).length > 0;
       if (damageRolled && this.isContentVisible && !!canvas.tokens?.controlled.length) return true;
       // @ts-expect-error no dnd5e-types
       return super.canApplyDamage;
@@ -328,7 +328,7 @@ export function defineChatMessageMidiClass(baseClass: ChatMessage.Implementation
       const type = isDnd5eRollMessage(this) ? "roll" : undefined;
       // @ts-expect-error no dnd5e-types
       if (type !== undefined || !this.flags?.[MODULE_ID]) return super.applyChatCardDamage(li, multiplier);
-      const rollsToCheck = rollsOfType(this.rolls, MQDamageRollTypes);
+      const rollsToCheck = cardDamageRolls(this, MQDamageRollTypes);
       const damages = (game.system as Dnd5eSystem).dice.aggregateDamageRolls(rollsToCheck, { respectProperties: true }).map(roll => ({
         // @ts-expect-error no dnd5e-types
         value: Math.max(0, roll.total) * (roll.options.type in CONFIG.DND5E.healingTypes ? -1 : 1),
@@ -345,7 +345,7 @@ export function defineChatMessageMidiClass(baseClass: ChatMessage.Implementation
     
     applyChatCardTemp(li: HTMLElement) {
       if (!canvas.tokens) return;
-      const rollsToCheck = rollsOfType(this.rolls, MQDamageRollTypes);
+      const rollsToCheck = cardDamageRolls(this, MQDamageRollTypes);
       const total = rollsToCheck.reduce((acc, roll) => acc + (roll.total ?? 0), 0);
 
       return Promise.all(canvas.tokens.controlled.map(t => {

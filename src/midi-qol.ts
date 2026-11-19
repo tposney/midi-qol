@@ -1,3 +1,4 @@
+import { cardDamageRolls } from "./module/lib/cardState.js";
 import { installFormulaAndPlacement } from "./module/rolls/formula.js";
 import { installAttackRolls } from "./module/rolls/attack.js";
 import { installDamageRolls } from "./module/rolls/damage.js";
@@ -264,6 +265,8 @@ Object.assign(globalThis.MidiQOL, {
   contestedRoll,
   createConditionData,
   createDamageDetail,
+  // A use card's damage rolls of some types: from its damage messages (M13 stage 3; the card holds none of their damage)
+  cardDamageRolls,
   decodeWorkflowOptions,
   encodeWorkflowOptions,
   createEffects,

@@ -195,6 +195,32 @@ export function rollsOfType(rolls: readonly Roll[] | undefined, types: string | 
   return (rolls ?? []).filter(roll => wanted.includes(rollTypeOf(roll) ?? ""));
 }
 
+/** midi's damage messages of a use card (M13): its own contributions' and other workflows' (D2), by stored origin */
+export function cardDamageMessages(card: ChatMessage.Implementation | null | undefined): ChatMessage.Implementation[] {
+  return card?.id ? messagesFrom(card.id, "damage").filter(message => message.flags?.["midi-qol"]?.damage) : [];
+}
+
+/** A damage message another workflow added to the card (a damage-only workflow's, keyed by it) */
+const addedByWorkflow = (message: ChatMessage.Implementation) => String(message.flags?.["midi-qol"]?.damage?.key ?? "").startsWith("workflow:");
+
+/**
+ * A use card's damage rolls of `types` (M13 stage 3): its damage messages' rolls. A type none of its own messages holds
+ * comes from the card's rolls: a card from before them, or damage not in a message yet. `drawn`: what the card draws;
+ * with dnd5e's chat card summaries off the messages show in the log themselves and the card draws none of their damage
+ * (user, M13 D1 b; drawing them always is option a).
+ */
+export function cardDamageRolls(card: ChatMessage.Implementation | null | undefined, types: string | readonly string[], options: { drawn?: boolean } = {}): Roll[] {
+  if (!card) return [];
+  const drawsMessages = !options.drawn || !!game.settings?.get("dnd5e", "chatCardSummary");
+  const messages = drawsMessages ? cardDamageMessages(card) : [];
+  const own = messages.filter(message => !addedByWorkflow(message)).flatMap(message => message.rolls as Roll[]);
+  const added = messages.filter(addedByWorkflow).flatMap(message => message.rolls as Roll[]);
+  return (typeof types === "string" ? [types] : types).flatMap(type => {
+    const fromMessages = rollsOfType(own, type);
+    return [...(fromMessages.length ? fromMessages : rollsOfType(card.rolls as Roll[], type)), ...rollsOfType(added, type)];
+  });
+}
+
 /** A card's attack roll, found by its tag rather than by position */
 export function attackRollOf(message: { rolls?: readonly Roll[] } | undefined): Roll | undefined {
   return rollsOfType(message?.rolls, "attack")[0];

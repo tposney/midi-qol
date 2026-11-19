@@ -342,7 +342,6 @@ export type MidiOptions = {
     fastForward?: boolean;
     fastForwardAttack?: boolean;
     fastForwardDamage?: boolean;
-    fastForwardHeal?: boolean;
     fastForwardSet?: boolean;
     fumble?: boolean | number;
     recomputeAdvantage?: boolean;
@@ -1288,8 +1287,13 @@ export declare function queueUpdate(document: ChatMessage.Implementation, update
  * once (Workflow#performThrottledUpdate).
  */
 export declare function throttledUpdate(document: ChatMessage.Implementation, updates: ChatMessage.UpdateData): Promise<ChatMessage<"base" | import("fvtt-types/src/foundry/common/abstract/document.mjs").default.ModuleSubType | "midi-qol.damage" | "midi-qol.note"> | import("fvtt-types/src/foundry/common/abstract/document.mjs").default.Any | undefined>;
-/** Run `deleteCard` once the card's write in flight is done, with its queued writes dropped and no new ones sent */
-export declare function deleteCardAfterWrites(uuid: string, deleteCard: () => Promise<unknown>): Promise<void>;
+/**
+ * A card about to be deleted, by any client-side delete (ChatMessageMidi._preDeleteOperation): its write in flight lands
+ * first, its queued writes are dropped and no new ones sent
+ */
+export declare function settleCardWrites(uuid: string): Promise<void>;
+/** The card is gone: writes for it are no longer held */
+export declare function forgetDeletingCard(uuid: string): void;
 export declare function getUpdatesCache(uuid: string | undefined | null): any;
 export declare function addUpdatesCacheFlags(uuid: string | undefined | null, updates: any, prepend?: string): void;
 export declare function addUpdatesCache(uuid: string | undefined | null, updates: any): void;

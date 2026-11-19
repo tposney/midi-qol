@@ -457,7 +457,8 @@ card, carrying `attackSplit`. The first workflow's card lists each target's resu
 
 ## What the card stores
 
-A workflow keeps its state on its usage card, in `card.system.midi` and `card.rolls`. midi's internal
+A workflow keeps its state on its usage card, in `card.system.midi` and `card.rolls`, and its damage in the card's
+damage messages. midi's internal
 format may change: read it through the workflow.
 
 | Stored | Fields | Where |
@@ -469,7 +470,8 @@ format may change: read it through the workflow.
 | Token sets | `targets`, `hitTargets`, `hitTargetsEC`, `saves`, `failedSaves`, `superSavers` | `system.midi.records` |
 | Token sets | `semiSuperSavers`, `criticalSaves`, `fumbleSaves` | `system.midi.records` |
 | Token facts | `saveAttribution`, `preSelectedTargets`, `otherDamageMatches`, `ammunitionDamageMatches` | `system.midi.records` |
-| Rolls | `attackRoll`, `damageRolls`, `otherDamageRolls`, `bonusDamageRolls`, `utilityRolls`, save rolls | `card.rolls` |
+| Rolls | `attackRoll`, `utilityRolls`, save rolls | `card.rolls` |
+| Damage | `damageRolls`, `otherDamageRolls`, `bonusDamageRolls` | the card's damage messages (`MidiQOL.cardDamageRolls`), ids in `system.midi.state.damageMessages` |
 
 `failedSaves` is stored only when the use has a save. Other modules' `workflowOptions` keys are stored
 too: a namespace registered with `MidiQOL.registerWorkflowOptionsSchema` as its schema's data, an
@@ -524,7 +526,7 @@ Removed since the previous version of this page; reading them gives `undefined`:
 
 | Field | Instead |
 | --- | --- |
-| `attackRollHTML`, `damageRollHTML`, `bonusDamageRollHTML` | The card draws its rolls from `card.rolls` |
+| `attackRollHTML`, `damageRollHTML`, `bonusDamageRollHTML` | The card draws its rolls from `card.rolls`, its damage from its damage messages |
 | `otherDamageRollHTML`, `utilityRollHTML` | As above |
 | `kickStart`, `onUseCalled`, `attackRolled` | None |
 | `otherDamageList` | None; it was never set |

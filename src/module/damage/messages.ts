@@ -1,6 +1,8 @@
 /*
- * midi's damage messages (Workflow.createDamageMessages, M2 stage 8): dnd5e damage messages folded into the use card.
- * Their summary template renders nothing (the card shows the damage), which is what makes dnd5e hide them in the log.
+ * midi's damage messages (Workflow.createDamageMessages, M2 stage 8): dnd5e damage messages folded into the use card,
+ * which holds no damage of its own and draws theirs (cardDamageRolls, M13 stage 3). Their summary template renders
+ * nothing (the card draws them), which is what makes dnd5e hide them in the log; with dnd5e's chat card summaries off
+ * they show in the log (M13 D1 b).
  */
 const MODULE_ID = "midi-qol";
 export const DAMAGE_SUMMARY_TEMPLATE = "modules/midi-qol/templates/chat/damage-summary.hbs";
@@ -21,6 +23,12 @@ export function deleteDamageMessagesWithCard(card: ChatMessage.Implementation, u
 
 export function registerDamageMessageSummary() {
   Hooks.on("deleteChatMessage", (card: ChatMessage.Implementation, _options: unknown, userId: string) => deleteDamageMessagesWithCard(card, userId));
+  // dnd5e redraws a message's origin when its system data changes, not its rolls: the card draws them
+  Hooks.on("updateChatMessage", (message: ChatMessage.Implementation, changed: { rolls?: unknown }) => {
+    if (!message.flags?.[MODULE_ID]?.damage || !("rolls" in changed)) return;
+    const origin = game.messages?.get((message._source.system as { origin?: string } | undefined)?.origin ?? "");
+    if (origin) ui.chat?.updateMessage(origin);
+  });
   globalThis.libWrapper.register(MODULE_ID, "dnd5e.dataModels.chatMessage.DamageMessageData.prototype.summaryTemplate",
     function (this: { parent?: { flags?: Record<string, any> } }, wrapped: () => string) {
       return this.parent?.flags?.[MODULE_ID]?.damage ? DAMAGE_SUMMARY_TEMPLATE : wrapped();

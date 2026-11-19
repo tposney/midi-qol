@@ -4,7 +4,7 @@ import { TroubleShooter } from "../apps/TroubleShooter.js";
 import { displayTokenName, setupDamageDetails } from "../utils.js";
 import { prepareDamageListToJSON, timedAwaitExecuteAsGM } from "../GMAction.js";
 import { Workflow } from "../Workflow.js";
-import { cardMidiState, cardSourceActor, rollsOfType, cardTargetDetail, storedMidiFlag, cardDamageMatches } from "../lib/cardState.js";
+import { cardMidiState, cardSourceActor, cardDamageRolls, cardTargetDetail, storedMidiFlag, cardDamageMatches } from "../lib/cardState.js";
 import { CalcDamageOptions, CombinedTargetDescriptor, DamageApplicationOptions, DamageDescription, DamageListEntry, Dnd5eSystem } from "../../globals.js";
 
 // SVG Icons for midi-qol custom change sources (using dnd5e SVGs for consistent styling)
@@ -35,7 +35,7 @@ export class DamageApplicationElementMidi extends globalThis.dnd5e.applications.
   connectedCallback() {
     this.damageType = this.dataset.damageType ?? "defaultDamage";
     super.connectedCallback();
-    const rolls: Roll[] = rollsOfType(this.chatMessage?.rolls, this.damageType);
+    const rolls: Roll[] = cardDamageRolls(this.chatMessage, this.damageType);
     // The ammunition's other damage is kept apart: it applies by its own condition and save.
     const isAmmunition = (r: Roll) => !!foundry.utils.getProperty(r, `options.${MODULE_ID}.ammunition`);
     const damagesOf = (group: Roll[], midiAmmunition: boolean) => (game.system as Dnd5eSystem).dice

@@ -14,7 +14,7 @@ import { MODULE_ID, MQDamageRollTypes } from "../../midi-qol.js";
 import { Workflow } from "../Workflow.js";
 import { followUpButtons } from "../followUps.js";
 import { NOTE_MESSAGE_TYPE, noteCard, notesOf } from "./CardNoteMessage.js";
-import { attributionMap, cardMidi, rollTypeOf, rollsOfType, cardStateSchema, recordFor, recordList, type CardRecord } from "../lib/cardState.js";
+import { attributionMap, cardMidi, rollTypeOf, rollsOfType, cardStateSchema, recordFor, recordList, cardDamageRolls, type CardRecord } from "../lib/cardState.js";
 import { DamageRules, applyDamageRules, copyDamageOptions, hasDamageRule, mergeDamageRules } from "../lib/damageRules.js";
 
 /** Renderer per roll-backed section; damage renderers aggregate the section's rolls into one block. */
@@ -26,7 +26,10 @@ const SECTION_ROLL_RENDERERS: Record<string, (rolls: Roll[]) => Promise<string> 
   utility: rolls => midiRenderFormulaRoll(rolls[0])
 };
 
-/** Roll types midi tags damage rolls with; the presence of one means damage has been rolled. */
+/** A section's rolls: damage from the card's damage messages (cardDamageRolls), the rest from the card's rolls */
+function rollsOfRollType(card: ChatMessage.Implementation, rollType: string, options: { drawn?: boolean } = {}): Roll[] {
+  return MQDamageRollTypes.includes(rollType) ? cardDamageRolls(card, rollType, options) : rollsOfType(card.rolls as Roll[], rollType);
+}
 
 /**
  * Which of the card's buttons this user should see. Policy comes from the settings at render (GM and player
@@ -37,7 +40,7 @@ export function midiButtonVisibility(message: Dnd5eChatMessage | undefined, acti
   const progress = midi.progress ?? {};
   const rolls = message?.rolls ?? [];
   const attackRolled = rolls.some(r => rollTypeOf(r) === "attack");
-  const damageRolled = rollsOfType(rolls, MQDamageRollTypes).length > 0;
+  const damageRolled = cardDamageRolls(message, MQDamageRollTypes).length > 0;
 
   // Confirmation holds the buttons only while pending; `progress.confirmed` alone does not mean the card is finished.
   const confirmEnabled = !!midi.confirmAttackDamage;
@@ -485,7 +488,7 @@ export function setupUsageCardMessage() {
         }
         if (!section.rollType) { out[name] = section; continue; }
         const renderer = SECTION_ROLL_RENDERERS[section.rollType];
-        const rolls = rollsOfType(this.parent.rolls, section.rollType);
+        const rolls = rollsOfRollType(this.parent, section.rollType, { drawn: true });
         // No rolls to render from — a card mid-workflow, or one whose rolls were pruned.
         if (!renderer || !rolls.length) { out[name] = { ...section, html: section.html ?? "" }; continue; }
         const html = await renderer(rolls as Roll[]);
@@ -499,7 +502,7 @@ export function setupUsageCardMessage() {
     /** A roll section's heading, worked out for the viewer from the activity and the rolls (older cards stored it) */
     #sectionLabel(rollType: string): string {
       const activity = (this.parent as Dnd5eChatMessage).getAssociatedActivity?.() as Activity | undefined;
-      const rolls = rollsOfType(this.parent.rolls, rollType);
+      const rolls = rollsOfRollType(this.parent, rollType);
       const localize = (key: string) => game.i18n?.localize(key) ?? key;
       switch (rollType) {
         case "attack": {
@@ -564,8 +567,7 @@ export function setupUsageCardMessage() {
     #damageApplicationTypes(): string[] {
       const allowed = !!game.user?.isGM || !!safeGetGameSetting("dnd5e", "allowPlayerDamageTray");
       if (!allowed || !this.parent.isContentVisible) return [];
-      const present = new Set((this.parent.rolls ?? []).map(r => rollTypeOf(r)));
-      return MQDamageRollTypes.filter(type => present.has(type));
+      return MQDamageRollTypes.filter(type => cardDamageRolls(this.parent, type).length);
     }
   };
 

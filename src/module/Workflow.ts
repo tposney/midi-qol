@@ -17,7 +17,7 @@ import { TeleportOption } from "./activities/TeleportActivity.js";
 import { cardWorkflowOptions, decodeWorkflowOptions, inheritableWorkflowOptions } from "./lib/workflowOptionsCodec.js";
 import { eventModifiers } from "./lib/rollKeys.js";
 import { TokenDocumentSet, hookTarget, tokenOf } from "./lib/tokenDocumentSet.js";
-import { RECORD_SETS, RecordSet, RecordFacts, STATE_KEYS, StateKey, attributionMap, attributionTriples, cardMidi, rollTypeOf, cardOtherConsumption, cardPreSelected, messagesFrom, recordList, recordPath, recordPathOfUuid, storedMidiFlag } from "./lib/cardState.js";
+import { RECORD_SETS, RecordSet, RecordFacts, STATE_KEYS, StateKey, attributionMap, attributionTriples, cardDamageRolls, cardMidi, rollTypeOf, cardOtherConsumption, cardPreSelected, messagesFrom, recordList, recordPath, recordPathOfUuid, storedMidiFlag } from "./lib/cardState.js";
 import { preferredActiveGM, rollAbility, SAVE_REQUEST, socketlibSocket, timedAwaitExecuteAsGM, timedExecuteAsGM, unTimedExecuteAsGM } from "./GMAction.js";
 import { askUser } from "./lib/requests.js";
 import { beginPlayerWait, rollDialogsFor, trackPlayerWait, type WaitChoiceSpec } from "./lib/playerWaits.js";
@@ -215,23 +215,24 @@ class CardStateStore {
   loadedContributions: DamageContribution[] = [];
 
   /**
-   * M13 stage 2: the use's damage from its contributions' messages, when every one still exists (else the card's rolls:
-   * a card from before them, a message deleted, a use rebuilt before they were made). Copies: the messages' rolls are
-   * theirs. A contribution's untargeted rolls were also bonus damage.
+   * The use's damage from its contributions' messages (M13): the card holds none of the damage they do. A message gone
+   * (deleted) takes its damage with it; the card's rolls are left for damage never in a message (a card from before
+   * them). Copies: the messages' rolls are theirs. A contribution's untargeted rolls were also bonus damage.
    */
   #loadDamageMessages(ids: Record<string, string> | undefined): void {
     const entries = Object.entries(ids ?? {});
     if (!entries.length) return;
     const messages = entries.map(([key, id]) => [key, game.messages?.get(id)] as const);
-    if (messages.some(([, message]) => !message)) return;
     const copy = (rolls: Roll[]) => rolls.map(roll => Roll.fromJSON(JSON.stringify(roll)) as Roll);
     const rollsOf = (key: string) => copy((messages.find(([k]) => k === key)?.[1]?.rolls ?? []) as Roll[]);
     const own: Record<string, string> = { activity: "damageRolls", other: "otherDamageRolls", bonus: "bonusDamageRolls" };
     for (const [key, field] of Object.entries(own)) {
-      if (ids?.[key]) this.#cache.set(field, rollsOf(key));
+      if (!ids?.[key]) continue;
+      const rolls = rollsOf(key);
+      if (rolls.length) this.#cache.set(field, rolls);
       else this.#cache.delete(field);
     }
-    this.loadedContributions = messages.filter(([key]) => !own[key]).map(([key, message]) => ({
+    this.loadedContributions = messages.filter(([key, message]) => !own[key] && message).map(([key, message]) => ({
       key, role: String(foundry.utils.getProperty(message!, `flags.${MODULE_ID}.damage.role`) ?? "module"), rolls: rollsOf(key)
     }));
     const untargeted = this.loadedContributions.flatMap(c => c.rolls.filter(roll => !foundry.utils.getProperty(roll, `options.${MODULE_ID}.contribution.targeted`)));
@@ -1171,7 +1172,7 @@ export class Workflow {
     if (activity?.attack && !rolled.has("attack")) return "WorkflowState_WaitForAttackRoll";
     const other = activity?.otherActivity;
     const damages = activity?.hasDamage || other?.hasDamage || activity?.hasHealing || other?.hasHealing;
-    if (damages && !MQDamageRollTypes.some(type => rolled.has(type))) return "WorkflowState_WaitForDamageRoll";
+    if (damages && !cardDamageRolls(card, MQDamageRollTypes).length) return "WorkflowState_WaitForDamageRoll";
     if (midi.confirmAttackDamage && !progress.confirmed) return "WorkflowState_ConfirmRoll";
     return "WorkflowState_Completed";
   }
@@ -5230,9 +5231,14 @@ export class Workflow {
     let messageRolls: Roll[] = [];
     if (this.attackRoll) messageRolls.push(this.attackRoll);
     if (this.utilityRoll) messageRolls.push(this.utilityRoll);
-    if (this.damageRolls) messageRolls.push(...this.damageRolls);
-    if (this.bonusDamageRolls) messageRolls.push(...this.bonusDamageRolls);
-    if (this.otherDamageRolls) messageRolls.push(...this.otherDamageRolls);
+    // Damage a damage message holds is the message's (M13 stage 3): the card keeps only damage not in one yet
+    const held = this.#damageKeysInMessages();
+    if (this.damageRolls && !held.has("activity")) messageRolls.push(...this.damageRolls);
+    if (this.bonusDamageRolls) messageRolls.push(...this.bonusDamageRolls.filter(roll => {
+      const contribution = foundry.utils.getProperty(roll, `options.${MODULE_ID}.contribution.key`);
+      return !held.has(typeof contribution === "string" ? contribution : "bonus");
+    }));
+    if (this.otherDamageRolls && !held.has("other")) messageRolls.push(...this.otherDamageRolls);
     /*
      * Saves go last so `rolls[0]` keeps meaning what it did to anything still indexing it. Only those the card's own
      * save and check messages don't hold: another module's, or one midi changed.
@@ -7247,6 +7253,14 @@ export class Workflow {
   #foreignDamageMessageIds: Record<string, string> = {};
   #damageMessagesSync: Promise<void> | undefined;
 
+  /** The contribution keys (activity, other, bonus, a contributor's) whose damage message exists */
+  #damageKeysInMessages(): Set<string> {
+    const ids = this.ownsCard ? this.#damageMessageIds : this.#foreignDamageMessageIds;
+    const prefix = `workflow:${this.id}:`;
+    return new Set(Object.entries(ids).filter(([, id]) => game.messages?.has(id))
+      .map(([key]) => key.startsWith(prefix) ? key.slice(prefix.length) : key));
+  }
+
   /** The damage rolls changed once their messages exist (a macro, a later bonus): the messages follow, once per change burst */
   syncDamageMessages(): void {
     if (this.readOnly || this.#damageMessagesSync) return;
@@ -7267,7 +7281,8 @@ export class Workflow {
    */
   async createDamageMessages(): Promise<void> {
     const card = this.chatCard;
-    if (this.readOnly || !card?.id || !game.settings.get("dnd5e", "chatCardSummary")) return;
+    // Made whatever dnd5e's chat card summaries setting: off, they show in the log as dnd5e's own (user, M13 D1 b)
+    if (this.readOnly || !card?.id) return;
     // A damage-only workflow adding to another use's card adds its own messages to it (user, M13 D2): keyed by the
     // workflow, role module, kept here (the card's state is the other use's)
     const owns = this.ownsCard;
@@ -7299,20 +7314,36 @@ export class Workflow {
     for (const { key, role, rolls } of contributions) {
       const id = ids[key];
       const existing = id ? game.messages?.get(id) : undefined;
-      if (existing) await existing.update({ rolls: shown(rolls) } as ChatMessage.UpdateData);
+      if (existing) {
+        // Unchanged: no write (each one redraws the card)
+        const next = shown(rolls);
+        const stored = (existing.rolls as Roll[]).map(roll => JSON.stringify(roll.toJSON()));
+        if (stored.length !== next.length || next.some((roll, i) => JSON.stringify(roll) !== stored[i]))
+          await existing.update({ rolls: next } as ChatMessage.UpdateData);
+      }
       else creates.push({
         type: "damage", rolls: shown(rolls), speaker: card.speaker, whisper: card.whisper, blind: card.blind, author: game.user?.id,
         system: { ...(this.activity?.messageSources ?? {}), origin: card.id, targets },
         flags: { [MODULE_ID]: { damage: { role, key } } }
       });
     }
-    if (!creates.length) return;
-    const created = await ChatMessage.implementation.createDocuments(creates as ChatMessage.CreateData[]);
-    for (const message of created ?? []) {
-      const key = foundry.utils.getProperty(message, `flags.${MODULE_ID}.damage.key`) as string | undefined;
-      if (key && message.id) ids[key] = message.id;
+    if (creates.length) {
+      const created = await ChatMessage.implementation.createDocuments(creates as ChatMessage.CreateData[]);
+      for (const message of created ?? []) {
+        const key = foundry.utils.getProperty(message, `flags.${MODULE_ID}.damage.key`) as string | undefined;
+        if (key && message.id) ids[key] = message.id;
+      }
+      if (owns) this.#damageMessageIds = ids;
     }
-    if (owns) this.#damageMessageIds = ids;
+    // The card no longer holds the damage its messages do (M13 stage 3)
+    if (owns) {
+      this.#persistRolls();
+      await this.performThrottledUpdate(card, {});
+    } else {
+      const ownRoll = (roll: Roll) => foundry.utils.getProperty(roll, `options.${MODULE_ID}.addedBy`) === this.id;
+      const added = this.chatRolls.map(roll => { foundry.utils.setProperty(roll, `options.${MODULE_ID}.addedBy`, this.id); return roll; });
+      await this.performThrottledUpdate(card, { rolls: [...(card.rolls as Roll[]).filter(roll => !ownRoll(roll)), ...added] } as ChatMessage.UpdateData);
+    }
   }
 
   /** Start collecting the damage step's dice (the activity's, the other activity's, bonus damage) for one throw */

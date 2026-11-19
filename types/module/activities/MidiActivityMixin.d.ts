@@ -177,31 +177,6 @@ export declare let MidiActivityMixin: (Base: any) => {
          */
         shouldAutoConsume(workflow?: Workflow): boolean;
         checkAutoConsume(usage: ActivityUseConfiguration, dialog?: RollDialogConfig): Promise<boolean>;
-        rollDamage(config: RollProcessConfig, dialog?: RollDialogConfig, message?: RollMessageConfig): Promise<any>;
-        _midiRollDamage(config: RollProcessConfig, dialog?: RollDialogConfig, message?: RollMessageConfig): Promise<any>;
-        /**
-         * Check if other activity damage should be deferred until after consumption is confirmed.
-         * If deferral is needed, stores the config and dialog for later rolling.
-         * Only defers if we're actually checking hits or saves - otherwise consume immediately.
-         * @param config - The roll process configuration
-         * @param dialog - The roll dialog configuration
-         * @returns true if damage was deferred, false if it should be rolled immediately
-         */
-        deferOtherDamage(config: RollProcessConfig, dialog: RollDialogConfig): boolean;
-        /**
-         * Roll the other damage: the item's own other activity and the loaded ammunition's activity
-         * both roll. Ammunition is resolved separately from otherActivity, and SRD ammunition such as
-         * Arrow of Slaying carries its damage on an activity of its own.
-         * @returns The other damage rolls, or undefined if none were rolled
-         */
-        rollOtherDamage(config: RollProcessConfig, dialog: RollDialogConfig): Promise<Roll[] | undefined>;
-        /** Roll one source of other damage. */
-        _rollOtherDamageSource(source: /*elided*/ any, isAmmunition: boolean, otherConfig: RollProcessConfig, dialog: RollDialogConfig, config: RollProcessConfig): Promise<Roll[] | undefined>;
-        configureDamageRoll(config: RollProcessConfig): void;
-        getDamageConfig(config?: RollProcessConfig): any;
-        getDamageRollModifiers(roll: Roll): string[];
-        createDamageRollModifiers(this: Activity, rollConfig: RollProcessConfig): void;
-        postProcessDamageRoll(config: RollProcessConfig, result: Array<Roll>): Promise<Array<Roll>>;
         setupCanSeeSense(usage: {
             workflow?: Workflow;
         }): Promise<void>;
@@ -549,6 +524,7 @@ export declare let MidiActivityMixin: (Base: any) => {
         refund: (consumed: unknown) => Promise<void>;
         getRollData: () => import("fvtt-types/src/utils/index.mjs").AnyMutableObject;
         rollAttack?(config: RollProcessConfig, dialog: RollDialogConfig, message: RollMessageConfig): Promise<Roll[] | null>;
+        rollDamage(config: RollProcessConfig, dialog: RollDialogConfig, message: RollMessageConfig): Promise<Roll[] | void>;
         rollFormula?(config: RollProcessConfig, dialog: RollDialogConfig, message: RollMessageConfig): Promise<Roll[] | void>;
         canScale?: boolean;
         _prepareUsageConfig: (config: object) => object;
@@ -647,6 +623,8 @@ export declare let MidiActivityMixin: (Base: any) => {
                 onSave: boolean;
             }[];
         };
+        deferOtherDamage: (config: RollProcessConfig, dialog: RollDialogConfig) => boolean;
+        rollOtherDamage: (config: RollProcessConfig, dialog: RollDialogConfig) => Promise<Roll[] | undefined>;
     };
     [x: string]: any;
     LOCALIZATION_PREFIXES: any[];

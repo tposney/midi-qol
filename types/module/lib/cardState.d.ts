@@ -8,7 +8,7 @@ import type { MidiCardSection } from "../ChatClasses/UsageCardMessage.js";
  * Workflow scalars stored in `system.midi.state`: only what a rebuilt workflow cannot work out from its card (rolls,
  * activity) and the canvas, or what other readers need (the damage tray's matches).
  */
-export declare const STATE_KEYS: readonly ["isCritical", "isFumble", "templateUuids", "workflowOptions", "saveMults", "damageOnly", "otherConsumed", "otherDeclined", "otherScaling", "ammunitionData", "inCombat", "isTurn", "deferredConcentration", "useChanges", "damageRules", "stepChanges", "stepMove"];
+export declare const STATE_KEYS: readonly ["isCritical", "isFumble", "templateUuids", "workflowOptions", "saveMults", "damageOnly", "otherConsumed", "otherDeclined", "otherScaling", "ammunitionData", "inCombat", "isTurn", "deferredConcentration", "useChanges", "damageRules", "stepChanges", "stepMove", "damageMessages"];
 export type StateKey = typeof STATE_KEYS[number];
 /**
  * Workflow token sets: record field, and its old flag name (a uuid array; `targets` was `{uuid, name}`). Macros change them, so they are stored.
@@ -377,6 +377,91 @@ export declare function cardStateSchema(): {
         }>>, {
             initial: undefined;
         }>>>;
+        readonly damageMessages: import("fvtt-types/src/foundry/common/data/fields.mjs").ArrayField<import("fvtt-types/src/foundry/common/data/fields.mjs").SchemaField<{
+            readonly key: /*elided*/ any;
+            readonly id: /*elided*/ any;
+        }, import("fvtt-types/src/foundry/common/data/fields.mjs").SchemaField.DefaultOptions, import("fvtt-types/src/foundry/common/data/fields.mjs").SchemaField.Internal.AssignmentType<{
+            readonly key: /*elided*/ any;
+            readonly id: /*elided*/ any;
+        }, import("fvtt-types/src/foundry/common/data/fields.mjs").SchemaField.DefaultOptions>, {
+            key: import("fvtt-types/src/foundry/common/data/fields.mjs").DataField.DerivedInitializedType<string, import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.DefaultOptions, import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.MergedOptions<{
+                readonly blank: false;
+            }>>, {
+                initial: undefined;
+            }>>;
+            id: import("fvtt-types/src/foundry/common/data/fields.mjs").DataField.DerivedInitializedType<string, import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.DefaultOptions, import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.MergedOptions<{
+                readonly blank: false;
+            }>>, {
+                initial: undefined;
+            }>>;
+        }, {
+            key: import("fvtt-types/src/foundry/common/data/fields.mjs").DataField.DerivedInitializedType<string, import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.DefaultOptions, import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.MergedOptions<{
+                readonly blank: false;
+            }>>, {
+                initial: undefined;
+            }>>;
+            id: import("fvtt-types/src/foundry/common/data/fields.mjs").DataField.DerivedInitializedType<string, import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.DefaultOptions, import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.MergedOptions<{
+                readonly blank: false;
+            }>>, {
+                initial: undefined;
+            }>>;
+        }>, {
+            required: boolean;
+            initial: undefined;
+        }, import("fvtt-types/src/foundry/common/data/fields.mjs").SchemaField.Internal.AssignmentType<{
+            readonly key: /*elided*/ any;
+            readonly id: /*elided*/ any;
+        }, import("fvtt-types/src/foundry/common/data/fields.mjs").SchemaField.DefaultOptions>, {
+            key: import("fvtt-types/src/foundry/common/data/fields.mjs").DataField.DerivedInitializedType<string, import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.DefaultOptions, import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.MergedOptions<{
+                readonly blank: false;
+            }>>, {
+                initial: undefined;
+            }>>;
+            id: import("fvtt-types/src/foundry/common/data/fields.mjs").DataField.DerivedInitializedType<string, import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.DefaultOptions, import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.MergedOptions<{
+                readonly blank: false;
+            }>>, {
+                initial: undefined;
+            }>>;
+        }, import("fvtt-types/src/foundry/common/data/fields.mjs").ArrayField.AssignmentType<import("fvtt-types/src/foundry/common/data/fields.mjs").SchemaField.Internal.AssignmentType<{
+            readonly key: /*elided*/ any;
+            readonly id: /*elided*/ any;
+        }, import("fvtt-types/src/foundry/common/data/fields.mjs").SchemaField.DefaultOptions>, {
+            required: boolean;
+            initial: undefined;
+        }>, {
+            key: import("fvtt-types/src/foundry/common/data/fields.mjs").DataField.DerivedInitializedType<string, import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.DefaultOptions, import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.MergedOptions<{
+                readonly blank: false;
+            }>>, {
+                initial: undefined;
+            }>>;
+            id: import("fvtt-types/src/foundry/common/data/fields.mjs").DataField.DerivedInitializedType<string, import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.DefaultOptions, import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.MergedOptions<{
+                readonly blank: false;
+            }>>, {
+                initial: undefined;
+            }>>;
+        }[], {
+            key: import("fvtt-types/src/foundry/common/data/fields.mjs").DataField.DerivedInitializedType<string, import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.DefaultOptions, import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.MergedOptions<{
+                readonly blank: false;
+            }>>, {
+                initial: undefined;
+            }>>;
+            id: import("fvtt-types/src/foundry/common/data/fields.mjs").DataField.DerivedInitializedType<string, import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.DefaultOptions, import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.MergedOptions<{
+                readonly blank: false;
+            }>>, {
+                initial: undefined;
+            }>>;
+        }, {
+            key: import("fvtt-types/src/foundry/common/data/fields.mjs").DataField.DerivedInitializedType<string, import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.DefaultOptions, import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.MergedOptions<{
+                readonly blank: false;
+            }>>, {
+                initial: undefined;
+            }>>;
+            id: import("fvtt-types/src/foundry/common/data/fields.mjs").DataField.DerivedInitializedType<string, import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.DefaultOptions, import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.MergedOptions<{
+                readonly blank: false;
+            }>>, {
+                initial: undefined;
+            }>>;
+        }[]>;
         readonly damageRules: import("fvtt-types/src/foundry/common/data/fields.mjs").SchemaField<{
             readonly downgrade: /*elided*/ any;
             readonly ignore: /*elided*/ any;
@@ -730,6 +815,91 @@ export declare function cardStateSchema(): {
         }>>, {
             initial: undefined;
         }>>>;
+        readonly damageMessages: import("fvtt-types/src/foundry/common/data/fields.mjs").ArrayField<import("fvtt-types/src/foundry/common/data/fields.mjs").SchemaField<{
+            readonly key: /*elided*/ any;
+            readonly id: /*elided*/ any;
+        }, import("fvtt-types/src/foundry/common/data/fields.mjs").SchemaField.DefaultOptions, import("fvtt-types/src/foundry/common/data/fields.mjs").SchemaField.Internal.AssignmentType<{
+            readonly key: /*elided*/ any;
+            readonly id: /*elided*/ any;
+        }, import("fvtt-types/src/foundry/common/data/fields.mjs").SchemaField.DefaultOptions>, {
+            key: import("fvtt-types/src/foundry/common/data/fields.mjs").DataField.DerivedInitializedType<string, import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.DefaultOptions, import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.MergedOptions<{
+                readonly blank: false;
+            }>>, {
+                initial: undefined;
+            }>>;
+            id: import("fvtt-types/src/foundry/common/data/fields.mjs").DataField.DerivedInitializedType<string, import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.DefaultOptions, import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.MergedOptions<{
+                readonly blank: false;
+            }>>, {
+                initial: undefined;
+            }>>;
+        }, {
+            key: import("fvtt-types/src/foundry/common/data/fields.mjs").DataField.DerivedInitializedType<string, import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.DefaultOptions, import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.MergedOptions<{
+                readonly blank: false;
+            }>>, {
+                initial: undefined;
+            }>>;
+            id: import("fvtt-types/src/foundry/common/data/fields.mjs").DataField.DerivedInitializedType<string, import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.DefaultOptions, import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.MergedOptions<{
+                readonly blank: false;
+            }>>, {
+                initial: undefined;
+            }>>;
+        }>, {
+            required: boolean;
+            initial: undefined;
+        }, import("fvtt-types/src/foundry/common/data/fields.mjs").SchemaField.Internal.AssignmentType<{
+            readonly key: /*elided*/ any;
+            readonly id: /*elided*/ any;
+        }, import("fvtt-types/src/foundry/common/data/fields.mjs").SchemaField.DefaultOptions>, {
+            key: import("fvtt-types/src/foundry/common/data/fields.mjs").DataField.DerivedInitializedType<string, import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.DefaultOptions, import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.MergedOptions<{
+                readonly blank: false;
+            }>>, {
+                initial: undefined;
+            }>>;
+            id: import("fvtt-types/src/foundry/common/data/fields.mjs").DataField.DerivedInitializedType<string, import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.DefaultOptions, import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.MergedOptions<{
+                readonly blank: false;
+            }>>, {
+                initial: undefined;
+            }>>;
+        }, import("fvtt-types/src/foundry/common/data/fields.mjs").ArrayField.AssignmentType<import("fvtt-types/src/foundry/common/data/fields.mjs").SchemaField.Internal.AssignmentType<{
+            readonly key: /*elided*/ any;
+            readonly id: /*elided*/ any;
+        }, import("fvtt-types/src/foundry/common/data/fields.mjs").SchemaField.DefaultOptions>, {
+            required: boolean;
+            initial: undefined;
+        }>, {
+            key: import("fvtt-types/src/foundry/common/data/fields.mjs").DataField.DerivedInitializedType<string, import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.DefaultOptions, import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.MergedOptions<{
+                readonly blank: false;
+            }>>, {
+                initial: undefined;
+            }>>;
+            id: import("fvtt-types/src/foundry/common/data/fields.mjs").DataField.DerivedInitializedType<string, import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.DefaultOptions, import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.MergedOptions<{
+                readonly blank: false;
+            }>>, {
+                initial: undefined;
+            }>>;
+        }[], {
+            key: import("fvtt-types/src/foundry/common/data/fields.mjs").DataField.DerivedInitializedType<string, import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.DefaultOptions, import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.MergedOptions<{
+                readonly blank: false;
+            }>>, {
+                initial: undefined;
+            }>>;
+            id: import("fvtt-types/src/foundry/common/data/fields.mjs").DataField.DerivedInitializedType<string, import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.DefaultOptions, import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.MergedOptions<{
+                readonly blank: false;
+            }>>, {
+                initial: undefined;
+            }>>;
+        }, {
+            key: import("fvtt-types/src/foundry/common/data/fields.mjs").DataField.DerivedInitializedType<string, import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.DefaultOptions, import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.MergedOptions<{
+                readonly blank: false;
+            }>>, {
+                initial: undefined;
+            }>>;
+            id: import("fvtt-types/src/foundry/common/data/fields.mjs").DataField.DerivedInitializedType<string, import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.DefaultOptions, import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.MergedOptions<{
+                readonly blank: false;
+            }>>, {
+                initial: undefined;
+            }>>;
+        }[]>;
         readonly damageRules: import("fvtt-types/src/foundry/common/data/fields.mjs").SchemaField<{
             readonly downgrade: /*elided*/ any;
             readonly ignore: /*elided*/ any;
@@ -1083,6 +1253,91 @@ export declare function cardStateSchema(): {
         }>>, {
             initial: undefined;
         }>>>;
+        readonly damageMessages: import("fvtt-types/src/foundry/common/data/fields.mjs").ArrayField<import("fvtt-types/src/foundry/common/data/fields.mjs").SchemaField<{
+            readonly key: /*elided*/ any;
+            readonly id: /*elided*/ any;
+        }, import("fvtt-types/src/foundry/common/data/fields.mjs").SchemaField.DefaultOptions, import("fvtt-types/src/foundry/common/data/fields.mjs").SchemaField.Internal.AssignmentType<{
+            readonly key: /*elided*/ any;
+            readonly id: /*elided*/ any;
+        }, import("fvtt-types/src/foundry/common/data/fields.mjs").SchemaField.DefaultOptions>, {
+            key: import("fvtt-types/src/foundry/common/data/fields.mjs").DataField.DerivedInitializedType<string, import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.DefaultOptions, import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.MergedOptions<{
+                readonly blank: false;
+            }>>, {
+                initial: undefined;
+            }>>;
+            id: import("fvtt-types/src/foundry/common/data/fields.mjs").DataField.DerivedInitializedType<string, import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.DefaultOptions, import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.MergedOptions<{
+                readonly blank: false;
+            }>>, {
+                initial: undefined;
+            }>>;
+        }, {
+            key: import("fvtt-types/src/foundry/common/data/fields.mjs").DataField.DerivedInitializedType<string, import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.DefaultOptions, import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.MergedOptions<{
+                readonly blank: false;
+            }>>, {
+                initial: undefined;
+            }>>;
+            id: import("fvtt-types/src/foundry/common/data/fields.mjs").DataField.DerivedInitializedType<string, import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.DefaultOptions, import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.MergedOptions<{
+                readonly blank: false;
+            }>>, {
+                initial: undefined;
+            }>>;
+        }>, {
+            required: boolean;
+            initial: undefined;
+        }, import("fvtt-types/src/foundry/common/data/fields.mjs").SchemaField.Internal.AssignmentType<{
+            readonly key: /*elided*/ any;
+            readonly id: /*elided*/ any;
+        }, import("fvtt-types/src/foundry/common/data/fields.mjs").SchemaField.DefaultOptions>, {
+            key: import("fvtt-types/src/foundry/common/data/fields.mjs").DataField.DerivedInitializedType<string, import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.DefaultOptions, import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.MergedOptions<{
+                readonly blank: false;
+            }>>, {
+                initial: undefined;
+            }>>;
+            id: import("fvtt-types/src/foundry/common/data/fields.mjs").DataField.DerivedInitializedType<string, import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.DefaultOptions, import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.MergedOptions<{
+                readonly blank: false;
+            }>>, {
+                initial: undefined;
+            }>>;
+        }, import("fvtt-types/src/foundry/common/data/fields.mjs").ArrayField.AssignmentType<import("fvtt-types/src/foundry/common/data/fields.mjs").SchemaField.Internal.AssignmentType<{
+            readonly key: /*elided*/ any;
+            readonly id: /*elided*/ any;
+        }, import("fvtt-types/src/foundry/common/data/fields.mjs").SchemaField.DefaultOptions>, {
+            required: boolean;
+            initial: undefined;
+        }>, {
+            key: import("fvtt-types/src/foundry/common/data/fields.mjs").DataField.DerivedInitializedType<string, import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.DefaultOptions, import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.MergedOptions<{
+                readonly blank: false;
+            }>>, {
+                initial: undefined;
+            }>>;
+            id: import("fvtt-types/src/foundry/common/data/fields.mjs").DataField.DerivedInitializedType<string, import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.DefaultOptions, import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.MergedOptions<{
+                readonly blank: false;
+            }>>, {
+                initial: undefined;
+            }>>;
+        }[], {
+            key: import("fvtt-types/src/foundry/common/data/fields.mjs").DataField.DerivedInitializedType<string, import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.DefaultOptions, import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.MergedOptions<{
+                readonly blank: false;
+            }>>, {
+                initial: undefined;
+            }>>;
+            id: import("fvtt-types/src/foundry/common/data/fields.mjs").DataField.DerivedInitializedType<string, import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.DefaultOptions, import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.MergedOptions<{
+                readonly blank: false;
+            }>>, {
+                initial: undefined;
+            }>>;
+        }, {
+            key: import("fvtt-types/src/foundry/common/data/fields.mjs").DataField.DerivedInitializedType<string, import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.DefaultOptions, import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.MergedOptions<{
+                readonly blank: false;
+            }>>, {
+                initial: undefined;
+            }>>;
+            id: import("fvtt-types/src/foundry/common/data/fields.mjs").DataField.DerivedInitializedType<string, import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.DefaultOptions, import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.MergedOptions<{
+                readonly blank: false;
+            }>>, {
+                initial: undefined;
+            }>>;
+        }[]>;
         readonly damageRules: import("fvtt-types/src/foundry/common/data/fields.mjs").SchemaField<{
             readonly downgrade: /*elided*/ any;
             readonly ignore: /*elided*/ any;
@@ -1436,6 +1691,91 @@ export declare function cardStateSchema(): {
         }>>, {
             initial: undefined;
         }>>>;
+        readonly damageMessages: import("fvtt-types/src/foundry/common/data/fields.mjs").ArrayField<import("fvtt-types/src/foundry/common/data/fields.mjs").SchemaField<{
+            readonly key: /*elided*/ any;
+            readonly id: /*elided*/ any;
+        }, import("fvtt-types/src/foundry/common/data/fields.mjs").SchemaField.DefaultOptions, import("fvtt-types/src/foundry/common/data/fields.mjs").SchemaField.Internal.AssignmentType<{
+            readonly key: /*elided*/ any;
+            readonly id: /*elided*/ any;
+        }, import("fvtt-types/src/foundry/common/data/fields.mjs").SchemaField.DefaultOptions>, {
+            key: import("fvtt-types/src/foundry/common/data/fields.mjs").DataField.DerivedInitializedType<string, import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.DefaultOptions, import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.MergedOptions<{
+                readonly blank: false;
+            }>>, {
+                initial: undefined;
+            }>>;
+            id: import("fvtt-types/src/foundry/common/data/fields.mjs").DataField.DerivedInitializedType<string, import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.DefaultOptions, import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.MergedOptions<{
+                readonly blank: false;
+            }>>, {
+                initial: undefined;
+            }>>;
+        }, {
+            key: import("fvtt-types/src/foundry/common/data/fields.mjs").DataField.DerivedInitializedType<string, import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.DefaultOptions, import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.MergedOptions<{
+                readonly blank: false;
+            }>>, {
+                initial: undefined;
+            }>>;
+            id: import("fvtt-types/src/foundry/common/data/fields.mjs").DataField.DerivedInitializedType<string, import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.DefaultOptions, import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.MergedOptions<{
+                readonly blank: false;
+            }>>, {
+                initial: undefined;
+            }>>;
+        }>, {
+            required: boolean;
+            initial: undefined;
+        }, import("fvtt-types/src/foundry/common/data/fields.mjs").SchemaField.Internal.AssignmentType<{
+            readonly key: /*elided*/ any;
+            readonly id: /*elided*/ any;
+        }, import("fvtt-types/src/foundry/common/data/fields.mjs").SchemaField.DefaultOptions>, {
+            key: import("fvtt-types/src/foundry/common/data/fields.mjs").DataField.DerivedInitializedType<string, import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.DefaultOptions, import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.MergedOptions<{
+                readonly blank: false;
+            }>>, {
+                initial: undefined;
+            }>>;
+            id: import("fvtt-types/src/foundry/common/data/fields.mjs").DataField.DerivedInitializedType<string, import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.DefaultOptions, import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.MergedOptions<{
+                readonly blank: false;
+            }>>, {
+                initial: undefined;
+            }>>;
+        }, import("fvtt-types/src/foundry/common/data/fields.mjs").ArrayField.AssignmentType<import("fvtt-types/src/foundry/common/data/fields.mjs").SchemaField.Internal.AssignmentType<{
+            readonly key: /*elided*/ any;
+            readonly id: /*elided*/ any;
+        }, import("fvtt-types/src/foundry/common/data/fields.mjs").SchemaField.DefaultOptions>, {
+            required: boolean;
+            initial: undefined;
+        }>, {
+            key: import("fvtt-types/src/foundry/common/data/fields.mjs").DataField.DerivedInitializedType<string, import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.DefaultOptions, import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.MergedOptions<{
+                readonly blank: false;
+            }>>, {
+                initial: undefined;
+            }>>;
+            id: import("fvtt-types/src/foundry/common/data/fields.mjs").DataField.DerivedInitializedType<string, import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.DefaultOptions, import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.MergedOptions<{
+                readonly blank: false;
+            }>>, {
+                initial: undefined;
+            }>>;
+        }[], {
+            key: import("fvtt-types/src/foundry/common/data/fields.mjs").DataField.DerivedInitializedType<string, import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.DefaultOptions, import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.MergedOptions<{
+                readonly blank: false;
+            }>>, {
+                initial: undefined;
+            }>>;
+            id: import("fvtt-types/src/foundry/common/data/fields.mjs").DataField.DerivedInitializedType<string, import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.DefaultOptions, import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.MergedOptions<{
+                readonly blank: false;
+            }>>, {
+                initial: undefined;
+            }>>;
+        }, {
+            key: import("fvtt-types/src/foundry/common/data/fields.mjs").DataField.DerivedInitializedType<string, import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.DefaultOptions, import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.MergedOptions<{
+                readonly blank: false;
+            }>>, {
+                initial: undefined;
+            }>>;
+            id: import("fvtt-types/src/foundry/common/data/fields.mjs").DataField.DerivedInitializedType<string, import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.DefaultOptions, import("fvtt-types/src/foundry/common/data/fields.mjs").StringField.MergedOptions<{
+                readonly blank: false;
+            }>>, {
+                initial: undefined;
+            }>>;
+        }[]>;
         readonly damageRules: import("fvtt-types/src/foundry/common/data/fields.mjs").SchemaField<{
             readonly downgrade: /*elided*/ any;
             readonly ignore: /*elided*/ any;
@@ -4164,6 +4504,17 @@ export declare function cardMidiState(message: ChatMessage.Implementation | unde
 export declare function rollTypeOf(roll: unknown): string | undefined;
 /** The rolls tagged with one of `types` */
 export declare function rollsOfType(rolls: readonly Roll[] | undefined, types: string | readonly string[]): Roll[];
+/** midi's damage messages of a use card (M13): its own contributions' and other workflows' (D2), by stored origin */
+export declare function cardDamageMessages(card: ChatMessage.Implementation | null | undefined): ChatMessage.Implementation[];
+/**
+ * A use card's damage rolls of `types` (M13 stage 3): its damage messages' rolls. A type none of its own messages holds
+ * comes from the card's rolls: a card from before them, or damage not in a message yet. `drawn`: what the card draws;
+ * with dnd5e's chat card summaries off the messages show in the log themselves and the card draws none of their damage
+ * (user, M13 D1 b; drawing them always is option a).
+ */
+export declare function cardDamageRolls(card: ChatMessage.Implementation | null | undefined, types: string | readonly string[], options?: {
+    drawn?: boolean;
+}): Roll[];
 /** A card's attack roll, found by its tag rather than by position */
 export declare function attackRollOf(message: {
     rolls?: readonly Roll[];

@@ -3,7 +3,6 @@
  * advantage presentation and the damage tray. Design notes: dnd5e-v6-checklist, M13.
  */
 import { Activity, Dnd5eChatMessage } from "../../globals.js";
-/** Roll types midi tags damage rolls with; the presence of one means damage has been rolled. */
 /**
  * Which of the card's buttons this user should see. Policy comes from the settings at render (GM and player
  * settings differ), progress mostly from `message.rolls`. Used for midi's buttons and dnd5e's.

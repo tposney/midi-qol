@@ -1276,6 +1276,8 @@ export declare class Workflow {
      * (addTargetedDamageBonus); each is its own damage message (createDamageMessages).
      */
     rollDamageContributions(): Promise<void>;
+    /** The damage rolls changed once their messages exist (a macro, a later bonus): the messages follow, once per change burst */
+    syncDamageMessages(): void;
     /**
      * M2 stage 8: the use's damage as dnd5e damage messages, one per contribution (the activity's, the other activity's or
      * the ammunition's, bonus damage), origin the use card, so dnd5e and other modules find them
