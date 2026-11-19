@@ -208,20 +208,12 @@ export function registerFlowVariants(): void {
       workflow.failedSaves = workflow.hitTargets.union(workflow.hitTargetsEC);
       return "midi-qol.WaitForDamageRoll";
     }
-    let hookId = Hooks.on("createChatMessage", workflow.processSaveRoll.bind(workflow));
-    let monksId = Hooks.on("updateChatMessage", workflow.monksSavingCheck.bind(workflow));
-    //@ts-expect-error flash-rolls-5e custom hook
-    let flashId = Hooks.on("flash-rolls-5e.rollComplete", workflow.flashSavingCheck.bind(workflow));
+    // The saveRequests providers listen for their own answers (a trap's chat cards: created, not rendered; M5b)
     try {
       const saveDisplay = saveDisplayMode();
       await workflow.ports.requestSaves(workflow, saveDisplay !== "allShow");
     } catch (err) {
       TroubleShooter.recordError(err, "checkSaves");
-    } finally {
-      Hooks.off("createChatMessage", hookId);
-      Hooks.off("updateChatMessage", monksId);
-      //@ts-expect-error flash-rolls-5e custom hook
-      Hooks.off("flash-rolls-5e.rollComplete", flashId);
     }
     if (debugEnabled > 1) debug("Check Saves: renderChat message hooks length ", Hooks.events["renderChatMessageHTML"]?.length);
     const saveDisplay = saveDisplayMode();

@@ -29,6 +29,8 @@ export interface SaveRequestEntry {
 export interface SaveRequestContext {
   /** The use's workflow (midi's providers call its request builders) */
   workflow: Workflow;
+  /** Listen to a hook until every save of the use is in (once per key: providers sharing a listener register it once) */
+  listen(hook: string, key: string, fn: (...args: never[]) => unknown): void;
 }
 
 export interface SaveRequestProvider {

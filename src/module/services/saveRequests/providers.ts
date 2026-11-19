@@ -19,6 +19,13 @@ function shared(requests: SaveRequest[]) {
     dc: saveDetails.rollDC as number | undefined, whisper: displayOptions.whisper };
 }
 
+/** Roll messages answer a chat card (and a Monk's TokenBar request, by any roll of the token): created in a trap's flow, rendered otherwise */
+function listenForRollMessages(context: SaveRequestContext) {
+  const { workflow } = context;
+  const hook = workflow.flowId === "midi-qol.trap" ? "createChatMessage" : "renderChatMessageHTML";
+  context.listen(hook, "rollMessages", workflow.processSaveRoll.bind(workflow));
+}
+
 const split = <T>(requests: SaveRequest[], build: (request: SaveRequest) => T) => ({
   player: requests.filter(r => !r.playerInfo.player?.isGM).map(build),
   gm: requests.filter(r => !!r.playerInfo.player?.isGM).map(build)
@@ -29,7 +36,11 @@ const split = <T>(requests: SaveRequest[], build: (request: SaveRequest) => T) =
  * can roll it for the player from the chat log. With no GM connected, a GM-side request can't be sent.
  */
 const monks: SaveRequestProvider = {
-  request(requests, { workflow }) {
+  request(requests, context) {
+    const { workflow } = context;
+    // Revealed rolls come as updates to Monk's message; a roll by the token answers it too, as it always did
+    context.listen("updateChatMessage", "monks", workflow.monksSavingCheck.bind(workflow));
+    listenForRollMessages(context);
     const entries = requests.map(r => ({ promise: pending(workflow, r) }));
     const { player, gm } = split(requests, r => workflow.buildMonksTokenBarRequest(r.target, r.saveDetails));
     const s = shared(requests);
@@ -39,7 +50,9 @@ const monks: SaveRequestProvider = {
 };
 
 const flash: SaveRequestProvider = {
-  request(requests, { workflow }) {
+  request(requests, context) {
+    const { workflow } = context;
+    context.listen("flash-rolls-5e.rollComplete", "flash", workflow.flashSavingCheck.bind(workflow));
     const entries = requests.map(r => ({ promise: pending(workflow, r) }));
     const { player, gm } = split(requests, r => workflow.buildFlashRollsRequest(r.target, r.saveDetails));
     const s = shared(requests);
@@ -60,7 +73,9 @@ const epic: SaveRequestProvider = {
 
 /** A whispered chat card the player (or, for the GM's creatures with "none", the GM) answers by rolling */
 const chat: SaveRequestProvider = {
-  request(requests, { workflow }) {
+  request(requests, context) {
+    const { workflow } = context;
+    listenForRollMessages(context);
     return requests.map(r => workflow.createPlayerChatSaveRequest(
       r.target, r.playerInfo.player!, r.saveDetails, r.rollInfo.type, r.rollInfo.abilities, r.rollInfo.skills, r.rollInfo.tools,
       r.saveDetails.rollDC as number | undefined, r.displayOptions.showRoll, r.playerInfo.GMprompt, r.isMagicSave, r.rollInfo.action) as SaveRequestEntry);

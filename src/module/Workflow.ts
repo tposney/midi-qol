@@ -6630,7 +6630,12 @@ export class Workflow {
     // The saveRequests service asks each provider once with its targets; a player's save not asked through the request
     // core goes on the player list here, as it always did
     const toAsk = slots.flatMap(slot => "request" in slot ? [slot.request] : []);
-    const answered = requestSaves(toAsk, { workflow: this });
+    // The providers' listeners (roll messages, Monk's TokenBar updates, Flash Rolls' hook), until every save is in
+    const listeners = new Map<string, { hook: string, id: number }>();
+    const listen = (hook: string, key: string, fn: (...args: never[]) => unknown) => {
+      if (!listeners.has(key)) listeners.set(key, { hook, id: Hooks.on(hook as Hooks.HookName, fn as unknown as Hooks.Function<Hooks.HookName>) });
+    };
+    const answered = requestSaves(toAsk, { workflow: this, listen });
     let next = 0;
     for (const slot of slots) {
       if ("friendly" in slot) { promises.push(slot.friendly); continue; }
@@ -6641,7 +6646,12 @@ export class Workflow {
     }
 
     if (debugEnabled > 1) debug("check saves: waiting for ", this.pendingSaves.keys())
-    const rawResults = await Promise.all(promises);
+    let rawResults: (Roll[] | Roll | null)[];
+    try {
+      rawResults = await Promise.all(promises);
+    } finally {
+      for (const { hook, id } of listeners.values()) Hooks.off(hook as Hooks.HookName, id);
+    }
     (await Promise.all(requestCards)).forEach(chatMessage => chatMessage?.delete());
     if (toAsk.some(request => settingsProviderFor(request) === MIDI_SAVE_PROVIDERS.epic)) await busyWait(10);
     // Keep saveDetails for the last target (used for attribution tracking)

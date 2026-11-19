@@ -50,11 +50,7 @@ export function registerSavesSteps(): void {
     if (configSettings.autoCheckSaves !== "none") {
       await workflow.callMidiHooks("midi-qol.preCheckSaves");
       if (workflow.aborted) return "midi-qol.Abort";
-      if (debugEnabled > 1) debug("Check Saves: renderChat message hooks length ", Hooks.events["renderChatMessageHTML"]?.length)
-      let hookId = Hooks.on("renderChatMessageHTML", workflow.processSaveRoll.bind(workflow));
-      let monksId = Hooks.on("updateChatMessage", workflow.monksSavingCheck.bind(workflow));
-      //@ts-expect-error flash-rolls-5e custom hook
-      let flashId = Hooks.on("flash-rolls-5e.rollComplete", workflow.flashSavingCheck.bind(workflow));
+      // The saveRequests providers listen for their own answers while the saves are out (M5b)
       try {
         const saveDisplay = saveDisplayMode();
         await workflow.ports.requestSaves(workflow, saveDisplay !== "allShow");
@@ -62,11 +58,6 @@ export function registerSavesSteps(): void {
         const message = ("midi-qol | checkSaves error")
         TroubleShooter.recordError(err, message);
         error(message, err)
-      } finally {
-        Hooks.off("renderChatMessageHTML", hookId);
-        Hooks.off("updateChatMessage", monksId);
-        //@ts-expect-error flash-rolls-5e custom hook
-        Hooks.off("flash-rolls-5e.rollComplete", flashId);
       }
       if (debugEnabled > 1) debug("Check Saves: ", workflow.pendingSaves.keys(), workflow.saves);
       if (debugEnabled > 1) debug("Check Saves: renderChat message hooks length ", Hooks.events["renderChatMessageHTML"]?.length)
