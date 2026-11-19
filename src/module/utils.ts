@@ -2462,6 +2462,11 @@ export async function completeActivityUse(activityRef: Activity | string | undef
   message: RollMessageConfig = {}
 ): Promise<Workflow | undefined> {
   activityRef = foundry.utils.deepClone(activityRef);
+  // The caller's objects are left as they were: the use's targets, sequence and dnd5e's defaults go in copies, so options
+  // reused for another call don't carry this use's (deepClone copies plain objects; documents, Sets and events are kept)
+  usage = foundry.utils.deepClone(usage);
+  dialog = foundry.utils.deepClone(dialog);
+  message = foundry.utils.deepClone(message);
   usage.midiOptions ??= {};
   // The union of targetsToUse and targetUuids, by document: a token on another level or scene has no canvas token but is a target
   let targetsToUse = new TokenDocumentSet();
@@ -2686,14 +2691,14 @@ export async function completeItemUse(itemRef: Item.Implementation | string, con
     error("completeItemUse | legacy rolls are no longer supported");
     return;
   }
-  config.midiOptions ??= {};
   if (!(item instanceof CONFIG.Item.documentClass)) {
     error("completeItemUse only works for items", item);
     return;
   }
-  if (config.midiOptions.activityId || config.midiOptions.activityIdentifier) {
+  const { activityId, activityIdentifier } = config.midiOptions ?? {};
+  if (activityId || activityIdentifier) {
     // @ts-expect-error no dnd5e-types
-    const selected: Activity = item.system.activities.find(a => a.id === config.midiOptions.activityId || a.identifier === config.midiOptions.activityIdentifier)
+    const selected: Activity = item.system.activities.find(a => a.id === activityId || a.identifier === activityIdentifier)
     if (selected) return completeActivityUse(selected, activityConfig, dialog, message);
   }
   // @ts-expect-error no dnd5e-types
