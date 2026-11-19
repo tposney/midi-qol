@@ -455,6 +455,8 @@ Hooks.once('init', async function () {
   defineDamageContributionsService();
   defineReactionsService();
   reactionsService.register("midi-qol.items", midiItemReactions, { label: "Midi-QOL: reaction items" });
+  defineSaveRequestsService();
+  registerMidiSaveProviders();
   damageModifiersService.register("midi-qol.targetedBonuses", targetedDamageBonusContributor, { label: "Midi-QOL: bonuses for particular targets" });
   defineTargetConfirmationService(resolveTargetConfirmation);
   defineChooseTokensService();
@@ -1064,6 +1066,8 @@ import { registerBonusApprovalQuery } from "./module/services/rollBonuses/approv
 import { registerDamageMessageSummary } from "./module/damage/messages.js";
 import { defineDamageContributionsService } from "./module/services/damageContributions/service.js";
 import { defineReactionsService, reactionsService } from "./module/services/reactions/service.js";
+import { defineSaveRequestsService } from "./module/services/saveRequests/service.js";
+import { registerMidiSaveProviders } from "./module/services/saveRequests/providers.js";
 import { midiItemReactions } from "./module/services/reactions/provider.js";
 import { previewFlow, stepsApi } from "./module/steps/api.js";
 import { requestsApi, setupRequests } from "./module/lib/requests.js";

@@ -1,4 +1,5 @@
 import { allSteps, getStep, REACTION_STEPS, stepForMethod, type StepContext } from "./steps/steps.js";
+import { MIDI_SAVE_PROVIDERS, requestSaves, settingsProviderFor, type SaveRequest, type SaveRequestEntry } from "./services/saveRequests/service.js";
 import { deprecation, removedError } from "./lib/compatLine.js";
 import { assembleSteps, stepAfterInFlow, type AssembledSteps, type StepChange, type StepChangeInput } from "./steps/assembly.js";
 import { missingSteps, reportAssembly, useStepChanges } from "./steps/api.js";
@@ -6129,13 +6130,19 @@ export class Workflow {
    */
   queueTargetSaveRoll(options: QueueSaveRollOptions): { promise: Promise<Roll[] | Roll | null> | null, requestCard: Promise<ChatMessage | undefined> | undefined } {
     const queued = this.queueTargetSaveRollRequest(options);
+    if (queued.friendly) return { promise: queued.promise, requestCard: queued.requestCard };
+    return { promise: this.withSavePlayerWait(options, queued), requestCard: queued.requestCard };
+  }
+
+  /** A player's save that wasn't asked through the request core goes on the player list, with the GM's choices (the GM answers for them) */
+  withSavePlayerWait(options: SaveRequest, queued: SaveRequestEntry): Promise<Roll[] | Roll | null> | null {
     const { target, saveDetails, rollInfo, displayOptions, playerInfo: { player } } = options;
     const queuedPromise = queued.promise;
     // Asked through the request core: it put the request on the player list itself
-    if (!queuedPromise || queued.friendly || queued.asked || !player || player.isGM) return { promise: queuedPromise, requestCard: queued.requestCard };
+    if (!queuedPromise || queued.asked || !player || player.isGM) return queuedPromise;
     const requestIds = [target.id, target.actor?.uuid].filter((id): id is string => !!id);
     const what = [...rollInfo.abilities, ...rollInfo.skills, ...rollInfo.tools].map(key => key.toUpperCase()).join("/");
-    const promise = trackPlayerWait<Roll[] | Roll | null>({
+    return trackPlayerWait<Roll[] | Roll | null>({
       kind: rollInfo.type === "save" ? "save" : "check",
       userId: player.id!,
       actorUuid: target.actor?.uuid ?? undefined,
@@ -6152,7 +6159,6 @@ export class Workflow {
         }
       }
     }, () => queuedPromise);
-    return { promise, requestCard: queued.requestCard };
   }
 
   queueTargetSaveRollRequest(options: QueueSaveRollOptions): { promise: Promise<Roll[] | Roll | null> | null, requestCard: Promise<ChatMessage | undefined> | undefined, friendly?: boolean, asked?: boolean } {
@@ -6628,8 +6634,10 @@ export class Workflow {
       return;
     }
 
-    const { flags: moduleFlags, requests: moduleRequests } = this.computeModuleIntegrationSettings(simulate, flagRollType ?? "");
+    const { flags: moduleFlags } = this.computeModuleIntegrationSettings(simulate, flagRollType ?? "");
     const { playerMonksTB, playerFlashTB, playerEpicRolls } = moduleFlags;
+    // Each target's save, asked of the saveRequests service once every target is set up (M5b); a friendly auto result has its roll
+    const slots: ({ request: SaveRequest } | { friendly: Promise<Roll[] | Roll | null> })[] = [];
     // @ts-expect-error no dnd5e-types
     const isMagicSave = this.item.type === "spell" || this.activity.midiProperties?.magicEffect;
 
@@ -6676,8 +6684,12 @@ export class Workflow {
         await asyncHooksCallAll("midi-qol.preTargetSave", saver && hookTarget(saver), this, saveDetails);
         if (saver && configSettings.allowUseMacro && this.workflowOptions.noTargetOnUseMacro !== true) await this.triggerTargetMacros(["preTargetSave"], new Set([saver]));
 
-        // Queue the save roll using the appropriate handler
-        const { promise, requestCard } = this.queueTargetSaveRoll({
+        const friendly = this.getFriendlyTargetRoll(saveDetails as { isFriendly: boolean });
+        if (friendly) {
+          slots.push({ friendly });
+          continue;
+        }
+        slots.push({ request: {
           target,
           saveDetails,
           rollInfo: {
@@ -6706,38 +6718,31 @@ export class Workflow {
             gmMonksTB: gmMonksTB ?? false,
             gmFlashTB: gmFlashTB ?? false,
             gmRER: gmRER ?? false
-          },
-          moduleRequests
-        });
-
-        if (promise) promises.push(promise);
-        if (requestCard) requestCards.push(requestCard);
+          }
+        } });
       }
     } catch (err) {
       TroubleShooter.recordError(err);
       console.warn(err)
     }
 
-    // Dispatch batched requests to external modules
-    this.dispatchMonksTokenBarSaves(
-      moduleRequests.monks.player, moduleRequests.monks.gm,
-      rollType ?? "save", rollAbilities, rollSkills, rollDC,
-      whisper,
-    );
-    this.dispatchFlashRollsSaves(
-      moduleRequests.flash.player, moduleRequests.flash.gm,
-      rollType ?? "save", rollAbilities, rollSkills, rollTools, rollDC
-    );
-    this.dispatchEpicRollsSaves(
-      moduleRequests.epic.player, moduleRequests.epic.gm,
-      rollType ?? "save", rollDC
-    );
+    // The saveRequests service asks each provider once with its targets; a player's save not asked through the request
+    // core goes on the player list here, as it always did
+    const toAsk = slots.flatMap(slot => "request" in slot ? [slot.request] : []);
+    const answered = requestSaves(toAsk, { workflow: this });
+    let next = 0;
+    for (const slot of slots) {
+      if ("friendly" in slot) { promises.push(slot.friendly); continue; }
+      const entry = answered[next++];
+      const promise = this.withSavePlayerWait(slot.request, entry);
+      if (promise) promises.push(promise);
+      if (entry.requestCard) requestCards.push(entry.requestCard);
+    }
 
     if (debugEnabled > 1) debug("check saves: requests are ", this.saveRequests)
     const rawResults = await Promise.all(promises);
     (await Promise.all(requestCards)).forEach(chatMessage => chatMessage?.delete());
-    const epicRequests = moduleRequests.epic.player.concat(moduleRequests.epic.gm);
-    if (epicRequests?.length > 0) await busyWait(10);
+    if (toAsk.some(request => settingsProviderFor(request) === MIDI_SAVE_PROVIDERS.epic)) await busyWait(10);
     // Keep saveDetails for the last target (used for attribution tracking)
     const results = this.normalizeRollResults(rawResults, D20Roll);
     this.saveResults = results.filter(r => !!r).flat();
