@@ -6103,14 +6103,26 @@ export class Workflow {
 
     // The DC goes on the roll so dnd5e can tell success from failure; who sees it is decided when the card is shown.
     const showTargetDC = true;
-    return socketlibSocket.executeAsUser("rollAbility", owner?.id, {
-      saveDetails,
-      displayOptions: {
-        fastForward: simulate || !showRollDialog,
-        chatMessage: showRoll,
-        rollMode,
-        showTargetDC
-      }
+    const data = { saveDetails, displayOptions: { fastForward: simulate || !showRollDialog, chatMessage: showRoll, rollMode, showTargetDC } };
+    if (!owner || owner.isSelf) return rollAbility(data) as Promise<Roll[] | Roll | null>;
+    // Another client (a GM's): through the request core (M5b), with its deadline. On time-out, disconnect or error midi
+    // rolls it here without prompts, so one GM leaving no longer fails every target's save.
+    const what = [...rollAbilities, ...(saveDetails.rollSkills ?? []), ...(saveDetails.rollTools ?? [])].map(key => String(key).toUpperCase()).join("/");
+    return askUser<Roll[] | Roll | null>(owner, {
+      type: SAVE_REQUEST,
+      data,
+      kind: rollType === "save" ? "save" : "check",
+      actorUuid: target.actor?.uuid ?? undefined,
+      tokenUuid: getTokenDocument(target)?.uuid ?? undefined,
+      label: i18nFormat("midi-qol.PlayerWaits.SaveLabel", {
+        what, type: i18n(rollType === "save" ? "DND5E.SavingThrow" : "DND5E.AbilityCheck"), item: this.item?.name ?? ""
+      }),
+      timeoutMs: (configSettings.playerSaveTimeout ?? 0) * 1000,
+      fallback: async () => await rollAbility({ ...data, displayOptions: { ...data.displayOptions, fastForward: true, unattended: !target.actor?.isOwner } }) as Roll[] | Roll | null
+    }).settled.then(settled => settled.value, async err => {
+      TroubleShooter.recordError(err, `${this.workflowName} | save for ${target.name} could not be made`);
+      //@ts-expect-error CONFIG.Dice.BasicRoll: no dnd5e-types
+      return [await new CONFIG.Dice.BasicRoll("-1").evaluate()];
     });
   }
 

@@ -5,11 +5,11 @@
  * checks' current totals. On a card that can't draw notes (stored markup) the note is shown on its own in the log.
  */
 
-import { trackPlayerWait } from "./playerWaits.js";
 import { error, GameSystemConfig, i18n, i18nFormat, MODULE_ID } from "../../midi-qol.js";
 import { SaveDetails, TokenOrDocument } from "../../globals.js";
 import { CardNoteRenderContext } from "../ChatClasses/CardNoteMessage.js";
-import { preferredActiveGM, socketlibSocket } from "../GMAction.js";
+import { preferredActiveGM, rollAbility, SAVE_REQUEST, unTimedExecuteAsGM } from "../GMAction.js";
+import { askUser } from "./requests.js";
 import { getCachedDocument, getToken, getTokenDocument, playerFor, rollModeToMessageMode, validRollAbility } from "../utils.js";
 import { addCardNote, registerCardNoteRenderer, renderLinkedMessage, visibleRollTotal } from "./cardNotes.js";
 import { tokenName } from "./tokenNames.js";
@@ -199,24 +199,34 @@ export async function contestedRoll(data: {
     targetRollOptions
   );
 
-  // The GM can roll for a player who hasn't (the player list): rolled for them, or on the GM's screen
+  // Each side's player is asked through the request core (M5b), as a save is: its deadline, the GM answering from the
+  // player list (rolled for them, or on the GM's screen), and on time-out or disconnect the GM (or, with none, this
+  // client without prompts) rolls it for them
   const contestRoll = (user: User.Implementation, saveDetails: typeof sourceSaveDetails, rollOptions: typeof sourceRollOptions, actorUuid?: string, tokenUuid?: string) => {
-    const roll = (asUser: string, fastForward: boolean | undefined, mode?: "advantage" | "disadvantage") => socketlibSocket.executeAsUser("rollAbility", asUser, {
+    const rollMode = rollModeToMessageMode(rollOptions.rollMode);
+    const asked = { saveDetails, displayOptions: { chatMessage: true, fastForward: rollOptions.fastForward, rollMode } };
+    type Rolled = Roll[] | Roll | undefined;
+    if (user.isSelf) return rollAbility(asked) as Promise<Rolled>;
+    // Rolled for the player: shown to them as their own roll would have been
+    const forPlayer = (fastForward: boolean, mode?: "advantage" | "disadvantage") => ({
       saveDetails: mode ? { ...saveDetails, advantage: mode === "advantage", disadvantage: mode === "disadvantage" } : saveDetails,
-      // Rolled by a GM for the player: shown to them as their own roll would have been
-      displayOptions: { chatMessage: true, fastForward, rollMode: rollModeToMessageMode(rollOptions.rollMode), forUserId: asUser !== user.id ? user.id : undefined }
+      displayOptions: { chatMessage: true, fastForward, rollMode, forUserId: user.id ?? undefined }
     });
-    const gm = () => game.users?.activeGM?.id ?? user.id!;
-    return trackPlayerWait({
-      kind: "contest", userId: user.id!, actorUuid, tokenUuid,
+    const byGm = (fastForward: boolean, mode?: "advantage" | "disadvantage"): Promise<Rolled> => (preferredActiveGM()
+      ? unTimedExecuteAsGM("rollAbility", forPlayer(fastForward, mode))
+      : rollAbility({ ...forPlayer(true, mode), displayOptions: { ...forPlayer(true, mode).displayOptions, unattended: true } })) as Promise<Rolled>;
+    return askUser<Rolled>(user, {
+      type: SAVE_REQUEST, data: asked, kind: "contest", actorUuid, tokenUuid,
       label: i18nFormat("midi-qol.PlayerWaits.ContestLabel", { flavor: flavor ?? i18n("midi-qol.ContestedRoll") }),
-      choices: {
-        roll: { label: "midi-qol.PlayerWaits.Choice.normal", value: () => roll(gm(), true) },
-        advantage: { label: "midi-qol.PlayerWaits.Choice.advantage", value: () => roll(gm(), true, "advantage") },
-        disadvantage: { label: "midi-qol.PlayerWaits.Choice.disadvantage", value: () => roll(gm(), true, "disadvantage") },
-        gmRoll: () => roll(gm(), false)
+      timeoutMs: (configSettings.playerSaveTimeout ?? 0) * 1000,
+      fallback: () => byGm(true),
+      gmChoices: {
+        roll: { label: "midi-qol.PlayerWaits.Choice.normal", value: () => byGm(true) },
+        advantage: { label: "midi-qol.PlayerWaits.Choice.advantage", value: () => byGm(true, "advantage") },
+        disadvantage: { label: "midi-qol.PlayerWaits.Choice.disadvantage", value: () => byGm(true, "disadvantage") },
+        gmRoll: () => byGm(false)
       }
-    }, () => roll(user.id!, rollOptions.fastForward));
+    }).settled.then(settled => settled.value, err => { error("contestedRoll | a roll could not be made", err); return undefined; });
   };
   const resultPromises = [
     contestRoll(player1, sourceSaveDetails, sourceRollOptions, sourceDocument?.actor?.uuid ?? undefined, sourceDocument?.uuid ?? undefined),
@@ -228,8 +238,9 @@ export async function contestedRoll(data: {
   let roll2 = results[1];
   if (roll1 instanceof Array) roll1 = roll1[0];
   if (roll2 instanceof Array) roll2 = roll2[0];
-  let result: number | undefined = roll1?.total - roll2?.total;
-  if (isNaN(result)) result = undefined;
+  // A side with no roll (it couldn't be made) leaves the contest without a result
+  let result: number | undefined = roll1?.total !== undefined && roll2?.total !== undefined ? roll1.total - roll2.total : undefined;
+  if (result !== undefined && isNaN(result)) result = undefined;
   if (note && result === undefined) await note.update({ "system.data.incomplete": true } as ChatMessage.UpdateData);
   // Without a card the result is a message of its own.
   if (displayResults !== false && !note) {
@@ -237,7 +248,7 @@ export async function contestedRoll(data: {
     if (result === undefined) resultString = "";
     else resultString = result > 0 ? i18n("midi-qol.save-success") : result < 0 ? i18n("midi-qol.save-failure") : result === 0 ? i18n("midi-qol.save-drawn") : "no result"
     const skippedString = i18n("midi-qol.Skipped");
-    const content = `${flavor ?? i18n("midi-qol.ContestedRoll")} ${resultString} ${roll1.total ?? skippedString} ${i18n("midi-qol.versus")} ${roll2.total ?? skippedString}`;
+    const content = `${flavor ?? i18n("midi-qol.ContestedRoll")} ${resultString} ${roll1?.total ?? skippedString} ${i18n("midi-qol.versus")} ${roll2?.total ?? skippedString}`;
     ChatMessage.create({ content: `<p>${content}</p>`, speaker: ChatMessage.getSpeaker({ token: sourceToken }) });
   }
 
