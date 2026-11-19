@@ -25,7 +25,7 @@ import { installedModules } from "./setupModules.js";
 import { offerFollowUps } from "./followUps.js";
 import { configSettings, autoRemoveTargets, checkRule, checkMechanic, safeGetGameSetting, useWeakReferences, onUseMacroOptions, chatCardUpdates } from "./settings.js";
 import { challengeVisibleToPlayers, saveDisplayMode } from "./lib/saveVisibility.js";
-import { BONUS_REQUEST, createDamageDetail, processDamageRoll, untargetDeadTokens, checkIncapacitated, getAutoRollDamage, isAutoFastForward, getAutoRollAttack, checkNearby, expireMyEffects, validTargetTokens, userTargetsKeepingUndrawn, HEALING_BUTTON_KEY, isActivityType, getOrCreateTokenForActorAsSet, doReactions, type ReactionResult, playerFor, requestPCActiveDefence, evalActivationCondition, asyncHooksCallAll, asyncHooksCall, renderSaveRollHTML, markFlanking, tokenForActor, getOrCreateTokenForActor, createConditionData, evalCondition, computeCoverBonus, computeTargetAC, TOTAL_COVER, THREE_QUARTERS_COVER, HALF_COVER, hasCoverTotal, isInCombat, displayDSNForRoll, setActionUsed, getTokenDocument, getToken, addRollTo, sumRolls, throttledUpdate, getCachedDocument, getUpdatesCache, clearUpdatesCache, getDamageType, getTokenName, tokenPortrait, setRollOperatorEvaluated, evalAllConditions, evalAllConditionsAsync, getAppliedEffects, CEAddEffectWith, getCEEffectByName, CEHasEffectApplied, CERemoveEffect, CEToggleEffect, getActivityDefaultDamageType, activityHasAreaTarget, DSNMarkDiceDisplayed, expectedTemplateCount, getSaveMultiplierForActivity, checkActivityRange, isRangeCheckable, getActivityAutoTargetAction, activityHasEmanationNoTemplate, completeActivityUse, getActor, getConcentrationEffect, convertDuration, getRemoveAllButtons, requestPCSave, pcSaveOptions, addUpdatesCache, MidiOptions, getOptionalCountRemainingShortFlag, bonusDialog, getTargetDescriptor, queueUpdate, addAttribution, renderAttributionTooltip, getAdvantageModeTitle, resolveItemMacro, resolveActivityMacro, midiFlag, updateUserTargets, getConsumptionData, toMessageMode, toLegacyRollMode, isDnd5eRollMessage, rollAnswersRequest, type SaveRequestKind, dnd5eRollType, tokenSourceElevation, applyStatusCondition, deleteCardAfterWrites } from "./utils.js";
+import { BONUS_REQUEST, createDamageDetail, processDamageRoll, untargetDeadTokens, checkIncapacitated, getAutoRollDamage, isAutoFastForward, getAutoRollAttack, checkNearby, expireMyEffects, validTargetTokens, userTargetsKeepingUndrawn, HEALING_BUTTON_KEY, isActivityType, getOrCreateTokenForActorAsSet, doReactions, type ReactionResult, playerFor, requestPCActiveDefence, evalActivationCondition, asyncHooksCallAll, asyncHooksCall, renderSaveRollHTML, markFlanking, tokenForActor, getOrCreateTokenForActor, createConditionData, evalCondition, computeCoverBonus, computeTargetAC, TOTAL_COVER, THREE_QUARTERS_COVER, HALF_COVER, hasCoverTotal, isInCombat, displayDSNForRoll, setActionUsed, getTokenDocument, getToken, addRollTo, sumRolls, throttledUpdate, getCachedDocument, getUpdatesCache, clearUpdatesCache, getDamageType, getTokenName, tokenPortrait, setRollOperatorEvaluated, evalAllConditions, evalAllConditionsAsync, getAppliedEffects, CEAddEffectWith, getCEEffectByName, CEHasEffectApplied, CERemoveEffect, CEToggleEffect, getActivityDefaultDamageType, activityHasAreaTarget, DSNMarkDiceDisplayed, expectedTemplateCount, getSaveMultiplierForActivity, checkActivityRange, isRangeCheckable, getActivityAutoTargetAction, activityHasEmanationNoTemplate, completeActivityUse, getActor, getConcentrationEffect, convertDuration, getRemoveAllButtons, requestPCSave, pcSaveOptions, addUpdatesCache, MidiOptions, getOptionalCountRemainingShortFlag, bonusDialog, getTargetDescriptor, queueUpdate, addAttribution, renderAttributionTooltip, getAdvantageModeTitle, resolveItemMacro, resolveActivityMacro, midiFlag, updateUserTargets, getConsumptionData, toMessageMode, toLegacyRollMode, isDnd5eRollMessage, rollAnswersRequest, type SaveRequestKind, dnd5eRollType, tokenSourceElevation, applyStatusCondition } from "./utils.js";
 import { OnUseMacros } from "./apps/Item.js";
 import { bonusCheck, collectBonusFlags, defaultRollOptions, buildPreComputedAdvantageMap, checkActivityAbilities } from "./patching.js";
 import { collectRollModifiers } from "./services/rollModifiers/service.js";
@@ -176,6 +176,7 @@ class CardStateStore {
       if (value === undefined || value === null) continue;
       if (key === "workflowOptions") this.#cache.set(key, decodeWorkflowOptions(foundry.utils.deepClone(value)));
       else if (key === "damageRules") this.#cache.set(key, mergeDamageRules(value as Parameters<typeof mergeDamageRules>[0]));
+      else if (key === "damageMessages") this.#cache.set(key, Object.fromEntries((value as { key: string, id: string }[]).map(({ key, id }) => [key, id])));
       else this.#cache.set(key, foundry.utils.deepClone(value));
     }
     for (const key of ["attackRollCount", "damageRollCount"] as const) if (midi[key] != null) this.#cache.set(key, midi[key]);
@@ -207,7 +208,7 @@ class CardStateStore {
       if (key === "attackRoll") { if (!this.#cache.has(key)) this.#cache.set(key, roll); }
       else this.#cache.set(key, [...((this.#cache.get(key) as Roll[] | undefined) ?? []), roll]);
     }
-    this.#loadDamageMessages(state.damageMessages as Record<string, string> | undefined);
+    this.#loadDamageMessages(this.#cache.get("damageMessages") as Record<string, string> | undefined);
   }
 
   /** The damage contributions read back from their messages (loadDamageMessages), for the workflow's ledger */
@@ -629,8 +630,8 @@ export class Workflow {
     const nested = messagesFrom(card.id!, USAGE_MESSAGE_TYPE).filter(m => m.id !== card.id && m.canUserModify(game.user!, "update"));
     const path: string = "system.origin";
     if (nested.length) await ChatMessage.updateDocuments(nested.map(m => ({ _id: m.id, [path]: origin })));
-    if (card.uuid) await deleteCardAfterWrites(card.uuid, () => card.delete());
-    else await card.delete();
+    // The delete waits for the card's write in flight (ChatMessageMidi._preDeleteOperation)
+    await card.delete();
   }
 
   /** Count the workflow as executing while `fn` runs: a roll from a card button happens outside performState. */
@@ -7239,7 +7240,9 @@ export class Workflow {
 
   /** This use's damage messages (createDamageMessages), by contribution key: on its card's state, so a rebuilt use finds them */
   get #damageMessageIds(): Record<string, string> { return this.#persisted.scalar("damageMessages", {} as Record<string, string>); }
-  set #damageMessageIds(ids: Record<string, string>) { this.#persisted.setScalar("damageMessages", ids); }
+  set #damageMessageIds(ids: Record<string, string>) {
+    this.#persisted.setScalar("damageMessages", ids, ids => Object.entries(ids).map(([key, id]) => ({ key, id })));
+  }
   /** A damage-only workflow's messages on another use's card (D2): kept here, the card's state is that use's */
   #foreignDamageMessageIds: Record<string, string> = {};
   #damageMessagesSync: Promise<void> | undefined;

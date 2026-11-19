@@ -4,7 +4,7 @@ import { MESSAGE_TYPES, MODULE_ID, MQDamageRollTypes, debugEnabled, error, i18n,
 import { TroubleShooter } from "../apps/TroubleShooter.js";
 import { Dnd5eSystem } from "../../globals.js";
 import { configSettings, forceHideRoll, safeGetGameSetting } from "../settings.js";
-import { displayTokenName, getToken, isDnd5eRollMessage } from "../utils.js";
+import { displayTokenName, forgetDeletingCard, getToken, isDnd5eRollMessage, settleCardWrites } from "../utils.js";
 import { damageDetailToObject, Workflow } from "../Workflow.js";
 import { renameMarkedTokens } from "../lib/tokenNames.js";
 import { attackRollOf, cardHitResult, cardHitsPending, cardMidi, rollsOfType, cardMidiState, cardSourceActor, recordList, storedMidiFlag } from "../lib/cardState.js";
@@ -162,6 +162,22 @@ export type ChatMessageMidiClass = new (...args: ConstructorParameters<ChatMessa
 
 export function defineChatMessageMidiClass(baseClass: ChatMessage.ImplementationClass): ChatMessageMidiClass {
   return class ChatMessageMidi extends baseClass /*globalThis.dnd5e.documents.ChatMessage5e*/ {
+
+    /**
+     * Any delete from this client (a macro's card.delete(), a chat clear, undo) waits for each card's write in flight and
+     * drops its queued ones: a write sent meanwhile reached the server after the delete, which logged a TypeError
+     */
+    static async _preDeleteOperation(...args: Parameters<ChatMessage.ImplementationClass["_preDeleteOperation"]>) {
+      const allowed = await super._preDeleteOperation(...args);
+      if (allowed === false) return false;
+      await Promise.all(args[0].map(message => message.uuid ? settleCardWrites(message.uuid) : undefined));
+      return allowed;
+    }
+
+    _onDelete(...args: Parameters<ChatMessage.Implementation["_onDelete"]>) {
+      super._onDelete(...args);
+      if (this.uuid) forgetDeletingCard(this.uuid);
+    }
 
     /**
      * dnd5e's lookup, then a synthetic item rebuilt from the snapshot midi keeps on the card. Every

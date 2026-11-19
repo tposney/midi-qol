@@ -8457,7 +8457,7 @@ function rollsMatch(current: readonly unknown[] | undefined, incoming: readonly 
 
 async function _updateAction(document: foundry.abstract.Document.Any, updates: ChatMessage.UpdateData) {
   const baseDocument = document.uuid ? fromUuidSync(document.uuid) as ChatMessage.Stored : null;
-  if (document.uuid && deletingCards.has(document.uuid)) return document;
+  if (document.uuid && isDeleting(document.uuid)) return document;
   if (!baseDocument) {
     console.warn(`midi-qol | _updateAction | baseDocument not found for ${document.uuid}`);
     return document;
@@ -8612,20 +8612,27 @@ export async function throttledUpdate(document: ChatMessage.Implementation, upda
   return await write;
 }
 const cardWrites = new Map<string, Promise<unknown>>();
-// Cards being deleted: a write sent now would reach the server after the delete and be rejected
-const deletingCards = new Set<string>();
+// Cards being deleted, and since when: a write sent now would reach the server after the delete and be rejected. Kept a
+// while only, in case the server refuses the delete
+const deletingCards = new Map<string, number>();
+const isDeleting = (uuid: string) => Date.now() - (deletingCards.get(uuid) ?? -Infinity) < 30000;
 
-/** Run `deleteCard` once the card's write in flight is done, with its queued writes dropped and no new ones sent */
-export async function deleteCardAfterWrites(uuid: string, deleteCard: () => Promise<unknown>): Promise<void> {
-  deletingCards.add(uuid);
+/**
+ * A card about to be deleted, by any client-side delete (ChatMessageMidi._preDeleteOperation): its write in flight lands
+ * first, its queued writes are dropped and no new ones sent
+ */
+export async function settleCardWrites(uuid: string): Promise<void> {
+  deletingCards.set(uuid, Date.now());
   delete updatesCache[uuid];
-  try {
-    await cardWrites.get(uuid);
-    await deleteCard();
-  } finally {
-    deletingCards.delete(uuid);
-  }
+  await cardWrites.get(uuid);
 }
+
+/** The card is gone: writes for it are no longer held */
+export function forgetDeletingCard(uuid: string): void {
+  deletingCards.delete(uuid);
+  delete updatesCache[uuid];
+}
+
 export function getUpdatesCache(uuid: string | undefined | null) {
   if (!uuid) return {};
   return updatesCache[uuid] ?? {};
