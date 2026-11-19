@@ -286,7 +286,11 @@ export async function postTemplateConfirmTargets(activity: Activity, options: Mi
   // A use given its targets (workflowOptions.ignoreUserTargets) keeps them: the user's targets may be anyone's by now. An
   // area's targets are the template's, whatever it was given
   const keepGiven = !!workflow.workflowOptions?.ignoreUserTargets && !activityHasAreaTarget(activity);
-  if (activityRequiresPostTemplateConfirmation(activity) && game.user?.targets && !keepGiven) {
+  // Targets worked out from the template are the use's already (user-targets plan stage 2). A use the player is shown them
+  // for reads them back, as macros filter a template's targets by editing the player's (MISC Arms of the Astral Self,
+  // Limited Magic Immunity: the plan's "must keep"); one they aren't shown keeps its own
+  const ownTemplateTargets = workflow.templateTargetsComputed && !workflow.showsTargetsToUser;
+  if (activityRequiresPostTemplateConfirmation(activity) && game.user?.targets && !keepGiven && !ownTemplateTargets) {
     await updateTargets();
   }
   return true;

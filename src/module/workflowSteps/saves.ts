@@ -34,7 +34,9 @@ export function registerSavesSteps(): void {
       if (workflow.workflowOptions.noTargetOnUseMacro !== true) await workflow.triggerTargetMacros(["isAboutToSave"]); // ??
       if (workflow.ammunition && workflow.workflowOptions.noOnUseMacro !== true) await workflow.callMacros(workflow.ammunition, workflow.ammunitionOnUseMacros?.getMacros("preSave"), "OnUse", "preSave");
     }
-    if (workflow.workflowType === "BaseWorkflow" && !workflow.workflowOptions.ignoreUserTargets && !workflow.activity.attack && workflow.activity.target?.affects.type !== "self") { // Allow editing of targets if there is no attack that has already been processed.
+    // Allow editing of targets if there is no attack that has already been processed: for a use the player drives and
+    // was shown the targets of (an automated use's are its own: user-targets plan stage 2)
+    if (workflow.workflowType === "BaseWorkflow" && workflow.showsTargetsToUser && !workflow.activity.attack && workflow.activity.target?.affects.type !== "self") {
       workflow.targets = userTargetsKeepingUndrawn(workflow.targets);
       workflow.hitTargets = new TokenDocumentSet(workflow.targets);
     }

@@ -36,6 +36,16 @@ import { clearAbandonedUse, isRelaunched, noteCall, takeRelaunch, type UseState 
 import { activityHasAreaTarget, callActivityHooks, canSee, canSense, checkActivityRange, checkTargetsSeen, checkTotalCover, checkIncapacitated, createConditionData, displayDSNForRoll, evalActivationCondition, evalCondition, getAutoRollAttack, getAutoRollDamage, getRemoveAttackButtons, getRemoveDamageButtons, getSpeaker, getToken, activityHasAutoPlaceTemplate, confirmUseOffScene, hasUsedBonusAction, hasUsedReaction, autoConsumeResource, isInCombat, logIncapacitatedCheckResult, needsBonusActionCheck, needsReactionCheck, setBonusActionUsed, setReactionUsed, sumRolls, getOrCreateTokenForActor, validTargetTokens, userTargetsKeepingUndrawn, itemMagicAvailable, hasNoReactionsMarker, HEALING_BUTTON_KEY, activityHasEmanationNoTemplate, getActivityAutoTargetAction, areMidiKeysPressed, getActor, setRangedTargets, updateUserTargets, isValidTarget, needsAOOCheck, addRollTo, getConsumptionData, toMessageMode, rollModeToMessageMode, tokenSourceCenter, isActivityType, speakerFor, setMessageTargets } from "../utils.js";
 import { activityHasScaledTargetCount, attachTokenOptions, templateOriginOptions, createActivityTemplateRegions, preTemplateTargets, removeFlanking, requiresTargetConfirmation, selectTargetsFromTemplates, setDamageRollMinTerms, shouldEnforceSingleTarget } from "./activityHelpers.js";
 
+
+/** The player's targets now are the use's pre-selection (user-targets plan stage 3): its snapshot and the workflow's */
+function retakeUserTargets(workflow: Workflow, usage?: ActivityUseConfiguration): void {
+  const uuids = Array.from(game.user?.targets ?? []).map(t => t.document.uuid).filter((uuid): uuid is string => !!uuid);
+  // setupTargets reads the use's own options; the workflow keeps its merged copy
+  if (usage?.midiOptions?.workflowOptions) usage.midiOptions.workflowOptions.preSelectedTargetUuids = uuids;
+  workflow.workflowOptions.preSelectedTargetUuids = uuids;
+  workflow.preSelectedTargets = new TokenDocumentSet(uuids);
+}
+
 export class MidiConditionField extends globalThis.dnd5e.dataModels.fields.FormulaField {
   _validateType(value: unknown) {
     return typeof value === "string";
@@ -256,6 +266,7 @@ export let MidiActivityMixin = Base => {
       if (offScene === "viewed" && choosesCreatures) usage.midiOptions.workflowOptions.targetConfirmation ??= "always";
       // Capture current targets before template placement can replace them
       // The player's targets as the use starts (a use told to ignore them has none from the player)
+      const snapshotFromUser = usage.midiOptions.workflowOptions.preSelectedTargetUuids === undefined && !usage.midiOptions.ignoreUserTargets;
       usage.midiOptions.workflowOptions.preSelectedTargetUuids ??= (usage.midiOptions.ignoreUserTargets ? [] : Array.from(game.user?.targets ?? []))
         .map(t => t.document.uuid).filter((uuid): uuid is string => !!uuid);
       if (debugEnabled > 0) warn("MidiQOL | MidiActivity | use | Called", usage, dialog, message);
@@ -333,6 +344,9 @@ export let MidiActivityMixin = Base => {
       // Stopped after the workflow was made: the caller's config is left without it, so a resubmitted config starts afresh
       const abandon = () => { clearAbandonedUse(usage); return stop(false); };
       if (!await activity.preTargetingChecks(usage, dialog, message)) return abandon();
+      // A preTargeting macro or hook may have set the player's targets: the use takes them (user-targets plan stage 3,
+      // C1). Safe now that automated uses never write the player's targets.
+      if (snapshotFromUser && !memberCount(usage.midiOptions.targetsToUse)) retakeUserTargets(usage.workflow!, usage);
       // Save/clear targets BEFORE setupTargets changes game.user.targets for self-targeting
       const isSelfTarget = this.target?.affects?.type === "self"
         // @ts-expect-error item.type includes "tool" at runtime
@@ -377,6 +391,18 @@ export let MidiActivityMixin = Base => {
       if (state.deferConcentration && usageConfig.concentration?.begin) {
         state.usage.workflow!.deferredConcentration = { scaling: usageConfig.scaling || undefined, end: usageConfig.concentration.end ?? undefined };
         usageConfig.concentration.begin = false;
+      }
+      // The player changed their targets while dnd5e's usage dialog was open: the use takes them, as valid targets (user-
+      // targets plan stage 3, C2). Not an area (its template decides), self, or a use the player doesn't drive. This hook is
+      // synchronous, so there is no confirmation from here.
+      const workflow = state.usage.workflow!;
+      if (state.dialog?.configure && workflow.showsTargetsToUser && !workflow.selfTargeted && !activityHasAreaTarget(newActivity)
+        && !memberCount(state.usage.midiOptions?.targetsToUse) && canvas?.scene) {
+        const now = validTargetTokens(new Set(game.user?.targets ?? []));
+        if (!workflow.targets.equals(now)) {
+          workflow.setTargets(now);
+          retakeUserTargets(workflow, state.usage);
+        }
       }
     }
 

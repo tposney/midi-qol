@@ -128,7 +128,6 @@ export function registerFlowVariants(): void {
   });
 
   registerFlowVariant("midi-qol.trap", "midi-qol.Start", async ({ workflow, base }: { workflow: TrapWorkflow, base: () => Promise<unknown> }) => {
-    workflow.saveTargets = validTargetTokens(new Set(game.user?.targets));
     workflow.effectsAlreadyExpired = [];
     if (debugEnabled > 1) debug(" Trapworkflow | WorkflowState_Start ", workflow.item, getActivityAutoTargetAction(workflow.activity), activityHasAreaTarget(workflow.activity), workflow.targets);
     // don't support the placement of a template
@@ -276,17 +275,6 @@ export function registerFlowVariants(): void {
   });
 
   registerFlowVariant("midi-qol.trap", "midi-qol.RollFinished", async ({ workflow, base }: { workflow: TrapWorkflow, base: () => Promise<unknown> }) => {
-    // area effect trap, put back the targets the way they were
-    if (workflow.saveTargets && activityHasAreaTarget(workflow.activity)) {
-      game.user?.targets.forEach(t => {
-        t.setTarget(false, { releaseOthers: false });
-      });
-      game.user?.targets.clear();
-      for (const t of workflow.saveTargets.tokens) {
-        t.setTarget(true, { releaseOthers: false })
-        game.user?.targets.add(t)
-      }
-    }
     // Run the base step here: returning the base method made it a separate state, firing RollFinished's hooks twice
     return base();
   });

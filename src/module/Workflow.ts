@@ -2398,13 +2398,27 @@ export class Workflow {
     return true;
   }
 
+  /**
+   * A person drives this use, so its template's targets are shown as the player's (user-targets plan stage 2). Not a
+   * use given its targets, one started by completeActivityUse or attack per target (a sequence), a trap or over-time.
+   */
+  get showsTargetsToUser(): boolean {
+    return !this.workflowOptions.ignoreUserTargets && this.sequenceId === undefined && !this.workflowOptions.isOverTime
+      && this.flowId !== "midi-qol.trap";
+  }
+
+  /** The use's targets were worked out from its templates (auto-target), not left to the player's selection */
+  templateTargetsComputed = false;
+
+  /** The template's targets are the use's, worked out directly; the player sees them only when they drive the use */
   selectAllTemplateTargets(activity?: Activity): void {
     const tokens = computeActivityTemplateTargets(activity ?? this.activity, this.templateUuids);
     if (!tokens) return;
-    updateUserTargets(tokens.map(t => t.id).filter(Boolean) as string[]);
     // Creatures on other levels reached through an opening have no canvas token, so they join the use's targets, not the user's
     const offLevel = computeOffLevelTemplateTargets(activity ?? this.activity, this.templateUuids);
-    this.setTargets(new Set<TokenOrDocument>([...(game.user?.targets ?? []), ...offLevel]));
+    this.setTargets(new Set<TokenOrDocument>([...tokens, ...offLevel]));
+    this.templateTargetsComputed = true;
+    if (this.showsTargetsToUser) updateUserTargets(tokens.map(t => t.id).filter(Boolean) as string[]);
   }
 
   async setupTemplateCleanup(templateDocument: MeasuredTemplateDocument | RegionDocument.Implementation): Promise<boolean> {
@@ -8648,7 +8662,6 @@ export class DamageOnlyWorkflow extends Workflow {
 export class TrapWorkflow extends Workflow {
   static flowId = "midi-qol.trap";
   templateLocation: { x: number, y: number, direction?: number, removeDelay?: number } | undefined;
-  saveTargets: TokenDocumentSet | undefined;
   targetsPassedToConstructor: boolean;
   static get forceCreate() { return false; }
   constructor(
@@ -8661,15 +8674,6 @@ export class TrapWorkflow extends Workflow {
     _storeWorkflow: boolean = false) {
     super(actor, activity, speakerFor({ actor }), new Set(targets ?? []), { event, storeWorkflow: false });
     this.targetsPassedToConstructor = targets !== undefined;
-    // Sync game.user.targets from targets passed to constructor (for non-AoE activities)
-    if (this.targetsPassedToConstructor && targets && targets.length > 0) {
-      game.user?.targets.forEach(t => t.setTarget(false, { releaseOthers: false }));
-      game.user?.targets.clear();
-      for (const t of targets) {
-        t.setTarget(true, { releaseOthers: false });
-        game.user?.targets.add(t);
-      }
-    }
     if (templateLocation) this.templateLocation = templateLocation;
     // Use fastForwardAttack/fastForwardDamage instead of shiftOnlyEvent to skip dialogs
     // Clear any event passed to constructor - it lacks target property that dnd5e's buildPost expects
@@ -8677,8 +8681,10 @@ export class TrapWorkflow extends Workflow {
     this.rollOptions.fastForwardAttack = true;
     this.rollOptions.fastForwardDamage = true;
     this.suspended = false;
+    // Its targets go with its use, not through the player's (user-targets plan stage 2): a trap leaves those alone
+    const targetsToUse = this.targetsPassedToConstructor && targets?.length ? new Set(targets) : undefined;
     // @ts-expect-error no dnd5e-types
-    this.activity.use({ configure: false, workflow: this, midiOptions: { workflowOptions: this.workflowOptions } }, {}, {})
+    this.activity.use({ configure: false, workflow: this, midiOptions: { workflowOptions: this.workflowOptions, ...(targetsToUse ? { targetsToUse } : {}) } }, {}, {})
     // this.performState("midi-qol.Start");
     return this;
   }
@@ -8866,6 +8872,8 @@ export type WorkflowOptions = InexactPartial<{
   preSelectedTargetUuids: string[];
   // UUID of the over-time effect that triggered this workflow, used by overtime processing.
   overTimeEffectUuid: string;
+  /** An over-time effect's use (utils doOverTimeEffect); CAT reads it too */
+  isOverTime: boolean;
   // A teleport's destinations, or "button" to leave a Plan: Auto teleport to the card's button.
   teleport: TeleportOption;
 }>
