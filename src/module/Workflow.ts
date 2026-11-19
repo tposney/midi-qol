@@ -6758,7 +6758,7 @@ export class Workflow {
       if (!mflags[key].roll) continue;
       const requestId = key.replace("token", "");
       if (!mflags[key].reveal) continue; // Must be showing the roll
-      const pendingKey = this.pendingSaves.keyForTokenId(requestId);
+      const pendingKey = this.pendingSaves.keyForToken(requestId, message.speaker?.scene);
       if (pendingKey) {
         let roll: Roll.Any;
         try {
@@ -6852,7 +6852,7 @@ export class Workflow {
   processSaveRoll(message: ChatMessage.Implementation, _html: HTMLElement | ChatMessage.Database.OnCreateOptions, _dataOrUserId?: ChatMessage.MessageData | string) {
     // An initiative roll by the same token is not the save being waited for
     const isRoll = isDnd5eRollMessage(message) && dnd5eRollType(message) !== "initiative";
-    const key = this.pendingSaves.keyForTokenId(message?.speaker?.token);
+    const key = this.pendingSaves.keyForToken(message?.speaker?.token, message?.speaker?.scene);
     if (debugEnabled > 0) warn("processSaveRoll |", key, this.pendingSaves.keys())
     if (!key || !isRoll) return true;
     // Only the kind of roll asked for answers it: another roll by the same token (a different save, an attack) doesn't

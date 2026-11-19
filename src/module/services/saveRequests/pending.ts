@@ -69,9 +69,15 @@ export class PendingSaves {
     this.take(key);
   }
 
-  /** The key of the save a token (by its id) waits for */
-  keyForTokenId(tokenId: string | null | undefined): string | undefined {
+  /**
+   * The key of the save a token waits for, from an answer that names the token by id (Monk's TokenBar, a chat roll's
+   * speaker): by its TokenDocument uuid when the answer's scene gives one that waits (a token id is unique only within a
+   * scene), else by the id alone (an answer whose speaker scene isn't the token's)
+   */
+  keyForToken(tokenId: string | null | undefined, sceneId?: string | null): string | undefined {
     if (!tokenId) return undefined;
+    const uuid = sceneId ? `Scene.${sceneId}.Token.${tokenId}` : undefined;
+    if (uuid && this.#pending.has(uuid)) return uuid;
     for (const [key, pending] of this.#pending) if (pending.tokenId === tokenId) return key;
     return undefined;
   }
