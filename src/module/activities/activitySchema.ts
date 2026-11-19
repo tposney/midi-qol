@@ -1,7 +1,7 @@
+import { configSettings } from "../settings.js";
 import { MODULE_ID, i18n } from "../../midi-qol.js";
 import { followUpTargetModes } from "../followUps.js";
-import { MidiConditionField } from "./MidiActivityMixin.js";
-import { teleportMoverModes, teleportPlanModes } from "./TeleportActivity.js";
+import { teleportMoverModes, teleportPlanModes } from "./teleport.js";
 
 /*
  * midi's activity fields, added to dnd5e's own activity data models rather than defined by midi's subclasses, so any
@@ -217,5 +217,51 @@ export function installActivitySchema() {
         const schema = wrapped(...args);
         return { ...schema, ...extra(schema) };
       }, "WRAPPER");
+  }
+}
+
+export class MidiConditionField extends globalThis.dnd5e.dataModels.fields.FormulaField {
+  _validateType(value: unknown) {
+    return typeof value === "string";
+  }
+  constructor(options: any) {
+    super(options);
+  }
+  static get _defaults(): any {
+    return foundry.utils.mergeObject(super._defaults, {
+      deterministic: false
+    });
+  }
+
+  /**
+   * Override _toInput to wrap the text input with a condition editor button.
+   * The button opens the ConditionEditor which provides autocomplete for condition expressions.
+   */
+  _toInput(config: any): HTMLElement {
+    // A plain text input: Foundry 14 draws formula fields with its dice Formula Editor (the λ button), not for conditions
+    const input = foundry.applications.fields.createTextInput(config) as HTMLInputElement;
+
+    if (!configSettings.conditionEditorEnabled) return input;
+
+    // Create wrapper container
+    const wrapper = document.createElement("div");
+    wrapper.classList.add("midi-condition-field-wrapper");
+    wrapper.appendChild(input);
+
+    // Create editor button using data-action pattern (event listeners don't survive Handlebars outerHTML serialization)
+    const fieldName = config.name ?? this.name;
+    const fieldLabel = this.label ?? config.name ?? this.name;
+    const button = document.createElement("button");
+    button.type = "button";
+    button.classList.add("midi-condition-editor-btn", "unbutton", "control-button");
+    button.dataset.action = "openConditionEditor";
+    button.dataset.fieldName = fieldName;
+    button.dataset.fieldLabel = fieldLabel;
+    button.innerHTML = '<i class="fas fa-code" inert></i>';
+    button.dataset.tooltip = i18n("midi-qol.ConditionEditor.Tooltip");
+    button.ariaLabel = i18n("midi-qol.ConditionEditor.Tooltip");
+
+    wrapper.appendChild(button);
+    return wrapper;
   }
 }

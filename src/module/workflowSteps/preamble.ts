@@ -1,6 +1,8 @@
 import { debug, debugEnabled, error, i18nFormat, warn } from "../../midi-qol.js";
-import { isTransformActivity, transformActor } from "../activities/TransformActivity.js";
-import { isMidiActivityType, placeEmanationTemplate, setupCanSeeSense } from "../activities/MidiActivityMixin.js";
+import { isTransformActivity, transformActor } from "../activities/transform.js";
+import { isMidiActivityType } from "../activities/midiActivity.js";
+import { placeEmanationTemplate } from "../activities/regions.js";
+import { setupCanSeeSense } from "../activities/useChecks.js";
 import { activityHasScaledTargetCount, postTemplateConfirmTargets } from "../activities/activityHelpers.js";
 import { TroubleShooter } from "../apps/TroubleShooter.js";
 import { checkMechanic, configSettings, safeGetGameSetting } from "../settings.js";

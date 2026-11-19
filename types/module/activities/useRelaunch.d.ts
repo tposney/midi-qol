@@ -1,5 +1,5 @@
 import type { Activity, ActivityUseConfiguration, RollDialogConfig, RollMessageConfig } from "../../globals.js";
-import { type MidiActivity } from "./MidiActivityMixin.js";
+import { type MidiActivity } from "./midiActivity.js";
 /** One use's working state between midi's pre-use work, dnd5e's use and midi's post-use work. */
 export interface UseState {
     usage: ActivityUseConfiguration;

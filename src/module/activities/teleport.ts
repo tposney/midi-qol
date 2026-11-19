@@ -1,6 +1,6 @@
 import { adoptActivityType } from "./activityPrototype.js";
 import { registerSheetExtras } from "./activitySheets.js";
-import type { MidiActivity } from "./MidiActivityMixin.js";
+import type { MidiActivity } from "./midiActivity.js";
 import { registerCardActions } from "./cardActions.js";
 import { Activity, RollMessageConfig } from "../../globals.js";
 import { debugEnabled, GameSystemConfig, i18n, i18nFormat, warn, moveToken } from "../../midi-qol.js";

@@ -1,5 +1,6 @@
 import { confirmTargets } from "../services/targetConfirmation/service.js";
-import { isMidiActivityType, setupCanSeeSense } from "./MidiActivityMixin.js";
+import { isMidiActivityType } from "./midiActivity.js";
+import { setupCanSeeSense } from "./useChecks.js";
 import { TokenDocumentSet, memberCount } from "../lib/tokenDocumentSet.js";
 import { Activity, ActivityUseConfiguration, RollMessageConfig, TokenOrDocument } from "../../globals.js";
 import { MODULE_ID, debugEnabled, warn, i18n, GameSystemConfig } from "../../midi-qol.js";

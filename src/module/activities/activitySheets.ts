@@ -9,7 +9,7 @@ import {
 import { installedModules } from "../setupModules.js";
 import { activityHasAreaTarget, isActivityType, rollModeToMessageMode } from "../utils.js";
 import { attachTokenOptions, templateOriginOptions } from "./activityHelpers.js";
-import { isMidiActivityType, type MidiActivity } from "./MidiActivityMixin.js";
+import { isMidiActivityType, type MidiActivity } from "./midiActivity.js";
 
 /*
  * midi's additions to dnd5e's activity sheets (M14 stage 3: were midi's sheet classes, installed by graft.ts), with no
@@ -98,11 +98,13 @@ export function installActivitySheets(types: Iterable<string>) {
   Hooks.on("renderActivitySheet", app => {
     if (isMidiSheet(app)) onRender(app);
   });
+  // DAE's macro editor button in every activity sheet's header
+  Hooks.on("renderActivitySheet", renderActivitySheetHook);
 }
 
 /** An activity sheet of a type midi uses */
 function isMidiSheet(app: unknown): app is ActivitySheetApp {
-  return !!app && typeof app === "object" && "activity" in app && isMidiActivityType((app as { activity?: MidiActivity }).activity);
+  return !!app && typeof app === "object" && "activity" in app && isMidiActivityType(app.activity);
 }
 
 /** midi's tab and its sub-tabs (were midi's _getTabs), marked active as dnd5e's are */
@@ -312,4 +314,36 @@ function openConditionEditor(this: ActivitySheetApp, _event: PointerEvent, targe
 
 function openRegionBehaviorEditor(this: ActivitySheetApp) {
   new RegionBehaviorEditor(this.activity).render({ force: true });
+}
+
+/**
+ * DAE's activity macro editor as a header button (green when the activity has a macro). Foundry 14's render hooks pass
+ * the application's root element: the old `[elem]` (a jQuery list) threw on every activity sheet render.
+ */
+function renderActivitySheetHook(app: unknown, element: HTMLElement) {
+  const Editor = globalThis.DAE?.DIMEditor;
+  if (!Editor || !isActivitySheet(app)) return;
+  const activity = app.activity;
+  if (!activity.macro) return;
+  const header = element.querySelector(".window-header");
+  const existing = header?.querySelector<HTMLElement>("button.dae-dimeditor");
+  const hasMacro = activity.macro instanceof Macro && !!activity.macro.command;
+  if (existing) {
+    if (hasMacro) existing.style.color = "#36ba36";
+    return;
+  }
+  const close = header?.querySelector('button[data-action="close"]');
+  if (!close) return;
+  const button = document.createElement("button");
+  button.type = "button";
+  button.className = "header-control fa-solid fa-file-pen dae-dimeditor icon";
+  button.title = "Activity Macro Editor";
+  button.addEventListener("click", () => new Editor({ document: app.activity }).render({ force: true }));
+  if (hasMacro) button.style.color = "#36ba36";
+  close.parentNode?.insertBefore(button, close);
+}
+
+/** Any activity sheet (DAE's button is offered on every type's) */
+function isActivitySheet(app: unknown): app is ActivitySheetApp {
+  return !!app && typeof app === "object" && "activity" in app;
 }

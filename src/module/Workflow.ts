@@ -1,5 +1,8 @@
 import { isRollOf } from "./rolls/common.js";
-import { attachRegionActivityBehavior, hasConsumption, isMidiActivityType, setupCanSeeSense, shouldAutoConsume } from "./activities/MidiActivityMixin.js";
+import { attachRegionActivityBehavior } from "./activities/regions.js";
+import { hasConsumption, shouldAutoConsume } from "./activities/use.js";
+import { isMidiActivityType } from "./activities/midiActivity.js";
+import { setupCanSeeSense } from "./activities/useChecks.js";
 import { rollOtherDamage } from "./rolls/damage.js";
 import { allSteps, getStep, REACTION_STEPS, stepForMethod, type StepContext } from "./steps/steps.js";
 import { MIDI_SAVE_PROVIDERS, requestSaves, settingsProviderFor, type SaveRequest, type SaveRequestEntry } from "./services/saveRequests/service.js";
@@ -14,7 +17,7 @@ import { getDistance } from "./services/distance/service.js";
 import { computeFlankedStatus, computeFlankingStatus } from "./services/flanking/service.js";
 import { speakerFor } from "./utils.js";
 import { warn, debug, log, i18n, i18nFormat, busyWait, error, debugEnabled, MQItemMacroLabel, GameSystemConfig, MODULE_ID, MQActivityMacroLabel, gameStats, MQDamageRollTypes } from "../midi-qol.js";
-import { TeleportOption } from "./activities/TeleportActivity.js";
+import { TeleportOption } from "./activities/teleport.js";
 import { cardWorkflowOptions, decodeWorkflowOptions, inheritableWorkflowOptions } from "./lib/workflowOptionsCodec.js";
 import { eventModifiers } from "./lib/rollKeys.js";
 import { TokenDocumentSet, hookTarget, tokenOf } from "./lib/tokenDocumentSet.js";
@@ -41,7 +44,7 @@ import { activityHasScaledTargetCount, computeActivityTemplateTargets, computeOf
 import { Activity, Dnd5eChatMessage, ActivitySave, ActivityCheck, ActivityUseConfiguration, DamageDescription, DamageListEntry, TokenOrDocument, DND5ETargetDescriptor, CombinedTargetDescriptor, ActivityEffectData, QueueSaveRollOptions, SaveDetails, ProcessTargetSaveContext, ModuleIntegrationFlags, ModuleIntegrationRequests, MonksTokenBarRequest, FlashRollsRequest, EpicRollsRequest, RollProcessConfig, RollDialogConfig } from "../globals.js";
 import { AnyMutableObject, AnyObject, EmptyObject, InexactPartial } from "fvtt-types/utils";
 import Token = foundry.canvas.placeables.Token;
-import { computeAttackAdvantage } from "./activities/AttackActivity.js";
+import { computeAttackAdvantage } from "./rolls/attack.js";
 import { collectDamageRules, DamageRules, mergeDamageRules, sameDamageRules, storeDamageRules } from "./lib/damageRules.js";
 import { RollModifierTracker, CriticalModifierFlags, computeCriticalModifiers, computeTargetCriticalModifiers, getFlagDisplayName } from "./lib/RollModifierTracker.js";
 

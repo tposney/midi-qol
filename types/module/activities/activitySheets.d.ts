@@ -1,5 +1,5 @@
 import type { AnyMutableObject } from "fvtt-types/utils";
-import { type MidiActivity } from "./MidiActivityMixin.js";
+import { type MidiActivity } from "./midiActivity.js";
 /** The sheet's activity: dnd5e's members midi's sheet code calls */
 type SheetActivity = MidiActivity & {
     update(changes: object): Promise<unknown>;

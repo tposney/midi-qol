@@ -1,5 +1,6 @@
 import type { Activity, DND5ETargetDescriptor, Dnd5eSystem, RollDialogConfig, RollMessageConfig, RollProcessConfig } from "../../globals.js";
-import { hasConsumption, isMidiActivityType } from "../activities/MidiActivityMixin.js";
+import { hasConsumption } from "../activities/use.js";
+import { isMidiActivityType } from "../activities/midiActivity.js";
 import { GameSystemConfig, MODULE_ID, debugEnabled, error, i18n, i18nFormat, warn } from "../../midi-qol.js";
 import { TroubleShooter } from "../apps/TroubleShooter.js";
 import { cardOtherConsumption } from "../lib/cardState.js";

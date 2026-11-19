@@ -3,7 +3,7 @@ import { TokenDocumentSet } from "../lib/tokenDocumentSet.js";
 import { Activity } from "../../globals.js";
 import { isActivityType } from "../utils.js";
 import { debugEnabled, GameSystemConfig, i18nFormat, warn } from "../../midi-qol.js";
-import { type MidiActivity } from "./MidiActivityMixin.js";
+import { type MidiActivity } from "./midiActivity.js";
 import type { ActivityUseConfiguration } from "../../globals.js";
 
 

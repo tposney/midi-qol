@@ -4,7 +4,8 @@ import { reportServiceProblem } from "../api/services.js";
 import { setMessageTargets } from "../utils.js";
 import { Workflow } from "../Workflow.js";
 import { MODULE_ID } from "../../midi-qol.js";
-import { finishUse, onUseConsumption, onUsePreUse, prepareUse, type MidiActivity } from "./MidiActivityMixin.js";
+import { finishUse, onUseConsumption, onUsePreUse, prepareUse } from "./use.js";
+import { type MidiActivity } from "./midiActivity.js";
 
 /*
  * M10: a use goes through the restart (plan ~/Documents/midi-next-M10-plan-2026-11-19.md; spike

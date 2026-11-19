@@ -1,6 +1,8 @@
 import { installUse } from "./module/activities/useRelaunch.js";
-import { useAs, confirmTargets, setupTargets, attachRegionActivityBehavior } from "./module/activities/MidiActivityMixin.js";
-import { planTeleport } from "./module/activities/TeleportActivity.js";
+import { useAs } from "./module/activities/use.js";
+import { confirmTargets, setupTargets } from "./module/activities/useTargets.js";
+import { attachRegionActivityBehavior } from "./module/activities/regions.js";
+import { planTeleport } from "./module/activities/teleport.js";
 import { cardDamageRolls } from "./module/lib/cardState.js";
 import { installFormulaAndPlacement } from "./module/rolls/formula.js";
 import { installAttackRolls } from "./module/rolls/attack.js";
@@ -38,7 +40,7 @@ import { TroubleShooter } from './module/apps/TroubleShooter.js';
 import { notifyFeatureOverlaps, setupFeatureOverlaps } from './module/featureOverlaps.js';
 import { TargetConfirmationDialog } from './module/apps/TargetConfirmation.js';
 import { TargetConfirmationConfig } from './module/apps/TargetConfirmationConfig.js';
-import { setupAttackActivity } from './module/activities/AttackActivity.js';
+import { setupActivityTypes } from './module/activities/types.js';
 import { RollModifierTracker } from './module/lib/RollModifierTracker.js';
 import { TokenDocumentSet, setupTokenSetMode, tokenSetDocumentMode } from './module/lib/tokenDocumentSet.js';
 import { injectMidiCompletions } from './module/lib/midiCompletions.js';
@@ -422,32 +424,15 @@ function setupActivities() {
   globalThis.MidiQOL.activityTypes = {};
   installActivitySchema();
   installActivityPrototype();
-  setupMidiActivityMixin();
+  setupUsageCard();
   initUseRelaunch();
   registerMidiSteps();
-  setupAttackActivity();
-  globalThis.MidiQOL.activityTypes["attack"] = GameSystemConfig.activityTypes.attack;
-  setupDamageActivity();
-  globalThis.MidiQOL.activityTypes["damage"] = GameSystemConfig.activityTypes.damage;
-  setupCastActivity();
-  globalThis.MidiQOL.activityTypes["cast"] = GameSystemConfig.activityTypes.cast;
-  setupSaveActivity();
-  globalThis.MidiQOL.activityTypes["save"] = GameSystemConfig.activityTypes.save;
-  setupCheckActivity(); // must happen after setupSaveActivity
-  globalThis.MidiQOL.activityTypes["check"] = GameSystemConfig.activityTypes.check;
-  setupEnchantActivity();
-  globalThis.MidiQOL.activityTypes["enchant"] = GameSystemConfig.activityTypes.enchant;
-  setupHealActivity();
-  globalThis.MidiQOL.activityTypes["heal"] = GameSystemConfig.activityTypes.heal;
-  setupSummonActivity();
-  globalThis.MidiQOL.activityTypes["summon"] = GameSystemConfig.activityTypes.summon;
+  setupActivityTypes();
   setupTransformActivity();
   setupTeleportActivity();
-  globalThis.MidiQOL.activityTypes["transform"] = GameSystemConfig.activityTypes.transform;
-  setupUtilityActivity();
-  globalThis.MidiQOL.activityTypes["utility"] = GameSystemConfig.activityTypes.utility;
-  setupForwardActivity();
-  globalThis.MidiQOL.activityTypes["forward"] = GameSystemConfig.activityTypes.forward;
+  // dnd5e's classes, as midi uses them (were midi's classes until M14)
+  for (const type of ["attack", "damage", "cast", "save", "check", "enchant", "heal", "summon", "transform", "utility", "forward"])
+    globalThis.MidiQOL.activityTypes[type] = GameSystemConfig.activityTypes[type];
   // midi's activity classes are gone (M14): their mixin is kept as a deprecated pass-through
   Object.defineProperty(globalThis.MidiQOL.activityTypes, "MidiActivityMixin", { configurable: true, enumerable: false, get: () => {
     deprecation("midi-qol | MidiQOL.activityTypes.MidiActivityMixin is deprecated: midi's behaviour is on dnd5e's own activity classes; for a type of your own use MidiQOL.registerActivityPolicy",
@@ -1050,15 +1035,8 @@ import { contestedRoll, setupContestNote } from './module/lib/contestedRoll.js';
 import { setupInfluenceNote } from './module/lib/influenceNote.js';
 import { setupTokenNames, tokenName, tokenNameMarkup } from './module/lib/tokenNames.js';
 import { setupCardNoteMessage } from './module/ChatClasses/CardNoteMessage.js';
-import { setupSaveActivity } from './module/activities/SaveActivity.js';
-import { setupUtilityActivity } from './module/activities/UtilityActivity.js';
-import { setupSummonActivity } from './module/activities/SummonActivity.js';
-import { setupDamageActivity } from './module/activities/DamageActivity.js';
-import { setupCastActivity } from './module/activities/CastActivity.js';
-import { setupCheckActivity } from './module/activities/CheckActivity.js';
-import { setupHealActivity } from './module/activities/HealActivity.js';
 import { computeTargetsFromTemplates, requiresTargetConfirmation, resolveTargetConfirmation, selectTargetsFromTemplates, showItemInfo } from './module/activities/activityHelpers.js';
-import { setupMidiActivityMixin } from './module/activities/MidiActivityMixin.js';
+import { setupUsageCard } from './module/activities/usageCard.js';
 import { installActivitySheets } from './module/activities/activitySheets.js';
 import { initUseRelaunch } from './module/activities/useRelaunch.js';
 import { registerMidiSteps } from './module/workflowSteps/index.js';
@@ -1066,10 +1044,8 @@ import { installActivitySchema } from './module/activities/activitySchema.js';
 import { installCardActions, registerCardAction } from './module/activities/cardActions.js';
 import { installUsageButtons, registerCardButtonRule } from './module/activities/usageButtons.js';
 import { installActivityPrototype, installActivityCreation, registerActivityPolicy, activityPolicy } from './module/activities/activityPrototype.js';
-import { setupForwardActivity } from './module/activities/ForwardActivity.js';
-import { setupEnchantActivity } from './module/activities/EnchantActivity.js';
-import { setupTransformActivity } from './module/activities/TransformActivity.js';
-import { setupTeleportActivity } from './module/activities/TeleportActivity.js';
+import { setupTransformActivity } from './module/activities/transform.js';
+import { setupTeleportActivity } from './module/activities/teleport.js';
 import { MidiCombat5e } from './module/MidiCombat5e.js';
 import { MoveTokenOptions, TeleportTokenDestination, TokenOrDocument, SelectOptionValue } from './globals.js';
 import { DamageApplicationElementMidi } from './module/ChatClasses/DamageApplicationElementMidi.js';

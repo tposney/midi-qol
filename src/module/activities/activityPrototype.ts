@@ -2,7 +2,7 @@ import { MODULE_ID } from "../../midi-qol.js";
 import { Activity } from "../../globals.js";
 import { Registry } from "../api/registry.js";
 import { configSettings } from "../settings.js";
-import { findAmmunitionActivity } from "./MidiActivityMixin.js";
+import { findAmmunitionActivity } from "./midiActivity.js";
 
 /**
  * What midi does with each activity type, in place of per-type getter overrides on midi's subclasses.

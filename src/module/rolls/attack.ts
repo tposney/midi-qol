@@ -1,9 +1,12 @@
+import { AdvantageFlags, RollModifierTracker, computeAdvantageFlags } from "../lib/RollModifierTracker.js";
+import { GameSystemConfig } from "../../midi-qol.js";
+import { MidiOptions } from "../utils.js";
 import type { Activity, ActivityUseConfiguration, DND5ETargetDescriptor, RollDialogConfig, RollMessageConfig, RollProcessConfig } from "../../globals.js";
 import { MODULE_ID, busyWait, debug, debugEnabled, error, i18n, i18nFormat, warn } from "../../midi-qol.js";
 import { OnUseMacros } from "../apps/Item.js";
 import { USAGE_MESSAGE_TYPE } from "../ChatClasses/UsageCardMessage.js";
 import { doActivityReactions } from "../activities/activityHelpers.js";
-import { findAmmunitionActivity } from "../activities/MidiActivityMixin.js";
+import { findAmmunitionActivity } from "../activities/midiActivity.js";
 import { deprecation } from "../lib/compatLine.js";
 import { applyRollModifiers, applyTrackerAdvantage, computeRollModifiers, type RollModifierFlags } from "../lib/RollModifierTracker.js";
 import { decideRollDialog, dialogShown, heldKeys } from "../lib/rollKeys.js";
@@ -11,7 +14,6 @@ import { TokenDocumentSet } from "../lib/tokenDocumentSet.js";
 import { configSettings } from "../settings.js";
 import { addAttribution, areMidiKeysPressed, callActivityHooks, displayDSNForRoll, getSpeaker, getToken, isAutoFastForward, setMessageTargets, tokenSourceCenter, updateUserTargets } from "../utils.js";
 import { Workflow } from "../Workflow.js";
-import { labelAttackParts, rollBonusSources } from "../activities/AttackActivity.js";
 import { isRollOf } from "./common.js";
 
 /*
@@ -578,5 +580,162 @@ export function installAttackRolls(): void {
       return attackAgain(activity, workflow, event);
     }
   });
+}
+
+/* The attack roll's advantage and bonus labels (M14: from AttackActivity.ts) */
+
+/**
+ * Compute attack advantage/disadvantage from actor flags and target grants flags.
+ * This handles the flag-based advantage checks for attacks.
+ * Special rules (flanking, invisible, nearby foe, heavy weapons) are handled separately in Workflow.
+ *
+ * @param actor - The attacking actor
+ * @param actionType - The action type (mwak, rwak, msak, rsak, etc.)
+ * @param options - MidiOptions including workflow, target info
+ * @param abilityId - Optional ability ID for ability-based attack flags (e.g., "str", "dex")
+ * @param tracker - Optional existing RollModifierTracker to populate
+ * @returns RollModifierTracker with attack advantage attribution
+ */
+export async function computeAttackAdvantage(
+  actor: Actor.Implementation,
+  actionType: string,
+  options: MidiOptions,
+  abilityId?: string,
+  tracker?: RollModifierTracker
+): Promise<RollModifierTracker> {
+  tracker ??= new RollModifierTracker();
+
+  // Spell school for school-specific attack flags
+  // @ts-expect-error no dnd5e-types
+  const attackSchool: string | undefined = options.item?.system?.school;
+
+  // Define attack advantage flags
+  const attackFlags: AdvantageFlags = {
+    advantageFlags: [
+      "advantage.all",
+      "advantage.attack.all",
+      `advantage.attack.${actionType}`,
+      // Include ability-based attack flags if abilityId is provided
+      ...(abilityId ? [`advantage.attack.${abilityId}`] : []),
+      ...(attackSchool ? [`advantage.attack.school.${attackSchool}`] : [])
+    ],
+    disadvantageFlags: [
+      "disadvantage.all",
+      "disadvantage.attack.all",
+      `disadvantage.attack.${actionType}`,
+      ...(abilityId ? [`disadvantage.attack.${abilityId}`] : []),
+      ...(attackSchool ? [`disadvantage.attack.school.${attackSchool}`] : [])
+    ],
+    noAdvantageFlags: [
+      "noAdvantage.all",
+      "noAdvantage.attack.all",
+      `noAdvantage.attack.${actionType}`,
+      ...(abilityId ? [`noAdvantage.attack.${abilityId}`] : []),
+      ...(attackSchool ? [`noAdvantage.attack.school.${attackSchool}`] : [])
+    ],
+    noDisadvantageFlags: [
+      "noDisadvantage.all",
+      "noDisadvantage.attack.all",
+      `noDisadvantage.attack.${actionType}`,
+      ...(abilityId ? [`noDisadvantage.attack.${abilityId}`] : []),
+      ...(attackSchool ? [`noDisadvantage.attack.school.${attackSchool}`] : [])
+    ],
+    systemRollModeFields: [...(abilityId ? [`abilities.${abilityId}.attack.roll.mode`] : []), "rolls.attack.mode", `rolls.attack.${actionType}.mode`],
+    ...(options.workflow?.activity ? { systemRules: { category: "attack" as const, item: options.workflow.activity.item,
+      // @ts-expect-error no dnd5e-types
+      rollData: options.workflow.activity.getRollData({ roll: { ability: abilityId, attackMode: options.workflow.attackMode } }) } } : {}),
+    // Target grants flags (checked on target actor)
+    sourceAdvantageFlags: [
+      "grants.advantage.all",
+      "grants.advantage.attack.all",
+      `grants.advantage.attack.${actionType}`,
+      ...(attackSchool ? [`grants.advantage.attack.school.${attackSchool}`] : [])
+    ],
+    sourceDisadvantageFlags: [
+      "grants.disadvantage.all",
+      "grants.disadvantage.attack.all",
+      `grants.disadvantage.attack.${actionType}`,
+      ...(attackSchool ? [`grants.disadvantage.attack.school.${attackSchool}`] : [])
+    ],
+    sourceNoAdvantageFlags: [
+      "grants.noAdvantage.attack.all",
+      `grants.noAdvantage.attack.${actionType}`,
+      ...(attackSchool ? [`grants.noAdvantage.attack.school.${attackSchool}`] : [])
+    ],
+    sourceNoDisadvantageFlags: [
+      "grants.noDisadvantage.attack.all",
+      `grants.noDisadvantage.attack.${actionType}`,
+      ...(attackSchool ? [`grants.noDisadvantage.attack.school.${attackSchool}`] : [])
+    ]
+  };
+
+  // For attacks, the entity that grants advantage/disadvantage is the defender (target)
+  const targetToken = options.workflow?.targets?.documents[0];
+  const targetActor = targetToken?.actor ?? undefined;
+
+  await computeAdvantageFlags(actor, attackFlags, {
+    ...options,
+    grantsActor: targetActor,
+    grantsToken: targetToken
+  }, tracker);
+
+  return tracker;
+}
+
+/** The label of dnd5e's combined roll bonus term (its `@ruleBonus` part), which rollBonusSources breaks down. */
+export function rollBonusLabel(): string {
+  return i18n("midi-qol.AttackTerm.RollBonus");
+}
+
+/**
+ * dnd5e's attack roll parts (getAttackData: `@mod`, `@prof`, `@bonus`, …) with a label in brackets, which each
+ * evaluated term keeps as its flavor. Parts that aren't one of these references are left as they are.
+ */
+export function labelAttackParts(parts: string[], ability: string | undefined): string[] {
+  const labels: Record<string, string | undefined> = {
+    mod: ability ? GameSystemConfig.abilities[ability]?.label : undefined,
+    prof: i18n("DND5E.Proficiency"),
+    bonus: i18n("DND5E.BonusAttack"),
+    weaponMagic: i18n("DND5E.MagicalBonus"),
+    ammoMagic: i18n("DND5E.ConsumeAmmunition"),
+    ruleBonus: rollBonusLabel(),
+    situational: i18n("midi-qol.AttackTerm.Situational")
+  };
+  return parts.map(part => {
+    const key = /^@([\w.]+)$/.exec(part)?.[1];
+    if (!key) return part;
+    const label = key.startsWith("reductions.") ? i18n("DND5E.Exhaustion") : labels[key];
+    return label ? `${part}[${label.replace(/[[\]]/g, "")}]` : part;
+  });
+}
+
+/**
+ * The effects behind dnd5e's combined roll bonus for this attack (`@ruleBonus`: the attack roll bonuses for the
+ * ability, all attacks and the action type), each with its own value resolved against the actor's data. Only adding
+ * changes have a value of their own; an override or custom change is listed without one.
+ */
+export function rollBonusSources(activity: any, ability: string | undefined, actionType: string | undefined): Array<{ label: string, value?: string, img?: string }> {
+  const actor = activity?.actor;
+  if (!actor) return [];
+  const keys = new Set([
+    "system.rolls.attack.bonus",
+    ...(actionType ? [`system.rolls.attack.${actionType}.bonus`, `system.bonuses.${actionType}.attack`] : []),
+    ...(ability ? [`system.abilities.${ability}.attack.roll.bonus`] : [])
+  ]);
+  const rollData = actor.getRollData();
+  const sources: Array<{ label: string, value?: string, img?: string }> = [];
+  for (const effect of actor.allApplicableEffects()) {
+    if (!effect.active) continue;
+    for (const change of effect.system.changes ?? []) {
+      if (!keys.has(change.key)) continue;
+      if (change.type !== "add") {
+        sources.push({ label: effect.name, img: effect.img ?? undefined });
+        continue;
+      }
+      const resolved = Roll.replaceFormulaData(`${change.value}`.trim(), rollData).replace(/^\+\s*/, "");
+      sources.push({ label: effect.name, value: resolved.startsWith("-") ? resolved : `+${resolved}`, img: effect.img ?? undefined });
+    }
+  }
+  return sources;
 }
 

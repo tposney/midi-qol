@@ -3,7 +3,7 @@ import { type SaveRequest, type SaveRequestEntry } from "./services/saveRequests
 import { PendingSaves } from "./services/saveRequests/pending.js";
 import { type AssembledSteps, type StepChangeInput } from "./steps/assembly.js";
 import { type PortName, type WorkflowPorts } from "./steps/ports.js";
-import { TeleportOption } from "./activities/TeleportActivity.js";
+import { TeleportOption } from "./activities/teleport.js";
 import { TokenDocumentSet } from "./lib/tokenDocumentSet.js";
 import { type WaitChoiceSpec } from "./lib/playerWaits.js";
 import { type ReactionResult, getOrCreateTokenForActor } from "./utils.js";

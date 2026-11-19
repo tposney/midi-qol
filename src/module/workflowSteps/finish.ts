@@ -1,5 +1,5 @@
 import { debugEnabled, error, log, warn } from "../../midi-qol.js";
-import { autoTeleport, isTeleportActivity } from "../activities/TeleportActivity.js";
+import { autoTeleport, isTeleportActivity } from "../activities/teleport.js";
 import { TroubleShooter } from "../apps/TroubleShooter.js";
 import { offerFollowUps } from "../followUps.js";
 import { configSettings } from "../settings.js";

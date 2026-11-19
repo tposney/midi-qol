@@ -1,5 +1,6 @@
 import type { Activity } from "../../globals.js";
-import { hasConsumption, isMidiActivityType } from "./MidiActivityMixin.js";
+import { hasConsumption } from "./use.js";
+import { isMidiActivityType } from "./midiActivity.js";
 import { i18n } from "../../midi-qol.js";
 import { midiButtonVisibility } from "../ChatClasses/UsageCardMessage.js";
 import { cardMidi, cardOtherConsumption } from "../lib/cardState.js";
