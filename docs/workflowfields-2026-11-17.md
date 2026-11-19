@@ -400,8 +400,9 @@ In the teleport passes `options.teleport` holds `maxDistance` and `tokens` (`pre
 
 | Field | Stable | Type | What it holds | When |
 | --- | --- | --- | --- | --- |
-| `currentAction` | yes | function | The state the workflow is in or waits in | `preTargeting` (`WorkflowState_NoAction`) |
-| `nameForState(state)` | yes | string | A state's name: `nameForState(currentAction)` gives `"WaitForSaves"` | always |
+| `currentStep` | yes | string | The step the workflow is in or waits in: its id, `"midi-qol.WaitForSaves"` | `preTargeting` (`"midi-qol.NoAction"`) |
+| `currentAction` | yes | function | The same step as its `WorkflowState_<name>` forwarder, for comparing with `workflow.WorkflowState_<name>`; see below | `preTargeting` (`WorkflowState_NoAction`) |
+| `nameForState(step)` | yes | string | A step's name, from its id or forwarder: `nameForState(currentStep)` gives `"WaitForSaves"` | always |
 | `suspended` | yes | boolean | The workflow is waiting (for a roll, a button, a template) | `preTargeting` (true); false while states run |
 | `executingStates` |  | number | Above 0 while the workflow is running | always |
 | `stateTransitionCount` |  | number | States run so far | `postNoAction` |
@@ -430,6 +431,13 @@ In the teleport passes `options.teleport` holds `maxDistance` and `tokens` (`pre
 is created.
 
 `suspended` is true during `preTargeting` and `preItemRoll`, which run before the workflow starts.
+
+midi's steps are registered steps (their ids are `midi-qol.<name>`; see
+[Steps, reactions and requests](/docs/StepsAndReactions-2026-11-19.md)), not methods of the workflow.
+`workflow.WorkflowState_<name>` remains as one function per step, so `workflow.currentAction ===
+workflow.WorkflowState_WaitForSaves` still works. Calling one runs that step and warns as deprecated: use
+`workflow.performState("midi-qol.<name>")` to run the workflow from a step, and `MidiQOL.steps` to change
+what a step does.
 
 ## Workflow options midi sets
 
@@ -473,7 +481,7 @@ changes.
 Read from what is stored, not stored themselves: `advantageSaves` and `disadvantageSaves` (each record's
 save advantage mode), `attackTotal`, `diceRoll`, `d20AttackRoll` and
 the damage totals. Worked out again when a workflow is rebuilt, not stored: `item`, `activity`,
-`speaker`, `token`, `currentAction` (where it waits), the damage details, `failedSaves` with no save, `tokenSaves`, and the four can-see / can-sense sets (not on a
+`speaker`, `token`, `currentStep` (where it waits), the damage details, `failedSaves` with no save, `tokenSaves`, and the four can-see / can-sense sets (not on a
 read-only copy). A rebuilt workflow is `suspended` with `itemUseComplete` true.
 
 Not kept, so empty on a rebuilt workflow: anything a macro added to the workflow, `undoData`,
@@ -551,7 +559,7 @@ unset.
 | `workflowName` | string | `"workflow <id>"` |
 | `workflowOptions` | object | midi's defaults |
 | `rollOptions` | object | Empty apart from `fastForward` |
-| `currentAction` | function | `WorkflowState_NoAction` |
+| `currentStep`, `currentAction` | string, function | `"midi-qol.NoAction"`, `WorkflowState_NoAction` |
 | `suspended` | boolean | true |
 | `aborted` | boolean | false |
 | `itemUseComplete` | boolean | false |

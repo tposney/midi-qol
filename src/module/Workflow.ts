@@ -435,8 +435,8 @@ export class Workflow {
   /*
    * M5 (plan ~/Documents/midi-next-M5-steps-as-data-plan-2026-11-19.md): midi's steps are registered steps with a run
    * of their own (workflowSteps/). `WorkflowState_<name>` is each one's forwarder, for old callers: it runs the step
-   * (the flow's variant, if it has one) and returns the next step's forwarder, as the method did. One function per
-   * name, so comparing `currentAction` with it still works.
+   * (the flow's variant, if it has one) and returns the next step's forwarder, as the method did, with a deprecation
+   * warning. One function per name, so comparing `currentAction` with it still works (no warning).
    */
   declare WorkflowState_Suspend: StateMethod;
   declare WorkflowState_NoAction: StateMethod;
@@ -474,7 +474,12 @@ export class Workflow {
     for (const step of allSteps()) {
       if (!step.method || Object.prototype.hasOwnProperty.call(Workflow.prototype, step.method)) continue;
       const id = step.id;
+      const method = step.method;
       const forwarder = async function (this: Workflow): Promise<WorkflowState> {
+        foundry.utils.logCompatibilityWarning(`midi-qol | workflow.${method}() is deprecated: midi's steps are registered steps. `
+          + `To run the workflow from a step use workflow.performState("${id}"); to change what a step does use MidiQOL.steps `
+          + `(replace, wrap, insert). Comparing workflow.currentAction with it still works; workflow.currentStep is the step's id.`,
+          { since: "15.0.0", once: true });
         const next = await this.#runOwn(id);
         return next ? (this.methodForStep(next) ?? next) : undefined;
       };

@@ -905,7 +905,7 @@ Before 14.6.9 a card kept the workflow's state as `flags.midi-qol` keys. On a ca
 | `card.flags.midi-qol.isCritical` | `workflow.isCritical` |
 | `card.flags.midi-qol.isFumble` | `workflow.isFumble` |
 | `card.flags.midi-qol.workflowOptions` | `workflow.workflowOptions` |
-| `card.flags.midi-qol.currentAction` | `workflow.currentAction` |
+| `card.flags.midi-qol.currentAction` | `workflow.currentStep` (the step's id), or `workflow.currentAction` |
 | `card.flags.midi-qol.saveAttribution` | `workflow.saveAttribution` |
 | `card.flags.midi-qol.templateUuid` / `templateUuids` | `workflow.templateUuids[0]` / `workflow.templateUuids` |
 | `card.flags.midi-qol.attackRoll` | `workflow.attackRoll` |

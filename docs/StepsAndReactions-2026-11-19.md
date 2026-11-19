@@ -27,6 +27,11 @@ MidiQOL.steps.register({
 
 A step that has to wait (a dialog) can return `"midi-qol.Suspend"`; resuming the workflow runs it again.
 
+midi's own steps are registered the same way (their bodies are in `src/module/workflowSteps/`), so replacing or
+wrapping one changes it in every flow: the trap, saves-first, active-defence and damage-only flows run their own
+variant of some steps under the same id. `workflow.currentStep` is the id of the step a use is in.
+`workflow.WorkflowState_<name>()` still runs a step for old code, with a deprecation warning.
+
 ### Changing every use (the global layer)
 
 ```js
