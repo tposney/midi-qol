@@ -63,7 +63,7 @@ const MIDI_OPTION_KEYS = new Set([
   "attackPerTarget", "attackRollDSN", "attackSplit", "autoConsumeResource", "autoFastAttack", "autoRollAttack",
   "autoRollDamage", "cardNote", "castUsesBonusAction", "castUsesReaction", "chatMessage", "checkGMStatus", "checkGMstatus",
   "configureDialog", "coverOrigin", "createWorkflow", "critical", "damageRollDSN", "disadvantage", "event", "excludeTargets",
-  "fastForward", "fastForwardAbility", "fastForwardAttack", "fastForwardDamage", "fastForwardHeal", "fastForwardSet",
+  "fastForward", "fastForwardAbility", "fastForwardAttack", "fastForwardDamage", "fastForwardSet",
   "forceCompletion", "forceTemplateTargeting", "formulaDSN", "fumble", "grantsActor", "grantsToken", "ignoreUserTargets",
   "includeTargets", "isConcentrationCheck", "isCritical", "isDummy", "isFumble", "isMagicSave", "isOverTime", "isReaction",
   "isTriggered", "item", "itemCardUuid", "itemUuid", "noConcentrationCheck", "noOnUseMacro", "noProvokeReaction",

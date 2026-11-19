@@ -1,3 +1,7 @@
+import { installFormulaAndPlacement } from "./module/rolls/formula.js";
+import { installAttackRolls } from "./module/rolls/attack.js";
+import { installDamageRolls } from "./module/rolls/damage.js";
+import { adoptedActivityTypes } from "./module/activities/graft.js";
 import { computeDistance } from "./module/services/distance/provider.js";
 import { compatibilityLine, deprecation, isRemoved, removedError, setupCompatibilityLine } from './module/lib/compatLine.js';
 import { UNMEASURABLE_DISTANCE, getDistance, measureTokens } from "./module/services/distance/service.js";
@@ -438,6 +442,10 @@ function setupActivities() {
   installCardActions(GameSystemConfig.activityTypes);
   installUsageButtons();
   setupActivityTitles();
+  // midi's rolls as wraps of dnd5e's methods (M13), on the types adopted above
+  installDamageRolls(adoptedActivityTypes);
+  installAttackRolls();
+  installFormulaAndPlacement();
 }
 
 Hooks.once('init', async function () {

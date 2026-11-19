@@ -1,3 +1,5 @@
+import { isRollOf } from "./rolls/common.js";
+import { rollOtherDamage } from "./rolls/damage.js";
 import { allSteps, getStep, REACTION_STEPS, stepForMethod, type StepContext } from "./steps/steps.js";
 import { MIDI_SAVE_PROVIDERS, requestSaves, settingsProviderFor, type SaveRequest, type SaveRequestEntry } from "./services/saveRequests/service.js";
 import { PendingSaves } from "./services/saveRequests/pending.js";
@@ -2935,7 +2937,7 @@ export class Workflow {
     const dialog = this.otherDamageDialog ?? {};
 
     try {
-      const otherResult = await this.activity.rollOtherDamage(config, dialog);
+      const otherResult = await rollOtherDamage(this.activity, config, dialog);
 
       if (otherResult) {
         await this.displayDamageRolls();
@@ -7216,7 +7218,8 @@ export class Workflow {
     const TargetsField = globalThis.dnd5e?.dataModels?.chatMessage?.fields?.TargetsField;
     const targets = TargetsField ? TargetsField.getDescriptors(this.hitTargets.documents) : [];
     const other = this.otherDamageRolls ?? [];
-    const otherRole = other.some(roll => foundry.utils.getProperty(roll, "options.midiAmmunition")) ? "ammunition" : "other";
+    // The ammunition's rolls are tagged options.midi-qol.ammunition (rolls/damage.ts); this read options.midiAmmunition, so never matched
+    const otherRole = other.some(roll => !!foundry.utils.getProperty(roll, `options.${MODULE_ID}.ammunition`)) ? "ammunition" : "other";
     // midi's own damage is keyed by its role; a module's contributions by contributor (two may share a role)
     const contributions = [
       { key: "activity", role: "activity", rolls: this.damageRolls ?? [] },
@@ -8653,10 +8656,12 @@ export class DummyWorkflow extends Workflow {
   async simulateAttack(target: Token.Implementation) {
     this.targets = new Set([target]);
     await this.checkAttackAdvantage(); // resets tracker internally
-    // Block updates to quantity
-    //@ts-expect-error
-    const hookId = Hooks.on("dnd5e.rollAttack", (item, roll, ammoUpdate) => {
-      if (item === this.item && ammoUpdate?.length) ammoUpdate.length = 0
+    // A simulated attack spends no ammunition (dnd5e 6.1's arguments: the guard never matched with the old ones)
+    const hookId = Hooks.on("dnd5e.rollAttack", (_rolls, { ammoUpdate, subject }) => {
+      if (!ammoUpdate || !subject || !isRollOf(subject, this.activity)) return;
+      // @ts-expect-error no dnd5e-types
+      ammoUpdate.quantity = this.actor.items.get(ammoUpdate.id)?.system.quantity ?? ammoUpdate.quantity;
+      ammoUpdate.destroy = false;
     });
     try {
       [this.attackRoll] = await this.activity.rollAttack?.({ midiOptions: { fastForward: true, chatMessage: false, isDummy: true, workflowOptions: this.workflowOptions } }, {}, {}) as Roll[];

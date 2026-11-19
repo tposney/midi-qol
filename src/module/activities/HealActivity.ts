@@ -3,7 +3,6 @@ import { registerCardActions } from "./cardActions.js";
 import { Activity, RollDialogConfig, RollMessageConfig, RollProcessConfig } from "../../globals.js";
 import { debugEnabled, GameSystemConfig, warn } from "../../midi-qol.js";
 import { Workflow } from "../Workflow.js";
-import { isAutoFastForward } from "../utils.js";
 import { MidiActivityMixin, MidiActivityMixinSheet } from "./MidiActivityMixin.js";
 
 export let MidiHealActivity: ReturnType<typeof defineMidiHealActivityClass>;
@@ -40,24 +39,6 @@ let defineMidiHealActivityClass = <T extends Activity>(ActivityClass: T) => {
       }, { inplace: false, insertKeys: true, insertValues: true })
 
     
-    async rollDamage(config: RollProcessConfig = {}, dialog: RollDialogConfig = {}, message: RollMessageConfig = {}) {
-      config.midiOptions ??= {};
-      config.midiOptions.fastForwardHeal ??= isAutoFastForward("damage");
-      config.midiOptions.fastForwardDamage ??= isAutoFastForward("damage");
-      return super.rollDamage(config, dialog, message);
-    }
-    
-    /*
-    getDamageConfig(config: any ={}) {
-      if ( !this.healing.formula ) return foundry.utils.mergeObject({ rolls: [] }, config);
-  
-      const rollConfig:any = foundry.utils.mergeObject({ critical: { allow: false }, scaling: 0 }, config);
-      const rollData = this.getRollData();
-      rollConfig.rolls = [this._processDamagePart(this.healing, rollConfig, rollData)].concat(config.rolls ?? []);
-  
-      return rollConfig;
-    }
-    */
   }
 }
 

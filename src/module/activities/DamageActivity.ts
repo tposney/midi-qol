@@ -4,7 +4,6 @@ import { AnyMutableObject } from "fvtt-types/utils";
 import { Activity } from "../../globals.js";
 import { debugEnabled, GameSystemConfig, warn } from "../../midi-qol.js";
 import { Workflow } from "../Workflow.js";
-import { isAutoFastForward } from "../utils.js";
 import { MidiActivityMixin, MidiActivityMixinSheet } from "./MidiActivityMixin.js";
 
 export let MidiDamageActivity: ReturnType<typeof defineMidiDamageActivityClass>;
@@ -42,12 +41,6 @@ let defineMidiDamageActivityClass = <T extends Activity>(ActivityClass: T) => {
 
 
     
-    async rollDamage(config: AnyMutableObject, dialog: AnyMutableObject, message: AnyMutableObject) {
-      config.midiOptions ??= {};
-      // @ts-expect-error config is AnyMutableObject
-      config.midiOptions.fastForwardDamage ??= isAutoFastForward("damage");
-      return super.rollDamage(config, dialog, message);
-    }
 
   }
 }

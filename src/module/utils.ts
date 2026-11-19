@@ -2623,7 +2623,6 @@ export type MidiOptions = {
   fastForward?: boolean;
   fastForwardAttack?: boolean;
   fastForwardDamage?: boolean;
-  fastForwardHeal?: boolean;
   fastForwardSet?: boolean;
   fumble?: boolean | number;
   recomputeAdvantage?: boolean;

@@ -141,6 +141,9 @@ export function graftOnto(top: ClassLike, base: ClassLike, prototypePath?: strin
 
 type ActivityClassLike = ClassLike & { metadata?: { sheetClass?: ClassLike } };
 
+/** The dnd5e activity types midi adopted (its roll wraps are registered on these: M13) */
+export const adoptedActivityTypes = new Set<string>();
+
 /**
  * midi's activity class (and sheet) for a dnd5e activity type, installed on the classes dnd5e registered for it.
  * Returns dnd5e's class, now with midi's behaviour.
@@ -148,6 +151,7 @@ type ActivityClassLike = ClassLike & { metadata?: { sheetClass?: ClassLike } };
 export function adoptActivityType(type: string, midiClass: ClassLike, midiSheet?: ClassLike): ClassLike | undefined {
   const base = GameSystemConfig.activityTypes?.[type]?.documentClass as ActivityClassLike | undefined;
   if (!base) return undefined;
+  adoptedActivityTypes.add(type);
   const baseSheet = base.metadata?.sheetClass;
   if (midiSheet && baseSheet) graftOnto(midiSheet, baseSheet);
   graftOnto(midiClass, base, `CONFIG.DND5E.activityTypes.${type}.documentClass.prototype`);

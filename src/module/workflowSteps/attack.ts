@@ -1,3 +1,4 @@
+import { attackEachTarget } from "../rolls/attack.js";
 import { error, i18n } from "../../midi-qol.js";
 import { TroubleShooter } from "../apps/TroubleShooter.js";
 import { TokenDocumentSet } from "../lib/tokenDocumentSet.js";
@@ -18,8 +19,7 @@ export function registerAttackSteps(): void {
       workflow.whisperAttackCard = configSettings.autoCheckHit === "whisper" || rollMode === "blind" || rollMode === "gm";
       if (configSettings.autoCheckHit !== "none") await workflow.displayHitTargets(workflow.whisperAttackCard);
       workflow.needsHitTargetsDisplayed = false;
-      const attackEachTarget: unknown = workflow.activity.attackEachTarget;
-      if (typeof attackEachTarget === "function") await attackEachTarget.call(workflow.activity, workflow);
+      await attackEachTarget(workflow.activity, workflow);
       workflow.outcome = "split";
       return "midi-qol.RollFinished";
     }

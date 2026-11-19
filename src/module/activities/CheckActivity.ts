@@ -49,10 +49,6 @@ let defineMidiCheckActivityClass = <T extends Activity>(ActivityClass: T) => {
 
 
 
-    async rollDamage(config: RollProcessConfig, dialog: RollDialogConfig = {}, message: RollMessageConfig = {}) {
-      message = foundry.utils.mergeObject({ "data.system.onSave": this.damage?.onSave ?? null }, message);
-      return super.rollDamage(config, dialog, message);
-    }
 
     prepareFinalData(rollData) {
       super.prepareFinalData(rollData);

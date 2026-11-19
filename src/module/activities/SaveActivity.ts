@@ -3,7 +3,6 @@ import { registerCardActions } from "./cardActions.js";
 import { Activity, RollDialogConfig, RollMessageConfig, RollProcessConfig } from "../../globals.js";
 import { debugEnabled, warn, i18n, GameSystemConfig } from "../../midi-qol.js";
 import { Workflow } from "../Workflow.js";
-import { isAutoFastForward } from "../utils.js";
 import { MidiActivityMixin, MidiActivityMixinSheet } from "./MidiActivityMixin.js";
 
 export let MidiSaveActivity: ReturnType<typeof defineMidiSaveActivityClass>;
@@ -49,20 +48,6 @@ let defineMidiSaveActivityClass = <T extends Activity>(ActivityClass: T) => {
     async _triggerSubsequentActions(config, results) {
     }
     
-    getDamageConfig(config: RollProcessConfig = {}) {
-      const rollConfig = super.getDamageConfig(config);
-
-      rollConfig.critical ??= {};
-      rollConfig.critical.allow = this.damage?.critical.allow;
-      rollConfig.critical.bonusDamage = this.damage?.critical.bonus;
-
-      return rollConfig;
-    }
-    async rollDamage(config: RollProcessConfig = {}, dialog: RollDialogConfig = {}, message: RollMessageConfig = {}) {
-      config.midiOptions ??= {};
-      config.midiOptions.fastForwardDamage ??= isAutoFastForward("damage");
-      return super.rollDamage(config, dialog, message);
-    }
   }
 }
 

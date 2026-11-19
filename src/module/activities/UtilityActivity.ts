@@ -62,58 +62,6 @@ let defineMidiUtilityActivityClass = <T extends Activity>(ActivityClass: T) => {
 
 
     
-    async rollFormula(config: RollProcessConfig, dialog: RollDialogConfig, message: RollMessageConfig) {
-      if (debugEnabled > 0)
-        warn("UtilityActivity | rollFormula | Called", config, dialog, message);
-      config ??= {};
-      dialog ??= {};
-      message ??= {}
-      const workflow = config.workflow as Workflow;
-      if (!workflow) {
-        const errorMessage = "MidiUtilityActivity | rollFormula | No workflow found";
-        error(errorMessage);
-        TroubleShooter.recordError(new Error("No Workflow Found"), errorMessage);
-        return;
-      }
-      config.midiOptions ??= {};
-      config.midiOptions.fastForwardDamage ??= isAutoFastForward("damage", { workflow })
-      if (debugEnabled > 0) {
-        warn("MidiUtilityActivity | rollFormula | Called", config, dialog, message);
-      }
-      if (await callActivityHooks(this, "midi-qol.preFormulaRoll", workflow) === false) {
-        console.warn("midi-qol | UtilityActivity | Formula roll blocked via pre-hook");
-        return;
-      }
-
-      const keys = heldKeys(config.event);
-      if (keys.normal || keys.advantage || keys.disadvantage) dialog.configure = this.midiProperties?.forceDamageDialog !== "always";
-      else if (dialog.configure === undefined) {
-          switch (this.midiProperties?.forceDamageDialog) {
-            case "always":
-              dialog.configure = true;
-              break;
-            case "never":
-              dialog.configure = false;
-              break;
-            default:
-              dialog.configure = !(config.midiOptions?.fastForwardDamage ?? config.workflow?.workflowOptions.fastForwardDamage ?? false);
-          }
-      }
-      if (workflow.rollOptions?.rollToggle) dialog.configure = !!!dialog.configure;
-      const rollToggle = areMidiKeysPressed(config.event, "RollToggle");
-      if (workflow) workflow.rollOptions.rollToggle = rollToggle;
-      if (rollToggle) dialog.configure = !!!dialog.configure;
-      message.create ??= false;
-      message = setMessageTargets(message ?? {}, workflow);
-      let result = await super.rollFormula!(config, dialog, message) as Roll[] | undefined;
-      if (result && workflow.workflowOptions?.formulaDSN !== false) await displayDSNForRoll(result[0], "formulaD20", undefined, undefined, workflow?.actor);
-
-      if (config.midiOptions.updateWorkflow !== false && workflow) {
-        if (result) await workflow.setUtilityRolls(result);
-        workflow.resume(result ? "utilityRolled" : undefined);
-      }
-      return result;
-    }
     async _midiUsageContext(message) {
       const context = await super._midiUsageContext(message);
       context.hasRollFormula = true; // TODO fix this when able to do a proper card !!this.roll?.formula;
