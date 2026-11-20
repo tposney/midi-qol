@@ -339,6 +339,135 @@ export async function restManager(actor: Actor.Implementation, result: { longRes
   }
 }
 
+// Helper to apply a replacement effect - supports status effect IDs, effect UUIDs, and macro specifications
+// Syntax: "statusId" or "effectUuid" or "statusId|overlay" or "effectUuid|overlay"
+// Macro syntax: "function.functionName", "Macro.macroName", "ItemMacro", "ItemMacro.itemNameOrUuid",
+//               "ActivityMacro", "ActivityMacro.uuid"
+export async function applyReplacementEffect(actor: Actor.Implementation, effectSpec: string, effect?: ActiveEffect.Implementation): Promise<void> {
+  // Parse the effect spec for optional parameters using | as separator
+  const parts = effectSpec.split("|");
+  const effectIdOrUuid = parts[0].trim();
+  let overlay = false;
+
+  // Parse optional parameters (e.g., "overlay" or "overlay=true")
+  for (let i = 1; i < parts.length; i++) {
+    const param = parts[i].trim().toLowerCase();
+    if (param === "overlay" || param === "overlay=true") {
+      overlay = true;
+    } else if (param === "overlay=false") {
+      overlay = false;
+    }
+  }
+
+  // Check if it's a macro specification
+  if (effectIdOrUuid.startsWith("function.") || effectIdOrUuid.startsWith("Macro.") ||
+    effectIdOrUuid.startsWith("ItemMacro") || effectIdOrUuid.startsWith("ActivityMacro")) {
+    // Execute macro with actor context
+    await executeMacroSpec(effectIdOrUuid, actor, effect);
+  } else {
+    // Check if it's a status effect ID (from CONFIG.statusEffects)
+    const statusEffect = CONFIG.statusEffects.find(se => se.id === effectIdOrUuid);
+    if (statusEffect) {
+      // Apply as status effect using toggleStatusEffect
+      await toggleStatus(actor, effectIdOrUuid, { active: true, overlay });
+    } else {
+      // Assume it's an effect UUID - fetch and apply
+      const sourceEffect = await fromUuid(effectIdOrUuid) as ActiveEffect.Implementation | undefined;
+      if (sourceEffect) {
+        const effectData = sourceEffect.toObject();
+        if (overlay) {
+          foundry.utils.setProperty(effectData, "flags.core.overlay", true);
+        }
+        await actor.createEmbeddedDocuments("ActiveEffect", [effectData]);
+      }
+    }
+  }
+}
+
+// Helper to execute a macro specification for replacement effects
+// Supports: "function.functionName", "Macro.macroName", "ItemMacro", "ItemMacro.itemNameOrUuid",
+//           "ActivityMacro", "ActivityMacro.uuid"
+async function executeMacroSpec(macroSpec: string, actor: Actor.Implementation, effect?: ActiveEffect.Implementation): Promise<any> {
+  let macro: Macro.Implementation | undefined;
+  let macroItem: Item.Implementation | undefined;
+  let macroActivity: Activity | undefined;
+
+  // Get the origin item/activity from the effect if available
+  let originItem: Item.Implementation | undefined;
+  let originActivity: Activity | undefined;
+  if (effect?.origin) {
+    const origin = await fromUuid(effect.origin);
+    if (origin instanceof Item) {
+      originItem = origin;
+      // @ts-expect-error no dnd5e-types
+      originActivity = origin.system.activities?.contents[0];
+    } else if ((origin as any)?.item) {
+      originActivity = origin as unknown as Activity;
+      originItem = (origin as any).item;
+    }
+  }
+
+  try {
+    if (macroSpec.startsWith("function.")) {
+      const funcName = macroSpec.replace("function.", "").trim();
+      macro = DAE.createSyntheticMacro(
+        `return await ${funcName}({ speaker, actor, token, character, item, args, scope })`,
+        "replacement effect function call"
+      );
+      macroItem = originItem;
+    } else if (macroSpec.startsWith("Macro.")) {
+      const macroName = macroSpec.replace("Macro.", "").trim();
+      macro = await DAE.resolveWorldMacro(macroName);
+      if (!macro) {
+        warn(`applyReplacementEffect | Could not find macro ${macroName}`);
+        return;
+      }
+      if (macro.type === "chat") {
+        macro.execute();
+        return;
+      }
+      macroItem = originItem;
+    } else if (macroSpec.startsWith("ItemMacro")) {
+      const resolved = await resolveItemMacro(macroSpec, { actor, originItem });
+      if (resolved) {
+        macroItem = resolved.item;
+        macro = DAE.createSyntheticMacro(resolved.macroData.command as string, String(resolved.macroData.name));
+      } else if (effect) {
+        const itemData = DAE.getEffectItemData(effect);
+        if (itemData) {
+          macroItem = itemData as unknown as Item.Implementation;
+          const command = DAE.getItemMacroCommand(itemData);
+          if (command) macro = DAE.createSyntheticMacro(command);
+        }
+      }
+      if (!macro) {
+        warn(`applyReplacementEffect | Could not resolve ItemMacro: ${macroSpec}`);
+        return;
+      }
+    } else if (macroSpec.startsWith("ActivityMacro")) {
+      const resolved = await resolveActivityMacro(macroSpec, { originItem, originActivity });
+      if (!resolved) {
+        warn(`applyReplacementEffect | Could not resolve ActivityMacro: ${macroSpec}`);
+        return;
+      }
+      macroItem = resolved.item;
+      macroActivity = resolved.activity;
+      macro = resolved.macro;
+    }
+
+    if (!macro?.command) return;
+
+    const token = tokenForActor(actor);
+    const args = [{ actor, token, effect, item: macroItem, activity: macroActivity, reason: "replacementEffect" }];
+    const scope: Macro.UnknownScope = { actor, token, effect, item: macroItem, activity: macroActivity, args };
+
+    return macro.execute(scope);
+  } catch (err) {
+    TroubleShooter.recordError(err, "executeMacroSpec: Error evaluating macro");
+    error("Error evaluating replacement effect macro", err);
+  }
+}
+
 export function initHooks() {
   registerStanchHooks();
   Hooks.on("getChatMessageContextOptions", addViewAsPlayerOption);
@@ -409,134 +538,6 @@ export function initHooks() {
     clearUpdatesCache(message.uuid);
   });
 
-  // Helper to apply a replacement effect - supports status effect IDs, effect UUIDs, and macro specifications
-  // Syntax: "statusId" or "effectUuid" or "statusId|overlay" or "effectUuid|overlay"
-  // Macro syntax: "function.functionName", "Macro.macroName", "ItemMacro", "ItemMacro.itemNameOrUuid",
-  //               "ActivityMacro", "ActivityMacro.uuid"
-  async function applyReplacementEffect(actor: Actor.Implementation, effectSpec: string, effect?: ActiveEffect.Implementation): Promise<void> {
-    // Parse the effect spec for optional parameters using | as separator
-    const parts = effectSpec.split("|");
-    const effectIdOrUuid = parts[0].trim();
-    let overlay = false;
-
-    // Parse optional parameters (e.g., "overlay" or "overlay=true")
-    for (let i = 1; i < parts.length; i++) {
-      const param = parts[i].trim().toLowerCase();
-      if (param === "overlay" || param === "overlay=true") {
-        overlay = true;
-      } else if (param === "overlay=false") {
-        overlay = false;
-      }
-    }
-
-    // Check if it's a macro specification
-    if (effectIdOrUuid.startsWith("function.") || effectIdOrUuid.startsWith("Macro.") ||
-      effectIdOrUuid.startsWith("ItemMacro") || effectIdOrUuid.startsWith("ActivityMacro")) {
-      // Execute macro with actor context
-      await executeMacroSpec(effectIdOrUuid, actor, effect);
-    } else {
-      // Check if it's a status effect ID (from CONFIG.statusEffects)
-      const statusEffect = CONFIG.statusEffects.find(se => se.id === effectIdOrUuid);
-      if (statusEffect) {
-        // Apply as status effect using toggleStatusEffect
-        await toggleStatus(actor, effectIdOrUuid, { active: true, overlay });
-      } else {
-        // Assume it's an effect UUID - fetch and apply
-        const sourceEffect = await fromUuid(effectIdOrUuid) as ActiveEffect.Implementation | undefined;
-        if (sourceEffect) {
-          const effectData = sourceEffect.toObject();
-          if (overlay) {
-            foundry.utils.setProperty(effectData, "flags.core.overlay", true);
-          }
-          await actor.createEmbeddedDocuments("ActiveEffect", [effectData]);
-        }
-      }
-    }
-  }
-
-  // Helper to execute a macro specification for replacement effects
-  // Supports: "function.functionName", "Macro.macroName", "ItemMacro", "ItemMacro.itemNameOrUuid",
-  //           "ActivityMacro", "ActivityMacro.uuid"
-  async function executeMacroSpec(macroSpec: string, actor: Actor.Implementation, effect?: ActiveEffect.Implementation): Promise<any> {
-    let macro: Macro.Implementation | undefined;
-    let macroItem: Item.Implementation | undefined;
-    let macroActivity: Activity | undefined;
-
-    // Get the origin item/activity from the effect if available
-    let originItem: Item.Implementation | undefined;
-    let originActivity: Activity | undefined;
-    if (effect?.origin) {
-      const origin = await fromUuid(effect.origin);
-      if (origin instanceof Item) {
-        originItem = origin;
-        // @ts-expect-error no dnd5e-types
-        originActivity = origin.system.activities?.contents[0];
-      } else if ((origin as any)?.item) {
-        originActivity = origin as unknown as Activity;
-        originItem = (origin as any).item;
-      }
-    }
-
-    try {
-      if (macroSpec.startsWith("function.")) {
-        const funcName = macroSpec.replace("function.", "").trim();
-        macro = DAE.createSyntheticMacro(
-          `return await ${funcName}({ speaker, actor, token, character, item, args, scope })`,
-          "replacement effect function call"
-        );
-        macroItem = originItem;
-      } else if (macroSpec.startsWith("Macro.")) {
-        const macroName = macroSpec.replace("Macro.", "").trim();
-        macro = await DAE.resolveWorldMacro(macroName);
-        if (!macro) {
-          warn(`applyReplacementEffect | Could not find macro ${macroName}`);
-          return;
-        }
-        if (macro.type === "chat") {
-          macro.execute();
-          return;
-        }
-        macroItem = originItem;
-      } else if (macroSpec.startsWith("ItemMacro")) {
-        const resolved = await resolveItemMacro(macroSpec, { actor, originItem });
-        if (resolved) {
-          macroItem = resolved.item;
-          macro = DAE.createSyntheticMacro(resolved.macroData.command as string, String(resolved.macroData.name));
-        } else if (effect) {
-          const itemData = DAE.getEffectItemData(effect);
-          if (itemData) {
-            macroItem = itemData as unknown as Item.Implementation;
-            const command = DAE.getItemMacroCommand(itemData);
-            if (command) macro = DAE.createSyntheticMacro(command);
-          }
-        }
-        if (!macro) {
-          warn(`applyReplacementEffect | Could not resolve ItemMacro: ${macroSpec}`);
-          return;
-        }
-      } else if (macroSpec.startsWith("ActivityMacro")) {
-        const resolved = await resolveActivityMacro(macroSpec, { originItem, originActivity });
-        if (!resolved) {
-          warn(`applyReplacementEffect | Could not resolve ActivityMacro: ${macroSpec}`);
-          return;
-        }
-        macroItem = resolved.item;
-        macroActivity = resolved.activity;
-        macro = resolved.macro;
-      }
-
-      if (!macro?.command) return;
-
-      const token = tokenForActor(actor);
-      const args = [{ actor, token, effect, item: macroItem, activity: macroActivity, reason: "replacementEffect" }];
-      const scope: Macro.UnknownScope = { actor, token, effect, item: macroItem, activity: macroActivity, args };
-
-      return macro.execute(scope);
-    } catch (err) {
-      TroubleShooter.recordError(err, "executeMacroSpec: Error evaluating macro");
-      error("Error evaluating replacement effect macro", err);
-    }
-  }
 
   Hooks.on("midi-qol.RollComplete", async (workflow) => {
     const activityUuid = workflow.activity.uuid ?? "";

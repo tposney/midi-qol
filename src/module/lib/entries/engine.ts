@@ -95,8 +95,24 @@ function itemEntries(item: Item.Implementation, actor: Actor.Implementation | un
   return list;
 }
 
+/** Other forms read as entries on an effect (OverTime): id → reader */
+const effectReaders = new Registry<(effect: ActiveEffect.Implementation, actor: Actor.Implementation) => Entry[]>();
+
+export function registerEffectEntryReader(id: string, reader: (effect: ActiveEffect.Implementation, actor: Actor.Implementation) => Entry[]): () => void {
+  effectReaders.set(id, reader);
+  return () => { effectReaders.delete(id); };
+}
+
 function effectEntries(effect: ActiveEffect.Implementation, actor: Actor.Implementation): FoundEntry[] {
-  return entriesOf(effect.getFlag(MODULE_ID, "entries")).map(entry => found(entry, "effect", effect, actor));
+  const list = entriesOf(effect.getFlag(MODULE_ID, "entries"));
+  for (const reader of effectReaders.entries()) {
+    try {
+      list.push(...reader.value(effect, actor));
+    } catch (err) {
+      console.warn(`midi-qol | entry reader ${reader.id} failed for ${effect.name}`, err);
+    }
+  }
+  return list.map(entry => found(entry, "effect", effect, actor));
 }
 
 const listens = (entry: Entry, momentId: string) => [entry.on].flat().includes(momentId);

@@ -31,6 +31,7 @@ import { dice3dEnabled, installedModules } from "./setupModules.js";
 import { concentrationCheckItemDisplayName } from "./Hooks.js";
 
 import { OnUseMacros } from "./apps/Item.js";
+import { runMoment } from "./lib/entries/engine.js";
 import { TroubleShooter } from "./apps/TroubleShooter.js";
 import { MidiActivityChoiceDialog } from "./apps/MidiActivityChoiceDialog.js";
 import { Activity, ActivityUseConfiguration, CalcDamageOptions, MidiChangeData, DamageDescription, DamageDetailsByCategory, DamageListEntry, PreComputedAdvantageData, PreSetupDamageListEntry, RollDialogConfig, RollMessageConfig, TokenOrDocument, DND5ETargetDescriptor, SaveDetails, Dnd5eSystem } from "../globals.js";
@@ -1393,7 +1394,7 @@ export function untargetDeadTokens(only?: Set<TokenOrDocument>) {
   }
 }
 
-function replaceAtFields<T>(value: T, context: Record<string, string>, options: { blankValue: string | number, maxIterations: number } = { blankValue: "", maxIterations: 4 }) {
+export function replaceAtFields<T>(value: T, context: Record<string, string>, options: { blankValue: string | number, maxIterations: number } = { blankValue: "", maxIterations: 4 }) {
   if (typeof value !== "string") return value;
   let count = 0;
   if (!value.includes("@")) return value;
@@ -1940,7 +1941,7 @@ interface OvertimeItemBuildContext {
  * Build item and activity data for overtime effect execution
  * @returns Object containing itemData and activityData ready for item creation
  */
-async function buildOvertimeItemData(ctx: OvertimeItemBuildContext): Promise<{ itemData: any; activityData: any }> {
+export async function buildOvertimeItemData(ctx: OvertimeItemBuildContext): Promise<{ itemData: any; activityData: any }> {
   const { actor, effect, details, label, isPermanent } = ctx;
   const { damageRoll, damageType, damageBeforeSave, saveMagic, itemName, chatFlavor, saveDamage } = details;
 
@@ -2276,7 +2277,7 @@ export function buildRollActivityData(details: OvertimeDetails): Record<string, 
   return activityData;
 }
 
-async function overTimeRemoveConditionMet(removeCondition: string, rollData: any): Promise<boolean> {
+export async function overTimeRemoveConditionMet(removeCondition: string, rollData: any): Promise<boolean> {
   const value = replaceAtFields(removeCondition, rollData, { blankValue: 0, maxIterations: 3 });
   try {
     return !!await evalCondition(value, rollData, { errorReturn: true, async: true });
@@ -2306,6 +2307,8 @@ export async function gmOverTimeEffect(actor: Actor.Implementation, effect: Acti
     const authorHandlesStacks = rawDamageRoll.includes("@stackCount");
     const details = parseOvertimeDetails(change.value, rollData, effect.name);
     if (!details) continue;
+    // The rest run as entries (lib/entries/overtime.ts)
+    if (options.onlyActionSaves && !details.actionSave) continue;
 
     // Evaluate applyCondition
     if (details.applyCondition) {
@@ -2504,10 +2507,12 @@ export async function processTurnOverTime(combat: Combat.Implementation, combata
   const actor = combatant?.actor;
   if (!actor) return;
   if (startTurn) removeActionUsed(actor);
+  // The bearer's entries at its turn (M15), converted OverTime included; action saves are still the old path's
+  await runMoment(startTurn ? "turnStart" : "turnEnd", { actor, combat });
   for (const effect of actor.appliedEffects) {
     // @ts-expect-error fvtt-types v14 ActiveEffect
     const keys: string[] = effect.system.changes.map(change => change.key);
-    if (keys.some(key => key.startsWith(`flags.${MODULE_ID}.OverTime`))) await doOverTimeEffect(actor, effect, startTurn);
+    if (keys.some(key => key.startsWith(`flags.${MODULE_ID}.OverTime`))) await doOverTimeEffect(actor, effect, startTurn, { onlyActionSaves: true });
     if (keys.some(key => key.startsWith(`flags.${MODULE_ID}.ActivityOverTime`))) await doActivityOverTimeEffect(actor, effect, startTurn);
   }
 }

@@ -42,6 +42,8 @@ function baseCost(activity: Activity, workflow: Workflow | undefined): UseCost {
   const activation = workflow?.activity?.effectiveActivationType ?? activity.activation?.type;
   if (!workflow) return { action: activation === "action" ? 1 : 0, bonus: activation === "bonus" ? 1 : 0, reaction: activation === "reaction" ? 1 : 0 };
   const options = workflow.workflowOptions ?? {};
+  // An over-time tick (a repeated save, damage each turn) is not the bearer's use: it costs nothing
+  if (options.isOverTime) return { action: 0, bonus: 0, reaction: 0 };
   return {
     reaction: workflow.itemUsesReaction || options.castUsesReaction ? 1 : 0,
     bonus: workflow.itemUsesBonusAction || options.castUsesBonusAction ? 1 : 0,
