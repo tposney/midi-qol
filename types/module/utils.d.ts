@@ -4,7 +4,7 @@ import { DialogCountdown } from "./lib/dialogCountdown.js";
 import { TokenDocumentSet } from "./lib/tokenDocumentSet.js";
 import { AttributionEntry, AttributionMap, AugmentedEvent, Workflow, WorkflowOptions, WorkflowRollOptions } from "./Workflow.js";
 import { type IncomingRequest } from "./lib/requests.js";
-import { Activity, ActivityUseConfiguration, MidiChangeData, DamageDescription, DamageListEntry, PreComputedAdvantageData, PreSetupDamageListEntry, RollDialogConfig, RollMessageConfig, TokenOrDocument, DND5ETargetDescriptor, SaveDetails } from "../globals.js";
+import { Activity, ActivityUseConfiguration, CalcDamageOptions, MidiChangeData, DamageDescription, DamageListEntry, PreComputedAdvantageData, PreSetupDamageListEntry, RollDialogConfig, RollMessageConfig, TokenOrDocument, DND5ETargetDescriptor, SaveDetails } from "../globals.js";
 import Token = foundry.canvas.placeables.Token;
 import { AnyObject } from "fvtt-types/utils";
 export type ReactionItemReference = {
@@ -103,6 +103,20 @@ export declare function setupDamageDetails(actorDamage: PreSetupDamageListEntry,
  * body.
  */
 export declare function withDeprecatedDamageFields<T extends DamageListEntry>(entry: T): T;
+type TargetDamageRecord = Omit<PreSetupDamageListEntry, "options"> & {
+    options?: CalcDamageOptions;
+};
+/**
+ * A rebuilt use's damage lists as processDamageRoll leaves them (damageList: the last list; targetDamage: each target's
+ * entries), for the targets (`only`: by uuid) no damage card records: worked out now from its stored rolls and the
+ * targets as they are, so HP and resistances are today's. No hooks, macros or reactions; nothing applied.
+ */
+export declare function reconstructDamageLists(workflow: Workflow, only?: Set<string>): {
+    damageList: DamageListEntry[];
+    targetDamage: Record<string, DamageListEntry[]>;
+};
+/** The damage a use's rolls do to one target (dnd5e's calculation, midi's options); no reactions, nothing applied */
+export declare function targetDamageRecord(workflow: Workflow, tokenDocument: TokenDocument.Implementation, totalDamage: number, hitTargets: TokenDocumentSet, defaultSaveMultiplier: number): TargetDamageRecord | undefined;
 export declare function processDamageRoll(workflow: Workflow, defaultDamageType: string): Promise<void>;
 export declare function getSaveMultiplierForActivity(activity: Activity): number;
 /**

@@ -8,6 +8,7 @@ import { withWorkflowOptionsCodec } from "./lib/workflowOptionsCodec.js";
 import { i18n, log, warn, gameStats, getCanvas, error, debugEnabled, debug, GameSystemConfig, MODULE_ID } from "../midi-qol.js";
 import { BONUS_REQUEST, CONCENTRATION_REQUEST, damageActiveHas, damageChangeHas, DEFENCE_REQUEST, REACTIONS_REQUEST, calculateDamageAmounts, hpChangeFromDetail, getToken, getTokenDocument, gmOverTimeEffect, fromActorUuid, promptReactions, hasUsedAction, hasUsedBonusAction, removeActionUsed, removeBonusActionUsed, removeReactionUsed, ReactionItemReference, isEffectExpired, expireEffects, deleteAppliedEffects, getAppliedEffects, CERemoveEffect, CEAddEffectWith, getActor, completeItemUse, completeActivityUse, localActivityOverTimeEffect, validTargetTokens, hasUsedAnyReaction, getVitalityItem, MidiOptions, tokenSourceCenter, toggleStatus, withDeprecatedDamageFields, speakerFor } from "./utils.js";
 import { registerRequestHandler, type IncomingRequest } from "./lib/requests.js";
+import { messagesFrom } from "./lib/cardState.js";
 import { DAMAGE_MESSAGE_TYPE } from "./ChatClasses/DamageCardMessage.js";
 import { DamageDescriptionObject, Workflow } from "./Workflow.js";
 import { applyFailedDeathSaves, bonusCheck, revertFailedDeathSaves } from "./patching.js";
@@ -2707,6 +2708,11 @@ export async function buildDamageCardContext(
  * Puts back the DUPLICATED_MIDI_OPTIONS the flag does not carry - midi's own dnd5e.preApplyDamage
  * handler reads `midi.sourceActorUuid`. Only fills what is absent, so older entries keep theirs.
  */
+/** A use's damage as applied: the entries of its damage cards (shown or hidden), found from its usage card */
+export function useDamageList(useCardId: string): RecoveredUndoEntry[] {
+  return messagesFrom(useCardId, DAMAGE_MESSAGE_TYPE).flatMap(message => recoverUndoListFromFlag(message, message.flags?.[MODULE_ID]?.undoDamage ?? []));
+}
+
 function recoverUndoListFromFlag(message: ChatMessage.Implementation,
   damageList: StoredUndoEntry[]): RecoveredUndoEntry[] {
   const flags = message?.flags?.[MODULE_ID];

@@ -574,6 +574,220 @@ function uncannyDodgeSourceIcon(actor: Actor.Implementation): string | undefined
   return undefined;
 }
 
+type TargetDamageRecord = Omit<PreSetupDamageListEntry, "options"> & { options?: CalcDamageOptions };
+
+/** The use's total damage (healing negative) from its rolls; undefined when it has none */
+function useDamageTotal(workflow: Workflow): number | undefined {
+  const none = (detail: DamageDescription[] | undefined) => detail?.length === 0 || (detail?.length === 1 && detail[0]?.type === "midi-none");
+  if (none(workflow.rawDamageDetail) && none(workflow.rawBonusDamageDetail) && none(workflow.rawOtherDamageDetail)) return undefined;
+  let total = workflow.rawDamageDetail?.reduce((acc, di) => acc + (di.type === "temphp" ? 0 : di.type === "healing" ? -di.value : di.value), 0) ?? 0;
+  if (workflow.rawOtherDamageDetail) total += workflow.rawOtherDamageDetail.reduce((acc, di) => acc + (di.type === "temphp" ? 0 : di.value), 0) ?? 0;
+  if (workflow.rawBonusDamageDetail) total += workflow.rawBonusDamageDetail.reduce((acc, di) => acc + (di.type === "temphp" ? 0 : di.value), 0) ?? 0;
+  return total;
+}
+
+/** Other damage gets a list (and card) of its own unless one concentration check covers all of the damage */
+function damageSelectors(workflow: Workflow) {
+  const selectors: ("combinedDamage" | "otherDamage")[] = ["combinedDamage"];
+  if (!configSettings.singleConcentrationRoll && workflow.otherDamageRolls) selectors.push("otherDamage");
+  const inSelector = (selector: "combinedDamage" | "otherDamage") => (d: DamageDescription) =>
+    selector === "otherDamage" ? d.midiCategory === "otherDamage" : (selectors.length === 1 || d.midiCategory !== "otherDamage");
+  return { selectors, inSelector };
+}
+
+/**
+ * A rebuilt use's damage lists as processDamageRoll leaves them (damageList: the last list; targetDamage: each target's
+ * entries), for the targets (`only`: by uuid) no damage card records: worked out now from its stored rolls and the
+ * targets as they are, so HP and resistances are today's. No hooks, macros or reactions; nothing applied.
+ */
+export function reconstructDamageLists(workflow: Workflow, only?: Set<string>): { damageList: DamageListEntry[], targetDamage: Record<string, DamageListEntry[]> } {
+  const result = { damageList: [] as DamageListEntry[], targetDamage: {} as Record<string, DamageListEntry[]> };
+  const totalDamage = useDamageTotal(workflow);
+  if (totalDamage === undefined) return result;
+  const hitTargets = workflow.hitTargets.union(workflow.hitTargetsEC);
+  const defaultSaveMultiplier = getSaveMultiplierForActivity(workflow.activity);
+  const records = workflow.targets.documents.filter(document => !only || only.has(document.uuid ?? "")).map(document => [document, targetDamageRecord(workflow, document, totalDamage, hitTargets, defaultSaveMultiplier)] as const);
+  const { selectors, inSelector } = damageSelectors(workflow);
+  for (const selector of selectors) {
+    result.damageList = [];
+    for (const [document, record] of records) {
+      const actor = document.actor;
+      if (!actor || !record?.options) continue;
+      const entry = setupDamageDetails({ ...record, options: copyDamageOptions(record.options),
+        calculatedDamages: record.calculatedDamages.filter(inSelector(selector)), damages: record.damages.filter(inSelector(selector)) }, actor);
+      if (!entry) continue;
+      result.damageList.push(entry);
+      if (document.uuid) (result.targetDamage[document.uuid] ??= []).push(entry);
+    }
+  }
+  return result;
+}
+
+/** The damage a use's rolls do to one target (dnd5e's calculation, midi's options); no reactions, nothing applied */
+export function targetDamageRecord(workflow: Workflow, tokenDocument: TokenDocument.Implementation, totalDamage: number,
+  hitTargets: TokenDocumentSet, defaultSaveMultiplier: number): TargetDamageRecord | undefined {
+  const actor = tokenDocument.actor;
+  if (!actor?.uuid) return undefined;
+  let challengeModeScale = 1;
+  let challengeModeAR = 0;
+  if (["scale", "scaleNoAR"].includes(checkRule("challengeModeArmor") as string) && workflow.attackRoll && workflow.hitTargetsEC?.has(tokenDocument)) {
+    //scale the damage detail for a glancing blow - only for the first damage list? or all?
+    const scale = workflow.challengeModeScale?.[tokenDocument?.uuid ?? "dummy"] ?? 1;
+    challengeModeScale = scale;
+  } else if (checkRule("challengeModeArmor") === "challenge" && workflow.hitTargetsEC?.has(tokenDocument)) {
+    //@ts-expect-error no dnd5e-types
+    challengeModeAR = actor.system.attributes.ac.AR ?? 0;
+  }
+
+  const semiSuperSaver = workflow.semiSuperSavers.has(tokenDocument);
+  const superSaver = workflow.superSavers.has(tokenDocument);
+  const hasSaved = workflow.saves.has(tokenDocument);
+  // What a successful save does to base damage; applySaves adds Super Saver per damage entry.
+  const saveMultiplier = defaultSaveMultiplier;
+  const record: TargetDamageRecord = {
+    actorId: actor.id!,
+    actorUuid: actor.uuid,
+    challengeModeScale,
+    challengeModeAR,
+    critical: workflow.isCritical,
+    calculatedDamages: [],
+    damages: [],
+    isHit: hitTargets.has(tokenDocument),
+    saved: hasSaved,
+    sceneId: tokenDocument.parent?.id ?? "",
+    semiSuperSaver,
+    superSaver,
+    totalDamage,
+    targetUuid: tokenDocument?.uuid ?? "",
+  };
+  const damageBuckets: [DamageDescription[], "defaultDamage" | "otherDamage" | "bonusDamage"][] = [
+    [workflow.damageDetail ?? [], "defaultDamage"],
+    [workflow.otherDamageFor(tokenDocument), "otherDamage"],
+    [workflow.bonusDamageDetail ?? [], "bonusDamage"]
+  ];
+
+  const buildCalcDamageOptions = (): CalcDamageOptions => {
+    const calcDamageOptions: CalcDamageOptions = {
+      invertHealing: true,
+      multiplier: challengeModeScale,
+      // Always initialize ignore to ensure dnd5e calculateDamage processes traits correctly
+      ignore: {
+        immunity: new Set<string>(),
+        resistance: new Set<string>(),
+        vulnerability: new Set<string>(),
+        modification: new Set<string>(),
+        absorption: new Set<string>(),
+      },
+      midi: {
+        challengeModeAR,
+        criticalSave: workflow.criticalSaves.has(tokenDocument),
+        fumbleSave: workflow.fumbleSaves.has(tokenDocument),
+        isCritical: workflow.isCritical,
+        isFumble: workflow.isFumble,
+        isHit: hitTargets.has(tokenDocument),
+        itemType: workflow.item.type,
+        save: hasSaved,
+        saved: hasSaved,
+        saveMultiplier, // default
+        semiSuperSaver,
+        sourceActorUuid: workflow.actor.uuid ?? undefined,
+        itemCardUuid: workflow.itemCardUuid,
+        superSaver,
+        targetUuid: tokenDocument.uuid ?? undefined,
+        // @ts-expect-error no dnd5e-types
+        uncannyDodge: actor.flags?.[MODULE_ID]?.["uncanny-dodge"] && workflow.item?.hasAttack,
+        uncannyDodgeIcon: uncannyDodgeSourceIcon(actor)
+      }
+    };
+    const categories: Record<string, string> = { "idi": "immunity", "idr": "resistance", "idv": "vulnerability", "ida": "absorption", "idm": "modification" };
+    const ignoreTraits = workflow?.activity?.midiProperties?.ignoreTraits;
+    if (ignoreTraits) {
+      /*
+       * Ignore an entire category. "All Damage" traits are stored under the literal "ALL", which
+       * is not a member of damageTypes, so enumerating damage types alone left an all-damage
+       * trait fully in force.
+       */
+      const ignoreWholeCategory = (category: string) => {
+        if (!calcDamageOptions.ignore?.[category]) foundry.utils.setProperty(calcDamageOptions, `ignore.${category}`, new Set())
+        for (let dt of Object.keys(GameSystemConfig.damageTypes)) {
+          calcDamageOptions.ignore![category].add(dt);
+        }
+        calcDamageOptions.ignore![category].add(ALL_DAMAGE_KEY);
+      };
+      for (let key of Object.keys(categories)) {
+        // Check for base key (e.g., "idi") - applies to all damage types
+        if (ignoreTraits.has(key)) ignoreWholeCategory(categories[key]);
+      }
+      // Check for damage-type specific keys (e.g., "idi.fire")
+      for (const trait of ignoreTraits) {
+        if (trait.includes('.')) {
+          const [categoryKey, damageType] = trait.split('.');
+          const category = categories[categoryKey];
+          if (!category) continue;
+          // "ALL" is not offered in the UI - the blanket key covers it - but tolerate it
+          // from hand-edited data or a macro: it is shorthand for every damage type.
+          if (damageType === ALL_DAMAGE_KEY) {
+            ignoreWholeCategory(category);
+            continue;
+          }
+          if (GameSystemConfig.damageTypes[damageType]) {
+            if (!calcDamageOptions.ignore?.[category]) foundry.utils.setProperty(calcDamageOptions, `ignore.${category}`, new Set())
+            calcDamageOptions.ignore![category].add(damageType);
+          }
+        }
+      }
+      /*
+       * Downgrade immunity to resistance - ignoring an immunity would leave full damage. Only the
+       * types this target is immune to: dnd5e ignores the resistance of a downgraded type that has
+       * no immunity to downgrade.
+       */
+      // @ts-expect-error no dnd5e-types
+      const immunities: Set<string> = actor.system.traits?.di?.value ?? new Set();
+      const downgradeTypes = (ignoreTraits.has(DOWNGRADE_IMMUNITY_KEY) || ignoreTraits.has(`${DOWNGRADE_IMMUNITY_KEY}.${ALL_DAMAGE_KEY}`))
+        ? new Set(immunities)
+        : new Set(Array.from(ignoreTraits)
+          .filter(trait => trait.startsWith(`${DOWNGRADE_IMMUNITY_KEY}.`))
+          .map(trait => trait.split('.')[1])
+          .filter(damageType => immunities.has(damageType) || immunities.has(ALL_DAMAGE_KEY)));
+      if (downgradeTypes.size) calcDamageOptions.downgrade = downgradeTypes;
+    }
+    // dnd5e 6.1's attacker rules: downgrade is dnd5e's two steps, unlike Downgrade Immunity above
+    return applyDamageRules(calcDamageOptions, workflow.damageRules);
+  };
+
+  // One record per target: the raw damage, each entry tagged with its category, and dnd5e's calculation of it
+  const calcDamageOptions = buildCalcDamageOptions();
+  // Per category, the record's options are the first category's, as calculated with
+  let categoryOptions: CalcDamageOptions | undefined = calcDamageOptions;
+  const rawDamage: DamageDescription[] = [];
+  let calculated: DamageDescription[] = [];
+  for (const [damages, type] of damageBuckets) {
+    if (!damages) {
+      const message = `processDamageRoll | ${type} damages is not defined`;
+      TroubleShooter.recordError(new Error("no valid damage"), message);
+      error(message);
+      continue;
+    }
+    for (const d of damages) d.midiCategory = type;
+    rawDamage.push(...damages.filter(d => d.type !== "midi-none"));
+    // dnd5e's damage modification and midi's DR are budgets consumed per call: one call for all of the damage,
+    // unless each category is to be calculated on its own
+    if (!configSettings.singleDamageCalculation) {
+      // False when a hook vetoes the calculation
+      const categoryDamage: DamageDescription[] = actor.calculateDamage(damages, categoryOptions ?? buildCalcDamageOptions()) || [];
+      categoryOptions = undefined;
+      // What midi's DR pass added belongs to this category's damage
+      for (const d of categoryDamage) d.midiCategory ??= type;
+      calculated = calculated.concat(categoryDamage);
+    }
+  }
+  if (configSettings.singleDamageCalculation) {
+    // Tagged entries, never by index: midi's DR pass adds an aggregate entry and splices out midi-none entries
+    calculated = actor.calculateDamage(damageBuckets.flatMap(([damages]) => damages ?? []), calcDamageOptions) || [];
+  }
+  return Object.assign(record, { options: calcDamageOptions, calculatedDamages: calculated, damages: rawDamage });
+}
+
 export async function processDamageRoll(workflow: Workflow, defaultDamageType: string) {
   if (debugEnabled > 0) warn("processDamageRoll |", workflow)
   // Every target, with a canvas token or not: damage goes by the token's document and actor
@@ -591,206 +805,42 @@ export async function processDamageRoll(workflow: Workflow, defaultDamageType: s
   if (debugEnabled > 0) warn("processDamageRoll | damage details pre merge are ", workflow.rawDamageDetail, workflow.rawBonusDamageDetail ?? []);
   let totalDamage = 0;
 
-  const baseNoDamage = workflow.rawDamageDetail?.length === 0 || (workflow.rawDamageDetail?.length === 1 && workflow?.rawDamageDetail[0]?.type === "midi-none");
-  const bonusNoDamage = workflow.rawBonusDamageDetail?.length === 0 || (workflow.rawBonusDamageDetail?.length === 1 && workflow.rawBonusDamageDetail[0]?.type === "midi-none");
-  const otherNoDamage = workflow.rawOtherDamageDetail?.length === 0 || (workflow.rawOtherDamageDetail?.length === 1 && workflow.rawOtherDamageDetail[0]?.type === "midi-none");
-  if (baseNoDamage && bonusNoDamage && otherNoDamage) return;
+  const useTotal = useDamageTotal(workflow);
+  if (useTotal === undefined) return;
 
-  const damagePerActor: Record<string, Omit<PreSetupDamageListEntry, "options"> & { options?: CalcDamageOptions }> = {};
+  const damagePerActor: Record<string, TargetDamageRecord> = {};
   workflow.damageList = [];
-  totalDamage = 0;
-  totalDamage = workflow.rawDamageDetail?.reduce((acc, di) => acc + (di.type === "temphp" ? 0 : di.type === "healing" ? -di.value : di.value), 0) ?? 0;
-  if (workflow.rawOtherDamageDetail) totalDamage += workflow.rawOtherDamageDetail.reduce((acc, di) => acc + (di.type === "temphp" ? 0 : di.value), 0) ?? 0;
-  if (workflow.rawBonusDamageDetail) totalDamage += workflow.rawBonusDamageDetail.reduce((acc, di) => acc + (di.type === "temphp" ? 0 : di.value), 0) ?? 0;
+  totalDamage = useTotal;
   const defaultSaveMultiplier = getSaveMultiplierForActivity(workflow.activity);
   for (const tokenDocument of theTargets) {
     // Reactions need a Token: drawn, or midi's for an actor with none on the scene
     const token = workflow.targets.placeableOf(tokenDocument);
     const actor = tokenDocument.actor;
     if (!actor?.uuid) continue;
-    let challengeModeScale = 1;
-    let challengeModeAR = 0;
-    if (["scale", "scaleNoAR"].includes(checkRule("challengeModeArmor") as string) && workflow.attackRoll && workflow.hitTargetsEC?.has(tokenDocument)) {
-      //scale the damage detail for a glancing blow - only for the first damage list? or all?
-      const scale = workflow.challengeModeScale?.[tokenDocument?.uuid ?? "dummy"] ?? 1;
-      challengeModeScale = scale;
-    } else if (checkRule("challengeModeArmor") === "challenge" && workflow.hitTargetsEC?.has(tokenDocument)) {
-      //@ts-expect-error no dnd5e-types
-      challengeModeAR = actor.system.attributes.ac.AR ?? 0;
-    }
-
-    const semiSuperSaver = workflow.semiSuperSavers.has(tokenDocument);
-    const superSaver = workflow.superSavers.has(tokenDocument);
-    const hasSaved = workflow.saves.has(tokenDocument);
-    // What a successful save does to base damage; applySaves adds Super Saver per damage entry.
-    const saveMultiplier = defaultSaveMultiplier;
-    damagePerActor[actor.uuid] = {
-      actorId: actor.id!,
-      actorUuid: actor.uuid,
-      challengeModeScale,
-      challengeModeAR,
-      critical: workflow.isCritical,
-      calculatedDamages: [],
-      damages: [],
-      isHit: hitTargets.has(tokenDocument),
-      saved: hasSaved,
-      sceneId: tokenDocument.parent?.id ?? "",
-      semiSuperSaver,
-      superSaver,
-      totalDamage,
-      targetUuid: tokenDocument?.uuid ?? "",
-    };
     if (!foundry.utils.getProperty(workflow.activity.item, `flags.${MODULE_ID}.noProvokeReaction`) && !workflow?.workflowOptions?.noProvokeReaction) {
       if (token && totalDamage !== 0 && (workflow.hitTargets.has(tokenDocument) || workflow.hitTargetsEC.has(tokenDocument) || workflow.hasSave)) {
         const isHealing = ("heal" === workflow.activity.actionType) || totalDamage < 0;
         await workflow.askReactionsStep(token, workflow.tokenUuid, workflow.damageRoll ?? workflow.bonusDamageRoll ?? workflow.otherDamageRoll ?? new Roll("0"), !isHealing ? "reactiondamage" : "reactionheal", { activity: workflow.activity, item: workflow.item, workflow, workflowOptions: { damageDetail: workflow.rawDamageDetail, damageTotal: totalDamage, sourceActorUuid: workflow.actor.uuid, sourceItemUuid: workflow.item.uuid, sourceAmmoUuid: workflow.ammunition?.uuid } });
       }
     }
-    const damageBuckets: [DamageDescription[], "defaultDamage" | "otherDamage" | "bonusDamage"][] = [
-      [workflow.damageDetail ?? [], "defaultDamage"],
-      [workflow.otherDamageFor(tokenDocument), "otherDamage"],
-      [workflow.bonusDamageDetail ?? [], "bonusDamage"]
-    ];
-
-    const buildCalcDamageOptions = (): CalcDamageOptions => {
-      const calcDamageOptions: CalcDamageOptions = {
-        invertHealing: true,
-        multiplier: challengeModeScale,
-        // Always initialize ignore to ensure dnd5e calculateDamage processes traits correctly
-        ignore: {
-          immunity: new Set<string>(),
-          resistance: new Set<string>(),
-          vulnerability: new Set<string>(),
-          modification: new Set<string>(),
-          absorption: new Set<string>(),
-        },
-        midi: {
-          challengeModeAR,
-          criticalSave: workflow.criticalSaves.has(tokenDocument),
-          fumbleSave: workflow.fumbleSaves.has(tokenDocument),
-          isCritical: workflow.isCritical,
-          isFumble: workflow.isFumble,
-          isHit: hitTargets.has(tokenDocument),
-          itemType: workflow.item.type,
-          save: hasSaved,
-          saved: hasSaved,
-          saveMultiplier, // default
-          semiSuperSaver,
-          sourceActorUuid: workflow.actor.uuid ?? undefined,
-          itemCardUuid: workflow.itemCardUuid,
-          superSaver,
-          targetUuid: tokenDocument.uuid ?? undefined,
-          // @ts-expect-error no dnd5e-types
-          uncannyDodge: actor.flags?.[MODULE_ID]?.["uncanny-dodge"] && workflow.item?.hasAttack,
-          uncannyDodgeIcon: uncannyDodgeSourceIcon(actor)
-        }
-      };
-      /*
-       * Keep what was actually applied, keyed by target.
-       *
-       * The card cannot recompute this later: uncanny dodge is a reaction, so the flag it reads is
-       * set during the workflow and gone by the time anything re-renders. `processDamageRoll` runs
-       * after the damage is displayed, so this is the only point at which the real answer exists.
-       */
-      if (tokenDocument?.uuid) {
-        workflow.midiTargetDetail ??= {};
-        const { uncannyDodge, uncannyDodgeIcon } = calcDamageOptions.midi ?? {};
-        workflow.midiTargetDetail[tokenDocument.uuid] = { uncannyDodge, uncannyDodgeIcon };
-      }
-      const categories: Record<string, string> = { "idi": "immunity", "idr": "resistance", "idv": "vulnerability", "ida": "absorption", "idm": "modification" };
-      const ignoreTraits = workflow?.activity?.midiProperties?.ignoreTraits;
-      if (ignoreTraits) {
-        /*
-         * Ignore an entire category. "All Damage" traits are stored under the literal "ALL", which
-         * is not a member of damageTypes, so enumerating damage types alone left an all-damage
-         * trait fully in force.
-         */
-        const ignoreWholeCategory = (category: string) => {
-          if (!calcDamageOptions.ignore?.[category]) foundry.utils.setProperty(calcDamageOptions, `ignore.${category}`, new Set())
-          for (let dt of Object.keys(GameSystemConfig.damageTypes)) {
-            calcDamageOptions.ignore![category].add(dt);
-          }
-          calcDamageOptions.ignore![category].add(ALL_DAMAGE_KEY);
-        };
-        for (let key of Object.keys(categories)) {
-          // Check for base key (e.g., "idi") - applies to all damage types
-          if (ignoreTraits.has(key)) ignoreWholeCategory(categories[key]);
-        }
-        // Check for damage-type specific keys (e.g., "idi.fire")
-        for (const trait of ignoreTraits) {
-          if (trait.includes('.')) {
-            const [categoryKey, damageType] = trait.split('.');
-            const category = categories[categoryKey];
-            if (!category) continue;
-            // "ALL" is not offered in the UI - the blanket key covers it - but tolerate it
-            // from hand-edited data or a macro: it is shorthand for every damage type.
-            if (damageType === ALL_DAMAGE_KEY) {
-              ignoreWholeCategory(category);
-              continue;
-            }
-            if (GameSystemConfig.damageTypes[damageType]) {
-              if (!calcDamageOptions.ignore?.[category]) foundry.utils.setProperty(calcDamageOptions, `ignore.${category}`, new Set())
-              calcDamageOptions.ignore![category].add(damageType);
-            }
-          }
-        }
-        /*
-         * Downgrade immunity to resistance - ignoring an immunity would leave full damage. Only the
-         * types this target is immune to: dnd5e ignores the resistance of a downgraded type that has
-         * no immunity to downgrade.
-         */
-        // @ts-expect-error no dnd5e-types
-        const immunities: Set<string> = actor.system.traits?.di?.value ?? new Set();
-        const downgradeTypes = (ignoreTraits.has(DOWNGRADE_IMMUNITY_KEY) || ignoreTraits.has(`${DOWNGRADE_IMMUNITY_KEY}.${ALL_DAMAGE_KEY}`))
-          ? new Set(immunities)
-          : new Set(Array.from(ignoreTraits)
-            .filter(trait => trait.startsWith(`${DOWNGRADE_IMMUNITY_KEY}.`))
-            .map(trait => trait.split('.')[1])
-            .filter(damageType => immunities.has(damageType) || immunities.has(ALL_DAMAGE_KEY)));
-        if (downgradeTypes.size) calcDamageOptions.downgrade = downgradeTypes;
-      }
-      // dnd5e 6.1's attacker rules: downgrade is dnd5e's two steps, unlike Downgrade Immunity above
-      return applyDamageRules(calcDamageOptions, workflow.damageRules);
-    };
-
-    // One record per target: the raw damage, each entry tagged with its category, and dnd5e's calculation of it
-    const calcDamageOptions = buildCalcDamageOptions();
-    // Per category, the record's options are the first category's, as calculated with
-    let categoryOptions: CalcDamageOptions | undefined = calcDamageOptions;
-    const rawDamage: DamageDescription[] = [];
-    let calculated: DamageDescription[] = [];
-    for (const [damages, type] of damageBuckets) {
-      if (!damages) {
-        const message = `processDamageRoll | ${type} damages is not defined`;
-        TroubleShooter.recordError(new Error("no valid damage"), message);
-        error(message);
-        continue;
-      }
-      for (const d of damages) d.midiCategory = type;
-      rawDamage.push(...damages.filter(d => d.type !== "midi-none"));
-      // dnd5e's damage modification and midi's DR are budgets consumed per call: one call for all of the damage,
-      // unless each category is to be calculated on its own
-      if (!configSettings.singleDamageCalculation) {
-        // False when a hook vetoes the calculation
-        const categoryDamage: DamageDescription[] = actor.calculateDamage(damages, categoryOptions ?? buildCalcDamageOptions()) || [];
-        categoryOptions = undefined;
-        // What midi's DR pass added belongs to this category's damage
-        for (const d of categoryDamage) d.midiCategory ??= type;
-        calculated = calculated.concat(categoryDamage);
-      }
+    const record = targetDamageRecord(workflow, tokenDocument, totalDamage, hitTargets, defaultSaveMultiplier);
+    if (!record) continue;
+    damagePerActor[actor.uuid] = record;
+    /*
+     * Keep what was actually applied, keyed by target.
+     *
+     * The card cannot recompute this later: uncanny dodge is a reaction, so the flag it reads is
+     * set during the workflow and gone by the time anything re-renders. `processDamageRoll` runs
+     * after the damage is displayed, so this is the only point at which the real answer exists.
+     */
+    if (tokenDocument.uuid) {
+      workflow.midiTargetDetail ??= {};
+      const { uncannyDodge, uncannyDodgeIcon } = record.options?.midi ?? {};
+      workflow.midiTargetDetail[tokenDocument.uuid] = { uncannyDodge, uncannyDodgeIcon };
     }
-    if (configSettings.singleDamageCalculation) {
-      // Tagged entries, never by index: midi's DR pass adds an aggregate entry and splices out midi-none entries
-      calculated = actor.calculateDamage(damageBuckets.flatMap(([damages]) => damages ?? []), calcDamageOptions) || [];
-    }
-    Object.assign(damagePerActor[actor.uuid], { options: calcDamageOptions, calculatedDamages: calculated, damages: rawDamage });
   }
 
-  // Other damage gets a list (and card) of its own unless one concentration check covers all of the damage
-  const selectors: ("combinedDamage" | "otherDamage")[] = ["combinedDamage"];
-  if (!configSettings.singleConcentrationRoll && workflow.otherDamageRolls) selectors.push("otherDamage");
-  const inSelector = (selector: "combinedDamage" | "otherDamage") => (d: DamageDescription) =>
-    selector === "otherDamage" ? d.midiCategory === "otherDamage" : (selectors.length === 1 || d.midiCategory !== "otherDamage");
+  const { selectors, inSelector } = damageSelectors(workflow);
   // Each target's damage entries, one per list: the effects' damage components are all of them, as macros leave them
   workflow.targetDamage = {};
   // Damage cards are linked to the usage card (system.origin), so undo finds them.

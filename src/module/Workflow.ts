@@ -23,14 +23,14 @@ import { cardWorkflowOptions, decodeWorkflowOptions, inheritableWorkflowOptions 
 import { eventModifiers } from "./lib/rollKeys.js";
 import { TokenDocumentSet, hookTarget, tokenOf } from "./lib/tokenDocumentSet.js";
 import { RECORD_SETS, RecordSet, RecordFacts, STATE_KEYS, StateKey, attributionMap, attributionTriples, cardDamageRolls, cardMidi, rollTypeOf, cardOtherConsumption, cardPreSelected, messagesFrom, recordList, recordPath, recordPathOfUuid, storedMidiFlag } from "./lib/cardState.js";
-import { preferredActiveGM, rollAbility, SAVE_REQUEST, socketlibSocket, timedAwaitExecuteAsGM, timedExecuteAsGM, unTimedExecuteAsGM } from "./GMAction.js";
+import { preferredActiveGM, rollAbility, useDamageList, SAVE_REQUEST, socketlibSocket, timedAwaitExecuteAsGM, timedExecuteAsGM, unTimedExecuteAsGM } from "./GMAction.js";
 import { askUser } from "./lib/requests.js";
 import { beginPlayerWait, endPlayerWaitsOwnedBy, rollDialogsFor, trackPlayerWait, type WaitChoiceSpec } from "./lib/playerWaits.js";
 import { installedModules } from "./setupModules.js";
 import { offerFollowUps } from "./followUps.js";
 import { configSettings, autoRemoveTargets, checkRule, checkMechanic, safeGetGameSetting, useWeakReferences, onUseMacroOptions, chatCardUpdates } from "./settings.js";
 import { challengeVisibleToPlayers, saveDisplayMode } from "./lib/saveVisibility.js";
-import { BONUS_REQUEST, createDamageDetail, processDamageRoll, untargetDeadTokens, checkIncapacitated, getAutoRollDamage, isAutoFastForward, getAutoRollAttack, checkNearby, expireMyEffects, validTargetTokens, userTargetsKeepingUndrawn, HEALING_BUTTON_KEY, isActivityType, getOrCreateTokenForActorAsSet, doReactions, type ReactionResult, playerFor, requestPCActiveDefence, evalActivationCondition, asyncHooksCallAll, asyncHooksCall, renderSaveRollHTML, markFlanking, tokenForActor, getOrCreateTokenForActor, createConditionData, evalCondition, computeCoverBonus, computeTargetAC, TOTAL_COVER, THREE_QUARTERS_COVER, HALF_COVER, hasCoverTotal, isInCombat, displayDSNForRoll, setActionUsed, getTokenDocument, getToken, addRollTo, sumRolls, throttledUpdate, getCachedDocument, getUpdatesCache, clearUpdatesCache, getDamageType, getTokenName, tokenPortrait, setRollOperatorEvaluated, evalAllConditions, evalAllConditionsAsync, getAppliedEffects, CEAddEffectWith, getCEEffectByName, CEHasEffectApplied, CERemoveEffect, CEToggleEffect, getActivityDefaultDamageType, activityHasAreaTarget, DSNMarkDiceDisplayed, expectedTemplateCount, getSaveMultiplierForActivity, checkActivityRange, isRangeCheckable, getActivityAutoTargetAction, activityHasEmanationNoTemplate, completeActivityUse, getActor, getConcentrationEffect, convertDuration, getRemoveAllButtons, requestPCSave, pcSaveOptions, addUpdatesCache, MidiOptions, getOptionalCountRemainingShortFlag, bonusDialog, getTargetDescriptor, queueUpdate, addAttribution, renderAttributionTooltip, getAdvantageModeTitle, resolveItemMacro, resolveActivityMacro, midiFlag, updateUserTargets, getConsumptionData, toMessageMode, toLegacyRollMode, isDnd5eRollMessage, rollAnswersRequest, type SaveRequestKind, dnd5eRollType, tokenSourceElevation, applyStatusCondition } from "./utils.js";
+import { BONUS_REQUEST, createDamageDetail, processDamageRoll, reconstructDamageLists, untargetDeadTokens, checkIncapacitated, getAutoRollDamage, isAutoFastForward, getAutoRollAttack, checkNearby, expireMyEffects, validTargetTokens, userTargetsKeepingUndrawn, HEALING_BUTTON_KEY, isActivityType, getOrCreateTokenForActorAsSet, doReactions, type ReactionResult, playerFor, requestPCActiveDefence, evalActivationCondition, asyncHooksCallAll, asyncHooksCall, renderSaveRollHTML, markFlanking, tokenForActor, getOrCreateTokenForActor, createConditionData, evalCondition, computeCoverBonus, computeTargetAC, TOTAL_COVER, THREE_QUARTERS_COVER, HALF_COVER, hasCoverTotal, isInCombat, displayDSNForRoll, setActionUsed, getTokenDocument, getToken, addRollTo, sumRolls, throttledUpdate, getCachedDocument, getUpdatesCache, clearUpdatesCache, getDamageType, getTokenName, tokenPortrait, setRollOperatorEvaluated, evalAllConditions, evalAllConditionsAsync, getAppliedEffects, CEAddEffectWith, getCEEffectByName, CEHasEffectApplied, CERemoveEffect, CEToggleEffect, getActivityDefaultDamageType, activityHasAreaTarget, DSNMarkDiceDisplayed, expectedTemplateCount, getSaveMultiplierForActivity, checkActivityRange, isRangeCheckable, getActivityAutoTargetAction, activityHasEmanationNoTemplate, completeActivityUse, getActor, getConcentrationEffect, convertDuration, getRemoveAllButtons, requestPCSave, pcSaveOptions, addUpdatesCache, MidiOptions, getOptionalCountRemainingShortFlag, bonusDialog, getTargetDescriptor, queueUpdate, addAttribution, renderAttributionTooltip, getAdvantageModeTitle, resolveItemMacro, resolveActivityMacro, midiFlag, updateUserTargets, getConsumptionData, toMessageMode, toLegacyRollMode, isDnd5eRollMessage, rollAnswersRequest, type SaveRequestKind, dnd5eRollType, tokenSourceElevation, applyStatusCondition } from "./utils.js";
 import { OnUseMacros } from "./apps/Item.js";
 import { bonusCheck, collectBonusFlags, defaultRollOptions, buildPreComputedAdvantageMap, checkActivityAbilities } from "./patching.js";
 import { collectRollModifiers } from "./services/rollModifiers/service.js";
@@ -1117,7 +1117,52 @@ export class Workflow {
   set isTurn(isTurn: boolean) { this.#persisted.setScalar("isTurn", isTurn); }
   AoO: boolean = false;
 
-  damageList: DamageListEntry[] = [];
+  #damageList: DamageListEntry[] = [];
+  #targetDamage: Record<string, DamageListEntry[]> | undefined;
+  // A rebuilt use's damage lists, worked out when first read: from its damage cards (as applied), and for a use whose
+  // damage step was reached, the targets no card records as the rolls would do now (reconstructDamageLists; user, 2026-11-20)
+  #damageFromCards = false;
+  #damageReached = false;
+  /** Each target's damage record from the damage application */
+  get damageList(): DamageListEntry[] {
+    this.#loadDamageFromCards();
+    return this.#damageList;
+  }
+  set damageList(damageList: DamageListEntry[]) {
+    this.#damageFromCards = false;
+    this.#damageList = damageList;
+  }
+  /** Each target's damage entries, one per list */
+  get targetDamage(): Record<string, DamageListEntry[]> | undefined {
+    this.#loadDamageFromCards();
+    return this.#targetDamage;
+  }
+  set targetDamage(targetDamage: Record<string, DamageListEntry[]> | undefined) {
+    this.#damageFromCards = false;
+    this.#targetDamage = targetDamage;
+  }
+  #loadDamageFromCards(): void {
+    const cardId = this.itemCardId;
+    if (!this.#damageFromCards || !cardId) return;
+    this.#damageFromCards = false;
+    this.#damageList = [];
+    this.#targetDamage = {};
+    // The card keeps what undo needs; who was hit or saved, and the crit, are the use's own
+    for (const stored of useDamageList(cardId)) {
+      const uuid = stored.targetUuid;
+      const entry: DamageListEntry = { ...stored, actorId: getActor(stored.actorUuid)?.id ?? "", critical: this.isCritical,
+        isHit: this.hitTargets.has(uuid) || this.hitTargetsEC.has(uuid), saved: this.saves.has(uuid), semiSuperSaver: this.semiSuperSavers.has(uuid),
+        superSaver: this.superSavers.has(uuid), sceneId: foundry.utils.parseUuid(uuid)?.primaryId ?? "",
+        tempDamage: (stored.oldTempHP ?? 0) - (stored.newTempHP ?? 0), details: [] };
+      this.#damageList.push(entry);
+      (this.#targetDamage[uuid] ??= []).push(entry);
+    }
+    const unrecorded = new Set(this.targets.uuids.filter(uuid => !this.#targetDamage?.[uuid]));
+    if (!this.#damageReached || !unrecorded.size) return;
+    const worked = reconstructDamageLists(this, unrecorded);
+    this.#damageList.push(...worked.damageList);
+    Object.assign(this.#targetDamage, worked.targetDamage);
+  }
 
   saveDisplayFlavor: string | undefined;
 
@@ -2021,7 +2066,6 @@ export class Workflow {
   /** What the damage calculation applied that the card shows, by token uuid (set once it has run) */
   midiTargetDetail: Record<string, { uncannyDodge?: unknown, uncannyDodgeIcon?: unknown }> | undefined;
   /** Each target's damage entries, one per damage list (other damage may have its own), by token uuid (processDamageRoll); not stored */
-  targetDamage: Record<string, DamageListEntry[]> | undefined;
   targetSaveDetails: Record<string, SaveDetails> | undefined;  // Per-target SaveDetails for attribution tracking
 
   /** Get save rolls keyed by target UUID - derived from targetSaveDetails */
@@ -2274,6 +2318,8 @@ export class Workflow {
     // The other activity's use declined: its damage dropped, the ammunition's kept
     if (this.otherConsumed === false) this.dropOtherActivityDamage();
     // A read-only copy is for reading the card: it doesn't recompute sight (asynchronous, so not there to read anyway)
+    this.#damageFromCards = true;
+    this.#damageReached = resumePoint === "WorkflowState_Completed" && !!(this.damageRolls?.length || this.otherDamageRolls?.length || this.bonusDamageRolls?.length);
     // Sight as it was decided, from the records (tokens move: recomputing would answer for where they are now); a card
     // written before sight was recorded is worked out again, as it was then
     if (!this.#restoreSight() && !this.readOnly && isMidiActivityType(this.activity)) void setupCanSeeSense(this.activity, { workflow: this });

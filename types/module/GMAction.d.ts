@@ -216,5 +216,14 @@ export declare function buildDamageCardContext(message: ChatMessage.Implementati
     showNPC: boolean;
     playerButtons?: boolean;
 }>;
+/**
+ * Recover a stored entry, sharing every decoding rule with the socket path. Accepts the full socket
+ * shape too, so messages written before the payload was pruned keep working.
+ *
+ * Puts back the DUPLICATED_MIDI_OPTIONS the flag does not carry - midi's own dnd5e.preApplyDamage
+ * handler reads `midi.sourceActorUuid`. Only fills what is absent, so older entries keep theirs.
+ */
+/** A use's damage as applied: the entries of its damage cards (shown or hidden), found from its usage card */
+export declare function useDamageList(useCardId: string): RecoveredUndoEntry[];
 export declare function prepareDamageListToJSON(damageList: DamageListEntry[]): SerializedDamageListEntry[];
 export {};

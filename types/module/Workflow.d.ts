@@ -256,7 +256,12 @@ export declare class Workflow {
     get isTurn(): boolean;
     set isTurn(isTurn: boolean);
     AoO: boolean;
-    damageList: DamageListEntry[];
+    /** Each target's damage record from the damage application */
+    get damageList(): DamageListEntry[];
+    set damageList(damageList: DamageListEntry[]);
+    /** Each target's damage entries, one per list */
+    get targetDamage(): Record<string, DamageListEntry[]> | undefined;
+    set targetDamage(targetDamage: Record<string, DamageListEntry[]> | undefined);
     saveDisplayFlavor: string | undefined;
     get id(): string | undefined;
     set id(id: string | null | undefined);
@@ -625,7 +630,6 @@ export declare class Workflow {
         uncannyDodgeIcon?: unknown;
     }> | undefined;
     /** Each target's damage entries, one per damage list (other damage may have its own), by token uuid (processDamageRoll); not stored */
-    targetDamage: Record<string, DamageListEntry[]> | undefined;
     targetSaveDetails: Record<string, SaveDetails> | undefined;
     get tokenSaves(): Record<string, Roll> | undefined;
     /** A target's save roll (a Token, TokenDocument or token uuid); undefined until it has rolled */
