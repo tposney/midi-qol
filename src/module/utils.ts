@@ -19,7 +19,7 @@ import { sensesModes } from "./services/perception/service.js";
 import { applyDamageRules, collectDamageRules, copyDamageOptions } from "./lib/damageRules.js";
 import type { AttackModifier } from "./Workflow.js";
 import { TokenDocumentSet, hookTarget, memberCount, rememberSyntheticToken, tokenOf } from "./lib/tokenDocumentSet.js";
-import { rollBonusLabel } from "./rolls/attack.js";
+import { recordRollChange, rollBonusLabel } from "./lib/rollParts.js";
 import { debug, i18n, error, warn, busyWait, allAttackTypes, debugEnabled, overTimeEffectsToDelete, getStaticID, savedOverTimeEffectsToDelete, GameSystemConfig, systemConcentrationId, MQItemMacroLabel, MODULE_ID, midiReactionEffect, midiBonusActionEffect, MQActivityMacroLabel, ceInterface, i18nFormat } from "../midi-qol.js";
 import { configSettings, autoRemoveTargets, checkRule, criticalDamage, criticalDamageGM, checkMechanic, safeGetGameSetting, autoRollDamageOptions, showReactionAttackRollOptions, shouldDisplaySaveDC, DOWNGRADE_IMMUNITY_KEY, ALL_DAMAGE_KEY } from "./settings.js";
 import { log } from "../midi-qol.js";
@@ -5024,6 +5024,7 @@ export async function bonusDialog(
       bonusSpent = addBonusCosts(bonusSpent, candidate.cost);
       usedLabels.push(candidate.label);
     }
+    if (roll !== before) recordRollChange(roll, before, usedLabels);
     stillAffordable();
     if (showRoll && lastForceFlag === "" && roll !== before) {
       DSNMarkDiceDisplayed(roll);
@@ -5034,6 +5035,9 @@ export async function bonusDialog(
   }
   if (!bonusQuery) optionalCandidates = [];
   if (validFlags.length === 0 && optionalCandidates.length === 0) return roll;
+  // What the dialog's bonuses change is recorded against the roll they were offered on
+  const offeredOn = roll;
+  const automaticLabels = usedLabels.length;
   const onCandidate = async (dialog: RollModifyDialog, button: { candidate: OfferedBonus }) => {
     const candidate = button.candidate;
     newRoll = await applyOfferedBonus(candidate, candidateContext(newRoll), bonusRollData);
@@ -5066,6 +5070,7 @@ export async function bonusDialog(
       DSNMarkDiceDisplayed(originalRoll);
       // The new roll has had dsn display done for each bonus term/reroll so mark it as displayed
       DSNMarkDiceDisplayed(newRoll);
+      if (newRoll !== offeredOn) recordRollChange(newRoll, offeredOn, usedLabels.slice(automaticLabels));
 
       if (showRoll && newRoll !== originalRoll) {
         //@ts-expect-error
@@ -6934,10 +6939,7 @@ export function addAttribution(roll: Roll, attributions: AttributionMap) {
   if (attributions && Object.keys(attributions).length > 0) {
     // Convert map to array and store on roll options for tooltip rendering
     const entries = attributionMapToArray(attributions);
-    // The roll's named parts (BONUS, lib/rollParts.ts) were added as it was built: kept
-    const stored = foundry.utils.getProperty(roll, "options.attributions");
-    const parts = (Array.isArray(stored) ? stored as AttributionEntry[] : []).filter(entry => entry.type === "BONUS");
-    foundry.utils.setProperty(roll, "options.attributions", [...entries, ...parts]);
+    foundry.utils.setProperty(roll, "options.attributions", entries);
   }
 }
 
@@ -7130,6 +7132,7 @@ export async function midiRenderAggregatedDamageRolls(rolls: Roll[], template: s
     tooltipFormula,
     user: game.user?.id,
     flavor: options.flavor,
+    attackReasons: bonusSourceIcons(rolls),
     damageTypes: breakdowns
       .filter((b: any) => b.config?.icon)
       .map((b: any) => ({ icon: b.config.icon, label: b.config.label ?? b.label }))
@@ -7153,8 +7156,8 @@ export function midiRenderBonusDamageRolls(rolls: Roll[], options?: any) {
  * Strength, Proficiency, Flanking, …, the Roll Bonus with the effects behind it), after whether the d20 had advantage
  * or disadvantage, which alone is coloured (its sources are in the attribution tooltip).
  */
-function attackTermChips(roll: Roll, modifiers: AttackModifier[], reasonIcon: (m: AttackModifier, cls: string) => string,
-  describeReason: (m: AttackModifier) => string): string {
+export function rollTermChips(roll: Roll, modifiers: AttackModifier[] = [], reasonIcon: (m: AttackModifier, cls: string) => string = () => "",
+  describeReason: (m: AttackModifier) => string = m => m.label): string {
   const esc = foundry.utils.escapeHTML;
   const sources = (foundry.utils.getProperty(roll, `options.${MODULE_ID}.rollBonusSources`) ?? []) as Array<{ label: string, value?: string }>;
   const chips: string[] = [];
@@ -7186,6 +7189,19 @@ function attackTermChips(roll: Roll, modifiers: AttackModifier[], reasonIcon: (m
     chips.push(`<span class="midi-attack-reason-chip">${modifier ? reasonIcon(modifier, "midi-attack-reason-icon") : ""} ${esc(valueText)}${dice} ${esc(label)}${detail}</span>`);
   });
   return chips.length ? `<div class="midi-attack-reason-chips">${chips.join("")}</div>` : "";
+}
+
+/** An icon for each effect or rule behind a roll's combined bonus (lib/rollParts.ts), outlined green or red, its value and name as its tooltip */
+function bonusSourceIcons(rolls: Roll[]): string[] {
+  const esc = foundry.utils.escapeHTML;
+  return rolls.flatMap(roll => (foundry.utils.getProperty(roll, `options.${MODULE_ID}.rollBonusSources`) ?? []) as Array<{ label: string, value?: string, img?: string }>)
+    .map(src => {
+      const text = esc(src.value ? `${src.value} ${src.label}` : src.label);
+      const sign = `${src.value ?? ""}`.startsWith("-") ? "minus" : "plus";
+      return src.img
+        ? `<img src="${esc(src.img)}" class="midi-attack-reason midi-attack-reason-effect ${sign}" alt="${esc(src.label)}" data-tooltip="${text}">`
+        : `<i class="fas fa-wand-magic-sparkles midi-attack-reason ${sign}" data-tooltip="${text}"></i>`;
+    });
 }
 
 export async function midiRenderTemplateRoll(roll: Roll | undefined, template: string, options?: any) {
@@ -7232,14 +7248,7 @@ export async function midiRenderTemplateRoll(roll: Roll | undefined, template: s
   const attackReasons = attackModifiers.map(m => reasonIcon(m, `midi-attack-reason ${reasonSign(m)}`, ` data-tooltip="${foundry.utils.escapeHTML(describeReason(m))}"`));
   // Effects behind the roll bonus (Bless and the like) by their own image, outlined green or red; the weapon's own
   // make-up (ability, proficiency, magic, ammunition) is the usual and gets none
-  const bonusSources = (foundry.utils.getProperty(roll, `options.${MODULE_ID}.rollBonusSources`) ?? []) as Array<{ label: string, value?: string, img?: string }>;
-  for (const src of bonusSources) {
-    const text = foundry.utils.escapeHTML(src.value ? `${src.value} ${src.label}` : src.label);
-    const sign = `${src.value ?? ""}`.startsWith("-") ? "minus" : "plus";
-    attackReasons.push(src.img
-      ? `<img src="${foundry.utils.escapeHTML(src.img)}" class="midi-attack-reason midi-attack-reason-effect ${sign}" alt="${foundry.utils.escapeHTML(src.label)}" data-tooltip="${text}">`
-      : `<i class="fas fa-wand-magic-sparkles midi-attack-reason ${sign}" data-tooltip="${text}"></i>`);
-  }
+  attackReasons.push(...bonusSourceIcons([roll]));
   // Exhaustion's penalty (dnd5e's condition roll reduction, labelled when the roll was built), by its status image
   const exhaustionLabel = i18n("DND5E.Exhaustion");
   const exhaustionImg = CONFIG.statusEffects.find(effect => effect.id === "exhaustion")?.img;
@@ -7254,7 +7263,7 @@ export async function midiRenderTemplateRoll(roll: Roll | undefined, template: s
       ? `<img src="${foundry.utils.escapeHTML(exhaustionImg)}" class="midi-attack-reason midi-attack-reason-effect ${value < 0 ? "minus" : "plus"}" alt="${foundry.utils.escapeHTML(exhaustionLabel)}" data-tooltip="${text}">`
       : `<i class="fas fa-face-tired midi-attack-reason ${value < 0 ? "minus" : "plus"}" data-tooltip="${text}"></i>`);
   }
-  const attackReasonsTooltip = template.endsWith("attack-roll.html") ? attackTermChips(roll, attackModifiers, reasonIcon, describeReason) : "";
+  const attackReasonsTooltip = template.endsWith("attack-roll.html") ? rollTermChips(roll, attackModifiers, reasonIcon, describeReason) : "";
 
   const chatData = {
     formula: template.endsWith("attack-roll.html") ? roll.formula.replace(/\[[^\]]*\]/g, "") : roll.formula,

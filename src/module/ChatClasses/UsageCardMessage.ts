@@ -9,7 +9,7 @@ import { midiButtonHidden } from "../activities/usageButtons.js";
 import { error } from "../../midi-qol.js";
 import { Activity, ChatMessageRenderOptions, DamageApplicationOptions, Dnd5eChatMessage } from "../../globals.js";
 import { checkRule, configSettings, safeGetGameSetting } from "../settings.js";
-import { getRemoveAllButtons, getRemoveAttackButtons, getRemoveDamageButtons, midiRenderAttackRoll, midiRenderDamageRolls, midiRenderOtherDamageRolls, midiRenderBonusDamageRolls, midiRenderFormulaRoll, renderRollAttributionIcon, renderSaveRollHTML, getAdvantageModeTitle, getTokenName, renderAttributionTooltip, tokenPortrait, activityHasAreaTarget, isActivityType } from "../utils.js";
+import { getRemoveAllButtons, getRemoveAttackButtons, getRemoveDamageButtons, midiRenderAttackRoll, midiRenderDamageRolls, midiRenderOtherDamageRolls, midiRenderBonusDamageRolls, midiRenderFormulaRoll, renderRollAttributionIcon, renderSaveRollHTML, getAdvantageModeTitle, getTokenName, renderAttributionTooltip, rollTermChips, tokenPortrait, activityHasAreaTarget, isActivityType } from "../utils.js";
 import { cardActor, saveDisplayMode } from "../lib/saveVisibility.js";
 import { MODULE_ID, MQDamageRollTypes } from "../../midi-qol.js";
 import { Workflow } from "../Workflow.js";
@@ -150,8 +150,12 @@ async function saveRow(uuid: string, result?: { roll?: Roll, total?: number | nu
   }
   if (record) {
     const attribution = attributionMap(record.saveAttribution);
-    row.attributionTooltip = foundry.utils.escapeHTML(await renderAttributionTooltip(attribution, getAdvantageModeTitle(record.saveMode)));
-    row.hasAttribution = !foundry.utils.isEmpty(attribution);
+    const hasModeSources = !foundry.utils.isEmpty(attribution);
+    // The save's terms (ability, proficiency, the Roll Bonus with the effects and rules behind it: lib/rollParts.ts)
+    const chips = roll ? rollTermChips(roll) : "";
+    const sources = roll ? foundry.utils.getProperty(roll, `options.${MODULE_ID}.rollBonusSources`) : undefined;
+    row.attributionTooltip = foundry.utils.escapeHTML(`${hasModeSources ? await renderAttributionTooltip(attribution, getAdvantageModeTitle(record.saveMode)) : ""}${chips}`);
+    row.hasAttribution = hasModeSources || (Array.isArray(sources) && sources.length > 0);
     row.coverLabel = record.saveCover ? COVER_ICONS[record.saveCover] : undefined;
   }
   return row;
