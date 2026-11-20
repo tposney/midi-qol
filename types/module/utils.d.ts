@@ -1125,8 +1125,12 @@ export declare function setActionUsed(actor: Actor.Implementation): Promise<void
 export declare function setReactionUsed(actor: Actor.Implementation, active?: boolean): Promise<void>;
 /** Spend a bonus action (a facade over the economy ledger) */
 export declare function setBonusActionUsed(actor: Actor.Implementation): Promise<void>;
-/** Close the turn window (a facade over the economy ledger); an older world's stored action flag is cleared too */
-export declare function removeActionUsed(actor: Actor.Implementation): Promise<any>;
+/**
+ * The action back: `force` closes the turn window now (a rest, a macro); otherwise its own expiry ends it (turn start,
+ * combat end), as the reaction and bonus action markers' do: deleting it here as well races core's expiry, which fails
+ * the whole expiry batch. An older world's stored action flag is cleared either way.
+ */
+export declare function removeActionUsed(actor: Actor.Implementation, force?: boolean): Promise<any>;
 export declare function removeReactionUsed(actor: Actor.Implementation, force?: boolean): Promise<void>;
 export declare function hasUsedAction(actor: Actor.Implementation): boolean | undefined;
 export declare function hasUsedReaction(actor: Actor.Implementation): boolean;

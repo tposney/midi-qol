@@ -6679,9 +6679,13 @@ export async function setBonusActionUsed(actor: Actor.Implementation) {
   await spendBudget(actor, "bonus");
 }
 
-/** Close the turn window (a facade over the economy ledger); an older world's stored action flag is cleared too */
-export async function removeActionUsed(actor: Actor.Implementation) {
-  await resetBudget(actor, "action");
+/**
+ * The action back: `force` closes the turn window now (a rest, a macro); otherwise its own expiry ends it (turn start,
+ * combat end), as the reaction and bonus action markers' do: deleting it here as well races core's expiry, which fails
+ * the whole expiry batch. An older world's stored action flag is cleared either way.
+ */
+export async function removeActionUsed(actor: Actor.Implementation, force = false) {
+  if (force) await resetBudget(actor, "action");
   if (!actor._source.flags?.[MODULE_ID]?.actions?.action) return;
   if (game.user?.isGM || actor.isOwner) return await actor?.setFlag(MODULE_ID, "actions", { action: false });
   else return await unTimedExecuteAsGM("_gmSetFlag", { base: MODULE_ID, key: "actions.action", value: false, actorUuid: actor.uuid })

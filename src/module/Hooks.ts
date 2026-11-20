@@ -334,7 +334,7 @@ export async function restManager(actor: Actor.Implementation, result: { longRes
   if (result.newDay && myExpiredEffects.newDay.length) await expireEffects(actor, myExpiredEffects.newDay, { "expiry-reason": "midi-qol:newDay" });
   if (foundry.utils.getProperty(actor, "flags.midi-qol.actions.reactionsReset") !== "never") await removeReactionUsed(actor, true); // remove reaction used for a rest
   if (foundry.utils.getProperty(actor, "flags.midi-qol.actions.bonusActionsReset") !== "never") {
-    await removeActionUsed(actor);
+    await removeActionUsed(actor, true);
     await removeBonusActionUsed(actor, true);
   }
 }
