@@ -22,6 +22,8 @@ and requests are in `StepsAndReactions-2026-11-19.md`.
 | give your provider a setting | `MidiQOL.settings.register(module, { key, group, label, default })`: your game setting, shown in midi's settings Modules tab | your module |
 | damage over time, a bonus to damage, an advantage flag | the effect keys (`flags.midi-qol.OverTime`, `DamageBonusMacro`, `flags.midi-qol.advantage.*`) | the effect |
 | test any of the above | `workflowOptions.fixedDice`, `MidiQOL.useTrace(workflow)` (the steps that ran and who changed them) | your tests |
+| know why a use came out as it did | `MidiQOL.why(workflow)`: each roll's labelled terms, the sources behind a combined bonus, the advantage sources, changes after the roll; the targets' AC | your module |
+| know what a use would do before it is made (a HUD, NPC tactics) | `MidiQOL.preview(activity, targets)`: range and reach, AC and cover, advantage and its sources, the attack's make-up, a save's DC, cost and blockers, the steps; nothing rolled or written | your module |
 
 Rules of thumb:
 
@@ -34,6 +36,20 @@ Rules of thumb:
   and a step change when it is "what happens next".
 - Content (items, effects) uses onUse macros and effect keys; modules use hooks, steps and services. A later milestone
   (M24's conversion) reads the old content forms as one entry format; until then they all work.
+
+## Naming what you add to a roll
+
+The card explains each roll's total where it is shown (the attack total's and save rows' tooltips, icons beside the
+total), so name what you add:
+- an effect changing a roll field (`system.rolls.attack.bonus`…): named by the effect, nothing to do;
+- a `rollBonuses` contributor: named by its `label`, prompted or not; a reroll or replacement it makes is recorded on
+  the roll (`options.midi-qol.changes`);
+- a part you push into dnd5e's roll config in a hook: give it a flavour (`"1d4[Bless]"`), or it shows as "Bonus";
+- damage: a `damageContributions` contribution (its own roll under its label), not a term pushed into midi's roll.
+
+A `rollModifiers` contributor is also asked by `MidiQOL.preview`, with `preview: true` on the query and a stand-in
+workflow (actor, token, item, activity, targets, sight, long range, flanking); answer as for the use, or nothing if
+you need a use in progress.
 
 ## A new activity type
 
