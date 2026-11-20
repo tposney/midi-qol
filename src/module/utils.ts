@@ -4910,7 +4910,7 @@ export async function bonusDialog(
         if (!ids?.length) break;
         const picked = orderForApplication(optionalCandidates.filter(c => ids.includes(c.id)));
         for (const candidate of picked) if (optionalCandidates.some(c => c.id === candidate.id)) await take(candidate);
-        if (!picked.some(c => c.effect.kind === "reroll" || c.effect.kind === "replace")) break;
+        if (!picked.some(c => c.effect.kind === "reroll" || c.effect.kind === "replace" || c.effect.kind === "mode")) break;
       }
     } catch (err) {
       TroubleShooter.recordError(err, "midi-qol | bonus prompt ask");
@@ -8609,9 +8609,7 @@ export function setRollMinDiceTerm(roll: Roll, minValue: number, count = 1) {
       if (r.result < minValue) r.result = Math.min(minValue, d.faces ?? 1);
     });
   };
-  //@ts-expect-error
-  roll._total = roll._evaluateTotal();
-  return roll;
+  return refreshRollTotal(roll);
 }
 
 export function setRollMaxDiceTerm(roll: Roll, maxValue: number, count = 1) {
@@ -8621,7 +8619,12 @@ export function setRollMaxDiceTerm(roll: Roll, maxValue: number, count = 1) {
       if (r.result > maxValue) r.result = Math.max(1, maxValue);
     });
   };
-  //@ts-expect-error
+  return refreshRollTotal(roll);
+}
+
+/** A roll's total worked out again after its dice results were changed in place */
+export function refreshRollTotal<T extends Roll>(roll: T): T {
+  //@ts-expect-error Roll#_total and _evaluateTotal are protected
   roll._total = roll._evaluateTotal();
   return roll;
 }

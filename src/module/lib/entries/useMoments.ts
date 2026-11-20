@@ -5,6 +5,7 @@ import type { RollKind, RollModifier, RollModifierEffect, RollQuery } from "../.
 import type { DamageContribution } from "../../services/damageContributions/service.js";
 import type { DamageChange, DamageStage } from "../../services/damageModifiers/rules.js";
 import { DAMAGE_STAGES } from "../../services/damageModifiers/rules.js";
+import { applyBonusEffect, type BonusEffect } from "../../services/rollBonuses/service.js";
 import { collectEntries, conditionDataFor, entryHolds, holds, limitAllows, registerAction, registerMoment, runMoment, spendEntryLimit, type ActionRun, type MomentContext } from "./engine.js";
 
 /*
@@ -222,6 +223,25 @@ async function damageChangeAction(run: ActionRun) {
   else store.push({ stage, change });
 }
 
+/**
+ * `{ bonus: BonusEffect, rolls? }` at a use or target moment: applied to the use's attack roll as it stands (at
+ * `attacked`, a target giving the attacker disadvantage: 2024 Lucky; at `use.missed`, a reroll). A roll moment's
+ * bonus is a rollBonuses candidate instead (lib/entries/rollBonuses.ts).
+ */
+async function bonusAction(run: ActionRun) {
+  const workflow = run.context.workflow;
+  const effect = run.action.bonus as BonusEffect | undefined;
+  if (!workflow || !isUseMoment(run.moment) || !effect || typeof effect !== "object") return;
+  const rolls = rollKinds(run.action.rolls);
+  if (rolls && !rolls.includes("attack")) return;
+  if (!workflow.attackRoll) {
+    console.warn(`midi-qol | entry ${run.found.entry.id}: no attack roll at ${run.moment} for its bonus`);
+    return;
+  }
+  const changed = await applyBonusEffect(workflow.attackRoll, effect, run.conditionData, labelOf(run));
+  if (changed !== workflow.attackRoll) await workflow.setAttackRoll(changed);
+}
+
 /** `{ abort: reason }`: the use stops (at use.configure, before anything is spent) */
 async function abortAction(run: ActionRun) {
   const workflow = run.context.workflow;
@@ -294,6 +314,7 @@ export function registerUseMoments() {
   registerAction("modifier", modifierAction);
   registerAction("damageChange", damageChangeAction);
   registerAction("abort", abortAction);
+  registerAction("bonus", bonusAction);
   registerAction("heal", run => useDamageAction(run, true));
   register("rollModifiers", "midi-qol.entries", { for: entryRollModifiers }, { label: "Midi-QOL: entries" });
   register("damageContributions", "midi-qol.entries", {

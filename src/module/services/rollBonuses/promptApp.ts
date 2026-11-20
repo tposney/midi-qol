@@ -48,7 +48,7 @@ export class BonusPromptApp extends RollModifyDialog {
       if (!this.rendered) break;
       const value: string = typeof button.value === "string" ? button.value : "";
       const kind: string | undefined = button.candidate?.effect?.kind;
-      if (value.startsWith("reroll") || value.startsWith("replace") || kind === "reroll" || kind === "replace") rerolled = true;
+      if (value.startsWith("reroll") || value.startsWith("replace") || kind === "reroll" || kind === "replace" || kind === "mode") rerolled = true;
       await this.submit(button);
     }
     if (!this.rendered) return;

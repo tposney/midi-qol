@@ -331,6 +331,8 @@ declare module "fvtt-types/configuration" {
       "midi-qol"?: {
         /** M15: per-turn and per-round entry limits, stamped (lib/entries/limits.ts) */
         entryLimits?: import("./module/lib/entries/limits.js").StoredLimit[];
+        /** M15 stage 4d: entries offered as toggles, by toggle key (lib/entries/offers.ts): on or off */
+        toggles?: Record<string, boolean>;
         dependentOn?: string; // UUID of parent document for midi-qol dependent tracking
         actions?: {
           // This really should be structured but actions.reaction is used in other modules and macros

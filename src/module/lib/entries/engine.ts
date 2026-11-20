@@ -2,11 +2,12 @@ import { MODULE_ID } from "../../../midi-qol.js";
 import { Registry } from "../../api/registry.js";
 import type { Workflow } from "../../Workflow.js";
 import type { Activity } from "../../../globals.js";
-import { createConditionData, evalCondition, expireEffects } from "../../utils.js";
+import { createConditionData, evalCondition, expireEffects, hasUsedReaction, setReactionUsed } from "../../utils.js";
 import { getDistance } from "../../services/distance/service.js";
 import { unTimedExecuteAsGM } from "../../GMAction.js";
 import { limitKey, limitStamp, selectGroups, spendStoredLimit, withinLimit, type CombatMoment, type StoredLimit } from "./limits.js";
 import type { Entry, EntryAction, EntryHome, EntryWho, FoundEntry } from "./types.js";
+import { askOffers, costAllows, listToggles, offerOption, setToggle, spendEntryCost, toggleOn } from "./offers.js";
 
 /*
  * M15 stage 1: the entry engine (plan ~/Documents/midi-next-M15-plan-2026-11-20.md). A moment is raised with the actor
@@ -17,7 +18,7 @@ import type { Entry, EntryAction, EntryHome, EntryWho, FoundEntry } from "./type
  * State, point-in-time only: an effect's counts on the effect (`flags.midi-qol.entryState`), per-turn and per-round
  * limits on the actor (`flags.midi-qol.entryLimits`, stamped with the combat, round and turn: lib/entries/limits.ts),
  * per-use limits in memory on the use.
- * Offers other than "always" (ask, reaction, toggle) come with stages 3 and 4: until then such an entry is not run.
+ * Offers: ask, reaction (an ask costing the reaction) and toggle (lib/entries/offers.ts).
  */
 
 export interface MomentContext {
@@ -207,6 +208,14 @@ export function collectEntries(momentId: string, context: MomentContext): FoundE
   return context.only ? list.filter(f => documentUuid(f.document) === context.only) : list;
 }
 
+/** The actor's entries offered as toggles (its items in use and applied effects), for the sheet's Toggles control */
+export function actorToggleEntries(actor: Actor.Implementation): FoundEntry[] {
+  const list: FoundEntry[] = [];
+  for (const item of actor.items) if (itemInUse(item)) list.push(...itemEntries(item, actor));
+  for (const effect of actor.appliedEffects) list.push(...effectEntries(effect, actor));
+  return list.filter(f => f.entry.offer === "toggle");
+}
+
 /** An entry runs if its `who` filter (a near entry's) and its `if` hold */
 export async function entryHolds(f: FoundEntry, conditionData: Record<string, unknown>): Promise<boolean> {
   const filter = typeof f.who === "object" ? f.who.filter : undefined;
@@ -377,22 +386,33 @@ export async function runActions(list: readonly EntryAction[], run: Omit<ActionR
 
 /** Run a moment's entries for this context (MidiQOL.entries.run): what ran, in order */
 export async function runMoment(momentId: string, context: MomentContext): Promise<EntryRunResult[]> {
-  const candidates: { found: FoundEntry, conditionData: Record<string, unknown> }[] = [];
+  type Candidate = { found: FoundEntry, conditionData: Record<string, unknown>, entry: Entry, ask: boolean };
+  const candidates: Candidate[] = [];
   for (const f of collectEntries(momentId, context)) {
-    if ((f.entry.offer ?? "always") !== "always") continue;
+    const offer = f.entry.offer ?? "always";
+    if (offer === "toggle" && !toggleOn(f)) continue;
+    // A reaction offer is asked as `ask` and costs the reaction: not offered once it is used
+    if (offer === "reaction" && (!f.actor || hasUsedReaction(f.actor))) continue;
     const conditionData = conditionDataFor(f, context);
     if (!await entryHolds(f, conditionData)) continue;
-    if (!limitAllows(f, context)) continue;
-    candidates.push({ found: f, conditionData });
+    if (!limitAllows(f, context) || !costAllows(f)) continue;
+    candidates.push({ found: f, conditionData, entry: f.entry, ask: offer === "ask" || offer === "reaction" });
   }
   const results: EntryRunResult[] = [];
   // A group is one entry per use, across the use's moments (Metamagic: one option per spell), unless it stacks
   const used = context.workflow ? groupsUsed.get(context.workflow) ?? new Set<string>() : undefined;
-  const open = candidates.filter(c => !c.found.entry.group || c.found.entry.stacks || !used?.has(c.found.entry.group));
-  for (const { found: f, conditionData } of selectGroups(open.map(c => ({ ...c, entry: c.found.entry })))) {
+  const open = candidates.filter(c => !c.entry.group || c.entry.stacks || !used?.has(c.entry.group));
+  const automatic = selectGroups(open.filter(c => !c.ask));
+  const taken = new Set(automatic.flatMap(c => c.entry.group && !c.entry.stacks ? [c.entry.group] : []));
+  const asked = await chooseAsked(momentId, open.filter(c => c.ask && (!c.entry.group || c.entry.stacks || !taken.has(c.entry.group))));
+  for (const { found: f, conditionData } of [...automatic, ...selectGroups(asked)]) {
     const ran: string[] = [];
     await runActions(f.entry.do, { moment: momentId, found: f, context, conditionData }, ran);
-    if (ran.length) await spendEntryLimit(f, context);
+    if (ran.length) {
+      await spendEntryLimit(f, context);
+      await spendEntryCost(f);
+      if (f.entry.offer === "reaction" && f.actor) await setReactionUsed(f.actor);
+    }
     if (ran.length && used && f.entry.group) {
       used.add(f.entry.group);
       groupsUsed.set(context.workflow!, used);
@@ -402,6 +422,25 @@ export async function runMoment(momentId: string, context: MomentContext): Promi
   return results;
 }
 
+/** The ask offers taken: each actor's owner asked once for the moment */
+async function chooseAsked<T extends { found: FoundEntry }>(momentId: string, list: T[]): Promise<T[]> {
+  if (!list.length) return [];
+  const byActor = new Map<Actor.Implementation, { candidate: T, key: string }[]>();
+  list.forEach((candidate, index) => {
+    const actor = candidate.found.actor;
+    if (!actor) return;
+    const entries = byActor.get(actor) ?? [];
+    if (!entries.length) byActor.set(actor, entries);
+    entries.push({ candidate, key: `o${index}` });
+  });
+  const taken: T[] = [];
+  for (const [actor, entries] of byActor) {
+    const title = `${actor.name}: ${moments.get(momentId)?.value.label ?? momentId}`;
+    const keys = new Set(await askOffers(actor, title, entries.map(({ candidate, key }) => offerOption(candidate.found, key))));
+    taken.push(...entries.filter(e => keys.has(e.key)).map(e => e.candidate));
+  }
+  return taken;
+}
 /* midi's built-in actions (stage 1); the rest come with stage 2 */
 
 export function registerMidiEntryActions() {
@@ -419,7 +458,7 @@ export function registerMidiEntryActions() {
 }
 
 export const entriesApi = {
-  registerMoment, registerAction, collect: collectEntries, run: runMoment, state: entryState,
+  registerMoment, registerAction, collect: collectEntries, run: runMoment, state: entryState, toggles: listToggles, setToggle,
   moments: () => moments.entries().map(entry => entry.id),
   actions: () => actions.entries().map(entry => entry.id)
 };

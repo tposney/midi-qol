@@ -1,7 +1,7 @@
 import type { Activity } from "../../../globals.js";
 import { defineService, entries, reportServiceProblem } from "../../api/services.js";
 import type { Workflow } from "../../Workflow.js";
-import { addRollToAsync, setBonusActionUsed, setReactionUsed, setActionUsed } from "../../utils.js";
+import { addRollToAsync, setBonusActionUsed, setReactionUsed, setActionUsed, refreshRollTotal } from "../../utils.js";
 import { approveBonus } from "./approval.js";
 import { canAfford, type BonusCost, type BonusEffect, type BonusPhase, type BonusRollKind, type Outcome } from "./rules.js";
 
@@ -170,6 +170,40 @@ export async function collectBonusCandidates(query: RollBonusQuery, phase: Bonus
   return offered;
 }
 
+type D20Result = { result: number, active?: boolean, discarded?: boolean, rerolled?: boolean };
+
+/**
+ * A d20 roll given advantage or disadvantage after it was rolled: a copy whose d20 has a second die (rolled now if it
+ * has one) and keeps the higher (advantage) or lower; the other mode already on it cancels to the first die.
+ */
+export async function applyRollMode(roll: Roll, mode: "advantage" | "disadvantage"): Promise<Roll> {
+  const copy = (roll.constructor as typeof Roll).fromData(JSON.parse(JSON.stringify(roll))) as Roll;
+  const term = copy.terms[0];
+  if (!(term instanceof foundry.dice.terms.Die) || term.faces !== 20) return roll;
+  const modifiers = term.modifiers.filter(m => !/^k[hl]/.test(m));
+  const had = term.modifiers.some(m => m.startsWith("kh")) ? 1 : term.modifiers.some(m => m.startsWith("kl")) ? -1 : 0;
+  const wanted = mode === "advantage" ? 1 : -1;
+  const final = had === 0 ? wanted : had === wanted ? had : 0;
+  const results = term.results as D20Result[];
+  const live = results.filter(r => !r.rerolled);
+  if (final !== 0 && live.length < 2) {
+    const extra = await new Roll("1d20").evaluate();
+    const result: D20Result = { result: extra.total ?? 1, active: true };
+    results.push(result);
+    live.push(result);
+  }
+  for (const r of live) { r.active = false; r.discarded = true; }
+  const kept = final === 1 ? live.reduce((a, b) => b.result > a.result ? b : a)
+    : final === -1 ? live.reduce((a, b) => b.result < a.result ? b : a) : live[0];
+  kept.active = true;
+  kept.discarded = false;
+  term.modifiers = final === 1 ? [...modifiers, "kh"] : final === -1 ? [...modifiers, "kl"] : modifiers;
+  term.number = Math.max(1, live.length);
+  refreshRollTotal(copy);
+  foundry.utils.setProperty(copy, "options.advantageMode", final);
+  return copy;
+}
+
 /** The roll after one bonus's effect, from the roll data of the use. */
 export async function applyBonusEffect(roll: Roll, effect: BonusEffect, rollData: object, label: string): Promise<Roll> {
   const nameTerms = (bonusRoll: Roll) => {
@@ -191,6 +225,8 @@ export async function applyBonusEffect(roll: Roll, effect: BonusEffect, rollData
       if (effect.keep === "lower") return (rerolled.total ?? 0) <= (roll.total ?? 0) ? rerolled : roll;
       return rerolled;
     }
+    case "mode":
+      return applyRollMode(roll, effect.mode);
     case "replace": {
       const RollClass = roll.constructor as typeof Roll;
       return new RollClass(effect.formula, { ...roll.data, ...rollData }, roll.options).evaluate();

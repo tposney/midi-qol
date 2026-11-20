@@ -23,6 +23,8 @@ export type BonusCost = Partial<Record<ResourceType, Record<string, CostEntry>>>
 export type BonusEffect =
   | { kind: "add"; formula: string; damageType?: string; critical?: "double" | "never" | "force" }
   | { kind: "reroll"; keep: "new" | "higher" | "lower" | "ask"; dice?: "max" | "min"; addFormula?: string }
+  /** Advantage or disadvantage given after the roll (2024 Lucky): another d20, the higher or lower kept; with the other mode they cancel */
+  | { kind: "mode"; mode: "advantage" | "disadvantage" }
   | { kind: "replace"; formula: string }
   | { kind: "outcome"; success: boolean }
   | { kind: "critical" }
@@ -84,7 +86,7 @@ export function shouldPrompt(phase: BonusPhase, s: { hasOptional: boolean; dismi
   return true;
 }
 
-const EFFECT_ORDER: Record<BonusEffect["kind"], number> = { replace: 0, reroll: 1, add: 2, outcome: 3, critical: 3, rider: 4 };
+const EFFECT_ORDER: Record<BonusEffect["kind"], number> = { replace: 0, reroll: 1, mode: 1, add: 2, outcome: 3, critical: 3, rider: 4 };
 
 /** Where a kind of effect comes in the application order (orderForApplication); unknown kinds last */
 export function effectOrder(kind: string | undefined): number {
@@ -92,7 +94,7 @@ export function effectOrder(kind: string | undefined): number {
 }
 
 /**
- * The order chosen bonuses are applied in within a phase: replace, reroll, add, outcome/critical, riders; higher
+ * The order chosen bonuses are applied in within a phase: replace, reroll/mode, add, outcome/critical, riders; higher
  * priority first within each. A reroll rerolls the whole roll, so it comes before adds or it would drop them.
  */
 export function orderForApplication<T extends { effect: BonusEffect; priority?: number }>(chosen: readonly T[]): T[] {

@@ -2,6 +2,8 @@ import { register } from "../../api/services.js";
 import type { BonusCandidate, BonusCost, BonusEffect, BonusPhase, BonusRollKind, RollBonusQuery } from "../../services/rollBonuses/service.js";
 import { collectEntries, conditionDataFor, entryHolds, holds, limitAllows, spendEntryLimit, type MomentContext } from "./engine.js";
 import type { FoundEntry } from "./types.js";
+import { askOffers, offerOption, toggleOn } from "./offers.js";
+import { hasUsedReaction } from "../../utils.js";
 
 /*
  * M15 stage 3e: "offer as a roll bonus". An entry on a roll moment (`roll.preRoll`, `roll.preResult`,
@@ -10,6 +12,8 @@ import type { FoundEntry } from "./types.js";
  * uses, else the item's: Lucky's Luck Points); its `limit` is checked when it is offered and spent when it is chosen.
  * `bonus.rolls` names the roll kinds it is for (all when absent). Its `if` is evaluated when the roll's bonuses are
  * collected, with `event.kind` the roll's kind (not yet the roll itself).
+ * Stage 4e: `toggle` while on; `reaction` asked as `ask`, costing the reaction too; someone else's entry (a near one,
+ * `who: { within }`) is decided by its holder (asked for ask/reaction, through the request core) and paid by them.
  */
 
 const PHASE_OF: Record<string, BonusPhase> = { "roll.preRoll": "preRoll", "roll.preResult": "preResult", "roll.postResult": "postResult" };
@@ -35,6 +39,11 @@ function costOf(activity: Activityish | undefined, item: Item.Implementation | u
   return undefined;
 }
 
+/** A reaction offer also costs the reaction */
+function withReaction(cost: BonusCost | undefined, reaction: boolean): BonusCost | undefined {
+  return reaction ? { ...cost, actions: { ...cost?.actions, reaction: { cost: 1, available: 1 } } } : cost;
+}
+
 /** The roll bonuses the actor's entries offer for this roll */
 async function entryCandidates(query: RollBonusQuery): Promise<BonusCandidate[]> {
   const context: MomentContext = { actor: query.actor, workflow: query.workflow, activity: query.activity, item: query.item, event: { kind: query.kind } };
@@ -50,7 +59,10 @@ async function entryCandidates(query: RollBonusQuery): Promise<BonusCandidate[]>
   const candidates: BonusCandidate[] = [];
   for (const [key, { found: f, phases }] of byEntry) {
     const offer = f.entry.offer ?? "always";
-    if (offer !== "always" && offer !== "ask") continue;
+    if (offer === "toggle" ? !toggleOn(f) : !["always", "ask", "reaction"].includes(offer)) continue;
+    // Someone else's entry (a near one: an ally's, an enemy's): its holder decides (asked for ask/reaction) and pays
+    const holder = f.actor && f.actor !== query.actor ? f.actor : undefined;
+    if (offer === "reaction" && hasUsedReaction(f.actor ?? query.actor)) continue;
     if (!limitAllows(f, context)) continue;
     const conditionData = conditionDataFor(f, context);
     if (!await entryHolds(f, conditionData)) continue;
@@ -61,10 +73,14 @@ async function entryCandidates(query: RollBonusQuery): Promise<BonusCandidate[]>
       if (!bonus || typeof bonus !== "object" || !("kind" in bonus)) return;
       const rolls = action.rolls === undefined ? undefined : [action.rolls].flat() as BonusRollKind[];
       if (rolls && !rolls.includes(query.kind)) return;
+      const label = (typeof action.label === "string" ? action.label : undefined) ?? activity?.name ?? (f.document as { name?: string }).name ?? f.entry.id;
+      const asks = offer === "ask" || offer === "reaction";
+      const cost = withReaction(costOf(activity, item), offer === "reaction");
       candidates.push({
-        id: `${key}#${index}`,
-        label: (typeof action.label === "string" ? action.label : undefined) ?? activity?.name ?? (f.document as { name?: string }).name ?? f.entry.id,
-        phases, effect: bonus, optional: offer === "ask", cost: costOf(activity, item),
+        id: `${key}#${index}`, label, phases, effect: bonus, cost,
+        optional: asks && !holder,
+        ...(holder ? { spender: holder.uuid ?? undefined } : {}),
+        ...(holder && asks ? { approve: async () => (await askOffers(holder, `${holder.name}: ${label} (${query.actor.name})`, [offerOption(f, "take")])).length > 0 } : {}),
         onChosen: () => spendEntryLimit(f, context)
       });
     });
