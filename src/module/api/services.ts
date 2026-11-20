@@ -53,6 +53,8 @@ interface ServiceEntry<P> {
   id: string;
   kind: ServiceKind;
   description: string;
+  /** The version of what the service reads from its providers or contributors (a field added: raised), if it says */
+  contract?: number;
   /** For a single service: the provider id the configuration picks (e.g. a midi setting), or undefined. */
   selector?: () => string | undefined;
   providers: Registry<P, { label?: string }>;
@@ -76,10 +78,10 @@ function changed(service: { id: string, resolved?: unknown }) {
 }
 
 /** midi only: declare a service. */
-export function defineService<P>(id: string, options: { kind: ServiceKind, description: string, selector?: () => string | undefined }) {
+export function defineService<P>(id: string, options: { kind: ServiceKind, description: string, selector?: () => string | undefined, contract?: number }) {
   if (services.has(id)) throw new Error(`midi-qol | service "${id}" is already defined`);
   const service: ServiceEntry<unknown> = {
-    id, kind: options.kind, description: options.description, selector: options.selector,
+    id, kind: options.kind, description: options.description, selector: options.selector, contract: options.contract,
     providers: new Registry(() => changed(service)), wrappers: new Registry(() => changed(service))
   };
   services.set(id, service);
@@ -180,8 +182,8 @@ export function providers(serviceId: string): { id: string, label?: string, prio
   return service.providers.list().map(p => ({ id: p.id, label: p.meta.label, priority: p.priority, available: isAvailable(p), active: p.id === active }));
 }
 
-export function list(): { id: string, kind: ServiceKind, description: string }[] {
-  return [...services.values()].map(s => ({ id: s.id, kind: s.kind, description: s.description }));
+export function list(): { id: string, kind: ServiceKind, description: string, contract?: number }[] {
+  return [...services.values()].map(s => ({ id: s.id, kind: s.kind, description: s.description, ...(s.contract ? { contract: s.contract } : {}) }));
 }
 
 /** Forget cached providers, e.g. after a setting that selects one changed. */

@@ -85,9 +85,15 @@ declare module "../../api/services.js" {
 
 export let rollBonusesService: ReturnType<typeof defineService<RollBonusContributor>>;
 
+/**
+ * What rollBonuses reads from a candidate, by version: 1 the M1 fields; 2 (M15 stage 3a) chosen bonuses applied in
+ * orderForApplication order, a damage `add` with its own damageType or critical as its own damage roll.
+ */
+export const ROLL_BONUSES_CONTRACT = 2;
+
 export function defineRollBonusesService() {
   rollBonusesService = defineService<RollBonusContributor>("rollBonuses", {
-    kind: "contributors",
+    kind: "contributors", contract: ROLL_BONUSES_CONTRACT,
     description: "Bonuses offered on a roll (added dice, rerolls, a changed result), optional or automatic, by phase"
   });
 }
@@ -221,11 +227,23 @@ export async function applyOfferedBonus(bonus: OfferedBonus, ctx: BonusContext, 
   let roll = ctx.roll;
   if (!(await approveBonus(bonus, ctx))) return roll;
   try {
-    if (bonus.targets?.length && ctx.query.kind === "damage" && bonus.effect.kind === "add" && ctx.query.workflow) {
-      const extra = await new Roll(bonus.effect.formula, { ...ctx.roll.data, ...rollData }).evaluate();
+    const effect = bonus.effect;
+    const rollType = (ctx.roll.options as { type?: string }).type;
+    if (bonus.targets?.length && ctx.query.kind === "damage" && effect.kind === "add" && ctx.query.workflow) {
+      const extra = await new Roll(effect.formula, { ...ctx.roll.data, ...rollData }).evaluate();
       ctx.query.workflow.addTargetedDamageBonus({ targets: [...bonus.targets], amount: extra.total ?? 0,
-        type: bonus.effect.damageType ?? (ctx.roll.options as { type?: string }).type ?? "none", label: bonus.label });
-    } else roll = await applyBonusEffect(ctx.roll, bonus.effect, rollData, bonus.label);
+        type: effect.damageType ?? rollType ?? "none", label: bonus.label });
+    } else if (ctx.query.kind === "damage" && effect.kind === "add" && ctx.query.workflow
+      && ((effect.damageType && effect.damageType !== rollType) || effect.critical === "force" || effect.critical === "never")) {
+      // Its own damage roll: its type and its critical, not merged into the roll it was offered on
+      const workflow = ctx.query.workflow;
+      const isCritical = effect.critical === "force" ? true : effect.critical === "never" ? false : !!workflow.isCritical;
+      // @ts-expect-error no dnd5e-types
+      const extra: Roll = await new CONFIG.Dice.DamageRoll(effect.formula, { ...ctx.roll.data, ...rollData },
+        { type: effect.damageType ?? rollType, isCritical, flavor: bonus.label }).evaluate();
+      for (const term of extra.terms) if (!(term instanceof foundry.dice.terms.OperatorTerm)) term.options.flavor ||= bonus.label;
+      await workflow.setBonusDamageRolls([...(workflow.bonusDamageRolls ?? []), extra]);
+    } else roll = await applyBonusEffect(ctx.roll, effect, rollData, bonus.label);
     // A changed roll is a new object: carry forward what was used on the roll it came from
     const used: string[] = [...(foundry.utils.getProperty(ctx.roll, "flags.midi-qol.optionalsUsed") as string[] ?? [])];
     used.push(bonus.id);

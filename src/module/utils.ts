@@ -11,7 +11,7 @@ import { computeFlankedStatus, computeFlankingStatus } from "./services/flanking
 import { getHexCentroid } from "./services/flanking/provider.js";
 import { bonusPromptService } from "./services/rollBonuses/prompt.js";
 import { applyOfferedBonus, collectBonusCandidates, type BonusCost, type BonusPhase, type OfferedBonus, type RollBonusQuery } from "./services/rollBonuses/service.js";
-import { addCosts as addBonusCosts, canAfford as canAffordBonus } from "./services/rollBonuses/rules.js";
+import { addCosts as addBonusCosts, canAfford as canAffordBonus, orderForApplication } from "./services/rollBonuses/rules.js";
 import { crossesOppositeSides, opposedByAngle } from "./services/flanking/rules.js";
 import { DialogCountdown } from "./lib/dialogCountdown.js";
 import { coverBetween, coverFor } from "./services/cover/service.js";
@@ -4823,7 +4823,7 @@ export async function bonusDialog(
   const stillAffordable = () => { optionalCandidates = optionalCandidates.filter(c => canAffordBonus(c.cost, bonusSpent)); };
   if (bonusQuery && automaticCandidates.length) {
     const before = roll;
-    for (const candidate of automaticCandidates) {
+    for (const candidate of orderForApplication(automaticCandidates)) {
       if (!canAffordBonus(candidate.cost, bonusSpent)) continue;
       roll = newRoll = await applyOfferedBonus(candidate, candidateContext(roll), bonusRollData);
       bonusSpent = addBonusCosts(bonusSpent, candidate.cost);

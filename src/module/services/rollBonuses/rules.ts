@@ -86,6 +86,11 @@ export function shouldPrompt(phase: BonusPhase, s: { hasOptional: boolean; dismi
 
 const EFFECT_ORDER: Record<BonusEffect["kind"], number> = { replace: 0, reroll: 1, add: 2, outcome: 3, critical: 3, rider: 4 };
 
+/** Where a kind of effect comes in the application order (orderForApplication); unknown kinds last */
+export function effectOrder(kind: string | undefined): number {
+  return kind && kind in EFFECT_ORDER ? EFFECT_ORDER[kind as BonusEffect["kind"]] : 5;
+}
+
 /**
  * The order chosen bonuses are applied in within a phase: replace, reroll, add, outcome/critical, riders; higher
  * priority first within each. A reroll rerolls the whole roll, so it comes before adds or it would drop them.

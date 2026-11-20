@@ -1,4 +1,6 @@
 import { RollModifyDialog } from "../../utils.js";
+import { parseFlagValue } from "../../rules/optionalFlags.js";
+import { effectOrder } from "./rules.js";
 
 /*
  * midi's phased bonus prompt: the same bonuses as the classic dialog (flags.midi-qol.optional and rollBonuses
@@ -31,8 +33,16 @@ export class BonusPromptApp extends RollModifyDialog {
   /** Applies the ticked bonuses in the order shown, each through its own handler. */
   async applyTicked() {
     const ids = Array.from(this.element.querySelectorAll<HTMLInputElement>("input[name='bonus']:checked")).map(input => input.value);
-    // Handlers re-render the dialog (new button ids), so take the buttons first
-    const chosen = ids.map(id => this.data.buttons?.[id]).filter(Boolean);
+    // Handlers re-render the dialog (new button ids), so take the buttons first; applied in the application order
+    // (replace, reroll, add, outcome; rules orderForApplication), so an add ticked above a reroll isn't rerolled away
+    const kindOf = (button: { value?: unknown, candidate?: { effect?: { kind?: string } } }) => {
+      if (button.candidate?.effect?.kind) return button.candidate.effect.kind;
+      const parsed = parseFlagValue(button.value);
+      return parsed && "effect" in parsed ? parsed.effect.kind : "rider";
+    };
+    const chosen = ids.map(id => this.data.buttons?.[id]).filter(Boolean)
+      .map((button, index) => ({ button, index })).sort((a, b) => (effectOrder(kindOf(a.button)) - effectOrder(kindOf(b.button))) || (a.index - b.index))
+      .map(({ button }) => button);
     let rerolled = false;
     for (const button of chosen) {
       if (!this.rendered) break;
