@@ -1,4 +1,4 @@
-import { TURN_MOMENTS, type MomentHandler, type TurnMomentName } from "./turnMomentsCore.js";
+import { TURN_MOMENTS, type HandlerOptions, type MomentHandler, type TurnMomentName } from "./turnMomentsCore.js";
 export type { TurnMomentName };
 export { TURN_MOMENTS };
 export interface TurnMoment {
@@ -21,10 +21,7 @@ export interface TurnMoment {
 }
 export declare function setupTurnMoments(): void;
 /** MidiQOL.turnMoments: add (or replace, by id) a handler for a moment; returns the function that removes it */
-export declare function onTurnMoment(moment: TurnMomentName, id: string, handler: MomentHandler<TurnMoment>, options?: {
-    priority?: number;
-    uncapped?: boolean;
-}): () => void;
+export declare function onTurnMoment(moment: TurnMomentName, id: string, handler: MomentHandler<TurnMoment>, options?: HandlerOptions): () => void;
 export declare const turnMomentsApi: {
     moments: readonly ["enterCombat", "combatStart", "roundStart", "turnStart", "turnEnd", "roundEnd", "rewind", "exitCombat", "combatEnd"];
     on: typeof onTurnMoment;

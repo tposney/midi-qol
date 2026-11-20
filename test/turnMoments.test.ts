@@ -53,6 +53,22 @@ describe("MomentDispatcher (M4)", () => {
     expect(seen).toEqual(["next", "stuck"]);
   });
 
+  it("a detached handler is started in its turn and not waited for; its failure is still reported", async () => {
+    const onError = vi.fn();
+    const onSlow = vi.fn();
+    const d = new MomentDispatcher<P>({ cap: 10, onError, onSlow });
+    const seen: string[] = [];
+    d.on("turnStart", "first", () => { seen.push("first"); }, { priority: 2 });
+    d.on("turnStart", "ask", async () => { seen.push("ask started"); await tick(40); seen.push("ask done"); throw new Error("later"); }, { priority: 1, detached: true });
+    d.on("turnStart", "next", () => { seen.push("next"); });
+    await d.dispatch("combat", { moment: "turnStart" });
+    expect(seen).toEqual(["first", "ask started", "next"]);
+    await tick(60);
+    expect(seen).toEqual(["first", "ask started", "next", "ask done"]);
+    expect(onError).toHaveBeenCalledWith("ask", "turnStart", expect.any(Error));
+    expect(onSlow).not.toHaveBeenCalled();
+  });
+
   it("an uncapped handler is waited for however long it takes", async () => {
     const onSlow = vi.fn();
     const d = new MomentDispatcher<P>({ cap: 10, onSlow });

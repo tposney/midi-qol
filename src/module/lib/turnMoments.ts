@@ -1,6 +1,6 @@
 import { MODULE_ID } from "../../midi-qol.js";
 import { TroubleShooter } from "../apps/TroubleShooter.js";
-import { MomentDispatcher, TURN_MOMENTS, type MomentHandler, type TurnMomentName } from "./turnMomentsCore.js";
+import { MomentDispatcher, TURN_MOMENTS, type HandlerOptions, type MomentHandler, type TurnMomentName } from "./turnMomentsCore.js";
 
 /*
  * The turn-moment dispatcher (M4 stage 1; plan ~/Documents/midi-next-M4-plan-2026-11-20.md): one place that says a
@@ -20,8 +20,9 @@ import { MomentDispatcher, TURN_MOMENTS, type MomentHandler, type TurnMomentName
  *   nothing for it);
  * - one combat's moments are delivered in the order raised (core doesn't await turn events between updates, so two
  *   quick changes can overlap); a handler that changes the combat must not wait for the moments that raises.
- * Handlers run in priority order, each awaited and isolated, each for at most three seconds: a handler that asks a
- * player starts its own flow and returns.
+ * Handlers run in priority order, each awaited and isolated, each for at most three seconds. A handler that asks a player
+ * or runs long registers `detached`: started in its turn, not waited for, so it gives up running before core's expiry
+ * and before the next moment.
  */
 
 export type { TurnMomentName };
@@ -135,7 +136,7 @@ export function setupTurnMoments() {
 }
 
 /** MidiQOL.turnMoments: add (or replace, by id) a handler for a moment; returns the function that removes it */
-export function onTurnMoment(moment: TurnMomentName, id: string, handler: MomentHandler<TurnMoment>, options: { priority?: number, uncapped?: boolean } = {}): () => void {
+export function onTurnMoment(moment: TurnMomentName, id: string, handler: MomentHandler<TurnMoment>, options: HandlerOptions = {}): () => void {
   if (!(TURN_MOMENTS as readonly string[]).includes(moment)) console.warn(`midi-qol | turnMoments.on: no moment "${moment}" (${TURN_MOMENTS.join(", ")})`);
   return dispatcher.on(moment, id, handler, options);
 }
