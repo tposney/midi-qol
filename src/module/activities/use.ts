@@ -13,6 +13,7 @@ import { saveUndoData } from "../undo.js";
 import { clearAbandonedUse, type UseState } from "./useRelaunch.js";
 import { activityHasAreaTarget, activityHasAutoPlaceTemplate, confirmUseOffScene, hasUsedBonusAction, hasUsedReaction, autoConsumeResource, setBonusActionUsed, setReactionUsed, validTargetTokens, activityHasEmanationNoTemplate, areMidiKeysPressed, getActor, toMessageMode, isActivityType, speakerFor } from "../utils.js";
 import { removeFlanking } from "./activityHelpers.js";
+import { raiseUseConfigure } from "../lib/entries/useMoments.js";
 
 /*
  * A use of an activity (M10's restart, useRelaunch.ts): midi's work before dnd5e's use (prepareUse), during it (onUsePreUse, onUseConsumption) and after it (finishUse); consumption choices; using as another actor.
@@ -158,6 +159,8 @@ export async function prepareUse(used: MidiActivity, usage: ActivityUseConfigura
     && !(isActivityType(activity, "transform") && activity.transform?.mode === "form");
   // Stopped after the workflow was made: the caller's config is left without it, so a resubmitted config starts afresh
   const abandon = () => { clearAbandonedUse(usage); return stop(false); };
+  // M15 stage 4: use.configure entries (an abort stops the use before its checks and costs)
+  if (!await raiseUseConfigure(usage.workflow!, usage)) return abandon();
   if (!await preTargetingChecks(activity, usage, dialog, message)) return abandon();
   // A preTargeting macro or hook may have set the player's targets: the use takes them (user-targets plan stage 3,
   // C1). Safe now that automated uses never write the player's targets.

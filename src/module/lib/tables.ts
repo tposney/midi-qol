@@ -32,38 +32,53 @@ export function tableDeclaration(activity: Activity | undefined | null): TableDe
   return isTableDeclaration(declared) ? declared : undefined;
 }
 
-/** The step's work: roll the activity's table, record the result as a choice */
-export async function rollUseTable(workflow: Workflow): Promise<TableResultChoice | undefined> {
-  const declaration = tableDeclaration(workflow.activity);
-  if (!declaration) return undefined;
-  const kept = workflow.choices[declaration.id];
-  if (isTableResult(kept)) return kept;
-  let result: TableResultChoice;
+/** A table drawn: its result, and the drawn row's actions (inline rows' `do`, a core result's flags.midi-qol.do) */
+export interface TableDraw extends TableResultChoice { do?: unknown[] }
+
+/**
+ * Draw a declared table (the RollTable step, M15's table action): a core table as core draws it (its chat card), inline
+ * rows as a card note on the use (whispered per the reveal policy), or a chat message without a use.
+ */
+export async function rollTable(declaration: TableDeclaration, { workflow, rollData = {}, name = "" }: { workflow?: Workflow, rollData?: Record<string, unknown>, name?: string }): Promise<TableDraw | undefined> {
   if (declaration.table) {
     const table = await fromUuid(declaration.table);
     if (!(table instanceof RollTable)) {
-      ui.notifications?.warn(`midi-qol | ${workflow.activity?.name}: no roll table ${declaration.table}`);
+      ui.notifications?.warn(`midi-qol | ${name}: no roll table ${declaration.table}`);
       return undefined;
     }
     const draw = await table.draw({ displayChat: true });
     const drawn = draw.results[0];
-    result = {
+    const actions = foundry.utils.getProperty(drawn ?? {}, "flags.midi-qol.do");
+    return {
       row: drawn ? table.results.contents.findIndex(r => r.id === drawn.id) : -1,
       label: drawn?.name || drawn?.description || "",
-      total: draw.roll.total ?? 0
+      total: draw.roll.total ?? 0,
+      ...(Array.isArray(actions) ? { do: actions } : {})
     };
-  } else {
-    const rows = declaration.rows ?? [];
-    const roll = await new Roll(declaration.formula || "1d20", workflow.activity?.getRollData() ?? {}).evaluate();
-    const row = rowFor(rows, roll.total ?? 0);
-    result = { row, label: rows[row]?.label ?? "", total: roll.total ?? 0 };
-    const name = foundry.utils.escapeHTML(workflow.activity?.name ?? "");
-    // The reveal policy (M19): whispered to the users it may be shown to, unless that is everyone
-    const users = game.users?.contents ?? [];
-    const shownTo = users.filter(user => reveals({ subject: "tableResult", user, caster: workflow.actor }));
-    await addCardNote(workflow, `<div><strong>${name}</strong>: ${result.total}${result.label ? ` — ${foundry.utils.escapeHTML(result.label)}` : ""}</div>`,
-      { anchor: "utility", key: `midi-qol.table.${declaration.id}`, ...(shownTo.length < users.length ? { whisper: shownTo.map(user => user.id ?? "") } : {}) });
   }
-  workflow.setChoice(declaration.id, { ...result });
+  const rows = declaration.rows ?? [];
+  const roll = await new Roll(declaration.formula || "1d20", rollData).evaluate();
+  const row = rowFor(rows, roll.total ?? 0);
+  const result: TableDraw = { row, label: rows[row]?.label ?? "", total: roll.total ?? 0, ...(rows[row]?.do ? { do: rows[row].do } : {}) };
+  const html = `<div><strong>${foundry.utils.escapeHTML(name)}</strong>: ${result.total}${result.label ? ` — ${foundry.utils.escapeHTML(result.label)}` : ""}</div>`;
+  // The reveal policy (M19): whispered to the users it may be shown to, unless that is everyone
+  const users = game.users?.contents ?? [];
+  const shownTo = users.filter(user => reveals({ subject: "tableResult", user, caster: workflow?.actor }));
+  const whisper = shownTo.length < users.length ? shownTo.map(user => user.id ?? "") : undefined;
+  if (workflow) await addCardNote(workflow, html, { anchor: "utility", key: `midi-qol.table.${declaration.id}`, ...(whisper ? { whisper } : {}) });
+  else await ChatMessage.create({ content: html, ...(whisper ? { whisper } : {}) });
+  return result;
+}
+
+/** The step's work: roll the activity's table, record the result as a choice */
+export async function rollUseTable(workflow: Workflow): Promise<TableDraw | undefined> {
+  const declaration = tableDeclaration(workflow.activity);
+  if (!declaration) return undefined;
+  const kept = workflow.choices[declaration.id];
+  if (isTableResult(kept)) return kept;
+  const result = await rollTable(declaration, { workflow, rollData: workflow.activity?.getRollData() ?? {}, name: workflow.activity?.name ?? "" });
+  if (!result) return undefined;
+  const { do: _actions, ...choice } = result;
+  workflow.setChoice(declaration.id, choice);
   return result;
 }

@@ -1,6 +1,6 @@
 import { register } from "../../api/services.js";
 import type { BonusCandidate, BonusCost, BonusEffect, BonusPhase, BonusRollKind, RollBonusQuery } from "../../services/rollBonuses/service.js";
-import { collectEntries, conditionDataFor, holds, limitAllows, spendEntryLimit, type MomentContext } from "./engine.js";
+import { collectEntries, conditionDataFor, entryHolds, holds, limitAllows, spendEntryLimit, type MomentContext } from "./engine.js";
 import type { FoundEntry } from "./types.js";
 
 /*
@@ -53,7 +53,7 @@ async function entryCandidates(query: RollBonusQuery): Promise<BonusCandidate[]>
     if (offer !== "always" && offer !== "ask") continue;
     if (!limitAllows(f, context)) continue;
     const conditionData = conditionDataFor(f, context);
-    if (!await holds(f.entry.if, conditionData)) continue;
+    if (!await entryHolds(f, conditionData)) continue;
     const activity = entryActivity(f);
     const item = activity?.item ?? (f.document instanceof Item ? f.document : undefined);
     f.entry.do.forEach((action, index) => {

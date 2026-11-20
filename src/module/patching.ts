@@ -10,7 +10,7 @@ import { initHiding } from "./lib/hiding.js";
 import { log, i18n, error, i18nFormat, warn, debugEnabled, GameSystemConfig, MODULE_ID, gameStats, getStaticID, MIDI_IMPLYING_STATUSES } from "../midi-qol.js";
 import { saveDisplayMode } from "./lib/saveVisibility.js";
 import { configSettings, checkRule, checkMechanic, safeGetGameSetting, safeSetGameSetting, playerControlsInvisibleTokens } from "./settings.js";
-import { bonusDialog, createConditionData, displayDSNForRoll, expireRollEffect, getCriticalDamage, getDeadStatus, getOptionalCountRemainingShortFlag, getUnconsciousStatus, getVitalityDeadStatus, getWoundedStatus, hasUsedAction, hasUsedBonusAction, hasUsedReaction, midiRenderRoll, notificationNotify, removeActionUsed, removeBonusActionUsed, removeReactionUsed, tokenForActor, expireEffects, DSNMarkDiceDisplayed, evalAllConditionsAsync, hasCondition, MidiOptions, getVitalityItem, checkMagicResistanceAndVulnerability, isAutoFastForward, FastForwardRollType, buildRollChoices, selectBestRollChoice, getTokenPerimeterPolygon, closestPointOnPerimeter, measurePointDistance, setUserInitiatedTarget, dnd5eRollType, updateUserTargets, isEffectExpired, processTurnOverTime, toggleStatus, isActivityType, getTokenDocument, speakerFor, isMessageMode } from "./utils.js";
+import { bonusDialog, createConditionData, displayDSNForRoll, expireRollEffect, getCriticalDamage, getDeadStatus, getOptionalCountRemainingShortFlag, getUnconsciousStatus, getVitalityDeadStatus, getWoundedStatus, hasUsedAction, hasUsedBonusAction, hasUsedReaction, midiRenderRoll, notificationNotify, removeActionUsed, removeBonusActionUsed, removeReactionUsed, tokenForActor, expireEffects, DSNMarkDiceDisplayed, evalAllConditionsAsync, hasCondition, MidiOptions, getVitalityItem, checkMagicResistanceAndVulnerability, isAutoFastForward, FastForwardRollType, buildRollChoices, selectBestRollChoice, getTokenPerimeterPolygon, closestPointOnPerimeter, measurePointDistance, setUserInitiatedTarget, dnd5eRollType, updateUserTargets, isEffectExpired, processTurnOverTime, toggleStatus, isActivityType, getTokenDocument, speakerFor, isMessageMode, queueActorEffects } from "./utils.js";
 import { computeActivityTemplateTargets } from "./activities/activityHelpers.js";
 import { installedModules } from "./setupModules.js";
 import { OnUseMacro, OnUseMacros } from "./apps/Item.js";
@@ -53,6 +53,18 @@ export function getActorWoundedSemaphore(actorUuid: string | null): foundry.util
     actorWoundedSemaphores.set(actorUuid, new foundry.utils.Semaphore(1));
   }
   return actorWoundedSemaphores.get(actorUuid)!;
+}
+
+/**
+ * Resolves once midi's status work for the actor on this client is done: the wounded, unconscious and dead changes its
+ * HP updates started (they run after the update resolves, on the active GM) and its queued fixed-id effect changes.
+ * For a caller changing the actor's effects right after an HP change (a reset deleting every effect), which otherwise
+ * races midi removing unconscious (MidiQOL.actorEffectsSettled).
+ */
+export async function actorEffectsSettled(actor: Actor.Implementation | null | undefined): Promise<void> {
+  if (!actor?.uuid) return;
+  await getActorWoundedSemaphore(actor.uuid).add(async () => {});
+  await queueActorEffects(actor, async () => {});
 }
 
 // ==================== PATCHING ENTRY POINTS ====================

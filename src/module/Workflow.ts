@@ -37,6 +37,7 @@ import { OnUseMacros } from "./apps/Item.js";
 import { bonusCheck, collectBonusFlags, defaultRollOptions, buildPreComputedAdvantageMap, checkActivityAbilities } from "./patching.js";
 import { collectRollModifiers } from "./services/rollModifiers/service.js";
 import { collectDamageContributions } from "./services/damageContributions/service.js";
+import { raiseDamaged, raiseUseMoments } from "./lib/entries/useMoments.js";
 import { collectBonusCandidates, spendBonusCost, type OfferedBonus, type RollBonusQuery } from "./services/rollBonuses/service.js";
 import { reportServiceProblem } from "./api/services.js";
 import { saveTargetsUndoData, saveUndoData } from "./undo.js";
@@ -2768,7 +2769,12 @@ export class Workflow {
         get aborted() { return workflow.aborted; },
         cancelled: () => { this.outcome = "cancelled"; },
         // Named after the step (midi's or a module's): a module's step has hooks and passes as midi's do
-        pass: (prePost, step) => this.callOnUseMacrosForAction(prePost, step as string),
+        pass: async (prePost, step) => {
+          const result = await this.callOnUseMacrosForAction(prePost, step as string);
+          // M15 stage 4: the use and target moments of this pass
+          await raiseUseMoments(this, prePost, step);
+          return result;
+        },
         hook: (prePost, step) => this.callHooksForAction(prePost, step as string),
         changes: step => this.assembledSteps.anchors[step],
         flowNext: step => stepAfterInFlow(getFlow(this.flowId)?.steps ?? [], step),
@@ -7125,6 +7131,7 @@ export class Workflow {
     if ((damages.hpDamage !== 0 || damages.tempDamage > 0 || damagedAtZero) && (this.hitTargets.has(token) || this.hitTargetsEC.has(token) || this.otherActivity?.save || this.otherActivity?.check)) {
       let healedDamaged = damages.hpDamage < 0 ? "isHealed" : "isDamaged";
       await asyncHooksCallAll(`midi-qol.${healedDamaged}`, hookTarget(token), { item: this.item, workflow: this, damageItem: damages, ditem: damages });
+      if (healedDamaged === "isDamaged") await raiseDamaged(this, getTokenDocument(token), damages as unknown as Record<string, unknown>);
       const actorOnUseMacros = foundry.utils.getProperty(token.actor ?? {}, midiFlag(`onUseMacroParts`)) as OnUseMacros ?? new OnUseMacros();
       // It seems applyTokenDamageMany without a this gets through to here - so a silly guard in place TODO come back and fix this properly
       if (this.callMacros) await this.callMacros(this.item,

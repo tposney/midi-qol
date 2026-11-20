@@ -10,6 +10,7 @@ import {
   splitOvertimeSpec, type ActionSaveContext, type CountAction, type OvertimeDetails
 } from "../../utils.js";
 import type { Workflow } from "../../Workflow.js";
+import { isUseMoment, useDamageAction } from "./useMoments.js";
 import { applyingActivity, registerAction, registerEffectEntryReader, registerMoment, type ActionRun } from "./engine.js";
 import type { Entry, EntryAction } from "./types.js";
 
@@ -379,6 +380,7 @@ export function registerOvertimeEntries() {
   registerEffectEntryReader("midi-qol.overtime", overtimeEntries);
   registerAction("save", tickAction("save"), { priority: 10 });
   registerAction("check", tickAction("check"), { priority: 10 });
-  registerAction("damage", tickAction("damage"));
+  // At a use moment, damage the use deals; otherwise the tick's
+  registerAction("damage", run => isUseMoment(run.moment) ? useDamageAction(run, false) : tickAction("damage")(run));
   registerAction("count", count);
 }

@@ -1,5 +1,7 @@
 import { getAutoRollDamage } from "../utils.js";
 import { rollUseTable, tableDeclaration } from "../lib/tables.js";
+import { runActivityActions } from "../lib/entries/useChanges.js";
+import type { EntryAction } from "../lib/entries/types.js";
 import { setStepRun } from "../steps/steps.js";
 import { Workflow, workflowStepHost, type WorkflowState } from "../Workflow.js";
 
@@ -28,7 +30,9 @@ export function registerUtilitySteps(): void {
 
   // M28: the activity's random table (lib/tables.ts), after its utility roll; only a use with a table meets it
   setStepRun("midi-qol.RollTable", async ({ workflow }: { workflow: Workflow }): Promise<WorkflowState> => {
-    await rollUseTable(workflow);
+    const drawn = await rollUseTable(workflow);
+    // M15: the drawn row's actions, as the activity's
+    if (drawn?.do?.length) await runActivityActions(workflow, `table.${tableDeclaration(workflow.activity)?.id}`, drawn.do as EntryAction[]);
     return workflow.activity.roll?.formula ? "midi-qol.WaitForDamageRoll" : workflow.postAttackRollState;
   });
 }

@@ -3,6 +3,7 @@ import { Registry } from "../../api/registry.js";
 import type { Workflow } from "../../Workflow.js";
 import type { Activity } from "../../../globals.js";
 import { createConditionData, evalCondition, expireEffects } from "../../utils.js";
+import { getDistance } from "../../services/distance/service.js";
 import { unTimedExecuteAsGM } from "../../GMAction.js";
 import { limitKey, limitStamp, selectGroups, spendStoredLimit, withinLimit, type CombatMoment, type StoredLimit } from "./limits.js";
 import type { Entry, EntryAction, EntryHome, EntryWho, FoundEntry } from "./types.js";
@@ -132,11 +133,90 @@ function collectByWho(context: MomentContext, momentId: string): FoundEntry[] {
   return list.filter(f => listens(f.entry, momentId));
 }
 
+/* Near (stage 4c): entries with `who: { within, of, filter }` on the creatures around the one the moment is about */
+
+/** Bumped whenever an item, effect or actor changes: the near holders are found again */
+let homesGeneration = 0;
+let nearHolders: { generation: number, byActor: WeakMap<Actor.Implementation, FoundEntry[]> } = { generation: -1, byActor: new WeakMap() };
+
+/** An actor's near entries (its items' and applied effects' with an object `who`) */
+function nearEntriesOf(actor: Actor.Implementation): FoundEntry[] {
+  if (nearHolders.generation !== homesGeneration) nearHolders = { generation: homesGeneration, byActor: new WeakMap() };
+  let list = nearHolders.byActor.get(actor);
+  if (!list) {
+    list = [];
+    for (const item of actor.items) if (itemInUse(item)) list.push(...itemEntries(item, actor).filter(f => typeof f.who === "object"));
+    for (const effect of actor.appliedEffects) list.push(...effectEntries(effect, actor).filter(f => typeof f.who === "object"));
+    nearHolders.byActor.set(actor, list);
+  }
+  return list;
+}
+
+/** The token a moment is about: its target, the use's token, else the actor's first on the viewed scene */
+function momentToken(context: MomentContext): TokenDocument.Implementation | undefined {
+  if (context.target) return context.target;
+  const useToken = context.workflow?.token as { document?: TokenDocument.Implementation } | TokenDocument.Implementation | undefined;
+  if (useToken && context.workflow?.actor === context.actor) return useToken instanceof TokenDocument ? useToken : useToken.document;
+  return context.actor.getActiveTokens(false, true)[0] as TokenDocument.Implementation | undefined;
+}
+
+/** A creature's reach: its longest equipped melee weapon's, else 5 */
+function reachOf(actor: Actor.Implementation): number {
+  let reach = 5;
+  for (const item of actor.items) {
+    const system = item.system as { equipped?: boolean, range?: { reach?: number | null }, type?: { value?: string } };
+    if (["weapon"].includes(item.type) && system.equipped && system.range?.reach) reach = Math.max(reach, Number(system.range.reach) || 0);
+  }
+  return reach;
+}
+
+function nearEntries(context: MomentContext, momentId: string): FoundEntry[] {
+  const about = momentToken(context);
+  const scene = about?.parent;
+  if (!about || !scene) return [];
+  const list: FoundEntry[] = [];
+  for (const holderToken of scene.tokens) {
+    const holder = holderToken.actor;
+    if (!holder) continue;
+    for (const f of nearEntriesOf(holder)) {
+      if (!listens(f.entry, momentId)) continue;
+      const who = f.who as Exclude<EntryWho, string>;
+      let from: TokenDocument.Implementation | undefined = holderToken;
+      if (who.of === "origin") {
+        const origin = f.document instanceof ActiveEffect ? originActor(f.document) : undefined;
+        from = origin?.getActiveTokens(false, true).find(t => t.parent === scene) as TokenDocument.Implementation | undefined;
+      } else if (who.of !== "bearer") {
+        console.warn(`midi-qol | entry ${f.entry.id}: who.of "${who.of}" is not supported (bearer or origin)`);
+        continue;
+      }
+      if (!from) continue;
+      const within = who.within === "reach" ? reachOf(holder) : Number(who.within);
+      const distance = from === about ? 0 : getDistance(from, about, { wallsBlock: false });
+      if (distance < 0 || distance > within) continue;
+      list.push({ ...f, near: { creature: context.actor, token: about, distance } });
+    }
+  }
+  return list;
+}
+
 /** The entries a moment would run for this context, before conditions and limits (MidiQOL.entries.collect) */
 export function collectEntries(momentId: string, context: MomentContext): FoundEntry[] {
   const definition = moments.get(momentId)?.value;
   const list = (definition?.collect ?? collectByWho)(context, momentId);
+  if (!definition?.collect) list.push(...nearEntries(context, momentId));
   return context.only ? list.filter(f => documentUuid(f.document) === context.only) : list;
+}
+
+/** An entry runs if its `who` filter (a near entry's) and its `if` hold */
+export async function entryHolds(f: FoundEntry, conditionData: Record<string, unknown>): Promise<boolean> {
+  const filter = typeof f.who === "object" ? f.who.filter : undefined;
+  return await holds(filter, conditionData) && await holds(f.entry.if, conditionData);
+}
+
+export function watchEntryHomes() {
+  const bump = () => { homesGeneration += 1; };
+  for (const hook of ["createItem", "updateItem", "deleteItem", "createActiveEffect", "updateActiveEffect", "deleteActiveEffect", "updateActor", "createToken", "deleteToken", "canvasReady"])
+    Hooks.on(hook as Hooks.HookName, bump);
 }
 
 /** The activity that applied an effect (dnd5e's system.origin, DAE's flags.dae.activity), while it still exists */
@@ -199,6 +279,8 @@ export async function setEntryState(effect: ActiveEffect.Implementation, entryId
 }
 
 const useLimits = new WeakMap<object, Map<string, number>>();
+/** The groups a use has taken an entry of */
+const groupsUsed = new WeakMap<object, Set<string>>();
 
 function storedLimits(actor: Actor.Implementation | undefined): StoredLimit[] {
   const stored = actor?.getFlag(MODULE_ID, "entryLimits");
@@ -254,7 +336,8 @@ export function conditionDataFor(f: FoundEntry, context: MomentContext): Record<
     workflow: context.workflow, actor: f.actor ?? context.actor, activity: context.activity, item: context.item,
     ...(context.target ? { target: context.target } : {}),
     extraData: {
-      event: context.event ?? {},
+      event: f.near ? { ...context.event, creature: f.near.creature, creatureToken: f.near.token, distance: f.near.distance } : context.event ?? {},
+      bearer: f.actor,
       entry: { id: f.entry.id, self: documentUuid(f.document), home: f.home, counts: effect ? entryState(effect, f.entry.id) : {} },
       choices: (effect?.getFlag(MODULE_ID, "choices") as Record<string, unknown> | undefined) ?? context.workflow?.workflowOptions?.choices ?? {}
     }
@@ -268,7 +351,8 @@ export async function holds(expression: string | undefined, conditionData: Recor
 
 export interface EntryRunResult { entry: string, document: string, actions: string[] }
 
-async function runActions(list: readonly EntryAction[], run: Omit<ActionRun, "action">, ran: string[]): Promise<void> {
+/** Run a list of actions for an entry (a table row's, an action's then/else): the keys that ran are added to `ran` */
+export async function runActions(list: readonly EntryAction[], run: Omit<ActionRun, "action">, ran: string[]): Promise<void> {
   for (const action of list) {
     if (!await holds(action.if, run.conditionData)) continue;
     const key = actionKey(action);
@@ -297,15 +381,22 @@ export async function runMoment(momentId: string, context: MomentContext): Promi
   for (const f of collectEntries(momentId, context)) {
     if ((f.entry.offer ?? "always") !== "always") continue;
     const conditionData = conditionDataFor(f, context);
-    if (!await holds(f.entry.if, conditionData)) continue;
+    if (!await entryHolds(f, conditionData)) continue;
     if (!limitAllows(f, context)) continue;
     candidates.push({ found: f, conditionData });
   }
   const results: EntryRunResult[] = [];
-  for (const { found: f, conditionData } of selectGroups(candidates.map(c => ({ ...c, entry: c.found.entry })))) {
+  // A group is one entry per use, across the use's moments (Metamagic: one option per spell), unless it stacks
+  const used = context.workflow ? groupsUsed.get(context.workflow) ?? new Set<string>() : undefined;
+  const open = candidates.filter(c => !c.found.entry.group || c.found.entry.stacks || !used?.has(c.found.entry.group));
+  for (const { found: f, conditionData } of selectGroups(open.map(c => ({ ...c, entry: c.found.entry })))) {
     const ran: string[] = [];
     await runActions(f.entry.do, { moment: momentId, found: f, context, conditionData }, ran);
     if (ran.length) await spendEntryLimit(f, context);
+    if (ran.length && used && f.entry.group) {
+      used.add(f.entry.group);
+      groupsUsed.set(context.workflow!, used);
+    }
     results.push({ entry: f.entry.id, document: documentUuid(f.document), actions: ran });
   }
   return results;

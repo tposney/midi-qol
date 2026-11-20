@@ -13,7 +13,7 @@ export type EntryWho =
   | "bearer"
   /** The creature whose use applied the effect */
   | "origin"
-  /** Someone near (stage 4) */
+  /** Someone near: the moment is about a creature within `within` feet of the bearer (or of the effect's origin); `filter` an expression */
   | { within: number | "reach", of: "bearer" | "origin" | string, filter?: string };
 
 export interface EntryLimit { per: "turn" | "round" | "use" | "effect", max?: number }
@@ -54,4 +54,6 @@ export interface FoundEntry {
   who: EntryWho;
   /** The actor the entry belongs to (the effect's bearer, the item's owner) */
   actor?: Actor.Implementation;
+  /** A near entry (`who: { within }`): the creature the moment is about, its token, how far */
+  near?: { creature: Actor.Implementation, token: TokenDocument.Implementation, distance: number };
 }

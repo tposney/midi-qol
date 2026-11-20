@@ -9,9 +9,11 @@ import { settingsApi } from "./module/lib/settingsRegistry.js";
 import { useTrace, saveUseTrace } from "./module/lib/useTrace.js";
 import { why } from "./module/lib/why.js";
 import { preview } from "./module/lib/preview.js";
-import { entriesApi, registerMidiEntryActions } from "./module/lib/entries/engine.js";
+import { entriesApi, registerMidiEntryActions, watchEntryHomes } from "./module/lib/entries/engine.js";
 import { registerOvertimeEntries } from "./module/lib/entries/overtime.js";
 import { registerEntryRollBonuses } from "./module/lib/entries/rollBonuses.js";
+import { registerUseMoments } from "./module/lib/entries/useMoments.js";
+import { registerUseChanges } from "./module/lib/entries/useChanges.js";
 import { outcomes } from "./module/lib/outcomes.js";
 import { registerTag, registerMidiTags, tagValue, tagNames, tagDefinition, replacedTags, tagsView } from "./module/lib/tags.js";
 import { installFixedDice, withFixedDice } from "./module/lib/fixedDice.js";
@@ -34,7 +36,7 @@ import { registerSettings, fetchParams, configSettings, checkRule, enableWorkflo
 import { decodeWorkflowOptions, encodeWorkflowOptions, registerWorkflowOptionsSchema } from "./module/lib/workflowOptionsCodec.js";
 import { preloadTemplates } from './module/preloadTemplates.js';
 import { checkModules, setupModules } from './module/setupModules.js';
-import { itemPatching, visionPatching, actorAbilityRollPatching, readyPatching, initPatching, addDiceTermModifiers, computeAbilityAdvantage, computeSkillAdvantage, computeToolAdvantage, processWoundedStatus, getActorWoundedSemaphore } from './module/patching.js';
+import { itemPatching, visionPatching, actorAbilityRollPatching, readyPatching, initPatching, addDiceTermModifiers, computeAbilityAdvantage, computeSkillAdvantage, computeToolAdvantage, processWoundedStatus, getActorWoundedSemaphore, actorEffectsSettled } from './module/patching.js';
 import { MidiDependentsRegistry } from './module/lib/MidiDependentsRegistry.js';
 import { initHooks, readyHooks, setupHooks } from './module/Hooks.js';
 import { setupCATIntegration } from './module/catIntegration.js';
@@ -43,7 +45,7 @@ import { setupMagicSight, drawnMagicSight } from './module/magicSight.js';
 import { SaferSocket, initGMActionSetup, setupSocket, socketlibSocket, unTimedExecuteAsGM } from './module/GMAction.js';
 import { setupSheetQol } from './module/sheetQOL.js';
 import { TrapWorkflow, DamageOnlyWorkflow, Workflow, DummyWorkflow, UserWorkflow, targetedDamageBonusContributor } from './module/Workflow.js';
-import { addConcentrationDependent, addRollTo, addRollToAsync, applyTokenDamage, applyTokenDamageMany, canSee, canSense, canSenseModes, checkDistance, checkIncapacitated, checkNearby, chooseEffect, completeItemUse, computeCoverBonus, getCoverBonus, tokenAtPosition, createConditionData, throttledUpdate, displayDSNForRoll, doConcentrationCheck, doOverTimeEffect, evalAllConditions, evalCondition, findNearby, findNearbyCount, getCachedDocument, getChanges, getConcentrationEffect, getTokenDocument, getOrCreateTokenForActor, getOrCreateTokenForActorAsSet, getTokenPlayerName, getTokenPlayerNameForUser, getTraitMult, hasCondition, hasUsedBonusAction, hasUsedReaction, isValidTarget, midiRenderAttackRoll, midiRenderBonusDamageRoll, midiRenderDamageRoll, midiRenderOtherDamageRoll, midiRenderRoll, fromActorUuid, playerFor, playerForActor, raceOrType, reactionDialog, removeHiddenCondition, removeInvisibleCondition, removeReactionUsed, setActionUsed, setBonusActionUsed, setReactionUsed, hasUsedAction, tokenForActor, typeOrRace, validRollAbility, actorFromUuid, removeActionUsed, removeBonusActionUsed, getCheckRollModeFor, getSaveRollModeFor, completeActivityUse, checkActivityRange, unseenTargets, totalCoverTargets, modifyDamageBy, convertDuration, splitOvertimeSpec, isRangeCheckable, activityRanges, getItemFromEffectOrigin, addDependent, updatesCache, createDamageDetail, activityHasEmanationNoTemplate, getVitalityItem, getVitalityValue, getVitalityMax, hasVitalitySystem, resolveItemMacro, resolveActivityMacro, setupMidiFlagTypes, initCoverConstants, ReactionDialog, RollModifyDialog, sizeNumeric, restoreWorkflowTokenSets, setupMarkerChecks, setupCheckVision, toggleStatus } from "./module/utils.js";
+import { addConcentrationDependent, addRollTo, addRollToAsync, applyTokenDamage, applyTokenDamageMany, canSee, canSense, canSenseModes, checkDistance, checkIncapacitated, checkNearby, chooseEffect, completeItemUse, computeCoverBonus, getCoverBonus, tokenAtPosition, createConditionData, throttledUpdate, displayDSNForRoll, doConcentrationCheck, doOverTimeEffect, evalAllConditions, evalCondition, findNearby, findNearbyCount, getCachedDocument, getChanges, getConcentrationEffect, getTokenDocument, getOrCreateTokenForActor, getOrCreateTokenForActorAsSet, getTokenPlayerName, getTokenPlayerNameForUser, getTraitMult, hasCondition, hasUsedBonusAction, hasUsedReaction, isValidTarget, midiRenderAttackRoll, midiRenderBonusDamageRoll, midiRenderDamageRoll, midiRenderOtherDamageRoll, midiRenderRoll, fromActorUuid, playerFor, playerForActor, raceOrType, reactionDialog, removeHiddenCondition, removeInvisibleCondition, removeReactionUsed, setActionUsed, setBonusActionUsed, setReactionUsed, hasUsedAction, tokenForActor, typeOrRace, validRollAbility, actorFromUuid, removeActionUsed, removeBonusActionUsed, getCheckRollModeFor, getSaveRollModeFor, completeActivityUse, checkActivityRange, unseenTargets, totalCoverTargets, modifyDamageBy, convertDuration, splitOvertimeSpec, isRangeCheckable, activityRanges, getItemFromEffectOrigin, addDependent, updatesCache, createDamageDetail, activityHasEmanationNoTemplate, getVitalityItem, getVitalityValue, getVitalityMax, hasVitalitySystem, resolveItemMacro, resolveActivityMacro, setupMidiFlagTypes, initCoverConstants, ReactionDialog, RollModifyDialog, sizeNumeric, restoreWorkflowTokenSets, setupMarkerChecks, setupCheckVision, toggleStatus, queueActorEffects } from "./module/utils.js";
 import { addFollowUp } from './module/followUps.js';
 import { highlightTokens } from './module/lib/tokenHighlight.js';
 import { ConfigPanel } from './module/apps/ConfigPanel.js';
@@ -388,6 +390,8 @@ Object.assign(globalThis.MidiQOL, {
   teleportToken,
   testfunc,
   toggleStatus,
+  actorEffectsSettled,
+  queueActorEffects,
   tokenForActor,
   TokenDocumentSet,
   setTokenDocumentSets,
@@ -511,7 +515,10 @@ Hooks.once('init', async function () {
   defineTokenNamesService();
   registerMidiIssueContributors();
   registerMidiEntryActions();
+  watchEntryHomes();
   registerOvertimeEntries();
+  registerUseMoments();
+  registerUseChanges();
   setupLedgerEvents();
   defineRangeService();
   defineBonusPromptService(() => `midi-qol.${safeGetGameSetting("midi-qol", "BonusPrompt") ?? "phased"}`);
