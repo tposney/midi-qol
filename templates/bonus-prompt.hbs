@@ -2,7 +2,7 @@
     <div class="midi-qol-bonus-roll">{{{content}}}</div>
     <ul class="midi-qol-bonus-list" style="list-style: none; padding: 0; margin: 0.5em 0;">
         {{#each entries}}
-        <li><label style="display: flex; align-items: center; gap: 6px;"><input type="checkbox" name="bonus" value="{{id}}"> {{{icon}}} <span>{{{label}}}</span></label></li>
+        <li><label style="display: flex; align-items: center; gap: 6px;" {{#if tooltip}}data-tooltip="{{tooltip}}"{{/if}}><input type="checkbox" name="bonus" value="{{id}}"> {{{icon}}} <span>{{{label}}}</span></label></li>
         {{/each}}
     </ul>
     <div class="dialog-buttons midi-qol-dialog-buttons">

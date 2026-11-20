@@ -75,6 +75,17 @@ export interface BonusCandidate {
   apply?: (ctx: BonusContext, rollData: object) => Promise<Roll>;
   /** The prompt's icon for it (HTML), in place of the default die. */
   iconHTML?: string;
+  /** Shown with it in the prompt (its tooltip) */
+  description?: string;
+  /**
+   * postResult: on which result it is offered: "failure" (a miss, a failed save), "success" (a hit: a reaction to an
+   * enemy's success) or "any". Absent: as before (the roll's after-result ask, which opens on a failure).
+   */
+  when?: "failure" | "success" | "any";
+  /** Whose resources pay for it (an actor uuid), when not the roller's: a bonus spent by someone else */
+  spender?: string;
+  /** A damage add whose type is chosen when it is taken: the types offered (one: that type) */
+  damageTypes?: readonly string[];
 }
 
 export interface RollBonusContributor {
@@ -91,9 +102,28 @@ export let rollBonusesService: ReturnType<typeof defineService<RollBonusContribu
 
 /**
  * What rollBonuses reads from a candidate, by version: 1 the M1 fields; 2 (M15 stage 3a) chosen bonuses applied in
- * orderForApplication order, a damage `add` with its own damageType or critical as its own damage roll.
+ * orderForApplication order, a damage `add` with its own damageType or critical as its own damage roll; 3 (stage 3d)
+ * `apply`, `iconHTML`, `description`, `when`, `spender`, `damageTypes`.
  */
-export const ROLL_BONUSES_CONTRACT = 2;
+export const ROLL_BONUSES_CONTRACT = 3;
+
+/** Whether a candidate is offered for this result after the roll (its `when`) */
+export function offeredForResult(candidate: { when?: "failure" | "success" | "any" }, phase: BonusPhase, outcome: Outcome | undefined): boolean {
+  if (phase !== "postResult" || !candidate.when || candidate.when === "any" || outcome?.success === undefined) return true;
+  return candidate.when === "success" ? outcome.success : !outcome.success;
+}
+
+/** The damage type a damage add with several types is taken as: asked of the roller */
+async function chooseDamageType(types: readonly string[], label: string): Promise<string | undefined> {
+  if (types.length <= 1) return types[0];
+  const options = types.map(type => `<option value="${type}">${foundry.utils.escapeHTML(CONFIG.DND5E.damageTypes[type]?.label ?? type)}</option>`).join("");
+  const chosen = await foundry.applications.api.DialogV2.prompt({
+    window: { title: label },
+    content: `<select name="damageType">${options}</select>`,
+    ok: { callback: (_event: Event, button: HTMLButtonElement) => (button.form?.elements.namedItem("damageType") as HTMLSelectElement | null)?.value }
+  }).catch(() => undefined);
+  return typeof chosen === "string" ? chosen : types[0];
+}
 
 export function defineRollBonusesService() {
   rollBonusesService = defineService<RollBonusContributor>("rollBonuses", {
@@ -125,6 +155,7 @@ export async function collectBonusCandidates(query: RollBonusQuery, phase: Bonus
     }
     for (const candidate of candidates ?? []) {
       if (!candidate.phases.includes(phase)) continue;
+      if (!offeredForResult(candidate, phase, outcome)) continue;
       if (outcome?.isFumble && !candidate.onFumble) continue;
       if (!canAfford(candidate.cost)) continue;
       try {
@@ -236,7 +267,9 @@ export async function applyOfferedBonus(bonus: OfferedBonus, ctx: BonusContext, 
   let roll = ctx.roll;
   if (!(await approveBonus(bonus, ctx))) return roll;
   try {
-    const effect = bonus.effect;
+    let effect = bonus.effect;
+    if (effect.kind === "add" && !effect.damageType && bonus.damageTypes?.length)
+      effect = { ...effect, damageType: await chooseDamageType(bonus.damageTypes, bonus.label) };
     const rollType = (ctx.roll.options as { type?: string }).type;
     if (bonus.targets?.length && ctx.query.kind === "damage" && effect.kind === "add" && ctx.query.workflow) {
       const extra = await new Roll(effect.formula, { ...ctx.roll.data, ...rollData }).evaluate();
@@ -260,7 +293,9 @@ export async function applyOfferedBonus(bonus: OfferedBonus, ctx: BonusContext, 
       used.push(bonus.id);
       foundry.utils.setProperty(roll, "flags.midi-qol.optionalsUsed", used);
     }
-    if (!bonus.spendsOwnCost) await spendBonusCost(ctx.query.actor, bonus.cost, bonus.label);
+    // Paid by its spender when it has one (someone else's resources), else the roller
+    const spender = bonus.spender ? fromUuidSync(bonus.spender) : undefined;
+    if (!bonus.spendsOwnCost) await spendBonusCost(spender instanceof Actor ? spender : ctx.query.actor, bonus.cost, bonus.label);
     await bonus.onChosen?.({ ...ctx, roll });
   } catch (err) {
     reportServiceProblem("rollBonuses", bonus.contributor, `${bonus.label}: applying it failed`, err);

@@ -7733,6 +7733,15 @@ export class Workflow {
           const newRoll = await bonusDialog.bind(this)(bonusFlags, attackBonus, displayBonusRolls, `${this.actor.name} - ${i18n("DND5E.Attack")} ${i18n("DND5E.Roll")}`, this.attackRoll, "attackRoll", { flagOwners, bonusQuery, bonusPhase: "postResult", candidates });
           if (newRoll) this.setAttackRoll(newRoll);
         }
+      } else {
+        // A hit: the after-result bonuses that say they are for a success (stage 3d, `when`)
+        candidates = (await collectBonusCandidates(bonusQuery, "postResult", this.attackRoll!, { success: true, isCritical: this.isCritical }))
+          .filter(candidate => candidate.when === "success" || candidate.when === "any");
+        if (candidates.length > 0) {
+          await this.flushCardWrites();
+          const newRoll = await bonusDialog.bind(this)([], attackBonus, checkMechanic("displayBonusRolls") as boolean, `${this.actor.name} - ${i18n("DND5E.Attack")} ${i18n("DND5E.Roll")}`, this.attackRoll, "attackRoll", { flagOwners, bonusQuery, bonusPhase: "postResult", candidates });
+          if (newRoll) this.setAttackRoll(newRoll);
+        }
       }
     }
     return this.attackRoll!;

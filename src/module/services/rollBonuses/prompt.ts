@@ -6,8 +6,27 @@ import { defineService } from "../../api/services.js";
  * A provider opens a window over the dialog data midi's bonus code drives (RollModifyDialog's data and handlers).
  */
 
+/** What a prompt provider's `ask` is asked: the roll, and the optional bonuses on offer */
+export interface BonusAskRequest {
+  title: string;
+  actor: Actor.Implementation;
+  roll: Roll;
+  /** The roll as the asking user may see it (HTML; "Hidden Roll" for a hidden roll) */
+  rollHTML: string;
+  phase: string;
+  candidates: readonly { id: string, label: string, description?: string, effect: { kind: string }, img?: string }[];
+  /** Seconds before it is answered for the roller (none taken) */
+  timeout: number;
+}
+
+/**
+ * A provider either opens a window over midi's dialog data (`open`: the window drives midi's handlers, as midi's two
+ * prompts do), or answers a request (`ask`, contract 3): the ids chosen, or null / [] for none. midi applies a
+ * selection in the application order, and asks again with what is left after a reroll or a replacement.
+ */
 export interface BonusPromptProvider {
-  open(data: object): { render(options?: object): unknown };
+  open?(data: object): { render(options?: object): unknown };
+  ask?(request: BonusAskRequest): Promise<readonly string[] | null>;
 }
 
 declare module "../../api/services.js" {

@@ -19,8 +19,8 @@ export class BonusPromptApp extends RollModifyDialog {
 
   async _prepareContext(options) {
     const context = await super._prepareContext(options);
-    const buttons: Record<string, { label?: string, icon?: string }> = this.data.buttons ?? {};
-    const entries = Object.entries(buttons).filter(([id]) => id !== "no").map(([id, button]) => ({ id, label: button.label, icon: button.icon }));
+    const buttons: Record<string, { label?: string, icon?: string, tooltip?: string }> = this.data.buttons ?? {};
+    const entries = Object.entries(buttons).filter(([id]) => id !== "no").map(([id, button]) => ({ id, label: button.label, icon: button.icon, tooltip: (button as { tooltip?: string }).tooltip }));
     return { ...context, entries };
   }
 

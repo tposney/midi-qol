@@ -4329,6 +4329,7 @@ export class RollModifyDialog extends HandlebarsApplicationMixin(ApplicationV2) 
       this.data.buttons[foundry.utils.randomID()] = {
         icon: candidate.iconHTML ?? '<i class="fas fa-dice-d20"></i>',
         label: `${candidate.label}${detail}`,
+        ...(candidate.description ? { tooltip: foundry.utils.escapeHTML(candidate.description) } : {}),
         key: candidate.id,
         candidate,
         callback: this.data.onCandidate
@@ -4504,7 +4505,7 @@ async function displayBeforeAfterRolls(data: {
 const OPTIONAL_AC_KEYS = ["acOnAttack", "acOnHit"];
 /** The window the bonus prompt service picks (the classic dialog when none is registered). */
 function openBonusPrompt(data: object): { render(options?: object): unknown } {
-  return bonusPromptService?.get()?.open(data) ?? new RollModifyDialog(data);
+  return bonusPromptService?.get()?.open?.(data) ?? new RollModifyDialog(data);
 }
 
 export async function bonusDialog(
@@ -4849,8 +4850,8 @@ export async function bonusDialog(
   const offered = optionalCandidates.map(c => c.id);
   const taken = new Set<string>();
   const automaticLabels = usedLabels.length;
-  const onCandidate = async (dialog: RollModifyDialog, button: { candidate: OfferedBonus }) => {
-    const candidate = button.candidate;
+  /** A chosen candidate applied: the roll, the budget, the session; a flag's other value withdrawn */
+  const take = async (candidate: OfferedBonus) => {
     newRoll = await applyOfferedBonus(candidate, candidateContext(newRoll), bonusRollData);
     roll = newRoll;
     usedLabels.push(candidate.flagLabel ?? candidate.label);
@@ -4861,6 +4862,9 @@ export async function bonusDialog(
     optionalCandidates = optionalCandidates.filter(c => c.id !== candidate.id && (!candidate.flagKey || c.flagKey !== candidate.flagKey)
       && (!c.flagKey || getOptionalCountRemaining(this.actor, `${c.flagKey}.count`, ownerOf(c.flagKey)) >= 1));
     stillAffordable();
+  };
+  const onCandidate = async (dialog: RollModifyDialog, button: { candidate: OfferedBonus }) => {
+    await take(button.candidate);
     dialog.data.candidates = optionalCandidates;
     if (optionalCandidates.length === 0) {
       dialog.close();
@@ -4879,23 +4883,48 @@ export async function bonusDialog(
     ? await askBonusDecision(options.withinRequest, { actorUuid: this.actor?.uuid, tokenUuid: (this.actor?.token ?? this.actor?.getActiveTokens(false, true)[0])?.uuid, label: title })
     : undefined;
   const request: IncomingRequest | undefined = options.request ?? decision?.incoming;
-  const chosen = new Promise<Roll>((resolve, reject) => {
-    async function onClose() {
-      // The original roll is dsn displayed before the bonus dialog is called so mark it as displayed
-      DSNMarkDiceDisplayed(originalRoll);
-      // The new roll has had dsn display done for each bonus term/reroll so mark it as displayed
-      DSNMarkDiceDisplayed(newRoll);
-      if (newRoll !== offeredOn) recordRollChange(newRoll, offeredOn, usedLabels.slice(automaticLabels));
-      // Offered and not taken: not asked again in this roll's later phases
-      for (const id of offered) if (!taken.has(id)) session.declined.add(id);
-
-      if (showRoll && newRoll !== originalRoll) {
-        //@ts-expect-error
-        const card = await displayBeforeAfterRolls({ originalRoll, newRoll, rollMode: originalRoll.options.rollMode, title, player, options, actor: this.actor });
-        if (card?.uuid && this instanceof Workflow && configSettings.undoWorkflow) await unTimedExecuteAsGM("addUndoChatCards", { id: this.id, chatCardUuids: [card.uuid] });
-      }
-      resolve(newRoll)
+  /** The prompt is done: dice marked shown, the change recorded, what wasn't taken declined, the before and after shown */
+  const finishPrompt = async () => {
+    // The original roll is dsn displayed before the bonus dialog is called so mark it as displayed
+    DSNMarkDiceDisplayed(originalRoll);
+    // The new roll has had dsn display done for each bonus term/reroll so mark it as displayed
+    DSNMarkDiceDisplayed(newRoll);
+    if (newRoll !== offeredOn) recordRollChange(newRoll, offeredOn, usedLabels.slice(automaticLabels));
+    // Offered and not taken: not asked again in this roll's later phases
+    for (const id of offered) if (!taken.has(id)) session.declined.add(id);
+    if (showRoll && newRoll !== originalRoll) {
+      //@ts-expect-error
+      const card = await displayBeforeAfterRolls({ originalRoll, newRoll, rollMode: originalRoll.options.rollMode, title, player, options, actor: this.actor });
+      if (card?.uuid && this instanceof Workflow && configSettings.undoWorkflow) await unTimedExecuteAsGM("addUndoChatCards", { id: this.id, chatCardUuids: [card.uuid] });
     }
+  };
+  // A provider that answers (`ask`, contract 3): the selection applied in the application order, asked again with what is
+  // left after a reroll or a replacement
+  const prompter = bonusPromptService?.get();
+  if (prompter?.ask) {
+    try {
+      while (optionalCandidates.length) {
+        const visible = game.user?.isGM || ["public", "gm", "self"].includes(toMessageMode(options?.rollMode ?? safeGetGameSetting("core", "messageMode")));
+        const ids = await prompter.ask({ title, actor: this.actor, roll: newRoll, rollHTML: visible ? await midiRenderRoll(newRoll) : "Hidden Roll",
+          phase: bonusPhase, candidates: optionalCandidates, timeout });
+        if (!ids?.length) break;
+        const picked = orderForApplication(optionalCandidates.filter(c => ids.includes(c.id)));
+        for (const candidate of picked) if (optionalCandidates.some(c => c.id === candidate.id)) await take(candidate);
+        if (!picked.some(c => c.effect.kind === "reroll" || c.effect.kind === "replace")) break;
+      }
+    } catch (err) {
+      TroubleShooter.recordError(err, "midi-qol | bonus prompt ask");
+    } finally {
+      decision?.finish();
+    }
+    await finishPrompt();
+    return newRoll;
+  }
+  const chosen = new Promise<Roll>((resolve, reject) => {
+    const onClose = async () => {
+      await finishPrompt();
+      resolve(newRoll);
+    };
 
     let content: string;
     let rollMode: any = options?.rollMode ?? safeGetGameSetting("core", "messageMode");
@@ -4917,7 +4946,7 @@ export async function bonusDialog(
         currentRoll: roll,
         rollHTML,
         rollMode: rollType,
-        close: onClose.bind(this),
+        close: onClose,
         timeout,
         item: this.item,
         workflow: this instanceof Workflow ? this : undefined,
