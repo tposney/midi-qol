@@ -94,6 +94,21 @@ function parentheticalToJSON(this: unknown, wrapped: () => Record<string, unknow
   return data;
 }
 
+/**
+ * A one-shot dnd5e roll hook for one actor's roll. dnd5e's roll hooks are global, so Hooks.once ran every pending roll's
+ * handler on whichever roll came first: two targets' saves overlapping gave the first both targets' forced results and
+ * the second none.
+ */
+function onceForSubject<K extends Hooks.HookName>(name: K, subject: Actor.Implementation, configAt: number, fn: Hooks.Function<K>): number {
+  const handler = ((...args: unknown[]) => {
+    if ((args[configAt] as RollProcessConfig | undefined)?.subject !== subject) return undefined;
+    Hooks.off(name, id);
+    return (fn as (...args: unknown[]) => unknown)(...args);
+  }) as Hooks.Function<K>;
+  const id = Hooks.on(name, handler);
+  return id;
+}
+
 export function initPatching() {
   libWrapper = globalThis.libWrapper;
   Hooks.on("dnd5e.postBuildSkillRollConfig", applyChosenAbilityModifiers("skill"));
@@ -1393,7 +1408,7 @@ async function doD20Roll(this: Actor.Implementation, wrapped, kind: D20RollKind,
     const chosenAbility = abilityFor?.(config[kind.idKey] ?? "");
     if (chosenAbility) config.ability = chosenAbility;
 
-    preRollHookId = Hooks.once(`dnd5e.preRoll${kind.hook}`, (configData, dialogData) => {
+    preRollHookId = onceForSubject(`dnd5e.preRoll${kind.hook}`, this, 0, (configData: RollProcessConfig, dialogData: RollDialogConfig) => {
       configData.midiOptions = { ...(configData.midiOptions ?? {}), ...(midiOptions ?? {}) };
       const choices = Object.values(advantageMap);
       const allAutoFail = choices.length > 0 && choices.every(d => d.tracker instanceof RollModifierTracker && d.tracker.modifiers.willFail);
@@ -1416,7 +1431,7 @@ async function doD20Roll(this: Actor.Implementation, wrapped, kind: D20RollKind,
     });
 
     let dialogShown = false;
-    postRollHookId = Hooks.once(`dnd5e.post${kind.hook}RollConfiguration`, (rolls, configData, dialogData, messageDetails) => {
+    postRollHookId = onceForSubject(`dnd5e.post${kind.hook}RollConfiguration`, this, 1, (rolls: Roll[], configData: RollProcessConfig, dialogData: RollDialogConfig, messageDetails: RollMessageConfig) => {
       // record the configured message data for later display
       message = messageDetails;
       dialogShown = !!dialogData.configure;
@@ -1595,7 +1610,7 @@ async function rollDeathSave(this: Actor.Implementation, wrapped, config: RollPr
   const blindSaveRoll = configSettings.rollSavesBlind.includes("all") || configSettings.rollSavesBlind.includes("death");
   const actor = this;
 
-  const preRollHookId = Hooks.once("dnd5e.preRollDeathSave", (configData, dialogData, messageData) => {
+  const preRollHookId = onceForSubject("dnd5e.preRollDeathSave", this, 0, (configData: RollProcessConfig, dialogData: RollDialogConfig, messageData: RollMessageConfig) => {
     // Merge midiOptions to ensure advantage/disadvantage and other values are preserved
     configData.midiOptions = { ...(configData.midiOptions ?? {}), ...(config.midiOptions ?? {}) };
 
