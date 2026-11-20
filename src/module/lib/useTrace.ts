@@ -1,5 +1,6 @@
 import { MODULE_ID } from "../../midi-qol.js";
 import { jsonSafe, type Workflow } from "../Workflow.js";
+import { outcomes, type TargetOutcome } from "./outcomes.js";
 
 /*
  * A use's trace (M25): what it was given, the steps it ran with who changed them, and its outcome, as plain data, for
@@ -14,6 +15,8 @@ export interface UseTraceTarget {
   failedSave: boolean;
   /** HP and temporary HP the use took (negative: healed) */
   damage?: { hp: number, temp: number, newHP: number };
+  /** The outcome record (M26) */
+  outcome?: TargetOutcome;
 }
 
 export interface UseTrace {
@@ -34,6 +37,7 @@ export interface UseTrace {
 
 export function useTrace(workflow: Workflow): UseTrace {
   const damageOf = (uuid: string | null) => workflow.damageList.find(entry => entry.targetUuid === uuid);
+  const targetOutcomes = outcomes(workflow);
   return {
     use: {
       item: workflow.item?.uuid ?? undefined, activity: workflow.activity?.uuid ?? undefined, actor: workflow.actor?.uuid ?? undefined,
@@ -51,7 +55,8 @@ export function useTrace(workflow: Workflow): UseTrace {
         return {
           name: token.name, uuid: token.uuid,
           hit: workflow.hitTargets.has(token), saved: workflow.saves.has(token), failedSave: workflow.failedSaves.has(token),
-          ...(damage ? { damage: { hp: damage.hpDamage, temp: damage.tempDamage, newHP: damage.newHP } } : {})
+          ...(damage ? { damage: { hp: damage.hpDamage, temp: damage.tempDamage, newHP: damage.newHP } } : {}),
+          outcome: targetOutcomes.get(token.uuid ?? "")
         };
       })
     },

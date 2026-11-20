@@ -1,6 +1,8 @@
 import { activityTypeSteps, activityTypeStepsMarkdown } from "./module/activities/activityTypeSteps.js";
 import { settingsApi } from "./module/lib/settingsRegistry.js";
 import { useTrace, saveUseTrace } from "./module/lib/useTrace.js";
+import { outcomes } from "./module/lib/outcomes.js";
+import { registerTag, registerMidiTags, tagValue, tagNames, tagDefinition, replacedTags, tagsView } from "./module/lib/tags.js";
 import { installFixedDice, withFixedDice } from "./module/lib/fixedDice.js";
 import { installUse } from "./module/activities/useRelaunch.js";
 import { useAs } from "./module/activities/use.js";
@@ -283,7 +285,9 @@ Object.assign(globalThis.MidiQOL, {
   // The test harness (M25): fixed dice for code outside a use (a use takes workflowOptions.fixedDice)
   testing: { fixedDice: withFixedDice },
   // A use's trace (M25): its inputs, steps with who changed them, and outcome; saved as a JSON file
-  useTrace, saveUseTrace,
+  useTrace, saveUseTrace, outcomes,
+  // Tags (M26): named facts about a use and its targets that conditions read; modules add or replace them
+  tags: { register: registerTag, get: tagValue, names: tagNames, definition: tagDefinition, replaced: replacedTags, view: tagsView },
   // The settings registry (M4a): every setting declared once; modules register their own (shown in the panel's Modules tab)
   settings: settingsApi,
   // The activity-type table (M24): each type's capabilities and the steps that act for it; as Markdown for the guide
@@ -493,6 +497,7 @@ Hooks.once('init', async function () {
   registerBonusApprovalQuery();
   defineFlankingService();
   defineDistanceService();
+  registerMidiTags();
   defineRangeService();
   defineBonusPromptService(() => `midi-qol.${safeGetGameSetting("midi-qol", "BonusPrompt") ?? "phased"}`);
   // Registered here, not in services/rollBonuses/prompt.ts: BonusPromptApp extends utils' RollModifyDialog and utils

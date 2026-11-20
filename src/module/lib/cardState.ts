@@ -38,7 +38,9 @@ export const STATE_KEYS = [
   // A move through inserted steps under way (steps/engine.ts StepMove): a use rebuilt while one of them waits resumes it
   "stepMove",
   // The use's damage messages by contribution key (M13 stage 2): a rebuilt use loads its damage from them
-  "damageMessages"
+  "damageMessages",
+  // Snapshot tags fixed at the use's resolution (M26, lib/tags.ts): a list of { tag, target, value }
+  "tagSnapshots"
 ] as const;
 export type StateKey = typeof STATE_KEYS[number];
 
@@ -112,6 +114,7 @@ export function cardStateSchema() {
       // The use's damage messages by contribution key (M13 stage 2). A list, not an object keyed by contribution: an update
       // reads dots in a key as a path, and module contribution keys have them
       damageMessages: new ArrayField(new SchemaField({ key: new StringField({ blank: false }), id: new StringField({ blank: false }) }), unset),
+      tagSnapshots: new ArrayField(new ObjectField(), unset),
       damageRules: new SchemaField({
         downgrade: new ArrayField(new StringField(), unset),
         ignore: new SchemaField(Object.fromEntries(RULE_IGNORES.map(category => [category, new ArrayField(new StringField(), unset)])), unset)

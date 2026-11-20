@@ -1,4 +1,5 @@
 import { type Workflow } from "../Workflow.js";
+import { type TargetOutcome } from "./outcomes.js";
 export interface UseTraceTarget {
     name: string | null;
     uuid: string | null;
@@ -11,6 +12,8 @@ export interface UseTraceTarget {
         temp: number;
         newHP: number;
     };
+    /** The outcome record (M26) */
+    outcome?: TargetOutcome;
 }
 export interface UseTrace {
     use: {

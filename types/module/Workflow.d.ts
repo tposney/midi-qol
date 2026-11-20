@@ -6,6 +6,7 @@ import { type AssembledSteps, type StepChangeInput } from "./steps/assembly.js";
 import { type PortName, type WorkflowPorts } from "./steps/ports.js";
 import { TeleportOption } from "./activities/teleport.js";
 import { TokenDocumentSet } from "./lib/tokenDocumentSet.js";
+import type { TagSnapshot } from "./lib/tags.js";
 import { type WaitChoiceSpec } from "./lib/playerWaits.js";
 import { type ReactionResult, getOrCreateTokenForActor } from "./utils.js";
 import { OnUseMacros } from "./apps/Item.js";
@@ -241,6 +242,9 @@ export declare class Workflow {
     tokenCanSense: Set<Token.Implementation>;
     /** The use's templates (regions): replace the array to change it, a change in place isn't stored */
     get templateUuids(): string[];
+    /** Snapshot tags fixed at the use's resolution (M26, lib/tags.ts) */
+    get tagSnapshots(): readonly TagSnapshot[];
+    recordTagSnapshot(snapshot: TagSnapshot): void;
     set templateUuids(templateUuids: string[]);
     expectedTemplateCount: number;
     placedTemplateCount: number;

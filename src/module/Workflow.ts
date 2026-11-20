@@ -22,6 +22,7 @@ import { TeleportOption } from "./activities/teleport.js";
 import { cardWorkflowOptions, decodeWorkflowOptions, inheritableWorkflowOptions } from "./lib/workflowOptionsCodec.js";
 import { eventModifiers } from "./lib/rollKeys.js";
 import { TokenDocumentSet, hookTarget, tokenOf } from "./lib/tokenDocumentSet.js";
+import type { TagSnapshot } from "./lib/tags.js";
 import { RECORD_SETS, RecordSet, RecordFacts, STATE_KEYS, StateKey, attributionMap, attributionTriples, cardDamageRolls, cardMidi, rollTypeOf, cardOtherConsumption, cardPreSelected, messagesFrom, recordList, recordPath, recordPathOfUuid, storedMidiFlag } from "./lib/cardState.js";
 import { preferredActiveGM, rollAbility, useDamageList, SAVE_REQUEST, socketlibSocket, timedAwaitExecuteAsGM, timedExecuteAsGM, unTimedExecuteAsGM } from "./GMAction.js";
 import { askUser } from "./lib/requests.js";
@@ -1079,6 +1080,13 @@ export class Workflow {
 
   /** The use's templates (regions): replace the array to change it, a change in place isn't stored */
   get templateUuids(): string[] { return this.#persisted.scalar<string[]>("templateUuids", []); }
+  /** Snapshot tags fixed at the use's resolution (M26, lib/tags.ts) */
+  get tagSnapshots(): readonly TagSnapshot[] { return this.#persisted.scalar<TagSnapshot[]>("tagSnapshots", []); }
+  recordTagSnapshot(snapshot: TagSnapshot): void {
+    if (this.readOnly) return;
+    const kept = this.tagSnapshots.filter(other => other.tag !== snapshot.tag || other.target !== snapshot.target);
+    this.#persisted.setScalar("tagSnapshots", [...kept, snapshot]);
+  }
   set templateUuids(templateUuids: string[]) { this.#persisted.setScalar("templateUuids", [...templateUuids]); }
   expectedTemplateCount: number = 0;
   placedTemplateCount: number = 0;

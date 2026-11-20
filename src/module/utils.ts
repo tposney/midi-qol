@@ -1,4 +1,5 @@
 import { askBonusDecision } from "./lib/bonusDecisions.js";
+import { tagsView } from "./lib/tags.js";
 import { checkRange, type RangeCheckResult } from "./services/range/service.js";
 import { queryUser } from "./lib/midiQueries.js";
 import { computeDistance } from "./services/distance/provider.js";
@@ -6397,6 +6398,10 @@ export function createConditionData(data: {
       rollData.shouldRollDamage = data.workflow.shouldRollDamage;
       rollData.hasAttack = data.workflow.activity.attack;
       rollData.hasDamage = data.workflow.activity.hasDamage;
+      // Tags (M26), worked out when read: about the target when there is one
+      const workflow = data.workflow;
+      const tagTarget = data.target ? getTokenDocument(data.target) : undefined;
+      Object.defineProperty(rollData, "tags", { get: () => tagsView(workflow, tagTarget), enumerable: false, configurable: true });
     }
     if (!data.activity && data.workflow) data.activity = data.workflow.activity;
     if (data.activity) {
