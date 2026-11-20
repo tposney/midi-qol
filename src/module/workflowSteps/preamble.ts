@@ -1,4 +1,5 @@
 import { debug, debugEnabled, error, i18nFormat, warn } from "../../midi-qol.js";
+import { choiceDeclarations, resolveChoices } from "../lib/choices.js";
 import { isTransformActivity, transformActor } from "../activities/transform.js";
 import { isMidiActivityType } from "../activities/midiActivity.js";
 import { placeEmanationTemplate } from "../activities/regions.js";
@@ -134,6 +135,16 @@ export function registerPreambleSteps(): void {
         await workflow.refundConsumption();
         return "midi-qol.Abort";
       }
+    }
+    // Only a use with choices meets the Choices step: others keep the hook order they had
+    return choiceDeclarations(workflow.activity).length ? "midi-qol.Choices" : "midi-qol.ValidateRoll";
+  });
+
+  // M28: the activity's choices, asked once before any roll (lib/choices.ts)
+  setStepRun("midi-qol.Choices", async ({ workflow }: { workflow: Workflow }): Promise<WorkflowState> => {
+    if (!await resolveChoices(workflow)) {
+      await workflow.refundConsumption();
+      return "midi-qol.Abort";
     }
     return "midi-qol.ValidateRoll";
   });

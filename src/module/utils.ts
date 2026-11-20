@@ -6401,6 +6401,7 @@ export function createConditionData(data: {
       // Tags (M26), worked out when read: about the target when there is one
       const workflow = data.workflow;
       const tagTarget = data.target ? getTokenDocument(data.target) : undefined;
+      rollData.choices = workflow.choices;
       Object.defineProperty(rollData, "tags", { get: () => tagsView(workflow, tagTarget), enumerable: false, configurable: true });
     }
     if (!data.activity && data.workflow) data.activity = data.workflow.activity;

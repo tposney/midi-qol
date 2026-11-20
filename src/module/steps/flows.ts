@@ -19,6 +19,7 @@ export interface Flow {
 export const COARSE_STEPS: Readonly<Record<string, readonly string[]>> = {
   "midi-qol.prepare": ["NoAction", "Start", "Transform"],
   "midi-qol.targeting": ["PlaceEmanation", "AwaitTemplate", "TemplatePlaced", "AoETargetConfirmation"],
+  "midi-qol.choices": ["Choices"],
   "midi-qol.validate": ["ValidateRoll", "PreambleComplete"],
   "midi-qol.utility": ["WaitForUtilityRoll", "UtilityRollComplete"],
   "midi-qol.attack": ["WaitForAttackRoll"],
@@ -79,7 +80,7 @@ export function allFlows(): Flow[] {
 }
 
 const ids = (...names: string[]) => names.map(name => `midi-qol.${name}`);
-const PREAMBLE = ["NoAction", "Start", "Transform", "PlaceEmanation", "AwaitTemplate", "TemplatePlaced", "AoETargetConfirmation", "ValidateRoll", "PreambleComplete"];
+const PREAMBLE = ["NoAction", "Start", "Transform", "PlaceEmanation", "AwaitTemplate", "TemplatePlaced", "AoETargetConfirmation", "Choices", "ValidateRoll", "PreambleComplete"];
 const UTILITY = ["WaitForUtilityRoll", "UtilityRollComplete"];
 const ATTACK = ["WaitForAttackRoll", "AttackRollComplete"];
 const SAVES = ["WaitForSaves", "SavesComplete"];

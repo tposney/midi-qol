@@ -7,6 +7,7 @@ import { type PortName, type WorkflowPorts } from "./steps/ports.js";
 import { TeleportOption } from "./activities/teleport.js";
 import { TokenDocumentSet } from "./lib/tokenDocumentSet.js";
 import type { TagSnapshot } from "./lib/tags.js";
+import { type ChoiceValue } from "./lib/choices.js";
 import { type WaitChoiceSpec } from "./lib/playerWaits.js";
 import { type ReactionResult, getOrCreateTokenForActor } from "./utils.js";
 import { OnUseMacros } from "./apps/Item.js";
@@ -98,6 +99,7 @@ export declare class Workflow {
     WorkflowState_AwaitTemplate: StateMethod;
     WorkflowState_TemplatePlaced: StateMethod;
     WorkflowState_AoETargetConfirmation: StateMethod;
+    WorkflowState_Choices: StateMethod;
     WorkflowState_ValidateRoll: StateMethod;
     WorkflowState_PreambleComplete: StateMethod;
     WorkflowState_WaitForAttackRoll: StateMethod;
@@ -242,6 +244,12 @@ export declare class Workflow {
     tokenCanSense: Set<Token.Implementation>;
     /** The use's templates (regions): replace the array to change it, a change in place isn't stored */
     get templateUuids(): string[];
+    /**
+     * The use's choices (M28, lib/choices.ts) by id: those the Choices step stored, and dnd5e's own damage type pick
+     * (`damageType`, read from the rolls) unless the activity declares a choice of that id
+     */
+    get choices(): Record<string, ChoiceValue>;
+    setChoice(id: string, value: ChoiceValue): void;
     /** Snapshot tags fixed at the use's resolution (M26, lib/tags.ts) */
     get tagSnapshots(): readonly TagSnapshot[];
     recordTagSnapshot(snapshot: TagSnapshot): void;
@@ -836,6 +844,7 @@ export declare class Workflow {
                     transfer: boolean;
                 };
                 "midi-qol": {
+                    choices?: Record<string, ChoiceValue> | undefined;
                     castData: {
                         castLevel?: number;
                     } | undefined;
@@ -855,6 +864,7 @@ export declare class Workflow {
                         transfer: boolean;
                     };
                     "midi-qol": {
+                        choices?: Record<string, ChoiceValue> | undefined;
                         castData: {
                             castLevel?: number;
                         } | undefined;
@@ -872,6 +882,8 @@ export declare class Workflow {
                 advantage: boolean;
                 /** Every die the use rolls shows this face (M25: tests, examples): "min", "average", "max" or a position 0–1 in the die's range */
                 fixedDice: FixedDice;
+                /** The activity's choices (M28), by id: not asked */
+                choices: Record<string, ChoiceValue>;
                 allowIncapacitated: boolean;
                 /**
                  * Caller-supplied control over per-target attack splitting: true forces it on, false off,
@@ -1482,6 +1494,8 @@ export type WorkflowOptions = InexactPartial<{
     advantage: boolean;
     /** Every die the use rolls shows this face (M25: tests, examples): "min", "average", "max" or a position 0–1 in the die's range */
     fixedDice: FixedDice;
+    /** The activity's choices (M28), by id: not asked */
+    choices: Record<string, ChoiceValue>;
     allowIncapacitated: boolean;
     /**
      * Caller-supplied control over per-target attack splitting: true forces it on, false off,

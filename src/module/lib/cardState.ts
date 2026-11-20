@@ -40,7 +40,9 @@ export const STATE_KEYS = [
   // The use's damage messages by contribution key (M13 stage 2): a rebuilt use loads its damage from them
   "damageMessages",
   // Snapshot tags fixed at the use's resolution (M26, lib/tags.ts): a list of { tag, target, value }
-  "tagSnapshots"
+  "tagSnapshots",
+  // The use's choices (M28, lib/choices.ts): a list of { id, value }
+  "choices"
 ] as const;
 export type StateKey = typeof STATE_KEYS[number];
 
@@ -115,6 +117,7 @@ export function cardStateSchema() {
       // reads dots in a key as a path, and module contribution keys have them
       damageMessages: new ArrayField(new SchemaField({ key: new StringField({ blank: false }), id: new StringField({ blank: false }) }), unset),
       tagSnapshots: new ArrayField(new ObjectField(), unset),
+      choices: new ArrayField(new ObjectField(), unset),
       damageRules: new SchemaField({
         downgrade: new ArrayField(new StringField(), unset),
         ignore: new SchemaField(Object.fromEntries(RULE_IGNORES.map(category => [category, new ArrayField(new StringField(), unset)])), unset)

@@ -23,6 +23,7 @@ import { cardWorkflowOptions, decodeWorkflowOptions, inheritableWorkflowOptions 
 import { eventModifiers } from "./lib/rollKeys.js";
 import { TokenDocumentSet, hookTarget, tokenOf } from "./lib/tokenDocumentSet.js";
 import type { TagSnapshot } from "./lib/tags.js";
+import { chosenEffectId, rolledDamageTypeChoice, type ChoiceValue, type StoredChoice } from "./lib/choices.js";
 import { RECORD_SETS, RecordSet, RecordFacts, STATE_KEYS, StateKey, attributionMap, attributionTriples, cardDamageRolls, cardMidi, rollTypeOf, cardOtherConsumption, cardPreSelected, messagesFrom, recordList, recordPath, recordPathOfUuid, storedMidiFlag } from "./lib/cardState.js";
 import { preferredActiveGM, rollAbility, useDamageList, SAVE_REQUEST, socketlibSocket, timedAwaitExecuteAsGM, timedExecuteAsGM, unTimedExecuteAsGM } from "./GMAction.js";
 import { askUser } from "./lib/requests.js";
@@ -517,6 +518,7 @@ export class Workflow {
   declare WorkflowState_AwaitTemplate: StateMethod;
   declare WorkflowState_TemplatePlaced: StateMethod;
   declare WorkflowState_AoETargetConfirmation: StateMethod;
+  declare WorkflowState_Choices: StateMethod;
   declare WorkflowState_ValidateRoll: StateMethod;
   declare WorkflowState_PreambleComplete: StateMethod;
   declare WorkflowState_WaitForAttackRoll: StateMethod;
@@ -1080,6 +1082,22 @@ export class Workflow {
 
   /** The use's templates (regions): replace the array to change it, a change in place isn't stored */
   get templateUuids(): string[] { return this.#persisted.scalar<string[]>("templateUuids", []); }
+  /**
+   * The use's choices (M28, lib/choices.ts) by id: those the Choices step stored, and dnd5e's own damage type pick
+   * (`damageType`, read from the rolls) unless the activity declares a choice of that id
+   */
+  get choices(): Record<string, ChoiceValue> {
+    const result: Record<string, ChoiceValue> = {};
+    const rolled = rolledDamageTypeChoice(this);
+    if (rolled) result.damageType = rolled;
+    for (const { id, value } of this.#persisted.scalar<StoredChoice[]>("choices", [])) result[id] = value;
+    return result;
+  }
+  setChoice(id: string, value: ChoiceValue): void {
+    if (this.readOnly) return;
+    const kept = this.#persisted.scalar<StoredChoice[]>("choices", []).filter(choice => choice.id !== id);
+    this.#persisted.setScalar("choices", [...kept, { id, value }]);
+  }
   /** Snapshot tags fixed at the use's resolution (M26, lib/tags.ts) */
   get tagSnapshots(): readonly TagSnapshot[] { return this.#persisted.scalar<TagSnapshot[]>("tagSnapshots", []); }
   recordTagSnapshot(snapshot: TagSnapshot): void {
@@ -3354,6 +3372,7 @@ export class Workflow {
     const regionBehavior = this.activity.regionBehavior as { enabled?: boolean, rules?: { trigger: string, action: string, targetId: string }[] } | undefined;
     const regionRules = this.templateUuids.some(uuid => uuid.includes(".Region.")) && regionBehavior?.enabled ? regionBehavior.rules ?? [] : [];
     const regionEffectIds = new Set<string>(regionRules.filter(rule => rule.action === "applyEffect" && rule.trigger === "entry").map(rule => rule.targetId));
+    const chosenEffect = chosenEffectId(this);
     const resolveEffects = async (activity: Activity | undefined | null) => {
       const resolved = { applied: [] as ActiveEffect.Implementation[], onSave: [] as ActiveEffect.Implementation[] };
       if (!activity) return resolved;
@@ -3367,6 +3386,8 @@ export class Workflow {
         // @ts-expect-error no dnd5e-types
         if (!effect || effect.transfer || effect.type === "enchantment") continue;
         if (activity === this.activity && effect.id && regionEffectIds.has(effect.id)) continue;
+        // A choice of the activity's effects (M28): only the chosen one
+        if (activity === this.activity && chosenEffect !== undefined && effect.id !== chosenEffect) continue;
         (profile.onSave === true ? resolved.onSave : resolved.applied).push(effect);
       }
       return resolved;
@@ -3381,7 +3402,7 @@ export class Workflow {
     const ammunitionResolved = await resolveEffects(ammunition);
     let ammunitionEffects = ammunitionResolved.applied;
     let onSaveAmmunitionEffects = ammunitionResolved.onSave;
-    if (activityEffects.length > 0 && this.effectTargets.count > 0 && this.activity.midiProperties?.chooseEffects) { // WIP
+    if (chosenEffect === undefined && activityEffects.length > 0 && this.effectTargets.count > 0 && this.activity.midiProperties?.chooseEffects) { // WIP
       activityEffects = await this.chooseEffects(activityEffects, { activity: this.activity, activityUuid: this.activity.uuid, isOtherActivity: false });
     }
     if (otherActivityEffects.length > 0 && this.otherEffectTargets.count > 0 && this.otherActivity?.midiProperties?.chooseEffects) { // WIP
@@ -3424,7 +3445,9 @@ export class Workflow {
       "flags": {
         "dae": { transfer: false },
         "midi-qol": {
-          castData: this.castData
+          castData: this.castData,
+          // The use's choices go with the effects it applies (M28): read on later turns, after the card is gone
+          ...(Object.keys(this.choices).length ? { choices: this.choices } : {})
         }
       }
     };
@@ -9005,6 +9028,8 @@ export type WorkflowOptions = InexactPartial<{
   advantage: boolean;
   /** Every die the use rolls shows this face (M25: tests, examples): "min", "average", "max" or a position 0–1 in the die's range */
   fixedDice: FixedDice;
+  /** The activity's choices (M28), by id: not asked */
+  choices: Record<string, ChoiceValue>;
   allowIncapacitated: boolean;
   /**
    * Caller-supplied control over per-target attack splitting: true forces it on, false off,

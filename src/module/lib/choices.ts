@@ -1,0 +1,233 @@
+import type { Workflow } from "../Workflow.js";
+import { MODULE_ID } from "../../midi-qol.js";
+import type { Activity } from "../../globals.js";
+
+/*
+ * Choices (M28 data half; shapes ~/Documents/midi-next-waveB-shapes-2026-11-20.md): named choices an activity declares
+ * (`midiChoices`), asked once in the `midi-qol.Choices` step after target confirmation, before any roll; supplied by a
+ * caller (`workflowOptions.choices`) or, for an NPC with no player owner, its default. Stored on the use (the card's
+ * `state.choices`), copied to the effects it applies (`flags.midi-qol.choices`), read by conditions (`choices.<id>`).
+ * dnd5e's own damage type pick (a part with several types) is read from the rolls as `choices.damageType`, not stored.
+ */
+
+export type ChoiceKind = "damageType" | "option" | "ability" | "skill" | "creatureType" | "number" | "allocate" | "targets";
+export type ChoiceValue = string | number | string[] | Record<string, number>;
+
+export interface ChoiceDeclaration {
+  id: string;
+  label?: string;
+  kind: ChoiceKind;
+  options?: (string | { value: string, label?: string })[];
+  /** Options from the use: the damage parts' types; the activity's effects (the chosen one is the one applied) */
+  source?: "partTypes" | "effects";
+  default?: ChoiceValue;
+  min?: number;
+  max?: number | string;
+  /** allocate: a formula over the activity's roll data ("2 + @item.level") */
+  total?: string;
+  /** M15: kept per actor (declared now, not acted on) */
+  remember?: "standing";
+}
+
+/** One stored answer (a list: ids may have dots, which an update reads as a path) */
+export interface StoredChoice { id: string, value: ChoiceValue }
+
+const KINDS: readonly ChoiceKind[] = ["damageType", "option", "ability", "skill", "creatureType", "number", "allocate", "targets"];
+
+/** The activity's declarations that are well formed */
+export function choiceDeclarations(activity: Activity | undefined | null): ChoiceDeclaration[] {
+  const declared = activity?.midiChoices;
+  if (!Array.isArray(declared)) return [];
+  return declared.filter((d): d is ChoiceDeclaration => !!d && typeof d.id === "string" && !!d.id && KINDS.includes(d.kind));
+}
+
+interface Option { value: string, label: string }
+
+function configOptions(record: Record<string, { label?: string } | string> | undefined): Option[] {
+  return Object.entries(record ?? {}).map(([value, entry]) => ({ value, label: game.i18n?.localize(typeof entry === "string" ? entry : entry?.label ?? value) ?? value }));
+}
+
+/** The options of a list-like choice */
+export function choiceOptions(declaration: ChoiceDeclaration, workflow: Workflow): Option[] {
+  if (declaration.options?.length) return declaration.options.map(option => typeof option === "string"
+    ? { value: option, label: option } : { value: option.value, label: option.label ?? option.value });
+  const dnd5e = CONFIG.DND5E;
+  if (declaration.source === "partTypes") {
+    const types = new Set<string>();
+    for (const part of workflow.activity?.damage?.parts ?? []) for (const type of part.types ?? []) types.add(type);
+    return [...types].map(value => ({ value, label: game.i18n?.localize(dnd5e.damageTypes[value]?.label ?? value) ?? value }));
+  }
+  if (declaration.source === "effects") {
+    return (workflow.activity?.effects ?? []).flatMap(profile => {
+      const effect = workflow.activity?.item?.effects.get(profile._id ?? "");
+      return effect ? [{ value: effect.id ?? "", label: effect.name }] : [];
+    });
+  }
+  switch (declaration.kind) {
+    case "damageType": return configOptions(dnd5e.damageTypes);
+    case "ability": return configOptions(dnd5e.abilities);
+    case "skill": return configOptions(dnd5e.skills);
+    // @ts-expect-error no dnd5e-types
+    case "creatureType": return configOptions(dnd5e.creatureTypes);
+    default: return [];
+  }
+}
+
+function evaluateNumber(formula: string | number | undefined, workflow: Workflow): number | undefined {
+  if (typeof formula === "number") return formula;
+  if (!formula) return undefined;
+  const value = Number(new Roll(formula, workflow.activity?.getRollData() ?? {}).evaluateSync({ strict: false }).total);
+  return Number.isFinite(value) ? value : undefined;
+}
+
+/** A value is one this declaration can take (supplied values are checked, not trusted) */
+export function validChoice(declaration: ChoiceDeclaration, value: unknown, workflow: Workflow): value is ChoiceValue {
+  switch (declaration.kind) {
+    case "number": {
+      if (typeof value !== "number" || !Number.isFinite(value)) return false;
+      return (declaration.min === undefined || value >= declaration.min) && (typeof declaration.max !== "number" || value <= declaration.max);
+    }
+    case "allocate": {
+      if (!value || typeof value !== "object" || Array.isArray(value)) return false;
+      const counts = Object.values(value);
+      if (!counts.every(count => Number.isInteger(count) && count >= 0)) return false;
+      const total = evaluateNumber(declaration.total, workflow);
+      return total === undefined || counts.reduce((a, b) => a + b, 0) === total;
+    }
+    case "targets": {
+      if (!Array.isArray(value) || !value.every(uuid => typeof uuid === "string")) return false;
+      const max = evaluateNumber(declaration.max, workflow);
+      return max === undefined || value.length <= max;
+    }
+    default: {
+      if (typeof value !== "string") return false;
+      const options = choiceOptions(declaration, workflow);
+      return !options.length || options.some(option => option.value === value);
+    }
+  }
+}
+
+function escape(text: string) { return foundry.utils.escapeHTML(text); }
+
+/** The form for the choices still to answer */
+function choicesForm(declarations: ChoiceDeclaration[], workflow: Workflow): string {
+  const targets = workflow.targets.documents;
+  const rows = declarations.map((declaration, index) => {
+    const label = escape(declaration.label ?? declaration.id);
+    const name = `choice-${index}`;
+    switch (declaration.kind) {
+      case "number":
+        return `<div class="form-group"><label>${label}</label><input type="number" name="${name}" value="${Number(declaration.default ?? declaration.min ?? 0)}"
+          ${declaration.min !== undefined ? `min="${declaration.min}"` : ""} ${typeof declaration.max === "number" ? `max="${declaration.max}"` : ""}></div>`;
+      case "allocate": {
+        const total = evaluateNumber(declaration.total, workflow) ?? 0;
+        const each = targets.map((token, t) => `<div class="form-group"><label>${escape(token.name ?? "")}</label>
+          <input type="number" name="${name}-${t}" min="0" step="1" value="${t === 0 ? total : 0}"></div>`).join("");
+        return `<fieldset><legend>${label} (${total})</legend>${each}</fieldset>`;
+      }
+      case "targets": {
+        const each = targets.map((token, t) => `<label class="checkbox"><input type="checkbox" name="${name}-${t}"> ${escape(token.name ?? "")}</label>`).join("");
+        const max = evaluateNumber(declaration.max, workflow);
+        return `<fieldset><legend>${label}${max !== undefined ? ` (${max})` : ""}</legend>${each}</fieldset>`;
+      }
+      default: {
+        const options = choiceOptions(declaration, workflow).map(option =>
+          `<option value="${escape(option.value)}" ${option.value === declaration.default ? "selected" : ""}>${escape(option.label)}</option>`).join("");
+        return `<div class="form-group"><label>${label}</label><select name="${name}">${options}</select></div>`;
+      }
+    }
+  });
+  return rows.join("");
+}
+
+function readForm(declarations: ChoiceDeclaration[], data: Record<string, unknown>, workflow: Workflow): Record<string, ChoiceValue> {
+  const targets = workflow.targets.documents;
+  const answers: Record<string, ChoiceValue> = {};
+  declarations.forEach((declaration, index) => {
+    const name = `choice-${index}`;
+    if (declaration.kind === "number") answers[declaration.id] = Number(data[name]);
+    else if (declaration.kind === "allocate") {
+      answers[declaration.id] = Object.fromEntries(targets.map((token, t) => [token.uuid ?? "", Number(data[`${name}-${t}`] ?? 0)]));
+    } else if (declaration.kind === "targets") {
+      answers[declaration.id] = targets.filter((_, t) => !!data[`${name}-${t}`]).map(token => token.uuid ?? "");
+    } else answers[declaration.id] = String(data[name] ?? "");
+  });
+  return answers;
+}
+
+/** Ask the choices; undefined when the dialog was closed */
+async function askChoices(declarations: ChoiceDeclaration[], workflow: Workflow): Promise<Record<string, ChoiceValue> | undefined> {
+  for (;;) {
+    const data = await foundry.applications.api.DialogV2.input({
+      window: { title: `${workflow.activity?.name ?? workflow.item?.name ?? ""}: ${game.i18n?.localize(`${MODULE_ID}.Choices.Title`)}` },
+      content: choicesForm(declarations, workflow),
+      ok: { label: game.i18n?.localize(`${MODULE_ID}.Choices.Confirm`) ?? "OK" },
+      rejectClose: false
+    });
+    if (!data) return undefined;
+    const answers = readForm(declarations, data as Record<string, unknown>, workflow);
+    const invalid = declarations.filter(declaration => !validChoice(declaration, answers[declaration.id], workflow));
+    if (!invalid.length) return answers;
+    ui.notifications?.warn(game.i18n?.format(`${MODULE_ID}.Choices.Invalid`, { choices: invalid.map(d => d.label ?? d.id).join(", ") }) ?? "");
+  }
+}
+
+/**
+ * The Choices step's work: the activity's choices answered and stored on the use. False when the user closed the
+ * dialog (the use is abandoned).
+ */
+export async function resolveChoices(workflow: Workflow): Promise<boolean> {
+  const declarations = choiceDeclarations(workflow.activity);
+  if (!declarations.length) return true;
+  const supplied: Record<string, unknown> = workflow.workflowOptions.choices ?? {};
+  const answers: Record<string, ChoiceValue> = {};
+  const toAsk: ChoiceDeclaration[] = [];
+  for (const declaration of declarations) {
+    const kept = workflow.choices[declaration.id];
+    if (kept !== undefined) continue;
+    const given = supplied[declaration.id];
+    if (given !== undefined && validChoice(declaration, given, workflow)) answers[declaration.id] = given;
+    else if (declaration.default !== undefined && !workflow.actor?.hasPlayerOwner) answers[declaration.id] = declaration.default;
+    else toAsk.push(declaration);
+  }
+  if (toAsk.length) {
+    const asked = await askChoices(toAsk, workflow);
+    if (!asked) return false;
+    Object.assign(answers, asked);
+  }
+  for (const [id, value] of Object.entries(answers)) workflow.setChoice(id, value);
+  return true;
+}
+
+/** dnd5e's own damage type picks: the first damage roll whose part offered several types */
+export function rolledDamageTypeChoice(workflow: Workflow): string | undefined {
+  for (const roll of workflow.damageRolls ?? []) {
+    // @ts-expect-error no dnd5e-types
+    const { type, types } = roll.options ?? {};
+    if (typeof type === "string" && Array.isArray(types) && types.length > 1) return type;
+  }
+  return undefined;
+}
+
+/** A damage type choice from the parts' types sets the roll's type, as dnd5e's picker would; true if one did */
+export function applyDamageTypeChoice(workflow: Workflow, rolls: { options?: Record<string, unknown> }[]): boolean {
+  const declaration = choiceDeclarations(workflow.activity).find(d => d.kind === "damageType" && d.source === "partTypes");
+  const chosen = declaration ? workflow.choices[declaration.id] : undefined;
+  if (typeof chosen !== "string") return false;
+  let applied = false;
+  for (const roll of rolls) {
+    const types = roll.options?.types;
+    if (Array.isArray(types) && types.includes(chosen)) {
+      roll.options!.type = chosen;
+      applied = true;
+    }
+  }
+  return applied;
+}
+
+/** The effect a `source: "effects"` choice chose, if the activity has one answered */
+export function chosenEffectId(workflow: Workflow): string | undefined {
+  const declaration = choiceDeclarations(workflow.activity).find(d => d.source === "effects");
+  const chosen = declaration ? workflow.choices[declaration.id] : undefined;
+  return typeof chosen === "string" ? chosen : undefined;
+}

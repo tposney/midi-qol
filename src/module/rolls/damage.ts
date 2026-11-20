@@ -1,4 +1,5 @@
 import type { Activity, DND5ETargetDescriptor, Dnd5eSystem, RollDialogConfig, RollMessageConfig, RollProcessConfig } from "../../globals.js";
+import { applyDamageTypeChoice } from "../lib/choices.js";
 import { onActivityTypeAdopted } from "../activities/activityPrototype.js";
 import { hasConsumption } from "../activities/use.js";
 import { isMidiActivityType } from "../activities/midiActivity.js";
@@ -132,8 +133,9 @@ async function midiRollDamage(activity: Activity, wrapped: RollDamage, config: R
         if (keys.critical) rollConfig.isCritical = true;
         else if (keys.normal) rollConfig.isCritical = false;
         else if (!dialogConfig.configure) rollConfig.isCritical ||= rollConfig.midiOptions?.isCritical;
-        // A choice of damage types needs the dialog
-        if (activity.damage?.parts.some(part => part.types.size > 1)) dialogConfig.configure = true;
+        // A choice of damage types needs the dialog, unless the use's choices made it (M28)
+        if (applyDamageTypeChoice(workflow, rollConfig.rolls ?? [])) { /* chosen */ }
+        else if (activity.damage?.parts.some(part => part.types.size > 1)) dialogConfig.configure = true;
         // @ts-expect-error no dnd5e-types
         else if ((rollConfig.ammunition?.system.damage.base?.types.size ?? 0) > 1) dialogConfig.configure = true;
         else if ((activity.healing?.types?.size ?? 0) > 1) dialogConfig.configure = true;
@@ -361,6 +363,7 @@ function configureDamageRoll(rollConfig: RollProcessConfig): void {
     }
     const workflow = rollConfig.workflow as Workflow | undefined;
     if (!workflow) return;
+    applyDamageTypeChoice(workflow, rollConfig.rolls ?? []);
     // dnd5e 6.1's attacker ignore/downgrade rules for this roll: the use's damage applies them
     if (rollConfig.midiOptions?.updateWorkflow !== false) workflow.addDamageRules(rollConfig.applicationOptions);
     if (workflow.workflowType === "TrapWorkflow") workflow.rollOptions.fastForward = true;
