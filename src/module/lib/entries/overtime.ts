@@ -1,14 +1,16 @@
-import { MODULE_ID } from "../../../midi-qol.js";
+import { GameSystemConfig, MODULE_ID, i18n } from "../../../midi-qol.js";
+import { preferredActiveGM } from "../../GMAction.js";
 import { OnUseMacros } from "../../apps/Item.js";
 import { applyReplacementEffect } from "../../Hooks.js";
 import { TroubleShooter } from "../../apps/TroubleShooter.js";
 import {
-  buildOvertimeItemData, completeItemUse, createConditionData, evalCondition, expireEffects, getEffectStackCount,
-  getOrCreateTokenForActor, overTimeRemoveConditionMet, parseOvertimeDetails, replaceAtFields, splitOvertimeSpec,
-  type CountAction, type OvertimeDetails
+  buildOvertimeItemData, completeItemUse, createConditionData, doActivityOverTimeEffect, evalCondition, expireEffects,
+  getEffectStackCount, getOrCreateTokenForActor, handleActionSaveDialog, handleActionSaveRollRequest,
+  handleActionSaveRollResponse, overTimeRemoveConditionMet, parseOvertimeDetails, playerForActor, replaceAtFields,
+  splitOvertimeSpec, type ActionSaveContext, type CountAction, type OvertimeDetails
 } from "../../utils.js";
 import type { Workflow } from "../../Workflow.js";
-import { applyingActivity, registerAction, registerEffectEntryReader, type ActionRun } from "./engine.js";
+import { applyingActivity, registerAction, registerEffectEntryReader, registerMoment, type ActionRun } from "./engine.js";
 import type { Entry, EntryAction } from "./types.js";
 
 /*
@@ -49,9 +51,15 @@ export function overtimeEntries(effect: ActiveEffect.Implementation, actor: Acto
   changes.forEach((change, index) => {
     const value = typeof change.value === "string" ? change.value : String(change.value ?? "");
     const details = parseOvertimeDetails(value, rollData, effect.name);
-    if (!details || details.actionSave) return;
+    if (!details) return;
+    const multiplyByStacks = !(splitOvertimeSpec(value).damageRoll ?? "").includes("@stackCount");
+    if (details.actionSave) {
+      // Asked at the bearer's turn start, its cards cleared at turn end, a roll from its card answered (actionRoll)
+      entries.push({ id: `overtime-${index}`, on: ["turnStart", "turnEnd", ACTION_ROLL], do: [{ actionSave: { ...details, multiplyByStacks } }] });
+      return;
+    }
     const { turn, saveCount, failCount, actionSave: _actionSave, ...rest } = details;
-    const tick: Tick = { ...rest, multiplyByStacks: !(splitOvertimeSpec(value).damageRoll ?? "").includes("@stackCount") };
+    const tick: Tick = { ...rest, multiplyByStacks };
     const counted = (saveCount || failCount) && details.saveDC > -1;
     entries.push({
       id: `overtime-${index}`,
@@ -64,6 +72,18 @@ export function overtimeEntries(effect: ActiveEffect.Implementation, actor: Acto
   });
   return entries;
 }
+
+/** An effect's ActivityOverTime changes as entries: each a use of the named activity at the turn it chooses */
+export function activityOvertimeEntries(effect: ActiveEffect.Implementation): Entry[] {
+  // @ts-expect-error fvtt-types v14 ActiveEffect
+  const changes = (effect.system.changes as { key: string, value: unknown, priority?: number }[])
+    .filter(change => change.key.startsWith(`flags.${MODULE_ID}.ActivityOverTime`))
+    .sort((a, b) => (a.priority ?? 10) - (b.priority ?? 10));
+  return changes.map((change, index) => ({ id: `activity-overtime-${index}`, on: ["turnStart", "turnEnd"], do: [{ use: String(change.value ?? "") }] }));
+}
+
+/** A player's roll from an action save's card (chatMessageHandling), answered by the effect's actionSave entry */
+export const ACTION_ROLL = "overtime.actionRoll";
 
 type TickKind = "save" | "check" | "damage";
 
@@ -126,36 +146,10 @@ function tickFor(kind: TickKind, action: Record<string, unknown>, effect: Active
 let previousTick: Promise<void> = Promise.resolve();
 
 /**
- * The tick: a use on the bearer, on the applying item's card (its name and image, the entry's label) when that item
- * still exists, else on a card built from the spec as before; a save or a fail picks then/else.
+ * A tick's use on the bearer: its item built from the tick (on the applying item's card when that item still exists),
+ * run as a use of its origin's (or the bearer's), the outcome taken at RollComplete; null if the use failed.
  */
-const tickAction = (kind: TickKind) => async ({ action, found, context }: ActionRun): Promise<{ success?: boolean } | void> => {
-  const effect = found.document;
-  if (!(effect instanceof ActiveEffect)) return;
-  const actor = found.actor ?? context.actor;
-  const rollData = rollDataFor(actor, effect);
-  const tick = tickFor(kind, action, effect, rollData);
-  if (!tick) return;
-  if (tick.applyCondition) {
-    const value = replaceAtFields(tick.applyCondition, rollData, { blankValue: 0, maxIterations: 3 });
-    let applies = true;
-    try {
-      applies = !!await evalCondition(value, rollData, { async: true });
-    } catch (err) {
-      const message = `midi-qol | overtime tick | error evaluating the apply condition ${value} - assuming true`;
-      TroubleShooter.recordError(err, message);
-      console.warn(message, err);
-    }
-    if (!applies) return;
-  }
-  const permanent = !!effect.flags?.[MODULE_ID]?.overtime?.permanent;
-  if (permanent && !tick.damageRoll && !tick.macro) {
-    if (tick.removeCondition && await overTimeRemoveConditionMet(tick.removeCondition, rollData))
-      await expireEffects(actor, [effect], { "expiry-reason": "midi-qol:overTime" });
-    return;
-  }
-  // Evaluated before the tick, applied after it
-  const removeAfter = !!tick.removeCondition && await overTimeRemoveConditionMet(tick.removeCondition, rollData);
+async function runTickUse(actor: Actor.Implementation, effect: ActiveEffect.Implementation, tick: Tick, permanent: boolean): Promise<Workflow | undefined | null> {
   const details = { ...tick, turn: "start", saveCount: undefined, failCount: undefined, actionSave: undefined } as OvertimeDetails;
   const { itemData, activityData } = await buildOvertimeItemData({ actor, effect, details, label: tick.label, isPermanent: permanent });
   const target = getOrCreateTokenForActor(actor)!;
@@ -213,10 +207,46 @@ const tickAction = (kind: TickKind) => async ({ action, found, context }: Action
   } catch (err) {
     TroubleShooter.recordError(err, "midi-qol | overtime tick | completeItemUse");
     console.warn("midi-qol | overtime tick | completeItemUse error", err);
-    return;
+    return null;
   } finally {
     if (hookId !== undefined) Hooks.off("midi-qol.RollComplete", hookId);
   }
+  return workflow;
+}
+
+/**
+ * The tick: a use on the bearer, on the applying item's card (its name and image, the entry's label) when that item
+ * still exists, else on a card built from the spec as before; a save or a fail picks then/else.
+ */
+const tickAction = (kind: TickKind) => async ({ action, found, context }: ActionRun): Promise<{ success?: boolean } | void> => {
+  const effect = found.document;
+  if (!(effect instanceof ActiveEffect)) return;
+  const actor = found.actor ?? context.actor;
+  const rollData = rollDataFor(actor, effect);
+  const tick = tickFor(kind, action, effect, rollData);
+  if (!tick) return;
+  if (tick.applyCondition) {
+    const value = replaceAtFields(tick.applyCondition, rollData, { blankValue: 0, maxIterations: 3 });
+    let applies = true;
+    try {
+      applies = !!await evalCondition(value, rollData, { async: true });
+    } catch (err) {
+      const message = `midi-qol | overtime tick | error evaluating the apply condition ${value} - assuming true`;
+      TroubleShooter.recordError(err, message);
+      console.warn(message, err);
+    }
+    if (!applies) return;
+  }
+  const permanent = !!effect.flags?.[MODULE_ID]?.overtime?.permanent;
+  if (permanent && !tick.damageRoll && !tick.macro) {
+    if (tick.removeCondition && await overTimeRemoveConditionMet(tick.removeCondition, rollData))
+      await expireEffects(actor, [effect], { "expiry-reason": "midi-qol:overTime" });
+    return;
+  }
+  // Evaluated before the tick, applied after it
+  const removeAfter = !!tick.removeCondition && await overTimeRemoveConditionMet(tick.removeCondition, rollData);
+  const workflow = await runTickUse(actor, effect, tick, permanent);
+  if (workflow === null) return;
   if (removeAfter) {
     await expireEffects(actor, [effect], { "expiry-reason": "midi-qol:overTime" });
     return;
@@ -265,7 +295,87 @@ async function count({ action, found, context }: ActionRun): Promise<void> {
   await effect.update(updates);
 }
 
+/**
+ * An action save (`actionSave=dialog|roll`): the bearer repeats the save by spending its action. Dialog: asked at its
+ * turn start; roll: a prompt card at its turn start, the roll from it answered at actionRoll, the cards cleared at its
+ * turn end. The effect's tick then runs without a save (the save is the action's), and a success ends the effect.
+ * The old engine's per-change logic, unchanged.
+ */
+async function actionSave({ action, found, context, moment }: ActionRun): Promise<void> {
+  const effect = found.document;
+  if (!(effect instanceof ActiveEffect)) return;
+  const actor = found.actor ?? context.actor;
+  const details = action.actionSave as OvertimeDetails & { multiplyByStacks: boolean };
+  const isActionSave = moment === ACTION_ROLL;
+  const startTurn = moment === "turnStart" || isActionSave;
+  const endTurn = moment === "turnEnd";
+  const event = (context.event ?? {}) as { roll?: Roll, rollFlags?: Record<string, unknown> };
+  const rollData = rollDataFor(actor, effect);
+  if (details.applyCondition) {
+    const value = replaceAtFields(details.applyCondition, rollData, { blankValue: 0, maxIterations: 3 });
+    let applies = true;
+    try {
+      applies = !!await evalCondition(value, rollData, { async: true });
+    } catch (err) {
+      TroubleShooter.recordError(err, `midi-qol | action save | error evaluating the apply condition ${value} - assuming true`);
+    }
+    if (!applies) return;
+  }
+  const { turn, label, rollTypeString, saveAbilityString } = details;
+  const changeTurnStart = turn === "start";
+  const changeTurnEnd = turn === "end";
+  const messageFlavor: Record<string, string> = {
+    "save": `${GameSystemConfig.abilities[saveAbilityString]?.label ?? saveAbilityString} ${i18n("midi-qol.saving-throw")}`,
+    "check": `${GameSystemConfig.abilities[saveAbilityString]?.label ?? saveAbilityString} ${i18n("midi-qol.ability-check")}`,
+    "skill": `${GameSystemConfig.skills[saveAbilityString]?.label ?? saveAbilityString} ${i18n("midi-qol.skill-check")}`
+  };
+  const rollTypeArray = (rollTypeString.includes("|") ? rollTypeString.split("|") : [rollTypeString]).map(s => s.trim().toLowerCase());
+  if (endTurn) {
+    for (const uuid of effect.getFlag(MODULE_ID, "overtimeChatCardUuids") ?? []) (fromUuidSync(uuid) as ChatMessage.Implementation | undefined)?.delete();
+  }
+  if (isActionSave && details.actionSave === "dialog") return;
+  let owner: User.Implementation | null | undefined = playerForActor(actor) as User.Implementation | undefined ?? preferredActiveGM();
+  if (!owner?.active) owner = preferredActiveGM();
+  const ctx: ActionSaveContext = { actor, effect, details, owner, messageFlavor };
+  if (details.actionSave === "dialog" && startTurn) {
+    if (!await handleActionSaveDialog(ctx)) return;
+  } else if (details.actionSave === "roll" && isActionSave && event.roll) {
+    if (await handleActionSaveRollResponse(ctx, { saveToUse: event.roll, rollFlags: event.rollFlags }, rollTypeArray) !== undefined) return;
+  } else if (details.actionSave === "roll" && startTurn) {
+    if (await handleActionSaveRollRequest(ctx, changeTurnEnd) !== undefined) return;
+  }
+  const actionSaveSuccess = effect.flags?.[MODULE_ID]?.actionSaveSuccess;
+  if (actionSaveSuccess === true && changeTurnEnd) {
+    await expireEffects(actor, [effect], { "expiry-reason": "midi-qol:overTime:actionSave" });
+    return;
+  }
+  if (!((endTurn && changeTurnEnd) || (startTurn && changeTurnStart))) return;
+  // The save is the action's: the tick itself has none
+  if (!details.damageRoll && !details.macro) {
+    if (actionSaveSuccess || (details.removeCondition && await overTimeRemoveConditionMet(details.removeCondition, rollData)))
+      await expireEffects(actor, [effect], { "expiry-reason": "midi-qol:overTime" });
+    return;
+  }
+  const { saveCount: _s, failCount: _f, actionSave: _a, turn: _t, ...tick } = details;
+  // Evaluated before the tick, applied after it
+  const removeAfter = !!details.removeCondition && await overTimeRemoveConditionMet(details.removeCondition, rollData);
+  if (await runTickUse(actor, effect, tick, true) === null) return;
+  if (actionSaveSuccess) await expireEffects(actor, [effect], { "expiry-reason": "midi-qol:overTime:actionSave" });
+  else if (removeAfter) await expireEffects(actor, [effect], { "expiry-reason": "midi-qol:overTime" });
+}
+
+/** ActivityOverTime: a use of the named activity (the applying item's, or by uuid), as it always ran */
+async function activityUse({ action, found, context, moment }: ActionRun): Promise<void> {
+  const effect = found.document;
+  if (!(effect instanceof ActiveEffect) || (moment !== "turnStart" && moment !== "turnEnd")) return;
+  await doActivityOverTimeEffect(found.actor ?? context.actor, effect, moment === "turnStart", { onlyChange: String(action.use ?? "") });
+}
+
 export function registerOvertimeEntries() {
+  registerMoment(ACTION_ROLL, { label: "The bearer rolls an action save from its card" });
+  registerEffectEntryReader("midi-qol.activityOvertime", activityOvertimeEntries);
+  registerAction("actionSave", actionSave);
+  registerAction("use", activityUse);
   registerEffectEntryReader("midi-qol.overtime", overtimeEntries);
   registerAction("save", tickAction("save"), { priority: 10 });
   registerAction("check", tickAction("check"), { priority: 10 });

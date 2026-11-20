@@ -20,7 +20,7 @@ import { applyDamageRules, collectDamageRules, copyDamageOptions } from "./lib/d
 import type { AttackModifier } from "./Workflow.js";
 import { TokenDocumentSet, hookTarget, memberCount, rememberSyntheticToken, tokenOf } from "./lib/tokenDocumentSet.js";
 import { recordRollChange, rollBonusLabel } from "./lib/rollParts.js";
-import { debug, i18n, error, warn, busyWait, allAttackTypes, debugEnabled, overTimeEffectsToDelete, getStaticID, savedOverTimeEffectsToDelete, GameSystemConfig, systemConcentrationId, MQItemMacroLabel, MODULE_ID, midiReactionEffect, midiBonusActionEffect, MQActivityMacroLabel, ceInterface, i18nFormat } from "../midi-qol.js";
+import { debug, i18n, error, warn, busyWait, allAttackTypes, debugEnabled, getStaticID, GameSystemConfig, systemConcentrationId, MQItemMacroLabel, MODULE_ID, midiReactionEffect, midiBonusActionEffect, MQActivityMacroLabel, ceInterface, i18nFormat } from "../midi-qol.js";
 import { configSettings, autoRemoveTargets, checkRule, criticalDamage, criticalDamageGM, checkMechanic, safeGetGameSetting, autoRollDamageOptions, showReactionAttackRollOptions, shouldDisplaySaveDC, DOWNGRADE_IMMUNITY_KEY, ALL_DAMAGE_KEY } from "./settings.js";
 import { log } from "../midi-qol.js";
 import { AttributionEntry, AttributionMap, AttributionType, AugmentedEvent, DummyWorkflow, jsonSafe, Workflow, WorkflowOptions, WorkflowRollOptions } from "./Workflow.js";
@@ -1412,6 +1412,11 @@ export function replaceAtFields<T>(value: T, context: Record<string, string>, op
   return result;
 }
 
+/**
+ * Run an effect's over-time entries now (MidiQOL.doOverTimeEffect): its turn start's (`startTurn`) or turn end's, or,
+ * with `isActionSave`, the answer to a roll from an action save's card (`saveToUse`, `rollFlags`). On the GM; the
+ * entries are lib/entries (OverTime read as entries, lib/entries/overtime.ts).
+ */
 export async function doOverTimeEffect(actor: Actor.Implementation, effect: ActiveEffect.Implementation, startTurn: boolean = true, options: any = { saveToUse: undefined, rollFlags: undefined, isActionSave: false }) {
   if (game.user?.isGM)
     return gmOverTimeEffect(actor, effect, startTurn, options);
@@ -1424,7 +1429,8 @@ export async function doActivityOverTimeEffect(actor: Actor.Implementation, effe
   if (auraFlags.isAura && auraFlags.ignoreSelf) return;
   const owner = playerForActor(actor);
   // @ts-expect-error fvtt-types v14 ActiveEffect
-  const changes = effect.system.changes.filter(change => change.key.startsWith(`flags.${MODULE_ID}.ActivityOverTime`));
+  const changes = effect.system.changes.filter(change => change.key.startsWith(`flags.${MODULE_ID}.ActivityOverTime`)
+    && (options.onlyChange === undefined || String(change.value ?? "") === options.onlyChange));
   let requiresUserExecution = false;
   for (let change of changes) {
     const activity = await getOvertimeActivity(actor, effect, change, startTurn);
@@ -1469,7 +1475,8 @@ async function getOvertimeActivity(actor: Actor.Implementation, effect: ActiveEf
 export async function localActivityOverTimeEffect(actor: Actor.Implementation, effect: ActiveEffect.Implementation, startTurn: boolean = true, options: any = { saveToUse: undefined, rollFlags: undefined, rollMode: undefined }) {
   // Get the activity
   // @ts-expect-error fvtt-types v14 ActiveEffect
-  let changes = effect.system.changes.filter(change => change.key.startsWith(`flags.${MODULE_ID}.ActivityOverTime`));
+  let changes = effect.system.changes.filter(change => change.key.startsWith(`flags.${MODULE_ID}.ActivityOverTime`)
+    && (options.onlyChange === undefined || String(change.value ?? "") === options.onlyChange));
   changes = changes.sort((c1, c2) => (c1.priority ?? 10) - (c2.priority ?? 10));
   const castLevel = effect.flags?.[MODULE_ID]?.castData?.castLevel ?? 0;
   const spellLevel = effect.flags?.[MODULE_ID]?.castData?.baseLevel ?? 0;
@@ -1774,7 +1781,7 @@ export function countActionToString(action: CountAction): string {
 }
 
 /** Parameters for actionSave handler functions */
-interface ActionSaveContext {
+export interface ActionSaveContext {
   actor: Actor.Implementation;
   effect: ActiveEffect.Implementation;
   details: OvertimeDetails;
@@ -1786,7 +1793,7 @@ interface ActionSaveContext {
  * Handle actionSave="dialog" - prompts player with dialog to roll save
  * @returns true if effect should be processed further, false to skip
  */
-async function handleActionSaveDialog(ctx: ActionSaveContext): Promise<boolean> {
+export async function handleActionSaveDialog(ctx: ActionSaveContext): Promise<boolean> {
   const { actor, effect, details, owner } = ctx;
   const { saveDC, saveAbility, saveMagic, rollMode, rollTypeString } = details;
 
@@ -1849,7 +1856,7 @@ async function handleActionSaveDialog(ctx: ActionSaveContext): Promise<boolean> 
  * Handle actionSave="roll" response - process player's save roll
  * @returns effect.id if processing should stop, null to continue to next effect
  */
-async function handleActionSaveRollResponse(
+export async function handleActionSaveRollResponse(
   ctx: ActionSaveContext,
   options: { saveToUse?: any; rollFlags?: any },
   rollType: string[]
@@ -1887,7 +1894,7 @@ async function handleActionSaveRollResponse(
  * Handle actionSave="roll" request - create roll request chat cards
  * @returns effect.id if processing should stop, undefined to continue
  */
-async function handleActionSaveRollRequest(ctx: ActionSaveContext, changeTurnEnd: boolean): Promise<string | null | undefined> {
+export async function handleActionSaveRollRequest(ctx: ActionSaveContext, changeTurnEnd: boolean): Promise<string | null | undefined> {
   const { actor, effect, details, owner, messageFlavor } = ctx;
   const { saveAbility, saveDC, rollMode, label, rollTypeString } = details;
   // A save just rolled from the last card may have ended the effect (handleActionSaveRollResponse): nothing to ask for
@@ -2289,212 +2296,11 @@ export async function overTimeRemoveConditionMet(removeCondition: string, rollDa
   }
 }
 
-export async function gmOverTimeEffect(actor: Actor.Implementation, effect: ActiveEffect.Implementation, startTurn: boolean = true, options: any = { saveToUse: undefined, rollFlags: undefined, rollMode: undefined }) {
-  const endTurn = !startTurn;
-  if (effect.disabled || effect.isSuppressed) return;
-  const auraFlags = effect.flags?.ActiveAuras ?? {};
-  if (auraFlags.isAura && auraFlags.ignoreSelf) return;
-  const rollData = createConditionData({ actor, workflow: undefined, target: actor, effect });
-  if (!rollData.flags) rollData.flags = actor.flags;
-  rollData.flags.midiqol = rollData.flags[MODULE_ID];
-  // @ts-expect-error fvtt-types v14 ActiveEffect
-  const changes = effect.system.changes.filter(change => change.key.startsWith(`flags.${MODULE_ID}.OverTime`));
-  if (changes.length > 0) for (let change of changes) {
-    // flags.midi-qol.OverTime turn=start/end, damageRoll=rollspec, damageType=string, saveDC=number, saveAbility=str/dex/etc, damageBeforeSave=true/[false], label="String"
-    // Read the raw value - parseOvertimeDetails substitutes @fields before details.damageRoll exists.
-    // Only damageRoll counts; @stackCount in a condition says nothing about damage scaling.
-    const rawDamageRoll = typeof change.value === "string" ? (splitOvertimeSpec(change.value).damageRoll ?? "") : "";
-    const authorHandlesStacks = rawDamageRoll.includes("@stackCount");
-    const details = parseOvertimeDetails(change.value, rollData, effect.name);
-    if (!details) continue;
-    // The rest run as entries (lib/entries/overtime.ts)
-    if (options.onlyActionSaves && !details.actionSave) continue;
-
-    // Evaluate applyCondition
-    if (details.applyCondition) {
-      let value = replaceAtFields(details.applyCondition, rollData, { blankValue: 0, maxIterations: 3 });
-      let result;
-      try {
-        result = await evalCondition(value, rollData, { async: true });
-      } catch (err) {
-        const message = `midi-qol | gmOverTimeEffect | error when evaluating overtime apply condition ${value} - assuming true`;
-        TroubleShooter.recordError(err, message);
-        console.warn(message, err);
-        result = true;
-      }
-      if (!result) continue;
-    }
-
-    // Extract commonly used values from details
-    const { turn, label, rollTypeString, saveAbility, saveAbilityString, saveDC, rollMode, actionSave } = details;
-    const changeTurnStart = turn === "start";
-    const changeTurnEnd = turn === "end";
-
-    // Build message flavor for different roll types
-    const messageFlavor: Record<string, string> = {
-      "save": `${GameSystemConfig.abilities[saveAbilityString]?.label ?? saveAbilityString} ${i18n("midi-qol.saving-throw")}`,
-      "check": `${GameSystemConfig.abilities[saveAbilityString]?.label ?? saveAbilityString} ${i18n("midi-qol.ability-check")}`,
-      "skill": `${GameSystemConfig.skills[saveAbilityString]?.label ?? saveAbilityString} ${i18n("midi-qol.skill-check")}`
-    };
-    // For rollType as array matching later
-    const rollTypeArray = (rollTypeString.includes("|") ? rollTypeString.split("|") : [rollTypeString]).map(s => s.trim().toLowerCase());
-
-    if (endTurn) {
-      const chatCardUuids = effect.getFlag(MODULE_ID, "overtimeChatCardUuids");
-      if (chatCardUuids) for (let chatCardUuid of chatCardUuids) {
-        const chatCard = fromUuidSync(chatCardUuid) as ChatMessage.Implementation | undefined;
-        chatCard?.delete();
-      }
-    }
-
-    if (options.isActionSave && actionSave === "dialog") {
-      // generated by a save roll so we can ignore
-      continue;
-    }
-
-    // Get actor owner for actionSave handling
-    let owner = playerForActor(actor) ?? preferredActiveGM();
-    if (!owner?.active) owner = preferredActiveGM();
-
-    // Create context for actionSave handlers
-    const actionSaveCtx: ActionSaveContext = { actor, effect, details, owner, messageFlavor };
-
-    // Handle actionSave variants using helper functions
-    if (actionSave && startTurn && actionSave === "dialog") {
-      const shouldContinue = await handleActionSaveDialog(actionSaveCtx);
-      if (!shouldContinue) return effect.id;
-    } else if (actionSave && actionSave === "roll" && options.isActionSave && options.saveToUse) {
-      const result = await handleActionSaveRollResponse(actionSaveCtx, options, rollTypeArray);
-      if (result !== undefined) {
-        if (result === null) continue; // continue to next effect
-        return result;
-      }
-    } else if (actionSave === "roll" && startTurn) {
-      const result = await handleActionSaveRollRequest(actionSaveCtx, changeTurnEnd);
-      if (result !== undefined) return result;
-    }
-
-    let actionSaveSuccess = effect.flags?.[MODULE_ID]?.actionSaveSuccess;
-    if (actionSaveSuccess === true && changeTurnEnd) {
-      await expireEffects(actor, [effect], { "expiry-reason": "midi-qol:overTime:actionSave" });
-      return effect.id;
-    }
-    if ((endTurn && changeTurnEnd) || (startTurn && changeTurnStart)) {
-      // Extract values from typed details object (already parsed)
-      const { damageRoll, damageType, damageBeforeSave, macro: macroToCall, allowIncapacitated, killAnim, saveCount, failCount, fastForwardAttack, fastForwardDamage, autoRollAttack, autoRollDamage } = details;
-
-      if (debugEnabled > 0) warn(`gmOverTimeEffect | Overtime provided data is `, details);
-      if (debugEnabled > 0) warn(`gmOverTimeEffect | OverTime label=${label} startTurn=${startTurn} endTurn=${endTurn} damageBeforeSave=${damageBeforeSave} saveDC=${saveDC} saveAbility=${saveAbility} damageRoll=${damageRoll} damageType=${damageType}`);
-
-      // Build item and activity data using helper function
-      // isPermanent is true for actionSave items OR if effect was marked permanent by saveCount/failCount
-      const effectMarkedPermanent = !!effect.flags?.[MODULE_ID]?.overtime?.permanent;
-      const isPermanent = !!actionSave || effectMarkedPermanent;
-      // Nothing to roll (an action save is rolled from its own card): no workflow, so no empty card.
-      if (isPermanent && !damageRoll && !macroToCall) {
-        if (actionSaveSuccess || (details.removeCondition && await overTimeRemoveConditionMet(details.removeCondition, rollData)))
-          await expireEffects(actor, [effect], { "expiry-reason": "midi-qol:overTime" });
-        return effect.id;
-      }
-      const { itemData, activityData } = await buildOvertimeItemData({ actor, effect, details, label, isPermanent });
-
-      // roll the damage and save....
-      const theTargetToken = getOrCreateTokenForActor(actor)!;
-      // Target is passed via targetsToUse in the options below — no need to modify game.user.targets
-      // which would clobber the GM's real targets before completeActivityUse can save them.
-
-      // Repeat per stack by default; if the spec uses @stackCount the author scales it themselves.
-      if (damageRoll && activityData.damage?.parts?.[0]) {
-        let damageRollString = damageRoll;
-        if (!authorHandlesStacks) {
-          const stackCount = getEffectStackCount(effect, theTargetToken);
-          for (let i = 1; i < stackCount; i++)
-            damageRollString = `${damageRollString} + ${damageRoll}`;
-        }
-        activityData.damage.parts[0].custom.formula = damageRollString;
-      }
-
-      // Set additional item flags
-      foundry.utils.setProperty(itemData.flags, "midi-qol.forceCEOff", true);
-      if (killAnim) foundry.utils.setProperty(itemData.flags, "autoanimations.killAnim", true)
-      if (macroToCall) {
-        foundry.utils.setProperty(itemData, `flags.${MODULE_ID}.onUseMacroName`, macroToCall);
-        foundry.utils.setProperty(itemData, `flags.${MODULE_ID}.onUseMacroParts`, new OnUseMacros(macroToCall));
-      }
-
-      // Try and find the source actor for the overtime effect so that optional bonuses etc can fire.
-      let origin: any = fromUuidSync(effect.origin);
-      while (origin && !(origin instanceof Actor)) {
-        origin = origin?.parent;
-      }
-      itemData.system.activities = { "overtime": activityData };
-      foundry.utils.setProperty(itemData, `flags.${MODULE_ID}.syntheticItem`, true);
-      let ownedItem: Item = new CONFIG.Item.documentClass(itemData, { parent: ((origin instanceof Actor) ? origin : actor) });
-      ownedItem.prepareData();
-      // @ts-expect-error no dnd5e-types
-      ownedItem.prepareFinalAttributes();
-      // Register effect for save/fail count tracking if either is specified
-      // Skip registration if effect is already permanent (no save processing needed)
-      if (!actionSave && !isPermanent && (saveCount || failCount) && saveDC > -1 && effect.uuid) {
-        // @ts-expect-error no dnd5e-types
-        const activityUuid = ownedItem.system.activities.contents[0].uuid;
-        savedOverTimeEffectsToDelete[activityUuid] = {
-          uuid: effect.uuid,
-          saveCount: saveCount?.count,
-          saveCountAction: saveCount ? countActionToString(saveCount) : undefined,
-          saveConsecutive: saveCount?.consecutive ?? false,
-          failCount: failCount?.count,
-          failCountAction: failCount ? countActionToString(failCount) : undefined,
-          failConsecutive: failCount?.consecutive ?? false,
-        };
-      }
-
-      if (details.removeCondition) {
-        if (effect.uuid && await overTimeRemoveConditionMet(details.removeCondition, rollData)) {
-          // @ts-expect-error no dnd5e-types
-          const otKey = ownedItem.system.activities.contents[0].uuid;
-          overTimeEffectsToDelete[otKey] = { uuid: effect.uuid }
-        }
-      }
-      try {
-        const options = {
-          createWorkflow: true,
-          configureDialog: false,
-          saveDC,
-          fastForwardAttack,
-          fastForwardDamage,
-          autoRollAttack,
-          autoRollDamage: autoRollDamage ? "onHit" : "none",
-          checkGMStatus: true,
-          targetsToUse: new Set([theTargetToken]),
-          // targetUuids: [theTargetUuid],
-          ignoreUserTargets: true,
-          workflowOptions: { targetConfirmation: "none", isOverTime: true, allowIncapacitated, overTimeEffectUuid: effect.uuid ?? undefined }
-        };
-        await completeItemUse(ownedItem, { midiOptions: options }, { configure: false }, { rollMode: rollMode as keyof CONFIG.Dice.RollModes | undefined, systemCard: false }); // worried about multiple effects in flight so do one at a time
-        if (actionSaveSuccess) {
-          await expireEffects(actor, [effect], { "expiry-reason": "midi-qol:overTime:actionSave" });
-        }
-        /*
-        if (actionSaveSuccess !== undefined && !saveResultDisplayed) {
-          let content;
-          if (actionSaveSuccess) {
-            content = `${effect.name} ${messageFlavor[details.rollType]} ${i18n("midi-qol.save-success")}`;
-          } else {
-            content = `${effect.name} ${messageFlavor[details.rollType]} ${i18n("midi-qol.save-failure")}`;
-          }
-          ChatMessage.create({ content, speaker: ChatMessage.getSpeaker({ actor }) });
-        }
-        */
-        return effect.id;
-      } catch (err) {
-        const message = "midi-qol | completeItemUse | error";
-        TroubleShooter.recordError(err, message);
-        console.warn(message, err);
-      } finally {
-      }
-    }
-  }
+/** One effect's over-time entries at its turn start or end, or answering an action save's roll (doOverTimeEffect) */
+export async function gmOverTimeEffect(actor: Actor.Implementation, effect: ActiveEffect.Implementation, startTurn: boolean = true, options: any = {}) {
+  const moment = options?.isActionSave ? "overtime.actionRoll" : startTurn ? "turnStart" : "turnEnd";
+  await runMoment(moment, { actor, only: effect.uuid ?? undefined, ...(options?.isActionSave ? { event: { roll: options.saveToUse, rollFlags: options.rollFlags } } : {}) });
+  return effect.id;
 }
 
 /**
@@ -2507,14 +2313,8 @@ export async function processTurnOverTime(combat: Combat.Implementation, combata
   const actor = combatant?.actor;
   if (!actor) return;
   if (startTurn) removeActionUsed(actor);
-  // The bearer's entries at its turn (M15), converted OverTime included; action saves are still the old path's
+  // The bearer's entries at its turn (M15): OverTime and ActivityOverTime read as entries (lib/entries/overtime.ts)
   await runMoment(startTurn ? "turnStart" : "turnEnd", { actor, combat });
-  for (const effect of actor.appliedEffects) {
-    // @ts-expect-error fvtt-types v14 ActiveEffect
-    const keys: string[] = effect.system.changes.map(change => change.key);
-    if (keys.some(key => key.startsWith(`flags.${MODULE_ID}.OverTime`))) await doOverTimeEffect(actor, effect, startTurn, { onlyActionSaves: true });
-    if (keys.some(key => key.startsWith(`flags.${MODULE_ID}.ActivityOverTime`))) await doActivityOverTimeEffect(actor, effect, startTurn);
-  }
 }
 export async function completeActivityUse(activityRef: Activity | string | undefined,
   usage: ActivityUseConfiguration = {},

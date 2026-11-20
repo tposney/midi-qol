@@ -29,9 +29,13 @@ export interface MomentContext {
   /** The moment's own data, `event` in conditions */
   event?: Record<string, unknown>;
   combat?: Combat.Implementation | null;
+  /** Only the entries on this document (an effect's uuid): MidiQOL.doOverTimeEffect for one effect */
+  only?: string;
 }
 
 export interface ActionRun {
+  /** The moment the entry runs at */
+  moment: string;
   action: EntryAction;
   found: FoundEntry;
   context: MomentContext;
@@ -131,7 +135,8 @@ function collectByWho(context: MomentContext, momentId: string): FoundEntry[] {
 /** The entries a moment would run for this context, before conditions and limits (MidiQOL.entries.collect) */
 export function collectEntries(momentId: string, context: MomentContext): FoundEntry[] {
   const definition = moments.get(momentId)?.value;
-  return (definition?.collect ?? collectByWho)(context, momentId);
+  const list = (definition?.collect ?? collectByWho)(context, momentId);
+  return context.only ? list.filter(f => documentUuid(f.document) === context.only) : list;
 }
 
 /** The activity that applied an effect (dnd5e's system.origin, DAE's flags.dae.activity), while it still exists */
@@ -299,7 +304,7 @@ export async function runMoment(momentId: string, context: MomentContext): Promi
   const results: EntryRunResult[] = [];
   for (const { found: f, conditionData } of selectGroups(candidates.map(c => ({ ...c, entry: c.found.entry })))) {
     const ran: string[] = [];
-    await runActions(f.entry.do, { found: f, context, conditionData }, ran);
+    await runActions(f.entry.do, { moment: momentId, found: f, context, conditionData }, ran);
     if (ran.length) await spendEntryLimit(f, context);
     results.push({ entry: f.entry.id, document: documentUuid(f.document), actions: ran });
   }

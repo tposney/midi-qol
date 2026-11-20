@@ -2,7 +2,7 @@ import { registerDamageCalculationStep, runDamageCalculation } from "./steps/dam
 import { deprecation } from "./lib/compatLine.js";
 import { afterDamageApplied, consumeDamageApplication, runAfterDamageApplied, stampDamageApplication } from "./damage/application.js";
 import { applyDamageModifierStage } from "./services/damageModifiers/service.js";
-import { warn, error, debug, i18n, debugEnabled, overTimeEffectsToDelete, savedOverTimeEffectsToDelete, log, gameStats, GameSystemConfig, MODULE_ID, getStaticID, MIDI_IMPLYING_STATUSES } from "../midi-qol.js";
+import { warn, error, debug, i18n, debugEnabled, log, gameStats, GameSystemConfig, MODULE_ID, getStaticID, MIDI_IMPLYING_STATUSES } from "../midi-qol.js";
 import { excludeRegionSourceEffect, moveRegionsOnTurnChange } from "./regionBehaviors/MidiRegionActivityBehaviorType.js";
 import { colorChatMessageHandler, nsaMessageHandler, hideStuffHandler, hideRollUpdate, hideRollRender, checkOverTimeSaves } from "./chatMessageHandling.js";
 import { preferredActiveGM, processUndoDamageCard, whisperRollToPlayer } from "./GMAction.js";
@@ -540,111 +540,7 @@ export function initHooks() {
 
 
   Hooks.on("midi-qol.RollComplete", async (workflow) => {
-    const activityUuid = workflow.activity.uuid ?? "";
-    if (savedOverTimeEffectsToDelete[activityUuid]) {
-      const effectData = savedOverTimeEffectsToDelete[activityUuid];
-      let effect = fromUuidSync(effectData.uuid) as ActiveEffect.Implementation | undefined;
-
-      if (effect) {
-        const saved = workflow.saves.count === 1;
-        const failed = workflow.failedSaves.count === 1;
-        const { saveCount, saveCountAction, saveConsecutive,
-                failCount, failCountAction, failConsecutive } = effectData;
-        const actor = effect.parent as Actor.Implementation;
-
-        if (saved || !workflow.hasSave) {
-          // Handle saveCount - need multiple saves to trigger action
-          if (saved && saveCount !== undefined) {
-            let savesRemaining = foundry.utils.getProperty(effect, `flags.${MODULE_ID}.overtime.savesRemaining`) as number | undefined;
-            // Initialize if not set
-            if (savesRemaining === undefined) savesRemaining = saveCount;
-            savesRemaining -= 1;
-
-            if (savesRemaining <= 0) {
-              // Required saves reached - apply action
-              // Action format: [c][-+]effectSpec (e.g., "-", "+", "c-petrified", "c+prone")
-              const action = (saveCountAction ?? "-").replace(/^c/, ""); // Strip consecutive flag
-              const isRemove = action.startsWith("-");
-              const effectSpec = action.length > 1 ? action.slice(1) : undefined;
-
-              // Apply effectSpec if specified (always added to actor)
-              if (effectSpec) await applyReplacementEffect(actor, effectSpec, effect);
-
-              // Then handle the mode
-              if (isRemove) {
-                expireEffects(actor, [effect], { "expiry-reason": "midi-qol:overTime:saveCount" });
-              } else {
-                const permanentUpdate: Record<string, any> = { [`flags.${MODULE_ID}.overtime.permanent`]: true };
-                await effect.update(permanentUpdate);
-              }
-            } else {
-              // Decrement counter on effect
-              // If failCount is consecutive, a save resets the fail streak
-              const updates: Record<string, any> = {
-                [`flags.${MODULE_ID}.overtime.savesRemaining`]: savesRemaining
-              };
-              if (failConsecutive && failCount !== undefined) {
-                updates[`flags.${MODULE_ID}.overtime.failsRemaining`] = failCount;
-              }
-              await effect.update(updates);
-            }
-          } else {
-            // No saveCount specified - check if effect is already permanent
-            const isAlreadyPermanent = !!effect.flags?.[MODULE_ID]?.overtime?.permanent;
-            if (!isAlreadyPermanent) {
-              // Original behavior: single save removes the effect
-              expireEffects(actor, [effect], { "expiry-reason": "midi-qol:overTime" });
-            }
-            // If already permanent, do nothing - just let the overtime damage continue
-          }
-        } else if (failed && failCount !== undefined) {
-          // Handle failCount - multiple fails trigger action
-          let failsRemaining = foundry.utils.getProperty(effect, `flags.${MODULE_ID}.overtime.failsRemaining`) as number | undefined;
-          // Initialize if not set
-          if (failsRemaining === undefined) failsRemaining = failCount;
-          failsRemaining -= 1;
-
-          if (failsRemaining <= 0) {
-            // Required fails reached - apply action
-            const action = (failCountAction ?? "+").replace(/^c/, ""); // Strip consecutive flag
-            const isRemove = action.startsWith("-");
-            const effectSpec = action.length > 1 ? action.slice(1) : undefined;
-
-            // Apply effectSpec if specified (always added to actor)
-            if (effectSpec) await applyReplacementEffect(actor, effectSpec, effect);
-
-            // Then handle the mode
-            if (isRemove) {
-              expireEffects(actor, [effect], { "expiry-reason": "midi-qol:overTime:failCount" });
-            } else {
-              const permanentUpdate: Record<string, any> = { [`flags.${MODULE_ID}.overtime.permanent`]: true };
-              await effect.update(permanentUpdate);
-            }
-          } else {
-            // Decrement counter on effect
-            // If saveCount is consecutive, a failure resets the save streak
-            const updates: Record<string, any> = {
-              [`flags.${MODULE_ID}.overtime.failsRemaining`]: failsRemaining
-            };
-            if (saveConsecutive && saveCount !== undefined) {
-              updates[`flags.${MODULE_ID}.overtime.savesRemaining`] = saveCount;
-            }
-            await effect.update(updates);
-          }
-        } else if (failed && saveConsecutive && saveCount !== undefined) {
-          // Failed but no failCount to process — still need to reset consecutive save streak
-          const resetUpdate: Record<string, any> = { [`flags.${MODULE_ID}.overtime.savesRemaining`]: saveCount };
-          await effect.update(resetUpdate);
-        }
-      }
-      delete savedOverTimeEffectsToDelete[activityUuid];
-    }
-    if (overTimeEffectsToDelete[activityUuid]) {
-      let effect = fromUuidSync(overTimeEffectsToDelete[activityUuid].uuid) as ActiveEffect.Implementation | undefined;
-      if (effect) expireEffects(effect.parent as Actor.Implementation, [effect], { "expiry-reason": "midi-qol:overTime" });
-      delete overTimeEffectsToDelete[activityUuid];
-    }
-    if (debugEnabled > 1) debug("Finished the roll", activityUuid, workflow.id)
+    if (debugEnabled > 1) debug("Finished the roll", workflow.activity?.uuid, workflow.id)
   });
 
   Hooks.on("applyActiveEffect", midiCustomEffect);
