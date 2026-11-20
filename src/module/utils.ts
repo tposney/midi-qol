@@ -13,6 +13,7 @@ import { bonusPromptService } from "./services/rollBonuses/prompt.js";
 import { applyOfferedBonus, collectBonusCandidates, type BonusCost, type BonusPhase, type OfferedBonus, type RollBonusQuery } from "./services/rollBonuses/service.js";
 import { addCosts as addBonusCosts, canAfford as canAffordBonus, orderForApplication } from "./services/rollBonuses/rules.js";
 import { parseFlagValue } from "./rules/optionalFlags.js";
+import { bonusSession } from "./services/rollBonuses/session.js";
 import { crossesOppositeSides, opposedByAngle } from "./services/flanking/rules.js";
 import { DialogCountdown } from "./lib/dialogCountdown.js";
 import { coverBetween, coverFor } from "./services/cover/service.js";
@@ -4796,13 +4797,16 @@ export async function bonusDialog(
   const query: RollBonusQuery = bonusQuery ?? { kind: rollType === "attackRoll" ? "attack" : rollType === "damageRoll" ? "damage" : OPTIONAL_AC_KEYS.includes(flagSelector) ? "ac" : "save",
     actor: this.actor, ...(this instanceof Workflow ? { workflow: this } : {}) };
   const candidateContext = (current: Roll) => ({ query, phase: bonusPhase, roll: current });
+  // The roll's session across its phases (stage 3b): what was spent, applied and declined
+  const rollCount = this instanceof Workflow ? (rollType === "attackRoll" ? this.attackRollCount : rollType === "damageRoll" ? this.damageRollCount : 0) : 0;
+  const session = bonusSession(this, `${rollType}:${rollCount}`);
   // The flags as candidates (rollBonuses 6b): one per button the prompt shows (a flag's selector value, its .all value),
   // applied by the flag's own behaviour (applyFlag), its count spent there
   const flagCandidates = (flagName: string, optional: boolean): OfferedBonus[] =>
     flagBonusButtons(this.actor, flagName, flagSelector, ownerOf(flagName), this.item).map((button, index) => {
       const parsed = parseFlagValue(button.value);
       return {
-        id: `${flagName}#${index}`, contributor: "midi-qol.optionalFlags", label: button.label, iconHTML: button.icon,
+        id: `${flagName}#${flagSelector}#${index}`, contributor: "midi-qol.optionalFlags", label: button.label, iconHTML: button.icon,
         flagKey: flagName, flagLabel: bonusLabel(flagName), phases: [bonusPhase],
         effect: parsed && "effect" in parsed ? parsed.effect : { kind: "rider" }, optional, spendsOwnCost: true,
         apply: (ctx: { roll: Roll }) => applyFlag(button, ctx.roll)
@@ -4812,16 +4816,22 @@ export async function bonusDialog(
   if (!bonusQuery) optionalCandidates = [];
   const automatic: OfferedBonus[] = [...forcedFlags.map(flagName => flagCandidates(flagName, false)[0]).filter((c): c is OfferedBonus => !!c),
     ...(bonusQuery ? automaticCandidates : [])];
-  optionalCandidates = [...validFlags.flatMap(flagName => flagCandidates(flagName, true)), ...optionalCandidates];
+  optionalCandidates = [...validFlags.flatMap(flagName => flagCandidates(flagName, true)), ...optionalCandidates]
+    .filter(c => !session.declined.has(c.id) && !session.applied.has(c.id));
   // What chosen bonuses have spent this roll: a later one drawing on the same pool must still fit
-  let bonusSpent: BonusCost = {};
+  let bonusSpent: BonusCost = session.spent;
+  const tookBonus = (candidate: OfferedBonus) => {
+    if (!candidate.flagKey) session.applied.add(candidate.id);
+    session.spent = bonusSpent;
+  };
   const stillAffordable = () => { optionalCandidates = optionalCandidates.filter(c => canAffordBonus(c.cost, bonusSpent)); };
   if (automatic.length) {
     const before = roll;
-    for (const candidate of orderForApplication(automatic)) {
+    for (const candidate of orderForApplication(automatic.filter(c => !session.applied.has(c.id)))) {
       if (!canAffordBonus(candidate.cost, bonusSpent)) continue;
       roll = newRoll = await applyOfferedBonus(candidate, candidateContext(roll), bonusRollData);
       bonusSpent = addBonusCosts(bonusSpent, candidate.cost);
+      tookBonus(candidate);
       usedLabels.push(candidate.flagLabel ?? candidate.label);
     }
     if (roll !== before) recordRollChange(roll, before, usedLabels);
@@ -4836,6 +4846,8 @@ export async function bonusDialog(
   if (optionalCandidates.length === 0) return roll;
   // What the dialog's bonuses change is recorded against the roll they were offered on
   const offeredOn = roll;
+  const offered = optionalCandidates.map(c => c.id);
+  const taken = new Set<string>();
   const automaticLabels = usedLabels.length;
   const onCandidate = async (dialog: RollModifyDialog, button: { candidate: OfferedBonus }) => {
     const candidate = button.candidate;
@@ -4843,6 +4855,8 @@ export async function bonusDialog(
     roll = newRoll;
     usedLabels.push(candidate.flagLabel ?? candidate.label);
     bonusSpent = addBonusCosts(bonusSpent, candidate.cost);
+    tookBonus(candidate);
+    taken.add(candidate.id);
     // A flag's other value goes with it, and a flag whose count is used up
     optionalCandidates = optionalCandidates.filter(c => c.id !== candidate.id && (!candidate.flagKey || c.flagKey !== candidate.flagKey)
       && (!c.flagKey || getOptionalCountRemaining(this.actor, `${c.flagKey}.count`, ownerOf(c.flagKey)) >= 1));
@@ -4872,6 +4886,8 @@ export async function bonusDialog(
       // The new roll has had dsn display done for each bonus term/reroll so mark it as displayed
       DSNMarkDiceDisplayed(newRoll);
       if (newRoll !== offeredOn) recordRollChange(newRoll, offeredOn, usedLabels.slice(automaticLabels));
+      // Offered and not taken: not asked again in this roll's later phases
+      for (const id of offered) if (!taken.has(id)) session.declined.add(id);
 
       if (showRoll && newRoll !== originalRoll) {
         //@ts-expect-error
