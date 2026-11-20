@@ -1,7 +1,7 @@
 import { checkMechanic, configSettings } from "../settings.js";
 import type { Activity } from "../../globals.js";
 import { DummyWorkflow, type AttributionEntry } from "../Workflow.js";
-import { attributionMapToArray, checkActivityRange, computeTargetAC, getOrCreateTokenForActor, getToken, getTokenDocument, isRangeCheckable, speakerFor } from "../utils.js";
+import { attributionMapToArray, checkActivityRange, computeTargetAC, getOrCreateTokenForActor, getToken, getTokenDocument, isRangeCheckable, activityHasAreaTarget, speakerFor } from "../utils.js";
 import { getDistance } from "../services/distance/service.js";
 import { isMidiActivityType } from "../activities/midiActivity.js";
 import { setupCanSeeSense } from "../activities/useChecks.js";
@@ -26,8 +26,8 @@ export interface PreviewTarget {
   distance?: number;
   /**
    * "normal", "dis" (long range: disadvantage) or "fail" (out of reach), for any activity with a range. `checked`: the
-   * use would act on it (midi checks ranged and thrown attacks, by the Check range setting); a melee attack's reach is
-   * reported but not checked by the use.
+   * use would refuse a target out of range (the Check range setting; not for area targeting); long range gives
+   * disadvantage only to ranged and thrown attacks.
    */
   range?: { result: string, range?: number, longRange?: number, checked: boolean };
   /** The AC the attack would be compared with, and its cover */
@@ -76,10 +76,10 @@ async function previewTarget(activity: Activity, attacker: Token.Implementation 
   }
   if (attacker && targetToken && activity.range) {
     const range = checkActivityRange(activity, attacker, new Set([targetToken]), false);
-    const checked = checkMechanic("checkRange") !== "none" && isRangeCheckable(activity);
+    // As the use: the pre-use check refuses out of range (useChecks), the preamble gives long range to ranged and thrown attacks
+    const checked = checkMechanic("checkRange") !== "none" && !activityHasAreaTarget(activity);
     result.range = { result: range.result, range: range.range, longRange: range.longRange, checked };
-    // As the use: long range only where the use checks it
-    workflow.longRangeAttack = checked && range.result === "dis";
+    workflow.longRangeAttack = checked && isRangeCheckable(activity) && range.result === "dis";
   }
   if (activity.attack) {
     await workflow.checkAttackAdvantage();
