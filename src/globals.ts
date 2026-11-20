@@ -281,6 +281,12 @@ declare module "fvtt-types/configuration" {
         transfer?: boolean;
       };
       "midi-qol"?: {
+        /** M15: entries (lib/entries) */
+        entries?: import("./module/lib/entries/types.js").Entry[];
+        /** M15: an entry's counts on its effect (saves, fails, used), by entry id */
+        entryState?: Record<string, Record<string, number>>;
+        /** M28: the applying use's choices, copied to the effect */
+        choices?: Record<string, unknown>;
         actionSaveSuccess?: boolean;
         /** Applied by a midi region rule: the region behaviour and the source effect */
         regionRule?: { behavior?: string; effect?: string };
@@ -321,6 +327,8 @@ declare module "fvtt-types/configuration" {
         previousActorIds?: string[];
       };
       "midi-qol"?: {
+        /** M15: per-turn and per-round entry limits, stamped (lib/entries/limits.ts) */
+        entryLimits?: import("./module/lib/entries/limits.js").StoredLimit[];
         dependentOn?: string; // UUID of parent document for midi-qol dependent tracking
         actions?: {
           // This really should be structured but actions.reaction is used in other modules and macros
@@ -642,6 +650,8 @@ declare module "fvtt-types/configuration" {
         }
       };
       "midi-qol"?: {
+        /** M15: entries (lib/entries) */
+        entries?: import("./module/lib/entries/types.js").Entry[];
         dependentOn?: string; // UUID of parent document for midi-qol dependent tracking
         onUseMacroParts?: OnUseMacros;
         onUseMacroName?: string;

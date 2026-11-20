@@ -9,6 +9,7 @@ import { settingsApi } from "./module/lib/settingsRegistry.js";
 import { useTrace, saveUseTrace } from "./module/lib/useTrace.js";
 import { why } from "./module/lib/why.js";
 import { preview } from "./module/lib/preview.js";
+import { entriesApi, registerMidiEntryActions } from "./module/lib/entries/engine.js";
 import { outcomes } from "./module/lib/outcomes.js";
 import { registerTag, registerMidiTags, tagValue, tagNames, tagDefinition, replacedTags, tagsView } from "./module/lib/tags.js";
 import { installFixedDice, withFixedDice } from "./module/lib/fixedDice.js";
@@ -333,6 +334,7 @@ Object.assign(globalThis.MidiQOL, {
       previewFlow(activity, options, configSettings.savesBeforeDamage ? "midi-qol.savesFirst" : "midi-qol.standard")
   },
   steps: stepsApi,
+  entries: entriesApi,
   requests: requestsApi,
   damageCalculation: { get: getDamageCalculationStep, register: registerDamageCalculationStep, remove: removeDamageCalculationStep, order: damageCalculationOrder },
   UNMEASURABLE_DISTANCE,
@@ -515,6 +517,7 @@ Hooks.once('init', async function () {
   defineRevealPolicyService();
   defineTokenNamesService();
   registerMidiIssueContributors();
+  registerMidiEntryActions();
   setupLedgerEvents();
   defineRangeService();
   defineBonusPromptService(() => `midi-qol.${safeGetGameSetting("midi-qol", "BonusPrompt") ?? "phased"}`);

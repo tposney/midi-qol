@@ -66,6 +66,7 @@
     "economy",
     "enableWorkflow",
     "encodeWorkflowOptions",
+    "entries",
     "evalAllConditions",
     "evalCondition",
     "exportSettingsToJSON",
