@@ -38,6 +38,10 @@ export type RecordFacts = {
     otherDamage?: boolean;
     ammunitionDamage?: boolean;
     preSelected?: number | null;
+    canSee?: boolean;
+    canSense?: boolean;
+    seesActor?: boolean;
+    sensesActor?: boolean;
     hitClass?: string | null;
     hitSymbol?: string | null;
     hitShowAC?: boolean | null;
@@ -2029,6 +2033,58 @@ export declare function cardStateSchema(): {
             readonly required: boolean;
             readonly initial: undefined;
         }>>;
+        readonly canSee: import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField<{
+            required: boolean;
+            initial: undefined;
+        }, import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.AssignmentType<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.DefaultOptions, {
+            required: boolean;
+            initial: undefined;
+        }>>, import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.InitializedType<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.DefaultOptions, {
+            required: boolean;
+            initial: undefined;
+        }>>, import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.InitializedType<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.DefaultOptions, {
+            required: boolean;
+            initial: undefined;
+        }>>>;
+        readonly canSense: import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField<{
+            required: boolean;
+            initial: undefined;
+        }, import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.AssignmentType<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.DefaultOptions, {
+            required: boolean;
+            initial: undefined;
+        }>>, import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.InitializedType<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.DefaultOptions, {
+            required: boolean;
+            initial: undefined;
+        }>>, import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.InitializedType<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.DefaultOptions, {
+            required: boolean;
+            initial: undefined;
+        }>>>;
+        readonly seesActor: import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField<{
+            required: boolean;
+            initial: undefined;
+        }, import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.AssignmentType<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.DefaultOptions, {
+            required: boolean;
+            initial: undefined;
+        }>>, import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.InitializedType<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.DefaultOptions, {
+            required: boolean;
+            initial: undefined;
+        }>>, import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.InitializedType<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.DefaultOptions, {
+            required: boolean;
+            initial: undefined;
+        }>>>;
+        readonly sensesActor: import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField<{
+            required: boolean;
+            initial: undefined;
+        }, import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.AssignmentType<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.DefaultOptions, {
+            required: boolean;
+            initial: undefined;
+        }>>, import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.InitializedType<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.DefaultOptions, {
+            required: boolean;
+            initial: undefined;
+        }>>, import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.InitializedType<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.DefaultOptions, {
+            required: boolean;
+            initial: undefined;
+        }>>>;
         readonly uuid: import("fvtt-types/src/foundry/common/data/fields.mjs").StringField<{
             readonly required: true;
             readonly blank: false;
@@ -2254,6 +2310,58 @@ export declare function cardStateSchema(): {
             readonly required: boolean;
             readonly initial: undefined;
         }>>;
+        readonly canSee: import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField<{
+            required: boolean;
+            initial: undefined;
+        }, import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.AssignmentType<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.DefaultOptions, {
+            required: boolean;
+            initial: undefined;
+        }>>, import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.InitializedType<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.DefaultOptions, {
+            required: boolean;
+            initial: undefined;
+        }>>, import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.InitializedType<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.DefaultOptions, {
+            required: boolean;
+            initial: undefined;
+        }>>>;
+        readonly canSense: import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField<{
+            required: boolean;
+            initial: undefined;
+        }, import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.AssignmentType<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.DefaultOptions, {
+            required: boolean;
+            initial: undefined;
+        }>>, import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.InitializedType<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.DefaultOptions, {
+            required: boolean;
+            initial: undefined;
+        }>>, import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.InitializedType<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.DefaultOptions, {
+            required: boolean;
+            initial: undefined;
+        }>>>;
+        readonly seesActor: import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField<{
+            required: boolean;
+            initial: undefined;
+        }, import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.AssignmentType<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.DefaultOptions, {
+            required: boolean;
+            initial: undefined;
+        }>>, import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.InitializedType<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.DefaultOptions, {
+            required: boolean;
+            initial: undefined;
+        }>>, import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.InitializedType<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.DefaultOptions, {
+            required: boolean;
+            initial: undefined;
+        }>>>;
+        readonly sensesActor: import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField<{
+            required: boolean;
+            initial: undefined;
+        }, import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.AssignmentType<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.DefaultOptions, {
+            required: boolean;
+            initial: undefined;
+        }>>, import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.InitializedType<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.DefaultOptions, {
+            required: boolean;
+            initial: undefined;
+        }>>, import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.InitializedType<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.DefaultOptions, {
+            required: boolean;
+            initial: undefined;
+        }>>>;
         readonly uuid: import("fvtt-types/src/foundry/common/data/fields.mjs").StringField<{
             readonly required: true;
             readonly blank: false;
@@ -2317,6 +2425,22 @@ export declare function cardStateSchema(): {
             readonly required: boolean;
             readonly initial: undefined;
         }>;
+        canSee: import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.InitializedType<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.DefaultOptions, {
+            required: boolean;
+            initial: undefined;
+        }>>;
+        canSense: import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.InitializedType<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.DefaultOptions, {
+            required: boolean;
+            initial: undefined;
+        }>>;
+        seesActor: import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.InitializedType<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.DefaultOptions, {
+            required: boolean;
+            initial: undefined;
+        }>>;
+        sensesActor: import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.InitializedType<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.DefaultOptions, {
+            required: boolean;
+            initial: undefined;
+        }>>;
         uuid: string;
     }, {
         hitShowAC: import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.InitializedType<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.DefaultOptions, {
@@ -2377,6 +2501,22 @@ export declare function cardStateSchema(): {
             readonly required: boolean;
             readonly initial: undefined;
         }>;
+        canSee: import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.InitializedType<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.DefaultOptions, {
+            required: boolean;
+            initial: undefined;
+        }>>;
+        canSense: import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.InitializedType<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.DefaultOptions, {
+            required: boolean;
+            initial: undefined;
+        }>>;
+        seesActor: import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.InitializedType<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.DefaultOptions, {
+            required: boolean;
+            initial: undefined;
+        }>>;
+        sensesActor: import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.InitializedType<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.DefaultOptions, {
+            required: boolean;
+            initial: undefined;
+        }>>;
         uuid: string;
     }>, import("fvtt-types/src/foundry/common/data/fields.mjs").TypedObjectField.DefaultOptions, import("fvtt-types/src/foundry/common/data/fields.mjs").TypedObjectField.AssignmentType<import("fvtt-types/src/foundry/common/data/fields.mjs").SchemaField<{
         readonly hitShowAC: import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField<{
@@ -2599,6 +2739,58 @@ export declare function cardStateSchema(): {
             readonly required: boolean;
             readonly initial: undefined;
         }>>;
+        readonly canSee: import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField<{
+            required: boolean;
+            initial: undefined;
+        }, import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.AssignmentType<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.DefaultOptions, {
+            required: boolean;
+            initial: undefined;
+        }>>, import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.InitializedType<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.DefaultOptions, {
+            required: boolean;
+            initial: undefined;
+        }>>, import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.InitializedType<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.DefaultOptions, {
+            required: boolean;
+            initial: undefined;
+        }>>>;
+        readonly canSense: import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField<{
+            required: boolean;
+            initial: undefined;
+        }, import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.AssignmentType<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.DefaultOptions, {
+            required: boolean;
+            initial: undefined;
+        }>>, import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.InitializedType<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.DefaultOptions, {
+            required: boolean;
+            initial: undefined;
+        }>>, import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.InitializedType<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.DefaultOptions, {
+            required: boolean;
+            initial: undefined;
+        }>>>;
+        readonly seesActor: import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField<{
+            required: boolean;
+            initial: undefined;
+        }, import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.AssignmentType<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.DefaultOptions, {
+            required: boolean;
+            initial: undefined;
+        }>>, import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.InitializedType<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.DefaultOptions, {
+            required: boolean;
+            initial: undefined;
+        }>>, import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.InitializedType<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.DefaultOptions, {
+            required: boolean;
+            initial: undefined;
+        }>>>;
+        readonly sensesActor: import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField<{
+            required: boolean;
+            initial: undefined;
+        }, import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.AssignmentType<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.DefaultOptions, {
+            required: boolean;
+            initial: undefined;
+        }>>, import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.InitializedType<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.DefaultOptions, {
+            required: boolean;
+            initial: undefined;
+        }>>, import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.InitializedType<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.DefaultOptions, {
+            required: boolean;
+            initial: undefined;
+        }>>>;
         readonly uuid: import("fvtt-types/src/foundry/common/data/fields.mjs").StringField<{
             readonly required: true;
             readonly blank: false;
@@ -2824,6 +3016,58 @@ export declare function cardStateSchema(): {
             readonly required: boolean;
             readonly initial: undefined;
         }>>;
+        readonly canSee: import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField<{
+            required: boolean;
+            initial: undefined;
+        }, import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.AssignmentType<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.DefaultOptions, {
+            required: boolean;
+            initial: undefined;
+        }>>, import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.InitializedType<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.DefaultOptions, {
+            required: boolean;
+            initial: undefined;
+        }>>, import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.InitializedType<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.DefaultOptions, {
+            required: boolean;
+            initial: undefined;
+        }>>>;
+        readonly canSense: import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField<{
+            required: boolean;
+            initial: undefined;
+        }, import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.AssignmentType<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.DefaultOptions, {
+            required: boolean;
+            initial: undefined;
+        }>>, import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.InitializedType<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.DefaultOptions, {
+            required: boolean;
+            initial: undefined;
+        }>>, import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.InitializedType<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.DefaultOptions, {
+            required: boolean;
+            initial: undefined;
+        }>>>;
+        readonly seesActor: import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField<{
+            required: boolean;
+            initial: undefined;
+        }, import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.AssignmentType<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.DefaultOptions, {
+            required: boolean;
+            initial: undefined;
+        }>>, import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.InitializedType<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.DefaultOptions, {
+            required: boolean;
+            initial: undefined;
+        }>>, import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.InitializedType<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.DefaultOptions, {
+            required: boolean;
+            initial: undefined;
+        }>>>;
+        readonly sensesActor: import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField<{
+            required: boolean;
+            initial: undefined;
+        }, import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.AssignmentType<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.DefaultOptions, {
+            required: boolean;
+            initial: undefined;
+        }>>, import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.InitializedType<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.DefaultOptions, {
+            required: boolean;
+            initial: undefined;
+        }>>, import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.InitializedType<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.DefaultOptions, {
+            required: boolean;
+            initial: undefined;
+        }>>>;
         readonly uuid: import("fvtt-types/src/foundry/common/data/fields.mjs").StringField<{
             readonly required: true;
             readonly blank: false;
@@ -2887,6 +3131,22 @@ export declare function cardStateSchema(): {
             readonly required: boolean;
             readonly initial: undefined;
         }>;
+        canSee: import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.InitializedType<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.DefaultOptions, {
+            required: boolean;
+            initial: undefined;
+        }>>;
+        canSense: import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.InitializedType<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.DefaultOptions, {
+            required: boolean;
+            initial: undefined;
+        }>>;
+        seesActor: import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.InitializedType<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.DefaultOptions, {
+            required: boolean;
+            initial: undefined;
+        }>>;
+        sensesActor: import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.InitializedType<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.DefaultOptions, {
+            required: boolean;
+            initial: undefined;
+        }>>;
         uuid: string;
     }, {
         hitShowAC: import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.InitializedType<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.DefaultOptions, {
@@ -2947,6 +3207,22 @@ export declare function cardStateSchema(): {
             readonly required: boolean;
             readonly initial: undefined;
         }>;
+        canSee: import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.InitializedType<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.DefaultOptions, {
+            required: boolean;
+            initial: undefined;
+        }>>;
+        canSense: import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.InitializedType<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.DefaultOptions, {
+            required: boolean;
+            initial: undefined;
+        }>>;
+        seesActor: import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.InitializedType<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.DefaultOptions, {
+            required: boolean;
+            initial: undefined;
+        }>>;
+        sensesActor: import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.InitializedType<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.DefaultOptions, {
+            required: boolean;
+            initial: undefined;
+        }>>;
         uuid: string;
     }>, import("fvtt-types/src/foundry/common/data/fields.mjs").TypedObjectField.DefaultOptions>, {
         [x: string]: {
@@ -3008,6 +3284,22 @@ export declare function cardStateSchema(): {
                 readonly required: boolean;
                 readonly initial: undefined;
             }>;
+            canSee: import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.InitializedType<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.DefaultOptions, {
+                required: boolean;
+                initial: undefined;
+            }>>;
+            canSense: import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.InitializedType<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.DefaultOptions, {
+                required: boolean;
+                initial: undefined;
+            }>>;
+            seesActor: import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.InitializedType<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.DefaultOptions, {
+                required: boolean;
+                initial: undefined;
+            }>>;
+            sensesActor: import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.InitializedType<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.DefaultOptions, {
+                required: boolean;
+                initial: undefined;
+            }>>;
             uuid: string;
         };
     }, {
@@ -3070,6 +3362,22 @@ export declare function cardStateSchema(): {
                 readonly required: boolean;
                 readonly initial: undefined;
             }>;
+            canSee: import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.InitializedType<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.DefaultOptions, {
+                required: boolean;
+                initial: undefined;
+            }>>;
+            canSense: import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.InitializedType<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.DefaultOptions, {
+                required: boolean;
+                initial: undefined;
+            }>>;
+            seesActor: import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.InitializedType<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.DefaultOptions, {
+                required: boolean;
+                initial: undefined;
+            }>>;
+            sensesActor: import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.InitializedType<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.DefaultOptions, {
+                required: boolean;
+                initial: undefined;
+            }>>;
             uuid: string;
         };
     }>, {
@@ -3295,6 +3603,58 @@ export declare function cardStateSchema(): {
             readonly required: boolean;
             readonly initial: undefined;
         }>>;
+        readonly canSee: import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField<{
+            required: boolean;
+            initial: undefined;
+        }, import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.AssignmentType<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.DefaultOptions, {
+            required: boolean;
+            initial: undefined;
+        }>>, import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.InitializedType<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.DefaultOptions, {
+            required: boolean;
+            initial: undefined;
+        }>>, import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.InitializedType<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.DefaultOptions, {
+            required: boolean;
+            initial: undefined;
+        }>>>;
+        readonly canSense: import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField<{
+            required: boolean;
+            initial: undefined;
+        }, import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.AssignmentType<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.DefaultOptions, {
+            required: boolean;
+            initial: undefined;
+        }>>, import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.InitializedType<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.DefaultOptions, {
+            required: boolean;
+            initial: undefined;
+        }>>, import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.InitializedType<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.DefaultOptions, {
+            required: boolean;
+            initial: undefined;
+        }>>>;
+        readonly seesActor: import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField<{
+            required: boolean;
+            initial: undefined;
+        }, import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.AssignmentType<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.DefaultOptions, {
+            required: boolean;
+            initial: undefined;
+        }>>, import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.InitializedType<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.DefaultOptions, {
+            required: boolean;
+            initial: undefined;
+        }>>, import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.InitializedType<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.DefaultOptions, {
+            required: boolean;
+            initial: undefined;
+        }>>>;
+        readonly sensesActor: import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField<{
+            required: boolean;
+            initial: undefined;
+        }, import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.AssignmentType<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.DefaultOptions, {
+            required: boolean;
+            initial: undefined;
+        }>>, import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.InitializedType<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.DefaultOptions, {
+            required: boolean;
+            initial: undefined;
+        }>>, import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.InitializedType<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.DefaultOptions, {
+            required: boolean;
+            initial: undefined;
+        }>>>;
         readonly uuid: import("fvtt-types/src/foundry/common/data/fields.mjs").StringField<{
             readonly required: true;
             readonly blank: false;
@@ -3520,6 +3880,58 @@ export declare function cardStateSchema(): {
             readonly required: boolean;
             readonly initial: undefined;
         }>>;
+        readonly canSee: import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField<{
+            required: boolean;
+            initial: undefined;
+        }, import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.AssignmentType<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.DefaultOptions, {
+            required: boolean;
+            initial: undefined;
+        }>>, import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.InitializedType<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.DefaultOptions, {
+            required: boolean;
+            initial: undefined;
+        }>>, import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.InitializedType<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.DefaultOptions, {
+            required: boolean;
+            initial: undefined;
+        }>>>;
+        readonly canSense: import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField<{
+            required: boolean;
+            initial: undefined;
+        }, import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.AssignmentType<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.DefaultOptions, {
+            required: boolean;
+            initial: undefined;
+        }>>, import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.InitializedType<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.DefaultOptions, {
+            required: boolean;
+            initial: undefined;
+        }>>, import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.InitializedType<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.DefaultOptions, {
+            required: boolean;
+            initial: undefined;
+        }>>>;
+        readonly seesActor: import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField<{
+            required: boolean;
+            initial: undefined;
+        }, import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.AssignmentType<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.DefaultOptions, {
+            required: boolean;
+            initial: undefined;
+        }>>, import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.InitializedType<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.DefaultOptions, {
+            required: boolean;
+            initial: undefined;
+        }>>, import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.InitializedType<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.DefaultOptions, {
+            required: boolean;
+            initial: undefined;
+        }>>>;
+        readonly sensesActor: import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField<{
+            required: boolean;
+            initial: undefined;
+        }, import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.AssignmentType<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.DefaultOptions, {
+            required: boolean;
+            initial: undefined;
+        }>>, import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.InitializedType<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.DefaultOptions, {
+            required: boolean;
+            initial: undefined;
+        }>>, import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.InitializedType<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.DefaultOptions, {
+            required: boolean;
+            initial: undefined;
+        }>>>;
         readonly uuid: import("fvtt-types/src/foundry/common/data/fields.mjs").StringField<{
             readonly required: true;
             readonly blank: false;
@@ -3583,6 +3995,22 @@ export declare function cardStateSchema(): {
             readonly required: boolean;
             readonly initial: undefined;
         }>;
+        canSee: import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.InitializedType<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.DefaultOptions, {
+            required: boolean;
+            initial: undefined;
+        }>>;
+        canSense: import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.InitializedType<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.DefaultOptions, {
+            required: boolean;
+            initial: undefined;
+        }>>;
+        seesActor: import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.InitializedType<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.DefaultOptions, {
+            required: boolean;
+            initial: undefined;
+        }>>;
+        sensesActor: import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.InitializedType<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.DefaultOptions, {
+            required: boolean;
+            initial: undefined;
+        }>>;
         uuid: string;
     }, {
         hitShowAC: import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.InitializedType<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.DefaultOptions, {
@@ -3643,6 +4071,22 @@ export declare function cardStateSchema(): {
             readonly required: boolean;
             readonly initial: undefined;
         }>;
+        canSee: import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.InitializedType<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.DefaultOptions, {
+            required: boolean;
+            initial: undefined;
+        }>>;
+        canSense: import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.InitializedType<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.DefaultOptions, {
+            required: boolean;
+            initial: undefined;
+        }>>;
+        seesActor: import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.InitializedType<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.DefaultOptions, {
+            required: boolean;
+            initial: undefined;
+        }>>;
+        sensesActor: import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.InitializedType<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.DefaultOptions, {
+            required: boolean;
+            initial: undefined;
+        }>>;
         uuid: string;
     }>, import("fvtt-types/src/foundry/common/data/fields.mjs").TypedObjectField.DefaultOptions, import("fvtt-types/src/foundry/common/data/fields.mjs").TypedObjectField.AssignmentType<import("fvtt-types/src/foundry/common/data/fields.mjs").SchemaField<{
         readonly hitShowAC: import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField<{
@@ -3865,6 +4309,58 @@ export declare function cardStateSchema(): {
             readonly required: boolean;
             readonly initial: undefined;
         }>>;
+        readonly canSee: import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField<{
+            required: boolean;
+            initial: undefined;
+        }, import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.AssignmentType<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.DefaultOptions, {
+            required: boolean;
+            initial: undefined;
+        }>>, import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.InitializedType<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.DefaultOptions, {
+            required: boolean;
+            initial: undefined;
+        }>>, import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.InitializedType<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.DefaultOptions, {
+            required: boolean;
+            initial: undefined;
+        }>>>;
+        readonly canSense: import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField<{
+            required: boolean;
+            initial: undefined;
+        }, import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.AssignmentType<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.DefaultOptions, {
+            required: boolean;
+            initial: undefined;
+        }>>, import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.InitializedType<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.DefaultOptions, {
+            required: boolean;
+            initial: undefined;
+        }>>, import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.InitializedType<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.DefaultOptions, {
+            required: boolean;
+            initial: undefined;
+        }>>>;
+        readonly seesActor: import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField<{
+            required: boolean;
+            initial: undefined;
+        }, import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.AssignmentType<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.DefaultOptions, {
+            required: boolean;
+            initial: undefined;
+        }>>, import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.InitializedType<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.DefaultOptions, {
+            required: boolean;
+            initial: undefined;
+        }>>, import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.InitializedType<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.DefaultOptions, {
+            required: boolean;
+            initial: undefined;
+        }>>>;
+        readonly sensesActor: import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField<{
+            required: boolean;
+            initial: undefined;
+        }, import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.AssignmentType<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.DefaultOptions, {
+            required: boolean;
+            initial: undefined;
+        }>>, import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.InitializedType<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.DefaultOptions, {
+            required: boolean;
+            initial: undefined;
+        }>>, import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.InitializedType<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.DefaultOptions, {
+            required: boolean;
+            initial: undefined;
+        }>>>;
         readonly uuid: import("fvtt-types/src/foundry/common/data/fields.mjs").StringField<{
             readonly required: true;
             readonly blank: false;
@@ -4090,6 +4586,58 @@ export declare function cardStateSchema(): {
             readonly required: boolean;
             readonly initial: undefined;
         }>>;
+        readonly canSee: import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField<{
+            required: boolean;
+            initial: undefined;
+        }, import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.AssignmentType<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.DefaultOptions, {
+            required: boolean;
+            initial: undefined;
+        }>>, import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.InitializedType<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.DefaultOptions, {
+            required: boolean;
+            initial: undefined;
+        }>>, import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.InitializedType<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.DefaultOptions, {
+            required: boolean;
+            initial: undefined;
+        }>>>;
+        readonly canSense: import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField<{
+            required: boolean;
+            initial: undefined;
+        }, import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.AssignmentType<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.DefaultOptions, {
+            required: boolean;
+            initial: undefined;
+        }>>, import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.InitializedType<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.DefaultOptions, {
+            required: boolean;
+            initial: undefined;
+        }>>, import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.InitializedType<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.DefaultOptions, {
+            required: boolean;
+            initial: undefined;
+        }>>>;
+        readonly seesActor: import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField<{
+            required: boolean;
+            initial: undefined;
+        }, import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.AssignmentType<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.DefaultOptions, {
+            required: boolean;
+            initial: undefined;
+        }>>, import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.InitializedType<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.DefaultOptions, {
+            required: boolean;
+            initial: undefined;
+        }>>, import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.InitializedType<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.DefaultOptions, {
+            required: boolean;
+            initial: undefined;
+        }>>>;
+        readonly sensesActor: import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField<{
+            required: boolean;
+            initial: undefined;
+        }, import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.AssignmentType<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.DefaultOptions, {
+            required: boolean;
+            initial: undefined;
+        }>>, import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.InitializedType<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.DefaultOptions, {
+            required: boolean;
+            initial: undefined;
+        }>>, import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.InitializedType<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.DefaultOptions, {
+            required: boolean;
+            initial: undefined;
+        }>>>;
         readonly uuid: import("fvtt-types/src/foundry/common/data/fields.mjs").StringField<{
             readonly required: true;
             readonly blank: false;
@@ -4153,6 +4701,22 @@ export declare function cardStateSchema(): {
             readonly required: boolean;
             readonly initial: undefined;
         }>;
+        canSee: import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.InitializedType<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.DefaultOptions, {
+            required: boolean;
+            initial: undefined;
+        }>>;
+        canSense: import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.InitializedType<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.DefaultOptions, {
+            required: boolean;
+            initial: undefined;
+        }>>;
+        seesActor: import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.InitializedType<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.DefaultOptions, {
+            required: boolean;
+            initial: undefined;
+        }>>;
+        sensesActor: import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.InitializedType<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.DefaultOptions, {
+            required: boolean;
+            initial: undefined;
+        }>>;
         uuid: string;
     }, {
         hitShowAC: import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.InitializedType<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.DefaultOptions, {
@@ -4213,6 +4777,22 @@ export declare function cardStateSchema(): {
             readonly required: boolean;
             readonly initial: undefined;
         }>;
+        canSee: import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.InitializedType<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.DefaultOptions, {
+            required: boolean;
+            initial: undefined;
+        }>>;
+        canSense: import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.InitializedType<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.DefaultOptions, {
+            required: boolean;
+            initial: undefined;
+        }>>;
+        seesActor: import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.InitializedType<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.DefaultOptions, {
+            required: boolean;
+            initial: undefined;
+        }>>;
+        sensesActor: import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.InitializedType<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.DefaultOptions, {
+            required: boolean;
+            initial: undefined;
+        }>>;
         uuid: string;
     }>, import("fvtt-types/src/foundry/common/data/fields.mjs").TypedObjectField.DefaultOptions>, {
         [x: string]: {
@@ -4274,6 +4854,22 @@ export declare function cardStateSchema(): {
                 readonly required: boolean;
                 readonly initial: undefined;
             }>;
+            canSee: import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.InitializedType<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.DefaultOptions, {
+                required: boolean;
+                initial: undefined;
+            }>>;
+            canSense: import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.InitializedType<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.DefaultOptions, {
+                required: boolean;
+                initial: undefined;
+            }>>;
+            seesActor: import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.InitializedType<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.DefaultOptions, {
+                required: boolean;
+                initial: undefined;
+            }>>;
+            sensesActor: import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.InitializedType<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.DefaultOptions, {
+                required: boolean;
+                initial: undefined;
+            }>>;
             uuid: string;
         };
     }, {
@@ -4336,6 +4932,22 @@ export declare function cardStateSchema(): {
                 readonly required: boolean;
                 readonly initial: undefined;
             }>;
+            canSee: import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.InitializedType<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.DefaultOptions, {
+                required: boolean;
+                initial: undefined;
+            }>>;
+            canSense: import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.InitializedType<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.DefaultOptions, {
+                required: boolean;
+                initial: undefined;
+            }>>;
+            seesActor: import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.InitializedType<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.DefaultOptions, {
+                required: boolean;
+                initial: undefined;
+            }>>;
+            sensesActor: import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.InitializedType<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.DefaultOptions, {
+                required: boolean;
+                initial: undefined;
+            }>>;
             uuid: string;
         };
     }>, {
@@ -4401,6 +5013,22 @@ export declare function cardStateSchema(): {
                     readonly required: boolean;
                     readonly initial: undefined;
                 }>;
+                canSee: import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.InitializedType<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.DefaultOptions, {
+                    required: boolean;
+                    initial: undefined;
+                }>>;
+                canSense: import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.InitializedType<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.DefaultOptions, {
+                    required: boolean;
+                    initial: undefined;
+                }>>;
+                seesActor: import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.InitializedType<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.DefaultOptions, {
+                    required: boolean;
+                    initial: undefined;
+                }>>;
+                sensesActor: import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.InitializedType<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.DefaultOptions, {
+                    required: boolean;
+                    initial: undefined;
+                }>>;
                 uuid: string;
             };
         };
@@ -4465,6 +5093,22 @@ export declare function cardStateSchema(): {
                     readonly required: boolean;
                     readonly initial: undefined;
                 }>;
+                canSee: import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.InitializedType<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.DefaultOptions, {
+                    required: boolean;
+                    initial: undefined;
+                }>>;
+                canSense: import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.InitializedType<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.DefaultOptions, {
+                    required: boolean;
+                    initial: undefined;
+                }>>;
+                seesActor: import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.InitializedType<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.DefaultOptions, {
+                    required: boolean;
+                    initial: undefined;
+                }>>;
+                sensesActor: import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.InitializedType<import("fvtt-types/src/utils/index.mjs").SimpleMerge<import("fvtt-types/src/foundry/common/data/fields.mjs").BooleanField.DefaultOptions, {
+                    required: boolean;
+                    initial: undefined;
+                }>>;
                 uuid: string;
             };
         };

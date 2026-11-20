@@ -6312,10 +6312,10 @@ export function createConditionData(data: {
         rollData.target.semiSuperSaver = data.workflow?.semiSuperSavers.has(theTarget);
         rollData.target.isHit = data.workflow?.hitTargets.has(theTarget);
         rollData.target.isHitEC = data.workflow?.hitTargetsEC.has(theTarget);
-        rollData.target.canSense = data.workflow?.token && data.workflow.targetsCanSense.has(data.workflow.token);
-        rollData.target.canSee = data.workflow?.token && data.workflow.targetsCanSee.has(data.workflow.token);
         // Sight is between placeables
         const drawnTarget = tokenOf(theTarget);
+        rollData.target.canSense = !!drawnTarget && data.workflow?.targetsCanSense?.has(drawnTarget);
+        rollData.target.canSee = !!drawnTarget && data.workflow?.targetsCanSee?.has(drawnTarget);
         rollData.canSense = !!drawnTarget && data.workflow?.tokenCanSense?.has(drawnTarget);
         rollData.canSee = !!drawnTarget && data.workflow?.tokenCanSee?.has(drawnTarget);
         if (theTarget) rollData.target.isCombatTurn = game.combat?.combatant?.tokenId === theTarget.id;

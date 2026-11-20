@@ -22,14 +22,15 @@ export async function setupCanSeeSense(activity: MidiActivity, usage: { workflow
     // TODO: This is odd - if `!workflow.token` then `true`, but then we're adding `undefined` to `targetsCanSense`
     const tokenCanSense = workflow.token ? canSense(workflow.token, target, globalThis.MidiQOL.InvisibleDisadvantageVisionModes, { forceVision: true }) : true;
     const targetCanSense = workflow.token ? canSense(target, workflow.token, globalThis.MidiQOL.InvisibleDisadvantageVisionModes, { forceVision: true }) : false;
-    if (targetCanSense) workflow.targetsCanSense.add(workflow.token!);
-    else workflow.targetsCanSense.delete(workflow.token!);
+    // Per target: the targets that sense the actor (they held the actor's token, set by each target in turn)
+    if (targetCanSense) workflow.targetsCanSense.add(target);
+    else workflow.targetsCanSense.delete(target);
     if (tokenCanSense) workflow.tokenCanSense.add(target);
     else workflow.tokenCanSense.delete(target);
     const tokenCanSee = workflow.token ? canSee(workflow.token, target, { forceVision: true }) : true;
     const targetCanSee = workflow.token ? canSee(target, workflow.token, { forceVision: true }) : false;
-    if (targetCanSee) workflow.targetsCanSee.add(workflow.token!);
-    else workflow.targetsCanSee.delete(workflow.token!);
+    if (targetCanSee) workflow.targetsCanSee.add(target);
+    else workflow.targetsCanSee.delete(target);
     if (tokenCanSee) workflow.tokenCanSee.add(target);
     else workflow.tokenCanSee.delete(target);
   }
@@ -53,7 +54,7 @@ export async function setupCanSeeSense(activity: MidiActivity, usage: { workflow
       }
     }
   }
-
+  workflow.recordSight();
 }
 
 export async function preTargetingChecks(activity: MidiActivity, usage: ActivityUseConfiguration, dialog: RollDialogConfig, message: RollMessageConfig, optionsConfig: any = {}): Promise<boolean> {

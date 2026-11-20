@@ -1071,6 +1071,7 @@ export class Workflow {
   set targets(targets: Set<TokenOrDocument>) { this.#persisted.setTokenSet("targets", targets ?? new Set()); }
 
   // Worked out again when the workflow is rebuilt (setupCanSeeSense)
+  /** The targets that see / sense the actor; `tokenCanSee` / `tokenCanSense`: the targets the actor sees / senses */
   targetsCanSee: Set<Token.Implementation> = new Set();
   targetsCanSense: Set<Token.Implementation> = new Set();
   tokenCanSee: Set<Token.Implementation> = new Set();
@@ -2208,6 +2209,32 @@ export class Workflow {
     return canvas?.scene ? new TokenDocumentSet(game.user?.targets ?? []) : new TokenDocumentSet();
   }
 
+  /** Each target's sight, as setupCanSeeSense decided it, on its record (a point-in-time fact) */
+  recordSight(): void {
+    if (!this.ownsCard) return;
+    for (const target of this.targets.tokens) {
+      this.#persisted.setRecordFacts(target.document, {
+        canSee: this.tokenCanSee.has(target), canSense: this.tokenCanSense.has(target),
+        seesActor: this.targetsCanSee.has(target), sensesActor: this.targetsCanSense.has(target)
+      });
+    }
+  }
+
+  /** The recorded sight back into the sets; false for a card with none recorded */
+  #restoreSight(): boolean {
+    const records = recordList(cardMidi(this.#ownCard()).records).filter(record => typeof record.canSee === "boolean");
+    if (!records.length) return false;
+    for (const record of records) {
+      const target = (fromUuidSync(record.uuid) as TokenDocument.Implementation | null)?.object;
+      if (!target) continue;
+      if (record.canSee) this.tokenCanSee.add(target);
+      if (record.canSense) this.tokenCanSense.add(target);
+      if (record.seesActor) this.targetsCanSee.add(target);
+      if (record.sensesActor) this.targetsCanSense.add(target);
+    }
+    return true;
+  }
+
   /** A rebuilt workflow's values that are worked out from its card and the canvas, not stored */
   #restoreFromCard() {
     this.suspended = true;
@@ -2247,7 +2274,9 @@ export class Workflow {
     // The other activity's use declined: its damage dropped, the ammunition's kept
     if (this.otherConsumed === false) this.dropOtherActivityDamage();
     // A read-only copy is for reading the card: it doesn't recompute sight (asynchronous, so not there to read anyway)
-    if (!this.readOnly && isMidiActivityType(this.activity)) void setupCanSeeSense(this.activity, { workflow: this });
+    // Sight as it was decided, from the records (tokens move: recomputing would answer for where they are now); a card
+    // written before sight was recorded is worked out again, as it was then
+    if (!this.#restoreSight() && !this.readOnly && isMidiActivityType(this.activity)) void setupCanSeeSense(this.activity, { workflow: this });
     const saves = this.targets.documents.flatMap(t => t.uuid ? [[t.uuid, cardSaveRoll(this.chatCard, t.uuid)] as const] : []).filter(([, roll]) => !!roll);
     if (saves.length) this.#restoredSaves = Object.fromEntries(saves) as Record<string, Roll>;
   }

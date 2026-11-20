@@ -54,9 +54,7 @@ const perception: RollModifierContributor = {
       // RAW 2024: Only "can you see the creature?" matters (blindsight/truesight = can see; tremorsense = cannot see)
       const isRAW2014 = checkRule("invisAdvantage") === "RAW2014";
       const tokenCanPerceive = isRAW2014 ? workflow.tokenCanSense?.has(firstTarget) : workflow.tokenCanSee?.has(firstTarget);
-      const targetCanPerceive = isRAW2014
-        ? (workflow.token && workflow.targetsCanSense?.has(workflow.token))
-        : (workflow.token && workflow.targetsCanSee?.has(workflow.token));
+      const targetCanPerceive = isRAW2014 ? workflow.targetsCanSense?.has(firstTarget) : workflow.targetsCanSee?.has(firstTarget);
       const invisAdvantage = isRAW2014 ? invisibleToken || !targetCanPerceive : !targetCanPerceive;
       if (invisAdvantage) {
         if (!targetCanPerceive) {

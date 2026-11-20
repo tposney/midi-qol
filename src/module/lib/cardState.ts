@@ -72,6 +72,9 @@ export type RecordFacts = {
   otherDamage?: boolean, ammunitionDamage?: boolean,
   // Targeted before the use (workflowOptions.preSelectedTargetUuids), by position
   preSelected?: number | null,
+  // Sight as decided when the use's targets were set (setupCanSeeSense): the actor sees / senses the target, the target
+  // sees / senses the actor. A point-in-time fact (tokens move): a rebuilt workflow restores it, never recomputes it
+  canSee?: boolean, canSense?: boolean, seesActor?: boolean, sensesActor?: boolean,
   // The hits row (hits.html) as the attack left it: AC and its modifiers at the time. Null clears the row.
   hitClass?: string | null, hitSymbol?: string | null, hitShowAC?: boolean | null, acDisplay?: string | null, acTooltip?: string | null,
   acIcons?: { img?: string, icon?: string, tooltip?: string, cssClass?: string, useDnd5eIcon?: boolean }[] | null
@@ -121,6 +124,7 @@ export function cardStateSchema() {
       saveAttribution: new ArrayField(new ArrayField(new StringField()), unset),
       uncannyDodge: bool(), uncannyDodgeIcon: str(),
       otherDamage: bool(), ammunitionDamage: bool(), preSelected: num(),
+      canSee: bool(), canSense: bool(), seesActor: bool(), sensesActor: bool(),
       ...Object.fromEntries(["hitClass", "hitSymbol", "acDisplay", "acTooltip"].map(key => [key, new StringField({ ...unset, blank: true, nullable: true })])),
       hitShowAC: new BooleanField({ ...unset, nullable: true }),
       acIcons: new ArrayField(new ObjectField(), { ...unset, nullable: true })

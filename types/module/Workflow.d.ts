@@ -234,6 +234,7 @@ export declare class Workflow {
     get tokenDocument(): TokenDocument.Implementation | undefined;
     get targets(): TokenDocumentSet;
     set targets(targets: Set<TokenOrDocument>);
+    /** The targets that see / sense the actor; `tokenCanSee` / `tokenCanSense`: the targets the actor sees / senses */
     targetsCanSee: Set<Token.Implementation>;
     targetsCanSense: Set<Token.Implementation>;
     tokenCanSee: Set<Token.Implementation>;
@@ -651,6 +652,8 @@ export declare class Workflow {
         castLevel?: number;
     } | undefined;
     constructor(actor: Actor.Implementation | null, activity: Activity | null, speaker: ChatMessage.SpeakerData | null, targets: Set<TokenOrDocument> | TokenOrDocument[] | null, options?: WorkflowConstructorOptions);
+    /** Each target's sight, as setupCanSeeSense decided it, on its record (a point-in-time fact) */
+    recordSight(): void;
     someEventKeySet(): boolean | undefined;
     someAutoRollEventKeySet(): boolean | undefined;
     static removeItemCardConfirmRollButton(itemCardUuid: string): Promise<void | ChatMessage<"base" | import("fvtt-types/src/foundry/common/abstract/document.mjs").default.ModuleSubType | "midi-qol.damage" | "midi-qol.note"> | import("fvtt-types/src/foundry/common/abstract/document.mjs").default.Any>;
