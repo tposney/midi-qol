@@ -21,7 +21,7 @@ export declare function registerCostContributor(id: string, contributor: CostCon
 export declare function cost(activity: Activity, workflow?: Workflow): UseCost;
 /** Charge the use's cost on the ledger; returns what was charged */
 export declare function chargeUse(workflow: Workflow): Promise<UseCost>;
-export declare const costsApi: {
+export declare const costContributorsApi: {
     register: typeof registerCostContributor;
     entries: () => string[];
 };

@@ -1,4 +1,5 @@
 import { MidiActivity } from "./midiActivity.js";
+import { issuePolicy, issues } from "../services/economy/issues.js";
 import { getDistance } from "../services/distance/service.js";
 import { ActivityUseConfiguration, RollDialogConfig, RollMessageConfig } from "../../globals.js";
 import { MODULE_ID, debugEnabled, error, i18n, i18nFormat, warn } from "../../midi-qol.js";
@@ -70,11 +71,11 @@ export async function preTargetingChecks(activity: MidiActivity, usage: Activity
   options = foundry.utils.mergeObject(options, usage.midiOptions?.proceedChecks ?? {}, { insertKeys: true, overwrite: true });
   let cancelWorkflow: boolean | undefined;
 
-  if (options.checkAllowIncapacitated && !usage.midiOptions?.workflowOptions?.allowIncapacitated && checkMechanic("incapacitated") !== "nothing") {
-    const condition = checkIncapacitated(activity.actor, true, false);
-    if (condition) {
-      logIncapacitatedCheckResult(activity.actor?.name ?? "", condition, debugEnabled > 0, true);
-      if (checkMechanic("incapacitated") === "enforce") return removeWorkflow(usage.workflow);
+  if (options.checkAllowIncapacitated && !usage.midiOptions?.workflowOptions?.allowIncapacitated && activity.actor) {
+    const [incapacitated] = await issues(activity, { workflow, only: ["incapacitated"] });
+    if (incapacitated) {
+      logIncapacitatedCheckResult(activity.actor.name ?? "", incapacitated.label, debugEnabled > 0, true);
+      if (issuePolicy(incapacitated, activity.actor) === "enforce") return removeWorkflow(usage.workflow);
     }
   }
 
@@ -137,44 +138,12 @@ export async function preChatChecks(activity: MidiActivity, usage: ActivityUseCo
     }
   }
 
-  // @ts-expect-error no dnd5e-types
-  if (activity.isSpell || activity.item?.system.type?.value === "scroll") {
-    const midiFlags = activity.actor?.flags[MODULE_ID];
-    // @ts-expect-error no dnd5e-types
-    const needsVerbal = activity.item.system.properties.has("vocal");
-    // @ts-expect-error no dnd5e-types
-    const needsSomatic = activity.item.system.properties.has("somatic");
-    // @ts-expect-error no dnd5e-types
-    const needsMaterial = activity.item.system.properties.has("material");
-    //TODO Consider how to disable activity check for DamageOnly workflows and trap workflows
-    const conditionData = createConditionData({ actor: activity.actor, activity: activity });
-    const notSpell = await evalCondition(midiFlags?.fail?.spell?.all, conditionData, { errorReturn: false, async: true });
-    if (notSpell) {
-      ui.notifications?.warn("You are unable to cast the spell");
-      return removeWorkflow(usage.workflow);
-    }
-    if (options.checkComponents) {
-      let notVerbal = await evalCondition(midiFlags?.fail?.spell?.verbal, conditionData, { errorReturn: false, async: true });
-      if (notVerbal && needsVerbal) {
-        ui.notifications?.warn("You make no sound and the spell fails");
-        return removeWorkflow(usage.workflow);
-      }
-      notVerbal = notVerbal || await evalCondition(midiFlags?.fail?.spell?.vocal, conditionData, { errorReturn: false, async: true });
-      if (notVerbal && needsVerbal) {
-        ui.notifications?.warn("You make no sound and the spell fails");
-        return removeWorkflow(usage.workflow);
-      }
-      const notSomatic = await evalCondition(midiFlags?.fail?.spell?.somatic, conditionData, { errorReturn: false, async: true });
-      if (notSomatic && needsSomatic) {
-        ui.notifications?.warn("You can't make the gestures and the spell fails");
-        return removeWorkflow(usage.workflow);
-      }
-      const notMaterial = await evalCondition(midiFlags?.fail?.spell?.material, conditionData, { errorReturn: false, async: true });
-      if (notMaterial && needsMaterial) {
-        ui.notifications?.warn("You can't use the material component and the spell fails");
-        return removeWorkflow(usage.workflow);
-      }
-    }
+  // A spell's components and spells the caster can't cast: the economy's issue contributors (M4)
+  const componentIds = options.checkComponents ? ["noSpell", "noVerbal", "noSomatic", "noMaterial"] : ["noSpell"];
+  const [refused] = await issues(activity, { workflow, only: componentIds });
+  if (refused) {
+    ui.notifications?.warn(refused.label);
+    return removeWorkflow(usage.workflow);
   }
   workflow.AoO = false;
   workflow.itemUsesReaction = false;
@@ -195,9 +164,15 @@ export async function preChatChecks(activity: MidiActivity, usage: ActivityUseCo
 
     if (workflow.AoO) workflow.itemUsesReaction = true;
 
-    const queryReaction = workflow.itemUsesReaction && (hasUsedReaction(reactingActor) || hasNoReactionsMarker(reactingActor)) && reactingActor.inCombat
-      && needsReactionCheck(reactingActor)
-    if (queryReaction) {
+    // The budget issue and its policy (M4): warn asks, enforce refuses, show and off let it go
+    const [reactionUsed] = workflow.itemUsesReaction && reactingActor.inCombat ? await issues(activity, { workflow, only: ["reactionUsed"] }) : [];
+    const reactionPolicy = reactionUsed ? issuePolicy(reactionUsed, reactingActor) : "off";
+    if (reactionUsed && reactionPolicy === "enforce") {
+      ui.notifications?.warn(reactionUsed.label);
+      await workflow.performState("midi-qol.Abort");
+      return removeWorkflow(usage.workflow);
+    }
+    if (reactionPolicy === "warn") {
       const shouldRoll = await foundry.applications.api.DialogV2.confirm({
         window: {
           title: "midi-qol.EnforceReactions.Title"
@@ -219,8 +194,14 @@ export async function preChatChecks(activity: MidiActivity, usage: ActivityUseCo
   // conditional on needsBonusActionCheck.
   if (!usage.midiOptions?.workflowOptions?.notBonusAction && options.checkBonusAction && activity.actor?.inCombat) {
     workflow.itemUsesBonusAction = ["bonus"].includes(activity.effectiveActivationType ?? "");
-    const queryBonus = workflow.itemUsesBonusAction && hasUsedBonusAction(activity.actor) && needsBonusActionCheck(activity.actor);
-    if (queryBonus) {
+    const [bonusUsed] = workflow.itemUsesBonusAction ? await issues(activity, { workflow, only: ["bonusActionUsed"] }) : [];
+    const bonusPolicy = bonusUsed ? issuePolicy(bonusUsed, activity.actor) : "off";
+    if (bonusUsed && bonusPolicy === "enforce") {
+      ui.notifications?.warn(bonusUsed.label);
+      await workflow.performState("midi-qol.Abort");
+      return removeWorkflow(usage.workflow);
+    }
+    if (bonusPolicy === "warn") {
       const shouldRoll = await foundry.applications.api.DialogV2.confirm({
         window: {
           title: "midi-qol.EnforceBonusActions.Title"

@@ -8,7 +8,7 @@ import { actionFlag, budget, spend, type BudgetKindId } from "./ledger.js";
  * What a use costs and its charge (M4 stage 3; plan ~/Documents/midi-next-M4-plan-2026-11-20.md).
  * - `cost(activity, workflow)` (MidiQOL.economy.cost): the action, bonus action and reaction a use spends. Midi's base
  *   is today's: a reaction or bonus action as the use checks decided it (an opportunity attack is a reaction), the
- *   action only in combat on the actor's own turn. Cost contributors (MidiQOL.economy.costs.register) change it in
+ *   action only in combat on the actor's own turn. Cost contributors (MidiQOL.economy.costContributors.register) change it in
  *   priority order: Cunning Action making Dash a bonus action, Quickened Spell.
  * - `chargeUse(workflow)`: spends it on the ledger when the use is under way. A weapon attack's Attack action carries
  *   the attacks it allows (`flags.midi-qol.actions.attacksMax`, Extra Attack 2): the first spends the action and leaves
@@ -96,4 +96,4 @@ export async function chargeUse(workflow: Workflow): Promise<UseCost> {
   return charged;
 }
 
-export const costsApi = { register: registerCostContributor, entries: () => contributors.entries().map(entry => entry.id) };
+export const costContributorsApi = { register: registerCostContributor, entries: () => contributors.entries().map(entry => entry.id) };

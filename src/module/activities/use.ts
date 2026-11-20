@@ -270,8 +270,6 @@ export async function finishUse(used: MidiActivity, state: UseState, useResults:
   usage.workflow.itemUseComplete = true;
 
   usage.workflow.id = useResults.message.uuid;
-  // The use's action, bonus action or reaction on the economy ledger (M4)
-  await chargeUse(usage.workflow);
   const usageData = state.usageData;
   // @ts-expect-error no dnd5e-types
   if (activity.item?.type === "spell" || activity.item.flags?.dnd5e?.spellLevel) {
@@ -284,6 +282,9 @@ export async function finishUse(used: MidiActivity, state: UseState, useResults:
       itemUuid: activity.item.uuid
     };
   }
+  // The use's action, bonus action or reaction on the economy ledger (M4); after castData: the spell slot rule reads the
+  // level cast
+  await chargeUse(usage.workflow);
   // Scaling is now handled by the workflow's activity getter (reads from chat card flags).
   await usage.workflow.performState("midi-qol.Start");
   return useResults;

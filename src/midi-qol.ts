@@ -1,4 +1,5 @@
 import { activityTypeSteps, activityTypeStepsMarkdown } from "./module/activities/activityTypeSteps.js";
+import { registerMidiIssueContributors } from "./module/services/economy/issues.js";
 import { economyApi } from "./module/services/economy/api.js";
 import { turnMomentsApi } from "./module/lib/turnMoments.js";
 import { defineRevealPolicyService, reveals } from "./module/services/revealPolicy/service.js";
@@ -510,6 +511,7 @@ Hooks.once('init', async function () {
   registerMidiTags();
   defineRevealPolicyService();
   defineTokenNamesService();
+  registerMidiIssueContributors();
   defineRangeService();
   defineBonusPromptService(() => `midi-qol.${safeGetGameSetting("midi-qol", "BonusPrompt") ?? "phased"}`);
   // Registered here, not in services/rollBonuses/prompt.ts: BonusPromptApp extends utils' RollModifyDialog and utils
