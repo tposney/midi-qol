@@ -205,7 +205,7 @@ function storedLimits(actor: Actor.Implementation | undefined): StoredLimit[] {
   return Array.isArray(stored) ? stored : [];
 }
 
-function limitAllows(f: FoundEntry, context: MomentContext): boolean {
+export function limitAllows(f: FoundEntry, context: MomentContext): boolean {
   const limit = f.entry.limit;
   if (!limit) return true;
   const key = limitKey(documentUuid(f.document), f.entry.id);
@@ -220,7 +220,7 @@ function limitAllows(f: FoundEntry, context: MomentContext): boolean {
   }
 }
 
-async function spendEntryLimit(f: FoundEntry, context: MomentContext): Promise<void> {
+export async function spendEntryLimit(f: FoundEntry, context: MomentContext): Promise<void> {
   const limit = f.entry.limit;
   if (!limit) return;
   const key = limitKey(documentUuid(f.document), f.entry.id);
@@ -248,7 +248,7 @@ async function spendEntryLimit(f: FoundEntry, context: MomentContext): Promise<v
 
 /* Running */
 
-function conditionDataFor(f: FoundEntry, context: MomentContext): Record<string, unknown> {
+export function conditionDataFor(f: FoundEntry, context: MomentContext): Record<string, unknown> {
   const effect = f.document instanceof ActiveEffect ? f.document : undefined;
   return createConditionData({
     workflow: context.workflow, actor: f.actor ?? context.actor, activity: context.activity, item: context.item,
@@ -261,7 +261,7 @@ function conditionDataFor(f: FoundEntry, context: MomentContext): Record<string,
   });
 }
 
-async function holds(expression: string | undefined, conditionData: Record<string, unknown>): Promise<boolean> {
+export async function holds(expression: string | undefined, conditionData: Record<string, unknown>): Promise<boolean> {
   if (!expression) return true;
   return !!await evalCondition(expression, conditionData, { errorReturn: false, async: true });
 }

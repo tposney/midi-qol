@@ -11,6 +11,7 @@ import { why } from "./module/lib/why.js";
 import { preview } from "./module/lib/preview.js";
 import { entriesApi, registerMidiEntryActions } from "./module/lib/entries/engine.js";
 import { registerOvertimeEntries } from "./module/lib/entries/overtime.js";
+import { registerEntryRollBonuses } from "./module/lib/entries/rollBonuses.js";
 import { outcomes } from "./module/lib/outcomes.js";
 import { registerTag, registerMidiTags, tagValue, tagNames, tagDefinition, replacedTags, tagsView } from "./module/lib/tags.js";
 import { installFixedDice, withFixedDice } from "./module/lib/fixedDice.js";
@@ -501,6 +502,7 @@ Hooks.once('init', async function () {
   defineTargetConfirmationService(resolveTargetConfirmation);
   defineChooseTokensService();
   defineRollBonusesService();
+  registerEntryRollBonuses();
   registerBonusApprovalQuery();
   defineFlankingService();
   defineDistanceService();
