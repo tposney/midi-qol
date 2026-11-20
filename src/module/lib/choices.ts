@@ -1,6 +1,7 @@
 import type { Workflow } from "../Workflow.js";
 import { MODULE_ID } from "../../midi-qol.js";
 import type { Activity } from "../../globals.js";
+import type { TableResultChoice } from "./tables.js";
 
 /*
  * Choices (M28 data half; shapes ~/Documents/midi-next-waveB-shapes-2026-11-20.md): named choices an activity declares
@@ -11,7 +12,7 @@ import type { Activity } from "../../globals.js";
  */
 
 export type ChoiceKind = "damageType" | "option" | "ability" | "skill" | "creatureType" | "number" | "allocate" | "targets";
-export type ChoiceValue = string | number | string[] | Record<string, number>;
+export type ChoiceValue = string | number | string[] | Record<string, number> | TableResultChoice;
 
 export interface ChoiceDeclaration {
   id: string;

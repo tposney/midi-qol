@@ -82,6 +82,8 @@ function sharedFields(): Fields {
     midiSteps: new ArrayField(new ObjectField(), { required: false, initial: undefined }),
     // The activity's choices (M28, lib/choices.ts), asked in the Choices step; left out unless set
     midiChoices: new ArrayField(new ObjectField(), { required: false, initial: undefined }),
+    // The activity's random table (M28, lib/tables.ts), rolled in the RollTable step; left out unless set
+    midiTable: new ObjectField({ required: false, initial: undefined }),
     overTimeProperties: new SchemaField({
       // `default` is not a field option, so no initial value: unset reads as "start" (kept as stored data has it)
       turnChoice: new StringField({ blank: false, choices: ["start", "end"], default: "start" }),

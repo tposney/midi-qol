@@ -1,7 +1,8 @@
 import type { Workflow } from "../Workflow.js";
 import type { Activity } from "../../globals.js";
+import type { TableResultChoice } from "./tables.js";
 export type ChoiceKind = "damageType" | "option" | "ability" | "skill" | "creatureType" | "number" | "allocate" | "targets";
-export type ChoiceValue = string | number | string[] | Record<string, number>;
+export type ChoiceValue = string | number | string[] | Record<string, number> | TableResultChoice;
 export interface ChoiceDeclaration {
     id: string;
     label?: string;

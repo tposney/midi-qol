@@ -1,4 +1,5 @@
 import { attackEachTarget } from "../rolls/attack.js";
+import { tableDeclaration } from "../lib/tables.js";
 import { error, i18n } from "../../midi-qol.js";
 import { TroubleShooter } from "../apps/TroubleShooter.js";
 import { TokenDocumentSet } from "../lib/tokenDocumentSet.js";
@@ -32,6 +33,7 @@ export function registerAttackSteps(): void {
         await workflow.displayHitTargets(false);
       }
       if (workflow.activity.roll?.formula) return "midi-qol.WaitForUtilityRoll";
+      if (tableDeclaration(workflow.activity)) return "midi-qol.RollTable";
       return workflow.postAttackRollState;
     }
 

@@ -130,7 +130,7 @@ export function allSteps(): Step[] {
 const BUILT_IN: readonly (string | [string, Partial<Step>])[] = [
   ["Suspend", { marker: true }], "NoAction", "Start", "Transform", "PlaceEmanation", "AwaitTemplate", "TemplatePlaced", "AoETargetConfirmation",
   "Choices", "ValidateRoll", "PreambleComplete", "WaitForAttackRoll", ["AttackRollComplete", { flush: true }], "WaitForDamageRoll",
-  "ConfirmRoll", "RollConfirmed", "DamageRollStarted", "DamageRollComplete", "WaitForUtilityRoll", "UtilityRollComplete",
+  "ConfirmRoll", "RollConfirmed", "DamageRollStarted", "DamageRollComplete", "WaitForUtilityRoll", "UtilityRollComplete", "RollTable",
   ["WaitForSaves", { flush: true }], "SavesComplete", ["AllRollsComplete", { flush: true }], "ApplyDynamicEffects",
   ["Cleanup", { flush: true }], "Completed", "Abort", "Cancel", "RollFinished"
 ];

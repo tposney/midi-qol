@@ -27,3 +27,17 @@ describe("damageOutcome (M26)", () => {
     expect(outcome).toMatchObject({ hp: 0, healed: 8, prevented: {}, droppedToZero: false });
   });
 });
+
+import { rowFor } from "../src/module/lib/tableRows.js";
+
+// M28: an inline table's row for a total
+describe("rowFor (M28)", () => {
+  const rows = [{ range: [1, 2] as [number, number], label: "low" }, { range: [3, 6] as [number, number], label: "high" }];
+  it("the row a total falls in", () => {
+    expect(rowFor(rows, 1)).toBe(0);
+    expect(rowFor(rows, 6)).toBe(1);
+  });
+  it("-1 outside every row", () => {
+    expect(rowFor(rows, 7)).toBe(-1);
+  });
+});

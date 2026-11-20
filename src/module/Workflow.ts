@@ -519,6 +519,7 @@ export class Workflow {
   declare WorkflowState_TemplatePlaced: StateMethod;
   declare WorkflowState_AoETargetConfirmation: StateMethod;
   declare WorkflowState_Choices: StateMethod;
+  declare WorkflowState_RollTable: StateMethod;
   declare WorkflowState_ValidateRoll: StateMethod;
   declare WorkflowState_PreambleComplete: StateMethod;
   declare WorkflowState_WaitForAttackRoll: StateMethod;

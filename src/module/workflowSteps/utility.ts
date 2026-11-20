@@ -1,4 +1,5 @@
 import { getAutoRollDamage } from "../utils.js";
+import { rollUseTable, tableDeclaration } from "../lib/tables.js";
 import { setStepRun } from "../steps/steps.js";
 import { Workflow, workflowStepHost, type WorkflowState } from "../Workflow.js";
 
@@ -22,6 +23,12 @@ export function registerUtilitySteps(): void {
     if (workflow.itemCardUuid) {
       workflow.displayUtilityRolls();
     }
-    return "midi-qol.WaitForDamageRoll";
+    return tableDeclaration(workflow.activity) ? "midi-qol.RollTable" : "midi-qol.WaitForDamageRoll";
+  });
+
+  // M28: the activity's random table (lib/tables.ts), after its utility roll; only a use with a table meets it
+  setStepRun("midi-qol.RollTable", async ({ workflow }: { workflow: Workflow }): Promise<WorkflowState> => {
+    await rollUseTable(workflow);
+    return workflow.activity.roll?.formula ? "midi-qol.WaitForDamageRoll" : workflow.postAttackRollState;
   });
 }

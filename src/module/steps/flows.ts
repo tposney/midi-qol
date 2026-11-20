@@ -21,7 +21,7 @@ export const COARSE_STEPS: Readonly<Record<string, readonly string[]>> = {
   "midi-qol.targeting": ["PlaceEmanation", "AwaitTemplate", "TemplatePlaced", "AoETargetConfirmation"],
   "midi-qol.choices": ["Choices"],
   "midi-qol.validate": ["ValidateRoll", "PreambleComplete"],
-  "midi-qol.utility": ["WaitForUtilityRoll", "UtilityRollComplete"],
+  "midi-qol.utility": ["WaitForUtilityRoll", "UtilityRollComplete", "RollTable"],
   "midi-qol.attack": ["WaitForAttackRoll"],
   "midi-qol.hits": ["AttackRollComplete"],
   "midi-qol.damageRoll": ["WaitForDamageRoll", "ConfirmRoll", "RollConfirmed", "DamageRollStarted", "DamageRollComplete"],
@@ -81,7 +81,7 @@ export function allFlows(): Flow[] {
 
 const ids = (...names: string[]) => names.map(name => `midi-qol.${name}`);
 const PREAMBLE = ["NoAction", "Start", "Transform", "PlaceEmanation", "AwaitTemplate", "TemplatePlaced", "AoETargetConfirmation", "Choices", "ValidateRoll", "PreambleComplete"];
-const UTILITY = ["WaitForUtilityRoll", "UtilityRollComplete"];
+const UTILITY = ["WaitForUtilityRoll", "UtilityRollComplete", "RollTable"];
 const ATTACK = ["WaitForAttackRoll", "AttackRollComplete"];
 const SAVES = ["WaitForSaves", "SavesComplete"];
 const DAMAGE_ROLL = ["WaitForDamageRoll", "ConfirmRoll", "RollConfirmed", "DamageRollStarted", "DamageRollComplete"];
