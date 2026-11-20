@@ -1,4 +1,5 @@
 import type { Workflow } from "../Workflow.js";
+import { reveals } from "../services/revealPolicy/service.js";
 import type { Activity } from "../../globals.js";
 import { addCardNote } from "./cardNotes.js";
 import { rowFor, type TableRow } from "./tableRows.js";
@@ -57,8 +58,11 @@ export async function rollUseTable(workflow: Workflow): Promise<TableResultChoic
     const row = rowFor(rows, roll.total ?? 0);
     result = { row, label: rows[row]?.label ?? "", total: roll.total ?? 0 };
     const name = foundry.utils.escapeHTML(workflow.activity?.name ?? "");
+    // The reveal policy (M19): whispered to the users it may be shown to, unless that is everyone
+    const users = game.users?.contents ?? [];
+    const shownTo = users.filter(user => reveals({ subject: "tableResult", user, caster: workflow.actor }));
     await addCardNote(workflow, `<div><strong>${name}</strong>: ${result.total}${result.label ? ` — ${foundry.utils.escapeHTML(result.label)}` : ""}</div>`,
-      { anchor: "utility", key: `midi-qol.table.${declaration.id}` });
+      { anchor: "utility", key: `midi-qol.table.${declaration.id}`, ...(shownTo.length < users.length ? { whisper: shownTo.map(user => user.id ?? "") } : {}) });
   }
   workflow.setChoice(declaration.id, { ...result });
   return result;

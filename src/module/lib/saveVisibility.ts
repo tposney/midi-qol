@@ -1,7 +1,9 @@
 import { cardSourceActor } from "./cardState.js";
+import { reveals, revealedSaveDetail } from "../services/revealPolicy/service.js";
 import { configSettings, safeGetGameSetting } from "../settings.js";
 
 /**
+ * Asked of the reveal policy (M19, services/revealPolicy), whose default provider is the rule below.
  * Who sees what of a save: one rule for midi's saves section, its damage lines, the save messages and dnd5e's
  * summaries of them, and the DC in save requests. A card's challenge (its DC, and its NPC targets' results) is the
  * caster's: dnd5e's challenge visibility "player" shows it to players when the caster has a player owner, whoever
@@ -22,9 +24,7 @@ export function cardActor(card: ChatMessage.Implementation | null | undefined): 
 
 /** Whether `user` sees the challenge of a card used by `caster`. */
 export function challengeVisible(caster: Actor.Implementation | null | undefined, user: User.Implementation | null | undefined = game.user): boolean {
-  if (user?.isGM) return true;
-  if (caster && user && caster.testUserPermission(user, "OWNER")) return true;
-  return challengeVisibleToPlayers(caster);
+  return reveals({ subject: "challenge", user, caster: caster ?? undefined });
 }
 
 /** Whether players who don't own `caster` see the challenge of a card it used. */
@@ -38,10 +38,7 @@ export function challengeVisibleToPlayers(caster: Actor.Implementation | null | 
 
 /** Whether `user` sees a target's save result on a card used by `caster`; `playerOwned`: the target has a player owner. */
 export function canSeeSaveResult(caster: Actor.Implementation | null | undefined, playerOwned: boolean, user: User.Implementation | null | undefined = game.user): boolean {
-  if (user?.isGM) return true;
-  if (["gmOnly", "whisper"].includes(saveDisplayMode())) return false;
-  if (playerOwned) return safeGetGameSetting("dnd5e", "challengeVisibility") !== "none";
-  return challengeVisible(caster, user);
+  return reveals({ subject: "saveResult", user, caster: caster ?? undefined, playerOwned });
 }
 
 /** Whether `user` sees a player character's save outcome: as canSeeSaveResult, or its owner unless whisper/gmOnly (as dnd5e shows a roll's challenge to its roller). */
@@ -52,7 +49,5 @@ export function canSeePlayerOutcome(caster: Actor.Implementation | null | undefi
 
 /** How much of a visible save a player sees: the dice for player characters and allShow, else the total or just the outcome. */
 export function saveDetail(playerOwned: boolean): "outcome" | "total" | "dice" {
-  const mode = saveDisplayMode();
-  if (playerOwned || mode === "allShow") return "dice";
-  return mode === "allNoRoll" ? "outcome" : "total";
+  return revealedSaveDetail({ playerOwned });
 }

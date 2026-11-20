@@ -1,4 +1,5 @@
 /**
+ * Asked of the reveal policy (M19, services/revealPolicy), whose default provider is the rule below.
  * Who sees what of a save: one rule for midi's saves section, its damage lines, the save messages and dnd5e's
  * summaries of them, and the DC in save requests. A card's challenge (its DC, and its NPC targets' results) is the
  * caster's: dnd5e's challenge visibility "player" shows it to players when the caster has a player owner, whoever

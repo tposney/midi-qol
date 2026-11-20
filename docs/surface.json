@@ -159,6 +159,7 @@
     "resolveItemMacro",
     "resolveTargetConfirmation",
     "restoreWorkflowTokenSets",
+    "reveals",
     "RollModifierTracker",
     "safeGetGameSetting",
     "saveRequests",
@@ -523,9 +524,11 @@
     "perception",
     "range",
     "reactions",
+    "revealPolicy",
     "rollBonuses",
     "rollModifiers",
     "saveRequests",
-    "targetConfirmation"
+    "targetConfirmation",
+    "tokenNames"
   ]
 }

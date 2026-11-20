@@ -1,4 +1,5 @@
 import { askBonusDecision } from "./lib/bonusDecisions.js";
+import { shownTokenName } from "./services/tokenNames/service.js";
 import { tagsView } from "./lib/tags.js";
 import { checkRange, type RangeCheckResult } from "./services/range/service.js";
 import { queryUser } from "./lib/midiQueries.js";
@@ -3952,7 +3953,7 @@ export function getTokenPlayerName(token: TokenOrDocument, checkGM: boolean = fa
 export function getTokenPlayerNameForUser(user: User.Implementation, token: TokenOrDocument, checkGM: boolean = false) {
   if (!token) return game.user?.name;
   if (checkGM && user?.isGM) return getTokenName(token);
-  return hiddenTokenName(token) ?? getTokenName(token);
+  return hiddenTokenName(token, user) ?? getTokenName(token);
 }
 
 /**
@@ -3968,57 +3969,9 @@ export function displayTokenName(uuid: string | undefined, name: string): string
   return hiddenTokenName(token) ?? name;
 }
 
-/** The name players are shown for a token, or undefined if it is not hidden. */
-function hiddenTokenName(token: TokenOrDocument): string | undefined {
-  if (game.modules.get("anonymous")?.active) {
-    // @ts-expect-error
-    const api: any = game.modules.get("anonymous")?.api;
-    return api?.playersSeeName(token.actor) ? undefined : api?.getName(token.actor) as string;
-  }
-  if (game.modules.get("hide-npc-names")?.active) return getPlayerNPCNameHideNPCNAmes(token);
-  if (configSettings.hideNPCNames && !token.actor?.hasPlayerOwner) return configSettings.hideNPCNames;
-  return undefined;
-}
-
-function getPlayerNPCNameHideNPCNAmes(token: TokenOrDocument): string | undefined {
-  const actorFlags: any = foundry.utils.getProperty(token.actor ?? {}, "flags.hide-npc-names");
-  if (actorFlags?.nameHiddenOverride === true) return actorFlags.replacementNameOverride as string;
-  if (actorFlags?.nameHiddenOverride === false) return undefined;
-  /*
-    hideHostile: "hideHostileNames",
-    hideNeutral: "hideNeutralNames",
-    hideFriendly: "hideFriendlyNames",
-    hideSecret: "hideSecretNames",
-    hostileNameReplacement: "hostileNameReplacement",
-    neutralNameReplacement: "neutralNameReplacement",
-    friendlyNameReplacement: "friendlyNameReplacement",
-    secretNameReplacement: "secretNameReplacement",
-    tokenHiddenSuffix: "tokenHiddenSuffix",
-    hideParts: "hideParts",
-    showOnActorDirectory: "showOnActorDirectory"
-  */
-  if (actorFlags === undefined) {
-    let hideSetting: boolean;
-    switch ((token instanceof TokenDocument ? token : token.document).disposition) {
-      case CONST.TOKEN_DISPOSITIONS.FRIENDLY:
-        hideSetting = safeGetGameSetting("hide-npc-names", "hideFriendlyNames");
-        if (hideSetting) return safeGetGameSetting("hide-npc-names", "friendlyNameReplacement") as string;
-        break;
-      case CONST.TOKEN_DISPOSITIONS.HOSTILE:
-        hideSetting = safeGetGameSetting("hide-npc-names", "hideHostileNames");
-        if (hideSetting) return safeGetGameSetting("hide-npc-names", "hostileNameReplacement") as string;
-        break;
-      case CONST.TOKEN_DISPOSITIONS.SECRET:
-        hideSetting = safeGetGameSetting("hide-npc-names", "hideSecretNames");
-        if (hideSetting) return safeGetGameSetting("hide-npc-names", "secretNameReplacement") as string;
-        break;
-      case CONST.TOKEN_DISPOSITIONS.NEUTRAL:
-        hideSetting = safeGetGameSetting("hide-npc-names", "hideNeutralNames");
-        if (hideSetting) return safeGetGameSetting("hide-npc-names", "neutralNameReplacement") as string;
-        break;
-    }
-  }
-  return undefined;
+/** The name the current user is shown for a token, or undefined if it is not hidden (the tokenNames service). */
+function hiddenTokenName(token: TokenOrDocument, user: User.Implementation | null | undefined = game.user): string | undefined {
+  return shownTokenName(token, user);
 }
 
 export function getSpeaker(actor: Actor.Implementation) {

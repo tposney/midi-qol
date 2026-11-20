@@ -3,13 +3,14 @@
  * advantage presentation and the damage tray. Design notes: dnd5e-v6-checklist, M13.
  */
 
+import { reveals } from "../services/revealPolicy/service.js";
 import { activityPolicy } from "../activities/activityPrototype.js";
 import { midiButtonHidden } from "../activities/usageButtons.js";
 import { error } from "../../midi-qol.js";
 import { Activity, ChatMessageRenderOptions, DamageApplicationOptions, Dnd5eChatMessage } from "../../globals.js";
 import { checkRule, configSettings, safeGetGameSetting } from "../settings.js";
 import { getRemoveAllButtons, getRemoveAttackButtons, getRemoveDamageButtons, midiRenderAttackRoll, midiRenderDamageRolls, midiRenderOtherDamageRolls, midiRenderBonusDamageRolls, midiRenderFormulaRoll, renderRollAttributionIcon, renderSaveRollHTML, getAdvantageModeTitle, getTokenName, renderAttributionTooltip, tokenPortrait, activityHasAreaTarget, isActivityType } from "../utils.js";
-import { saveDisplayMode } from "../lib/saveVisibility.js";
+import { cardActor, saveDisplayMode } from "../lib/saveVisibility.js";
 import { MODULE_ID, MQDamageRollTypes } from "../../midi-qol.js";
 import { Workflow } from "../Workflow.js";
 import { followUpButtons } from "../followUps.js";
@@ -532,10 +533,14 @@ export function setupUsageCardMessage() {
         const document = fromUuidSync(record.uuid);
         if (!(document instanceof TokenDocument)) continue;
         const npc = !document.actor?.hasPlayerOwner;
+        // The reveal policy (M19): hit or miss, and the AC, for this user
+        const caster = cardActor(this.parent as ChatMessage.Implementation);
+        const target = document.actor ?? undefined;
+        const hitShown = reveals({ subject: "hitResult", caster, target });
         rows.push({
-          actorUuid: record.uuid, target: { id: document.id }, hitClass: record.hitClass, hitSymbol: record.hitSymbol ?? "",
+          actorUuid: record.uuid, target: { id: document.id }, hitClass: hitShown ? record.hitClass : "", hitSymbol: hitShown ? record.hitSymbol ?? "" : "",
           img: await tokenPortrait(document), gmName: getTokenName(document), targetClass: npc ? "midi-qol-npc-target" : "midi-qol-player-target",
-          showAC: !!record.hitShowAC, acClass: npc ? "midi-qol-npc-ac" : "", acDisplay: record.acDisplay ?? "",
+          showAC: !!record.hitShowAC && reveals({ subject: "ac", caster, target }), acClass: npc ? "midi-qol-npc-ac" : "", acDisplay: record.acDisplay ?? "",
           acTooltip: record.acTooltip ?? undefined, acIcons: record.acIcons ?? []
         });
       }

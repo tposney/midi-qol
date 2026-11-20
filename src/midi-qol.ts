@@ -1,4 +1,6 @@
 import { activityTypeSteps, activityTypeStepsMarkdown } from "./module/activities/activityTypeSteps.js";
+import { defineRevealPolicyService, reveals } from "./module/services/revealPolicy/service.js";
+import { defineTokenNamesService } from "./module/services/tokenNames/service.js";
 import { settingsApi } from "./module/lib/settingsRegistry.js";
 import { useTrace, saveUseTrace } from "./module/lib/useTrace.js";
 import { outcomes } from "./module/lib/outcomes.js";
@@ -287,6 +289,8 @@ Object.assign(globalThis.MidiQOL, {
   // A use's trace (M25): its inputs, steps with who changed them, and outcome; saved as a JSON file
   useTrace, saveUseTrace, outcomes,
   // Tags (M26): named facts about a use and its targets that conditions read; modules add or replace them
+  // The reveal policy (M19): may this user learn this (DCs, save and hit results, AC, names, table results)
+  reveals,
   tags: { register: registerTag, get: tagValue, names: tagNames, definition: tagDefinition, replaced: replacedTags, view: tagsView },
   // The settings registry (M4a): every setting declared once; modules register their own (shown in the panel's Modules tab)
   settings: settingsApi,
@@ -498,6 +502,8 @@ Hooks.once('init', async function () {
   defineFlankingService();
   defineDistanceService();
   registerMidiTags();
+  defineRevealPolicyService();
+  defineTokenNamesService();
   defineRangeService();
   defineBonusPromptService(() => `midi-qol.${safeGetGameSetting("midi-qol", "BonusPrompt") ?? "phased"}`);
   // Registered here, not in services/rollBonuses/prompt.ts: BonusPromptApp extends utils' RollModifyDialog and utils
