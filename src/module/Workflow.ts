@@ -4003,9 +4003,6 @@ export class Workflow {
       const finishedTargets = new TokenDocumentSet(this.targets);
       setTimeout(() => untargetDeadTokens(finishedTargets), 500);
     }
-    if (this.inCombat && this.isTurn && this.activity.activation?.type === "action" && !this.AoO) {
-      await setActionUsed(this.actor);
-    }
   }
 
   initSaveResults() {

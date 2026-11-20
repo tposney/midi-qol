@@ -874,6 +874,7 @@
   "midi-qol.reactionFlavorMoved": "{actorName} is moving and can use a reaction",
   "midi-qol.reactionUsed": "Reaction used",
   "midi-qol.bonusActionUsed": "Bonus Action used",
+  "midi-qol.Economy.TurnWindow": "Turn: actions used",
   "midi-qol._comment for translators_DeferText": "The text below is searched for by midi in the onUseMacro field in item data. If you change it every item with an onUseMacro will need to be changed to match",
   "midi-qol._comment for translators_ItemMacroText": "The text below is searched for by midi in the onUseMacro field in item data. If you change it every item with an onUseMacro will need to be changed to match",
   "midi-qol.ItemMacroText": "ItemMacro",

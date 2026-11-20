@@ -1119,11 +1119,13 @@ export declare function getDeadStatus(): ActiveEffect<"base" | import("fvtt-type
 export declare function getVitalityDeadStatus(): ActiveEffect<"base" | import("fvtt-types/src/foundry/common/abstract/document.mjs").default.ModuleSubType> | CONFIG.StatusEffect | null | undefined;
 export declare function ConvenientEffectsHasEffect(effectName: string, actor: Actor.Implementation, ignoreInactive?: boolean): boolean;
 export declare function isInCombat(actor: Actor.Implementation): boolean;
+/** Spend the action (a facade over the economy ledger's turn window) */
 export declare function setActionUsed(actor: Actor.Implementation): Promise<void>;
 /** Spend a reaction (a facade over the economy ledger, M4: services/economy/ledger.ts); `active` false closes the window */
 export declare function setReactionUsed(actor: Actor.Implementation, active?: boolean): Promise<void>;
 /** Spend a bonus action (a facade over the economy ledger) */
 export declare function setBonusActionUsed(actor: Actor.Implementation): Promise<void>;
+/** Close the turn window (a facade over the economy ledger); an older world's stored action flag is cleared too */
 export declare function removeActionUsed(actor: Actor.Implementation): Promise<any>;
 export declare function removeReactionUsed(actor: Actor.Implementation, force?: boolean): Promise<void>;
 export declare function hasUsedAction(actor: Actor.Implementation): boolean | undefined;

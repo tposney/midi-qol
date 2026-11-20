@@ -1,4 +1,5 @@
 import { MidiActivity } from "./midiActivity.js";
+import { chargeUse } from "../services/economy/cost.js";
 import { postChatCardChecks, preChatChecks, preTargetingChecks, setupCanSeeSense } from "./useChecks.js";
 import { setupTargets } from "./useTargets.js";
 import { skipConcentrationActorUuids } from "../patching.js";
@@ -269,10 +270,8 @@ export async function finishUse(used: MidiActivity, state: UseState, useResults:
   usage.workflow.itemUseComplete = true;
 
   usage.workflow.id = useResults.message.uuid;
-  if ((usage.workflow.itemUsesReaction || usage.midiOptions?.workflowOptions?.castUsesReaction) && used.actor && !hasUsedReaction(used.actor))
-    await setReactionUsed(used.actor);
-  if ((usage.workflow.itemUsesBonusAction || usage.midiOptions?.workflowOptions?.castUsesBonusAction) && used.actor && !hasUsedBonusAction(used.actor))
-    await setBonusActionUsed(used.actor);
+  // The use's action, bonus action or reaction on the economy ledger (M4)
+  await chargeUse(usage.workflow);
   const usageData = state.usageData;
   // @ts-expect-error no dnd5e-types
   if (activity.item?.type === "spell" || activity.item.flags?.dnd5e?.spellLevel) {

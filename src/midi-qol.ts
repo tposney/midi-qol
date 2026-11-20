@@ -1,5 +1,5 @@
 import { activityTypeSteps, activityTypeStepsMarkdown } from "./module/activities/activityTypeSteps.js";
-import { economyApi } from "./module/services/economy/ledger.js";
+import { economyApi } from "./module/services/economy/api.js";
 import { turnMomentsApi } from "./module/lib/turnMoments.js";
 import { defineRevealPolicyService, reveals } from "./module/services/revealPolicy/service.js";
 import { defineTokenNamesService } from "./module/services/tokenNames/service.js";

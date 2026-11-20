@@ -6662,8 +6662,9 @@ export function isInCombat(actor: Actor.Implementation) {
   return (combats?.length ?? 0) > 0;
 }
 
+/** Spend the action (a facade over the economy ledger's turn window) */
 export async function setActionUsed(actor: Actor.Implementation) {
-  await actor.setFlag(MODULE_ID, "actions", { action: true });
+  await spendBudget(actor, "action");
 }
 
 /** Spend a reaction (a facade over the economy ledger, M4: services/economy/ledger.ts); `active` false closes the window */
@@ -6678,7 +6679,10 @@ export async function setBonusActionUsed(actor: Actor.Implementation) {
   await spendBudget(actor, "bonus");
 }
 
+/** Close the turn window (a facade over the economy ledger); an older world's stored action flag is cleared too */
 export async function removeActionUsed(actor: Actor.Implementation) {
+  await resetBudget(actor, "action");
+  if (!actor._source.flags?.[MODULE_ID]?.actions?.action) return;
   if (game.user?.isGM || actor.isOwner) return await actor?.setFlag(MODULE_ID, "actions", { action: false });
   else return await unTimedExecuteAsGM("_gmSetFlag", { base: MODULE_ID, key: "actions.action", value: false, actorUuid: actor.uuid })
 }
