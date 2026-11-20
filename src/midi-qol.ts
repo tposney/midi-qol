@@ -8,6 +8,7 @@ import { defineTokenNamesService } from "./module/services/tokenNames/service.js
 import { settingsApi } from "./module/lib/settingsRegistry.js";
 import { useTrace, saveUseTrace } from "./module/lib/useTrace.js";
 import { why } from "./module/lib/why.js";
+import { preview } from "./module/lib/preview.js";
 import { outcomes } from "./module/lib/outcomes.js";
 import { registerTag, registerMidiTags, tagValue, tagNames, tagDefinition, replacedTags, tagsView } from "./module/lib/tags.js";
 import { installFixedDice, withFixedDice } from "./module/lib/fixedDice.js";
@@ -292,7 +293,7 @@ Object.assign(globalThis.MidiQOL, {
   // The test harness (M25): fixed dice for code outside a use (a use takes workflowOptions.fixedDice)
   testing: { fixedDice: withFixedDice },
   // A use's trace (M25): its inputs, steps with who changed them, and outcome; saved as a JSON file
-  useTrace, saveUseTrace, outcomes, why,
+  useTrace, saveUseTrace, outcomes, why, preview,
   // The turn-moment dispatcher (M4): turn and round starts and ends, combat start and end, raised once
   turnMoments: turnMomentsApi,
   // The action economy ledger (M4): each budget kind's window, spend, refund, reset

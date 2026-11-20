@@ -28,6 +28,11 @@ export interface RollQuery {
   tool?: string;
   /** The workflow the roll belongs to, if any. */
   workflow?: Workflow;
+  /**
+   * A preview (MidiQOL.preview): the use has not started and won't from this; its workflow is a stand-in with the
+   * actor, token, item, activity, targets, sight, long range and flanking. Answer as for the real use, or nothing.
+   */
+  preview?: boolean;
 }
 
 export interface RollModifierContributor {

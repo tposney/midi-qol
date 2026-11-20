@@ -4057,7 +4057,7 @@ export class Workflow {
     // Long range, flanking, unseen/invisible/hidden, nearby foe and heavy weapon are midi's rollModifiers contributors (services/attackRollRules.ts)
     await collectRollModifiers({
       kind: "attack", actor: this.actor, token: getTokenDocument(this.token), target: this.targets.documents[0],
-      activity: this.activity, item: this.item, workflow: this
+      activity: this.activity, item: this.item, workflow: this, ...(this.workflowOptions?.preview ? { preview: true } : {})
     }, this.attackRollModifierTracker);
   }
 
@@ -9024,6 +9024,8 @@ type WorkflowConstructorOptions = InexactPartial<{
 // `workflowOptions`
 export type WorkflowOptions = InexactPartial<{
   advantage: boolean;
+  /** A preview (MidiQOL.preview, M16): the rules are asked as for a use that has not started; nothing rolls or writes */
+  preview: boolean;
   /** Every die the use rolls shows this face (M25: tests, examples): "min", "average", "max" or a position 0–1 in the die's range */
   fixedDice: FixedDice;
   /** The activity's choices (M28), by id: not asked */

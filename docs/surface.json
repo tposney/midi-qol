@@ -136,6 +136,7 @@
     "playerFor",
     "playerForActor",
     "playerWaits",
+    "preview",
     "processWoundedStatus",
     "raceOrType",
     "reactionDialog",
