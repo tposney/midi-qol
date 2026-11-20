@@ -116,7 +116,8 @@ If you prefer to configure settings manually, here's a recommended full automati
 | Auto Apply Item Effects | Workflow | Checked |
 
 > [!tip] Navigation
-> See [Configuration Reference](#configuration-reference) for all available settings.
+> See [Configuration Reference](#configuration-reference) for all available settings. <br>
+> [Jump to Top](#table-of-contents)
 
 ---
 
@@ -217,6 +218,8 @@ If you prefer to configure settings manually, here's a recommended full automati
 | Convenient Effects | Matches effects by name; toggle per-item |
 | Levels | Uses wall collision for distance/LOS |
 | DDB Game Log | Triggers workflow from D&D Beyond rolls |
+
+> [!tip] [Jump to Top](#table-of-contents)
 
 ---
 
@@ -477,6 +480,8 @@ Target Confirmation displays a dialog before completing an item roll, allowing y
 | Vitality Death Requires | When actor is dead: "Vitality of 0" or "Vitality of 0 AND HP of 0" |
 | Enable DDB Game Log | Accept rolls from ddb-game-log to trigger midi workflows |
 
+> [!tip] [Jump to Top](#table-of-contents)
+
 ## Custom Sounds
 
 Midi-QOL provides a flexible system for playing sounds during workflow events. Enable with "Use Custom Sounds" in the Misc settings tab. Many of the supporting modules that provide visual effects also apply sound effects, so if using those you will not want midi custom sounds.
@@ -614,6 +619,8 @@ Actor Type: any
       rwak: { playlistName: "Midi Item Tracks", soundName: "bowshot" }
 ```
 
+> [!tip] [Jump to Top](#table-of-contents)
+
 ---
 
 # Features Guide
@@ -688,7 +695,10 @@ Configure an activity to automatically trigger another activity on the same item
 
 ### Over Time Effects (Activity Tab)
 
-For activities that repeat on subsequent turns (like ongoing damage, regeneration, or repeated saves). When an effect with an OverTime activity is applied to a token, midi-qol automatically processes the activity at the specified point in the combat turn.
+For activities that repeat on subsequent turns (like ongoing damage, regeneration, or repeated saves). When an effect with an OverTime activity is applied to a token, midi-qol automatically processes the activity at the specified point in the combat turn. The effect must use the key `flags.midi-qol.activityOvertime` with a value that specifies the activitiy to be called:
+
+- activity uuid - e.g. `Actor.mi2JsNuE6WQNakd0.Item.zHYRGoowWBQXyVDT.Activity.3SJSAL3pv9gKkAM9`
+- (recommended) activity identifier - e.g. `burning-overtime`
 
 | Field | Description |
 |-------|-------------|
@@ -706,12 +716,16 @@ For activities that repeat on subsequent turns (like ongoing damage, regeneratio
 
 **Example - Burning (End of Turn, Save Ends):**
 1. Create a Save activity with damage and appropriate save DC
-2. Enable "Is Over Time" and set "Turn Choice" to "End of Turn"
-3. Check "Save Removes" so a successful save ends the burning
+2. Set the activity identifier to `burning-overtime`
+3. Enable "Is Over Time" and set "Turn Choice" to "End of Turn"
+4. Check "Save Removes" so a successful save ends the burning
+5. Create an active effect with `flags.midi-qol.activityOvertime | Override | burning-overtime`
 
 **Example - Regeneration (Start of Turn):**
 1. Create a Heal activity with healing formula
-2. Enable "Is Over Time" and set "Turn Choice" to "Start of Turn"
+2. Set the activity identifier to `overtime-healing`
+3. Enable "Is Over Time" and set "Turn Choice" to "Start of Turn"
+4. Create an active effect with `flags.midi-qol.activityOvertime | Override | overtime-healing`
 
 **Example - Remove on Damage Taken:**
 1. Set Remove Condition to `@attributes.hp.value < @attributes.hp.max` or similar
@@ -809,6 +823,8 @@ Additional expiry options (requires DAE 0.2.25+):
 | "half damage on save" | Save = half damage (if check spell text enabled) |
 | "auto fail friendly" | Friendly tokens auto-fail saves |
 
+> [!tip] [Jump to Top](#table-of-contents)
+
 ---
 
 # Flags Reference
@@ -858,7 +874,8 @@ Advantage, disadvantage, noAdvantage and noDisadvantage flags for saves and chec
 | `flags.midi-qol.deathSaveBonus` | Add to death saves |
 
 > [!tip] Navigation 
-> See [FLAGS.md](FLAGS.md) for complete documentation of all flags.
+> See [FLAGS.md](FLAGS.md) for complete documentation of all flags. <br>
+> [Jump to Top](#table-of-contents)
 
 ---
 
@@ -891,6 +908,8 @@ Alternative AC system with Evasion Class (EC) and Armor Resistance (AR):
 - Roll < EC: Miss
 - Roll >= EC and <= AC: Glancing blow (damage reduced by AR)
 - Roll > AC: Full hit
+
+> [!tip] [Jump to Top](#table-of-contents)
 
 ---
 
@@ -967,6 +986,8 @@ If using Convenient Effects + DAE effects on same item, you'll get both. Choose 
 - OR exported midi-qol settings (from Misc tab)
 
 No world information is exported. Module list helps with debugging.
+
+> [!tip] [Jump to Top](#table-of-contents)
 
 ---
 
@@ -1280,10 +1301,11 @@ turn=end, saveDC=15, saveAbility=wis, failCount=2+, removeCondition=@attributes.
 - All @-field expressions are evaluated against the affected actor's roll data
 - Multiple OverTime flags can exist on the same effect (use different keys like `flags.midi-qol.OverTime.burn` and `flags.midi-qol.OverTime.poison`)
 - The `itemName` parameter can reference items by UUID or by name (searches actor items first, then world items)
-- For activity-based overtime effects (recommended for v13+), see the Over Time Effects section in Activity configuration
+- For [activity-based overtime effects](#over-time-effects-activity-tab) (recommended for v13+), see the Over Time Effects section in Activity configuration
 
 > [!tip] Navigation
-> See [docs/workflowfields.md](docs/workflowfields.md) for available workflow data in conditions.
+> See [docs/workflowfields.md](docs/workflowfields.md) for available workflow data in conditions. <br>
+> [Jump to Top](#table-of-contents)
 
 ---
 

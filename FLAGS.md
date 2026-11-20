@@ -72,7 +72,7 @@ All **Evaluated** flags in the advantage, disadvantage, noAdvantage, noDisadvant
 Additionally, the following special flags are BooleanFormula: `neverTarget`, `ignoreNearbyFoes`, `potentCantrip`, `sculptSpells`, `carefulSpells`, `sharpShooter`, `uncanny-dodge`, `inMotion`, `initiativeAdv`, `initiativeDisadv`, `initiativeNoAdv`, `initiativeNoDisadv`, `advantage.concentration`, `disadvantage.concentration`, `noAdvantage.concentration`, `noDisadvantage.concentration`, `fail.disadvantage.heavy`, and `canFlank`.
 
 **Deferred evaluation flags** include:
-- `flags.midi-qol.optional.*` - Optional bonus effects
+- `flags.midi-qol.optional.*` - [Optional bonus effects](#optional-bonus-effects)
 - `flags.midi-qol.advantage.*` / `disadvantage.*` - Advantage/disadvantage conditions
 - `flags.midi-qol.grants.*` - Target-applied effects
 - `flags.midi-qol.fail.*` / `success.*` - Auto-fail/success conditions
@@ -138,6 +138,8 @@ Flags are accessed in two ways:
 
 Each section below indicates the access type for its flags.
 
+> [!tip] [Jump to Top](#table-of-contents)
+
 ## Conditional Expression Evaluation
 
 Flags marked as **Evaluated** can contain conditional expressions. These expressions are evaluated at runtime using `evalCondition()`.
@@ -168,6 +170,8 @@ details.cr >= 10
 > The `@` syntax uses `Roll.replaceFormulaData()` for substitution, while direct access uses the sandbox proxy. Both produce the same result.
 
 ### Available Data in Expressions
+
+In v13.0.43 and later, you can see a full list of the data available to these expressions by typing `MidiQOL.logEvaluationData = true` in the console. When an expression is evaluated, both the data and the result will be printed. This setting remains active until the client is reloaded
 
 **Actor Data (from `actor.getRollData()`):**
 | Path | Description |
@@ -375,6 +379,8 @@ The expression is evaluated as JavaScript, and the result determines the flag va
 | `classes.rogue.levels ? 2 : false` | Returns 2 if has rogue levels |
 | `hasCondition(tokenUuid, "enlarged") ? abilities.str.mod : 0` | STR mod if enlarged, else 0 |
 
+> [!tip] [Jump to Top](#table-of-contents)
+
 ---
 
 ## Absorption
@@ -465,6 +471,8 @@ Grant advantage on various roll types. All advantage flags are **Evaluated** (co
 | `flags.midi-qol.advantage.concentration` | Evaluated | Advantage on concentration checks |
 | `flags.midi-qol.advantage.deathSave` | Evaluated | Advantage on death saving throws. **Native alternative:** `system.attributes.death.roll.mode = 1` |
 
+> [!tip] [Jump to Top](#table-of-contents)
+
 ---
 
 ## Disadvantage
@@ -539,6 +547,8 @@ Grant disadvantage on various roll types. All disadvantage flags are **Evaluated
 |------|--------|-------------|
 | `flags.midi-qol.disadvantage.concentration` | Evaluated | Disadvantage on concentration checks |
 | `flags.midi-qol.disadvantage.deathSave` | Evaluated | Disadvantage on death saves. **Native alternative:** `system.attributes.death.roll.mode = -1` |
+
+> [!tip] [Jump to Top](#table-of-contents)
 
 ---
 
@@ -710,6 +720,8 @@ Prevent attacks from being critical hits. All noCritical flags are **Evaluated**
 
 *Attack types: mwak, rwak, msak, rsak, heal, other, save, util.*
 
+> [!tip] [Jump to Top](#table-of-contents)
+
 ---
 
 ## Fumble
@@ -850,6 +862,8 @@ Force automatic success on rolls. All success flags are **Evaluated** (condition
 | Flag | Access | Description |
 |------|--------|-------------|
 | `flags.midi-qol.success.deathSave` | Evaluated | Succeed all death saving throws |
+
+> [!tip] [Jump to Top](#table-of-contents)
 
 ---
 
@@ -1035,6 +1049,8 @@ These flags are set on the **source actor** (caster) and suppress advantage/disa
 
 **Example use case:** A creature whose gaze attack prevents targets from having advantage on the save, regardless of other effects they have.
 
+> [!tip] [Jump to Top](#table-of-contents)
+
 ---
 
 ## Magic Resistance/Vulnerability
@@ -1061,6 +1077,8 @@ Advantage or disadvantage on saves against magical effects. All magic resistance
 | `flags.midi-qol.magicVulnerability.all.{ability}` | Evaluated | Disadvantage on specific ability saves vs magic |
 
 *Abilities: str, dex, con, int, wis, cha.*
+
+> [!tip] [Jump to Top](#table-of-contents)
 
 ---
 
@@ -1103,6 +1121,8 @@ Set minimum or maximum values for the d20 roll (not total). All min/max flags ar
 
 *Abilities: str, dex, con, int, wis, cha.*
 *Tools: alchemist, bagpipes, brewer, calligrapher, card, carpenter, cartographer, chess, cobbler, cook, dice, disg, drum, dulcimer, flute, forg, glassblower, herb, horn, jeweler, leatherworker, lute, lyre, mason, navg, painter, panflute, pois, potter, shawm, smith, thief, tinker, viol, weaver, woodcarver.*
+
+> [!tip] [Jump to Top](#table-of-contents)
 
 ---
 
@@ -1192,6 +1212,8 @@ system.traits.dm.midi.non-magical-physical ADD -3
 system.traits.dm.amount.cold ADD -5
 ```
 
+> [!tip] [Jump to Top](#table-of-contents)
+
 ---
 
 ## Range Modifiers
@@ -1226,6 +1248,8 @@ Modify item range values. Range flags are **Evaluated** (expression with roll da
 *Attack types: mwak, rwak, msak, rsak, heal, other, save, util.*
 
 **Example for blinded:** `flags.midi-qol.range.all ADD 5 - item.range.value` (sets range to 5)
+
+> [!tip] [Jump to Top](#table-of-contents)
 
 ---
 
@@ -1264,13 +1288,33 @@ No damage on save (normal damage on fail). Registered as **BooleanFormula** fiel
 
 *Abilities: str, dex, con, int, wis, cha.*
 
+> [!tip] [Jump to Top](#table-of-contents)
+
 ---
 
 ## Optional Bonus Effects
 
-**Access Type:** Mixed - see table below for each flag type
+Optional bonuses can modify *attack*, *damage*, *save*, *check*, and *skill* rolls, or provide an *AC bonus* against one attack at a time. Key features include:
 
-Optional bonuses prompt the player to apply them when triggered. Replace `NAME` with your identifier.
+- **Conditional Triggers:** use [conditional evaluations](#conditional-expression-evaluation) to limit when the bonus is applied. 
+- **Activation Options:** provide a prompt or use the bonus automatically. 
+- **Consume Resources:** limit the bonus with action economy, item and activity uses, or other resources.
+- **Failed Rolls:** offer the bonus only when the triggering roll fails a DC.
+- **Call Macros:** write complex logic in a macro that returns an evaluated roll or a [valid bonus](#bonus-value-options).
+
+Each optional bonus key has the following structure. `NAME` must be replaced with your own unique identifier for each bonus. Also see [config](#configuration) and [type](#bonus-types).
+```
+flags.midi-qol.optional.NAME.{config or type}
+```
+
+### Sections
+
+- [Example](#example---lucky-reroll)
+- [Configuration](#configuration)
+  - [Count](#count-format-options)
+  - [Bonus](#bonus-value-options)
+  - [Macros](#itemmacro-in-optional-bonus-flags)
+- [Types](#bonus-types)
 
 ### Example - Lucky Reroll
 
@@ -1284,21 +1328,29 @@ To create an effect like "Lucky" that allows rerolling one attack roll and keepi
 
 When the actor makes an attack roll, they'll be prompted to use "Lucky - Reroll Attack". If activated, the attack is rerolled and the highest result is kept. The `count` of 1 means this can only be used once before the effect is exhausted.
 
+**Other Examples:**
+- `flags.midi-qol.optional.bardic-inspiration.attack.fail.all CUSTOM @scale.bard.inspiration` - Bardic Inspiration 2024
+- `flags.midi-qol.optional.shield.ac CUSTOM +5` - Shield spell adds +5 AC
+
 ### Configuration
 
 | Flag | Access | Description |
 |------|--------|-------------|
-| `flags.midi-qol.optional.NAME.label` | Direct | Display label for the bonus |
-| `flags.midi-qol.optional.NAME.count` | Special | Uses remaining (see count formats below) |
-| `flags.midi-qol.optional.NAME.countAlt` | Special | Alternative use count (see count formats below) |
-| `flags.midi-qol.optional.NAME.activation` | Evaluated | Activation condition for the bonus |
-| `flags.midi-qol.optional.NAME.force` | Evaluated | Condition to force activation |
+| `flags.midi-qol.optional.NAME.label` | Direct | Display label for the bonus prompt |
+| `flags.midi-qol.optional.NAME.count` | Special | Primary consumption (see [count formats](#count-format-options)) |
+| `flags.midi-qol.optional.NAME.countAlt` | Special | Secondary consumption (see [count formats](#count-format-options)) |
+| `flags.midi-qol.optional.NAME.activation` | Evaluated | Condition to show prompt |
+| `flags.midi-qol.optional.NAME.force` | Evaluated | Condition for automatic application |
 | `flags.midi-qol.optional.NAME.macroToCall` | Direct | Macro to execute |
+| `flags.midi-qol.optional.NAME.displayBonusRolls` | Direct | Override display setting for this bonus (`true`/`false`) |
+| `flags.midi-qol.optional.NAME.rollMode` | Direct | Roll mode for this bonus (`publicroll`, `gmroll`, `blindroll`, `selfroll`) |
+
+None of these are required. If an optional bonus only has one key `flags.midi-qol.optional.NAME.{type} CUSTOM {bonus}`, then it will apply once the first time it is triggered. Include `count` for more than one use, and use `activation` or `force` to limit the trigger.
 
 > [!important] Documentation
 > Guides on the data available for activation and force conditions are available in the [Conditional Expression Evaluation](#conditional-expression-evaluation) section, or in the [MidiQOL Discord](https://discord.com/channels/915186263609454632/1218903432392347658).
 
-**Count Format Options:**
+#### Count Format Options
 | Value | Description |
 |-------|-------------|
 | `3` (numeric) | Fixed number of uses, decremented on each use |
@@ -1319,8 +1371,7 @@ When the actor makes an attack roll, they'll be prompted to use "Lucky - Reroll 
 | `ActivityUses.{itemName}.{activityName}` | (e.g., `ActivityUses.Bardic Inspiration.Sing Song`) |
 | `@{path}` | Reference to actor data (e.g., `@resources.primary.value`) |
 
-**Bonus Value Options:**
-
+#### Bonus Value Options
 The value set for optional bonus flags determines what happens when the bonus is applied:
 
 | Value | Description |
@@ -1350,7 +1401,7 @@ The value set for optional bonus flags determines what happens when the bonus is
 
 #### ItemMacro in Optional Bonus Flags
 
-When using `ItemMacro` as the value for optional bonus flags (e.g., `flags.midi-qol.optional.NAME.attack.all`), it is automatically rewritten:
+When using `ItemMacro` as the value for optional bonus flags (e.g., `flags.midi-qol.optional.NAME.attack.all CUSTOM ItemMacro`), it is automatically rewritten:
 
 | Input Value | Rewritten To |
 |-------------|--------------|
@@ -1360,97 +1411,36 @@ When using `ItemMacro` as the value for optional bonus flags (e.g., `flags.midi-
 
 This allows effects to reference their source item's macro without hardcoding UUIDs.
 
-**Examples:**
-- `flags.midi-qol.optional.lucky.attack.all CUSTOM reroll-kh` - Lucky feat reroll, keep highest
-- `flags.midi-qol.optional.bless.save.all CUSTOM 1d4` - Bless adds 1d4 to saves
-- `flags.midi-qol.optional.shield.ac CUSTOM +5` - Shield spell adds +5 AC
+### Bonus Types
 
-### Attack Bonuses
+Optional bonuses with `fail` keys are evaluated only when the triggering roll fails.
 
-| Flag | Access | Description |
-|------|--------|-------------|
-| `flags.midi-qol.optional.NAME.attack.all` | Evaluated | Optional attack bonus (all) |
-| `flags.midi-qol.optional.NAME.attack.{attackType}` | Evaluated | Optional attack bonus (specific type) |
+| Flag | Access |
+| --- | --- |
+| `flags.midi-qol.optional.NAME.attack.{attackType}` | Evaluated |
+| `flags.midi-qol.optional.NAME.attack.fail.{attackType}` | Evaluated |
+| `flags.midi-qol.optional.NAME.save.{ability}` | Evaluated |
+| `flags.midi-qol.optional.NAME.save.fail.{ability}` | Evaluated |
+| `flags.midi-qol.optional.NAME.check.{ability}` | Evaluated |
+| `flags.midi-qol.optional.NAME.check.fail.{ability}` | Evaluated |
+| `flags.midi-qol.optional.NAME.skill.{skill}` | Evaluated |
+| `flags.midi-qol.optional.NAME.skill.fail.{skill}` | Evaluated |
+| `flags.midi-qol.optional.NAME.damage.{damageType}` | Evaluated |
+| `flags.midi-qol.optional.NAME.ac` | Evaluated |
 
-*Attack types: mwak, rwak, msak, rsak, heal, other, save, util.*
+| Subtype | Values |
+| --- | --- |
+| **Attack Types** | `all` \| `mwak`, `rwak`, `msak`, `rsak` |
+| **Abilities** | `all` \| `str`, `dex`, `con`, `int`, `wis`, `cha` |
+| **Skills** | `all` \| `acr`, `ani`, `arc`, `ath`, `dec`, `his`, `ins`, `inv`, `itm`, `med`, `nat`, `prc`, `per`, `prf`, `rel`, `slt`, `ste`, `sur` |
+| **Damage Types** | `all` \| `mwak`, `rwak`, `msak`, `rsak`, `heal`, `other`, `save`, `util` |
 
-### Attack Fail Bonuses
+Optional bonuses for damage can use an additional [configuration option](#configuration). This includes the bonus when evaluating damage dice for critical hits.
+```
+flags.midi-qol.optional.NAME.criticalDamage
+```
 
-Only prompt when attack misses.
-
-| Flag | Access | Description |
-|------|--------|-------------|
-| `flags.midi-qol.optional.NAME.attack.fail.all` | Evaluated | Optional bonus on miss (all) |
-| `flags.midi-qol.optional.NAME.attack.fail.{attackType}` | Evaluated | Optional bonus on miss (specific type) |
-
-*Attack types: mwak, rwak, msak, rsak.*
-
-### Save Bonuses
-
-| Flag | Access | Description |
-|------|--------|-------------|
-| `flags.midi-qol.optional.NAME.save.all` | Evaluated | Optional save bonus (all) |
-| `flags.midi-qol.optional.NAME.save.{ability}` | Evaluated | Optional save bonus (specific ability) |
-
-*Abilities: str, dex, con, int, wis, cha.*
-
-### Save Fail Bonuses
-
-Only prompt when save fails.
-
-| Flag | Access | Description |
-|------|--------|-------------|
-| `flags.midi-qol.optional.NAME.save.fail.all` | Evaluated | Optional bonus on failed save (all) |
-| `flags.midi-qol.optional.NAME.save.fail.{ability}` | Evaluated | Optional bonus on failed save (specific) |
-
-*Abilities: str, dex, con, int, wis, cha.*
-
-### Check Bonuses
-
-| Flag | Access | Description |
-|------|--------|-------------|
-| `flags.midi-qol.optional.NAME.check.all` | Evaluated | Optional check bonus (all) |
-| `flags.midi-qol.optional.NAME.check.{ability}` | Evaluated | Optional check bonus (specific ability) |
-
-*Abilities: str, dex, con, int, wis, cha.*
-
-### Check Fail Bonuses
-
-| Flag | Access | Description |
-|------|--------|-------------|
-| `flags.midi-qol.optional.NAME.check.fail.all` | Evaluated | Optional bonus on failed check (all) |
-| `flags.midi-qol.optional.NAME.check.fail.{ability}` | Evaluated | Optional bonus on failed check (specific) |
-
-*Abilities: str, dex, con, int, wis, cha.*
-
-### Skill Bonuses
-
-| Flag | Access | Description |
-|------|--------|-------------|
-| `flags.midi-qol.optional.NAME.skill.all` | Evaluated | Optional skill bonus (all) |
-| `flags.midi-qol.optional.NAME.skill.{skill}` | Evaluated | Optional skill bonus (specific) |
-| `flags.midi-qol.optional.NAME.skill.fail.all` | Evaluated | Optional bonus on failed skill (all) |
-| `flags.midi-qol.optional.NAME.skill.fail.{skill}` | Evaluated | Optional bonus on failed skill (specific) |
-
-*Skills: acr, ani, arc, ath, dec, his, ins, inv, itm, med, nat, prc, per, prf, rel, slt, ste, sur.*
-
-### Damage Bonuses
-
-| Flag | Access | Description |
-|------|--------|-------------|
-| `flags.midi-qol.optional.NAME.damage.all` | Evaluated | Optional damage bonus (all) |
-| `flags.midi-qol.optional.NAME.damage.{attackType}` | Evaluated | Optional damage bonus (specific type) |
-
-*Attack types: mwak, rwak, msak, rsak, heal, other, save, util.*
-
-### Other Optional
-
-| Flag | Access | Description |
-|------|--------|-------------|
-| `flags.midi-qol.optional.NAME.ac` | Evaluated | Optional AC bonus (reaction) |
-| `flags.midi-qol.optional.NAME.criticalDamage` | Evaluated | Optional critical damage bonus |
-| `flags.midi-qol.optional.NAME.displayBonusRolls` | Direct | Override display setting for this bonus (true/false) |
-| `flags.midi-qol.optional.NAME.rollMode` | Direct | Roll mode for this bonus (publicroll, gmroll, blindroll, selfroll) |
+> [!tip] [Jump to Top](#table-of-contents)
 
 ---
 
@@ -1485,6 +1475,8 @@ Only prompt when save fails.
 > [!tip] Navigation
 > See the README for OverTime syntax and parameters. ([Activity Overtimes](/README.md#over-time-effects-activity-tab) or [Legacy Overtimes](/README.md#overtime-effects-flag-based))
 
+> [!tip] [Jump to Top](#table-of-contents)
+
 ---
 
 ## Action Tracking
@@ -1508,6 +1500,8 @@ Track action economy usage. All action tracking flags are **Direct** (boolean/nu
 | `flags.midi-qol.actions.bonusActionsUsed` | Direct | Number of bonus actions used |
 | `flags.midi-qol.actions.bonusActionCombatRound` | Direct | Round bonus action was used |
 | `flags.midi-qol.actions.bonusActionsReset` | Direct | When bonus actions reset ("never" to prevent) |
+
+> [!tip] [Jump to Top](#table-of-contents)
 
 ---
 
@@ -1563,6 +1557,8 @@ Key: flags.midi-qol.advantage.deathSave
 Mode: Custom
 Value: 1[isRaging]
 ```
+
+> [!tip] [Jump to Top](#table-of-contents)
 
 ---
 
@@ -1641,3 +1637,5 @@ The following flags have been renamed for consistency. The old flags with `abili
 | Deprecated Flag | Access | Mapped To |
 |-----------------|--------|-----------|
 | `flags.midi-qol.sharpShooter` | Evaluated | `flags.dnd5e.sharpShooter` |
+
+> [!tip] [Jump to Top](#table-of-contents)
