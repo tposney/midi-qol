@@ -293,6 +293,8 @@ declare module "fvtt-types/configuration" {
         castData?: {
           castLevel?: number;
           baseLevel?: number;
+          /** The applying save's DC (M15: a repeated save uses it) */
+          saveDC?: number;
         };
         dependentOn?: string; // UUID of parent document (Actor/Item) for midi-qol dependent tracking
         overtime?: {

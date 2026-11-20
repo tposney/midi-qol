@@ -8,7 +8,7 @@ import {
   type CountAction, type OvertimeDetails
 } from "../../utils.js";
 import type { Workflow } from "../../Workflow.js";
-import { registerAction, registerEffectEntryReader, type ActionRun } from "./engine.js";
+import { applyingActivity, registerAction, registerEffectEntryReader, type ActionRun } from "./engine.js";
 import type { Entry, EntryAction } from "./types.js";
 
 /*
@@ -65,16 +65,77 @@ export function overtimeEntries(effect: ActiveEffect.Implementation, actor: Acto
   return entries;
 }
 
+type TickKind = "save" | "check" | "damage";
+
+/** A value or formula (`@entry.origin.dc`, `8 + @prof`) against the tick's roll data */
+function numberFrom(value: unknown, rollData: Record<string, any>): number | undefined {
+  if (typeof value === "number") return value;
+  if (typeof value !== "string" || !value.trim()) return undefined;
+  try {
+    const result = Roll.safeEval(replaceAtFields(value, rollData, { blankValue: 0, maxIterations: 3 }));
+    return typeof result === "number" && Number.isFinite(result) ? result : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+/**
+ * The tick an action asks for. Converted OverTime carries its parsed spec. A native action:
+ * - `{ save: "applying" }`: the applying activity's save, with the DC recorded when the effect was applied
+ *   (castData.saveDC; the activity's current DC only when none was recorded);
+ * - `{ save: { ability, dc } }`; `{ check: { ability, skill?: [...], dc } }`;
+ * - `damage` (a formula), `type`, `onSave` ("half" | "none" | "full"), alone or with a save;
+ * - `label`, `flavor`, `rollMode`, `killAnim`, `macro` for its card.
+ */
+function tickFor(kind: TickKind, action: Record<string, unknown>, effect: ActiveEffect.Implementation, rollData: Record<string, any>): Tick | undefined {
+  const spec = action[kind];
+  if (kind === "save" && spec && typeof spec === "object" && "rollType" in spec) return spec as Tick;
+  const applying = applyingActivity(effect) as { item?: Item.Implementation, save?: { ability?: Set<string>, dc?: { value?: number } } } | undefined;
+  let rollType: Tick["rollType"] = "damage";
+  let abilities: string[] = [];
+  let dc = -1;
+  if (kind === "save" && (spec === "applying" || spec === true)) {
+    rollType = "save";
+    abilities = [...(applying?.save?.ability ?? [])];
+    dc = effect.flags?.[MODULE_ID]?.castData?.saveDC ?? applying?.save?.dc?.value ?? -1;
+  } else if ((kind === "save" || kind === "check") && spec && typeof spec === "object") {
+    const given = spec as { ability?: string | string[], skill?: string | string[], dc?: unknown };
+    const skills = [given.skill ?? []].flat();
+    rollType = kind === "check" && skills.length ? "skill" : kind;
+    abilities = skills.length && kind === "check" ? skills : [given.ability ?? []].flat();
+    dc = numberFrom(given.dc, rollData) ?? -1;
+  }
+  if (kind !== "damage" && (!abilities.length || dc < 0)) {
+    console.warn(`midi-qol | entry on ${effect.name}: its ${kind} has no ability or DC`, action);
+    return undefined;
+  }
+  // @ts-expect-error item.type includes dnd5e subtypes
+  const spell = applying?.item?.type === "spell";
+  const onSave = action.onSave === "half" ? "halfdamage" : action.onSave === "full" ? "fulldamage" : "nodamage";
+  const text = (key: string) => typeof action[key] === "string" ? action[key] as string : undefined;
+  return {
+    label: text("label") ?? effect.name, rollType, rollTypeString: rollType, saveAbility: abilities, saveAbilityString: abilities.join("|"),
+    saveDC: dc, saveMagic: spell,
+    damageRoll: text("damage"), damageType: text("type") ?? "", damageBeforeSave: false, saveDamage: onSave,
+    allowIncapacitated: false, killAnim: !!action.killAnim, macro: text("macro"), chatFlavor: text("flavor") ?? "", rollMode: text("rollMode"),
+    fastForwardDamage: true, fastForwardAttack: true, autoRollAttack: true, autoRollDamage: true, multiplyByStacks: false
+  };
+}
+
 /** The last tick's use, still finishing: the next one starts after it */
 let previousTick: Promise<void> = Promise.resolve();
 
-/** The tick: today's OverTime use, from the spec, on a card of its own; a save or a fail picks then/else */
-async function overtimeTick({ action, found, context }: ActionRun): Promise<{ success?: boolean } | void> {
+/**
+ * The tick: a use on the bearer, on the applying item's card (its name and image, the entry's label) when that item
+ * still exists, else on a card built from the spec as before; a save or a fail picks then/else.
+ */
+const tickAction = (kind: TickKind) => async ({ action, found, context }: ActionRun): Promise<{ success?: boolean } | void> => {
   const effect = found.document;
   if (!(effect instanceof ActiveEffect)) return;
-  const actor = context.actor;
-  const tick = action.save as Tick;
+  const actor = found.actor ?? context.actor;
   const rollData = rollDataFor(actor, effect);
+  const tick = tickFor(kind, action, effect, rollData);
+  if (!tick) return;
   if (tick.applyCondition) {
     const value = replaceAtFields(tick.applyCondition, rollData, { blankValue: 0, maxIterations: 3 });
     let applies = true;
@@ -111,6 +172,13 @@ async function overtimeTick({ action, found, context }: ActionRun): Promise<{ su
   }
   let origin: unknown = fromUuidSync(effect.origin ?? "");
   while (origin && !(origin instanceof Actor)) origin = (origin as { parent?: unknown }).parent;
+  // The applying item's card: its name and image, the entry's label on the activity
+  const applyingItem = (applyingActivity(effect) as { item?: Item.Implementation } | undefined)?.item;
+  if (applyingItem) {
+    itemData.name = applyingItem.name;
+    itemData.img = applyingItem.img;
+    activityData.name = tick.label;
+  }
   itemData.system.activities = { overtime: activityData };
   foundry.utils.setProperty(itemData, `flags.${MODULE_ID}.syntheticItem`, true);
   const item = new CONFIG.Item.documentClass(itemData, { parent: origin instanceof Actor ? origin : actor });
@@ -156,7 +224,7 @@ async function overtimeTick({ action, found, context }: ActionRun): Promise<{ su
   if (permanent || tick.saveDC <= -1 || !workflow) return;
   if (workflow.saves.count === 1) return { success: true };
   if (workflow.failedSaves.count === 1) return { success: false };
-}
+};
 
 /**
  * A count: `{ count: "saves" | "fails", max, mode, effect, reset }`. Converted OverTime (`legacy`) counts down where it
@@ -199,6 +267,8 @@ async function count({ action, found, context }: ActionRun): Promise<void> {
 
 export function registerOvertimeEntries() {
   registerEffectEntryReader("midi-qol.overtime", overtimeEntries);
-  registerAction("save", overtimeTick);
+  registerAction("save", tickAction("save"), { priority: 10 });
+  registerAction("check", tickAction("check"), { priority: 10 });
+  registerAction("damage", tickAction("damage"));
   registerAction("count", count);
 }

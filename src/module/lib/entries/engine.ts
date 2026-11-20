@@ -62,9 +62,9 @@ export function registerAction(key: string, handler: ActionHandler, options: { p
   return () => { actions.delete(key); };
 }
 
-/** The handler an action names: the first of its keys that is a registered action */
+/** The handler an action names: of its keys that are registered actions, the highest priority (save before damage) */
 function actionKey(action: EntryAction): string | undefined {
-  return Object.keys(action).find(key => !CONTROL_KEYS.has(key) && actions.has(key));
+  return actions.entries().find(entry => !CONTROL_KEYS.has(entry.id) && entry.id in action)?.id;
 }
 
 /* Homes */
@@ -132,6 +132,37 @@ function collectByWho(context: MomentContext, momentId: string): FoundEntry[] {
 export function collectEntries(momentId: string, context: MomentContext): FoundEntry[] {
   const definition = moments.get(momentId)?.value;
   return (definition?.collect ?? collectByWho)(context, momentId);
+}
+
+/** The activity that applied an effect (dnd5e's system.origin, DAE's flags.dae.activity), while it still exists */
+export function applyingActivity(effect: ActiveEffect.Implementation): Activity | undefined {
+  const uuid = (foundry.utils.getProperty(effect, "system.origin.activity") ?? effect.flags?.dae?.activity) as string | undefined;
+  const activity = uuid ? fromUuidSync(uuid, { strict: false }) : undefined;
+  return activity && typeof activity === "object" && "item" in activity ? activity as unknown as Activity : undefined;
+}
+
+/** The actor whose use applied an effect */
+export function originActor(effect: ActiveEffect.Implementation): Actor.Implementation | undefined {
+  const fromActivity = applyingActivity(effect)?.actor;
+  if (fromActivity) return fromActivity as Actor.Implementation;
+  let origin: unknown = effect.origin ? fromUuidSync(effect.origin, { strict: false }) : undefined;
+  while (origin && !(origin instanceof Actor)) origin = (origin as { parent?: unknown }).parent;
+  return origin instanceof Actor ? origin : undefined;
+}
+
+/** The origin's moments: entries on the effects, on the combat's other creatures, that this actor's uses applied */
+function collectForOrigin(context: MomentContext, momentId: string): FoundEntry[] {
+  const combat = context.combat ?? game.combat;
+  const list: FoundEntry[] = [];
+  for (const combatant of combat?.combatants ?? []) {
+    const bearer = combatant.actor;
+    if (!bearer) continue;
+    for (const effect of bearer.appliedEffects) {
+      if (originActor(effect) !== context.actor) continue;
+      list.push(...effectEntries(effect, bearer).filter(f => f.who === "bearer" && listens(f.entry, momentId)));
+    }
+  }
+  return list;
 }
 
 /* State */
@@ -215,7 +246,7 @@ async function spendEntryLimit(f: FoundEntry, context: MomentContext): Promise<v
 function conditionDataFor(f: FoundEntry, context: MomentContext): Record<string, unknown> {
   const effect = f.document instanceof ActiveEffect ? f.document : undefined;
   return createConditionData({
-    workflow: context.workflow, actor: context.actor, activity: context.activity, item: context.item,
+    workflow: context.workflow, actor: f.actor ?? context.actor, activity: context.activity, item: context.item,
     ...(context.target ? { target: context.target } : {}),
     extraData: {
       event: context.event ?? {},
@@ -278,6 +309,11 @@ export async function runMoment(momentId: string, context: MomentContext): Promi
 /* midi's built-in actions (stage 1); the rest come with stage 2 */
 
 export function registerMidiEntryActions() {
+  registerMoment("turnStart", { label: "The bearer's turn starts" });
+  registerMoment("turnEnd", { label: "The bearer's turn ends" });
+  registerMoment("roundStart", { label: "A round starts (for each creature in the combat)" });
+  registerMoment("originTurnStart", { label: "The turn of the creature whose use applied the effect starts", collect: collectForOrigin });
+  registerMoment("originTurnEnd", { label: "The turn of the creature whose use applied the effect ends", collect: collectForOrigin });
   // { end: true }: the effect holding the entry ends (as an expiry, so DAE's expiry mode applies)
   registerAction("end", async ({ found: f }) => {
     if (!(f.document instanceof ActiveEffect)) return;

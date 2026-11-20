@@ -2137,6 +2137,8 @@ export class Workflow {
   rollOptions: WorkflowRollOptions;
   castData: {
     castLevel?: number;
+    /** The applying save's DC, recorded on the effects the use applies (appliedCastData) */
+    saveDC?: number;
   } | undefined;
 
   // TODO: type options
@@ -3440,13 +3442,20 @@ export class Workflow {
     };
   }
 
+  /** The use's cast data with the save DC it applied with, when its activity has one */
+  appliedCastData(): Workflow["castData"] {
+    const dc: unknown = (this.saveActivity ?? this.activity)?.save?.dc?.value;
+    return typeof dc === "number" && Number.isFinite(dc) ? { ...(this.castData ?? {}), saveDC: dc } : this.castData;
+  }
+
   /** What DAE is given with each application: metadata, the concentration origin and the roll context */
   effectsApplicationData() {
     const metaData = {
       "flags": {
         "dae": { transfer: false },
         "midi-qol": {
-          castData: this.castData,
+          // With the applying save's DC (M15: a repeated save uses the DC as it was applied)
+          castData: this.appliedCastData(),
           // The use's choices go with the effects it applies (M28): read on later turns, after the card is gone
           ...(Object.keys(this.choices).length ? { choices: this.choices } : {})
         }
