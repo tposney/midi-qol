@@ -620,7 +620,8 @@ async function _addDependent(data: { documentUuid: string, dependentUuid: string
 }
 
 /** Also the socketlib handler "chooseReactions", kept for other modules (MidiQOL.socket()); midi asks through REACTIONS_REQUEST */
-async function localDoReactions(data: { tokenUuid: string; reactionActivityList: ReactionItemReference[], triggerTokenUuid: string, reactionFlavor: string; triggerType: string; options: any }) {
+async function localDoReactions(data: { tokenUuid: string; reactionActivityList: ReactionItemReference[], triggerTokenUuid: string, reactionFlavor: string; triggerType: string; options: any, reactionOffers?: unknown[] }) {
+  if (data.reactionOffers?.length) data.options.reactionOffers = data.reactionOffers;
   if (data.options.itemUuid) {
     data.options.item = fromUuidSync(data.options.itemUuid);
   }

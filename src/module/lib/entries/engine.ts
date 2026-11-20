@@ -33,6 +33,11 @@ export interface MomentContext {
   combat?: Combat.Implementation | null;
   /** Only the entries on this document (an effect's uuid): MidiQOL.doOverTimeEffect for one effect */
   only?: string;
+  /**
+   * Which offers run (a reaction moment, lib/entries/reactionMoments.ts): "automatic" the always and toggle entries
+   * (the asks go in the reaction prompt), "asks" only the plain asks (no reaction prompt was shown). All when absent.
+   */
+  offers?: "automatic" | "asks";
 }
 
 export interface ActionRun {
@@ -390,36 +395,73 @@ export async function runMoment(momentId: string, context: MomentContext): Promi
   const candidates: Candidate[] = [];
   for (const f of collectEntries(momentId, context)) {
     const offer = f.entry.offer ?? "always";
+    const ask = offer === "ask" || offer === "reaction";
+    if (context.offers === "automatic" && ask) continue;
+    if (context.offers === "asks" && offer !== "ask") continue;
     if (offer === "toggle" && !toggleOn(f)) continue;
     // A reaction offer is asked as `ask` and costs the reaction: not offered once it is used
     if (offer === "reaction" && (!f.actor || hasUsedReaction(f.actor))) continue;
     const conditionData = conditionDataFor(f, context);
     if (!await entryHolds(f, conditionData)) continue;
     if (!limitAllows(f, context) || !costAllows(f)) continue;
-    candidates.push({ found: f, conditionData, entry: f.entry, ask: offer === "ask" || offer === "reaction" });
+    candidates.push({ found: f, conditionData, entry: f.entry, ask });
   }
   const results: EntryRunResult[] = [];
   // A group is one entry per use, across the use's moments (Metamagic: one option per spell), unless it stacks
-  const used = context.workflow ? groupsUsed.get(context.workflow) ?? new Set<string>() : undefined;
-  const open = candidates.filter(c => !c.entry.group || c.entry.stacks || !used?.has(c.entry.group));
+  const open = candidates.filter(c => groupOpen(c.entry, context));
   const automatic = selectGroups(open.filter(c => !c.ask));
   const taken = new Set(automatic.flatMap(c => c.entry.group && !c.entry.stacks ? [c.entry.group] : []));
   const asked = await chooseAsked(momentId, open.filter(c => c.ask && (!c.entry.group || c.entry.stacks || !taken.has(c.entry.group))));
-  for (const { found: f, conditionData } of [...automatic, ...selectGroups(asked)]) {
-    const ran: string[] = [];
-    await runActions(f.entry.do, { moment: momentId, found: f, context, conditionData }, ran);
-    if (ran.length) {
-      await spendEntryLimit(f, context);
-      await spendEntryCost(f);
-      if (f.entry.offer === "reaction" && f.actor) await setReactionUsed(f.actor);
-    }
-    if (ran.length && used && f.entry.group) {
-      used.add(f.entry.group);
-      groupsUsed.set(context.workflow!, used);
-    }
-    results.push({ entry: f.entry.id, document: documentUuid(f.document), actions: ran });
-  }
+  for (const { found: f, conditionData } of [...automatic, ...selectGroups(asked)]) results.push(await takeEntry(momentId, f, context, conditionData));
   return results;
+}
+
+/** The entry's group (if any) has no entry taken yet this use, or it stacks */
+function groupOpen(entry: Entry, context: MomentContext): boolean {
+  if (!entry.group || entry.stacks || !context.workflow) return true;
+  return !groupsUsed.get(context.workflow)?.has(entry.group);
+}
+
+/**
+ * Run an entry that was chosen (or runs by itself): its actions, then what taking it spends: its limit, its cost, the
+ * reaction for a reaction offer, its group for the use. A reaction prompt's offer (lib/entries/reactionMoments.ts) is
+ * taken this way.
+ */
+export async function takeEntry(momentId: string, f: FoundEntry, context: MomentContext, conditionData: Record<string, unknown>): Promise<EntryRunResult> {
+  const ran: string[] = [];
+  await runActions(f.entry.do, { moment: momentId, found: f, context, conditionData }, ran);
+  if (ran.length) {
+    await spendEntryLimit(f, context);
+    await spendEntryCost(f);
+    if (f.entry.offer === "reaction" && f.actor) await setReactionUsed(f.actor);
+    if (f.entry.group && context.workflow) {
+      const used = groupsUsed.get(context.workflow) ?? new Set<string>();
+      used.add(f.entry.group);
+      groupsUsed.set(context.workflow, used);
+    }
+  }
+  return { entry: f.entry.id, document: documentUuid(f.document), actions: ran };
+}
+
+/**
+ * The ask and reaction offers a moment has for its creature, not yet run (a reaction prompt's): their conditions,
+ * limits, costs and groups checked; reaction offers only while `reactionLeft`.
+ */
+export async function offerableEntries(momentId: string, context: MomentContext, reactionLeft: boolean): Promise<{ found: FoundEntry, conditionData: Record<string, unknown> }[]> {
+  const list: { found: FoundEntry, conditionData: Record<string, unknown> }[] = [];
+  for (const f of collectEntries(momentId, context)) {
+    const offer = f.entry.offer ?? "always";
+    if (offer !== "ask" && offer !== "reaction") continue;
+    if (offer === "reaction" && !reactionLeft) continue;
+    // Someone else's (near) entry is asked of its holder, not in this creature's prompt
+    if (f.actor && f.actor !== context.actor) continue;
+    if (!groupOpen(f.entry, context)) continue;
+    const conditionData = conditionDataFor(f, context);
+    if (!await entryHolds(f, conditionData)) continue;
+    if (!limitAllows(f, context) || !costAllows(f)) continue;
+    list.push({ found: f, conditionData });
+  }
+  return list;
 }
 
 /** The ask offers taken: each actor's owner asked once for the moment */

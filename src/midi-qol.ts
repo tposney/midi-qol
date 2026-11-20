@@ -15,6 +15,7 @@ import { registerEntryRollBonuses } from "./module/lib/entries/rollBonuses.js";
 import { registerUseMoments } from "./module/lib/entries/useMoments.js";
 import { registerUseChanges } from "./module/lib/entries/useChanges.js";
 import { registerEntryOffers } from "./module/lib/entries/offers.js";
+import { registerReactionMoments } from "./module/lib/entries/reactionMoments.js";
 import { outcomes } from "./module/lib/outcomes.js";
 import { registerTag, registerMidiTags, tagValue, tagNames, tagDefinition, replacedTags, tagsView } from "./module/lib/tags.js";
 import { installFixedDice, withFixedDice } from "./module/lib/fixedDice.js";
@@ -521,6 +522,7 @@ Hooks.once('init', async function () {
   registerUseMoments();
   registerUseChanges();
   registerEntryOffers();
+  registerReactionMoments();
   setupLedgerEvents();
   defineRangeService();
   defineBonusPromptService(() => `midi-qol.${safeGetGameSetting("midi-qol", "BonusPrompt") ?? "phased"}`);

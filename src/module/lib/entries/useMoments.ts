@@ -36,22 +36,21 @@ const attacks = (w: Workflow) => !!w.activity?.attack;
 const USE_MOMENTS: Record<string, MomentAt[]> = {
   "post midi-qol.PreambleComplete": [{ moment: "use.targeted" }, { moment: "targeted", targets: allTargets }],
   "pre midi-qol.WaitForAttackRoll": [{ moment: "use.attack", when: attacks }],
-  "pre midi-qol.AttackRollComplete": [{ moment: "attacked", targets: allTargets, when: w => attacks(w) && !!w.attackRoll }],
+  // attacked, hit, missed, saveRequested, saveFailed, saveSucceeded, damaging, healing: raised where midi asks for
+  // reactions, so they share its prompt (lib/entries/reactionMoments.ts)
   "post midi-qol.AttackRollComplete": [
     { moment: "use.hit", when: w => attacks(w) && hitTargets(w).length > 0 },
-    { moment: "use.missed", when: w => attacks(w) && !!w.attackRoll && hitTargets(w).length === 0 },
-    { moment: "hit", targets: hitTargets, when: attacks }
+    { moment: "use.missed", when: w => attacks(w) && !!w.attackRoll && hitTargets(w).length === 0 }
   ],
   "pre midi-qol.DamageRollStarted": [{ moment: "use.damageRoll" }],
   "post midi-qol.DamageRollComplete": [{ moment: "use.damageRolled" }],
-  "pre midi-qol.WaitForSaves": [{ moment: "use.saves", when: w => !!w.saveActivity }, { moment: "saveRequested", targets: hitTargets, when: w => !!w.saveActivity }],
-  "pre midi-qol.AllRollsComplete": [{ moment: "damaging", targets: hitTargets, when: w => !!w.damageRolls?.length }],
+  "pre midi-qol.WaitForSaves": [{ moment: "use.saves", when: w => !!w.saveActivity }],
   "pre midi-qol.ApplyDynamicEffects": [{ moment: "use.effects" }],
   "post midi-qol.RollFinished": [{ moment: "use.end" }]
 };
 
-const USE_MOMENT_IDS = new Set(["use.configure", ...Object.values(USE_MOMENTS).flat().map(m => m.moment), "damaged"]);
-const TARGET_MOMENT_IDS = new Set(Object.values(USE_MOMENTS).flat().filter(m => m.targets).map(m => m.moment).concat("damaged"));
+const SITE_MOMENTS = ["attacked", "hit", "missed", "saveRequested", "saveFailed", "saveSucceeded", "damaging", "healing", "damaged"];
+const USE_MOMENT_IDS = new Set(["use.configure", ...Object.values(USE_MOMENTS).flat().map(m => m.moment), ...SITE_MOMENTS]);
 
 /** A moment raised by a use (its contributions go to the use) */
 export function isUseMoment(moment: string): boolean { return USE_MOMENT_IDS.has(moment); }
@@ -62,7 +61,7 @@ export function useContext(workflow: Workflow, event: Record<string, unknown> = 
 }
 
 /** The context of a target moment: the target is the actor; the user's use is `event.use` */
-function targetContext(workflow: Workflow, target: TokenDocument.Implementation, event: Record<string, unknown> = {}): MomentContext | undefined {
+export function targetContext(workflow: Workflow, target: TokenDocument.Implementation, event: Record<string, unknown> = {}): MomentContext | undefined {
   const actor = target.actor;
   if (!actor) return undefined;
   return { actor, workflow, target, event: { ...event, actor: workflow.actor, token: workflow.token?.document ?? workflow.token, use: workflow } };
@@ -233,6 +232,16 @@ async function bonusAction(run: ActionRun) {
   const effect = run.action.bonus as BonusEffect | undefined;
   if (!workflow || !isUseMoment(run.moment) || !effect || typeof effect !== "object") return;
   const rolls = rollKinds(run.action.rolls);
+  // An AC bonus at a target moment: this attack's AC for the target (the reaction site adds it)
+  if (rolls?.includes("ac" as RollKind)) {
+    const target = run.context.target;
+    if (!target?.uuid || effect.kind !== "add") return;
+    const change = await rolled(effect.formula, run.conditionData);
+    const byTarget = acChanges.get(workflow) ?? new Map<string, number>();
+    byTarget.set(target.uuid, (byTarget.get(target.uuid) ?? 0) + change);
+    acChanges.set(workflow, byTarget);
+    return;
+  }
   if (rolls && !rolls.includes("attack")) return;
   if (!workflow.attackRoll) {
     console.warn(`midi-qol | entry ${run.found.entry.id}: no attack roll at ${run.moment} for its bonus`);
@@ -249,6 +258,17 @@ async function abortAction(run: ActionRun) {
   const reason = typeof run.action.abort === "string" ? run.action.abort : labelOf(run);
   ui.notifications?.warn(`${workflow.activity?.name ?? workflow.item?.name}: ${reason}`);
   workflow.aborted = true;
+}
+
+/** AC changes the target's entries made for this use's attack, not yet taken by the hit check */
+const acChanges = new WeakMap<Workflow, Map<string, number>>();
+
+/** The AC change waiting for the target (and cleared) */
+export function takeACChange(workflow: Workflow, target: TokenDocument.Implementation): number {
+  const byTarget = acChanges.get(workflow);
+  const change = target.uuid ? byTarget?.get(target.uuid) ?? 0 : 0;
+  if (target.uuid) byTarget?.delete(target.uuid);
+  return change;
 }
 
 /* midi's contributors over the use's contributions */
@@ -305,8 +325,12 @@ export function registerUseMoments() {
   registerMoment("targeted", { label: "The bearer is targeted by a use" });
   registerMoment("attacked", { label: "The bearer is attacked: the roll is made, the result not yet known" });
   registerMoment("hit", { label: "The bearer is hit by an attack" });
+  registerMoment("missed", { label: "The bearer is missed by an attack" });
   registerMoment("saveRequested", { label: "The bearer is about to be asked to save against a use" });
-  registerMoment("damaging", { label: "The bearer is about to take a use's damage" });
+  registerMoment("saveFailed", { label: "The bearer failed its save against a use" });
+  registerMoment("saveSucceeded", { label: "The bearer made its save against a use" });
+  registerMoment("damaging", { label: "The bearer is about to take a use's damage (event.damage: worked out, not applied)" });
+  registerMoment("healing", { label: "The bearer is about to be healed by a use" });
   registerMoment("damaged", { label: "The bearer took a use's damage" });
   registerMoment("roll.preRoll", { label: "Before the bearer's roll (modifiers and bonuses)" });
   registerMoment("roll.preResult", { label: "The bearer's roll is made, before its result (bonuses)" });

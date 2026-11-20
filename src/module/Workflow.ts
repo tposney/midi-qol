@@ -38,6 +38,7 @@ import { bonusCheck, collectBonusFlags, defaultRollOptions, buildPreComputedAdva
 import { collectRollModifiers } from "./services/rollModifiers/service.js";
 import { collectDamageContributions } from "./services/damageContributions/service.js";
 import { raiseDamaged, raiseUseMoments } from "./lib/entries/useMoments.js";
+import { targetMoment } from "./lib/entries/reactionMoments.js";
 import { collectBonusCandidates, spendBonusCost, type OfferedBonus, type RollBonusQuery } from "./services/rollBonuses/service.js";
 import { reportServiceProblem } from "./api/services.js";
 import { saveTargetsUndoData, saveUndoData } from "./undo.js";
@@ -6556,12 +6557,10 @@ export class Workflow {
 
     this.updateSaveFailSets(target, saved);
 
-    if (!this.item.flags?.[MODULE_ID]?.noProvokeReaction && !this.workflowOptions.noProvokeReaction) {
-      if (saved)
-        await this.askReactionsStep(target, this.tokenUuid, this.attackRoll, "reactionsavesuccess", { workflow: this, activity: this.activity, item: this.item })
-      else
-        await this.askReactionsStep(target, this.tokenUuid, this.attackRoll, "reactionsavefail", { workflow: this, activity: this.activity, item: this.item })
-    }
+    // M15 4f: saveSucceeded / saveFailed, sharing the reaction prompt
+    const provokes = !this.item.flags?.[MODULE_ID]?.noProvokeReaction && !this.workflowOptions.noProvokeReaction;
+    await targetMoment(this, getTokenDocument(target), saved ? "saveSucceeded" : "saveFailed", { total: saveRollTotal, dc: resultDC, saved, critical: isCritical, fumble: isFumble },
+      provokes ? () => this.askReactionsStep(target, this.tokenUuid, this.attackRoll, saved ? "reactionsavesuccess" : "reactionsavefail", { workflow: this, activity: this.activity, item: this.item }) : undefined);
     if (isCritical) this.criticalSaves = this.criticalSaves.add(target);
 
     // Trigger target macros that might modify the roll
@@ -6875,9 +6874,10 @@ export class Workflow {
         // Every save gets a message, linked to the card; each viewer's "Summarize chat cards" decides whether it
         // shows in the log or folds into the card.
         const showRoll = !simulate;
-        if (!this.item.flags?.[MODULE_ID]?.noProvokeReaction && !this.workflowOptions.noProvokeReaction) {
-          await this.askReactionsStep(target, this.tokenUuid, this.attackRoll ?? new Roll(""), "reactionsave", { workflow: this, activity: this.activity, item: this.item })
-        }
+        // M15 4f: saveRequested, sharing the reaction prompt
+        const provokes = !this.item.flags?.[MODULE_ID]?.noProvokeReaction && !this.workflowOptions.noProvokeReaction;
+        await targetMoment(this, getTokenDocument(target), "saveRequested", { dc: rollDC, rollType },
+          provokes ? () => this.askReactionsStep(target, this.tokenUuid, this.attackRoll ?? new Roll(""), "reactionsave", { workflow: this, activity: this.activity, item: this.item }) : undefined);
 
         // Build save details for this target
         const saveDetails = await this.buildSaveDetailsForTarget(target, {
@@ -7899,11 +7899,22 @@ export class Workflow {
             foundry.utils.setProperty(this.actor, `flags.midi.evaluated.grants.attack.bonus.${this.activity.actionType}`, { value: attackBonus, effects: [`${targetActor.name}`] });
           }
         }
+        // M15 4f: the attacked moment (the target's entries; its asks in the reaction prompt): before the result
+        const provokes = !this.item.flags?.[MODULE_ID]?.noProvokeReaction && !this.workflowOptions.noProvokeReaction;
+        const askAttacked = !challengeModeArmorSet && !!this.attackRoll && provokes;
+        const attackedResult = this.attackRoll
+          ? await targetMoment(this, targetDocument, "attacked", { roll: this.attackRoll, attackTotal, ac: targetAC, critical: this.isCritical },
+            askAttacked ? () => {
+              const workflowOptions = foundry.utils.mergeObject(this.workflowOptions, { sourceActorUuid: this.actor.uuid, sourceItemUuid: this.item.uuid }, { inplace: false, overwrite: true });
+              return this.askReactionsStep(targetToken, this.tokenUuid, this.attackRoll, "reactionattacked", { activity: this.activity, item: this.item, workflow: this, workflowOptions });
+            } : undefined)
+          : undefined;
+        // An entry may have changed the roll (disadvantage after the roll)
+        attackTotal = this.attackTotal;
         if (challengeModeArmorSet) isHit = attackTotal > targetAC || this.isCritical;
         else {
-          if (this.attackRoll && !this.item.flags?.[MODULE_ID]?.noProvokeReaction && !this.workflowOptions.noProvokeReaction) {
-            const workflowOptions = foundry.utils.mergeObject(this.workflowOptions, { sourceActorUuid: this.actor.uuid, sourceItemUuid: this.item.uuid }, { inplace: false, overwrite: true });
-            const result = await this.askReactionsStep(targetToken, this.tokenUuid, this.attackRoll, "reactionattacked", { activity: this.activity, item: this.item, workflow: this, workflowOptions });
+          if (attackedResult) {
+            const result = attackedResult;
             if (result?.ac && isFinite(targetAC)) { // result.ac is a newAC total from optional bonus dialog; don't override total cover (Infinity)
               //@ts-expect-error no dnd5e-types
               const preReactionRawAC: number = targetToken.actor?.system.attributes.ac?.value ?? 10;
@@ -7933,13 +7944,11 @@ export class Workflow {
 
         if (targetEC) isHitEC = challengeModeArmorSet && attackTotal <= targetAC && attackTotal >= targetEC && isFinite(targetAC);
         // check to see if the roll hit the target
-        if ((isHit || isHitEC) && this.activity.attack && this.attackRoll && targetToken !== null && !foundry.utils.getProperty(this, `item.flags.${MODULE_ID}.noProvokeReaction`) && !this.workflowOptions.noProvokeReaction) {
+        if ((isHit || isHitEC) && this.activity.attack && this.attackRoll && targetToken !== null) {
           const workflowOptions = foundry.utils.mergeObject(this.workflowOptions, { sourceActorUuid: this.actor.uuid, sourceItemUuid: this.item.uuid }, { inplace: false, overwrite: true });
-          // reaction is the same as reactionhit to accomodate the existing reaction workflow
-          let result;
-          if (!this.item.flags?.[MODULE_ID]?.noProvokeReaction && !this.workflowOptions.noProvokeReaction) {
-            result = await this.askReactionsStep(targetToken, this.tokenUuid, this.attackRoll, "reaction", { activity: this.activity, item: this.item, workflow: this, workflowOptions });
-          }
+          // reaction is the same as reactionhit to accomodate the existing reaction workflow; the hit moment shares its prompt
+          const result = await targetMoment(this, targetDocument, "hit", { roll: this.attackRoll, attackTotal, ac: targetAC, critical: this.isCritical },
+            provokes ? () => this.askReactionsStep(targetToken, this.tokenUuid, this.attackRoll, "reaction", { activity: this.activity, item: this.item, workflow: this, workflowOptions }) : undefined);
           if (!Workflow.findWorkflow(this.id)) // workflow has been removed - bail out
             return;
           // targetAC already has cover, flanking, and targetACMod from computeTargetAC (via acResult.effectiveAC)
@@ -7968,12 +7977,10 @@ export class Workflow {
           isHit = (attackTotal + attackBonus >= targetAC || this.isCritical) && result?.name !== "missed";
           if (challengeModeArmorSet) isHit = this.attackTotal >= targetAC || this.isCritical;
           if (targetEC) isHitEC = challengeModeArmorSet && this.attackTotal <= targetAC && this.attackTotal >= targetEC && isFinite(targetAC);
-        } else if ((!isHit && !isHitEC) && this.activity.attack && this.attackRoll && targetToken !== null && !foundry.utils.getProperty(this, `item.flags.${MODULE_ID}.noProvokeReaction`)) {
+        } else if ((!isHit && !isHitEC) && this.activity.attack && this.attackRoll && targetToken !== null) {
           const workflowOptions = foundry.utils.mergeObject(this.workflowOptions, { sourceActorUuid: this.actor.uuid, sourceItemUuid: this.item.uuid }, { inplace: false, overwrite: true });
-          if (!this.item.flags?.[MODULE_ID]?.noProvokeReaction && !this.workflowOptions.noProvokeReaction) {
-            await this.askReactionsStep(targetToken, this.tokenUuid, this.attackRoll, "reactionmissed", { activity: this.activity, item: this.item, workflow: this, workflowOptions });
-          }
-          // TODO what else to do once rolled
+          await targetMoment(this, targetDocument, "missed", { roll: this.attackRoll, attackTotal, ac: targetAC, fumble: this.isFumble },
+            provokes ? () => this.askReactionsStep(targetToken, this.tokenUuid, this.attackRoll, "reactionmissed", { activity: this.activity, item: this.item, workflow: this, workflowOptions }) : undefined);
         }
         const optionalCrits = checkRule("optionalCritRule") as number;
         if (this.targets.documents.length === 1 && configSettings.optionalRulesEnabled && optionalCrits > -1) {
@@ -8721,7 +8728,8 @@ export class ActiveDefenceWorkflow extends Workflow {
         if (!this.item.flags?.[MODULE_ID]?.noProvokeReaction && !this.workflowOptions.noProvokeReaction) {
           //@ts-expect-error no dnd5e-types
           const savedAC = target.actor.system.attributes.ac.value;
-          reaction = await this.askReactionsStep(target, this.tokenUuid, this.attackRoll, "reaction", { activity: this.activity, item: this.item, workflow: this, workflowOptions });
+          reaction = await targetMoment(this, getTokenDocument(target), "hit", { roll: this.attackRoll, defence: results[i], critical: this.isCritical },
+            () => this.askReactionsStep(target, this.tokenUuid, this.attackRoll, "reaction", { activity: this.activity, item: this.item, workflow: this, workflowOptions })) ?? {};
           //@ts-expect-error no dnd5e-types
           const acChange = target.actor.system.attributes.ac.value - savedAC;
           rollTotal += (reaction.ac ?? 0) + acChange; // deal with bonus ac if any.
@@ -8738,7 +8746,8 @@ export class ActiveDefenceWorkflow extends Workflow {
             name?: string;
             uuid?: string;
             ac?: number;
-          } = await this.askReactionsStep(target, this.tokenUuid, this.attackRoll, "reactionmissed", { activity: this.activity, item: this.item, workflow: this, workflowOptions });
+          } = await targetMoment(this, getTokenDocument(target), "missed", { roll: this.attackRoll, defence: results[i] },
+            () => this.askReactionsStep(target, this.tokenUuid, this.attackRoll, "reactionmissed", { activity: this.activity, item: this.item, workflow: this, workflowOptions })) ?? {};
           //@ts-expect-error no dnd5e-types
           const acChange = target.actor.system.attributes.ac.value - savedAC;
           rollTotal += (reaction.ac ?? 0) + acChange; // deal with bonus ac if any.
