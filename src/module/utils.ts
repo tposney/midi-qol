@@ -6934,7 +6934,10 @@ export function addAttribution(roll: Roll, attributions: AttributionMap) {
   if (attributions && Object.keys(attributions).length > 0) {
     // Convert map to array and store on roll options for tooltip rendering
     const entries = attributionMapToArray(attributions);
-    foundry.utils.setProperty(roll, "options.attributions", entries);
+    // The roll's named parts (BONUS, lib/rollParts.ts) were added as it was built: kept
+    const stored = foundry.utils.getProperty(roll, "options.attributions");
+    const parts = (Array.isArray(stored) ? stored as AttributionEntry[] : []).filter(entry => entry.type === "BONUS");
+    foundry.utils.setProperty(roll, "options.attributions", [...entries, ...parts]);
   }
 }
 

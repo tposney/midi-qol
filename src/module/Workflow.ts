@@ -79,7 +79,7 @@ export const shiftOnlyEvent = { shiftKey: true, altKey: false, ctrlKey: false, m
 /** Sentinel value for attackTotal before any attack roll has been made. */
 export const minAttackTotal = -100;
 
-export type AttributionType = 'ADV' | 'DIS' | 'NOADV' | 'NODIS' | 'CRIT' | 'NOCRIT' | 'FUMBLE' | 'NOFUMBLE';
+export type AttributionType = 'ADV' | 'DIS' | 'NOADV' | 'NODIS' | 'CRIT' | 'NOCRIT' | 'FUMBLE' | 'NOFUMBLE' | 'BONUS';
 export type AttributionMap = Partial<Record<AttributionType, Record<string, string>>>;
 export interface AttributionEntry {
   type: AttributionType;
@@ -87,6 +87,8 @@ export interface AttributionEntry {
   source: string;
   /** Human-readable display name for tooltips */
   displayName: string;
+  /** BONUS: the part's formula or value (M16: each part of a roll's total, named) */
+  value?: string;
 }
 
 export interface DamageDescriptionObject extends Omit<DamageDescription, 'properties'> {

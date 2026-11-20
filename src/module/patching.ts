@@ -1,6 +1,7 @@
 import { requestForRollClaim } from "./lib/bonusDecisions.js";
 import { toggleBudgetStatus } from "./services/economy/ledger.js";
 import { onTurnMoment, setupTurnMoments } from "./lib/turnMoments.js";
+import { registerRollPartNaming } from "./lib/rollParts.js";
 import type { IncomingRequest } from "./lib/requests.js";
 import { collectRollModifiers } from "./services/rollModifiers/service.js";
 import { collectBonusCandidates, type BonusRollKind, type RollBonusQuery } from "./services/rollBonuses/service.js";
@@ -111,6 +112,7 @@ function onceForSubject<K extends Hooks.HookName>(name: K, subject: Actor.Implem
 
 export function initPatching() {
   libWrapper = globalThis.libWrapper;
+  registerRollPartNaming();
   Hooks.on("dnd5e.postBuildSkillRollConfig", applyChosenAbilityModifiers("skill"));
   Hooks.on("dnd5e.postBuildToolRollConfig", applyChosenAbilityModifiers("tool"));
   // TODO this needs more work libWrapper.register(MODULE_ID, "CONFIG.Item.documentClass.migrateData", removeMidiProperties, "WRAPPER");
