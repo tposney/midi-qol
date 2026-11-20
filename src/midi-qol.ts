@@ -1,4 +1,5 @@
 import { activityTypeSteps, activityTypeStepsMarkdown } from "./module/activities/activityTypeSteps.js";
+import { turnMomentsApi } from "./module/lib/turnMoments.js";
 import { defineRevealPolicyService, reveals } from "./module/services/revealPolicy/service.js";
 import { defineTokenNamesService } from "./module/services/tokenNames/service.js";
 import { settingsApi } from "./module/lib/settingsRegistry.js";
@@ -288,6 +289,8 @@ Object.assign(globalThis.MidiQOL, {
   testing: { fixedDice: withFixedDice },
   // A use's trace (M25): its inputs, steps with who changed them, and outcome; saved as a JSON file
   useTrace, saveUseTrace, outcomes,
+  // The turn-moment dispatcher (M4): turn and round starts and ends, combat start and end, raised once
+  turnMoments: turnMomentsApi,
   // Tags (M26): named facts about a use and its targets that conditions read; modules add or replace them
   // The reveal policy (M19): may this user learn this (DCs, save and hit results, AC, names, table results)
   reveals,

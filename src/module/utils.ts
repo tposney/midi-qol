@@ -1,4 +1,5 @@
 import { askBonusDecision } from "./lib/bonusDecisions.js";
+import { onTurnMoment } from "./lib/turnMoments.js";
 import { shownTokenName } from "./services/tokenNames/service.js";
 import { tagsView } from "./lib/tags.js";
 import { checkRange, type RangeCheckResult } from "./services/range/service.js";
@@ -6839,16 +6840,14 @@ async function removeLingeringMarkers(actor: Actor.Implementation, shouldHaveEnd
   }
 }
 
+/** On the turn moments (M4, core's active GM): after DAE and core have had their go at expiring the markers */
 export function setupMarkerChecks() {
-  Hooks.on("deleteCombat", (combat: Combat.Implementation) => {
-    if (!preferredActiveGM()?.isSelf) return;
-    const actors = combat.combatants.contents.map(c => c.actor).filter(a => !!a) as Actor.Implementation[];
+  onTurnMoment("combatEnd", "midi-qol.lingeringMarkers", ({ combat }) => {
+    const actors = combat.combatants.contents.flatMap(c => c.actor ?? []);
     setTimeout(() => actors.forEach(actor => removeLingeringMarkers(actor, marker => !!marker.flags?.dae?.specialDuration?.includes("combatEnd"))), 500);
   });
-  Hooks.on("combatTurnChange", (combat: Combat.Implementation) => {
-    if (!preferredActiveGM()?.isSelf) return;
-    const actor = combat.combatant?.actor;
-    if (actor) setTimeout(() => removeLingeringMarkers(actor, isEffectExpired), 500);
+  onTurnMoment("turnStart", "midi-qol.lingeringMarkers", ({ actor, skipped }) => {
+    if (actor && !skipped) setTimeout(() => removeLingeringMarkers(actor, isEffectExpired), 500);
   });
 }
 

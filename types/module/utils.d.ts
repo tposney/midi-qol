@@ -1132,6 +1132,7 @@ export declare function hasUsedAnyReaction(actor: Actor.Implementation): boolean
 export declare function expirePerTurnBonusActions(combat: Combat.Implementation, data: Combat.RoundUpdateData | Combat.TurnUpdateData, _options?: Combat.RoundUpdateOptions | Combat.TurnUpdateOptions): Promise<void>;
 export declare function hasUsedBonusAction(actor: Actor.Implementation): boolean;
 export declare function removeBonusActionUsed(actor: Actor.Implementation, force?: boolean): Promise<void>;
+/** On the turn moments (M4, core's active GM): after DAE and core have had their go at expiring the markers */
 export declare function setupMarkerChecks(): void;
 export declare function needsReactionCheck(actor: Actor.Implementation): boolean;
 export declare function needsAOOCheck(actor: Actor.Implementation): boolean;

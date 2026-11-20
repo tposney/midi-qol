@@ -1,4 +1,5 @@
 import { requestForRollClaim } from "./lib/bonusDecisions.js";
+import { onTurnMoment, setupTurnMoments } from "./lib/turnMoments.js";
 import type { IncomingRequest } from "./lib/requests.js";
 import { collectRollModifiers } from "./services/rollModifiers/service.js";
 import { collectBonusCandidates, type BonusRollKind, type RollBonusQuery } from "./services/rollBonuses/service.js";
@@ -107,8 +108,11 @@ export function initPatching() {
   libWrapper.register(MODULE_ID, "CONFIG.Actor.documentClass.prototype.toggleStatusEffect", toggleImpliedStatus, "MIXED");
   libWrapper.register(MODULE_ID, "CONFIG.Combat.documentClass.prototype._preUpdate", combatPreUpdate, "WRAPPER");
   Hooks.on("updateCombat", recoverRerolledInitiativeUses);
-  libWrapper.register(MODULE_ID, "CONFIG.Combat.documentClass.prototype._onStartTurn", combatOnStartTurn, "WRAPPER");
-  libWrapper.register(MODULE_ID, "CONFIG.Combat.documentClass.prototype._onEndTurn", combatOnEndTurn, "WRAPPER");
+  // The turn-moment dispatcher (M4) wraps the combat lifecycle; over-time effects tick on its moments, waited for as
+  // core waited for them (their saves) before its own expiry
+  setupTurnMoments();
+  onTurnMoment("turnStart", "midi-qol.overTime", ({ combat, combatant }) => combatant ? processTurnOverTime(combat, combatant, true) : undefined, { priority: 100, uncapped: true });
+  onTurnMoment("turnEnd", "midi-qol.overTime", ({ combat, combatant }) => combatant ? processTurnOverTime(combat, combatant, false) : undefined, { priority: 100, uncapped: true });
   libWrapper.register(MODULE_ID, "CONFIG.Item.documentClass.prototype.getRollData", itemGetRollData, "WRAPPER");
   libWrapper.register(MODULE_ID, "CONFIG.Item.documentClass.prototype.dependentOrigin", itemDependentOrigin, "MIXED");
   libWrapper.register(MODULE_ID, "CONFIG.ActiveEffect.documentClass.prototype._preCreate", _preCreateActiveEffect, "WRAPPER");
@@ -1011,16 +1015,6 @@ async function rerollInitiativeInUpdate(combat: Combat.Implementation, changed: 
   changed.turn = Math.max(first, 0);
   await ChatMessage.implementation.create(messages as ChatMessage.CreateData[]);
   return updates.map(u => u._id);
-}
-
-async function combatOnStartTurn(this: Combat.Implementation, wrapped, combatant: Combatant.Implementation, context: object) {
-  await wrapped(combatant, context);
-  await processTurnOverTime(this, combatant, true);
-}
-
-async function combatOnEndTurn(this: Combat.Implementation, wrapped, combatant: Combatant.Implementation, context: object) {
-  await wrapped(combatant, context);
-  await processTurnOverTime(this, combatant, false);
 }
 
 /**
