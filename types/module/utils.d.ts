@@ -1443,7 +1443,9 @@ export declare function queueActorEffects<T>(actor: Actor.Implementation, fn: ()
 /** Deletes the actor's effect `id` if present; another caller deleting it first counts as done. */
 export declare function deleteEffectIfPresent(actor: Actor.Implementation, id: string | null): Promise<void>;
 /** Creates an effect keeping its fixed id; another caller creating it first counts as done. */
-export declare function createEffectWithId(actor: Actor.Implementation, data: ActiveEffect.CreateData): Promise<void>;
+export declare function createEffectWithId(actor: Actor.Implementation, data: ActiveEffect.CreateData, options?: {
+    midiLedger?: boolean;
+}): Promise<void>;
 /** actor.toggleStatusEffect, queued; losing a race with another module counts as done. */
 export declare function toggleStatus(actor: Actor.Implementation | null | undefined, statusId: string, options?: Actor.ToggleStatusEffectOptions): Promise<ActiveEffect.Implementation | boolean | undefined>;
 /**

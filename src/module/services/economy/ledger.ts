@@ -1,5 +1,6 @@
 import { MODULE_ID, getStaticID, i18n } from "../../../midi-qol.js";
 import { configSettings } from "../../settings.js";
+import { deprecation } from "../../lib/compatLine.js";
 import { asyncHooksCall, asyncHooksCallAll, createEffectWithId, deleteEffectIfPresent, getBonusActionEffect, getReactionEffect, queueActorEffects } from "../../utils.js";
 
 /*
@@ -118,6 +119,20 @@ function numberOf(value: unknown, fallback: number): number {
   return Number.isFinite(n) ? n : fallback;
 }
 
+/** The ledger's own writes: a window created or its count changed without it was written directly */
+const LEDGER_WRITE = { midiLedger: true };
+
+/** Is the kind tracked for this actor */
+export function isTracked(ref: ActorRef, kindId: BudgetKindId): boolean {
+  const actor = actorOf(ref);
+  return !!actor && !!KINDS[kindId]?.tracked(actor);
+}
+
+/** The kind whose window `effect` is, if it is one */
+export function windowKind(effect: ActiveEffect.Implementation): BudgetKindId | undefined {
+  return (Object.values(KINDS) as BudgetKind[]).find(kind => kind.windowId() === effect.id)?.id;
+}
+
 /** A kind's budget for an actor (or a token's actor) */
 export function budget(ref: ActorRef, kindId: BudgetKindId): BudgetState {
   const actor = actorOf(ref);
@@ -185,13 +200,13 @@ export async function spend(ref: ActorRef, kindId: BudgetKindId, options: { coun
     const now = budget(actor, kindId);
     const changes = windowChanges(actor, kind, now.used + by, { ...now.counters, ...options.counters });
     // @ts-expect-error fvtt-types v14 ActiveEffect
-    if (now.window) await now.window.update({ "system.changes": changes });
+    if (now.window) await now.window.update({ "system.changes": changes }, LEDGER_WRITE);
     else {
       // An ended window still there gives way to the new one
       await deleteEffectIfPresent(actor, kind.windowId());
       const data = effect.toObject();
       foundry.utils.setProperty(data, "system.changes", changes);
-      await createEffectWithId(actor, data);
+      await createEffectWithId(actor, data, LEDGER_WRITE);
     }
   });
   if (kindId === "reaction") await asyncHooksCallAll("midi-qol.setReactionUsed", actor, effect);
@@ -209,7 +224,7 @@ export async function refund(ref: ActorRef, kindId: BudgetKindId): Promise<void>
     const count = now.used - 1;
     if (count <= 0 && !Object.keys(now.counters).length) await deleteEffectIfPresent(actor, now.window.id);
     // @ts-expect-error fvtt-types v14 ActiveEffect
-    else await now.window.update({ "system.changes": windowChanges(actor, kind, Math.max(count, 0), now.counters) });
+    else await now.window.update({ "system.changes": windowChanges(actor, kind, Math.max(count, 0), now.counters) }, LEDGER_WRITE);
   });
 }
 
@@ -222,3 +237,55 @@ export async function reset(ref: ActorRef, kindId: BudgetKindId): Promise<void> 
 }
 
 
+
+const FACADES: Record<BudgetKindId, { label: string, facade: string }> = {
+  reaction: { label: "reaction", facade: "MidiQOL.setReactionUsed(actor) / MidiQOL.economy.spend(actor, \"reaction\")" },
+  bonus: { label: "bonus action", facade: "MidiQOL.setBonusActionUsed(actor) / MidiQOL.economy.spend(actor, \"bonus\")" },
+  action: { label: "turn", facade: "MidiQOL.setActionUsed(actor) / MidiQOL.economy.spend(actor, \"action\")" }
+};
+
+/** A window written directly (a macro or module creating the marker, or changing its count) */
+function warnDirectWrite(kind: BudgetKindId, verb: string) {
+  deprecation(`midi-qol | midi's ${FACADES[kind].label} marker was ${verb} directly: use ${FACADES[kind].facade}, which counts it on the economy ledger and queues the change with the actor's other effect changes`,
+    { since: "15.0.0", once: true });
+}
+
+function economyChanged(effect: ActiveEffect.Implementation, change: "created" | "updated" | "deleted") {
+  const kind = windowKind(effect);
+  const actor = effect.parent;
+  if (!kind || !(actor instanceof Actor)) return undefined;
+  Hooks.callAll("midi-qol.economyChanged", { actor, kind, effect, change });
+  return kind;
+}
+
+/**
+ * The windows' document events: `midi-qol.economyChanged` ({ actor, kind, effect, change }: read the state with
+ * MidiQOL.economy.budget) on every client, whatever wrote the window (the ledger, the token HUD, expiry, a macro); a
+ * window created or its count changed other than through the ledger is warned about on the client that did it.
+ */
+export function setupLedgerEvents() {
+  const byLedger = (options: object) => "midiLedger" in options && options.midiLedger === true;
+  Hooks.on("createActiveEffect", (effect, options, userId) => {
+    const kind = economyChanged(effect, "created");
+    if (kind && userId === game.user?.id && !byLedger(options)) warnDirectWrite(kind, "created");
+  });
+  Hooks.on("updateActiveEffect", (effect, changed, options, userId) => {
+    const kind = economyChanged(effect, "updated");
+    if (kind && userId === game.user?.id && !byLedger(options) && foundry.utils.hasProperty(changed, "system.changes")) warnDirectWrite(kind, "changed");
+  });
+  Hooks.on("deleteActiveEffect", (effect: ActiveEffect.Implementation) => { economyChanged(effect, "deleted"); });
+}
+
+/**
+ * The token HUD's (or actor.toggleStatusEffect's) reaction and bonus action statuses, through the ledger: on spends,
+ * off closes the window. Undefined (left to core) for other statuses, or a kind not tracked for this actor.
+ */
+export async function toggleBudgetStatus(actor: Actor.Implementation, statusId: string, active: boolean | undefined): Promise<boolean | undefined> {
+  const kind: BudgetKindId | undefined = statusId === "reaction" ? "reaction" : statusId === "bonusaction" ? "bonus" : undefined;
+  if (!kind || !isTracked(actor, kind)) return undefined;
+  const open = !!budget(actor, kind).window;
+  const on = active ?? !open;
+  if (on && !open) await spend(actor, kind);
+  else if (!on && open) await reset(actor, kind);
+  return !!budget(actor, kind).window;
+}

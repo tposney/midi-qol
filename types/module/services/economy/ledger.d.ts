@@ -14,6 +14,10 @@ export interface BudgetState {
 type ActorRef = Actor.Implementation | TokenDocument.Implementation | null | undefined;
 /** One of the actor's `flags.midi-qol.actions` values (budgets: reactionsMax, attacksMax...) */
 export declare function actionFlag(actor: Actor.Implementation, name: string): unknown;
+/** Is the kind tracked for this actor */
+export declare function isTracked(ref: ActorRef, kindId: BudgetKindId): boolean;
+/** The kind whose window `effect` is, if it is one */
+export declare function windowKind(effect: ActiveEffect.Implementation): BudgetKindId | undefined;
 /** A kind's budget for an actor (or a token's actor) */
 export declare function budget(ref: ActorRef, kindId: BudgetKindId): BudgetState;
 /** The ledger for an actor or token: each budget kind's state (MidiQOL.economy.ledger) */
@@ -31,4 +35,15 @@ export declare function spend(ref: ActorRef, kindId: BudgetKindId, options?: {
 export declare function refund(ref: ActorRef, kindId: BudgetKindId): Promise<void>;
 /** Close the kind's window (MidiQOL.economy.reset): a rest, or setReactionUsed(actor, false) */
 export declare function reset(ref: ActorRef, kindId: BudgetKindId): Promise<void>;
+/**
+ * The windows' document events: `midi-qol.economyChanged` ({ actor, kind, effect, change }: read the state with
+ * MidiQOL.economy.budget) on every client, whatever wrote the window (the ledger, the token HUD, expiry, a macro); a
+ * window created or its count changed other than through the ledger is warned about on the client that did it.
+ */
+export declare function setupLedgerEvents(): void;
+/**
+ * The token HUD's (or actor.toggleStatusEffect's) reaction and bonus action statuses, through the ledger: on spends,
+ * off closes the window. Undefined (left to core) for other statuses, or a kind not tracked for this actor.
+ */
+export declare function toggleBudgetStatus(actor: Actor.Implementation, statusId: string, active: boolean | undefined): Promise<boolean | undefined>;
 export {};

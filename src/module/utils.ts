@@ -9349,9 +9349,9 @@ export async function deleteEffectIfPresent(actor: Actor.Implementation, id: str
 }
 
 /** Creates an effect keeping its fixed id; another caller creating it first counts as done. */
-export async function createEffectWithId(actor: Actor.Implementation, data: ActiveEffect.CreateData) {
+export async function createEffectWithId(actor: Actor.Implementation, data: ActiveEffect.CreateData, options: { midiLedger?: boolean } = {}) {
   try {
-    await ActiveEffect.implementation.create(data, { parent: actor, keepId: true });
+    await ActiveEffect.implementation.create(data, { parent: actor, keepId: true, ...options });
   } catch (err) {
     if (!/already exists/.test(String((err as Error)?.message ?? err))) throw err;
   }

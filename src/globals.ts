@@ -78,6 +78,8 @@ declare module "fvtt-types/configuration" {
       "midi-qol.playerWaitsChanged": (waits: playerWaits.WaitInfo[]) => void;
       /** A service's providers or wrappers changed (api/services.ts) */
       "midi-qol.servicesChanged": (serviceId: string) => void;
+      /** A budget kind's window effect created, changed or deleted (M4 economy ledger; read the state with MidiQOL.economy.budget) */
+      "midi-qol.economyChanged": (event: { actor: Actor.Implementation, kind: string, effect: ActiveEffect.Implementation, change: "created" | "updated" | "deleted" }) => void;
       /** midi's init: register service providers */
       "midi-qol.registerServices": (services: typeof import("./module/api/services.js").servicesApi) => void;
       /** dnd5e's roll configuration dialogs (and midi's MidiRollChoiceDialog) when they render */

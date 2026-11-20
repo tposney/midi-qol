@@ -1,4 +1,5 @@
 import { requestForRollClaim } from "./lib/bonusDecisions.js";
+import { toggleBudgetStatus } from "./services/economy/ledger.js";
 import { onTurnMoment, setupTurnMoments } from "./lib/turnMoments.js";
 import type { IncomingRequest } from "./lib/requests.js";
 import { collectRollModifiers } from "./services/rollModifiers/service.js";
@@ -1022,6 +1023,9 @@ async function rerollInitiativeInUpdate(combat: Combat.Implementation, changed: 
  * dependent condition): core finds no document to toggle, so off would do nothing and a toggle would add a second one.
  */
 async function toggleImpliedStatus(this: Actor.Implementation, wrapped, statusId: string, options: Actor.ToggleStatusEffectOptions = {}) {
+  // The reaction and bonus action markers are the economy ledger's windows (M4): toggled through it
+  const budgetToggle = await toggleBudgetStatus(this, statusId, options.active);
+  if (budgetToggle !== undefined) return budgetToggle;
   const carriers = Object.entries(MIDI_IMPLYING_STATUSES).filter(([, implied]) => implied === statusId)
     .map(([status]) => getStaticID(status)).filter(id => this.effects.has(id));
   if (!carriers.length || this.effects.has(getStaticID(statusId))) return wrapped(statusId, options);

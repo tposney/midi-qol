@@ -220,6 +220,7 @@
     "midi-qol.dependentsRegistryChanged",
     "midi-qol.dnd5eCalculateDamage",
     "midi-qol.dnd5ePreCalculateDamage",
+    "midi-qol.economyChanged",
     "midi-qol.hitsChecked",
     "midi-qol.itemUseActivitySelect",
     "midi-qol.midiReady",
