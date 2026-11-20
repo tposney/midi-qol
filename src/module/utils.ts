@@ -12,6 +12,7 @@ import { getHexCentroid } from "./services/flanking/provider.js";
 import { bonusPromptService } from "./services/rollBonuses/prompt.js";
 import { applyOfferedBonus, collectBonusCandidates, type BonusCost, type BonusPhase, type OfferedBonus, type RollBonusQuery } from "./services/rollBonuses/service.js";
 import { addCosts as addBonusCosts, canAfford as canAffordBonus, orderForApplication } from "./services/rollBonuses/rules.js";
+import { parseFlagValue } from "./rules/optionalFlags.js";
 import { crossesOppositeSides, opposedByAngle } from "./services/flanking/rules.js";
 import { DialogCountdown } from "./lib/dialogCountdown.js";
 import { coverBetween, coverFor } from "./services/cover/service.js";
@@ -4143,6 +4144,92 @@ export function actorFromUuid(uuid?: string): any {
 }
 
 // TODO: This
+/** A flags.midi-qol.optional bonus's buttons for a roll: its own selector's value and its `.all` value, labelled */
+export function flagBonusButtons(actor: Actor.Implementation, flag: string, flagSelector: string, owner: object | undefined, item: Item | undefined): FlagBonusButton[] {
+  const buttons: FlagBonusButton[] = [];
+      let flagData: any = foundry.utils.getProperty(owner ?? {}, flag) as any; // TODO This should be tightened up
+  let value: string | undefined = foundry.utils.getProperty(flagData ?? {}, flagSelector) as string;
+  // Skip object values — can happen if a flag key like "damage.save" gets an extra ".all"
+  // appended by DAE deprecation logic, creating a nested object instead of a string
+  if (typeof value === "object") value = undefined;
+  let icon = "fas fa-dice-d20";
+  if (value !== undefined) {
+    let labelDetail;
+    if (typeof value === "string") {
+      labelDetail = Roll.replaceFormulaData(value, actor.getRollData() as Record<string, unknown>);
+      if (value.startsWith("ItemMacro")) {
+        icon = CONFIG.Macro.sidebarIcon;
+        if (value === "ItemMacro")
+          labelDetail = item?.name ?? "Macro";
+        else {
+          const uuid = value.split(".").slice(1).join(".");
+          const item = fromUuidSync(uuid);
+          if (item)
+            labelDetail = item.name;
+          else
+            labelDetail = uuid;
+        }
+      }
+      else if (value.startsWith("function")) {
+        icon = CONFIG.Macro.sidebarIcon;
+        labelDetail = value.split(".").slice(-1);
+      } else if (value.startsWith("Macro")) {
+        icon = CONFIG.Macro.sidebarIcon;
+        labelDetail = value.split(".").slice(1).join(".");
+      }
+    } else labelDetail = `${value}`
+    buttons.push({
+      icon: `<i class="${icon}"></i>`,
+      //          label: (flagData.label ?? "Bonus") + `  (${foundry.utils.getProperty(flagData, flagSelector) ?? "0"})`,
+      label: (flagData?.label ?? "Bonus") + ` (${labelDetail})`,
+      value: `${value}`,
+      key: flag
+    });
+  }
+  let selector = flagSelector.split(".");
+  if (selector[selector.length - 1] !== "all") {
+    selector[selector.length - 1] = "all";
+    const allSelector = selector.join(".");
+    value = foundry.utils.getProperty(flagData ?? {}, allSelector) as string | undefined;
+    if (typeof value === "object") value = undefined;
+    if (value !== undefined) {
+      if (typeof value !== "string") value = `${value}`
+      let labelDetail = Roll.replaceFormulaData(value, actor.getRollData() as Record<string, unknown>);
+      if (value.startsWith("ItemMacro")) {
+        icon = CONFIG.Macro.sidebarIcon;
+        if (value === "ItemMacro")
+          labelDetail = item?.name ?? "Macro";
+        else {
+          const uuid = value.split(".").slice(1).join(".");
+          const item = fromUuidSync(uuid) as Item.Implementation | undefined;
+          if (item)
+            labelDetail = item.name;
+          else
+            labelDetail = uuid;
+        }
+      } else if (value.startsWith("function")) {
+        icon = CONFIG.Macro.sidebarIcon;
+        labelDetail = value.split(".").slice(-1).join(".");
+      } else if (value.startsWith("Macro")) {
+        icon = CONFIG.Macro.sidebarIcon;
+        labelDetail = value.split(".").slice(1).join(".");
+      } else labelDetail = value;
+      // check force condition. if true call the callback and return obj
+
+      buttons.push({
+        icon: `<i class="${icon}"></i>`,
+        //          label: (flagData.label ?? "Bonus") + `  (${foundry.utils.getProperty(flagData, allSelector) ?? "0"})`,
+        label: (flagData?.label ?? "Bonus") + (debugEnabled > 0 ? `: ${labelDetail}` : ""),
+        value,
+        key: flag
+      });
+    }
+  }
+  return buttons;
+}
+
+export type FlagBonusButton = { icon: string, label: string, value: string, key: string };
+
 export class RollModifyDialog extends HandlebarsApplicationMixin(ApplicationV2) {
   rollExpanded: boolean;
   timeRemaining: number;
@@ -4231,94 +4318,15 @@ export class RollModifyDialog extends HandlebarsApplicationMixin(ApplicationV2) 
       return foundry.utils.getProperty(owner, flagName) !== undefined
     });
     if (this.data.flags.length === 0 && !this.data.candidates?.length) this.close();
-    this.data.buttons = this.data.flags.reduce((obj, flag) => {
-      const owner = ownerOf(flag);
-      let flagData: any = foundry.utils.getProperty(owner ?? {}, flag) as any; // TODO This should be tightened up
-      let value: string | undefined = foundry.utils.getProperty(flagData ?? {}, this.data.flagSelector) as string;
-      // Skip object values — can happen if a flag key like "damage.save" gets an extra ".all"
-      // appended by DAE deprecation logic, creating a nested object instead of a string
-      if (typeof value === "object") value = undefined;
-      let icon = "fas fa-dice-d20";
-      if (value !== undefined) {
-        let labelDetail;
-        if (typeof value === "string") {
-          labelDetail = Roll.replaceFormulaData(value, this.data.actor.getRollData() as Record<string, unknown>);
-          if (value.startsWith("ItemMacro")) {
-            icon = CONFIG.Macro.sidebarIcon;
-            if (value === "ItemMacro")
-              labelDetail = this.data.item?.name ?? "Macro";
-            else {
-              const uuid = value.split(".").slice(1).join(".");
-              const item = fromUuidSync(uuid);
-              if (item)
-                labelDetail = item.name;
-              else
-                labelDetail = uuid;
-            }
-          }
-          else if (value.startsWith("function")) {
-            icon = CONFIG.Macro.sidebarIcon;
-            labelDetail = value.split(".").slice(-1);
-          } else if (value.startsWith("Macro")) {
-            icon = CONFIG.Macro.sidebarIcon;
-            labelDetail = value.split(".").slice(1).join(".");
-          }
-        } else labelDetail = `${value}`
-        obj[foundry.utils.randomID()] = {
-          icon: `<i class="${icon}"></i>`,
-          //          label: (flagData.label ?? "Bonus") + `  (${foundry.utils.getProperty(flagData, this.data.flagSelector) ?? "0"})`,
-          label: (flagData?.label ?? "Bonus") + ` (${labelDetail})`,
-          value: `${value}`,
-          key: flag,
-          callback: this.data.callback
-        }
-      }
-      let selector = this.data.flagSelector.split(".");
-      if (selector[selector.length - 1] !== "all") {
-        selector[selector.length - 1] = "all";
-        const allSelector = selector.join(".");
-        value = foundry.utils.getProperty(flagData ?? {}, allSelector) as string | undefined;
-        if (typeof value === "object") value = undefined;
-        if (value !== undefined) {
-          if (typeof value !== "string") value = `${value}`
-          let labelDetail = Roll.replaceFormulaData(value, this.data.actor.getRollData() as Record<string, unknown>);
-          if (value.startsWith("ItemMacro")) {
-            icon = CONFIG.Macro.sidebarIcon;
-            if (value === "ItemMacro")
-              labelDetail = this.data.item?.name ?? "Macro";
-            else {
-              const uuid = value.split(".").slice(1).join(".");
-              const item = fromUuidSync(uuid) as Item.Implementation | undefined;
-              if (item)
-                labelDetail = item.name;
-              else
-                labelDetail = uuid;
-            }
-          } else if (value.startsWith("function")) {
-            icon = CONFIG.Macro.sidebarIcon;
-            labelDetail = value.split(".").slice(-1).join(".");
-          } else if (value.startsWith("Macro")) {
-            icon = CONFIG.Macro.sidebarIcon;
-            labelDetail = value.split(".").slice(1).join(".");
-          } else labelDetail = value;
-          // check force condition. if true call the callback and return obj
-
-          obj[foundry.utils.randomID()] = {
-            icon: `<i class="${icon}"></i>`,
-            //          label: (flagData.label ?? "Bonus") + `  (${foundry.utils.getProperty(flagData, allSelector) ?? "0"})`,
-            label: (flagData?.label ?? "Bonus") + (debugEnabled > 0 ? `: ${labelDetail}` : ""),
-            value,
-            key: flag,
-            callback: this.data.callback
-          }
-        }
-      }
-      return obj;
-    }, {})
+    this.data.buttons = {};
+    for (const flag of this.data.flags)
+      for (const button of flagBonusButtons(this.data.actor, flag, this.data.flagSelector, ownerOf(flag), this.data.item))
+        this.data.buttons[foundry.utils.randomID()] = { ...button, callback: this.data.callback };
     for (const candidate of this.data.candidates ?? []) {
-      const detail = candidate.effect.kind === "add" ? ` (${candidate.effect.formula})` : candidate.effect.kind === "replace" ? ` (${candidate.effect.formula})` : "";
+      // A flag's label already carries its value
+      const detail = candidate.flagKey ? "" : candidate.effect.kind === "add" ? ` (${candidate.effect.formula})` : candidate.effect.kind === "replace" ? ` (${candidate.effect.formula})` : "";
       this.data.buttons[foundry.utils.randomID()] = {
-        icon: '<i class="fas fa-dice-d20"></i>',
+        icon: candidate.iconHTML ?? '<i class="fas fa-dice-d20"></i>',
         label: `${candidate.label}${detail}`,
         key: candidate.id,
         candidate,
@@ -4532,7 +4540,10 @@ export async function bonusDialog(
     for (const term of bonusRoll.terms) if (!(term instanceof foundry.dice.terms.OperatorTerm)) term.options.flavor ||= bonusLabel(flagName);
   };
 
-  const callback = async (dialog, button) => {
+  /** A flag's button applied to `current` (rollBonuses 6b: the flag candidates' apply): the new roll */
+  const applyFlag = async (button: FlagBonusButton, current: Roll): Promise<Roll> => {
+    let roll: Roll = current;
+    let newRoll: Roll = current;
     let reRoll: Roll | undefined;
     let chatMessage: ChatMessage.Implementation | undefined;
     const undoId = foundry.utils.randomID();
@@ -4553,7 +4564,7 @@ export async function bonusDialog(
     // @ts-expect-error no dnd5e-types
     let rollMode = roll.options.rollMode;
     rollMode = (foundry.utils.getProperty(buttonOwner ?? {}, button.key) as any)?.rollMode ?? rollMode ?? safeGetGameSetting("core", "messageMode");
-    if (!hasEffectGranting(this.actor, button.key, flagSelector, buttonOwner)) return;
+    if (!hasEffectGranting(this.actor, button.key, flagSelector, buttonOwner)) return current;
     let resultApplied = false; // This is just for macro calls
     let macroToCall: string = "";
     const allFlagSelector = flagSelector.split(".").slice(0, -1).join(".") + ".all";
@@ -4729,31 +4740,11 @@ export async function bonusDialog(
     }
 
     await removeEffectGranting(this.actor, button.key);
-    roll = newRoll;
-    const optionalsUsed: string[] = foundry.utils.getProperty(roll, `flags.${MODULE_ID}.optionalsUsed`) as string[] ?? [];
+    const optionalsUsed: string[] = foundry.utils.getProperty(newRoll, `flags.${MODULE_ID}.optionalsUsed`) as string[] ?? [];
     optionalsUsed.push(`${button.key}.${flagSelector}`);
-    foundry.utils.setProperty(roll, `flags.${MODULE_ID}.optionalsUsed`, optionalsUsed);
-    usedLabels.push(bonusLabel(button.key));
-    if (dialog) {
-      validFlags = validFlags.filter(bf => bf !== button.key);
-      if (validFlags.length === 0 && optionalCandidates.length === 0) {
-        dialog?.close();
-        return;
-      }
-
-      const newRollHTML = /*reRoll ? await midiRenderRoll(reRoll) :*/ await midiRenderRoll(newRoll);
-      dialog.data.flags = validFlags;
-      dialog.data.currentRoll = newRoll;
-      if (game.user?.isGM) {
-        dialog.data.content = newRollHTML;
-      } else {
-        if (["public", "gm", "self"].includes(toMessageMode(rollMode))) dialog.data.content = newRollHTML;
-        else dialog.data.content = "Hidden Roll";
-      }
-      dialog.render(true);
-      // dialog.close();
-    }
+    foundry.utils.setProperty(newRoll, `flags.${MODULE_ID}.optionalsUsed`, optionalsUsed);
     if (chatMessage) unTimedExecuteAsGM("addUndoChatCards", { id: undoId, chatCardUuids: [(await chatMessage).uuid] });
+    return newRoll;
   }
 
   let parameters: { [key: string]: any } = {};
@@ -4782,8 +4773,7 @@ export async function bonusDialog(
   };
   const conditionData = createConditionData({ workflow: (this instanceof Workflow ? this : undefined), ...parameters });
   let validFlags: string[] = [];
-  let lastForceFlag = ""
-  const oldRoll = foundry.utils.deepClone(roll);
+  const forcedFlags: string[] = [];
   for (let flagName of bonusFlags) {
     const owner = ownerOf(flagName);
     if ((getOptionalCountRemaining(this.actor, `${flagName}.count`, owner)) < 1) continue;
@@ -4795,51 +4785,55 @@ export async function bonusDialog(
     let forcedCondition: string | undefined = foundry.utils.getProperty(owner ?? {}, `${flagName}.force`) as string;
     if (forcedCondition !== undefined) {
       forcedCondition = await evalCondition(forcedCondition, conditionData, { errorReturn: true, async: true });
-      if (forcedCondition) {
-        const altFlag = flagSelector.split(".").slice(0, -1).join(".") + ".all";
-        await callback(undefined, {
-          key: flagName,
-          value: foundry.utils.getProperty(owner ?? {}, `${flagName}.${flagSelector}`) ?? foundry.utils.getProperty(owner ?? {}, `${flagName}.${altFlag}`) ?? "",
-          label: "none"
-        });
-        lastForceFlag = flagName;
-      }
+      // A forced flag applies without asking (an automatic candidate, below)
+      if (forcedCondition) forcedFlags.push(flagName);
       continue;
     }
     if (foundry.utils.getProperty(owner, flagName) !== undefined) validFlags.push(flagName);
   }
-  if (showRoll && lastForceFlag !== "") {
-    DSNMarkDiceDisplayed(roll);
-    // const rollMode = foundry.utils.getProperty(this.actor ?? {}, lastForceFlag)?.rollMode ?? options.rollMode ?? safeGetGameSetting("core", "messageMode");
-    //@ts-expect-error
-    const rollMode = foundry.utils.getProperty(ownerOf(lastForceFlag) ?? {}, lastForceFlag)?.rollMode ?? oldRoll.options.rollMode ?? safeGetGameSetting("core", "messageMode");
-    const card = await displayBeforeAfterRolls({ originalRoll: oldRoll, newRoll: roll, rollMode, title, player, options, actor: this.actor });
-    if (card?.uuid && this instanceof Workflow && configSettings.undoWorkflow) await unTimedExecuteAsGM("addUndoChatCards", { id: this.id, chatCardUuids: [card.uuid] });
-  }
   const bonusRollData = (this.activity ?? this.item ?? this.actor)?.getRollData() ?? {};
-  const candidateContext = (current: Roll) => ({ query: bonusQuery!, phase: bonusPhase, roll: current });
+  // A roll with flags only (an AC bonus, a save asked without a query) still has a query for its flag candidates
+  const query: RollBonusQuery = bonusQuery ?? { kind: rollType === "attackRoll" ? "attack" : rollType === "damageRoll" ? "damage" : OPTIONAL_AC_KEYS.includes(flagSelector) ? "ac" : "save",
+    actor: this.actor, ...(this instanceof Workflow ? { workflow: this } : {}) };
+  const candidateContext = (current: Roll) => ({ query, phase: bonusPhase, roll: current });
+  // The flags as candidates (rollBonuses 6b): one per button the prompt shows (a flag's selector value, its .all value),
+  // applied by the flag's own behaviour (applyFlag), its count spent there
+  const flagCandidates = (flagName: string, optional: boolean): OfferedBonus[] =>
+    flagBonusButtons(this.actor, flagName, flagSelector, ownerOf(flagName), this.item).map((button, index) => {
+      const parsed = parseFlagValue(button.value);
+      return {
+        id: `${flagName}#${index}`, contributor: "midi-qol.optionalFlags", label: button.label, iconHTML: button.icon,
+        flagKey: flagName, flagLabel: bonusLabel(flagName), phases: [bonusPhase],
+        effect: parsed && "effect" in parsed ? parsed.effect : { kind: "rider" }, optional, spendsOwnCost: true,
+        apply: (ctx: { roll: Roll }) => applyFlag(button, ctx.roll)
+      };
+    });
+  // Service candidates only with a query; the flags always
+  if (!bonusQuery) optionalCandidates = [];
+  const automatic: OfferedBonus[] = [...forcedFlags.map(flagName => flagCandidates(flagName, false)[0]).filter((c): c is OfferedBonus => !!c),
+    ...(bonusQuery ? automaticCandidates : [])];
+  optionalCandidates = [...validFlags.flatMap(flagName => flagCandidates(flagName, true)), ...optionalCandidates];
   // What chosen bonuses have spent this roll: a later one drawing on the same pool must still fit
   let bonusSpent: BonusCost = {};
   const stillAffordable = () => { optionalCandidates = optionalCandidates.filter(c => canAffordBonus(c.cost, bonusSpent)); };
-  if (bonusQuery && automaticCandidates.length) {
+  if (automatic.length) {
     const before = roll;
-    for (const candidate of orderForApplication(automaticCandidates)) {
+    for (const candidate of orderForApplication(automatic)) {
       if (!canAffordBonus(candidate.cost, bonusSpent)) continue;
       roll = newRoll = await applyOfferedBonus(candidate, candidateContext(roll), bonusRollData);
       bonusSpent = addBonusCosts(bonusSpent, candidate.cost);
-      usedLabels.push(candidate.label);
+      usedLabels.push(candidate.flagLabel ?? candidate.label);
     }
     if (roll !== before) recordRollChange(roll, before, usedLabels);
     stillAffordable();
-    if (showRoll && lastForceFlag === "" && roll !== before) {
+    if (showRoll && roll !== before) {
       DSNMarkDiceDisplayed(roll);
       //@ts-expect-error
       const card = await displayBeforeAfterRolls({ originalRoll: before, newRoll: roll, rollMode: before.options.rollMode ?? safeGetGameSetting("core", "messageMode"), title, player, options, actor: this.actor });
       if (card?.uuid && this instanceof Workflow && configSettings.undoWorkflow) await unTimedExecuteAsGM("addUndoChatCards", { id: this.id, chatCardUuids: [card.uuid] });
     }
   }
-  if (!bonusQuery) optionalCandidates = [];
-  if (validFlags.length === 0 && optionalCandidates.length === 0) return roll;
+  if (optionalCandidates.length === 0) return roll;
   // What the dialog's bonuses change is recorded against the roll they were offered on
   const offeredOn = roll;
   const automaticLabels = usedLabels.length;
@@ -4847,12 +4841,14 @@ export async function bonusDialog(
     const candidate = button.candidate;
     newRoll = await applyOfferedBonus(candidate, candidateContext(newRoll), bonusRollData);
     roll = newRoll;
-    usedLabels.push(candidate.label);
+    usedLabels.push(candidate.flagLabel ?? candidate.label);
     bonusSpent = addBonusCosts(bonusSpent, candidate.cost);
-    optionalCandidates = optionalCandidates.filter(c => c.id !== candidate.id);
+    // A flag's other value goes with it, and a flag whose count is used up
+    optionalCandidates = optionalCandidates.filter(c => c.id !== candidate.id && (!candidate.flagKey || c.flagKey !== candidate.flagKey)
+      && (!c.flagKey || getOptionalCountRemaining(this.actor, `${c.flagKey}.count`, ownerOf(c.flagKey)) >= 1));
     stillAffordable();
     dialog.data.candidates = optionalCandidates;
-    if (validFlags.length === 0 && optionalCandidates.length === 0) {
+    if (optionalCandidates.length === 0) {
       dialog.close();
       return;
     }
@@ -4896,7 +4892,8 @@ export async function bonusDialog(
     openBonusPrompt(
       {
         actor: this.actor,
-        flags: validFlags,
+        // The flags are among the candidates (flagCandidates); the dialog builds no flag buttons of its own
+        flags: [],
         flagSelector,
         targetObject: this,
         title,
@@ -4904,7 +4901,6 @@ export async function bonusDialog(
         currentRoll: roll,
         rollHTML,
         rollMode: rollType,
-        callback,
         close: onClose.bind(this),
         timeout,
         item: this.item,

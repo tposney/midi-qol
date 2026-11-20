@@ -71,6 +71,10 @@ export interface BonusCandidate {
   validate?: (ctx: BonusContext) => true | string;
   /** After it was applied: its consumption and side effects. */
   onChosen?: (ctx: BonusContext & { roll: Roll }) => Promise<void> | void;
+  /** Applies the bonus itself, in place of its effect (a macro value, a flag's own behaviour): returns the new roll. */
+  apply?: (ctx: BonusContext, rollData: object) => Promise<Roll>;
+  /** The prompt's icon for it (HTML), in place of the default die. */
+  iconHTML?: string;
 }
 
 export interface RollBonusContributor {
@@ -99,7 +103,12 @@ export function defineRollBonusesService() {
 }
 
 /** A contributor's candidate, its id prefixed with the contributor's. */
-export type OfferedBonus = BonusCandidate & { contributor: string };
+export type OfferedBonus = BonusCandidate & {
+  contributor: string;
+  /** A flags.midi-qol.optional bonus: its flag (a flag can offer two values, both withdrawn when one is used) and its name */
+  flagKey?: string;
+  flagLabel?: string;
+};
 
 /** Asks every contributor for the roll's candidates for `phase`, keeping those valid now and affordable. */
 export async function collectBonusCandidates(query: RollBonusQuery, phase: BonusPhase, roll: Roll, outcome?: Outcome): Promise<OfferedBonus[]> {
@@ -243,11 +252,14 @@ export async function applyOfferedBonus(bonus: OfferedBonus, ctx: BonusContext, 
         { type: effect.damageType ?? rollType, isCritical, flavor: bonus.label }).evaluate();
       for (const term of extra.terms) if (!(term instanceof foundry.dice.terms.OperatorTerm)) term.options.flavor ||= bonus.label;
       await workflow.setBonusDamageRolls([...(workflow.bonusDamageRolls ?? []), extra]);
-    } else roll = await applyBonusEffect(ctx.roll, effect, rollData, bonus.label);
-    // A changed roll is a new object: carry forward what was used on the roll it came from
-    const used: string[] = [...(foundry.utils.getProperty(ctx.roll, "flags.midi-qol.optionalsUsed") as string[] ?? [])];
-    used.push(bonus.id);
-    foundry.utils.setProperty(roll, "flags.midi-qol.optionalsUsed", used);
+    } else if (bonus.apply) roll = await bonus.apply(ctx, rollData);
+    else roll = await applyBonusEffect(ctx.roll, effect, rollData, bonus.label);
+    // A changed roll is a new object: carry forward what was used on the roll it came from (an `apply` records its own)
+    if (!bonus.apply) {
+      const used: string[] = [...(foundry.utils.getProperty(ctx.roll, "flags.midi-qol.optionalsUsed") as string[] ?? [])];
+      used.push(bonus.id);
+      foundry.utils.setProperty(roll, "flags.midi-qol.optionalsUsed", used);
+    }
     if (!bonus.spendsOwnCost) await spendBonusCost(ctx.query.actor, bonus.cost, bonus.label);
     await bonus.onChosen?.({ ...ctx, roll });
   } catch (err) {
