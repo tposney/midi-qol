@@ -738,7 +738,7 @@ export let fetchParams = () => {
     configSettings.itemTypeList = itemList.filter((type) => !["base", "backpack"].includes(type));
   }
   if (configSettings.itemTypeList === undefined) configSettings.itemTypeList = Object.keys(CONFIG.Item.typeLabels);
-  if (configSettings.defaultSaveMult === undefined) configSettings.defaultSaveMult = 0.5;
+  if (configSettings.defaultSaveMult === undefined || configSettings.defaultSaveMult === null) configSettings.defaultSaveMult = 0.5;
   if (configSettings.ignoreSpellReactionRestriction === undefined) configSettings.ignoreSpellReactionRestriction = false;
   if (configSettings.damageImmunityMultiplier === undefined) configSettings.damageImmunityMultiplier = 0.0;
   if (configSettings.damageResistanceMultiplier === undefined) configSettings.damageResistanceMultiplier = 0.5;
