@@ -1,4 +1,5 @@
 import { askBonusDecision } from "./lib/bonusDecisions.js";
+import { budget, reset as resetBudget, spend as spendBudget } from "./services/economy/ledger.js";
 import { onTurnMoment } from "./lib/turnMoments.js";
 import { shownTokenName } from "./services/tokenNames/service.js";
 import { tagsView } from "./lib/tags.js";
@@ -6665,93 +6666,16 @@ export async function setActionUsed(actor: Actor.Implementation) {
   await actor.setFlag(MODULE_ID, "actions", { action: true });
 }
 
-/** The changes on midi's reaction marker when `count` reactions have been used. */
-function reactionChanges(actor: Actor.Implementation, count: number) {
-  return [
-    { key: 'flags.midi-qol.actions.reaction', type: "override", value: String(count >= (actor.getFlag(MODULE_ID, "actions")?.reactionsMax ?? 1)) },
-    { key: 'flags.midi-qol.actions.reactionsUsed', type: "override", value: String(count) },
-    { key: 'flags.midi-qol.actions.reactionCombatRound', type: "override", value: String(game.combat?.round ?? false) }
-  ];
-}
-
-/** The changes on midi's bonus action marker when `count` bonus actions have been used. */
-function bonusActionChanges(actor: Actor.Implementation, count: number) {
-  return [
-    { key: 'flags.midi-qol.actions.bonus', type: "override", value: String(count >= (actor.getFlag(MODULE_ID, "actions")?.bonusActionsMax ?? 1)) },
-    { key: 'flags.midi-qol.actions.bonusActionsUsed', type: "override", value: String(count) },
-    { key: 'flags.midi-qol.actions.bonusActionCombatRound', type: "override", value: String(game.combat?.round ?? false) }
-  ];
-}
-
-/** Replaces a marker effect, queued, recounting in case another use counted since `count` was read. */
-async function replaceMarker(actor: Actor.Implementation, effect: ActiveEffect.Implementation, count: number, flag: "reactionsUsed" | "bonusActionsUsed",
-  changes: (actor: Actor.Implementation, count: number) => object[]) {
-  await queueActorEffects(actor, async () => {
-    const current = (actor.getFlag(MODULE_ID, "actions")?.[flag] ?? 0) + 1;
-    const data = effect.toObject();
-    if (current !== count) foundry.utils.setProperty(data, "system.changes", changes(actor, current));
-    await deleteEffectIfPresent(actor, effect.id);
-    await createEffectWithId(actor, data);
-  });
-}
-
+/** Spend a reaction (a facade over the economy ledger, M4: services/economy/ledger.ts); `active` false closes the window */
 export async function setReactionUsed(actor: Actor.Implementation, active: boolean = true) {
-  if (!getReactionEffect()) return;
-  const id = getStaticID("reaction");
-  if (!active) {
-    await queueActorEffects(actor, () => deleteEffectIfPresent(actor, id));
-    return;
-  }
-  if (!["all", "displayOnly"].includes(configSettings.enforceReactions) && configSettings.enforceReactions !== actor.type) return;
-  const actions = actor.getFlag(MODULE_ID, "actions");
-  const newCount = (actions?.reactionsUsed ?? 0) + 1;
-  const effect = getReactionEffect()?.clone({}, { keepId: true });
-  if (!effect) return;
-  effect.updateSource({
-    origin: actor.uuid,
-    // @ts-expect-error fvtt-types v14 ActiveEffect
-    "system.changes": reactionChanges(actor, newCount)
-  });
-  if (actions?.reactionsReset === "eachTurn") {
-    effect.updateSource({ duration: { value: 1, units: "turns" } })
-  }
-  if (actions?.reactionsReset === "rest") {
-    effect.updateSource({ duration: { expiry: null }, flags: { dae: { specialDuration: ["shortRest"] } } });
-  }
-  if (actions?.reactionsReset === "never") {
-    effect.updateSource({ duration: { expiry: null }, flags: { dae: { specialDuration: [] } } });
-  }
-  if (await asyncHooksCall("midi-qol.preSetReactionUsed", actor, effect) === false) return;
-  await replaceMarker(actor, effect, newCount, "reactionsUsed", reactionChanges);
-  await asyncHooksCallAll("midi-qol.setReactionUsed", actor, effect);
+  if (!active) return resetBudget(actor, "reaction");
+  await spendBudget(actor, "reaction");
 }
 
+/** Spend a bonus action (a facade over the economy ledger) */
 export async function setBonusActionUsed(actor: Actor.Implementation) {
   if (debugEnabled > 0) warn("setBonusActionUsed | starting");
-  if (!["all", "displayOnly"].includes(configSettings.enforceBonusActions) && configSettings.enforceBonusActions !== actor.type) return;
-  const actions = (actor.getFlag(MODULE_ID, "actions"));
-  const newCount = (actions?.bonusActionsUsed ?? 0) + 1;
-  const effect = getBonusActionEffect()?.clone({}, { keepId: true });
-  if (!effect) return;
-  effect.updateSource({
-    origin: actor.uuid,
-    // @ts-expect-error fvtt-types v14 ActiveEffect
-    "system.changes": bonusActionChanges(actor, newCount)
-  });
-  if (actions?.bonusActionsReset === "eachTurn") {
-    effect.updateSource({ duration: { value: 1, units: "turns" } })
-  }
-  if (actions?.bonusActionsReset === "rest") {
-    effect.updateSource({ duration: { expiry: null }, flags: { dae: { specialDuration: ["shortRest"] } } });
-  }
-  if (actions?.bonusActionsReset === "never") {
-    effect.updateSource({ duration: { expiry: null }, flags: { dae: { specialDuration: [] } } });
-  }
-  effect.origin = actor.uuid;
-
-  if (await asyncHooksCall("midi-qol.preSetBonusActionUsed", actor, effect) === false) return;
-  await replaceMarker(actor, effect, newCount, "bonusActionsUsed", bonusActionChanges);
-  await asyncHooksCallAll("midi-qol.setBonusActionUsed", actor, effect);
+  await spendBudget(actor, "bonus");
 }
 
 export async function removeActionUsed(actor: Actor.Implementation) {
@@ -6761,9 +6685,7 @@ export async function removeActionUsed(actor: Actor.Implementation) {
 
 export async function removeReactionUsed(actor: Actor.Implementation, force = false) {
   if (debugEnabled > 0) warn("removeReactionUsed | starting", actor);
-  if (force) { // otherwise DAE expires it through its special duration
-    await queueActorEffects(actor, () => deleteEffectIfPresent(actor, getStaticID("reaction"))); // reaction always non-transfer
-  }
+  if (force) await resetBudget(actor, "reaction"); // otherwise its window ends by its own expiry
   // safety net unset of flags - just in case.
   if (actor.flags?.[MODULE_ID]?.actions?.reaction) await actor.update({ flags: { [MODULE_ID]: { actions: { reactionsUsed: 0, reactionCombatRound: new foundry.data.operators.ForcedDeletion() } } } });
 }
@@ -6773,7 +6695,7 @@ export function hasUsedAction(actor: Actor.Implementation) {
 }
 
 export function hasUsedReaction(actor: Actor.Implementation) {
-  return (actor.getFlag(MODULE_ID, "actions")?.reactionsUsed ?? 0) >= (actor.getFlag(MODULE_ID, "actions")?.reactionsMax ?? 1);
+  return budget(actor, "reaction").exhausted;
 }
 
 const NO_REACTIONS_EFFECT = "Compendium.dnd5e.effects.ActiveEffect.tZuPpkTWg8lVjxhL";
@@ -6788,45 +6710,41 @@ export function hasUsedAnyReaction(actor: Actor.Implementation) {
   return (actor.getFlag(MODULE_ID, "actions")?.reactionsUsed ?? 0) > 0;
 }
 
-export async function expirePerTurnBonusActions(
-  combat: Combat.Implementation,
-  data: Combat.RoundUpdateData | Combat.TurnUpdateData,
-  _options?: Combat.RoundUpdateOptions | Combat.TurnUpdateOptions
-) {
+/**
+ * Optional bonuses' per-turn counts (`flags.midi-qol.optional.NAME.count` each-turn / each-round / turn), reset on the
+ * turn moments (M4; core's active GM): each-turn at every turn start, each-round at a round start, turn at the start of
+ * the bearer's own turn.
+ */
+async function resetOptionalBonusCounts(combat: Combat.Implementation, moment: "turnStart" | "roundStart", whose: Actor.Implementation | null | undefined) {
   const optionalFlagRe = /flags.midi-qol.optional.[^.]+.(count|countAlt)$/;
-  for (let combatant of (combat.turns ?? [])) { // monks combat details does not pass the combat as it should so put in a guard
+  for (const combatant of combat.turns ?? []) {
     const actor = combatant.actor;
     if (!actor) continue;
-    const actorAllApplicableEffects = actor.allApplicableEffects();
-    for (let effect of actorAllApplicableEffects) {
+    for (const effect of actor.allApplicableEffects()) {
       // @ts-expect-error fvtt-types v14 ActiveEffect
-      for (let change of effect.system.changes) {
-        if (change.key.match(optionalFlagRe)
-          && ((change.value === "each-turn")
-            || (change.value === "each-round" && data.round !== combat.round))
-          || (change.value === "turn" && (data.turn !== null) && combat?.turns[data.turn ?? combat.turn].actor === actor)) {
-          const usedKey = change.key.replace(/.(count|countAlt)$/, ".used")
-          const isUsed = foundry.utils.getProperty(actor, usedKey);
-          if (isUsed) {
-            const key = usedKey.replace(`flags.${MODULE_ID}.`, "");
-            //TODO turn this into actor updates instead of each flag
-            await unTimedExecuteAsGM("_gmUnsetFlag", { actorUuid: actor.uuid, base: MODULE_ID, key });
-          }
-        }
+      for (const change of effect.system.changes) {
+        if (!change.key.match(optionalFlagRe)) continue;
+        const resets = (change.value === "each-turn" && moment === "turnStart")
+          || (change.value === "each-round" && moment === "roundStart")
+          || (change.value === "turn" && moment === "turnStart" && whose === actor);
+        if (!resets) continue;
+        const usedKey = change.key.replace(/.(count|countAlt)$/, ".used");
+        if (foundry.utils.getProperty(actor, usedKey)) await actor.unsetFlag(MODULE_ID, usedKey.replace(`flags.${MODULE_ID}.`, ""));
       }
     }
   }
 }
 
+export function setupOptionalBonusResets() {
+  onTurnMoment("turnStart", "midi-qol.optionalBonusCounts", ({ combat, actor }) => resetOptionalBonusCounts(combat, "turnStart", actor));
+  onTurnMoment("roundStart", "midi-qol.optionalBonusCounts", ({ combat }) => resetOptionalBonusCounts(combat, "roundStart", undefined));
+}
+
 export function hasUsedBonusAction(actor: Actor.Implementation) {
-  const currentUsed = actor.getFlag(MODULE_ID, "actions")?.bonusActionsUsed ?? 0;
-  const max = actor.getFlag(MODULE_ID, "actions")?.bonusActionsMax ?? 1;
-  return currentUsed >= max;
+  return budget(actor, "bonus").exhausted;
 }
 export async function removeBonusActionUsed(actor: Actor.Implementation, force = false) {
-  if (force) { // otherwise DAE expires it through its special duration
-    await queueActorEffects(actor, () => deleteEffectIfPresent(actor, getStaticID("bonusaction")));
-  }
+  if (force) await resetBudget(actor, "bonus"); // otherwise its window ends by its own expiry
   // Safety net flag reset just in case
   if (force) await actor.update({ flags: { [MODULE_ID]: { actions: { bonusActionsUsed: 0, bonus: false, bonusActionCombatRound: new foundry.data.operators.ForcedDeletion() } } } });
 }
@@ -6843,8 +6761,19 @@ async function removeLingeringMarkers(actor: Actor.Implementation, shouldHaveEnd
 /** On the turn moments (M4, core's active GM): after DAE and core have had their go at expiring the markers */
 export function setupMarkerChecks() {
   onTurnMoment("combatEnd", "midi-qol.lingeringMarkers", ({ combat }) => {
-    const actors = combat.combatants.contents.flatMap(c => c.actor ?? []);
-    setTimeout(() => actors.forEach(actor => removeLingeringMarkers(actor, marker => !!marker.flags?.dae?.specialDuration?.includes("combatEnd"))), 500);
+    // Only the markers there when the combat ended: a window opened since (a reaction just after) is not this combat's
+    const ended = new Map<Actor.Implementation, Map<string, number | null | undefined>>();
+    for (const actor of combat.combatants.contents.flatMap(c => c.actor ?? [])) {
+      const markers = new Map<string, number | null | undefined>();
+      for (const id of [getStaticID("reaction"), getStaticID("bonusaction")]) {
+        const marker = actor.effects.get(id);
+        if (marker) markers.set(id, marker._stats?.createdTime);
+      }
+      if (markers.size) ended.set(actor, markers);
+    }
+    setTimeout(() => ended.forEach((markers, actor) => removeLingeringMarkers(actor, marker =>
+      markers.has(marker.id ?? "") && markers.get(marker.id ?? "") === marker._stats?.createdTime
+      && !!marker.flags?.dae?.specialDuration?.includes("combatEnd"))), 500);
   });
   onTurnMoment("turnStart", "midi-qol.lingeringMarkers", ({ actor, skipped }) => {
     if (actor && !skipped) setTimeout(() => removeLingeringMarkers(actor, isEffectExpired), 500);
@@ -9407,7 +9336,7 @@ export async function queueActorEffects<T>(actor: Actor.Implementation, fn: () =
 }
 
 /** Deletes the actor's effect `id` if present; another caller deleting it first counts as done. */
-async function deleteEffectIfPresent(actor: Actor.Implementation, id: string | null) {
+export async function deleteEffectIfPresent(actor: Actor.Implementation, id: string | null) {
   try {
     await (id ? actor.effects.get(id) : undefined)?.delete();
   } catch (err) {
@@ -9416,7 +9345,7 @@ async function deleteEffectIfPresent(actor: Actor.Implementation, id: string | n
 }
 
 /** Creates an effect keeping its fixed id; another caller creating it first counts as done. */
-async function createEffectWithId(actor: Actor.Implementation, data: ActiveEffect.CreateData) {
+export async function createEffectWithId(actor: Actor.Implementation, data: ActiveEffect.CreateData) {
   try {
     await ActiveEffect.implementation.create(data, { parent: actor, keepId: true });
   } catch (err) {

@@ -7,7 +7,7 @@ import { excludeRegionSourceEffect, moveRegionsOnTurnChange } from "./regionBeha
 import { colorChatMessageHandler, nsaMessageHandler, hideStuffHandler, hideRollUpdate, hideRollRender, checkOverTimeSaves } from "./chatMessageHandling.js";
 import { preferredActiveGM, processUndoDamageCard, whisperRollToPlayer } from "./GMAction.js";
 import { addViewAsPlayerOption } from "./ChatClasses/DamageCardMessage.js";
-import { damageActiveHas, untargetDeadTokens, untargetAllTokens, midiCustomEffect, removeReactionUsed, removeBonusActionUsed, chackFlanking as checkFlanking, expireRollEffect, removeActionUsed, expirePerTurnBonusActions, clearUpdatesCache, expireEffects, processConcentrationRequestMessage, doConcentrationCheck, completeActivityUse, isAutoFastForward, areMidiKeysPressed, throttledScrollBottom, getVitalityItem, tokenForActor, resolveItemMacro, resolveActivityMacro, doSyncRoll, getTokenPerimeterPolygon, closestPointOnPerimeter, measurePointDistance, updateFlankingHighlight, onUserManualTarget, toggleStatus, videoThumbnail } from "./utils.js";
+import { damageActiveHas, untargetDeadTokens, untargetAllTokens, midiCustomEffect, removeReactionUsed, removeBonusActionUsed, chackFlanking as checkFlanking, expireRollEffect, removeActionUsed, setupOptionalBonusResets, clearUpdatesCache, expireEffects, processConcentrationRequestMessage, doConcentrationCheck, completeActivityUse, isAutoFastForward, areMidiKeysPressed, throttledScrollBottom, getVitalityItem, tokenForActor, resolveItemMacro, resolveActivityMacro, doSyncRoll, getTokenPerimeterPolygon, closestPointOnPerimeter, measurePointDistance, updateFlankingHighlight, onUserManualTarget, toggleStatus, videoThumbnail } from "./utils.js";
 import { releaseForcedNormalKeys } from "./lib/rollKeys.js";
 import { computeAdvantageFlagsSync } from "./lib/RollModifierTracker.js";
 import { checkRule, configSettings, dragDropTargeting } from "./settings.js";
@@ -651,8 +651,7 @@ export function initHooks() {
   // Hooks.on("preCreateActiveEffect", checkImmunity); Disabled in lieu of having effect marked suppressed
   Hooks.on("preUpdateItem", preUpdateItemActorOnUseMacro);
   Hooks.on("preUpdateActor", preUpdateItemActorOnUseMacro);
-  Hooks.on("combatRound", expirePerTurnBonusActions); // TODO Move this to the update combat hook?
-  Hooks.on("combatTurn", expirePerTurnBonusActions);
+  setupOptionalBonusResets();
   Hooks.on("updateCombatant", (combatant, updates, options, user) => {
     if (game.user?.id !== user) return true;
     if (combatant.actor && updates.initiative) expireRollEffect.bind(combatant.actor)("Initiative", "none");

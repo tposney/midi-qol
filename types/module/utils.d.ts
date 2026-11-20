@@ -1120,7 +1120,9 @@ export declare function getVitalityDeadStatus(): ActiveEffect<"base" | import("f
 export declare function ConvenientEffectsHasEffect(effectName: string, actor: Actor.Implementation, ignoreInactive?: boolean): boolean;
 export declare function isInCombat(actor: Actor.Implementation): boolean;
 export declare function setActionUsed(actor: Actor.Implementation): Promise<void>;
+/** Spend a reaction (a facade over the economy ledger, M4: services/economy/ledger.ts); `active` false closes the window */
 export declare function setReactionUsed(actor: Actor.Implementation, active?: boolean): Promise<void>;
+/** Spend a bonus action (a facade over the economy ledger) */
 export declare function setBonusActionUsed(actor: Actor.Implementation): Promise<void>;
 export declare function removeActionUsed(actor: Actor.Implementation): Promise<any>;
 export declare function removeReactionUsed(actor: Actor.Implementation, force?: boolean): Promise<void>;
@@ -1129,7 +1131,7 @@ export declare function hasUsedReaction(actor: Actor.Implementation): boolean;
 /** dnd5e 6.1's No Reactions marker (an empty effect from its effects compendium), by its source or icon */
 export declare function hasNoReactionsMarker(actor: Actor.Implementation | null | undefined): boolean;
 export declare function hasUsedAnyReaction(actor: Actor.Implementation): boolean;
-export declare function expirePerTurnBonusActions(combat: Combat.Implementation, data: Combat.RoundUpdateData | Combat.TurnUpdateData, _options?: Combat.RoundUpdateOptions | Combat.TurnUpdateOptions): Promise<void>;
+export declare function setupOptionalBonusResets(): void;
 export declare function hasUsedBonusAction(actor: Actor.Implementation): boolean;
 export declare function removeBonusActionUsed(actor: Actor.Implementation, force?: boolean): Promise<void>;
 /** On the turn moments (M4, core's active GM): after DAE and core have had their go at expiring the markers */
@@ -1436,6 +1438,10 @@ export declare function getTargetDescriptor<T extends DND5ETargetDescriptor>(uui
 export declare const throttledScrollBottom: () => void;
 /** Runs `fn` after midi's earlier fixed-id effect changes for the actor (concurrent ones fail). `fn` must not queue for the same actor. */
 export declare function queueActorEffects<T>(actor: Actor.Implementation, fn: () => Promise<T>): Promise<T>;
+/** Deletes the actor's effect `id` if present; another caller deleting it first counts as done. */
+export declare function deleteEffectIfPresent(actor: Actor.Implementation, id: string | null): Promise<void>;
+/** Creates an effect keeping its fixed id; another caller creating it first counts as done. */
+export declare function createEffectWithId(actor: Actor.Implementation, data: ActiveEffect.CreateData): Promise<void>;
 /** actor.toggleStatusEffect, queued; losing a race with another module counts as done. */
 export declare function toggleStatus(actor: Actor.Implementation | null | undefined, statusId: string, options?: Actor.ToggleStatusEffectOptions): Promise<ActiveEffect.Implementation | boolean | undefined>;
 /**

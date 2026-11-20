@@ -1,4 +1,5 @@
 import { activityTypeSteps, activityTypeStepsMarkdown } from "./module/activities/activityTypeSteps.js";
+import { economyApi } from "./module/services/economy/ledger.js";
 import { turnMomentsApi } from "./module/lib/turnMoments.js";
 import { defineRevealPolicyService, reveals } from "./module/services/revealPolicy/service.js";
 import { defineTokenNamesService } from "./module/services/tokenNames/service.js";
@@ -291,6 +292,8 @@ Object.assign(globalThis.MidiQOL, {
   useTrace, saveUseTrace, outcomes,
   // The turn-moment dispatcher (M4): turn and round starts and ends, combat start and end, raised once
   turnMoments: turnMomentsApi,
+  // The action economy ledger (M4): each budget kind's window, spend, refund, reset
+  economy: economyApi,
   // Tags (M26): named facts about a use and its targets that conditions read; modules add or replace them
   // The reveal policy (M19): may this user learn this (DCs, save and hit results, AC, names, table results)
   reveals,
