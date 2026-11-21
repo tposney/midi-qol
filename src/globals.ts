@@ -665,6 +665,8 @@ declare module "fvtt-types/configuration" {
       "midi-qol"?: {
         /** M15: entries (lib/entries) */
         entries?: import("./module/lib/entries/types.js").Entry[];
+        /** M11: an overlay item (only the difference, for items with this identifier: lib/entries/rules.ts) */
+        overlay?: import("./module/lib/entries/rules.js").OverlayFlag;
         /** M18: the item's presentation override (and per activity), "none" for every channel */
         presentation?: "none" | (import("./module/lib/cues.js").Cue["presentation"] & { activities?: Record<string, import("./module/lib/cues.js").Cue["presentation"] | "none"> });
         dependentOn?: string; // UUID of parent document for midi-qol dependent tracking

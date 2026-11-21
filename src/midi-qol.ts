@@ -16,7 +16,7 @@ import { registerUseEvents } from "./module/lib/entries/useEvents.js";
 import { registerBearerEvents } from "./module/lib/entries/bearerEvents.js";
 import { registerServiceEvents } from "./module/lib/entries/serviceEvents.js";
 import { registerRedirection } from "./module/lib/entries/redirection.js";
-import { rulesApi } from "./module/lib/entries/rules.js";
+import { registerOverlayPack, rulesApi } from "./module/lib/entries/rules.js";
 import { definePresentersService } from "./module/services/presenters/service.js";
 import { registerCues } from "./module/lib/cues.js";
 import { registerActivityActions, takeAction } from "./module/lib/entries/activityActions.js";
@@ -1031,6 +1031,8 @@ Hooks.once('ready', function () {
   globalThis.MidiQOL.MQOnUseOptions = MQOnUseOptions;
 
   MidiSounds.midiSoundsReadyHooks();
+  // M11: midi's overlays (sample items flagged midi-qol.overlay) as rules, on every client
+  void registerOverlayPack("midi-qol.midiqol-sample-items", "midi-qol").catch(err => console.warn("midi-qol | overlays", err));
 
   globalThis.dnd5e.config.areaTargetTypes["emanationNoTemplate"] = {
     label: i18n("midi-qol.emanationNoTemplate"),

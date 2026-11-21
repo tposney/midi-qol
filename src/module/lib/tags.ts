@@ -2,6 +2,7 @@ import type { Workflow } from "../Workflow.js";
 import { getDistance } from "../services/distance/service.js";
 import { findNearby } from "../utils.js";
 import { outcomes } from "./outcomes.js";
+import { coverFor } from "../services/cover/service.js";
 
 /*
  * Tags (M26; shapes ~/Documents/midi-next-waveB-shapes-2026-11-20.md): named facts about a use, and about a target where
@@ -204,6 +205,23 @@ export function registerMidiTags(): void {
     return level > 0 && spendsSlot ? context.workflow.spellLevel : 0;
   }));
   registerTag("use.area", use("Has an area", ({ workflow }) => !!workflow.activity?.target?.template?.type));
+  // M11 (the viability items' tags)
+  registerTag("use.flanking", use("The attack has flanking advantage", ({ workflow }) => !!workflow.flankingAdvantage));
+  registerTag("use.ammunition", use("The ammunition's identifier", ({ workflow }) => {
+    // @ts-expect-error no dnd5e-types
+    const identifier: unknown = workflow.ammunition?.system?.identifier;
+    return typeof identifier === "string" && identifier ? identifier : undefined;
+  }));
+  registerTag("target.cover", target("Cover from the use (none, half, threeQuarters, total)", ({ workflow, target: targetDocument }) =>
+    targetDocument && workflow.token ? coverFor(workflow.token, targetDocument, { activity: workflow.activity }).level : undefined));
+  registerTag("target.flying", target("Flying (the fly status, or a hover/fly speed while not prone)", context => {
+    const actor = actorOf(context);
+    if (!actor) return undefined;
+    if (actor.statuses.has("fly") || actor.statuses.has("flying")) return true;
+    // @ts-expect-error no dnd5e-types
+    const movement = actor.system.attributes?.movement as { fly?: number, hover?: boolean } | undefined;
+    return !!movement?.hover && !!movement.fly && !actor.statuses.has("prone");
+  }));
 
   registerTag("relation.distance", { group: "relation", label: "Distance to the target", kind: "derived", perTarget: true,
     compute: ({ workflow, target }) => workflow.token && target ? getDistance(workflow.token, target) : undefined });
