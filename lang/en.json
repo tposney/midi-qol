@@ -864,7 +864,6 @@
   "midi-qol.bonusActionUsed": "Bonus Action used",
   "midi-qol._comment for translators_DeferText": "The text below is searched for by midi in the onUseMacro field in item data. If you change it every item with an onUseMacro will need to be changed to match",
   "midi-qol._comment for translators_ItemMacroText": "The text below is searched for by midi in the onUseMacro field in item data. If you change it every item with an onUseMacro will need to be changed to match",
-  "midi-qol.ItemMacroText": "ItemMacro",
   "midi-qol.TargetConfirmationConfig.Name": "Target Confirmation",
   "midi-qol.TargetConfirmationConfig.Hint": "When rolling an item confirm targets before completing",
   "midi-qol.TargetConfirmation.Name": "Target Confirmation",
