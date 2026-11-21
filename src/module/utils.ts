@@ -27,7 +27,7 @@ import { debug, i18n, error, warn, busyWait, allAttackTypes, debugEnabled, getSt
 import { configSettings, autoRemoveTargets, checkRule, criticalDamage, criticalDamageGM, checkMechanic, safeGetGameSetting, autoRollDamageOptions, showReactionAttackRollOptions, shouldDisplaySaveDC, DOWNGRADE_IMMUNITY_KEY, ALL_DAMAGE_KEY } from "./settings.js";
 import { log } from "../midi-qol.js";
 import { AttributionEntry, AttributionMap, AttributionType, AugmentedEvent, DummyWorkflow, jsonSafe, Workflow, WorkflowOptions, WorkflowRollOptions } from "./Workflow.js";
-import { preferredActiveGM, prepareDamageListToJSON, socketlibSocket, timedAwaitExecuteAsGM, unTimedExecuteAsGM } from "./GMAction.js";
+import { ACTION_SAVE_REQUEST, ACTIVITY_OVERTIME_REQUEST, rollActionSave as rollActionSaveHere, preferredActiveGM, prepareDamageListToJSON, rollAbility, timedAwaitExecuteAsGM, unTimedExecuteAsGM } from "./GMAction.js";
 import { askUser, type IncomingRequest } from "./lib/requests.js";
 import { collectResponses, type ResponseOffer, type ResponseQuery } from "./services/responses/service.js";
 import { applyStandingChoices, setStandingChoice, standingKey } from "./services/rollBonuses/standing.js";
@@ -1456,7 +1456,12 @@ export async function doActivityOverTimeEffect(actor: Actor.Implementation, effe
   if (!requiresUserExecution || !owner || owner === game.user || !owner.active)
     return localActivityOverTimeEffect(actor, effect, startTurn, options);
   else {
-    return socketlibSocket.executeAsUser("localActivityOverTimeEffect", owner.id, { actorUuid: actor.uuid, effectUuid: effect.uuid, startTurn, options })
+    // Run on its owner's client (a private roll mode), through the request core; with the owner gone, here
+    return askUser<unknown>(owner, {
+      type: ACTIVITY_OVERTIME_REQUEST, data: { actorUuid: actor.uuid, effectUuid: effect.uuid, startTurn, options }, kind: "overtime",
+      actorUuid: actor.uuid ?? undefined, label: `${actor.name}: ${effect.name}`, timeoutMs: 0,
+      fallback: () => localActivityOverTimeEffect(actor, effect, startTurn, options)
+    }).settled.then(settled => settled.value, err => { TroubleShooter.recordError(err, `activity over time | ${effect.name}`); return undefined; });
   }
 }
 
@@ -1836,18 +1841,20 @@ export async function handleActionSaveDialog(ctx: ActionSaveContext): Promise<bo
     itemId: "",
   };
 
-  // Prompt player for confirmation, then roll via rollAbility on their client
-  let saveResult: any = await socketlibSocket.executeAsUser("rollActionSave", owner?.id, {
-    actorUuid: actor.uuid,
-    effectName: effect.name,
-    saveDetails,
-    displayOptions: {
-      fastForward: false,
-      chatMessage: true,
-      showTargetDC: true,
-      rollMode,
+  // The player confirms using their action, then rolls on their client (the request core: its deadline, the GM
+  // answering from the player list); nothing on a time-out or a disconnect (the action wasn't taken)
+  const displayOptions = { fastForward: false, chatMessage: true, showTargetDC: true, rollMode };
+  const forPlayer = { saveDetails, displayOptions: { ...displayOptions, fastForward: true, forUserId: owner.id ?? undefined } };
+  let saveResult: any = owner.isSelf ? await rollActionSaveHere({ actorUuid: actor.uuid ?? "", effectName: effect.name ?? "", saveDetails, displayOptions }) : await askUser<unknown>(owner, {
+    type: ACTION_SAVE_REQUEST, data: { actorUuid: actor.uuid, effectName: effect.name, saveDetails, displayOptions },
+    kind: "save", actorUuid: actor.uuid ?? undefined, label: `${actor.name}: ${effect.name}`,
+    timeoutMs: (configSettings.playerSaveTimeout ?? 0) * 1000,
+    fallback: () => undefined,
+    gmChoices: {
+      roll: { label: "midi-qol.PlayerWaits.Choice.normal", value: () => rollAbility(forPlayer) },
+      skip: () => undefined
     }
-  });
+  }).settled.then(settled => settled.value, err => { TroubleShooter.recordError(err, `action save | ${effect.name}`); return undefined; });
 
   // Reconstruct Roll from socketlib serialization — same pattern as normalizeRollResults in checkSaves
   //@ts-expect-error no dnd5e types

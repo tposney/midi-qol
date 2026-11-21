@@ -46,6 +46,10 @@ export let setupSocket = () => {
   registerRequestHandler(BONUS_REQUEST, (data: Parameters<typeof _bonusCheck>[0], incoming: IncomingRequest) => _bonusCheck(data, incoming));
   // A concentration roll asked through the request core (utils processConcentrationRequestMessage): their roll dialog
   registerRequestHandler(CONCENTRATION_REQUEST, (data: Parameters<typeof rollConcentration>[0], incoming: IncomingRequest) => rollConcentration(data, incoming));
+  // An action save's roll asked through the request core (utils handleActionSaveDialog): confirm, then the roll
+  registerRequestHandler(ACTION_SAVE_REQUEST, (data: Parameters<typeof rollActionSave>[0], incoming: IncomingRequest) => rollActionSave(data, incoming));
+  // An ActivityOverTime use run on its owner's client (a private roll mode: utils doActivityOverTimeEffect)
+  registerRequestHandler(ACTIVITY_OVERTIME_REQUEST, (data: Parameters<typeof _localActivityOverTimeEffect>[0]) => _localActivityOverTimeEffect(data));
   // An optional bonus inside a requested roll: decided under the requester's deadline, which a GM can skip
   registerBonusDecisions();
   for (const [name, handler] of Object.entries(playerWaitHandlers)) registerSocketAndQuery(name, handler);
@@ -762,6 +766,10 @@ export function whisperRollToPlayer(message: ChatMessage.Implementation) {
 
 /** The request type a player's client answers with its roll dialog (rollAbility with the request) */
 export const SAVE_REQUEST = "midi-qol.save";
+/** An action save's roll (the player confirms using their action, then rolls) */
+export const ACTION_SAVE_REQUEST = "midi-qol.actionSave";
+/** An ActivityOverTime use on its owner's client */
+export const ACTIVITY_OVERTIME_REQUEST = "midi-qol.activityOverTime";
 
 export async function rollAbility(data: {
   saveDetails: SaveDetails;
@@ -2502,15 +2510,22 @@ async function _teleportToken(data: { tokenUuid: string, destination: TeleportTo
   }
 }
 
-async function rollActionSave(data: { actorUuid: string; effectName: string; saveDetails: SaveDetails; displayOptions: object }) {
+/**
+ * An action save on the player's client: confirm using the action, then roll. Asked through the request core
+ * (ACTION_SAVE_REQUEST): its dialog closes when the request is answered for the player (a GM, the time-out), and a
+ * confirmation after that is dropped.
+ */
+export async function rollActionSave(data: { actorUuid: string; effectName: string; saveDetails: SaveDetails; displayOptions: object }, request?: IncomingRequest) {
   const { DialogV2 } = foundry.applications.api;
   const actor = fromActorUuid(data.actorUuid);
   const confirmed = await DialogV2.confirm({
     window: { title: `${actor?.name ?? ""}: ${data.effectName}` },
     content: `<p>${actor?.name} &mdash; use your action to roll against ${data.effectName}?</p>`,
     rejectClose: false,
+    render: (_event: Event, dialog: foundry.applications.api.DialogV2) => { request?.onSettled(() => { void dialog.close(); }); }
   });
   if (!confirmed) return undefined;
+  if (request && (request.settledHow || !await request.claim())) return undefined;
   return rollAbility({ saveDetails: data.saveDetails, displayOptions: data.displayOptions });
 }
 
