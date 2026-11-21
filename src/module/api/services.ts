@@ -27,8 +27,18 @@ let problemReporter: (serviceId: string, providerId: string, message: string, er
 
 export function setServiceProblemReporter(reporter: typeof problemReporter) { problemReporter = reporter; }
 
+export interface ServiceProblem { serviceId: string, providerId: string, message: string, count: number, lastError?: string }
+const serviceProblemLog = new Map<string, ServiceProblem>();
+
+/** The problems reported this session, once each with a count (the TroubleShooter lists them as problems) */
+export function serviceProblems(): ServiceProblem[] { return [...serviceProblemLog.values()]; }
+
 /** A provider or contributor failed or gave an answer midi could not use: it is skipped, and the problem recorded. */
 export function reportServiceProblem(serviceId: string, providerId: string, message: string, err?: unknown) {
+  const key = `${serviceId}|${providerId}|${message}`;
+  const known = serviceProblemLog.get(key);
+  const lastError = err instanceof Error ? err.message : err === undefined ? undefined : String(err);
+  serviceProblemLog.set(key, { serviceId, providerId, message, count: (known?.count ?? 0) + 1, ...(lastError ? { lastError } : known?.lastError ? { lastError: known.lastError } : {}) });
   try { problemReporter(serviceId, providerId, message, err); }
   catch { console.warn(`midi-qol | ${serviceId} | ${providerId}: ${message}`, err ?? ""); }
 }
@@ -191,4 +201,4 @@ export function refreshServices() {
   for (const service of services.values()) changed(service);
 }
 
-export const servicesApi = { register, unregister, wrap, unwrap, get, all, entries, isProvider, providers, list, activeProviderId, reportProblem: reportServiceProblem };
+export const servicesApi = { register, unregister, wrap, unwrap, get, all, entries, isProvider, providers, list, activeProviderId, reportProblem: reportServiceProblem, problems: serviceProblems };

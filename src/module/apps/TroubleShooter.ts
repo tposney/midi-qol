@@ -1,4 +1,5 @@
-import { entries } from "../api/services.js";
+import { entries, serviceProblems, type ServiceProblem } from "../api/services.js";
+import { automationReport } from "../lib/entries/overlays.js";
 import { chooseJsonFile } from "../lib/fileDialogs.js";
 import { i18n, i18nFormat, systemConcentrationId } from "../../midi-qol.js";
 import { ModuleReviewDialog } from "./ModuleReviewDialog.js";
@@ -85,6 +86,7 @@ export class TroubleShooter extends HandlebarsApplicationMixin(ApplicationV2) {
     common: {template: "modules/midi-qol/templates/apps/TroubleShooter/common.hbs"},
     problems: {template: "modules/midi-qol/templates/apps/TroubleShooter/problems.hbs"},
     errors: {template: "modules/midi-qol/templates/apps/TroubleShooter/errors.hbs"},
+    automation: {template: "modules/midi-qol/templates/apps/TroubleShooter/automation.hbs"},
     modules: {template: "modules/midi-qol/templates/apps/TroubleShooter/modules.hbs"},
     footer: {template: "templates/generic/form-footer.hbs"}
   }
@@ -347,6 +349,8 @@ export class TroubleShooter extends HandlebarsApplicationMixin(ApplicationV2) {
         label: "midi-qol.TroubleShooter.ReviewModules"
       }
     ]
+    // M11: what automates each actor's items, and the registered overlays (live, not part of the exported data)
+    context.automation = await automationReport();
     // V12-only:
     context.tabs = this.#getTabs();
     return context;
@@ -359,6 +363,7 @@ export class TroubleShooter extends HandlebarsApplicationMixin(ApplicationV2) {
       common: {id: "common", group: "sheet", label: "midi-qol.TroubleShooter.Tabs.common"},
       problems: {id: "problems", group: "sheet", label: "midi-qol.TroubleShooter.Tabs.problems"},
       errors: {id: "errors", group: "sheet", label: "midi-qol.TroubleShooter.Tabs.errors"},
+      automation: {id: "automation", group: "sheet", label: "midi-qol.TroubleShooter.Tabs.automation"},
       modules: {id: "modules", group: "sheet", label: "midi-qol.TroubleShooter.Tabs.modules"}
     };
     // The tab shown is the one Foundry remembers (tabGroups), so a re-render keeps it and the nav marks it
@@ -951,6 +956,7 @@ export class TroubleShooter extends HandlebarsApplicationMixin(ApplicationV2) {
 
   public static checkCommonProblems(data: TroubleShooterData) {
     data.problems.push(...featureOverlapProblems());
+    data.problems.push(...serviceProblemsAsProblems());
     this.checkMidiSettings(data);
     this.checkMidiCoverSettings(data)
     this.checkRollBonusPrompts(data);
@@ -1089,6 +1095,24 @@ export class TroubleShooter extends HandlebarsApplicationMixin(ApplicationV2) {
       });
     }
   }
+}
+
+/** What to do about a service's or step's reported problem, by kind */
+function serviceProblemAdvice(problem: ServiceProblem): string {
+  if (problem.serviceId === "steps") return "Two modules change the same step of a use, or a replacement leaves out what the step does: the one named wins. Disable one of them if that isn't what you want, or ask its author.";
+  if (problem.serviceId === "use" && problem.providerId === "preUseActivity") return "Another module's dnd5e.preUseActivity listener runs before midi's, so it sees each use twice. Update that module or report it to its author.";
+  return `A module's ${problem.serviceId} provider failed or gave an answer midi couldn't use, and was skipped for that call. Update the module or report it to its author; the Errors tab has the details.`;
+}
+
+/** The services' and steps' reported problems (api/services.ts), once each */
+function serviceProblemsAsProblems(): ProblemSpec[] {
+  return serviceProblems().map(problem => ({
+    moduleId: problem.providerId.split(".")[0] || problem.providerId,
+    severity: "Warn" as const,
+    problemSummary: `${problem.serviceId} | ${problem.providerId}: ${problem.message}`,
+    fixer: serviceProblemAdvice(problem),
+    problemDetail: { times: problem.count, ...(problem.lastError ? { lastError: problem.lastError } : {}) }
+  }));
 }
 
 interface ProblemSpec {

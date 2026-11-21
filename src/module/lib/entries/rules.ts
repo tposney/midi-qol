@@ -110,7 +110,11 @@ export function describeRuleFor(item: ItemLike): { source: string, identifier: s
 
 /* Overlays (11c): an item that holds only the difference, keyed by identifier */
 
-export interface OverlayFlag { identifier: string, rules?: "2014" | "2024", type?: string, version?: string }
+export interface OverlayFlag {
+  identifier: string, rules?: "2014" | "2024", type?: string, version?: string,
+  /** The base it was saved against (save as overlay): a base changed since is reported */
+  base?: { uuid: string, modifiedTime?: number }
+}
 
 /** An overlay item as a rule: its entries, its activities' (by type and name), its effects' (by name) */
 export function ruleFromOverlay(item: ItemLike): Rule | undefined {

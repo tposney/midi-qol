@@ -1,5 +1,5 @@
 import { MODULE_ID } from "../../../midi-qol.js";
-import { automatedBy, registerRule, ruleFromOverlay } from "./rules.js";
+import { automatedBy, registerRule, ruleFor, ruleFromOverlay } from "./rules.js";
 
 /*
  * M11c-2 (plan ~/Documents/midi-next-M11-plan-2026-11-22.md): an overlay's data part, stored (user, 2026-11-22). An
@@ -24,7 +24,9 @@ export function registerOverlay(item: Item.Implementation, source: string): (() 
   overlaysByIdentifier.set(rule.identifier, [...list.filter(o => o.item.uuid !== item.uuid), entry]);
   const unregister = () => {
     off();
-    overlaysByIdentifier.set(rule.identifier, (overlaysByIdentifier.get(rule.identifier) ?? []).filter(o => o !== entry));
+    const rest = (overlaysByIdentifier.get(rule.identifier) ?? []).filter(o => o !== entry);
+    if (rest.length) overlaysByIdentifier.set(rule.identifier, rest);
+    else overlaysByIdentifier.delete(rule.identifier);
     if (item.uuid && registeredByUuid.get(item.uuid) === unregister) registeredByUuid.delete(item.uuid);
   };
   if (item.uuid) {
@@ -184,7 +186,8 @@ export async function saveAsOverlay(item: Item.Implementation): Promise<Item.Imp
     name: `${item.name} (overlay)`, type: item.type, img: item.img,
     system: { identifier: `${identifier}-overlay`, source: { rules }, activities, description: { value: "" } },
     effects,
-    flags: { [MODULE_ID]: { overlay: { identifier, ...(rules ? { rules } : {}), version }, ...(ownEntries ? { entries: ownEntries } : {}) } }
+    flags: { [MODULE_ID]: { overlay: { identifier, ...(rules ? { rules } : {}), version, base: { uuid: base.uuid ?? String(sourceUuid), modifiedTime: base._stats?.modifiedTime ?? undefined } },
+      ...(ownEntries ? { entries: ownEntries } : {}) } }
   }], { keepId: true });
   const overlay = created[0] as Item.Implementation | undefined;
   if (overlay) registerOverlay(overlay, "world");
@@ -204,3 +207,63 @@ export function watchOverlayAuthoring(): void {
     });
   });
 }
+
+/* The TroubleShooter's automation sources (11c) */
+
+export interface AutomationRow { item: string, identifier?: string, status: string, detail?: string }
+export interface OverlayRow { name: string, source: string, identifier: string, rules?: string, version: string, baseChanged?: boolean, base?: string }
+
+const AUTOMATED_BY: Record<string, string> = { "chris-premades": "CPR", cat: "CAT", macro: "a macro", entries: "its own entries" };
+
+/** For each of the actor's items with an identifier something matches: what automates it, or why an overlay doesn't */
+export function actorAutomation(actor: Actor.Implementation): AutomationRow[] {
+  const rows: AutomationRow[] = [];
+  for (const item of actor.items) {
+    const identifier = (item.system as { identifier?: string }).identifier;
+    const overlay = overlayFor(item);
+    const other = automatedBy(item);
+    const rule = ruleFor(item);
+    const marker = item.effects.find(e => typeof e.getFlag(MODULE_ID, "overlayPart") === "object");
+    const markerFlag = marker?.getFlag(MODULE_ID, "overlayPart") as OverlayMarker | undefined;
+    const dataPart = markerFlag ? `data part v${markerFlag.version}${overlay && versionOf(overlay.item) !== markerFlag.version ? ` (overlay now v${versionOf(overlay.item)}: replaced at the next change)` : ""}` : undefined;
+    if (rule) rows.push({ item: item.name ?? "", identifier, status: `rule: ${rule.source}`, detail: dataPart });
+    else if (other && (overlay || overlaysByIdentifier.has(identifier ?? ""))) rows.push({ item: item.name ?? "", identifier, status: AUTOMATED_BY[other] ?? other, detail: "an overlay matches its identifier but doesn't apply: something else automates it" });
+    else if (other) rows.push({ item: item.name ?? "", identifier, status: AUTOMATED_BY[other] ?? other });
+    else if (identifier && overlaysByIdentifier.has(identifier)) rows.push({ item: item.name ?? "", identifier, status: "no overlay applies", detail: "an overlay has its identifier, for another ruleset or type" });
+  }
+  return rows;
+}
+
+/** The registered overlays, each with whether its base changed since it was saved */
+export async function overlayRows(): Promise<OverlayRow[]> {
+  const rows: OverlayRow[] = [];
+  for (const list of overlaysByIdentifier.values()) {
+    for (const { source, item } of list) {
+      const flag = item.getFlag(MODULE_ID, "overlay");
+      if (!flag) continue;
+      let baseChanged: boolean | undefined;
+      if (flag.base?.uuid) {
+        const base = await fromUuid(flag.base.uuid).catch(() => null) as Item.Implementation | null;
+        baseChanged = !base || (!!flag.base.modifiedTime && (base._stats?.modifiedTime ?? 0) > flag.base.modifiedTime);
+      }
+      rows.push({ name: item.name ?? "", source, identifier: flag.identifier, rules: flag.rules, version: versionOf(item), ...(baseChanged !== undefined ? { baseChanged } : {}), ...(flag.base?.uuid ? { base: flag.base.uuid } : {}) });
+    }
+  }
+  return rows;
+}
+
+/** For the TroubleShooter: the world's actors and the viewed scene's unlinked tokens, those with anything to show */
+export async function automationReport(): Promise<{ actors: { name: string, rows: AutomationRow[] }[], overlays: OverlayRow[] }> {
+  const actors: { name: string, rows: AutomationRow[] }[] = [];
+  const seen = new Set<Actor.Implementation>();
+  const add = (actor: Actor.Implementation | null | undefined, name?: string) => {
+    if (!actor || seen.has(actor)) return;
+    seen.add(actor);
+    const rows = actorAutomation(actor);
+    if (rows.length) actors.push({ name: name ?? actor.name ?? "", rows });
+  };
+  for (const actor of game.actors ?? []) add(actor);
+  for (const token of canvas?.scene?.tokens ?? []) if (!token.actorLink) add(token.actor, `${token.name} (token)`);
+  return { actors, overlays: await overlayRows() };
+}
+

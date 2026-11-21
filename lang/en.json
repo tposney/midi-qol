@@ -1170,7 +1170,23 @@
       "common": "Common Modules",
       "problems": "Problems",
       "errors": "Errors",
-      "modules": "All Modules"
+      "modules": "All Modules",
+      "automation": "Automation"
+    },
+    "Automation": {
+      "Overlays": "Overlays",
+      "Overlay": "Overlay",
+      "Source": "Source",
+      "Identifier": "Identifier",
+      "Version": "Version",
+      "Base": "Base item",
+      "BaseChanged": "changed since the overlay was saved",
+      "BaseSame": "unchanged",
+      "NoOverlays": "No overlays registered",
+      "Item": "Item",
+      "AutomatedBy": "Automated by",
+      "Detail": "Detail",
+      "NoItems": "No items with an automation or a matching overlay"
     },
     "ClearErrors": "Clear Errors",
     "Overwrite": "Overwrite Midi Settings",

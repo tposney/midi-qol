@@ -1,0 +1,50 @@
+<section id="midi-troubleshooter-automation" class="tab{{#if tab.active}} active{{/if}}" data-group="{{tab.group}}" data-tab="{{tab.id}}">
+    <div class="midi-scrollable-list">
+        <div class="midi-qol-box">
+            {{#if automation.overlays.length}}
+                <table>
+                    <th style="text-align: center" colspan="5">{{localize "midi-qol.TroubleShooter.Automation.Overlays"}}</th>
+                    <tr>
+                        <th>{{localize "midi-qol.TroubleShooter.Automation.Overlay"}}</th>
+                        <th>{{localize "midi-qol.TroubleShooter.Automation.Source"}}</th>
+                        <th>{{localize "midi-qol.TroubleShooter.Automation.Identifier"}}</th>
+                        <th>{{localize "midi-qol.TroubleShooter.Automation.Version"}}</th>
+                        <th>{{localize "midi-qol.TroubleShooter.Automation.Base"}}</th>
+                    </tr>
+                    {{#each automation.overlays as |overlay|}}
+                        <tr>
+                            <td>{{overlay.name}}</td>
+                            <td>{{overlay.source}}</td>
+                            <td>{{overlay.identifier}}{{#if overlay.rules}} ({{overlay.rules}}){{/if}}</td>
+                            <td>{{overlay.version}}</td>
+                            <td>{{#if overlay.baseChanged}}<strong>{{localize "midi-qol.TroubleShooter.Automation.BaseChanged"}}</strong>{{else}}{{#if overlay.base}}{{localize "midi-qol.TroubleShooter.Automation.BaseSame"}}{{/if}}{{/if}}</td>
+                        </tr>
+                    {{/each}}
+                </table>
+            {{else}}
+                <div style="text-align: center">{{localize "midi-qol.TroubleShooter.Automation.NoOverlays"}}</div>
+            {{/if}}
+        </div>
+        {{#each automation.actors as |actor|}}
+            <div class="midi-qol-box">
+                <table>
+                    <th style="text-align: center" colspan="3">{{actor.name}}</th>
+                    <tr>
+                        <th>{{localize "midi-qol.TroubleShooter.Automation.Item"}}</th>
+                        <th>{{localize "midi-qol.TroubleShooter.Automation.AutomatedBy"}}</th>
+                        <th>{{localize "midi-qol.TroubleShooter.Automation.Detail"}}</th>
+                    </tr>
+                    {{#each actor.rows as |row|}}
+                        <tr>
+                            <td>{{row.item}}{{#if row.identifier}} <span class="midi-qol-very-faint">({{row.identifier}})</span>{{/if}}</td>
+                            <td>{{row.status}}</td>
+                            <td>{{row.detail}}</td>
+                        </tr>
+                    {{/each}}
+                </table>
+            </div>
+        {{else}}
+            <div class="midi-qol-box" style="text-align: center">{{localize "midi-qol.TroubleShooter.Automation.NoItems"}}</div>
+        {{/each}}
+    </div>
+</section>
