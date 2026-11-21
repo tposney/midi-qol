@@ -1,0 +1,171 @@
+{
+  "_id": "mqeGlovesMissile",
+  "name": "Gloves of Missile Snaring",
+  "type": "equipment",
+  "folder": "mqsEntryFolder00",
+  "img": "icons/equipment/hand/glove-tooled-leather-blue.webp",
+  "system": {
+    "activities": {
+      "x4IPCLTGbrUwWZxn": {
+        "type": "utility",
+        "name": "Snare Missile",
+        "_id": "x4IPCLTGbrUwWZxn",
+        "sort": 0,
+        "activation": {
+          "type": "reaction",
+          "value": null,
+          "override": false,
+          "condition": "Hit by an attack roll with a Ranged or Thrown weapon"
+        },
+        "consumption": {
+          "scaling": {
+            "allowed": false
+          },
+          "spellSlot": true,
+          "targets": []
+        },
+        "description": {
+          "chatFlavor": ""
+        },
+        "duration": {
+          "units": "inst",
+          "concentration": false,
+          "override": false
+        },
+        "effects": [],
+        "range": {
+          "override": false,
+          "units": "self",
+          "special": ""
+        },
+        "target": {
+          "template": {
+            "contiguous": false,
+            "units": "ft",
+            "type": ""
+          },
+          "affects": {
+            "choice": false,
+            "count": "",
+            "type": "object",
+            "special": ""
+          },
+          "override": false,
+          "prompt": false
+        },
+        "uses": {
+          "spent": 0,
+          "recovery": [],
+          "max": ""
+        },
+        "roll": {
+          "prompt": false,
+          "visible": false,
+          "name": "Snare Missile",
+          "formula": "1d10 + @abilities.dex.mod"
+        },
+        "img": "",
+        "appliedEffects": [],
+        "visibility": {
+          "requireMagic": true,
+          "level": {
+            "min": null,
+            "max": null
+          },
+          "identifier": "",
+          "requireIdentification": true
+        }
+      }
+    },
+    "uses": {
+      "spent": 0,
+      "recovery": [],
+      "max": ""
+    },
+    "description": {
+      "value": "<p><em>Wondrous Item, Uncommon (Requires Attunement)</em></p><p>If you're hit by an attack roll made with a Ranged or Thrown weapon while wearing these gloves, you can take a Reaction to reduce the damage by 1d10 plus your Dexterity modifier if you have a free hand. If you reduce the damage to 0, you can catch the ammunition or weapon if it is small enough for you to hold in that hand.</p><p><em>Automation (midi-qol entries):</em> offered as a reaction when a ranged weapon attack (or a thrown weapon) damages you: 1d10 + your Dexterity modifier less damage; catching the missile is the GM's.</p>",
+      "chat": ""
+    },
+    "identifier": "gloves-of-missile-snaring",
+    "source": {
+      "revision": 1,
+      "rules": "2024",
+      "book": "",
+      "license": "CC-BY-4.0"
+    },
+    "identified": true,
+    "unidentified": {
+      "description": ""
+    },
+    "container": null,
+    "quantity": 1,
+    "weight": {
+      "value": 0,
+      "units": "lb"
+    },
+    "price": {
+      "value": 400,
+      "denomination": "gp"
+    },
+    "rarity": "uncommon",
+    "attunement": "required",
+    "attuned": false,
+    "equipped": false,
+    "armor": {
+      "value": null,
+      "magicalBonus": null,
+      "dex": null
+    },
+    "cover": null,
+    "crewed": false,
+    "hp": {
+      "value": null,
+      "max": null,
+      "dt": null,
+      "conditions": ""
+    },
+    "type": {
+      "value": "wondrous",
+      "baseItem": ""
+    },
+    "properties": [
+      "mgc"
+    ],
+    "strength": null,
+    "proficient": null
+  },
+  "effects": [],
+  "flags": {
+    "midi-qol": {
+      "entries": [
+        {
+          "id": "snare",
+          "on": "damaging",
+          "offer": "reaction",
+          "activity": "x4IPCLTGbrUwWZxn",
+          "if": "event.use?.activity?.actionType === 'rwak' || !!event.use?.item?.system?.properties?.has?.('thr')",
+          "do": [
+            {
+              "damageChange": {
+                "stage": "flatReduction",
+                "amount": "-(1d10 + @abilities.dex.mod)"
+              },
+              "label": "Gloves of Missile Snaring"
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "_stats": {
+    "compendiumSource": null,
+    "duplicateSource": null,
+    "coreVersion": "14.360",
+    "systemId": "dnd5e",
+    "systemVersion": "6.1.0"
+  },
+  "ownership": {
+    "default": 0
+  },
+  "_key": "!items!mqeGlovesMissile"
+}

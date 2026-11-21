@@ -1,0 +1,97 @@
+{
+  "_id": "mqeNecklaceAdapt",
+  "name": "Necklace of Adaptation",
+  "type": "equipment",
+  "folder": "mqsEntryFolder00",
+  "img": "icons/equipment/neck/amulet-carved-stone-spiral-blue.webp",
+  "system": {
+    "activities": {},
+    "uses": {
+      "spent": 0,
+      "recovery": [],
+      "max": ""
+    },
+    "description": {
+      "value": "<p><em>Wondrous Item, Uncommon (Requires Attunement)</em></p><p>While wearing this necklace, you can breathe normally in any environment, and you have Advantage on saving throws made to avoid or end the &amp;Reference[Poisoned apply=false] condition.</p><p><em>Automation (midi-qol entries):</em> advantage on saves against a use that would poison you, while attuned.</p>",
+      "chat": ""
+    },
+    "identifier": "necklace-of-adaptation",
+    "source": {
+      "revision": 1,
+      "rules": "2024",
+      "license": "CC-BY-4.0",
+      "book": ""
+    },
+    "identified": true,
+    "unidentified": {
+      "description": ""
+    },
+    "container": null,
+    "quantity": 1,
+    "weight": {
+      "value": 0,
+      "units": "lb"
+    },
+    "price": {
+      "value": 400,
+      "denomination": "gp"
+    },
+    "rarity": "uncommon",
+    "attunement": "required",
+    "attuned": false,
+    "equipped": false,
+    "armor": {
+      "value": null,
+      "magicalBonus": null,
+      "dex": null
+    },
+    "cover": null,
+    "crewed": false,
+    "hp": {
+      "value": null,
+      "max": null,
+      "dt": null,
+      "conditions": ""
+    },
+    "type": {
+      "value": "wondrous",
+      "baseItem": ""
+    },
+    "properties": [
+      "mgc"
+    ],
+    "strength": null,
+    "proficient": null
+  },
+  "effects": [],
+  "flags": {
+    "midi-qol": {
+      "entries": [
+        {
+          "id": "adaptation",
+          "on": "roll.preRoll",
+          "who": "owner",
+          "if": "event.kind === 'save' && !!tags.use?.statuses?.has('poisoned')",
+          "do": [
+            {
+              "modifier": "advantage",
+              "rolls": "save",
+              "label": "Necklace of Adaptation"
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "_stats": {
+    "compendiumSource": null,
+    "duplicateSource": null,
+    "coreVersion": "14.360",
+    "systemId": "dnd5e",
+    "systemVersion": "6.1.0"
+  },
+  "ownership": {
+    "default": 0
+  },
+  "_key": "!items!mqeNecklaceAdapt"
+}

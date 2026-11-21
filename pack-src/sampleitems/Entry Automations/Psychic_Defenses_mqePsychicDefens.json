@@ -1,0 +1,80 @@
+{
+  "name": "Psychic Defenses",
+  "type": "feat",
+  "img": "icons/magic/perception/third-eye-blue-red.webp",
+  "system": {
+    "description": {
+      "value": "<p>You have resistance to psychic damage, and you have advantage on saving throws against being charmed or frightened.</p><p><em>Automation (midi-qol entries):</em> advantage on saves against a use that would charm or frighten you.</p>",
+      "chatFlavor": ""
+    },
+    "source": {
+      "custom": "",
+      "rules": "2024",
+      "revision": 1,
+      "license": "",
+      "book": ""
+    },
+    "activities": {},
+    "type": {
+      "value": "class",
+      "subtype": ""
+    },
+    "identifier": "psychic-defenses"
+  },
+  "effects": [
+    {
+      "_id": "mqePsychicResi00",
+      "name": "Psychic Resistance",
+      "img": "icons/magic/perception/third-eye-blue-red.webp",
+      "type": "base",
+      "transfer": true,
+      "disabled": false,
+      "statuses": [],
+      "system": {
+        "changes": [
+          {
+            "key": "system.traits.dr.value",
+            "type": "add",
+            "value": "psychic"
+          }
+        ]
+      },
+      "duration": {},
+      "flags": {},
+      "description": "",
+      "_key": "!items.effects!mqePsychicDefens.mqePsychicResi00"
+    }
+  ],
+  "flags": {
+    "midi-qol": {
+      "entries": [
+        {
+          "id": "defenses",
+          "on": "roll.preRoll",
+          "who": "owner",
+          "if": "event.kind === 'save' && ['charmed', 'frightened'].some(s => !!tags.use?.statuses?.has(s))",
+          "do": [
+            {
+              "modifier": "advantage",
+              "rolls": "save",
+              "label": "Psychic Defenses"
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "_id": "mqePsychicDefens",
+  "_key": "!items!mqePsychicDefens",
+  "folder": "mqsEntryFolder00",
+  "ownership": {
+    "default": 0
+  },
+  "_stats": {
+    "compendiumSource": null,
+    "duplicateSource": null,
+    "coreVersion": "14.360",
+    "systemId": "dnd5e",
+    "systemVersion": "6.1.0"
+  }
+}

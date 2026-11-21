@@ -1,0 +1,116 @@
+{
+  "name": "Twilight Shroud",
+  "type": "feat",
+  "img": "icons/magic/light/orb-shadow-blue.webp",
+  "system": {
+    "description": {
+      "value": "<p>Your Channel Divinity sphere of twilight shrouds the creatures you choose in it: each has Half Cover while it is.</p><p><em>Automation (midi-qol entries):</em> a Shrouded creature has at least Half Cover from every attack and Dexterity save (+2 AC and Dexterity saves).</p>",
+      "chatFlavor": ""
+    },
+    "source": {
+      "custom": "",
+      "rules": "2024",
+      "revision": 1,
+      "license": "",
+      "book": ""
+    },
+    "activities": {
+      "mqeShroudActiv00": {
+        "_id": "mqeShroudActiv00",
+        "type": "utility",
+        "name": "Shroud",
+        "activation": {
+          "type": "bonus",
+          "value": null,
+          "condition": ""
+        },
+        "consumption": {
+          "targets": [],
+          "scaling": {
+            "allowed": false
+          },
+          "spellSlot": true
+        },
+        "duration": {
+          "units": "inst"
+        },
+        "range": {
+          "units": "ft",
+          "value": "30"
+        },
+        "target": {
+          "affects": {
+            "type": "creature",
+            "count": ""
+          },
+          "template": {
+            "type": ""
+          }
+        },
+        "uses": {
+          "spent": 0,
+          "max": "",
+          "recovery": []
+        },
+        "effects": [
+          {
+            "_id": "mqeShrouded00000"
+          }
+        ]
+      }
+    },
+    "type": {
+      "value": "class",
+      "subtype": "channelDivinity"
+    },
+    "identifier": "twilight-shroud"
+  },
+  "effects": [
+    {
+      "_id": "mqeShrouded00000",
+      "name": "Shrouded",
+      "img": "icons/magic/light/orb-shadow-blue.webp",
+      "type": "base",
+      "transfer": false,
+      "disabled": false,
+      "statuses": [],
+      "system": {
+        "changes": []
+      },
+      "duration": {
+        "rounds": 1
+      },
+      "flags": {
+        "midi-qol": {
+          "entries": [
+            {
+              "id": "shroud",
+              "on": "cover",
+              "do": [
+                {
+                  "cover": "half"
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "description": "",
+      "_key": "!items.effects!mqeTwilightShrou.mqeShrouded00000"
+    }
+  ],
+  "flags": {},
+  "_id": "mqeTwilightShrou",
+  "_key": "!items!mqeTwilightShrou",
+  "folder": "mqsEntryFolder00",
+  "ownership": {
+    "default": 0
+  },
+  "_stats": {
+    "compendiumSource": null,
+    "duplicateSource": null,
+    "coreVersion": "14.360",
+    "systemId": "dnd5e",
+    "systemVersion": "6.1.0"
+  }
+}

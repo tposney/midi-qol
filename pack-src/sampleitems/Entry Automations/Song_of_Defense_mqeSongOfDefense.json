@@ -1,0 +1,106 @@
+{
+  "name": "Song of Defense",
+  "type": "feat",
+  "img": "icons/magic/defensive/shield-barrier-flaming-diamond-blue.webp",
+  "system": {
+    "description": {
+      "value": "<p>When you take damage while your Bladesong is active, you can use your reaction and expend a spell slot to reduce that damage by five times the slot's level.</p><p><em>Automation (midi-qol entries):</em> offered as a reaction when you take damage during Bladesong; it spends a 1st-level slot here for 5 less damage (other slot levels are not offered yet).</p>",
+      "chatFlavor": ""
+    },
+    "source": {
+      "custom": "",
+      "rules": "2024",
+      "revision": 1,
+      "license": "",
+      "book": ""
+    },
+    "activities": {
+      "mqeSongDefense00": {
+        "_id": "mqeSongDefense00",
+        "type": "utility",
+        "name": "Song of Defense",
+        "activation": {
+          "type": "reaction",
+          "value": null,
+          "condition": ""
+        },
+        "consumption": {
+          "targets": [
+            {
+              "type": "spellSlots",
+              "target": "1",
+              "value": "1",
+              "scaling": {}
+            }
+          ],
+          "scaling": {
+            "allowed": false
+          },
+          "spellSlot": true
+        },
+        "duration": {
+          "units": "inst"
+        },
+        "range": {
+          "units": "self"
+        },
+        "target": {
+          "affects": {
+            "type": "",
+            "count": ""
+          },
+          "template": {
+            "type": ""
+          }
+        },
+        "uses": {
+          "spent": 0,
+          "max": "",
+          "recovery": []
+        },
+        "effects": []
+      }
+    },
+    "type": {
+      "value": "class",
+      "subtype": ""
+    },
+    "identifier": "song-of-defense"
+  },
+  "effects": [],
+  "flags": {
+    "midi-qol": {
+      "entries": [
+        {
+          "id": "song",
+          "on": "damaging",
+          "offer": "reaction",
+          "activity": "mqeSongDefense00",
+          "if": "bearer.appliedEffects.some(e => e.name === 'Bladesong')",
+          "do": [
+            {
+              "damageChange": {
+                "stage": "flatReduction",
+                "amount": "-5"
+              },
+              "label": "Song of Defense"
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "_id": "mqeSongOfDefense",
+  "_key": "!items!mqeSongOfDefense",
+  "folder": "mqsEntryFolder00",
+  "ownership": {
+    "default": 0
+  },
+  "_stats": {
+    "compendiumSource": null,
+    "duplicateSource": null,
+    "coreVersion": "14.360",
+    "systemId": "dnd5e",
+    "systemVersion": "6.1.0"
+  }
+}

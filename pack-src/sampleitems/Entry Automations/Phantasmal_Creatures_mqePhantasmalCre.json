@@ -1,0 +1,59 @@
+{
+  "name": "Phantasmal Creatures",
+  "type": "feat",
+  "img": "icons/magic/control/silhouette-hold-change-blue.webp",
+  "system": {
+    "description": {
+      "value": "<p>You can cast Summon Beast and Summon Fey as illusion spells.</p><p><em>Automation (midi-qol entries):</em> offered when you cast Summon Beast or Summon Fey: the spell becomes an illusion (its halved hit points stay the GM's).</p>",
+      "chatFlavor": ""
+    },
+    "source": {
+      "custom": "",
+      "rules": "2024",
+      "revision": 1,
+      "license": "",
+      "book": ""
+    },
+    "activities": {},
+    "type": {
+      "value": "class",
+      "subtype": ""
+    },
+    "identifier": "phantasmal-creatures"
+  },
+  "effects": [],
+  "flags": {
+    "midi-qol": {
+      "entries": [
+        {
+          "id": "phantasmal",
+          "on": "use.configure",
+          "who": "owner",
+          "offer": "ask",
+          "label": "Cast as an illusion",
+          "if": "['summon-beast', 'summon-fey'].includes(use.item?.system?.identifier)",
+          "do": [
+            {
+              "change": {
+                "school": "ill"
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "_id": "mqePhantasmalCre",
+  "_key": "!items!mqePhantasmalCre",
+  "folder": "mqsEntryFolder00",
+  "ownership": {
+    "default": 0
+  },
+  "_stats": {
+    "compendiumSource": null,
+    "duplicateSource": null,
+    "coreVersion": "14.360",
+    "systemId": "dnd5e",
+    "systemVersion": "6.1.0"
+  }
+}

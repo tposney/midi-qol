@@ -1,0 +1,155 @@
+{
+  "_id": "mqeDistantSpell0",
+  "name": "Distant Spell",
+  "type": "feat",
+  "img": "icons/skills/targeting/target-strike-triple-blue.webp",
+  "system": {
+    "description": {
+      "value": "<blockquote><p>Cost: 1 Sorcery Point</p></blockquote><p>When you cast a spell that has a range of at least 5 feet, you can spend 1 Sorcery Point to double the spell's range. Or when you cast a spell that has a range of Touch, you can spend 1 Sorcery Point to make the spell's range 30 feet.</p><p><em>Automation (midi-qol entries):</em> offered as you cast a spell (one Metamagic option per spell, Empowered and Seeking combine); its Sorcery Points come from Font of Magic.</p>",
+      "chat": ""
+    },
+    "source": {
+      "custom": "",
+      "rules": "2024",
+      "revision": 1,
+      "license": "CC-BY-4.0",
+      "book": ""
+    },
+    "uses": {
+      "max": "",
+      "spent": 0,
+      "recovery": []
+    },
+    "type": {
+      "value": "class",
+      "subtype": "metamagic"
+    },
+    "prerequisites": {
+      "level": null,
+      "repeatable": false
+    },
+    "properties": [],
+    "requirements": "",
+    "activities": {
+      "WMoNZCe0IyHlRLM4": {
+        "type": "utility",
+        "name": "Distant Spell",
+        "_id": "WMoNZCe0IyHlRLM4",
+        "activation": {
+          "type": "",
+          "value": null,
+          "override": false,
+          "condition": "When you cast a spell that has a range of at least 5 feet or when you cast a spell that has a range of Touch"
+        },
+        "consumption": {
+          "scaling": {
+            "allowed": false
+          },
+          "spellSlot": true,
+          "targets": [
+            {
+              "type": "itemUses",
+              "value": "1",
+              "target": "font-of-magic",
+              "scaling": {}
+            }
+          ]
+        },
+        "description": {
+          "chatFlavor": ""
+        },
+        "duration": {
+          "units": "inst",
+          "concentration": false,
+          "override": false
+        },
+        "effects": [],
+        "range": {
+          "override": false,
+          "units": "self",
+          "special": ""
+        },
+        "target": {
+          "template": {
+            "contiguous": false,
+            "units": "ft",
+            "type": ""
+          },
+          "affects": {
+            "choice": false,
+            "count": "",
+            "type": ""
+          },
+          "override": false,
+          "prompt": false
+        },
+        "uses": {
+          "spent": 0,
+          "recovery": [],
+          "max": ""
+        },
+        "sort": 0,
+        "roll": {
+          "prompt": false,
+          "visible": false,
+          "name": "",
+          "formula": ""
+        }
+      }
+    },
+    "enchant": {},
+    "identifier": "distant-spell"
+  },
+  "effects": [],
+  "folder": "mqsEntryFolder00",
+  "flags": {
+    "dnd5e": {
+      "riders": {
+        "activity": [],
+        "effect": []
+      }
+    },
+    "midi-qol": {
+      "entries": [
+        {
+          "on": "use.configure",
+          "if": "tags.use.kind === 'spell' && ['touch', 'ft'].includes(use.activity.range.units)",
+          "do": [
+            {
+              "if": "use.activity.range.units === 'touch'",
+              "change": {
+                "range": {
+                  "units": "ft",
+                  "value": 30
+                }
+              }
+            },
+            {
+              "if": "use.activity.range.units === 'ft'",
+              "change": {
+                "range": "@value * 2"
+              }
+            }
+          ],
+          "id": "distant",
+          "who": "owner",
+          "offer": "ask",
+          "group": "metamagic",
+          "activity": "WMoNZCe0IyHlRLM4",
+          "label": "Distant Spell"
+        }
+      ]
+    }
+  },
+  "_stats": {
+    "compendiumSource": null,
+    "duplicateSource": null,
+    "coreVersion": "14.360",
+    "systemId": "dnd5e",
+    "systemVersion": "6.1.0"
+  },
+  "ownership": {
+    "default": 0
+  },
+  "_key": "!items!mqeDistantSpell0"
+}

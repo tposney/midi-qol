@@ -1,0 +1,73 @@
+{
+  "name": "Wild Magic Surge",
+  "type": "feat",
+  "img": "icons/magic/lightning/bolt-strike-forked-blue.webp",
+  "system": {
+    "description": {
+      "value": "<p>Once per turn, right after you cast a sorcerer spell with a spell slot, you can roll 1d20. On a 20, roll on the Wild Magic Surge table.</p><p><em>Automation (midi-qol entries):</em> asked after each sorcerer spell cast with a slot, once a turn; a 20 announces the surge (the table itself is the GM's).</p>",
+      "chatFlavor": ""
+    },
+    "source": {
+      "custom": "",
+      "rules": "2024",
+      "revision": 1,
+      "license": "",
+      "book": ""
+    },
+    "activities": {},
+    "type": {
+      "value": "class",
+      "subtype": ""
+    },
+    "identifier": "wild-magic-surge"
+  },
+  "effects": [],
+  "flags": {
+    "midi-qol": {
+      "entries": [
+        {
+          "id": "surge",
+          "on": "use.end",
+          "who": "owner",
+          "offer": "ask",
+          "limit": {
+            "per": "turn"
+          },
+          "label": "Wild Magic Surge (d20)",
+          "if": "tags.use.kind === 'spell' && !!tags.use.spellSlot && tags.use.class === 'sorcerer'",
+          "do": [
+            {
+              "table": {
+                "id": "surge.check",
+                "formula": "1d20",
+                "rows": [
+                  {
+                    "range": [
+                      20,
+                      20
+                    ],
+                    "label": "Wild Magic Surge! Roll on the Wild Magic Surge table.",
+                    "do": []
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "_id": "mqeWildMagicSurg",
+  "_key": "!items!mqeWildMagicSurg",
+  "folder": "mqsEntryFolder00",
+  "ownership": {
+    "default": 0
+  },
+  "_stats": {
+    "compendiumSource": null,
+    "duplicateSource": null,
+    "coreVersion": "14.360",
+    "systemId": "dnd5e",
+    "systemVersion": "6.1.0"
+  }
+}

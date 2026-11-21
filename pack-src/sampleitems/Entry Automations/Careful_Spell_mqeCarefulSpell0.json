@@ -1,0 +1,151 @@
+{
+  "_id": "mqeCarefulSpell0",
+  "name": "Careful Spell",
+  "type": "feat",
+  "img": "icons/magic/nature/beam-hand-leaves-green.webp",
+  "system": {
+    "description": {
+      "value": "<blockquote><p>Cost: 1 Sorcery Point</p></blockquote><p>When you cast a spell that forces other creatures to make a saving throw, you can protect some of those creatures from the spell's full force. To do so, spend 1 Sorcery Point and choose a number of those creatures up to your Charisma modifier (minimum of one creature). A chosen creature automatically succeeds on its saving throw against the spell, and it takes no damage if it would normally take half damage on a successful save.</p><p><strong>Creatures You Can Protect:</strong> [[lookup @abilities.cha.mod]]</p><p><em>Automation (midi-qol entries):</em> offered as you cast a spell (one Metamagic option per spell, Empowered and Seeking combine); its Sorcery Points come from Font of Magic.</p>",
+      "chat": ""
+    },
+    "source": {
+      "custom": "",
+      "rules": "2024",
+      "revision": 1,
+      "license": "CC-BY-4.0",
+      "book": ""
+    },
+    "uses": {
+      "max": "",
+      "spent": 0,
+      "recovery": []
+    },
+    "type": {
+      "value": "class",
+      "subtype": "metamagic"
+    },
+    "prerequisites": {
+      "level": null,
+      "repeatable": false
+    },
+    "properties": [],
+    "requirements": "",
+    "activities": {
+      "jD3THRjOL2ILRYuM": {
+        "type": "utility",
+        "name": "Careful Spell",
+        "_id": "jD3THRjOL2ILRYuM",
+        "activation": {
+          "type": "",
+          "value": null,
+          "override": false,
+          "condition": "When you cast a spell that forces other creatures to make a saving throw"
+        },
+        "consumption": {
+          "scaling": {
+            "allowed": false
+          },
+          "spellSlot": true,
+          "targets": [
+            {
+              "type": "itemUses",
+              "value": "1",
+              "target": "font-of-magic",
+              "scaling": {}
+            }
+          ]
+        },
+        "description": {
+          "chatFlavor": ""
+        },
+        "duration": {
+          "units": "inst",
+          "concentration": false,
+          "override": false
+        },
+        "effects": [],
+        "range": {
+          "override": false,
+          "units": "self",
+          "special": ""
+        },
+        "target": {
+          "template": {
+            "contiguous": false,
+            "units": "ft",
+            "type": ""
+          },
+          "affects": {
+            "choice": false,
+            "count": "@abilities.cha.mod",
+            "type": "creature",
+            "special": ""
+          },
+          "override": false,
+          "prompt": false
+        },
+        "uses": {
+          "spent": 0,
+          "recovery": [],
+          "max": ""
+        },
+        "sort": 0,
+        "roll": {
+          "prompt": false,
+          "visible": false,
+          "name": "",
+          "formula": ""
+        }
+      }
+    },
+    "enchant": {},
+    "identifier": "careful-spell"
+  },
+  "effects": [],
+  "folder": "mqsEntryFolder00",
+  "flags": {
+    "dnd5e": {
+      "riders": {
+        "activity": [],
+        "effect": []
+      }
+    },
+    "midi-qol": {
+      "entries": [
+        {
+          "on": "use.saves",
+          "if": "tags.use.kind === 'spell'",
+          "choose": {
+            "kind": "targets",
+            "max": "max(1, @abilities.cha.mod)",
+            "label": "Careful Spell: protected creatures"
+          },
+          "do": [
+            {
+              "modifier": "success",
+              "rolls": "save",
+              "for": "careful"
+            }
+          ],
+          "id": "careful",
+          "who": "owner",
+          "offer": "ask",
+          "group": "metamagic",
+          "activity": "jD3THRjOL2ILRYuM",
+          "label": "Careful Spell"
+        }
+      ]
+    }
+  },
+  "_stats": {
+    "compendiumSource": null,
+    "duplicateSource": null,
+    "coreVersion": "14.360",
+    "systemId": "dnd5e",
+    "systemVersion": "6.1.0"
+  },
+  "ownership": {
+    "default": 0
+  },
+  "_key": "!items!mqeCarefulSpell0"
+}

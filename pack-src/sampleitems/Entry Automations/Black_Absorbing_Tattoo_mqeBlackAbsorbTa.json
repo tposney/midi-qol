@@ -1,0 +1,142 @@
+{
+  "name": "Black Absorbing Tattoo",
+  "type": "equipment",
+  "img": "icons/magic/unholy/hand-claw-glow-orange.webp",
+  "system": {
+    "description": {
+      "value": "<p>While attuned, you have resistance to necrotic damage. When you take necrotic damage, you can use your reaction to take none of it and regain hit points equal to half the damage you would have taken. Once used, it can't be used again until the next dawn.</p><p><em>Automation (midi-qol entries):</em> offered as a reaction when you would take necrotic damage: you take none of it and regain half of it.</p>",
+      "chatFlavor": ""
+    },
+    "source": {
+      "custom": "",
+      "rules": "2024",
+      "revision": 1,
+      "license": "",
+      "book": ""
+    },
+    "activities": {
+      "mqeAbsorbTattoo0": {
+        "_id": "mqeAbsorbTattoo0",
+        "type": "utility",
+        "name": "Absorb",
+        "activation": {
+          "type": "reaction",
+          "value": null,
+          "condition": ""
+        },
+        "consumption": {
+          "targets": [],
+          "scaling": {
+            "allowed": false
+          },
+          "spellSlot": true
+        },
+        "duration": {
+          "units": "inst"
+        },
+        "range": {
+          "units": "self"
+        },
+        "target": {
+          "affects": {
+            "type": "",
+            "count": ""
+          },
+          "template": {
+            "type": ""
+          }
+        },
+        "uses": {
+          "spent": 0,
+          "max": "",
+          "recovery": []
+        },
+        "effects": []
+      }
+    },
+    "type": {
+      "value": "trinket",
+      "baseItem": ""
+    },
+    "attunement": "required",
+    "attuned": true,
+    "equipped": true,
+    "identifier": "black-absorbing-tattoo",
+    "uses": {
+      "spent": 0,
+      "max": "1",
+      "recovery": [
+        {
+          "period": "dawn",
+          "type": "recoverAll"
+        }
+      ]
+    }
+  },
+  "effects": [
+    {
+      "_id": "mqeNecroticResi0",
+      "name": "Necrotic Resistance",
+      "img": "icons/magic/unholy/hand-claw-glow-orange.webp",
+      "type": "base",
+      "transfer": true,
+      "disabled": false,
+      "statuses": [],
+      "system": {
+        "changes": [
+          {
+            "key": "system.traits.dr.value",
+            "type": "add",
+            "value": "necrotic"
+          }
+        ]
+      },
+      "duration": {},
+      "flags": {},
+      "description": "",
+      "_key": "!items.effects!mqeBlackAbsorbTa.mqeNecroticResi0"
+    }
+  ],
+  "flags": {
+    "midi-qol": {
+      "entries": [
+        {
+          "id": "absorb",
+          "on": "damaging",
+          "offer": "reaction",
+          "activity": "mqeAbsorbTattoo0",
+          "if": "(event.damage?.applied?.necrotic ?? 0) > 0",
+          "do": [
+            {
+              "heal": "floor(@event.damage.applied.necrotic / 2)",
+              "label": "Black Absorbing Tattoo"
+            },
+            {
+              "damageChange": {
+                "stage": "complete",
+                "types": [
+                  "necrotic"
+                ],
+                "multiplier": 0
+              },
+              "label": "Black Absorbing Tattoo"
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "_id": "mqeBlackAbsorbTa",
+  "_key": "!items!mqeBlackAbsorbTa",
+  "folder": "mqsEntryFolder00",
+  "ownership": {
+    "default": 0
+  },
+  "_stats": {
+    "compendiumSource": null,
+    "duplicateSource": null,
+    "coreVersion": "14.360",
+    "systemId": "dnd5e",
+    "systemVersion": "6.1.0"
+  }
+}

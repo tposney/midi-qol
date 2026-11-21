@@ -1,0 +1,150 @@
+{
+  "name": "Emboldening Bond (entries)",
+  "type": "feat",
+  "img": "icons/magic/life/heart-cross-strong-flame-green.webp",
+  "system": {
+    "description": {
+      "value": "<p>As an action, you bond up to a number of willing creatures you can see within 30 feet (yourself included) equal to your Proficiency Bonus, for 10 minutes. While a bonded creature is within 30 feet of another, it can add 1d4 to an attack roll, ability check or saving throw it makes, once a turn. Using the feature again ends the earlier bond.</p><p><em>Automation (midi-qol entries):</em> a bonded creature near another is offered the 1d4 after its roll, once a turn; bonding again ends the earlier bond everywhere.</p>",
+      "chatFlavor": ""
+    },
+    "source": {
+      "custom": "",
+      "rules": "2024",
+      "revision": 1,
+      "license": "",
+      "book": ""
+    },
+    "activities": {
+      "mqeBondActivity0": {
+        "_id": "mqeBondActivity0",
+        "type": "utility",
+        "name": "Bond",
+        "activation": {
+          "type": "action",
+          "value": null,
+          "condition": ""
+        },
+        "consumption": {
+          "targets": [],
+          "scaling": {
+            "allowed": false
+          },
+          "spellSlot": true
+        },
+        "duration": {
+          "units": "inst"
+        },
+        "range": {
+          "units": "ft",
+          "value": "30"
+        },
+        "target": {
+          "affects": {
+            "type": "creature",
+            "count": "@prof"
+          },
+          "template": {
+            "type": ""
+          }
+        },
+        "uses": {
+          "spent": 0,
+          "max": "",
+          "recovery": []
+        },
+        "effects": [
+          {
+            "_id": "mqeBonded0000000"
+          }
+        ],
+        "midiEntries": [
+          {
+            "id": "rebond",
+            "on": "use.effects",
+            "do": [
+              {
+                "effect": "remove",
+                "what": {
+                  "origin": "this item"
+                },
+                "to": "anyone"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    "type": {
+      "value": "class",
+      "subtype": ""
+    },
+    "identifier": "emboldening-bond",
+    "uses": {
+      "spent": 0,
+      "max": "@prof",
+      "recovery": [
+        {
+          "period": "lr",
+          "type": "recoverAll"
+        }
+      ]
+    }
+  },
+  "effects": [
+    {
+      "_id": "mqeBonded0000000",
+      "name": "Bonded",
+      "img": "icons/magic/life/heart-cross-strong-flame-green.webp",
+      "type": "base",
+      "transfer": false,
+      "disabled": false,
+      "statuses": [],
+      "system": {
+        "changes": []
+      },
+      "duration": {
+        "seconds": 600
+      },
+      "flags": {
+        "midi-qol": {
+          "entries": [
+            {
+              "id": "bond",
+              "on": "roll.postResult",
+              "offer": "ask",
+              "limit": {
+                "per": "turn"
+              },
+              "label": "Emboldening Bond (1d4)",
+              "if": "['attack', 'check', 'save'].includes(event.kind) && nearby({ within: 30, filter: a => a.effects.some(e => e.name === 'Bonded' && e.origin === entry.origin.uuid) }).length > 0",
+              "do": [
+                {
+                  "bonus": {
+                    "kind": "add",
+                    "formula": "1d4"
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "description": "",
+      "_key": "!items.effects!mqeEmboldeningBo.mqeBonded0000000"
+    }
+  ],
+  "flags": {},
+  "_id": "mqeEmboldeningBo",
+  "_key": "!items!mqeEmboldeningBo",
+  "folder": "mqsEntryFolder00",
+  "ownership": {
+    "default": 0
+  },
+  "_stats": {
+    "compendiumSource": null,
+    "duplicateSource": null,
+    "coreVersion": "14.360",
+    "systemId": "dnd5e",
+    "systemVersion": "6.1.0"
+  }
+}

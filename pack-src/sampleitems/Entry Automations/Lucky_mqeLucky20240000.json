@@ -1,0 +1,164 @@
+{
+  "name": "Lucky",
+  "type": "feat",
+  "img": "icons/magic/control/buff-luck-fortune-green.webp",
+  "system": {
+    "description": {
+      "value": "<p>You have Luck Points equal to your Proficiency Bonus, regained on a Long Rest. Spend one to give yourself Advantage on a D20 Test as you roll, or to give a creature attacking you Disadvantage on that attack.</p><p><em>Automation (midi-qol entries):</em> offered on your d20 tests and when you are attacked; each costs a Luck Point (the feat's uses).</p>",
+      "chatFlavor": ""
+    },
+    "source": {
+      "custom": "",
+      "rules": "2024",
+      "revision": 1,
+      "license": "",
+      "book": ""
+    },
+    "activities": {
+      "luckyAdvantage00": {
+        "_id": "luckyAdvantage00",
+        "type": "utility",
+        "name": "Advantage",
+        "activation": {
+          "type": "special",
+          "value": null,
+          "condition": ""
+        },
+        "consumption": {
+          "targets": [],
+          "scaling": {
+            "allowed": false
+          },
+          "spellSlot": true
+        },
+        "duration": {
+          "units": "inst"
+        },
+        "range": {
+          "units": "self"
+        },
+        "target": {
+          "affects": {
+            "type": "",
+            "count": ""
+          },
+          "template": {
+            "type": ""
+          }
+        },
+        "uses": {
+          "spent": 0,
+          "max": "",
+          "recovery": []
+        },
+        "effects": []
+      },
+      "luckyDisadvanta0": {
+        "_id": "luckyDisadvanta0",
+        "type": "utility",
+        "name": "Disadvantage",
+        "activation": {
+          "type": "reaction",
+          "value": null,
+          "condition": ""
+        },
+        "consumption": {
+          "targets": [],
+          "scaling": {
+            "allowed": false
+          },
+          "spellSlot": true
+        },
+        "duration": {
+          "units": "inst"
+        },
+        "range": {
+          "units": "self"
+        },
+        "target": {
+          "affects": {
+            "type": "",
+            "count": ""
+          },
+          "template": {
+            "type": ""
+          }
+        },
+        "uses": {
+          "spent": 0,
+          "max": "",
+          "recovery": []
+        },
+        "effects": []
+      }
+    },
+    "type": {
+      "value": "feat",
+      "subtype": "origin"
+    },
+    "identifier": "lucky",
+    "uses": {
+      "spent": 0,
+      "max": "@prof",
+      "recovery": [
+        {
+          "period": "lr",
+          "type": "recoverAll"
+        }
+      ]
+    }
+  },
+  "effects": [],
+  "flags": {
+    "midi-qol": {
+      "entries": [
+        {
+          "id": "advantage",
+          "on": [
+            "roll.preRoll",
+            "roll.preResult"
+          ],
+          "offer": "ask",
+          "activity": "luckyAdvantage00",
+          "if": "['attack', 'check', 'save'].includes(event.kind)",
+          "do": [
+            {
+              "bonus": {
+                "kind": "mode",
+                "mode": "advantage"
+              }
+            }
+          ]
+        },
+        {
+          "id": "disadvantage",
+          "on": "attacked",
+          "offer": "ask",
+          "activity": "luckyDisadvanta0",
+          "do": [
+            {
+              "bonus": {
+                "kind": "mode",
+                "mode": "disadvantage"
+              },
+              "rolls": "attack"
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "_id": "mqeLucky20240000",
+  "_key": "!items!mqeLucky20240000",
+  "folder": "mqsEntryFolder00",
+  "ownership": {
+    "default": 0
+  },
+  "_stats": {
+    "compendiumSource": null,
+    "duplicateSource": null,
+    "coreVersion": "14.360",
+    "systemId": "dnd5e",
+    "systemVersion": "6.1.0"
+  }
+}

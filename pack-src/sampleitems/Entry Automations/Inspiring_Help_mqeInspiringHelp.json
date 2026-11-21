@@ -1,0 +1,150 @@
+{
+  "name": "Inspiring Help",
+  "type": "feat",
+  "img": "icons/magic/control/buff-strength-muscle-damage-orange.webp",
+  "system": {
+    "description": {
+      "value": "<p>When you take the Help action, the creature you help can add 1d6 to the roll you help with, or, if it is an attack roll, to the damage of that attack if it hits instead. The help is then spent.</p><p><em>Automation (midi-qol entries):</em> the helped creature is offered +1d6 on its attack roll or check, or +1d6 damage when its attack hits; the help ends with its next use.</p>",
+      "chatFlavor": ""
+    },
+    "source": {
+      "custom": "",
+      "rules": "2024",
+      "revision": 1,
+      "license": "",
+      "book": ""
+    },
+    "activities": {
+      "mqeHelpActivity0": {
+        "_id": "mqeHelpActivity0",
+        "type": "utility",
+        "name": "Help",
+        "activation": {
+          "type": "action",
+          "value": null,
+          "condition": ""
+        },
+        "consumption": {
+          "targets": [],
+          "scaling": {
+            "allowed": false
+          },
+          "spellSlot": true
+        },
+        "duration": {
+          "units": "inst"
+        },
+        "range": {
+          "units": "ft",
+          "value": "5"
+        },
+        "target": {
+          "affects": {
+            "type": "ally",
+            "count": "1"
+          },
+          "template": {
+            "type": ""
+          }
+        },
+        "uses": {
+          "spent": 0,
+          "max": "",
+          "recovery": []
+        },
+        "effects": [
+          {
+            "_id": "mqeHelped0000000"
+          }
+        ]
+      }
+    },
+    "type": {
+      "value": "feat",
+      "subtype": ""
+    },
+    "identifier": "inspiring-help"
+  },
+  "effects": [
+    {
+      "_id": "mqeHelped0000000",
+      "name": "Helped",
+      "img": "icons/magic/control/buff-strength-muscle-damage-orange.webp",
+      "type": "base",
+      "transfer": false,
+      "disabled": false,
+      "statuses": [],
+      "system": {
+        "changes": []
+      },
+      "duration": {
+        "rounds": 1
+      },
+      "flags": {
+        "midi-qol": {
+          "entries": [
+            {
+              "id": "help.roll",
+              "on": "roll.postResult",
+              "offer": "ask",
+              "label": "Inspiring Help (+1d6)",
+              "if": "['attack', 'check'].includes(event.kind)",
+              "do": [
+                {
+                  "bonus": {
+                    "kind": "add",
+                    "formula": "1d6"
+                  }
+                }
+              ]
+            },
+            {
+              "id": "help.spent",
+              "on": "use.end",
+              "who": "bearer",
+              "do": [
+                {
+                  "end": true
+                }
+              ]
+            },
+            {
+              "id": "help.damage",
+              "on": "use.hit",
+              "who": "bearer",
+              "offer": "ask",
+              "label": "Inspiring Help (+1d6 damage)",
+              "if": "!!tags.use.attack",
+              "do": [
+                {
+                  "damage": "1d6",
+                  "to": "target",
+                  "label": "Inspiring Help"
+                },
+                {
+                  "end": true
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "description": "",
+      "_key": "!items.effects!mqeInspiringHelp.mqeHelped0000000"
+    }
+  ],
+  "flags": {},
+  "_id": "mqeInspiringHelp",
+  "_key": "!items!mqeInspiringHelp",
+  "folder": "mqsEntryFolder00",
+  "ownership": {
+    "default": 0
+  },
+  "_stats": {
+    "compendiumSource": null,
+    "duplicateSource": null,
+    "coreVersion": "14.360",
+    "systemId": "dnd5e",
+    "systemVersion": "6.1.0"
+  }
+}

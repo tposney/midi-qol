@@ -1,0 +1,214 @@
+{
+  "name": "Menacing Attack",
+  "type": "feat",
+  "img": "icons/skills/melee/strike-sword-blood-red.webp",
+  "system": {
+    "description": {
+      "value": "<p>When you hit a creature with an attack roll, you can expend one Superiority Die to add it to the damage, and the target must succeed on a Wisdom saving throw or have the Frightened condition until the end of your next turn.</p><p><em>Automation (midi-qol entries):</em> offered when your attack hits (one maneuver per attack): the die joins the attack's damage and the target saves or is frightened; each costs a Superiority Die (the feature's uses).</p>",
+      "chatFlavor": ""
+    },
+    "source": {
+      "custom": "",
+      "rules": "2024",
+      "revision": 1,
+      "license": "",
+      "book": ""
+    },
+    "activities": {
+      "mqeMenaceDamage0": {
+        "_id": "mqeMenaceDamage0",
+        "type": "damage",
+        "name": "Superiority Die",
+        "activation": {
+          "type": "special",
+          "value": null,
+          "condition": ""
+        },
+        "consumption": {
+          "targets": [],
+          "scaling": {
+            "allowed": false
+          },
+          "spellSlot": true
+        },
+        "duration": {
+          "units": "inst"
+        },
+        "range": {
+          "units": "self"
+        },
+        "target": {
+          "affects": {
+            "type": "",
+            "count": ""
+          },
+          "template": {
+            "type": ""
+          }
+        },
+        "uses": {
+          "spent": 0,
+          "max": "",
+          "recovery": []
+        },
+        "effects": [],
+        "damage": {
+          "parts": [
+            {
+              "number": 1,
+              "denomination": 8,
+              "bonus": "",
+              "types": [
+                "psychic"
+              ],
+              "custom": {
+                "enabled": false,
+                "formula": ""
+              },
+              "scaling": {
+                "mode": ""
+              }
+            }
+          ]
+        },
+        "midiProperties": {
+          "automationOnly": true
+        }
+      },
+      "mqeMenaceSave000": {
+        "_id": "mqeMenaceSave000",
+        "type": "save",
+        "name": "Menace",
+        "activation": {
+          "type": "special",
+          "value": null,
+          "condition": ""
+        },
+        "consumption": {
+          "targets": [],
+          "scaling": {
+            "allowed": false
+          },
+          "spellSlot": true
+        },
+        "duration": {
+          "units": "inst"
+        },
+        "range": {
+          "units": "ft",
+          "value": "60"
+        },
+        "target": {
+          "affects": {
+            "type": "creature",
+            "count": "1"
+          },
+          "template": {
+            "type": ""
+          }
+        },
+        "uses": {
+          "spent": 0,
+          "max": "",
+          "recovery": []
+        },
+        "effects": [
+          {
+            "_id": "mqeMenaced000000"
+          }
+        ],
+        "save": {
+          "ability": [
+            "wis"
+          ],
+          "dc": {
+            "calculation": "",
+            "formula": "8 + @prof + max(@abilities.str.mod, @abilities.dex.mod)"
+          }
+        },
+        "damage": {
+          "onSave": "none",
+          "parts": []
+        },
+        "midiProperties": {
+          "automationOnly": true
+        }
+      }
+    },
+    "type": {
+      "value": "class",
+      "subtype": "maneuver"
+    },
+    "identifier": "menacing-attack",
+    "uses": {
+      "spent": 0,
+      "max": "4",
+      "recovery": [
+        {
+          "period": "sr",
+          "type": "recoverAll"
+        }
+      ]
+    }
+  },
+  "effects": [
+    {
+      "_id": "mqeMenaced000000",
+      "name": "Menaced",
+      "img": "icons/skills/melee/strike-sword-blood-red.webp",
+      "type": "base",
+      "transfer": false,
+      "disabled": false,
+      "statuses": [
+        "frightened"
+      ],
+      "system": {
+        "changes": []
+      },
+      "duration": {
+        "rounds": 1
+      },
+      "flags": {},
+      "description": "",
+      "_key": "!items.effects!mqeMenacingAttac.mqeMenaced000000"
+    }
+  ],
+  "flags": {
+    "midi-qol": {
+      "entries": [
+        {
+          "id": "menacing",
+          "on": "use.hit",
+          "who": "owner",
+          "offer": "ask",
+          "group": "maneuver",
+          "activity": "mqeMenaceDamage0",
+          "if": "!!tags.use.attack",
+          "label": "Menacing Attack",
+          "do": [
+            {
+              "damage": "activity",
+              "to": "target"
+            },
+            {
+              "save": "activity:mqeMenaceSave000"
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "_id": "mqeMenacingAttac",
+  "_key": "!items!mqeMenacingAttac",
+  "folder": "mqsEntryFolder00",
+  "ownership": {
+    "default": 0
+  },
+  "_stats": {
+    "compendiumSource": null,
+    "duplicateSource": null,
+    "coreVersion": "14.360",
+    "systemId": "dnd5e",
+    "systemVersion": "6.1.0"
+  }
+}
