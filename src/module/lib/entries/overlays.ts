@@ -22,11 +22,20 @@ export function registerOverlay(item: Item.Implementation, source: string): (() 
   const list = overlaysByIdentifier.get(rule.identifier) ?? [];
   const entry = { source, item };
   overlaysByIdentifier.set(rule.identifier, [...list.filter(o => o.item.uuid !== item.uuid), entry]);
-  return () => {
+  const unregister = () => {
     off();
     overlaysByIdentifier.set(rule.identifier, (overlaysByIdentifier.get(rule.identifier) ?? []).filter(o => o !== entry));
+    if (item.uuid && registeredByUuid.get(item.uuid) === unregister) registeredByUuid.delete(item.uuid);
   };
+  if (item.uuid) {
+    registeredByUuid.get(item.uuid)?.();
+    registeredByUuid.set(item.uuid, unregister);
+  }
+  return unregister;
 }
+
+/** Each registered overlay item's unregister: a deleted world overlay stops applying */
+const registeredByUuid = new Map<string, () => void>();
 
 type OverlayMarker = { overlay: string, version: string };
 
@@ -83,6 +92,7 @@ export async function applyOverlayData(item: Item.Implementation): Promise<boole
 
 /** On the active GM: an item created on an actor gets its overlay's data part; at ready, the world's actors' items */
 export function watchOverlayData(): void {
+  Hooks.on("deleteItem", item => { const uuid = (item as Item.Implementation).uuid; if (uuid) registeredByUuid.get(uuid)?.(); });
   Hooks.on("createItem", item => {
     if (game.user?.isActiveGM && overlaysByIdentifier.size) void applyOverlayData(item as Item.Implementation).catch(err => console.warn("midi-qol | overlay data", err));
   });
@@ -112,4 +122,85 @@ export function registerWorldOverlays(): number {
   let count = 0;
   for (const item of game.items ?? []) if (item.getFlag(MODULE_ID, "overlay") && registerOverlay(item, "world")) count++;
   return count;
+}
+
+/* Authoring (11c-2): save an edited copy of a base item as an overlay */
+
+const isOverlayPart = (flags: unknown) => !!(flags as Record<string, { overlayPart?: unknown } | undefined> | undefined)?.[MODULE_ID]?.overlayPart;
+const sameEntries = (a: unknown, b: unknown) => JSON.stringify(a ?? []) === JSON.stringify(b ?? []);
+
+/**
+ * The difference between an item and its base (its compendium source) as a world overlay item: the item's entries if
+ * changed; an effect or activity the base has, as a stub with its entries if they changed; one the base lacks, whole
+ * (the data part). Saving again for the same identifier updates that overlay and its version. Registered at once.
+ */
+export async function saveAsOverlay(item: Item.Implementation): Promise<Item.Implementation | undefined> {
+  const sourceUuid = item._stats?.compendiumSource;
+  const base = sourceUuid ? await fromUuid(sourceUuid) as Item.Implementation | null : null;
+  if (!base) {
+    ui.notifications?.warn(game.i18n?.localize("midi-qol.Overlay.NoBase") ?? "No base item (compendium source) to compare with");
+    return undefined;
+  }
+  const system = item.system as { identifier?: string, source?: { rules?: string } };
+  const identifier = system.identifier || (base.system as { identifier?: string }).identifier;
+  if (!identifier) {
+    ui.notifications?.warn(game.i18n?.localize("midi-qol.Overlay.NoIdentifier") ?? "The item has no identifier");
+    return undefined;
+  }
+  type ActivityLike = { id: string, type?: string, name?: string, midiEntries?: unknown[], flags?: unknown, toObject(): Record<string, unknown> };
+  const activitiesOf = (doc: Item.Implementation) => [...((doc.system as { activities?: Iterable<ActivityLike> }).activities ?? [])];
+  const baseActivities = activitiesOf(base);
+  const activities: Record<string, unknown> = {};
+  for (const activity of activitiesOf(item)) {
+    if (isOverlayPart(activity.flags)) continue;
+    const match = baseActivities.find(a => a.type === activity.type && a.name === activity.name);
+    if (!match) activities[activity.id] = activity.toObject();
+    else if (activity.midiEntries?.length && !sameEntries(activity.midiEntries, match.midiEntries))
+      activities[activity.id] = { _id: activity.id, type: activity.type, name: activity.name, midiEntries: activity.midiEntries };
+  }
+  const effects: ActiveEffect.CreateData[] = [];
+  for (const effect of item.effects) {
+    // What an overlay added, and its marker, are the overlay's already
+    if (isOverlayPart(effect.flags)) continue;
+    const match = base.effects.find(e => e.name === effect.name);
+    const entries = effect.getFlag(MODULE_ID, "entries");
+    if (!match) effects.push(effect.toObject());
+    else if (entries?.length && !sameEntries(entries, match.getFlag(MODULE_ID, "entries")))
+      effects.push({ _id: effect.id, name: effect.name, img: effect.img, flags: { [MODULE_ID]: { entries } } });
+  }
+  const itemEntries = item.getFlag(MODULE_ID, "entries");
+  const ownEntries = itemEntries?.length && !sameEntries(itemEntries, base.getFlag(MODULE_ID, "entries")) ? itemEntries : undefined;
+  if (!ownEntries && !effects.length && !Object.keys(activities).length) {
+    ui.notifications?.info(game.i18n?.localize("midi-qol.Overlay.NoDifference") ?? "No difference from the base item");
+    return undefined;
+  }
+  const rules = system.source?.rules === "2014" || system.source?.rules === "2024" ? system.source.rules : undefined;
+  const existing = game.items?.find(i => i.getFlag(MODULE_ID, "overlay")?.identifier === identifier && i.getFlag(MODULE_ID, "overlay")?.rules === rules);
+  const version = String(Number(existing?.getFlag(MODULE_ID, "overlay")?.version ?? 0) + 1);
+  // Saved again: the same id (so the same uuid and registration), a new version
+  if (existing) await existing.delete();
+  const created = await Item.createDocuments([{
+    ...(existing?.id ? { _id: existing.id } : {}),
+    name: `${item.name} (overlay)`, type: item.type, img: item.img,
+    system: { identifier: `${identifier}-overlay`, source: { rules }, activities, description: { value: "" } },
+    effects,
+    flags: { [MODULE_ID]: { overlay: { identifier, ...(rules ? { rules } : {}), version }, ...(ownEntries ? { entries: ownEntries } : {}) } }
+  }], { keepId: true });
+  const overlay = created[0] as Item.Implementation | undefined;
+  if (overlay) registerOverlay(overlay, "world");
+  return overlay;
+}
+
+export function watchOverlayAuthoring(): void {
+  //@ts-expect-error dnd5e hook
+  Hooks.on("getHeaderControlsItemSheet5e", (app: foundry.applications.api.DocumentSheetV2<Item>, controls: foundry.applications.api.ApplicationV2.HeaderControlsEntry[]) => {
+    const item = app.document as Item.Implementation;
+    if (!game.user?.isGM || !item._stats?.compendiumSource || item.getFlag(MODULE_ID, "overlay")) return;
+    controls.push({
+      label: "midi-qol.Overlay.Save",
+      icon: "fa-solid fa-layer-group",
+      // @ts-expect-error v13-ism
+      onClick: () => saveAsOverlay(item)
+    });
+  });
 }
