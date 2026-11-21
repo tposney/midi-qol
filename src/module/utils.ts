@@ -16,7 +16,8 @@ import { parseFlagValue } from "./rules/optionalFlags.js";
 import { bonusSession } from "./services/rollBonuses/session.js";
 import { crossesOppositeSides, opposedByAngle } from "./services/flanking/rules.js";
 import { DialogCountdown } from "./lib/dialogCountdown.js";
-import { coverBetween, coverFor } from "./services/cover/service.js";
+import { coverAnswer, coverBetween, coverFor, coverLevelFor } from "./services/cover/service.js";
+import type { EntryCover } from "./lib/entries/serviceEvents.js";
 import { sensesModes } from "./services/perception/service.js";
 import { applyDamageRules, collectDamageRules, copyDamageOptions } from "./lib/damageRules.js";
 import type { AttackModifier } from "./Workflow.js";
@@ -3525,11 +3526,14 @@ export function computeTargetAC(
   options: {
     ignoreCover?: boolean;
     targetACMod?: number;
+    /** M15: what the entries said about this target's cover from the use (lib/entries/serviceEvents.ts) */
+    entryCover?: EntryCover;
   } = {}
 ): TargetACResult {
   const targetActor = target.actor;
   const item = activity?.item;
-  const { ignoreCover = false, targetACMod = 0 } = options;
+  const { targetACMod = 0, entryCover } = options;
+  let { ignoreCover = false } = options;
 
   //@ts-expect-error no dnd5e-types
   const acValue: number = targetActor?.system?.attributes?.ac?.value ?? 10;
@@ -3540,8 +3544,11 @@ export function computeTargetAC(
   // TOTAL_COVER not set by dnd5e for tokens with total cover
   if (hasCoverTotal(targetActor)) statusCoverBonus = TOTAL_COVER;
 
-  // Get raw module cover
-  const moduleCoverBonus = computeCoverBonus(attacker, target, activity);
+  // Get raw module cover; an entry's cover for the target counts as at least that much
+  let moduleCoverBonus = computeCoverBonus(attacker, target, activity);
+  if (entryCover?.level) moduleCoverBonus = Math.max(moduleCoverBonus, coverAnswer(entryCover.level).bonus);
+  // Cover the use's entries ignore, status cover too (Sacred Flame)
+  if (entryCover?.ignore?.length && entryCover.ignore.includes(coverLevelFor(Math.max(statusCoverBonus, moduleCoverBonus)))) ignoreCover = true;
 
   // Effective cover is the higher of status vs module
   let effectiveCoverBonus = Math.max(statusCoverBonus, moduleCoverBonus);

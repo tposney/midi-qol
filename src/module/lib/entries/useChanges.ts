@@ -114,15 +114,26 @@ function entryItem(run: ActionRun): Item.Implementation | undefined {
   return document.item;
 }
 
+/** The creatures on the scene of the entry's actor */
+function sceneActors(run: ActionRun): Actor.Implementation[] {
+  const actor = run.found.actor ?? run.context.actor;
+  const scene = (actor.getActiveTokens(false, true)[0] as TokenDocument.Implementation | undefined)?.parent ?? canvas?.scene;
+  const actors = new Set<Actor.Implementation>();
+  for (const token of scene?.tokens ?? []) if (token.actor) actors.add(token.actor);
+  return [...actors];
+}
+
 /**
  * `{ effect: "apply" | "remove", what, to? }`: `what` a status id, an effect on the entry's item (its id or name), or
- * for remove `{ origin: "this item" }` (the effects the entry's item applied). `to` as `for` (default "self").
+ * for remove `{ origin: "this item" }` (the effects the entry's item applied). `to` as `for` (default "self"), or
+ * "anyone" (every creature on the scene).
  */
 async function effectAction(run: ActionRun) {
   const mode = run.action.effect;
   const what = run.action.what;
   if (mode !== "apply" && mode !== "remove") return;
-  const actors = actorsFor(run.action.to, run, "self");
+  // "anyone": every creature on the scene (removing what this item applied wherever it is: Emboldening Bond)
+  const actors = run.action.to === "anyone" ? sceneActors(run) : actorsFor(run.action.to, run, "self");
   const item = entryItem(run);
   const status = typeof what === "string" ? CONFIG.statusEffects.find(s => s.id === what) : undefined;
   for (const actor of actors) {
@@ -134,7 +145,9 @@ async function effectAction(run: ActionRun) {
     }
     if (mode === "remove") {
       const origin = what && typeof what === "object" && "origin" in what ? item?.uuid : undefined;
-      const ids = actor.effects.filter(e => origin ? e.origin === origin : (e.id === what || e.name === what)).map(e => e.id!);
+      // Applied by the item or one of its activities
+      const fromItem = (e: ActiveEffect.Implementation) => !!e.origin && (e.origin === origin || e.origin.startsWith(`${origin}.`));
+      const ids = actor.effects.filter(e => origin ? fromItem(e) : (e.id === what || e.name === what)).map(e => e.id!);
       if (ids.length) await unTimedExecuteAsGM("removeEffects", { actorUuid: actor.uuid, effects: ids, options: { "expiry-reason": `midi-qol:entry:${run.found.entry.id}` } });
       continue;
     }

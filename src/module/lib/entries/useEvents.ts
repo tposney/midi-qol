@@ -6,6 +6,8 @@ import type { DamageContribution } from "../../services/damageContributions/serv
 import type { DamageChange, DamageStage } from "../../services/damageModifiers/rules.js";
 import { DAMAGE_STAGES } from "../../services/damageModifiers/rules.js";
 import { applyBonusEffect, type BonusEffect } from "../../services/rollBonuses/service.js";
+import { raiseDealsDamage } from "./bearerEvents.js";
+import { entryActivity } from "./activityActions.js";
 import { collectEntries, conditionDataFor, entryHolds, holds, limitAllows, registerAction, registerEvent, runEvent, spendEntryLimit, type ActionRun, type EventContext } from "./engine.js";
 
 /*
@@ -31,11 +33,17 @@ const documents = (set: { documents?: TokenDocument.Implementation[] } | undefin
 const allTargets: TargetsOf = w => documents(w.targets);
 const hitTargets: TargetsOf = w => [...new Set([...documents(w.hitTargets), ...documents(w.hitTargetsEC)])];
 const attacks = (w: Workflow) => !!w.activity?.attack;
+// @ts-expect-error item.type includes dnd5e subtypes
+const casts = (w: Workflow) => w.item?.type === "spell";
 
 /** The events each step pass raises, by "pre"/"post" and step id */
 const USE_EVENTS: Record<string, EventAt[]> = {
-  "post midi-qol.PreambleComplete": [{ eventId: "use.targeted" }, { eventId: "targeted", targets: allTargets }],
-  "pre midi-qol.WaitForAttackRoll": [{ eventId: "use.attack", when: attacks }],
+  "post midi-qol.PreambleComplete": [
+    { eventId: "use.targeted" }, { eventId: "targeted", targets: allTargets }, { eventId: "casts", when: casts },
+    // The services' questions for this use, answered now for midi's synchronous checks (lib/entries/serviceEvents.ts)
+    { eventId: "cover" }, { eventId: "cover", targets: allTargets }, { eventId: "perception" }, { eventId: "perception", targets: allTargets }
+  ],
+  "pre midi-qol.WaitForAttackRoll": [{ eventId: "use.attack", when: attacks }, { eventId: "attacks", when: attacks }],
   // attacked, hit, missed, saveRequested, saveFailed, saveSucceeded, damaging, healing: raised where midi asks for
   // reactions, so they share its prompt (lib/entries/responseEvents.ts)
   "post midi-qol.AttackRollComplete": [
@@ -104,6 +112,7 @@ export async function raiseDamaged(workflow: Workflow, target: TokenDocument.Imp
   if (!target || workflow.readOnly) return;
   const context = targetContext(workflow, target, { damage });
   if (context && anyEntries("damaged", context)) await runEvent("damaged", context);
+  await raiseDealsDamage(workflow, target);
 }
 
 /* What the use's entries contributed */
@@ -143,9 +152,13 @@ export function actorsFor(spec: unknown, run: ActionRun, fallback: "self" | "tar
       if (context.target?.actor) return [context.target.actor];
       return documents(context.workflow?.targets).map(t => t.actor).filter((a): a is Actor.Implementation => !!a);
     }
-    default:
+    default: {
+      // A choice of targets (Careful Spell's): those the player chose
+      const chosen = (run.conditionData.choices as Record<string, unknown> | undefined)?.[which] ?? context.workflow?.choices[which];
+      if (Array.isArray(chosen)) return chosen.map(uuid => (fromUuidSync(String(uuid)) as TokenDocument.Implementation | null)?.actor).filter((a): a is Actor.Implementation => !!a);
       console.warn(`midi-qol | entry ${found.entry.id}: unknown for/to "${which}"`);
       return [];
+    }
   }
 }
 
@@ -197,8 +210,22 @@ export async function useDamageAction(run: ActionRun, healing: boolean) {
     console.warn(`midi-qol | entry ${run.found.entry.id}: damage at ${run.eventId} goes to the use's targets ("to": "target")`);
     return;
   }
+  const targetUuids = targets?.map(t => t.uuid).filter((uuid): uuid is string => !!uuid);
+  // "activity": the damage parts of the entry's activity (Menacing Attack's superiority die), with its roll data
+  if (formula === "activity") {
+    const activity = run.found.entry.activity ? entryActivity(run.found, run.found.entry.activity) : undefined;
+    const parts = (activity as { damage?: { parts?: { formula?: string, types?: Set<string> }[] } } | undefined)?.damage?.parts ?? [];
+    if (!parts.length) console.warn(`midi-qol | entry ${run.found.entry.id}: damage "activity" but its activity ${run.found.entry.activity ?? "(none)"} has no damage`);
+    const rollData = activity?.getRollData() ?? {};
+    for (const part of parts) {
+      if (!part.formula) continue;
+      contributionsOf(workflow).damage.push({ role: "midi-qol.entries", formula: Roll.replaceFormulaData(part.formula, rollData, { missing: "0" }),
+        damageType: [...(part.types ?? [])][0], label: labelOf(run), targets: targetUuids });
+    }
+    return;
+  }
   const type = typeof run.action.type === "string" ? run.action.type : healing ? "healing" : undefined;
-  contributionsOf(workflow).damage.push({ role: "midi-qol.entries", formula, damageType: type, label: labelOf(run), targets: targets?.map(t => t.uuid).filter((uuid): uuid is string => !!uuid) });
+  contributionsOf(workflow).damage.push({ role: "midi-qol.entries", formula, damageType: type, label: labelOf(run), targets: targetUuids });
 }
 
 /** `{ damageChange: { stage, amount?, multiplier?, types? }, for? }`: a change to the damage a target takes (the event's target, else every target) */
@@ -211,15 +238,42 @@ async function damageChangeAction(run: ActionRun) {
     console.warn(`midi-qol | entry ${run.found.entry.id}: unknown damage stage ${stage}`);
     return;
   }
-  const rollData = run.conditionData;
-  const amount = typeof spec.amount === "string" ? await rolled(spec.amount, rollData) : spec.amount;
-  const multiplier = typeof spec.multiplier === "string" ? await rolled(spec.multiplier, rollData) : spec.multiplier;
-  const change: DamageChange = { label: labelOf(run), ...(amount !== undefined ? { amount } : {}), ...(multiplier !== undefined ? { multiplier } : {}), ...(spec.types ? { types: spec.types } : {}) };
+  const changeFor = async (rollData: Record<string, unknown>): Promise<DamageChange> => {
+    const amount = typeof spec.amount === "string" ? await rolled(spec.amount, rollData) : spec.amount;
+    const multiplier = typeof spec.multiplier === "string" ? await rolled(spec.multiplier, rollData) : spec.multiplier;
+    return { label: labelOf(run), ...(amount !== undefined ? { amount } : {}), ...(multiplier !== undefined ? { multiplier } : {}), ...(spec.types ? { types: spec.types } : {}) };
+  };
   const store = contributionsOf(workflow).damageChanges;
   const target = run.context.target;
-  if (target) store.push({ targetUuid: target.uuid ?? undefined, stage, change });
-  else if (typeof run.action.for === "string" && run.action.for !== "target") console.warn(`midi-qol | entry ${run.found.entry.id}: damageChange is for the use's targets`);
-  else store.push({ stage, change });
+  if (target) {
+    store.push({ targetUuid: target.uuid ?? undefined, stage, change: await changeFor(run.conditionData) });
+    return;
+  }
+  if (typeof run.action.for === "string" && run.action.for !== "target") {
+    console.warn(`midi-qol | entry ${run.found.entry.id}: damageChange is for the use's targets`);
+    return;
+  }
+  // At a use event, a formula is worked out for each target (Magic Missile's darts: an allocation read as that
+  // target's share); a plain number is one change for all
+  const perTarget = [spec.amount, spec.multiplier].some(value => typeof value === "string" && value.includes("@"));
+  if (!perTarget) {
+    store.push({ stage, change: await changeFor(run.conditionData) });
+    return;
+  }
+  for (const token of documents(workflow.targets)) {
+    if (!token.uuid) continue;
+    store.push({ targetUuid: token.uuid, stage, change: await changeFor(targetRollData(run.conditionData, token.uuid)) });
+  }
+}
+
+/** Condition data for one target: an allocation choice ({ uuid: count }) reads as that target's count */
+function targetRollData(conditionData: Record<string, unknown>, targetUuid: string): Record<string, unknown> {
+  const choices = (conditionData.choices ?? {}) as Record<string, unknown>;
+  const own: Record<string, unknown> = {};
+  for (const [id, value] of Object.entries(choices)) {
+    own[id] = value && typeof value === "object" && !Array.isArray(value) && targetUuid in value ? (value as Record<string, unknown>)[targetUuid] : value;
+  }
+  return { ...conditionData, choices: own };
 }
 
 /**
@@ -240,6 +294,17 @@ async function bonusAction(run: ActionRun) {
     const byTarget = acChanges.get(workflow) ?? new Map<string, number>();
     byTarget.set(target.uuid, (byTarget.get(target.uuid) ?? 0) + change);
     acChanges.set(workflow, byTarget);
+    return;
+  }
+  // On the use's damage once rolled (Empowered Spell): a reroll of chosen dice goes to the first damage roll, any other
+  // bonus to each damage roll
+  if (run.eventId === "use.damageRolled" || ([run.action.rolls].flat().includes("damage") && !rolls?.includes("attack"))) {
+    const damageRolls = workflow.damageRolls ?? [];
+    if (!damageRolls.length) return;
+    const onlyFirst = effect.kind === "reroll" && effect.dice === "choose";
+    const changed: Roll[] = [];
+    for (const [index, roll] of damageRolls.entries()) changed.push(onlyFirst && index > 0 ? roll : await applyBonusEffect(roll, effect, run.conditionData, labelOf(run)));
+    if (changed.some((roll, index) => roll !== damageRolls[index])) await workflow.setDamageRolls(changed);
     return;
   }
   if (rolls && !rolls.includes("attack")) return;

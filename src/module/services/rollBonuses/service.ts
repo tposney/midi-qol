@@ -260,6 +260,31 @@ export async function applyRollMode(roll: Roll, mode: "advantage" | "disadvantag
 }
 
 /** The roll after one bonus's effect, from the roll data of the use. */
+/** Reroll up to `max` dice that rolled below their average, lowest first; a copy, the old results kept as rerolled */
+async function rerollLowDice(roll: Roll, max: number | string | undefined, rollData: object): Promise<Roll> {
+  let count = typeof max === "number" ? max : 1;
+  if (typeof max === "string" && max.trim()) {
+    const evaluated = await new Roll(max, { ...roll.data, ...rollData }).evaluate();
+    count = evaluated.total ?? 1;
+  }
+  const changed = (roll.constructor as typeof Roll).fromData(JSON.parse(JSON.stringify(roll))) as Roll;
+  const low: { term: foundry.dice.terms.DiceTerm, index: number, result: number }[] = [];
+  for (const term of changed.dice) {
+    term.results.forEach((result, index) => {
+      if (result.active && !result.discarded && result.result < (term.faces! + 1) / 2) low.push({ term, index, result: result.result });
+    });
+  }
+  low.sort((a, b) => (a.result / a.term.faces!) - (b.result / b.term.faces!));
+  for (const { term, index } of low.slice(0, Math.max(0, count))) {
+    const old = term.results[index];
+    old.rerolled = true;
+    old.active = false;
+    const fresh = await new Roll(`1d${term.faces}`).evaluate();
+    term.results.push({ result: fresh.total ?? 1, active: true });
+  }
+  return refreshRollTotal(changed);
+}
+
 export async function applyBonusEffect(roll: Roll, effect: BonusEffect, rollData: object, label: string): Promise<Roll> {
   const nameTerms = (bonusRoll: Roll) => {
     for (const term of bonusRoll.terms) if (!(term instanceof foundry.dice.terms.OperatorTerm)) term.options.flavor ||= label;
@@ -271,6 +296,7 @@ export async function applyBonusEffect(roll: Roll, effect: BonusEffect, rollData
       return addRollToAsync(roll, bonus);
     }
     case "reroll": {
+      if (effect.dice === "choose") return rerollLowDice(roll, effect.max, rollData);
       const options = effect.dice === "max" ? { maximize: true } : effect.dice === "min" ? { minimize: true } : {};
       const RollClass = roll.constructor as typeof Roll;
       const rerolled: Roll = effect.addFormula

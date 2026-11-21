@@ -30,7 +30,10 @@ export interface EntryAction {
 export interface Entry {
   id: string;
   on: string | string[];
-  who?: EntryWho;
+  /** A list only for an `action` entry: who may take it */
+  who?: EntryWho | EntryWho[];
+  /** What a card or prompt calls it (an action's button) */
+  label?: string;
   if?: string;
   offer?: "always" | "ask" | "reaction" | "toggle";
   activity?: string;

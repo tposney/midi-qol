@@ -7,6 +7,8 @@ import { getDistance } from "../../services/distance/service.js";
 import { unTimedExecuteAsGM } from "../../GMAction.js";
 import { limitKey, limitStamp, selectGroups, spendStoredLimit, withinLimit, type CombatPosition, type StoredLimit } from "./limits.js";
 import type { Entry, EntryAction, EntryHome, EntryWho, FoundEntry } from "./types.js";
+import { addEconomy, entryConditionExtras } from "./conditionData.js";
+import { askEntryChoice, type ChoiceDeclaration } from "../choices.js";
 import { askOffers, costAllows, editToggles, listToggles, offerOption, setToggle, spendEntryCost, toggleOn } from "./offers.js";
 
 /*
@@ -86,8 +88,10 @@ function entriesOf(source: unknown): Entry[] {
 
 const defaultWho = (home: EntryHome): EntryWho => home === "effect" ? "bearer" : "this";
 
+/** A list of whos (an `action` entry: the bearer or someone near) is collected as its home's default; its taker is checked against the list */
 function found(entry: Entry, home: EntryHome, document: FoundEntry["document"], actor: Actor.Implementation | undefined): FoundEntry {
-  return { entry, home, document, who: entry.who ?? defaultWho(home), actor };
+  const who = Array.isArray(entry.who) ? defaultWho(home) : entry.who ?? defaultWho(home);
+  return { entry, home, document, who, actor };
 }
 
 /** An item's entries count while it is in use: equipped where that matters, attuned where it needs attunement */
@@ -127,6 +131,13 @@ function effectEntries(effect: ActiveEffect.Implementation, actor: Actor.Impleme
 }
 
 const listens = (entry: Entry, eventId: string) => [entry.on].flat().includes(eventId);
+
+/** An actor's applied effects' entries for an event, whatever their who */
+export function actorEffectEntries(actor: Actor.Implementation, eventId: string): FoundEntry[] {
+  const list: FoundEntry[] = [];
+  for (const effect of actor.appliedEffects) list.push(...effectEntries(effect, actor).filter(f => listens(f.entry, eventId)));
+  return list;
+}
 
 /** By who: the use's own entries (this), the actor's items (owner), its applied effects (bearer) */
 function collectByWho(context: EventContext, eventId: string): FoundEntry[] {
@@ -346,16 +357,20 @@ export async function spendEntryLimit(f: FoundEntry, context: EventContext): Pro
 
 export function conditionDataFor(f: FoundEntry, context: EventContext): Record<string, unknown> {
   const effect = f.document instanceof ActiveEffect ? f.document : undefined;
-  return createConditionData({
+  const { extra, entry } = entryConditionExtras(f, context, effect ? applyingActivity(effect) : undefined, effect ? originActor(effect) : undefined);
+  const data = createConditionData({
     workflow: context.workflow, actor: f.actor ?? context.actor, activity: context.activity, item: context.item,
     ...(context.target ? { target: context.target } : {}),
     extraData: {
+      ...extra,
       event: f.near ? { ...context.event, creature: f.near.creature, creatureToken: f.near.token, distance: f.near.distance } : context.event ?? {},
       bearer: f.actor,
-      entry: { id: f.entry.id, self: documentUuid(f.document), home: f.home, counts: effect ? entryState(effect, f.entry.id) : {} },
-      choices: (effect?.getFlag(MODULE_ID, "choices") as Record<string, unknown> | undefined) ?? context.workflow?.workflowOptions?.choices ?? {}
+      entry: { ...entry, id: f.entry.id, self: documentUuid(f.document), home: f.home, counts: effect ? entryState(effect, f.entry.id) : {} },
+      choices: (effect?.getFlag(MODULE_ID, "choices") as Record<string, unknown> | undefined) ?? context.workflow?.choices ?? context.workflow?.workflowOptions?.choices ?? {}
     }
   });
+  addEconomy(data, f.actor ?? context.actor);
+  return data;
 }
 
 export async function holds(expression: string | undefined, conditionData: Record<string, unknown>): Promise<boolean> {
@@ -429,6 +444,14 @@ function groupOpen(entry: Entry, context: EventContext): boolean {
  */
 export async function takeEntry(eventId: string, f: FoundEntry, context: EventContext, conditionData: Record<string, unknown>): Promise<EntryRunResult> {
   const ran: string[] = [];
+  // Its own choice, asked as it is taken and kept on the use as choices[<entry id>]; closed, it is not taken
+  if (f.entry.choose && context.workflow && await holds(f.entry.choose.if as string | undefined, conditionData)) {
+    const value = await askEntryChoice({ label: f.entry.label ?? f.entry.id, kind: "option", ...f.entry.choose, id: f.entry.id } as ChoiceDeclaration, context.workflow);
+    if (value === undefined) return { entry: f.entry.id, document: documentUuid(f.document), actions: ran };
+    context.workflow.setChoice(f.entry.id, value);
+    const choices = (conditionData.choices ?? {}) as Record<string, unknown>;
+    conditionData.choices = { ...choices, [f.entry.id]: value };
+  }
   await runActions(f.entry.do, { eventId: eventId, found: f, context, conditionData }, ran);
   if (ran.length) {
     await spendEntryLimit(f, context);

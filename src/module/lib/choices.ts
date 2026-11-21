@@ -189,6 +189,17 @@ async function askChoices(declarations: ChoiceDeclaration[], workflow: Workflow)
 }
 
 /**
+ * M15 stage 6: an entry's own choice (`choose`), asked when the entry is taken: its value, or undefined when the
+ * dialog was closed. `choose.if` (an expression, checked by the caller) says when it is asked at all.
+ */
+export async function askEntryChoice(declaration: ChoiceDeclaration, workflow: Workflow): Promise<ChoiceValue | undefined> {
+  const remembered = REMEMBERABLE.includes(declaration.kind) ? rememberedChoice(workflow.actor, activityChoiceKey(workflow.activity, declaration.id)) : undefined;
+  if (remembered && validChoice(declaration, remembered.value, workflow)) return remembered.value;
+  const answers = await askChoices([declaration], workflow);
+  return answers?.[declaration.id];
+}
+
+/**
  * The Choices step's work: the activity's choices answered and stored on the use. False when the user closed the
  * dialog (the use is abandoned).
  */

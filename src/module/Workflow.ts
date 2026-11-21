@@ -39,6 +39,8 @@ import { collectRollModifiers } from "./services/rollModifiers/service.js";
 import { collectDamageContributions } from "./services/damageContributions/service.js";
 import { reveals } from "./services/revealPolicy/service.js";
 import { raiseDamaged, raiseUseEvents } from "./lib/entries/useEvents.js";
+import { entryCoverFor } from "./lib/entries/serviceEvents.js";
+import { coverAnswer, coverLevelFor } from "./services/cover/service.js";
 import { targetEvent } from "./lib/entries/responseEvents.js";
 import { collectBonusCandidates, spendBonusCost, type OfferedBonus, type RollBonusQuery } from "./services/rollBonuses/service.js";
 import { approveBonus } from "./services/rollBonuses/approval.js";
@@ -5849,7 +5851,11 @@ export class Workflow {
       // Direct targeting (no template) — cover from caster position
       moduleCoverBonus = computeCoverBonus(this.token, target, this.activity);
     }
+    // An entry's cover for the target counts as at least that much; cover the use's entries ignore is none (status too)
+    const entryCover = entryCoverFor(this, getTokenDocument(target));
+    if (entryCover?.level) moduleCoverBonus = Math.max(moduleCoverBonus, coverAnswer(entryCover.level).bonus);
     const effectiveCoverBonus = Math.max(moduleCoverBonus, statusCoverBonus);
+    if (entryCover?.ignore?.includes(coverLevelFor(effectiveCoverBonus))) return -statusCoverBonus;
 
     // Spell Sniper ignores 1/2 3/4 cover for ranged spell attacks
     if (this.activity.actionType === "rsak" && this.actor.flags?.dnd5e?.spellSniper && effectiveCoverBonus !== TOTAL_COVER) {
@@ -7971,7 +7977,7 @@ export class Workflow {
       // applies attack-specific reductions (ignoreFullCover, sharpShooter, spellSniper, ignoreCover),
       // and incorporates targetACMod.
       let acResult = this.token && drawnToken
-        ? computeTargetAC(this.token, drawnToken, this.activity, { ignoreCover, targetACMod })
+        ? computeTargetAC(this.token, drawnToken, this.activity, { ignoreCover, targetACMod, entryCover: entryCoverFor(this, getTokenDocument(targetToken)) })
         : undefined;
 
       let targetAC = vehicleACOverride ?? acResult?.effectiveAC
@@ -8049,7 +8055,7 @@ export class Workflow {
               // Spell reaction (e.g. Shield) was used but didn't return ac directly.
               // The actor's AC has been updated by the reaction workflow — recompute effective AC.
               const postReactionACResult = this.token && drawnToken
-                ? computeTargetAC(this.token, drawnToken, this.activity, { ignoreCover, targetACMod })
+                ? computeTargetAC(this.token, drawnToken, this.activity, { ignoreCover, targetACMod, entryCover: entryCoverFor(this, getTokenDocument(targetToken)) })
                 : undefined;
               if (postReactionACResult && postReactionACResult.effectiveAC !== targetAC) {
                 // Show the reaction's contribution separately: restore pre-reaction baseAC and track the delta
@@ -8092,7 +8098,7 @@ export class Workflow {
           } else if (result?.uuid) {
             // Spell reaction was used but didn't return ac directly — recompute effective AC.
             const postReactionACResult = this.token && drawnToken
-              ? computeTargetAC(this.token, drawnToken, this.activity, { ignoreCover, targetACMod })
+              ? computeTargetAC(this.token, drawnToken, this.activity, { ignoreCover, targetACMod, entryCover: entryCoverFor(this, getTokenDocument(targetToken)) })
               : undefined;
             if (postReactionACResult && postReactionACResult.effectiveAC !== targetAC) {
               const preReactionBaseAC = acResult?.baseAC ?? postReactionACResult.baseAC;

@@ -1,4 +1,5 @@
 import { i18n, log, warn, debugEnabled, MODULE_ID } from "../../../midi-qol.js";
+import { invisibilityDenied } from "../../lib/entries/serviceEvents.js";
 import { checkRule, configSettings, safeGetGameSetting } from "../../settings.js";
 import { installedModules } from "../../setupModules.js";
 import { checkDistance, checkNearby, createConditionData, evalAllConditionsAsync, hasCondition, midiFlag } from "../../utils.js";
@@ -48,13 +49,16 @@ const perception: RollModifierContributor = {
     const evaluated = (path: string, effect: string) => foundry.utils.setProperty(actor, `flags.midi.evaluated.${path}`, { value: true, effects: [effect] });
     if (checkRule("invisAdvantage") && checkRule("invisAdvantage") !== "none") {
       // if we are using a proxy token to attack use that for hidden invisible
-      const invisibleToken = workflow.token ? hasCondition(workflow.token.actor as Actor, "invisible") : false;
-      const invisibleTarget = hasCondition(firstTarget.actor as Actor, "invisible");
+      // An entry can deny a creature Invisible's benefit (Shining Smite): it is attacked, and attacks, as if seen
+      const attackerSeen = invisibilityDenied(workflow, workflow.token?.actor);
+      const targetSeen = invisibilityDenied(workflow, firstTarget.actor);
+      const invisibleToken = workflow.token && !attackerSeen ? hasCondition(workflow.token.actor as Actor, "invisible") : false;
+      const invisibleTarget = !targetSeen && hasCondition(firstTarget.actor as Actor, "invisible");
       // RAW 2014: Invisible condition explicitly grants adv/disadv; canSense used for non-invisible "unseen" cases
       // RAW 2024: Only "can you see the creature?" matters (blindsight/truesight = can see; tremorsense = cannot see)
       const isRAW2014 = checkRule("invisAdvantage") === "RAW2014";
-      const tokenCanPerceive = isRAW2014 ? workflow.tokenCanSense?.has(firstTarget) : workflow.tokenCanSee?.has(firstTarget);
-      const targetCanPerceive = isRAW2014 ? workflow.targetsCanSense?.has(firstTarget) : workflow.targetsCanSee?.has(firstTarget);
+      const tokenCanPerceive = targetSeen || (isRAW2014 ? workflow.tokenCanSense?.has(firstTarget) : workflow.tokenCanSee?.has(firstTarget));
+      const targetCanPerceive = attackerSeen || (isRAW2014 ? workflow.targetsCanSense?.has(firstTarget) : workflow.targetsCanSee?.has(firstTarget));
       const invisAdvantage = isRAW2014 ? invisibleToken || !targetCanPerceive : !targetCanPerceive;
       if (invisAdvantage) {
         if (!targetCanPerceive) {

@@ -52,7 +52,8 @@ export function coverAnswer(level: CoverLevel): CoverAnswer {
   return { level, bonus: { none: 0, half: HALF_COVER, threeQuarters: THREE_QUARTERS_COVER, total: TOTAL_COVER }[level] };
 }
 
-function levelForBonus(bonus: number): CoverLevel {
+/** The level a cover bonus is (status cover reads as a bonus) */
+export function coverLevelFor(bonus: number): CoverLevel {
   if (bonus === TOTAL_COVER) return "total";
   if (bonus >= THREE_QUARTERS_COVER) return "threeQuarters";
   return bonus > 0 ? "half" : "none";
@@ -106,7 +107,7 @@ const simpleCover: CoverProvider = {
     if (activity) coverOptions.activity = activity;
     const result = api.getCover(coverOptions);
     if (!result || result.bonus == null) return "total";
-    return levelForBonus(result.bonus);
+    return coverLevelFor(result.bonus);
   }
 };
 
@@ -168,6 +169,6 @@ export function coverFor(attacker: TokenOrDocument | undefined, target: TokenOrD
   const statusBonus: number = targetActor?.system?.attributes?.ac?.cover ?? 0;
   const targetDocument = documentOf(target);
   const geometry = targetDocument ? coverBetween({ attacker: documentOf(attacker), target: targetDocument, activity: options.activity, origin: options.origin }) : coverAnswer("none");
-  if (statusBonus > geometry.bonus) return { ...coverAnswer(levelForBonus(statusBonus)), bonus: statusBonus, from: "status" };
+  if (statusBonus > geometry.bonus) return { ...coverAnswer(coverLevelFor(statusBonus)), bonus: statusBonus, from: "status" };
   return { ...geometry, from: geometry.level === "none" ? "none" : "geometry" };
 }

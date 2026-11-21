@@ -13,6 +13,9 @@ import { entriesApi, registerMidiEntryActions, watchEntryHomes } from "./module/
 import { registerOvertimeEntries } from "./module/lib/entries/overtime.js";
 import { registerEntryRollBonuses } from "./module/lib/entries/rollBonuses.js";
 import { registerUseEvents } from "./module/lib/entries/useEvents.js";
+import { registerBearerEvents } from "./module/lib/entries/bearerEvents.js";
+import { registerServiceEvents } from "./module/lib/entries/serviceEvents.js";
+import { registerActivityActions, takeAction } from "./module/lib/entries/activityActions.js";
 import { registerUseChanges } from "./module/lib/entries/useChanges.js";
 import { registerEntryOffers } from "./module/lib/entries/offers.js";
 import { registerResponseEvents } from "./module/lib/entries/responseEvents.js";
@@ -330,7 +333,7 @@ Object.assign(globalThis.MidiQOL, {
       previewFlow(activity, options, configSettings.savesBeforeDamage ? "midi-qol.savesFirst" : "midi-qol.standard")
   },
   steps: stepsApi,
-  entries: entriesApi,
+  entries: { ...entriesApi, takeAction },
   requests: requestsApi,
   damageCalculation: { get: getDamageCalculationStep, register: registerDamageCalculationStep, remove: removeDamageCalculationStep, order: damageCalculationOrder },
   UNMEASURABLE_DISTANCE,
@@ -520,6 +523,9 @@ Hooks.once('init', async function () {
   watchEntryHomes();
   registerOvertimeEntries();
   registerUseEvents();
+  registerBearerEvents();
+  registerActivityActions();
+  registerServiceEvents();
   registerUseChanges();
   registerEntryOffers();
   registerResponseEvents();

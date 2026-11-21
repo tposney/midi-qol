@@ -51,6 +51,6 @@ export function bonusDamageTypeKey(bonusKey: string): string {
 
 /** The "Remember this choice" checkbox a prompt shows for a question */
 export function rememberCheckbox(name: string): string {
-  const label = game.i18n?.localize(`${MODULE_ID}.RememberChoice`) ?? "Remember this choice";
+  const label = game.i18n?.localize(`${MODULE_ID}.RememberChoice.Label`) ?? "Remember this choice";
   return `<label class="checkbox midi-qol-remember-choice"><input type="checkbox" name="${name}"> ${foundry.utils.escapeHTML(label)}</label>`;
 }

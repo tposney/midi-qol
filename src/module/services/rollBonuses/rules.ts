@@ -22,7 +22,11 @@ export type BonusCost = Partial<Record<ResourceType, Record<string, CostEntry>>>
 
 export type BonusEffect =
   | { kind: "add"; formula: string; damageType?: string; critical?: "double" | "never" | "force" }
-  | { kind: "reroll"; keep: "new" | "higher" | "lower" | "ask"; dice?: "max" | "min"; addFormula?: string }
+  /**
+   * dice "choose": only some dice are rerolled, up to `max` (a number or formula; default 1) of those below their
+   * average, lowest first (Empowered Spell: the best choice for the roller); `keep` is then "new"
+   */
+  | { kind: "reroll"; keep: "new" | "higher" | "lower" | "ask"; dice?: "max" | "min" | "choose"; max?: number | string; addFormula?: string }
   /** Advantage or disadvantage given after the roll (2024 Lucky): another d20, the higher or lower kept; with the other mode they cancel */
   | { kind: "mode"; mode: "advantage" | "disadvantage" }
   | { kind: "replace"; formula: string }

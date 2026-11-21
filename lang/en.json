@@ -1028,7 +1028,7 @@
   "midi-qol.EntryTogglesHint": "Features and effects that run while switched on",
   "midi-qol.ShowAllBonusOffers.Name": "Show every bonus offer",
   "midi-qol.ShowAllBonusOffers.Hint": "Offer bonuses even when they can't change the result (an attack that already hits, or misses by more than the bonus can make up). Off: such offers are hidden where you can see the target's AC or DC.",
-  "midi-qol.RememberChoice": "Remember this choice",
+  "midi-qol.RememberChoice.Label": "Remember this choice",
   "midi-qol.RememberChoice.Hint": "Remembered choices: used without asking",
   "midi-qol.RememberChoice.Forget": "Ask each time",
   "midi-qol.Standing.Title": "When it is offered",
