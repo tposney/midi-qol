@@ -163,6 +163,7 @@ declare module "fvtt-types/configuration" {
     "dnd5e.metricLengthUnits": boolean;
     "dnd5e.attackRollVisibility": string;
     "dnd5e.challengeVisibility": string;
+    "dnd5e.bloodied": string;
     "dnd5e.chatCardSummary": boolean;
     "midi-qol.MidiSoundSettings": Record<string, any>;
     "midi-qol.playerControlsInvisibleTokens": boolean;

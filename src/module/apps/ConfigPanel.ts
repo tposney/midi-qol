@@ -441,9 +441,11 @@ async function fetchConfigFile(filename: string | undefined): Promise<string> {
 }
 
 function showDiffs(current: any, changed: any, flavor: string = "", title: string = ""): Promise<boolean> {
-  const diffs = foundry.utils.diffObject(changed, current, { inner: true });
+  // Flattened, so a nested change (optionalRules.coverCalculation) is listed by its own name and values
+  const diffs = foundry.utils.flattenObject(foundry.utils.diffObject(changed, current, { inner: true }));
   const changes: string[] = [];
-  for (let key of Object.keys(diffs)) {
+  for (let path of Object.keys(diffs)) {
+    const key = path.split(".").pop() ?? path;
     let name: string;
     if (key.startsWith("gm"))
       name = key[2].toUpperCase() + key.substring(3);
@@ -451,8 +453,8 @@ function showDiffs(current: any, changed: any, flavor: string = "", title: strin
     let longName = i18n("midi-qol." + name + ".Name");
     if (longName?.startsWith("midi-qol")) longName = name;
     debug("Show config changes: Name is ", name, key, key.startsWith("gm") ? "GM" : "", i18n(`midi-qol.${name + ".Name"}`))
-    let currentVal = current[key];
-    let changedVal = changed[key];
+    let currentVal = foundry.utils.getProperty(current, path);
+    let changedVal = foundry.utils.getProperty(changed, path);
     if (typeof currentVal === "object") currentVal = "Object"
     if (typeof changedVal === "object") changedVal = "Object"
 
@@ -514,6 +516,35 @@ let quickSettingsDetails: any = {
     codeChecks: (current, settings) => {
       settings.itemTypeList = Object.keys(CONFIG.Item.typeLabels).filter(key => !["backpack", "base"].includes(key));
     }
+  },
+  HitPointStatuses: {
+    description: "HP statuses: NPCs Dead and player characters Unconscious at 0 HP, Bloodied shown on every token",
+    shortDescription: "HP statuses",
+    configSettings: {
+      addDead: "overlay",
+      midiDeadCondition: "dead",
+      midiUnconsciousCondition: "unconscious"
+    },
+    // dnd5e applies Bloodied itself; as shipped it shows the icon on friendly tokens only
+    onApply: () => game.settings.set("dnd5e", "bloodied", "all")
+  },
+  CoverModule: {
+    description: "Cover: calculated by the active cover module",
+    shortDescription: "Cover from module",
+    configSettings: {},
+    codeChecks: (current, settings) => {
+      const module = ["simplecover5e", "tokencover", "levelsautocover"].find(id => installedModules.get(id));
+      if (module) settings.optionalRules = { coverCalculation: module };
+      else ui.notifications?.warn("No supported cover module is active: Simple Cover 5e, Alternative Token Cover or Levels Auto Cover");
+    }
+  },
+  ConditionRules: {
+    description: "Condition rules: apply the ones dnd5e doesn't (turns optional rules on)",
+    shortDescription: "Condition rules",
+    configSettings: {
+      optionalRulesEnabled: true,
+      optionalRules: { conditionRules: true }
+    },
   },
   PlayerAuto: {
     description: "Player Attack/Damage Roll: Automatic",
@@ -694,6 +725,8 @@ export async function applySettings(key: string) {
       settingsToApply = foundry.utils.mergeObject(configSettings, settingsToApply, { overwrite: true, inplace: true });
       //@ts-expect-error
       if (game.user?.can("SETTINGS_MODIFY")) game.settings.set("midi-qol", "ConfigSettings", settingsToApply);
+      // Other systems' or modules' settings, changed only once the user has confirmed
+      if (config.onApply && game.user?.can("SETTINGS_MODIFY")) await config.onApply();
       return true;
     }
   } else if (config.fileName) {
