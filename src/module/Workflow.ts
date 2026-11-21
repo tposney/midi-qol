@@ -7886,6 +7886,32 @@ export class Workflow {
 
       // Already in the attack roll for a single target (attackRollParts)
       const midiFlagsAttackBonus = this.grantedAttackBonusInRollUuid === targetActor.uuid ? undefined : targetActor.flags?.[MODULE_ID]?.grants?.attack?.bonus;
+      // The auto successes and failures in force, in the order they apply (the last decides): the attacker's (dnd5e's roll
+      // fields, then midi's flag for every roll), then those the target grants (14.7.1)
+      const forcedResults = async (): Promise<{ flag: string, hit: boolean }[]> => {
+        const conditionData = createConditionData({ workflow: this, target: targetToken, actor: this.actor });
+        const actionType = this.activity.actionType;
+        const attackFields = [`abilities.${this.activity.ability}.attack.roll`, "rolls.attack", `rolls.attack.${actionType}`];
+        const firstMatch = async (kind: "fail" | "success"): Promise<string | undefined> => {
+          for (const path of attackFields)
+            if (await evalAllConditionsAsync(this.actor, `system.${path}.${kind}`, conditionData)) return `${path}.${kind}`;
+          if (await evalAllConditionsAsync(this.actor, midiFlag(`${kind}.all`), conditionData)) return `${kind}.all`;
+          return undefined;
+        };
+        const granted = async (kind: "fail" | "success"): Promise<string | undefined> => {
+          if (!targetActor.flags?.[MODULE_ID]?.grants?.attack?.[kind]) return undefined;
+          for (const flag of [`grants.attack.${kind}.${actionType}`, `grants.attack.${kind}.all`])
+            if (await evalAllConditionsAsync(targetActor, midiFlag(flag), conditionData)) return flag;
+          return undefined;
+        };
+        const results: { flag: string, hit: boolean }[] = [];
+        const add = (flag: string | undefined, hit: boolean) => { if (flag) results.push({ flag, hit }); };
+        add(await firstMatch("fail"), false);
+        add(await firstMatch("success"), true);
+        add(await granted("success"), true);
+        add(await granted("fail"), false);
+        return results;
+      };
       let reactionACDelta = 0;
       let reactionItemName: string | undefined;
       if (!this.isFumble) {
@@ -7947,6 +7973,12 @@ export class Workflow {
         if (!isFinite(targetAC)) isHit = false; // total cover (coverTotal status or TOTAL_COVER from computeCoverBonus)
 
         if (targetEC) isHitEC = challengeModeArmorSet && attackTotal <= targetAC && attackTotal >= targetEC && isFinite(targetAC);
+        // A forced hit or miss decides which reactions (and hit/missed events) are offered, not the roll against AC
+        const forcedHit = (await forcedResults()).at(-1)?.hit;
+        if (forcedHit !== undefined) {
+          isHit = forcedHit;
+          isHitEC = false;
+        }
         // check to see if the roll hit the target
         if ((isHit || isHitEC) && this.activity.attack && this.attackRoll && targetToken !== null) {
           const workflowOptions = foundry.utils.mergeObject(this.workflowOptions, { sourceActorUuid: this.actor.uuid, sourceItemUuid: this.item.uuid }, { inplace: false, overwrite: true });
@@ -7999,63 +8031,13 @@ export class Workflow {
         hitResultNumeric = this.isCritical ? "++" : !isFinite(targetAC) ? `${attackTotal}/∞` : `${attackTotal}/${Math.abs(attackTotal - targetAC)}`;
       }
 
-      // An auto success or failure decides the hit whatever the AC
+      // An auto success or failure decides the hit whatever the AC; tested again here, as a reaction may have added one
       let forcedResult = false;
-      {
-        const conditionData = createConditionData({ workflow: this, target: targetToken, actor: this.actor });
-        const actionType = this.activity.actionType;
-        const attackFields = [`abilities.${this.activity.ability}.attack.roll`, "rolls.attack", `rolls.attack.${actionType}`];
-        // dnd5e's roll fields, then midi's flag for every roll
-        const firstMatch = async (kind: "fail" | "success"): Promise<string | undefined> => {
-          for (const path of attackFields)
-            if (await evalAllConditionsAsync(this.actor, `system.${path}.${kind}`, conditionData)) return `${path}.${kind}`;
-          if (await evalAllConditionsAsync(this.actor, midiFlag(`${kind}.all`), conditionData)) return `${kind}.all`;
-          return undefined;
-        };
-        const failFlag = await firstMatch("fail");
-        if (failFlag) {
-          isHit = false;
-          isHitEC = false;
-          forcedResult = true;
-          this.attackRollModifierTracker.critical.setOverride(false, failFlag, getFlagDisplayName(failFlag));
-        }
-        const successFlag = await firstMatch("success");
-        if (successFlag) {
-          isHit = true;
-          isHitEC = false;
-          forcedResult = true;
-          this.attackRollModifierTracker.fumble.setOverride(false, successFlag, getFlagDisplayName(successFlag));
-        }
-      }
-
-      const midiFlagsGrantsAttackSuccess = targetActor.flags?.[MODULE_ID]?.grants?.attack?.success;
-      const midiFlagsGrantsAttackFail = targetActor.flags?.[MODULE_ID]?.grants?.attack?.fail;
-      let conditionData;
-      if (midiFlagsGrantsAttackSuccess || midiFlagsGrantsAttackFail) {
-        conditionData = createConditionData({ workflow: this, target: targetToken, actor: this.actor });
-
-        let grantsSuccessFlag: string | undefined;
-        if (await evalAllConditionsAsync(targetActor, midiFlag(`grants.attack.success.${this.activity.actionType}`), conditionData))
-          grantsSuccessFlag = `grants.attack.success.${this.activity.actionType}`;
-        else if (await evalAllConditionsAsync(targetActor, midiFlag(`grants.attack.success.all`), conditionData))
-          grantsSuccessFlag = "grants.attack.success.all";
-        if (grantsSuccessFlag) {
-          isHit = true;
-          isHitEC = false;
-          forcedResult = true;
-          this.attackRollModifierTracker.fumble.setOverride(false, grantsSuccessFlag, getFlagDisplayName(grantsSuccessFlag));
-        }
-        let grantsFailFlag: string | undefined;
-        if (await evalAllConditionsAsync(targetActor, midiFlag(`grants.attack.fail.${this.activity.actionType}`), conditionData))
-          grantsFailFlag = `grants.attack.fail.${this.activity.actionType}`;
-        else if (await evalAllConditionsAsync(targetActor, midiFlag(`grants.attack.fail.all`), conditionData))
-          grantsFailFlag = "grants.attack.fail.all";
-        if (grantsFailFlag) {
-          isHit = false;
-          isHitEC = false;
-          forcedResult = true;
-          this.attackRollModifierTracker.critical.setOverride(false, grantsFailFlag, getFlagDisplayName(grantsFailFlag));
-        }
+      for (const { flag, hit } of await forcedResults()) {
+        isHit = hit;
+        isHitEC = false;
+        forcedResult = true;
+        (hit ? this.attackRollModifierTracker.fumble : this.attackRollModifierTracker.critical).setOverride(false, flag, getFlagDisplayName(flag));
       }
 
       let hitScale = 1;

@@ -21,7 +21,7 @@ import { MidiActivityChoiceDialog } from "./apps/MidiActivityChoiceDialog.js";
 import { MidiRollChoiceDialog, PreComputedAdvantage } from "./apps/MidiRollChoiceDialog.js";
 import Token = foundry.canvas.placeables.Token;
 import { AnyMutableObject } from "fvtt-types/utils";
-import { Activity, ActivityUseConfiguration, RollDialogConfig, RollMessageConfig, RollProcessConfig } from "../globals.js";
+import { Activity, ActivityUseConfiguration, BasicRollConfig, RollDialogConfig, RollMessageConfig, RollProcessConfig } from "../globals.js";
 import { Workflow } from "./Workflow.js";
 import type { Dnd5eChatMessage } from "../globals.js";
 import { activityPolicy } from "./activities/activityPrototype.js";
@@ -536,6 +536,31 @@ function isVisible(this: Token.Implementation, wrapped) {
  * Link a save, check or tool roll to the card and activity it was rolled for, as dnd5e's own save buttons do:
  * `system.origin` (dnd5e's MessageRegistry, getOriginatingMessage, summaries) and the activity's message sources.
  */
+/** An activity's own save or check bonus as a roll's parts, as dnd5e's card buttons add it (14.6.14) */
+export function activityBonusRoll(activity: Activity | undefined, type: "save" | "check"): BasicRollConfig | undefined {
+  const formula = type === "save" ? activity?.save?.bonus : activity?.check?.bonus;
+  if (!activity || !formula) return undefined;
+  const rollData = activity.getRollData();
+  if (type === "check" && activity.ability === "spellcasting") rollData.mod = rollData.abilities?.[activity.spellcastingAbility ?? ""]?.mod ?? 0;
+  const activityBonus = Roll.replaceFormulaData(formula, rollData, { missing: "0" });
+  return activityBonus ? { parts: ["@activityBonus"], data: { activityBonus } } : undefined;
+}
+
+/** Add the bonus of the activity a requested roll is for, unless the caller (a card button) already did */
+function addActivityBonus(config: RollProcessConfig, type: "save" | "check"): void {
+  if (config.hookNames?.includes("concentration") || config.rolls?.some(r => r.data && "activityBonus" in r.data)) return;
+  const midiOptions = config.midiOptions;
+  const activity = midiOptions?.workflow?.saveActivity ?? (midiOptions?.saveActivityUuid ? fromUuidSync(midiOptions.saveActivityUuid, { strict: false }) as Activity | undefined : undefined);
+  const bonus = activityBonusRoll(activity ?? undefined, type);
+  if (!bonus) return;
+  const first = config.rolls?.[0];
+  if (!first) config.rolls = [bonus];
+  else {
+    first.parts = [...(first.parts ?? []), ...(bonus.parts ?? [])];
+    first.data = { ...(first.data ?? {}), ...bonus.data };
+  }
+}
+
 function linkRollToCard(message: AnyMutableObject, midiOptions: MidiOptions | undefined): string | undefined {
   const card = midiOptions?.itemCardUuid ? fromUuidSync(midiOptions.itemCardUuid) : undefined;
   const cardId: string | undefined = midiOptions?.workflow?.itemCardId ?? (card instanceof ChatMessage ? card.id ?? undefined : undefined);
@@ -1411,6 +1436,7 @@ async function doD20Roll(this: Actor.Implementation, wrapped, kind: D20RollKind,
     const saveCreate = message.create;
     message.create = false;
     const originatingCardId = linkRollToCard(message, config.midiOptions);
+    addActivityBonus(config, kind.rollType === "save" ? "save" : "check");
     const midiOptions = config.midiOptions;
 
     // Trackers per choice: passed from the workflow (via GMAction), none for another module's roll, else computed

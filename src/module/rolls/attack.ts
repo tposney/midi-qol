@@ -392,16 +392,38 @@ async function midiRollAttack(activity: AttackActivityLike, wrapped: RollAttack,
     if (workflow.useActiveDefence) message.create = false; // go through the roll process but don't show the attack roll.
 
     message.create ??= config.midiOptions.chatMessage;
-    config.attackMode ??= activity.attackMode ?? "oneHanded";
+    // A mode the caller named (workflowOptions.attackMode or versatile, config.attackMode)
+    const callerAttackMode = config.attackMode;
+    // dnd5e's last used mode for this activity, else the activity's own; an off-hand activity stays off-hand (14.6.15)
+    const lastAttackMode: string | undefined = (activity.item.flags as { dnd5e?: { last?: Record<string, { attackMode?: string }> } }).dnd5e?.last?.[activity.id ?? ""]?.attackMode;
+    const keepsLastMode = !activity.attackMode?.endsWith("offhand") || !!lastAttackMode?.endsWith("offhand");
+    config.attackMode ??= (keepsLastMode ? lastAttackMode : undefined) ?? activity.attackMode ?? "oneHanded";
     // Without the dialog dnd5e spends its last-used or first ammunition, not midi's choice
     // @ts-expect-error no dnd5e-types
     if (activity.item.system.properties?.has("amm")) config.ammunition ??= split?.ammunition || activity.ammunition || undefined;
+    let versatileKey = false;
     // @ts-expect-error no dnd5e-types
-    if (config.event && areMidiKeysPressed(config.event, "Versatile") && activity.item.isVersatile) config.attackMode = "twoHanded";
+    if (config.event && areMidiKeysPressed(config.event, "Versatile") && activity.item.isVersatile) {
+      config.attackMode = "twoHanded";
+      versatileKey = true;
+    }
+    // A named or Versatile-key mode is rolled once: dnd5e's remembered mode (its flag update after the roll) is kept
+    const forcedMode = versatileKey ? "twoHanded" : callerAttackMode;
+    const keepLastMode = forcedMode ? Hooks.on("preUpdateItem", (item: Item.Implementation, changes: { flags?: { dnd5e?: { last?: Record<string, { attackMode?: string }> } } }) => {
+      if (item.uuid !== activity.item.uuid) return;
+      const last = changes.flags?.dnd5e?.last?.[activity.id ?? ""];
+      if (!last || last.attackMode !== forcedMode) return;
+      if (lastAttackMode) last.attackMode = lastAttackMode;
+      else delete last.attackMode;
+    }) : undefined;
     setMessageTargets(message, workflow);
     // rollBonuses' automatic preRoll bonuses join the formula (attackRollParts)
     await workflow.collectPreRollBonuses("attack");
-    rolls = await workflow.keepRollMessageFlags(activity, () => wrapped(config, dialog, message));
+    try {
+      rolls = await workflow.keepRollMessageFlags(activity, () => wrapped(config, dialog, message));
+    } finally {
+      if (keepLastMode !== undefined) Hooks.off("preUpdateItem", keepLastMode);
+    }
 
     if (!rolls || rolls.length === 0) return null;
     // @ts-expect-error no dnd5e-types
