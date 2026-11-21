@@ -1,6 +1,10 @@
 import type { Activity } from "../../../globals.js";
 import type { Workflow } from "../../Workflow.js";
-import { completeActivityUse } from "../../utils.js";
+import { completeActivityUse, playerForActor } from "../../utils.js";
+import { rollAbility, SAVE_REQUEST } from "../../GMAction.js";
+import { askUser } from "../requests.js";
+import { configSettings } from "../../settings.js";
+import type { SaveDetails } from "../../../globals.js";
 import { getDistance } from "../../services/distance/service.js";
 import { isTracked, spend } from "../../services/economy/ledger.js";
 import { onTurnEvent } from "../turnEvents.js";
@@ -132,6 +136,56 @@ export async function directRoll(actor: Actor.Implementation, kind: "save" | "ch
   const roll = Array.isArray(rolls) ? rolls[0] : rolls;
   if (!roll) return undefined;
   return (roll.total ?? 0) >= dc;
+}
+
+/** Who `by` names: the use's actor ("attacker", "event.actor"), the entry's holder ("bearer", "self") */
+function rollerOf(run: ActionRun): Actor.Implementation | undefined {
+  switch (run.action.by) {
+    case "attacker":
+    case "event.actor": return run.context.workflow?.actor ?? undefined;
+    case "bearer":
+    case "self": return run.found.actor ?? run.context.actor;
+    default: return undefined;
+  }
+}
+
+/**
+ * A save or check made by another creature (`by`: Sanctuary's attacker): its owner rolls on their own client through
+ * the request core (its deadline; the GM can roll for them); this client rolls when it owns it or nobody else is there.
+ */
+export async function rollBy(actor: Actor.Implementation, kind: "save" | "check", spec: DirectSpec, conditionData: Record<string, unknown>, label: string): Promise<boolean | undefined> {
+  const owner = playerForActor(actor) as User.Implementation | undefined;
+  if (!owner || owner.isSelf || !owner.active || owner.isGM) return directRoll(actor, kind, spec, conditionData);
+  const dc = dcOf(spec.dc, conditionData);
+  if (dc === undefined) return undefined;
+  const skills = [spec.skill ?? []].flat();
+  const abilities = [spec.ability ?? []].flat();
+  const rollType = kind === "check" && skills.length ? "skill" : kind;
+  const saveDetails: SaveDetails = {
+    actorUuid: actor.uuid ?? "", advantage: undefined, disadvantage: undefined, modifierTracker: undefined, isFriendly: false,
+    isMagicSave: false, isConcentrationCheck: false, rollDC: dc, saveItemUuid: "", workflowId: "", itemCardUuid: "", workflowOptions: {},
+    rollType, rollAbilities: rollType === "skill" ? [] : abilities, rollSkills: rollType === "skill" ? skills : [], rollTools: [], itemId: ""
+  };
+  const displayOptions = { fastForward: false, chatMessage: true, showTargetDC: true };
+  const forPlayer = { saveDetails, displayOptions: { ...displayOptions, fastForward: true, forUserId: owner.id ?? undefined } };
+  const rolled = await askUser<unknown>(owner, {
+    type: SAVE_REQUEST, data: { saveDetails, displayOptions }, kind: "save", actorUuid: actor.uuid ?? undefined, label,
+    timeoutMs: (configSettings.playerSaveTimeout ?? 0) * 1000,
+    fallback: () => rollAbility(forPlayer),
+    gmChoices: { roll: { label: "midi-qol.PlayerWaits.Choice.normal", value: () => rollAbility(forPlayer) } }
+  }).settled.then(settled => settled.value, () => undefined);
+  const roll = (Array.isArray(rolled) ? rolled[0] : rolled) as { total?: number } | undefined;
+  return roll?.total === undefined ? undefined : roll.total >= dc;
+}
+
+/** `save` / `check` with `by`: rolled by that creature (rollBy) */
+export async function byRollAction(run: ActionRun, kind: "save" | "check"): Promise<{ success?: boolean } | void> {
+  const spec = run.action[kind];
+  const roller = rollerOf(run);
+  if (!spec || typeof spec !== "object" || !roller) return;
+  const label = `${roller.name}: ${typeof run.action.label === "string" ? run.action.label : (run.found.document as { name?: string }).name ?? run.found.entry.id}`;
+  const success = await rollBy(roller, kind, spec as DirectSpec, run.conditionData, label);
+  return success === undefined ? undefined : { success };
 }
 
 /** `save` / `check` with `{ ability, skill?, dc }` at an action: the taker rolls */

@@ -1,0 +1,209 @@
+{
+  "name": "Mirror Image",
+  "system": {
+    "description": {
+      "value": "<p>Three illusory duplicates of yourself appear in your space. Until the spell ends, the duplicates move with you and mimic your actions, shifting position so it's impossible to track which image is real.</p><p>Each time a creature hits you with an attack roll during the spell's duration, roll a [[/r (@flags.dnd-players-handbook.mirrorImages)d6kh1cs&gt;2#Duplicate destroyed]]{d6 for each} of your remaining duplicates. If any of the d6s rolls a 3 or higher, one of the duplicates is hit instead of you, and the duplicate is destroyed. The duplicates otherwise ignore all other damage and effects. The spell ends when all three duplicates are destroyed.</p><p>A creature is unaffected by this spell if it has the &amp;Reference[blinded apply=false] condition, &amp;Reference[blindsight], or &amp;Reference[truesight].</p><p><em>Automation (midi-qol entries):</em> each time you are hit, a d6 for each remaining duplicate: on a 3 or higher a duplicate is hit instead (the attack misses you) and destroyed; the spell ends with the third.</p>",
+      "chat": ""
+    },
+    "source": {
+      "custom": "",
+      "rules": "2024",
+      "license": "CC-BY-4.0",
+      "book": ""
+    },
+    "activation": {
+      "type": "action",
+      "condition": "",
+      "value": null
+    },
+    "duration": {
+      "value": "1",
+      "units": "minute"
+    },
+    "target": {
+      "affects": {
+        "choice": false
+      },
+      "template": {
+        "units": "",
+        "contiguous": false
+      }
+    },
+    "range": {
+      "units": "self"
+    },
+    "uses": {
+      "max": "",
+      "recovery": [],
+      "spent": 0
+    },
+    "level": 2,
+    "school": "ill",
+    "properties": [
+      "vocal",
+      "somatic"
+    ],
+    "materials": {
+      "value": "",
+      "consumed": false,
+      "cost": 0,
+      "supply": 0
+    },
+    "preparation": {
+      "mode": "prepared",
+      "prepared": false
+    },
+    "activities": {
+      "dnd5eactivity000": {
+        "_id": "dnd5eactivity000",
+        "type": "utility",
+        "activation": {
+          "type": "action",
+          "value": null,
+          "override": false
+        },
+        "consumption": {
+          "targets": [],
+          "scaling": {
+            "allowed": false,
+            "max": ""
+          }
+        },
+        "description": {
+          "chatFlavor": ""
+        },
+        "duration": {
+          "units": "inst",
+          "override": false
+        },
+        "effects": [
+          {
+            "_id": "mqeMirrorImage00"
+          }
+        ],
+        "range": {
+          "override": false
+        },
+        "target": {
+          "prompt": true,
+          "template": {
+            "contiguous": false,
+            "units": "ft"
+          },
+          "affects": {
+            "choice": false,
+            "type": "self"
+          },
+          "override": false
+        },
+        "roll": {
+          "formula": "(@flags.dnd-players-handbook.mirrorImages)d6kh",
+          "name": "",
+          "prompt": false,
+          "visible": false
+        },
+        "uses": {
+          "spent": 0,
+          "recovery": []
+        },
+        "sort": 0
+      }
+    },
+    "identifier": "mirror-image"
+  },
+  "_id": "mqeMirrorImage00",
+  "type": "spell",
+  "img": "icons/magic/defensive/illusion-evasion-echo-purple.webp",
+  "effects": [
+    {
+      "_id": "mqeMirrorImage00",
+      "name": "Mirror Image",
+      "img": "icons/magic/defensive/illusion-evasion-echo-purple.webp",
+      "type": "base",
+      "transfer": false,
+      "disabled": false,
+      "statuses": [],
+      "system": {
+        "changes": []
+      },
+      "duration": {
+        "seconds": 60
+      },
+      "flags": {
+        "midi-qol": {
+          "entries": [
+            {
+              "id": "duplicates",
+              "on": "hit",
+              "label": "Mirror Image",
+              "do": [
+                {
+                  "table": {
+                    "id": "duplicates",
+                    "formula": "(3 - @entry.counts.destroyed)d6kh",
+                    "rows": [
+                      {
+                        "range": [
+                          3,
+                          6
+                        ],
+                        "label": "A duplicate is hit and destroyed",
+                        "do": [
+                          {
+                            "retarget": {
+                              "to": "none"
+                            },
+                            "label": "Mirror Image"
+                          },
+                          {
+                            "state": {
+                              "destroyed": "+1"
+                            }
+                          },
+                          {
+                            "end": true,
+                            "if": "(entry.counts.destroyed ?? 0) >= 3"
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                }
+              ]
+            }
+          ],
+          "entryState": {
+            "duplicates": {
+              "destroyed": 0
+            }
+          }
+        },
+        "dae": {
+          "selfTarget": true
+        }
+      },
+      "description": "",
+      "_key": "!items.effects!mqeMirrorImage00.mqeMirrorImage00"
+    }
+  ],
+  "folder": "mqsEntryFolder00",
+  "ownership": {
+    "default": 0
+  },
+  "flags": {
+    "dnd5e": {
+      "riders": {
+        "activity": [],
+        "effect": []
+      }
+    }
+  },
+  "_stats": {
+    "compendiumSource": null,
+    "duplicateSource": null,
+    "coreVersion": "14.360",
+    "systemId": "dnd5e",
+    "systemVersion": "6.1.0"
+  },
+  "_key": "!items!mqeMirrorImage00"
+}

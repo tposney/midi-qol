@@ -43,17 +43,30 @@ export function useView(workflow: Workflow): Record<string, unknown> {
   return view;
 }
 
+function spellDCOf(item: Item.Implementation | undefined, actor: Actor.Implementation | undefined): number | undefined {
+  // @ts-expect-error item.type includes dnd5e subtypes
+  if (item?.type !== "spell") return undefined;
+  // @ts-expect-error no dnd5e-types
+  const dc: unknown = actor?.system.attributes?.spell?.dc;
+  return typeof dc === "number" ? dc : undefined;
+}
+
 /** The use that applied an effect: from DAE's application record (castData) and the effect's origin */
 export function originView(effect: ActiveEffect.Implementation, activity: unknown, actor: Actor.Implementation | undefined): Record<string, unknown> {
   const castData = effect.flags?.[MODULE_ID]?.castData as { castLevel?: number, baseLevel?: number, saveDC?: number } | undefined;
   const applying = activity as { item?: Item.Implementation, save?: { dc?: { value?: number } } } | undefined;
+  // No applying activity (an effect a macro applied with only its origin): the item its origin names
+  let originItem: unknown = applying?.item ?? (effect.origin ? fromUuidSync(effect.origin, { strict: false }) : undefined);
+  while (originItem && !(originItem instanceof Item) && (originItem as { parent?: unknown }).parent) originItem = (originItem as { parent?: unknown }).parent;
+  const item = originItem instanceof Item ? originItem as Item.Implementation : undefined;
   return {
     uuid: effect.origin,
     actor,
-    item: applying?.item,
+    item,
     activity: applying,
     spellLevel: castData?.castLevel ?? castData?.baseLevel ?? 0,
-    dc: castData?.saveDC ?? applying?.save?.dc?.value ?? 0
+    // The recorded DC, the applying activity's, else (a spell's effect with no save of its own: Sanctuary) the caster's spell DC
+    dc: castData?.saveDC ?? applying?.save?.dc?.value ?? spellDCOf(item, actor) ?? 0
   };
 }
 

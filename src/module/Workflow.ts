@@ -40,6 +40,7 @@ import { collectDamageContributions } from "./services/damageContributions/servi
 import { reveals } from "./services/revealPolicy/service.js";
 import { raiseDamaged, raiseUseEvents } from "./lib/entries/useEvents.js";
 import { entryCoverFor } from "./lib/entries/serviceEvents.js";
+import { applyRetarget, takeRetarget } from "./lib/entries/redirection.js";
 import { coverAnswer, coverLevelFor } from "./services/cover/service.js";
 import { targetEvent } from "./lib/entries/responseEvents.js";
 import { collectBonusCandidates, spendBonusCost, type OfferedBonus, type RollBonusQuery } from "./services/rollBonuses/service.js";
@@ -512,6 +513,17 @@ let stepHostOf: (workflow: Workflow) => WorkflowStepHost;
 /** The generated WorkflowState_<name> forwarders: never a step's own implementation */
 const stepForwarders = new WeakSet<Function>();
 export function workflowStepHost(workflow: Workflow): WorkflowStepHost { return stepHostOf(workflow); }
+
+/** M29: a redirection of the use (lib/entries/redirection.ts) */
+export interface UseRedirection {
+  /** TokenDocument uuids: the target redirected, and the new one (none: dropped, or at a hit, missed) */
+  from: string;
+  to?: string;
+  /** What did it (the entry's label) */
+  label: string;
+  /** The event it happened at */
+  at: string;
+}
 
 export class Workflow {
   /*
@@ -1106,6 +1118,22 @@ export class Workflow {
     if (this.readOnly) return;
     const kept = this.#persisted.scalar<StoredChoice[]>("choices", []).filter(choice => choice.id !== id);
     this.#persisted.setScalar("choices", [...kept, { id, value }]);
+  }
+  /** M29: the use's redirections, in order: a target replaced by another (`to`), or dropped / missed (`to` absent) */
+  get redirections(): readonly UseRedirection[] { return this.#persisted.scalar<UseRedirection[]>("redirections", []); }
+  /** M29: `from` is replaced by `to` in the use (dropped from it when absent), and the change recorded */
+  redirect(from: TokenDocument.Implementation, to: TokenDocument.Implementation | undefined, record: Omit<UseRedirection, "from" | "to">): void {
+    if (this.readOnly || !from.uuid) return;
+    const replace = (set: TokenDocumentSet) => new TokenDocumentSet(set.documents.flatMap(doc => doc === from ? (to && !set.has(to) ? [to] : []) : [doc]));
+    if (this.targets.has(from)) this.targets = replace(this.targets);
+    if (this.hitTargets.has(from)) this.hitTargets = new TokenDocumentSet(this.hitTargets.documents.filter(doc => doc !== from));
+    if (this.hitTargetsEC.has(from)) this.hitTargetsEC = new TokenDocumentSet(this.hitTargetsEC.documents.filter(doc => doc !== from));
+    this.noteRedirection({ from: from.uuid, ...(to?.uuid ? { to: to.uuid } : {}), ...record });
+  }
+  /** M29: a redirection recorded without changing the targets (a hit turned into a miss: Mirror Image's duplicate) */
+  noteRedirection(record: UseRedirection): void {
+    if (this.readOnly) return;
+    this.#persisted.setScalar("redirections", [...this.redirections, record]);
   }
   /** Snapshot tags fixed at the use's resolution (M26, lib/tags.ts) */
   get tagSnapshots(): readonly TagSnapshot[] { return this.#persisted.scalar<TagSnapshot[]>("tagSnapshots", []); }
@@ -7927,7 +7955,12 @@ export class Workflow {
 
     this.hitDisplayData = {};
     const challengeModeArmorSet = !([undefined, false, "none"].includes((checkRule("challengeModeArmor") as string | boolean | undefined)));
-    for (const targetDocument of this.targets.documents) {
+    // A queue: a target an entry redirects the attack to (M29) is checked next, with the same roll
+    const queue = [...this.targets.documents];
+    while (queue.length) {
+      const targetDocument = queue.shift()!;
+      // M29: an entry at its hit sent the attack to nothing (Mirror Image's duplicate): a miss, whatever is worked out after
+      let missedByRedirect = false;
       // No canvas token (another scene or level): its actor's AC, with no cover or reactions
       const drawnToken = this.targets.placeableOf(targetDocument);
       const targetToken: TokenOrDocument = drawnToken ?? targetDocument;
@@ -8048,6 +8081,13 @@ export class Workflow {
               return this.askReactionsStep(targetToken, this.tokenUuid, this.attackRoll, "reactionattacked", { activity: this.activity, item: this.item, workflow: this, workflowOptions });
             } : undefined)
           : undefined;
+        // M29: an entry at attacked redirected the attack: the new target is checked in this one's place
+        const redirectedAtAttack = takeRetarget(this, targetDocument);
+        if (redirectedAtAttack) {
+          const to = applyRetarget(this, targetDocument, redirectedAtAttack);
+          if (to) queue.unshift(to);
+          continue;
+        }
         // An entry may have changed the roll (disadvantage after the roll)
         attackTotal = this.attackTotal;
         if (challengeModeArmorSet) isHit = attackTotal > targetAC || this.isCritical;
@@ -8096,6 +8136,16 @@ export class Workflow {
             provokes ? () => this.askReactionsStep(targetToken, this.tokenUuid, this.attackRoll, "reaction", { activity: this.activity, item: this.item, workflow: this, workflowOptions }) : undefined);
           if (!Workflow.findWorkflow(this.id)) // workflow has been removed - bail out
             return;
+          // M29: an entry at hit redirected it: to another target (checked next, the same roll), or to none (a miss)
+          const redirectedAtHit = takeRetarget(this, targetDocument);
+          if (redirectedAtHit?.to === "none") {
+            if (targetDocument.uuid) this.noteRedirection({ from: targetDocument.uuid, label: redirectedAtHit.label, at: "hit" });
+            missedByRedirect = true;
+          } else if (redirectedAtHit) {
+            const to = applyRetarget(this, targetDocument, redirectedAtHit);
+            if (to) queue.unshift(to);
+            continue;
+          }
           // targetAC already has cover, flanking, and targetACMod from computeTargetAC (via acResult.effectiveAC)
           // Only update if the hit reaction returned a new AC total
           if (result?.ac) {
@@ -8174,6 +8224,10 @@ export class Workflow {
         if (targetEC) isHitEC = challengeModeArmorSet && this.attackTotal <= targetAC && this.attackTotal >= targetEC && isFinite(targetAC);
       }
       if (retest) hitResultNumeric = this.isCritical ? "++" : !isFinite(targetAC) ? `${attackTotal}/∞` : `${attackTotal}/${Math.abs(attackTotal - targetAC)}`;
+      if (missedByRedirect) {
+        isHit = false;
+        isHitEC = false;
+      }
       if (isHit) this.hitTargets = this.hitTargets.add(targetToken);
       if (isHitEC) this.hitTargetsEC = this.hitTargetsEC.add(targetToken);
       if (isHit || isHitEC) await this.processCriticalFlags();

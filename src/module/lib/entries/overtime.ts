@@ -11,7 +11,7 @@ import {
 } from "../../utils.js";
 import type { Workflow } from "../../Workflow.js";
 import { isUseEvent, useDamageAction } from "./useEvents.js";
-import { actionRollAction, activityRollAction, isActivityRef } from "./activityActions.js";
+import { actionRollAction, activityRollAction, byRollAction, isActivityRef } from "./activityActions.js";
 import { originView } from "./conditionData.js";
 import { applyingActivity, originActor, registerAction, registerEffectEntryReader, registerEvent, type ActionRun } from "./engine.js";
 import type { Entry, EntryAction } from "./types.js";
@@ -385,6 +385,7 @@ export function registerOvertimeEntries() {
   registerEffectEntryReader("midi-qol.overtime", overtimeEntries);
   // An activity ref uses that activity; at an action the taker rolls; otherwise an effect's tick
   const rollAction = (kind: "save" | "check") => (run: ActionRun) => isActivityRef(run.action[kind]) ? activityRollAction(run, kind)
+    : run.action.by ? byRollAction(run, kind)
     : run.eventId === "action" ? actionRollAction(run, kind) : tickAction(kind)(run);
   registerAction("save", rollAction("save"), { priority: 10 });
   registerAction("check", rollAction("check"), { priority: 10 });

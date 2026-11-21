@@ -30,6 +30,8 @@ export interface TargetOutcome {
   damage?: DamageOutcome;
   /** uuids of the effects the use applied to the target that are still on it */
   effects: string[];
+  /** M29: the target this one replaced (the use was redirected to it), and by what */
+  redirectedFrom?: { target: string, label: string };
 }
 
 interface DamageEntryLike {
@@ -91,6 +93,8 @@ export function outcomes(workflow: Workflow): Map<string, TargetOutcome> {
     const uuid = token.uuid;
     if (!uuid) continue;
     const outcome: TargetOutcome = { target: uuid, effects: [] };
+    const redirected = workflow.redirections?.find(r => r.to === uuid);
+    if (redirected) outcome.redirectedFrom = { target: redirected.from, label: redirected.label };
     if (attackRoll) {
       const ac = descriptors.find(descriptor => descriptor.token === uuid)?.ac ?? undefined;
       const total = attackRoll.total ?? undefined;

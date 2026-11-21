@@ -37,9 +37,10 @@ export interface EventContext {
   only?: string;
   /**
    * Which offers run (a reaction event, lib/entries/responseEvents.ts): "automatic" the always and toggle entries
-   * (the asks go in the reaction prompt), "asks" only the plain asks (no reaction prompt was shown). All when absent.
+   * (the asks go in the reaction prompt), "asks" the plain asks (no reaction prompt was shown) and the near holders'
+   * asks and reactions, "near" only those (the creature's own were in its reaction prompt). All when absent.
    */
-  offers?: "automatic" | "asks";
+  offers?: "automatic" | "asks" | "near";
 }
 
 export interface ActionRun {
@@ -447,7 +448,10 @@ export async function runEvent(eventId: string, context: EventContext): Promise<
     const offer = f.entry.offer ?? "always";
     const ask = offer === "ask" || offer === "reaction";
     if (context.offers === "automatic" && ask) continue;
-    if (context.offers === "asks" && offer !== "ask") continue;
+    // A near holder's ask or reaction (Arrow-Catching Shield) is never in this creature's reaction prompt: asked of the holder (M29)
+    const nearOffer = ask && !!f.actor && f.actor !== context.actor;
+    if (context.offers === "asks" && offer !== "ask" && !nearOffer) continue;
+    if (context.offers === "near" && !nearOffer) continue;
     if (offer === "toggle" && !toggleOn(f)) continue;
     // A reaction offer is asked as `ask` and costs the reaction: not offered once it is used
     if (offer === "reaction" && (!f.actor || hasUsedReaction(f.actor))) continue;

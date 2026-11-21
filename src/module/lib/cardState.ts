@@ -42,7 +42,9 @@ export const STATE_KEYS = [
   // Snapshot tags fixed at the use's resolution (M26, lib/tags.ts): a list of { tag, target, value }
   "tagSnapshots",
   // The use's choices (M28, lib/choices.ts): a list of { id, value }
-  "choices"
+  "choices",
+  // The use's redirections (M29, lib/entries/redirection.ts): a list of { from, to?, label, at }
+  "redirections"
 ] as const;
 export type StateKey = typeof STATE_KEYS[number];
 

@@ -1,0 +1,192 @@
+{
+  "_id": "mqeArrowCatching",
+  "name": "Arrow-Catching Shield",
+  "type": "equipment",
+  "folder": "mqsEntryFolder00",
+  "img": "icons/skills/melee/shield-block-fire-orange.webp",
+  "system": {
+    "activities": {
+      "KZLj6yQjI7Ps1KkW": {
+        "type": "utility",
+        "name": "Intercept Attack",
+        "_id": "KZLj6yQjI7Ps1KkW",
+        "sort": 100000,
+        "activation": {
+          "type": "reaction",
+          "value": null,
+          "override": false,
+          "condition": "an attacker makes a ranged attack roll against a target within 5 feet of you"
+        },
+        "consumption": {
+          "scaling": {
+            "allowed": false
+          },
+          "spellSlot": true,
+          "targets": []
+        },
+        "description": {
+          "chatFlavor": "You become the target of the ranged attack."
+        },
+        "duration": {
+          "units": "inst",
+          "concentration": false,
+          "override": false
+        },
+        "effects": [],
+        "range": {
+          "override": false,
+          "units": "ft",
+          "special": "",
+          "value": "5"
+        },
+        "target": {
+          "template": {
+            "contiguous": false,
+            "units": "ft",
+            "type": ""
+          },
+          "affects": {
+            "choice": false,
+            "count": "1",
+            "type": "any",
+            "special": "attack roll made against target"
+          },
+          "override": false,
+          "prompt": true
+        },
+        "uses": {
+          "spent": 0,
+          "recovery": [],
+          "max": ""
+        },
+        "roll": {
+          "prompt": false,
+          "visible": false,
+          "name": "",
+          "formula": ""
+        },
+        "img": "",
+        "appliedEffects": [],
+        "visibility": {
+          "requireMagic": true,
+          "level": {
+            "min": null,
+            "max": null
+          },
+          "identifier": "",
+          "requireIdentification": true
+        }
+      }
+    },
+    "uses": {
+      "spent": 0,
+      "recovery": [],
+      "max": ""
+    },
+    "description": {
+      "value": "<p><em>Armor (Shield), Rare (Requires Attunement)</em></p><p>You gain a +2 bonus to Armor Class against ranged attack rolls while you wield this Shield. This bonus is in addition to the Shield's normal bonus to AC.</p><p>Whenever an attacker makes a ranged attack roll against a target within 5 feet of you, you can take a Reaction to become the target of the attack instead.</p><section class=\"secret\" id=\"secret-n4z3GTIVyxRRS17N\"><p><strong>Foundry Note</strong></p><p>The <strong>Ranged Attack AC Bonus</strong> effect is provided for optional use and may be toggled active before a ranged attack roll is made against the wearer.</p></section><p><em>Automation (midi-qol entries):</em> +2 AC against ranged attacks while wielded (attuned); when a creature within 5 feet of you is the target of a ranged attack, you are offered your reaction to become its target (the attack roll is checked against your AC).</p>",
+      "chat": ""
+    },
+    "identifier": "arrow-catching-shield",
+    "source": {
+      "revision": 1,
+      "rules": "2024",
+      "license": "CC-BY-4.0",
+      "book": ""
+    },
+    "identified": true,
+    "unidentified": {
+      "description": ""
+    },
+    "container": null,
+    "quantity": 1,
+    "weight": {
+      "value": 6,
+      "units": "lb"
+    },
+    "price": {
+      "value": 4000,
+      "denomination": "gp"
+    },
+    "rarity": "rare",
+    "attunement": "required",
+    "attuned": false,
+    "equipped": false,
+    "armor": {
+      "value": 2,
+      "magicalBonus": null,
+      "dex": null
+    },
+    "cover": null,
+    "crewed": false,
+    "hp": {
+      "value": null,
+      "max": null,
+      "dt": null,
+      "conditions": ""
+    },
+    "type": {
+      "value": "shield",
+      "baseItem": "shield"
+    },
+    "properties": [
+      "mgc"
+    ],
+    "strength": null,
+    "proficient": null
+  },
+  "effects": [],
+  "flags": {
+    "midi-qol": {
+      "entries": [
+        {
+          "id": "ac",
+          "on": "attacked",
+          "if": "['rwak', 'rsak'].includes(tags.use.attack)",
+          "do": [
+            {
+              "bonus": {
+                "kind": "add",
+                "formula": "2"
+              },
+              "rolls": "ac",
+              "label": "Arrow-Catching Shield"
+            }
+          ]
+        },
+        {
+          "id": "catch",
+          "on": "attacked",
+          "who": {
+            "within": 5,
+            "of": "bearer",
+            "filter": "event.creature?.uuid !== bearer?.uuid"
+          },
+          "offer": "reaction",
+          "activity": "KZLj6yQjI7Ps1KkW",
+          "label": "Arrow-Catching Shield: become the target",
+          "if": "['rwak', 'rsak'].includes(tags.use.attack)",
+          "do": [
+            {
+              "retarget": {
+                "to": "bearer"
+              },
+              "label": "Arrow-Catching Shield"
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "_stats": {
+    "compendiumSource": null,
+    "duplicateSource": null,
+    "coreVersion": "14.360",
+    "systemId": "dnd5e",
+    "systemVersion": "6.1.0"
+  },
+  "ownership": {
+    "default": 0
+  },
+  "_key": "!items!mqeArrowCatching"
+}
