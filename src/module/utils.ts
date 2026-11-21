@@ -29,6 +29,7 @@ import { AttributionEntry, AttributionMap, AttributionType, AugmentedEvent, Dumm
 import { preferredActiveGM, prepareDamageListToJSON, socketlibSocket, timedAwaitExecuteAsGM, unTimedExecuteAsGM } from "./GMAction.js";
 import { askUser, type IncomingRequest } from "./lib/requests.js";
 import { collectResponses, type ResponseOffer, type ResponseQuery } from "./services/responses/service.js";
+import { applyStandingChoices, setStandingChoice, standingKey } from "./services/rollBonuses/standing.js";
 import { hasEventEntries, eventOfTrigger, targetEvent } from "./lib/entries/responseEvents.js";
 import { dice3dEnabled, installedModules } from "./setupModules.js";
 import { concentrationCheckItemDisplayName } from "./Hooks.js";
@@ -4828,6 +4829,13 @@ export async function bonusDialog(
     ...(bonusQuery ? automaticCandidates : [])];
   optionalCandidates = [...validFlags.flatMap(flagName => flagCandidates(flagName, true)), ...optionalCandidates]
     .filter(c => !session.declined.has(c.id) && !session.applied.has(c.id));
+  // The roller's standing choices (M15 stage 5a): never and critical-only drop out, always and next apply without asking
+  const critical = (this instanceof Workflow && !!this.isCritical) || !!foundry.utils.getProperty(roll, "isCritical");
+  const standing = options.preChosen ? undefined : applyStandingChoices(this.actor, optionalCandidates, critical);
+  if (standing) {
+    optionalCandidates = standing.ask;
+    automatic.push(...standing.apply);
+  }
   // What chosen bonuses have spent this roll: a later one drawing on the same pool must still fit
   let bonusSpent: BonusCost = session.spent;
   const tookBonus = (candidate: OfferedBonus) => {
@@ -4845,6 +4853,9 @@ export async function bonusDialog(
       usedLabels.push(candidate.flagLabel ?? candidate.label);
     }
     if (roll !== before) recordRollChange(roll, before, usedLabels);
+    // Armed for one roll: back to ask once applied
+    for (const candidate of standing?.armed ?? []) if (session.applied.has(candidate.id) || candidate.flagKey)
+      await setStandingChoice(this.actor, standingKey(candidate), "ask", candidate.flagLabel ?? candidate.label);
     stillAffordable();
     if (showRoll && roll !== before) {
       DSNMarkDiceDisplayed(roll);

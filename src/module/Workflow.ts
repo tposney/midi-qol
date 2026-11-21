@@ -4043,6 +4043,10 @@ export class Workflow {
     if (this.workflowOptions?.disadvantage) {
       this.attackRollModifierTracker.disadvantage.add("workflowOptions", i18n("midi-qol.WorkflowOptions"));
     }
+    // A use called as a critical or fumble (midiOptions.isCritical / isFumble: prepareUse set them, the reset above
+    // cleared them since 13.0.42, so the attack and its damage were rolled as normal)
+    if (this.workflowOptions?.isCritical) this.attackRollModifierTracker.critical.setOverride(true, "activity.use", i18n("midi-qol.ActivityUse"));
+    if (this.workflowOptions?.isFumble) this.attackRollModifierTracker.fumble.setOverride(true, "activity.use", i18n("midi-qol.ActivityUse"));
     // Sets this.flankingAdvantage, which the midi-qol.flanking rollModifiers contributor reads
     await this.checkFlankingAdvantage();
 
@@ -9102,6 +9106,8 @@ export type WorkflowOptions = InexactPartial<{
   formulaDSN: boolean;
   ignoreUserTargets: boolean;
   isCritical: boolean;
+  /** The use was called as a fumble (midiOptions.isFumble) */
+  isFumble: boolean;
   isMagicSave: boolean;
   isReaction: boolean;
   item: Item.Implementation;

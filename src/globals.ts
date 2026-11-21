@@ -333,6 +333,8 @@ declare module "fvtt-types/configuration" {
         entryLimits?: import("./module/lib/entries/limits.js").StoredLimit[];
         /** M15 stage 4d: entries offered as toggles, by toggle key (lib/entries/offers.ts): on or off */
         toggles?: Record<string, boolean>;
+        /** M15 stage 5a: standing choices per bonus (services/rollBonuses/standing.ts) */
+        bonusChoices?: import("./module/services/rollBonuses/standing.js").StoredStanding[];
         dependentOn?: string; // UUID of parent document for midi-qol dependent tracking
         actions?: {
           // This really should be structured but actions.reaction is used in other modules and macros

@@ -4,6 +4,7 @@ import { playerForActor } from "../../utils.js";
 import { askUser, registerRequestHandler, type IncomingRequest } from "../requests.js";
 import type { FoundEntry } from "./types.js";
 import { actorToggleEntries } from "./engine.js";
+import { STANDING_CHOICES, storedStandings, type StandingChoice } from "../../services/rollBonuses/standing.js";
 
 /*
  * M15 stage 4d: offers at use and target events (a roll event's offers are rollBonuses').
@@ -184,7 +185,7 @@ export function listToggles(actor: Actor.Implementation): { key: string, label: 
   return [...seen.values()];
 }
 
-/** The sheet's Toggles control: each toggle entry a checkbox; saved on the actor */
+/** The sheet's Toggles and choices control: each toggle entry a checkbox; each standing choice a select (M15 5a); saved on the actor */
 export async function editToggles(actor: Actor.Implementation): Promise<void> {
   const found = actorToggleEntries(actor);
   const stored = togglesOf(actor);
@@ -196,26 +197,40 @@ export async function editToggles(actor: Actor.Implementation): Promise<void> {
     const option = offerOption(f, key);
     return [optionHTML(option, `<input type="checkbox" name="${escape(key)}"${stored[key] ? " checked" : ""}>`)];
   });
-  const content = `<p class="hint">${escape(i18n("midi-qol.EntryTogglesHint"))}</p><div class="midi-qol-entry-toggles">${rows.join("")}</div>`;
+  const standings = storedStandings(actor);
+  const choiceRows = standings.map((s, index) => `<div class="form-group"><label>${escape(s.label)}</label><div class="form-fields">`
+    + `<select name="standing-${index}">${STANDING_CHOICES.map(c => `<option value="${c}"${c === s.choice ? " selected" : ""}>${escape(i18n(`midi-qol.Standing.${c}`))}</option>`).join("")}</select></div></div>`);
+  const content = (rows.length ? `<p class="hint">${escape(i18n("midi-qol.EntryTogglesHint"))}</p><div class="midi-qol-entry-toggles">${rows.join("")}</div>` : "")
+    + (choiceRows.length ? `<p class="hint">${escape(i18n("midi-qol.Standing.Hint"))}</p><div class="midi-qol-standing-choices">${choiceRows.join("")}</div>` : "");
   const values = await foundry.applications.api.DialogV2.wait({
     window: { title: `${actor.name}: ${i18n("midi-qol.EntryToggles")}` },
+    position: { width: 440 },
     content,
     buttons: [{
       action: "save", label: game.i18n?.localize("Save") ?? "Save", default: true,
-      callback: (_event: Event, button: HTMLButtonElement) => Object.fromEntries([...seen].map(key => [key, !!button.form?.querySelector<HTMLInputElement>(`input[name="${CSS.escape(key)}"]`)?.checked]))
+      callback: (_event: Event, button: HTMLButtonElement) => ({
+        toggles: Object.fromEntries([...seen].map(key => [key, !!button.form?.querySelector<HTMLInputElement>(`input[name="${CSS.escape(key)}"]`)?.checked])),
+        choices: standings.map((_s, index) => button.form?.querySelector<HTMLSelectElement>(`select[name="standing-${index}"]`)?.value as StandingChoice | undefined)
+      })
     }],
     rejectClose: false
-  }) as Record<string, boolean> | null | undefined;
+  }) as { toggles: Record<string, boolean>, choices: (StandingChoice | undefined)[] } | null | undefined;
   if (!values || typeof values !== "object") return;
-  const changed = Object.entries(values).filter(([key, on]) => !!stored[key] !== on);
-  if (changed.length) await actor.update(Object.fromEntries(changed.map(([key, on]) => [`flags.${MODULE_ID}.toggles.${key}`, on])));
+  const changed = Object.entries(values.toggles).filter(([key, on]) => !!stored[key] !== on);
+  const updates: Record<string, unknown> = Object.fromEntries(changed.map(([key, on]) => [`flags.${MODULE_ID}.toggles.${key}`, on]));
+  const kept = standings.flatMap((s, index) => {
+    const choice = values.choices[index] ?? s.choice;
+    return choice === "ask" ? [] : [{ ...s, choice }];
+  });
+  if (kept.length !== standings.length || kept.some((s, i) => s.choice !== standings[i]?.choice)) updates[`flags.${MODULE_ID}.bonusChoices`] = kept;
+  if (Object.keys(updates).length) await actor.update(updates);
 }
 
 export function registerEntryOffers() {
   registerRequestHandler(ENTRY_OFFER_REQUEST, answerOffer);
   Hooks.on("getHeaderControlsActorSheetV2", (app: foundry.applications.api.DocumentSheetV2<Actor>, controls: foundry.applications.api.ApplicationV2.HeaderControlsEntry[]) => {
     const actor = app.document as Actor.Implementation;
-    if (!actor?.isOwner || !actorToggleEntries(actor).length) return;
+    if (!actor?.isOwner || (!actorToggleEntries(actor).length && !storedStandings(actor).length)) return;
     // Core runs a control's onClick (fvtt-types has only `action`)
     (controls as (typeof controls[number] | { label: string, icon: string, onClick: () => void })[]).push({
       label: "midi-qol.EntryToggles",

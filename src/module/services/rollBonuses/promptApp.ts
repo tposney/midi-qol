@@ -1,6 +1,8 @@
 import { RollModifyDialog } from "../../utils.js";
 import { parseFlagValue } from "../../rules/optionalFlags.js";
 import { effectOrder } from "./rules.js";
+import type { OfferedBonus } from "./service.js";
+import { setStandingChoice, standingChoice, standingKey, STANDING_CHOICES, type StandingChoice } from "./standing.js";
 
 /*
  * midi's phased bonus prompt: the same bonuses as the classic dialog (flags.midi-qol.optional and rollBonuses
@@ -19,15 +21,27 @@ export class BonusPromptApp extends RollModifyDialog {
 
   async _prepareContext(options) {
     const context = await super._prepareContext(options);
-    const buttons: Record<string, { label?: string, icon?: string, tooltip?: string }> = this.data.buttons ?? {};
-    const entries = Object.entries(buttons).filter(([id]) => id !== "no").map(([id, button]) => ({ id, label: button.label, icon: button.icon, tooltip: (button as { tooltip?: string }).tooltip }));
-    return { ...context, entries };
+    const buttons: Record<string, { label?: string, icon?: string, tooltip?: string, candidate?: OfferedBonus }> = this.data.buttons ?? {};
+    const actor = this.data.actor;
+    // The row's standing choice (M15 stage 5a): the roller's own bonuses only (someone else's is its holder's)
+    const standingOf = (candidate: OfferedBonus | undefined) => candidate && actor && (!candidate.spender || candidate.spender === actor.uuid)
+      ? { standingKey: standingKey(candidate), standingLabel: candidate.flagLabel ?? candidate.label, choice: standingChoice(actor, standingKey(candidate)) } : {};
+    const entries = Object.entries(buttons).filter(([id]) => id !== "no").map(([id, button]) => ({ id, label: button.label, icon: button.icon, tooltip: button.tooltip, ...standingOf(button.candidate) }));
+    const standingChoices = STANDING_CHOICES.map(value => ({ value, label: game.i18n?.localize(`midi-qol.Standing.${value}`) ?? value }));
+    return { ...context, entries, standingChoices };
   }
 
   async _onRender(context, options) {
     await super._onRender(context, options);
     this.element.querySelector("[data-bonus-action='apply']")?.addEventListener("click", () => this.applyTicked());
     this.element.querySelector("[data-bonus-action='skip']")?.addEventListener("click", () => this.data.buttons?.no?.callback?.());
+    for (const select of Array.from(this.element.querySelectorAll<HTMLSelectElement>("select[name='standing']"))) {
+      select.addEventListener("change", () => {
+        const actor = this.data.actor;
+        const key = select.dataset.standingKey;
+        if (actor && key) void setStandingChoice(actor, key, select.value as StandingChoice, select.dataset.standingLabel ?? key);
+      });
+    }
   }
 
   /** Applies the ticked bonuses in the order shown, each through its own handler. */

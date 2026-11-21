@@ -7,7 +7,7 @@ import { getDistance } from "../../services/distance/service.js";
 import { unTimedExecuteAsGM } from "../../GMAction.js";
 import { limitKey, limitStamp, selectGroups, spendStoredLimit, withinLimit, type CombatPosition, type StoredLimit } from "./limits.js";
 import type { Entry, EntryAction, EntryHome, EntryWho, FoundEntry } from "./types.js";
-import { askOffers, costAllows, listToggles, offerOption, setToggle, spendEntryCost, toggleOn } from "./offers.js";
+import { askOffers, costAllows, editToggles, listToggles, offerOption, setToggle, spendEntryCost, toggleOn } from "./offers.js";
 
 /*
  * M15 stage 1: the entry engine (plan ~/Documents/midi-next-M15-plan-2026-11-20.md). A event is raised with the actor
@@ -500,7 +500,7 @@ export function registerMidiEntryActions() {
 }
 
 export const entriesApi = {
-  registerEvent, registerAction, collect: collectEntries, run: runEvent, state: entryState, toggles: listToggles, setToggle,
+  registerEvent, registerAction, collect: collectEntries, run: runEvent, state: entryState, toggles: listToggles, setToggle, editToggles,
   events: () => events.entries().map(entry => entry.id),
   actions: () => actions.entries().map(entry => entry.id)
 };
