@@ -1159,7 +1159,7 @@
   "midi-qol.AverageDamageOptions": {
     "none": "None",
     "npc": "NPC only damage rolls",
-    "character": "Character ony damage rolls",
+    "character": "Character only damage rolls",
     "all": "All damage rolls"
   },
   "midi-qol.GriddedGridless.Name": "Gridless Grid",
