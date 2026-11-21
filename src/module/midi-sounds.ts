@@ -1,7 +1,10 @@
 import { debug, i18n, GameSystemConfig } from "../midi-qol.js";
 import { configSettings, midiSoundSettings } from "./settings.js";
 import { dice3dEnabled } from "./setupModules.js";
-import { Workflow } from "./Workflow.js";
+import type { Cue } from "./lib/cues.js";
+import type { Workflow } from "./Workflow.js";
+import { register as registerPresenter } from "./api/services.js";
+import type { Presenter } from "./services/presenters/service.js";
  
 interface SoundSpec {
   playlistName: string;
@@ -15,10 +18,10 @@ export class MidiSounds {
     return { playlist, sound: playlist?.sounds.getName(soundName) };
   }
 
-  static async playSound(playListName: string, soundName: string) {
+  static async playSound(playListName: string, soundName: string, broadcast = true) {
     const { playlist, sound } = this.getSound(playListName, soundName);
     if (playlist && sound?.path) {
-        return foundry.audio.AudioHelper.play({ src: sound.path, volume: sound.volume, loop: false }, true);
+        return foundry.audio.AudioHelper.play({ src: sound.path, volume: sound.volume, loop: false }, broadcast);
     }
     return null;
   }
@@ -40,13 +43,13 @@ export class MidiSounds {
       ...damageEntries,
     };
   }
-  static async playRandomSound(playListName: string) {
+  static async playRandomSound(playListName: string, broadcast = true) {
     const playlist: Playlist | undefined = game.playlists?.getName(playListName);
     if (playlist) {
       const sounds = playlist.sounds;
       const soundIndex = Math.floor(Math.random() * sounds.contents.length);
       const sound = sounds.contents[soundIndex];
-      return this.playSound(playlist.name, sound.name);
+      return this.playSound(playlist.name, sound.name, broadcast);
     }
     return null;
   }
@@ -116,11 +119,11 @@ export class MidiSounds {
     return undefined;
   }
 
-  static playSpec(spec: SoundSpec) {
+  static playSpec(spec: SoundSpec, broadcast = true) {
     if (spec.soundName !== "random")
-      return this.playSound(spec.playlistName, spec.soundName);
+      return this.playSound(spec.playlistName, spec.soundName, broadcast);
     else
-      return this.playRandomSound(spec.playlistName)
+      return this.playRandomSound(spec.playlistName, broadcast)
   }
 
   static processHook(workflow: Workflow, selector: string) {
@@ -132,46 +135,50 @@ export class MidiSounds {
     return this.playSpec(spec);
   }
 
+  /** The sound settings' spec for a cue's item keys and a selector (itemRoll, attack, hit, a damage type...) */
+  static specForCue(cue: Cue, selector: string): SoundSpec | undefined {
+    const keys = cue.sound;
+    return this.getSpecFor(keys.actorType ?? "all", keys.itemType ?? "any", keys.subtype ?? "", keys.baseItem ?? "", selector);
+  }
+
+  /**
+   * M18: the selectors a cue plays, in order, each the first of its alternatives that has a sound (the action type, else
+   * "attack"; the damage type, else "damage"). The attack's own sound is with the roll under Dice So Nice, else with its
+   * result, as the old hooks played it.
+   */
+  static selectorsFor(cue: Cue): string[][] {
+    const attack = [cue.tags.actionType ?? "", "attack"].filter(Boolean);
+    switch (cue.cue) {
+      case "use.start": return [["itemRoll"]];
+      case "attack.roll": return dice3dEnabled() ? [attack] : [];
+      case "attack.hit": case "attack.miss": case "attack.critical": case "attack.fumble":
+        return [...(dice3dEnabled() ? [] : [attack]), [cue.cue.slice("attack.".length)]];
+      case "damage.rolled": return [[cue.tags.defaultDamageType ?? "", "damage"].filter(Boolean)];
+      default: return [];
+    }
+  }
+
+  /** midi's sounds as the default sound presenter: Midi Sound Settings' lookups, played on this client */
+  static presenter: Presenter = {
+    channel: "sound",
+    claims: cue => {
+      if (!configSettings.useCustomSounds) return false;
+      if (typeof cue.presentation?.sound === "object") return true;
+      return MidiSounds.selectorsFor(cue).some(alternatives => alternatives.some(selector => MidiSounds.specForCue(cue, selector)));
+    },
+    play: async cue => {
+      const override = cue.presentation?.sound;
+      if (override && typeof override === "object") return MidiSounds.playSpec({ playlistName: override.playlist, soundName: override.sound }, false);
+      for (const alternatives of MidiSounds.selectorsFor(cue)) {
+        const spec = alternatives.map(selector => MidiSounds.specForCue(cue, selector)).find(Boolean);
+        if (spec) await MidiSounds.playSpec(spec, false);
+      }
+    }
+  };
+
+  /** M18: the sounds are the default sound presenter (MidiSounds.presenter), on cues; the four hooks are gone */
   static midiSoundsReadyHooks() {
-    Hooks.on("midi-qol.preItemRoll", async (workflow: Workflow) => {
-      if (!configSettings.useCustomSounds || !workflow.item) return true;
-      await this.processHook(workflow, "itemRoll");
-      return true; // sounds can never block roll
-    });
-    Hooks.on("midi-qol.preAttackRoll", async (workflow: Workflow) => {
-      if (!configSettings.useCustomSounds || !workflow.item) return true;
-      if (dice3dEnabled() 
-        && workflow.activity.hasAttack && !await this.processHook(workflow, workflow.activity.actionType)) {
-        await this.processHook(workflow, "attack");
-      }
-      return true;
-    });
-
-    Hooks.on("midi-qol.AttackRollComplete", async (workflow: Workflow) => {
-      if (!configSettings.useCustomSounds || !workflow.item) return true;
-      if (!dice3dEnabled() 
-        && workflow.activity.hasAttack && !await this.processHook(workflow, workflow.activity.actionType)) {
-          await this.processHook(workflow, "attack");
-      }
-      if (workflow.isCritical) {
-        await this.processHook(workflow, "critical")
-      } else if (workflow.isFumble) {
-        await this.processHook(workflow, "fumble")
-      } else if (workflow.hitTargets.count === 0) {
-        await this.processHook(workflow, "miss")
-      } else {
-        await this.processHook(workflow, "hit")
-      }
-      return true;
-    });
-
-    Hooks.on("midi-qol.DamageRollComplete", async (workflow: Workflow) => {
-      if (!configSettings.useCustomSounds || !workflow.item) return true;
-      const result = await this.processHook(workflow, workflow.defaultDamageType);
-      if (!result)
-        await this.processHook(workflow, "damage");
-      return true;
-    });
+    registerPresenter("presenters", "midi-qol.sounds", MidiSounds.presenter, { label: "Midi-QOL: Midi Sound Settings", priority: -10 });
   }
 
   static async createDefaultPlayList(): Promise<Playlist.Implementation | undefined> {

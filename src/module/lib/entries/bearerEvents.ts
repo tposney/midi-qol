@@ -1,5 +1,6 @@
 import type { Workflow } from "../../Workflow.js";
 import { collectEntries, registerEvent, runEvent, type EventContext } from "./engine.js";
+import { raiseCreatureCue } from "../cues.js";
 
 /*
  * M15 stage 6: the bearer's events (the spike's "The bearer" row). Raised for the creature itself, its items and
@@ -27,7 +28,10 @@ function onUpdateActor(actor: Actor.Implementation, changes: object, options: Ac
   if (!hp) return;
   const max = hp.effectiveMax ?? hp.max;
   const event = { hp: { before: before.value, after: hp.value, max } };
-  if (before.value > 0 && hp.value <= 0) void raise("droppedToZero", actor, event);
+  if (before.value > 0 && hp.value <= 0) {
+    void raise("droppedToZero", actor, event);
+    raiseCreatureCue("creature.dropped", actor.getActiveTokens(false, true)[0] as TokenDocument.Implementation | undefined);
+  }
   if (before.value > max / 2 && hp.value <= max / 2 && hp.value > 0) void raise("bloodied", actor, event);
 }
 

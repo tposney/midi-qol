@@ -150,6 +150,8 @@ declare module "fvtt-types/configuration" {
       "midi-qol.preAttackRollConfig": (workflow: Workflow) => Promise<void | boolean>;
       "midi-qol.AttackRollComplete": (workflow: Workflow) => Promise<void | boolean>;
       "midi-qol.DamageRollComplete": (workflow: Workflow) => Promise<void | boolean>;
+      /** M18: a use's cue, as it is raised (lib/cues.ts) */
+      "midi-qol.cue": (cue: import("./module/lib/cues.js").Cue) => void;
       "midi-qol.preSetReactionUsed": (actor: Actor.Implementation, effect: ActiveEffect.Implementation) => boolean | void;
       "midi-qol.setReactionUsed": (actor: Actor.Implementation, effect: ActiveEffect.Implementation) => void;
       "midi-qol.preSetBonusActionUsed": (actor: Actor.Implementation, effect: ActiveEffect.Implementation) => boolean | void;
@@ -197,6 +199,8 @@ declare module "fvtt-types/configuration" {
     "midi-qol.EnableWorkflow": boolean;
     "midi-qol.BonusPrompt": string;
     "midi-qol.ShowAllBonusOffers": boolean;
+    /** M18: per player, each channel's presenters in the order to try them */
+    "midi-qol.PresenterOrder": Partial<Record<"visual" | "sound" | "text", string[]>>;
     "midi-qol.hiddenGroundCue": boolean;
     "midi-qol.ownChatCardSummary": string;
     "midi-qol.hiddenGroundCueStyle": string;
@@ -661,6 +665,8 @@ declare module "fvtt-types/configuration" {
       "midi-qol"?: {
         /** M15: entries (lib/entries) */
         entries?: import("./module/lib/entries/types.js").Entry[];
+        /** M18: the item's presentation override (and per activity), "none" for every channel */
+        presentation?: "none" | (import("./module/lib/cues.js").Cue["presentation"] & { activities?: Record<string, import("./module/lib/cues.js").Cue["presentation"] | "none"> });
         dependentOn?: string; // UUID of parent document for midi-qol dependent tracking
         onUseMacroParts?: OnUseMacros;
         onUseMacroName?: string;
@@ -741,6 +747,8 @@ declare global {
       "midi-qol.requestEvent": (data: { to: "holder" | "asked", id: string, event: string, how?: string, remaining?: number }) => { ok: boolean, remaining?: number };
       /** lib/midiQueries.ts: one of midi's GM actions or commands to a user (a socketlib handler's name), in place of socketlib */
       "midi-qol.call": (data: { name: string, args: unknown[], userId?: string }) => Promise<unknown>;
+      /** lib/cues.ts (M18): a use's cue, presented on the asked client */
+      "midi-qol.cue": (data: Record<string, unknown>) => Promise<boolean>;
     }
   }
 

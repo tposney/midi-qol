@@ -16,6 +16,8 @@ import { registerUseEvents } from "./module/lib/entries/useEvents.js";
 import { registerBearerEvents } from "./module/lib/entries/bearerEvents.js";
 import { registerServiceEvents } from "./module/lib/entries/serviceEvents.js";
 import { registerRedirection } from "./module/lib/entries/redirection.js";
+import { definePresentersService } from "./module/services/presenters/service.js";
+import { registerCues } from "./module/lib/cues.js";
 import { registerActivityActions, takeAction } from "./module/lib/entries/activityActions.js";
 import { registerUseChanges } from "./module/lib/entries/useChanges.js";
 import { registerEntryOffers } from "./module/lib/entries/offers.js";
@@ -528,6 +530,8 @@ Hooks.once('init', async function () {
   registerActivityActions();
   registerServiceEvents();
   registerRedirection();
+  definePresentersService();
+  registerCues();
   registerUseChanges();
   registerEntryOffers();
   registerResponseEvents();

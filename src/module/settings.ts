@@ -1704,6 +1704,16 @@ export const registerSettings = function () {
     type: Boolean
   });
 
+  // M18 (lib/cues.ts): per player, each channel's presenters in the order to try them (unlisted ones after, by priority)
+  game.settings.register("midi-qol", "PresenterOrder", {
+    name: "midi-qol.PresenterOrder.Name",
+    hint: "midi-qol.PresenterOrder.Hint",
+    scope: "user",
+    default: {},
+    config: false,
+    type: Object
+  });
+
   game.settings.register("midi-qol", "EnableWorkflow", {
     name: "midi-qol.EnableWorkflow.Name",
     hint: "midi-qol.EnableWorkflow.Hint",

@@ -68,7 +68,7 @@ export const MIDI_OPTION_KEYS = new Set([
   "includeTargets", "isConcentrationCheck", "isCritical", "isDummy", "isFumble", "isMagicSave", "isOverTime", "isReaction",
   "isTriggered", "item", "itemCardUuid", "itemUuid", "noConcentrationCheck", "noOnUseMacro", "noProvokeReaction",
   "noTargetOnUseMacro", "noUseWarning", "notBonusAction", "notReaction", "onlyOnUseItemMacros", "other",
-  "overTimeEffectUuid", "parts", "powerLevel", "preSelectedTargetUuids", "preview", "proceedChecks", "recomputeAdvantage",
+  "overTimeEffectUuid", "parts", "powerLevel", "preSelectedTargetUuids", "presentation", "preview", "proceedChecks", "recomputeAdvantage",
   "requestClaim", "rollAs", "rollAttackPerTarget", "rollOptions", "rollToggle", "rollType", "saveActivityUuid", "saveDC",
   "saveItem", "saveItemUuid", "simulate", "sourceActorUuid", "spellLevel", "steps", "target", "targetConfirmation",
   "targets", "targetsToUse", "targetUuids", "teleport", "templateUuid", "triggeredActivity", "triggeringActivityUuid",

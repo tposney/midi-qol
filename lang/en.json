@@ -1031,6 +1031,8 @@
   "midi-qol.RememberChoice.Label": "Remember this choice",
   "midi-qol.Redirect.Lose": "Lose it (no new target)",
   "midi-qol.Redirect.Prompt": "{target} is protected: choose a new target for {what}",
+  "midi-qol.PresenterOrder.Name": "Presenter order",
+  "midi-qol.PresenterOrder.Hint": "For each channel (animation, sound, text), the presenters to try first; the first that plays a cue plays it alone.",
   "midi-qol.RememberChoice.Hint": "Remembered choices: used without asking",
   "midi-qol.RememberChoice.Forget": "Ask each time",
   "midi-qol.Standing.Title": "When it is offered",

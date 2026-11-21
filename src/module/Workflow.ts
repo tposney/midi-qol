@@ -41,6 +41,7 @@ import { reveals } from "./services/revealPolicy/service.js";
 import { raiseDamaged, raiseUseEvents } from "./lib/entries/useEvents.js";
 import { entryCoverFor } from "./lib/entries/serviceEvents.js";
 import { applyRetarget, takeRetarget } from "./lib/entries/redirection.js";
+import { raiseStepCues } from "./lib/cues.js";
 import { coverAnswer, coverLevelFor } from "./services/cover/service.js";
 import { targetEvent } from "./lib/entries/responseEvents.js";
 import { collectBonusCandidates, spendBonusCost, type OfferedBonus, type RollBonusQuery } from "./services/rollBonuses/service.js";
@@ -2808,6 +2809,8 @@ export class Workflow {
           const result = await this.callOnUseMacrosForAction(prePost, step as string);
           // M15 stage 4: the use and target events of this pass
           await raiseUseEvents(this, prePost, step);
+          // M18: its presentation cues
+          raiseStepCues(this, prePost, step);
           return result;
         },
         hook: (prePost, step) => this.callHooksForAction(prePost, step as string),
@@ -9213,6 +9216,8 @@ export type WorkflowOptions = InexactPartial<{
   fixedDice: FixedDice;
   /** The activity's choices (M28), by id: not asked */
   choices: Record<string, ChoiceValue>;
+  /** M18: the use's presentation override ("none": no cues presented) */
+  presentation: "none" | import("./lib/cues.js").Cue["presentation"];
   allowIncapacitated: boolean;
   /**
    * Caller-supplied control over per-target attack splitting: true forces it on, false off,
