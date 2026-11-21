@@ -290,6 +290,8 @@ declare module "fvtt-types/configuration" {
         entries?: import("./module/lib/entries/types.js").Entry[];
         /** M15: an entry's counts on its effect (saves, fails, used), by entry id */
         entryState?: Record<string, Record<string, number>>;
+        /** M11c-2: added by an overlay (true), or the marker enchantment recording which overlay and version */
+        overlayPart?: true | { overlay: string, version: string };
         /** M28: the applying use's choices, copied to the effect */
         choices?: Record<string, unknown>;
         actionSaveSuccess?: boolean;
@@ -667,6 +669,8 @@ declare module "fvtt-types/configuration" {
         entries?: import("./module/lib/entries/types.js").Entry[];
         /** M11: an overlay item (only the difference, for items with this identifier: lib/entries/rules.ts) */
         overlay?: import("./module/lib/entries/rules.js").OverlayFlag;
+        /** M11c-2: added by an overlay (true), or the marker enchantment recording which overlay and version */
+        overlayPart?: true | { overlay: string, version: string };
         /** M18: the item's presentation override (and per activity), "none" for every channel */
         presentation?: "none" | (import("./module/lib/cues.js").Cue["presentation"] & { activities?: Record<string, import("./module/lib/cues.js").Cue["presentation"] | "none"> });
         dependentOn?: string; // UUID of parent document for midi-qol dependent tracking

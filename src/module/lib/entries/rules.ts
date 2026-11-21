@@ -60,8 +60,10 @@ export function automatedBy(item: ItemLike): string | undefined {
   if (midi?.onUseMacroName?.trim()) return "macro";
   if (midi?.entries?.length) return "entries";
   const activities = (item.system as { activities?: Iterable<{ midiEntries?: unknown[] }> }).activities;
-  for (const activity of activities ?? []) if (activity.midiEntries?.length) return "entries";
-  for (const effect of item.effects) if ((effect.flags as Record<string, { entries?: unknown[] } | undefined>)["midi-qol"]?.entries?.length) return "entries";
+  // What an overlay added (M11c-2) is the overlay's, not the item's own
+  const own = (flags: unknown) => !(flags as Record<string, { overlayPart?: unknown } | undefined> | undefined)?.["midi-qol"]?.overlayPart;
+  for (const activity of activities ?? []) if (activity.midiEntries?.length && own((activity as { flags?: unknown }).flags)) return "entries";
+  for (const effect of item.effects) if ((effect.flags as Record<string, { entries?: unknown[] } | undefined>)["midi-qol"]?.entries?.length && own(effect.flags)) return "entries";
   return undefined;
 }
 
@@ -108,7 +110,7 @@ export function describeRuleFor(item: ItemLike): { source: string, identifier: s
 
 /* Overlays (11c): an item that holds only the difference, keyed by identifier */
 
-export interface OverlayFlag { identifier: string, rules?: "2014" | "2024", type?: string }
+export interface OverlayFlag { identifier: string, rules?: "2014" | "2024", type?: string, version?: string }
 
 /** An overlay item as a rule: its entries, its activities' (by type and name), its effects' (by name) */
 export function ruleFromOverlay(item: ItemLike): Rule | undefined {
@@ -128,23 +130,6 @@ export function ruleFromOverlay(item: ItemLike): Rule | undefined {
     entries: entriesOf((item.flags as Record<string, { entries?: unknown[] } | undefined>)["midi-qol"]?.entries), activities, effects };
 }
 
-/** The overlays in a compendium, registered as rules of `source` (midi's sample pack at ready) */
-export async function registerOverlayPack(packId: string, source: string): Promise<number> {
-  const pack = game.packs?.get(packId);
-  if (!pack) return 0;
-  const index = await pack.getIndex({ fields: ["flags.midi-qol.overlay"] });
-  let count = 0;
-  for (const entry of index) {
-    if (!foundry.utils.getProperty(entry, "flags.midi-qol.overlay.identifier")) continue;
-    const item = await pack.getDocument(entry._id) as ItemLike | null;
-    const rule = item ? ruleFromOverlay(item) : undefined;
-    if (!rule) continue;
-    registerRule(source, rule);
-    count++;
-  }
-  return count;
-}
-
 /** For the TroubleShooter: what automates each of the actor's items (a rule's source, or another automation) */
 export function rulesReport(actor: Actor.Implementation): { item: string, identifier?: string, rule?: string, automatedBy?: string }[] {
   return actor.items.contents.map(item => {
@@ -155,7 +140,6 @@ export function rulesReport(actor: Actor.Implementation): { item: string, identi
 }
 
 export const rulesApi = {
-  registerOverlays: registerOverlayPack,
   report: rulesReport,
   register: registerRule,
   for: describeRuleFor,

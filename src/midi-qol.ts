@@ -16,7 +16,8 @@ import { registerUseEvents } from "./module/lib/entries/useEvents.js";
 import { registerBearerEvents } from "./module/lib/entries/bearerEvents.js";
 import { registerServiceEvents } from "./module/lib/entries/serviceEvents.js";
 import { registerRedirection } from "./module/lib/entries/redirection.js";
-import { registerOverlayPack, rulesApi } from "./module/lib/entries/rules.js";
+import { rulesApi } from "./module/lib/entries/rules.js";
+import { applyOverlayData, applyOverlayDataToWorld, registerOverlay, registerOverlayPack, registerWorldOverlays, watchOverlayData } from "./module/lib/entries/overlays.js";
 import { definePresentersService } from "./module/services/presenters/service.js";
 import { registerCues } from "./module/lib/cues.js";
 import { registerActivityActions, takeAction } from "./module/lib/entries/activityActions.js";
@@ -338,7 +339,7 @@ Object.assign(globalThis.MidiQOL, {
   },
   steps: stepsApi,
   entries: { ...entriesApi, takeAction },
-  rules: rulesApi,
+  rules: { ...rulesApi, registerOverlays: registerOverlayPack, registerOverlay, applyOverlayData },
   requests: requestsApi,
   damageCalculation: { get: getDamageCalculationStep, register: registerDamageCalculationStep, remove: removeDamageCalculationStep, order: damageCalculationOrder },
   UNMEASURABLE_DISTANCE,
@@ -1032,7 +1033,11 @@ Hooks.once('ready', function () {
 
   MidiSounds.midiSoundsReadyHooks();
   // M11: midi's overlays (sample items flagged midi-qol.overlay) as rules, on every client
-  void registerOverlayPack("midi-qol.midiqol-sample-items", "midi-qol").catch(err => console.warn("midi-qol | overlays", err));
+  // and the world's own (world items flagged midi-qol.overlay); then their data parts on the world's actors (active GM)
+  watchOverlayData();
+  void registerOverlayPack("midi-qol.midiqol-sample-items", "midi-qol")
+    .then(() => { registerWorldOverlays(); return applyOverlayDataToWorld(); })
+    .catch(err => console.warn("midi-qol | overlays", err));
 
   globalThis.dnd5e.config.areaTargetTypes["emanationNoTemplate"] = {
     label: i18n("midi-qol.emanationNoTemplate"),
