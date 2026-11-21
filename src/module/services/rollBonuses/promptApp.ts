@@ -2,6 +2,7 @@ import { RollModifyDialog } from "../../utils.js";
 import { parseFlagValue } from "../../rules/optionalFlags.js";
 import { effectOrder } from "./rules.js";
 import type { OfferedBonus } from "./service.js";
+import { bonusCostBadges, wirePickOne } from "../../lib/promptCosts.js";
 import { setStandingChoice, standingChoice, standingKey, STANDING_CHOICES, type StandingChoice } from "./standing.js";
 
 /*
@@ -26,13 +27,19 @@ export class BonusPromptApp extends RollModifyDialog {
     // The row's standing choice (M15 stage 5a): the roller's own bonuses only (someone else's is its holder's)
     const standingOf = (candidate: OfferedBonus | undefined) => candidate && actor && (!candidate.spender || candidate.spender === actor.uuid)
       ? { standingKey: standingKey(candidate), standingLabel: candidate.flagLabel ?? candidate.label, choice: standingChoice(actor, standingKey(candidate)) } : {};
-    const entries = Object.entries(buttons).filter(([id]) => id !== "no").map(([id, button]) => ({ id, label: button.label, icon: button.icon, tooltip: button.tooltip, ...standingOf(button.candidate) }));
+    const entries = Object.entries(buttons).filter(([id]) => id !== "no").map(([id, button]) => {
+      const cost = bonusCostBadges(button.candidate?.cost);
+      // An image in place of the default dice icon (a contributor's own icon HTML is kept)
+      const img = button.candidate?.img && !button.candidate.iconHTML ? button.candidate.img : undefined;
+      return { id, label: button.label, icon: img ? undefined : button.icon, img, tooltip: button.tooltip, badges: cost.badges, exclusive: cost.reaction ? "reaction" : undefined, ...standingOf(button.candidate) };
+    });
     const standingChoices = STANDING_CHOICES.map(value => ({ value, label: game.i18n?.localize(`midi-qol.Standing.${value}`) ?? value }));
     return { ...context, entries, standingChoices };
   }
 
   async _onRender(context, options) {
     await super._onRender(context, options);
+    wirePickOne(this.element);
     this.element.querySelector("[data-bonus-action='apply']")?.addEventListener("click", () => this.applyTicked());
     this.element.querySelector("[data-bonus-action='skip']")?.addEventListener("click", () => this.data.buttons?.no?.callback?.());
     for (const select of Array.from(this.element.querySelectorAll<HTMLSelectElement>("select[name='standing']"))) {

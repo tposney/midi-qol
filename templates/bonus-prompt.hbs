@@ -2,14 +2,16 @@
     <div class="midi-qol-bonus-roll">{{{content}}}</div>
     <ul class="midi-qol-bonus-list" style="list-style: none; padding: 0; margin: 0.5em 0;">
         {{#each entries}}
-        <li style="display: flex; align-items: center; gap: 6px;"><label style="display: flex; flex: 1; align-items: center; gap: 6px;" {{#if tooltip}}data-tooltip="{{tooltip}}"{{/if}}><input type="checkbox" name="bonus" value="{{id}}"> {{{icon}}} <span>{{{label}}}</span></label>
+        <li style="display: flex; align-items: center; gap: 6px;"><label style="display: flex; flex: 1; align-items: center; gap: 6px;" {{#if tooltip}}data-tooltip="{{tooltip}}"{{/if}}><input type="checkbox" name="bonus" value="{{id}}" {{#if exclusive}}data-exclusive="{{exclusive}}"{{/if}}>
+            {{#if img}}<img class="midi-qol-prompt-img" src="{{img}}" alt="">{{/if}} {{{icon}}} <span>{{{label}}}</span>
+            {{#each badges}}<span class="midi-qol-prompt-cost">{{this}}</span>{{/each}}</label>
             {{#if standingKey}}<select name="standing" data-standing-key="{{standingKey}}" data-standing-label="{{standingLabel}}" data-tooltip="{{localize "midi-qol.Standing.Title"}}" style="flex: 0 0 9em; width: 9em; height: auto; font-size: var(--font-size-12);">
                 {{#each ../standingChoices}}<option value="{{this.value}}" {{#if (eq this.value ../choice)}}selected{{/if}}>{{this.label}}</option>{{/each}}
             </select>{{/if}}</li>
         {{/each}}
     </ul>
     <div class="dialog-buttons midi-qol-dialog-buttons">
-        <button type="button" data-bonus-action="apply"><i class="fas fa-check"></i> {{localize "midi-qol.BonusPrompt.Apply"}}</button>
-        <button type="button" data-bonus-action="skip"><i class="fas fa-xmark"></i> {{localize "midi-qol.BonusPrompt.Skip"}}</button>
+        <button type="button" data-bonus-action="apply"><i class="fas fa-check"></i> {{localize (ifThen applyLabel applyLabel "midi-qol.BonusPrompt.Apply")}}</button>
+        <button type="button" data-bonus-action="skip" class="decline" autofocus><i class="fas fa-xmark"></i> {{localize (ifThen skipLabel skipLabel "midi-qol.BonusPrompt.Skip")}}</button>
     </div>
 </div>

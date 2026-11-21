@@ -1,3 +1,4 @@
+import { activityCostBadges, offerCostBadges, wirePickOne } from "./lib/promptCosts.js";
 import { askBonusDecision } from "./lib/bonusDecisions.js";
 import { budget, reset as resetBudget, spend as spendBudget } from "./services/economy/ledger.js";
 import { onTurnEvent } from "./lib/turnEvents.js";
@@ -5382,7 +5383,10 @@ export async function doReactions(targetRef: TokenOrDocument | string, triggerTo
     // Asked through the request core (lib/requests.ts): its deadline is the reaction timeout, a claim (a reaction chosen)
     // stops it, a GM answers from the player list, a time-out or disconnect is "no reaction"
     const reactingUser = player;
-    const offerChoices = [...reactionOffers].map(([key, offer]) => ({ key, label: offer.label, img: offer.img, description: offer.description }));
+    const offerChoices = [...reactionOffers].map(([key, offer]) => {
+      const cost = offerCostBadges(offer.cost);
+      return { key, label: offer.label, img: offer.img, description: offer.description, badges: cost.badges, reaction: cost.reaction };
+    });
     const data = { ...reactionRequestData(target, triggerTokenUuid, content ?? "", triggerType, reactionActivityList, options), reactionOffers: offerChoices };
     const request = askUser<ReactionResult>(reactingUser, {
       type: REACTIONS_REQUEST, data, kind: "reaction", owner: options.workflow, actorUuid: target.actor.uuid ?? undefined, tokenUuid: target.document.uuid ?? undefined,
@@ -5403,15 +5407,26 @@ export async function doReactions(targetRef: TokenOrDocument | string, triggerTo
       return noResult;
     });
     if (chatMessage) void chatMessage.delete();
-    // An offer was chosen: taken here, on the asking client (the use's)
-    const offer = result?.offerKey ? reactionOffers.get(result.offerKey) : undefined;
-    if (offer && reactionQuery) {
-      try {
-        result = { name: offer.label, ...((await offer.take(reactionQuery)) ?? {}) };
-      } catch (err) {
-        TroubleShooter.recordError(err, `doReactions | ${offer.label}`);
-        result = noResult;
+    // Offers chosen: taken here, on the asking client (the use's), in the order shown; a reaction used with them keeps its name
+    const offerKeys: string[] = result?.offerKeys ?? (result?.offerKey ? [result.offerKey] : []);
+    if (offerKeys.length && reactionQuery) {
+      const { offerKey: _key, offerKeys: _keys, ...answered } = result ?? {};
+      let combined: any = answered?.name && answered.name !== "None" ? answered : {};
+      // Each offer's new AC is the creature's AC with its own change: several add up
+      // @ts-expect-error no dnd5e-types
+      const baseAC = Number(target.actor.system.attributes.ac?.value ?? 10);
+      for (const key of offerKeys) {
+        const offer = reactionOffers.get(key);
+        if (!offer) continue;
+        try {
+          const taken: any = (await offer.take(reactionQuery)) ?? {};
+          const ac = taken.ac === undefined ? combined.ac : (combined.ac ?? baseAC) + (taken.ac - baseAC);
+          combined = { ...combined, ...taken, name: combined.name ?? taken.name ?? offer.label, ...(ac === undefined ? {} : { ac }) };
+        } catch (err) {
+          TroubleShooter.recordError(err, `doReactions | ${offer.label}`);
+        }
       }
+      result = combined.name ? combined : noResult;
     }
     if (result?.name) {
       let count = 100;
@@ -5431,10 +5446,10 @@ export async function doReactions(targetRef: TokenOrDocument | string, triggerTo
   }
 }
 
-export type ReactionResult = { name?: string, uuid?: string, ac?: number, itemName?: string, itemUuid?: string, offerKey?: string };
+export type ReactionResult = { name?: string, uuid?: string, ac?: number, itemName?: string, itemUuid?: string, offerKey?: string, offerKeys?: string[] };
 
 /** A contract 2 offer as the reacting client sees it: chosen, its key goes back to the asking client */
-export type ResponseOfferChoice = { key: string, label: string, img?: string, description?: string };
+export type ResponseOfferChoice = { key: string, label: string, img?: string, description?: string, badges?: string[], reaction?: boolean };
 
 /** The request type a reacting client answers (GMAction registers its handler) */
 export const REACTIONS_REQUEST = "midi-qol.reactions";
@@ -5510,10 +5525,13 @@ export async function promptReactions(
     const forced = (flag: string) => !!foundry.utils.getProperty(actor, `${flag}.force`);
     const acChoices: ResponseOfferChoice[] = acKey ? [
       ...validFlags.filter(flag => !forced(flag)).flatMap(flag => flagBonusButtons(actor, flag, acKey, actor, undefined)
-        .map((button, index) => ({ key: `ac:${flag}#${acKey}#${index}`, label: `${i18n("DND5E.AC")}: ${button.label}` }))),
-      ...(acBonuses?.candidates ?? []).filter(c => c.optional).map(c => ({ key: `ac:${c.id}`, label: `${i18n("DND5E.AC")}: ${c.label}`, description: c.description, img: c.img }))
+        .map((button, index) => ({ key: `ac:${flag}#${acKey}#${index}`, label: `${i18n("DND5E.AC")}: ${button.label}`, reaction: true }))),
+      ...(acBonuses?.candidates ?? []).filter(c => c.optional).map(c => ({ key: `ac:${c.id}`, label: `${i18n("DND5E.AC")}: ${c.label}`, description: c.description, img: c.img, reaction: true }))
     ] : [];
-    let chosenAC: string | undefined;
+    const chosenAC: string[] = [];
+    let activityResult: any;
+    // Offers chosen with an activity or AC bonus (M32a): their keys go back to the asking client
+    let otherOffers: string[] = [];
     if (reactionActivities.length > 0 || reactionOffers.length > 0 || acChoices.length > 0) {
       if (await asyncHooksCall("midi-qol.ReactionFilter", reactionActivities, options, triggerType, reactionActivityList) === false) {
         console.warn("midi-qol | Reaction processing cancelled by Hook");
@@ -5522,12 +5540,17 @@ export async function promptReactions(
       result = await reactionDialog(actor, triggerTokenUuid, reactionActivities, reactionFlavor, triggerType, { ...options, tokenUuid, reactionOffers: [...reactionOffers, ...acChoices] });
       const endTime = Date.now();
       if (debugEnabled > 0) warn("promptReactions | reaction processing returned after ", endTime - startTime, result)
-      if (result.uuid) return result; //TODO look at multiple choices here
-      if (typeof result.offerKey === "string" && result.offerKey.startsWith("ac:")) chosenAC = result.offerKey.slice(3);
-      else if (result.offerKey) return result;
+      const keys: string[] = result.offerKeys ?? (result.offerKey ? [result.offerKey] : []);
+      for (const key of keys) if (key.startsWith("ac:")) chosenAC.push(key.slice(3));
+      otherOffers = keys.filter(key => !key.startsWith("ac:"));
+      const withOffers = (answer: any) => otherOffers.length ? { ...answer, offerKey: otherOffers[0], offerKeys: otherOffers } : (({ offerKey: _k, offerKeys: _ks, ...rest }) => rest)(answer);
+      if (!chosenAC.length && (result.uuid || otherOffers.length)) return withOffers(result);
+      if (result.uuid) activityResult = withOffers(result);
     }
-    if (usedReaction) return { name: "None" };
-    if (!midiFlags && !acBonuses?.candidates.length) return { name: "None" };
+    const offersPart = otherOffers.length ? { offerKey: otherOffers[0], offerKeys: otherOffers } : {};
+    const nothingElse = () => activityResult ?? { name: "None", ...offersPart };
+    if (usedReaction) return nothingElse();
+    if (!midiFlags && !acBonuses?.candidates.length) return nothingElse();
     // The chosen AC bonus, and the forced (automatic) ones, applied by the bonus engine with no prompt of its own
     if ((validFlags.length > 0 || acBonuses?.candidates.length) && acKey) {
       let acRoll = acNow;
@@ -5543,18 +5566,18 @@ export async function promptReactions(
       let displayBonusRolls: boolean | undefined = validFlags.reduce((acc: boolean | undefined, flag: string) => (acc || (foundry.utils.getProperty(actor ?? {}, `${flag}.displayBonusRolls`) as boolean)), undefined);
       if (!displayBonusRolls) displayBonusRolls = checkMechanic("displayBonusRolls") as boolean;
       // @ts-expect-error no dnd5e-types
-      const newAC = await bonusDialog.bind(data)(validFlags, acKey, displayBonusRolls !== false, `${actor.name} - ${i18n("DND5E.AC")} ${actor.system.attributes.ac.value}`, acRoll, "roll", { card: options.itemCardUuid, anchor: "hits", bonusQuery: acBonuses?.query, bonusPhase: acBonuses?.phase, candidates: acBonuses?.candidates, preChosen: chosenAC ? [chosenAC] : [] });
+      const newAC = await bonusDialog.bind(data)(validFlags, acKey, displayBonusRolls !== false, `${actor.name} - ${i18n("DND5E.AC")} ${actor.system.attributes.ac.value}`, acRoll, "roll", { card: options.itemCardUuid, anchor: "hits", bonusQuery: acBonuses?.query, bonusPhase: acBonuses?.phase, candidates: acBonuses?.candidates, preChosen: chosenAC });
       const endTime = Date.now();
       if (debugEnabled > 0) warn("promptReactions | returned via bonus dialog ", endTime - startTime)
       // Only return the AC result if the user actually used an optional bonus (AC changed)
       if (newAC?.total !== acRoll.total) {
-        return { name: actor.name, uuid: actor.uuid, ac: newAC?.total };
+        return { name: actor.name, uuid: actor.uuid, ...(activityResult ?? {}), ac: newAC?.total, ...offersPart };
       }
-      return { name: "None" };
+      return nothingElse();
     }
     const endTime = Date.now();
     if (debugEnabled > 0) warn("promptReactions | returned no result ", endTime - startTime)
-    return { name: "None" };
+    return nothingElse();
   } catch (err) {
     const message = `promptReactions ${tokenUuid} ${triggerType} ${reactionActivityList}`;
     TroubleShooter.recordError(err, message);
@@ -5666,22 +5689,27 @@ export async function reactionDialog(
   try {
     let timeout = (options.timeout ?? configSettings.reactionTimeout ?? defaultTimeout);
     return new Promise((resolve, reject) => {
-      const callback = async function (dialog, button) {
-        const activity = reactionActivities.find(i => i.uuid === button.key);
+      // One button (classic), or the ticked rows (M32a): offers go back to the asking client, an activity is used here
+      const callback = async function (dialog, chosen) {
+        const buttons: any[] = (Array.isArray(chosen) ? chosen : [chosen]).filter(Boolean);
+        const offerButtons = buttons.filter(b => b.offerKey);
+        const offerKeys: string[] = offerButtons.map(b => b.offerKey);
+        const offerPart = offerKeys.length ? { offerKey: offerKeys[0], offerKeys } : {};
+        const activity = buttons.map(b => reactionActivities.find(i => i.uuid === b.key)).find(Boolean);
         // Claimed: the requester's deadline stops. Refused: a GM or the time-out answered already, so it isn't used too
         const incoming: IncomingRequest | undefined = options.incoming;
-        // An offer (contract 2): the asking client takes it
-        if (button.offerKey) {
-          if (incoming && !(await incoming.claim())) {
-            resolve(noResult);
-            return;
-          }
-          dialog.close();
-          resolve({ name: button.name, offerKey: button.offerKey });
+        if (!activity && !offerKeys.length) {
+          resolve(noResult);
           return;
         }
-        if (activity && incoming && !(await incoming.claim())) {
+        if (incoming && !(await incoming.claim())) {
           resolve(noResult);
+          return;
+        }
+        // Only offers (contract 2): the asking client takes them
+        if (!activity) {
+          dialog.close();
+          resolve({ name: offerButtons[0].name, ...offerPart });
           return;
         }
         if (activity) {
@@ -5704,7 +5732,7 @@ export async function reactionDialog(
           // reaction (Shield) is used from any scene
           const needsScene = effectiveTargetType !== "self" || !!activity.target?.template?.type || isActivityType(activity, "teleport");
           if (needsScene && !(await confirmReactionScene(options.tokenUuid))) {
-            resolve(noResult);
+            resolve(offerKeys.length ? { name: offerButtons[0].name, ...offerPart } : noResult);
             return;
           }
           const itemRollOptions = foundry.utils.mergeObject({
@@ -5721,9 +5749,10 @@ export async function reactionDialog(
             const config = { midiOptions: itemRollOptions };
             result = await completeActivityUse(activity, config, {}, { systemCard: false });
             const workflow = result;  // completeActivityUse returns a workflow when called locally which for reactions it always is
-            if (workflow && workflow.currentStep !== "midi-qol.Cleanup") resolve(noResult);
-            else if (workflow) resolve({ name: workflow.activity.name, uuid: workflow.activity.uuid, itemName: workflow.activity.item.name, itemUuid: activity.item.uuid })
-            else resolve(noResult);
+            const offersOnly = offerKeys.length ? { name: offerButtons[0].name, ...offerPart } : noResult;
+            if (workflow && workflow.currentStep !== "midi-qol.Cleanup") resolve(offersOnly);
+            else if (workflow) resolve({ name: workflow.activity.name, uuid: workflow.activity.uuid, itemName: workflow.activity.item.name, itemUuid: activity.item.uuid, ...offerPart })
+            else resolve(offersOnly);
           }
         }
         // actor.reset();
@@ -5806,6 +5835,20 @@ export class ReactionDialog extends HandlebarsApplicationMixin(ApplicationV2) {
     }
   };
 
+  /** M32a: the bonus prompt's look (rows, ticked and applied) unless the user's Bonus prompt style is classic */
+  get phased(): boolean {
+    return (safeGetGameSetting("midi-qol", "BonusPrompt") ?? "phased") !== "classic";
+  }
+
+  _configureRenderParts(options) {
+    const parts = super._configureRenderParts(options);
+    if (this.phased && parts.dialog) {
+      parts.dialog.template = "modules/midi-qol/templates/bonus-prompt.hbs";
+      parts.dialog.classes = [...(parts.dialog.classes ?? []), "midi-qol-bonus-prompt"];
+    }
+    return parts;
+  }
+
   static DEFAULT_OPTIONS: foundry.applications.api.ApplicationV2.DefaultOptions = {
     position: {
       width: 400,
@@ -5823,6 +5866,16 @@ export class ReactionDialog extends HandlebarsApplicationMixin(ApplicationV2) {
     await super._onRender(context, options);
     for (const button of Array.from(this.element.querySelectorAll(".dialog-button"))) {
       button.addEventListener("click", this._onClickButton.bind(this));
+    }
+    if (this.phased) {
+      wirePickOne(this.element);
+      this.element.querySelector("[data-bonus-action='apply']")?.addEventListener("click", () => {
+        const ticked = Array.from(this.element.querySelectorAll<HTMLInputElement>("input[name='bonus']:checked")).map(input => this.data.buttons[input.value]).filter(Boolean);
+        // Nothing ticked: as declining
+        if (!ticked.length) return void this.close();
+        void this.submit(ticked);
+      });
+      this.element.querySelector("[data-bonus-action='skip']")?.addEventListener("click", () => void this.close());
     }
     this.countdown?.attach(this.element);
   }
@@ -5843,11 +5896,20 @@ export class ReactionDialog extends HandlebarsApplicationMixin(ApplicationV2) {
         value: activity.name ?? activity.actionName,
         key: activity.uuid,
         callback: this.data.callback,
+        cost: activityCostBadges(activity)
       }
       return acc;
     }, {});
     for (const offer of this.data.offers ?? []) {
-      this.data.buttons[foundry.utils.randomID()] = { img: offer.img, name: offer.label, tooltip: offer.description, offerKey: offer.key, callback: this.data.callback };
+      this.data.buttons[foundry.utils.randomID()] = { img: offer.img, name: offer.label, tooltip: offer.description, offerKey: offer.key, callback: this.data.callback,
+        cost: { badges: offer.badges ?? [], reaction: offer.reaction ?? false } };
+    }
+    if (this.phased) {
+      const entries = Object.entries(this.data.buttons).map(([id, button]: [string, any]) => ({
+        id, img: button.img, label: foundry.utils.escapeHTML(button.name ?? ""), tooltip: button.tooltip, badges: button.cost?.badges ?? [],
+        exclusive: button.cost?.reaction ? "reaction" : undefined
+      }));
+      return { ...context, content: this.data.content, entries, skipLabel: "midi-qol.PlayerWaits.Choice.none", timeRemaining: this.timeRemaining };
     }
     // Declining is the default, so Enter (or a stray click) never spends a reaction
     this.data.buttons.none = { name: i18n("midi-qol.PlayerWaits.Choice.none"), decline: true, default: true, cssClass: "decline" };
@@ -5873,11 +5935,13 @@ export class ReactionDialog extends HandlebarsApplicationMixin(ApplicationV2) {
   async submit(button) {
     try {
       this.countdown?.stop();
-      debug("ReactionDialog submit", Date.now() - this.startTime, button.callback)
-      if (button.callback) {
+      // One button, or the ticked rows (M32a), which share the dialog's callback
+      const callback = Array.isArray(button) ? button[0]?.callback ?? this.data.callback : button.callback;
+      debug("ReactionDialog submit", Date.now() - this.startTime, callback)
+      if (callback) {
         this.data.completed = true;
         // The callback closes the dialog once it has the reaction
-        await button.callback(this, button);
+        await callback(this, button);
         if (this.rendered) this.close();
       }
     } catch (err: any) {
