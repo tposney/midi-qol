@@ -130,6 +130,8 @@ async function midiRollDamage(activity: Activity, wrapped: RollDamage, config: R
             else workflow.targetDescriptors.push(targetDetails);
           }
         }
+        // The damage bonuses chosen before the roll (M15 5d) are parts of it
+        if (rollConfig.rolls) workflow.addDamageBonusParts(rollConfig.rolls as { parts?: string[], data?: object, options?: Record<string, unknown> }[]);
         if (keys.critical) rollConfig.isCritical = true;
         else if (keys.normal) rollConfig.isCritical = false;
         else if (!dialogConfig.configure) rollConfig.isCritical ||= rollConfig.midiOptions?.isCritical;
@@ -156,11 +158,15 @@ async function midiRollDamage(activity: Activity, wrapped: RollDamage, config: R
       setMessageTargets(message, workflow);
       // The workflow's attack mode as of the roll (hooks and macros above may change it); dnd5e builds the roll data from it
       config.attackMode = workflow.attackMode;
+      // Damage choices before the roll (M15 5d): the use's own damage roll only
+      if (config.midiOptions?.updateWorkflow !== false) await workflow.chooseDamageBonusesBeforeRoll();
       result = await workflow.keepRollMessageFlags(activity, () => wrapped(config, dialog, message));
       if (!result) { // user backed out of roll
+        workflow.beforeDamageBonuses = [];
         workflow.currentAction = "midi-qol.WaitForDamageRoll";
         return;
       }
+      if (config.midiOptions?.updateWorkflow !== false) await workflow.settleBeforeDamageBonuses(result[0]);
       result = await postProcessDamageRoll(activity, config, result);
       if (config.midiOptions?.updateWorkflow !== false) await workflow.setDamageRolls(result);
     }

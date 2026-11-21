@@ -4,6 +4,7 @@ import { playerForActor } from "../../utils.js";
 import { askUser, registerRequestHandler, type IncomingRequest } from "../requests.js";
 import type { FoundEntry } from "./types.js";
 import { actorToggleEntries } from "./engine.js";
+import { rememberedChoices } from "../rememberedChoices.js";
 import { STANDING_CHOICES, storedStandings, type StandingChoice } from "../../services/rollBonuses/standing.js";
 
 /*
@@ -185,7 +186,7 @@ export function listToggles(actor: Actor.Implementation): { key: string, label: 
   return [...seen.values()];
 }
 
-/** The sheet's Toggles and choices control: each toggle entry a checkbox; each standing choice a select (M15 5a); saved on the actor */
+/** The sheet's Toggles and choices control: each toggle entry a checkbox; each standing choice a select (5a); each remembered choice kept or forgotten (5e); saved on the actor */
 export async function editToggles(actor: Actor.Implementation): Promise<void> {
   const found = actorToggleEntries(actor);
   const stored = togglesOf(actor);
@@ -200,8 +201,13 @@ export async function editToggles(actor: Actor.Implementation): Promise<void> {
   const standings = storedStandings(actor);
   const choiceRows = standings.map((s, index) => `<div class="form-group"><label>${escape(s.label)}</label><div class="form-fields">`
     + `<select name="standing-${index}">${STANDING_CHOICES.map(c => `<option value="${c}"${c === s.choice ? " selected" : ""}>${escape(i18n(`midi-qol.Standing.${c}`))}</option>`).join("")}</select></div></div>`);
+  const remembered = rememberedChoices(actor);
+  const rememberedRows = remembered.map((c, index) => `<div class="form-group"><label>${escape(c.label)}</label><div class="form-fields">`
+    + `<select name="remembered-${index}"><option value="keep" selected>${escape(c.valueLabel ?? String(c.value))}</option>`
+    + `<option value="forget">${escape(i18n("midi-qol.RememberChoice.Forget"))}</option></select></div></div>`);
   const content = (rows.length ? `<p class="hint">${escape(i18n("midi-qol.EntryTogglesHint"))}</p><div class="midi-qol-entry-toggles">${rows.join("")}</div>` : "")
-    + (choiceRows.length ? `<p class="hint">${escape(i18n("midi-qol.Standing.Hint"))}</p><div class="midi-qol-standing-choices">${choiceRows.join("")}</div>` : "");
+    + (choiceRows.length ? `<p class="hint">${escape(i18n("midi-qol.Standing.Hint"))}</p><div class="midi-qol-standing-choices">${choiceRows.join("")}</div>` : "")
+    + (rememberedRows.length ? `<p class="hint">${escape(i18n("midi-qol.RememberChoice.Hint"))}</p><div class="midi-qol-remembered-choices">${rememberedRows.join("")}</div>` : "");
   const values = await foundry.applications.api.DialogV2.wait({
     window: { title: `${actor.name}: ${i18n("midi-qol.EntryToggles")}` },
     position: { width: 440 },
@@ -210,11 +216,12 @@ export async function editToggles(actor: Actor.Implementation): Promise<void> {
       action: "save", label: game.i18n?.localize("Save") ?? "Save", default: true,
       callback: (_event: Event, button: HTMLButtonElement) => ({
         toggles: Object.fromEntries([...seen].map(key => [key, !!button.form?.querySelector<HTMLInputElement>(`input[name="${CSS.escape(key)}"]`)?.checked])),
-        choices: standings.map((_s, index) => button.form?.querySelector<HTMLSelectElement>(`select[name="standing-${index}"]`)?.value as StandingChoice | undefined)
+        choices: standings.map((_s, index) => button.form?.querySelector<HTMLSelectElement>(`select[name="standing-${index}"]`)?.value as StandingChoice | undefined),
+        forget: remembered.filter((_c, index) => button.form?.querySelector<HTMLSelectElement>(`select[name="remembered-${index}"]`)?.value === "forget").map(c => c.key)
       })
     }],
     rejectClose: false
-  }) as { toggles: Record<string, boolean>, choices: (StandingChoice | undefined)[] } | null | undefined;
+  }) as { toggles: Record<string, boolean>, choices: (StandingChoice | undefined)[], forget: string[] } | null | undefined;
   if (!values || typeof values !== "object") return;
   const changed = Object.entries(values.toggles).filter(([key, on]) => !!stored[key] !== on);
   const updates: Record<string, unknown> = Object.fromEntries(changed.map(([key, on]) => [`flags.${MODULE_ID}.toggles.${key}`, on]));
@@ -223,6 +230,7 @@ export async function editToggles(actor: Actor.Implementation): Promise<void> {
     return choice === "ask" ? [] : [{ ...s, choice }];
   });
   if (kept.length !== standings.length || kept.some((s, i) => s.choice !== standings[i]?.choice)) updates[`flags.${MODULE_ID}.bonusChoices`] = kept;
+  if (values.forget.length) updates[`flags.${MODULE_ID}.rememberedChoices`] = remembered.filter(c => !values.forget.includes(c.key));
   if (Object.keys(updates).length) await actor.update(updates);
 }
 
@@ -230,7 +238,7 @@ export function registerEntryOffers() {
   registerRequestHandler(ENTRY_OFFER_REQUEST, answerOffer);
   Hooks.on("getHeaderControlsActorSheetV2", (app: foundry.applications.api.DocumentSheetV2<Actor>, controls: foundry.applications.api.ApplicationV2.HeaderControlsEntry[]) => {
     const actor = app.document as Actor.Implementation;
-    if (!actor?.isOwner || (!actorToggleEntries(actor).length && !storedStandings(actor).length)) return;
+    if (!actor?.isOwner || (!actorToggleEntries(actor).length && !storedStandings(actor).length && !rememberedChoices(actor).length)) return;
     // Core runs a control's onClick (fvtt-types has only `action`)
     (controls as (typeof controls[number] | { label: string, icon: string, onClick: () => void })[]).push({
       label: "midi-qol.EntryToggles",

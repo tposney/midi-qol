@@ -336,6 +336,8 @@ declare module "fvtt-types/configuration" {
         toggles?: Record<string, boolean>;
         /** M15 stage 5a: standing choices per bonus (services/rollBonuses/standing.ts) */
         bonusChoices?: import("./module/services/rollBonuses/standing.js").StoredStanding[];
+        /** M15 stage 5e: choices remembered per question (lib/rememberedChoices.ts) */
+        rememberedChoices?: import("./module/lib/rememberedChoices.js").RememberedChoice[];
         dependentOn?: string; // UUID of parent document for midi-qol dependent tracking
         actions?: {
           // This really should be structured but actions.reaction is used in other modules and macros

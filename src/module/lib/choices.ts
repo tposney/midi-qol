@@ -2,6 +2,7 @@ import type { Workflow } from "../Workflow.js";
 import { MODULE_ID } from "../../midi-qol.js";
 import type { Activity } from "../../globals.js";
 import type { TableResultChoice } from "./tables.js";
+import { activityChoiceKey, rememberChoice, rememberCheckbox, rememberedChoice } from "./rememberedChoices.js";
 
 /*
  * Choices (M28 data half; shapes ~/Documents/midi-next-waveB-shapes-2026-11-20.md): named choices an activity declares
@@ -26,7 +27,7 @@ export interface ChoiceDeclaration {
   max?: number | string;
   /** allocate: a formula over the activity's roll data ("2 + @item.level") */
   total?: string;
-  /** M15: kept per actor (declared now, not acted on) */
+  /** M15: kept per actor (declared, not read: every list-like choice can be remembered by the player, 5e) */
   remember?: "standing";
 }
 
@@ -134,7 +135,8 @@ function choicesForm(declarations: ChoiceDeclaration[], workflow: Workflow): str
       default: {
         const options = choiceOptions(declaration, workflow).map(option =>
           `<option value="${escape(option.value)}" ${option.value === declaration.default ? "selected" : ""}>${escape(option.label)}</option>`).join("");
-        return `<div class="form-group"><label>${label}</label><select name="${name}">${options}</select></div>`;
+        // A list-like choice can be remembered for the actor (M15 5e)
+        return `<div class="form-group"><label>${label}</label><select name="${name}">${options}</select></div>${rememberCheckbox(`${name}-remember`)}`;
       }
     }
   });
@@ -156,7 +158,10 @@ function readForm(declarations: ChoiceDeclaration[], data: Record<string, unknow
   return answers;
 }
 
-/** Ask the choices; undefined when the dialog was closed */
+/** The list-like kinds a player can remember an answer to (not a use's own: a number, an allocation, targets) */
+const REMEMBERABLE: readonly ChoiceKind[] = ["damageType", "option", "ability", "skill", "creatureType"];
+
+/** Ask the choices; undefined when the dialog was closed. Answers ticked "Remember this choice" are kept for the actor */
 async function askChoices(declarations: ChoiceDeclaration[], workflow: Workflow): Promise<Record<string, ChoiceValue> | undefined> {
   for (;;) {
     const data = await foundry.applications.api.DialogV2.input({
@@ -168,7 +173,17 @@ async function askChoices(declarations: ChoiceDeclaration[], workflow: Workflow)
     if (!data) return undefined;
     const answers = readForm(declarations, data as Record<string, unknown>, workflow);
     const invalid = declarations.filter(declaration => !validChoice(declaration, answers[declaration.id], workflow));
-    if (!invalid.length) return answers;
+    if (!invalid.length) {
+      const actor = workflow.actor;
+      for (const [index, declaration] of declarations.entries()) {
+        if (!actor || !REMEMBERABLE.includes(declaration.kind) || !(data as Record<string, unknown>)[`choice-${index}-remember`]) continue;
+        const value = answers[declaration.id];
+        await rememberChoice(actor, { key: activityChoiceKey(workflow.activity, declaration.id), value,
+          label: `${workflow.activity?.item?.name ?? ""}: ${declaration.label ?? declaration.id}`,
+          valueLabel: choiceOptions(declaration, workflow).find(option => option.value === value)?.label ?? String(value) });
+      }
+      return answers;
+    }
     ui.notifications?.warn(game.i18n?.format(`${MODULE_ID}.Choices.Invalid`, { choices: invalid.map(d => d.label ?? d.id).join(", ") }) ?? "");
   }
 }
@@ -187,7 +202,10 @@ export async function resolveChoices(workflow: Workflow): Promise<boolean> {
     const kept = workflow.choices[declaration.id];
     if (kept !== undefined) continue;
     const given = supplied[declaration.id];
+    // The player's remembered answer (M15 5e), while it is still a valid one
+    const remembered = REMEMBERABLE.includes(declaration.kind) ? rememberedChoice(workflow.actor, activityChoiceKey(workflow.activity, declaration.id)) : undefined;
     if (given !== undefined && validChoice(declaration, given, workflow)) answers[declaration.id] = given;
+    else if (remembered && validChoice(declaration, remembered.value, workflow)) answers[declaration.id] = remembered.value;
     else if (declaration.default !== undefined && !workflow.actor?.hasPlayerOwner) answers[declaration.id] = declaration.default;
     else toAsk.push(declaration);
   }

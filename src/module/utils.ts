@@ -4544,6 +4544,8 @@ export async function bonusDialog(
   // does not live on the actor. Defaults to actor when not present in the map.
   const flagOwners: Record<string, any> = options.flagOwners ?? {};
   const ownerOf = (flagName: string): any => flagOwners[flagName] ?? this.actor;
+  // A flag's own selector (options.flagSelectors: an attack's fail flags offered with its others in one ask, M15 5c)
+  const selectorOf = (flagName: string): string => (options.flagSelectors as Record<string, string> | undefined)?.[flagName] ?? flagSelector;
   const bonusLabel = (flagName: string): string => (foundry.utils.getProperty(ownerOf(flagName) ?? {}, `${flagName}.label`) as string) || flagName.split(".").at(-1) || flagName;
   // The bonuses applied, by name, for the before and after display
   const usedLabels: string[] = options.bonusLabels = [];
@@ -4554,6 +4556,7 @@ export async function bonusDialog(
 
   /** A flag's button applied to `current` (rollBonuses 6b: the flag candidates' apply): the new roll */
   const applyFlag = async (button: FlagBonusButton, current: Roll): Promise<Roll> => {
+    const flagSelector = selectorOf(button.key);
     let roll: Roll = current;
     let newRoll: Roll = current;
     let reRoll: Roll | undefined;
@@ -4814,10 +4817,10 @@ export async function bonusDialog(
   // The flags as candidates (rollBonuses 6b): one per button the prompt shows (a flag's selector value, its .all value),
   // applied by the flag's own behaviour (applyFlag), its count spent there
   const flagCandidates = (flagName: string, optional: boolean): OfferedBonus[] =>
-    flagBonusButtons(this.actor, flagName, flagSelector, ownerOf(flagName), this.item).map((button, index) => {
+    flagBonusButtons(this.actor, flagName, selectorOf(flagName), ownerOf(flagName), this.item).map((button, index) => {
       const parsed = parseFlagValue(button.value);
       return {
-        id: `${flagName}#${flagSelector}#${index}`, contributor: "midi-qol.optionalFlags", label: button.label, iconHTML: button.icon,
+        id: `${flagName}#${selectorOf(flagName)}#${index}`, contributor: "midi-qol.optionalFlags", label: button.label, iconHTML: button.icon,
         flagKey: flagName, flagLabel: bonusLabel(flagName), phases: [bonusPhase],
         effect: parsed && "effect" in parsed ? parsed.effect : { kind: "rider" }, optional, spendsOwnCost: true,
         apply: (ctx: { roll: Roll }) => applyFlag(button, ctx.roll)

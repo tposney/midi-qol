@@ -37,9 +37,13 @@ import { OnUseMacros } from "./apps/Item.js";
 import { bonusCheck, collectBonusFlags, defaultRollOptions, buildPreComputedAdvantageMap, checkActivityAbilities } from "./patching.js";
 import { collectRollModifiers } from "./services/rollModifiers/service.js";
 import { collectDamageContributions } from "./services/damageContributions/service.js";
+import { reveals } from "./services/revealPolicy/service.js";
 import { raiseDamaged, raiseUseEvents } from "./lib/entries/useEvents.js";
 import { targetEvent } from "./lib/entries/responseEvents.js";
 import { collectBonusCandidates, spendBonusCost, type OfferedBonus, type RollBonusQuery } from "./services/rollBonuses/service.js";
+import { approveBonus } from "./services/rollBonuses/approval.js";
+import { applyStandingChoices, setStandingChoice, standingKey } from "./services/rollBonuses/standing.js";
+import { askOffers } from "./lib/entries/offers.js";
 import { reportServiceProblem } from "./api/services.js";
 import { saveTargetsUndoData, saveUndoData } from "./undo.js";
 import { TroubleShooter } from "./apps/TroubleShooter.js";
@@ -7658,6 +7662,79 @@ export class Workflow {
     this.#preRollBonuses[kind] = offered.filter(candidate => !candidate.optional && candidate.effect.kind === "add");
   }
 
+  /** Damage bonuses offered before the damage roll (M15 5d), taken or not: not offered again after it */
+  #beforeDamageOffered = new Set<string>();
+  /** Those taken: parts of the damage roll (damageRollParts), settled after it */
+  beforeDamageBonuses: OfferedBonus[] = [];
+
+  /**
+   * Damage choices before the damage roll (M15 5d; proposal 13b part 2): the damage adds the use's bonuses offer (not
+   * those that react to the dice, `needsRoll`, nor targeted or several-type ones) are chosen now: automatic ones and
+   * those the actor's standing choices apply, the rest asked of the actor's owner in one prompt. Each taken becomes a
+   * part of the damage roll; the after-roll ask leaves them out. Optional flags stay after the roll.
+   */
+  async chooseDamageBonusesBeforeRoll(): Promise<OfferedBonus[]> {
+    this.beforeDamageBonuses = [];
+    // Saves still to come: contributors' damage bonuses wait until they are known (decision 4, offerDeferredDamageBonuses)
+    if (this.hasSave && !this.#savesResolved) return [];
+    const query = this.rollBonusQuery("damage");
+    const zero = new Roll("0");
+    const offered: OfferedBonus[] = [];
+    for (const phase of ["preRoll", "postResult"] as const)
+      for (const c of await collectBonusCandidates(query, phase, zero))
+        if (c.effect.kind === "add" && !c.needsRoll && !c.targets?.length && (c.damageTypes?.length ?? 0) <= 1 && !c.apply && !offered.some(o => o.id === c.id)) offered.push(c);
+    if (!offered.length) return [];
+    for (const c of offered) this.#beforeDamageOffered.add(c.id);
+    const standing = applyStandingChoices(this.actor, offered.filter(c => c.optional), !!this.isCritical);
+    let askedIds: string[] = [];
+    if (standing.ask.length) {
+      await this.flushCardWrites(); // a person decides next
+      askedIds = await askOffers(this.actor, `${this.actor.name} - ${i18n("DND5E.Damage")}`,
+        standing.ask.map(c => ({ key: c.id, label: c.label, img: c.img, description: c.description })));
+    }
+    const chosen = [...offered.filter(c => !c.optional), ...standing.apply, ...standing.ask.filter(c => askedIds.includes(c.id))];
+    for (const c of standing.armed) await setStandingChoice(this.actor, standingKey(c), "ask", c.label);
+    const ctx = { query, phase: "preRoll" as const, roll: zero };
+    for (const c of chosen) if (await approveBonus(c, ctx)) this.beforeDamageBonuses.push(c);
+    return this.beforeDamageBonuses;
+  }
+
+  /** The chosen before-roll damage bonuses as dnd5e damage roll configs: into the first roll, or their own (a type, no critical) */
+  addDamageBonusParts(rolls: { parts?: string[], data?: object, options?: Record<string, unknown> }[]): void {
+    const first = rolls[0];
+    if (!first) return;
+    for (const bonus of this.beforeDamageBonuses) {
+      if (bonus.effect.kind !== "add") continue;
+      const type = bonus.effect.damageType ?? bonus.damageTypes?.[0];
+      const never = bonus.effect.critical === "never";
+      if (!type && !never) first.parts = [...(first.parts ?? []), bonus.effect.formula];
+      else rolls.push({ parts: [bonus.effect.formula], data: first.data,
+        options: { ...(first.options ?? {}), type: type ?? first.options?.type, types: [type ?? first.options?.type], ...(never ? { critical: { allow: false } } : {}),
+          [MODULE_ID]: { beforeRollBonus: bonus.label } } });
+    }
+  }
+
+  /** After the damage roll: the before-roll bonuses are recorded as used, their costs spent and their onChosen run */
+  async settleBeforeDamageBonuses(roll: Roll | undefined): Promise<void> {
+    const taken = this.beforeDamageBonuses;
+    this.beforeDamageBonuses = [];
+    if (!taken.length || !roll) return;
+    const used: string[] = foundry.utils.getProperty(roll, `flags.${MODULE_ID}.optionalsUsed`) as string[] ?? [];
+    for (const bonus of taken) {
+      used.push(bonus.id);
+      try {
+        if (!bonus.spendsOwnCost) await spendBonusCost(bonus.spender ? (fromUuidSync(bonus.spender) as Actor.Implementation | null) ?? this.actor : this.actor, bonus.cost, bonus.label);
+        await bonus.onChosen?.({ query: this.rollBonusQuery("damage"), phase: "preRoll", roll });
+      } catch (err) {
+        reportServiceProblem("rollBonuses", bonus.contributor, `${bonus.label}: applying it failed`, err);
+      }
+    }
+    foundry.utils.setProperty(roll, `flags.${MODULE_ID}.optionalsUsed`, used);
+  }
+
+  /** Offered before the damage roll already (5d) */
+  offeredBeforeDamage(id: string): boolean { return this.#beforeDamageOffered.has(id); }
+
   /** After the roll: the preRoll bonuses it carries are recorded as used, their costs spent and their onChosen run. */
   async settlePreRollBonuses(kind: "attack", roll: Roll): Promise<void> {
     const applied = this.#preRollBonuses[kind] ?? [];
@@ -7687,14 +7764,15 @@ export class Workflow {
   async processAttackRollBonusFlags() {
     let attackBonus = "attack.all";
     if (this.activity && this.activity.hasAttack) attackBonus = `attack.${this.activity.actionType}`;
+    const failBonus = this.activity && this.activity.hasAttack ? `attack.fail.${this.activity.actionType}` : "attack.fail.all";
     const { keys: allOptionalKeys, owners: flagOwners } = this.collectOptionalFlagSources();
     const ownerOfShort = (flag: string): any => flagOwners[`flags.${MODULE_ID}.optional.${flag}`] ?? this.actor;
-    // If the attack roll is a fumble only select flags that allow the roll to be rerolled.
-    let bonusFlags = allOptionalKeys
+    // The optional flags with a value for `all` or `selector` (on a fumble only those that reroll), with uses left
+    const flagsFor = (all: string, selector: string) => allOptionalKeys
       .filter(flag => {
         const owner = ownerOfShort(flag);
-        const hasAttackFlag = foundry.utils.getProperty(owner ?? {}, midiFlag(`optional.${flag}.attack.all`)) as string ||
-          foundry.utils.getProperty(owner ?? {}, midiFlag(`optional.${flag}.${attackBonus}`)) as string;
+        const hasAttackFlag = foundry.utils.getProperty(owner ?? {}, midiFlag(`optional.${flag}.${all}`)) as string ||
+          foundry.utils.getProperty(owner ?? {}, midiFlag(`optional.${flag}.${selector}`)) as string;
         if (hasAttackFlag === undefined) return false;
         if (this.isFumble && !hasAttackFlag?.includes("roll")) return false;
         const flagData = foundry.utils.getProperty(owner ?? {}, midiFlag(`optional.${flag}`)) as any;
@@ -7702,55 +7780,70 @@ export class Workflow {
         return getOptionalCountRemainingShortFlag(this.actor, flag, owner) > 0;
       })
       .map(flag => midiFlag(`optional.${flag}`));
-
+    const displayFor = (flags: string[]): boolean => flags.reduce((acc: boolean | undefined, flag) => (acc || (foundry.utils.getProperty(flagOwners[flag] ?? this.actor ?? {}, `${flag}.displayBonusRolls`) as boolean)), undefined)
+      ?? checkMechanic("displayBonusRolls") as boolean;
+    const title = `${this.actor.name} - ${i18n("DND5E.Attack")} ${i18n("DND5E.Roll")}`;
     const bonusQuery = this.rollBonusQuery("attack");
-    let candidates = await collectBonusCandidates(bonusQuery, "preResult", this.attackRoll!, { isFumble: this.isFumble });
-    if (bonusFlags.length > 0 || candidates.length > 0) {
-      const displayBonusRolls: boolean | undefined = bonusFlags.reduce((acc: boolean | undefined, flag) => (acc || (foundry.utils.getProperty(flagOwners[flag] ?? this.actor ?? {}, `${flag}.displayBonusRolls`) as boolean)), undefined)
-        ?? checkMechanic("displayBonusRolls") as boolean;
-      await this.flushCardWrites(); // a person decides next
-      const newRoll = await bonusDialog.bind(this)(bonusFlags, attackBonus, displayBonusRolls, `${this.actor.name} - ${i18n("DND5E.Attack")} ${i18n("DND5E.Roll")}`, this.attackRoll!, "attackRoll", { flagOwners, bonusQuery, bonusPhase: "preResult", candidates })
-      if (newRoll) this.setAttackRoll(newRoll);
-    }
-    if (this.targets.count === 1) {
-      const target = this.targets.documents[0]!;
-      // Use the AC captured at roll time (matches what checkHits will compare against
-      // via computeTargetAC). Falls back to live ac.value when no descriptor exists.
-      const descriptor = getTargetDescriptor(target.actor?.uuid ?? "", this.targetDescriptors);
-      // @ts-expect-error no dnd5e-types
-      const targetAC = descriptor?.ac ?? target.actor?.system.attributes.ac.value;
+    const bonusFlags = flagsFor("attack.all", attackBonus);
+
+    const target = this.targets.count === 1 ? this.targets.documents[0]! : undefined;
+    // Use the AC captured at roll time (matches what checkHits will compare against via computeTargetAC). Falls back to
+    // live ac.value when no descriptor exists.
+    // @ts-expect-error no dnd5e-types
+    const targetAC = target ? getTargetDescriptor(target.actor?.uuid ?? "", this.targetDescriptors)?.ac ?? target.actor?.system.attributes.ac.value : undefined;
+    const missed = () => this.isFumble || (this.attackRoll!.total ?? 0) < targetAC;
+    // One after-roll ask (M15 5c): when this user sees hit or miss at once, the before-result bonuses and the after-result
+    // ones for that result are offered together; separate only when the result is hidden from them
+    const user = game.user ?? undefined;
+    const oneAsk = !!target && targetAC !== undefined && !!user
+      && reveals({ subject: "hitResult", user, caster: this.actor, target: target.actor ?? undefined })
+      && reveals({ subject: "ac", user, caster: this.actor, target: target.actor ?? undefined });
+    let provisional: boolean | undefined;
+    if (oneAsk) {
       await this.processAttackRoll();
-      const isMiss = this.isFumble || (this.attackRoll!.total ?? 0) < targetAC;
+      provisional = missed();
+      const flagSelectors: Record<string, string> = {};
+      for (const flag of bonusFlags) flagSelectors[flag] = attackBonus;
+      const afterFlags = provisional ? flagsFor("attack.fail.all", failBonus) : [];
+      for (const flag of afterFlags) if (!(flag in flagSelectors)) flagSelectors[flag] = failBonus;
+      const before = await collectBonusCandidates(bonusQuery, "preResult", this.attackRoll!, { isFumble: this.isFumble });
+      const after = (await collectBonusCandidates(bonusQuery, "postResult", this.attackRoll!, provisional ? { success: false, isFumble: this.isFumble } : { success: true, isCritical: this.isCritical }))
+        .filter(candidate => provisional || candidate.when === "success" || candidate.when === "any");
+      const candidates = [...before, ...after.filter(a => !before.some(b => b.id === a.id))];
+      const flags = Object.keys(flagSelectors);
+      if (flags.length > 0 || candidates.length > 0) {
+        await this.flushCardWrites(); // a person decides next
+        const newRoll = await bonusDialog.bind(this)(flags, attackBonus, displayFor(flags), title, this.attackRoll!, "attackRoll", { flagOwners, bonusQuery, bonusPhase: "preResult", candidates, flagSelectors });
+        if (newRoll) this.setAttackRoll(newRoll);
+      }
+    } else {
+      const candidates = await collectBonusCandidates(bonusQuery, "preResult", this.attackRoll!, { isFumble: this.isFumble });
+      if (bonusFlags.length > 0 || candidates.length > 0) {
+        await this.flushCardWrites(); // a person decides next
+        const newRoll = await bonusDialog.bind(this)(bonusFlags, attackBonus, displayFor(bonusFlags), title, this.attackRoll!, "attackRoll", { flagOwners, bonusQuery, bonusPhase: "preResult", candidates })
+        if (newRoll) this.setAttackRoll(newRoll);
+      }
+    }
+    if (target) {
+      await this.processAttackRoll();
+      const isMiss = missed();
+      // Asked already with the before-result bonuses, for the same result
+      if (oneAsk && isMiss === provisional) return this.attackRoll!;
       if (isMiss) {
-        attackBonus = "attack.fail.all"
-        if (this.activity && this.activity.hasAttack) attackBonus = `attack.fail.${this.activity.actionType}`;
-        let bonusFlags = allOptionalKeys
-          .filter(flag => {
-            const owner = ownerOfShort(flag);
-            const hasAttackFlag = foundry.utils.getProperty(owner ?? {}, midiFlag(`optional.${flag}.attack.fail.all`)) as string
-              || foundry.utils.getProperty(owner ?? {}, midiFlag(`optional.${flag}.${attackBonus}`)) as string;
-            if (hasAttackFlag === undefined) return false;
-            if (this.isFumble && !hasAttackFlag?.includes("roll")) return false;
-            const flagData = foundry.utils.getProperty(owner ?? {}, midiFlag(`optional.${flag}`)) as any;
-            if (!flagData?.count) return true;
-            return getOptionalCountRemainingShortFlag(this.actor, flag, owner) > 0;
-          })
-          .map(flag => midiFlag(`optional.${flag}`));
-        candidates = await collectBonusCandidates(bonusQuery, "postResult", this.attackRoll!, { success: false, isFumble: this.isFumble });
-        if (bonusFlags.length > 0 || candidates.length > 0) {
-          const displayBonusRolls: boolean | undefined = bonusFlags.reduce((acc: boolean | undefined, flag: string) => (acc || (foundry.utils.getProperty(flagOwners[flag] ?? this.actor ?? {}, `${flag}.displayBonusRolls`) as boolean)), undefined)
-            ?? checkMechanic("displayBonusRolls") as boolean;
+        const failFlags = flagsFor("attack.fail.all", failBonus);
+        const candidates = await collectBonusCandidates(bonusQuery, "postResult", this.attackRoll!, { success: false, isFumble: this.isFumble });
+        if (failFlags.length > 0 || candidates.length > 0) {
           await this.flushCardWrites(); // a person decides next
-          const newRoll = await bonusDialog.bind(this)(bonusFlags, attackBonus, displayBonusRolls, `${this.actor.name} - ${i18n("DND5E.Attack")} ${i18n("DND5E.Roll")}`, this.attackRoll, "attackRoll", { flagOwners, bonusQuery, bonusPhase: "postResult", candidates });
+          const newRoll = await bonusDialog.bind(this)(failFlags, failBonus, displayFor(failFlags), title, this.attackRoll, "attackRoll", { flagOwners, bonusQuery, bonusPhase: "postResult", candidates });
           if (newRoll) this.setAttackRoll(newRoll);
         }
       } else {
         // A hit: the after-result bonuses that say they are for a success (stage 3d, `when`)
-        candidates = (await collectBonusCandidates(bonusQuery, "postResult", this.attackRoll!, { success: true, isCritical: this.isCritical }))
+        const candidates = (await collectBonusCandidates(bonusQuery, "postResult", this.attackRoll!, { success: true, isCritical: this.isCritical }))
           .filter(candidate => candidate.when === "success" || candidate.when === "any");
         if (candidates.length > 0) {
           await this.flushCardWrites();
-          const newRoll = await bonusDialog.bind(this)([], attackBonus, checkMechanic("displayBonusRolls") as boolean, `${this.actor.name} - ${i18n("DND5E.Attack")} ${i18n("DND5E.Roll")}`, this.attackRoll, "attackRoll", { flagOwners, bonusQuery, bonusPhase: "postResult", candidates });
+          const newRoll = await bonusDialog.bind(this)([], attackBonus, checkMechanic("displayBonusRolls") as boolean, title, this.attackRoll, "attackRoll", { flagOwners, bonusQuery, bonusPhase: "postResult", candidates });
           if (newRoll) this.setAttackRoll(newRoll);
         }
       }
@@ -7778,7 +7871,8 @@ export class Workflow {
     // Contributors' damage bonuses wait until the saves are known (offerDeferredDamageBonuses); flags keep their timing
     const deferContributors = this.hasSave && !this.#savesResolved;
     if (deferContributors) this.#deferredDamageBonuses = true;
-    const candidates = damageRolls[0] && !deferContributors ? await collectBonusCandidates(bonusQuery, "postResult", damageRolls[0]) : [];
+    const candidates = damageRolls[0] && !deferContributors
+      ? (await collectBonusCandidates(bonusQuery, "postResult", damageRolls[0])).filter(c => !this.offeredBeforeDamage(c.id)) : [];
     if (bonusFlags.length > 0 || candidates.length > 0) {
       // this.damamgeRollHTML = $(this.damageRolHTML).find(".dice-roll").remove();
       // TODO dnd3 work out what this means for multiple rolls

@@ -5,6 +5,8 @@ import { addRollToAsync, setBonusActionUsed, setReactionUsed, setActionUsed, ref
 import { safeGetGameSetting } from "../../settings.js";
 import { approveBonus } from "./approval.js";
 import { reveals } from "../revealPolicy/service.js";
+import { bonusDamageTypeKey, rememberChoice, rememberCheckbox, rememberedChoice } from "../../lib/rememberedChoices.js";
+import { standingKey } from "./standing.js";
 import { addCanMatter, canAfford, type BonusCost, type BonusEffect, type BonusPhase, type BonusRollKind, type Outcome } from "./rules.js";
 
 /*
@@ -88,6 +90,11 @@ export interface BonusCandidate {
   spender?: string;
   /** A damage add whose type is chosen when it is taken: the types offered (one: that type) */
   damageTypes?: readonly string[];
+  /**
+   * Damage: it reacts to the dice rolled, so it is offered after the damage roll (M15 5d). Without it a damage add is
+   * chosen before the roll and becomes part of it (dnd5e doubles its dice on a critical, keeps its type).
+   */
+  needsRoll?: boolean;
 }
 
 export interface RollBonusContributor {
@@ -146,16 +153,28 @@ function outcomeVisible(query: RollBonusQuery): boolean {
   return false;
 }
 
-/** The damage type a damage add with several types is taken as: asked of the roller */
-async function chooseDamageType(types: readonly string[], label: string): Promise<string | undefined> {
+/**
+ * The damage type a damage add with several types is taken as: the roller's remembered type (M15 5e) while it is one
+ * of the types, else asked, with "Remember this choice"
+ */
+async function chooseDamageType(types: readonly string[], label: string, actor?: Actor.Implementation, rememberKey?: string): Promise<string | undefined> {
   if (types.length <= 1) return types[0];
-  const options = types.map(type => `<option value="${type}">${foundry.utils.escapeHTML(CONFIG.DND5E.damageTypes[type]?.label ?? type)}</option>`).join("");
+  const remembered = actor && rememberKey ? rememberedChoice(actor, rememberKey)?.value : undefined;
+  if (typeof remembered === "string" && types.includes(remembered)) return remembered;
+  const typeLabel = (type: string) => CONFIG.DND5E.damageTypes[type]?.label ?? type;
+  const options = types.map(type => `<option value="${type}">${foundry.utils.escapeHTML(typeLabel(type))}</option>`).join("");
   const chosen = await foundry.applications.api.DialogV2.prompt({
     window: { title: label },
-    content: `<select name="damageType">${options}</select>`,
-    ok: { callback: (_event: Event, button: HTMLButtonElement) => (button.form?.elements.namedItem("damageType") as HTMLSelectElement | null)?.value }
-  }).catch(() => undefined);
-  return typeof chosen === "string" ? chosen : types[0];
+    content: `<select name="damageType">${options}</select>${actor && rememberKey ? rememberCheckbox("remember") : ""}`,
+    ok: { callback: (_event: Event, button: HTMLButtonElement) => ({
+      type: (button.form?.elements.namedItem("damageType") as HTMLSelectElement | null)?.value,
+      remember: !!(button.form?.elements.namedItem("remember") as HTMLInputElement | null)?.checked
+    }) }
+  }).catch(() => undefined) as { type?: string, remember?: boolean } | undefined;
+  const type = typeof chosen?.type === "string" ? chosen.type : types[0];
+  if (chosen?.remember && actor && rememberKey && type)
+    await rememberChoice(actor, { key: rememberKey, value: type, label: `${label}: ${game.i18n?.localize("DND5E.DamageType") ?? "Damage type"}`, valueLabel: typeLabel(type) });
+  return type;
 }
 
 export function defineRollBonusesService() {
@@ -341,7 +360,7 @@ export async function applyOfferedBonus(bonus: OfferedBonus, ctx: BonusContext, 
   try {
     let effect = bonus.effect;
     if (effect.kind === "add" && !effect.damageType && bonus.damageTypes?.length)
-      effect = { ...effect, damageType: await chooseDamageType(bonus.damageTypes, bonus.label) };
+      effect = { ...effect, damageType: await chooseDamageType(bonus.damageTypes, bonus.label, ctx.query.actor, bonusDamageTypeKey(standingKey(bonus))) };
     const rollType = (ctx.roll.options as { type?: string }).type;
     if (bonus.targets?.length && ctx.query.kind === "damage" && effect.kind === "add" && ctx.query.workflow) {
       const extra = await new Roll(effect.formula, { ...ctx.roll.data, ...rollData }).evaluate();

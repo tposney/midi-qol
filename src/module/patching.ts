@@ -688,7 +688,8 @@ export function collectBonusFlags(actor: Actor.Implementation, category: string,
   return bonusFlags;
 }
 
-export async function bonusCheck(actor: Actor.Implementation, result: Roll, category: string, detail = "", messageData: any = {}, prompt: { request?: IncomingRequest, withinRequest?: IncomingRequest } = {}): Promise<Roll> {
+export async function bonusCheck(actor: Actor.Implementation, result: Roll, category: string, detail = "", messageData: any = {},
+  prompt: { request?: IncomingRequest, withinRequest?: IncomingRequest, alsoFail?: { category: string, detail: string } } = {}): Promise<Roll> {
   detail ||= dnd5eRollType(messageData) ?? ""; // death saves -> "death", tool checks -> "tool"
   let bonusFlags = collectBonusFlags(actor, category, detail);
   // rollBonuses contributors: before the result, or after a failure ("fail.<subject>")
@@ -702,7 +703,17 @@ export async function bonusCheck(actor: Actor.Implementation, result: Roll, cate
     skill: kind === "skill" && subject !== "all" ? subject : undefined
   };
   const bonusPhase = failure ? "postResult" : "preResult";
-  const candidates = await collectBonusCandidates(bonusQuery, bonusPhase, result, failure ? { success: false } : undefined);
+  let candidates = await collectBonusCandidates(bonusQuery, bonusPhase, result, failure ? { success: false } : undefined);
+  // One after-roll ask (M15 5c): a roll already failing against a target its roller sees offers its failure bonuses too
+  let flagSelectors: Record<string, string> | undefined;
+  if (prompt.alsoFail) {
+    flagSelectors = Object.fromEntries(bonusFlags.map(flag => [flag, detail ? `${category}.${detail}` : category]));
+    for (const flag of collectBonusFlags(actor, prompt.alsoFail.category, prompt.alsoFail.detail))
+      if (!(flag in flagSelectors)) flagSelectors[flag] = `${prompt.alsoFail.category}.${prompt.alsoFail.detail}`;
+    bonusFlags = Object.keys(flagSelectors);
+    const failCandidates = await collectBonusCandidates(bonusQuery, "postResult", result, { success: false });
+    candidates = [...candidates, ...failCandidates.filter(f => !candidates.some(c => c.id === f.id))];
+  }
   if (bonusFlags.length > 0 || candidates.length > 0) {
     const data = {
       actor,
@@ -744,7 +755,7 @@ export async function bonusCheck(actor: Actor.Implementation, result: Roll, cate
       data.roll,
       "roll",
       // A save or check rolled for a use card is linked to it; the bonus is shown there
-      { messageData, card: game.messages?.get(messageData?.system?.origin?.id ?? messageData?.system?.origin ?? ""), anchor: "saves", bonusQuery, bonusPhase, candidates, request: prompt.request, withinRequest: prompt.withinRequest }
+      { messageData, card: game.messages?.get(messageData?.system?.origin?.id ?? messageData?.system?.origin ?? ""), anchor: "saves", bonusQuery, bonusPhase, candidates, request: prompt.request, withinRequest: prompt.withinRequest, flagSelectors }
     );
     if (newRoll) result = newRoll;
   }
@@ -1513,14 +1524,18 @@ async function doD20Roll(this: Actor.Implementation, wrapped, kind: D20RollKind,
       const bonus = kind.bonus(rollId, config);
       // A roll answering a request (a player's requested save): its bonuses are decided under the request's deadline
       const withinRequest = requestForRollClaim(config.midiOptions.requestClaim);
-      result[0] = await bonusCheck(this, result[0], bonus.category, bonus.detail, message.data, { withinRequest });
+      // Failing already against a target the roller sees (it is on the roll): one ask with the failure bonuses (5c)
+      const failDetail = () => collectBonusFlags(this, kind.rollType, `fail.${rollId}`).length > 0 ? `fail.${rollId}` : "fail.all";
+      // @ts-expect-error no dnd5e-types
+      const oneAsk = !!bonus.failBonuses && Number.isNumeric(result[0].options.target) && result[0].isSuccess === false;
+      result[0] = await bonusCheck(this, result[0], bonus.category, bonus.detail, message.data,
+        { withinRequest, ...(oneAsk ? { alsoFail: { category: kind.rollType, detail: failDetail() } } : {}) });
       DSNMarkDiceDisplayed(result);
       // @ts-expect-error no dnd5e-types
-      if (bonus.failBonuses && Number.isNumeric(result[0].options.target) && result[0].isSuccess === false) {
+      if (!oneAsk && bonus.failBonuses && Number.isNumeric(result[0].options.target) && result[0].isSuccess === false) {
         // A failed roll with optional fail bonuses (flags.midi-qol.optional.NAME.<type>.fail) offers them
         // bonusCheck also asks rollBonuses contributors, so it runs with or without fail flags
-        const hasSpecific = collectBonusFlags(this, kind.rollType, `fail.${rollId}`).length > 0;
-        result[0] = await bonusCheck(this, result[0], kind.rollType, hasSpecific ? `fail.${rollId}` : "fail.all", message.data, { withinRequest });
+        result[0] = await bonusCheck(this, result[0], kind.rollType, failDetail(), message.data, { withinRequest });
         DSNMarkDiceDisplayed(result);
       }
     }
