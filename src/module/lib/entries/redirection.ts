@@ -1,10 +1,10 @@
 import type { Workflow } from "../../Workflow.js";
-import { playerForActor } from "../../utils.js";
+import { applyTokenDamage, playerForActor } from "../../utils.js";
 import { configSettings } from "../../settings.js";
 import { getDistance } from "../../services/distance/service.js";
 import { askUser, registerRequestHandler, type IncomingRequest } from "../requests.js";
-import { entryState, registerAction, runEvent, setEntryState, type ActionRun } from "./engine.js";
-import { targetContext } from "./useEvents.js";
+import { entryState, originActor, registerAction, runEvent, setEntryState, type ActionRun } from "./engine.js";
+import { addTargetDamageChange, targetContext } from "./useEvents.js";
 
 /*
  * M29 redirection (plan ~/Documents/midi-next-M29-plan-2026-11-21.md). `{ retarget: { to, by?, orLose? } }` at a
@@ -174,7 +174,70 @@ async function stateAction(run: ActionRun) {
   if (counts) counts.counts = { ...state };
 }
 
+/* Transfer damage (29c) */
+
+const NOT_DAMAGE = new Set(["healing", "temphp", "midi-none"]);
+
+/** The holder's pool: the entry's activity's uses, else its item's (Arcane Ward's hit points) */
+function poolOf(run: ActionRun): { left: number, spend(n: number): Promise<unknown> } | undefined {
+  const document = run.found.document as { item?: Item.Implementation, system?: { uses?: { value?: number, spent?: number, max?: unknown } } };
+  const item = document instanceof Item ? document : document.item ?? (run.found.document instanceof ActiveEffect && run.found.document.parent instanceof Item ? run.found.document.parent : undefined);
+  // @ts-expect-error no dnd5e-types
+  const uses = item?.system.uses as { value?: number, spent?: number, max?: unknown } | undefined;
+  if (!item || !uses?.max) return undefined;
+  return { left: uses.value ?? 0, spend: n => { const update: Record<string, unknown> = { "system.uses.spent": (uses.spent ?? 0) + n }; return item.update(update); } };
+}
+
+/**
+ * `{ transfer: { to, amount?, keep?, type? } }` at `damaging`: some of the damage the target is about to take goes
+ * elsewhere. `to`: "origin" (the effect's origin: Warding Bond's caster), "bearer", a token uuid, or "pool" (the
+ * entry's activity's or item's uses: Arcane Ward). `amount`: "all" (default), "half" (rounded down: the target keeps
+ * the larger half) or a formula, at most the damage. `keep`: the target still takes it all (Warding Bond's "you take
+ * the same amount"). `type`: the type the other creature takes it as ("none": in full, no resistance); else the
+ * target's damage types in proportion, through the other creature's own resistances.
+ */
+async function transferAction(run: ActionRun) {
+  const workflow = run.context.workflow;
+  const target = run.context.target;
+  const spec = run.action.transfer as { to?: string, amount?: string | number, keep?: boolean, type?: string } | undefined;
+  if (!workflow || !target?.uuid || !spec || typeof spec !== "object") return;
+  if (run.eventId !== "damaging") {
+    console.warn(`midi-qol | entry ${run.found.entry.id}: transfer at ${run.eventId} (damaging only)`);
+    return;
+  }
+  const applied = ((run.context.event?.damage as { applied?: Record<string, number> } | undefined)?.applied) ?? {};
+  const byType = Object.entries(applied).filter(([type, value]) => !NOT_DAMAGE.has(type) && value > 0);
+  const total = byType.reduce((sum, [, value]) => sum + value, 0);
+  if (total <= 0) return;
+  let moved = total;
+  if (spec.amount === "half") moved = Math.floor(total / 2);
+  else if (spec.amount !== undefined && spec.amount !== "all") {
+    const roll = await new Roll(String(spec.amount), run.conditionData).evaluate();
+    moved = Math.max(0, Math.min(total, Math.floor(roll.total ?? 0)));
+  }
+  const label = typeof run.action.label === "string" ? run.action.label : (run.found.document as { name?: string }).name ?? run.found.entry.id;
+  const to = spec.to ?? "origin";
+  if (to === "pool") {
+    const pool = poolOf(run);
+    if (!pool) return;
+    moved = Math.min(moved, pool.left);
+    if (moved <= 0) return;
+    await pool.spend(moved);
+  } else {
+    const holder = to === "bearer" ? run.found.actor
+      : to === "origin" && run.found.document instanceof ActiveEffect ? originActor(run.found.document) : undefined;
+    const other = holder ? tokenOfActor(holder, target.parent) : to === "origin" || to === "bearer" ? undefined : fromUuidSync(to, { strict: false });
+    if (!(other instanceof TokenDocument) || moved <= 0) return;
+    // The other creature's share: one type, or the target's types in proportion
+    const detail = spec.type ? [{ type: spec.type, value: moved, properties: new Set<string>() }]
+      : byType.map(([type, value], i) => ({ type, value: i === 0 ? moved - byType.slice(1).reduce((n, [, v]) => n + Math.floor(v * moved / total), 0) : Math.floor(value * moved / total), properties: new Set<string>() }));
+    await applyTokenDamage(detail, moved, new Set([other as TokenDocument.Implementation]), undefined, new Set(), { forceApply: true, label: "defaultDamage", existingDamage: [], superSavers: new Set(), semiSuperSavers: new Set() });
+  }
+  if (!spec.keep) addTargetDamageChange(workflow, target.uuid, "flatReduction", { label, amount: -moved });
+}
+
 export function registerRedirection() {
+  registerAction("transfer", transferAction);
   registerRequestHandler(CHOOSE_TARGET_REQUEST, (data: ChooseData, request: IncomingRequest) => chooseTargetHere(data, request));
   registerAction("retarget", retargetAction);
   registerAction("state", stateAction);

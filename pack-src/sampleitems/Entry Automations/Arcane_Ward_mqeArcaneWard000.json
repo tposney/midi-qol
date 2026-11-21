@@ -1,0 +1,67 @@
+{
+  "name": "Arcane Ward",
+  "type": "feat",
+  "img": "icons/magic/defensive/shield-barrier-glowing-blue.webp",
+  "system": {
+    "description": {
+      "value": "<p>You have a magical ward with hit points (twice your wizard level plus your Intelligence modifier). Whenever you take damage, the ward takes it instead; any damage beyond its hit points carries over to you. Casting an abjuration spell with a spell slot restores it.</p><p><em>Automation (midi-qol entries):</em> the ward's hit points are this feature's uses: damage you would take spends them first, the rest reaches you. Restoring it by casting an abjuration is the player's (add uses).</p>",
+      "chatFlavor": ""
+    },
+    "source": {
+      "custom": "",
+      "rules": "2024",
+      "revision": 1,
+      "license": "",
+      "book": ""
+    },
+    "activities": {},
+    "type": {
+      "value": "class",
+      "subtype": ""
+    },
+    "identifier": "arcane-ward",
+    "uses": {
+      "spent": 0,
+      "max": "2 * @details.level + @abilities.int.mod",
+      "recovery": [
+        {
+          "period": "lr",
+          "type": "recoverAll"
+        }
+      ]
+    }
+  },
+  "effects": [],
+  "flags": {
+    "midi-qol": {
+      "entries": [
+        {
+          "id": "ward",
+          "on": "damaging",
+          "label": "Arcane Ward",
+          "do": [
+            {
+              "transfer": {
+                "to": "pool"
+              },
+              "label": "Arcane Ward"
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "_id": "mqeArcaneWard000",
+  "_key": "!items!mqeArcaneWard000",
+  "folder": "mqsEntryFolder00",
+  "ownership": {
+    "default": 0
+  },
+  "_stats": {
+    "compendiumSource": null,
+    "duplicateSource": null,
+    "coreVersion": "14.360",
+    "systemId": "dnd5e",
+    "systemVersion": "6.1.0"
+  }
+}

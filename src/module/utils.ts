@@ -5969,7 +5969,10 @@ function buildEvalSandbox(sandbox: AnyMutableObject, asyncEval: boolean): AnyMut
     extras.contestedRoll = contestedRoll;
     extras.confirm = confirm;
   }
-  return foundry.utils.mergeObject(sandbox, extras);
+  // A new object over the caller's data, not a merge into it: merged in place, a second evaluation of the same data
+  // recursed into the Combat the first had left there and threw on its read-only properties (any condition evaluated
+  // twice during a combat failed). The helpers win over same-named data, as with the merge.
+  return Object.assign(Object.create(sandbox), extras);
 }
 
 function mySafeEvalImpl(expression: string, sandbox: AnyMutableObject, onErrorReturn: any, asyncEval: boolean): any {

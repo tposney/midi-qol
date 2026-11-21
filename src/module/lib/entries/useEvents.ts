@@ -352,6 +352,11 @@ async function abortAction(run: ActionRun) {
   workflow.aborted = true;
 }
 
+/** A damage change for one target of the use (M29 transfer: what moves to another creature or a pool) */
+export function addTargetDamageChange(workflow: Workflow, targetUuid: string, stage: DamageStage, change: DamageChange): void {
+  contributionsOf(workflow).damageChanges.push({ targetUuid, stage, change });
+}
+
 /** AC changes the target's entries made for this use's attack, not yet taken by the hit check */
 const acChanges = new WeakMap<Workflow, Map<string, number>>();
 
