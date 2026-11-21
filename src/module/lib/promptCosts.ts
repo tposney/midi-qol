@@ -8,6 +8,15 @@ import type { BonusCost } from "../services/rollBonuses/rules.js";
 
 export interface PromptCost { badges: string[], reaction: boolean }
 
+/** A row a prompt shows for another part (M32a step 3: a failed save's reactions in its bonus prompt) */
+export interface PromptRow {
+  id: string, label: string, img?: string, tooltip?: string, badges: string[], exclusive?: string, checked?: boolean,
+  standingKey?: string, standingLabel?: string, choice?: string, choices?: { value: string, label: string }[]
+}
+
+/** Rows shown in a bonus prompt for another part: what was ticked comes back in `chosen` (undefined: not answered) */
+export interface PromptResponses { rows: PromptRow[], chosen?: string[], shown?: boolean }
+
 const localize = (key: string, data?: Record<string, string | number>) =>
   (data ? game.i18n?.format(key, Object.fromEntries(Object.entries(data).map(([k, v]) => [k, String(v)]))) : game.i18n?.localize(key)) ?? key;
 

@@ -1,4 +1,4 @@
-import { activityCostBadges, offerCostBadges, wirePickOne } from "./lib/promptCosts.js";
+import { activityCostBadges, offerCostBadges, wirePickOne, type PromptResponses, type PromptRow } from "./lib/promptCosts.js";
 import { askBonusDecision } from "./lib/bonusDecisions.js";
 import { budget, reset as resetBudget, spend as spendBudget } from "./services/economy/ledger.js";
 import { onTurnEvent } from "./lib/turnEvents.js";
@@ -2531,6 +2531,8 @@ export type MidiOptions = {
   saveItem?: Item.Implementation;
   saveItemUuid?: string;
   saveActivityUuid?: string;
+  /** M32a step 3: a failed save's bonuses are asked later, with its saveFailed reactions (not in the roll) */
+  failBonusesWithReactions?: boolean;
   simulate?: boolean;
   // grantsActor/grantsToken: The opposing entity that grants advantage/disadvantage.
   // For attacks: the defender (target). For saves/checks: the caster (workflow.actor).
@@ -4285,7 +4287,9 @@ export class RollModifyDialog extends HandlebarsApplicationMixin(ApplicationV2) 
     candidates?: OfferedBonus[],
     onCandidate?: (dialog: RollModifyDialog, button: { candidate: OfferedBonus }) => Promise<void>,
     /** Asked through the request core (M5b): the requester's deadline is shown (its pause asks the requester), and the dialog closes when it is answered for the player */
-    request?: IncomingRequest
+    request?: IncomingRequest,
+    /** M32a step 3: another part's rows shown after the bonuses (a failed save's reactions) */
+    responses?: PromptResponses
   }
 
   constructor(data) {
@@ -4994,7 +4998,8 @@ export async function bonusDialog(
         flagOwners,
         candidates: optionalCandidates,
         onCandidate,
-        request
+        request,
+        responses: options.responses
       }).render({ force: true });
   });
   return chosen.finally(() => decision?.finish());
@@ -5341,6 +5346,8 @@ export async function doReactions(targetRef: TokenOrDocument | string, triggerTo
       reactionCount += (await acBonusCandidates(target.actor, getTokenDocument(target)?.uuid ?? undefined, triggerTokenRef, triggerType, acNow, options))?.candidates.length ?? 0;
     }
 
+    // M32a step 3: a failed save's bonuses are asked with its reactions, so the request goes with no reaction on offer
+    if (options.failedSaveBonus) reactionCount += 1;
     if (reactionCount <= 0) return noResult;
     const workflow: Workflow | undefined = options.workflow ?? Workflow.workflowFor(options?.activity);
     // The reacting player sees the card as it is now
@@ -5408,7 +5415,9 @@ export async function doReactions(targetRef: TokenOrDocument | string, triggerTo
     });
     if (chatMessage) void chatMessage.delete();
     // Offers chosen: taken here, on the asking client (the use's), in the order shown; a reaction used with them keeps its name
-    const offerKeys: string[] = result?.offerKeys ?? (result?.offerKey ? [result.offerKey] : []);
+    // A save its bonuses turned into a success: the saveFailed offers chosen with them are dropped (nothing spent)
+    const offerKeys: string[] = result?.saveSucceeded ? [] : result?.offerKeys ?? (result?.offerKey ? [result.offerKey] : []);
+    const savePart = result?.saveRoll ? { saveRoll: result.saveRoll, saveSucceeded: result.saveSucceeded } : {};
     if (offerKeys.length && reactionQuery) {
       const { offerKey: _key, offerKeys: _keys, ...answered } = result ?? {};
       let combined: any = answered?.name && answered.name !== "None" ? answered : {};
@@ -5426,7 +5435,7 @@ export async function doReactions(targetRef: TokenOrDocument | string, triggerTo
           TroubleShooter.recordError(err, `doReactions | ${offer.label}`);
         }
       }
-      result = combined.name ? combined : noResult;
+      result = combined.name ? { ...combined, ...savePart } : { ...noResult, ...savePart };
     }
     if (result?.name) {
       let count = 100;
@@ -5446,7 +5455,7 @@ export async function doReactions(targetRef: TokenOrDocument | string, triggerTo
   }
 }
 
-export type ReactionResult = { name?: string, uuid?: string, ac?: number, itemName?: string, itemUuid?: string, offerKey?: string, offerKeys?: string[] };
+export type ReactionResult = { name?: string, uuid?: string, ac?: number, itemName?: string, itemUuid?: string, offerKey?: string, offerKeys?: string[], saveRoll?: string, saveSucceeded?: boolean };
 
 /** A contract 2 offer as the reacting client sees it: chosen, its key goes back to the asking client */
 export type ResponseOfferChoice = { key: string, label: string, img?: string, description?: string, badges?: string[], reaction?: boolean };
@@ -5480,7 +5489,7 @@ function reactionRequestData(target: Token.Implementation, triggerTokenUuid: str
 export interface ReactionStandingRow { standingKey: string, label: string, choice: StandingChoice, askOnly: boolean }
 
 /** The reaction prompt's rows by match key (an activity's uuid, an offer's key), with the creature's standing choices */
-function reactionStandingRows(actor: Actor.Implementation, activities: Activity[], offers: ResponseOfferChoice[]): { rows: Map<string, ReactionStandingRow> } {
+export function reactionStandingRows(actor: Actor.Implementation, activities: Activity[], offers: ResponseOfferChoice[]): { rows: Map<string, ReactionStandingRow> } {
   const rows = new Map<string, ReactionStandingRow>();
   for (const activity of activities) {
     const item = activity.item;
@@ -5794,7 +5803,8 @@ export async function reactionDialog(
         resolve(noResult);
       }
       // M32a step 2: every row decided (always / next): taken without a prompt, one reaction at most
-      const standing: { rows: Map<string, ReactionStandingRow>, skipDialog?: boolean } | undefined = options.standing;
+      // chosenByPlayer: rows the player ticked in another prompt (a failed save's), used as chosen (their usage dialogs too)
+      const standing: { rows: Map<string, ReactionStandingRow>, skipDialog?: boolean, chosenByPlayer?: boolean } | undefined = options.standing;
       if (standing?.skipDialog) {
         let reactionTaken = false;
         const chosen: any[] = [];
@@ -5802,12 +5812,12 @@ export async function reactionDialog(
           const spends = activity.activation?.type === "reaction";
           if (spends && reactionTaken) continue;
           reactionTaken ||= spends;
-          chosen.push({ key: activity.uuid, name: activity.name, auto: true });
+          chosen.push({ key: activity.uuid, name: activity.name, auto: !standing.chosenByPlayer });
         }
         for (const offer of (options.reactionOffers ?? []) as ResponseOfferChoice[]) {
           if (offer.reaction && reactionTaken) continue;
           reactionTaken ||= !!offer.reaction;
-          chosen.push({ offerKey: offer.key, name: offer.label, auto: true });
+          chosen.push({ offerKey: offer.key, name: offer.label, auto: !standing.chosenByPlayer });
         }
         void callback({ close() { } }, chosen);
         return;

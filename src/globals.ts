@@ -2056,6 +2056,8 @@ export type SaveDetails = {
   advantageByChoice?: Record<string, PreComputedAdvantageData>;
   /** The modifier keys held when the activity was used, for the roll of the creature that used it */
   heldModifiers?: { altKey: boolean; ctrlKey: boolean; metaKey: boolean; shiftKey: boolean };
+  /** M32a step 3: the use provokes reactions, so a failed save's bonuses are asked with its saveFailed reactions, not in the roll */
+  failBonusesWithReactions?: boolean;
 };
 
 export type ProcessTargetSaveContext = {

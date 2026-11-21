@@ -66,8 +66,9 @@ export async function targetEvent(workflow: Workflow, target: TokenDocument.Impl
   } finally {
     byUse.delete(pendingKey(target, eventId));
   }
-  // Its plain asks if no prompt showed them; near holders' asks and reactions either way (asked of the holder)
-  if (has) await runEvent(eventId, { ...context, offers: record.presented ? "near" : "asks" });
+  // Its plain asks if no prompt showed them; near holders' asks and reactions either way (asked of the holder). Not when
+  // the answer's bonuses turned a failed save into a success (M32a step 3): the event no longer holds
+  if (has && !answer?.saveSucceeded) await runEvent(eventId, { ...context, offers: record.presented ? "near" : "asks" });
   const askedAC = takeACChange(workflow, target);
   const change = automaticAC + askedAC;
   if (change && answer?.ac === undefined) {

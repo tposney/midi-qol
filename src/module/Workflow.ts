@@ -6338,6 +6338,7 @@ export class Workflow {
                   recomputeAdvantage: true, // compute advantage/disadvantage from flags in roll function
                   saveItemUuid: this.saveItem?.uuid,
                   saveActivityUuid: this.saveActivity?.uuid,
+                  failBonusesWithReactions: saveDetails.failBonusesWithReactions,
                   isConcentrationCheck: saveDetails.isConcentrationCheck,
                   workflowOptions: saveDetails.workflowOptions,
                   // Another player's creature, rolled here because no GM is connected: nobody here may answer its prompts
@@ -6603,9 +6604,24 @@ export class Workflow {
     this.updateSaveFailSets(target, saved);
 
     // M15 4f: saveSucceeded / saveFailed, sharing the reaction prompt
-    const provokes = !this.item.flags?.[MODULE_ID]?.noProvokeReaction && !this.workflowOptions.noProvokeReaction;
-    await targetEvent(this, getTokenDocument(target), saved ? "saveSucceeded" : "saveFailed", { total: saveRollTotal, dc: resultDC, saved, critical: isCritical, fumble: isFumble },
-      provokes ? () => this.askReactionsStep(target, this.tokenUuid, this.attackRoll, saved ? "reactionsavesuccess" : "reactionsavefail", { workflow: this, activity: this.activity, item: this.item }) : undefined);
+    const provokes = this.provokesReactions;
+    // M32a step 3: a failed save's bonuses go in the same request as its reactions, answered on the player's client
+    // (bonuses first, the save re-checked, the reactions only if it still fails); the roll left them for this
+    // (failBonusesWithReactions), as it does when its roller doesn't see the DC
+    const failBonus = !saved && provokes ? await this.failedSaveBonusSpec(target, result, rollType ?? "", rollAbility ?? "", resultDC) : undefined;
+    const answer = await targetEvent(this, getTokenDocument(target), saved ? "saveSucceeded" : "saveFailed", { total: saveRollTotal, dc: resultDC, saved, critical: isCritical, fumble: isFumble },
+      provokes ? () => this.askReactionsStep(target, this.tokenUuid, this.attackRoll, saved ? "reactionsavesuccess" : "reactionsavefail",
+        { workflow: this, activity: this.activity, item: this.item, ...(failBonus ? { failedSaveBonus: failBonus } : {}) }) : undefined);
+    let failBonusesAsked = false;
+    if (failBonus && answer?.saveRoll) {
+      failBonusesAsked = true;
+      saveRolls = [Roll.fromJSON(answer.saveRoll) as Roll, ...saveRolls.slice(1)];
+      result[0] = saveRolls[0];
+      saveRollTotal = saveRolls.reduce((acc, r) => acc + (r?.total ?? 0), 0);
+      saved = saveRollTotal >= resultDC;
+      ({ isFumble, isCritical } = this.determineCriticalOrFumble(saveRolls[0], saveRollTotal));
+      this.updateSaveFailSets(target, saved);
+    }
     if (isCritical) this.criticalSaves = this.criticalSaves.add(target);
 
     // Trigger target macros that might modify the roll
@@ -6623,8 +6639,10 @@ export class Workflow {
     // Apply fail bonuses if the save failed
     // @ts-expect-error no dnd5e-types
     if (!(result[0] instanceof D20Roll)) result[0] = D20Roll.fromRoll(result[0]);
+    // Not asked with the reactions (reactions off for its player, a creature that can't react): asked on their own; a roll
+    // that left them for the reactions (provokes) didn't ask them itself
     // @ts-expect-error no dnd5e-types
-    if (!saved && !Number.isNumeric(result[0].options.target)) {
+    if (!saved && !failBonusesAsked && (provokes || !Number.isNumeric(result[0].options.target))) {
       const failBonusResult = await this.applyFailedSaveBonuses(target, result, saveRolls, rollType ?? "", rollAbility ?? "");
       if (failBonusResult) {
         saveRolls = failBonusResult.saveRolls;
@@ -6668,6 +6686,27 @@ export class Workflow {
       this.saves.delete(target);
       this.failedSaves = this.failedSaves.add(target);
     }
+  }
+
+  /** The use provokes reactions (an item or the use can turn them off) */
+  get provokesReactions(): boolean {
+    return !this.item?.flags?.[MODULE_ID]?.noProvokeReaction && !this.workflowOptions.noProvokeReaction;
+  }
+
+  /**
+   * M32a step 3: what a failed save's bonus part sends with its reactions, when it has fail bonuses on offer (fail flags
+   * or a rollBonuses contributor's after-failure bonus); none: the reactions alone
+   */
+  async failedSaveBonusSpec(target: TokenOrDocument, result: Roll[], rollType: string, rollAbility: string, dc: number):
+    Promise<{ result: string, rollType: string, selector: string, dc: number } | undefined> {
+    if (!target.actor || !result[0]) return undefined;
+    const failAbilityFlags = collectBonusFlags(target.actor, rollType, `fail.${rollAbility}`).length;
+    if (!failAbilityFlags && !collectBonusFlags(target.actor, rollType, "fail.all").length) {
+      const kind = rollType.startsWith("save") ? "save" : rollType.startsWith("skill") ? "skill" : "check";
+      const offered = await collectBonusCandidates({ kind, actor: target.actor, ability: rollAbility || undefined }, "postResult", result[0], { success: false });
+      if (!offered.length) return undefined;
+    }
+    return { result: JSON.stringify(result[0].toJSON()), rollType, selector: failAbilityFlags ? `fail.${rollAbility}` : "fail.all", dc };
   }
 
   /**
@@ -6792,6 +6831,7 @@ export class Workflow {
       rollSkills,
       rollTools,
       itemId: this.saveActivity?.item.id ?? "",
+      failBonusesWithReactions: this.provokesReactions,
     };
     // A creature rolling its own check or save (Hide, Search) rolls it with the keys held when it was used.
     const event = this.rollOptions.event as AugmentedEvent | undefined;

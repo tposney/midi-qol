@@ -31,7 +31,11 @@ export interface ResponseQuery {
 }
 
 /** What a reaction prompt's choice gives back: a reaction used (name, uuid), a new AC (an AC bonus) */
-export type ResponseAnswer = { name?: string, uuid?: string, ac?: number, itemName?: string, itemUuid?: string };
+export type ResponseAnswer = {
+  name?: string, uuid?: string, ac?: number, itemName?: string, itemUuid?: string,
+  /** M32a step 3: a failed save's roll after the bonuses taken in the same prompt (Roll JSON), and whether it now succeeds */
+  saveRoll?: string, saveSucceeded?: boolean
+};
 
 /**
  * Contract 2: a choice that is not a whole activity (an entry's reaction or ask, an AC bonus). Shown in the reaction

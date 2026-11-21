@@ -8,6 +8,7 @@ import { withWorkflowOptionsCodec } from "./lib/workflowOptionsCodec.js";
 import { i18n, log, warn, gameStats, getCanvas, error, debugEnabled, debug, GameSystemConfig, MODULE_ID } from "../midi-qol.js";
 import { BONUS_REQUEST, CONCENTRATION_REQUEST, damageActiveHas, damageChangeHas, DEFENCE_REQUEST, REACTIONS_REQUEST, calculateDamageAmounts, hpChangeFromDetail, getToken, getTokenDocument, gmOverTimeEffect, fromActorUuid, promptReactions, hasUsedAction, hasUsedBonusAction, removeActionUsed, removeBonusActionUsed, removeReactionUsed, ReactionItemReference, isEffectExpired, expireEffects, deleteAppliedEffects, getAppliedEffects, CERemoveEffect, CEAddEffectWith, getActor, completeItemUse, completeActivityUse, localActivityOverTimeEffect, validTargetTokens, hasUsedAnyReaction, getVitalityItem, MidiOptions, tokenSourceCenter, toggleStatus, withDeprecatedDamageFields, speakerFor } from "./utils.js";
 import { registerRequestHandler, type IncomingRequest } from "./lib/requests.js";
+import { promptFailedSave } from "./lib/failedSaveResponse.js";
 import { messagesFrom } from "./lib/cardState.js";
 import { DAMAGE_MESSAGE_TYPE } from "./ChatClasses/DamageCardMessage.js";
 import { DamageDescriptionObject, Workflow } from "./Workflow.js";
@@ -634,6 +635,9 @@ async function localDoReactions(data: { tokenUuid: string; reactionActivityList:
     data.options.activity = data.options.item.system.activities.get(data.options.activity._id);
   }
   // reactionItemUuidList can't used since magic items don't have a uuid, so must always look them up locally.
+  // M32a step 3: a failed save's bonuses asked with its reactions
+  if (data.options.failedSaveBonus)
+    return promptFailedSave(data.tokenUuid, data.reactionActivityList, data.triggerTokenUuid, data.reactionFlavor, data.triggerType, data.options);
   const result = await promptReactions(data.tokenUuid, data.reactionActivityList, data.triggerTokenUuid, data.reactionFlavor, data.triggerType, data.options)
   return result;
 }
@@ -883,6 +887,7 @@ export async function rollAbility(data: {
     isMagicSave,
     saveItemUuid,
     saveActivityUuid: sd.saveActivityUuid,
+    failBonusesWithReactions: sd.failBonusesWithReactions,
     isConcentrationCheck,
     workflowOptions,
     itemCardUuid,

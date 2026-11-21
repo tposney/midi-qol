@@ -1,3 +1,4 @@
+import type { PromptResponses } from "./lib/promptCosts.js";
 import { requestForRollClaim } from "./lib/bonusDecisions.js";
 import { toggleBudgetStatus } from "./services/economy/ledger.js";
 import { onTurnEvent, setupTurnEvents } from "./lib/turnEvents.js";
@@ -689,7 +690,7 @@ export function collectBonusFlags(actor: Actor.Implementation, category: string,
 }
 
 export async function bonusCheck(actor: Actor.Implementation, result: Roll, category: string, detail = "", messageData: any = {},
-  prompt: { request?: IncomingRequest, withinRequest?: IncomingRequest, alsoFail?: { category: string, detail: string } } = {}): Promise<Roll> {
+  prompt: { request?: IncomingRequest, withinRequest?: IncomingRequest, alsoFail?: { category: string, detail: string }, responses?: PromptResponses } = {}): Promise<Roll> {
   detail ||= dnd5eRollType(messageData) ?? ""; // death saves -> "death", tool checks -> "tool"
   let bonusFlags = collectBonusFlags(actor, category, detail);
   // rollBonuses contributors: before the result, or after a failure ("fail.<subject>")
@@ -755,7 +756,7 @@ export async function bonusCheck(actor: Actor.Implementation, result: Roll, cate
       data.roll,
       "roll",
       // A save or check rolled for a use card is linked to it; the bonus is shown there
-      { messageData, card: game.messages?.get(messageData?.system?.origin?.id ?? messageData?.system?.origin ?? ""), anchor: "saves", bonusQuery, bonusPhase, candidates, request: prompt.request, withinRequest: prompt.withinRequest, flagSelectors }
+      { messageData, card: game.messages?.get(messageData?.system?.origin?.id ?? messageData?.system?.origin ?? ""), anchor: "saves", bonusQuery, bonusPhase, candidates, request: prompt.request, withinRequest: prompt.withinRequest, flagSelectors, responses: prompt.responses }
     );
     if (newRoll) result = newRoll;
   }
@@ -1524,15 +1525,17 @@ async function doD20Roll(this: Actor.Implementation, wrapped, kind: D20RollKind,
       const bonus = kind.bonus(rollId, config);
       // A roll answering a request (a player's requested save): its bonuses are decided under the request's deadline
       const withinRequest = requestForRollClaim(config.midiOptions.requestClaim);
-      // Failing already against a target the roller sees (it is on the roll): one ask with the failure bonuses (5c)
+      // Failing already against a target the roller sees (it is on the roll): one ask with the failure bonuses (5c). Not
+      // when the use asks them later with the creature's saveFailed reactions (M32a step 3)
+      const failLater = !!config.midiOptions.failBonusesWithReactions;
       const failDetail = () => collectBonusFlags(this, kind.rollType, `fail.${rollId}`).length > 0 ? `fail.${rollId}` : "fail.all";
       // @ts-expect-error no dnd5e-types
-      const oneAsk = !!bonus.failBonuses && Number.isNumeric(result[0].options.target) && result[0].isSuccess === false;
+      const oneAsk = !failLater && !!bonus.failBonuses && Number.isNumeric(result[0].options.target) && result[0].isSuccess === false;
       result[0] = await bonusCheck(this, result[0], bonus.category, bonus.detail, message.data,
         { withinRequest, ...(oneAsk ? { alsoFail: { category: kind.rollType, detail: failDetail() } } : {}) });
       DSNMarkDiceDisplayed(result);
       // @ts-expect-error no dnd5e-types
-      if (!oneAsk && bonus.failBonuses && Number.isNumeric(result[0].options.target) && result[0].isSuccess === false) {
+      if (!oneAsk && !failLater && bonus.failBonuses && Number.isNumeric(result[0].options.target) && result[0].isSuccess === false) {
         // A failed roll with optional fail bonuses (flags.midi-qol.optional.NAME.<type>.fail) offers them
         // bonusCheck also asks rollBonuses contributors, so it runs with or without fail flags
         result[0] = await bonusCheck(this, result[0], kind.rollType, failDetail(), message.data, { withinRequest });

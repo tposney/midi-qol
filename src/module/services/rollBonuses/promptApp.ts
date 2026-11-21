@@ -2,7 +2,7 @@ import { RollModifyDialog } from "../../utils.js";
 import { parseFlagValue } from "../../rules/optionalFlags.js";
 import { effectOrder } from "./rules.js";
 import type { OfferedBonus } from "./service.js";
-import { bonusCostBadges, wirePickOne } from "../../lib/promptCosts.js";
+import { bonusCostBadges, wirePickOne, type PromptResponses } from "../../lib/promptCosts.js";
 import { standingChoice, standingKey, STANDING_CHOICES, wireStandingSelects } from "./standing.js";
 
 /*
@@ -34,7 +34,11 @@ export class BonusPromptApp extends RollModifyDialog {
       return { id, label: button.label, icon: img ? undefined : button.icon, img, tooltip: button.tooltip, badges: cost.badges, exclusive: cost.reaction ? "reaction" : undefined, ...standingOf(button.candidate) };
     });
     const standingChoices = STANDING_CHOICES.map(value => ({ value, label: game.i18n?.localize(`midi-qol.Standing.${value}`) ?? value }));
-    return { ...context, entries, standingChoices };
+    // M32a step 3: another part's rows (a failed save's reactions), after the bonuses; kept ticked across re-renders
+    const responses: PromptResponses | undefined = this.data.responses;
+    if (responses?.rows.length) responses.shown = true;
+    const responseEntries = (responses?.rows ?? []).map(row => ({ ...row, id: `resp:${row.id}`, checked: responses?.chosen ? responses.chosen.includes(row.id) : row.checked }));
+    return { ...context, entries: [...entries, ...responseEntries], standingChoices };
   }
 
   async _onRender(context, options) {
@@ -47,7 +51,10 @@ export class BonusPromptApp extends RollModifyDialog {
 
   /** Applies the ticked bonuses in the order shown, each through its own handler. */
   async applyTicked() {
-    const ids = Array.from(this.element.querySelectorAll<HTMLInputElement>("input[name='bonus']:checked")).map(input => input.value);
+    const ticked = Array.from(this.element.querySelectorAll<HTMLInputElement>("input[name='bonus']:checked")).map(input => input.value);
+    const responses: PromptResponses | undefined = this.data.responses;
+    if (responses) responses.chosen = ticked.filter(id => id.startsWith("resp:")).map(id => id.slice(5));
+    const ids = ticked.filter(id => !id.startsWith("resp:"));
     // Handlers re-render the dialog (new button ids), so take the buttons first; applied in the application order
     // (replace, reroll, add, outcome; rules orderForApplication), so an add ticked above a reroll isn't rerolled away
     const kindOf = (button: { value?: unknown, candidate?: { effect?: { kind?: string } } }) => {
