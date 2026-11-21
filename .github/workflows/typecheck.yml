@@ -1,0 +1,27 @@
+# Type-checks every pull request and every push to a release line, so a type error is seen before review.
+# It only runs the compiler (the first step of `npm run build`); nothing is built, packaged or published.
+name: Type check
+
+on:
+  pull_request:
+  push:
+    branches: [dnd6, "dnd5e-*", midi-next]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: typecheck-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  typecheck:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - run: npx tsc --noEmit -p tsconfig.json
