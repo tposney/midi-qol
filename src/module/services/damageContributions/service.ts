@@ -27,6 +27,11 @@ export interface DamageContribution {
   label: string;
   /** Only these targets (token document uuids); all the use hits when omitted. */
   targets?: readonly string[];
+  /**
+   * M15 6b: false: never critical. Otherwise (default) it is critical exactly as the use's own damage roll is, with
+   * the same rules (dnd5e's settings and midi's Critical Damage setting): Hex's die on a critical hit.
+   */
+  critical?: false;
 }
 
 export interface DamageContributor {

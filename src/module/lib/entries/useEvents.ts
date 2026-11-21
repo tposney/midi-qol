@@ -238,12 +238,14 @@ export async function useDamageAction(run: ActionRun, healing: boolean) {
     for (const part of parts) {
       if (!part.formula) continue;
       contributionsOf(workflow).damage.push({ role: "midi-qol.entries", formula: Roll.replaceFormulaData(part.formula, rollData, { missing: "0" }),
-        damageType: [...(part.types ?? [])][0], label: labelOf(run), targets: targetUuids });
+        damageType: [...(part.types ?? [])][0], label: labelOf(run), targets: targetUuids, ...(run.action.critical === false ? { critical: false as const } : {}) });
     }
     return;
   }
   const type = typeof run.action.type === "string" ? run.action.type : healing ? "healing" : undefined;
-  contributionsOf(workflow).damage.push({ role: "midi-qol.entries", formula, damageType: type, label: labelOf(run), targets: targetUuids });
+  // `critical: false`: never critical (default: as the use's damage roll); healing never is
+  contributionsOf(workflow).damage.push({ role: "midi-qol.entries", formula, damageType: type, label: labelOf(run), targets: targetUuids,
+    ...(run.action.critical === false || healing ? { critical: false as const } : {}) });
 }
 
 /** `{ damageChange: { stage, amount?, multiplier?, types? }, for? }`: a change to the damage a target takes (the event's target, else every target) */

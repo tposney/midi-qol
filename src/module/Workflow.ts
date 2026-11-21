@@ -7474,6 +7474,13 @@ export class Workflow {
   async rollDamageContributions(): Promise<void> {
     const found = await collectDamageContributions({ workflow: this, actor: this.actor, item: this.item, activity: this.activity });
     if (!found.length) return;
+    // Critical as the use's own damage roll is, with its rules (midi's Critical Damage setting applies in configureDamage),
+    // without the item's own extra critical dice (Brutal Critical, Savage Attacks): those are the weapon roll's
+    const useRoll = this.damageRolls?.[0];
+    // @ts-expect-error no dnd5e-types
+    const useCritical = !!(useRoll?.options?.isCritical ?? this.isCritical);
+    // @ts-expect-error no dnd5e-types
+    const { bonusDice: _bonusDice, bonusDamage: _bonusDamage, ...criticalRules } = (useRoll?.options?.critical ?? {}) as Record<string, unknown>;
     const rollData = (this.activity ?? this.item ?? this.actor)?.getRollData() ?? {};
     const untargeted: Roll[] = [];
     const counts: Record<string, number> = {};
@@ -7481,8 +7488,10 @@ export class Workflow {
       const key = `${contributor}#${counts[contributor] = (counts[contributor] ?? 0) + 1}`;
       try {
         const type = contribution.damageType ?? this.damageRolls?.[0]?.options?.type ?? MidiQOL.MQdefaultDamageType;
+        const critical = useCritical && contribution.critical !== false;
         // @ts-expect-error no dnd5e-types
-        const roll: Roll = await new CONFIG.Dice.DamageRoll(contribution.formula, rollData, { type, flavor: contribution.label }).evaluate();
+        const roll: Roll = await new CONFIG.Dice.DamageRoll(contribution.formula, rollData, { type, flavor: contribution.label,
+          isCritical: critical, critical: { ...criticalRules, allow: critical } }).evaluate();
         if (contribution.targets?.length) this.addTargetedDamageBonus({ targets: [...contribution.targets], amount: roll.total ?? 0, type, label: contribution.label });
         else untargeted.push(roll);
         // Tagged: told apart from other bonus damage by the tag, not by object (a rebuilt use's rolls are copies)
