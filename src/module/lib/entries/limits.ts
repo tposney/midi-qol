@@ -6,13 +6,13 @@
  */
 import type { EntryLimit } from "./types.js";
 
-export interface CombatMoment { id: string, round: number, turn: number }
+export interface CombatPosition { id: string, round: number, turn: number }
 export interface LimitRecord { stamp: string, count: number }
 /** As stored on the actor: an array, which an update replaces whole (stale records go in the same write) */
 export type StoredLimit = LimitRecord & { key: string };
 
 /** The stamp a limit's count is kept under now; undefined: the limit doesn't apply now (turn/round outside combat) */
-export function limitStamp(per: EntryLimit["per"], combat: CombatMoment | undefined): string | undefined {
+export function limitStamp(per: EntryLimit["per"], combat: CombatPosition | undefined): string | undefined {
   switch (per) {
     case "turn": return combat ? `${combat.id}:${combat.round}:${combat.turn}` : undefined;
     case "round": return combat ? `${combat.id}:${combat.round}` : undefined;
@@ -37,14 +37,14 @@ export function spendLimit(record: LimitRecord | undefined, stamp: string): Limi
 }
 
 /** The stored records whose stamp is still current (this turn's or this round's) */
-export function pruneLimits(records: readonly StoredLimit[], combat: CombatMoment | undefined): StoredLimit[] {
+export function pruneLimits(records: readonly StoredLimit[], combat: CombatPosition | undefined): StoredLimit[] {
   if (!combat) return [];
   const turn = limitStamp("turn", combat), round = limitStamp("round", combat);
   return records.filter(record => record.stamp === turn || record.stamp === round);
 }
 
-/** The stored records after one more use of `key` under `stamp` (pruned to the current combat moment) */
-export function spendStoredLimit(records: readonly StoredLimit[], key: string, stamp: string, combat: CombatMoment | undefined): StoredLimit[] {
+/** The stored records after one more use of `key` under `stamp` (pruned to the current combat event) */
+export function spendStoredLimit(records: readonly StoredLimit[], key: string, stamp: string, combat: CombatPosition | undefined): StoredLimit[] {
   const kept = pruneLimits(records, combat).filter(record => record.key !== key);
   return [...kept, { key, ...spendLimit(records.find(record => record.key === key), stamp) }];
 }
@@ -55,7 +55,7 @@ export function limitKey(documentUuid: string, entryId: string): string {
 }
 
 /**
- * One entry of a group per moment, unless it stacks: the first of a group in order is kept, and later entries of that
+ * One entry of a group per event, unless it stacks: the first of a group in order is kept, and later entries of that
  * group only if they say `stacks` (Empowered Spell combines with another Metamagic). Entries with no group all run.
  */
 export function selectGroups<T extends { entry: { group?: string, stacks?: boolean } }>(found: readonly T[]): T[] {

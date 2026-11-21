@@ -2,17 +2,17 @@ import type { Activity } from "../../../globals.js";
 import { configSettings } from "../../settings.js";
 import { debugEnabled, warn } from "../../../midi-qol.js";
 import { evalReactionActivationCondition, isActivityType, maxCastLevel, reactionTriggerLabelFor } from "../../utils.js";
-import type { ReactionContributor } from "./service.js";
-import { momentEvent } from "../../lib/entries/reactionMoments.js";
+import type { ResponseContributor } from "./service.js";
+import { eventDataFor } from "../../lib/entries/responseEvents.js";
 
 /*
  * midi's own reaction contributor: the creature's items with a reaction activity it can use now (attuned, prepared,
  * a slot or uses left, the reaction not spent unless it costs none) whose reaction condition is met (no condition: the
- * attack hit). Moved from utils doReactions (M3 stage 4). Its condition also has `moment` and `event` (M15 4f), as an
+ * attack hit). Moved from utils doReactions (M3 stage 4). Its condition also has `event` and `event` (M15 4f), as an
  * entry's has; the activity is still used on the reacting player's client (its slot, its targets), not as an entry.
  */
-export const midiItemReactions: ReactionContributor = {
-  async for({ target, usedReaction, triggerType, options, moment }) {
+export const midiItemReactions: ResponseContributor = {
+  async for({ target, usedReaction, triggerType, options, eventId }) {
     if (!target.actor) return [];
     const reactions: Activity[] = [];
     const maxLevel = maxCastLevel(target.actor);
@@ -75,9 +75,9 @@ export const midiItemReactions: ReactionContributor = {
         if (!reactionCondition) {
           reactionCondition = 'reaction === "isHit"';
         }
-        // The moment and its event (M15 4f: attack total and AC, the save, the damage worked out) as entries see them
+        // The event and its event (M15 4f: attack total and AC, the save, the damage worked out) as entries see them
         const returnvalue = await evalReactionActivationCondition(options.workflow, reactionCondition, target, { async: true,
-          extraData: { reaction: reactionTriggerLabelFor(triggerType), moment, event: momentEvent(options.workflow, target, moment) ?? {} } });
+          extraData: { reaction: reactionTriggerLabelFor(triggerType), eventId, event: eventDataFor(options.workflow, target, eventId) ?? {} } });
         if (debugEnabled > 0) warn(`for ${target.actor.name} ${theItem.name} using condition ${reactionCondition} condition ${returnvalue}`, options.workflow?.conditionData);
         if (!returnvalue) continue;
         reactions.push(activity);

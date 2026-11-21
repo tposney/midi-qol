@@ -1,12 +1,12 @@
 import { register } from "../../api/services.js";
 import type { BonusCandidate, BonusCost, BonusEffect, BonusPhase, BonusRollKind, RollBonusQuery } from "../../services/rollBonuses/service.js";
-import { collectEntries, conditionDataFor, entryHolds, holds, limitAllows, spendEntryLimit, type MomentContext } from "./engine.js";
+import { collectEntries, conditionDataFor, entryHolds, holds, limitAllows, spendEntryLimit, type EventContext } from "./engine.js";
 import type { FoundEntry } from "./types.js";
 import { askOffers, offerOption, toggleOn } from "./offers.js";
 import { hasUsedReaction } from "../../utils.js";
 
 /*
- * M15 stage 3e: "offer as a roll bonus". An entry on a roll moment (`roll.preRoll`, `roll.preResult`,
+ * M15 stage 3e: "offer as a roll bonus". An entry on a roll event (`roll.preRoll`, `roll.preResult`,
  * `roll.postResult`) with a `bonus` action is a rollBonuses candidate, so it has the bonus engine's session, costs,
  * prompt and approval: `offer: "ask"` is optional, "always" automatic; its `activity` is its cost (the activity's
  * uses, else the item's: Lucky's Luck Points); its `limit` is checked when it is offered and spent when it is chosen.
@@ -17,7 +17,7 @@ import { hasUsedReaction } from "../../utils.js";
  */
 
 const PHASE_OF: Record<string, BonusPhase> = { "roll.preRoll": "preRoll", "roll.preResult": "preResult", "roll.postResult": "postResult" };
-const ROLL_MOMENTS = Object.keys(PHASE_OF);
+const ROLL_EVENTS = Object.keys(PHASE_OF);
 
 type Activityish = { id?: string, uuid?: string, name?: string, item?: Item.Implementation, uses?: { max?: number | string | null, value?: number } };
 
@@ -46,14 +46,14 @@ function withReaction(cost: BonusCost | undefined, reaction: boolean): BonusCost
 
 /** The roll bonuses the actor's entries offer for this roll */
 async function entryCandidates(query: RollBonusQuery): Promise<BonusCandidate[]> {
-  const context: MomentContext = { actor: query.actor, workflow: query.workflow, activity: query.activity, item: query.item, event: { kind: query.kind } };
+  const context: EventContext = { actor: query.actor, workflow: query.workflow, activity: query.activity, item: query.item, event: { kind: query.kind } };
   const byEntry = new Map<string, { found: FoundEntry, phases: BonusPhase[] }>();
-  for (const moment of ROLL_MOMENTS) {
-    for (const f of collectEntries(moment, context)) {
+  for (const eventId of ROLL_EVENTS) {
+    for (const f of collectEntries(eventId, context)) {
       const key = `${(f.document as { uuid?: string }).uuid ?? ""}#${f.entry.id}`;
       const known = byEntry.get(key);
-      if (known) known.phases.push(PHASE_OF[moment]);
-      else byEntry.set(key, { found: f, phases: [PHASE_OF[moment]] });
+      if (known) known.phases.push(PHASE_OF[eventId]);
+      else byEntry.set(key, { found: f, phases: [PHASE_OF[eventId]] });
     }
   }
   const candidates: BonusCandidate[] = [];

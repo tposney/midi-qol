@@ -13,7 +13,7 @@ import { saveUndoData } from "../undo.js";
 import { clearAbandonedUse, type UseState } from "./useRelaunch.js";
 import { activityHasAreaTarget, activityHasAutoPlaceTemplate, confirmUseOffScene, hasUsedBonusAction, hasUsedReaction, autoConsumeResource, setBonusActionUsed, setReactionUsed, validTargetTokens, activityHasEmanationNoTemplate, areMidiKeysPressed, getActor, toMessageMode, isActivityType, speakerFor } from "../utils.js";
 import { removeFlanking } from "./activityHelpers.js";
-import { raiseUseConfigure } from "../lib/entries/useMoments.js";
+import { raiseUseConfigure } from "../lib/entries/useEvents.js";
 
 /*
  * A use of an activity (M10's restart, useRelaunch.ts): midi's work before dnd5e's use (prepareUse), during it (onUsePreUse, onUseConsumption) and after it (finishUse); consumption choices; using as another actor.

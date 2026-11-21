@@ -10,13 +10,13 @@ import {
   splitOvertimeSpec, type ActionSaveContext, type CountAction, type OvertimeDetails
 } from "../../utils.js";
 import type { Workflow } from "../../Workflow.js";
-import { isUseMoment, useDamageAction } from "./useMoments.js";
-import { applyingActivity, registerAction, registerEffectEntryReader, registerMoment, type ActionRun } from "./engine.js";
+import { isUseEvent, useDamageAction } from "./useEvents.js";
+import { applyingActivity, registerAction, registerEffectEntryReader, registerEvent, type ActionRun } from "./engine.js";
 import type { Entry, EntryAction } from "./types.js";
 
 /*
  * M15 stage 2, phase A: `flags.midi-qol.OverTime` read as entries (the key stays readable; the OverTime editor still
- * writes it). Each change becomes an entry on its turn moment whose `save` action is the tick: today's behaviour
+ * writes it). Each change becomes an entry on its turn event whose `save` action is the tick: today's behaviour
  * (apply and remove conditions, a permanent effect, stacks, the tick's item built from the spec, its card), and whose
  * `then`/`else` are the save and fail counts, kept where they always were (`flags.midi-qol.overtime`), so an effect
  * part-way through its count in a world keeps counting. Action saves (`actionSave=`) stay on the old path until stage
@@ -302,14 +302,14 @@ async function count({ action, found, context }: ActionRun): Promise<void> {
  * turn end. The effect's tick then runs without a save (the save is the action's), and a success ends the effect.
  * The old engine's per-change logic, unchanged.
  */
-async function actionSave({ action, found, context, moment }: ActionRun): Promise<void> {
+async function actionSave({ action, found, context, eventId }: ActionRun): Promise<void> {
   const effect = found.document;
   if (!(effect instanceof ActiveEffect)) return;
   const actor = found.actor ?? context.actor;
   const details = action.actionSave as OvertimeDetails & { multiplyByStacks: boolean };
-  const isActionSave = moment === ACTION_ROLL;
-  const startTurn = moment === "turnStart" || isActionSave;
-  const endTurn = moment === "turnEnd";
+  const isActionSave = eventId === ACTION_ROLL;
+  const startTurn = eventId === "turnStart" || isActionSave;
+  const endTurn = eventId === "turnEnd";
   const event = (context.event ?? {}) as { roll?: Roll, rollFlags?: Record<string, unknown> };
   const rollData = rollDataFor(actor, effect);
   if (details.applyCondition) {
@@ -366,21 +366,21 @@ async function actionSave({ action, found, context, moment }: ActionRun): Promis
 }
 
 /** ActivityOverTime: a use of the named activity (the applying item's, or by uuid), as it always ran */
-async function activityUse({ action, found, context, moment }: ActionRun): Promise<void> {
+async function activityUse({ action, found, context, eventId }: ActionRun): Promise<void> {
   const effect = found.document;
-  if (!(effect instanceof ActiveEffect) || (moment !== "turnStart" && moment !== "turnEnd")) return;
-  await doActivityOverTimeEffect(found.actor ?? context.actor, effect, moment === "turnStart", { onlyChange: String(action.use ?? "") });
+  if (!(effect instanceof ActiveEffect) || (eventId !== "turnStart" && eventId !== "turnEnd")) return;
+  await doActivityOverTimeEffect(found.actor ?? context.actor, effect, eventId === "turnStart", { onlyChange: String(action.use ?? "") });
 }
 
 export function registerOvertimeEntries() {
-  registerMoment(ACTION_ROLL, { label: "The bearer rolls an action save from its card" });
+  registerEvent(ACTION_ROLL, { label: "The bearer rolls an action save from its card" });
   registerEffectEntryReader("midi-qol.activityOvertime", activityOvertimeEntries);
   registerAction("actionSave", actionSave);
   registerAction("use", activityUse);
   registerEffectEntryReader("midi-qol.overtime", overtimeEntries);
   registerAction("save", tickAction("save"), { priority: 10 });
   registerAction("check", tickAction("check"), { priority: 10 });
-  // At a use moment, damage the use deals; otherwise the tick's
-  registerAction("damage", run => isUseMoment(run.moment) ? useDamageAction(run, false) : tickAction("damage")(run));
+  // At a use event, damage the use deals; otherwise the tick's
+  registerAction("damage", run => isUseEvent(run.eventId) ? useDamageAction(run, false) : tickAction("damage")(run));
   registerAction("count", count);
 }

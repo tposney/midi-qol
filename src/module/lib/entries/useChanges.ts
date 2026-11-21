@@ -5,7 +5,7 @@ import { conditionDataFor, registerAction, runActions, type ActionRun } from "./
 import type { Workflow } from "../../Workflow.js";
 import type { FoundEntry } from "./types.js";
 import type { EntryAction } from "./types.js";
-import { actorsFor, useContext } from "./useMoments.js";
+import { actorsFor, useContext } from "./useEvents.js";
 
 /*
  * M15 stage 4b: the actions that change a use or act for it.
@@ -97,9 +97,9 @@ function damageTypeChange(run: ActionRun, spec: { from?: string | string[], to?:
 async function changeAction(run: ActionRun) {
   const spec = run.action.change as Record<string, unknown> | undefined;
   if (!run.context.workflow || !spec || typeof spec !== "object") return;
-  if (run.moment === "use.configure") await useConfigureChange(run, spec);
-  else if (spec.damageType && ["use.damageRoll", "use.damageRolled"].includes(run.moment)) damageTypeChange(run, spec.damageType as { from?: string[], to?: string });
-  else console.warn(`midi-qol | entry ${run.found.entry.id}: change ${Object.keys(spec).join(", ")} can't be made at ${run.moment}`);
+  if (run.eventId === "use.configure") await useConfigureChange(run, spec);
+  else if (spec.damageType && ["use.damageRoll", "use.damageRolled"].includes(run.eventId)) damageTypeChange(run, spec.damageType as { from?: string[], to?: string });
+  else console.warn(`midi-qol | entry ${run.found.entry.id}: change ${Object.keys(spec).join(", ")} can't be made at ${run.eventId}`);
 }
 
 /** The item holding the entry (an effect's: the item it came from) */
@@ -168,7 +168,7 @@ export async function runActivityActions(workflow: Workflow, id: string, list: r
   const context = useContext(workflow);
   const found: FoundEntry = { entry: { id, on: "table", do: [...list] }, home: "activity", document: workflow.activity as unknown as FoundEntry["document"], who: "this", actor: workflow.actor };
   const ran: string[] = [];
-  await runActions(list, { moment: "table", found, context, conditionData: conditionDataFor(found, context) }, ran);
+  await runActions(list, { eventId: "table", found, context, conditionData: conditionDataFor(found, context) }, ran);
   return ran;
 }
 

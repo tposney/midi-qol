@@ -1,8 +1,8 @@
 import { requestForRollClaim } from "./lib/bonusDecisions.js";
 import { toggleBudgetStatus } from "./services/economy/ledger.js";
-import { onTurnMoment, setupTurnMoments } from "./lib/turnMoments.js";
+import { onTurnEvent, setupTurnEvents } from "./lib/turnEvents.js";
 import { registerRollPartLabels } from "./lib/rollParts.js";
-import { runMoment } from "./lib/entries/engine.js";
+import { runEvent } from "./lib/entries/engine.js";
 import type { IncomingRequest } from "./lib/requests.js";
 import { collectRollModifiers } from "./services/rollModifiers/service.js";
 import { collectBonusCandidates, type BonusRollKind, type RollBonusQuery } from "./services/rollBonuses/service.js";
@@ -139,16 +139,16 @@ export function initPatching() {
   libWrapper.register(MODULE_ID, "CONFIG.Actor.documentClass.prototype.toggleStatusEffect", toggleImpliedStatus, "MIXED");
   libWrapper.register(MODULE_ID, "CONFIG.Combat.documentClass.prototype._preUpdate", combatPreUpdate, "WRAPPER");
   Hooks.on("updateCombat", recoverRerolledInitiativeUses);
-  // The turn-moment dispatcher (M4) wraps the combat lifecycle; over-time effects tick on its moments, waited for as
+  // The turn-event dispatcher (M4) wraps the combat lifecycle; over-time effects tick on its events, waited for as
   // core waited for them (their saves) before its own expiry
-  setupTurnMoments();
-  onTurnMoment("turnStart", "midi-qol.overTime", ({ combat, combatant }) => combatant ? processTurnOverTime(combat, combatant, true) : undefined, { priority: 100, uncapped: true });
-  onTurnMoment("turnEnd", "midi-qol.overTime", ({ combat, combatant }) => combatant ? processTurnOverTime(combat, combatant, false) : undefined, { priority: 100, uncapped: true });
+  setupTurnEvents();
+  onTurnEvent("turnStart", "midi-qol.overTime", ({ combat, combatant }) => combatant ? processTurnOverTime(combat, combatant, true) : undefined, { priority: 100, uncapped: true });
+  onTurnEvent("turnEnd", "midi-qol.overTime", ({ combat, combatant }) => combatant ? processTurnOverTime(combat, combatant, false) : undefined, { priority: 100, uncapped: true });
   // Entries on the effects a creature's uses applied, at its turn (M15), and every combatant's at a round's start
-  onTurnMoment("turnStart", "midi-qol.entries.origin", ({ combat, combatant }) => combatant?.actor ? runMoment("originTurnStart", { actor: combatant.actor, combat }).then(() => undefined) : undefined, { priority: 90, uncapped: true });
-  onTurnMoment("turnEnd", "midi-qol.entries.origin", ({ combat, combatant }) => combatant?.actor ? runMoment("originTurnEnd", { actor: combatant.actor, combat }).then(() => undefined) : undefined, { priority: 90, uncapped: true });
-  onTurnMoment("roundStart", "midi-qol.entries.round", async ({ combat }) => {
-    for (const combatant of combat.combatants) if (combatant.actor) await runMoment("roundStart", { actor: combatant.actor, combat });
+  onTurnEvent("turnStart", "midi-qol.entries.origin", ({ combat, combatant }) => combatant?.actor ? runEvent("originTurnStart", { actor: combatant.actor, combat }).then(() => undefined) : undefined, { priority: 90, uncapped: true });
+  onTurnEvent("turnEnd", "midi-qol.entries.origin", ({ combat, combatant }) => combatant?.actor ? runEvent("originTurnEnd", { actor: combatant.actor, combat }).then(() => undefined) : undefined, { priority: 90, uncapped: true });
+  onTurnEvent("roundStart", "midi-qol.entries.round", async ({ combat }) => {
+    for (const combatant of combat.combatants) if (combatant.actor) await runEvent("roundStart", { actor: combatant.actor, combat });
   }, { priority: 90, uncapped: true });
   libWrapper.register(MODULE_ID, "CONFIG.Item.documentClass.prototype.getRollData", itemGetRollData, "WRAPPER");
   libWrapper.register(MODULE_ID, "CONFIG.Item.documentClass.prototype.dependentOrigin", itemDependentOrigin, "MIXED");

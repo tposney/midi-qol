@@ -6,11 +6,11 @@ import type { FoundEntry } from "./types.js";
 import { actorToggleEntries } from "./engine.js";
 
 /*
- * M15 stage 4d: offers at use and target moments (a roll moment's offers are rollBonuses').
+ * M15 stage 4d: offers at use and target events (a roll event's offers are rollBonuses').
  * - `toggle`: the entry runs while its actor's toggle for it is on (`flags.midi-qol.toggles`, set from the sheet's
  *   Toggles control or MidiQOL.entries.setToggle). Off by default.
  * - `ask`: the entry's actor's owner is asked through the request core (their player when connected, else the GM),
- *   with the reaction time-out and the GM able to answer "none" from the player list. One dialog per actor and moment:
+ *   with the reaction time-out and the GM able to answer "none" from the player list. One dialog per actor and event:
  *   each entry a choice, a group's entries one choice among them (several only where they stack).
  * An entry's `activity` is its cost: one use of the activity (else of its item), offered only while one is left.
  */

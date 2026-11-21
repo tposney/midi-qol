@@ -1,6 +1,6 @@
 /*
  * M15: the entry format (wave B spike, ~/Documents/midi-next-format-spike-2026-11-20.md "The format"). An entry is
- * data on an activity (`midiEntries`), an item or an effect (`flags.midi-qol.entries`): at a moment, for whom, if a
+ * data on an activity (`midiEntries`), an item or an effect (`flags.midi-qol.entries`): at a event, for whom, if a
  * condition holds, within a limit, it runs its actions, each a contribution to a service or a step change.
  */
 
@@ -13,7 +13,7 @@ export type EntryWho =
   | "bearer"
   /** The creature whose use applied the effect */
   | "origin"
-  /** Someone near: the moment is about a creature within `within` feet of the bearer (or of the effect's origin); `filter` an expression */
+  /** Someone near: the event is about a creature within `within` feet of the bearer (or of the effect's origin); `filter` an expression */
   | { within: number | "reach", of: "bearer" | "origin" | string, filter?: string };
 
 export interface EntryLimit { per: "turn" | "round" | "use" | "effect", max?: number }
@@ -44,7 +44,7 @@ export interface Entry {
 /** Where an entry was found */
 export type EntryHome = "activity" | "item" | "effect" | "registry";
 
-/** An entry found for a moment: where it came from, and whose it is */
+/** An entry found for a event: where it came from, and whose it is */
 export interface FoundEntry {
   entry: Entry;
   home: EntryHome;
@@ -54,6 +54,6 @@ export interface FoundEntry {
   who: EntryWho;
   /** The actor the entry belongs to (the effect's bearer, the item's owner) */
   actor?: Actor.Implementation;
-  /** A near entry (`who: { within }`): the creature the moment is about, its token, how far */
+  /** A near entry (`who: { within }`): the creature the event is about, its token, how far */
   near?: { creature: Actor.Implementation, token: TokenDocument.Implementation, distance: number };
 }

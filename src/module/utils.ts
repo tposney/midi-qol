@@ -1,6 +1,6 @@
 import { askBonusDecision } from "./lib/bonusDecisions.js";
 import { budget, reset as resetBudget, spend as spendBudget } from "./services/economy/ledger.js";
-import { onTurnMoment } from "./lib/turnMoments.js";
+import { onTurnEvent } from "./lib/turnEvents.js";
 import { shownTokenName } from "./services/tokenNames/service.js";
 import { tagsView } from "./lib/tags.js";
 import { checkRange, type RangeCheckResult } from "./services/range/service.js";
@@ -28,13 +28,13 @@ import { log } from "../midi-qol.js";
 import { AttributionEntry, AttributionMap, AttributionType, AugmentedEvent, DummyWorkflow, jsonSafe, Workflow, WorkflowOptions, WorkflowRollOptions } from "./Workflow.js";
 import { preferredActiveGM, prepareDamageListToJSON, socketlibSocket, timedAwaitExecuteAsGM, unTimedExecuteAsGM } from "./GMAction.js";
 import { askUser, type IncomingRequest } from "./lib/requests.js";
-import { collectReactions, type ReactionOffer, type ReactionQuery } from "./services/reactions/service.js";
-import { hasMomentEntries, momentOfTrigger, targetMoment } from "./lib/entries/reactionMoments.js";
+import { collectResponses, type ResponseOffer, type ResponseQuery } from "./services/responses/service.js";
+import { hasEventEntries, eventOfTrigger, targetEvent } from "./lib/entries/responseEvents.js";
 import { dice3dEnabled, installedModules } from "./setupModules.js";
 import { concentrationCheckItemDisplayName } from "./Hooks.js";
 
 import { OnUseMacros } from "./apps/Item.js";
-import { runMoment } from "./lib/entries/engine.js";
+import { runEvent } from "./lib/entries/engine.js";
 import { TroubleShooter } from "./apps/TroubleShooter.js";
 import { MidiActivityChoiceDialog } from "./apps/MidiActivityChoiceDialog.js";
 import { Activity, ActivityUseConfiguration, CalcDamageOptions, MidiChangeData, DamageDescription, DamageDetailsByCategory, DamageListEntry, PreComputedAdvantageData, PreSetupDamageListEntry, RollDialogConfig, RollMessageConfig, TokenOrDocument, DND5ETargetDescriptor, SaveDetails, Dnd5eSystem } from "../globals.js";
@@ -827,17 +827,17 @@ export async function processDamageRoll(workflow: Workflow, defaultDamageType: s
     if (!actor?.uuid) continue;
     if (totalDamage !== 0 && (workflow.hitTargets.has(tokenDocument) || workflow.hitTargetsEC.has(tokenDocument) || workflow.hasSave)) {
       const isHealing = ("heal" === workflow.activity.actionType) || totalDamage < 0;
-      const moment = isHealing ? "healing" : "damaging";
+      const eventId = isHealing ? "healing" : "damaging";
       const provokes = !!token && !foundry.utils.getProperty(workflow.activity.item, `flags.${MODULE_ID}.noProvokeReaction`) && !workflow?.workflowOptions?.noProvokeReaction;
       // M15 4f: damaging / healing, sharing the reaction prompt; event.damage is this target's damage worked out (not
-      // applied), only when it has entries for the moment
+      // applied), only when it has entries for the event
       const event: Record<string, unknown> = { total: totalDamage };
-      if (hasMomentEntries(workflow, tokenDocument, moment)) {
+      if (hasEventEntries(workflow, tokenDocument, eventId)) {
         const preview = targetDamageRecord(workflow, tokenDocument, totalDamage, hitTargets, defaultSaveMultiplier);
         const byType = (list: DamageDescription[] | undefined) => (list ?? []).reduce((acc: Record<string, number>, d) => { acc[d.type] = (acc[d.type] ?? 0) + (d.value ?? 0); return acc; }, {});
         event.damage = { rolled: byType(preview?.damages), applied: byType(preview?.calculatedDamages) };
       }
-      await targetMoment(workflow, tokenDocument, moment, event, provokes ? () => workflow.askReactionsStep(token!, workflow.tokenUuid, workflow.damageRoll ?? workflow.bonusDamageRoll ?? workflow.otherDamageRoll ?? new Roll("0"), !isHealing ? "reactiondamage" : "reactionheal", { activity: workflow.activity, item: workflow.item, workflow, workflowOptions: { damageDetail: workflow.rawDamageDetail, damageTotal: totalDamage, sourceActorUuid: workflow.actor.uuid, sourceItemUuid: workflow.item.uuid, sourceAmmoUuid: workflow.ammunition?.uuid } }) : undefined);
+      await targetEvent(workflow, tokenDocument, eventId, event, provokes ? () => workflow.askReactionsStep(token!, workflow.tokenUuid, workflow.damageRoll ?? workflow.bonusDamageRoll ?? workflow.otherDamageRoll ?? new Roll("0"), !isHealing ? "reactiondamage" : "reactionheal", { activity: workflow.activity, item: workflow.item, workflow, workflowOptions: { damageDetail: workflow.rawDamageDetail, damageTotal: totalDamage, sourceActorUuid: workflow.actor.uuid, sourceItemUuid: workflow.item.uuid, sourceAmmoUuid: workflow.ammunition?.uuid } }) : undefined);
     }
     const record = targetDamageRecord(workflow, tokenDocument, totalDamage, hitTargets, defaultSaveMultiplier);
     if (!record) continue;
@@ -2309,8 +2309,8 @@ export async function overTimeRemoveConditionMet(removeCondition: string, rollDa
 
 /** One effect's over-time entries at its turn start or end, or answering an action save's roll (doOverTimeEffect) */
 export async function gmOverTimeEffect(actor: Actor.Implementation, effect: ActiveEffect.Implementation, startTurn: boolean = true, options: any = {}) {
-  const moment = options?.isActionSave ? "overtime.actionRoll" : startTurn ? "turnStart" : "turnEnd";
-  await runMoment(moment, { actor, only: effect.uuid ?? undefined, ...(options?.isActionSave ? { event: { roll: options.saveToUse, rollFlags: options.rollFlags } } : {}) });
+  const eventId = options?.isActionSave ? "overtime.actionRoll" : startTurn ? "turnStart" : "turnEnd";
+  await runEvent(eventId, { actor, only: effect.uuid ?? undefined, ...(options?.isActionSave ? { event: { roll: options.saveToUse, rollFlags: options.rollFlags } } : {}) });
   return effect.id;
 }
 
@@ -2325,7 +2325,7 @@ export async function processTurnOverTime(combat: Combat.Implementation, combata
   if (!actor) return;
   if (startTurn) removeActionUsed(actor);
   // The bearer's entries at its turn (M15): OverTime and ActivityOverTime read as entries (lib/entries/overtime.ts)
-  await runMoment(startTurn ? "turnStart" : "turnEnd", { actor, combat });
+  await runEvent(startTurn ? "turnStart" : "turnEnd", { actor, combat });
 }
 export async function completeActivityUse(activityRef: Activity | string | undefined,
   usage: ActivityUseConfiguration = {},
@@ -3201,7 +3201,7 @@ export function getPerimeterDistanceToPoint(token: Token, point: { x: number, y:
  * token merely passed through, and an attack made straight after moving is rejected as out of range
  * from the *old* position.
  *
- * `_source` holds the destination from the moment the database write lands and never interpolates,
+ * `_source` holds the destination from the event the database write lands and never interpolates,
  * which is why core reads it too - see Token#checkCollision, which derives its origin as
  * `getMovementOrigin(this.document._source)`.
  *
@@ -5263,13 +5263,13 @@ export async function doReactions(targetRef: TokenOrDocument | string, triggerTo
     let reactions: ReactionItem[] = [];
     let reactionCount = 0;
     let reactionActivityList: ReactionItemReference[] = [];
-    const reactionOffers = new Map<string, ReactionOffer>();
-    let reactionQuery: ReactionQuery | undefined;
+    const reactionOffers = new Map<string, ResponseOffer>();
+    let reactionQuery: ResponseQuery | undefined;
     try {
-      // The reactions service's contributors (midi's own: services/reactions/provider.ts), each candidate once, only
+      // The reactions service's contributors (midi's own: services/responses/provider.ts), each candidate once, only
       // those that could change the result
-      reactionQuery = { workflow: options.workflow, target: target.document, actor: target.actor, triggerType, trigger: reactionTriggerLabelFor(triggerType), moment: momentOfTrigger(triggerType), triggeringRoll, usedReaction, options };
-      const found = await collectReactions(reactionQuery);
+      reactionQuery = { workflow: options.workflow, target: target.document, actor: target.actor, triggerType, trigger: reactionTriggerLabelFor(triggerType), eventId: eventOfTrigger(triggerType), triggeringRoll, usedReaction, options };
+      const found = await collectResponses(reactionQuery);
       for (const { contributor, candidate } of found) {
         // Contract 2: an offer (not a whole activity) is shown in the same prompt and taken here
         if (candidate.offer) {
@@ -5406,7 +5406,7 @@ export async function doReactions(targetRef: TokenOrDocument | string, triggerTo
 export type ReactionResult = { name?: string, uuid?: string, ac?: number, itemName?: string, itemUuid?: string, offerKey?: string };
 
 /** A contract 2 offer as the reacting client sees it: chosen, its key goes back to the asking client */
-export type ReactionOfferChoice = { key: string, label: string, img?: string, description?: string };
+export type ResponseOfferChoice = { key: string, label: string, img?: string, description?: string };
 
 /** The request type a reacting client answers (GMAction registers its handler) */
 export const REACTIONS_REQUEST = "midi-qol.reactions";
@@ -5467,7 +5467,7 @@ export async function promptReactions(
     } finally {
       enableNotifications(true);
     }
-    const reactionOffers: ReactionOfferChoice[] = Array.isArray(options.reactionOffers) ? options.reactionOffers : [];
+    const reactionOffers: ResponseOfferChoice[] = Array.isArray(options.reactionOffers) ? options.reactionOffers : [];
     // The AC bonuses (optional flags with acOnAttack/acOnHit, rollBonuses' ac candidates) are choices in the same prompt
     const acKey = optionalACKey(triggerType);
     const validFlags = !usedReaction && midiFlags && acKey ? Object.keys(midiFlags?.optional ?? {})
@@ -5480,7 +5480,7 @@ export async function promptReactions(
     const acNow = await new Roll(`${actor.system.attributes.ac.value}`).roll();
     const acBonuses = !usedReaction && acKey ? await acBonusCandidates(actor, tokenUuid, triggerTokenUuid, triggerType, acNow, options) : undefined;
     const forced = (flag: string) => !!foundry.utils.getProperty(actor, `${flag}.force`);
-    const acChoices: ReactionOfferChoice[] = acKey ? [
+    const acChoices: ResponseOfferChoice[] = acKey ? [
       ...validFlags.filter(flag => !forced(flag)).flatMap(flag => flagBonusButtons(actor, flag, acKey, actor, undefined)
         .map((button, index) => ({ key: `ac:${flag}#${acKey}#${index}`, label: `${i18n("DND5E.AC")}: ${button.label}` }))),
       ...(acBonuses?.candidates ?? []).filter(c => c.optional).map(c => ({ key: `ac:${c.id}`, label: `${i18n("DND5E.AC")}: ${c.label}`, description: c.description, img: c.img }))
@@ -5746,7 +5746,7 @@ export class ReactionDialog extends HandlebarsApplicationMixin(ApplicationV2) {
     tokenUuid?: string,
     activities: Activity[],
     /** Contract 2 offers (not whole activities): chosen, the asking client takes them */
-    offers?: ReactionOfferChoice[],
+    offers?: ResponseOfferChoice[],
     title: string,
     content: HTMLElement,
     callback: () => {},
@@ -6633,10 +6633,10 @@ export function hasUsedAnyReaction(actor: Actor.Implementation) {
 
 /**
  * Optional bonuses' per-turn counts (`flags.midi-qol.optional.NAME.count` each-turn / each-round / turn), reset on the
- * turn moments (M4; core's active GM): each-turn at every turn start, each-round at a round start, turn at the start of
+ * turn events (M4; core's active GM): each-turn at every turn start, each-round at a round start, turn at the start of
  * the bearer's own turn.
  */
-async function resetOptionalBonusCounts(combat: Combat.Implementation, moment: "turnStart" | "roundStart", whose: Actor.Implementation | null | undefined) {
+async function resetOptionalBonusCounts(combat: Combat.Implementation, eventId: "turnStart" | "roundStart", whose: Actor.Implementation | null | undefined) {
   const optionalFlagRe = /flags.midi-qol.optional.[^.]+.(count|countAlt)$/;
   for (const combatant of combat.turns ?? []) {
     const actor = combatant.actor;
@@ -6645,9 +6645,9 @@ async function resetOptionalBonusCounts(combat: Combat.Implementation, moment: "
       // @ts-expect-error fvtt-types v14 ActiveEffect
       for (const change of effect.system.changes) {
         if (!change.key.match(optionalFlagRe)) continue;
-        const resets = (change.value === "each-turn" && moment === "turnStart")
-          || (change.value === "each-round" && moment === "roundStart")
-          || (change.value === "turn" && moment === "turnStart" && whose === actor);
+        const resets = (change.value === "each-turn" && eventId === "turnStart")
+          || (change.value === "each-round" && eventId === "roundStart")
+          || (change.value === "turn" && eventId === "turnStart" && whose === actor);
         if (!resets) continue;
         const usedKey = change.key.replace(/.(count|countAlt)$/, ".used");
         if (foundry.utils.getProperty(actor, usedKey)) await actor.unsetFlag(MODULE_ID, usedKey.replace(`flags.${MODULE_ID}.`, ""));
@@ -6657,8 +6657,8 @@ async function resetOptionalBonusCounts(combat: Combat.Implementation, moment: "
 }
 
 export function setupOptionalBonusResets() {
-  onTurnMoment("turnStart", "midi-qol.optionalBonusCounts", ({ combat, actor }) => resetOptionalBonusCounts(combat, "turnStart", actor));
-  onTurnMoment("roundStart", "midi-qol.optionalBonusCounts", ({ combat }) => resetOptionalBonusCounts(combat, "roundStart", undefined));
+  onTurnEvent("turnStart", "midi-qol.optionalBonusCounts", ({ combat, actor }) => resetOptionalBonusCounts(combat, "turnStart", actor));
+  onTurnEvent("roundStart", "midi-qol.optionalBonusCounts", ({ combat }) => resetOptionalBonusCounts(combat, "roundStart", undefined));
 }
 
 export function hasUsedBonusAction(actor: Actor.Implementation) {
@@ -6679,9 +6679,9 @@ async function removeLingeringMarkers(actor: Actor.Implementation, shouldHaveEnd
   }
 }
 
-/** On the turn moments (M4, core's active GM): after DAE and core have had their go at expiring the markers */
+/** On the turn events (M4, core's active GM): after DAE and core have had their go at expiring the markers */
 export function setupMarkerChecks() {
-  onTurnMoment("combatEnd", "midi-qol.lingeringMarkers", ({ combat }) => {
+  onTurnEvent("combatEnd", "midi-qol.lingeringMarkers", ({ combat }) => {
     // Only the markers there when the combat ended: a window opened since (a reaction just after) is not this combat's
     const ended = new Map<Actor.Implementation, Map<string, number | null | undefined>>();
     for (const actor of combat.combatants.contents.flatMap(c => c.actor ?? [])) {
@@ -6696,7 +6696,7 @@ export function setupMarkerChecks() {
       markers.has(marker.id ?? "") && markers.get(marker.id ?? "") === marker._stats?.createdTime
       && !!marker.flags?.dae?.specialDuration?.includes("combatEnd"))), 500);
   });
-  onTurnMoment("turnStart", "midi-qol.lingeringMarkers", ({ actor, skipped }) => {
+  onTurnEvent("turnStart", "midi-qol.lingeringMarkers", ({ actor, skipped }) => {
     if (actor && !skipped) setTimeout(() => removeLingeringMarkers(actor, isEffectExpired), 500);
   });
 }

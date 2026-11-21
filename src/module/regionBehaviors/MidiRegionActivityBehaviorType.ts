@@ -185,7 +185,7 @@ export class MidiRegionActivityBehaviorType extends foundry.data.regionBehaviors
             if (oncePerTurn) await this._markTriggeredThisTurn(token, rule.targetUuid, turn);
             await this._triggerActivity(token, rule.targetUuid);
             break;
-          // On entry, effects are dnd5e's apply-effect behaviour; these are the rules for other moments (a turn's start or end)
+          // On entry, effects are dnd5e's apply-effect behaviour; these are the rules for other events (a turn's start or end)
           case "applyEffect":
             await this._applyEffect(token, rule.targetUuid);
             break;

@@ -1,16 +1,16 @@
 import { MODULE_ID } from "../../midi-qol.js";
 import { TroubleShooter } from "../apps/TroubleShooter.js";
-import { MomentDispatcher, TURN_MOMENTS, type HandlerOptions, type MomentHandler, type TurnMomentName } from "./turnMomentsCore.js";
+import { EventDispatcher, TURN_EVENTS, type HandlerOptions, type EventHandler, type TurnEventName } from "./turnEventsCore.js";
 
 /*
- * The turn-moment dispatcher (M4 stage 1; plan ~/Documents/midi-next-M4-plan-2026-11-20.md): one place that says a
+ * The turn-event dispatcher (M4 stage 1; plan ~/Documents/midi-next-M4-plan-2026-11-20.md): one place that says a
  * combatant's turn or a round started or ended, raised once, for midi (over-time effects, the economy's resets, M15's
- * triggers) and for modules (MidiQOL.turnMoments.on).
+ * triggers) and for modules (MidiQOL.turnEvents.on).
  *
  * It rides core's own combat lifecycle rather than working turns out from updates: core's active GM runs
  * Combat#_onStartTurn / _onEndTurn / _onStartRound / _onEndRound for every boundary a change crosses (several turns or
  * rounds at once, each skipped one marked `skipped`; a change of turn order ends one turn and starts another), and
- * _onEnter / _onExit as combatants join and leave. The moments are raised after the system's own handling (dnd5e's use
+ * _onEnter / _onExit as combatants join and leave. The events are raised after the system's own handling (dnd5e's use
  * recovery) and before core's for the same boundary (effect expiry, region turn events): a tick with consequences (damage at
  * the end of its turn, a failed save applying the next stage) happens before an effect ending at that boundary is
  * removed. So:
@@ -18,20 +18,20 @@ import { MomentDispatcher, TURN_MOMENTS, type HandlerOptions, type MomentHandler
  * - round 0 is not a round: its turn end and round end when the combat starts are not raised;
  * - combatStart: round 1 starting from round 0; combatEnd: the combat deleted; rewind: the turn moved back (core raises
  *   nothing for it);
- * - one combat's moments are delivered in the order raised (core doesn't await turn events between updates, so two
- *   quick changes can overlap); a handler that changes the combat must not wait for the moments that raises.
+ * - one combat's events are delivered in the order raised (core doesn't await turn events between updates, so two
+ *   quick changes can overlap); a handler that changes the combat must not wait for the events that raises.
  * Handlers run in priority order, each awaited and isolated, each for at most three seconds. A handler that asks a player
  * or runs long registers `detached`: started in its turn, not waited for, so it gives up running before core's expiry
- * and before the next moment.
+ * and before the next event.
  */
 
-export type { TurnMomentName };
-export { TURN_MOMENTS };
+export type { TurnEventName };
+export { TURN_EVENTS };
 
-export interface TurnMoment {
-  moment: TurnMomentName;
+export interface TurnEvent {
+  eventId: TurnEventName;
   combat: Combat.Implementation;
-  /** The combatant whose turn it is (turn moments), or who joined or left (enter, exit) */
+  /** The combatant whose turn it is (turn events), or who joined or left (enter, exit) */
   combatant?: Combatant.Implementation;
   token?: TokenDocument.Implementation | null;
   actor?: Actor.Implementation | null;
@@ -46,28 +46,28 @@ export interface TurnMoment {
 interface TurnContext { round?: number, turn?: number | null, skipped?: boolean }
 
 const reportedSlow = new Set<string>();
-const dispatcher = new MomentDispatcher<TurnMoment>({
-  onError: (id, moment, error) => {
-    const message = `midi-qol | turn moment ${moment}: handler ${id} failed`;
+const dispatcher = new EventDispatcher<TurnEvent>({
+  onError: (id, eventId, error) => {
+    const message = `midi-qol | turn event ${eventId}: handler ${id} failed`;
     console.warn(message, error);
     TroubleShooter.recordError(error, message);
   },
-  onSlow: (id, moment, cap) => {
-    if (reportedSlow.has(`${moment}|${id}`)) return;
-    reportedSlow.add(`${moment}|${id}`);
-    console.warn(`midi-qol | turn moment ${moment}: handler ${id} took over ${cap / 1000}s; the turn went on without it (a handler must not wait for a player)`);
+  onSlow: (id, eventId, cap) => {
+    if (reportedSlow.has(`${eventId}|${id}`)) return;
+    reportedSlow.add(`${eventId}|${id}`);
+    console.warn(`midi-qol | turn event ${eventId}: handler ${id} took over ${cap / 1000}s; the turn went on without it (a handler must not wait for a player)`);
   }
 });
 
-function previousOf(combat: Combat.Implementation): TurnMoment["previous"] {
+function previousOf(combat: Combat.Implementation): TurnEvent["previous"] {
   const previous = combat.previous;
   return previous ? { round: previous.round ?? null, turn: previous.turn ?? null, combatantId: previous.combatantId ?? null } : undefined;
 }
 
-function raise(combat: Combat.Implementation, moment: TurnMomentName, context: TurnContext, combatant?: Combatant.Implementation): Promise<void> {
+function raise(combat: Combat.Implementation, eventId: TurnEventName, context: TurnContext, combatant?: Combatant.Implementation): Promise<void> {
   const token = combatant?.token ?? null;
   return dispatcher.dispatch(combat.id ?? "", {
-    moment, combat, combatant, token, actor: combatant?.actor ?? null,
+    eventId, combat, combatant, token, actor: combatant?.actor ?? null,
     round: context.round ?? combat.round ?? 0, turn: context.turn ?? combat.turn ?? null, skipped: !!context.skipped,
     previous: previousOf(combat)
   });
@@ -117,7 +117,7 @@ function rewound(previous: CombatState, current: CombatState): boolean {
 
 type LibWrapperRegister = { register(packageId: string, target: string, fn: (...args: never[]) => unknown, type: string): unknown };
 
-export function setupTurnMoments() {
+export function setupTurnEvents() {
   const libWrapper = (globalThis as { libWrapper?: LibWrapperRegister }).libWrapper;
   if (!libWrapper) return;
   const prototype = "CONFIG.Combat.documentClass.prototype";
@@ -135,15 +135,15 @@ export function setupTurnMoments() {
   });
 }
 
-/** MidiQOL.turnMoments: add (or replace, by id) a handler for a moment; returns the function that removes it */
-export function onTurnMoment(moment: TurnMomentName, id: string, handler: MomentHandler<TurnMoment>, options: HandlerOptions = {}): () => void {
-  if (!(TURN_MOMENTS as readonly string[]).includes(moment)) console.warn(`midi-qol | turnMoments.on: no moment "${moment}" (${TURN_MOMENTS.join(", ")})`);
-  return dispatcher.on(moment, id, handler, options);
+/** MidiQOL.turnEvents: add (or replace, by id) a handler for a event; returns the function that removes it */
+export function onTurnEvent(eventId: TurnEventName, id: string, handler: EventHandler<TurnEvent>, options: HandlerOptions = {}): () => void {
+  if (!(TURN_EVENTS as readonly string[]).includes(eventId)) console.warn(`midi-qol | turnEvents.on: no event "${eventId}" (${TURN_EVENTS.join(", ")})`);
+  return dispatcher.on(eventId, id, handler, options);
 }
 
-export const turnMomentsApi = {
-  moments: TURN_MOMENTS,
-  on: onTurnMoment,
-  off: (moment: TurnMomentName, id: string) => dispatcher.off(moment, id),
-  handlers: (moment: TurnMomentName) => dispatcher.handlers(moment)
+export const turnEventsApi = {
+  events: TURN_EVENTS,
+  on: onTurnEvent,
+  off: (eventId: TurnEventName, id: string) => dispatcher.off(eventId, id),
+  handlers: (eventId: TurnEventName) => dispatcher.handlers(eventId)
 };

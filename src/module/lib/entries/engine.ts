@@ -5,12 +5,12 @@ import type { Activity } from "../../../globals.js";
 import { createConditionData, evalCondition, expireEffects, hasUsedReaction, setReactionUsed } from "../../utils.js";
 import { getDistance } from "../../services/distance/service.js";
 import { unTimedExecuteAsGM } from "../../GMAction.js";
-import { limitKey, limitStamp, selectGroups, spendStoredLimit, withinLimit, type CombatMoment, type StoredLimit } from "./limits.js";
+import { limitKey, limitStamp, selectGroups, spendStoredLimit, withinLimit, type CombatPosition, type StoredLimit } from "./limits.js";
 import type { Entry, EntryAction, EntryHome, EntryWho, FoundEntry } from "./types.js";
 import { askOffers, costAllows, listToggles, offerOption, setToggle, spendEntryCost, toggleOn } from "./offers.js";
 
 /*
- * M15 stage 1: the entry engine (plan ~/Documents/midi-next-M15-plan-2026-11-20.md). A moment is raised with the actor
+ * M15 stage 1: the entry engine (plan ~/Documents/midi-next-M15-plan-2026-11-20.md). A event is raised with the actor
  * it is about; the engine collects the entries for it by `who` from their homes (the use's activity and item, the
  * actor's items, its applied effects), keeps those whose `if` holds and whose limit allows, one per group unless they
  * stack, and runs each one's actions in order: every action is a registered handler (a contribution to a service or a
@@ -21,31 +21,31 @@ import { askOffers, costAllows, listToggles, offerOption, setToggle, spendEntryC
  * Offers: ask, reaction (an ask costing the reaction) and toggle (lib/entries/offers.ts).
  */
 
-export interface MomentContext {
-  /** The creature the moment is about: the bearer at its turn, the user of a use, the roller of a roll */
+export interface EventContext {
+  /** The creature the event is about: the bearer at its turn, the user of a use, the roller of a roll */
   actor: Actor.Implementation;
   workflow?: Workflow;
   activity?: Activity;
   item?: Item.Implementation;
   target?: TokenDocument.Implementation;
-  /** The moment's own data, `event` in conditions */
+  /** The event's own data, `event` in conditions */
   event?: Record<string, unknown>;
   combat?: Combat.Implementation | null;
   /** Only the entries on this document (an effect's uuid): MidiQOL.doOverTimeEffect for one effect */
   only?: string;
   /**
-   * Which offers run (a reaction moment, lib/entries/reactionMoments.ts): "automatic" the always and toggle entries
+   * Which offers run (a reaction event, lib/entries/responseEvents.ts): "automatic" the always and toggle entries
    * (the asks go in the reaction prompt), "asks" only the plain asks (no reaction prompt was shown). All when absent.
    */
   offers?: "automatic" | "asks";
 }
 
 export interface ActionRun {
-  /** The moment the entry runs at */
-  moment: string;
+  /** The event the entry runs at */
+  eventId: string;
   action: EntryAction;
   found: FoundEntry;
-  context: MomentContext;
+  context: EventContext;
   conditionData: Record<string, unknown>;
 }
 
@@ -53,19 +53,19 @@ export interface ActionRun {
 export type ActionResult = { success?: boolean } | void;
 export type ActionHandler = (run: ActionRun) => ActionResult | Promise<ActionResult>;
 
-export interface MomentDefinition {
+export interface EventDefinition {
   label?: string;
-  /** Collects the entries for the moment; the default collects by `who` (this, owner, bearer) */
-  collect?: (context: MomentContext, momentId: string) => FoundEntry[];
+  /** Collects the entries for the event; the default collects by `who` (this, owner, bearer) */
+  collect?: (context: EventContext, eventId: string) => FoundEntry[];
 }
 
-const moments = new Registry<MomentDefinition>();
+const events = new Registry<EventDefinition>();
 const actions = new Registry<ActionHandler>();
 const CONTROL_KEYS = new Set(["if", "then", "else"]);
 
-export function registerMoment(id: string, definition: MomentDefinition = {}): () => void {
-  moments.set(id, definition);
-  return () => { moments.delete(id); };
+export function registerEvent(id: string, definition: EventDefinition = {}): () => void {
+  events.set(id, definition);
+  return () => { events.delete(id); };
 }
 
 export function registerAction(key: string, handler: ActionHandler, options: { priority?: number } = {}): () => void {
@@ -126,20 +126,20 @@ function effectEntries(effect: ActiveEffect.Implementation, actor: Actor.Impleme
   return list.map(entry => found(entry, "effect", effect, actor));
 }
 
-const listens = (entry: Entry, momentId: string) => [entry.on].flat().includes(momentId);
+const listens = (entry: Entry, eventId: string) => [entry.on].flat().includes(eventId);
 
 /** By who: the use's own entries (this), the actor's items (owner), its applied effects (bearer) */
-function collectByWho(context: MomentContext, momentId: string): FoundEntry[] {
+function collectByWho(context: EventContext, eventId: string): FoundEntry[] {
   const { actor } = context;
   const list: FoundEntry[] = [];
   const own = context.activity?.item ?? context.item;
   if (own) list.push(...itemEntries(own, actor).filter(f => f.who === "this" && (f.home !== "activity" || f.document === context.activity)));
   for (const item of actor.items) if (itemInUse(item)) list.push(...itemEntries(item, actor).filter(f => f.who === "owner"));
   for (const effect of actor.appliedEffects) list.push(...effectEntries(effect, actor).filter(f => f.who === "bearer"));
-  return list.filter(f => listens(f.entry, momentId));
+  return list.filter(f => listens(f.entry, eventId));
 }
 
-/* Near (stage 4c): entries with `who: { within, of, filter }` on the creatures around the one the moment is about */
+/* Near (stage 4c): entries with `who: { within, of, filter }` on the creatures around the one the event is about */
 
 /** Bumped whenever an item, effect or actor changes: the near holders are found again */
 let homesGeneration = 0;
@@ -158,8 +158,8 @@ function nearEntriesOf(actor: Actor.Implementation): FoundEntry[] {
   return list;
 }
 
-/** The token a moment is about: its target, the use's token, else the actor's first on the viewed scene */
-function momentToken(context: MomentContext): TokenDocument.Implementation | undefined {
+/** The token a event is about: its target, the use's token, else the actor's first on the viewed scene */
+function eventToken(context: EventContext): TokenDocument.Implementation | undefined {
   if (context.target) return context.target;
   const useToken = context.workflow?.token as { document?: TokenDocument.Implementation } | TokenDocument.Implementation | undefined;
   if (useToken && context.workflow?.actor === context.actor) return useToken instanceof TokenDocument ? useToken : useToken.document;
@@ -176,8 +176,8 @@ function reachOf(actor: Actor.Implementation): number {
   return reach;
 }
 
-function nearEntries(context: MomentContext, momentId: string): FoundEntry[] {
-  const about = momentToken(context);
+function nearEntries(context: EventContext, eventId: string): FoundEntry[] {
+  const about = eventToken(context);
   const scene = about?.parent;
   if (!about || !scene) return [];
   const list: FoundEntry[] = [];
@@ -185,7 +185,7 @@ function nearEntries(context: MomentContext, momentId: string): FoundEntry[] {
     const holder = holderToken.actor;
     if (!holder) continue;
     for (const f of nearEntriesOf(holder)) {
-      if (!listens(f.entry, momentId)) continue;
+      if (!listens(f.entry, eventId)) continue;
       const who = f.who as Exclude<EntryWho, string>;
       let from: TokenDocument.Implementation | undefined = holderToken;
       if (who.of === "origin") {
@@ -205,11 +205,11 @@ function nearEntries(context: MomentContext, momentId: string): FoundEntry[] {
   return list;
 }
 
-/** The entries a moment would run for this context, before conditions and limits (MidiQOL.entries.collect) */
-export function collectEntries(momentId: string, context: MomentContext): FoundEntry[] {
-  const definition = moments.get(momentId)?.value;
-  const list = (definition?.collect ?? collectByWho)(context, momentId);
-  if (!definition?.collect) list.push(...nearEntries(context, momentId));
+/** The entries a event would run for this context, before conditions and limits (MidiQOL.entries.collect) */
+export function collectEntries(eventId: string, context: EventContext): FoundEntry[] {
+  const definition = events.get(eventId)?.value;
+  const list = (definition?.collect ?? collectByWho)(context, eventId);
+  if (!definition?.collect) list.push(...nearEntries(context, eventId));
   return context.only ? list.filter(f => documentUuid(f.document) === context.only) : list;
 }
 
@@ -249,8 +249,8 @@ export function originActor(effect: ActiveEffect.Implementation): Actor.Implemen
   return origin instanceof Actor ? origin : undefined;
 }
 
-/** The origin's moments: entries on the effects, on the combat's other creatures, that this actor's uses applied */
-function collectForOrigin(context: MomentContext, momentId: string): FoundEntry[] {
+/** The origin's events: entries on the effects, on the combat's other creatures, that this actor's uses applied */
+function collectForOrigin(context: EventContext, eventId: string): FoundEntry[] {
   const combat = context.combat ?? game.combat;
   const list: FoundEntry[] = [];
   for (const combatant of combat?.combatants ?? []) {
@@ -258,7 +258,7 @@ function collectForOrigin(context: MomentContext, momentId: string): FoundEntry[
     if (!bearer) continue;
     for (const effect of bearer.appliedEffects) {
       if (originActor(effect) !== context.actor) continue;
-      list.push(...effectEntries(effect, bearer).filter(f => f.who === "bearer" && listens(f.entry, momentId)));
+      list.push(...effectEntries(effect, bearer).filter(f => f.who === "bearer" && listens(f.entry, eventId)));
     }
   }
   return list;
@@ -266,7 +266,7 @@ function collectForOrigin(context: MomentContext, momentId: string): FoundEntry[
 
 /* State */
 
-function combatMoment(context: MomentContext): CombatMoment | undefined {
+function combatPosition(context: EventContext): CombatPosition | undefined {
   const combat = context.combat ?? game.combat;
   if (!combat?.started || !combat.id) return undefined;
   return { id: combat.id, round: combat.round ?? 0, turn: combat.turn ?? 0 };
@@ -301,7 +301,7 @@ function storedLimits(actor: Actor.Implementation | undefined): StoredLimit[] {
   return Array.isArray(stored) ? stored : [];
 }
 
-export function limitAllows(f: FoundEntry, context: MomentContext): boolean {
+export function limitAllows(f: FoundEntry, context: EventContext): boolean {
   const limit = f.entry.limit;
   if (!limit) return true;
   const key = limitKey(documentUuid(f.document), f.entry.id);
@@ -311,12 +311,12 @@ export function limitAllows(f: FoundEntry, context: MomentContext): boolean {
     case "effect": return !(f.document instanceof ActiveEffect) || (entryState(f.document, f.entry.id).used ?? 0) < max;
     default: {
       const records = storedLimits(f.actor);
-      return withinLimit(limit, records.find(record => record.key === key), limitStamp(limit.per, combatMoment(context)));
+      return withinLimit(limit, records.find(record => record.key === key), limitStamp(limit.per, combatPosition(context)));
     }
   }
 }
 
-export async function spendEntryLimit(f: FoundEntry, context: MomentContext): Promise<void> {
+export async function spendEntryLimit(f: FoundEntry, context: EventContext): Promise<void> {
   const limit = f.entry.limit;
   if (!limit) return;
   const key = limitKey(documentUuid(f.document), f.entry.id);
@@ -334,7 +334,7 @@ export async function spendEntryLimit(f: FoundEntry, context: MomentContext): Pr
       return setEntryState(f.document, f.entry.id, { ...state, used: (state.used ?? 0) + 1 });
     }
     default: {
-      const combat = combatMoment(context);
+      const combat = combatPosition(context);
       const stamp = limitStamp(limit.per, combat);
       if (!stamp || !f.actor) return;
       await updateDocument(f.actor, { [`flags.${MODULE_ID}.entryLimits`]: spendStoredLimit(storedLimits(f.actor), key, stamp, combat) });
@@ -344,7 +344,7 @@ export async function spendEntryLimit(f: FoundEntry, context: MomentContext): Pr
 
 /* Running */
 
-export function conditionDataFor(f: FoundEntry, context: MomentContext): Record<string, unknown> {
+export function conditionDataFor(f: FoundEntry, context: EventContext): Record<string, unknown> {
   const effect = f.document instanceof ActiveEffect ? f.document : undefined;
   return createConditionData({
     workflow: context.workflow, actor: f.actor ?? context.actor, activity: context.activity, item: context.item,
@@ -389,11 +389,11 @@ export async function runActions(list: readonly EntryAction[], run: Omit<ActionR
   }
 }
 
-/** Run a moment's entries for this context (MidiQOL.entries.run): what ran, in order */
-export async function runMoment(momentId: string, context: MomentContext): Promise<EntryRunResult[]> {
+/** Run a event's entries for this context (MidiQOL.entries.run): what ran, in order */
+export async function runEvent(eventId: string, context: EventContext): Promise<EntryRunResult[]> {
   type Candidate = { found: FoundEntry, conditionData: Record<string, unknown>, entry: Entry, ask: boolean };
   const candidates: Candidate[] = [];
-  for (const f of collectEntries(momentId, context)) {
+  for (const f of collectEntries(eventId, context)) {
     const offer = f.entry.offer ?? "always";
     const ask = offer === "ask" || offer === "reaction";
     if (context.offers === "automatic" && ask) continue;
@@ -407,29 +407,29 @@ export async function runMoment(momentId: string, context: MomentContext): Promi
     candidates.push({ found: f, conditionData, entry: f.entry, ask });
   }
   const results: EntryRunResult[] = [];
-  // A group is one entry per use, across the use's moments (Metamagic: one option per spell), unless it stacks
+  // A group is one entry per use, across the use's events (Metamagic: one option per spell), unless it stacks
   const open = candidates.filter(c => groupOpen(c.entry, context));
   const automatic = selectGroups(open.filter(c => !c.ask));
   const taken = new Set(automatic.flatMap(c => c.entry.group && !c.entry.stacks ? [c.entry.group] : []));
-  const asked = await chooseAsked(momentId, open.filter(c => c.ask && (!c.entry.group || c.entry.stacks || !taken.has(c.entry.group))));
-  for (const { found: f, conditionData } of [...automatic, ...selectGroups(asked)]) results.push(await takeEntry(momentId, f, context, conditionData));
+  const asked = await chooseAsked(eventId, open.filter(c => c.ask && (!c.entry.group || c.entry.stacks || !taken.has(c.entry.group))));
+  for (const { found: f, conditionData } of [...automatic, ...selectGroups(asked)]) results.push(await takeEntry(eventId, f, context, conditionData));
   return results;
 }
 
 /** The entry's group (if any) has no entry taken yet this use, or it stacks */
-function groupOpen(entry: Entry, context: MomentContext): boolean {
+function groupOpen(entry: Entry, context: EventContext): boolean {
   if (!entry.group || entry.stacks || !context.workflow) return true;
   return !groupsUsed.get(context.workflow)?.has(entry.group);
 }
 
 /**
  * Run an entry that was chosen (or runs by itself): its actions, then what taking it spends: its limit, its cost, the
- * reaction for a reaction offer, its group for the use. A reaction prompt's offer (lib/entries/reactionMoments.ts) is
+ * reaction for a reaction offer, its group for the use. A reaction prompt's offer (lib/entries/responseEvents.ts) is
  * taken this way.
  */
-export async function takeEntry(momentId: string, f: FoundEntry, context: MomentContext, conditionData: Record<string, unknown>): Promise<EntryRunResult> {
+export async function takeEntry(eventId: string, f: FoundEntry, context: EventContext, conditionData: Record<string, unknown>): Promise<EntryRunResult> {
   const ran: string[] = [];
-  await runActions(f.entry.do, { moment: momentId, found: f, context, conditionData }, ran);
+  await runActions(f.entry.do, { eventId: eventId, found: f, context, conditionData }, ran);
   if (ran.length) {
     await spendEntryLimit(f, context);
     await spendEntryCost(f);
@@ -444,12 +444,12 @@ export async function takeEntry(momentId: string, f: FoundEntry, context: Moment
 }
 
 /**
- * The ask and reaction offers a moment has for its creature, not yet run (a reaction prompt's): their conditions,
+ * The ask and reaction offers a event has for its creature, not yet run (a reaction prompt's): their conditions,
  * limits, costs and groups checked; reaction offers only while `reactionLeft`.
  */
-export async function offerableEntries(momentId: string, context: MomentContext, reactionLeft: boolean): Promise<{ found: FoundEntry, conditionData: Record<string, unknown> }[]> {
+export async function offerableEntries(eventId: string, context: EventContext, reactionLeft: boolean): Promise<{ found: FoundEntry, conditionData: Record<string, unknown> }[]> {
   const list: { found: FoundEntry, conditionData: Record<string, unknown> }[] = [];
-  for (const f of collectEntries(momentId, context)) {
+  for (const f of collectEntries(eventId, context)) {
     const offer = f.entry.offer ?? "always";
     if (offer !== "ask" && offer !== "reaction") continue;
     if (offer === "reaction" && !reactionLeft) continue;
@@ -464,8 +464,8 @@ export async function offerableEntries(momentId: string, context: MomentContext,
   return list;
 }
 
-/** The ask offers taken: each actor's owner asked once for the moment */
-async function chooseAsked<T extends { found: FoundEntry }>(momentId: string, list: T[]): Promise<T[]> {
+/** The ask offers taken: each actor's owner asked once for the event */
+async function chooseAsked<T extends { found: FoundEntry }>(eventId: string, list: T[]): Promise<T[]> {
   if (!list.length) return [];
   const byActor = new Map<Actor.Implementation, { candidate: T, key: string }[]>();
   list.forEach((candidate, index) => {
@@ -477,7 +477,7 @@ async function chooseAsked<T extends { found: FoundEntry }>(momentId: string, li
   });
   const taken: T[] = [];
   for (const [actor, entries] of byActor) {
-    const title = `${actor.name}: ${moments.get(momentId)?.value.label ?? momentId}`;
+    const title = `${actor.name}: ${events.get(eventId)?.value.label ?? eventId}`;
     const keys = new Set(await askOffers(actor, title, entries.map(({ candidate, key }) => offerOption(candidate.found, key))));
     taken.push(...entries.filter(e => keys.has(e.key)).map(e => e.candidate));
   }
@@ -486,11 +486,11 @@ async function chooseAsked<T extends { found: FoundEntry }>(momentId: string, li
 /* midi's built-in actions (stage 1); the rest come with stage 2 */
 
 export function registerMidiEntryActions() {
-  registerMoment("turnStart", { label: "The bearer's turn starts" });
-  registerMoment("turnEnd", { label: "The bearer's turn ends" });
-  registerMoment("roundStart", { label: "A round starts (for each creature in the combat)" });
-  registerMoment("originTurnStart", { label: "The turn of the creature whose use applied the effect starts", collect: collectForOrigin });
-  registerMoment("originTurnEnd", { label: "The turn of the creature whose use applied the effect ends", collect: collectForOrigin });
+  registerEvent("turnStart", { label: "The bearer's turn starts" });
+  registerEvent("turnEnd", { label: "The bearer's turn ends" });
+  registerEvent("roundStart", { label: "A round starts (for each creature in the combat)" });
+  registerEvent("originTurnStart", { label: "The turn of the creature whose use applied the effect starts", collect: collectForOrigin });
+  registerEvent("originTurnEnd", { label: "The turn of the creature whose use applied the effect ends", collect: collectForOrigin });
   // { end: true }: the effect holding the entry ends (as an expiry, so DAE's expiry mode applies)
   registerAction("end", async ({ found: f }) => {
     if (!(f.document instanceof ActiveEffect)) return;
@@ -500,7 +500,7 @@ export function registerMidiEntryActions() {
 }
 
 export const entriesApi = {
-  registerMoment, registerAction, collect: collectEntries, run: runMoment, state: entryState, toggles: listToggles, setToggle,
-  moments: () => moments.entries().map(entry => entry.id),
+  registerEvent, registerAction, collect: collectEntries, run: runEvent, state: entryState, toggles: listToggles, setToggle,
+  events: () => events.entries().map(entry => entry.id),
   actions: () => actions.entries().map(entry => entry.id)
 };

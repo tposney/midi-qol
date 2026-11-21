@@ -2,7 +2,7 @@ import { activityTypeSteps, activityTypeStepsMarkdown } from "./module/activitie
 import { registerMidiIssueContributors } from "./module/services/economy/issues.js";
 import { setupLedgerEvents } from "./module/services/economy/ledger.js";
 import { economyApi } from "./module/services/economy/api.js";
-import { turnMomentsApi } from "./module/lib/turnMoments.js";
+import { turnEventsApi } from "./module/lib/turnEvents.js";
 import { defineRevealPolicyService, reveals } from "./module/services/revealPolicy/service.js";
 import { defineTokenNamesService } from "./module/services/tokenNames/service.js";
 import { settingsApi } from "./module/lib/settingsRegistry.js";
@@ -12,10 +12,10 @@ import { preview } from "./module/lib/preview.js";
 import { entriesApi, registerMidiEntryActions, watchEntryHomes } from "./module/lib/entries/engine.js";
 import { registerOvertimeEntries } from "./module/lib/entries/overtime.js";
 import { registerEntryRollBonuses } from "./module/lib/entries/rollBonuses.js";
-import { registerUseMoments } from "./module/lib/entries/useMoments.js";
+import { registerUseEvents } from "./module/lib/entries/useEvents.js";
 import { registerUseChanges } from "./module/lib/entries/useChanges.js";
 import { registerEntryOffers } from "./module/lib/entries/offers.js";
-import { registerReactionMoments } from "./module/lib/entries/reactionMoments.js";
+import { registerResponseEvents } from "./module/lib/entries/responseEvents.js";
 import { outcomes } from "./module/lib/outcomes.js";
 import { registerTag, registerMidiTags, tagValue, tagNames, tagDefinition, replacedTags, tagsView } from "./module/lib/tags.js";
 import { installFixedDice, withFixedDice } from "./module/lib/fixedDice.js";
@@ -291,8 +291,8 @@ Object.assign(globalThis.MidiQOL, {
   testing: { fixedDice: withFixedDice },
   // A use's trace (M25): its inputs, steps with who changed them, and outcome; saved as a JSON file
   useTrace, saveUseTrace, outcomes, why, preview,
-  // The turn-moment dispatcher (M4): turn and round starts and ends, combat start and end, raised once
-  turnMoments: turnMomentsApi,
+  // The turn-event dispatcher (M4): turn and round starts and ends, combat start and end, raised once
+  turnEvents: turnEventsApi,
   // The action economy ledger (M4): each budget kind's window, spend, refund, reset
   economy: economyApi,
   // Tags (M26): named facts about a use and its targets that conditions read; modules add or replace them
@@ -500,8 +500,8 @@ Hooks.once('init', async function () {
   registerAttackRollRules();
   defineDamageModifiersService();
   defineDamageContributionsService();
-  defineReactionsService();
-  reactionsService.register("midi-qol.items", midiItemReactions, { label: "Midi-QOL: reaction items" });
+  defineResponsesService();
+  responsesService.register("midi-qol.items", midiItemReactions, { label: "Midi-QOL: reaction items" });
   defineSaveRequestsService();
   registerMidiSaveProviders();
   damageModifiersService.register("midi-qol.targetedBonuses", targetedDamageBonusContributor, { label: "Midi-QOL: bonuses for particular targets" });
@@ -519,10 +519,10 @@ Hooks.once('init', async function () {
   registerMidiEntryActions();
   watchEntryHomes();
   registerOvertimeEntries();
-  registerUseMoments();
+  registerUseEvents();
   registerUseChanges();
   registerEntryOffers();
-  registerReactionMoments();
+  registerResponseEvents();
   setupLedgerEvents();
   defineRangeService();
   defineBonusPromptService(() => `midi-qol.${safeGetGameSetting("midi-qol", "BonusPrompt") ?? "phased"}`);
@@ -872,7 +872,7 @@ Hooks.once("dae.setupComplete", () => {
 
 /*
  * At ready, not init: the `usage` slot is contended — CPR and CAT may claim it too — and the model
- * subclasses whatever is registered at that moment, so it must go last rather than first.
+ * subclasses whatever is registered at that event, so it must go last rather than first.
  */
 
 Hooks.once("ready", () => {
@@ -1117,11 +1117,11 @@ import { damageCalculationOrder, getDamageCalculationStep, registerDamageCalcula
 import { registerBonusApprovalQuery } from "./module/services/rollBonuses/approval.js";
 import { registerDamageMessageSummary } from "./module/damage/messages.js";
 import { defineDamageContributionsService } from "./module/services/damageContributions/service.js";
-import { defineReactionsService, reactionsService } from "./module/services/reactions/service.js";
+import { defineResponsesService, responsesService } from "./module/services/responses/service.js";
 import { defineSaveRequestsService, MIDI_SAVE_PROVIDERS, requestSaves, settingsProviderFor } from "./module/services/saveRequests/service.js";
 import { midiSaveProviders, registerMidiSaveProviders } from "./module/services/saveRequests/providers.js";
 import { PendingSaves } from "./module/services/saveRequests/pending.js";
-import { midiItemReactions } from "./module/services/reactions/provider.js";
+import { midiItemReactions } from "./module/services/responses/provider.js";
 import { previewFlow, stepsApi } from "./module/steps/api.js";
 import { requestsApi, setupRequests } from "./module/lib/requests.js";
 import type { Activity } from "./globals.js";

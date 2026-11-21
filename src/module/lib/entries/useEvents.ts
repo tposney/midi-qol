@@ -6,12 +6,12 @@ import type { DamageContribution } from "../../services/damageContributions/serv
 import type { DamageChange, DamageStage } from "../../services/damageModifiers/rules.js";
 import { DAMAGE_STAGES } from "../../services/damageModifiers/rules.js";
 import { applyBonusEffect, type BonusEffect } from "../../services/rollBonuses/service.js";
-import { collectEntries, conditionDataFor, entryHolds, holds, limitAllows, registerAction, registerMoment, runMoment, spendEntryLimit, type ActionRun, type MomentContext } from "./engine.js";
+import { collectEntries, conditionDataFor, entryHolds, holds, limitAllows, registerAction, registerEvent, runEvent, spendEntryLimit, type ActionRun, type EventContext } from "./engine.js";
 
 /*
- * M15 stage 4a: the use moments and the target moments, and the actions that contribute to a use. A use moment is
- * raised for the use's actor (`who: "this"` / `"owner"`, an effect's bearer); a target moment for each target, the
- * target as the actor and the attacker's use as `event.use`. Both are raised from the step passes (USE_MOMENTS),
+ * M15 stage 4a: the use events and the target events, and the actions that contribute to a use. A use event is
+ * raised for the use's actor (`who: "this"` / `"owner"`, an effect's bearer); a target event for each target, the
+ * target as the actor and the attacker's use as `event.use`. Both are raised from the step passes (USE_EVENTS),
  * `use.configure` from prepareUse and `damaged` with midi's isDamaged.
  * A contribution an action makes (a roll modifier, damage, a damage change) is kept on the use and read by midi's
  * contributors when the service asks (as rollBonuses' targeted damage bonuses are), so it applies on whichever client
@@ -20,9 +20,9 @@ import { collectEntries, conditionDataFor, entryHolds, holds, limitAllows, regis
 
 type TargetsOf = (workflow: Workflow) => TokenDocument.Implementation[];
 
-interface MomentAt {
-  moment: string;
-  /** For each of these targets (a target moment); a use moment when absent */
+interface EventAt {
+  eventId: string;
+  /** For each of these targets (a target event); a use event when absent */
   targets?: TargetsOf;
   when?: (workflow: Workflow) => boolean;
 }
@@ -32,61 +32,61 @@ const allTargets: TargetsOf = w => documents(w.targets);
 const hitTargets: TargetsOf = w => [...new Set([...documents(w.hitTargets), ...documents(w.hitTargetsEC)])];
 const attacks = (w: Workflow) => !!w.activity?.attack;
 
-/** The moments each step pass raises, by "pre"/"post" and step id */
-const USE_MOMENTS: Record<string, MomentAt[]> = {
-  "post midi-qol.PreambleComplete": [{ moment: "use.targeted" }, { moment: "targeted", targets: allTargets }],
-  "pre midi-qol.WaitForAttackRoll": [{ moment: "use.attack", when: attacks }],
+/** The events each step pass raises, by "pre"/"post" and step id */
+const USE_EVENTS: Record<string, EventAt[]> = {
+  "post midi-qol.PreambleComplete": [{ eventId: "use.targeted" }, { eventId: "targeted", targets: allTargets }],
+  "pre midi-qol.WaitForAttackRoll": [{ eventId: "use.attack", when: attacks }],
   // attacked, hit, missed, saveRequested, saveFailed, saveSucceeded, damaging, healing: raised where midi asks for
-  // reactions, so they share its prompt (lib/entries/reactionMoments.ts)
+  // reactions, so they share its prompt (lib/entries/responseEvents.ts)
   "post midi-qol.AttackRollComplete": [
-    { moment: "use.hit", when: w => attacks(w) && hitTargets(w).length > 0 },
-    { moment: "use.missed", when: w => attacks(w) && !!w.attackRoll && hitTargets(w).length === 0 }
+    { eventId: "use.hit", when: w => attacks(w) && hitTargets(w).length > 0 },
+    { eventId: "use.missed", when: w => attacks(w) && !!w.attackRoll && hitTargets(w).length === 0 }
   ],
-  "pre midi-qol.DamageRollStarted": [{ moment: "use.damageRoll" }],
-  "post midi-qol.DamageRollComplete": [{ moment: "use.damageRolled" }],
-  "pre midi-qol.WaitForSaves": [{ moment: "use.saves", when: w => !!w.saveActivity }],
-  "pre midi-qol.ApplyDynamicEffects": [{ moment: "use.effects" }],
-  "post midi-qol.RollFinished": [{ moment: "use.end" }]
+  "pre midi-qol.DamageRollStarted": [{ eventId: "use.damageRoll" }],
+  "post midi-qol.DamageRollComplete": [{ eventId: "use.damageRolled" }],
+  "pre midi-qol.WaitForSaves": [{ eventId: "use.saves", when: w => !!w.saveActivity }],
+  "pre midi-qol.ApplyDynamicEffects": [{ eventId: "use.effects" }],
+  "post midi-qol.RollFinished": [{ eventId: "use.end" }]
 };
 
-const SITE_MOMENTS = ["attacked", "hit", "missed", "saveRequested", "saveFailed", "saveSucceeded", "damaging", "healing", "damaged"];
-const USE_MOMENT_IDS = new Set(["use.configure", ...Object.values(USE_MOMENTS).flat().map(m => m.moment), ...SITE_MOMENTS]);
+const SITE_EVENTS = ["attacked", "hit", "missed", "saveRequested", "saveFailed", "saveSucceeded", "damaging", "healing", "damaged"];
+const USE_EVENT_IDS = new Set(["use.configure", ...Object.values(USE_EVENTS).flat().map(m => m.eventId), ...SITE_EVENTS]);
 
-/** A moment raised by a use (its contributions go to the use) */
-export function isUseMoment(moment: string): boolean { return USE_MOMENT_IDS.has(moment); }
+/** A event raised by a use (its contributions go to the use) */
+export function isUseEvent(eventId: string): boolean { return USE_EVENT_IDS.has(eventId); }
 
-/** The context of a use moment: the user's */
-export function useContext(workflow: Workflow, event: Record<string, unknown> = {}): MomentContext {
+/** The context of a use event: the user's */
+export function useContext(workflow: Workflow, event: Record<string, unknown> = {}): EventContext {
   return { actor: workflow.actor, workflow, activity: workflow.activity as Activity, item: workflow.item, event };
 }
 
-/** The context of a target moment: the target is the actor; the user's use is `event.use` */
-export function targetContext(workflow: Workflow, target: TokenDocument.Implementation, event: Record<string, unknown> = {}): MomentContext | undefined {
+/** The context of a target event: the target is the actor; the user's use is `event.use` */
+export function targetContext(workflow: Workflow, target: TokenDocument.Implementation, event: Record<string, unknown> = {}): EventContext | undefined {
   const actor = target.actor;
   if (!actor) return undefined;
   return { actor, workflow, target, event: { ...event, actor: workflow.actor, token: workflow.token?.document ?? workflow.token, use: workflow } };
 }
 
-/** Whether any of the actor's homes has an entry for the moment (most uses have none: no condition data built) */
-function anyEntries(moment: string, context: MomentContext): boolean {
-  return collectEntries(moment, context).length > 0;
+/** Whether any of the actor's homes has an entry for the event (most uses have none: no condition data built) */
+function anyEntries(eventId: string, context: EventContext): boolean {
+  return collectEntries(eventId, context).length > 0;
 }
 
-/** The step pass hook: raise the moments of this pass (Workflow's engine host) */
-export async function raiseUseMoments(workflow: Workflow, prePost: "pre" | "post", step: string | undefined): Promise<void> {
-  const list = step ? USE_MOMENTS[`${prePost} ${step}`] : undefined;
+/** The step pass hook: raise the events of this pass (Workflow's engine host) */
+export async function raiseUseEvents(workflow: Workflow, prePost: "pre" | "post", step: string | undefined): Promise<void> {
+  const list = step ? USE_EVENTS[`${prePost} ${step}`] : undefined;
   if (!list || workflow.readOnly) return;
   for (const at of list) {
     if (workflow.aborted) return;
     if (at.when && !at.when(workflow)) continue;
     if (!at.targets) {
       const context = useContext(workflow);
-      if (anyEntries(at.moment, context)) await runMoment(at.moment, context);
+      if (anyEntries(at.eventId, context)) await runEvent(at.eventId, context);
       continue;
     }
     for (const target of at.targets(workflow)) {
       const context = targetContext(workflow, target);
-      if (context && anyEntries(at.moment, context)) await runMoment(at.moment, context);
+      if (context && anyEntries(at.eventId, context)) await runEvent(at.eventId, context);
     }
   }
 }
@@ -95,7 +95,7 @@ export async function raiseUseMoments(workflow: Workflow, prePost: "pre" | "post
 export async function raiseUseConfigure(workflow: Workflow, usage: object): Promise<boolean> {
   const context = useContext(workflow, { usage });
   if (!anyEntries("use.configure", context)) return true;
-  await runMoment("use.configure", context);
+  await runEvent("use.configure", context);
   return !workflow.aborted;
 }
 
@@ -103,7 +103,7 @@ export async function raiseUseConfigure(workflow: Workflow, usage: object): Prom
 export async function raiseDamaged(workflow: Workflow, target: TokenDocument.Implementation | undefined, damage: Record<string, unknown>): Promise<void> {
   if (!target || workflow.readOnly) return;
   const context = targetContext(workflow, target, { damage });
-  if (context && anyEntries("damaged", context)) await runMoment("damaged", context);
+  if (context && anyEntries("damaged", context)) await runEvent("damaged", context);
 }
 
 /* What the use's entries contributed */
@@ -129,8 +129,8 @@ function labelOf(run: ActionRun): string {
 }
 
 /**
- * Whose `for`/`to` names: "self" the entry's actor (the user at a use moment, the bearer at a target moment),
- * "target" the moment's target or else every target of the use, "attacker"/"event.actor" the use's actor.
+ * Whose `for`/`to` names: "self" the entry's actor (the user at a use event, the bearer at a target event),
+ * "target" the event's target or else every target of the use, "attacker"/"event.actor" the use's actor.
  */
 export function actorsFor(spec: unknown, run: ActionRun, fallback: "self" | "target"): Actor.Implementation[] {
   const { context, found } = run;
@@ -171,10 +171,10 @@ function modifierOf(run: ActionRun): RollModifier | undefined {
   return { effect, value, label: labelOf(run), source: `${(run.found.document as { uuid?: string }).uuid ?? ""}#${run.found.entry.id}` };
 }
 
-/** `{ modifier, rolls?, for? }` at a use or target moment: on the rolls of the use it names (default: the entry's actor) */
+/** `{ modifier, rolls?, for? }` at a use or target event: on the rolls of the use it names (default: the entry's actor) */
 async function modifierAction(run: ActionRun) {
   const workflow = run.context.workflow;
-  if (!workflow || !isUseMoment(run.moment)) return;
+  if (!workflow || !isUseEvent(run.eventId)) return;
   const modifier = modifierOf(run);
   if (!modifier) return;
   const rolls = rollKinds(run.action.rolls);
@@ -186,7 +186,7 @@ async function rolled(formula: string, rollData: Record<string, unknown>): Promi
   return roll.total ?? 0;
 }
 
-/** `{ damage | heal: formula, type?, to? }` at a use moment: damage the use deals (its damage step), to the target or every target hit */
+/** `{ damage | heal: formula, type?, to? }` at a use event: damage the use deals (its damage step), to the target or every target hit */
 export async function useDamageAction(run: ActionRun, healing: boolean) {
   const workflow = run.context.workflow;
   if (!workflow) return;
@@ -194,14 +194,14 @@ export async function useDamageAction(run: ActionRun, healing: boolean) {
   if (typeof formula !== "string") return;
   const targets = targetDocumentsFor(run.action.to, run);
   if (targets && !targets.length) {
-    console.warn(`midi-qol | entry ${run.found.entry.id}: damage at ${run.moment} goes to the use's targets ("to": "target")`);
+    console.warn(`midi-qol | entry ${run.found.entry.id}: damage at ${run.eventId} goes to the use's targets ("to": "target")`);
     return;
   }
   const type = typeof run.action.type === "string" ? run.action.type : healing ? "healing" : undefined;
   contributionsOf(workflow).damage.push({ role: "midi-qol.entries", formula, damageType: type, label: labelOf(run), targets: targets?.map(t => t.uuid).filter((uuid): uuid is string => !!uuid) });
 }
 
-/** `{ damageChange: { stage, amount?, multiplier?, types? }, for? }`: a change to the damage a target takes (the moment's target, else every target) */
+/** `{ damageChange: { stage, amount?, multiplier?, types? }, for? }`: a change to the damage a target takes (the event's target, else every target) */
 async function damageChangeAction(run: ActionRun) {
   const workflow = run.context.workflow;
   const spec = run.action.damageChange as { stage?: DamageStage, amount?: number | string, multiplier?: number | string, types?: string[] } | undefined;
@@ -223,16 +223,16 @@ async function damageChangeAction(run: ActionRun) {
 }
 
 /**
- * `{ bonus: BonusEffect, rolls? }` at a use or target moment: applied to the use's attack roll as it stands (at
- * `attacked`, a target giving the attacker disadvantage: 2024 Lucky; at `use.missed`, a reroll). A roll moment's
+ * `{ bonus: BonusEffect, rolls? }` at a use or target event: applied to the use's attack roll as it stands (at
+ * `attacked`, a target giving the attacker disadvantage: 2024 Lucky; at `use.missed`, a reroll). A roll event's
  * bonus is a rollBonuses candidate instead (lib/entries/rollBonuses.ts).
  */
 async function bonusAction(run: ActionRun) {
   const workflow = run.context.workflow;
   const effect = run.action.bonus as BonusEffect | undefined;
-  if (!workflow || !isUseMoment(run.moment) || !effect || typeof effect !== "object") return;
+  if (!workflow || !isUseEvent(run.eventId) || !effect || typeof effect !== "object") return;
   const rolls = rollKinds(run.action.rolls);
-  // An AC bonus at a target moment: this attack's AC for the target (the reaction site adds it)
+  // An AC bonus at a target event: this attack's AC for the target (the reaction site adds it)
   if (rolls?.includes("ac" as RollKind)) {
     const target = run.context.target;
     if (!target?.uuid || effect.kind !== "add") return;
@@ -244,7 +244,7 @@ async function bonusAction(run: ActionRun) {
   }
   if (rolls && !rolls.includes("attack")) return;
   if (!workflow.attackRoll) {
-    console.warn(`midi-qol | entry ${run.found.entry.id}: no attack roll at ${run.moment} for its bonus`);
+    console.warn(`midi-qol | entry ${run.found.entry.id}: no attack roll at ${run.eventId} for its bonus`);
     return;
   }
   const changed = await applyBonusEffect(workflow.attackRoll, effect, run.conditionData, labelOf(run));
@@ -254,7 +254,7 @@ async function bonusAction(run: ActionRun) {
 /** `{ abort: reason }`: the use stops (at use.configure, before anything is spent) */
 async function abortAction(run: ActionRun) {
   const workflow = run.context.workflow;
-  if (!workflow || !isUseMoment(run.moment)) return;
+  if (!workflow || !isUseEvent(run.eventId)) return;
   const reason = typeof run.action.abort === "string" ? run.action.abort : labelOf(run);
   ui.notifications?.warn(`${workflow.activity?.name ?? workflow.item?.name}: ${reason}`);
   workflow.aborted = true;
@@ -281,7 +281,7 @@ async function entryRollModifiers(query: RollQuery): Promise<RollModifier[]> {
       if (m.actorUuid === query.actor.uuid && (!m.rolls || m.rolls.includes(query.kind))) found.push(m.modifier);
     }
   }
-  const context: MomentContext = { actor: query.actor, workflow: query.workflow, activity: query.activity, item: query.item, event: { kind: query.kind, ability: query.ability, skill: query.skill, tool: query.tool, use: query.workflow } };
+  const context: EventContext = { actor: query.actor, workflow: query.workflow, activity: query.activity, item: query.item, event: { kind: query.kind, ability: query.ability, skill: query.skill, tool: query.tool, use: query.workflow } };
   for (const f of collectEntries("roll.preRoll", context)) {
     if ((f.entry.offer ?? "always") !== "always") continue;
     const actions = f.entry.do.filter(action => "modifier" in action);
@@ -293,7 +293,7 @@ async function entryRollModifiers(query: RollQuery): Promise<RollModifier[]> {
       const rolls = rollKinds(action.rolls);
       if (rolls && !rolls.includes(query.kind)) continue;
       if (!await holds(action.if, conditionData)) continue;
-      const modifier = modifierOf({ moment: "roll.preRoll", action, found: f, context, conditionData });
+      const modifier = modifierOf({ eventId: "roll.preRoll", action, found: f, context, conditionData });
       if (modifier) { found.push(modifier); used = true; }
     }
     if (used && !query.preview) await spendEntryLimit(f, context);
@@ -311,30 +311,30 @@ export function useContributions(workflow: Workflow): Readonly<UseContributions>
   return contributions.get(workflow);
 }
 
-export function registerUseMoments() {
-  registerMoment("use.configure", { label: "A use starts, before its checks, targets and costs" });
-  registerMoment("use.targeted", { label: "The use's targets are chosen" });
-  registerMoment("use.attack", { label: "Before the use's attack roll" });
-  registerMoment("use.hit", { label: "The use's attack hit a target" });
-  registerMoment("use.missed", { label: "The use's attack missed every target" });
-  registerMoment("use.damageRoll", { label: "The use's damage is rolled (damage added here joins it)" });
-  registerMoment("use.damageRolled", { label: "The use's damage was rolled" });
-  registerMoment("use.saves", { label: "Before the use's targets are asked to save" });
-  registerMoment("use.effects", { label: "Before the use's effects are applied" });
-  registerMoment("use.end", { label: "The use finished" });
-  registerMoment("targeted", { label: "The bearer is targeted by a use" });
-  registerMoment("attacked", { label: "The bearer is attacked: the roll is made, the result not yet known" });
-  registerMoment("hit", { label: "The bearer is hit by an attack" });
-  registerMoment("missed", { label: "The bearer is missed by an attack" });
-  registerMoment("saveRequested", { label: "The bearer is about to be asked to save against a use" });
-  registerMoment("saveFailed", { label: "The bearer failed its save against a use" });
-  registerMoment("saveSucceeded", { label: "The bearer made its save against a use" });
-  registerMoment("damaging", { label: "The bearer is about to take a use's damage (event.damage: worked out, not applied)" });
-  registerMoment("healing", { label: "The bearer is about to be healed by a use" });
-  registerMoment("damaged", { label: "The bearer took a use's damage" });
-  registerMoment("roll.preRoll", { label: "Before the bearer's roll (modifiers and bonuses)" });
-  registerMoment("roll.preResult", { label: "The bearer's roll is made, before its result (bonuses)" });
-  registerMoment("roll.postResult", { label: "After the bearer's roll's result (bonuses)" });
+export function registerUseEvents() {
+  registerEvent("use.configure", { label: "A use starts, before its checks, targets and costs" });
+  registerEvent("use.targeted", { label: "The use's targets are chosen" });
+  registerEvent("use.attack", { label: "Before the use's attack roll" });
+  registerEvent("use.hit", { label: "The use's attack hit a target" });
+  registerEvent("use.missed", { label: "The use's attack missed every target" });
+  registerEvent("use.damageRoll", { label: "The use's damage is rolled (damage added here joins it)" });
+  registerEvent("use.damageRolled", { label: "The use's damage was rolled" });
+  registerEvent("use.saves", { label: "Before the use's targets are asked to save" });
+  registerEvent("use.effects", { label: "Before the use's effects are applied" });
+  registerEvent("use.end", { label: "The use finished" });
+  registerEvent("targeted", { label: "The bearer is targeted by a use" });
+  registerEvent("attacked", { label: "The bearer is attacked: the roll is made, the result not yet known" });
+  registerEvent("hit", { label: "The bearer is hit by an attack" });
+  registerEvent("missed", { label: "The bearer is missed by an attack" });
+  registerEvent("saveRequested", { label: "The bearer is about to be asked to save against a use" });
+  registerEvent("saveFailed", { label: "The bearer failed its save against a use" });
+  registerEvent("saveSucceeded", { label: "The bearer made its save against a use" });
+  registerEvent("damaging", { label: "The bearer is about to take a use's damage (event.damage: worked out, not applied)" });
+  registerEvent("healing", { label: "The bearer is about to be healed by a use" });
+  registerEvent("damaged", { label: "The bearer took a use's damage" });
+  registerEvent("roll.preRoll", { label: "Before the bearer's roll (modifiers and bonuses)" });
+  registerEvent("roll.preResult", { label: "The bearer's roll is made, before its result (bonuses)" });
+  registerEvent("roll.postResult", { label: "After the bearer's roll's result (bonuses)" });
   registerAction("modifier", modifierAction);
   registerAction("damageChange", damageChangeAction);
   registerAction("abort", abortAction);

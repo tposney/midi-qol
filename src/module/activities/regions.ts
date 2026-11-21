@@ -175,7 +175,7 @@ export async function attachRegionActivityBehavior(activity: MidiActivity, regio
       } else if (rule.action === "applyEffect" || rule.action === "removeEffect") {
         const effect = activity.item?.effects.get(rule.targetId);
         if (!effect) continue;
-        // Applied on entry (and removed on exit, implied) is dnd5e's behaviour; at any other moment the rule is midi's own
+        // Applied on entry (and removed on exit, implied) is dnd5e's behaviour; at any other event the rule is midi's own
         if (rule.action === "applyEffect" && rule.trigger === "entry") effectUuids.push(effect.uuid);
         else if (!(rule.action === "removeEffect" && rule.trigger === "exit" && entryEffectIds.has(rule.targetId)))
           resolvedRules.push({ trigger: rule.trigger, action: rule.action, targetUuid: effect.uuid });
