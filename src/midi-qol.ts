@@ -34,7 +34,7 @@ import { compatibilityLine, deprecation, isRemoved, removedError, setupCompatibi
 import { UNMEASURABLE_DISTANCE, getDistance, measureTokens } from "./module/services/distance/service.js";
 import { rollFieldLocalizations, rollFieldMappings } from "./module/rollFields.js";
 import "./module/damageAbsorption.js";
-import { registerSettings, fetchParams, configSettings, checkRule, enableWorkflow, fetchSoundSettings, midiSoundSettingsBackup, readySettingsSetup, collectSettingData, exportSettingsToJSON, importSettingsFromJSON, safeGetGameSetting, shouldDisplaySaveDC, triggeredActivityTargetOptions, triggeredActivityRollAsOptions, resetConfigSettingsToDefaults, setTokenDocumentSets } from './module/settings.js';
+import { registerSettings, fetchParams, configSettings, checkRule, enableWorkflow, fetchSoundSettings, midiSoundSettingsBackup, readySettingsSetup, collectSettingData, exportSettingsToJSON, importSettingsFromJSON, safeGetGameSetting, shouldDisplaySaveDC, triggeredActivityTargetOptions, triggeredActivityRollAsOptions, resetConfigSettingsToDefaults, setTokenDocumentSets, migrateClientToUserSettings } from './module/settings.js';
 import { decodeWorkflowOptions, encodeWorkflowOptions, registerWorkflowOptionsSchema } from "./module/lib/workflowOptionsCodec.js";
 import { preloadTemplates } from './module/preloadTemplates.js';
 import { checkModules, setupModules } from './module/setupModules.js';
@@ -300,7 +300,7 @@ Object.assign(globalThis.MidiQOL, {
   reveals,
   tags: { register: registerTag, get: tagValue, names: tagNames, definition: tagDefinition, replaced: replacedTags, view: tagsView },
   // The settings registry (M4a): every setting declared once; modules register their own (shown in the panel's Modules tab)
-  settings: settingsApi,
+  settings: { ...settingsApi, migrateClientToUser: migrateClientToUserSettings },
   // The activity-type table (M24): each type's capabilities and the steps that act for it; as Markdown for the guide
   activityTypeSteps, activityTypeStepsMarkdown,
   decodeWorkflowOptions,
@@ -876,6 +876,8 @@ Hooks.once("dae.setupComplete", () => {
  */
 
 Hooks.once("ready", () => {
+  // Player preferences that moved from this device to the player (user scope): copied once
+  void migrateClientToUserSettings();
   // can't hook off simple cover ready as it fires too early to be able to call api.setLibraryMode
   // if (configSettings.optionalRules.coverCalculation === "simplecover5e" && game.modules.get("simplecover5e")?.active) {
   //   //@ts-expect-error

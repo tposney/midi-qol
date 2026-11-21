@@ -19,7 +19,8 @@ export interface SettingDeclaration {
   key: string;
   /** In midi's stored ConfigSettings, or a game setting of its module */
   store: "config" | "setting";
-  scope: "world" | "client";
+  /** world: the GM's, for everyone; user: each player's own, wherever they log in; client: this device's */
+  scope: "world" | "user" | "client";
   type: SettingType;
   default: unknown;
   /** The settings panel's group (its tabs for midi's; a module's own group name) */
@@ -34,7 +35,7 @@ export interface SettingDeclaration {
 }
 
 /** What a module gives to register a setting */
-export type SettingRegistration = Omit<SettingDeclaration, "store" | "module" | "scope" | "type"> & { scope?: "world" | "client", type?: SettingType };
+export type SettingRegistration = Omit<SettingDeclaration, "store" | "module" | "scope" | "type"> & { scope?: "world" | "user" | "client", type?: SettingType };
 
 const registered = new Map<string, SettingDeclaration>();
 
@@ -59,8 +60,9 @@ function midiGameSettingDeclarations(): SettingDeclaration[] {
   for (const setting of game.settings?.settings?.values() ?? []) {
     if (setting.namespace !== MODULE_ID || setting.key === "ConfigSettings") continue;
     const type = setting.type === Boolean ? "boolean" : setting.type === Number ? "number" : setting.type === String ? "string" : "object";
-    out.push({ module: MODULE_ID, key: setting.key, store: "setting", scope: setting.scope === "client" ? "client" : "world", type,
-      default: setting.default, group: setting.scope === "client" ? "client" : "world",
+    const scope = setting.scope === "client" ? "client" : setting.scope === "user" ? "user" : "world";
+    out.push({ module: MODULE_ID, key: setting.key, store: "setting", scope, type,
+      default: setting.default, group: scope,
       label: typeof setting.name === "string" ? setting.name : undefined, hint: typeof setting.hint === "string" ? setting.hint : undefined,
       choices: setting.choices });
   }

@@ -1653,7 +1653,7 @@ export const registerSettings = function () {
   });
 
   game.settings.register("midi-qol", "TargetConfirmation", {
-    scope: "client",
+    scope: "user",
     type: Object,
     default: defaultTargetConfirmationSettings,
     config: false,
@@ -1685,13 +1685,15 @@ export const registerSettings = function () {
   game.settings.register("midi-qol", "BonusPrompt", {
     name: "midi-qol.BonusPrompt.Name",
     hint: "midi-qol.BonusPrompt.Hint",
-    scope: "client",
+    scope: "user",
     default: "phased",
     config: true,
     type: String,
     choices: { phased: "midi-qol.BonusPrompt.Phased", classic: "midi-qol.BonusPrompt.Classic" }
   });
 
+  // Player preferences are "user" settings: they follow the player to any device (user, 2026-11-21). Those that were
+  // "client" before are copied from this device once (migrateClientToUserSettings)
   // M15 5b (user, 2026-11-21): per player, offers are shown even when they can't change the result
   game.settings.register("midi-qol", "ShowAllBonusOffers", {
     name: "midi-qol.ShowAllBonusOffers.Name",
@@ -1755,7 +1757,7 @@ export const registerSettings = function () {
   game.settings.register("midi-qol", "ForceHideRoll", {
     name: "midi-qol.ForceHideRoll.Name",
     hint: "midi-qol.ForceHideRoll.Hint",
-    scope: "client",
+    scope: "user",
     default: true,
     type: Boolean,
     config: true,
@@ -1811,7 +1813,7 @@ export const registerSettings = function () {
   game.settings.register("midi-qol", "AutoRemoveTargets", {
     name: "midi-qol.AutoRemoveTargets.Name",
     hint: "midi-qol.AutoRemoveTargets.Hint",
-    scope: "client",
+    scope: "user",
     default: "dead",
     type: String,
     config: true,
@@ -1950,6 +1952,28 @@ export const registerSettings = function () {
     type: TroubleShooter,
     restricted: false
   });
+}
+
+/** Settings that were per device ("client") and are now the player's ("user") */
+const MOVED_TO_USER = ["TargetConfirmation", "BonusPrompt", "AutoRemoveTargets", "ForceHideRoll"];
+
+/**
+ * A player's value of a setting that moved from this device to the player: copied once, when the player has no value
+ * of their own yet. The device's copy stays (other worlds on this server, on midi 14.x, read it).
+ */
+export async function migrateClientToUserSettings(): Promise<void> {
+  const userStore = game.settings?.storage.get("user") as { getSetting?(key: string, user: string | null): unknown } | undefined;
+  for (const key of MOVED_TO_USER) {
+    const id = `midi-qol.${key}`;
+    try {
+      if (userStore?.getSetting?.(id, game.userId ?? null)) continue;
+      const stored = window.localStorage.getItem(id);
+      if (stored === null) continue;
+      await game.settings.set("midi-qol", key as never, JSON.parse(stored) as never);
+    } catch (err) {
+      console.warn(`midi-qol | could not copy this device's ${key} to your settings`, err);
+    }
+  }
 }
 
 export function safeGetGameSetting(moduleName: string, settingName: string): any | undefined {
