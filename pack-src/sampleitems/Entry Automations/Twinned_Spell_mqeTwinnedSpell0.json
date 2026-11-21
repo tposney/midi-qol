@@ -5,7 +5,7 @@
   "img": "icons/magic/lightning/bolts-forked-large-orange.webp",
   "system": {
     "description": {
-      "value": "<blockquote><p>Cost: 1 Sorcery Point</p></blockquote><p>When you cast a spell, such as <em>Charm Person</em>, that can be cast with a higher-level spell slot to target an additional creature, you can spend 1 Sorcery Point to increase the spell's effective level by 1.</p><p><em>Automation (midi-qol entries):</em> offered as you cast a spell (one Metamagic option per spell, Empowered and Seeking combine); its Sorcery Points come from Font of Magic.</p>",
+      "value": "<blockquote><p>Cost: 1 Sorcery Point</p></blockquote><p>When you cast a spell, such as <em>Charm Person</em>, that can be cast with a higher-level spell slot to target an additional creature, you can spend 1 Sorcery Point to increase the spell's effective level by 1.</p><p><em>Automation (midi-qol entries):</em> offered as you cast a spell (one Metamagic option per spell, Empowered and Seeking combine); its Sorcery Points come from Font of Magic. Careful Spell: the chosen creatures succeed on the save and take no damage from a spell doing half on a success.</p>",
       "chat": ""
     },
     "source": {

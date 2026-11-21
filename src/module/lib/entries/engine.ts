@@ -397,25 +397,46 @@ export interface EntryRunResult { entry: string, document: string, actions: stri
 /** Run a list of actions for an entry (a table row's, an action's then/else): the keys that ran are added to `ran` */
 export async function runActions(list: readonly EntryAction[], run: Omit<ActionRun, "action">, ran: string[]): Promise<void> {
   for (const action of list) {
+    // At a use's event (no one target), an action for the targets with a condition is run for each target its
+    // condition holds for, its condition and values read with that target (Ensnaring Strike: Large or larger)
+    const targets = perTargetRun(action, run);
+    if (targets) {
+      for (const target of targets) {
+        const context = { ...run.context, target };
+        const conditionData = conditionDataFor(run.found, context);
+        if (await holds(action.if, conditionData)) await runAction(action, { ...run, context, conditionData }, ran);
+      }
+      continue;
+    }
     if (!await holds(action.if, run.conditionData)) continue;
-    const key = actionKey(action);
-    const handler = key ? actions.get(key)?.value : undefined;
-    if (!key || !handler) {
-      console.warn(`midi-qol | entry ${run.found.entry.id}: no action ${Object.keys(action).join(", ")}`);
-      continue;
-    }
-    let result: ActionResult;
-    try {
-      result = await handler({ ...run, action });
-    } catch (err) {
-      console.warn(`midi-qol | entry ${run.found.entry.id}: action ${key} failed`, err);
-      continue;
-    }
-    ran.push(key);
-    const success = result?.success;
-    if (success === true && action.then) await runActions(action.then, run, ran);
-    if (success === false && action.else) await runActions(action.else, run, ran);
+    await runAction(action, run, ran);
   }
+}
+
+function perTargetRun(action: EntryAction, run: Omit<ActionRun, "action">): TokenDocument.Implementation[] | undefined {
+  if (run.context.target || !run.context.workflow || !action.if) return undefined;
+  if (action.for !== "target" && action.to !== "target") return undefined;
+  return (run.context.workflow.targets as { documents?: TokenDocument.Implementation[] } | undefined)?.documents ?? [];
+}
+
+async function runAction(action: EntryAction, run: Omit<ActionRun, "action">, ran: string[]): Promise<void> {
+  const key = actionKey(action);
+  const handler = key ? actions.get(key)?.value : undefined;
+  if (!key || !handler) {
+    console.warn(`midi-qol | entry ${run.found.entry.id}: no action ${Object.keys(action).join(", ")}`);
+    return;
+  }
+  let result: ActionResult;
+  try {
+    result = await handler({ ...run, action });
+  } catch (err) {
+    console.warn(`midi-qol | entry ${run.found.entry.id}: action ${key} failed`, err);
+    return;
+  }
+  ran.push(key);
+  const success = result?.success;
+  if (success === true && action.then) await runActions(action.then, run, ran);
+  if (success === false && action.else) await runActions(action.else, run, ran);
 }
 
 /** Run a event's entries for this context (MidiQOL.entries.run): what ran, in order */

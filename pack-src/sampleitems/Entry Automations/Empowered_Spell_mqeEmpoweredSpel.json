@@ -5,7 +5,7 @@
   "img": "icons/magic/air/wind-tornado-wall-blue.webp",
   "system": {
     "description": {
-      "value": "<blockquote><p>Cost: 1 Sorcery Point</p></blockquote><p>When you roll damage for a spell, you can spend 1 Sorcery Point to reroll a number of the damage dice up to your Charisma modifier (minimum of one, currently [[lookup @abilities.cha.mod]]), and you must use the new rolls.</p><p>You can use Empowered Spell even if you've already used a different Metamagic option during the casting of the spell.</p><p><em>Automation (midi-qol entries):</em> offered as you cast a spell (one Metamagic option per spell, Empowered and Seeking combine); its Sorcery Points come from Font of Magic.</p>",
+      "value": "<blockquote><p>Cost: 1 Sorcery Point</p></blockquote><p>When you roll damage for a spell, you can spend 1 Sorcery Point to reroll a number of the damage dice up to your Charisma modifier (minimum of one, currently [[lookup @abilities.cha.mod]]), and you must use the new rolls.</p><p>You can use Empowered Spell even if you've already used a different Metamagic option during the casting of the spell.</p><p><em>Automation (midi-qol entries):</em> offered as you cast a spell (one Metamagic option per spell, Empowered and Seeking combine); its Sorcery Points come from Font of Magic. Careful Spell: the chosen creatures succeed on the save and take no damage from a spell doing half on a success.</p>",
       "chat": ""
     },
     "source": {

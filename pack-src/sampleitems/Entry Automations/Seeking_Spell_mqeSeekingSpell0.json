@@ -5,7 +5,7 @@
   "img": "icons/tools/navigation/compass-brass-blue-red.webp",
   "system": {
     "description": {
-      "value": "<blockquote><p>Cost: 1 Sorcery Point</p></blockquote><p>If you make an attack roll for a spell and miss, you can spend 1 Sorcery Point to reroll the d20, and you must use the new roll.</p><p>You can use Seeking Spell even if you've already used a different Metamagic option during the casting of the spell.</p><p><em>Automation (midi-qol entries):</em> offered as you cast a spell (one Metamagic option per spell, Empowered and Seeking combine); its Sorcery Points come from Font of Magic.</p>",
+      "value": "<blockquote><p>Cost: 1 Sorcery Point</p></blockquote><p>If you make an attack roll for a spell and miss, you can spend 1 Sorcery Point to reroll the d20, and you must use the new roll.</p><p>You can use Seeking Spell even if you've already used a different Metamagic option during the casting of the spell.</p><p><em>Automation (midi-qol entries):</em> offered as you cast a spell (one Metamagic option per spell, Empowered and Seeking combine); its Sorcery Points come from Font of Magic. Careful Spell: the chosen creatures succeed on the save and take no damage from a spell doing half on a success.</p>",
       "chat": ""
     },
     "source": {

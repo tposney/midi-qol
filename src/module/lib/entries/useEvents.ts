@@ -270,7 +270,13 @@ async function damageChangeAction(run: ActionRun) {
     return;
   }
   if (typeof run.action.for === "string" && run.action.for !== "target") {
-    console.warn(`midi-qol | entry ${run.found.entry.id}: damageChange is for the use's targets`);
+    // A choice of targets (Careful Spell's): those the player chose
+    const chosen = (run.conditionData.choices as Record<string, unknown> | undefined)?.[run.action.for] ?? workflow.choices[run.action.for];
+    if (!Array.isArray(chosen)) {
+      console.warn(`midi-qol | entry ${run.found.entry.id}: damageChange for "${run.action.for}": not a target or a choice of targets`);
+      return;
+    }
+    for (const uuid of chosen) store.push({ targetUuid: String(uuid), stage, change: await changeFor(targetRollData(run.conditionData, String(uuid))) });
     return;
   }
   // At a use event, a formula is worked out for each target (Magic Missile's darts: an allocation read as that

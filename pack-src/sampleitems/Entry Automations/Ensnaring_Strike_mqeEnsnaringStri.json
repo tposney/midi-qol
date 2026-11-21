@@ -2,7 +2,7 @@
   "name": "Ensnaring Strike",
   "system": {
     "description": {
-      "value": "<p>As you hit the target, grasping vines appear on it, and it makes a Strength saving throw. A Large or larger creature has Advantage on this save. On a failed save, the target has the <span style=\"font-family:Signika, sans-serif\">&amp;Reference[restrained apply=false] </span>condition until the spell ends. On a successful save, the vines shrivel away, and the spell ends.</p><p>While Restrained, the target takes 1d6 Piercing damage at the start of each of its turns. The target or a creature within reach of it can take an action to make a [[/check ability=str skill=ath dc=@attributes.spell.dc]] check against your spell save DC. On a success, the spell ends.</p><p><strong>Using a Higher-Level Spell Slot.</strong> The damage increases by 1d6 for each spell slot level above 1.</p><p><em>Automation (midi-qol entries):</em> the vines deal (spell level)d6 Piercing at the start of each of the bearer's turns; it or a creature within reach can use an action to try to free it (Athletics against your DC).</p>",
+      "value": "<p>As you hit the target, grasping vines appear on it, and it makes a Strength saving throw. A Large or larger creature has Advantage on this save. On a failed save, the target has the <span style=\"font-family:Signika, sans-serif\">&amp;Reference[restrained apply=false] </span>condition until the spell ends. On a successful save, the vines shrivel away, and the spell ends.</p><p>While Restrained, the target takes 1d6 Piercing damage at the start of each of its turns. The target or a creature within reach of it can take an action to make a [[/check ability=str skill=ath dc=@attributes.spell.dc]] check against your spell save DC. On a success, the spell ends.</p><p><strong>Using a Higher-Level Spell Slot.</strong> The damage increases by 1d6 for each spell slot level above 1.</p><p><em>Automation (midi-qol entries):</em> a Large or larger target has advantage on the save; the vines deal (spell level)d6 Piercing at the start of each of the bearer's turns; it or a creature within reach can use an action to try to free it (Athletics against your DC).</p>",
       "chat": ""
     },
     "source": {
@@ -134,7 +134,22 @@
           "spent": 0,
           "recovery": []
         },
-        "sort": 0
+        "sort": 0,
+        "midiEntries": [
+          {
+            "id": "large",
+            "on": "use.saves",
+            "do": [
+              {
+                "modifier": "advantage",
+                "rolls": "save",
+                "for": "target",
+                "if": "tags.target.sizeRank >= 3",
+                "label": "Ensnaring Strike: Large or larger"
+              }
+            ]
+          }
+        ]
       },
       "ZWId9mbOE9zFnP6f": {
         "type": "damage",

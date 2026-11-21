@@ -58,17 +58,17 @@ export const inheritableWorkflowOptions = <T>(options: T): T => decodeWorkflowOp
  * midi's own option keys (WorkflowOptions, MidiOptions, and what midi reads from either). Any other key is another
  * module's: stored on the card through a registered schema (its namespace), or, for now, as it is.
  */
-const MIDI_OPTION_KEYS = new Set([
+export const MIDI_OPTION_KEYS = new Set([
   "activityId", "activityIdentifier", "addOptionalBonuses", "advantage", "allowIncapacitated", "asUser", "attackMode",
   "attackPerTarget", "attackRollDSN", "attackSplit", "autoConsumeResource", "autoFastAttack", "autoRollAttack",
-  "autoRollDamage", "cardNote", "castUsesBonusAction", "castUsesReaction", "chatMessage", "checkGMStatus", "checkGMstatus",
+  "autoRollDamage", "cardNote", "castUsesBonusAction", "castUsesReaction", "chatMessage", "checkGMStatus", "checkGMstatus", "choices",
   "configureDialog", "coverOrigin", "createWorkflow", "critical", "damageRollDSN", "disadvantage", "event", "excludeTargets",
-  "fastForward", "fastForwardAbility", "fastForwardAttack", "fastForwardDamage", "fastForwardSet",
+  "fastForward", "fastForwardAbility", "fastForwardAttack", "fastForwardDamage", "fastForwardSet", "fixedDice",
   "forceCompletion", "forceTemplateTargeting", "formulaDSN", "fumble", "grantsActor", "grantsToken", "ignoreUserTargets",
   "includeTargets", "isConcentrationCheck", "isCritical", "isDummy", "isFumble", "isMagicSave", "isOverTime", "isReaction",
   "isTriggered", "item", "itemCardUuid", "itemUuid", "noConcentrationCheck", "noOnUseMacro", "noProvokeReaction",
   "noTargetOnUseMacro", "noUseWarning", "notBonusAction", "notReaction", "onlyOnUseItemMacros", "other",
-  "overTimeEffectUuid", "parts", "powerLevel", "preSelectedTargetUuids", "proceedChecks", "recomputeAdvantage",
+  "overTimeEffectUuid", "parts", "powerLevel", "preSelectedTargetUuids", "preview", "proceedChecks", "recomputeAdvantage",
   "requestClaim", "rollAs", "rollAttackPerTarget", "rollOptions", "rollToggle", "rollType", "saveActivityUuid", "saveDC",
   "saveItem", "saveItemUuid", "simulate", "sourceActorUuid", "spellLevel", "steps", "target", "targetConfirmation",
   "targets", "targetsToUse", "targetUuids", "teleport", "templateUuid", "triggeredActivity", "triggeringActivityUuid",
