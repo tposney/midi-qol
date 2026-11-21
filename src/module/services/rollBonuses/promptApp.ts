@@ -3,7 +3,7 @@ import { parseFlagValue } from "../../rules/optionalFlags.js";
 import { effectOrder } from "./rules.js";
 import type { OfferedBonus } from "./service.js";
 import { bonusCostBadges, wirePickOne } from "../../lib/promptCosts.js";
-import { setStandingChoice, standingChoice, standingKey, STANDING_CHOICES, type StandingChoice } from "./standing.js";
+import { standingChoice, standingKey, STANDING_CHOICES, wireStandingSelects } from "./standing.js";
 
 /*
  * midi's phased bonus prompt: the same bonuses as the classic dialog (flags.midi-qol.optional and rollBonuses
@@ -42,13 +42,7 @@ export class BonusPromptApp extends RollModifyDialog {
     wirePickOne(this.element);
     this.element.querySelector("[data-bonus-action='apply']")?.addEventListener("click", () => this.applyTicked());
     this.element.querySelector("[data-bonus-action='skip']")?.addEventListener("click", () => this.data.buttons?.no?.callback?.());
-    for (const select of Array.from(this.element.querySelectorAll<HTMLSelectElement>("select[name='standing']"))) {
-      select.addEventListener("change", () => {
-        const actor = this.data.actor;
-        const key = select.dataset.standingKey;
-        if (actor && key) void setStandingChoice(actor, key, select.value as StandingChoice, select.dataset.standingLabel ?? key);
-      });
-    }
+    wireStandingSelects(this.element, this.data.actor);
   }
 
   /** Applies the ticked bonuses in the order shown, each through its own handler. */

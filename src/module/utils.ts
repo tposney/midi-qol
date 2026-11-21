@@ -31,7 +31,7 @@ import { AttributionEntry, AttributionMap, AttributionType, AugmentedEvent, Dumm
 import { ACTION_SAVE_REQUEST, ACTIVITY_OVERTIME_REQUEST, rollActionSave as rollActionSaveHere, preferredActiveGM, prepareDamageListToJSON, rollAbility, timedAwaitExecuteAsGM, unTimedExecuteAsGM } from "./GMAction.js";
 import { askUser, type IncomingRequest } from "./lib/requests.js";
 import { collectResponses, type ResponseOffer, type ResponseQuery } from "./services/responses/service.js";
-import { applyStandingChoices, setStandingChoice, standingKey } from "./services/rollBonuses/standing.js";
+import { applyStandingChoices, setStandingChoice, standingKey, reactionStanding, standingChoiceOptions, wireStandingSelects, ASK_ONLY_CHOICES, REACTION_CHOICES, type StandingChoice } from "./services/rollBonuses/standing.js";
 import { hasEventEntries, eventOfTrigger, targetEvent } from "./lib/entries/responseEvents.js";
 import { dice3dEnabled, installedModules } from "./setupModules.js";
 import { concentrationCheckItemDisplayName } from "./Hooks.js";
@@ -5477,6 +5477,29 @@ function reactionRequestData(target: Token.Implementation, triggerTokenUuid: str
   return { tokenUuid: target.document.uuid, reactionFlavor, triggerTokenUuid, triggerType, reactionActivityList, options: sent };
 }
 
+export interface ReactionStandingRow { standingKey: string, label: string, choice: StandingChoice, askOnly: boolean }
+
+/** The reaction prompt's rows by match key (an activity's uuid, an offer's key), with the creature's standing choices */
+function reactionStandingRows(actor: Actor.Implementation, activities: Activity[], offers: ResponseOfferChoice[]): { rows: Map<string, ReactionStandingRow> } {
+  const rows = new Map<string, ReactionStandingRow>();
+  for (const activity of activities) {
+    const item = activity.item;
+    const system = item?.system as { identifier?: string, level?: number } | undefined;
+    const itemKey = system?.identifier || item?.name?.slugify() || "";
+    // A spell slot, an area or a destination: choices of its own, so never taken unasked
+    const askOnly = (String(item?.type) === "spell" && (system?.level ?? 0) > 0) || !!activity.target?.template?.type || isActivityType(activity, "teleport");
+    const standingKey = `reaction:${itemKey}:${activity.id}`;
+    rows.set(activity.uuid, { standingKey, label: `${item?.name ?? ""}: ${activity.name ?? ""}`, choice: reactionStanding(actor, standingKey, askOnly), askOnly });
+  }
+  for (const offer of offers) {
+    // An AC flag is the same choice as in the bonus prompt (its flag's name); an AC bonus by its id
+    const flag = offer.key.match(/^ac:flags\.midi-qol\.optional\.([^#]+)#/);
+    const standingKey = flag ? `flag:${flag[1]}` : offer.key.startsWith("ac:") ? offer.key.slice(3) : `offer:${offer.key}`;
+    rows.set(offer.key, { standingKey, label: offer.label, choice: reactionStanding(actor, standingKey, false), askOnly: false });
+  }
+  return { rows };
+}
+
 export async function promptReactions(
   tokenUuid: string,
   reactionActivityList: ReactionItemReference[],
@@ -5532,12 +5555,20 @@ export async function promptReactions(
     let activityResult: any;
     // Offers chosen with an activity or AC bonus (M32a): their keys go back to the asking client
     let otherOffers: string[] = [];
-    if (reactionActivities.length > 0 || reactionOffers.length > 0 || acChoices.length > 0) {
+    // M32a step 2: the creature's standing choices on its rows: never hidden, always/next ticked, no prompt when all decided
+    const standing = reactionStandingRows(actor, reactionActivities, [...reactionOffers, ...acChoices]);
+    reactionActivities = reactionActivities.filter(activity => standing.rows.get(activity.uuid)?.choice !== "never");
+    const shownOffers = [...reactionOffers, ...acChoices].filter(offer => standing.rows.get(offer.key)?.choice !== "never");
+    if (reactionActivities.length > 0 || shownOffers.length > 0) {
       if (await asyncHooksCall("midi-qol.ReactionFilter", reactionActivities, options, triggerType, reactionActivityList) === false) {
         console.warn("midi-qol | Reaction processing cancelled by Hook");
         return { name: "Filter" };
       }
-      result = await reactionDialog(actor, triggerTokenUuid, reactionActivities, reactionFlavor, triggerType, { ...options, tokenUuid, reactionOffers: [...reactionOffers, ...acChoices] });
+      const skipDialog = [...reactionActivities.map(a => a.uuid), ...shownOffers.map(o => o.key)].every(key => ["always", "next"].includes(standing.rows.get(key)?.choice ?? "ask"));
+      result = await reactionDialog(actor, triggerTokenUuid, reactionActivities, reactionFlavor, triggerType, { ...options, tokenUuid, reactionOffers: shownOffers, standing: { rows: standing.rows, skipDialog } });
+      // "next" is used once: back to ask
+      const takenKeys = new Set<string>([...(result.offerKeys ?? (result.offerKey ? [result.offerKey] : [])), ...(result.uuid ? [result.uuid] : [])]);
+      for (const [key, row] of standing.rows) if (row.choice === "next" && takenKeys.has(key)) await setStandingChoice(actor, row.standingKey, "ask", row.label);
       const endTime = Date.now();
       if (debugEnabled > 0) warn("promptReactions | reaction processing returned after ", endTime - startTime, result)
       const keys: string[] = result.offerKeys ?? (result.offerKey ? [result.offerKey] : []);
@@ -5737,7 +5768,7 @@ export async function reactionDialog(
           }
           const itemRollOptions = foundry.utils.mergeObject({
             createWorkflow: true,
-            configureDialog: true,
+            configureDialog: !buttons.some(b => b.auto),
             checkGMStatus: false,
             targetUuids: effectiveTargetType !== "self" ? [triggerTokenUuid] : [getOrCreateTokenForActor(actor)?.document?.uuid],
             isReaction: true,
@@ -5762,6 +5793,25 @@ export async function reactionDialog(
       const noReaction = async function () {
         resolve(noResult);
       }
+      // M32a step 2: every row decided (always / next): taken without a prompt, one reaction at most
+      const standing: { rows: Map<string, ReactionStandingRow>, skipDialog?: boolean } | undefined = options.standing;
+      if (standing?.skipDialog) {
+        let reactionTaken = false;
+        const chosen: any[] = [];
+        for (const activity of reactionActivities) {
+          const spends = activity.activation?.type === "reaction";
+          if (spends && reactionTaken) continue;
+          reactionTaken ||= spends;
+          chosen.push({ key: activity.uuid, name: activity.name, auto: true });
+        }
+        for (const offer of (options.reactionOffers ?? []) as ResponseOfferChoice[]) {
+          if (offer.reaction && reactionTaken) continue;
+          reactionTaken ||= !!offer.reaction;
+          chosen.push({ offerKey: offer.key, name: offer.label, auto: true });
+        }
+        void callback({ close() { } }, chosen);
+        return;
+      }
       const dialog = new ReactionDialog({
         actor,
         tokenUuid: options.tokenUuid,
@@ -5769,6 +5819,7 @@ export async function reactionDialog(
         title: i18n("midi-qol.ReactionDialog.Title"),
         activities: reactionActivities,
         offers: options.reactionOffers ?? [],
+        standing: options.standing,
         content: rollFlavor,
         callback,
         close: noReaction,
@@ -5804,6 +5855,8 @@ export class ReactionDialog extends HandlebarsApplicationMixin(ApplicationV2) {
     activities: Activity[],
     /** Contract 2 offers (not whole activities): chosen, the asking client takes them */
     offers?: ResponseOfferChoice[],
+    /** M32a step 2: each row's standing choice, by match key */
+    standing?: { rows: Map<string, ReactionStandingRow> },
     title: string,
     content: HTMLElement,
     callback: () => {},
@@ -5869,6 +5922,7 @@ export class ReactionDialog extends HandlebarsApplicationMixin(ApplicationV2) {
     }
     if (this.phased) {
       wirePickOne(this.element);
+      wireStandingSelects(this.element, this.data.actor);
       this.element.querySelector("[data-bonus-action='apply']")?.addEventListener("click", () => {
         const ticked = Array.from(this.element.querySelectorAll<HTMLInputElement>("input[name='bonus']:checked")).map(input => this.data.buttons[input.value]).filter(Boolean);
         // Nothing ticked: as declining
@@ -5905,10 +5959,18 @@ export class ReactionDialog extends HandlebarsApplicationMixin(ApplicationV2) {
         cost: { badges: offer.badges ?? [], reaction: offer.reaction ?? false } };
     }
     if (this.phased) {
-      const entries = Object.entries(this.data.buttons).map(([id, button]: [string, any]) => ({
-        id, img: button.img, label: foundry.utils.escapeHTML(button.name ?? ""), tooltip: button.tooltip, badges: button.cost?.badges ?? [],
-        exclusive: button.cost?.reaction ? "reaction" : undefined
-      }));
+      let reactionTicked = false;
+      const entries = Object.entries(this.data.buttons).map(([id, button]: [string, any]) => {
+        const row = this.data.standing?.rows.get(button.key ?? button.offerKey);
+        const exclusive = button.cost?.reaction ? "reaction" : undefined;
+        // Always / next: ticked (one reaction at most)
+        let checked = row?.choice === "always" || row?.choice === "next";
+        if (checked && exclusive) checked = !reactionTicked && (reactionTicked = true);
+        return {
+          id, img: button.img, label: foundry.utils.escapeHTML(button.name ?? ""), tooltip: button.tooltip, badges: button.cost?.badges ?? [], exclusive, checked,
+          ...(row ? { standingKey: row.standingKey, standingLabel: row.label, choice: row.choice, choices: standingChoiceOptions(row.askOnly ? ASK_ONLY_CHOICES : REACTION_CHOICES) } : {})
+        };
+      });
       return { ...context, content: this.data.content, entries, skipLabel: "midi-qol.PlayerWaits.Choice.none", timeRemaining: this.timeRemaining };
     }
     // Declining is the default, so Enter (or a stray click) never spends a reaction

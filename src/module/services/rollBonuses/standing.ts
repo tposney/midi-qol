@@ -66,3 +66,31 @@ export function applyStandingChoices(actor: Actor.Implementation | undefined, op
   }
   return { ask, apply, armed };
 }
+
+/*
+ * M32a step 2: standing choices on reaction prompt rows (the same store). A reaction row is Ask, Always, Never or Next;
+ * a reaction that needs choices of its own (a spell slot, an area, a destination) is Ask or Never only.
+ */
+export const REACTION_CHOICES: readonly StandingChoice[] = ["ask", "always", "never", "next"];
+export const ASK_ONLY_CHOICES: readonly StandingChoice[] = ["ask", "never"];
+
+/** The choice for a reaction row, with "always"/"next" read as ask for a row that needs choices of its own */
+export function reactionStanding(actor: Actor.Implementation | undefined, key: string, askOnly: boolean): StandingChoice {
+  const choice = standingChoice(actor, key);
+  if (choice === "critical") return "ask";
+  return askOnly && (choice === "always" || choice === "next") ? "ask" : choice;
+}
+
+export function standingChoiceOptions(choices: readonly StandingChoice[]) {
+  return choices.map(value => ({ value, label: game.i18n?.localize(`midi-qol.Standing.${value}`) ?? value }));
+}
+
+/** A prompt's row controls: a change is stored on the actor */
+export function wireStandingSelects(element: HTMLElement, actor: Actor.Implementation | undefined) {
+  for (const select of Array.from(element.querySelectorAll<HTMLSelectElement>("select[name='standing']"))) {
+    select.addEventListener("change", () => {
+      const key = select.dataset.standingKey;
+      if (actor && key) void setStandingChoice(actor, key, select.value as StandingChoice, select.dataset.standingLabel ?? key);
+    });
+  }
+}
