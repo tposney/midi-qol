@@ -16,6 +16,7 @@ import { registerUseEvents } from "./module/lib/entries/useEvents.js";
 import { registerBearerEvents } from "./module/lib/entries/bearerEvents.js";
 import { registerServiceEvents } from "./module/lib/entries/serviceEvents.js";
 import { registerRedirection } from "./module/lib/entries/redirection.js";
+import { rulesApi } from "./module/lib/entries/rules.js";
 import { definePresentersService } from "./module/services/presenters/service.js";
 import { registerCues } from "./module/lib/cues.js";
 import { registerActivityActions, takeAction } from "./module/lib/entries/activityActions.js";
@@ -337,6 +338,7 @@ Object.assign(globalThis.MidiQOL, {
   },
   steps: stepsApi,
   entries: { ...entriesApi, takeAction },
+  rules: rulesApi,
   requests: requestsApi,
   damageCalculation: { get: getDamageCalculationStep, register: registerDamageCalculationStep, remove: removeDamageCalculationStep, order: damageCalculationOrder },
   UNMEASURABLE_DISTANCE,

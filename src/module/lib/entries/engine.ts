@@ -8,6 +8,7 @@ import { unTimedExecuteAsGM } from "../../GMAction.js";
 import { limitKey, limitStamp, selectGroups, spendStoredLimit, withinLimit, type CombatPosition, type StoredLimit } from "./limits.js";
 import type { Entry, EntryAction, EntryHome, EntryWho, FoundEntry } from "./types.js";
 import { addEconomy, entryConditionExtras } from "./conditionData.js";
+import { hasRules, itemOfEffect, matchesRole, ruleFor } from "./rules.js";
 import { askEntryChoice, type ChoiceDeclaration } from "../choices.js";
 import { askOffers, costAllows, editToggles, listToggles, offerOption, payEntryConsumption, setToggle, spendEntryCost, toggleOn } from "./offers.js";
 
@@ -103,11 +104,19 @@ function itemInUse(item: Item.Implementation): boolean {
   return true;
 }
 
-/** An item's own entries and its activities' */
+/** An item's own entries and its activities', or (M11) a registered rule's for its identifier when it has none */
 function itemEntries(item: Item.Implementation, actor: Actor.Implementation | undefined): FoundEntry[] {
   const list = entriesOf(item.getFlag(MODULE_ID, "entries")).map(entry => found(entry, "item", item, actor));
   // @ts-expect-error no dnd5e-types
   for (const activity of item.system.activities ?? []) list.push(...entriesOf(activity.midiEntries).map(entry => found(entry, "activity", activity, actor)));
+  const rule = hasRules() ? ruleFor(item)?.rule : undefined;
+  if (rule) {
+    list.push(...entriesOf(rule.entries).map(entry => found(entry, "item", item, actor)));
+    // @ts-expect-error no dnd5e-types
+    for (const activity of item.system.activities ?? []) {
+      for (const role of rule.activities ?? []) if (matchesRole(activity, role.match)) list.push(...entriesOf(role.entries).map(entry => found(entry, "activity", activity, actor)));
+    }
+  }
   return list;
 }
 
@@ -121,6 +130,9 @@ export function registerEffectEntryReader(id: string, reader: (effect: ActiveEff
 
 function effectEntries(effect: ActiveEffect.Implementation, actor: Actor.Implementation): FoundEntry[] {
   const list = entriesOf(effect.getFlag(MODULE_ID, "entries"));
+  // M11: a registered rule's entries for this effect's role, through the item it belongs to or was applied by
+  const rule = hasRules() && !list.length ? ruleFor(itemOfEffect(effect))?.rule : undefined;
+  for (const role of rule?.effects ?? []) if (matchesRole(effect, role.match)) list.push(...entriesOf(role.entries));
   for (const reader of effectReaders.entries()) {
     try {
       list.push(...reader.value(effect, actor));
@@ -246,6 +258,9 @@ export async function entryHolds(f: FoundEntry, conditionData: Record<string, un
   const filter = typeof f.who === "object" ? f.who.filter : undefined;
   return await holds(filter, conditionData) && await holds(f.entry.if, conditionData);
 }
+
+/** The near holders are found again (an item, effect or actor changed; a rule was registered) */
+export function invalidateEntryHomes(): void { homesGeneration += 1; }
 
 export function watchEntryHomes() {
   const bump = () => { homesGeneration += 1; };
