@@ -196,6 +196,7 @@ declare module "fvtt-types/configuration" {
     "midi-qol.ForceHideRoll": boolean;
     "midi-qol.EnableWorkflow": boolean;
     "midi-qol.BonusPrompt": string;
+    "midi-qol.ShowAllBonusOffers": boolean;
     "midi-qol.hiddenGroundCue": boolean;
     "midi-qol.ownChatCardSummary": string;
     "midi-qol.hiddenGroundCueStyle": string;

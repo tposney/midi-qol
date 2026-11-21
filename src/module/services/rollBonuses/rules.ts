@@ -110,3 +110,12 @@ export function maxScaling(base: number, step: number, available: number, cap = 
   if (step <= 0) return cap === Infinity ? 0 : cap;
   return Math.min(cap, Math.floor((available - base) / step) + 1);
 }
+
+/**
+ * M15 stage 5b: whether adding between `min` and `max` to `total` could change success against `target` (total >=
+ * target succeeds): an add that can't reach the target, or a hit an add can't undo, can't matter.
+ */
+export function addCanMatter(total: number, target: number, min: number, max: number): boolean {
+  const succeeds = total >= target;
+  return (total + min >= target) !== succeeds || (total + max >= target) !== succeeds;
+}

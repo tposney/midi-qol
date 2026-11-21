@@ -2,8 +2,10 @@ import type { Activity } from "../../../globals.js";
 import { defineService, entries, reportServiceProblem } from "../../api/services.js";
 import type { Workflow } from "../../Workflow.js";
 import { addRollToAsync, setBonusActionUsed, setReactionUsed, setActionUsed, refreshRollTotal } from "../../utils.js";
+import { safeGetGameSetting } from "../../settings.js";
 import { approveBonus } from "./approval.js";
-import { canAfford, type BonusCost, type BonusEffect, type BonusPhase, type BonusRollKind, type Outcome } from "./rules.js";
+import { reveals } from "../revealPolicy/service.js";
+import { addCanMatter, canAfford, type BonusCost, type BonusEffect, type BonusPhase, type BonusRollKind, type Outcome } from "./rules.js";
 
 /*
  * rollBonuses (contributors): optional (or automatic) bonuses a module offers on a roll, in phases (design:
@@ -113,6 +115,37 @@ export function offeredForResult(candidate: { when?: "failure" | "success" | "an
   return candidate.when === "success" ? outcome.success : !outcome.success;
 }
 
+/**
+ * Whether a candidate could change the roll's success against its target (the roll's AC or DC): adds only (a reroll,
+ * a replacement or advantage may always matter), not damage; an attack's natural 20 or 1 fixes the result.
+ */
+async function couldMatter(candidate: BonusCandidate, query: RollBonusQuery, roll: Roll, outcome: Outcome | undefined): Promise<boolean> {
+  if (candidate.effect.kind !== "add" || query.kind === "damage" || candidate.apply) return true;
+  const target = Number((roll.options as { target?: unknown }).target);
+  if (!Number.isFinite(target) || typeof roll.total !== "number") return true;
+  if (query.kind === "attack" && (outcome?.isCritical || outcome?.isFumble)) return false;
+  try {
+    const data = { ...(query.activity ?? query.item ?? query.actor)?.getRollData?.() ?? {}, ...roll.data };
+    const formula = Roll.replaceFormulaData(candidate.effect.formula, data, { missing: "0" });
+    const max = (await new Roll(formula).evaluate({ maximize: true })).total ?? 0;
+    const min = (await new Roll(formula).evaluate({ minimize: true })).total ?? 0;
+    return addCanMatter(roll.total, target, min, max);
+  } catch {
+    return true;
+  }
+}
+
+/** Whether this user sees what decides the roll's result (an attack's target AC, a save's or check's DC), and hasn't asked to see every offer */
+function outcomeVisible(query: RollBonusQuery): boolean {
+  const user = game.user ?? undefined;
+  // A player who wants every offer shown (the ShowAllBonusOffers user setting)
+  if (!user || safeGetGameSetting("midi-qol", "ShowAllBonusOffers")) return false;
+  if (query.kind === "attack") return reveals({ subject: "ac", user, caster: query.actor, target: query.target?.actor ?? undefined });
+  if (["save", "check", "skill", "tool"].includes(query.kind))
+    return reveals({ subject: "challenge", user, caster: query.workflow?.actor ?? undefined, target: query.actor });
+  return false;
+}
+
 /** The damage type a damage add with several types is taken as: asked of the roller */
 async function chooseDamageType(types: readonly string[], label: string): Promise<string | undefined> {
   if (types.length <= 1) return types[0];
@@ -158,6 +191,9 @@ export async function collectBonusCandidates(query: RollBonusQuery, phase: Bonus
       if (!offeredForResult(candidate, phase, outcome)) continue;
       if (outcome?.isFumble && !candidate.onFumble) continue;
       if (!canAfford(candidate.cost)) continue;
+      // An offer that can't change the result, where the roller can see the outcome (M15 5b, the reveal policy)
+      // (automatic bonuses still apply: the total, and rules reading it, show them)
+      if (candidate.optional && !await couldMatter(candidate, query, roll, outcome) && outcomeVisible(query)) continue;
       try {
         if (candidate.validate && candidate.validate({ query, phase, roll, outcome }) !== true) continue;
       } catch (err) {

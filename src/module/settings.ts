@@ -1692,6 +1692,16 @@ export const registerSettings = function () {
     choices: { phased: "midi-qol.BonusPrompt.Phased", classic: "midi-qol.BonusPrompt.Classic" }
   });
 
+  // M15 5b (user, 2026-11-21): per player, offers are shown even when they can't change the result
+  game.settings.register("midi-qol", "ShowAllBonusOffers", {
+    name: "midi-qol.ShowAllBonusOffers.Name",
+    hint: "midi-qol.ShowAllBonusOffers.Hint",
+    scope: "user",
+    default: false,
+    config: true,
+    type: Boolean
+  });
+
   game.settings.register("midi-qol", "EnableWorkflow", {
     name: "midi-qol.EnableWorkflow.Name",
     hint: "midi-qol.EnableWorkflow.Hint",

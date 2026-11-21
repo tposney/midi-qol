@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { addCosts, canAfford, fitSelection, maxScaling, orderForApplication, shouldPrompt, type BonusCost, type BonusEffect } from "../src/module/services/rollBonuses/rules.js";
+import { addCanMatter, addCosts, canAfford, fitSelection, maxScaling, orderForApplication, shouldPrompt, type BonusCost, type BonusEffect } from "../src/module/services/rollBonuses/rules.js";
 import { countCost, defaultPhase, flagPhase, flagValueFor, parseFlagValue } from "../src/module/rules/optionalFlags.js";
 
 const uses = (cost: number, available: number): BonusCost => ({ itemUses: { "Item.lucky": { cost, available } } });
@@ -100,5 +100,21 @@ describe("midi's optional flags", () => {
     expect(defaultPhase("acOnHit")).toBe("postResult");
     expect(flagPhase("preRoll")).toBe("preRoll");
     expect(flagPhase("sometime")).toBeUndefined();
+  });
+});
+
+describe("addCanMatter (M15 5b)", () => {
+  it("a miss an add can reach matters; one it can't doesn't", () => {
+    expect(addCanMatter(12, 15, 1, 4)).toBe(true);
+    expect(addCanMatter(10, 15, 1, 4)).toBe(false);
+  });
+  it("a success a positive add can't undo doesn't matter; a penalty that can does", () => {
+    expect(addCanMatter(16, 15, 1, 6)).toBe(false);
+    expect(addCanMatter(16, 15, -4, -1)).toBe(true);
+    expect(addCanMatter(20, 15, -4, -1)).toBe(false);
+  });
+  it("exactly the target succeeds", () => {
+    expect(addCanMatter(14, 15, 1, 1)).toBe(true);
+    expect(addCanMatter(15, 15, -1, -1)).toBe(true);
   });
 });
