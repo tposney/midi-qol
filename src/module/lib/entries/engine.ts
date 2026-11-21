@@ -145,6 +145,21 @@ function effectEntries(effect: ActiveEffect.Implementation, actor: Actor.Impleme
 
 const listens = (entry: Entry, eventId: string) => [entry.on].flat().includes(eventId);
 
+/**
+ * M11b: an effect's own entries for an event, run for its bearer: `ended` (the effect was deleted or disabled), from
+ * the effect as it was. Conditions, limits and offers as any event.
+ */
+export async function runEffectEvent(eventId: string, effect: ActiveEffect.Implementation, actor: Actor.Implementation, event: Record<string, unknown> = {}): Promise<EntryRunResult[]> {
+  const context: EventContext = { actor, event: { ...event, effect } };
+  const results: EntryRunResult[] = [];
+  for (const f of effectEntries(effect, actor).filter(f => listens(f.entry, eventId))) {
+    const conditionData = conditionDataFor(f, context);
+    if (!await entryHolds(f, conditionData)) continue;
+    results.push(await takeEntry(eventId, f, context, conditionData));
+  }
+  return results;
+}
+
 /** An actor's applied effects' entries for an event, whatever their who */
 export function actorEffectEntries(actor: Actor.Implementation, eventId: string): FoundEntry[] {
   const list: FoundEntry[] = [];

@@ -1,5 +1,5 @@
 import type { Workflow } from "../../Workflow.js";
-import { collectEntries, registerEvent, runEvent, type EventContext } from "./engine.js";
+import { collectEntries, registerEvent, runEffectEvent, runEvent, type EventContext } from "./engine.js";
 import { raiseCreatureCue } from "../cues.js";
 
 /*
@@ -35,6 +35,12 @@ function onUpdateActor(actor: Actor.Implementation, changes: object, options: Ac
   if (before.value > max / 2 && hp.value <= max / 2 && hp.value > 0) void raise("bloodied", actor, event);
 }
 
+/** M11b: the effect ends (deleted, or disabled: DAE's Mark Expired): its own `ended` entries, on the active GM */
+function onEffectEnded(effect: ActiveEffect.Implementation) {
+  if (!game.user?.isActiveGM || !(effect.parent instanceof Actor)) return;
+  void runEffectEvent("ended", effect, effect.parent as Actor.Implementation).catch(err => console.warn(`midi-qol | ended entries of ${effect.name}`, err));
+}
+
 function onCreateEffect(effect: ActiveEffect.Implementation) {
   if (!game.user?.isActiveGM || !(effect.parent instanceof Actor) || !effect.statuses.has("dead")) return;
   void raise("dies", effect.parent, { effect });
@@ -58,4 +64,7 @@ export function registerBearerEvents() {
   registerEvent("dealsDamage", { label: "The bearer's use deals damage" });
   Hooks.on("updateActor", (actor, changes, options) => onUpdateActor(actor, changes, options));
   Hooks.on("createActiveEffect", effect => onCreateEffect(effect));
+  registerEvent("ended", { label: "The effect holding the entry ends (deleted or disabled)" });
+  Hooks.on("deleteActiveEffect", effect => onEffectEnded(effect));
+  Hooks.on("updateActiveEffect", (effect, changes) => { if ((changes as { disabled?: boolean }).disabled === true) onEffectEnded(effect); });
 }

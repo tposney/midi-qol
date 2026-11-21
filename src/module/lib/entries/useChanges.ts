@@ -6,6 +6,7 @@ import type { Workflow } from "../../Workflow.js";
 import type { FoundEntry } from "./types.js";
 import type { EntryAction } from "./types.js";
 import { actorsFor, useContext } from "./useEvents.js";
+import { itemOfEffect } from "./rules.js";
 
 /*
  * M15 stage 4b: the actions that change a use or act for it.
@@ -109,11 +110,7 @@ async function changeAction(run: ActionRun) {
 function entryItem(run: ActionRun): Item.Implementation | undefined {
   const document = run.found.document as { item?: Item.Implementation, parent?: unknown, origin?: string };
   if (document instanceof Item) return document;
-  if (document instanceof ActiveEffect) {
-    if (document.parent instanceof Item) return document.parent;
-    const origin = document.origin ? fromUuidSync(document.origin, { strict: false }) : undefined;
-    return origin instanceof Item ? origin : undefined;
-  }
+  if (document instanceof ActiveEffect) return itemOfEffect(document);
   return document.item;
 }
 

@@ -1,5 +1,5 @@
 import type { Entry } from "./types.js";
-import { invalidateEntryHomes } from "./engine.js";
+import { applyingActivity, invalidateEntryHomes } from "./engine.js";
 
 /*
  * M11a (plan ~/Documents/midi-next-M11-plan-2026-11-22.md): rules as data. A rule is entries keyed by an item's
@@ -90,6 +90,9 @@ export function matchesRole(document: { type?: string, name?: string, statuses?:
 /** The item an effect belongs to: its parent (a transfer effect), else the item its origin names (an applied one) */
 export function itemOfEffect(effect: ActiveEffect.Implementation): ItemLike | undefined {
   if (effect.parent instanceof Item) return effect.parent as ItemLike;
+  // The applying activity's (an applied effect's origin is often the caster's concentration effect)
+  const applying = applyingActivity(effect) as { item?: ItemLike } | undefined;
+  if (applying?.item) return applying.item;
   let origin: unknown = effect.origin ? fromUuidSync(effect.origin, { strict: false }) : undefined;
   while (origin && !(origin instanceof Item) && (origin as { parent?: unknown }).parent) origin = (origin as { parent?: unknown }).parent;
   return origin instanceof Item ? origin as ItemLike : undefined;
