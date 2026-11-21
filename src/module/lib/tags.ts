@@ -175,8 +175,13 @@ export function registerMidiTags(): void {
     // @ts-expect-error no dnd5e-types
     return itemType(context) === "spell" || !!item?.system.properties?.has?.("mgc");
   }));
-  // @ts-expect-error no dnd5e-types
-  registerTag("use.class", use("Spellcasting class", context => itemOf(context)?.system.sourceClass || undefined));
+  // dnd5e 6 keeps the class as sourceItem ("class:wizard"; sourceClass migrated): its classIdentifier, which needs the
+  // class on the actor, else the class the sourceItem names
+  registerTag("use.class", use("Spellcasting class", context => {
+    const system = itemOf(context)?.system as { classIdentifier?: string, sourceItem?: string, sourceClass?: string } | undefined;
+    const named = system?.sourceItem?.startsWith("class:") ? system.sourceItem.slice("class:".length) : undefined;
+    return system?.classIdentifier || named || system?.sourceClass || undefined;
+  }));
   registerTag("use.activation", use("Activation (action, bonus, reaction...)", ({ workflow }) => {
     const type: unknown = workflow.activity?.activation?.type;
     return typeof type === "string" && type ? type : undefined;

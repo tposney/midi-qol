@@ -1,4 +1,5 @@
 import { register } from "../../api/services.js";
+import { unTimedExecuteAsGM } from "../../GMAction.js";
 import { Workflow } from "../../Workflow.js";
 import type { Activity } from "../../../globals.js";
 import type { RollKind, RollModifier, RollModifierEffect, RollQuery } from "../../services/rollModifiers/service.js";
@@ -200,11 +201,28 @@ async function rolled(formula: string, rollData: Record<string, unknown>): Promi
 }
 
 /** `{ damage | heal: formula, type?, to? }` at a use event: damage the use deals (its damage step), to the target or every target hit */
+/** Target events after the use's damage is rolled: healing there heals the bearer at once (Black Absorbing Tattoo) */
+const AFTER_DAMAGE = new Set(["damaging", "damaged", "healing"]);
+
+async function healNow(run: ActionRun, formula: string) {
+  const actor = run.context.target?.actor;
+  if (!actor?.uuid) return;
+  const amount = Math.max(0, Math.floor(await rolled(formula, run.conditionData)));
+  if (!amount) return;
+  // @ts-expect-error no dnd5e-types
+  const hp = actor.system.attributes.hp as { value: number, max: number, effectiveMax?: number };
+  const value = Math.min(hp.effectiveMax ?? hp.max, hp.value + amount);
+  const updates: Record<string, unknown> = { "system.attributes.hp.value": value };
+  if (actor.isOwner) await actor.update(updates);
+  else await unTimedExecuteAsGM("updateActor", { actorUuid: actor.uuid, updates });
+}
+
 export async function useDamageAction(run: ActionRun, healing: boolean) {
   const workflow = run.context.workflow;
   if (!workflow) return;
   const formula = healing ? run.action.heal : run.action.damage;
   if (typeof formula !== "string") return;
+  if (healing && run.context.target && AFTER_DAMAGE.has(run.eventId)) return healNow(run, formula);
   const targets = targetDocumentsFor(run.action.to, run);
   if (targets && !targets.length) {
     console.warn(`midi-qol | entry ${run.found.entry.id}: damage at ${run.eventId} goes to the use's targets ("to": "target")`);
@@ -296,12 +314,13 @@ async function bonusAction(run: ActionRun) {
     acChanges.set(workflow, byTarget);
     return;
   }
-  // On the use's damage once rolled (Empowered Spell): a reroll of chosen dice goes to the first damage roll, any other
-  // bonus to each damage roll
+  // On the use's damage once rolled (Empowered Spell, Empowered Evocation): an add or a reroll of chosen dice goes to
+  // the first damage roll, any other bonus to each
   if (run.eventId === "use.damageRolled" || ([run.action.rolls].flat().includes("damage") && !rolls?.includes("attack"))) {
     const damageRolls = workflow.damageRolls ?? [];
     if (!damageRolls.length) return;
-    const onlyFirst = effect.kind === "reroll" && effect.dice === "choose";
+    // "One damage roll" (Empowered Evocation's add, Empowered Spell's dice): the first
+    const onlyFirst = effect.kind === "add" || (effect.kind === "reroll" && effect.dice === "choose");
     const changed: Roll[] = [];
     for (const [index, roll] of damageRolls.entries()) changed.push(onlyFirst && index > 0 ? roll : await applyBonusEffect(roll, effect, run.conditionData, labelOf(run)));
     if (changed.some((roll, index) => roll !== damageRolls[index])) await workflow.setDamageRolls(changed);

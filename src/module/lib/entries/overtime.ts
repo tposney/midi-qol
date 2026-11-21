@@ -12,7 +12,8 @@ import {
 import type { Workflow } from "../../Workflow.js";
 import { isUseEvent, useDamageAction } from "./useEvents.js";
 import { actionRollAction, activityRollAction, isActivityRef } from "./activityActions.js";
-import { applyingActivity, registerAction, registerEffectEntryReader, registerEvent, type ActionRun } from "./engine.js";
+import { originView } from "./conditionData.js";
+import { applyingActivity, originActor, registerAction, registerEffectEntryReader, registerEvent, type ActionRun } from "./engine.js";
 import type { Entry, EntryAction } from "./types.js";
 
 /*
@@ -31,6 +32,8 @@ function rollDataFor(actor: Actor.Implementation, effect: ActiveEffect.Implement
   const rollData: Record<string, any> = createConditionData({ actor, workflow: undefined, target: actor, effect });
   if (!rollData.flags) rollData.flags = actor.flags;
   rollData.flags.midiqol = rollData.flags[MODULE_ID];
+  // A native entry's formulas read the applying use (@entry.origin.spellLevel, .dc)
+  rollData.entry = { origin: originView(effect, applyingActivity(effect), originActor(effect)) };
   return rollData;
 }
 
@@ -138,7 +141,8 @@ function tickFor(kind: TickKind, action: Record<string, unknown>, effect: Active
   return {
     label: text("label") ?? effect.name, rollType, rollTypeString: rollType, saveAbility: abilities, saveAbilityString: abilities.join("|"),
     saveDC: dc, saveMagic: spell,
-    damageRoll: text("damage"), damageType: text("type") ?? "", damageBeforeSave: false, saveDamage: onSave,
+    // Its @entry.origin references resolved now: the tick's item has none of the effect's data
+    damageRoll: text("damage")?.replace(/@entry\.origin\.(\w+)/g, (_, key: string) => String(rollData.entry?.origin?.[key] ?? 0)), damageType: text("type") ?? "", damageBeforeSave: false, saveDamage: onSave,
     allowIncapacitated: false, killAnim: !!action.killAnim, macro: text("macro"), chatFlavor: text("flavor") ?? "", rollMode: text("rollMode"),
     fastForwardDamage: true, fastForwardAttack: true, autoRollAttack: true, autoRollDamage: true, multiplyByStacks: false
   };

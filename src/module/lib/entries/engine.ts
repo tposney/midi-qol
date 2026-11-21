@@ -9,7 +9,7 @@ import { limitKey, limitStamp, selectGroups, spendStoredLimit, withinLimit, type
 import type { Entry, EntryAction, EntryHome, EntryWho, FoundEntry } from "./types.js";
 import { addEconomy, entryConditionExtras } from "./conditionData.js";
 import { askEntryChoice, type ChoiceDeclaration } from "../choices.js";
-import { askOffers, costAllows, editToggles, listToggles, offerOption, setToggle, spendEntryCost, toggleOn } from "./offers.js";
+import { askOffers, costAllows, editToggles, listToggles, offerOption, payEntryConsumption, setToggle, spendEntryCost, toggleOn } from "./offers.js";
 
 /*
  * M15 stage 1: the entry engine (plan ~/Documents/midi-next-M15-plan-2026-11-20.md). A event is raised with the actor
@@ -139,13 +139,21 @@ export function actorEffectEntries(actor: Actor.Implementation, eventId: string)
   return list;
 }
 
+/**
+ * An item's entry with no `who` is about the uses of that item at a use event (`use.*`), and about its owner at any
+ * other (attacked, damaging, a roll, a turn): Lucky's disadvantage, a reaction item's offer
+ */
+export function itemEntryIsOwners(f: FoundEntry, eventId: string): boolean {
+  return f.who === "owner" || (f.home === "item" && f.entry.who === undefined && !eventId.startsWith("use."));
+}
+
 /** By who: the use's own entries (this), the actor's items (owner), its applied effects (bearer) */
 function collectByWho(context: EventContext, eventId: string): FoundEntry[] {
   const { actor } = context;
   const list: FoundEntry[] = [];
   const own = context.activity?.item ?? context.item;
-  if (own) list.push(...itemEntries(own, actor).filter(f => f.who === "this" && (f.home !== "activity" || f.document === context.activity)));
-  for (const item of actor.items) if (itemInUse(item)) list.push(...itemEntries(item, actor).filter(f => f.who === "owner"));
+  if (own) list.push(...itemEntries(own, actor).filter(f => f.who === "this" && !itemEntryIsOwners(f, eventId) && (f.home !== "activity" || f.document === context.activity)));
+  for (const item of actor.items) if (itemInUse(item)) list.push(...itemEntries(item, actor).filter(f => itemEntryIsOwners(f, eventId)));
   for (const effect of actor.appliedEffects) list.push(...effectEntries(effect, actor).filter(f => f.who === "bearer"));
   return list.filter(f => listens(f.entry, eventId));
 }
@@ -340,7 +348,8 @@ export async function spendEntryLimit(f: FoundEntry, context: EventContext): Pro
       return;
     }
     case "effect": {
-      if (!(f.document instanceof ActiveEffect)) return;
+      // An entry that ended its own effect has nothing left to count on
+      if (!(f.document instanceof ActiveEffect) || !(f.document.parent as Actor.Implementation | null)?.effects?.has(f.document.id ?? "")) return;
       const state = entryState(f.document, f.entry.id);
       return setEntryState(f.document, f.entry.id, { ...state, used: (state.used ?? 0) + 1 });
     }
@@ -370,6 +379,11 @@ export function conditionDataFor(f: FoundEntry, context: EventContext): Record<s
     }
   });
   addEconomy(data, f.actor ?? context.actor);
+  // Someone else's entry at a use's event (a target's, a near creature's): its @abilities, @prof... are its own, not the user's
+  if (f.actor && context.workflow && f.actor !== context.workflow.actor) {
+    const own = f.actor.getRollData() as Record<string, unknown>;
+    for (const key of ["abilities", "attributes", "skills", "prof", "bonuses", "details", "traits", "classes", "scale", "spells"]) if (key in own) data[key] = own[key];
+  }
   return data;
 }
 
@@ -444,6 +458,7 @@ function groupOpen(entry: Entry, context: EventContext): boolean {
  */
 export async function takeEntry(eventId: string, f: FoundEntry, context: EventContext, conditionData: Record<string, unknown>): Promise<EntryRunResult> {
   const ran: string[] = [];
+  if (!await payEntryConsumption(f)) return { entry: f.entry.id, document: documentUuid(f.document), actions: ran };
   // Its own choice, asked as it is taken and kept on the use as choices[<entry id>]; closed, it is not taken
   if (f.entry.choose && context.workflow && await holds(f.entry.choose.if as string | undefined, conditionData)) {
     const value = await askEntryChoice({ label: f.entry.label ?? f.entry.id, kind: "option", ...f.entry.choose, id: f.entry.id } as ChoiceDeclaration, context.workflow);

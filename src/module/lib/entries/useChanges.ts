@@ -49,11 +49,14 @@ async function useConfigureChange(run: ActionRun, spec: Record<string, unknown>)
   const usage = run.context.event?.usage as { spell?: { slot?: string }, midiOptions?: { spellLevel?: number } } | undefined;
   const rollData = run.conditionData;
   const updates: Record<string, unknown> = {};
-  if (typeof spec.activation === "string") updates["activation.type"] = spec.activation;
+  // A spell's activity takes these from the spell unless it overrides them
+  if (typeof spec.activation === "string") Object.assign(updates, { "activation.type": spec.activation, "activation.override": true });
   for (const field of ["range", "duration"] as const) {
     const value = spec[field];
     if (value === undefined) continue;
     const current = (activity as unknown as Record<string, { value?: number | string, units?: string }>)[field] ?? {};
+    updates[`${field}.override`] = true;
+    if (current.units && !(typeof value === "object" && value && "units" in value)) updates[`${field}.units`] = current.units;
     if (typeof value === "object" && value) {
       const { value: v, units } = value as { value?: NumericChange, units?: string };
       if (units) updates[`${field}.units`] = units;

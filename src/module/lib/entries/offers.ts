@@ -61,9 +61,27 @@ export function entryActivity(f: FoundEntry): Usable | undefined {
   return item?.system.activities?.get(f.entry.activity) as Usable | undefined;
 }
 
+/** The entry's activity's own consumption (dnd5e's targets: Font of Magic's uses for a Metamagic option), if it has any */
+function consumingActivity(f: FoundEntry): { consume(config: object, message: object): Promise<unknown> } | undefined {
+  if (!f.entry.activity) return undefined;
+  const activity = entryActivity(f) as (Usable & { consumption?: { targets?: unknown[] }, consume?(config: object, message: object): Promise<unknown> }) | undefined;
+  return activity?.consumption?.targets?.length && activity.consume ? activity as { consume(config: object, message: object): Promise<unknown> } : undefined;
+}
+
+/**
+ * An entry whose activity has consumption targets is paid through dnd5e before it runs (its resources only: no
+ * action, no slot); false if dnd5e refused (not enough left; dnd5e says why). Other entries pay after (spendEntryCost).
+ */
+export async function payEntryConsumption(f: FoundEntry): Promise<boolean> {
+  const activity = consumingActivity(f);
+  if (!activity) return true;
+  const result = await activity.consume({ consume: { resources: true, action: false, spellSlot: false }, scaling: 0 }, {});
+  return result !== false;
+}
+
 /** What paying for the entry spends: one use of its activity, else of its item (none: free) */
 function costHolder(f: FoundEntry): { kind: "activity" | "item", holder: Usable } | undefined {
-  if (!f.entry.activity) return undefined;
+  if (!f.entry.activity || consumingActivity(f)) return undefined;
   const activity = entryActivity(f);
   if (activity?.uses?.max) return { kind: "activity", holder: activity };
   const item = activity?.item as unknown as Usable | undefined;

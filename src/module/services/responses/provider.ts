@@ -12,6 +12,16 @@ import { eventDataFor } from "../../lib/entries/responseEvents.js";
  * attack hit). Moved from utils doReactions (M3 stage 4). Its condition also has `event` and `event` (M15 4f), as an
  * entry's has; the activity is still used on the reacting player's client (its slot, its targets), not as an entry.
  */
+/** The activities an item's entries name as their cost (`activity`) */
+function entryCostActivities(item: Item.Implementation): Set<string> {
+  const ids = new Set<string>();
+  const add = (entries: unknown) => { if (Array.isArray(entries)) for (const entry of entries) if (typeof entry?.activity === "string") ids.add(entry.activity); };
+  add(item.getFlag("midi-qol", "entries"));
+  // @ts-expect-error no dnd5e-types
+  for (const activity of item.system.activities ?? []) add(activity.midiEntries);
+  return ids;
+}
+
 export const midiItemReactions: ResponseContributor = {
   async for({ target, usedReaction, triggerType, options, eventId }) {
     if (!target.actor) return [];
@@ -25,9 +35,12 @@ export const midiItemReactions: ResponseContributor = {
       if (!theItem.system.activities) continue;
       // If the spell is a proxy for a cast ativity skip
       if (!!item.getFlag("dnd5e", "cachedFor")) continue;
+      // An activity an entry names as its cost is offered as that entry (lib/entries/responseEvents.ts), not again here
+      const entryCosts = entryCostActivities(theItem);
       // @ts-expect-error no dnd5e-types
       for (let activity of theItem.system.activities) {
         try {
+          if (entryCosts.has(activity.id)) continue;
           const activationType = activity.effectiveActivationType ?? activity.activation?.type;
           if (!activationType?.includes("reaction")) continue;
           // What dnd5e would refuse (a spell under 6.1's antimagic status, its own visibility rules) isn't offered

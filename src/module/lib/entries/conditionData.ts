@@ -44,7 +44,7 @@ export function useView(workflow: Workflow): Record<string, unknown> {
 }
 
 /** The use that applied an effect: from DAE's application record (castData) and the effect's origin */
-function originView(effect: ActiveEffect.Implementation, activity: unknown, actor: Actor.Implementation | undefined): Record<string, unknown> {
+export function originView(effect: ActiveEffect.Implementation, activity: unknown, actor: Actor.Implementation | undefined): Record<string, unknown> {
   const castData = effect.flags?.[MODULE_ID]?.castData as { castLevel?: number, baseLevel?: number, saveDC?: number } | undefined;
   const applying = activity as { item?: Item.Implementation, save?: { dc?: { value?: number } } } | undefined;
   return {
