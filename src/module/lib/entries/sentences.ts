@@ -252,6 +252,12 @@ export function actionText(action: EntryAction, context: SentenceContext): strin
       if (k === "damageType") return say("Change.damageTypeTo", { from: or([part(v).from ?? []].flat().map(t => labelOf("damageTypes", t))), to: friendlyFormula(part(v).to ?? "?") });
       return `${has(`Change.${k}`) ? say(`Change.${k}`) : k} ${typeof v === "object" ? JSON.stringify(v) : friendlyFormula(v)}`;
     }).join(", ") });
+    case "macro": {
+      const name = typeof a.macro === "string" && a.macro.trim() ? a.macro.trim() : "ItemMacro";
+      if (name === "ItemMacro") return say("Action.macroItem");
+      if (name === "ActivityMacro") return say("Action.macroActivity");
+      return say("Action.macro", { name: name.replace(/^Macro\./, "") });
+    }
     case "table": {
       const found = part(part(a.table).find);
       if (typeof found.name === "string" && found.name) return say("Action.tableFind", { name: found.name });

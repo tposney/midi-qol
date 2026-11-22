@@ -33,6 +33,7 @@ import { applyOverlayData, applyOverlayDataToWorld, registerOverlay, registerOve
 import { definePresentersService } from "./module/services/presenters/service.js";
 import { registerCues } from "./module/lib/cues.js";
 import { registerActivityActions, takeAction } from "./module/lib/entries/activityActions.js";
+import { registerMacroAction } from "./module/lib/entries/macroAction.js";
 import { registerUseChanges } from "./module/lib/entries/useChanges.js";
 import { registerEntryOffers } from "./module/lib/entries/offers.js";
 import { registerResponseEvents } from "./module/lib/entries/responseEvents.js";
@@ -559,6 +560,7 @@ Hooks.once('init', async function () {
   registerItemAutomationSection();
   registerCardWaits();
   registerUseChanges();
+  registerMacroAction();
   registerEntryOffers();
   registerResponseEvents();
   defineEntryEditorServices();

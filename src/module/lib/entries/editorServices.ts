@@ -135,6 +135,10 @@ export function registerMidiEditorContributors() {
       const lists: Record<string, FieldOption[]> = {};
       for (const [name, key] of Object.entries(CONFIG_LISTS))
         lists[name] = Object.entries(dnd5e[key] ?? {}).map(([value, data]) => ({ value, label: game.i18n?.localize(typeof data === "string" ? data : data.label ?? value) ?? value }));
+      // A macro to run: the item's or activity's own, or a world macro
+      lists.macros = [{ value: "ItemMacro", label: game.i18n?.localize("midi-qol.Entries.Macro.item") ?? "ItemMacro" },
+        { value: "ActivityMacro", label: game.i18n?.localize("midi-qol.Entries.Macro.activity") ?? "ActivityMacro" },
+        ...[...(game.macros ?? [])].filter(m => m.type === "script").map(m => ({ value: m.name, label: m.name })).sort((a, b) => a.label.localeCompare(b.label))];
       lists.statuses = CONFIG.statusEffects.filter(s => s.id).map(s => ({ value: s.id, label: game.i18n?.localize(s.name ?? s.id) ?? s.id }));
       return lists;
     }

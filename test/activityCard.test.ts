@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { areaGroups, areaRules, areaSaveActivity, basicsUpdate, NEW_KINDS, newActivityData } from "../src/module/lib/entries/activityCard.js";
+import { areaGroups, areaRules, areaSaveActivity, basicsUpdate, NEW_KINDS, newActivityData, onUseString, parseOnUse } from "../src/module/lib/entries/activityCard.js";
 import { activityEffects, editedTargeting, mainBranch, newEffectData, targetingUpdate, targetPreset } from "../src/module/lib/entries/activityCard.js";
 import { activityCard, activityUpdate, branchFor, convertActivity, isBranchEntry, partFormula, partWithFormula, type ActivityData, type CardText } from "../src/module/lib/entries/activityCard.js";
 
@@ -163,5 +163,12 @@ describe("activity cards", () => {
     expect((area.activities[0] as any).regionBehavior.rules).toEqual([{ trigger: "entry", action: "useActivity", targetId: "s1" }, { trigger: "turnEnd", action: "useActivity", targetId: "s1" }]);
     expect((area.activities[1] as any).midiProperties.automationOnly).toBe(true);
     expect(newActivityData("self", ids, { name: "Probe", spell: false }).effects[0]).toMatchObject({ _id: "e1", transfer: false });
+  });
+
+  it("on-use macros: midi's string read as rows and written back", () => {
+    const rows = parseOnUse("[preItemRoll]My Macro, ItemMacro,[postDamageRoll]Compendium.x.y.Macro.z");
+    expect(rows).toEqual([{ option: "preItemRoll", macroName: "My Macro" }, { option: "postActiveEffects", macroName: "ItemMacro" }, { option: "postDamageRoll", macroName: "Compendium.x.y.Macro.z" }]);
+    expect(onUseString(rows)).toBe("[preItemRoll]My Macro,[postActiveEffects]ItemMacro,[postDamageRoll]Compendium.x.y.Macro.z");
+    expect(onUseString([{ option: "preItemRoll", macroName: " " }])).toBe("");
   });
 });

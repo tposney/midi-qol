@@ -12,6 +12,14 @@
         {{#if target.canLinger}}<div class="form-group"><label></label><div class="form-fields"><label class="checkbox"><input type="checkbox" name="card.area.lingers" {{#if target.lingers}}checked{{/if}}> {{localize "midi-qol.EntryEditor.Activity.Area.lingers"}}</label></div></div>{{/if}}
         {{#if target.who}}<div class="form-group"><label>{{localize "midi-qol.EntryEditor.Activity.TargetWho"}}</label><div class="form-fields"><select name="card.target.who">{{#each target.who}}<option value="{{value}}" {{#if selected}}selected{{/if}}>{{label}}</option>{{/each}}</select></div></div>{{/if}}
         {{/if}}
+        {{#if onUse}}
+        <div class="form-group"><label>{{localize "midi-qol.EntryEditor.OnUse.macro"}}</label><div class="form-fields">
+            <input type="text" name="card.onuse.name" value="{{onUse.name}}" list="midi-qol-onuse-macros">
+            <datalist id="midi-qol-onuse-macros">{{#each onUse.macros}}<option value="{{value}}">{{label}}</option>{{/each}}</datalist></div></div>
+        <div class="form-group"><label>{{localize "midi-qol.EntryEditor.OnUse.when"}}</label><div class="form-fields"><select name="card.onuse.option">{{#each onUse.passes}}<option value="{{value}}" {{#if selected}}selected{{/if}}>{{label}}</option>{{/each}}</select></div></div>
+        <p class="hint">{{localize "midi-qol.EntryEditor.OnUse.hint"}}</p>
+        <button type="button" data-action="removeOnUse" data-index="{{onUse.index}}"><i class="fa-solid fa-trash"></i> {{localize "midi-qol.EntryEditor.Activity.Area.remove"}}</button>
+        {{/if}}
         {{#if basics}}
         <div class="form-group"><label>{{localize "midi-qol.EntryEditor.Activity.Basics.activation"}}</label><div class="form-fields">
             {{#if basics.hasActivationValue}}<input type="number" name="card.basics.activationValue" value="{{basics.activationValue}}" min="1" step="1">{{/if}}

@@ -10,6 +10,8 @@ import { activityCardContributor, contributedActivityCard, optionList } from "..
 import { automationNotes } from "../lib/entries/automations.js";
 import { configOptions, type ConfigField } from "../lib/entries/config.js";
 import { effectAction, mainBranch, newEffectData, type NewEffect } from "../lib/entries/activityCard.js";
+import { onUseMacroOptions } from "../settings.js";
+import { onUseString, parseOnUse, type OnUseRow } from "../lib/entries/activityCard.js";
 import { basicsUpdate, NEW_KINDS, newActivityData, type Basics, type BasicsWhere, type NewKind } from "../lib/entries/activityCard.js";
 import { AREA_TRIGGERS, areaGroups, areaSaveActivity, areaView, editedRegion, type AreaGroup } from "../lib/entries/activityCard.js";
 import { convertActivity, editedTargeting, FROM_YOU_SHAPES, moveBranchEntry, POINT_SHAPES, ROLL_KINDS, TARGET_PRESETS, targetingUpdate, targetPreset, type RollKind, type TargetPreset, type Targeting } from "../lib/entries/activityCard.js";
@@ -202,6 +204,7 @@ function chipFields(fields: Record<string, unknown>, field: string): Record<stri
   if (field === "newEffect") return { newEffect: fields.newEffect };
   if (field === "area") return { area: fields.area };
   if (field === "basics") return { basics: fields.basics };
+  if (field.startsWith("onuse.")) return { onUse: fields.onUse };
   if (field.startsWith("area.")) return { areaGroup: fields.areaGroup };
   if (field === "save") return { save: fields.save };
   if (field === "dc") return fields.save ? { save: fields.save } : { check: fields.check };
@@ -273,6 +276,8 @@ export class EntryEditor extends HandlebarsApplicationMixin(ApplicationV2) {
   /** Which of them: a chip's field shown in place, under the line it is on ("all": the whole block) */
   #cardField: string | undefined;
   #cardPlace: string | undefined;
+  /** The item's on-use macros as edited (every activity's use runs them) */
+  #onUse: { rows: OnUseRow[], stored: string } | undefined;
   /** "+ add what it does" open */
   #addWhatOpen = false;
   /** The "+ effect" form as filled in so far */
@@ -306,6 +311,10 @@ export class EntryEditor extends HandlebarsApplicationMixin(ApplicationV2) {
       for (const draft of home.drafts) draft.problems = this.#problemsOf(draft, home.drafts);
       return home;
     });
+    if (root) {
+      const stored = String(foundry.utils.getProperty(root, "_source.flags.midi-qol.onUseMacroName") ?? "");
+      this.#onUse = { rows: parseOnUse(stored), stored: onUseString(parseOnUse(stored)) };
+    }
     // An activity another one's area runs is titled by that (the author never made it to be used on its own)
     type AreaOwner = { regionBehavior?: { enabled?: boolean, rules?: { action: string, targetId: string }[] } };
     const runByArea = new Set(activities.flatMap(a => {
@@ -332,7 +341,8 @@ export class EntryEditor extends HandlebarsApplicationMixin(ApplicationV2) {
       || (!!h.changes && JSON.stringify(h.changes.rows) !== h.changes.stored)
       || (!!h.card?.target && (Object.keys(this.#targetingUpdates(h).activity).length > 0 || Object.keys(this.#targetingUpdates(h).item).length > 0))
       || (!!h.card?.area && Object.keys(this.#areaUpdates(h).activity).length > 0)
-      || (!!h.card?.basics && (Object.keys(this.#basicsUpdates(h).activity).length > 0 || Object.keys(this.#basicsUpdates(h).item).length > 0)));
+      || (!!h.card?.basics && (Object.keys(this.#basicsUpdates(h).activity).length > 0 || Object.keys(this.#basicsUpdates(h).item).length > 0)))
+      || (!!this.#onUse && onUseString(this.#onUse.rows) !== this.#onUse.stored);
   }
 
   /** Closing with unsaved changes asks first (`options.discard`: no question) */
@@ -402,6 +412,8 @@ export class EntryEditor extends HandlebarsApplicationMixin(ApplicationV2) {
       addDamagePart: EntryEditor.#onAddDamagePart,
       addChange: EntryEditor.#onAddChange,
       addAreaGroup: EntryEditor.#onAddAreaGroup,
+      addOnUse: EntryEditor.#onAddOnUse,
+      removeOnUse: EntryEditor.#onRemoveOnUse,
       removeAreaGroup: EntryEditor.#onRemoveAreaGroup,
       confirmEffect: EntryEditor.#onConfirmEffect,
       removeEffect: EntryEditor.#onRemoveEffect,
@@ -583,7 +595,9 @@ export class EntryEditor extends HandlebarsApplicationMixin(ApplicationV2) {
   /** The macros run during this activity's use: the item's and the activity's own, as steps of its card */
   #cardMacros(h: Home) {
     const item = this.#homes.find(home => home.kind === "item");
-    const notes = [...(item ? automationNotes(item.document) : []), ...automationNotes(h.document)].filter(note => note.atUse);
+    // midi's own on-use macros are the editable rows (#onUseRows); the rest are described
+    const midi = i18n("midi-qol.EntryEditor.Automation.Source.midi");
+    const notes = [...(item ? automationNotes(item.document) : []), ...automationNotes(h.document)].filter(note => note.atUse && !(this.#onUse && note.source === midi));
     const and = game.i18n?.localize("midi-qol.Sentence.And") ?? "and";
     return notes.map(note => ({ ...note,
       sentence: game.i18n?.format("midi-qol.EntryEditor.Automation.Step", {
@@ -849,9 +863,46 @@ export class EntryEditor extends HandlebarsApplicationMixin(ApplicationV2) {
     const all = this.#cardField === "all" || !this.#cardField;
     const area = areaView(data, text);
     const region = area ? { text: area.text, groups: area.groups.map((g, index) => ({ text: g, index, home: at })), other: area.other, dnd5e: area.dnd5e, home: at } : undefined;
-    return { home: at, when: model.when.map(chip), branches, basics, targeting: model.targeting ? chip(model.targeting) : undefined, midi: this.#midiProperties(h), region, macros: this.#cardMacros(h),
+    return { home: at, onUse: this.#onUseRows(at), when: model.when.map(chip), branches, basics, targeting: model.targeting ? chip(model.targeting) : undefined, midi: this.#midiProperties(h), region, macros: this.#cardMacros(h),
       open: opened && all ? { ...opened, newEffect: undefined } : undefined,
       popover: opened && !all ? { place: this.#cardPlace, fields: { ...chipFields(opened, this.#cardField!), home: at, noAdd: true } } : undefined };
+  }
+
+  /** The item's on-use macros as phrases: "Then run the item's macro after active effects" */
+  #onUseRows(at: number) {
+    if (!this.#onUse) return undefined;
+    const name = (n: string) => n === "ItemMacro" ? i18n("midi-qol.Entries.Macro.item") : n === "ActivityMacro" ? i18n("midi-qol.Entries.Macro.activity")
+      : game.i18n?.format("midi-qol.EntryEditor.OnUse.named", { name: n.replace(/^Macro\./, "") }) ?? n;
+    const pass = (o: string) => (game.i18n?.localize(`midi-qol.onUseMacroOptions.${o}`) ?? o).trim().toLowerCase();
+    const command = this.#root ? globalThis.DAE?.getItemMacroCommand(this.#root) : undefined;
+    return { home: at, rows: this.#onUse.rows.map((r, i) => ({ i, home: at,
+      text: game.i18n?.format("midi-qol.EntryEditor.OnUse.step", { what: name(r.macroName), when: pass(r.option) }) ?? r.macroName,
+      code: r.macroName === "ItemMacro" ? command : undefined })) };
+  }
+
+  /** The open on-use row's fields */
+  #onUseFields() {
+    const index = this.#cardField?.startsWith("onuse.") ? Number(this.#cardField.slice(6)) : -1;
+    const row = this.#onUse?.rows[index];
+    if (!row) return undefined;
+    const option = (value: string, label: string, selected: boolean) => ({ value, label, selected });
+    return { index, name: row.macroName, macros: optionList("macros"),
+      passes: Object.entries(onUseMacroOptions as Record<string, string>).map(([o, label]) => option(o, label, row.option === o)) };
+  }
+
+  static #onAddOnUse(this: EntryEditor, _event: Event, target: HTMLElement) {
+    if (!this.#onUse) return;
+    this.#onUse.rows.push({ macroName: "ItemMacro", option: "postActiveEffects" });
+    this.#cardOpen = Number(target.dataset.home ?? this.#at);
+    this.#cardField = `onuse.${this.#onUse.rows.length - 1}`;
+    this.#cardPlace = "onuse";
+    this.render();
+  }
+
+  static #onRemoveOnUse(this: EntryEditor, _event: Event, target: HTMLElement) {
+    this.#onUse?.rows.splice(Number(target.dataset.index), 1);
+    this.#cardOpen = this.#cardField = this.#cardPlace = undefined;
+    this.render();
   }
 
   /** midi's properties of the activity that differ from their defaults, by their schema labels */
@@ -883,6 +934,7 @@ export class EntryEditor extends HandlebarsApplicationMixin(ApplicationV2) {
     try { fields = found.provider.fields(data); } catch (err) { console.warn(`midi-qol | activityCards ${found.id}: fields() failed`, err); }
     return {
       basics: this.#basicsContext(h),
+      onUse: this.#onUseFields(),
       contributed: fields.map(f => {
         const value = h.cardValues?.[f.name] ?? f.value;
         return { ...f, field: `card.x.${f.name}`, value, checked: f.type === "checkbox" && !!value,
@@ -954,6 +1006,7 @@ export class EntryEditor extends HandlebarsApplicationMixin(ApplicationV2) {
       effects: (data.effects ?? []).map(e => ({ id: e._id, name: this.#cardText().effectName(e._id), onSave: !!e.onSave, canOnSave: save })),
       newEffect: this.#newEffectContext(data),
       basics: this.#basicsContext(h),
+      onUse: this.#onUseFields(),
       ...this.#areaContext(data)
     };
   }
@@ -1177,6 +1230,11 @@ export class EntryEditor extends HandlebarsApplicationMixin(ApplicationV2) {
       if (key.startsWith("card.x.")) (h.cardValues ??= {})[key.slice("card.x.".length)] = value;
     if ("card.checkAbility" in data) h.card.checkAbility = String(data["card.checkAbility"] ?? "");
     if ("card.attackType" in data) h.card.attackType = String(data["card.attackType"] ?? "");
+    if ("card.onuse.name" in data && this.#onUse) {
+      const index = this.#cardField?.startsWith("onuse.") ? Number(this.#cardField.slice(6)) : -1;
+      const row = this.#onUse.rows[index];
+      if (row) { row.macroName = String(data["card.onuse.name"] ?? "").trim(); row.option = String(data["card.onuse.option"] ?? row.option); }
+    }
     if ("card.basics.activation" in data) {
       const value = (key: string) => data[`card.basics.${key}`];
       const b = { ...(h.card.basics ?? {}) };
@@ -1919,6 +1977,9 @@ export class EntryEditor extends HandlebarsApplicationMixin(ApplicationV2) {
       }
       if (Object.keys(changes).length) await home.document.update(changes);
     }
+    // The item's on-use macros (midi prepares its parts from this string)
+    if (this.#root && this.#onUse && onUseString(this.#onUse.rows) !== this.#onUse.stored)
+      await this.#root.setFlag(MODULE_ID, "onUseMacroName", onUseString(this.#onUse.rows));
     this.#saved = true;
     await this.close();
   }

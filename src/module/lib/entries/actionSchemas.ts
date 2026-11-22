@@ -68,6 +68,8 @@ export function registerMidiActionSchemas() {
   setActionSchema("perception", { fields: [
     { path: "perception.invisible", label: "midi-qol.Entries.Field.invisible", type: "tristate" }], initial: {} });
   // Its rows (range, label, actions) are the editor's row cards
+  setActionSchema("macro", { fields: [
+    { path: "macro", label: "midi-qol.Entries.Field.macro", type: "select", options: { list: "macros" } }], initial: "ItemMacro" }, "midi-qol.Entries.Action.macro");
   setActionSchema("table", { fields: [
     { path: "table.id", label: "midi-qol.Entries.Field.tableId", type: "string" },
     { path: "table.formula", label: "midi-qol.Entries.Field.formula", type: "formula" },

@@ -92,6 +92,23 @@
         {{/if}}
     </div>
     {{/each}}
+    {{#if onUse}}
+    <div class="midi-qol-activity-onuse">
+        {{#each onUse.rows}}
+        <div class="midi-qol-activity-macro"><i class="fa-solid fa-code"></i> <button type="button" class="midi-qol-entry-chip builtin" data-action="editActivity" data-home="{{home}}" data-field="onuse.{{i}}" data-place="onuse">{{text}}</button>
+            {{#if code}}<details class="midi-qol-entry-automation-code"><summary>{{localize "midi-qol.EntryEditor.Automation.Code"}}</summary><pre>{{code}}</pre></details>{{/if}}</div>
+        {{/each}}
+        <button type="button" class="midi-qol-onuse-add" data-action="addOnUse" data-home="{{onUse.home}}"><i class="fa-solid fa-code"></i> {{localize "midi-qol.EntryEditor.OnUse.add"}}</button>
+        {{#if (eq popover.place "onuse")}}
+        <div class="midi-qol-card-popover">
+            {{#with popover.fields}}{{> "modules/midi-qol/templates/apps/EntryEditor/cardFields.hbs"}}{{/with}}
+            <div class="midi-qol-card-popover-buttons">
+                <button type="button" data-action="closeActivityField" data-home="{{onUse.home}}"><i class="fa-solid fa-check"></i> {{localize "midi-qol.EntryEditor.Activity.Done"}}</button>
+            </div>
+        </div>
+        {{/if}}
+    </div>
+    {{/if}}
     {{#each macros}}
     <div class="midi-qol-activity-macro">
         <div><i class="fa-solid fa-code"></i> {{sentence}}{{#if version}} <span class="hint">({{version}})</span>{{/if}}</div>

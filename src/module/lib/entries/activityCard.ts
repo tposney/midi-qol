@@ -656,3 +656,19 @@ export function newActivityData(kind: NewKind, ids: { activity: string, effect: 
     };
   }
 }
+
+/* midi's on-use macros (flags.midi-qol.onUseMacroName: "[postActiveEffects]ItemMacro,[preItemRoll]My Macro") */
+
+export interface OnUseRow { macroName: string, option: string }
+
+export function parseOnUse(value: unknown): OnUseRow[] {
+  if (typeof value !== "string") return [];
+  return value.split(",").map(s => s.trim()).filter(Boolean).map(s => {
+    const m = /^(?:\[(.*?)\])?(.*)$/.exec(s)!;
+    return { option: m[1]?.trim() || "postActiveEffects", macroName: m[2].trim() };
+  });
+}
+
+export function onUseString(rows: readonly OnUseRow[]): string {
+  return rows.filter(r => r.macroName.trim()).map(r => `[${r.option || "postActiveEffects"}]${r.macroName.trim()}`).join(",");
+}
