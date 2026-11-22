@@ -80,6 +80,28 @@ export async function targetEvent(workflow: Workflow, target: TokenDocument.Impl
   return answer;
 }
 
+/**
+ * M32a step 5: whether an entry's actions could change the outcome, where midi can tell: fixed bonuses added to a roll
+ * with a known total and target (attacked/hit/missed: the attack against the AC; saveFailed/saveSucceeded: the save
+ * against the DC). A critical hit or a fumble isn't changed by a bonus. undefined: midi can't tell.
+ */
+function entryCanMatter(entry: { do?: unknown[] }, event: Record<string, unknown>): boolean | undefined {
+  const actions = entry.do ?? [];
+  if (!actions.length) return undefined;
+  let sum = 0;
+  for (const action of actions) {
+    const bonus = (action as { bonus?: { kind?: string, formula?: unknown } }).bonus;
+    if (bonus?.kind !== "add" || !Number.isNumeric(bonus.formula)) return undefined;
+    sum += Number(bonus.formula);
+  }
+  const attack = "ac" in event;
+  const total = Number(attack ? event.attackTotal : event.total);
+  const against = Number(attack ? event.ac : event.dc);
+  if (!Number.isFinite(total) || !Number.isFinite(against)) return undefined;
+  if (attack && (event.critical || event.fumble)) return false;
+  return (total + sum >= against) !== (total >= against);
+}
+
 /** An entry's standing-choice key by its item (identifier, else name) and entry id, so it survives an effect applied again */
 function entryStandingKey(found: { document: unknown, entry: { id: string } }): { standingKey?: string } {
   const document = found.document;
@@ -105,6 +127,7 @@ async function entryResponseOffers(query: ResponseQuery): Promise<ResponseCandid
         key: `${(found.document as { uuid?: string }).uuid ?? ""}#${found.entry.id}`,
         label: entryLabel(found), img: option.img, description: option.description,
         ...entryStandingKey(found),
+        ...(entryCanMatter(found.entry, record?.event ?? {}) === false ? { canMatter: false } : {}),
         ...(found.entry.offer === "reaction" ? { cost: { actions: { reaction: 1 } } } : {}),
         take: async () => {
           const result = await takeEntry(eventId, found, context, conditionData);

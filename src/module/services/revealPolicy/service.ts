@@ -13,10 +13,11 @@ import { configSettings, safeGetGameSetting } from "../../settings.js";
  *
  * Subjects: "challenge" (a card's DC and its NPC targets' results, the caster's challenge), "saveResult" (a target's
  * save outcome), "hitResult" (hit or miss), "ac" (a target's AC at the attack), "tableResult" (an activity's table
- * result). Names are the tokenNames service's. `saveDetail` says how much of a visible save is shown.
+ * result), "attacker" (what acts on a creature, for its reaction prompt: by default, unless the creature can't see it).
+ * Names are the tokenNames service's. `saveDetail` says how much of a visible save is shown.
  */
 
-export type RevealSubject = "challenge" | "saveResult" | "hitResult" | "ac" | "tableResult";
+export type RevealSubject = "challenge" | "saveResult" | "hitResult" | "ac" | "tableResult" | "attacker";
 export type SaveDetail = "outcome" | "total" | "dice";
 
 export interface RevealQuery {
@@ -29,6 +30,8 @@ export interface RevealQuery {
   /** The target has a player owner (saves: a player character's result) */
   playerOwned?: boolean;
   card?: ChatMessage.Implementation;
+  /** "attacker" (M32a): the target can see the creature acting on it */
+  seen?: boolean;
 }
 
 export interface SaveDetailQuery { user?: User.Implementation, caster?: Actor.Implementation, playerOwned: boolean }
@@ -76,6 +79,7 @@ export function midiReveals(query: RevealQuery): boolean {
     case "hitResult": return configSettings.autoCheckHit !== "whisper";
     case "ac": return true;
     case "tableResult": return true;
+    case "attacker": return query.seen !== false;
     default: return true;
   }
 }

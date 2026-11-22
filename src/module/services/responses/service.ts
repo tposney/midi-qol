@@ -48,6 +48,11 @@ export interface ResponseOffer {
   img?: string;
   /** The prompt's tooltip */
   description?: string;
+  /**
+   * M32a step 5: whether taking it could change the outcome, when the contributor can tell (false: hidden from a player
+   * who hasn't turned on Show every bonus offer); undefined: always shown
+   */
+  canMatter?: boolean;
   /** The key of the player's standing choice on it (M32a): one that survives its document being made again (an effect a spell applies each cast); default its contributor and key */
   standingKey?: string;
   /**

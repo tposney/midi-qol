@@ -1,3 +1,4 @@
+import { reveals } from "./services/revealPolicy/service.js";
 import type { ReactionTicket } from "./lib/reactionBatch.js";
 import { activityCostBadges, offerCostBadges, wirePickOne, type PromptResponses, type PromptRow } from "./lib/promptCosts.js";
 import { askBonusDecision } from "./lib/bonusDecisions.js";
@@ -5355,7 +5356,11 @@ export async function doReactions(targetRef: TokenOrDocument | string, triggerTo
     await workflow?.flushCardWrites();
 
     let chatMessage: ChatMessage.Implementation | undefined;
-    const reactionFlavor = game.i18n?.format(reactionPromptFor(triggerType), { itemName: (options.item?.name ?? "unknown"), actorName: target.name });
+    // M32a step 5: what acts on the creature, if its user may know (an unseen attacker isn't named, nor its total)
+    const attacker = triggerTokenUuid ? getToken(triggerTokenUuid) : undefined;
+    const seen = attacker && attacker !== target ? canSee(target, attacker, { forceVision: true }) : true;
+    const named = reveals({ subject: "attacker", user: player, caster: workflow?.actor ?? undefined, target: target.actor, seen });
+    const reactionFlavor = game.i18n?.format(reactionPromptFor(triggerType), { itemName: named ? (options.item?.name ?? "unknown") : i18n("midi-qol.UnseenSource"), actorName: target.name });
     const chatData: ChatMessage.CreateData = {
       content: reactionFlavor,
       whisper: [player.id]
@@ -5368,7 +5373,7 @@ export async function doReactions(targetRef: TokenOrDocument | string, triggerTo
     // {"none": "Attack Hit", "d20": "d20 roll only", "d20Crit": "d20 + Critical", "all": "Whole Attack Roll"},
 
     let content: string | undefined = reactionFlavor;
-    if (["isHit", "isMissed", "isCrit", "isFumble", "isAttacked"].includes(reactionTriggerLabelFor(triggerType))) {
+    if (named && ["isHit", "isMissed", "isCrit", "isFumble", "isAttacked"].includes(reactionTriggerLabelFor(triggerType))) {
       switch (configSettings.showReactionAttackRoll) {
         case "all":
           content = `${reactionFlavor} - ${i18n(rollOptions.all)} ${triggeringRoll?.total ?? ""}`;
@@ -5393,7 +5398,7 @@ export async function doReactions(targetRef: TokenOrDocument | string, triggerTo
     const reactingUser = player;
     const offerChoices = [...reactionOffers].map(([key, offer]) => {
       const cost = offerCostBadges(offer.cost);
-      return { key, label: offer.label, img: offer.img, description: offer.description, badges: cost.badges, reaction: cost.reaction, ...(offer.standingKey ? { standingKey: offer.standingKey } : {}) };
+      return { key, label: offer.label, img: offer.img, description: offer.description, badges: cost.badges, reaction: cost.reaction, ...(offer.standingKey ? { standingKey: offer.standingKey } : {}), ...(offer.canMatter === false ? { canMatter: false } : {}) };
     });
     const data = { ...reactionRequestData(target, triggerTokenUuid, content ?? "", triggerType, reactionActivityList, options), reactionOffers: offerChoices };
     const single = () => askReactionUser(reactingUser, data, { owner: options.workflow, actorUuid: target.actor?.uuid ?? undefined, tokenUuid: target.document.uuid ?? undefined, label: content ?? "", what: `${triggerType} for ${target.name}` });
@@ -5489,7 +5494,13 @@ export function askReactionGroup(user: User.Implementation, sections: object[], 
 export type ReactionResult = { name?: string, uuid?: string, ac?: number, itemName?: string, itemUuid?: string, offerKey?: string, offerKeys?: string[], saveRoll?: string, saveSucceeded?: boolean };
 
 /** A contract 2 offer as the reacting client sees it: chosen, its key goes back to the asking client */
-export type ResponseOfferChoice = { key: string, label: string, img?: string, description?: string, badges?: string[], reaction?: boolean, standingKey?: string };
+export type ResponseOfferChoice = { key: string, label: string, img?: string, description?: string, badges?: string[], reaction?: boolean, standingKey?: string, canMatter?: boolean };
+
+/** M32a step 5: the offers a player is shown: those that can't change the outcome only with their Show every bonus offer on */
+export function offersThatMatter(offers: ResponseOfferChoice[]): ResponseOfferChoice[] {
+  if (safeGetGameSetting(MODULE_ID, "ShowAllBonusOffers")) return offers;
+  return offers.filter(offer => offer.canMatter !== false);
+}
 
 /** The request type a reacting client answers (GMAction registers its handler) */
 export const REACTIONS_REQUEST = "midi-qol.reactions";
@@ -5575,7 +5586,7 @@ export async function promptReactions(
     } finally {
       enableNotifications(true);
     }
-    const reactionOffers: ResponseOfferChoice[] = Array.isArray(options.reactionOffers) ? options.reactionOffers : [];
+    const reactionOffers: ResponseOfferChoice[] = offersThatMatter(Array.isArray(options.reactionOffers) ? options.reactionOffers : []);
     // The AC bonuses (optional flags with acOnAttack/acOnHit, rollBonuses' ac candidates) are choices in the same prompt
     const acKey = optionalACKey(triggerType);
     const validFlags = !usedReaction && midiFlags && acKey ? Object.keys(midiFlags?.optional ?? {})

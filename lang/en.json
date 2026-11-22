@@ -874,6 +874,7 @@
   "midi-qol.reactionFlavorSaveFail": "{actorName} failed a save because of {itemName} and can use a reaction",
   "midi-qol.reactionFlavorSaveSuccess": "{actorName} succeeded on a save because of {itemName} and can use a reaction",
   "midi-qol.reactionFlavorMoved": "{actorName} is moving and can use a reaction",
+  "midi-qol.UnseenSource": "an unseen creature",
   "midi-qol.reactionUsed": "Reaction used",
   "midi-qol.bonusActionUsed": "Bonus Action used",
   "midi-qol.Economy.TurnWindow": "Turn: actions used",

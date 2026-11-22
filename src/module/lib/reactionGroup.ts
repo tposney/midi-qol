@@ -1,6 +1,6 @@
 import type { Activity } from "../../globals.js";
 import { activityCostBadges, wirePickOne, type PromptRow } from "./promptCosts.js";
-import { asyncHooksCall, promptReactions, reactionDialog, reactionStandingRows, type ReactionItemReference, type ReactionResult, type ReactionStandingRow, type ResponseOfferChoice } from "../utils.js";
+import { asyncHooksCall, offersThatMatter, promptReactions, reactionDialog, reactionStandingRows, type ReactionItemReference, type ReactionResult, type ReactionStandingRow, type ResponseOfferChoice } from "../utils.js";
 import { ASK_ONLY_CHOICES, REACTION_CHOICES, setStandingChoice, standingChoiceOptions, wireStandingSelects } from "../services/rollBonuses/standing.js";
 import type { IncomingRequest } from "./requests.js";
 import { safeGetGameSetting } from "../settings.js";
@@ -40,7 +40,7 @@ async function prepare(section: ReactionSection): Promise<Prepared | undefined> 
     const activity = uuid ? await fromUuid(uuid) as unknown as Activity | null : null;
     if (activity) activities.push(activity);
   }
-  let offers: ResponseOfferChoice[] = Array.isArray(section.options.reactionOffers) ? section.options.reactionOffers : [];
+  let offers: ResponseOfferChoice[] = offersThatMatter(Array.isArray(section.options.reactionOffers) ? section.options.reactionOffers : []);
   if ((activities.length || offers.length) && await asyncHooksCall("midi-qol.ReactionFilter", activities, section.options, section.triggerType, section.reactionActivityList) === false) {
     activities = [];
     offers = [];
