@@ -1,6 +1,6 @@
 import { i18n, MODULE_ID } from "../../midi-qol.js";
-import { actionProblems, registeredEvents } from "../lib/entries/engine.js";
-import type { Entry, EntryWho } from "../lib/entries/types.js";
+import { actionKeyOf, actionProblems, actionSchema, registeredActionKeys, registeredEvents, type ActionField } from "../lib/entries/engine.js";
+import type { Entry, EntryAction, EntryWho } from "../lib/entries/types.js";
 
 /*
  * M32d (plan ~/Documents/midi-next-M32-plan-2026-11-22.md): the entry editor. A document's entries (an activity's
@@ -58,6 +58,8 @@ export class EntryEditor extends HandlebarsApplicationMixin(ApplicationV2) {
       select: EntryEditor.#onSelect,
       add: EntryEditor.#onAdd,
       remove: EntryEditor.#onRemove,
+      addAction: EntryEditor.#onAddAction,
+      removeAction: EntryEditor.#onRemoveAction,
       toggleJson: EntryEditor.#onToggleJson,
       save: EntryEditor.#onSave
     }
@@ -122,10 +124,85 @@ export class EntryEditor extends HandlebarsApplicationMixin(ApplicationV2) {
       activities: [{ value: "", label: i18n("midi-qol.EntryEditor.Default"), selected: !entry?.activity },
         ...activities.map(a => ({ value: a.id, label: a.name ?? a.id, selected: a.id === entry?.activity }))],
       rawDo: draft?.raw.do ?? "",
+      actionCards: draft ? this.#actionCards(draft) : undefined,
+      // An empty list is falsy in Handlebars: whether the list parsed
+      cardsShown: !!draft && this.#actionsOf(draft) !== undefined,
       rawChoose: draft?.raw.choose ?? "",
       problems: draft?.problems ?? [],
       canSave: this.#drafts.every(d => !d.problems.length)
     };
+  }
+
+  /** The parsed action list, or undefined while its JSON doesn't parse */
+  #actionsOf(draft: Draft): EntryAction[] | undefined {
+    try {
+      const list = JSON.parse(draft.raw.do || "[]");
+      return Array.isArray(list) ? list : undefined;
+    } catch { return undefined; }
+  }
+
+  /** M32d step 2: each action as a card (its kind and its schema's fields), or its own JSON without a schema */
+  #actionCards(draft: Draft) {
+    const list = this.#actionsOf(draft);
+    if (!list) return undefined;
+    const kinds = registeredActionKeys().sort().map(key => ({ value: key, label: actionSchema(key).label }));
+    return list.map((action, index) => {
+      const key = action && typeof action === "object" ? actionKeyOf(action) : undefined;
+      const { schema } = key ? actionSchema(key) : { schema: undefined };
+      const branched = !!action && typeof action === "object" && ("then" in action || "else" in action);
+      const fields = schema && !branched ? schema.fields.map(field => this.#fieldContext(index, field, action)) : undefined;
+      return { index, key, kinds: kinds.map(k => ({ ...k, selected: k.value === key })), fields, json: fields ? undefined : JSON.stringify(action, null, 2) };
+    });
+  }
+
+  #fieldContext(index: number, field: ActionField, action: EntryAction) {
+    const value = foundry.utils.getProperty(action, field.path);
+    const options = typeof field.options === "function" ? field.options() : (field.options ?? []).map(v => ({ value: v, label: v || i18n("midi-qol.EntryEditor.Default") }));
+    return {
+      name: `act.${index}.f.${field.path}`, label: field.label, type: field.type,
+      value: field.type === "list" ? [value ?? []].flat().join(", ") : value ?? "",
+      checked: field.type === "boolean" && !!value,
+      options: field.type === "select" ? [...(options.some(o => o.value === "") ? [] : [{ value: "", label: i18n("midi-qol.EntryEditor.Default") }]), ...options]
+        .map(o => ({ ...o, selected: o.value === (value ?? "") })) : undefined
+    };
+  }
+
+  /** The cards' fields read back into the action list (an action's other keys kept) */
+  #readActionCards(draft: Draft, data: Record<string, unknown>) {
+    const list = this.#actionsOf(draft);
+    if (!list) return;
+    const cards = foundry.utils.expandObject(Object.fromEntries(Object.entries(data).filter(([k]) => k.startsWith("act.")))) as { act?: Record<string, { kind?: string, f?: Record<string, unknown>, json?: string }> };
+    for (const [i, card] of Object.entries(cards.act ?? {})) {
+      const index = Number(i);
+      let action = list[index];
+      if (!action) continue;
+      if (typeof card.json === "string") {
+        try { list[index] = JSON.parse(card.json); } catch { draft.problems.push(`do[${index}]: JSON`); }
+        continue;
+      }
+      const key = actionKeyOf(action);
+      // A new kind: a fresh action of that kind (its condition and label kept)
+      if (card.kind && card.kind !== key) {
+        action = { ...(action.if ? { if: action.if } : {}), ...(action.label ? { label: action.label } : {}), [card.kind]: "" };
+        list[index] = action;
+        continue;
+      }
+      const schema = key ? actionSchema(key).schema : undefined;
+      for (const field of schema?.fields ?? []) {
+        const raw = foundry.utils.getProperty(card.f ?? {}, field.path);
+        let value: unknown = raw;
+        if (field.type === "boolean") value = !!raw;
+        else if (field.type === "number") value = raw === "" || raw === undefined || raw === null ? undefined : Number(raw);
+        else if (field.type === "list") value = String(raw ?? "").split(",").map(v => v.trim()).filter(Boolean);
+        else value = raw === "" ? undefined : raw;
+        if (value === undefined || value === false || (Array.isArray(value) && !value.length)) {
+          // the action's own key stays (end: true and the like are its value)
+          if (field.path !== key) foundry.utils.deleteProperty(action, field.path);
+          else foundry.utils.setProperty(action, field.path, value ?? "");
+        } else foundry.utils.setProperty(action, field.path, value);
+      }
+    }
+    draft.raw.do = JSON.stringify(list, null, 2);
   }
 
   /** The entry as it is saved: its JSON fields parsed, empty fields left out */
@@ -175,7 +252,9 @@ export class EntryEditor extends HandlebarsApplicationMixin(ApplicationV2) {
     entry.limit = per ? { per: per as NonNullable<Entry["limit"]>["per"], ...(data.limitMax ? { max: Number(data.limitMax) } : {}) } : undefined;
     entry.group = String(data.group ?? "");
     entry.stacks = !!data.stacks;
-    draft.raw.do = String(data.do ?? "");
+    // The action cards when the list parses, else its raw JSON
+    if (typeof data.do === "string") draft.raw.do = data.do;
+    else this.#readActionCards(draft, data);
     draft.raw.choose = String(data.choose ?? "");
     draft.raw.json = undefined;
     for (const d of this.#drafts) d.problems = this.#problemsOf(d);
@@ -199,6 +278,26 @@ export class EntryEditor extends HandlebarsApplicationMixin(ApplicationV2) {
     this.#drafts.splice(this.#selected, 1);
     this.#selected = Math.max(0, Math.min(this.#selected, this.#drafts.length - 1));
     for (const d of this.#drafts) d.problems = this.#problemsOf(d);
+    this.render();
+  }
+
+  static #onAddAction(this: EntryEditor) {
+    const draft = this.#drafts[this.#selected];
+    const list = draft ? this.#actionsOf(draft) : undefined;
+    if (!draft || !list) return;
+    list.push({ damage: "1d6", type: "fire" });
+    draft.raw.do = JSON.stringify(list, null, 2);
+    draft.problems = this.#problemsOf(draft);
+    this.render();
+  }
+
+  static #onRemoveAction(this: EntryEditor, _event: Event, target: HTMLElement) {
+    const draft = this.#drafts[this.#selected];
+    const list = draft ? this.#actionsOf(draft) : undefined;
+    if (!draft || !list) return;
+    list.splice(Number(target.dataset.index ?? -1), 1);
+    draft.raw.do = JSON.stringify(list, null, 2);
+    draft.problems = this.#problemsOf(draft);
     this.render();
   }
 

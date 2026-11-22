@@ -1,3 +1,4 @@
+import { registerMidiActionSchemas } from "./module/lib/entries/actionSchemas.js";
 import { EntryEditor, registerEntryEditorControls } from "./module/apps/EntryEditor.js";
 import { registerRollDialogBonuses } from "./module/lib/rollDialogBonuses.js";
 import { defineSettingNeedsService } from "./module/services/settingNeeds/service.js";
@@ -545,6 +546,8 @@ Hooks.once('init', async function () {
   registerUseChanges();
   registerEntryOffers();
   registerResponseEvents();
+  // After every action is registered (M32d)
+  registerMidiActionSchemas();
   setupLedgerEvents();
   defineRangeService();
   defineBonusPromptService(() => `midi-qol.${safeGetGameSetting("midi-qol", "BonusPrompt") ?? "phased"}`);

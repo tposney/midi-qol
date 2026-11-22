@@ -2432,3 +2432,8 @@ body.midi-qol-hide-gambit-mirrors .gps-dialog-mirror:not(.midi-qol-gambit-shown)
 .midi-qol-entry-editor .midi-qol-entry-toolbar { display: flex; gap: 6px; justify-content: flex-end; margin-bottom: 6px; }
 .midi-qol-entry-editor .midi-qol-entry-problems { color: var(--color-level-error, #c00); margin: 0 0 6px; }
 .midi-qol-entry-editor textarea { font-family: var(--font-mono, monospace); font-size: var(--font-size-12); }
+.midi-qol-entry-editor .midi-qol-entry-action { border: 1px solid var(--color-border-light-2, #999); border-radius: 4px; padding: 4px 6px; margin-bottom: 6px; }
+.midi-qol-entry-editor .midi-qol-entry-action-head { display: flex; gap: 6px; align-items: center; margin-bottom: 4px; }
+.midi-qol-entry-editor .midi-qol-entry-action-head select { flex: 1; }
+.midi-qol-entry-editor .midi-qol-entry-action-head button { flex: 0 0 auto; width: auto; }
+

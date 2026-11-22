@@ -64,7 +64,20 @@ export interface EventDefinition {
 }
 
 const events = new Registry<EventDefinition>();
-const actions = new Registry<ActionHandler>();
+/**
+ * M32d: how the entry editor shows an action: its fields by path in the action (`bonus.formula`); keys it doesn't name
+ * are kept. An action without a schema is edited as JSON.
+ */
+export interface ActionField {
+  path: string;
+  label: string;
+  type: "string" | "formula" | "number" | "boolean" | "select" | "list";
+  /** select: its values, or a function giving them (damage types) */
+  options?: readonly string[] | (() => readonly { value: string, label: string }[]);
+}
+export interface ActionSchema { fields: readonly ActionField[] }
+
+const actions = new Registry<ActionHandler, { schema?: ActionSchema, label?: string }>();
 const CONTROL_KEYS = new Set(["if", "then", "else"]);
 
 export function registerEvent(id: string, definition: EventDefinition = {}): () => void {
@@ -72,10 +85,27 @@ export function registerEvent(id: string, definition: EventDefinition = {}): () 
   return () => { events.delete(id); };
 }
 
-export function registerAction(key: string, handler: ActionHandler, options: { priority?: number } = {}): () => void {
-  actions.set(key, handler, { priority: options.priority });
+export function registerAction(key: string, handler: ActionHandler, options: { priority?: number, schema?: ActionSchema, label?: string } = {}): () => void {
+  actions.set(key, handler, { priority: options.priority }, { schema: options.schema, label: options.label });
   return () => { actions.delete(key); };
 }
+
+/** M32d: a schema (and label) for an action already registered (midi's own, attached in one place: actionSchemas.ts) */
+export function setActionSchema(key: string, schema: ActionSchema, label?: string): void {
+  const entry = actions.get(key);
+  if (!entry) return;
+  entry.meta.schema = schema;
+  if (label) entry.meta.label = label;
+}
+
+export function actionSchema(key: string): { schema?: ActionSchema, label: string } {
+  const meta = actions.get(key)?.meta;
+  const i18nKey = `midi-qol.Entries.Action.${key}`;
+  return { schema: meta?.schema, label: game.i18n?.has(i18nKey) ? game.i18n.localize(i18nKey) : meta?.label ?? key };
+}
+
+/** The registered action an action object names (its highest-priority key) */
+export function actionKeyOf(action: EntryAction): string | undefined { return actionKey(action); }
 
 /** M32d: the registered events (id and label) and action keys, for the entry editor */
 export function registeredEvents(): { id: string, label: string }[] {
