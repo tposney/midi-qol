@@ -182,6 +182,13 @@ export function effectSummary(document: unknown): { statuses: string, changes: s
   return statuses || changes.length || duration ? { statuses, changes, duration } : undefined;
 }
 
+/** The part of an entry a sentence chip edits: who, its condition, its choice, or one action (by its card's path) */
+function onlyPart(focus: string): string | undefined {
+  if (["who", "if", "choose"].includes(focus)) return focus;
+  const action = /^act\.([^.]+)\./.exec(focus);
+  return action ? `action:${action[1]}` : undefined;
+}
+
 /** Of a card's fields, the ones a chip edits (its data-field): what its in-place editor shows */
 function chipFields(fields: Record<string, unknown>, field: string): Record<string, unknown> {
   if ("contributed" in fields) return { contributed: fields.contributed };
@@ -248,6 +255,8 @@ export class EntryEditor extends HandlebarsApplicationMixin(ApplicationV2) {
   #picker: number | undefined;
   /** A field to put the cursor in after the next render (a sentence's part clicked) */
   #focus: string | undefined;
+  /** Sentence view: the part of the open entry a chip opened (who, if, choose, action:<path>); the rest is hidden */
+  #only: string | undefined;
   /** The activity home whose card's fields are open */
   #cardOpen: number | undefined;
   /** Which of them: a chip's field shown in place, under the line it is on ("all": the whole block) */
@@ -355,6 +364,8 @@ export class EntryEditor extends HandlebarsApplicationMixin(ApplicationV2) {
       showRuns: EntryEditor.#onShowRuns,
       useRecipe: EntryEditor.#onUseRecipe,
       editActivity: EntryEditor.#onEditActivity,
+      allEntryFields: EntryEditor.#onAllEntryFields,
+      doneEntryPart: EntryEditor.#onDoneEntryPart,
       closeActivityField: EntryEditor.#onCloseActivityField,
       addToBranch: EntryEditor.#onAddToBranch,
       addDamagePart: EntryEditor.#onAddDamagePart,
@@ -453,7 +464,11 @@ export class EntryEditor extends HandlebarsApplicationMixin(ApplicationV2) {
       activities: [{ value: "", label: i18n("midi-qol.EntryEditor.Default"), selected: !entry?.activity },
         ...activities.map(a => ({ value: a.id, label: a.name ?? a.id, selected: a.id === entry?.activity }))],
       rawDo: draft?.raw.do ?? "",
-      actionCards: draft ? this.#actionCards(draft) : undefined,
+      // A chip's part: only its action card shown (the others stay in the form, hidden, so they are read back unchanged)
+      actionCards: draft ? this.#actionCards(draft)?.map(card => ({ ...card,
+        focusHidden: !!this.#only && this.#only !== `action:${(card as { path?: string }).path}` })) : undefined,
+      only: this.#view === "sentence" ? this.#only : undefined,
+      onlyAction: this.#view === "sentence" && !!this.#only?.startsWith("action:"),
       // An empty list is falsy in Handlebars: whether the list parsed
       cardsShown: !!draft && this.#actionsOf(draft) !== undefined,
       rawChoose: draft?.raw.choose ?? "",
@@ -1353,16 +1368,29 @@ export class EntryEditor extends HandlebarsApplicationMixin(ApplicationV2) {
       this.#picker = this.#picker === index && same ? undefined : index;
       this.#expanded = false;
     } else {
-      // Its form opens under the sentence, at the field that edits the part
+      // Its form opens under the sentence with only the part clicked shown (All fields shows the rest)
       this.#expanded = true;
       this.#picker = undefined;
       this.#focus = focus;
+      this.#only = onlyPart(focus);
     }
+    this.render();
+  }
+
+  static #onAllEntryFields(this: EntryEditor) {
+    this.#only = undefined;
+    this.render();
+  }
+
+  static #onDoneEntryPart(this: EntryEditor) {
+    this.#only = undefined;
+    this.#expanded = false;
     this.render();
   }
 
   static #onEditEntry(this: EntryEditor, _event: Event, target: HTMLElement) {
     this.#goHome(target);
+    this.#only = undefined;
     const index = Number(target.dataset.index ?? 0);
     this.#expanded = !(this.#expanded && this.#selected === index);
     this.#selected = index;

@@ -2532,3 +2532,6 @@ body.midi-qol-hide-gambit-mirrors .gps-dialog-mirror:not(.midi-qol-gambit-shown)
 .midi-qol-entry-editor .midi-qol-card-popover { border: 1px solid var(--color-border-highlight, #ff6400); border-radius: 4px; padding: 0.3rem 0.5rem; margin: 0.15rem 0 0.3rem 1rem; background: var(--color-bg-option, rgba(0, 0, 0, 0.15)); }
 .midi-qol-entry-editor .midi-qol-card-popover-buttons { display: flex; gap: 0.3rem; justify-content: flex-end; margin-top: 0.25rem; }
 .midi-qol-entry-editor .midi-qol-card-popover-buttons button { flex: 0 0 auto; width: auto; font-size: var(--font-size-12, 12px); line-height: 1.6; min-height: 0; }
+.midi-qol-entry-editor .midi-qol-part-hidden { display: none !important; }
+.midi-qol-entry-editor .midi-qol-entry-only-buttons { display: flex; gap: 0.3rem; justify-content: flex-end; }
+.midi-qol-entry-editor .midi-qol-entry-only-buttons button { flex: 0 0 auto; width: auto; font-size: var(--font-size-12, 12px); line-height: 1.6; min-height: 0; }

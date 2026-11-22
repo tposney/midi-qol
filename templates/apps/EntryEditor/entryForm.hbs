@@ -1,4 +1,8 @@
-        <div class="midi-qol-entry-toolbar">
+        {{#if only}}<div class="midi-qol-entry-only-buttons">
+            <button type="button" data-action="allEntryFields"><i class="fa-solid fa-list"></i> {{localize "midi-qol.EntryEditor.Activity.AllFields"}}</button>
+            <button type="button" data-action="doneEntryPart"><i class="fa-solid fa-check"></i> {{localize "midi-qol.EntryEditor.Activity.Done"}}</button>
+        </div>{{/if}}
+        <div class="midi-qol-entry-toolbar {{#if only}}midi-qol-part-hidden{{/if}}">
             <button type="button" data-action="remove"><i class="fa-solid fa-trash"></i> {{localize "midi-qol.EntryEditor.Remove"}}</button>
         </div>
         {{#if problems.length}}
@@ -10,37 +14,37 @@
         {{#if jsonView}}
         <textarea name="json" rows="24" spellcheck="false">{{json}}</textarea>
         {{else}}
-        <div class="form-group"><label>{{localize "midi-qol.EntryEditor.Field.id"}}</label><input type="text" name="id" value="{{entry.id}}"></div>
-        <div class="form-group"><label>{{localize "midi-qol.EntryEditor.Field.on"}}</label>
+        <div class="form-group {{#if only}}midi-qol-part-hidden{{/if}}"><label>{{localize "midi-qol.EntryEditor.Field.id"}}</label><input type="text" name="id" value="{{entry.id}}"></div>
+        <div class="form-group {{#if only}}midi-qol-part-hidden{{/if}}"><label>{{localize "midi-qol.EntryEditor.Field.on"}}</label>
             <multi-select name="on">{{#each events}}<option value="{{value}}" {{#if selected}}selected{{/if}}>{{label}}</option>{{/each}}</multi-select></div>
-        <div class="form-group"><label>{{localize "midi-qol.EntryEditor.Field.who"}}</label>
+        <div class="form-group {{#if (and only (not (eq only "who")))}}midi-qol-part-hidden{{/if}}"><label>{{localize "midi-qol.EntryEditor.Field.who"}}</label>
             <select name="who">{{#each who}}<option value="{{value}}" {{#if selected}}selected{{/if}}>{{label}}</option>{{/each}}</select></div>
         {{#if whoJson}}
-        <div class="form-group"><label>{{localize "midi-qol.EntryEditor.Field.whoJson"}}</label><input type="text" name="whoJson" value="{{whoJson}}" spellcheck="false"></div>
+        <div class="form-group {{#if (and only (not (eq only "who")))}}midi-qol-part-hidden{{/if}}"><label>{{localize "midi-qol.EntryEditor.Field.whoJson"}}</label><input type="text" name="whoJson" value="{{whoJson}}" spellcheck="false"></div>
         {{/if}}
         {{#if near}}
-        <div class="form-group"><label>{{localize "midi-qol.EntryEditor.Field.within"}}</label><input type="text" name="within" value="{{near.within}}"></div>
-        <div class="form-group"><label>{{localize "midi-qol.EntryEditor.Field.of"}}</label><input type="text" name="of" value="{{near.of}}"></div>
-        <div class="form-group"><label>{{localize "midi-qol.EntryEditor.Field.filter"}}</label><input type="text" name="filter" value="{{near.filter}}">
+        <div class="form-group {{#if (and only (not (eq only "who")))}}midi-qol-part-hidden{{/if}}"><label>{{localize "midi-qol.EntryEditor.Field.within"}}</label><input type="text" name="within" value="{{near.within}}"></div>
+        <div class="form-group {{#if (and only (not (eq only "who")))}}midi-qol-part-hidden{{/if}}"><label>{{localize "midi-qol.EntryEditor.Field.of"}}</label><input type="text" name="of" value="{{near.of}}"></div>
+        <div class="form-group {{#if (and only (not (eq only "who")))}}midi-qol-part-hidden{{/if}}"><label>{{localize "midi-qol.EntryEditor.Field.filter"}}</label><input type="text" name="filter" value="{{near.filter}}">
             <button type="button" class="midi-qol-entry-condition" data-action="editCondition" data-field="filter" data-tooltip="{{localize "midi-qol.EntryEditor.EditCondition"}}"><i class="fa-solid fa-code"></i></button></div>
         {{/if}}
-        <div class="form-group"><label>{{localize "midi-qol.EntryEditor.Field.label"}}</label><input type="text" name="label" value="{{entry.label}}"></div>
-        <div class="form-group"><label>{{localize "midi-qol.EntryEditor.Field.if"}}</label><textarea name="if" rows="2" spellcheck="false">{{entry.if}}</textarea>
+        <div class="form-group {{#if only}}midi-qol-part-hidden{{/if}}"><label>{{localize "midi-qol.EntryEditor.Field.label"}}</label><input type="text" name="label" value="{{entry.label}}"></div>
+        <div class="form-group {{#if (and only (not (eq only "if")))}}midi-qol-part-hidden{{/if}}"><label>{{localize "midi-qol.EntryEditor.Field.if"}}</label><textarea name="if" rows="2" spellcheck="false">{{entry.if}}</textarea>
             <button type="button" class="midi-qol-entry-condition" data-action="editCondition" data-field="if" data-tooltip="{{localize "midi-qol.EntryEditor.EditCondition"}}"><i class="fa-solid fa-code"></i></button></div>
-        <div class="form-group"><label></label><select name="ifPreset"><option value="">{{localize "midi-qol.EntryEditor.Field.ifPreset"}}</option>{{#each ifPresets}}<option value="{{value}}">{{label}}</option>{{/each}}</select></div>
-        <div class="form-group"><label>{{localize "midi-qol.EntryEditor.Field.offer"}}</label>
+        <div class="form-group {{#if (and only (not (eq only "if")))}}midi-qol-part-hidden{{/if}}"><label></label><select name="ifPreset"><option value="">{{localize "midi-qol.EntryEditor.Field.ifPreset"}}</option>{{#each ifPresets}}<option value="{{value}}">{{label}}</option>{{/each}}</select></div>
+        <div class="form-group {{#if only}}midi-qol-part-hidden{{/if}}"><label>{{localize "midi-qol.EntryEditor.Field.offer"}}</label>
             <select name="offer">{{#each offers}}<option value="{{value}}" {{#if selected}}selected{{/if}}>{{label}}</option>{{/each}}</select></div>
-        <div class="form-group"><label>{{localize "midi-qol.EntryEditor.Field.activity"}}</label>
+        <div class="form-group {{#if only}}midi-qol-part-hidden{{/if}}"><label>{{localize "midi-qol.EntryEditor.Field.activity"}}</label>
             <select name="activity">{{#each activities}}<option value="{{value}}" {{#if selected}}selected{{/if}}>{{label}}</option>{{/each}}</select></div>
-        <div class="form-group"><label>{{localize "midi-qol.EntryEditor.Field.limit"}}</label>
+        <div class="form-group {{#if only}}midi-qol-part-hidden{{/if}}"><label>{{localize "midi-qol.EntryEditor.Field.limit"}}</label>
             <select name="limitPer">{{#each limits}}<option value="{{value}}" {{#if selected}}selected{{/if}}>{{label}}</option>{{/each}}</select>
             <input type="number" name="limitMax" value="{{entry.limit.max}}" min="1" step="1"></div>
-        <div class="form-group"><label>{{localize "midi-qol.EntryEditor.Field.group"}}</label><input type="text" name="group" value="{{entry.group}}">
+        <div class="form-group {{#if only}}midi-qol-part-hidden{{/if}}"><label>{{localize "midi-qol.EntryEditor.Field.group"}}</label><input type="text" name="group" value="{{entry.group}}">
             <label class="checkbox"><input type="checkbox" name="stacks" {{#if entry.stacks}}checked{{/if}}> {{localize "midi-qol.EntryEditor.Field.stacks"}}</label></div>
-        <div class="form-group stacked"><label>{{localize "midi-qol.EntryEditor.Field.do"}}</label>
+        <div class="form-group stacked {{#if (and only (not onlyAction))}}midi-qol-part-hidden{{/if}}"><label class="{{#if only}}midi-qol-part-hidden{{/if}}">{{localize "midi-qol.EntryEditor.Field.do"}}</label>
             {{#if cardsShown}}
             {{#each actionCards}}
-            <div class="midi-qol-entry-nest" style="padding-left: {{indent}}px">
+            <div class="midi-qol-entry-nest {{#if focusHidden}}midi-qol-part-hidden{{/if}}" style="padding-left: {{indent}}px">
             {{#if row}}
             <div class="midi-qol-entry-row">
                 <strong>{{localize "midi-qol.EntryEditor.Row"}} {{number}}</strong>
@@ -106,10 +110,10 @@
             {{/if}}
             </div>
             {{/each}}
-            <button type="button" data-action="addAction"><i class="fa-solid fa-plus"></i> {{localize "midi-qol.EntryEditor.AddAction"}}</button>
+            <button type="button" data-action="addAction" class="{{#if only}}midi-qol-part-hidden{{/if}}"><i class="fa-solid fa-plus"></i> {{localize "midi-qol.EntryEditor.AddAction"}}</button>
             {{else}}
             <textarea name="do" rows="10" spellcheck="false">{{rawDo}}</textarea>
             {{/if}}
         </div>
-        <div class="form-group stacked"><label>{{localize "midi-qol.EntryEditor.Field.choose"}}</label><textarea name="choose" rows="3" spellcheck="false">{{rawChoose}}</textarea></div>
+        <div class="form-group stacked {{#if (and only (not (eq only "choose")))}}midi-qol-part-hidden{{/if}}"><label>{{localize "midi-qol.EntryEditor.Field.choose"}}</label><textarea name="choose" rows="3" spellcheck="false">{{rawChoose}}</textarea></div>
         {{/if}}
