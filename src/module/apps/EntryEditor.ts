@@ -6,7 +6,7 @@ import { recipe, recipesFor } from "../lib/entries/recipes.js";
 import { activityOvertimeEntries, overtimeEntries } from "../lib/entries/overtime.js";
 import { ACTIVITY_REF } from "../lib/entries/activityActions.js";
 import { ConditionEditor } from "./ConditionEditor.js";
-import { activityCardContributor, contributedActivityCard, optionList } from "../lib/entries/editorServices.js";
+import { activityCardContributor, addKindDefs, basicsFieldDefs, contributedActivityCard, effectPresetDefs, optionList, targetPresetDefs, type BasicsFieldDef } from "../lib/entries/editorServices.js";
 import { automationNotes } from "../lib/entries/automations.js";
 import { configOptions, type ConfigField } from "../lib/entries/config.js";
 import { effectAction, mainBranch, newEffectData, type NewEffect } from "../lib/entries/activityCard.js";
@@ -41,7 +41,7 @@ const VIEWS: readonly View[] = ["sentence", "form", "json"];
  * One document of the window: the item, one of its activities or one of its effects. `stored`: its entries as they
  * were read (only a changed home is written); an activity's `choices`: its midiChoices as JSON.
  */
-type Home = { document: EntryDocument, kind: EntryHome, label: string, drafts: Draft[], stored: string, choices?: string, choicesStored?: string, choicesProblem?: string, card?: CardEdits, cardValues?: Record<string, unknown>,
+type Home = { document: EntryDocument, kind: EntryHome, label: string, runByArea?: boolean, drafts: Draft[], stored: string, choices?: string, choicesStored?: string, choicesProblem?: string, card?: CardEdits, cardValues?: Record<string, unknown>,
   /** The item's automation settings: the owner's values and the fields (JSON) as edited, and as read */
   settings?: { values: Record<string, unknown>, stored: string, spec: string, specStored: string, problem?: string },
   /** An effect's changes as edited (key, type, value; their other fields kept), where they are stored, and as read */
@@ -281,7 +281,7 @@ export class EntryEditor extends HandlebarsApplicationMixin(ApplicationV2) {
   /** "+ add what it does" open */
   #addWhatOpen = false;
   /** The "+ effect" form as filled in so far */
-  #effectForm: { what: string, name: string, duration: string, units: string, repeat: boolean } = { what: "", name: "", duration: "", units: "", repeat: false };
+  #effectForm: { what: string, name: string, duration: string, units: string, repeat: boolean, param: string } = { what: "", name: "", duration: "", units: "", repeat: false, param: "" };
 
   /** `options.view`: the view to open in (else the user's last) */
   constructor(document: EntryDocument, options: { view?: View } & Record<string, unknown> = {}) {
@@ -321,10 +321,13 @@ export class EntryEditor extends HandlebarsApplicationMixin(ApplicationV2) {
       const rb = (a as AreaOwner).regionBehavior;
       return rb?.enabled ? (rb.rules ?? []).filter(r => r.action === "useActivity").map(r => r.targetId) : [];
     }));
+    // Activities are titled by what they do, named by their own name or, when they have none, the item's
     for (const home of this.#homes) {
-      const a = home.document as { id?: string | null, identifier?: string, name?: string | null };
-      if (home.kind === "activity" && (runByArea.has(a.id ?? "") || runByArea.has(a.identifier ?? "")))
-        home.label = game.i18n?.format("midi-qol.EntryEditor.Home.activityRunByArea", { name: a.name ?? "" }) ?? home.label;
+      if (home.kind !== "activity") continue;
+      const a = home.document as { id?: string | null, identifier?: string, name?: string | null, _source?: { name?: string } };
+      const name = a._source?.name || root?.name || a.name || "";
+      home.runByArea = runByArea.has(a.id ?? "") || runByArea.has(a.identifier ?? "");
+      home.label = game.i18n?.format(home.runByArea ? "midi-qol.EntryEditor.Home.activityRunByArea" : "midi-qol.EntryEditor.Home.activity", { name }) ?? home.label;
     }
     this.#at = Math.max(0, this.#homes.findIndex(home => same(home.document, document)));
     const last = game.settings.get(MODULE_ID, "EntryEditorView") as View;
@@ -341,7 +344,7 @@ export class EntryEditor extends HandlebarsApplicationMixin(ApplicationV2) {
       || (!!h.changes && JSON.stringify(h.changes.rows) !== h.changes.stored)
       || (!!h.card?.target && (Object.keys(this.#targetingUpdates(h).activity).length > 0 || Object.keys(this.#targetingUpdates(h).item).length > 0))
       || (!!h.card?.area && Object.keys(this.#areaUpdates(h).activity).length > 0)
-      || (!!h.card?.basics && (Object.keys(this.#basicsUpdates(h).activity).length > 0 || Object.keys(this.#basicsUpdates(h).item).length > 0)))
+      || ((!!h.card?.basics || !!h.card?.basicsExtra) && (Object.keys(this.#basicsUpdates(h).activity).length > 0 || Object.keys(this.#basicsUpdates(h).item).length > 0)))
       || (!!this.#onUse && onUseString(this.#onUse.rows) !== this.#onUse.stored);
   }
 
@@ -494,8 +497,9 @@ export class EntryEditor extends HandlebarsApplicationMixin(ApplicationV2) {
       hasEntry: !!entry,
       jsonView: this.#jsonView,
       sentenceView: this.#view === "sentence",
-      addWhat: this.#root ? { open: this.#addWhatOpen, kinds: NEW_KINDS.map(k => ({ value: k,
-        label: i18n(`midi-qol.EntryEditor.AddWhat.${k}`), hint: i18n(`midi-qol.EntryEditor.AddWhat.${k}Hint`) })) } : undefined,
+      addWhat: this.#root ? { open: this.#addWhatOpen, kinds: [...NEW_KINDS.map(k => ({ value: k,
+        label: i18n(`midi-qol.EntryEditor.AddWhat.${k}`), hint: i18n(`midi-qol.EntryEditor.AddWhat.${k}Hint`) })),
+        ...(this.#addWhatOpen ? addKindDefs(this.#root).map(def => ({ value: `x:${def.id}`, label: i18n(def.label), hint: def.hint ? i18n(def.hint) : "" })) : [])] } : undefined,
       showRuns: this.#showRuns,
       views: VIEWS.map(value => ({ value, label: i18n(`midi-qol.EntryEditor.View.${value}`), active: value === this.#view })),
       sentences: this.#view === "sentence" ? this.#sentences() : undefined,
@@ -719,6 +723,7 @@ export class EntryEditor extends HandlebarsApplicationMixin(ApplicationV2) {
     const prepared = h.document as { target?: { template?: { type?: string, size?: unknown, width?: unknown }, affects?: { type?: string, count?: unknown } }, range?: { units?: string, value?: unknown }, labels?: { target?: string } };
     if (prepared.target?.template?.type) data.areaLabel = prepared.labels?.target;
     // Its targeting as dnd5e resolves it
+    data.targetPresets = targetPresetDefs();
     data.targeting = {
       affectsType: prepared.target?.affects?.type ?? "", count: prepared.target?.affects?.count as Targeting["count"],
       templateType: prepared.target?.template?.type ?? "", size: prepared.target?.template?.size as Targeting["size"], width: prepared.target?.template?.width as Targeting["width"],
@@ -760,7 +765,7 @@ export class EntryEditor extends HandlebarsApplicationMixin(ApplicationV2) {
     // Unconverted: the card's update as saved (a module's own fields through its update())
     const update = !h.card ? {} : converting ? activityUpdate(source, { ...h.card, convertTo: undefined }) : this.#cardUpdate(h);
     const now = foundry.utils.mergeObject(source, foundry.utils.expandObject(update), { inplace: false }) as ActivityData;
-    if (h.card?.target && source.targeting) now.targeting = editedTargeting(source.targeting, h.card.target);
+    if (h.card?.target && source.targeting) now.targeting = editedTargeting(source.targeting, h.card.target, source.targetPresets);
     if (h.card?.area) now.regionBehavior = editedRegion(source.regionBehavior, h.card.area);
     return now;
   }
@@ -775,7 +780,7 @@ export class EntryEditor extends HandlebarsApplicationMixin(ApplicationV2) {
   #targetingUpdates(h: Home): { activity: Record<string, unknown>, item: Record<string, unknown> } {
     const source = this.#activitySource(h);
     if (!h.card?.target || !source.targeting) return { activity: {}, item: {} };
-    const targeting = editedTargeting(source.targeting, h.card.target);
+    const targeting = editedTargeting(source.targeting, h.card.target, source.targetPresets);
     if (JSON.stringify(targeting) === JSON.stringify(source.targeting)) return { activity: {}, item: {} };
     const onItem = this.#targetingOnItem(h);
     const update = targetingUpdate(targeting, onItem);
@@ -858,12 +863,15 @@ export class EntryEditor extends HandlebarsApplicationMixin(ApplicationV2) {
       };
     });
     // Range and targets are the Targets line's
-    const basics = this.#basicsText(this.#basicsEdited(h)) || i18n("midi-qol.EntryEditor.Activity.Basics.none");
+    const basics = [this.#basicsText(this.#basicsEdited(h)), ...this.#basicsExtra(h).map(f => f.text).filter(Boolean)].filter(Boolean).join(" · ")
+      || i18n("midi-qol.EntryEditor.Activity.Basics.none");
     const opened = this.#cardOpen === at ? { ...this.#openFields(h, data), home: at } : undefined;
     const all = this.#cardField === "all" || !this.#cardField;
     const area = areaView(data, text);
     const region = area ? { text: area.text, groups: area.groups.map((g, index) => ({ text: g, index, home: at })), other: area.other, dnd5e: area.dnd5e, home: at } : undefined;
-    return { home: at, onUse: this.#onUseRows(at), when: model.when.map(chip), branches, basics, targeting: model.targeting ? chip(model.targeting) : undefined, midi: this.#midiProperties(h), region, macros: this.#cardMacros(h),
+    // An activity an area runs: its targets and timing are the area's
+    const runByArea = !!h.runByArea;
+    return { home: at, runByArea, onUse: this.#onUseRows(at), when: model.when.map(chip), branches, basics: runByArea ? undefined : basics, targeting: model.targeting && !runByArea ? chip(model.targeting) : undefined, midi: this.#midiProperties(h), region, macros: this.#cardMacros(h),
       open: opened && all ? { ...opened, newEffect: undefined } : undefined,
       popover: opened && !all ? { place: this.#cardPlace, fields: { ...chipFields(opened, this.#cardField!), home: at, noAdd: true } } : undefined };
   }
@@ -959,21 +967,28 @@ export class EntryEditor extends HandlebarsApplicationMixin(ApplicationV2) {
       option("", i18n("midi-qol.EntryEditor.Activity.DCField.custom"), calculation === "")];
     const attack = data.type === "attack";
     const tg = data.targeting;
-    const preset: TargetPreset = tg ? targetPreset(tg) : "custom";
-    const shapes = preset === "point" ? POINT_SHAPES : preset === "fromYou" ? FROM_YOU_SHAPES : [];
+    const extra = data.targetPresets ?? [];
+    const preset: TargetPreset = tg ? targetPreset(tg, extra) : "custom";
+    // A registered preset says which fields edit it; midi's own by preset
+    const registered = extra.find(def => def.id === preset);
+    const has = (field: string, own: boolean) => registered ? (registered.fields ?? []).includes(field as never) : own;
+    const shapes = registered ? [...(registered.shapes ?? [])] : preset === "point" ? POINT_SHAPES : preset === "fromYou" ? FROM_YOU_SHAPES : [];
+    const area = ["point", "fromYou", "emanation"].includes(preset) || (!!registered && !!tg?.templateType);
     return {
       target: tg ? {
-        presets: [...TARGET_PRESETS, ...(preset === "custom" ? ["custom"] : [])].map(p => option(p, i18n(`midi-qol.EntryEditor.Activity.TargetPreset.${p}`), p === preset)),
+        presets: [...TARGET_PRESETS.map(p => option(p, i18n(`midi-qol.EntryEditor.Activity.TargetPreset.${p}`), p === preset)),
+          ...extra.map(def => option(def.id, i18n(def.label), def.id === preset)),
+          ...(preset === "custom" ? [option("custom", i18n("midi-qol.EntryEditor.Activity.TargetPreset.custom"), true)] : [])],
         custom: preset === "custom",
-        count: preset === "several" ? Number(tg.count) || 2 : undefined,
-        range: ["one", "several", "point"].includes(preset) ? Number(tg.rangeValue) || "" : undefined,
-        shapes: shapes.length ? shapes.map(s => option(s, i18n(`midi-qol.EntryEditor.Activity.Shape.${s}`), tg.templateType === s)) : undefined,
-        size: ["point", "fromYou", "emanation"].includes(preset) ? Number(tg.size) || "" : undefined,
-        width: tg.templateType === "line" ? Number(tg.width) || "" : undefined,
-        hasSize: ["point", "fromYou", "emanation"].includes(preset), hasWidth: tg.templateType === "line", hasRange: ["one", "several", "point"].includes(preset),
+        count: has("count", preset === "several") ? Number(tg.count) || (registered ? 1 : 2) : undefined,
+        range: has("range", ["one", "several", "point"].includes(preset)) ? Number(tg.rangeValue) || "" : undefined,
+        shapes: shapes.length && has("shape", true) ? shapes.map(s => option(s, i18n(`midi-qol.EntryEditor.Activity.Shape.${s}`), tg.templateType === s)) : undefined,
+        size: has("size", ["point", "fromYou", "emanation"].includes(preset)) ? Number(tg.size) || "" : undefined,
+        width: has("width", tg.templateType === "line") ? Number(tg.width) || "" : undefined,
+        hasSize: has("size", ["point", "fromYou", "emanation"].includes(preset)), hasWidth: has("width", tg.templateType === "line"), hasRange: has("range", ["one", "several", "point"].includes(preset)),
         // An area can linger and act on creatures in it (midi's region rules)
-        canLinger: ["point", "fromYou", "emanation"].includes(preset), lingers: !!data.regionBehavior?.enabled,
-        who: ["self", "custom"].includes(preset) ? undefined : ["creature", "enemy", "ally"].map(w => option(w, i18n(`midi-qol.EntryEditor.Activity.Target.who.${w}s`), (tg.affectsType || "creature") === w)),
+        canLinger: area, lingers: !!data.regionBehavior?.enabled,
+        who: !has("who", !["self", "custom"].includes(preset)) ? undefined : ["creature", "enemy", "ally"].map(w => option(w, i18n(`midi-qol.EntryEditor.Activity.Target.who.${w}s`), (tg.affectsType || "creature") === w)),
         onItem: undefined
       } : undefined,
       roll: {
@@ -1018,7 +1033,17 @@ export class EntryEditor extends HandlebarsApplicationMixin(ApplicationV2) {
       .sort((a, b) => a.label.localeCompare(b.label));
     const effects = [...(this.#item()?.effects ?? [])].filter(e => !(e as { transfer?: boolean }).transfer).map(e => ({ value: `effect:${e.id}`, label: e.name }));
     const pick = (list: { value: string, label: string }[]) => list.map(o => ({ ...o, selected: o.value === form.what }));
+    // Common effects, by group (midi's: movement, defence, rolls; a module's own)
+    const defs = effectPresetDefs();
+    const groups = [...new Set(defs.map(d => d.group ?? "other"))];
+    const presets = groups.map(g => ({ label: game.i18n?.has(`midi-qol.EffectPreset.group.${g}`) ? i18n(`midi-qol.EffectPreset.group.${g}`) : g,
+      options: pick(defs.filter(d => (d.group ?? "other") === g).map(d => ({ value: `preset:${d.id}`, label: i18n(d.label) }))) }));
+    const chosen = form.what.startsWith("preset:") ? defs.find(d => d.id === form.what.slice(7)) : undefined;
+    const value = form.param || chosen?.param?.default || "";
+    const param = chosen?.param ? { label: i18n(chosen.param.label), value, isSelect: chosen.param.type === "select", isNumber: chosen.param.type === "number",
+      options: chosen.param.list ? optionList(chosen.param.list).map(o => ({ ...o, selected: o.value === value })) : [] } : undefined;
     return {
+      presets, param,
       statuses: pick(statuses), effects: pick(effects), isNew: form.what === "new", name: form.name,
       duration: form.duration, units: ["", "rounds", "minutes", "hours"].map(u => ({ value: u, label: i18n(`midi-qol.EntryEditor.Activity.Units.${u || "none"}`), selected: u === form.units })),
       canRepeat: data.type === "save" && this.#cardPlace === mainBranch(data.type), repeat: form.repeat
@@ -1135,9 +1160,32 @@ export class EntryEditor extends HandlebarsApplicationMixin(ApplicationV2) {
   }
 
   #basicsUpdates(h: Home): { activity: Record<string, unknown>, item: Record<string, unknown> } {
-    if (!h.card?.basics) return { activity: {}, item: {} };
+    if (!h.card?.basics && !h.card?.basicsExtra) return { activity: {}, item: {} };
     const { current, where } = this.#basicsOf(h);
-    return basicsUpdate(current, this.#basicsEdited(h), where);
+    const updates = h.card.basics ? basicsUpdate(current, this.#basicsEdited(h), where) : { activity: {}, item: {} };
+    // Registered fields whose value changed: their own updates
+    for (const field of this.#basicsExtra(h)) {
+      if (!field.changed) continue;
+      try {
+        const update = field.def.update(field.value, h.document);
+        Object.assign(updates.activity, update.activity ?? {});
+        Object.assign(updates.item, update.item ?? {});
+      } catch (err) { console.warn(`midi-qol | basicsFields ${field.def.id}: update() failed`, err); }
+    }
+    return updates;
+  }
+
+  /** The registered basics fields (basicsFields service): read, as edited, worded */
+  #basicsExtra(h: Home): { def: BasicsFieldDef, value: unknown, changed: boolean, text?: string }[] {
+    if (!isActivity(h.document)) return [];
+    return basicsFieldDefs(h.document).map(def => {
+      let read: unknown, text: string | undefined;
+      try { read = def.read(h.document); } catch { read = undefined; }
+      const edited = h.card?.basicsExtra && def.id in h.card.basicsExtra;
+      const value = edited ? h.card!.basicsExtra![def.id] : read;
+      try { text = def.text?.(value, h.document); } catch { text = undefined; }
+      return { def, value, changed: !!edited && JSON.stringify(value) !== JSON.stringify(read), text };
+    });
   }
 
   /** "Action · Concentration, up to 1 minute · 3 uses per Long Rest", as dnd5e words each */
@@ -1168,6 +1216,9 @@ export class EntryEditor extends HandlebarsApplicationMixin(ApplicationV2) {
       uses: [option("", i18n("midi-qol.EntryEditor.Activity.Basics.noLimit"), !b.usesPeriod), option("recharge", i18n("midi-qol.EntryEditor.Activity.Basics.recharge"), b.usesPeriod === "recharge"),
         ...Object.entries(dnd5e.limitedUsePeriods).map(([k, v]) => option(k, game.i18n?.format("midi-qol.EntryEditor.Activity.Basics.per", { period: i18n(v.label ?? k) }) ?? k, b.usesPeriod === k))],
       usesMax: b.usesMax || "1", isRecharge: b.usesPeriod === "recharge", hasMax: !!b.usesPeriod && b.usesPeriod !== "recharge",
+      extra: this.#basicsExtra(h).map(({ def, value }) => ({ id: def.id, label: i18n(def.label), value, checked: !!value,
+        isSelect: def.type === "select", isCheckbox: def.type === "checkbox", isNumber: def.type === "number",
+        options: (def.options ?? []).map(o => ({ ...o, selected: o.value === String(value ?? "") })) })),
       recharge: ["2", "3", "4", "5", "6"].map(n => option(n, n === "6" ? "6" : `${n}–6`, (b.recharge || "6") === n))
     };
   }
@@ -1181,12 +1232,18 @@ export class EntryEditor extends HandlebarsApplicationMixin(ApplicationV2) {
     const [kind, id] = form.what.split(":");
     const status = kind === "status" ? CONFIG.statusEffects.find(s => s.id === id) : undefined;
     const itemEffect = kind === "effect" ? this.#item()?.effects.get(id) : undefined;
-    if (!status && !itemEffect && kind !== "new") return void ui.notifications?.warn(i18n("midi-qol.EntryEditor.Activity.PickEffect"));
+    const preset = kind === "preset" ? effectPresetDefs().find(d => d.id === id) : undefined;
+    if (!status && !itemEffect && !preset && kind !== "new") return void ui.notifications?.warn(i18n("midi-qol.EntryEditor.Activity.PickEffect"));
     const duration = Number(form.duration) > 0 && form.units ? { value: Number(form.duration), units: form.units } : undefined;
+    // A common effect is named by it and its value ("Resistance (Fire)") unless given a name
+    const value = form.param || preset?.param?.default || "";
+    const valueLabel = preset?.param?.list ? optionList(preset.param.list).find(o => o.value === value)?.label ?? value : value;
+    const presetName = preset ? `${i18n(preset.label)}${value ? ` (${valueLabel})` : ""}` : undefined;
     const added: NewEffect = itemEffect
       ? { _id: itemEffect.id!, existing: true, name: itemEffect.name, branch }
-      : { _id: foundry.utils.randomID(), name: status ? i18n(status.name!) : form.name.trim() || i18n("midi-qol.EntryEditor.Activity.NewEffectName"),
-        img: status?.img ?? (this.#item()?.img ?? undefined), statuses: status ? [status.id] : [], ...(duration ? { duration } : {}), repeatSave: form.repeat, branch };
+      : { _id: foundry.utils.randomID(), name: status ? i18n(status.name!) : form.name.trim() || presetName || i18n("midi-qol.EntryEditor.Activity.NewEffectName"),
+        img: status?.img ?? (this.#item()?.img ?? undefined), statuses: status ? [status.id] : [...(preset?.statuses ?? [])],
+        ...(preset ? { changes: preset.changes(value) } : {}), ...(duration ? { duration } : {}), repeatSave: form.repeat, branch };
     (h.card.newEffects ??= []).push(added);
     // Another branch than dnd5e's: an "apply this effect" action in the branch's own entry
     if (branch !== mainBranch(this.#activityNow(h).type)) {
@@ -1197,7 +1254,7 @@ export class EntryEditor extends HandlebarsApplicationMixin(ApplicationV2) {
       draft.raw.do = JSON.stringify(list, null, 2);
       draft.problems = this.#problemsOf(draft, h.drafts);
     }
-    this.#effectForm = { what: "", name: "", duration: "", units: "", repeat: false };
+    this.#effectForm = { what: "", name: "", duration: "", units: "", repeat: false, param: "" };
     this.#cardOpen = this.#cardField = this.#cardPlace = undefined;
     this.render();
   }
@@ -1247,6 +1304,13 @@ export class EntryEditor extends HandlebarsApplicationMixin(ApplicationV2) {
       if ("card.basics.usesMax" in data) b.usesMax = String(value("usesMax") ?? "");
       if ("card.basics.recharge" in data) b.recharge = String(value("recharge") ?? "");
       h.card.basics = b;
+      const extra = { ...(h.card.basicsExtra ?? {}) };
+      for (const { def } of this.#basicsExtra(h)) {
+        const key = `card.basicsx.${def.id}`;
+        if (!(key in data)) continue;
+        extra[def.id] = def.type === "checkbox" ? !!data[key] : def.type === "number" ? (data[key] === "" || data[key] === null ? null : Number(data[key])) : data[key];
+      }
+      if (Object.keys(extra).length) h.card.basicsExtra = extra;
     }
     // The area: its own settings, then the open group's
     if ("card.area.lingers" in data || "card.area.attach" in data) {
@@ -1268,14 +1332,19 @@ export class EntryEditor extends HandlebarsApplicationMixin(ApplicationV2) {
           : kind === "use" ? { kind, targetId, triggers: AREA_TRIGGERS.filter(tr => !!data[`card.area.g.trigger.${tr}`]) } : { kind, targetId };
       }
     }
-    if ("card.new.what" in data) this.#effectForm = { what: String(data["card.new.what"] ?? ""), name: String(data["card.new.name"] ?? this.#effectForm.name),
-      duration: String(data["card.new.duration"] ?? ""), units: String(data["card.new.units"] ?? ""), repeat: !!data["card.new.repeat"] };
+    if ("card.new.what" in data) {
+      const what = String(data["card.new.what"] ?? "");
+      this.#effectForm = { what, name: String(data["card.new.name"] ?? this.#effectForm.name),
+        duration: String(data["card.new.duration"] ?? ""), units: String(data["card.new.units"] ?? ""), repeat: !!data["card.new.repeat"],
+        // Another effect picked: its own default value
+        param: what === this.#effectForm.what ? String(data["card.new.param"] ?? this.#effectForm.param) : "" };
+    }
     if (Object.keys(data).some(k => k.startsWith("card.target."))) {
       const target = { ...(h.card.target ?? {}) };
       const num = (key: string) => { const v = data[`card.target.${key}`]; return v === undefined || v === "" || v === null ? undefined : Number(v); };
       const preset = data["card.target.preset"] as TargetPreset | undefined;
       // Another preset starts from its own defaults
-      if (preset && preset !== "custom" && preset !== (target.preset ?? targetPreset(this.#activitySource(h).targeting ?? {}))) h.card.target = { preset };
+      if (preset && preset !== "custom" && preset !== (target.preset ?? targetPreset(this.#activitySource(h).targeting ?? {}, this.#activitySource(h).targetPresets))) h.card.target = { preset };
       else {
         if (preset && preset !== "custom") target.preset = preset;
         for (const key of ["count", "range", "size", "width"] as const) if (num(key) !== undefined) target[key] = num(key);
@@ -1892,14 +1961,23 @@ export class EntryEditor extends HandlebarsApplicationMixin(ApplicationV2) {
   /** An activity made at once on the item (with the effect or save it needs), the editor reopened on it */
   static async #onAddWhat(this: EntryEditor, _event: Event, target: HTMLElement) {
     const item = this.#root;
-    const kind = target.dataset.kind as NewKind;
-    if (!item || !NEW_KINDS.includes(kind)) return;
+    const kind = target.dataset.kind ?? "";
+    // midi's kinds, or a registered one (addKinds service)
+    const registered = kind.startsWith("x:") && item ? addKindDefs(item).find(def => def.id === kind.slice(2)) : undefined;
+    if (!item || (!registered && !NEW_KINDS.includes(kind as NewKind))) return;
     if (this.#dirty()) return void ui.notifications?.warn(i18n("midi-qol.EntryEditor.AddWhat.saveFirst"));
-    const ids = { activity: foundry.utils.randomID(), effect: foundry.utils.randomID(), save: foundry.utils.randomID() };
-    const made = newActivityData(kind, ids, { name: item.name, spell: String(item.type) === "spell", img: item.img ?? undefined });
-    if (made.effects.length) await item.createEmbeddedDocuments("ActiveEffect", made.effects as never[], { keepId: true });
-    await item.update(Object.fromEntries(made.activities.map(a => [`system.activities.${a._id}`, a])));
-    const activity = (item.system as { activities?: { get(id: string): EntryDocument | undefined } }).activities?.get(ids.activity);
+    const spell = String(item.type) === "spell";
+    let made: { activities: readonly Record<string, unknown>[], effects?: readonly Record<string, unknown>[] };
+    if (registered) {
+      try { made = registered.make({ item, spell, randomID: () => foundry.utils.randomID() }); }
+      catch (err) { console.warn(`midi-qol | addKinds ${registered.id}: make() failed`, err); return; }
+    } else made = newActivityData(kind as NewKind, { activity: foundry.utils.randomID(), effect: foundry.utils.randomID(), save: foundry.utils.randomID() }, { name: item.name, spell, img: item.img ?? undefined });
+    if (made.effects?.length) await item.createEmbeddedDocuments("ActiveEffect", made.effects as never[], { keepId: true });
+    // Activities without an id get one (the first is the one the editor reopens on)
+    const activities = made.activities.map(a => ({ ...a, _id: typeof a._id === "string" && a._id ? a._id : foundry.utils.randomID() }));
+    if (!activities.length) return;
+    await item.update(Object.fromEntries(activities.map(a => [`system.activities.${a._id}`, a])));
+    const activity = (item.system as { activities?: { get(id: string): EntryDocument | undefined } }).activities?.get(activities[0]._id);
     if (!activity) return;
     const position = { left: this.position.left, top: this.position.top, width: this.position.width, height: this.position.height };
     await this.close({ discard: true });

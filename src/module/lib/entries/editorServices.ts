@@ -2,7 +2,8 @@ import { defineService, entries, register, reportServiceProblem } from "../../ap
 import type { EntryAction, EntryHome } from "./types.js";
 import type { SentenceContext, TriggerGroup } from "./sentences.js";
 import type { Recipe } from "./recipes.js";
-import { activityCard, type ActivityCardModel, type ActivityData, type CardText } from "./activityCard.js";
+import { MIDI_EFFECT_PRESETS } from "./effectPresets.js";
+import { activityCard, type ActivityCardModel, type ActivityData, type CardText, type Targeting } from "./activityCard.js";
 
 /*
  * The entry editor's vocabulary as contributor services, so modules extend what it offers and how it reads entries the
@@ -14,6 +15,10 @@ import { activityCard, type ActivityCardModel, type ActivityData, type CardText 
  *                  for a list are merged, so a module adds to midi's lists as well as making its own
  *   activityCards  what an activity type does by itself, for its card (the first contributor for its type, else "*")
  *   entryRecipes   recipes offered where an entry is added
+ *   effectPresets  common effects "+ effect" offers (changes, statuses; an optional amount, damage type...)
+ *   targetPresets  targeting presets beyond midi's (how to recognise one, its defaults, its wording, its fields)
+ *   addKinds       what "Add what it does" offers beyond midi's (the activities and effects one makes)
+ *   basicsFields   fields of the basics line beyond activation, duration and uses (read, worded, saved)
  *
  *   MidiQOL.services.register("entryWording", "my-module", {
  *     action: (action, key) => key === "myAction" ? `summon ${action.myAction.count} wolves` : undefined
@@ -50,6 +55,55 @@ export interface EntryRecipesContributor {
   recipes(home: EntryHome): readonly Recipe[];
 }
 
+/** One change of an effect, as Foundry 14 stores them (system.changes) */
+export interface EffectChange { key: string, type: string, value: string, phase?: string }
+/** A common effect: its changes (and statuses) for the value of its one optional parameter */
+export interface EffectPresetDef {
+  id: string;
+  label: string;
+  /** Where it is listed: movement, defence, rolls, or a module's own */
+  group?: string;
+  param?: { label: string, type: "number" | "formula" | "select", list?: string, default?: string };
+  changes(value: string): readonly EffectChange[];
+  statuses?: readonly string[];
+}
+export interface EffectPresetsContributor { presets(): readonly EffectPresetDef[] }
+
+/** A targeting preset: recognised after midi's own; picking it starts from its defaults; the listed fields edit it */
+export interface TargetPresetDef {
+  id: string;
+  label: string;
+  matches(t: Targeting): boolean;
+  defaults(current: Targeting): Targeting;
+  text(t: Targeting, say: CardText["say"]): string;
+  fields?: readonly ("count" | "range" | "size" | "width" | "who" | "shape")[];
+  shapes?: readonly string[];
+}
+export interface TargetPresetsContributor { presets(): readonly TargetPresetDef[] }
+
+/** Something "Add what it does" makes: activities (with _id) and item effects, made at once on the item */
+export interface AddKindDef {
+  id: string;
+  label: string;
+  hint?: string;
+  make(context: { item: Item.Implementation, spell: boolean, randomID(): string }): { activities: readonly Record<string, unknown>[], effects?: readonly Record<string, unknown>[] };
+}
+export interface AddKindsContributor { kinds(item: Item.Implementation): readonly AddKindDef[] }
+
+/** A field of the basics line: its value read from the activity, worded on the line, saved by its update */
+export interface BasicsFieldDef {
+  id: string;
+  label: string;
+  type: "text" | "number" | "select" | "checkbox";
+  options?: readonly FieldOption[];
+  read(activity: object): unknown;
+  /** Its words on the basics line (nothing: not shown) */
+  text?(value: unknown, activity: object): string | undefined;
+  /** The update for a new value: paths on the activity and on its item */
+  update(value: unknown, activity: object): { activity?: Record<string, unknown>, item?: Record<string, unknown> };
+}
+export interface BasicsFieldsContributor { fields(activity: object): readonly BasicsFieldDef[] }
+
 declare module "../../api/services.js" {
   interface MidiServices {
     entryWording: EntryWordingContributor;
@@ -57,6 +111,10 @@ declare module "../../api/services.js" {
     entryOptions: EntryOptionsContributor;
     activityCards: ActivityCardsContributor;
     entryRecipes: EntryRecipesContributor;
+    effectPresets: EffectPresetsContributor;
+    targetPresets: TargetPresetsContributor;
+    addKinds: AddKindsContributor;
+    basicsFields: BasicsFieldsContributor;
   }
 }
 
@@ -66,6 +124,10 @@ export function defineEntryEditorServices() {
   defineService<EntryOptionsContributor>("entryOptions", { kind: "contributors", description: "Named option lists the entry editor's fields pick from (merged across contributors)" });
   defineService<ActivityCardsContributor>("activityCards", { kind: "contributors", description: "What an activity type does by itself, read as an entry (the entry editor's activity card)" });
   defineService<EntryRecipesContributor>("entryRecipes", { kind: "contributors", description: "Recipes the entry editor offers where an entry is added" });
+  defineService<EffectPresetsContributor>("effectPresets", { kind: "contributors", description: "Common effects the sentence view's \"+ effect\" offers" });
+  defineService<TargetPresetsContributor>("targetPresets", { kind: "contributors", description: "Targeting presets the sentence view offers beyond midi's" });
+  defineService<AddKindsContributor>("addKinds", { kind: "contributors", description: "What the sentence view's \"Add what it does\" offers beyond midi's" });
+  defineService<BasicsFieldsContributor>("basicsFields", { kind: "contributors", description: "Fields of an activity's basics line beyond activation, duration and uses" });
 }
 
 /** Each contributor asked in turn (highest priority first); a failing one is reported and skipped */
@@ -117,6 +179,29 @@ export function contributedActivityCard(data: ActivityData, text: CardText): Act
   catch (err) { reportServiceProblem("activityCards", found.id, "card() failed", err); return undefined; }
 }
 
+/** Every contributor's, the first with an id kept */
+function firstById<T extends { id: string }>(lists: { result: readonly T[] }[]): T[] {
+  const seen = new Map<string, T>();
+  for (const { result } of lists) for (const def of result) if (def?.id && !seen.has(def.id)) seen.set(def.id, def);
+  return [...seen.values()];
+}
+
+export function effectPresetDefs(): EffectPresetDef[] {
+  return firstById(ask<EffectPresetsContributor, readonly EffectPresetDef[]>("effectPresets", p => p.presets()));
+}
+
+export function targetPresetDefs(): TargetPresetDef[] {
+  return firstById(ask<TargetPresetsContributor, readonly TargetPresetDef[]>("targetPresets", p => p.presets()));
+}
+
+export function addKindDefs(item: Item.Implementation): AddKindDef[] {
+  return firstById(ask<AddKindsContributor, readonly AddKindDef[]>("addKinds", p => p.kinds(item)));
+}
+
+export function basicsFieldDefs(activity: object): BasicsFieldDef[] {
+  return firstById(ask<BasicsFieldsContributor, readonly BasicsFieldDef[]>("basicsFields", p => p.fields(activity)));
+}
+
 export function contributedRecipes(home: EntryHome): Recipe[] {
   return ask<EntryRecipesContributor, readonly Recipe[]>("entryRecipes", p => p.recipes(home)).flatMap(a => [...a.result]);
 }
@@ -129,6 +214,7 @@ const CONFIG_LISTS: Record<string, string> = {
 
 /** midi's own contributors: dnd5e's lists and statuses, and the activity card for any type */
 export function registerMidiEditorContributors() {
+  register("effectPresets", "midi-qol.effects", { presets: () => MIDI_EFFECT_PRESETS }, { label: "Midi-QOL: common effects" });
   register("entryOptions", "midi-qol.lists", {
     lists: () => {
       const dnd5e = CONFIG.DND5E as unknown as Record<string, Record<string, { label?: string } | string> | undefined>;

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { areaGroups, areaRules, areaSaveActivity, basicsUpdate, NEW_KINDS, newActivityData, onUseString, parseOnUse } from "../src/module/lib/entries/activityCard.js";
-import { activityEffects, editedTargeting, mainBranch, newEffectData, targetingUpdate, targetPreset } from "../src/module/lib/entries/activityCard.js";
+import { MIDI_EFFECT_PRESETS, signed } from "../src/module/lib/entries/effectPresets.js";
+import { activityEffects, editedTargeting, mainBranch, newEffectData, targetingText, targetingUpdate, targetPreset } from "../src/module/lib/entries/activityCard.js";
 import { activityCard, activityUpdate, branchFor, convertActivity, isBranchEntry, partFormula, partWithFormula, type ActivityData, type CardText } from "../src/module/lib/entries/activityCard.js";
 
 const t: CardText = {
@@ -170,5 +171,28 @@ describe("activity cards", () => {
     expect(rows).toEqual([{ option: "preItemRoll", macroName: "My Macro" }, { option: "postActiveEffects", macroName: "ItemMacro" }, { option: "postDamageRoll", macroName: "Compendium.x.y.Macro.z" }]);
     expect(onUseString(rows)).toBe("[preItemRoll]My Macro,[postActiveEffects]ItemMacro,[postDamageRoll]Compendium.x.y.Macro.z");
     expect(onUseString([{ option: "preItemRoll", macroName: " " }])).toBe("");
+  });
+
+  it("common effects: each makes changes; bonuses signed; a new effect stores them as system.changes", () => {
+    for (const preset of MIDI_EFFECT_PRESETS) expect(preset.changes(preset.param?.default ?? "").length, preset.id).toBeGreaterThan(0);
+    const ac = MIDI_EFFECT_PRESETS.find(p => p.id === "acBonus")!;
+    expect(ac.changes("2")).toEqual([{ key: "system.attributes.ac.bonus", type: "add", value: "+2" }]);
+    expect(signed("-1d4")).toBe("-1d4");
+    const effect = newEffectData({ _id: "e1", name: "AC bonus (2)", changes: ac.changes("2"), branch: "saveFailed" }) as any;
+    expect(effect.system.changes).toEqual([{ phase: "initial", key: "system.attributes.ac.bonus", type: "add", value: "+2" }]);
+  });
+
+  it("a registered targeting preset: recognised after midi's, worded by it, its defaults when picked, only its fields edited", () => {
+    const wall = { id: "wall", label: "a wall", fields: ["size"] as const,
+      matches: (t: any) => t.templateType === "wall", defaults: (c: any) => ({ ...c, templateType: "wall", size: 60, rangeUnits: "ft", rangeValue: 120 }),
+      text: (t: any) => `a ${t.size} ft wall` };
+    const extra = [wall];
+    const current = { affectsType: "creature", templateType: "wall", size: 30, rangeUnits: "ft", rangeValue: 120 };
+    expect(targetPreset(current, extra)).toBe("wall");
+    expect(targetPreset(current)).toBe("custom");
+    expect(targetPreset({ affectsType: "creature", count: 1, rangeUnits: "ft", rangeValue: 30 }, extra)).toBe("one");
+    expect(targetingText(current, t, extra)).toBe("a 30 ft wall");
+    expect(editedTargeting({ affectsType: "creature", count: 1, rangeUnits: "ft", rangeValue: 30 }, { preset: "wall" }, extra)).toMatchObject({ templateType: "wall", size: 60 });
+    expect(editedTargeting(current, { size: 90, count: 5 }, extra)).toEqual({ ...current, size: 90 });
   });
 });

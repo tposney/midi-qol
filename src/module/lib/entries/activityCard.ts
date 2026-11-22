@@ -1,4 +1,5 @@
 import type { Entry, EntryAction } from "./types.js";
+import type { EffectChange, TargetPresetDef } from "./editorServices.js";
 
 /*
  * An activity read as an entry (the entry editor's activity card): what it does by itself, as dnd5e runs it, in
@@ -51,6 +52,8 @@ export interface ActivityData {
   areaLabel?: string;
   /** Its targeting as dnd5e resolves it (the editor fills it from the prepared activity) */
   targeting?: Targeting;
+  /** Registered targeting presets to read it with */
+  targetPresets?: readonly TargetPresetDef[];
 }
 
 /** What the area an activity makes does: midi's rules, dnd5e's effects while inside */
@@ -159,7 +162,7 @@ export function areaView(data: ActivityData, t: CardText): { text: string, group
 export function activityCard(data: ActivityData, t: CardText): ActivityCardModel {
   const card = activityCardOf(data, t);
   const region = cardRegion(data, t);
-  const targeting = data.targeting ? { kind: "none" as const, text: targetingText(data.targeting, t), field: "target" } : undefined;
+  const targeting = data.targeting ? { kind: "none" as const, text: targetingText(data.targeting, t, data.targetPresets), field: "target" } : undefined;
   return { ...card, ...(region ? { region } : {}), ...(targeting ? { targeting } : {}) };
 }
 
@@ -252,6 +255,8 @@ export interface CardEdits {
   area?: AreaEdits;
   /** Activation, duration, concentration, uses (the basics chip) */
   basics?: Partial<Basics>;
+  /** Registered basics fields' values (basicsFields service), by field id */
+  basicsExtra?: Record<string, unknown>;
   attackType?: string;
   attackClass?: string;
   saveAbility?: string[];
@@ -385,14 +390,21 @@ export interface Targeting {
   rangeUnits?: string;
   rangeValue?: string | number | null;
 }
-export type TargetPreset = "self" | "touch" | "one" | "several" | "point" | "fromYou" | "emanation" | "custom";
+/** midi's presets, or a registered one's id (targetPresets service) */
+export type TargetPreset = "self" | "touch" | "one" | "several" | "point" | "fromYou" | "emanation" | "custom" | (string & {});
 export const TARGET_PRESETS: readonly TargetPreset[] = ["one", "several", "self", "touch", "point", "fromYou", "emanation"];
 export const POINT_SHAPES = ["sphere", "cube", "cylinder"];
 export const FROM_YOU_SHAPES = ["cone", "line"];
 const EMANATION_SHAPES = ["radius", "emanationNoTemplate"];
 
 /** The preset a targeting reads as; data no preset describes exactly is "custom" (never forced into one) */
-export function targetPreset(t: Targeting): TargetPreset {
+/** midi's preset for the targeting, else the first registered one that recognises it, else custom */
+export function targetPreset(t: Targeting, extra: readonly TargetPresetDef[] = []): TargetPreset {
+  const own = builtInPreset(t);
+  return own !== "custom" ? own : extra.find(def => { try { return def.matches(t); } catch { return false; } })?.id ?? "custom";
+}
+
+function builtInPreset(t: Targeting): TargetPreset {
   const shape = t.templateType || "";
   const distance = t.rangeUnits === "ft" || t.rangeUnits === "m";
   if (shape) {
@@ -407,8 +419,10 @@ export function targetPreset(t: Targeting): TargetPreset {
 }
 
 /** What the targeting says: "one creature within 60 ft", "a 20 ft sphere at a point within 150 ft" */
-export function targetingText(tg: Targeting, t: CardText): string {
-  const preset = targetPreset(tg);
+export function targetingText(tg: Targeting, t: CardText, extra: readonly TargetPresetDef[] = []): string {
+  const preset = targetPreset(tg, extra);
+  const registered = extra.find(def => def.id === preset);
+  if (registered) return registered.text(tg, t.say);
   const who = t.say(`Activity.Target.who.${["enemy", "ally"].includes(tg.affectsType ?? "") ? tg.affectsType : "creature"}${Number(tg.count || 1) > 1 ? "s" : ""}`);
   const range = `${tg.rangeValue ?? "?"} ${tg.rangeUnits ?? ""}`.trim();
   return t.say(`Activity.Target.${preset}`, { who, count: String(tg.count ?? ""), range, shape: t.say(`Activity.Shape.${tg.templateType || "sphere"}`), size: String(tg.size ?? "?"), width: String(tg.width ?? "") });
@@ -418,10 +432,25 @@ export function targetingText(tg: Targeting, t: CardText): string {
 export interface TargetEdits { preset?: TargetPreset, count?: number, range?: number, shape?: string, size?: number, width?: number, who?: string }
 
 /** The targeting after the chip's edits (a preset changed: its own defaults, kept from before where they fit) */
-export function editedTargeting(current: Targeting, edits: TargetEdits | undefined): Targeting {
+export function editedTargeting(current: Targeting, edits: TargetEdits | undefined, extra: readonly TargetPresetDef[] = []): Targeting {
   if (!edits?.preset && !edits) return current;
-  const preset = edits.preset ?? targetPreset(current);
+  const preset = edits.preset ?? targetPreset(current, extra);
   if (preset === "custom") return current;
+  const registered = extra.find(def => def.id === preset);
+  if (registered) {
+    // Its defaults when picked, then the fields it lets the chip edit
+    const base = edits.preset && edits.preset !== targetPreset(current, extra) ? registered.defaults(current) : current;
+    const fields = registered.fields ?? [];
+    return {
+      ...base,
+      ...(fields.includes("count") && edits.count !== undefined ? { count: edits.count } : {}),
+      ...(fields.includes("range") && edits.range !== undefined ? { rangeValue: edits.range } : {}),
+      ...(fields.includes("size") && edits.size !== undefined ? { size: edits.size } : {}),
+      ...(fields.includes("width") && edits.width !== undefined ? { width: edits.width } : {}),
+      ...(fields.includes("who") && edits.who !== undefined ? { affectsType: edits.who } : {}),
+      ...(fields.includes("shape") && edits.shape !== undefined && (registered.shapes ?? []).includes(edits.shape) ? { templateType: edits.shape } : {})
+    };
+  }
   const who = edits.who ?? (["enemy", "ally", "creature"].includes(current.affectsType ?? "") ? current.affectsType : "creature");
   const range = edits.range ?? (Number(current.rangeValue) || 30);
   const size = edits.size ?? (Number(current.size) || (preset === "fromYou" ? 15 : preset === "emanation" ? 10 : 20));
@@ -436,6 +465,7 @@ export function editedTargeting(current: Targeting, edits: TargetEdits | undefin
       return { affectsType: who, count: "", templateType: shape, size, width: shape === "line" ? edits.width ?? (Number(current.width) || 5) : null, rangeUnits: "self", rangeValue: null };
     }
     case "emanation": return { affectsType: who, count: "", templateType: "radius", size, rangeUnits: "self", rangeValue: null };
+    default: return current;
   }
 }
 
@@ -466,6 +496,8 @@ export interface NewEffect {
   name: string;
   img?: string;
   statuses?: string[];
+  /** Its changes (a common effect's) */
+  changes?: readonly EffectChange[];
   duration?: { value: number, units: string };
   /** Ends when the creature succeeds on the applying save at the end of each of its turns */
   repeatSave?: boolean;
@@ -492,6 +524,7 @@ export function newEffectData(added: NewEffect): Record<string, unknown> {
   return {
     _id: added._id, name: added.name, img: added.img ?? "icons/svg/aura.svg", type: "base", transfer: false,
     statuses: added.statuses ?? [],
+    ...(added.changes?.length ? { system: { changes: added.changes.map(c => ({ phase: "initial", ...c })) } } : {}),
     ...(added.duration ? { duration: { value: added.duration.value, units: added.duration.units } } : {}),
     flags: added.repeatSave ? { "midi-qol": { entries: [{ id: "repeatSave", on: "turnEnd", label: added.name, do: [{ save: "applying", then: [{ end: true }] }] }] } } : {}
   };
