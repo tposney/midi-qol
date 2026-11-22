@@ -4863,7 +4863,8 @@ export async function bonusDialog(
   optionalCandidates = [...validFlags.flatMap(flagName => flagCandidates(flagName, true)), ...optionalCandidates]
     .filter(c => !session.declined.has(c.id) && !session.applied.has(c.id));
   // The roller's standing choices (M15 stage 5a): never and critical-only drop out, always and next apply without asking
-  const critical = (this instanceof Workflow && !!this.isCritical) || !!foundry.utils.getProperty(roll, "isCritical");
+  // A use's own decision (its tracker: a noCritical modifier makes a natural 20 ordinary); the roll's only outside a use
+  const critical = this instanceof Workflow ? !!this.isCritical : !!foundry.utils.getProperty(roll, "isCritical");
   const standing = options.preChosen ? undefined : applyStandingChoices(this.actor, optionalCandidates, critical);
   if (standing) {
     optionalCandidates = standing.ask;
