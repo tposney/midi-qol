@@ -130,7 +130,7 @@ export function friendlyFormula(formula: unknown): string {
     .replace(/@entry\.origin\.dc\b/g, say("Ref.OriginDc"))
     .replace(/@entry\.origin\.spellLevel\b/g, say("Ref.OriginSpellLevel"))
     .replace(/@entry\.counts\.(\w+)/g, (_m, name) => say("Ref.Count", { name }))
-    .replace(/@choices\.(\w+)/g, (_m, name) => say("Ref.Choice", { name }))
+    .replace(/@choices\.(\w+)/g, (_m, name) => choiceNames.has(name) ? `(${choiceText(name)})` : say("Ref.Choice", { name }))
     .replace(/@item\.level\b/g, say("Ref.ItemLevel"))
     // a reference already in brackets keeps one pair
     .replace(/\(\(([^()]*)\)\)/g, "($1)");
@@ -165,10 +165,20 @@ function whoText(who: EntryWho | EntryWho[] | undefined, home: EntryHome): strin
 let selfHome: EntryHome = "item";
 /** Whether the entry runs at a use's events: its damage and healing go to the use's targets by default, else to self */
 let atUse = false;
+/** The entry's own choice of targets by its key (the entry's id), named from its label ("Careful Spell: protected creatures") */
+let choiceNames = new Map<string, string>();
+
+/** A choice's name for the sentence: its label after any "<feature>: " prefix */
+export function choiceName(label: unknown): string | undefined {
+  if (typeof label !== "string" || !label.trim()) return undefined;
+  const at = label.lastIndexOf(": ");
+  return (at >= 0 ? label.slice(at + 2) : label).trim() || undefined;
+}
+const choiceText = (id: string) => choiceNames.has(id) ? say("To.choiceNamed", { name: choiceNames.get(id) }) : say("To.choice", { name: id });
 const target = (to: unknown, fallback: string) => {
   const id = typeof to === "string" && to ? to : fallback;
   if (id === "self") return say(selfHome === "effect" ? "Subject.bearer" : "Subject.owner");
-  return has(`To.${id}`) ? say(`To.${id}`) : say("To.choice", { name: id });
+  return has(`To.${id}`) ? say(`To.${id}`) : choiceText(id);
 };
 /** "DC 15", or a formula's words ("the caster's save DC") */
 const dcText = (dc: unknown) => Number.isNumeric(dc) ? say("Dc", { dc }) : friendlyFormula(dc ?? "?");
@@ -296,6 +306,9 @@ function actionLines(actions: EntryAction[], indent: number, path: string | unde
 /** An entry as a sentence */
 export function entrySentence(entry: Entry, context: SentenceContext): EntrySentence {
   selfHome = context.home;
+  const ownChoice = (entry as { choose?: { kind?: string, label?: unknown } }).choose;
+  const ownName = entry.id ? choiceName(ownChoice?.label) : undefined;
+  choiceNames = new Map(ownName && entry.id ? [[entry.id, ownName]] : []);
   const events = [entry.on ?? []].flat().filter(Boolean);
   atUse = events.length > 0 && events.every(id => USE_EVENT(id));
   const first: SentencePart[] = [];

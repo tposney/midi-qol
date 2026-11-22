@@ -2784,6 +2784,7 @@
   "midi-qol.Sentence.To.bearer": "the bearer",
   "midi-qol.Sentence.To.anyone": "everyone on the scene",
   "midi-qol.Sentence.To.choice": "the chosen {name}",
+  "midi-qol.Sentence.To.choiceNamed": "the {name}",
   "midi-qol.Sentence.Roll.attack": "the attack roll",
   "midi-qol.Sentence.Roll.damage": "the damage roll",
   "midi-qol.Sentence.Roll.save": "the save",
