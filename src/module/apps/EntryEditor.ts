@@ -154,6 +154,22 @@ function setByPath(target: Record<string, unknown>, path: string, value: unknown
   at[parts.at(-1)!] = value;
 }
 
+const CHANGE_MODES: Record<string, string> = { "0": "custom", "1": "×", "2": "+", "3": "≤", "4": "≥", "5": "=", custom: "custom", multiply: "×", add: "+", downgrade: "≤", upgrade: "≥", override: "=" };
+
+/** What an effect does while it lasts: its statuses, its changes, how long */
+export function effectSummary(document: unknown): { statuses: string, changes: string[], duration: string } | undefined {
+  if (!(document instanceof ActiveEffect)) return undefined;
+  const effect = document as ActiveEffect.Implementation & { system?: { changes?: unknown[] }, duration?: { label?: string } };
+  const statuses = [...effect.statuses].map(id => {
+    const status = CONFIG.statusEffects.find(s => s.id === id);
+    return status?.name ? i18n(status.name) : id;
+  }).join(", ");
+  const raw = (effect.system?.changes ?? (effect as { changes?: unknown[] }).changes ?? []) as { key?: string, mode?: number, type?: string, value?: unknown }[];
+  const changes = raw.filter(c => c.key).map(c => `${c.key!.replace(/^system\./, "")} ${CHANGE_MODES[String(c.type ?? c.mode ?? "2")] ?? ""} ${String(c.value ?? "")}`.replace(/\s+/g, " ").trim());
+  const duration = effect.duration?.label ?? "";
+  return statuses || changes.length || duration ? { statuses, changes, duration } : undefined;
+}
+
 /** The card field a built-in part edits (its chip's data-field) */
 function cardFieldName(part: string): string {
   if (part.startsWith("part.")) return `card.${part}.formula`;
@@ -434,6 +450,7 @@ export class EntryEditor extends HandlebarsApplicationMixin(ApplicationV2) {
         choices: (Array.isArray(choices) ? choices : []).map(c => game.i18n?.format("midi-qol.EntryEditor.ChoiceLine", { label: c.label ?? c.id ?? "?", kind: c.kind ?? "?" }) ?? ""),
         recipes: this.#recipes === at ? recipesFor(kind).map(r => ({ id: r.id, home: at, label: i18n(`midi-qol.Recipe.${r.id}.Label`), hint: i18n(`midi-qol.Recipe.${r.id}.Hint`) })) : undefined,
         card: h.card ? this.#cardContext(h, at) : undefined,
+        effectSummary: h.kind === "effect" ? effectSummary(h.document) : undefined,
         settings: this.#settingsContext(h, false),
         automations: this.#automations(h),
         sentences: h.drafts.map((draft, index) => {
@@ -542,6 +559,9 @@ export class EntryEditor extends HandlebarsApplicationMixin(ApplicationV2) {
     // A spell's level (how its damage scales), read from the item, not stored on the activity
     const item = this.#item();
     if (item && String(item.type) === "spell") data.spellLevel = Number((item.system as { level?: number }).level) || 0;
+    // The area it makes, as dnd5e words it (its own template, else the item's)
+    const prepared = h.document as { target?: { template?: { type?: string } }, labels?: { target?: string } };
+    if (prepared.target?.template?.type) data.areaLabel = prepared.labels?.target;
     return data;
   }
 
@@ -577,8 +597,9 @@ export class EntryEditor extends HandlebarsApplicationMixin(ApplicationV2) {
       effectName: id => item?.effects.get(id)?.name ?? id,
       documentName: uuid => (fromUuidSync(uuid, { strict: false }) as { name?: string } | null)?.name ?? undefined,
       activityName: id => {
-        const activity = (item?.system as { activities?: { get(id: string): { name?: string } | undefined } } | undefined)?.activities?.get(id);
-        return activity?.name || undefined;
+        // By id, or by identifier as region rules name them
+        const activities = [...((item?.system as { activities?: Iterable<{ id: string, name?: string, identifier?: string }> } | undefined)?.activities ?? [])];
+        return activities.find(a => a.id === id || a.identifier === id)?.name || undefined;
       },
       typeLabel: (kind, id) => kind === "creature"
         ? label(CONFIG.DND5E.creatureTypes as Record<string, { label?: string }>, id)
@@ -597,7 +618,9 @@ export class EntryEditor extends HandlebarsApplicationMixin(ApplicationV2) {
     const model = contributedActivityCard(data, text) ?? activityCard(data, text);
     const activities = [...((this.#item()?.system as { activities?: Iterable<{ id: string, name?: string }> } | undefined)?.activities ?? [])];
     const chip = (part: BuiltInPart) => ({ ...part, home: at });
-    const branches = model.branches.map(b => {
+    // An activity whose work is its area: its empty "for each target" says nothing
+    const shownBranches = model.region ? model.branches.filter(b => b.builtIn.length || h.drafts.some(d => isBranchEntry(this.#entryForSave(d)) === b.branch)) : model.branches;
+    const branches = shownBranches.map(b => {
       const index = h.drafts.findIndex(d => isBranchEntry(this.#entryForSave(d)) === b.branch);
       const entry = index >= 0 ? this.#entryForSave(h.drafts[index]) : undefined;
       const sentence = entry ? entrySentence(entry, { home: "activity", activities }) : undefined;
@@ -615,7 +638,10 @@ export class EntryEditor extends HandlebarsApplicationMixin(ApplicationV2) {
         } : undefined
       };
     });
-    return { home: at, when: model.when.map(chip), branches, macros: this.#cardMacros(h), open: this.#cardOpen === at ? this.#openFields(h, data) : undefined };
+    const labels = (h.document as { labels?: Record<string, unknown> }).labels ?? {};
+    const basics = [labels.activation, labels.range, labels.target, labels.concentrationDuration ?? labels.duration]
+      .filter((v): v is string => typeof v === "string" && !!v).join(" · ");
+    return { home: at, when: model.when.map(chip), branches, basics, region: model.region, macros: this.#cardMacros(h), open: this.#cardOpen === at ? this.#openFields(h, data) : undefined };
   }
 
   /** The open card's fields: a contributor's own, else midi's */

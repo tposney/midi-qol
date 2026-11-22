@@ -43,7 +43,16 @@ export interface ActivityData {
   activity?: { id?: string };
   /** The item's spell level (0: a cantrip), when it is a spell: how its damage scales */
   spellLevel?: number;
+  /** midi's region rules for the area it makes */
+  regionBehavior?: { enabled?: boolean, attachToken?: string, dispositionFilter?: number, oncePerTurn?: boolean, rules?: { trigger: string, action: string, targetId: string }[] };
+  /** dnd5e's region behaviours (an effect applied while inside) */
+  behaviors?: { type: string, config?: { effects?: string[] } }[];
+  /** The area it makes, worded ("15 ft emanation"), when it makes one */
+  areaLabel?: string;
 }
+
+/** What the area an activity makes does: midi's rules, dnd5e's effects while inside */
+export interface CardRegion { text: string, rules: string[] }
 export interface DamagePart { number?: number | null, denomination?: number | null, bonus?: string, types?: string[], custom?: { enabled?: boolean, formula?: string }, scaling?: { mode?: string, number?: number | null, formula?: string } }
 
 /** A part's formula as dnd5e writes it (its custom formula, else NdX + bonus) */
@@ -67,7 +76,7 @@ export type BuiltInKind = "save" | "attack" | "check" | "damage" | "healing" | "
 /** One thing the activity does by itself; `field`: the card field that edits it */
 export interface BuiltInPart { kind: BuiltInKind, text: string, field?: string }
 export interface CardBranch { branch: ActivityBranch, builtIn: BuiltInPart[] }
-export interface ActivityCardModel { when: BuiltInPart[], branches: CardBranch[] }
+export interface ActivityCardModel { when: BuiltInPart[], branches: CardBranch[], region?: CardRegion }
 
 export interface CardText {
   ability(id: string): string;
@@ -111,8 +120,39 @@ function effects(data: ActivityData, t: CardText, filter: (onSave: boolean) => b
   return (data.effects ?? []).filter(e => filter(!!e.onSave)).map(e => ({ kind: "effect" as const, field: `effect.${e._id}`, text: t.effectName(e._id) }));
 }
 
+const RULE_TRIGGERS = ["entry", "exit", "turnStart", "turnEnd"];
+
+/** The area's rules, grouped by what they do: "an enemy that enters it or ends its turn in it: uses Spirit Guardians Save" */
+export function cardRegion(data: ActivityData, t: CardText): CardRegion | undefined {
+  const rb = data.regionBehavior;
+  const whileIn = (data.behaviors ?? []).filter(b => b.type === "applyActiveEffect").flatMap(b => b.config?.effects ?? []).map(uuid => t.documentName(uuid) ?? "?");
+  const rules = rb?.enabled ? rb.rules ?? [] : [];
+  if (!rules.length && !whileIn.length) return undefined;
+  const area = data.areaLabel || t.say("Activity.Region.anArea");
+  const attached = rb?.enabled && rb.attachToken === "caster" ? t.say("Activity.Region.attachedCaster") : rb?.enabled && rb.attachToken === "target" ? t.say("Activity.Region.attachedTarget") : "";
+  const who = t.say(`Activity.Region.who.${rb?.dispositionFilter === 1 ? "ally" : rb?.dispositionFilter === 0 ? "any" : "enemy"}`);
+  const byAction = new Map<string, string[]>();
+  for (const rule of rules) {
+    const target = rule.action === "useActivity" ? t.activityName(rule.targetId) ?? rule.targetId : t.effectName(rule.targetId);
+    const does = t.say(`Activity.Region.action.${rule.action}`, { what: target });
+    const trigger = RULE_TRIGGERS.includes(rule.trigger) ? t.say(`Activity.Region.trigger.${rule.trigger}`) : rule.trigger;
+    byAction.set(does, [...(byAction.get(does) ?? []), trigger]);
+  }
+  const or = t.say("Activity.Region.or");
+  const lines = [...byAction].map(([does, triggers]) => t.say("Activity.Region.rule", { who, when: triggers.join(` ${or} `), does })
+    + (rb?.oncePerTurn && does.length ? ` ${t.say("Activity.Region.oncePerTurn")}` : ""));
+  if (whileIn.length) lines.push(t.say("Activity.Region.whileIn", { effects: whileIn.join(", ") }));
+  return { text: t.say("Activity.Region.makes", { area, attached }), rules: lines };
+}
+
 /** What the activity does by itself, by branch */
 export function activityCard(data: ActivityData, t: CardText): ActivityCardModel {
+  const card = activityCardOf(data, t);
+  const region = cardRegion(data, t);
+  return region ? { ...card, region } : card;
+}
+
+function activityCardOf(data: ActivityData, t: CardText): ActivityCardModel {
   switch (data.type) {
     case "attack":
       return {

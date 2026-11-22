@@ -5,6 +5,13 @@
         <span class="midi-qol-entry-views-gap"></span>
         <button type="button" class="midi-qol-activity-sheet" data-action="openActivitySheet" data-home="{{home}}" data-tooltip="{{localize "midi-qol.EntryEditor.Activity.Sheet"}}" aria-label="{{localize "midi-qol.EntryEditor.Activity.Sheet"}}"><i class="fa-solid fa-up-right-from-square"></i></button>
     </div>
+    {{#if basics}}<div class="midi-qol-activity-basics hint">{{basics}}</div>{{/if}}
+    {{#if region}}
+    <div class="midi-qol-activity-region">
+        <div>{{region.text}}</div>
+        <ul>{{#each region.rules}}<li>{{this}}</li>{{/each}}</ul>
+    </div>
+    {{/if}}
     {{#each branches}}
     <div class="midi-qol-activity-branch" data-branch="{{branch}}">
         <div class="midi-qol-entry-line midi-qol-activity-branch-line">

@@ -7,10 +7,11 @@
 {{#if sentenceView}}
 <section class="midi-qol-entry-sentences scrollable">
     {{#each sentences}}
-    <div class="midi-qol-entry-home {{#unless (or sentences.length card automations.length settings)}}empty{{/unless}}" data-home="{{home}}">
+    <div class="midi-qol-entry-home {{#unless (or sentences.length card automations.length settings effectSummary)}}empty{{/unless}}" data-home="{{home}}">
         {{#unless single}}<h4 class="midi-qol-entry-home-label">{{label}}{{#if effect}} <span class="hint">{{localize "midi-qol.EntryEditor.Home.effectHint"}}</span>{{/if}}</h4>{{/unless}}
         {{#each choices}}<div class="midi-qol-entry-choice-line">{{this}}</div>{{/each}}
         {{> "modules/midi-qol/templates/apps/EntryEditor/settings.hbs"}}
+        {{#with effectSummary}}<div class="midi-qol-entry-effect-summary">{{#if statuses}}<div>{{localize "midi-qol.EntryEditor.Effect.Statuses"}} {{statuses}}</div>{{/if}}{{#each changes}}<div><code>{{this}}</code></div>{{/each}}{{#if duration}}<div class="hint">{{localize "midi-qol.EntryEditor.Effect.Lasts"}} {{duration}}</div>{{/if}}</div>{{/with}}
         {{> "modules/midi-qol/templates/apps/EntryEditor/automationNotes.hbs"}}
         {{#with card}}{{> "modules/midi-qol/templates/apps/EntryEditor/activityCard.hbs"}}{{/with}}
         {{#each sentences}}

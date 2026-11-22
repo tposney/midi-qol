@@ -7,6 +7,7 @@
         {{#each settings}}<div class="midi-qol-item-automation-line">{{localize label}}: <strong>{{shown}}</strong></div>{{/each}}
         {{#each automations}}<div class="midi-qol-item-automation-line"><i class="fa-solid fa-code"></i> {{title}}: {{#each when}}{{this}}{{#unless @last}}; {{/unless}}{{/each}}</div>{{/each}}
         {{#with card}}
+        {{#if region}}<div class="midi-qol-item-automation-line">{{region.text}}<ul>{{#each region.rules}}<li>{{this}}</li>{{/each}}</ul></div>{{/if}}
         {{#each branches}}{{#if added}}<div class="midi-qol-item-automation-line"><strong>{{label}}</strong> {{#each added.lines}}{{#each parts}}{{text}} {{/each}}{{/each}}</div>{{/if}}{{/each}}
         {{#each macros}}<div class="midi-qol-item-automation-line"><i class="fa-solid fa-code"></i> {{sentence}}</div>{{/each}}
         {{/with}}
