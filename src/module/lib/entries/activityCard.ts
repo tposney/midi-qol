@@ -139,8 +139,10 @@ export function cardRegion(data: ActivityData, t: CardText): CardRegion | undefi
     byAction.set(does, [...(byAction.get(does) ?? []), trigger]);
   }
   const or = t.say("Activity.Region.or");
+  // Once per turn limits the activities a creature is made to use, not effects
+  const uses = new Set(rules.filter(r => r.action === "useActivity").map(r => t.say("Activity.Region.action.useActivity", { what: t.activityName(r.targetId) ?? r.targetId })));
   const lines = [...byAction].map(([does, triggers]) => t.say("Activity.Region.rule", { who, when: triggers.join(` ${or} `), does })
-    + (rb?.oncePerTurn && does.length ? ` ${t.say("Activity.Region.oncePerTurn")}` : ""));
+    + (rb?.oncePerTurn && uses.has(does) ? ` ${t.say("Activity.Region.oncePerTurn")}` : ""));
   if (whileIn.length) lines.push(t.say("Activity.Region.whileIn", { effects: whileIn.join(", ") }));
   return { text: t.say("Activity.Region.makes", { area, attached }), rules: lines };
 }

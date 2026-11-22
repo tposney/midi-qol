@@ -2525,3 +2525,7 @@ body.midi-qol-hide-gambit-mirrors .gps-dialog-mirror:not(.midi-qol-gambit-shown)
 .midi-qol-entry-editor .midi-qol-activity-basics { font-size: var(--font-size-12, 12px); margin-top: -0.1rem; }
 .midi-qol-entry-editor .midi-qol-activity-region ul, .midi-qol-item-automation ul { margin: 0.1rem 0 0.2rem 1.2rem; padding: 0; }
 .midi-qol-entry-editor .midi-qol-entry-effect-summary { margin: 0.1rem 0 0.3rem; }
+.midi-qol-entry-editor .midi-qol-entry-change { display: grid; grid-template-columns: minmax(0, 1fr) 6.5rem 6rem auto; gap: 0.25rem; align-items: center; margin: 0.15rem 0; }
+.midi-qol-entry-editor .midi-qol-entry-change button { width: auto; }
+.midi-qol-entry-editor .midi-qol-entry-effect-summary { position: relative; padding-right: 2.2rem; }
+.midi-qol-entry-editor .midi-qol-entry-effect-summary .midi-qol-entry-edit { position: absolute; right: 0; top: 0; }

@@ -37,7 +37,9 @@ const VIEWS: readonly View[] = ["sentence", "form", "json"];
  */
 type Home = { document: EntryDocument, kind: EntryHome, label: string, drafts: Draft[], stored: string, choices?: string, choicesStored?: string, choicesProblem?: string, card?: CardEdits, cardValues?: Record<string, unknown>,
   /** The item's automation settings: the owner's values and the fields (JSON) as edited, and as read */
-  settings?: { values: Record<string, unknown>, stored: string, spec: string, specStored: string, problem?: string } };
+  settings?: { values: Record<string, unknown>, stored: string, spec: string, specStored: string, problem?: string },
+  /** An effect's changes as edited (key, type, value; their other fields kept), where they are stored, and as read */
+  changes?: { rows: Record<string, unknown>[], path: string, stored: string } };
 type Draft = { entry: Entry, raw: { do: string, choose: string, json?: string }, problems: string[] };
 
 const NEAR = "near";
@@ -154,6 +156,14 @@ function setByPath(target: Record<string, unknown>, path: string, value: unknown
   at[parts.at(-1)!] = value;
 }
 
+/** An effect's changes as stored, and where (dnd5e 6 / Foundry 14: system.changes; before: changes) */
+function changesOf(effect: ActiveEffect.Implementation): { rows: Record<string, unknown>[], path: string, stored: string } {
+  const source = effect._source as { system?: { changes?: unknown[] }, changes?: unknown[] };
+  const path = Array.isArray(source.system?.changes) ? "system.changes" : "changes";
+  const rows = foundry.utils.deepClone((path === "system.changes" ? source.system!.changes : source.changes) ?? []) as Record<string, unknown>[];
+  return { rows, path, stored: JSON.stringify(rows) };
+}
+
 const CHANGE_MODES: Record<string, string> = { "0": "custom", "1": "×", "2": "+", "3": "≤", "4": "≥", "5": "=", custom: "custom", multiply: "×", add: "+", downgrade: "≤", upgrade: "≥", override: "=" };
 
 /** What an effect does while it lasts: its statuses, its changes, how long */
@@ -166,7 +176,9 @@ export function effectSummary(document: unknown): { statuses: string, changes: s
   }).join(", ");
   const raw = (effect.system?.changes ?? (effect as { changes?: unknown[] }).changes ?? []) as { key?: string, mode?: number, type?: string, value?: unknown }[];
   const changes = raw.filter(c => c.key).map(c => `${c.key!.replace(/^system\./, "")} ${CHANGE_MODES[String(c.type ?? c.mode ?? "2")] ?? ""} ${String(c.value ?? "")}`.replace(/\s+/g, " ").trim());
-  const duration = effect.duration?.label ?? "";
+  // Only an effect that has a duration says how long ("None" says nothing)
+  const lasting = effect._source.duration as { value?: number | null, rounds?: number | null, seconds?: number | null, turns?: number | null } | undefined;
+  const duration = lasting?.value || lasting?.rounds || lasting?.seconds || lasting?.turns ? effect.duration?.label ?? "" : "";
   return statuses || changes.length || duration ? { statuses, changes, duration } : undefined;
 }
 
@@ -240,6 +252,7 @@ export class EntryEditor extends HandlebarsApplicationMixin(ApplicationV2) {
       const home: Home = {
         document: d, kind, stored: JSON.stringify(entries), choices, choicesStored: choices, ...(kind === "activity" ? { card: {} } : {}),
         ...(values && spec !== undefined ? { settings: { values, stored: JSON.stringify(values), spec, specStored: spec } } : {}),
+        ...(d instanceof ActiveEffect ? { changes: changesOf(d) } : {}),
         label: kind === "item" ? i18n("midi-qol.EntryEditor.Home.item") : game.i18n?.format(`midi-qol.EntryEditor.Home.${kind}`, { name: d.name ?? "" }) ?? d.name ?? "",
         drafts: entries.map(entry => ({ entry, raw: { do: JSON.stringify(entry.do ?? [], null, 2), choose: entry.choose ? JSON.stringify(entry.choose, null, 2) : "" }, problems: [] }))
       };
@@ -257,7 +270,8 @@ export class EntryEditor extends HandlebarsApplicationMixin(ApplicationV2) {
   #dirty(): boolean {
     return this.#homes.some(h => h.choices !== h.choicesStored || JSON.stringify(h.drafts.map(d => this.#entryForSave(d))) !== h.stored
       || Object.keys(this.#cardUpdate(h)).length > 0
-      || (!!h.settings && (JSON.stringify(h.settings.values) !== h.settings.stored || h.settings.spec !== h.settings.specStored)));
+      || (!!h.settings && (JSON.stringify(h.settings.values) !== h.settings.stored || h.settings.spec !== h.settings.specStored))
+      || (!!h.changes && JSON.stringify(h.changes.rows) !== h.changes.stored));
   }
 
   /** Closing with unsaved changes asks first (`options.discard`: no question) */
@@ -320,6 +334,10 @@ export class EntryEditor extends HandlebarsApplicationMixin(ApplicationV2) {
       editActivity: EntryEditor.#onEditActivity,
       addToBranch: EntryEditor.#onAddToBranch,
       addDamagePart: EntryEditor.#onAddDamagePart,
+      addChange: EntryEditor.#onAddChange,
+      removeChange: EntryEditor.#onRemoveChange,
+      openEffectSheet: EntryEditor.#onOpenEffectSheet,
+      editEffect: EntryEditor.#onEditEffect,
       openActivitySheet: EntryEditor.#onOpenActivitySheet,
       save: EntryEditor.#onSave
     }
@@ -387,6 +405,7 @@ export class EntryEditor extends HandlebarsApplicationMixin(ApplicationV2) {
       activityCard: this.#view === "form" && home.card ? this.#cardContext(home, this.#at) : undefined,
       automations: this.#view === "form" ? this.#automations(home) : undefined,
       settings: this.#view === "form" ? this.#settingsContext(home, true) : undefined,
+      effectEditor: this.#view === "form" && home.changes ? this.#effectEditorContext(home) : undefined,
       homeChoices: this.#view === "form" ? home.choices : undefined,
       homeChoicesProblem: home.choicesProblem,
       ifPresets: conditionPresets(),
@@ -501,12 +520,59 @@ export class EntryEditor extends HandlebarsApplicationMixin(ApplicationV2) {
    * macros and what was added to activities. An activity with nothing of midi's is left to dnd5e's own list.
    */
   summary() {
-    return this.#sentences().map(home => {
-      const card = home.card && (home.card.branches.some(b => b.added) || home.card.macros.length) ? home.card : undefined;
+    const homes = this.#sentences().map(home => {
+      const card = home.card && (home.card.branches.some(b => b.added) || home.card.macros.length || home.card.region) ? home.card : undefined;
       const settings = home.settings?.fields.map(f => ({ label: f.label, shown: f.isSelect ? f.options.find(o => o.selected)?.label ?? String(f.value ?? "")
         : f.isCheckbox ? i18n(f.checked ? "Yes" : "No") : String(f.value ?? "") }));
-      return { label: home.label, single: home.single, sentences: home.sentences, card, settings, automations: home.automations };
-    }).filter(home => home.sentences.length || home.card || home.settings?.length || home.automations.length);
+      return { label: home.label, single: home.single, sentences: home.sentences, card, settings, automations: home.automations, effectSummary: home.effectSummary };
+    });
+    // Effects' summaries go with the rest of midi's automation, never alone (a plain item with effects shows nothing)
+    const content = (home: typeof homes[number]) => home.sentences.length || home.card || home.settings?.length || home.automations.length;
+    if (!homes.some(content)) return [];
+    return homes.filter(home => content(home) || home.effectSummary);
+  }
+
+  /* An effect's own data in the form view: what it gives, how long, its changes (editable) */
+
+  #effectEditorContext(h: Home) {
+    const summary = effectSummary(h.document);
+    const types = Object.keys((CONST as unknown as { ACTIVE_EFFECT_CHANGE_TYPES?: Record<string, number> }).ACTIVE_EFFECT_CHANGE_TYPES
+      ?? { custom: 0, multiply: 1, add: 2, downgrade: 3, upgrade: 4, override: 5 });
+    return {
+      home: this.#at, statuses: summary?.statuses ?? "", duration: summary?.duration ?? "",
+      changes: (h.changes?.rows ?? []).map((row, i) => ({ i, key: String(row.key ?? ""), value: String(row.value ?? ""),
+        types: types.map(t => ({ value: t, label: t, selected: String(row.type ?? "add") === t })) }))
+    };
+  }
+
+  #readChanges(data: Record<string, unknown>) {
+    const h = this.#homes[this.#at];
+    if (!h?.changes) return;
+    h.changes.rows.forEach((row, i) => {
+      for (const field of ["key", "type", "value"]) if (`chg.${i}.${field}` in data) row[field] = String(data[`chg.${i}.${field}`] ?? "");
+    });
+  }
+
+  static #onAddChange(this: EntryEditor) {
+    const h = this.#homes[this.#at];
+    h?.changes?.rows.push({ _id: foundry.utils.randomID(), key: "", type: "add", value: "", phase: "initial", priority: 20 });
+    this.render();
+  }
+
+  static #onRemoveChange(this: EntryEditor, _event: Event, target: HTMLElement) {
+    this.#homes[this.#at]?.changes?.rows.splice(Number(target.dataset.index), 1);
+    this.render();
+  }
+
+  static #onOpenEffectSheet(this: EntryEditor) {
+    (this.#homes[this.#at]?.document as { sheet?: { render(options: object): unknown } }).sheet?.render({ force: true });
+  }
+
+  /** The sentence view's effect: opened in the form view, at its own data */
+  static #onEditEffect(this: EntryEditor, _event: Event, target: HTMLElement) {
+    this.#goHome(target);
+    this.#view = "form";
+    this.render();
   }
 
   /* The item's automation settings (lib/entries/config.ts) */
@@ -1049,6 +1115,7 @@ export class EntryEditor extends HandlebarsApplicationMixin(ApplicationV2) {
     const data = formData.object as Record<string, unknown>;
     this.#readCard(data);
     this.#readSettings(data);
+    this.#readChanges(data);
     // The sentence view's other fields are the entry open under its sentence
     if (this.#view === "sentence" && !this.#expanded) return void this.render();
     const home = this.#homes[this.#at];
@@ -1319,6 +1386,7 @@ export class EntryEditor extends HandlebarsApplicationMixin(ApplicationV2) {
       if (home.choices !== home.choicesStored) changes.midiChoices = JSON.parse(home.choices || "[]");
       // The card's edits are the activity's own data (paths relative to the activity)
       Object.assign(changes, this.#cardUpdate(home));
+      if (home.changes && JSON.stringify(home.changes.rows) !== home.changes.stored) changes[home.changes.path] = home.changes.rows.filter(row => String(row.key ?? "").trim());
       if (home.settings) {
         if (JSON.stringify(home.settings.values) !== home.settings.stored) changes[`flags.${MODULE_ID}.config`] = home.settings.values;
         if (home.settings.spec !== home.settings.specStored) changes[`flags.${MODULE_ID}.configSpec`] = JSON.parse(home.settings.spec || "[]");

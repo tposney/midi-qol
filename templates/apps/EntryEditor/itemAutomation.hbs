@@ -4,6 +4,7 @@
     {{#each homes}}
     <div class="midi-qol-item-automation-home">
         {{#unless single}}<div class="midi-qol-item-automation-label">{{label}}</div>{{/unless}}
+        {{#with effectSummary}}<div class="midi-qol-item-automation-line">{{#if statuses}}{{localize "midi-qol.EntryEditor.Effect.Statuses"}} {{statuses}} {{/if}}{{#each changes}}<code>{{this}}</code> {{/each}}{{#if duration}}<span class="hint">{{localize "midi-qol.EntryEditor.Effect.Lasts"}} {{duration}}</span>{{/if}}</div>{{/with}}
         {{#each settings}}<div class="midi-qol-item-automation-line">{{localize label}}: <strong>{{shown}}</strong></div>{{/each}}
         {{#each automations}}<div class="midi-qol-item-automation-line"><i class="fa-solid fa-code"></i> {{title}}: {{#each when}}{{this}}{{#unless @last}}; {{/unless}}{{/each}}</div>{{/each}}
         {{#with card}}

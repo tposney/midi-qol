@@ -11,7 +11,7 @@
         {{#unless single}}<h4 class="midi-qol-entry-home-label">{{label}}{{#if effect}} <span class="hint">{{localize "midi-qol.EntryEditor.Home.effectHint"}}</span>{{/if}}</h4>{{/unless}}
         {{#each choices}}<div class="midi-qol-entry-choice-line">{{this}}</div>{{/each}}
         {{> "modules/midi-qol/templates/apps/EntryEditor/settings.hbs"}}
-        {{#with effectSummary}}<div class="midi-qol-entry-effect-summary">{{#if statuses}}<div>{{localize "midi-qol.EntryEditor.Effect.Statuses"}} {{statuses}}</div>{{/if}}{{#each changes}}<div><code>{{this}}</code></div>{{/each}}{{#if duration}}<div class="hint">{{localize "midi-qol.EntryEditor.Effect.Lasts"}} {{duration}}</div>{{/if}}</div>{{/with}}
+        {{#with effectSummary}}<div class="midi-qol-entry-effect-summary"><button type="button" class="midi-qol-entry-edit" data-action="editEffect" data-home="{{../home}}" data-tooltip="{{localize "midi-qol.EntryEditor.Effect.Edit"}}" aria-label="{{localize "midi-qol.EntryEditor.Effect.Edit"}}"><i class="fa-solid fa-pen"></i></button>{{#if statuses}}<div>{{localize "midi-qol.EntryEditor.Effect.Statuses"}} {{statuses}}</div>{{/if}}{{#each changes}}<div><code>{{this}}</code></div>{{/each}}{{#if duration}}<div class="hint">{{localize "midi-qol.EntryEditor.Effect.Lasts"}} {{duration}}</div>{{/if}}</div>{{/with}}
         {{> "modules/midi-qol/templates/apps/EntryEditor/automationNotes.hbs"}}
         {{#with card}}{{> "modules/midi-qol/templates/apps/EntryEditor/activityCard.hbs"}}{{/with}}
         {{#each sentences}}
@@ -85,6 +85,28 @@
             {{#if homeChoicesProblem}}<ul class="midi-qol-entry-problems"><li>{{homeChoicesProblem}}</li></ul>{{/if}}</div>
         {{/if}}
         {{> "modules/midi-qol/templates/apps/EntryEditor/settings.hbs"}}
+        {{#with effectEditor}}
+        <fieldset class="midi-qol-entry-effect-editor">
+            <legend>{{localize "midi-qol.EntryEditor.Effect.Title"}}</legend>
+            {{#if statuses}}<div>{{localize "midi-qol.EntryEditor.Effect.Statuses"}} {{statuses}}</div>{{/if}}
+            {{#if duration}}<div class="hint">{{localize "midi-qol.EntryEditor.Effect.Lasts"}} {{duration}}</div>{{/if}}
+            <div class="midi-qol-entry-changes">
+                {{#each changes}}
+                <div class="midi-qol-entry-change">
+                    <input type="text" name="chg.{{i}}.key" value="{{key}}" title="{{key}}" placeholder="system.attributes.ac.bonus">
+                    <select name="chg.{{i}}.type">{{#each types}}<option value="{{value}}" {{#if selected}}selected{{/if}}>{{label}}</option>{{/each}}</select>
+                    <input type="text" name="chg.{{i}}.value" value="{{value}}">
+                    <button type="button" data-action="removeChange" data-index="{{i}}" data-tooltip="{{localize "midi-qol.EntryEditor.Effect.Remove"}}" aria-label="{{localize "midi-qol.EntryEditor.Effect.Remove"}}"><i class="fa-solid fa-trash"></i></button>
+                </div>
+                {{else}}<p class="hint">{{localize "midi-qol.EntryEditor.Effect.NoChanges"}}</p>
+                {{/each}}
+            </div>
+            <div class="midi-qol-entry-home-buttons">
+                <button type="button" data-action="addChange"><i class="fa-solid fa-plus"></i> {{localize "midi-qol.EntryEditor.Effect.Add"}}</button>
+                <button type="button" data-action="openEffectSheet"><i class="fa-solid fa-up-right-from-square"></i> {{localize "midi-qol.EntryEditor.Effect.Sheet"}}</button>
+            </div>
+        </fieldset>
+        {{/with}}
         {{> "modules/midi-qol/templates/apps/EntryEditor/automationNotes.hbs"}}
         {{#with activityCard}}{{> "modules/midi-qol/templates/apps/EntryEditor/activityCard.hbs"}}{{/with}}
         {{#if hasEntry}}
