@@ -8,6 +8,7 @@ import { ACTIVITY_REF } from "../lib/entries/activityActions.js";
 import { ConditionEditor } from "./ConditionEditor.js";
 import { activityCardContributor, contributedActivityCard, optionList } from "../lib/entries/editorServices.js";
 import { automationNotes } from "../lib/entries/automations.js";
+import { configOptions, type ConfigField } from "../lib/entries/config.js";
 import { activityCard, activityUpdate, BRANCH_EVENT, branchEntryId, isBranchEntry, partFormula, type ActivityBranch, type ActivityData, type BuiltInPart, type CardEdits, type CardText } from "../lib/entries/activityCard.js";
 
 /*
@@ -34,7 +35,9 @@ const VIEWS: readonly View[] = ["sentence", "form", "json"];
  * One document of the window: the item, one of its activities or one of its effects. `stored`: its entries as they
  * were read (only a changed home is written); an activity's `choices`: its midiChoices as JSON.
  */
-type Home = { document: EntryDocument, kind: EntryHome, label: string, drafts: Draft[], stored: string, choices?: string, choicesStored?: string, choicesProblem?: string, card?: CardEdits, cardValues?: Record<string, unknown> };
+type Home = { document: EntryDocument, kind: EntryHome, label: string, drafts: Draft[], stored: string, choices?: string, choicesStored?: string, choicesProblem?: string, card?: CardEdits, cardValues?: Record<string, unknown>,
+  /** The item's automation settings: the owner's values and the fields (JSON) as edited, and as read */
+  settings?: { values: Record<string, unknown>, stored: string, spec: string, specStored: string, problem?: string } };
 type Draft = { entry: Entry, raw: { do: string, choose: string, json?: string }, problems: string[] };
 
 const NEAR = "near";
@@ -216,8 +219,11 @@ export class EntryEditor extends HandlebarsApplicationMixin(ApplicationV2) {
       const kind: EntryHome = isActivity(d) ? "activity" : d instanceof ActiveEffect ? "effect" : "item";
       const entries = entriesOfDocument(d);
       const choices = kind === "activity" ? JSON.stringify((d as { midiChoices?: unknown[] }).midiChoices ?? [], null, 2) : undefined;
+      const values = kind === "item" ? foundry.utils.deepClone((d.getFlag?.(MODULE_ID, "config") ?? {}) as Record<string, unknown>) : undefined;
+      const spec = kind === "item" ? JSON.stringify(d.getFlag?.(MODULE_ID, "configSpec") ?? [], null, 2) : undefined;
       const home: Home = {
         document: d, kind, stored: JSON.stringify(entries), choices, choicesStored: choices, ...(kind === "activity" ? { card: {} } : {}),
+        ...(values && spec !== undefined ? { settings: { values, stored: JSON.stringify(values), spec, specStored: spec } } : {}),
         label: kind === "item" ? i18n("midi-qol.EntryEditor.Home.item") : game.i18n?.format(`midi-qol.EntryEditor.Home.${kind}`, { name: d.name ?? "" }) ?? d.name ?? "",
         drafts: entries.map(entry => ({ entry, raw: { do: JSON.stringify(entry.do ?? [], null, 2), choose: entry.choose ? JSON.stringify(entry.choose, null, 2) : "" }, problems: [] }))
       };
@@ -234,7 +240,8 @@ export class EntryEditor extends HandlebarsApplicationMixin(ApplicationV2) {
   /** Whether anything differs from what was read */
   #dirty(): boolean {
     return this.#homes.some(h => h.choices !== h.choicesStored || JSON.stringify(h.drafts.map(d => this.#entryForSave(d))) !== h.stored
-      || Object.keys(this.#cardUpdate(h)).length > 0);
+      || Object.keys(this.#cardUpdate(h)).length > 0
+      || (!!h.settings && (JSON.stringify(h.settings.values) !== h.settings.stored || h.settings.spec !== h.settings.specStored)));
   }
 
   /** Closing with unsaved changes asks first (`options.discard`: no question) */
@@ -363,6 +370,7 @@ export class EntryEditor extends HandlebarsApplicationMixin(ApplicationV2) {
       homeLabel: this.#homes.length > 1 ? home.label : undefined,
       activityCard: this.#view === "form" && home.card ? this.#cardContext(home, this.#at) : undefined,
       automations: this.#view === "form" ? this.#automations(home) : undefined,
+      settings: this.#view === "form" ? this.#settingsContext(home, true) : undefined,
       homeChoices: this.#view === "form" ? home.choices : undefined,
       homeChoicesProblem: home.choicesProblem,
       ifPresets: conditionPresets(),
@@ -395,7 +403,7 @@ export class EntryEditor extends HandlebarsApplicationMixin(ApplicationV2) {
       warnings: this.#document instanceof ActiveEffect ? [] : on.filter(id => EFFECT_ONLY.has(id))
         .map(id => game.i18n?.format("midi-qol.EntryEditor.Warning.EffectOnly", { id }) ?? id),
       overtime: this.#overtimeShown(),
-      canSave: this.#homes.every(h => !h.choicesProblem && h.drafts.every(d => !d.problems.length))
+      canSave: this.#homes.every(h => !h.choicesProblem && !h.settings?.problem && h.drafts.every(d => !d.problems.length))
     };
   }
 
@@ -426,6 +434,7 @@ export class EntryEditor extends HandlebarsApplicationMixin(ApplicationV2) {
         choices: (Array.isArray(choices) ? choices : []).map(c => game.i18n?.format("midi-qol.EntryEditor.ChoiceLine", { label: c.label ?? c.id ?? "?", kind: c.kind ?? "?" }) ?? ""),
         recipes: this.#recipes === at ? recipesFor(kind).map(r => ({ id: r.id, home: at, label: i18n(`midi-qol.Recipe.${r.id}.Label`), hint: i18n(`midi-qol.Recipe.${r.id}.Hint`) })) : undefined,
         card: h.card ? this.#cardContext(h, at) : undefined,
+        settings: this.#settingsContext(h, false),
         automations: this.#automations(h),
         sentences: h.drafts.map((draft, index) => {
           const entry = this.#entryForSave(draft);
@@ -468,6 +477,47 @@ export class EntryEditor extends HandlebarsApplicationMixin(ApplicationV2) {
       sentence: game.i18n?.format("midi-qol.EntryEditor.Automation.Step", {
         what: note.own ? i18n("midi-qol.EntryEditor.Automation.OwnMacro") : game.i18n?.format("midi-qol.EntryEditor.Automation.ModuleMacro", { source: note.source, name: note.name }) ?? note.name,
         when: note.when.length < 2 ? note.when.join("") : `${note.when.slice(0, -1).join(", ")} ${and} ${note.when.at(-1)}` }) ?? note.name }));
+  }
+
+  /* The item's automation settings (lib/entries/config.ts) */
+
+  #settingsFields(h: Home): ConfigField[] {
+    try { const spec = JSON.parse(h.settings?.spec || "[]"); return Array.isArray(spec) ? spec.filter(f => f && typeof f.key === "string") : []; }
+    catch { return []; }
+  }
+
+  /** The settings section: each field with the owner's value; `author`: also the fields as JSON (the form view) */
+  #settingsContext(h: Home, author: boolean) {
+    if (!h.settings) return undefined;
+    const fields = this.#settingsFields(h);
+    if (!fields.length && !author) return undefined;
+    return {
+      fields: fields.map(f => {
+        const value = h.settings!.values[f.key] ?? f.default;
+        return { ...f, name: `cfg.${f.key}`, value, checked: !!value, isSelect: f.type === "select", isCheckbox: f.type === "checkbox", isNumber: f.type === "number",
+          options: configOptions(f).map(o => ({ ...o, selected: o.value === String(value ?? "") })) };
+      }),
+      ...(author ? { spec: h.settings.spec, problem: h.settings.problem } : {})
+    };
+  }
+
+  /** The settings' fields read into the item's home */
+  #readSettings(data: Record<string, unknown>) {
+    const h = this.#homes.find(home => home.settings);
+    if (!h?.settings) return;
+    if (typeof data.cfgSpec === "string") {
+      h.settings.spec = data.cfgSpec;
+      h.settings.problem = undefined;
+      try { if (!Array.isArray(JSON.parse(data.cfgSpec || "[]"))) h.settings.problem = i18n("midi-qol.EntryEditor.Settings.SpecProblem"); }
+      catch (err) { h.settings.problem = `${i18n("midi-qol.EntryEditor.Settings.SpecProblem")}: ${(err as Error).message}`; }
+    }
+    for (const f of this.#settingsFields(h)) {
+      const name = `cfg.${f.key}`;
+      if (f.type === "checkbox") { if (name in data) h.settings.values[f.key] = !!data[name]; continue; }
+      if (!(name in data)) continue;
+      const raw = data[name];
+      h.settings.values[f.key] = f.type === "number" ? (raw === "" || raw === null ? undefined : Number(raw)) : String(raw ?? "");
+    }
   }
 
   /* The activity card: what an activity does by itself, by branch, and what was added to each branch */
@@ -938,6 +988,7 @@ export class EntryEditor extends HandlebarsApplicationMixin(ApplicationV2) {
     const draft = this.#drafts[this.#selected];
     const data = formData.object as Record<string, unknown>;
     this.#readCard(data);
+    this.#readSettings(data);
     // The sentence view's other fields are the entry open under its sentence
     if (this.#view === "sentence" && !this.#expanded) return void this.render();
     const home = this.#homes[this.#at];
@@ -1208,6 +1259,10 @@ export class EntryEditor extends HandlebarsApplicationMixin(ApplicationV2) {
       if (home.choices !== home.choicesStored) changes.midiChoices = JSON.parse(home.choices || "[]");
       // The card's edits are the activity's own data (paths relative to the activity)
       Object.assign(changes, this.#cardUpdate(home));
+      if (home.settings) {
+        if (JSON.stringify(home.settings.values) !== home.settings.stored) changes[`flags.${MODULE_ID}.config`] = home.settings.values;
+        if (home.settings.spec !== home.settings.specStored) changes[`flags.${MODULE_ID}.configSpec`] = JSON.parse(home.settings.spec || "[]");
+      }
       if (Object.keys(changes).length) await home.document.update(changes);
     }
     this.#saved = true;

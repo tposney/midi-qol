@@ -2515,3 +2515,5 @@ body.midi-qol-hide-gambit-mirrors .gps-dialog-mirror:not(.midi-qol-gambit-shown)
 .midi-qol-entry-editor .midi-qol-activity-macro ul { margin: 0.15rem 0 0.25rem 1.2rem; padding: 0; }
 .midi-qol-entry-editor .midi-qol-activity-macro p { margin: 0.1rem 0; }
 .midi-qol-entry-editor select.midi-qol-entry-multiselect { min-height: 5.5rem; }
+.midi-qol-entry-editor .midi-qol-entry-settings { margin: 0.25rem 0; }
+.midi-qol-entry-editor .midi-qol-entry-settings-spec textarea { width: 100%; font-family: monospace; }

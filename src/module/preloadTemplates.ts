@@ -55,7 +55,8 @@ export async function preloadTemplates() {
     "modules/midi-qol/templates/chat/note.hbs",
     "modules/midi-qol/templates/apps/EntryEditor/entryForm.hbs",
     "modules/midi-qol/templates/apps/EntryEditor/activityCard.hbs",
-    "modules/midi-qol/templates/apps/EntryEditor/automationNotes.hbs"
+    "modules/midi-qol/templates/apps/EntryEditor/automationNotes.hbs",
+    "modules/midi-qol/templates/apps/EntryEditor/settings.hbs"
   ];
   // `midi.section` is referenced by name from usage-card.hbs, so it needs a registered alias the way
   // dnd5e registers its own card partials as `dnd5e.card-face` and friends.

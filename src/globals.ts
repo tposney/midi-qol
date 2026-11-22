@@ -677,6 +677,9 @@ declare module "fvtt-types/configuration" {
       "midi-qol"?: {
         /** M15: entries (lib/entries) */
         entries?: import("./module/lib/entries/types.js").Entry[];
+        /** The automation's settings fields, and the owner's values (lib/entries/config.ts) */
+        configSpec?: import("./module/lib/entries/config.js").ConfigField[];
+        config?: Record<string, unknown>;
         /** M11: an overlay item (only the difference, for items with this identifier: lib/entries/rules.ts) */
         overlay?: import("./module/lib/entries/rules.js").OverlayFlag;
         /** M11c-2: added by an overlay (true), or the marker enchantment recording which overlay and version */

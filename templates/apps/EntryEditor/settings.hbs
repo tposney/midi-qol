@@ -1,0 +1,26 @@
+{{#if settings}}
+<fieldset class="midi-qol-entry-settings">
+    <legend>{{localize "midi-qol.EntryEditor.Settings.Title"}}</legend>
+    {{#each settings.fields}}
+    <div class="form-group">
+        <label>{{localize label}}</label>
+        <div class="form-fields">
+            {{#if isSelect}}<select name="{{name}}">{{#each options}}<option value="{{value}}" {{#if selected}}selected{{/if}}>{{label}}</option>{{/each}}</select>
+            {{else if isCheckbox}}<input type="checkbox" name="{{name}}" {{#if checked}}checked{{/if}}>
+            {{else if isNumber}}<input type="number" name="{{name}}" value="{{value}}">
+            {{else}}<input type="text" name="{{name}}" value="{{value}}">{{/if}}
+        </div>
+        {{#if hint}}<p class="hint">{{localize hint}}</p>{{/if}}
+    </div>
+    {{else}}
+    <p class="hint">{{localize "midi-qol.EntryEditor.Settings.None"}}</p>
+    {{/each}}
+    {{#if settings.spec}}
+    <details class="midi-qol-entry-settings-spec"><summary>{{localize "midi-qol.EntryEditor.Settings.Spec"}}</summary>
+        <textarea name="cfgSpec" rows="6" spellcheck="false">{{settings.spec}}</textarea>
+        {{#if settings.problem}}<ul class="midi-qol-entry-problems"><li>{{settings.problem}}</li></ul>{{/if}}
+        <p class="hint">{{localize "midi-qol.EntryEditor.Settings.SpecHint"}}</p>
+    </details>
+    {{/if}}
+</fieldset>
+{{/if}}

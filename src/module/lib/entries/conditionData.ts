@@ -7,6 +7,7 @@ import { outcomes } from "../outcomes.js";
 import { tagsView } from "../tags.js";
 import type { FoundEntry } from "./types.js";
 import type { EventContext } from "./engine.js";
+import { configValues, entryItem } from "./config.js";
 
 /*
  * M15 stage 6 (the spike's condition data, "The format"): what an entry's `if` and `@` values read beyond midi's
@@ -159,6 +160,8 @@ export function entryConditionExtras(f: FoundEntry, context: EventContext, apply
   }
   const entry: Record<string, unknown> = { owner: f.actor };
   if (effect) entry.origin = originView(effect, applyingActivity, originActor);
+  // The item's automation settings (lib/entries/config.ts)
+  extra.config = configValues(entryItem(f));
   return { extra, entry };
 }
 
