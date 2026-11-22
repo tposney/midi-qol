@@ -14,7 +14,7 @@ import { configSettings, onUseMacroOptions } from "../settings.js";
 import { onUseString, parseOnUse, type OnUseRow } from "../lib/entries/activityCard.js";
 import { basicsUpdate, NEW_KINDS, newActivityData, type Basics, type BasicsWhere, type NewKind } from "../lib/entries/activityCard.js";
 import { AREA_TRIGGERS, areaGroups, areaSaveActivity, areaView, editedRegion, type AreaGroup } from "../lib/entries/activityCard.js";
-import { SEEN_PRESETS } from "../lib/entries/activityCard.js";
+import { editedWeapon, SEEN_PRESETS, weaponUpdate, type DamagePart } from "../lib/entries/activityCard.js";
 import { convertActivity, editedTargeting, FROM_YOU_SHAPES, moveBranchEntry, POINT_SHAPES, ROLL_KINDS, TARGET_PRESETS, targetingUpdate, targetPreset, type RollKind, type TargetPreset, type Targeting } from "../lib/entries/activityCard.js";
 import { activityCard, activityUpdate, BRANCH_EVENT, branchEntryId, isBranchEntry, partFormula, type ActivityBranch, type ActivityData, type BuiltInPart, type CardEdits, type CardText } from "../lib/entries/activityCard.js";
 
@@ -205,6 +205,7 @@ function chipFields(fields: Record<string, unknown>, field: string): Record<stri
   if (field === "newEffect") return { newEffect: fields.newEffect };
   if (field === "area") return { area: fields.area };
   if (field === "basics") return { basics: fields.basics };
+  if (field === "weapon") return { weapon: fields.weapon };
   if (field.startsWith("onuse.")) return { onUse: fields.onUse };
   if (field.startsWith("area.")) return { areaGroup: fields.areaGroup };
   if (field === "save") return { save: fields.save };
@@ -346,7 +347,8 @@ export class EntryEditor extends HandlebarsApplicationMixin(ApplicationV2) {
       || (!!h.card?.target && (Object.keys(this.#targetingUpdates(h).activity).length > 0 || Object.keys(this.#targetingUpdates(h).item).length > 0))
       || (!!h.card?.area && Object.keys(this.#areaUpdates(h).activity).length > 0)
       || ((!!h.card?.basics || !!h.card?.basicsExtra) && (Object.keys(this.#basicsUpdates(h).activity).length > 0 || Object.keys(this.#basicsUpdates(h).item).length > 0)))
-      || (!!this.#onUse && onUseString(this.#onUse.rows) !== this.#onUse.stored);
+      || (!!this.#onUse && onUseString(this.#onUse.rows) !== this.#onUse.stored)
+      || this.#homes.some(h => Object.keys(this.#weaponUpdates(h)).length > 0);
   }
 
   /** Closing with unsaved changes asks first (`options.discard`: no question) */
@@ -720,6 +722,13 @@ export class EntryEditor extends HandlebarsApplicationMixin(ApplicationV2) {
     // A spell's level (how its damage scales), read from the item, not stored on the activity
     const item = this.#item();
     if (item && String(item.type) === "spell") data.spellLevel = Number((item.system as { level?: number }).level) || 0;
+    // A weapon's damage, which its attacks can add (one-handed, and two-handed when versatile)
+    if (item && String(item.type) === "weapon") {
+      const system = item.system as { _source?: { damage?: { base?: DamagePart, versatile?: DamagePart } }, properties?: Set<string> };
+      const damage = system._source?.damage;
+      if (damage?.base) data.weapon = { base: damage.base, ...(damage.versatile ? { versatileSource: damage.versatile } : {}),
+        ...(system.properties?.has("ver") && damage.versatile ? { versatile: damage.versatile } : {}) };
+    }
     // The area it makes, as dnd5e words it (its own template, else the item's)
     const prepared = h.document as { target?: { template?: { type?: string, size?: unknown, width?: unknown }, affects?: { type?: string, count?: unknown } }, range?: { units?: string, value?: unknown }, labels?: { target?: string }, midiProperties?: { targetMustBeSeen?: boolean } };
     if (prepared.target?.template?.type) data.areaLabel = prepared.labels?.target;
@@ -769,6 +778,7 @@ export class EntryEditor extends HandlebarsApplicationMixin(ApplicationV2) {
     const now = foundry.utils.mergeObject(source, foundry.utils.expandObject(update), { inplace: false }) as ActivityData;
     if (h.card?.target && source.targeting) now.targeting = editedTargeting(source.targeting, h.card.target, source.targetPresets);
     if (h.card?.area) now.regionBehavior = editedRegion(source.regionBehavior, h.card.area);
+    if (h.card?.weapon && source.weapon) now.weapon = editedWeapon(source.weapon, h.card.weapon);
     return now;
   }
 
@@ -963,6 +973,13 @@ export class EntryEditor extends HandlebarsApplicationMixin(ApplicationV2) {
     const abilities = Object.entries(CONFIG.DND5E.abilities as Record<string, { label?: string }>).map(([id, a]) => ({ id, label: a.label ?? id }));
     // dnd5e's lists as midi's entryOptions gives them (modules' types included)
     const damageTypes = optionList("damageTypes").map(o => ({ id: o.value, label: o.label }));
+    const w = data.type === "attack" ? data.weapon : undefined;
+    const weapon = w ? {
+      includeBase: !!data.damage?.includeBase, formula: partFormula(w.base),
+      types: damageTypes.map(t => ({ value: t.id, label: t.label, selected: (w.base.types ?? []).includes(t.id) })),
+      versatile: !!w.versatile, versatileFormula: w.versatileSource ? partFormula(w.versatileSource) : "",
+      versatileTypes: damageTypes.map(t => ({ value: t.id, label: t.label, selected: (w.versatileSource?.types ?? []).includes(t.id) }))
+    } : undefined;
     const healingTypes = optionList("healingTypes").map(o => ({ id: o.value, label: o.label }));
     const option = (value: string, label: string, selected: boolean) => ({ value, label, selected });
     const save = data.type === "save";
@@ -1031,8 +1048,17 @@ export class EntryEditor extends HandlebarsApplicationMixin(ApplicationV2) {
       newEffect: this.#newEffectContext(data),
       basics: this.#basicsContext(h),
       onUse: this.#onUseFields(),
+      weapon,
       ...this.#areaContext(data)
     };
+  }
+
+  /** The weapon's update for its damage edits (on the item) */
+  #weaponUpdates(h: Home): Record<string, unknown> {
+    const source = this.#activitySource(h);
+    const item = (h.document as { item?: Item.Implementation }).item;
+    if (!h.card?.weapon || !source.weapon || !item) return {};
+    return weaponUpdate(source.weapon, h.card.weapon, [...((item.system as { properties?: Set<string> }).properties ?? [])]);
   }
 
   /** The "+ effect" form: a condition, one of the item's effects or a new one; how long; ends on a save */
@@ -1296,6 +1322,12 @@ export class EntryEditor extends HandlebarsApplicationMixin(ApplicationV2) {
       if (key.startsWith("card.x.")) (h.cardValues ??= {})[key.slice("card.x.".length)] = value;
     if ("card.checkAbility" in data) h.card.checkAbility = String(data["card.checkAbility"] ?? "");
     if ("card.attackType" in data) h.card.attackType = String(data["card.attackType"] ?? "");
+    if ("card.weapon.formula" in data) {
+      const list = (key: string) => ([] as unknown[]).concat(data[key] ?? []).map(String).filter(Boolean);
+      h.card.includeBase = !!data["card.weapon.includeBase"];
+      h.card.weapon = { formula: String(data["card.weapon.formula"] ?? ""), types: list("card.weapon.types"), versatile: !!data["card.weapon.versatile"],
+        ...("card.weapon.versatileFormula" in data ? { versatileFormula: String(data["card.weapon.versatileFormula"] ?? ""), versatileTypes: list("card.weapon.versatileTypes") } : {}) };
+    }
     if ("card.onuse.name" in data && this.#onUse) {
       const index = this.#cardField?.startsWith("onuse.") ? Number(this.#cardField.slice(6)) : -1;
       const row = this.#onUse.rows[index];
@@ -2050,6 +2082,9 @@ export class EntryEditor extends HandlebarsApplicationMixin(ApplicationV2) {
       const areaUpdate = this.#areaUpdates(home);
       if (areaUpdate.newActivity) await (home.document as { item?: Item.Implementation }).item?.update({ [`system.activities.${areaUpdate.newActivity._id}`]: areaUpdate.newActivity });
       Object.assign(changes, areaUpdate.activity);
+      // The weapon's damage
+      const weaponChanges = this.#weaponUpdates(home);
+      if (Object.keys(weaponChanges).length) await (home.document as { item?: Item.Implementation }).item?.update(weaponChanges);
       // Its basics: the activity's own, or the spell's / item's
       const basicsUpdates = this.#basicsUpdates(home);
       Object.assign(changes, basicsUpdates.activity);

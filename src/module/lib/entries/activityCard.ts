@@ -52,6 +52,8 @@ export interface ActivityData {
   areaLabel?: string;
   /** Its targeting as dnd5e resolves it (the editor fills it from the prepared activity) */
   targeting?: Targeting;
+  /** A weapon's damage the attack adds (includeBase): one-handed, and two-handed when versatile (with its stored data) */
+  weapon?: { base: DamagePart, versatile?: DamagePart, versatileSource?: DamagePart };
   /** Registered targeting presets to read it with */
   targetPresets?: readonly TargetPresetDef[];
 }
@@ -117,8 +119,48 @@ function damageParts(data: ActivityData, t: CardText, kind: "damage" | "half"): 
     kind, field: `part.${i}`,
     text: t.say(kind === "half" ? "Activity.HalfDamage" : "Activity.Damage", { formula: partFormula(part) || "?", type: (part.types ?? []).map(id => t.damageType(id)).join("/") }) + scales(part, data, t)
   } satisfies BuiltInPart));
-  if (data.damage?.includeBase && data.type === "attack") parts.unshift({ kind, field: "", text: t.say(kind === "half" ? "Activity.HalfBase" : "Activity.BaseDamage") });
+  if (data.damage?.includeBase && data.type === "attack") parts.unshift({ kind, field: "weapon", text: weaponDamageText(data, t, kind) });
   return parts;
+}
+
+/** The weapon's damage the attack adds: "the weapon's 1d8 Slashing damage (1d10 two-handed)" */
+function weaponDamageText(data: ActivityData, t: CardText, kind: "damage" | "half"): string {
+  const w = data.weapon;
+  if (!w || !partFormula(w.base)) return t.say(kind === "half" ? "Activity.HalfBase" : "Activity.BaseDamage");
+  const type = (w.base.types ?? []).map(id => t.damageType(id)).join("/");
+  const versatile = w.versatile && partFormula(w.versatile)
+    ? ` ${t.say("Activity.Versatile", { formula: partFormula(w.versatile), type: w.versatile.types?.length ? w.versatile.types.map(id => t.damageType(id)).join("/") : type })}` : "";
+  return t.say(kind === "half" ? "Activity.HalfWeaponDamage" : "Activity.WeaponDamage", { formula: partFormula(w.base), type }) + versatile;
+}
+
+/** The weapon's damage edits: one-handed formula and types, versatile (and its two-handed formula and types) */
+export interface WeaponEdits { formula?: string, types?: string[], versatile?: boolean, versatileFormula?: string, versatileTypes?: string[] }
+
+/** The weapon's update for the edits (only what changed): system.damage.base / versatile, the versatile property */
+export function editedWeapon(weapon: NonNullable<ActivityData["weapon"]>, edits: WeaponEdits | undefined): NonNullable<ActivityData["weapon"]> {
+  if (!edits) return weapon;
+  const same = (a: unknown, b: unknown) => JSON.stringify(a) === JSON.stringify(b);
+  let base = weapon.base;
+  if (edits.formula !== undefined && edits.formula !== partFormula(base)) base = partWithFormula(base, edits.formula);
+  if (edits.types && !same(edits.types, base.types ?? [])) base = { ...base, types: edits.types };
+  let stored: DamagePart = weapon.versatileSource ?? { number: null, denomination: null, bonus: "", types: [], custom: { enabled: false, formula: "" } };
+  if (edits.versatileFormula !== undefined && edits.versatileFormula !== partFormula(stored)) stored = partWithFormula(stored, edits.versatileFormula);
+  if (edits.versatileTypes && !same(edits.versatileTypes, stored.types ?? [])) stored = { ...stored, types: edits.versatileTypes };
+  const isVersatile = edits.versatile ?? !!weapon.versatile;
+  return { base, versatileSource: stored, ...(isVersatile ? { versatile: stored } : {}) };
+}
+
+export function weaponUpdate(weapon: NonNullable<ActivityData["weapon"]>, edits: WeaponEdits, properties: readonly string[]): Record<string, unknown> {
+  const update: Record<string, unknown> = {};
+  const same = (a: unknown, b: unknown) => JSON.stringify(a) === JSON.stringify(b);
+  const now = editedWeapon(weapon, edits);
+  if (!same(now.base, weapon.base)) update["system.damage.base"] = now.base;
+  const isVersatile = !!now.versatile;
+  if (isVersatile !== properties.includes("ver"))
+    update["system.properties"] = isVersatile ? [...properties.filter(p => p !== "ver"), "ver"] : properties.filter(p => p !== "ver");
+  if (weapon.versatileSource ? !same(now.versatileSource, weapon.versatileSource) : !!now.versatile && !!partFormula(now.versatileSource!))
+    update["system.damage.versatile"] = now.versatileSource;
+  return update;
 }
 
 function effects(data: ActivityData, t: CardText, filter: (onSave: boolean) => boolean): BuiltInPart[] {
@@ -255,6 +297,10 @@ export interface CardEdits {
   area?: AreaEdits;
   /** Activation, duration, concentration, uses (the basics chip) */
   basics?: Partial<Basics>;
+  /** The weapon's damage (an attack adding it) */
+  weapon?: WeaponEdits;
+  /** Whether the attack adds the weapon's damage */
+  includeBase?: boolean;
   /** Registered basics fields' values (basicsFields service), by field id */
   basicsExtra?: Record<string, unknown>;
   attackType?: string;
@@ -284,6 +330,7 @@ export function activityUpdate(data: ActivityData, edits: CardEdits): Record<str
   if (edits.dcCalculation !== undefined && edits.dcCalculation !== (dc?.calculation ?? "")) update[`${dcOf}.dc.calculation`] = edits.dcCalculation;
   if (edits.dcFormula !== undefined && edits.dcFormula !== (dc?.formula ?? "")) update[`${dcOf}.dc.formula`] = edits.dcFormula;
   if (edits.onSave !== undefined && edits.onSave !== (data.damage?.onSave ?? "half")) update["damage.onSave"] = edits.onSave;
+  if (edits.includeBase !== undefined && edits.includeBase !== !!data.damage?.includeBase) update["damage.includeBase"] = edits.includeBase;
   if (edits.parts) {
     const parts = (data.damage?.parts ?? []).map((part, i) => {
       const edit = edits.parts![i];

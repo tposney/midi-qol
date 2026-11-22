@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { areaGroups, areaRules, areaSaveActivity, basicsUpdate, NEW_KINDS, newActivityData, onUseString, parseOnUse } from "../src/module/lib/entries/activityCard.js";
+import { weaponUpdate } from "../src/module/lib/entries/activityCard.js";
 import { MIDI_EFFECT_PRESETS, signed } from "../src/module/lib/entries/effectPresets.js";
 import { activityEffects, editedTargeting, mainBranch, newEffectData, targetingText, targetingUpdate, targetPreset } from "../src/module/lib/entries/activityCard.js";
 import { activityCard, activityUpdate, branchFor, convertActivity, isBranchEntry, partFormula, partWithFormula, type ActivityData, type CardText } from "../src/module/lib/entries/activityCard.js";
@@ -202,5 +203,17 @@ describe("activity cards", () => {
     expect(editedTargeting(one, { preset: "several", count: 3 })).toMatchObject({ count: 3, mustSee: true });
     expect(editedTargeting({ ...one, mustSee: false }, { see: true })).toMatchObject({ mustSee: true });
     expect(targetingText({ ...one, templateType: "sphere", size: 20 }, t)).not.toContain("youCanSee");
+  });
+
+  it("a weapon's damage: worded with its two-handed damage; edits update the weapon and its versatile property", () => {
+    const weapon = { base: { number: 1, denomination: 8, bonus: "", types: ["slashing"] }, versatileSource: { number: 1, denomination: 10, bonus: "", types: [] } };
+    const data = { type: "attack", damage: { includeBase: true, parts: [] }, weapon: { ...weapon, versatile: weapon.versatileSource } } as any;
+    const text = activityCard(data, t).branches[0].builtIn[0].text;
+    expect(text).toContain("1d8");
+    expect(text).toContain("1d10");
+    expect(weaponUpdate(weapon, { versatile: true, versatileFormula: "1d12" }, ["fin"])).toEqual({
+      "system.properties": ["fin", "ver"], "system.damage.versatile": { number: 1, denomination: 12, bonus: "", types: [], custom: { enabled: false, formula: "" } } });
+    expect(weaponUpdate({ ...weapon, versatile: weapon.versatileSource }, { versatile: false }, ["ver"])).toEqual({ "system.properties": [] });
+    expect(weaponUpdate(weapon, { formula: "2d6" }, [])).toEqual({ "system.damage.base": { number: 2, denomination: 6, bonus: "", types: ["slashing"], custom: { enabled: false, formula: "" } } });
   });
 });
