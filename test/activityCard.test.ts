@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { editedTargeting, targetingUpdate, targetPreset } from "../src/module/lib/entries/activityCard.js";
 import { activityCard, activityUpdate, branchFor, convertActivity, isBranchEntry, partFormula, partWithFormula, type ActivityData, type CardText } from "../src/module/lib/entries/activityCard.js";
 
 const t: CardText = {
@@ -88,5 +89,25 @@ describe("activity cards", () => {
     expect(branchFor("saveSucceeded", "attack")).toBe("missed");
     expect(branchFor("each", "save")).toBe("saveFailed");
     expect(branchFor("hit", "damage")).toBe("each");
+  });
+
+  it("targeting presets: read exactly, custom otherwise", () => {
+    expect(targetPreset({ affectsType: "creature", count: 1, rangeUnits: "ft", rangeValue: 60 })).toBe("one");
+    expect(targetPreset({ affectsType: "creature", count: 3, rangeUnits: "ft", rangeValue: 30 })).toBe("several");
+    expect(targetPreset({ affectsType: "creature", count: 1, rangeUnits: "touch" })).toBe("touch");
+    expect(targetPreset({ affectsType: "self", rangeUnits: "self" })).toBe("self");
+    expect(targetPreset({ affectsType: "creature", templateType: "sphere", size: 20, rangeUnits: "ft", rangeValue: 150 })).toBe("point");
+    expect(targetPreset({ templateType: "cone", size: 15, rangeUnits: "self" })).toBe("fromYou");
+    expect(targetPreset({ templateType: "radius", size: 15, rangeUnits: "self" })).toBe("emanation");
+    expect(targetPreset({ templateType: "wall", rangeUnits: "ft", rangeValue: 120 })).toBe("custom");
+  });
+
+  it("a preset chosen: its defaults, what fits kept; written to the spell's own fields or the activity's", () => {
+    const point = editedTargeting({ affectsType: "creature", count: 1, rangeUnits: "ft", rangeValue: 90 }, { preset: "point" });
+    expect(point).toMatchObject({ templateType: "sphere", size: 20, rangeUnits: "ft", rangeValue: 90 });
+    const line = editedTargeting({}, { preset: "fromYou", shape: "line", size: 100 });
+    expect(line).toMatchObject({ templateType: "line", size: 100, width: 5, rangeUnits: "self" });
+    expect(targetingUpdate(point, true)).toMatchObject({ "system.target.template.type": "sphere", "system.range.value": "90" });
+    expect(targetingUpdate(point, false)).toMatchObject({ "target.override": true, "target.template.type": "sphere", "range.units": "ft" });
   });
 });

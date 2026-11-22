@@ -49,6 +49,8 @@ export interface ActivityData {
   behaviors?: { type: string, config?: { effects?: string[] } }[];
   /** The area it makes, worded ("15 ft emanation"), when it makes one */
   areaLabel?: string;
+  /** Its targeting as dnd5e resolves it (the editor fills it from the prepared activity) */
+  targeting?: Targeting;
 }
 
 /** What the area an activity makes does: midi's rules, dnd5e's effects while inside */
@@ -76,7 +78,7 @@ export type BuiltInKind = "save" | "attack" | "check" | "damage" | "healing" | "
 /** One thing the activity does by itself; `field`: the card field that edits it */
 export interface BuiltInPart { kind: BuiltInKind, text: string, field?: string }
 export interface CardBranch { branch: ActivityBranch, builtIn: BuiltInPart[] }
-export interface ActivityCardModel { when: BuiltInPart[], branches: CardBranch[], region?: CardRegion }
+export interface ActivityCardModel { when: BuiltInPart[], branches: CardBranch[], region?: CardRegion, targeting?: BuiltInPart }
 
 export interface CardText {
   ability(id: string): string;
@@ -151,7 +153,8 @@ export function cardRegion(data: ActivityData, t: CardText): CardRegion | undefi
 export function activityCard(data: ActivityData, t: CardText): ActivityCardModel {
   const card = activityCardOf(data, t);
   const region = cardRegion(data, t);
-  return region ? { ...card, region } : card;
+  const targeting = data.targeting ? { kind: "none" as const, text: targetingText(data.targeting, t), field: "target" } : undefined;
+  return { ...card, ...(region ? { region } : {}), ...(targeting ? { targeting } : {}) };
 }
 
 function activityCardOf(data: ActivityData, t: CardText): ActivityCardModel {
@@ -233,6 +236,8 @@ function activityCardOf(data: ActivityData, t: CardText): ActivityCardModel {
 export interface CardEdits {
   /** Another roll for the activity: converted on save (same id) */
   convertTo?: RollKind;
+  /** The targeting chip's edits */
+  target?: TargetEdits;
   attackType?: string;
   attackClass?: string;
   saveAbility?: string[];
@@ -350,4 +355,87 @@ export function moveBranchEntry(entry: Entry, to: string): Entry {
   const target = branch ? branchFor(branch, to) : undefined;
   if (!branch || !target || target === branch) return entry;
   return { ...entry, id: branchEntryId(target), on: BRANCH_EVENT[target] };
+}
+
+/* Targeting presets (the sentence view's "Targets" chip): one dropdown for dnd5e's target, template and range */
+
+/** An activity's targeting as dnd5e resolves it (its own, else its item's) */
+export interface Targeting {
+  affectsType?: string;
+  count?: string | number | null;
+  templateType?: string;
+  size?: string | number | null;
+  width?: string | number | null;
+  rangeUnits?: string;
+  rangeValue?: string | number | null;
+}
+export type TargetPreset = "self" | "touch" | "one" | "several" | "point" | "fromYou" | "emanation" | "custom";
+export const TARGET_PRESETS: readonly TargetPreset[] = ["one", "several", "self", "touch", "point", "fromYou", "emanation"];
+export const POINT_SHAPES = ["sphere", "cube", "cylinder"];
+export const FROM_YOU_SHAPES = ["cone", "line"];
+const EMANATION_SHAPES = ["radius", "emanationNoTemplate"];
+
+/** The preset a targeting reads as; data no preset describes exactly is "custom" (never forced into one) */
+export function targetPreset(t: Targeting): TargetPreset {
+  const shape = t.templateType || "";
+  const distance = t.rangeUnits === "ft" || t.rangeUnits === "m";
+  if (shape) {
+    if (t.rangeUnits === "self") return FROM_YOU_SHAPES.includes(shape) ? "fromYou" : EMANATION_SHAPES.includes(shape) ? "emanation" : "custom";
+    return POINT_SHAPES.includes(shape) && distance ? "point" : "custom";
+  }
+  if (t.affectsType === "self") return "self";
+  const count = Number(t.count || 1);
+  if (t.rangeUnits === "touch") return count <= 1 ? "touch" : "custom";
+  if (distance) return count <= 1 ? "one" : "several";
+  return t.rangeUnits === "self" && !t.affectsType ? "self" : "custom";
+}
+
+/** What the targeting says: "one creature within 60 ft", "a 20 ft sphere at a point within 150 ft" */
+export function targetingText(tg: Targeting, t: CardText): string {
+  const preset = targetPreset(tg);
+  const who = t.say(`Activity.Target.who.${["enemy", "ally"].includes(tg.affectsType ?? "") ? tg.affectsType : "creature"}${Number(tg.count || 1) > 1 ? "s" : ""}`);
+  const range = `${tg.rangeValue ?? "?"} ${tg.rangeUnits ?? ""}`.trim();
+  return t.say(`Activity.Target.${preset}`, { who, count: String(tg.count ?? ""), range, shape: t.say(`Activity.Shape.${tg.templateType || "sphere"}`), size: String(tg.size ?? "?"), width: String(tg.width ?? "") });
+}
+
+/** The edits the targeting chip makes */
+export interface TargetEdits { preset?: TargetPreset, count?: number, range?: number, shape?: string, size?: number, width?: number, who?: string }
+
+/** The targeting after the chip's edits (a preset changed: its own defaults, kept from before where they fit) */
+export function editedTargeting(current: Targeting, edits: TargetEdits | undefined): Targeting {
+  if (!edits?.preset && !edits) return current;
+  const preset = edits.preset ?? targetPreset(current);
+  if (preset === "custom") return current;
+  const who = edits.who ?? (["enemy", "ally", "creature"].includes(current.affectsType ?? "") ? current.affectsType : "creature");
+  const range = edits.range ?? (Number(current.rangeValue) || 30);
+  const size = edits.size ?? (Number(current.size) || (preset === "fromYou" ? 15 : preset === "emanation" ? 10 : 20));
+  switch (preset) {
+    case "self": return { affectsType: "self", count: "", templateType: "", rangeUnits: "self", rangeValue: null };
+    case "touch": return { affectsType: who, count: 1, templateType: "", rangeUnits: "touch", rangeValue: null };
+    case "one": return { affectsType: who, count: 1, templateType: "", rangeUnits: "ft", rangeValue: range };
+    case "several": return { affectsType: who, count: edits.count ?? Math.max(2, Number(current.count) || 2), templateType: "", rangeUnits: "ft", rangeValue: range };
+    case "point": return { affectsType: who, count: "", templateType: POINT_SHAPES.includes(edits.shape ?? "") ? edits.shape : POINT_SHAPES.includes(current.templateType ?? "") ? current.templateType : "sphere", size, rangeUnits: "ft", rangeValue: edits.range ?? (Number(current.rangeValue) || 60) };
+    case "fromYou": {
+      const shape = FROM_YOU_SHAPES.includes(edits.shape ?? "") ? edits.shape! : FROM_YOU_SHAPES.includes(current.templateType ?? "") ? current.templateType! : "cone";
+      return { affectsType: who, count: "", templateType: shape, size, width: shape === "line" ? edits.width ?? (Number(current.width) || 5) : null, rangeUnits: "self", rangeValue: null };
+    }
+    case "emanation": return { affectsType: who, count: "", templateType: "radius", size, rangeUnits: "self", rangeValue: null };
+  }
+}
+
+/** The update a targeting makes: on the item (a spell's activity that uses the spell's) or the activity (its own) */
+export function targetingUpdate(tg: Targeting, onItem: boolean): Record<string, unknown> {
+  const target = onItem ? "system.target" : "target";
+  const range = onItem ? "system.range" : "range";
+  return {
+    ...(onItem ? {} : { "target.override": true, "range.override": true }),
+    [`${target}.affects.type`]: tg.affectsType ?? "",
+    [`${target}.affects.count`]: tg.count === "" || tg.count === null || tg.count === undefined ? "" : String(tg.count),
+    [`${target}.template.type`]: tg.templateType ?? "",
+    [`${target}.template.size`]: tg.templateType ? String(tg.size ?? "") : "",
+    [`${target}.template.width`]: tg.templateType === "line" ? String(tg.width ?? "") : "",
+    [`${target}.template.units`]: "ft",
+    [`${range}.units`]: tg.rangeUnits ?? "",
+    [`${range}.value`]: tg.rangeValue === null || tg.rangeValue === undefined ? "" : String(tg.rangeValue)
+  };
 }

@@ -9,7 +9,7 @@ import { ConditionEditor } from "./ConditionEditor.js";
 import { activityCardContributor, contributedActivityCard, optionList } from "../lib/entries/editorServices.js";
 import { automationNotes } from "../lib/entries/automations.js";
 import { configOptions, type ConfigField } from "../lib/entries/config.js";
-import { convertActivity, moveBranchEntry, ROLL_KINDS, type RollKind } from "../lib/entries/activityCard.js";
+import { convertActivity, editedTargeting, FROM_YOU_SHAPES, moveBranchEntry, POINT_SHAPES, ROLL_KINDS, TARGET_PRESETS, targetingUpdate, targetPreset, type RollKind, type TargetPreset, type Targeting } from "../lib/entries/activityCard.js";
 import { activityCard, activityUpdate, BRANCH_EVENT, branchEntryId, isBranchEntry, partFormula, type ActivityBranch, type ActivityData, type BuiltInPart, type CardEdits, type CardText } from "../lib/entries/activityCard.js";
 
 /*
@@ -195,6 +195,7 @@ function chipFields(fields: Record<string, unknown>, field: string): Record<stri
   if ("contributed" in fields) return { contributed: fields.contributed };
   // What happens to the target: the roll, and that roll's own fields
   if (field === "roll") return { roll: fields.roll, save: fields.save, check: fields.check };
+  if (field === "target") return { target: fields.target };
   if (field === "save") return { save: fields.save };
   if (field === "dc") return fields.save ? { save: fields.save } : { check: fields.check };
   if (field === "check") return { check: fields.check };
@@ -216,7 +217,7 @@ function chipFields(fields: Record<string, unknown>, field: string): Record<stri
 function cardFieldName(part: string): string {
   if (part.startsWith("part.")) return `card.${part}.formula`;
   if (part.startsWith("effect.")) return `card.${part}`;
-  const named: Record<string, string> = { roll: "rollKind", save: "saveAbility", check: "checkAbility", dc: "dcCalculation", healing: "healing.formula" };
+  const named: Record<string, string> = { target: "target.preset", roll: "rollKind", save: "saveAbility", check: "checkAbility", dc: "dcCalculation", healing: "healing.formula" };
   return `card.${named[part] ?? part}`;
 }
 
@@ -306,7 +307,8 @@ export class EntryEditor extends HandlebarsApplicationMixin(ApplicationV2) {
     return this.#homes.some(h => h.choices !== h.choicesStored || JSON.stringify(h.drafts.map(d => this.#entryForSave(d))) !== h.stored
       || Object.keys(this.#cardUpdate(h)).length > 0
       || (!!h.settings && (JSON.stringify(h.settings.values) !== h.settings.stored || h.settings.spec !== h.settings.specStored))
-      || (!!h.changes && JSON.stringify(h.changes.rows) !== h.changes.stored));
+      || (!!h.changes && JSON.stringify(h.changes.rows) !== h.changes.stored)
+      || (!!h.card?.target && (Object.keys(this.#targetingUpdates(h).activity).length > 0 || Object.keys(this.#targetingUpdates(h).item).length > 0)));
   }
 
   /** Closing with unsaved changes asks first (`options.discard`: no question) */
@@ -668,8 +670,14 @@ export class EntryEditor extends HandlebarsApplicationMixin(ApplicationV2) {
     const item = this.#item();
     if (item && String(item.type) === "spell") data.spellLevel = Number((item.system as { level?: number }).level) || 0;
     // The area it makes, as dnd5e words it (its own template, else the item's)
-    const prepared = h.document as { target?: { template?: { type?: string } }, labels?: { target?: string } };
+    const prepared = h.document as { target?: { template?: { type?: string, size?: unknown, width?: unknown }, affects?: { type?: string, count?: unknown } }, range?: { units?: string, value?: unknown }, labels?: { target?: string } };
     if (prepared.target?.template?.type) data.areaLabel = prepared.labels?.target;
+    // Its targeting as dnd5e resolves it
+    data.targeting = {
+      affectsType: prepared.target?.affects?.type ?? "", count: prepared.target?.affects?.count as Targeting["count"],
+      templateType: prepared.target?.template?.type ?? "", size: prepared.target?.template?.size as Targeting["size"], width: prepared.target?.template?.width as Targeting["width"],
+      rangeUnits: prepared.range?.units ?? "", rangeValue: prepared.range?.value as Targeting["rangeValue"]
+    };
     return data;
   }
 
@@ -705,7 +713,26 @@ export class EntryEditor extends HandlebarsApplicationMixin(ApplicationV2) {
     const source = this.#convertedSource(h);
     // Unconverted: the card's update as saved (a module's own fields through its update())
     const update = !h.card ? {} : converting ? activityUpdate(source, { ...h.card, convertTo: undefined }) : this.#cardUpdate(h);
-    return foundry.utils.mergeObject(source, foundry.utils.expandObject(update), { inplace: false }) as ActivityData;
+    const now = foundry.utils.mergeObject(source, foundry.utils.expandObject(update), { inplace: false }) as ActivityData;
+    if (h.card?.target && source.targeting) now.targeting = editedTargeting(source.targeting, h.card.target);
+    return now;
+  }
+
+  /** Whether an activity's targeting is its spell's (dnd5e: a spell's activity without its own reads the spell's) */
+  #targetingOnItem(h: Home): boolean {
+    const activity = h.document as { _source?: { target?: { override?: boolean } }, item?: Item.Implementation };
+    return !!activity.item && String(activity.item.type) === "spell" && !activity._source?.target?.override;
+  }
+
+  /** The targeting chip's update: { activity, item } paths, or nothing when it wasn't edited */
+  #targetingUpdates(h: Home): { activity: Record<string, unknown>, item: Record<string, unknown> } {
+    const source = this.#activitySource(h);
+    if (!h.card?.target || !source.targeting) return { activity: {}, item: {} };
+    const targeting = editedTargeting(source.targeting, h.card.target);
+    if (JSON.stringify(targeting) === JSON.stringify(source.targeting)) return { activity: {}, item: {} };
+    const onItem = this.#targetingOnItem(h);
+    const update = targetingUpdate(targeting, onItem);
+    return onItem ? { activity: {}, item: update } : { activity: update, item: {} };
   }
 
   /** Replaces the activity with its conversion (same id), with the card's edits, entries and choices */
@@ -717,8 +744,11 @@ export class EntryEditor extends HandlebarsApplicationMixin(ApplicationV2) {
     if ("midiEntries" in changes) converted.midiEntries = changes.midiEntries;
     if ("midiChoices" in changes) converted.midiChoices = changes.midiChoices;
     const edits = activityUpdate(converted as unknown as ActivityData, { ...h.card!, convertTo: undefined });
-    const data = foundry.utils.mergeObject(converted, foundry.utils.expandObject(edits), { inplace: false });
+    // Its targeting edited too: the activity's own part goes into the replacement, the spell's onto the item
+    const targeting = this.#targetingUpdates(h);
+    const data = foundry.utils.mergeObject(converted, foundry.utils.expandObject({ ...edits, ...targeting.activity }), { inplace: false });
     await item.update({ [`system.activities.${activity.id}`]: new foundry.data.operators.ForcedReplacement(data) });
+    if (Object.keys(targeting.item).length) await item.update(targeting.item);
   }
 
   #cardText(): CardText {
@@ -775,11 +805,12 @@ export class EntryEditor extends HandlebarsApplicationMixin(ApplicationV2) {
       };
     });
     const labels = (h.document as { labels?: Record<string, unknown> }).labels ?? {};
-    const basics = [labels.activation, labels.range, labels.target, labels.concentrationDuration ?? labels.duration]
+    // Range and targets are the Targets line's
+    const basics = [labels.activation, labels.concentrationDuration ?? labels.duration]
       .filter((v): v is string => typeof v === "string" && !!v).join(" · ");
     const opened = this.#cardOpen === at ? { ...this.#openFields(h, data), home: at } : undefined;
     const all = this.#cardField === "all" || !this.#cardField;
-    return { home: at, when: model.when.map(chip), branches, basics, midi: this.#midiProperties(h), region: model.region, macros: this.#cardMacros(h),
+    return { home: at, when: model.when.map(chip), branches, basics, targeting: model.targeting ? chip(model.targeting) : undefined, midi: this.#midiProperties(h), region: model.region, macros: this.#cardMacros(h),
       open: opened && all ? opened : undefined,
       popover: opened && !all ? { place: this.#cardPlace, fields: { ...chipFields(opened, this.#cardField!), home: at, noAdd: true } } : undefined };
   }
@@ -835,7 +866,22 @@ export class EntryEditor extends HandlebarsApplicationMixin(ApplicationV2) {
       ...abilities.map(a => option(a.id, a.label, calculation === a.id)),
       option("", i18n("midi-qol.EntryEditor.Activity.DCField.custom"), calculation === "")];
     const attack = data.type === "attack";
+    const tg = data.targeting;
+    const preset: TargetPreset = tg ? targetPreset(tg) : "custom";
+    const shapes = preset === "point" ? POINT_SHAPES : preset === "fromYou" ? FROM_YOU_SHAPES : [];
     return {
+      target: tg ? {
+        presets: [...TARGET_PRESETS, ...(preset === "custom" ? ["custom"] : [])].map(p => option(p, i18n(`midi-qol.EntryEditor.Activity.TargetPreset.${p}`), p === preset)),
+        custom: preset === "custom",
+        count: preset === "several" ? Number(tg.count) || 2 : undefined,
+        range: ["one", "several", "point"].includes(preset) ? Number(tg.rangeValue) || "" : undefined,
+        shapes: shapes.length ? shapes.map(s => option(s, i18n(`midi-qol.EntryEditor.Activity.Shape.${s}`), tg.templateType === s)) : undefined,
+        size: ["point", "fromYou", "emanation"].includes(preset) ? Number(tg.size) || "" : undefined,
+        width: tg.templateType === "line" ? Number(tg.width) || "" : undefined,
+        hasSize: ["point", "fromYou", "emanation"].includes(preset), hasWidth: tg.templateType === "line", hasRange: ["one", "several", "point"].includes(preset),
+        who: ["self", "custom"].includes(preset) ? undefined : ["creature", "enemy", "ally"].map(w => option(w, i18n(`midi-qol.EntryEditor.Activity.Target.who.${w}s`), (tg.affectsType || "creature") === w)),
+        onItem: undefined
+      } : undefined,
       roll: {
         kinds: ROLL_KINDS.map(k => option(k, i18n(`midi-qol.EntryEditor.Activity.Roll.${k}`), data.type === k)),
         attack: attack ? {
@@ -871,6 +917,20 @@ export class EntryEditor extends HandlebarsApplicationMixin(ApplicationV2) {
       if (key.startsWith("card.x.")) (h.cardValues ??= {})[key.slice("card.x.".length)] = value;
     if ("card.checkAbility" in data) h.card.checkAbility = String(data["card.checkAbility"] ?? "");
     if ("card.attackType" in data) h.card.attackType = String(data["card.attackType"] ?? "");
+    if (Object.keys(data).some(k => k.startsWith("card.target."))) {
+      const target = { ...(h.card.target ?? {}) };
+      const num = (key: string) => { const v = data[`card.target.${key}`]; return v === undefined || v === "" || v === null ? undefined : Number(v); };
+      const preset = data["card.target.preset"] as TargetPreset | undefined;
+      // Another preset starts from its own defaults
+      if (preset && preset !== "custom" && preset !== (target.preset ?? targetPreset(this.#activitySource(h).targeting ?? {}))) h.card.target = { preset };
+      else {
+        if (preset && preset !== "custom") target.preset = preset;
+        for (const key of ["count", "range", "size", "width"] as const) if (num(key) !== undefined) target[key] = num(key);
+        if (typeof data["card.target.shape"] === "string") target.shape = data["card.target.shape"] as string;
+        if (typeof data["card.target.who"] === "string") target.who = data["card.target.who"] as string;
+        h.card.target = target;
+      }
+    }
     if ("card.attackClass" in data) h.card.attackClass = String(data["card.attackClass"] ?? "");
     if ("card.rollKind" in data) {
       const to = String(data["card.rollKind"] ?? "") as RollKind;
@@ -1519,6 +1579,10 @@ export class EntryEditor extends HandlebarsApplicationMixin(ApplicationV2) {
       }
       // The card's edits are the activity's own data (paths relative to the activity)
       Object.assign(changes, this.#cardUpdate(home));
+      // Its targeting: the activity's own, or the spell's
+      const targeting = this.#targetingUpdates(home);
+      Object.assign(changes, targeting.activity);
+      if (Object.keys(targeting.item).length) await (home.document as { item?: Item.Implementation }).item?.update(targeting.item);
       if (home.changes && JSON.stringify(home.changes.rows) !== home.changes.stored) changes[home.changes.path] = home.changes.rows.filter(row => String(row.key ?? "").trim());
       if (home.settings) {
         if (JSON.stringify(home.settings.values) !== home.settings.stored) changes[`flags.${MODULE_ID}.config`] = home.settings.values;

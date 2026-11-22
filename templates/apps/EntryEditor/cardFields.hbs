@@ -1,3 +1,16 @@
+        {{#if target}}
+        <div class="form-group">
+            <label>{{localize "midi-qol.EntryEditor.Activity.TargetField"}}</label>
+            <div class="form-fields"><select name="card.target.preset">{{#each target.presets}}<option value="{{value}}" {{#if selected}}selected{{/if}}>{{label}}</option>{{/each}}</select></div>
+        </div>
+        {{#if target.custom}}<p class="hint">{{localize "midi-qol.EntryEditor.Activity.TargetCustom"}}</p>{{/if}}
+        {{#if target.count}}<div class="form-group"><label>{{localize "midi-qol.EntryEditor.Activity.TargetCount"}}</label><div class="form-fields"><input type="number" name="card.target.count" value="{{target.count}}" min="2" step="1"></div></div>{{/if}}
+        {{#if target.shapes}}<div class="form-group"><label>{{localize "midi-qol.EntryEditor.Activity.TargetShape"}}</label><div class="form-fields"><select name="card.target.shape">{{#each target.shapes}}<option value="{{value}}" {{#if selected}}selected{{/if}}>{{label}}</option>{{/each}}</select></div></div>{{/if}}
+        {{#if target.hasSize}}<div class="form-group"><label>{{localize "midi-qol.EntryEditor.Activity.TargetSize"}}</label><div class="form-fields"><input type="number" name="card.target.size" value="{{target.size}}" min="0" step="5"></div></div>{{/if}}
+        {{#if target.hasWidth}}<div class="form-group"><label>{{localize "midi-qol.EntryEditor.Activity.TargetWidth"}}</label><div class="form-fields"><input type="number" name="card.target.width" value="{{target.width}}" min="0" step="5"></div></div>{{/if}}
+        {{#if target.hasRange}}<div class="form-group"><label>{{localize "midi-qol.EntryEditor.Activity.TargetRange"}}</label><div class="form-fields"><input type="number" name="card.target.range" value="{{target.range}}" min="0" step="5"></div></div>{{/if}}
+        {{#if target.who}}<div class="form-group"><label>{{localize "midi-qol.EntryEditor.Activity.TargetWho"}}</label><div class="form-fields"><select name="card.target.who">{{#each target.who}}<option value="{{value}}" {{#if selected}}selected{{/if}}>{{label}}</option>{{/each}}</select></div></div>{{/if}}
+        {{/if}}
         {{#if roll}}
         <div class="form-group">
             <label>{{localize "midi-qol.EntryEditor.Activity.RollField"}}</label>
