@@ -2495,3 +2495,7 @@ body.midi-qol-hide-gambit-mirrors .gps-dialog-mirror:not(.midi-qol-gambit-shown)
 .midi-qol-entry-editor .midi-qol-entry-picker-choices button { flex: 0 0 auto; width: auto; min-height: 0; line-height: 1.3; padding: 3px 8px; }
 .midi-qol-entry-editor .midi-qol-entry-picker-choices button.active { background: rgba(242, 178, 102, 0.35); border-color: rgba(190, 120, 30, 0.9); }
 
+.midi-qol-visuals-editor .midi-qol-visuals-root { display: flex; flex-direction: column; gap: 0.5rem; }
+.midi-qol-visuals-editor .midi-qol-visual-warning { color: var(--color-level-warning, #d9a400); margin: 0; }
+.midi-qol-visuals-editor .midi-qol-visual-less { flex: 0 0 auto; white-space: nowrap; }
+.midi-qol-visuals-editor .midi-qol-visual-number { flex: 0 0 4rem; }

@@ -143,6 +143,7 @@
     "queueActorEffects",
     "raceOrType",
     "reactionDialog",
+    "refreshTokenVisuals",
     "registerActivityPolicy",
     "registerCardAction",
     "registerCardButtonRule",
@@ -197,6 +198,7 @@
     "tokenForActor",
     "tokenName",
     "tokenNameMarkup",
+    "tokenVisuals",
     "totalCoverTargets",
     "TrapWorkflow",
     "turnEvents",
@@ -358,6 +360,7 @@
     "showGM",
     "TargetConfirmation",
     "tokenDocumentSets",
+    "TokenVisuals",
     "UseWeakReferences"
   ],
   "configSettings": [
@@ -545,7 +548,8 @@
     "saveRequests",
     "settingNeeds",
     "targetConfirmation",
-    "tokenNames"
+    "tokenNames",
+    "tokenVisuals"
   ],
   "steps": [
     "midi-qol.Abort",
@@ -771,6 +775,7 @@
     "toggles",
     "transformedActorUuids",
     "undoDamage",
-    "undone"
+    "undone",
+    "visuals"
   ]
 }

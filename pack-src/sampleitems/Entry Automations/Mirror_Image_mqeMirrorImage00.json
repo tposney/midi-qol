@@ -176,7 +176,13 @@
             "duplicates": {
               "destroyed": 0
             }
-          }
+          },
+          "visuals": [
+            {
+              "kind": "duplicates",
+              "count": "3 - @state.duplicates.destroyed"
+            }
+          ]
         },
         "dae": {
           "selfTarget": true

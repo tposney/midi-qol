@@ -2,8 +2,11 @@ import { PlayerSettingsView } from "./module/apps/PlayerSettingsView.js";
 import { registerCardWaits } from "./module/lib/cardWaits.js";
 import { registerMidiActionSchemas } from "./module/lib/entries/actionSchemas.js";
 import { EntryEditor, registerEntryEditorControls } from "./module/apps/EntryEditor.js";
+import { VisualsEditor, registerVisualsEditorControls } from "./module/apps/VisualsEditor.js";
 import { registerRollDialogBonuses } from "./module/lib/rollDialogBonuses.js";
 import { defineSettingNeedsService } from "./module/services/settingNeeds/service.js";
+import { defineTokenVisualsService, refreshTokenVisuals, setupTokenVisuals, tokenVisuals } from "./module/services/tokenVisuals/service.js";
+import { registerTokenVisualProviders } from "./module/services/tokenVisuals/providers.js";
 import { activityTypeSteps, activityTypeStepsMarkdown } from "./module/activities/activityTypeSteps.js";
 import { registerMidiIssueContributors } from "./module/services/economy/issues.js";
 import { setupLedgerEvents } from "./module/services/economy/ledger.js";
@@ -351,6 +354,8 @@ Object.assign(globalThis.MidiQOL, {
   UNMEASURABLE_DISTANCE,
   getItemFromEffectOrigin,
   getTokenPlayerName,
+  tokenVisuals,
+  refreshTokenVisuals,
   getTokenPlayerNameForUser,
   getTokenForActor: getOrCreateTokenForActor,
   getTokenForActorAsSet: getOrCreateTokenForActorAsSet,
@@ -445,6 +450,7 @@ Object.assign(globalThis.MidiQOL, {
     TargetConfirmationDialog,
     TroubleShooter,
     EntryEditor,
+    VisualsEditor,
     PlayerSettingsView,
     UndoWorkflow,
   },
@@ -546,6 +552,7 @@ Hooks.once('init', async function () {
   registerCues();
   registerRollDialogBonuses();
   registerEntryEditorControls();
+  registerVisualsEditorControls();
   registerCardWaits();
   registerUseChanges();
   registerEntryOffers();
@@ -556,6 +563,9 @@ Hooks.once('init', async function () {
   defineRangeService();
   defineBonusPromptService(() => `midi-qol.${safeGetGameSetting("midi-qol", "BonusPrompt") ?? "phased"}`);
   defineSettingNeedsService();
+  defineTokenVisualsService();
+  registerTokenVisualProviders();
+  setupTokenVisuals();
   // Registered here, not in services/rollBonuses/prompt.ts: BonusPromptApp extends utils' RollModifyDialog and utils
   // imports prompt.ts, so prompt.ts importing the app would evaluate the class before its base exists
   bonusPromptService.register("midi-qol.phased", { open: data => new BonusPromptApp(data) }, { label: "Phased (tick and apply)" });

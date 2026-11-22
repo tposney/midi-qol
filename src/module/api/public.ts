@@ -18,6 +18,7 @@ export type * from "../services/rollBonuses/service.js";
 export type * from "../services/rollModifiers/service.js";
 export type * from "../services/saveRequests/service.js";
 export type * from "../services/settingNeeds/service.js";
+export type * from "../services/tokenVisuals/service.js";
 export type * from "../services/targetConfirmation/service.js";
 export type * from "../services/tokenNames/service.js";
 export type * from "../services/rollBonuses/prompt.js";

@@ -1,0 +1,75 @@
+<div class="midi-qol-visuals-root">
+    <p class="hint">{{localize "midi-qol.VisualsEditor.DrawnBy"}} <strong>{{providerLabel}}</strong></p>
+    {{#each rows}}
+    <fieldset class="midi-qol-visual">
+        <div class="form-group">
+            <label>{{localize "midi-qol.VisualsEditor.Field.kind"}}</label>
+            <div class="form-fields">
+                <select name="v.{{index}}.kind">{{#each kinds}}<option value="{{value}}" {{#if selected}}selected{{/if}}>{{label}}</option>{{/each}}</select>
+                <button type="button" class="icon" data-action="remove" data-index="{{index}}" data-tooltip="{{localize "midi-qol.VisualsEditor.Remove"}}"><i class="fa-solid fa-trash"></i></button>
+            </div>
+        </div>
+        {{#if unsupported}}<p class="midi-qol-visual-warning"><i class="fa-solid fa-triangle-exclamation"></i> {{unsupported}}</p>{{/if}}
+        {{#if counted}}
+        <div class="form-group">
+            <label>{{localize "midi-qol.VisualsEditor.Field.count"}}</label>
+            <div class="form-fields">
+                <select name="v.{{index}}.mode">{{#each modes}}<option value="{{value}}" {{#if selected}}selected{{/if}}>{{label}}</option>{{/each}}</select>
+                {{#if fixedMode}}<input class="midi-qol-visual-number" type="number" name="v.{{index}}.fixed" value="{{fixed}}" min="0" step="1">{{/if}}
+            </div>
+        </div>
+        {{#if lessMode}}
+        <div class="form-group">
+            <label>{{localize "midi-qol.VisualsEditor.StartAt"}}</label>
+            <div class="form-fields">
+                <input class="midi-qol-visual-number" type="number" name="v.{{index}}.start" value="{{start}}" min="0" step="1">
+                <span class="midi-qol-visual-less">{{localize "midi-qol.VisualsEditor.Less"}}</span>
+                <select name="v.{{index}}.counter">{{#each counters}}<option value="{{value}}" {{#if selected}}selected{{/if}}>{{label}}</option>{{/each}}</select>
+            </div>
+            <p class="hint">{{localize "midi-qol.VisualsEditor.LessHint"}}</p>
+        </div>
+        {{/if}}
+        {{#if formulaMode}}
+        <div class="form-group">
+            <label>{{localize "midi-qol.VisualsEditor.Mode.formula"}}</label>
+            <div class="form-fields"><input type="text" name="v.{{index}}.formula" value="{{formula}}" placeholder="3 - @state.duplicates.destroyed"></div>
+        </div>
+        {{/if}}
+        {{/if}}
+        {{#if coloured}}
+        <div class="form-group">
+            <label>{{localize "midi-qol.VisualsEditor.Field.color"}}</label>
+            <div class="form-fields"><input type="text" name="v.{{index}}.color" value="{{color}}" placeholder="#40a0ff"></div>
+        </div>
+        {{/if}}
+        {{#if animated}}
+        <div class="form-group">
+            <label>{{localize "midi-qol.VisualsEditor.Field.file"}}</label>
+            <div class="form-fields">
+                <input type="text" name="v.{{index}}.file" value="{{file}}" list="midi-qol-visual-files-{{index}}" placeholder="jb2a.shield.01.loop.blue">
+                <datalist id="midi-qol-visual-files-{{index}}">{{#each files}}<option value="{{this}}"></option>{{/each}}</datalist>
+            </div>
+            <p class="hint">{{localize "midi-qol.VisualsEditor.FileHint"}}</p>
+        </div>
+        {{/if}}
+    </fieldset>
+    {{else}}
+    <p class="hint">{{localize "midi-qol.VisualsEditor.None"}}</p>
+    {{/each}}
+    <button type="button" data-action="add"><i class="fa-solid fa-plus"></i> {{localize "midi-qol.VisualsEditor.Add"}}</button>
+    {{#if canPreview}}
+    <fieldset class="midi-qol-visual-preview">
+        <legend>{{localize "midi-qol.VisualsEditor.Preview"}}</legend>
+        {{#each previewCounts}}
+        <div class="form-group">
+            <label>{{label}}</label>
+            <div class="form-fields"><input type="number" name="preview.{{counter}}" value="{{value}}" min="0" step="1"></div>
+        </div>
+        {{/each}}
+        <button type="button" data-action="preview"><i class="fa-solid fa-eye"></i> {{localize "midi-qol.VisualsEditor.PreviewOn"}}</button>
+    </fieldset>
+    {{/if}}
+    <footer class="form-footer">
+        <button type="button" data-action="save"><i class="fa-solid fa-save"></i> {{localize "midi-qol.VisualsEditor.Save"}}</button>
+    </footer>
+</div>

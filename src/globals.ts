@@ -220,6 +220,7 @@ declare module "fvtt-types/configuration" {
     "midi-qol.tokenDocumentSets": boolean;
     "midi-qol.EntryEditorPlayers": boolean;
     "midi-qol.EntryEditorView": string;
+    "midi-qol.TokenVisuals": string;
     "midi-qol.compatibilityLine": string;
     "midi-qol.PreferredGM": string;
     "midi-qol.MidiSoundSettings-backup": Record<string, any>;
@@ -297,6 +298,8 @@ declare module "fvtt-types/configuration" {
         entries?: import("./module/lib/entries/types.js").Entry[];
         /** M15: an entry's counts on its effect (saves, fails, used), by entry id */
         entryState?: Record<string, Record<string, number>>;
+        /** M33: what the effect shows on its bearer's token (services/tokenVisuals) */
+        visuals?: import("./module/services/tokenVisuals/service.js").VisualSpec[];
         /** M11c-2: added by an overlay (true), or the marker enchantment recording which overlay and version */
         overlayPart?: true | { overlay: string, version: string };
         /** M28: the applying use's choices, copied to the effect */
@@ -723,6 +726,13 @@ declare module "fvtt-types/configuration" {
         visionSourceHeight?: number;
         // Per-token override (0-100) for vision target elevation as a fraction of token height.
         visionTargetHeight?: number;
+      };
+    }
+    // fvtt-types looks flags up by document type ("Token"); the TokenDocument key above doesn't apply
+    Token: {
+      /** Token Magic FX's filters on the token (M33's provider reads them to change only what differs) */
+      tokenmagic?: {
+        filters?: { tmFilters?: { tmFilterId?: string, tmParams?: Record<string, unknown> } }[];
       };
     }
     AmbientLightDocument: {

@@ -1602,6 +1602,23 @@ export const registerSettings = function () {
     default: "sentence"
   });
 
+  game.settings.register("midi-qol", "TokenVisuals", {
+    name: "midi-qol.TokenVisuals.Name",
+    hint: "midi-qol.TokenVisuals.Hint",
+    scope: "world",
+    type: String,
+    config: true,
+    default: "auto",
+    choices: {
+      auto: "midi-qol.TokenVisuals.auto",
+      "midi-qol.tokenmagic": "Token Magic FX",
+      "midi-qol.sequencer": "Sequencer",
+      "midi-qol.midi": "midi-qol.TokenVisuals.midi",
+      none: "midi-qol.TokenVisuals.none"
+    },
+    onChange: () => Hooks.callAll("midi-qol.servicesChanged", "tokenVisuals")
+  });
+
   game.settings.register("midi-qol", "EntryEditorPlayers", {
     name: "midi-qol.EntryEditorPlayers.Name",
     hint: "midi-qol.EntryEditorPlayers.Hint",
