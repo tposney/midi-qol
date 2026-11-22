@@ -48,6 +48,8 @@ export interface ResponseOffer {
   img?: string;
   /** The prompt's tooltip */
   description?: string;
+  /** The key of the player's standing choice on it (M32a): one that survives its document being made again (an effect a spell applies each cast); default its contributor and key */
+  standingKey?: string;
   /**
    * What responding costs, in the economy's terms (`{ actions: { reaction: 1 } }`; none: free). midi offers it only while
    * the creature can pay; `take` spends it. A response is not only a dnd5e reaction: a free one, a legendary

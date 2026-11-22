@@ -1,3 +1,4 @@
+import { itemOfEffect } from "./rules.js";
 import { register } from "../../api/services.js";
 import { Workflow } from "../../Workflow.js";
 import type { ResponseAnswer, ResponseCandidate, ResponseQuery } from "../../services/responses/service.js";
@@ -79,6 +80,14 @@ export async function targetEvent(workflow: Workflow, target: TokenDocument.Impl
   return answer;
 }
 
+/** An entry's standing-choice key by its item (identifier, else name) and entry id, so it survives an effect applied again */
+function entryStandingKey(found: { document: unknown, entry: { id: string } }): { standingKey?: string } {
+  const document = found.document;
+  const item = document instanceof Item ? document as Item.Implementation : document instanceof ActiveEffect ? itemOfEffect(document as ActiveEffect.Implementation) : undefined;
+  const identifier = (item?.system as { identifier?: string } | undefined)?.identifier || item?.name?.slugify();
+  return identifier ? { standingKey: `entry:${identifier}#${found.entry.id}` } : {};
+}
+
 /** The reactions service's offers from the creature's entries at the trigger's event (contract 2) */
 async function entryResponseOffers(query: ResponseQuery): Promise<ResponseCandidate[]> {
   const eventId = query.eventId ?? EVENT_OF_TRIGGER[query.triggerType];
@@ -95,6 +104,7 @@ async function entryResponseOffers(query: ResponseQuery): Promise<ResponseCandid
       offer: {
         key: `${(found.document as { uuid?: string }).uuid ?? ""}#${found.entry.id}`,
         label: entryLabel(found), img: option.img, description: option.description,
+        ...entryStandingKey(found),
         ...(found.entry.offer === "reaction" ? { cost: { actions: { reaction: 1 } } } : {}),
         take: async () => {
           const result = await takeEntry(eventId, found, context, conditionData);

@@ -85,12 +85,14 @@ export function standingChoiceOptions(choices: readonly StandingChoice[]) {
   return choices.map(value => ({ value, label: game.i18n?.localize(`midi-qol.Standing.${value}`) ?? value }));
 }
 
-/** A prompt's row controls: a change is stored on the actor */
+/** A prompt's row controls: a change is stored on the actor (a row's own, `data-actor-uuid`, in a prompt with sections) */
 export function wireStandingSelects(element: HTMLElement, actor: Actor.Implementation | undefined) {
   for (const select of Array.from(element.querySelectorAll<HTMLSelectElement>("select[name='standing']"))) {
     select.addEventListener("change", () => {
       const key = select.dataset.standingKey;
-      if (actor && key) void setStandingChoice(actor, key, select.value as StandingChoice, select.dataset.standingLabel ?? key);
+      const own = select.dataset.actorUuid ? fromUuidSync(select.dataset.actorUuid) : undefined;
+      const owner = own instanceof Actor ? own as Actor.Implementation : actor;
+      if (owner && key) void setStandingChoice(owner, key, select.value as StandingChoice, select.dataset.standingLabel ?? key);
     });
   }
 }

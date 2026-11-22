@@ -6,9 +6,10 @@ import { _closePlayerRollDialogs, playerWaitHandlers, rollDialogsFor } from "./l
 import { DialogCountdown, dialogCountdownOptions } from "./lib/dialogCountdown.js";
 import { withWorkflowOptionsCodec } from "./lib/workflowOptionsCodec.js";
 import { i18n, log, warn, gameStats, getCanvas, error, debugEnabled, debug, GameSystemConfig, MODULE_ID } from "../midi-qol.js";
-import { BONUS_REQUEST, CONCENTRATION_REQUEST, damageActiveHas, damageChangeHas, DEFENCE_REQUEST, REACTIONS_REQUEST, calculateDamageAmounts, hpChangeFromDetail, getToken, getTokenDocument, gmOverTimeEffect, fromActorUuid, promptReactions, hasUsedAction, hasUsedBonusAction, removeActionUsed, removeBonusActionUsed, removeReactionUsed, ReactionItemReference, isEffectExpired, expireEffects, deleteAppliedEffects, getAppliedEffects, CERemoveEffect, CEAddEffectWith, getActor, completeItemUse, completeActivityUse, localActivityOverTimeEffect, validTargetTokens, hasUsedAnyReaction, getVitalityItem, MidiOptions, tokenSourceCenter, toggleStatus, withDeprecatedDamageFields, speakerFor } from "./utils.js";
+import { BONUS_REQUEST, REACTIONS_GROUP_REQUEST, CONCENTRATION_REQUEST, damageActiveHas, damageChangeHas, DEFENCE_REQUEST, REACTIONS_REQUEST, calculateDamageAmounts, hpChangeFromDetail, getToken, getTokenDocument, gmOverTimeEffect, fromActorUuid, promptReactions, hasUsedAction, hasUsedBonusAction, removeActionUsed, removeBonusActionUsed, removeReactionUsed, ReactionItemReference, isEffectExpired, expireEffects, deleteAppliedEffects, getAppliedEffects, CERemoveEffect, CEAddEffectWith, getActor, completeItemUse, completeActivityUse, localActivityOverTimeEffect, validTargetTokens, hasUsedAnyReaction, getVitalityItem, MidiOptions, tokenSourceCenter, toggleStatus, withDeprecatedDamageFields, speakerFor } from "./utils.js";
 import { registerRequestHandler, type IncomingRequest } from "./lib/requests.js";
 import { promptFailedSave } from "./lib/failedSaveResponse.js";
+import { promptReactionGroup } from "./lib/reactionGroup.js";
 import { messagesFrom } from "./lib/cardState.js";
 import { DAMAGE_MESSAGE_TYPE } from "./ChatClasses/DamageCardMessage.js";
 import { DamageDescriptionObject, Workflow } from "./Workflow.js";
@@ -39,6 +40,9 @@ export let setupSocket = () => {
   // The reacting client's answer to a reaction request (utils doReactions): the reaction dialog, its countdown the requester's
   registerRequestHandler(REACTIONS_REQUEST, (data: Parameters<typeof localDoReactions>[0], incoming: IncomingRequest) =>
     localDoReactions({ ...data, options: { ...data.options, incoming } }));
+  // M32a step 4: several creatures' reactions in one prompt
+  registerRequestHandler(REACTIONS_GROUP_REQUEST, (data: { sections: ReactionRequestData[] }, incoming: IncomingRequest) =>
+    promptReactionGroup(data.sections.map(section => resolveReactionData({ ...section, options: { ...section.options } })), incoming));
   // A player's save asked through the request core (Workflow#askPlayerSave): their roll dialog
   registerRequestHandler(SAVE_REQUEST, (data: Parameters<typeof rollAbility>[0], incoming: IncomingRequest) => rollAbility(data, incoming));
   // A player's Active Defence roll asked through the request core (utils requestPCActiveDefence): their D20Roll dialog
@@ -624,8 +628,19 @@ async function _addDependent(data: { documentUuid: string, dependentUuid: string
   return dependent.setFlag("dnd5e", "dependentOn", data.documentUuid);
 }
 
+type ReactionRequestData = { tokenUuid: string; reactionActivityList: ReactionItemReference[], triggerTokenUuid: string, reactionFlavor: string; triggerType: string; options: any, reactionOffers?: unknown[] };
+
+/** A reaction request's options with its documents found again on this client */
+function resolveReactionData(data: ReactionRequestData): ReactionRequestData {
+  if (data.reactionOffers?.length) data.options.reactionOffers = data.reactionOffers;
+  if (data.options.itemUuid) data.options.item = fromUuidSync(data.options.itemUuid);
+  if (data.options.activityUuid) data.options.activity = fromUuidSync(data.options.activityUuid);
+  else if (data.options.activity && data.options.item) data.options.activity = data.options.item.system.activities.get(data.options.activity._id);
+  return data;
+}
+
 /** Also the socketlib handler "chooseReactions", kept for other modules (MidiQOL.socket()); midi asks through REACTIONS_REQUEST */
-async function localDoReactions(data: { tokenUuid: string; reactionActivityList: ReactionItemReference[], triggerTokenUuid: string, reactionFlavor: string; triggerType: string; options: any, reactionOffers?: unknown[] }) {
+async function localDoReactions(data: ReactionRequestData) {
   if (data.reactionOffers?.length) data.options.reactionOffers = data.reactionOffers;
   if (data.options.itemUuid) {
     data.options.item = fromUuidSync(data.options.itemUuid);

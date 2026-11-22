@@ -2068,6 +2068,10 @@ export type ProcessTargetSaveContext = {
   template: foundry.canvas.placeables.MeasuredTemplate.Implementation | undefined | null;
   templateCoverOrigin?: { x: number, y: number, elevation?: number };
   D20Roll: typeof Roll;
+  /** M32a step 4: the event's reaction batch ticket (one request per user) */
+  reactionTicket?: import("./module/lib/reactionBatch.js").ReactionTicket;
+  /** M32a step 4: targets run at once up to their answer, then finish in target order */
+  order?: { turn(): Promise<void>, done(): void };
 };
 
 export type QueueSaveRollOptions = {

@@ -2361,6 +2361,13 @@ body.midi-qol-hide-gambit-mirrors .gps-dialog-mirror:not(.midi-qol-gambit-shown)
   white-space: nowrap;
   opacity: 0.85;
 }
+.midi-qol-bonus-prompt li.midi-qol-prompt-section {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 0.4em;
+  border-bottom: 1px solid var(--color-border-light-2, #999);
+}
 .midi-qol-bonus-prompt li.midi-qol-prompt-excluded {
   opacity: 0.5;
 }

@@ -1,3 +1,4 @@
+import type { ReactionTicket } from "./lib/reactionBatch.js";
 import { activityCostBadges, offerCostBadges, wirePickOne, type PromptResponses, type PromptRow } from "./lib/promptCosts.js";
 import { askBonusDecision } from "./lib/bonusDecisions.js";
 import { budget, reset as resetBudget, spend as spendBudget } from "./services/economy/ledger.js";
@@ -5392,27 +5393,13 @@ export async function doReactions(targetRef: TokenOrDocument | string, triggerTo
     const reactingUser = player;
     const offerChoices = [...reactionOffers].map(([key, offer]) => {
       const cost = offerCostBadges(offer.cost);
-      return { key, label: offer.label, img: offer.img, description: offer.description, badges: cost.badges, reaction: cost.reaction };
+      return { key, label: offer.label, img: offer.img, description: offer.description, badges: cost.badges, reaction: cost.reaction, ...(offer.standingKey ? { standingKey: offer.standingKey } : {}) };
     });
     const data = { ...reactionRequestData(target, triggerTokenUuid, content ?? "", triggerType, reactionActivityList, options), reactionOffers: offerChoices };
-    const request = askUser<ReactionResult>(reactingUser, {
-      type: REACTIONS_REQUEST, data, kind: "reaction", owner: options.workflow, actorUuid: target.actor.uuid ?? undefined, tokenUuid: target.document.uuid ?? undefined,
-      label: content ?? "", timeoutMs: (configSettings.reactionTimeout ?? defaultTimeout) * 1000, fallback: () => noResult,
-      gmChoices: {
-        none: () => noResult,
-        // The GM picks the reaction on their own screen, as for a creature with no player
-        choose: async () => {
-          const gm = preferredActiveGM();
-          if (!gm) return noResult;
-          return (await askUser<ReactionResult>(gm, { type: REACTIONS_REQUEST, data, kind: "reaction", label: content ?? "", timeoutMs: 0, fallback: () => noResult }).settled).value;
-        }
-      }
-    });
-    // A request that couldn't be settled (its fallback failed too) is no reaction
-    let result: any = await request.settled.then(settled => settled.value, err => {
-      TroubleShooter.recordError(err, `doReactions | ${triggerType} for ${target.name}`);
-      return noResult;
-    });
+    const single = () => askReactionUser(reactingUser, data, { owner: options.workflow, actorUuid: target.actor?.uuid ?? undefined, tokenUuid: target.document.uuid ?? undefined, label: content ?? "", what: `${triggerType} for ${target.name}` });
+    // M32a step 4: a save's reactions are batched per event (one request per user, a section per creature)
+    const ticket: ReactionTicket | undefined = options.reactionTicket;
+    let result: any = ticket ? await ticket.ask({ user: reactingUser, data, single, own: !!options.failedSaveBonus }) : await single();
     if (chatMessage) void chatMessage.delete();
     // Offers chosen: taken here, on the asking client (the use's), in the order shown; a reaction used with them keeps its name
     // A save its bonuses turned into a success: the saveFailed offers chosen with them are dropped (nothing spent)
@@ -5455,13 +5442,59 @@ export async function doReactions(targetRef: TokenOrDocument | string, triggerTo
   }
 }
 
+/** One creature's reactions asked of `user`: the request core's deadline, the GM's none/choose, "no reaction" on failure */
+function askReactionUser(user: User.Implementation, data: object, about: { owner?: object, actorUuid?: string, tokenUuid?: string, label: string, what: string }): Promise<ReactionResult> {
+  const noResult: ReactionResult = { name: undefined, uuid: undefined, ac: undefined };
+  const request = askUser<ReactionResult>(user, {
+    type: REACTIONS_REQUEST, data, kind: "reaction", owner: about.owner, actorUuid: about.actorUuid, tokenUuid: about.tokenUuid,
+    label: about.label, timeoutMs: (configSettings.reactionTimeout ?? defaultTimeout) * 1000, fallback: () => noResult,
+    gmChoices: {
+      none: () => noResult,
+      // The GM picks the reaction on their own screen, as for a creature with no player
+      choose: async () => {
+        const gm = preferredActiveGM();
+        if (!gm) return noResult;
+        return (await askUser<ReactionResult>(gm, { type: REACTIONS_REQUEST, data, kind: "reaction", label: about.label, timeoutMs: 0, fallback: () => noResult }).settled).value;
+      }
+    }
+  });
+  // A request that couldn't be settled (its fallback failed too) is no reaction
+  return request.settled.then(settled => settled.value ?? noResult, err => {
+    TroubleShooter.recordError(err, `doReactions | ${about.what}`);
+    return noResult;
+  });
+}
+
+/** M32a step 4: several creatures' reactions asked of one user in one request (a section each), answered in order */
+export function askReactionGroup(user: User.Implementation, sections: object[], about: { owner?: object, label: string }): Promise<ReactionResult[]> {
+  const none = () => sections.map((): ReactionResult => ({ name: undefined }));
+  const request = askUser<ReactionResult[]>(user, {
+    type: REACTIONS_GROUP_REQUEST, data: { sections }, kind: "reaction", owner: about.owner, label: about.label,
+    timeoutMs: (configSettings.reactionTimeout ?? defaultTimeout) * 1000, fallback: none,
+    gmChoices: {
+      none,
+      choose: async () => {
+        const gm = preferredActiveGM();
+        if (!gm) return none();
+        return (await askUser<ReactionResult[]>(gm, { type: REACTIONS_GROUP_REQUEST, data: { sections }, kind: "reaction", label: about.label, timeoutMs: 0, fallback: none }).settled).value;
+      }
+    }
+  });
+  return request.settled.then(settled => Array.isArray(settled.value) ? settled.value : none(), err => {
+    TroubleShooter.recordError(err, `doReactions | group for ${user.name}`);
+    return none();
+  });
+}
+
 export type ReactionResult = { name?: string, uuid?: string, ac?: number, itemName?: string, itemUuid?: string, offerKey?: string, offerKeys?: string[], saveRoll?: string, saveSucceeded?: boolean };
 
 /** A contract 2 offer as the reacting client sees it: chosen, its key goes back to the asking client */
-export type ResponseOfferChoice = { key: string, label: string, img?: string, description?: string, badges?: string[], reaction?: boolean };
+export type ResponseOfferChoice = { key: string, label: string, img?: string, description?: string, badges?: string[], reaction?: boolean, standingKey?: string };
 
 /** The request type a reacting client answers (GMAction registers its handler) */
 export const REACTIONS_REQUEST = "midi-qol.reactions";
+/** M32a step 4: several creatures' reactions in one request (one prompt, a section each) */
+export const REACTIONS_GROUP_REQUEST = "midi-qol.reactionGroup";
 /** A player's Active Defence roll, asked through the request core (M5b; GMAction._D20Roll answers it) */
 export const DEFENCE_REQUEST = "midi-qol.defence";
 /** Optional bonuses after a failed save, asked of the actor's player through the request core (M5b; GMAction._bonusCheck) */
@@ -5475,7 +5508,7 @@ export const CONCENTRATION_REQUEST = "midi-qol.concentration";
  * arrive as a plain copy that the reaction's use then treats as its own.
  */
 function reactionRequestData(target: Token.Implementation, triggerTokenUuid: string | undefined, reactionFlavor: string, triggerType: string, reactionActivityList: ReactionItemReference[], options: any) {
-  const { workflow, item, activity, ...rest } = options ?? {};
+  const { workflow, item, activity, reactionTicket: _ticket, ...rest } = options ?? {};
   const sent: any = jsonSafe(rest) ?? {};
   if (item instanceof CONFIG.Item.documentClass) sent.itemUuid = item.uuid;
   if (activity?.uuid) sent.activityUuid = activity.uuid;
@@ -5503,7 +5536,7 @@ export function reactionStandingRows(actor: Actor.Implementation, activities: Ac
   for (const offer of offers) {
     // An AC flag is the same choice as in the bonus prompt (its flag's name); an AC bonus by its id
     const flag = offer.key.match(/^ac:flags\.midi-qol\.optional\.([^#]+)#/);
-    const standingKey = flag ? `flag:${flag[1]}` : offer.key.startsWith("ac:") ? offer.key.slice(3) : `offer:${offer.key}`;
+    const standingKey = flag ? `flag:${flag[1]}` : offer.key.startsWith("ac:") ? offer.key.slice(3) : offer.standingKey ?? `offer:${offer.key}`;
     rows.set(offer.key, { standingKey, label: offer.label, choice: reactionStanding(actor, standingKey, false), askOnly: false });
   }
   return { rows };

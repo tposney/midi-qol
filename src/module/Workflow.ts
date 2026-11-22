@@ -1,3 +1,4 @@
+import { ReactionBatch } from "./lib/reactionBatch.js";
 import { isRollOf } from "./rolls/common.js";
 import { withFixedDice, type FixedDice } from "./lib/fixedDice.js";
 import { attachRegionActivityBehavior } from "./activities/regions.js";
@@ -6611,7 +6612,10 @@ export class Workflow {
     const failBonus = !saved && provokes ? await this.failedSaveBonusSpec(target, result, rollType ?? "", rollAbility ?? "", resultDC) : undefined;
     const answer = await targetEvent(this, getTokenDocument(target), saved ? "saveSucceeded" : "saveFailed", { total: saveRollTotal, dc: resultDC, saved, critical: isCritical, fumble: isFumble },
       provokes ? () => this.askReactionsStep(target, this.tokenUuid, this.attackRoll, saved ? "reactionsavesuccess" : "reactionsavefail",
-        { workflow: this, activity: this.activity, item: this.item, ...(failBonus ? { failedSaveBonus: failBonus } : {}) }) : undefined);
+        { workflow: this, activity: this.activity, item: this.item, ...(failBonus ? { failedSaveBonus: failBonus } : {}), ...(context.reactionTicket ? { reactionTicket: context.reactionTicket } : {}) }) : undefined);
+    // M32a step 4: answered (or nothing to ask): the rest in target order
+    context.reactionTicket?.settle();
+    await context.order?.turn();
     let failBonusesAsked = false;
     if (failBonus && answer?.saveRoll) {
       failBonusesAsked = true;
@@ -7090,8 +7094,15 @@ export class Workflow {
       }
     }
 
-    // Process each target's save result
+    // Process each target's save result. M32a step 4: every target runs up to its reaction answer at once (the asks
+    // batched: one request per user, a section per creature), then each finishes in target order
     const processContext = { rollDC, rollAbility: rollAbilities[0], rollType, template, templateCoverOrigin, D20Roll };
+    const saveTargets = [...allHitTargets].filter(target => !!target.actor);
+    const batch = new ReactionBatch(saveTargets.length, this);
+    const turns: Promise<void>[] = [];
+    const finishers: (() => void)[] = [];
+    for (let k = 0; k < saveTargets.length; k++) turns.push(new Promise<void>(resolve => finishers.push(resolve)));
+    const work: Promise<void>[] = [];
     let i = 0;
     for (let target of allHitTargets) {
       if (!target.actor) continue; // these were skipped when doing the rolls so they can be skipped now
@@ -7116,9 +7127,16 @@ export class Workflow {
       const midiChosenId: string | undefined = result[0]?.options?.midiChosenId;
       if (midiChosenId) processContext.rollAbility = midiChosenId;
 
-      await this.processTargetSaveResult(target, result, processContext);
+      const index = i;
+      const ticket = batch.ticket();
+      const order = { turn: () => index === 0 ? Promise.resolve() : turns[index - 1], done: () => finishers[index]() };
+      work.push(this.processTargetSaveResult(target, result, { ...processContext, reactionTicket: ticket, order }).finally(() => {
+        ticket.settle();
+        order.done();
+      }));
       i++;
     }
+    await Promise.all(work);
 
     this.saveDisplayFlavor = await this.computeSaveDisplayFlavor(rollDC, rollType ?? "", { rollAbilities: rollAbilities ?? [], rollSkills: rollSkills ?? [], rollTools: rollTools ?? [] });
   }
