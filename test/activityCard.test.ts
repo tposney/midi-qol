@@ -195,4 +195,12 @@ describe("activity cards", () => {
     expect(editedTargeting({ affectsType: "creature", count: 1, rangeUnits: "ft", rangeValue: 30 }, { preset: "wall" }, extra)).toMatchObject({ templateType: "wall", size: 60 });
     expect(editedTargeting(current, { size: 90, count: 5 }, extra)).toEqual({ ...current, size: 90 });
   });
+
+  it("a creature you can see: worded for single targets, kept through a preset change, not for areas", () => {
+    const one = { affectsType: "creature", count: 1, rangeUnits: "ft", rangeValue: 60, mustSee: true };
+    expect(targetingText(one, t)).toContain("youCanSee");
+    expect(editedTargeting(one, { preset: "several", count: 3 })).toMatchObject({ count: 3, mustSee: true });
+    expect(editedTargeting({ ...one, mustSee: false }, { see: true })).toMatchObject({ mustSee: true });
+    expect(targetingText({ ...one, templateType: "sphere", size: 20 }, t)).not.toContain("youCanSee");
+  });
 });

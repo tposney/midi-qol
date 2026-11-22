@@ -10,10 +10,11 @@ import { activityCardContributor, addKindDefs, basicsFieldDefs, contributedActiv
 import { automationNotes } from "../lib/entries/automations.js";
 import { configOptions, type ConfigField } from "../lib/entries/config.js";
 import { effectAction, mainBranch, newEffectData, type NewEffect } from "../lib/entries/activityCard.js";
-import { onUseMacroOptions } from "../settings.js";
+import { configSettings, onUseMacroOptions } from "../settings.js";
 import { onUseString, parseOnUse, type OnUseRow } from "../lib/entries/activityCard.js";
 import { basicsUpdate, NEW_KINDS, newActivityData, type Basics, type BasicsWhere, type NewKind } from "../lib/entries/activityCard.js";
 import { AREA_TRIGGERS, areaGroups, areaSaveActivity, areaView, editedRegion, type AreaGroup } from "../lib/entries/activityCard.js";
+import { SEEN_PRESETS } from "../lib/entries/activityCard.js";
 import { convertActivity, editedTargeting, FROM_YOU_SHAPES, moveBranchEntry, POINT_SHAPES, ROLL_KINDS, TARGET_PRESETS, targetingUpdate, targetPreset, type RollKind, type TargetPreset, type Targeting } from "../lib/entries/activityCard.js";
 import { activityCard, activityUpdate, BRANCH_EVENT, branchEntryId, isBranchEntry, partFormula, type ActivityBranch, type ActivityData, type BuiltInPart, type CardEdits, type CardText } from "../lib/entries/activityCard.js";
 
@@ -720,14 +721,15 @@ export class EntryEditor extends HandlebarsApplicationMixin(ApplicationV2) {
     const item = this.#item();
     if (item && String(item.type) === "spell") data.spellLevel = Number((item.system as { level?: number }).level) || 0;
     // The area it makes, as dnd5e words it (its own template, else the item's)
-    const prepared = h.document as { target?: { template?: { type?: string, size?: unknown, width?: unknown }, affects?: { type?: string, count?: unknown } }, range?: { units?: string, value?: unknown }, labels?: { target?: string } };
+    const prepared = h.document as { target?: { template?: { type?: string, size?: unknown, width?: unknown }, affects?: { type?: string, count?: unknown } }, range?: { units?: string, value?: unknown }, labels?: { target?: string }, midiProperties?: { targetMustBeSeen?: boolean } };
     if (prepared.target?.template?.type) data.areaLabel = prepared.labels?.target;
     // Its targeting as dnd5e resolves it
     data.targetPresets = targetPresetDefs();
     data.targeting = {
       affectsType: prepared.target?.affects?.type ?? "", count: prepared.target?.affects?.count as Targeting["count"],
       templateType: prepared.target?.template?.type ?? "", size: prepared.target?.template?.size as Targeting["size"], width: prepared.target?.template?.width as Targeting["width"],
-      rangeUnits: prepared.range?.units ?? "", rangeValue: prepared.range?.value as Targeting["rangeValue"]
+      rangeUnits: prepared.range?.units ?? "", rangeValue: prepared.range?.value as Targeting["rangeValue"],
+      mustSee: !!prepared.midiProperties?.targetMustBeSeen
     };
     return data;
   }
@@ -780,11 +782,14 @@ export class EntryEditor extends HandlebarsApplicationMixin(ApplicationV2) {
   #targetingUpdates(h: Home): { activity: Record<string, unknown>, item: Record<string, unknown> } {
     const source = this.#activitySource(h);
     if (!h.card?.target || !source.targeting) return { activity: {}, item: {} };
-    const targeting = editedTargeting(source.targeting, h.card.target, source.targetPresets);
-    if (JSON.stringify(targeting) === JSON.stringify(source.targeting)) return { activity: {}, item: {} };
+    const { mustSee, ...targeting } = editedTargeting(source.targeting, h.card.target, source.targetPresets);
+    const { mustSee: mustSeeBefore, ...before } = source.targeting;
+    // Seeing targets is midi's, on the activity (a spell's too); the rest where dnd5e reads it
+    const seen = !!mustSee !== !!mustSeeBefore ? { "midiProperties.targetMustBeSeen": !!mustSee } : {};
+    if (JSON.stringify(targeting) === JSON.stringify(before)) return { activity: seen, item: {} };
     const onItem = this.#targetingOnItem(h);
     const update = targetingUpdate(targeting, onItem);
-    return onItem ? { activity: {}, item: update } : { activity: update, item: {} };
+    return onItem ? { activity: seen, item: update } : { activity: { ...update, ...seen }, item: {} };
   }
 
   /** Replaces the activity with its conversion (same id), with the card's edits, entries and choices */
@@ -895,7 +900,8 @@ export class EntryEditor extends HandlebarsApplicationMixin(ApplicationV2) {
     if (!row) return undefined;
     const option = (value: string, label: string, selected: boolean) => ({ value, label, selected });
     return { index, name: row.macroName, macros: optionList("macros"),
-      passes: Object.entries(onUseMacroOptions as Record<string, string>).map(([o, label]) => option(o, label, row.option === o)) };
+      passes: Object.entries(onUseMacroOptions as Record<string, string | { label?: string }>)
+        .map(([o, entry]) => option(o, i18n(typeof entry === "string" ? entry : entry.label ?? o), row.option === o)) };
   }
 
   static #onAddOnUse(this: EntryEditor, _event: Event, target: HTMLElement) {
@@ -988,6 +994,9 @@ export class EntryEditor extends HandlebarsApplicationMixin(ApplicationV2) {
         hasSize: has("size", ["point", "fromYou", "emanation"].includes(preset)), hasWidth: has("width", tg.templateType === "line"), hasRange: has("range", ["one", "several", "point"].includes(preset)),
         // An area can linger and act on creatures in it (midi's region rules)
         canLinger: area, lingers: !!data.regionBehavior?.enabled,
+        // "a creature you can see": midi's check, as the world's Targets you can see rule says
+        canSee: has("who", SEEN_PRESETS.includes(preset)), mustSee: !!tg.mustSee,
+        seeHint: i18n(`midi-qol.EntryEditor.Activity.SeeRule.${configSettings.optionalRules?.targetMustBeSeen || "nothing"}`),
         who: !has("who", !["self", "custom"].includes(preset)) ? undefined : ["creature", "enemy", "ally"].map(w => option(w, i18n(`midi-qol.EntryEditor.Activity.Target.who.${w}s`), (tg.affectsType || "creature") === w)),
         onItem: undefined
       } : undefined,
@@ -1350,6 +1359,7 @@ export class EntryEditor extends HandlebarsApplicationMixin(ApplicationV2) {
         for (const key of ["count", "range", "size", "width"] as const) if (num(key) !== undefined) target[key] = num(key);
         if (typeof data["card.target.shape"] === "string") target.shape = data["card.target.shape"] as string;
         if (typeof data["card.target.who"] === "string") target.who = data["card.target.who"] as string;
+        if ("card.target.see" in data) target.see = !!data["card.target.see"];
         h.card.target = target;
       }
     }
