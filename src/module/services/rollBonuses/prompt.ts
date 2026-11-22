@@ -1,4 +1,5 @@
 import { defineService } from "../../api/services.js";
+import type { BonusSelection } from "./service.js";
 
 /*
  * bonusPrompt (single): the window a roll's optional bonuses are offered in. The client setting "Bonus prompt" picks
@@ -26,7 +27,8 @@ export interface BonusAskRequest {
  */
 export interface BonusPromptProvider {
   open?(data: object): { render(options?: object): unknown };
-  ask?(request: BonusAskRequest): Promise<readonly string[] | null>;
+  /** Contract 4: an answer may carry the bonus's selection (its scaling, inputs, damage type, targets) */
+  ask?(request: BonusAskRequest): Promise<readonly (string | { id: string, selection?: BonusSelection })[] | null>;
 }
 
 declare module "../../api/services.js" {

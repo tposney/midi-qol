@@ -91,6 +91,8 @@
   "midi-qol.PlayerWaits.Choice.choose": "Choose for them",
   "midi-qol.PlayerWaits.Choice.none": "No reaction",
   "midi-qol.PlayerWaits.Choice.skip": "Keep the roll",
+  "midi-qol.PlayerWaits.Choice.approve": "Approve for them",
+  "midi-qol.PlayerWaits.Choice.decline": "Decline for them",
   "midi-qol.PlayerWaits.attackLabel": "Attack roll: {item}",
   "midi-qol.PlayerWaits.damageLabel": "Damage roll: {item}",
   "midi-qol.PlayerWaits.utilityLabel": "Roll: {item}",
@@ -2495,6 +2497,8 @@
   "midi-qol.BonusPrompt.Classic": "Classic (one button per bonus)",
   "midi-qol.BonusPrompt.Apply": "Apply",
   "midi-qol.BonusPrompt.Skip": "Skip",
+  "midi-qol.BonusPrompt.Scaling": "Level",
+  "midi-qol.BonusPrompt.Targets": "Targets (up to {max})",
   "midi-qol.BonusApproval.Title": "Use your bonus?",
   "midi-qol.BonusApproval.Content": "{requester} asks to use {label} ({actor})."
 }

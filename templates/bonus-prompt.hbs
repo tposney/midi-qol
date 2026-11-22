@@ -5,10 +5,21 @@
         {{#if heading}}<li class="midi-qol-prompt-section">{{#if img}}<img class="midi-qol-prompt-img" src="{{img}}" alt="">{{/if}}<strong>{{heading}}</strong></li>{{else}}
         <li style="display: flex; align-items: center; gap: 6px;"><label style="display: flex; flex: 1; align-items: center; gap: 6px;" {{#if tooltip}}data-tooltip="{{tooltip}}"{{/if}}><input type="checkbox" name="bonus" value="{{id}}" {{#if exclusive}}data-exclusive="{{exclusive}}"{{/if}} {{#if checked}}checked{{/if}}>
             {{#if img}}<img class="midi-qol-prompt-img" src="{{img}}" alt="">{{/if}} {{{icon}}} <span>{{{label}}}</span>
-            {{#each badges}}<span class="midi-qol-prompt-cost">{{this}}</span>{{/each}}</label>
+            {{#each badges}}<span class="midi-qol-prompt-cost">{{this}}</span>{{/each}}
+            {{#if disabled}}<span class="midi-qol-prompt-disabled">{{disabled}}</span>{{/if}}</label>
             {{#if standingKey}}<select name="standing" data-standing-key="{{standingKey}}" data-standing-label="{{standingLabel}}" {{#if actorUuid}}data-actor-uuid="{{actorUuid}}"{{/if}} data-tooltip="{{localize "midi-qol.Standing.Title"}}" style="flex: 0 0 9em; width: 9em; height: auto; font-size: var(--font-size-12);">
                 {{#each (ifThen choices choices ../standingChoices)}}<option value="{{this.value}}" {{#if (eq this.value ../choice)}}selected{{/if}}>{{this.label}}</option>{{/each}}
             </select>{{/if}}</li>
+        {{#if controls}}<li class="midi-qol-prompt-inputs" data-row="{{id}}">
+            {{#each controls}}<span class="midi-qol-prompt-input">{{label}}
+                {{#if (eq kind "number")}}<input type="number" name="{{name}}" value="{{value}}" {{#if (ne min undefined)}}min="{{min}}"{{/if}} {{#if (ne max undefined)}}max="{{max}}"{{/if}} step="1">{{/if}}
+                {{#if (eq kind "text")}}<input type="text" name="{{name}}" value="{{value}}">{{/if}}
+                {{#if (eq kind "checkbox")}}<input type="checkbox" name="{{name}}" {{#if value}}checked{{/if}}>{{/if}}
+                {{#if (eq kind "select")}}<select name="{{name}}">{{#each options}}<option value="{{value}}" {{#if selected}}selected{{/if}}>{{label}}</option>{{/each}}</select>{{/if}}
+                {{#if (eq kind "multi")}}<select name="{{name}}" multiple>{{#each options}}<option value="{{value}}" {{#if selected}}selected{{/if}}>{{label}}</option>{{/each}}</select>{{/if}}
+                {{#if (eq kind "targets")}}{{#each options}}<label><input type="checkbox" name="targets" value="{{value}}" {{#if selected}}checked{{/if}}> {{label}}</label>{{/each}}{{/if}}
+            </span>{{/each}}
+        </li>{{/if}}
         {{/if}}
         {{/each}}
     </ul>

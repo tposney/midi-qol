@@ -690,7 +690,8 @@ export function collectBonusFlags(actor: Actor.Implementation, category: string,
 }
 
 export async function bonusCheck(actor: Actor.Implementation, result: Roll, category: string, detail = "", messageData: any = {},
-  prompt: { request?: IncomingRequest, withinRequest?: IncomingRequest, alsoFail?: { category: string, detail: string }, responses?: PromptResponses } = {}): Promise<Roll> {
+  prompt: { request?: IncomingRequest, withinRequest?: IncomingRequest, alsoFail?: { category: string, detail: string }, responses?: PromptResponses,
+    rollConfig?: { config: object, dialog: object, message: object } } = {}): Promise<Roll> {
   detail ||= dnd5eRollType(messageData) ?? ""; // death saves -> "death", tool checks -> "tool"
   let bonusFlags = collectBonusFlags(actor, category, detail);
   // rollBonuses contributors: before the result, or after a failure ("fail.<subject>")
@@ -701,7 +702,8 @@ export async function bonusCheck(actor: Actor.Implementation, result: Roll, cate
   const bonusQuery: RollBonusQuery = {
     kind, actor,
     ability: kind === "save" || kind === "check" ? (subject !== "all" ? subject : undefined) : undefined,
-    skill: kind === "skill" && subject !== "all" ? subject : undefined
+    skill: kind === "skill" && subject !== "all" ? subject : undefined,
+    ...(prompt.rollConfig ? { rollConfig: prompt.rollConfig } : {})
   };
   const bonusPhase = failure ? "postResult" : "preResult";
   let candidates = await collectBonusCandidates(bonusQuery, bonusPhase, result, failure ? { success: false } : undefined);
@@ -1531,14 +1533,15 @@ async function doD20Roll(this: Actor.Implementation, wrapped, kind: D20RollKind,
       const failDetail = () => collectBonusFlags(this, kind.rollType, `fail.${rollId}`).length > 0 ? `fail.${rollId}` : "fail.all";
       // @ts-expect-error no dnd5e-types
       const oneAsk = !failLater && !!bonus.failBonuses && Number.isNumeric(result[0].options.target) && result[0].isSuccess === false;
+      const rollConfig = { config, dialog, message };
       result[0] = await bonusCheck(this, result[0], bonus.category, bonus.detail, message.data,
-        { withinRequest, ...(oneAsk ? { alsoFail: { category: kind.rollType, detail: failDetail() } } : {}) });
+        { withinRequest, rollConfig, ...(oneAsk ? { alsoFail: { category: kind.rollType, detail: failDetail() } } : {}) });
       DSNMarkDiceDisplayed(result);
       // @ts-expect-error no dnd5e-types
       if (!oneAsk && !failLater && bonus.failBonuses && Number.isNumeric(result[0].options.target) && result[0].isSuccess === false) {
         // A failed roll with optional fail bonuses (flags.midi-qol.optional.NAME.<type>.fail) offers them
         // bonusCheck also asks rollBonuses contributors, so it runs with or without fail flags
-        result[0] = await bonusCheck(this, result[0], kind.rollType, failDetail(), message.data, { withinRequest });
+        result[0] = await bonusCheck(this, result[0], kind.rollType, failDetail(), message.data, { withinRequest, rollConfig });
         DSNMarkDiceDisplayed(result);
       }
     }

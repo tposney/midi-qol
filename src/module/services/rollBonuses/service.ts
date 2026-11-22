@@ -37,6 +37,8 @@ export interface RollBonusQuery {
   ability?: string;
   skill?: string;
   tool?: string;
+  /** Contract 4 (13a point 6): dnd5e's roll process, dialog and message config of the roll (live: read, don't keep) */
+  rollConfig?: { config: object, dialog: object, message: object };
 }
 
 export interface BonusContext {
@@ -44,6 +46,41 @@ export interface BonusContext {
   phase: BonusPhase;
   roll: Roll;
   outcome?: Outcome;
+  /** Contract 4: what was chosen in the prompt for this bonus (its scaling, inputs, damage type, targets) */
+  selection?: BonusSelection;
+}
+
+/** Contract 4: an input shown with a bonus in the prompt */
+export interface BonusInput {
+  name: string;
+  label: string;
+  /** multi: several of its options (CAT's comboboxMulti), its value a list */
+  type: "number" | "select" | "multi" | "checkbox" | "text";
+  options?: readonly { value: string, label: string }[];
+  default?: string | number | boolean | readonly string[];
+  min?: number;
+  max?: number;
+}
+
+/** Contract 4: what the player chose for a bonus in the prompt */
+export interface BonusSelection {
+  scaling?: number;
+  inputs: Record<string, string | number | boolean | readonly string[]>;
+  damageType?: string;
+  /** Token document uuids picked (targeting) */
+  targets: string[];
+}
+
+/** Contract 4: configure's answer for a selection: the bonus as it now is */
+export interface BonusConfigured {
+  effect?: BonusEffect;
+  cost?: BonusCost;
+  /** The row's label (the formula as configured) */
+  label?: string;
+  /** Why it can't be taken with this selection */
+  disabled?: string;
+  /** How many creatures it may pick now (CAT's target scaling) */
+  maxTargets?: number;
 }
 
 export interface BonusCandidate {
@@ -95,6 +132,17 @@ export interface BonusCandidate {
    * chosen before the roll and becomes part of it (dnd5e doubles its dice on a critical, keeps its type).
    */
   needsRoll?: boolean;
+  /** Contract 4: spent at a level from `min` (default 1) to `max`; the formula reads it as `@bonus.scaling` */
+  scaling?: { max: number, min?: number, label?: string };
+  /** Contract 4: inputs shown with it; the formula reads them as `@bonus.inputs.<name>` */
+  inputs?: readonly BonusInput[];
+  /**
+   * Contract 4: the player picks up to `max` creatures: from `candidates` (token document uuids, such as the attack's
+   * hit targets) when given, else those within `range` feet of the roller, by disposition to it
+   */
+  targeting?: { max: number, candidates?: readonly string[], range?: number, disposition?: "ally" | "enemy" | "any", self?: boolean };
+  /** Contract 4: the bonus for a selection, asked as the player changes it (CAT's updateScaling and input formulas) */
+  configure?: (selection: BonusSelection, ctx: BonusContext) => BonusConfigured | undefined | Promise<BonusConfigured | undefined>;
 }
 
 export interface RollBonusContributor {
@@ -112,9 +160,10 @@ export let rollBonusesService: ReturnType<typeof defineService<RollBonusContribu
 /**
  * What rollBonuses reads from a candidate, by version: 1 the M1 fields; 2 (M15 stage 3a) chosen bonuses applied in
  * orderForApplication order, a damage `add` with its own damageType or critical as its own damage roll; 3 (stage 3d)
- * `apply`, `iconHTML`, `description`, `when`, `spender`, `damageTypes`.
+ * `apply`, `iconHTML`, `description`, `when`, `spender`, `damageTypes`; 4 (M32b) `scaling`, `inputs`, `targeting`,
+ * `configure`, the selection on the context, a prompt provider's `ask` answering `{ id, selection }`.
  */
-export const ROLL_BONUSES_CONTRACT = 3;
+export const ROLL_BONUSES_CONTRACT = 4;
 
 /** Whether a candidate is offered for this result after the roll (its `when`) */
 export function offeredForResult(candidate: { when?: "failure" | "success" | "any" }, phase: BonusPhase, outcome: Outcome | undefined): boolean {
@@ -187,6 +236,8 @@ export function defineRollBonusesService() {
 /** A contributor's candidate, its id prefixed with the contributor's. */
 export type OfferedBonus = BonusCandidate & {
   contributor: string;
+  /** Contract 4: the prompt's selection, the bonus already configured for it */
+  selection?: BonusSelection;
   /** A flags.midi-qol.optional bonus: its flag (a flag can offer two values, both withdrawn when one is used) and its name */
   flagKey?: string;
   flagLabel?: string;
@@ -384,13 +435,31 @@ export async function applyOfferedBonus(bonus: OfferedBonus, ctx: BonusContext, 
   let roll = ctx.roll;
   if (!(await approveBonus(bonus, ctx))) return roll;
   try {
+    // Contract 4: the prompt's selection, read by the formula as @bonus.scaling / @bonus.inputs.<name>
+    // Without a prompt's selection (the classic dialog, a standing choice): its lowest level and its inputs' defaults
+    const selection: BonusSelection | undefined = bonus.selection ?? (bonus.scaling || bonus.inputs?.length
+      ? { scaling: bonus.scaling ? bonus.scaling.min ?? 1 : undefined, targets: [],
+        inputs: Object.fromEntries((bonus.inputs ?? []).filter(i => i.default !== undefined).map(i => [i.name, i.default!])) }
+      : undefined);
+    if (selection) {
+      ctx = { ...ctx, selection };
+      rollData = { ...rollData, bonus: { scaling: selection.scaling ?? 1, inputs: selection.inputs } };
+    }
+    // Taken without the prompt: configured for that selection here (the prompt configures its own)
+    if (!bonus.selection && selection && bonus.configure) {
+      const configured = await bonus.configure(selection, ctx);
+      if (configured?.disabled) return roll;
+      if (configured) bonus = { ...bonus, ...(configured.effect ? { effect: configured.effect } : {}), ...(configured.cost ? { cost: configured.cost } : {}) };
+    }
     let effect = bonus.effect;
+    if (effect.kind === "add" && !effect.damageType && selection?.damageType) effect = { ...effect, damageType: selection.damageType };
     if (effect.kind === "add" && !effect.damageType && bonus.damageTypes?.length)
       effect = { ...effect, damageType: await chooseDamageType(bonus.damageTypes, bonus.label, ctx.query.actor, bonusDamageTypeKey(standingKey(bonus))) };
+    const targets = selection?.targets.length ? selection.targets : bonus.targets;
     const rollType = (ctx.roll.options as { type?: string }).type;
-    if (bonus.targets?.length && ctx.query.kind === "damage" && effect.kind === "add" && ctx.query.workflow) {
+    if (targets?.length && ctx.query.kind === "damage" && effect.kind === "add" && ctx.query.workflow) {
       const extra = await new Roll(effect.formula, { ...ctx.roll.data, ...rollData }).evaluate();
-      ctx.query.workflow.addTargetedDamageBonus({ targets: [...bonus.targets], amount: extra.total ?? 0,
+      ctx.query.workflow.addTargetedDamageBonus({ targets: [...targets], amount: extra.total ?? 0,
         type: effect.damageType ?? rollType ?? "none", label: bonus.label });
     } else if (ctx.query.kind === "damage" && effect.kind === "add" && ctx.query.workflow
       && ((effect.damageType && effect.damageType !== rollType) || effect.critical === "force" || effect.critical === "never")) {

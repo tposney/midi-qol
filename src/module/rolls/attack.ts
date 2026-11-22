@@ -243,6 +243,7 @@ async function midiRollAttack(activity: AttackActivityLike, wrapped: RollAttack,
   let rolls: Roll[] | null | undefined;
   const workflow = config.workflow as Workflow | undefined;
   config.midiOptions ??= {};
+  if (workflow) workflow.rollConfigs.attack = { config, dialog, message };
 
   try {
     if (debugEnabled > 0) warn("rollAttack | Called", config, dialog, message);

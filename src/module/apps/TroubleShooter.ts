@@ -1,5 +1,6 @@
 import { entries, serviceProblems, type ServiceProblem } from "../api/services.js";
 import { automationReport } from "../lib/entries/overlays.js";
+import { setSetting, unmetSettingNeeds } from "../services/settingNeeds/service.js";
 import { chooseJsonFile } from "../lib/fileDialogs.js";
 import { i18n, i18nFormat, systemConcentrationId } from "../../midi-qol.js";
 import { ModuleReviewDialog } from "./ModuleReviewDialog.js";
@@ -957,6 +958,7 @@ export class TroubleShooter extends HandlebarsApplicationMixin(ApplicationV2) {
   public static checkCommonProblems(data: TroubleShooterData) {
     data.problems.push(...featureOverlapProblems());
     data.problems.push(...serviceProblemsAsProblems());
+    data.problems.push(...settingNeedsAsProblems());
     this.checkMidiSettings(data);
     this.checkMidiCoverSettings(data)
     this.checkRollBonusPrompts(data);
@@ -1095,6 +1097,29 @@ export class TroubleShooter extends HandlebarsApplicationMixin(ApplicationV2) {
       });
     }
   }
+}
+
+/** M32b: the midi settings modules need (the settingNeeds service) that aren't met, each with its Auto Fix */
+function settingNeedsAsProblems(): ProblemSpec[] {
+  const show = (value: unknown) => typeof value === "string" ? value : JSON.stringify(value);
+  return unmetSettingNeeds().map(({ contributor, need, value }) => {
+    const name = need.label ?? (need.setting.startsWith("ConfigSettings.")
+      ? game.i18n?.localize(`midi-qol.${need.setting.slice(15).capitalize()}.Name`) ?? need.setting : game.i18n?.localize(`midi-qol.${need.setting}.Name`) ?? need.setting);
+    return {
+      moduleId: contributor.split(".")[0] || contributor,
+      severity: "Warn" as const,
+      problemSummary: `${name}: ${show(value)}${need.fix !== undefined ? ` (${contributor} needs ${show(need.fix)})` : ""}`,
+      fixer: need.why ?? `${contributor} needs a different value for this midi setting`,
+      problemDetail: { setting: need.setting },
+      ...(need.fix !== undefined ? {
+        fixerFunc: async (app: TroubleShooter) => {
+          await setSetting(need.setting, need.fix);
+          TroubleShooter.data = TroubleShooter.collectTroubleShooterData();
+          app.render({ force: true });
+        }
+      } : {})
+    };
+  });
 }
 
 /** What to do about a service's or step's reported problem, by kind */

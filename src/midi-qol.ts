@@ -1,3 +1,4 @@
+import { defineSettingNeedsService } from "./module/services/settingNeeds/service.js";
 import { activityTypeSteps, activityTypeStepsMarkdown } from "./module/activities/activityTypeSteps.js";
 import { registerMidiIssueContributors } from "./module/services/economy/issues.js";
 import { setupLedgerEvents } from "./module/services/economy/ledger.js";
@@ -542,6 +543,7 @@ Hooks.once('init', async function () {
   setupLedgerEvents();
   defineRangeService();
   defineBonusPromptService(() => `midi-qol.${safeGetGameSetting("midi-qol", "BonusPrompt") ?? "phased"}`);
+  defineSettingNeedsService();
   // Registered here, not in services/rollBonuses/prompt.ts: BonusPromptApp extends utils' RollModifyDialog and utils
   // imports prompt.ts, so prompt.ts importing the app would evaluate the class before its base exists
   bonusPromptService.register("midi-qol.phased", { open: data => new BonusPromptApp(data) }, { label: "Phased (tick and apply)" });

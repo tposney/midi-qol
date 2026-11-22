@@ -7757,13 +7757,33 @@ export class Workflow {
   }
 
   /**
-   * rollBonuses' preRoll phase (stage 7): automatic bonuses that add to the formula are collected before the roll and
-   * become parts of it (attackRollParts), so they show in the roll and dnd5e doubles their dice on a critical. Optional
-   * preRoll bonuses are not offered yet (the prompt opens after the roll).
+   * rollBonuses' preRoll phase (stage 7): bonuses that add to the formula are collected before the roll and become
+   * parts of it (attackRollParts), so they show in the roll and dnd5e doubles their dice on a critical. M32b: optional
+   * ones too, chosen before the roll (the actor's standing choices, the rest asked of its owner in one prompt), as the
+   * damage adds are (M15 5d).
    */
   async collectPreRollBonuses(kind: "attack"): Promise<void> {
-    const offered = await collectBonusCandidates(this.rollBonusQuery(kind), "preRoll", new Roll("0"));
-    this.#preRollBonuses[kind] = offered.filter(candidate => !candidate.optional && candidate.effect.kind === "add");
+    const query = this.rollBonusQuery(kind);
+    const zero = new Roll("0");
+    const adds = (await collectBonusCandidates(query, "preRoll", zero)).filter(c => c.effect.kind === "add" && !c.apply);
+    const chosen = adds.filter(c => !c.optional);
+    const optional = adds.filter(c => c.optional);
+    if (optional.length) {
+      const standing = applyStandingChoices(this.actor, optional, false);
+      chosen.push(...standing.apply);
+      if (standing.ask.length) {
+        await this.flushCardWrites(); // a person decides next
+        const formula = (c: OfferedBonus) => c.effect.kind === "add" ? ` (+${c.effect.formula})` : "";
+        const ids = await askOffers(this.actor, `${this.actor.name} - ${i18n("DND5E.Attack")}`,
+          standing.ask.map(c => ({ key: c.id, label: `${c.label}${formula(c)}`, img: c.img, description: c.description })));
+        chosen.push(...standing.ask.filter(c => ids.includes(c.id)));
+      }
+      for (const c of standing.armed) await setStandingChoice(this.actor, standingKey(c), "ask", c.label);
+    }
+    const ctx = { query, phase: "preRoll" as const, roll: zero };
+    const taken: OfferedBonus[] = [];
+    for (const c of chosen) if (!c.optional || await approveBonus(c, ctx)) taken.push(c);
+    this.#preRollBonuses[kind] = taken;
   }
 
   /** Damage bonuses offered before the damage roll (M15 5d), taken or not: not offered again after it */
@@ -7857,11 +7877,15 @@ export class Workflow {
     foundry.utils.setProperty(roll, `flags.${MODULE_ID}.optionalsUsed`, used);
   }
 
+  /** dnd5e's config of this use's latest attack and damage rolls (midi's roll wraps record them), for rollBonuses */
+  rollConfigs: { attack?: { config: object, dialog: object, message: object }, damage?: { config: object, dialog: object, message: object } } = {};
+
   /** What rollBonuses contributors are told about this use's attack or damage roll. */
   rollBonusQuery(kind: "attack" | "damage"): RollBonusQuery {
     return {
       kind, actor: this.actor, token: getTokenDocument(this.token), workflow: this, activity: this.activity, item: this.item,
-      target: this.targets.count === 1 ? this.targets.documents[0] : undefined, actionType: this.activity?.actionType
+      target: this.targets.count === 1 ? this.targets.documents[0] : undefined, actionType: this.activity?.actionType,
+      ...(this.rollConfigs[kind] ? { rollConfig: this.rollConfigs[kind] } : {})
     };
   }
 

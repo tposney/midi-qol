@@ -4291,7 +4291,10 @@ export class RollModifyDialog extends HandlebarsApplicationMixin(ApplicationV2) 
     /** Asked through the request core (M5b): the requester's deadline is shown (its pause asks the requester), and the dialog closes when it is answered for the player */
     request?: IncomingRequest,
     /** M32a step 3: another part's rows shown after the bonuses (a failed save's reactions) */
-    responses?: PromptResponses
+    responses?: PromptResponses,
+    /** The roll's bonus query and phase (contract 4: a bonus's configure is asked with them) */
+    bonusQuery?: RollBonusQuery,
+    bonusPhase?: BonusPhase
   }
 
   constructor(data) {
@@ -4955,7 +4958,10 @@ export async function bonusDialog(
         const ids = await prompter.ask({ title, actor: this.actor, roll: newRoll, rollHTML: visible ? await midiRenderRoll(newRoll) : "Hidden Roll",
           phase: bonusPhase, candidates: optionalCandidates, timeout });
         if (!ids?.length) break;
-        const picked = orderForApplication(optionalCandidates.filter(c => ids.includes(c.id)));
+        // Contract 4: an answer is an id, or an id with its selection
+        const answers = new Map(ids.map(answer => typeof answer === "string" ? [answer, undefined] : [answer.id, answer.selection] as const));
+        const picked = orderForApplication(optionalCandidates.filter(c => answers.has(c.id))
+          .map(c => answers.get(c.id) ? { ...c, selection: answers.get(c.id) } : c));
         for (const candidate of picked) if (optionalCandidates.some(c => c.id === candidate.id)) await take(candidate);
         if (!picked.some(c => c.effect.kind === "reroll" || c.effect.kind === "replace" || c.effect.kind === "mode")) break;
       }
@@ -5001,7 +5007,9 @@ export async function bonusDialog(
         candidates: optionalCandidates,
         onCandidate,
         request,
-        responses: options.responses
+        responses: options.responses,
+        bonusQuery,
+        bonusPhase
       }).render({ force: true });
   });
   return chosen.finally(() => decision?.finish());

@@ -80,6 +80,7 @@ async function midiRollDamage(activity: Activity, wrapped: RollDamage, config: R
   const workflow = config.workflow as Workflow;
   // @ts-expect-error no dnd5e-types
   if (workflow.currentStep === "midi-qol.Abort") return activity.use(config, dialog, {});
+  workflow.rollConfigs.damage = { config, dialog, message };
   // Damage again for a completed use: a damage roll of its own, as dnd5e's
   if (workflow.readOnly || workflow.currentStep === "midi-qol.Completed")
     return Workflow.rerollDamage(workflow, activity, config, dialog, message);
