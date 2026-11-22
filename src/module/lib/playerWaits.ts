@@ -40,6 +40,8 @@ export interface WaitSpec<T> {
   keepDialogs?: boolean;
   /** What began the wait (a workflow): its waits end with it (endPlayerWaitsOwnedBy). */
   owner?: object;
+  /** M32e: the use's card it waits for (default: the owner's itemCardUuid) */
+  cardUuid?: string;
 }
 
 export interface WaitInfo {
@@ -55,6 +57,8 @@ export interface WaitInfo {
   /** The player disconnected while it was pending: it waits for the GM. */
   offline: boolean;
   source?: string;
+  /** M32e: the use's card it waits for (its "waiting for" line) */
+  cardUuid?: string;
 }
 
 /** A wait begun with beginPlayerWait. */
@@ -150,7 +154,8 @@ export function beginPlayerWait<T>(spec: WaitSpec<T>): PlayerWait<T> | undefined
       const choice = spec.choices[id];
       return typeof choice === "object" && choice ? { id, label: choice.label } : { id };
     }),
-    startedAt: Date.now(), offline: !user.active
+    startedAt: Date.now(), offline: !user.active,
+    cardUuid: spec.cardUuid ?? (spec.owner as { itemCardUuid?: string } | undefined)?.itemCardUuid
   };
   let settle!: (result: { choice: WaitChoice, value: T }) => void;
   const settled = new Promise<{ choice: WaitChoice, value: T }>(resolve => settle = resolve);

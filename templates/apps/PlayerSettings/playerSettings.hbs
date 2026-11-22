@@ -1,0 +1,24 @@
+<div class="midi-qol-player-settings-body">
+    {{#if none}}
+    <p>{{localize "midi-qol.PlayerSettings.NoPlayers"}}</p>
+    {{else}}
+    <p class="hint">{{localize "midi-qol.PlayerSettings.Hint"}}</p>
+    <table>
+        <thead><tr><th></th>{{#each players}}<th class="{{#unless active}}midi-qol-very-faint{{/unless}}">{{name}}</th>{{/each}}</tr></thead>
+        <tbody>
+            {{#each rows}}
+            <tr>
+                <td>{{label}}</td>
+                {{#each cells}}
+                <td>
+                    {{#if checkbox}}<input type="checkbox" name="{{name}}" {{#if checked}}checked{{/if}}>
+                    {{else if options}}<select name="{{name}}">{{#each options}}<option value="{{value}}" {{#if selected}}selected{{/if}}>{{label}}</option>{{/each}}</select>
+                    {{else}}<input type="text" name="{{name}}" value="{{value}}">{{/if}}
+                </td>
+                {{/each}}
+            </tr>
+            {{/each}}
+        </tbody>
+    </table>
+    {{/if}}
+</div>

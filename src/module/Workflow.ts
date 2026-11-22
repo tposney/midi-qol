@@ -3061,6 +3061,7 @@ export class Workflow {
       : { roll: { label: "midi-qol.PlayerWaits.Choice.roll", value: () => this.rollForPlayer(kind, "normal") }, dismiss };
     this.#rollWait = beginPlayerWait<unknown>({
       kind, userId: game.user.id!, actorUuid: this.actor.uuid ?? undefined, tokenUuid: this.tokenDocument?.uuid ?? undefined, keepDialogs: true,
+      cardUuid: this.itemCardUuid,
       label: i18nFormat(`midi-qol.PlayerWaits.${kind}Label`, { item: this.item?.name ?? "" }),
       choices,
       onSettled: () => { this.#rollWait = undefined; Workflow.#rollWaiters.delete(this); }

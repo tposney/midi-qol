@@ -1,3 +1,4 @@
+import { PlayerSettingsView } from "./apps/PlayerSettingsView.js";
 import { registerHiddenGroundCueSetting } from "./lib/hiddenGroundCue.js";
 import { applyChatCardSummaries, registerChatCardSummariesSetting } from "./lib/chatCardSummaries.js";
 import { registerRulesTextSettings } from "./lib/rulesText.js";
@@ -1836,6 +1837,16 @@ export const registerSettings = function () {
     hint: "midi-qol.Hint",
     icon: "fas fa-dice-d20",
     type: ConfigPanel as any,
+    restricted: true
+  });
+
+  // M32e: the players' midi user settings, for the GM
+  game.settings.registerMenu("midi-qol", "playerSettings", {
+    name: "midi-qol.PlayerSettings.Name",
+    label: "midi-qol.PlayerSettings.Label",
+    hint: "midi-qol.PlayerSettings.MenuHint",
+    icon: "fas fa-users-gear",
+    type: PlayerSettingsView,
     restricted: true
   });
 

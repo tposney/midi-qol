@@ -2436,4 +2436,6 @@ body.midi-qol-hide-gambit-mirrors .gps-dialog-mirror:not(.midi-qol-gambit-shown)
 .midi-qol-entry-editor .midi-qol-entry-action-head { display: flex; gap: 6px; align-items: center; margin-bottom: 4px; }
 .midi-qol-entry-editor .midi-qol-entry-action-head select { flex: 1; }
 .midi-qol-entry-editor .midi-qol-entry-action-head button { flex: 0 0 auto; width: auto; }
+/* M32e: a use's card, waiting for players */
+.midi-qol-card-waiting { margin-top: 4px; padding: 2px 4px; font-size: var(--font-size-12); font-style: italic; border-top: 1px dashed var(--color-border-light-2, #999); }
 
