@@ -2382,7 +2382,7 @@ export async function completeActivityUse(activityRef: Activity | string | undef
     return await new Promise((resolve) => {
       const maxWait = 90; // If the activity usage doesn't complete in 90 seconds then we have a problem
       // The use's targets travel with the use; the player's targets are left alone (M2 stage 7)
-      if (game.user && memberCount(targetsToUse) === 0 && activity.target?.affects?.type === "self") {
+      if (game.user && memberCount(targetsToUse) === 0 && activityTargetsSelf(activity)) {
         const selfTarget = getToken(activity.item.actor);
         if (selfTarget) targetsToUse = new TokenDocumentSet([selfTarget]);
       } else if (memberCount(targetsToUse) === 0 && !usage.midiOptions!.ignoreUserTargets) {
@@ -8360,6 +8360,19 @@ export function hasAutoPlaceTemplate(item: Item.Implementation): boolean {
 
 export function activityHasAutoPlaceTemplate(activity: Activity) {
   return activity && ["self", undefined].includes(activity.range?.units) && ["radius", "squareRadius"].includes(activity.target?.template.type);
+}
+
+/**
+ * Whether a use of the activity targets its user: its target is Self, or it has no target and no area, a range of
+ * Self, and is a utility or healing activity. dnd5e's SRD gives such spells (Mirror Image, Blur, False Life) no
+ * target at all. An attack, save or damage activity with a range of Self is left alone: it is for the creature just
+ * hit (Divine Smite, Searing Smite, Ensnaring Strike).
+ */
+export function activityTargetsSelf(activity: Activity | undefined | null): boolean {
+  const target = activity?.target;
+  if (target?.affects?.type === "self") return true;
+  if (target?.affects?.type || target?.template?.type) return false;
+  return activity?.range?.units === "self" && ["utility", "heal"].includes(activity.type);
 }
 
 export function activityHasEmanationNoTemplate(activity: Activity) {

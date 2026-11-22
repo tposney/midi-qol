@@ -1595,6 +1595,22 @@ export const consumeConfigOptions = keysToOptionsObj("ConfigDialogOptions", [
 export const registerSettings = function () {
   // Workflow token sets read as canvas tokens until MidiQOL.setTokenDocumentSets(true) (TokenDocumentSet document mode);
   // read once at init, so a change needs a reload. Removed in 14.8.0: sets then always read as TokenDocuments.
+  game.settings.register("midi-qol", "EntryEditorView", {
+    scope: "client",
+    type: String,
+    config: false,
+    default: "sentence"
+  });
+
+  game.settings.register("midi-qol", "EntryEditorPlayers", {
+    name: "midi-qol.EntryEditorPlayers.Name",
+    hint: "midi-qol.EntryEditorPlayers.Hint",
+    scope: "world",
+    type: Boolean,
+    config: true,
+    default: false
+  });
+
   game.settings.register("midi-qol", "tokenDocumentSets", {
     scope: "world",
     type: Boolean,

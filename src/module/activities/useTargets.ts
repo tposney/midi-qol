@@ -4,7 +4,7 @@ import { ActivityUseConfiguration, RollDialogConfig, RollMessageConfig } from ".
 import { error } from "../../midi-qol.js";
 import { TroubleShooter } from "../apps/TroubleShooter.js";
 import { configSettings } from "../settings.js";
-import { activityHasAreaTarget, getOrCreateTokenForActor, validTargetTokens, userTargetsKeepingUndrawn, updateUserTargets, isValidTarget } from "../utils.js";
+import { activityHasAreaTarget, activityTargetsSelf, getOrCreateTokenForActor, validTargetTokens, userTargetsKeepingUndrawn, updateUserTargets, isValidTarget } from "../utils.js";
 import { preTemplateTargets, requiresTargetConfirmation } from "./activityHelpers.js";
 
 /*
@@ -21,7 +21,7 @@ export async function setupTargets(activity: MidiActivity, config: ActivityUseCo
   }
   const workflow = config.workflow;
   const hasTargetsToUse = memberCount(config.midiOptions?.targetsToUse) > 0 && !activityHasAreaTarget(activity);
-  const isSelfTargetActivity = activity.target?.affects?.type === "self";
+  const isSelfTargetActivity = activityTargetsSelf(activity);
   // The player's targets are the use's targets only where the player decides (confirmation) or the use took the
   // player's targets: an automated use (given its targets) and self-targeting leave them alone (M2 stage 7)
   let syncUserTargets = false;
@@ -46,7 +46,7 @@ export async function setupTargets(activity: MidiActivity, config: ActivityUseCo
     workflow.workflowOptions.ignoreUserTargets = true;
   } else {
     // No targetsToUse and no confirmation — use current user targets or self-target.
-    let selfTarget = activity.target?.affects.type === "self";
+    let selfTarget = activityTargetsSelf(activity);
     // @ts-expect-error no dnd5e-types
     if (activity.item.type === "tool" && !activity.target?.affects.type)
       selfTarget = true;

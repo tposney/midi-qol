@@ -7,7 +7,7 @@ import { Workflow } from "../Workflow.js";
 import { TroubleShooter } from "../apps/TroubleShooter.js";
 import { checkMechanic, configSettings } from "../settings.js";
 import { saveUndoData } from "../undo.js";
-import { activityHasAreaTarget, callActivityHooks, canSee, canSense, checkActivityRange, checkTargetsSeen, checkTotalCover, checkIncapacitated, createConditionData, evalActivationCondition, evalCondition, getSpeaker, getToken, activityHasAutoPlaceTemplate, hasUsedBonusAction, hasUsedReaction, isInCombat, logIncapacitatedCheckResult, needsBonusActionCheck, needsReactionCheck, setBonusActionUsed, hasNoReactionsMarker, activityHasEmanationNoTemplate, needsAOOCheck, getConsumptionData } from "../utils.js";
+import { activityHasAreaTarget, activityTargetsSelf, callActivityHooks, canSee, canSense, checkActivityRange, checkTargetsSeen, checkTotalCover, checkIncapacitated, createConditionData, evalActivationCondition, evalCondition, getSpeaker, getToken, activityHasAutoPlaceTemplate, hasUsedBonusAction, hasUsedReaction, isInCombat, logIncapacitatedCheckResult, needsBonusActionCheck, needsReactionCheck, setBonusActionUsed, hasNoReactionsMarker, activityHasEmanationNoTemplate, needsAOOCheck, getConsumptionData } from "../utils.js";
 import { activityHasScaledTargetCount, shouldEnforceSingleTarget } from "./activityHelpers.js";
 
 /*
@@ -243,7 +243,7 @@ export async function postChatCardChecks(activity: MidiActivity, usage: Activity
 
     let isEmanationTargeting = activityHasAutoPlaceTemplate(activity) || activityHasEmanationNoTemplate(activity);
     let isAoETargeting = !isEmanationTargeting && activityHasAreaTarget(activity);
-    let selfTarget = activity.target?.affects.type === "self";
+    let selfTarget = activityTargetsSelf(activity);
     const inCombat = activity.actor && isInCombat(activity.actor);
     const requiresTargets = configSettings.requiresTargets === "always"
       || (configSettings.requiresTargets === "tokens" && (canvas?.scene?.tokens.size ?? 0) > 0)

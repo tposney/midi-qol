@@ -94,7 +94,7 @@
             "choice": false,
             "type": "self"
           },
-          "override": false
+          "override": true
         },
         "roll": {
           "formula": "(@flags.dnd-players-handbook.mirrorImages)d6kh",

@@ -73,13 +73,18 @@ export interface ActionField {
   label: string;
   /**
    * rollSpec: a save or check's what (the applying activity's, an activity's of the item, or ability / skill / DC);
-   * activity: one of the item's activities ("activity:<id>"); condition: a midi condition (the condition editor)
+   * activity: one of the item's activities ("activity:<id>"); condition: a midi condition (the condition editor);
+   * tristate: yes / no / unset (a false that means something); pairs: a map of names to values ("destroyed: +1");
+   * effectRef: a status, one of the item's effects, or everything the item applied
    */
-  type: "string" | "formula" | "number" | "boolean" | "select" | "list" | "rollSpec" | "activity" | "condition";
+  type: "string" | "formula" | "number" | "boolean" | "select" | "list" | "rollSpec" | "activity" | "condition" | "tristate" | "pairs" | "effectRef";
   /** select: its values, or a function giving them (damage types) */
   options?: readonly string[] | (() => readonly { value: string, label: string }[]);
+  /** string / formula / pairs: a value that reads as a number is stored as one */
+  numeric?: boolean;
 }
-export interface ActionSchema { fields: readonly ActionField[] }
+/** `initial`: the action's own value when a card is switched to it (`end: true`, `bonus: { kind: "add" }`) */
+export interface ActionSchema { fields: readonly ActionField[], initial?: unknown }
 
 const actions = new Registry<ActionHandler, { schema?: ActionSchema, label?: string }>();
 const CONTROL_KEYS = new Set(["if", "then", "else"]);
@@ -222,8 +227,10 @@ export async function runEffectEvent(eventId: string, effect: ActiveEffect.Imple
   const results: EntryRunResult[] = [];
   for (const f of effectEntries(effect, actor).filter(f => listens(f.entry, eventId))) {
     const conditionData = conditionDataFor(f, context);
-    if (!await entryHolds(f, conditionData)) continue;
-    results.push(await takeEntry(eventId, f, context, conditionData));
+    if (!await entryHolds(f, conditionData)) { noteCheck(eventId, f, "condition"); continue; }
+    const result = await takeEntry(eventId, f, context, conditionData);
+    noteCheck(eventId, f, "ran", result.actions);
+    results.push(result);
   }
   return results;
 }
@@ -493,6 +500,34 @@ export async function holds(expression: string | undefined, conditionData: Recor
 
 export interface EntryRunResult { entry: string, document: string, actions: string[] }
 
+/**
+ * What became of an entry the last times its event came up on this client (the entry editor's "last runs"): it ran
+ * (the actions that did), or why not. Kept in memory only, the latest few hundred.
+ */
+export interface EntryCheck {
+  at: number;
+  event: string;
+  entry: string;
+  /** The document holding the entry; for an applied effect also its name and origin (the item's own copy differs) */
+  document: string;
+  name?: string;
+  origin?: string;
+  outcome: "ran" | "condition" | "limit" | "cost" | "declined";
+  actions?: string[];
+}
+const checks: EntryCheck[] = [];
+const MAX_CHECKS = 300;
+
+function noteCheck(eventId: string, f: FoundEntry, outcome: EntryCheck["outcome"], actions?: string[]) {
+  const document = f.document as { uuid?: string | null, name?: string | null, origin?: string | null };
+  checks.push({ at: Date.now(), event: eventId, entry: f.entry.id, document: document.uuid ?? "", outcome,
+    ...(f.document instanceof ActiveEffect ? { name: document.name ?? "", origin: document.origin ?? "" } : {}), ...(actions ? { actions } : {}) });
+  if (checks.length > MAX_CHECKS) checks.splice(0, checks.length - MAX_CHECKS);
+}
+
+/** The recorded checks, oldest first */
+export function entryChecks(): readonly EntryCheck[] { return checks; }
+
 /** Run a list of actions for an entry (a table row's, an action's then/else): the keys that ran are added to `ran` */
 export async function runActions(list: readonly EntryAction[], run: Omit<ActionRun, "action">, ran: string[]): Promise<void> {
   for (const action of list) {
@@ -554,8 +589,9 @@ export async function runEvent(eventId: string, context: EventContext): Promise<
     // A reaction offer is asked as `ask` and costs the reaction: not offered once it is used
     if (offer === "reaction" && (!f.actor || hasUsedReaction(f.actor))) continue;
     const conditionData = conditionDataFor(f, context);
-    if (!await entryHolds(f, conditionData)) continue;
-    if (!limitAllows(f, context) || !costAllows(f)) continue;
+    if (!await entryHolds(f, conditionData)) { noteCheck(eventId, f, "condition"); continue; }
+    if (!limitAllows(f, context)) { noteCheck(eventId, f, "limit"); continue; }
+    if (!costAllows(f)) { noteCheck(eventId, f, "cost"); continue; }
     candidates.push({ found: f, conditionData, entry: f.entry, ask });
   }
   const results: EntryRunResult[] = [];
@@ -564,7 +600,13 @@ export async function runEvent(eventId: string, context: EventContext): Promise<
   const automatic = selectGroups(open.filter(c => !c.ask));
   const taken = new Set(automatic.flatMap(c => c.entry.group && !c.entry.stacks ? [c.entry.group] : []));
   const asked = await chooseAsked(eventId, open.filter(c => c.ask && (!c.entry.group || c.entry.stacks || !taken.has(c.entry.group))));
-  for (const { found: f, conditionData } of [...automatic, ...selectGroups(asked)]) results.push(await takeEntry(eventId, f, context, conditionData));
+  const chosen = [...automatic, ...selectGroups(asked)];
+  for (const candidate of open) if (candidate.ask && !chosen.includes(candidate)) noteCheck(eventId, candidate.found, "declined");
+  for (const { found: f, conditionData } of chosen) {
+    const result = await takeEntry(eventId, f, context, conditionData);
+    noteCheck(eventId, f, "ran", result.actions);
+    results.push(result);
+  }
   return results;
 }
 

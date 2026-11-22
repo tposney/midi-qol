@@ -11,7 +11,7 @@ import { TroubleShooter } from "../apps/TroubleShooter.js";
 import { checkRule, configSettings, safeGetGameSetting } from "../settings.js";
 import { saveUndoData } from "../undo.js";
 import { clearAbandonedUse, type UseState } from "./useRelaunch.js";
-import { activityHasAreaTarget, activityHasAutoPlaceTemplate, confirmUseOffScene, hasUsedBonusAction, hasUsedReaction, autoConsumeResource, setBonusActionUsed, setReactionUsed, validTargetTokens, activityHasEmanationNoTemplate, areMidiKeysPressed, getActor, toMessageMode, isActivityType, speakerFor } from "../utils.js";
+import { activityHasAreaTarget, activityTargetsSelf, activityHasAutoPlaceTemplate, confirmUseOffScene, hasUsedBonusAction, hasUsedReaction, autoConsumeResource, setBonusActionUsed, setReactionUsed, validTargetTokens, activityHasEmanationNoTemplate, areMidiKeysPressed, getActor, toMessageMode, isActivityType, speakerFor } from "../utils.js";
 import { removeFlanking } from "./activityHelpers.js";
 import { raiseUseConfigure } from "../lib/entries/useEvents.js";
 
@@ -166,7 +166,7 @@ export async function prepareUse(used: MidiActivity, usage: ActivityUseConfigura
   // C1). Safe now that automated uses never write the player's targets.
   if (snapshotFromUser && !memberCount(usage.midiOptions.targetsToUse)) retakeUserTargets(usage.workflow!, usage);
   // Save/clear targets BEFORE setupTargets changes game.user.targets for self-targeting
-  const isSelfTarget = used.target?.affects?.type === "self"
+  const isSelfTarget = activityTargetsSelf(used)
     // @ts-expect-error item.type includes "tool" at runtime
     || (used.item.type === "tool" && !used.target?.affects?.type);
   // Self-targeting no longer writes the player's targets (M2 stage 7), so there is nothing to save and restore

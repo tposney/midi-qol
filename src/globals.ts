@@ -218,6 +218,8 @@ declare module "fvtt-types/configuration" {
     "midi-qol.ReplaceDefaultActivities": boolean;
     "midi-qol.UseWeakReferences": boolean;
     "midi-qol.tokenDocumentSets": boolean;
+    "midi-qol.EntryEditorPlayers": boolean;
+    "midi-qol.EntryEditorView": string;
     "midi-qol.compatibilityLine": string;
     "midi-qol.PreferredGM": string;
     "midi-qol.MidiSoundSettings-backup": Record<string, any>;
