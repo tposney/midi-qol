@@ -5,7 +5,7 @@
   "img": "icons/magic/nature/beam-hand-leaves-green.webp",
   "system": {
     "description": {
-      "value": "<blockquote><p>Cost: 1 Sorcery Point</p></blockquote><p>When you cast a spell that forces other creatures to make a saving throw, you can protect some of those creatures from the spell's full force. To do so, spend 1 Sorcery Point and choose a number of those creatures up to your Charisma modifier (minimum of one creature). A chosen creature automatically succeeds on its saving throw against the spell, and it takes no damage if it would normally take half damage on a successful save.</p><p><strong>Creatures You Can Protect:</strong> [[lookup @abilities.cha.mod]]</p><p><em>Automation (midi-qol entries):</em> offered as you cast a spell (one Metamagic option per spell, Empowered and Seeking combine); its Sorcery Points come from Font of Magic. Careful Spell: the chosen creatures succeed on the save and take no damage from a spell doing half on a success.</p>",
+      "value": "<blockquote><p>Cost: 1 Sorcery Point</p></blockquote><p>When you cast a spell that forces other creatures to make a saving throw, you can protect some of those creatures from the spell's full force. To do so, spend 1 Sorcery Point and choose a number of those creatures up to your Charisma modifier (minimum of one creature). A chosen creature automatically succeeds on its saving throw against the spell, and it takes no damage if it would normally take half damage on a successful save.</p><p><strong>Creatures You Can Protect:</strong> [[lookup @abilities.cha.mod]]</p><p><em>Automation (midi-qol entries):</em> offered as you cast a spell (one Metamagic option per spell, Empowered and Seeking combine); its Sorcery Points come from Font of Magic. Careful Spell: the chosen creatures succeed on the save and take no damage from a spell doing half on a success. The choice holds for the spell's other saves until the end of the turn (an area's saves as creatures enter it), without asking or spending again; on a later turn it is offered again.</p>",
       "chat": ""
     },
     "source": {
@@ -118,7 +118,8 @@
           "choose": {
             "kind": "targets",
             "max": "max(1, @abilities.cha.mod)",
-            "label": "Careful Spell: protected creatures"
+            "label": "Careful Spell: protected creatures",
+            "keep": "turn"
           },
           "do": [
             {

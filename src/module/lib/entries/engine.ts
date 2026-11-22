@@ -1,3 +1,4 @@
+import { keepChoice, keptChoice } from "./keptChoices.js";
 import { MODULE_ID } from "../../../midi-qol.js";
 import { Registry } from "../../api/registry.js";
 import type { Workflow } from "../../Workflow.js";
@@ -9,7 +10,7 @@ import { limitKey, limitStamp, selectGroups, spendStoredLimit, withinLimit, type
 import type { Entry, EntryAction, EntryHome, EntryWho, FoundEntry } from "./types.js";
 import { addEconomy, entryConditionExtras } from "./conditionData.js";
 import { hasRules, itemOfEffect, matchesRole, ruleFor } from "./rules.js";
-import { askEntryChoice, type ChoiceDeclaration } from "../choices.js";
+import { askEntryChoice, type ChoiceDeclaration, type ChoiceValue } from "../choices.js";
 import { askOffers, costAllows, editToggles, listToggles, offerOption, payEntryConsumption, setToggle, spendEntryCost, toggleOn } from "./offers.js";
 
 /*
@@ -592,11 +593,14 @@ async function runAction(action: EntryAction, run: Omit<ActionRun, "action">, ra
 
 /** Run a event's entries for this context (MidiQOL.entries.run): what ran, in order */
 export async function runEvent(eventId: string, context: EventContext): Promise<EntryRunResult[]> {
-  type Candidate = { found: FoundEntry, conditionData: Record<string, unknown>, entry: Entry, ask: boolean };
+  type Candidate = { found: FoundEntry, conditionData: Record<string, unknown>, entry: Entry, ask: boolean, kept?: { value: unknown } };
   const candidates: Candidate[] = [];
   for (const f of collectEntries(eventId, context)) {
     const offer = f.entry.offer ?? "always";
-    const ask = offer === "ask" || offer === "reaction";
+    // A choice kept from earlier (choose.keep): taken again by itself, already paid for
+    const kept = f.entry.choose ? keptChoice(f, context) : undefined;
+    if (kept && context.offers && context.offers !== "automatic") continue;
+    const ask = (offer === "ask" || offer === "reaction") && !kept;
     if (context.offers === "automatic" && ask) continue;
     // A near holder's ask or reaction (Arrow-Catching Shield) is never in this creature's reaction prompt: asked of the holder (M29)
     const nearOffer = ask && !!f.actor && f.actor !== context.actor;
@@ -607,9 +611,9 @@ export async function runEvent(eventId: string, context: EventContext): Promise<
     if (offer === "reaction" && (!f.actor || hasUsedReaction(f.actor))) continue;
     const conditionData = conditionDataFor(f, context);
     if (!await entryHolds(f, conditionData)) { noteCheck(eventId, f, "condition"); continue; }
-    if (!limitAllows(f, context)) { noteCheck(eventId, f, "limit"); continue; }
-    if (!costAllows(f)) { noteCheck(eventId, f, "cost"); continue; }
-    candidates.push({ found: f, conditionData, entry: f.entry, ask });
+    if (!kept && !limitAllows(f, context)) { noteCheck(eventId, f, "limit"); continue; }
+    if (!kept && !costAllows(f)) { noteCheck(eventId, f, "cost"); continue; }
+    candidates.push({ found: f, conditionData, entry: f.entry, ask, ...(kept ? { kept } : {}) });
   }
   const results: EntryRunResult[] = [];
   // A group is one entry per use, across the use's events (Metamagic: one option per spell), unless it stacks
@@ -619,8 +623,8 @@ export async function runEvent(eventId: string, context: EventContext): Promise<
   const asked = await chooseAsked(eventId, open.filter(c => c.ask && (!c.entry.group || c.entry.stacks || !taken.has(c.entry.group))));
   const chosen = [...automatic, ...selectGroups(asked)];
   for (const candidate of open) if (candidate.ask && !chosen.includes(candidate)) noteCheck(eventId, candidate.found, "declined");
-  for (const { found: f, conditionData } of chosen) {
-    const result = await takeEntry(eventId, f, context, conditionData);
+  for (const { found: f, conditionData, kept } of chosen) {
+    const result = await takeEntry(eventId, f, context, conditionData, kept);
     noteCheck(eventId, f, "ran", result.actions);
     results.push(result);
   }
@@ -638,22 +642,26 @@ function groupOpen(entry: Entry, context: EventContext): boolean {
  * reaction for a reaction offer, its group for the use. A reaction prompt's offer (lib/entries/responseEvents.ts) is
  * taken this way.
  */
-export async function takeEntry(eventId: string, f: FoundEntry, context: EventContext, conditionData: Record<string, unknown>): Promise<EntryRunResult> {
+export async function takeEntry(eventId: string, f: FoundEntry, context: EventContext, conditionData: Record<string, unknown>, kept?: { value: unknown }): Promise<EntryRunResult> {
   const ran: string[] = [];
-  if (!await payEntryConsumption(f)) return { entry: f.entry.id, document: documentUuid(f.document), actions: ran };
-  // Its own choice, asked as it is taken and kept on the use as choices[<entry id>]; closed, it is not taken
+  // A kept choice (choose.keep) was paid for when it was made
+  if (!kept && !await payEntryConsumption(f)) return { entry: f.entry.id, document: documentUuid(f.document), actions: ran };
+  // Its own choice, asked as it is taken (or kept from earlier) and kept on the use as choices[<entry id>]; closed, it is not taken
   if (f.entry.choose && context.workflow && await holds(f.entry.choose.if as string | undefined, conditionData)) {
-    const value = await askEntryChoice({ label: f.entry.label ?? f.entry.id, kind: "option", ...f.entry.choose, id: f.entry.id } as ChoiceDeclaration, context.workflow);
+    const value = kept ? kept.value as ChoiceValue : await askEntryChoice({ label: f.entry.label ?? f.entry.id, kind: "option", ...f.entry.choose, id: f.entry.id } as ChoiceDeclaration, context.workflow);
     if (value === undefined) return { entry: f.entry.id, document: documentUuid(f.document), actions: ran };
+    if (!kept) await keepChoice(f, context, value);
     context.workflow.setChoice(f.entry.id, value);
     const choices = (conditionData.choices ?? {}) as Record<string, unknown>;
     conditionData.choices = { ...choices, [f.entry.id]: value };
   }
   await runActions(f.entry.do, { eventId: eventId, found: f, context, conditionData }, ran);
   if (ran.length) {
-    await spendEntryLimit(f, context);
-    await spendEntryCost(f);
-    if (f.entry.offer === "reaction" && f.actor) await setReactionUsed(f.actor);
+    if (!kept) {
+      await spendEntryLimit(f, context);
+      await spendEntryCost(f);
+      if (f.entry.offer === "reaction" && f.actor) await setReactionUsed(f.actor);
+    }
     if (f.entry.group && context.workflow) {
       const used = groupsUsed.get(context.workflow) ?? new Set<string>();
       used.add(f.entry.group);
