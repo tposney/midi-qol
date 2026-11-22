@@ -2,13 +2,14 @@
  * midi's range check: the "midi-qol" provider of the range service (service.ts). Range, long range, the range flags,
  * sharpshooter and spell sniper, thrown weapons, total cover and units, measured with the distance service.
  */
+import type { RangeCheckResult } from "./service.js";
 import type { Activity, TokenOrDocument } from "../../../globals.js";
 import { allAttackTypes, debugEnabled, i18nFormat, log, MODULE_ID, warn } from "../../../midi-qol.js";
 import { checkMechanic, configSettings } from "../../settings.js";
 import { activityRanges, createConditionData, evalAllConditions, evalCondition, getToken, hasCondition, isRangeCheckable } from "../../utils.js";
 import { rangeBand, rangeInGridUnits } from "../../rules/range.js";
 import { measureTokens } from "../distance/service.js";
-export function midiActivityRange(activityIn: Activity, tokenRef: TokenOrDocument | string | undefined, targetsRef: Set<TokenOrDocument | string> | undefined, showWarning: boolean = true): { result: string, attackingToken?: Token.Implementation, range?: number | undefined, longRange?: number | undefined } {
+export function midiActivityRange(activityIn: Activity, tokenRef: TokenOrDocument | string | undefined, targetsRef: Set<TokenOrDocument | string> | undefined, showWarning: boolean = true): RangeCheckResult {
   if (!canvas || !canvas.scene) return { result: "normal" };
   const checkRangeFunction = (activity: Activity, token: Token.Implementation, targets: Set<Token.Implementation>): { result: string, reason?: string, range?: number | undefined, longRange?: number | undefined } => {
     if (!canvas || !canvas.scene) return {
@@ -182,10 +183,11 @@ export function midiActivityRange(activityIn: Activity, tokenRef: TokenOrDocumen
   // An array: a Set's map can't give the same value twice (two targets with no Token)
   const targetsIn = targetsRef ? new Set([...targetsRef].map(t => getToken(t)).filter(t => !!t)) : undefined;
   if (!tokenIn || !targetsIn) return { result: "fail", attackingToken: undefined };
+  // The contract carries TokenDocuments; the checks below measure canvas tokens
   let attackingToken = tokenIn;
   if (!canvas || !canvas.tokens || !tokenIn || !targetsIn) return {
     result: "fail",
-    attackingToken: tokenIn,
+    attackingToken: tokenIn.document,
   }
 
   let canOverride = tokenIn.actor?.flags?.[MODULE_ID]?.rangeOverride?.attack?.all || tokenIn.actor?.flags?.[MODULE_ID]?.rangeOverride?.attack?.[activityIn.actionType];
@@ -200,7 +202,7 @@ export function midiActivityRange(activityIn: Activity, tokenRef: TokenOrDocumen
     if (result === "fail" && reason) {
       if (showWarning) ui.notifications?.warn(reason);
     }
-    return { result, attackingToken, range, longRange }
+    return { result, attackingToken: attackingToken.document, range, longRange }
   }
 
   const ownedTokens = canvas.tokens.ownedTokens;
@@ -217,7 +219,7 @@ export function midiActivityRange(activityIn: Activity, tokenRef: TokenOrDocumen
   });
 
   const successToken = possibleAttackers.find(attacker => checkRangeFunction(activityIn, attacker, targetsIn).result === "normal");
-  if (successToken) return { result: "normal", attackingToken: successToken, range, longRange };
+  if (successToken) return { result: "normal", attackingToken: successToken.document, range, longRange };
   // TODO come back and fix this: const disToken = possibleAttackers.find(attacker => checkRangeFunction(itemIn, attacker, targetsIn).result === "dis");
-  return { result: "fail", attackingToken, range, longRange };
+  return { result: "fail", attackingToken: attackingToken.document, range, longRange };
 }

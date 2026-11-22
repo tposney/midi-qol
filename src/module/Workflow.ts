@@ -1,3 +1,4 @@
+import type { RangeCheckResult } from "./services/range/service.js";
 import { ReactionBatch } from "./lib/reactionBatch.js";
 import { isRollOf } from "./rolls/common.js";
 import { withFixedDice, type FixedDice } from "./lib/fixedDice.js";
@@ -2165,12 +2166,8 @@ export class Workflow {
   attackMode: string | undefined;
   itemUsesReaction: boolean | undefined;
   itemUsesBonusAction: boolean | undefined;
-  rangeDetails: {
-    result: string;
-    attackingToken?: Token.Implementation;
-    range?: number;
-    longRange?: number
-  } | undefined;
+  /** The range check's answer (its attacking token a TokenDocument, as the range contract carries) */
+  rangeDetails: RangeCheckResult | undefined;
 
   sequenceId?: string;
   targetACModifiers: Map<string, number> = new Map(); // Map of actor uuid to AC modifier, used for active defences

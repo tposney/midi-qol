@@ -1,3 +1,4 @@
+import type { Workflow } from "../../Workflow.js";
 import { defineService, entries, reportServiceProblem } from "../../api/services.js";
 
 /*
@@ -12,7 +13,7 @@ import { defineService, entries, reportServiceProblem } from "../../api/services
  */
 
 export interface DamageContributionQuery {
-  workflow: any;
+  workflow: Workflow;
   actor: Actor.Implementation;
   item?: Item.Implementation;
   activity?: unknown;

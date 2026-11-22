@@ -1,3 +1,4 @@
+import type { Workflow } from "../Workflow.js";
 import { Registry } from "../api/registry.js";
 
 /*
@@ -54,10 +55,12 @@ const flows = new Registry<Flow>();
  * A flow's own implementation of a step (M5): the same step id, hooks, passes and module changes, another `run`.
  * `base()` runs the step's own implementation, as `super.WorkflowState_<name>()` did in the subclass that overrode it.
  */
-export type FlowVariant = (ctx: { workflow: any, base(): Promise<unknown> }) => unknown;
+// A flow runs its own kind of workflow (a trap flow a TrapWorkflow): a variant names that kind. Method syntax, so a
+// variant for a subclass is accepted where one for any Workflow is stored
+export type FlowVariant<W extends Workflow = Workflow> = { run(ctx: { workflow: W, base(): Promise<unknown> }): unknown }["run"];
 const variants = new Map<string, Map<string, FlowVariant>>();
 
-export function registerFlowVariant(flowId: string, stepId: string, run: FlowVariant): void {
+export function registerFlowVariant<W extends Workflow>(flowId: string, stepId: string, run: FlowVariant<W>): void {
   let forFlow = variants.get(flowId);
   if (!forFlow) variants.set(flowId, forFlow = new Map());
   forFlow.set(stepId, run);

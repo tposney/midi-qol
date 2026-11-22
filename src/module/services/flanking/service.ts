@@ -17,13 +17,14 @@ import { FLANKED_MODES } from "./rules.js";
  * Answers true or false, or undefined to leave that question to midi's geometry.
  */
 
+/** TokenDocuments (section 18: no canvas Token crosses a contract); a provider wanting geometry uses `.object` */
 export interface FlankingQuery {
-  attacker: Token.Implementation;
-  target: Token.Implementation;
+  attacker: TokenDocument.Implementation;
+  target: TokenDocument.Implementation;
 }
 
 export interface FlankedQuery {
-  target: Token.Implementation;
+  target: TokenDocument.Implementation;
 }
 
 type Answer = boolean | undefined | Promise<boolean | undefined>;
@@ -46,7 +47,10 @@ export function defineFlankingService() {
     kind: "single",
     description: "Whether an attacker flanks a target, and whether a target is flanked"
   });
-  flankingService.register("midi-qol", { flanking: ({ attacker, target }) => midiFlankingStatus(attacker, target), flanked: ({ target }) => midiFlankedStatus(target) }, { label: "Midi-QOL" });
+  flankingService.register("midi-qol", {
+    flanking: ({ attacker, target }) => attacker.object && target.object ? midiFlankingStatus(attacker.object, target.object) : undefined,
+    flanked: ({ target }) => target.object ? midiFlankedStatus(target.object) : undefined
+  }, { label: "Midi-QOL" });
 }
 
 /** Is `target` flanked: midi's setting decides whether the flanked rule applies, the provider decides. */
@@ -78,9 +82,9 @@ async function ask(question: "flanking" | "flanked", query: FlankingQuery | Flan
 
 /** The active provider's answer, or midi's geometry when it has none. */
 export async function isFlanking(attacker: Token.Implementation, target: Token.Implementation): Promise<boolean> {
-  return (await ask("flanking", { attacker, target })) ?? (await midiFlankingStatus(attacker, target));
+  return (await ask("flanking", { attacker: attacker.document, target: target.document })) ?? (await midiFlankingStatus(attacker, target));
 }
 
 export async function isFlanked(target: Token.Implementation): Promise<boolean> {
-  return (await ask("flanked", { target })) ?? (await midiFlankedStatus(target));
+  return (await ask("flanked", { target: target.document })) ?? (await midiFlankedStatus(target));
 }

@@ -16,7 +16,8 @@ import { midiActivityRange } from "./provider.js";
 
 export interface RangeCheckResult {
   result: string;
-  attackingToken?: Token.Implementation;
+  /** A TokenDocument (section 18: no canvas Token crosses a contract) */
+  attackingToken?: TokenDocument.Implementation;
   range?: number;
   longRange?: number;
 }

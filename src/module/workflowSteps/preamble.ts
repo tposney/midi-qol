@@ -162,9 +162,10 @@ export function registerPreambleSteps(): void {
         case "fail": workflow.outcome = "invalid"; return "midi-qol.RollFinished";
         case "dis": workflow.longRangeAttack = true;
       }
-      if (attackingToken && workflow.token !== attackingToken) {
+      const attacker = attackingToken?.object ?? undefined;
+      if (attacker && workflow.token !== attacker) {
         // changed the attacking token so update the canSee data
-        workflow.token = attackingToken;
+        workflow.token = attacker;
         if (isMidiActivityType(workflow.activity)) await setupCanSeeSense(workflow.activity, { workflow });
       }
     }

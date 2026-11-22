@@ -1,3 +1,4 @@
+import type { Workflow } from "../../Workflow.js";
 import { defineService, entries, reportServiceProblem } from "../../api/services.js";
 
 /*
@@ -14,7 +15,8 @@ import { defineService, entries, reportServiceProblem } from "../../api/services
  */
 
 export interface ResponseQuery {
-  workflow: any;
+  /** The use it responds to (none for a reaction asked outside a use) */
+  workflow: Workflow | undefined;
   /** The reacting creature's token (a document: midi-next passes TokenDocuments). */
   target: TokenDocument.Implementation;
   actor: Actor.Implementation;

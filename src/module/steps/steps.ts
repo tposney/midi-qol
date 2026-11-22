@@ -1,3 +1,4 @@
+import type { Workflow } from "../Workflow.js";
 import { Registry } from "../api/registry.js";
 import type { StepChange } from "./assembly.js";
 
@@ -45,7 +46,7 @@ export interface Step {
 export type ActivityCapability = "attack" | "damage" | "healing" | "save" | "check" | "utilityRoll" | "area" | "transform";
 
 export interface StepContext {
-  workflow: any;
+  workflow: Workflow;
   /** For a wrapper: run the step it wraps (and what that returns). */
   next(): Promise<unknown>;
   /** At a reaction step: who reacts to what (utils doReactions' arguments). */
@@ -73,7 +74,10 @@ export function unregisterStep(id: string): boolean {
 }
 
 /** A change to every use's flow (the global layer), optionally only where `when` says. */
-export type GlobalStepChange = StepChange & { when?: (workflow: any) => boolean };
+/** What a change's `when` sees: the use, or in a flow preview a stand-in with its activity, item, actor and options */
+export type StepUse = Workflow | { activity: unknown, item: unknown, actor: unknown, workflowOptions: { steps: unknown[] }, flowId: string, preview: true };
+
+export type GlobalStepChange = StepChange & { when?: (workflow: StepUse) => boolean };
 const globalChanges: GlobalStepChange[] = [];
 
 export function addStepChange(change: GlobalStepChange): void {
@@ -94,7 +98,7 @@ export function allGlobalStepChanges(): readonly GlobalStepChange[] {
 }
 
 /** The global changes that apply to a use (a `when` that throws: not applied), as data. */
-export function globalStepChangesFor(workflow: unknown): StepChange[] {
+export function globalStepChangesFor(workflow: StepUse): StepChange[] {
   return globalChanges
     .filter(change => { try { return change.when?.(workflow) ?? true; } catch { return false; } })
     .map(({ when: _when, ...change }) => change as StepChange);
@@ -182,13 +186,14 @@ for (const entry of BUILT_IN) {
 
 /**
  * Workflow fields more than one step writes or reads, and which (from the M2 state inventory). M3's step contracts
- * check a replacement step against these; until then they record who owns what. "use" is the code before the first
+ * check a replacement step against these. test/sharedFields.test.ts (M31) fails when a step body writes one directly
+ * without being listed as a writer. "use" is the code before the first
  * step (MidiActivityMixin.use), "GM" the GM's card actions.
  */
 export const SHARED_FIELDS: Readonly<Record<string, { writers: readonly string[], readers: readonly string[] }>> = {
-  outcome: { writers: ["dispatcher", "midi-qol.ValidateRoll", "midi-qol.AttackRollComplete", "midi-qol.WaitForSaves", "midi-qol.Abort"], readers: ["midi-qol.RollFinished", "midi-qol.Completed"] },
+  outcome: { writers: ["dispatcher", "midi-qol.ValidateRoll", "midi-qol.WaitForAttackRoll", "midi-qol.AttackRollComplete", "midi-qol.WaitForSaves", "midi-qol.Abort"], readers: ["midi-qol.RollFinished", "midi-qol.Completed"] },
   aborted: { writers: ["dispatcher", "macros", "midi-qol.Abort", "ActiveDefence checkHits"], readers: ["dispatcher", "stateAfter", "midi-qol.WaitForUtilityRoll"] },
-  whisperAttackCard: { writers: ["midi-qol.WaitForAttackRoll", "midi-qol.AttackRollComplete", "midi-qol.WaitForDamageRoll"], readers: ["midi-qol.AttackRollComplete"] },
+  whisperAttackCard: { writers: ["midi-qol.PreambleComplete", "midi-qol.WaitForAttackRoll", "midi-qol.AttackRollComplete", "midi-qol.WaitForDamageRoll"], readers: ["midi-qol.AttackRollComplete"] },
   hitDisplayData: { writers: ["midi-qol.AttackRollComplete", "GM"], readers: ["midi-qol.AttackRollComplete", "GM"] },
   effectTargets: { writers: ["midi-qol.WaitForSaves", "midi-qol.ApplyDynamicEffects"], readers: ["midi-qol.ApplyDynamicEffects"] },
   otherConsumed: { writers: ["midi-qol.WaitForSaves", "midi-qol.AllRollsComplete", "midi-qol.ApplyDynamicEffects"], readers: ["midi-qol.WaitForSaves", "midi-qol.AllRollsComplete", "midi-qol.ApplyDynamicEffects"] },

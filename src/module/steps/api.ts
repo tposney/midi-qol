@@ -1,7 +1,7 @@
 import { reportServiceProblem } from "../api/services.js";
 import { assembleSteps, normaliseChanges, previewSteps, stepsUsed, type AssembledSteps, type StepChange, type StepChangeInput, type StepConflict, type StepLayer } from "./assembly.js";
 import { COARSE_STEPS, getFlow, insertAnchor } from "./flows.js";
-import { addStepChange, contractGaps, getStep, globalStepChangesFor, isMidiStep, registerStep, removeStepChanges, unregisterStep, type ActivityCapability, type Step, type StepContext } from "./steps.js";
+import { addStepChange, contractGaps, getStep, globalStepChangesFor, isMidiStep, registerStep, removeStepChanges, unregisterStep, type ActivityCapability, type Step, type StepContext, type StepUse } from "./steps.js";
 
 /*
  * MidiQOL.steps (M3): a module registers its steps and changes every use's flow (the global layer; `when` limits a
@@ -19,7 +19,7 @@ import { addStepChange, contractGaps, getStep, globalStepChangesFor, isMidiStep,
  * and remove name a fine step (`midi-qol.AllRollsComplete`). MidiQOL.flows.preview shows what a use would run.
  */
 
-type When = { when?: (workflow: any) => boolean, priority?: number, source?: string };
+type When = { when?: (workflow: StepUse) => boolean, priority?: number, source?: string };
 const normaliseOptions = { insertAnchor, isCoarse: (id: string) => id in COARSE_STEPS };
 
 function addGlobal(change: StepChangeInput & When): void {
@@ -87,7 +87,7 @@ function storedChanges(sources: StepSources): StepChange[] {
  * A use's changes: the global changes that apply to it, the item's and the activity's stored ones, and its call's
  * (checked; problems reported). The used activity and its item only: not the other activity's or the ammunition's.
  */
-export function useStepChanges(workflow: unknown, callChanges: readonly unknown[] | undefined, sources: StepSources = {}): StepChange[] {
+export function useStepChanges(workflow: StepUse, callChanges: readonly unknown[] | undefined, sources: StepSources = {}): StepChange[] {
   const call = normaliseChanges(callChanges ?? [], "call", normaliseOptions);
   for (const problem of call.problems) reportOnce(`call|${problem}`, "call", problem);
   return [...globalStepChangesFor(workflow), ...storedChanges(sources), ...call.changes];
@@ -129,7 +129,7 @@ export function previewFlow(activity: any, options: { flow?: string, steps?: unk
   const flowId = options.flow ?? defaultFlow;
   const flow = getFlow(flowId);
   if (!flow) throw new Error(`midi-qol | flows.preview: no flow ${flowId}`);
-  const standIn = { activity, item: activity?.item, actor: activity?.actor, workflowOptions: { steps: options.steps ?? [] }, flowId, preview: true };
+  const standIn: StepUse = { activity, item: activity?.item, actor: activity?.actor, workflowOptions: { steps: options.steps ?? [] }, flowId, preview: true };
   const changes = useStepChanges(standIn, options.steps, { item: activity?.item, activity });
   const assembled = assembleSteps(changes);
   return { flow: flowId, steps: previewSteps(flow.steps, assembled), conflicts: assembled.conflicts, missing: missingSteps(changes) };

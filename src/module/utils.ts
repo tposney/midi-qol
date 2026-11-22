@@ -4260,6 +4260,9 @@ export function flagBonusButtons(actor: Actor.Implementation, flag: string, flag
 
 export type FlagBonusButton = { icon: string, label: string, value: string, key: string };
 
+/** M31: what a bonus prompt provider's `open` is given (the dialog data midi's bonus code drives) */
+export type BonusPromptData = RollModifyDialog["data"];
+
 export class RollModifyDialog extends HandlebarsApplicationMixin(ApplicationV2) {
   rollExpanded: boolean;
   timeRemaining: number;
@@ -4278,9 +4281,10 @@ export class RollModifyDialog extends HandlebarsApplicationMixin(ApplicationV2) 
     content: HTMLElement | string,
     currentRoll: Roll,
     rollHTML: string,
-    callback: () => {},
+    /** Filled in by the dialog */
+    callback?: () => {},
     close: () => {},
-    buttons: any,
+    buttons?: any,
     rollMode: string | undefined,
     timeout: number,
     item: Item | undefined,
@@ -4292,6 +4296,8 @@ export class RollModifyDialog extends HandlebarsApplicationMixin(ApplicationV2) 
     request?: IncomingRequest,
     /** M32a step 3: another part's rows shown after the bonuses (a failed save's reactions) */
     responses?: PromptResponses,
+    /** The use whose roll it is (none for a roll outside a use) */
+    workflow?: Workflow,
     /** The roll's bonus query and phase (contract 4: a bonus's configure is asked with them) */
     bonusQuery?: RollBonusQuery,
     bonusPhase?: BonusPhase
@@ -4538,7 +4544,7 @@ async function displayBeforeAfterRolls(data: {
 /** The optional AC bonus keys: added to the target's AC, `acOnAttack` when attacked, `acOnHit` once the attack hits */
 const OPTIONAL_AC_KEYS = ["acOnAttack", "acOnHit"];
 /** The window the bonus prompt service picks (the classic dialog when none is registered). */
-function openBonusPrompt(data: object): { render(options?: object): unknown } {
+function openBonusPrompt(data: BonusPromptData): { render(options?: object): unknown } {
   return bonusPromptService?.get()?.open?.(data) ?? new RollModifyDialog(data);
 }
 
@@ -4996,7 +5002,7 @@ export async function bonusDialog(
         targetObject: this,
         title,
         content,
-        currentRoll: roll,
+        currentRoll: newRoll,
         rollHTML,
         rollMode: rollType,
         close: onClose,

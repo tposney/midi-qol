@@ -1,5 +1,6 @@
 // Generates docs/surface.json: the names other modules may rely on (MidiQOL exports, midi-qol.* hooks, settings,
-// services). `node tools/surface.mjs --check` fails if the file is stale. Names only: shapes are versioned by apiVersion.
+// services; M31: step and flow ids, entry events and actions, tags, the flags.midi-qol keys midi reads).
+// `node tools/surface.mjs --check` fails if the file is stale. Names only: shapes are versioned by apiVersion.
 import fs from "node:fs";
 import path from "node:path";
 
@@ -63,18 +64,33 @@ for (const text of Object.values(sources).map(stripComments)) {
 const services = new Set();
 for (const text of Object.values(sources).map(stripComments)) for (const m of text.matchAll(/defineService(?:<[^>]*>)?\(\s*["']([\w.]+)["']/g)) services.add(m[1]);
 
+// M31: the step ids, flows, entry events and actions, tags midi registers, and the flag keys it reads
+const steps = new Set([...builtIn.matchAll(/(?:^|[\[,]\s*)\[?\s*"([A-Za-z]+)"/g)].map(m => `midi-qol.${m[1]}`));
+const flows = new Set(), entryEvents = new Set(), entryActions = new Set(), tags = new Set(), flags = new Set();
+for (const text of Object.values(sources).map(stripComments)) {
+  const consts = Object.fromEntries([...text.matchAll(/(?:export\s+)?const\s+([A-Z_][A-Z0-9_]*)\s*=\s*["']([^"']+)["']/g)].map(m => [m[1], m[2]]));
+  for (const m of text.matchAll(/registerFlow\(\s*\{\s*id:\s*["']([\w.-]+)["']/g)) flows.add(m[1]);
+  for (const m of text.matchAll(/registerEvent\(\s*(?:["']([\w.-]+)["']|([A-Z_][A-Z0-9_]*))/g)) { const id = m[1] ?? consts[m[2]]; if (id) entryEvents.add(id); }
+  for (const m of text.matchAll(/registerAction\(\s*["']([\w.-]+)["']/g)) entryActions.add(m[1]);
+  for (const m of text.matchAll(/registerTag\(\s*["']([\w.-]+)["']/g)) tags.add(m[1]);
+  for (const m of text.matchAll(/flags\.midi-qol\.([A-Za-z][\w-]*(?:\.[A-Za-z][\w-]*)*)/g)) flags.add(m[1].replace(/\.$/, ""));
+  for (const m of text.matchAll(/\bmidiFlag\(\s*["'`]([A-Za-z][\w.-]*?)(?:\$\{|["'`])/g)) flags.add(m[1].replace(/\.$/, ""));
+  for (const m of text.matchAll(/getFlag\(\s*(?:MODULE_ID|["']midi-qol["'])\s*,\s*["']([\w.-]+)["']/g)) flags.add(m[1]);
+}
+
 const sorted = s => [...s].sort((a, b) => a.localeCompare(b));
 // midi's declared ConfigSettings keys (M4a, lib/settingsTable.ts)
 const configKeys = new Set();
 for (const m of (sources[path.join("module", "lib", "settingsTable.ts")] ?? "").matchAll(/^  "([\w.]+)": \{ group/gm)) configKeys.add(m[1]);
-const surface = { apiVersion, api: sorted(api), hooks: sorted(hooks), settings: sorted(settings), configSettings: sorted(configKeys), services: sorted(services) };
+const surface = { apiVersion, api: sorted(api), hooks: sorted(hooks), settings: sorted(settings), configSettings: sorted(configKeys), services: sorted(services),
+  steps: sorted(steps), flows: sorted(flows), entryEvents: sorted(entryEvents), entryActions: sorted(entryActions), tags: sorted(tags), flags: sorted(flags) };
 const json = JSON.stringify(surface, null, 2) + "\n";
 
 if (process.argv.includes("--check")) {
   const current = fs.existsSync(outFile) ? fs.readFileSync(outFile, "utf8") : "";
   if (current === json) { console.log("docs/surface.json is up to date"); process.exit(0); }
   const old = current ? JSON.parse(current) : {};
-  for (const k of ["api", "hooks", "settings", "configSettings", "services"]) {
+  for (const k of ["api", "hooks", "settings", "configSettings", "services", "steps", "flows", "entryEvents", "entryActions", "tags", "flags"]) {
     const before = new Set(old[k] ?? []), after = new Set(surface[k]);
     const added = [...after].filter(x => !before.has(x)), removed = [...before].filter(x => !after.has(x));
     if (added.length || removed.length) console.log(`${k}: +${added.join(", +") || "-"}  -${removed.join(", -") || "-"}`);
@@ -85,4 +101,5 @@ if (process.argv.includes("--check")) {
 }
 fs.mkdirSync(path.dirname(outFile), { recursive: true });
 fs.writeFileSync(outFile, json);
-console.log(`docs/surface.json: ${surface.api.length} exports, ${surface.hooks.length} hooks, ${surface.settings.length} settings, ${surface.configSettings.length} config settings, ${surface.services.length} services`);
+console.log(`docs/surface.json: ${surface.api.length} exports, ${surface.hooks.length} hooks, ${surface.settings.length} settings, ${surface.configSettings.length} config settings, ${surface.services.length} services, `
+  + `${surface.steps.length} steps, ${surface.flows.length} flows, ${surface.entryEvents.length} entry events, ${surface.entryActions.length} entry actions, ${surface.tags.length} tags, ${surface.flags.length} flag keys`);

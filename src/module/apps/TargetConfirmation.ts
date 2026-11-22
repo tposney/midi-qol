@@ -253,7 +253,7 @@ export class TargetConfirmationDialog extends HandlebarsApplicationMixin(Applica
       let attackerToken = token;
       if (token && checkMechanic("checkRange") !== "none" && (["mwak", "msak", "rwak", "rsak", "utility", "check", "save", "damage"].includes(this.data.activity.actionType))) {
         const { result, attackingToken } = checkActivityRange(this.data.activity, token, new Set([target]), false);
-        if (attackingToken) attackerToken = attackingToken;
+        if (attackingToken?.object) attackerToken = attackingToken.object;
         switch (result) {
           case "normal":
             details.push(`${i18n("DND5E.RangeNormal")}`);

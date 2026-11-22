@@ -302,7 +302,7 @@ export async function postChatCardChecks(activity: MidiActivity, usage: Activity
         if (rangeDetails.result === "fail")
           return removeWorkflow(workflow);
         else {
-          tokenToUse = rangeDetails.attackingToken;
+          tokenToUse = rangeDetails.attackingToken?.object ?? undefined;
         }
       }
     }
