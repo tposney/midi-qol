@@ -26,7 +26,6 @@ export function registerRulesTextSettings() {
     if (!configSettings.rulesTextFill) return;
     void fillRulesText(item);
   });
-  //@ts-expect-error dnd5e hook
   Hooks.on("getHeaderControlsItemSheet5e", (app: foundry.applications.api.DocumentSheetV2<Item>, controls: foundry.applications.api.ApplicationV2.HeaderControlsEntry[]) => {
     const item = app.document;
     if (!item.isOwner || !lacksRulesText(item)) return;

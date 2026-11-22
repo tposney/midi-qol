@@ -77,6 +77,40 @@ export function registerAction(key: string, handler: ActionHandler, options: { p
   return () => { actions.delete(key); };
 }
 
+/** M32d: the registered events (id and label) and action keys, for the entry editor */
+export function registeredEvents(): { id: string, label: string }[] {
+  return events.entries().map(entry => {
+    const key = `midi-qol.Entries.Event.${entry.id}`;
+    const localized = game.i18n?.has(key) ? game.i18n.localize(key) : undefined;
+    return { id: entry.id, label: localized ?? entry.value.label ?? entry.id };
+  });
+}
+
+export function registeredActionKeys(): string[] {
+  return actions.entries().map(entry => entry.id).filter(id => !CONTROL_KEYS.has(id));
+}
+
+/** M32d: what is wrong with an action list (not a list, an action naming no registered action), for the editor */
+export function actionProblems(list: unknown): string[] {
+  if (!Array.isArray(list)) return ["the actions must be a list"];
+  const problems: string[] = [];
+  const check = (action: unknown, where: string) => {
+    if (!action || typeof action !== "object" || Array.isArray(action)) { problems.push(`${where}: not an action`); return; }
+    const keys = Object.keys(action).filter(k => !CONTROL_KEYS.has(k) && !["label", "to", "by", "for"].includes(k));
+    if (!actions.entries().some(entry => !CONTROL_KEYS.has(entry.id) && entry.id in (action as object)))
+      problems.push(`${where}: no registered action among ${keys.join(", ") || "its keys"}`);
+    for (const branch of ["then", "else"] as const) {
+      const nested = (action as Record<string, unknown>)[branch];
+      if (nested !== undefined) {
+        if (!Array.isArray(nested)) problems.push(`${where}.${branch}: must be a list`);
+        else nested.forEach((n, i) => check(n, `${where}.${branch}[${i}]`));
+      }
+    }
+  };
+  list.forEach((action, i) => check(action, `do[${i}]`));
+  return problems;
+}
+
 /** The handler an action names: of its keys that are registered actions, the highest priority (save before damage) */
 function actionKey(action: EntryAction): string | undefined {
   return actions.entries().find(entry => !CONTROL_KEYS.has(entry.id) && entry.id in action)?.id;

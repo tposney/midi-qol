@@ -195,7 +195,6 @@ export async function saveAsOverlay(item: Item.Implementation): Promise<Item.Imp
 }
 
 export function watchOverlayAuthoring(): void {
-  //@ts-expect-error dnd5e hook
   Hooks.on("getHeaderControlsItemSheet5e", (app: foundry.applications.api.DocumentSheetV2<Item>, controls: foundry.applications.api.ApplicationV2.HeaderControlsEntry[]) => {
     const item = app.document as Item.Implementation;
     if (!game.user?.isGM || !item._stats?.compendiumSource || item.getFlag(MODULE_ID, "overlay")) return;

@@ -711,7 +711,6 @@ export function initHooks() {
     }
   })
 
-  //@ts-expect-error
   Hooks.on("getHeaderControlsItemSheet5e", (
     app: foundry.applications.api.DocumentSheetV2<Item>,
     controls: foundry.applications.api.ApplicationV2.HeaderControlsEntry[]

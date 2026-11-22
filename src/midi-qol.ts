@@ -1,3 +1,4 @@
+import { EntryEditor, registerEntryEditorControls } from "./module/apps/EntryEditor.js";
 import { registerRollDialogBonuses } from "./module/lib/rollDialogBonuses.js";
 import { defineSettingNeedsService } from "./module/services/settingNeeds/service.js";
 import { activityTypeSteps, activityTypeStepsMarkdown } from "./module/activities/activityTypeSteps.js";
@@ -440,6 +441,7 @@ Object.assign(globalThis.MidiQOL, {
     TargetConfirmationConfig,
     TargetConfirmationDialog,
     TroubleShooter,
+    EntryEditor,
     UndoWorkflow,
   },
   logEvaluationData: false,
@@ -539,6 +541,7 @@ Hooks.once('init', async function () {
   definePresentersService();
   registerCues();
   registerRollDialogBonuses();
+  registerEntryEditorControls();
   registerUseChanges();
   registerEntryOffers();
   registerResponseEvents();
