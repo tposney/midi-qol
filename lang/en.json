@@ -2972,6 +2972,8 @@
   "midi-qol.EntryEditor.Activity.Type.forward": "it uses another activity",
   "midi-qol.EntryEditor.Activity.Nothing": "nothing",
   "midi-qol.EntryEditor.Activity.Midi": "Midi:",
+  "midi-qol.REGION_BEHAVIOR.damageType.title": "{name}: damage type",
+  "midi-qol.REGION_BEHAVIOR.damageType.content": "The damage type for every creature it affects while it lasts:",
   "midi-qol.EntryEditor.Activity.Region.makes": "It makes a {area}{attached}:",
   "midi-qol.EntryEditor.Activity.Region.anArea": "region",
   "midi-qol.EntryEditor.Activity.Region.attachedCaster": ", attached to you and moving with you",

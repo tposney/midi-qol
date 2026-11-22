@@ -52,6 +52,8 @@ export class MidiRegionActivityBehaviorType extends foundry.data.regionBehaviors
         label: `BEHAVIOR.TYPES.${MODULE_ID}.regionActivity.FIELDS.dispositionFilter.label`,
         hint: `BEHAVIOR.TYPES.${MODULE_ID}.regionActivity.FIELDS.dispositionFilter.hint`,
       }),
+      // The damage type its uses roll a part with several types as: the cast chose it once
+      damageType: new StringField({ initial: "", blank: true }),
       castLevel: new NumberField({
         initial: 0,
         integer: true,
@@ -357,6 +359,7 @@ export class MidiRegionActivityBehaviorType extends foundry.data.regionBehaviors
       targetUuids: [tokenUuid],
       castLevel,
       sourceActorUuid,
+      damageType: (self.damageType as string | undefined) || undefined,
     };
 
     // Resolve the source actor's player owner so the triggered activity is attributed
@@ -382,6 +385,7 @@ export class MidiRegionActivityBehaviorType extends foundry.data.regionBehaviors
     targetUuids: string[];
     castLevel: number;
     sourceActorUuid: string;
+    damageType?: string;
   }): Promise<void> {
     const activity = fromUuidSync(data.activityUuid);
     if (!activity) {
@@ -405,7 +409,7 @@ export class MidiRegionActivityBehaviorType extends foundry.data.regionBehaviors
         targetsToUse: targetTokens,
         spellLevel: data.castLevel || undefined,
         checkGMstatus: false,
-        workflowOptions: { noProvokeReaction: true, autoConsumeResource: "both" },
+        workflowOptions: { noProvokeReaction: true, autoConsumeResource: "both", ...(data.damageType ? { damageTypeChoice: data.damageType } : {}) },
       },
     }, {
       configure: false,

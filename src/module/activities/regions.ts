@@ -135,6 +135,31 @@ export async function placeEmanationTemplate(activity: MidiActivity, workflow: W
  * @param overTimeActivity The activity with isOverTimeFlag (may differ from `activity` if `activity` is the Cast activity)
  * @param castLevel The spell level from the usage message (set by dnd5e's _prepareUsageScaling before _usageChatContext)
  */
+/**
+ * The damage type a region's uses roll a part with several types as (dnd5e's Spirit Guardians: necrotic or radiant):
+ * the cast's own choice of one, else the caster's answer, asked once as the region is made. None: the uses ask.
+ */
+async function regionDamageType(activity: MidiActivity, rules: { action: string, targetUuid: string }[], workflow: Workflow | undefined): Promise<string | undefined> {
+  const types = new Set<string>();
+  for (const rule of rules) {
+    if (rule.action !== "useActivity") continue;
+    const used = fromUuidSync(rule.targetUuid, { strict: false }) as { damage?: { parts?: { types?: Set<string> }[] } } | null;
+    for (const part of used?.damage?.parts ?? []) if ((part.types?.size ?? 0) > 1) for (const type of part.types!) types.add(type);
+  }
+  if (!types.size) return undefined;
+  const given = workflow?.workflowOptions?.damageTypeChoice ?? Object.values(workflow?.choices ?? {}).find(v => typeof v === "string" && types.has(v));
+  if (typeof given === "string" && types.has(given)) return given;
+  const labels = CONFIG.DND5E.damageTypes as Record<string, { label?: string }>;
+  const first = [...types][0];
+  const chosen = await foundry.applications.api.DialogV2.wait({
+    window: { title: game.i18n?.format("midi-qol.REGION_BEHAVIOR.damageType.title", { name: activity.item?.name ?? "" }) ?? "" },
+    content: `<p>${foundry.utils.escapeHTML(i18n("midi-qol.REGION_BEHAVIOR.damageType.content"))}</p>`,
+    buttons: [...types].map((type, i) => ({ action: type, label: game.i18n?.localize(labels[type]?.label ?? type) ?? type, default: i === 0 })),
+    rejectClose: false
+  }).catch(() => undefined);
+  return typeof chosen === "string" && types.has(chosen) ? chosen : first;
+}
+
 export async function attachRegionActivityBehavior(activity: MidiActivity, regionDoc: RegionDocument.Implementation, workflow: Workflow, overTimeActivity: any, castLevel?: number) {
   const rbConfig = activity.regionBehavior;
   // Collect behaviors to attach and any region update; writeRegion() batches them
@@ -185,6 +210,8 @@ export async function attachRegionActivityBehavior(activity: MidiActivity, regio
     }
     effectBehavior(effectUuids, rbConfig.dispositionFilter ?? -1, rbConfig.excludeSource ?? true);
 
+    // A used activity's damage part with several types: the caster chooses once, now, for every use the region runs
+    const damageType = resolvedRules.some(r => r.action === "useActivity") ? await regionDamageType(activity, resolvedRules, workflow) : undefined;
     if (resolvedRules.length) behaviors.push({
       type: `${MODULE_ID}.regionActivity` as const,
       name: `${activity.item?.name ?? "Activity"} Region Activity`,
@@ -194,6 +221,7 @@ export async function attachRegionActivityBehavior(activity: MidiActivity, regio
         rules: resolvedRules,
         dispositionFilter: rbConfig.dispositionFilter ?? -1,
         castLevel: castLevel ?? workflow?.spellLevel ?? 0,
+        ...(damageType ? { damageType } : {}),
         excludeSource: rbConfig.excludeSource ?? true,
         oncePerTurn: rbConfig.oncePerTurn ?? true,
         activationEntry: !castAffectsTargets,

@@ -254,6 +254,21 @@ export function applyDamageTypeChoice(workflow: Workflow, rolls: { options?: Rec
   return applied;
 }
 
+/** A damage type given to the use (workflowOptions.damageTypeChoice: a region's cast chose it) for a part that offers it */
+export function applyGivenDamageType(workflow: Workflow, rolls: { options?: Record<string, unknown> }[]): boolean {
+  const given = workflow.workflowOptions?.damageTypeChoice;
+  if (typeof given !== "string" || !given) return false;
+  let applied = false;
+  for (const roll of rolls) {
+    const types = roll.options?.types;
+    if (Array.isArray(types) && types.includes(given)) {
+      roll.options!.type = given;
+      applied = true;
+    }
+  }
+  return applied;
+}
+
 /** The effect a `source: "effects"` choice chose, if the activity has one answered */
 export function chosenEffectId(workflow: Workflow): string | undefined {
   const declaration = choiceDeclarations(workflow.activity).find(d => d.source === "effects");

@@ -1,5 +1,5 @@
 import type { Activity, DND5ETargetDescriptor, Dnd5eSystem, RollDialogConfig, RollMessageConfig, RollProcessConfig } from "../../globals.js";
-import { applyDamageTypeChoice } from "../lib/choices.js";
+import { applyDamageTypeChoice, applyGivenDamageType } from "../lib/choices.js";
 import { onActivityTypeAdopted } from "../activities/activityPrototype.js";
 import { hasConsumption } from "../activities/use.js";
 import { isMidiActivityType } from "../activities/midiActivity.js";
@@ -138,6 +138,8 @@ async function midiRollDamage(activity: Activity, wrapped: RollDamage, config: R
         else if (!dialogConfig.configure) rollConfig.isCritical ||= rollConfig.midiOptions?.isCritical;
         // A choice of damage types needs the dialog, unless the use's choices made it (M28)
         if (applyDamageTypeChoice(workflow, rollConfig.rolls ?? [])) { /* chosen */ }
+        // Given to the use: a region's cast chose it once for every use the region runs
+        else if (applyGivenDamageType(workflow, rollConfig.rolls ?? [])) { /* given */ }
         else if (activity.damage?.parts.some(part => part.types.size > 1)) dialogConfig.configure = true;
         // @ts-expect-error no dnd5e-types
         else if ((rollConfig.ammunition?.system.damage.base?.types.size ?? 0) > 1) dialogConfig.configure = true;

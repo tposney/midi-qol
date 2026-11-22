@@ -9338,6 +9338,8 @@ export type WorkflowOptions = InexactPartial<{
   fixedDice: FixedDice;
   /** The activity's choices (M28), by id: not asked */
   choices: Record<string, ChoiceValue>;
+  /** The damage type a part with several types is rolled as, decided earlier (a region's cast): not asked */
+  damageTypeChoice: string;
   /** M18: the use's presentation override ("none": no cues presented) */
   presentation: "none" | import("./lib/cues.js").Cue["presentation"];
   allowIncapacitated: boolean;
