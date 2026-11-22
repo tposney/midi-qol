@@ -58,6 +58,16 @@
         {{/if}}
     </div>
     {{/each}}
+    {{#if addWhat}}
+    <div class="midi-qol-entry-add-what">
+        <button type="button" data-action="toggleAddWhat" class="{{#if addWhat.open}}active{{/if}}"><i class="fa-solid fa-plus"></i> {{localize "midi-qol.EntryEditor.AddWhat.button"}}</button>
+        {{#if addWhat.open}}
+        <div class="midi-qol-entry-picker midi-qol-entry-recipes">
+            {{#each addWhat.kinds}}<button type="button" data-action="addWhat" data-kind="{{value}}"><strong>{{label}}</strong><span>{{hint}}</span></button>{{/each}}
+        </div>
+        {{/if}}
+    </div>
+    {{/if}}
 </section>
 {{else}}
 <div class="midi-qol-entry-editor-body">

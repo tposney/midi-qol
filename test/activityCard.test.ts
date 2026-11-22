@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { areaGroups, areaRules, areaSaveActivity, basicsUpdate } from "../src/module/lib/entries/activityCard.js";
+import { areaGroups, areaRules, areaSaveActivity, basicsUpdate, NEW_KINDS, newActivityData } from "../src/module/lib/entries/activityCard.js";
 import { activityEffects, editedTargeting, mainBranch, newEffectData, targetingUpdate, targetPreset } from "../src/module/lib/entries/activityCard.js";
 import { activityCard, activityUpdate, branchFor, convertActivity, isBranchEntry, partFormula, partWithFormula, type ActivityData, type CardText } from "../src/module/lib/entries/activityCard.js";
 
@@ -148,5 +148,20 @@ describe("activity cards", () => {
     // A part's scaling
     const data = { type: "save", damage: { parts: [{ number: 3, denomination: 8, types: ["radiant"], scaling: { mode: "", number: null } }] } } as any;
     expect(activityUpdate(data, { parts: [{ formula: "3d8", types: ["radiant"], scaling: { mode: "whole", number: 1 } }] })["damage.parts"]).toEqual([{ number: 3, denomination: 8, types: ["radiant"], scaling: { mode: "whole", number: 1 } }]);
+  });
+
+  it("new activities: each kind reads as a sentence; an area runs a save made for it; an effect on yourself", () => {
+    const t = { ability: (id: string) => id, damageType: (id: string) => id, effectName: (id: string) => id, documentName: () => undefined, activityName: (id: string) => id,
+      typeLabel: (_k: string, id: string) => id, say: (key: string, data?: Record<string, string>) => `${key}${data ? JSON.stringify(data) : ""}` } as unknown as CardText;
+    const ids = { activity: "a1", effect: "e1", save: "s1" };
+    for (const kind of NEW_KINDS) {
+      const made = newActivityData(kind, ids, { name: "Probe", spell: true });
+      const card = activityCard(made.activities[0] as unknown as ActivityData, t);
+      expect(card.branches.length, kind).toBeGreaterThan(0);
+    }
+    const area = newActivityData("area", ids, { name: "Probe", spell: true });
+    expect((area.activities[0] as any).regionBehavior.rules).toEqual([{ trigger: "entry", action: "useActivity", targetId: "s1" }, { trigger: "turnEnd", action: "useActivity", targetId: "s1" }]);
+    expect((area.activities[1] as any).midiProperties.automationOnly).toBe(true);
+    expect(newActivityData("self", ids, { name: "Probe", spell: false }).effects[0]).toMatchObject({ _id: "e1", transfer: false });
   });
 });

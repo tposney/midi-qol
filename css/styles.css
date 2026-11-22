@@ -2538,3 +2538,4 @@ body.midi-qol-hide-gambit-mirrors .gps-dialog-mirror:not(.midi-qol-gambit-shown)
 .midi-qol-entry-editor .midi-qol-activity-region-line { display: flex; align-items: center; gap: 0.25rem; }
 .midi-qol-entry-editor .midi-qol-activity-region-line .midi-qol-branch-add { margin-left: auto; }
 .midi-qol-entry-editor .midi-qol-area-triggers { flex-wrap: wrap; gap: 0.3rem 0.8rem; }
+.midi-qol-entry-editor .midi-qol-entry-add-what { margin: 0.5rem 0; }

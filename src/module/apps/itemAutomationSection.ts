@@ -23,7 +23,7 @@ export function registerItemAutomationSection() {
     const section = holder.firstElementChild as HTMLElement | null;
     if (!section) return;
     section.querySelector("[data-midi-open-entries]")?.addEventListener("click", () => {
-      void new EntryEditor(item as unknown as ConstructorParameters<typeof EntryEditor>[0]).render({ force: true });
+      void new EntryEditor(item as unknown as ConstructorParameters<typeof EntryEditor>[0], { view: "sentence" }).render({ force: true });
     });
     const descriptions = tab.querySelector(".item-descriptions");
     if (descriptions) descriptions.after(section);

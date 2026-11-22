@@ -621,3 +621,38 @@ export function basicsUpdate(current: Basics, edited: Basics, where: BasicsWhere
   }
   return { activity, item };
 }
+
+/* Starting from nothing (the sentence view's "+ add what it does"): an activity that already reads as a sentence */
+
+export const NEW_KINDS = ["attack", "save", "damage", "healing", "self", "area"] as const;
+export type NewKind = typeof NEW_KINDS[number];
+
+/** The activity (and the effect it applies, for "an effect on yourself") a kind starts as; a spell's uses spell DC and attacks */
+export function newActivityData(kind: NewKind, ids: { activity: string, effect: string, save: string }, item: { name: string, spell: boolean, img?: string }):
+  { activities: Record<string, unknown>[], effects: Record<string, unknown>[] } {
+  // Its own activation, targeting and range (on a spell, dnd5e otherwise reads the spell's)
+  const base = { _id: ids.activity, activation: { type: "action", override: true }, consumption: { spellSlot: true, targets: [] } };
+  const one = (range: string) => ({ target: { override: true, affects: { type: "creature", count: "1" }, template: { type: "" } }, range: { override: true, units: "ft", value: range } });
+  const dc = item.spell ? { calculation: "spellcasting", formula: "" } : { calculation: "", formula: "13" };
+  const die = (number: number, denomination: number, types: string[]) => ({ number, denomination, bonus: "", types, custom: { enabled: false, formula: "" }, scaling: { mode: "", number: null } });
+  switch (kind) {
+    case "attack": return { activities: [{ ...base, ...one(item.spell ? "120" : "5"), type: "attack",
+      attack: { type: { value: item.spell ? "ranged" : "melee", classification: item.spell ? "spell" : "weapon" } },
+      damage: { includeBase: !item.spell, parts: item.spell ? [die(1, 10, ["fire"])] : [] } }], effects: [] };
+    case "save": return { activities: [{ ...base, ...one("60"), type: "save", save: { ability: ["dex"], dc }, damage: { onSave: "half", parts: [die(2, 6, ["fire"])] } }], effects: [] };
+    case "damage": return { activities: [{ ...base, ...one("60"), type: "damage", damage: { parts: [die(1, 6, ["force"])] } }], effects: [] };
+    case "healing": return { activities: [{ ...base, ...one("5"), type: "heal", target: { override: true, affects: { type: "ally", count: "1" }, template: { type: "" } }, healing: die(1, 8, ["healing"]) }], effects: [] };
+    case "self": return {
+      activities: [{ ...base, type: "utility", target: { override: true, affects: { type: "self" }, template: { type: "" } }, range: { override: true, units: "self" }, effects: [{ _id: ids.effect }] }],
+      effects: [{ _id: ids.effect, name: item.name, img: item.img ?? "icons/svg/aura.svg", type: "base", transfer: false, statuses: [], duration: { value: 1, units: "minutes" } }]
+    };
+    case "area": return {
+      activities: [
+        { ...base, type: "utility", name: item.name, target: { override: true, affects: { type: "creature" }, template: { type: "sphere", size: "20", units: "ft" } }, range: { override: true, units: "ft", value: "60" },
+          duration: { override: true, value: "1", units: "minute", concentration: item.spell }, regionBehavior: { enabled: true, attachToken: "default", dispositionFilter: -1, oncePerTurn: true,
+            rules: areaRules([{ kind: "use", targetId: ids.save, triggers: ["entry", "turnEnd"] }]) } },
+        { ...areaSaveActivity(ids.save, `${item.name}: Save`, item.spell), damage: { onSave: "half", parts: [die(2, 6, ["fire"])] } }],
+      effects: []
+    };
+  }
+}

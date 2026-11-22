@@ -10,7 +10,7 @@ import { activityCardContributor, contributedActivityCard, optionList } from "..
 import { automationNotes } from "../lib/entries/automations.js";
 import { configOptions, type ConfigField } from "../lib/entries/config.js";
 import { effectAction, mainBranch, newEffectData, type NewEffect } from "../lib/entries/activityCard.js";
-import { basicsUpdate, type Basics, type BasicsWhere } from "../lib/entries/activityCard.js";
+import { basicsUpdate, NEW_KINDS, newActivityData, type Basics, type BasicsWhere, type NewKind } from "../lib/entries/activityCard.js";
 import { AREA_TRIGGERS, areaGroups, areaSaveActivity, areaView, editedRegion, type AreaGroup } from "../lib/entries/activityCard.js";
 import { convertActivity, editedTargeting, FROM_YOU_SHAPES, moveBranchEntry, POINT_SHAPES, ROLL_KINDS, TARGET_PRESETS, targetingUpdate, targetPreset, type RollKind, type TargetPreset, type Targeting } from "../lib/entries/activityCard.js";
 import { activityCard, activityUpdate, BRANCH_EVENT, branchEntryId, isBranchEntry, partFormula, type ActivityBranch, type ActivityData, type BuiltInPart, type CardEdits, type CardText } from "../lib/entries/activityCard.js";
@@ -273,6 +273,8 @@ export class EntryEditor extends HandlebarsApplicationMixin(ApplicationV2) {
   /** Which of them: a chip's field shown in place, under the line it is on ("all": the whole block) */
   #cardField: string | undefined;
   #cardPlace: string | undefined;
+  /** "+ add what it does" open */
+  #addWhatOpen = false;
   /** The "+ effect" form as filled in so far */
   #effectForm: { what: string, name: string, duration: string, units: string, repeat: boolean } = { what: "", name: "", duration: "", units: "", repeat: false };
 
@@ -390,6 +392,8 @@ export class EntryEditor extends HandlebarsApplicationMixin(ApplicationV2) {
       addRowAction: EntryEditor.#onAddRowAction,
       showRuns: EntryEditor.#onShowRuns,
       useRecipe: EntryEditor.#onUseRecipe,
+      toggleAddWhat: EntryEditor.#onToggleAddWhat,
+      addWhat: EntryEditor.#onAddWhat,
       editActivity: EntryEditor.#onEditActivity,
       allEntryFields: EntryEditor.#onAllEntryFields,
       doneEntryPart: EntryEditor.#onDoneEntryPart,
@@ -478,6 +482,8 @@ export class EntryEditor extends HandlebarsApplicationMixin(ApplicationV2) {
       hasEntry: !!entry,
       jsonView: this.#jsonView,
       sentenceView: this.#view === "sentence",
+      addWhat: this.#root ? { open: this.#addWhatOpen, kinds: NEW_KINDS.map(k => ({ value: k,
+        label: i18n(`midi-qol.EntryEditor.AddWhat.${k}`), hint: i18n(`midi-qol.EntryEditor.AddWhat.${k}Hint`) })) } : undefined,
       showRuns: this.#showRuns,
       views: VIEWS.map(value => ({ value, label: i18n(`midi-qol.EntryEditor.View.${value}`), active: value === this.#view })),
       sentences: this.#view === "sentence" ? this.#sentences() : undefined,
@@ -1820,6 +1826,28 @@ export class EntryEditor extends HandlebarsApplicationMixin(ApplicationV2) {
   }
 
   /** A recipe's entry added to its home, under a free id */
+  static #onToggleAddWhat(this: EntryEditor) {
+    this.#addWhatOpen = !this.#addWhatOpen;
+    this.render();
+  }
+
+  /** An activity made at once on the item (with the effect or save it needs), the editor reopened on it */
+  static async #onAddWhat(this: EntryEditor, _event: Event, target: HTMLElement) {
+    const item = this.#root;
+    const kind = target.dataset.kind as NewKind;
+    if (!item || !NEW_KINDS.includes(kind)) return;
+    if (this.#dirty()) return void ui.notifications?.warn(i18n("midi-qol.EntryEditor.AddWhat.saveFirst"));
+    const ids = { activity: foundry.utils.randomID(), effect: foundry.utils.randomID(), save: foundry.utils.randomID() };
+    const made = newActivityData(kind, ids, { name: item.name, spell: String(item.type) === "spell", img: item.img ?? undefined });
+    if (made.effects.length) await item.createEmbeddedDocuments("ActiveEffect", made.effects as never[], { keepId: true });
+    await item.update(Object.fromEntries(made.activities.map(a => [`system.activities.${a._id}`, a])));
+    const activity = (item.system as { activities?: { get(id: string): EntryDocument | undefined } }).activities?.get(ids.activity);
+    if (!activity) return;
+    const position = { left: this.position.left, top: this.position.top, width: this.position.width, height: this.position.height };
+    await this.close({ discard: true });
+    await new EntryEditor(activity, { view: "sentence", position }).render({ force: true });
+  }
+
   static #onUseRecipe(this: EntryEditor, _event: Event, target: HTMLElement) {
     const found = recipe(target.dataset.recipe ?? "");
     if (!found) return;
