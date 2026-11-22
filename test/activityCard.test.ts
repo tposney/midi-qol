@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { editedTargeting, targetingUpdate, targetPreset } from "../src/module/lib/entries/activityCard.js";
+import { activityEffects, editedTargeting, mainBranch, newEffectData, targetingUpdate, targetPreset } from "../src/module/lib/entries/activityCard.js";
 import { activityCard, activityUpdate, branchFor, convertActivity, isBranchEntry, partFormula, partWithFormula, type ActivityData, type CardText } from "../src/module/lib/entries/activityCard.js";
 
 const t: CardText = {
@@ -109,5 +109,17 @@ describe("activity cards", () => {
     expect(line).toMatchObject({ templateType: "line", size: 100, width: 5, rangeUnits: "self" });
     expect(targetingUpdate(point, true)).toMatchObject({ "system.target.template.type": "sphere", "system.range.value": "90" });
     expect(targetingUpdate(point, false)).toMatchObject({ "target.override": true, "target.template.type": "sphere", "range.units": "ft" });
+  });
+
+  it("effects on outcomes: main-branch additions join the activity's list, removals leave it; a new effect's data", () => {
+    const data = { type: "save", effects: [{ _id: "para", onSave: false }, { _id: "old", onSave: true }] } as any;
+    const list = activityEffects(data, { removeEffects: ["old"], newEffects: [
+      { _id: "prone", name: "Prone", statuses: ["prone"], branch: "saveFailed" },
+      { _id: "slow", name: "Slow", branch: "saveSucceeded" }] });
+    expect(list).toEqual([{ _id: "para", onSave: false }, { _id: "prone", onSave: false }]);
+    expect(mainBranch("attack")).toBe("hit");
+    const effect = newEffectData({ _id: "prone", name: "Prone", statuses: ["prone"], duration: { value: 1, units: "minutes" }, repeatSave: true, branch: "saveFailed" }) as any;
+    expect(effect).toMatchObject({ _id: "prone", transfer: false, statuses: ["prone"], duration: { value: 1, units: "minutes" } });
+    expect(effect.flags["midi-qol"].entries[0]).toMatchObject({ on: "turnEnd", do: [{ save: "applying", then: [{ end: true }] }] });
   });
 });

@@ -9,6 +9,7 @@ import { ConditionEditor } from "./ConditionEditor.js";
 import { activityCardContributor, contributedActivityCard, optionList } from "../lib/entries/editorServices.js";
 import { automationNotes } from "../lib/entries/automations.js";
 import { configOptions, type ConfigField } from "../lib/entries/config.js";
+import { effectAction, mainBranch, newEffectData, type NewEffect } from "../lib/entries/activityCard.js";
 import { convertActivity, editedTargeting, FROM_YOU_SHAPES, moveBranchEntry, POINT_SHAPES, ROLL_KINDS, TARGET_PRESETS, targetingUpdate, targetPreset, type RollKind, type TargetPreset, type Targeting } from "../lib/entries/activityCard.js";
 import { activityCard, activityUpdate, BRANCH_EVENT, branchEntryId, isBranchEntry, partFormula, type ActivityBranch, type ActivityData, type BuiltInPart, type CardEdits, type CardText } from "../lib/entries/activityCard.js";
 
@@ -196,6 +197,7 @@ function chipFields(fields: Record<string, unknown>, field: string): Record<stri
   // What happens to the target: the roll, and that roll's own fields
   if (field === "roll") return { roll: fields.roll, save: fields.save, check: fields.check };
   if (field === "target") return { target: fields.target };
+  if (field === "newEffect") return { newEffect: fields.newEffect };
   if (field === "save") return { save: fields.save };
   if (field === "dc") return fields.save ? { save: fields.save } : { check: fields.check };
   if (field === "check") return { check: fields.check };
@@ -208,7 +210,7 @@ function chipFields(fields: Record<string, unknown>, field: string): Record<stri
   const effect = /^effect\.(.+)$/.exec(field);
   if (effect) {
     const row = (fields.effects as { id: string }[] | undefined)?.find(e => e.id === effect[1]);
-    return row ? { effects: [row] } : { empty: true };
+    return row ? { effects: [{ ...row, removable: true }] } : { empty: true };
   }
   return { empty: true };
 }
@@ -266,6 +268,8 @@ export class EntryEditor extends HandlebarsApplicationMixin(ApplicationV2) {
   /** Which of them: a chip's field shown in place, under the line it is on ("all": the whole block) */
   #cardField: string | undefined;
   #cardPlace: string | undefined;
+  /** The "+ effect" form as filled in so far */
+  #effectForm: { what: string, name: string, duration: string, units: string, repeat: boolean } = { what: "", name: "", duration: "", units: "", repeat: false };
 
   /** `options.view`: the view to open in (else the user's last) */
   constructor(document: EntryDocument, options: { view?: View } & Record<string, unknown> = {}) {
@@ -375,6 +379,8 @@ export class EntryEditor extends HandlebarsApplicationMixin(ApplicationV2) {
       addToBranch: EntryEditor.#onAddToBranch,
       addDamagePart: EntryEditor.#onAddDamagePart,
       addChange: EntryEditor.#onAddChange,
+      confirmEffect: EntryEditor.#onConfirmEffect,
+      removeEffect: EntryEditor.#onRemoveEffect,
       removeChange: EntryEditor.#onRemoveChange,
       openEffectSheet: EntryEditor.#onOpenEffectSheet,
       editEffect: EntryEditor.#onEditEffect,
@@ -760,7 +766,8 @@ export class EntryEditor extends HandlebarsApplicationMixin(ApplicationV2) {
     return {
       ability: id => label(CONFIG.DND5E.abilities as Record<string, { label?: string }>, id),
       damageType: id => label({ ...(CONFIG.DND5E.damageTypes as Record<string, { label?: string }>), ...(CONFIG.DND5E.healingTypes as Record<string, { label?: string }>) }, id),
-      effectName: id => item?.effects.get(id)?.name ?? id,
+      // An effect added but not yet saved has its name from the card
+      effectName: id => item?.effects.get(id)?.name ?? this.#homes.flatMap(h => h.card?.newEffects ?? []).find(e => e._id === id)?.name ?? id,
       documentName: uuid => (fromUuidSync(uuid, { strict: false }) as { name?: string } | null)?.name ?? undefined,
       activityName: id => {
         // By id, or by identifier as region rules name them
@@ -811,7 +818,7 @@ export class EntryEditor extends HandlebarsApplicationMixin(ApplicationV2) {
     const opened = this.#cardOpen === at ? { ...this.#openFields(h, data), home: at } : undefined;
     const all = this.#cardField === "all" || !this.#cardField;
     return { home: at, when: model.when.map(chip), branches, basics, targeting: model.targeting ? chip(model.targeting) : undefined, midi: this.#midiProperties(h), region: model.region, macros: this.#cardMacros(h),
-      open: opened && all ? opened : undefined,
+      open: opened && all ? { ...opened, newEffect: undefined } : undefined,
       popover: opened && !all ? { place: this.#cardPlace, fields: { ...chipFields(opened, this.#cardField!), home: at, noAdd: true } } : undefined };
   }
 
@@ -904,8 +911,72 @@ export class EntryEditor extends HandlebarsApplicationMixin(ApplicationV2) {
       parts: data.damage ? (data.damage.parts ?? []).map((part, i) => ({ i, formula: partFormula(part),
         types: damageTypes.map(t => option(t.id, t.label, (part.types ?? []).includes(t.id))) })) : undefined,
       healing: data.healing ? { formula: partFormula(data.healing), types: healingTypes.map(t => option(t.id, t.label, (data.healing!.types ?? []).includes(t.id))) } : undefined,
-      effects: save ? (data.effects ?? []).map(e => ({ id: e._id, name: this.#cardText().effectName(e._id), onSave: !!e.onSave })) : undefined
+      effects: (data.effects ?? []).map(e => ({ id: e._id, name: this.#cardText().effectName(e._id), onSave: !!e.onSave, canOnSave: save })),
+      newEffect: this.#newEffectContext(data)
     };
+  }
+
+  /** The "+ effect" form: a condition, one of the item's effects or a new one; how long; ends on a save */
+  #newEffectContext(data: ActivityData) {
+    const form = this.#effectForm;
+    const statuses = CONFIG.statusEffects.filter(s => s.id && s.name).map(s => ({ value: `status:${s.id}`, label: i18n(s.name!) }))
+      .sort((a, b) => a.label.localeCompare(b.label));
+    const effects = [...(this.#item()?.effects ?? [])].filter(e => !(e as { transfer?: boolean }).transfer).map(e => ({ value: `effect:${e.id}`, label: e.name }));
+    const pick = (list: { value: string, label: string }[]) => list.map(o => ({ ...o, selected: o.value === form.what }));
+    return {
+      statuses: pick(statuses), effects: pick(effects), isNew: form.what === "new", name: form.name,
+      duration: form.duration, units: ["", "rounds", "minutes", "hours"].map(u => ({ value: u, label: i18n(`midi-qol.EntryEditor.Activity.Units.${u || "none"}`), selected: u === form.units })),
+      canRepeat: data.type === "save" && this.#cardPlace === mainBranch(data.type), repeat: form.repeat
+    };
+  }
+
+  /** "Add": the effect joins the branch (created on the item when saved) */
+  static #onConfirmEffect(this: EntryEditor, _event: Event, target: HTMLElement) {
+    const h = this.#homes[Number(target.dataset.home ?? this.#at)];
+    if (!h?.card) return;
+    const form = this.#effectForm;
+    const branch = (this.#cardPlace ?? mainBranch(this.#activityNow(h).type)) as NewEffect["branch"];
+    const [kind, id] = form.what.split(":");
+    const status = kind === "status" ? CONFIG.statusEffects.find(s => s.id === id) : undefined;
+    const itemEffect = kind === "effect" ? this.#item()?.effects.get(id) : undefined;
+    if (!status && !itemEffect && kind !== "new") return void ui.notifications?.warn(i18n("midi-qol.EntryEditor.Activity.PickEffect"));
+    const duration = Number(form.duration) > 0 && form.units ? { value: Number(form.duration), units: form.units } : undefined;
+    const added: NewEffect = itemEffect
+      ? { _id: itemEffect.id!, existing: true, name: itemEffect.name, branch }
+      : { _id: foundry.utils.randomID(), name: status ? i18n(status.name!) : form.name.trim() || i18n("midi-qol.EntryEditor.Activity.NewEffectName"),
+        img: status?.img ?? (this.#item()?.img ?? undefined), statuses: status ? [status.id] : [], ...(duration ? { duration } : {}), repeatSave: form.repeat, branch };
+    (h.card.newEffects ??= []).push(added);
+    // Another branch than dnd5e's: an "apply this effect" action in the branch's own entry
+    if (branch !== mainBranch(this.#activityNow(h).type)) {
+      let draft = h.drafts.find(d => isBranchEntry(this.#entryForSave(d)) === branch);
+      if (!draft) { draft = this.#draftOf({ id: branchEntryId(branch), on: BRANCH_EVENT[branch], do: [] }); h.drafts.push(draft); }
+      const list = JSON.parse(draft.raw.do || "[]") as EntryAction[];
+      list.push(effectAction(added));
+      draft.raw.do = JSON.stringify(list, null, 2);
+      draft.problems = this.#problemsOf(draft, h.drafts);
+    }
+    this.#effectForm = { what: "", name: "", duration: "", units: "", repeat: false };
+    this.#cardOpen = this.#cardField = this.#cardPlace = undefined;
+    this.render();
+  }
+
+  /** An effect taken off the activity (left on the item); one added but not saved is dropped */
+  static #onRemoveEffect(this: EntryEditor, _event: Event, target: HTMLElement) {
+    const h = this.#homes[Number(target.dataset.home ?? this.#at)];
+    const id = target.dataset.id ?? "";
+    if (!h?.card || !id) return;
+    const pending = h.card.newEffects?.findIndex(e => e._id === id) ?? -1;
+    if (pending >= 0) h.card.newEffects!.splice(pending, 1);
+    else (h.card.removeEffects ??= []).push(id);
+    this.#cardOpen = this.#cardField = this.#cardPlace = undefined;
+    this.render();
+  }
+
+  /** The new effects a home's card made (not the item's own ones it picked), created on the item when saved */
+  async #createNewEffects(h: Home) {
+    const item = (h.document as { item?: Item.Implementation }).item;
+    const made = (h.card?.newEffects ?? []).filter(e => !e.existing);
+    if (item && made.length) await item.createEmbeddedDocuments("ActiveEffect", made.map(newEffectData) as never[], { keepId: true });
   }
 
   /** The open card's fields read into its edits */
@@ -917,6 +988,8 @@ export class EntryEditor extends HandlebarsApplicationMixin(ApplicationV2) {
       if (key.startsWith("card.x.")) (h.cardValues ??= {})[key.slice("card.x.".length)] = value;
     if ("card.checkAbility" in data) h.card.checkAbility = String(data["card.checkAbility"] ?? "");
     if ("card.attackType" in data) h.card.attackType = String(data["card.attackType"] ?? "");
+    if ("card.new.what" in data) this.#effectForm = { what: String(data["card.new.what"] ?? ""), name: String(data["card.new.name"] ?? this.#effectForm.name),
+      duration: String(data["card.new.duration"] ?? ""), units: String(data["card.new.units"] ?? ""), repeat: !!data["card.new.repeat"] };
     if (Object.keys(data).some(k => k.startsWith("card.target."))) {
       const target = { ...(h.card.target ?? {}) };
       const num = (key: string) => { const v = data[`card.target.${key}`]; return v === undefined || v === "" || v === null ? undefined : Number(v); };
@@ -1572,6 +1645,8 @@ export class EntryEditor extends HandlebarsApplicationMixin(ApplicationV2) {
       const changes: Record<string, unknown> = {};
       if (JSON.stringify(entries) !== home.stored) changes[home.kind === "activity" ? "midiEntries" : `flags.${MODULE_ID}.entries`] = entries;
       if (home.choices !== home.choicesStored) changes.midiChoices = JSON.parse(home.choices || "[]");
+      // Effects the card added exist before anything refers to them
+      if (home.card) await this.#createNewEffects(home);
       // A new roll: the activity replaced whole, its id kept (its entries and choices with it)
       if (home.card?.convertTo && home.card.convertTo !== this.#activitySource(home).type) {
         await this.#saveConverted(home, changes);

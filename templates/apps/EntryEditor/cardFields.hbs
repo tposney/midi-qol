@@ -94,6 +94,28 @@
         {{#each effects}}
         <div class="form-group">
             <label>{{name}}</label>
-            <div class="form-fields"><label class="checkbox"><input type="checkbox" name="card.effect.{{id}}" {{#if onSave}}checked{{/if}}> {{localize "midi-qol.EntryEditor.Activity.EffectOnSave"}}</label></div>
+            <div class="form-fields">
+                {{#if canOnSave}}<label class="checkbox"><input type="checkbox" name="card.effect.{{id}}" {{#if onSave}}checked{{/if}}> {{localize "midi-qol.EntryEditor.Activity.EffectOnSave"}}</label>{{/if}}
+                {{#if removable}}<button type="button" data-action="removeEffect" data-home="{{../home}}" data-id="{{id}}"><i class="fa-solid fa-trash"></i> {{localize "midi-qol.EntryEditor.Activity.RemoveEffect"}}</button>{{/if}}
+            </div>
         </div>
         {{/each}}
+        {{#if newEffect}}
+        <div class="form-group">
+            <label>{{localize "midi-qol.EntryEditor.Activity.EffectWhat"}}</label>
+            <div class="form-fields"><select name="card.new.what">
+                <option value="">—</option>
+                <optgroup label="{{localize "midi-qol.EntryEditor.Activity.Conditions"}}">{{#each newEffect.statuses}}<option value="{{value}}" {{#if selected}}selected{{/if}}>{{label}}</option>{{/each}}</optgroup>
+                {{#if newEffect.effects.length}}<optgroup label="{{localize "midi-qol.EntryEditor.Activity.ItemEffects"}}">{{#each newEffect.effects}}<option value="{{value}}" {{#if selected}}selected{{/if}}>{{label}}</option>{{/each}}</optgroup>{{/if}}
+                <option value="new" {{#if newEffect.isNew}}selected{{/if}}>{{localize "midi-qol.EntryEditor.Activity.NewEffect"}}</option>
+            </select></div>
+        </div>
+        {{#if newEffect.isNew}}<div class="form-group"><label>{{localize "midi-qol.EntryEditor.Activity.EffectName"}}</label><div class="form-fields"><input type="text" name="card.new.name" value="{{newEffect.name}}"></div></div>{{/if}}
+        <div class="form-group">
+            <label>{{localize "midi-qol.EntryEditor.Activity.EffectFor"}}</label>
+            <div class="form-fields"><input type="number" name="card.new.duration" value="{{newEffect.duration}}" min="0" step="1">
+                <select name="card.new.units">{{#each newEffect.units}}<option value="{{value}}" {{#if selected}}selected{{/if}}>{{label}}</option>{{/each}}</select></div>
+        </div>
+        {{#if newEffect.canRepeat}}<div class="form-group"><label></label><div class="form-fields"><label class="checkbox"><input type="checkbox" name="card.new.repeat" {{#if newEffect.repeat}}checked{{/if}}> {{localize "midi-qol.EntryEditor.Activity.RepeatSave"}}</label></div></div>{{/if}}
+        <button type="button" data-action="confirmEffect" data-home="{{home}}"><i class="fa-solid fa-plus"></i> {{localize "midi-qol.EntryEditor.Activity.AddEffectConfirm"}}</button>
+        {{/if}}

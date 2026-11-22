@@ -1,4 +1,4 @@
-import type { Entry } from "./types.js";
+import type { Entry, EntryAction } from "./types.js";
 
 /*
  * An activity read as an entry (the entry editor's activity card): what it does by itself, as dnd5e runs it, in
@@ -238,6 +238,10 @@ export interface CardEdits {
   convertTo?: RollKind;
   /** The targeting chip's edits */
   target?: TargetEdits;
+  /** Effects added in the sentence view (created on the item when saved) */
+  newEffects?: NewEffect[];
+  /** Effects taken off the activity (left on the item) */
+  removeEffects?: string[];
   attackType?: string;
   attackClass?: string;
   saveAbility?: string[];
@@ -280,10 +284,8 @@ export function activityUpdate(data: ActivityData, edits: CardEdits): Record<str
     if (!same(edits.healing.types, data.healing.types ?? [])) healing = { ...healing, types: edits.healing.types };
     if (!same(healing, data.healing)) update.healing = healing;
   }
-  if (edits.effectsOnSave) {
-    const list = (data.effects ?? []).map(e => e._id in edits.effectsOnSave! ? { ...e, onSave: edits.effectsOnSave![e._id] } : e);
-    if (!same(list, data.effects ?? [])) update.effects = list;
-  }
+  const list = activityEffects(data, edits);
+  if (!same(list, data.effects ?? [])) update.effects = list;
   return update;
 }
 
@@ -438,4 +440,50 @@ export function targetingUpdate(tg: Targeting, onItem: boolean): Record<string, 
     [`${range}.units`]: tg.rangeUnits ?? "",
     [`${range}.value`]: tg.rangeValue === null || tg.rangeValue === undefined ? "" : String(tg.rangeValue)
   };
+}
+
+/* Effects on outcomes (the sentence view's "+ effect") */
+
+/** An effect added in the sentence view: a condition, an effect of the item, or a new one, for a branch */
+export interface NewEffect {
+  _id: string;
+  /** The item's own effect it is (none: a new effect is made) */
+  existing?: boolean;
+  name: string;
+  img?: string;
+  statuses?: string[];
+  duration?: { value: number, units: string };
+  /** Ends when the creature succeeds on the applying save at the end of each of its turns */
+  repeatSave?: boolean;
+  branch: ActivityBranch;
+}
+
+/** The branch dnd5e applies an activity's own effects in: a failed save, a hit, each target */
+export function mainBranch(type: string): ActivityBranch {
+  return branchesOf(type)[0];
+}
+
+/** The activity's effects list after the card's edits: removed ones off, main-branch additions on, on-save switches */
+export function activityEffects(data: ActivityData, edits: CardEdits): { _id: string, onSave?: boolean }[] {
+  const removed = new Set(edits.removeEffects ?? []);
+  const main = mainBranch(data.type);
+  const list = (data.effects ?? []).filter(e => !removed.has(e._id)).map(e => ({ ...e }));
+  for (const added of edits.newEffects ?? []) if (added.branch === main && !list.some(e => e._id === added._id)) list.push({ _id: added._id, onSave: false });
+  for (const e of list) if (edits.effectsOnSave && e._id in edits.effectsOnSave) e.onSave = edits.effectsOnSave[e._id];
+  return list;
+}
+
+/** The effect a new one is made as (an item effect, applied to the target, not to the item's owner) */
+export function newEffectData(added: NewEffect): Record<string, unknown> {
+  return {
+    _id: added._id, name: added.name, img: added.img ?? "icons/svg/aura.svg", type: "base", transfer: false,
+    statuses: added.statuses ?? [],
+    ...(added.duration ? { duration: { value: added.duration.value, units: added.duration.units } } : {}),
+    flags: added.repeatSave ? { "midi-qol": { entries: [{ id: "repeatSave", on: "turnEnd", label: added.name, do: [{ save: "applying", then: [{ end: true }] }] }] } } : {}
+  };
+}
+
+/** A branch other than the main one applies an effect by an entry action (dnd5e's onSave means "also", not "only") */
+export function effectAction(added: NewEffect): EntryAction {
+  return { effect: "apply", what: added._id, to: "target" };
 }
