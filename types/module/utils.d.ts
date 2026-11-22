@@ -1,9 +1,13 @@
+import { type PromptResponses } from "./lib/promptCosts.js";
 import { type RangeCheckResult } from "./services/range/service.js";
-import { type OfferedBonus } from "./services/rollBonuses/service.js";
+import { type BonusPhase, type OfferedBonus, type RollBonusQuery } from "./services/rollBonuses/service.js";
 import { DialogCountdown } from "./lib/dialogCountdown.js";
+import type { EntryCover } from "./lib/entries/serviceEvents.js";
+import type { AttackModifier } from "./Workflow.js";
 import { TokenDocumentSet } from "./lib/tokenDocumentSet.js";
 import { AttributionEntry, AttributionMap, AugmentedEvent, Workflow, WorkflowOptions, WorkflowRollOptions } from "./Workflow.js";
 import { type IncomingRequest } from "./lib/requests.js";
+import { type StandingChoice } from "./services/rollBonuses/standing.js";
 import { Activity, ActivityUseConfiguration, CalcDamageOptions, MidiChangeData, DamageDescription, DamageListEntry, PreComputedAdvantageData, PreSetupDamageListEntry, RollDialogConfig, RollMessageConfig, TokenOrDocument, DND5ETargetDescriptor, SaveDetails } from "../globals.js";
 import Token = foundry.canvas.placeables.Token;
 import { AnyObject } from "fvtt-types/utils";
@@ -217,8 +221,17 @@ export declare function midiCustomEffect(target: foundry.abstract.DataModel.Any,
 }, current: unknown, delta: unknown, changes: unknown): boolean;
 /** Untargets the user's targets at 0 hit points; with `only`, just those of them (a finished workflow's targets). */
 export declare function untargetDeadTokens(only?: Set<TokenOrDocument>): void;
+export declare function replaceAtFields<T>(value: T, context: Record<string, string>, options?: {
+    blankValue: string | number;
+    maxIterations: number;
+}): string | T;
+/**
+ * Run an effect's over-time entries now (MidiQOL.doOverTimeEffect): its turn start's (`startTurn`) or turn end's, or,
+ * with `isActionSave`, the answer to a roll from an action save's card (`saveToUse`, `rollFlags`). On the GM; the
+ * entries are lib/entries (OverTime read as entries, lib/entries/overtime.ts).
+ */
 export declare function doOverTimeEffect(actor: Actor.Implementation, effect: ActiveEffect.Implementation, startTurn?: boolean, options?: any): Promise<any>;
-export declare function doActivityOverTimeEffect(actor: Actor.Implementation, effect: ActiveEffect.Implementation, startTurn?: boolean, options?: any): Promise<any>;
+export declare function doActivityOverTimeEffect(actor: Actor.Implementation, effect: ActiveEffect.Implementation, startTurn?: boolean, options?: any): Promise<unknown>;
 export declare function localActivityOverTimeEffect(actor: Actor.Implementation, effect: ActiveEffect.Implementation, startTurn?: boolean, options?: any): Promise<void>;
 /** Structured representation of count action (saveCount/failCount) */
 export interface CountAction {
@@ -308,6 +321,48 @@ export declare function parseCountAction(value: string, defaultMode: "remove" | 
  * Format: [-+]effectSpec (e.g., "-", "+", "-petrified", "+prone")
  */
 export declare function countActionToString(action: CountAction): string;
+/** Parameters for actionSave handler functions */
+export interface ActionSaveContext {
+    actor: Actor.Implementation;
+    effect: ActiveEffect.Implementation;
+    details: OvertimeDetails;
+    owner: User.Implementation | null | undefined;
+    messageFlavor: Record<string, string>;
+}
+/**
+ * Handle actionSave="dialog" - prompts player with dialog to roll save
+ * @returns true if effect should be processed further, false to skip
+ */
+export declare function handleActionSaveDialog(ctx: ActionSaveContext): Promise<boolean>;
+/**
+ * Handle actionSave="roll" response - process player's save roll
+ * @returns effect.id if processing should stop, null to continue to next effect
+ */
+export declare function handleActionSaveRollResponse(ctx: ActionSaveContext, options: {
+    saveToUse?: any;
+    rollFlags?: any;
+}, rollType: string[]): Promise<string | null | undefined>;
+/**
+ * Handle actionSave="roll" request - create roll request chat cards
+ * @returns effect.id if processing should stop, undefined to continue
+ */
+export declare function handleActionSaveRollRequest(ctx: ActionSaveContext, changeTurnEnd: boolean): Promise<string | null | undefined>;
+/** Parameters for building overtime item data */
+interface OvertimeItemBuildContext {
+    actor: Actor.Implementation;
+    effect: ActiveEffect.Implementation;
+    details: OvertimeDetails;
+    label: string;
+    isPermanent: boolean;
+}
+/**
+ * Build item and activity data for overtime effect execution
+ * @returns Object containing itemData and activityData ready for item creation
+ */
+export declare function buildOvertimeItemData(ctx: OvertimeItemBuildContext): Promise<{
+    itemData: any;
+    activityData: any;
+}>;
 /** Effect stack count - flags.dae.stacks, or EffectCounter's per-token counter when present. */
 export declare function getEffectStackCount(effect: ActiveEffect.Implementation | undefined, token?: TokenOrDocument): number;
 /**
@@ -326,7 +381,9 @@ export declare function serializeOvertimeDetails(data: Record<string, any>): str
  * Build activity data for save/check/skill rolls
  */
 export declare function buildRollActivityData(details: OvertimeDetails): Record<string, any>;
-export declare function gmOverTimeEffect(actor: Actor.Implementation, effect: ActiveEffect.Implementation, startTurn?: boolean, options?: any): Promise<string | null | undefined>;
+export declare function overTimeRemoveConditionMet(removeCondition: string, rollData: any): Promise<boolean>;
+/** One effect's over-time entries at its turn start or end, or answering an action save's roll (doOverTimeEffect) */
+export declare function gmOverTimeEffect(actor: Actor.Implementation, effect: ActiveEffect.Implementation, startTurn?: boolean, options?: any): Promise<string | null>;
 /**
  * A combatant's OverTime and ActivityOverTime effects at the start or end of its turn, driven by core's turn events,
  * which name the combatant rather than a position in the (possibly re-sorted) turn order.
@@ -384,6 +441,8 @@ export type MidiOptions = {
     saveItem?: Item.Implementation;
     saveItemUuid?: string;
     saveActivityUuid?: string;
+    /** M32a step 3: a failed save's bonuses are asked later, with its saveFailed reactions (not in the roll) */
+    failBonusesWithReactions?: boolean;
     simulate?: boolean;
     grantsActor?: Actor.Implementation;
     grantsToken?: TokenOrDocument;
@@ -603,7 +662,7 @@ export declare function getPerimeterDistanceToPoint(token: Token, point: {
  * token merely passed through, and an attack made straight after moving is rejected as out of range
  * from the *old* position.
  *
- * `_source` holds the destination from the moment the database write lands and never interpolates,
+ * `_source` holds the destination from the event the database write lands and never interpolates,
  * which is why core reads it too - see Token#checkCollision, which derives its origin as
  * `getMovementOrigin(this.document._source)`.
  *
@@ -738,6 +797,8 @@ export interface TargetACResult {
 export declare function computeTargetAC(attacker: Token, target: Token, activity: Activity | undefined, options?: {
     ignoreCover?: boolean;
     targetACMod?: number;
+    /** M15: what the entries said about this target's cover from the use (lib/entries/serviceEvents.ts) */
+    entryCover?: EntryCover;
 }): TargetACResult;
 export type FastForwardRollType = "attack" | "damage" | "check" | "save" | "skill" | "tool";
 export declare function isAutoFastForward(rollType: FastForwardRollType, { workflow, user }?: {
@@ -828,6 +889,16 @@ export declare function validTargetTokens(tokens?: Iterable<TokenOrDocument>): T
 export declare function userTargetsKeepingUndrawn(current?: Iterable<TokenOrDocument>): Set<TokenOrDocument>;
 export declare function fromActorUuid(uuid?: string): Actor.Implementation | null;
 export declare function actorFromUuid(uuid?: string): any;
+/** A flags.midi-qol.optional bonus's buttons for a roll: its own selector's value and its `.all` value, labelled */
+export declare function flagBonusButtons(actor: Actor.Implementation, flag: string, flagSelector: string, owner: object | undefined, item: Item | undefined): FlagBonusButton[];
+export type FlagBonusButton = {
+    icon: string;
+    label: string;
+    value: string;
+    key: string;
+};
+/** M31: what a bonus prompt provider's `open` is given (the dialog data midi's bonus code drives) */
+export type BonusPromptData = RollModifyDialog["data"];
 declare const RollModifyDialog_base: import("fvtt-types/src/foundry/client/applications/api/handlebars-application.mjs").default.Mix<typeof import("fvtt-types/src/foundry/client/applications/api/application.mjs").default>;
 export declare class RollModifyDialog extends RollModifyDialog_base {
     rollExpanded: boolean;
@@ -843,9 +914,10 @@ export declare class RollModifyDialog extends RollModifyDialog_base {
         content: HTMLElement | string;
         currentRoll: Roll;
         rollHTML: string;
-        callback: () => {};
+        /** Filled in by the dialog */
+        callback?: () => {};
         close: () => {};
-        buttons: any;
+        buttons?: any;
         rollMode: string | undefined;
         timeout: number;
         item: Item | undefined;
@@ -857,6 +929,13 @@ export declare class RollModifyDialog extends RollModifyDialog_base {
         }) => Promise<void>;
         /** Asked through the request core (M5b): the requester's deadline is shown (its pause asks the requester), and the dialog closes when it is answered for the player */
         request?: IncomingRequest;
+        /** M32a step 3: another part's rows shown after the bonuses (a failed save's reactions) */
+        responses?: PromptResponses;
+        /** The use whose roll it is (none for a roll outside a use) */
+        workflow?: Workflow;
+        /** The roll's bonus query and phase (contract 4: a bonus's configure is asked with them) */
+        bonusQuery?: RollBonusQuery;
+        bonusPhase?: BonusPhase;
     };
     constructor(data: any);
     static PARTS: {
@@ -963,21 +1042,55 @@ export declare function doReactions(targetRef: TokenOrDocument | string, trigger
     ac?: number;
     itemName?: string;
 }>;
+/** M32a step 4: several creatures' reactions asked of one user in one request (a section each), answered in order */
+export declare function askReactionGroup(user: User.Implementation, sections: object[], about: {
+    owner?: object;
+    label: string;
+}): Promise<ReactionResult[]>;
 export type ReactionResult = {
     name?: string;
     uuid?: string;
     ac?: number;
     itemName?: string;
     itemUuid?: string;
+    offerKey?: string;
+    offerKeys?: string[];
+    saveRoll?: string;
+    saveSucceeded?: boolean;
 };
+/** A contract 2 offer as the reacting client sees it: chosen, its key goes back to the asking client */
+export type ResponseOfferChoice = {
+    key: string;
+    label: string;
+    img?: string;
+    description?: string;
+    badges?: string[];
+    reaction?: boolean;
+    standingKey?: string;
+    canMatter?: boolean;
+};
+/** M32a step 5: the offers a player is shown: those that can't change the outcome only with their Show every bonus offer on */
+export declare function offersThatMatter(offers: ResponseOfferChoice[]): ResponseOfferChoice[];
 /** The request type a reacting client answers (GMAction registers its handler) */
 export declare const REACTIONS_REQUEST = "midi-qol.reactions";
+/** M32a step 4: several creatures' reactions in one request (one prompt, a section each) */
+export declare const REACTIONS_GROUP_REQUEST = "midi-qol.reactionGroup";
 /** A player's Active Defence roll, asked through the request core (M5b; GMAction._D20Roll answers it) */
 export declare const DEFENCE_REQUEST = "midi-qol.defence";
 /** Optional bonuses after a failed save, asked of the actor's player through the request core (M5b; GMAction._bonusCheck) */
 export declare const BONUS_REQUEST = "midi-qol.bonus";
 /** A concentration roll asked of the concentrating creature's player through the request core (M5b; GMAction.rollConcentration) */
 export declare const CONCENTRATION_REQUEST = "midi-qol.concentration";
+export interface ReactionStandingRow {
+    standingKey: string;
+    label: string;
+    choice: StandingChoice;
+    askOnly: boolean;
+}
+/** The reaction prompt's rows by match key (an activity's uuid, an offer's key), with the creature's standing choices */
+export declare function reactionStandingRows(actor: Actor.Implementation, activities: Activity[], offers: ResponseOfferChoice[]): {
+    rows: Map<string, ReactionStandingRow>;
+};
 export declare function promptReactions(tokenUuid: string, reactionActivityList: ReactionItemReference[], triggerTokenUuid: string | undefined, reactionFlavor: string, triggerType: string, options?: any): Promise<any>;
 export declare function playerFor(target?: TokenOrDocument | null): User | null | undefined;
 export declare function playerForActor(actor?: Actor | null): User | undefined;
@@ -1001,6 +1114,12 @@ export declare class ReactionDialog extends ReactionDialog_base {
         /** The reacting token: its name titles the dialog */
         tokenUuid?: string;
         activities: Activity[];
+        /** Contract 2 offers (not whole activities): chosen, the asking client takes them */
+        offers?: ResponseOfferChoice[];
+        /** M32a step 2: each row's standing choice, by match key */
+        standing?: {
+            rows: Map<string, ReactionStandingRow>;
+        };
         title: string;
         content: HTMLElement;
         callback: () => {};
@@ -1020,10 +1139,34 @@ export declare class ReactionDialog extends ReactionDialog_base {
             template: string;
         };
     };
+    /** M32a: the bonus prompt's look (rows, ticked and applied) unless the user's Bonus prompt style is classic */
+    get phased(): boolean;
+    _configureRenderParts(options: any): Record<string, import("fvtt-types/src/foundry/client/applications/api/handlebars-application.mjs").default.HandlebarsTemplatePart>;
     static DEFAULT_OPTIONS: foundry.applications.api.ApplicationV2.DefaultOptions;
     get title(): string;
     _onRender(context: any, options: any): Promise<void>;
     _prepareContext(options: any): Promise<{
+        content: HTMLElement;
+        entries: {
+            standingKey?: string | undefined;
+            standingLabel?: string | undefined;
+            choice?: StandingChoice | undefined;
+            choices?: {
+                value: StandingChoice;
+                label: string;
+            }[] | undefined;
+            id: string;
+            img: any;
+            label: string;
+            tooltip: any;
+            badges: any;
+            exclusive: string | undefined;
+            checked: boolean;
+        }[];
+        skipLabel: string;
+        timeRemaining: number;
+        tabs?: Record<string, import("fvtt-types/src/foundry/client/applications/api/application.mjs").default.Tab>;
+    } | {
         content: HTMLElement;
         buttons: any;
         timeRemaining: number;
@@ -1140,7 +1283,7 @@ export declare function hasUsedAnyReaction(actor: Actor.Implementation): boolean
 export declare function setupOptionalBonusResets(): void;
 export declare function hasUsedBonusAction(actor: Actor.Implementation): boolean;
 export declare function removeBonusActionUsed(actor: Actor.Implementation, force?: boolean): Promise<void>;
-/** On the turn moments (M4, core's active GM): after DAE and core have had their go at expiring the markers */
+/** On the turn events (M4, core's active GM): after DAE and core have had their go at expiring the markers */
 export declare function setupMarkerChecks(): void;
 export declare function needsReactionCheck(actor: Actor.Implementation): boolean;
 export declare function needsAOOCheck(actor: Actor.Implementation): boolean;
@@ -1219,6 +1362,12 @@ export declare function midiRenderAggregatedDamageRolls(rolls: Roll[], template:
 export declare function midiRenderDamageRolls(rolls: Roll[], options?: any): Promise<string>;
 export declare function midiRenderOtherDamageRolls(rolls: Roll[], options?: any): Promise<string>;
 export declare function midiRenderBonusDamageRolls(rolls: Roll[], options?: any): Promise<string>;
+/**
+ * The attack roll's tooltip: a chip for every term after the d20 (its value and the label it was rolled with:
+ * Strength, Proficiency, Flanking, …, the Roll Bonus with the effects behind it), after whether the d20 had advantage
+ * or disadvantage, which alone is coloured (its sources are in the attribution tooltip).
+ */
+export declare function rollTermChips(roll: Roll, modifiers?: AttackModifier[], reasonIcon?: (m: AttackModifier, cls: string) => string, describeReason?: (m: AttackModifier) => string): string;
 export declare function midiRenderTemplateRoll(roll: Roll | undefined, template: string, options?: any): Promise<string>;
 export declare function getFlankingEffect(): ActiveEffect<"base" | import("fvtt-types/src/foundry/common/abstract/document.mjs").default.ModuleSubType> | null | undefined;
 export declare function getFlankedEffect(): ActiveEffect<"base" | import("fvtt-types/src/foundry/common/abstract/document.mjs").default.ModuleSubType> | null | undefined;
@@ -1341,6 +1490,8 @@ export declare function setRollOperatorEvaluated(roll: Roll): Roll<import("fvtt-
 export declare function doSyncRoll(roll: Roll, source: string | undefined): Roll.Evaluated<Roll<import("fvtt-types/utils").EmptyObject>>;
 export declare function setRollMinDiceTerm(roll: Roll, minValue: number, count?: number): Roll<import("fvtt-types/utils").EmptyObject>;
 export declare function setRollMaxDiceTerm(roll: Roll, maxValue: number, count?: number): Roll<import("fvtt-types/utils").EmptyObject>;
+/** A roll's total worked out again after its dice results were changed in place */
+export declare function refreshRollTotal<T extends Roll>(roll: T): T;
 export declare function addDependent(document: foundry.abstract.Document.Any, dependent: foundry.abstract.Document.Any): Promise<any>;
 export declare function addConcentrationDependent(actorRef: TokenOrDocument | Actor.Implementation | string, dependent: foundry.abstract.Document.Any, item?: Item.Implementation): Promise<any>;
 export declare function getAppliedEffects(actor: Actor.Implementation | null | undefined, { includeEnchantments }: {

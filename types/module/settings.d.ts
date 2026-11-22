@@ -575,6 +575,11 @@ export declare const rollConfigOptions: Record<string, string>;
 export declare const damageConfigOptions: Record<string, string>;
 export declare const consumeConfigOptions: Record<string, string>;
 export declare const registerSettings: () => void;
+/**
+ * A player's value of a setting that moved from this device to the player: copied once, when the player has no value
+ * of their own yet. The device's copy stays (other worlds on this server, on midi 14.x, read it).
+ */
+export declare function migrateClientToUserSettings(): Promise<void>;
 export declare function safeGetGameSetting(moduleName: string, settingName: string): any | undefined;
 export declare function safeSetGameSetting(moduleName: string, settingName: string, value: unknown): Promise<unknown> | undefined;
 /**

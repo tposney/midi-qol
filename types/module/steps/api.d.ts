@@ -1,7 +1,7 @@
 import { type AssembledSteps, type StepChange, type StepConflict } from "./assembly.js";
-import { type ActivityCapability, type Step, type StepContext } from "./steps.js";
+import { type ActivityCapability, type Step, type StepContext, type StepUse } from "./steps.js";
 type When = {
-    when?: (workflow: any) => boolean;
+    when?: (workflow: StepUse) => boolean;
     priority?: number;
     source?: string;
 };
@@ -53,7 +53,7 @@ export interface StepSources {
  * A use's changes: the global changes that apply to it, the item's and the activity's stored ones, and its call's
  * (checked; problems reported). The used activity and its item only: not the other activity's or the ammunition's.
  */
-export declare function useStepChanges(workflow: unknown, callChanges: readonly unknown[] | undefined, sources?: StepSources): StepChange[];
+export declare function useStepChanges(workflow: StepUse, callChanges: readonly unknown[] | undefined, sources?: StepSources): StepChange[];
 /** Reports a use's conflicts and replacements that leave out what the step they replace writes (once a session each). */
 export declare function reportAssembly(assembled: AssembledSteps): void;
 /** The steps of a use's changes that aren't registered on this client. */

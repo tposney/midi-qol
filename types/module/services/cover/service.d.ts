@@ -32,6 +32,8 @@ export interface CoverProvider {
     walls?: "midi" | "provider";
 }
 export declare function coverAnswer(level: CoverLevel): CoverAnswer;
+/** The level a cover bonus is (status cover reads as a bonus) */
+export declare function coverLevelFor(bonus: number): CoverLevel;
 declare module "../../api/services.js" {
     interface MidiServices {
         cover: CoverProvider;

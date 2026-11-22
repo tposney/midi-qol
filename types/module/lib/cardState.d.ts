@@ -8,7 +8,7 @@ import type { MidiCardSection } from "../ChatClasses/UsageCardMessage.js";
  * Workflow scalars stored in `system.midi.state`: only what a rebuilt workflow cannot work out from its card (rolls,
  * activity) and the canvas, or what other readers need (the damage tray's matches).
  */
-export declare const STATE_KEYS: readonly ["isCritical", "isFumble", "templateUuids", "workflowOptions", "saveMults", "damageOnly", "otherConsumed", "otherDeclined", "otherScaling", "ammunitionData", "inCombat", "isTurn", "deferredConcentration", "useChanges", "damageRules", "stepChanges", "stepMove", "damageMessages", "tagSnapshots", "choices"];
+export declare const STATE_KEYS: readonly ["isCritical", "isFumble", "templateUuids", "workflowOptions", "saveMults", "damageOnly", "otherConsumed", "otherDeclined", "otherScaling", "ammunitionData", "inCombat", "isTurn", "deferredConcentration", "useChanges", "damageRules", "stepChanges", "stepMove", "damageMessages", "tagSnapshots", "choices", "redirections"];
 export type StateKey = typeof STATE_KEYS[number];
 /**
  * Workflow token sets: record field, and its old flag name (a uuid array; `targets` was `{uuid, name}`). Macros change them, so they are stored.

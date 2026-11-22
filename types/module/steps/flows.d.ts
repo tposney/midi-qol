@@ -1,3 +1,4 @@
+import type { Workflow } from "../Workflow.js";
 export interface Flow {
     id: string;
     label: string;
@@ -14,11 +15,13 @@ export declare function coarseStepOf(stepId: string): string | undefined;
  * A flow's own implementation of a step (M5): the same step id, hooks, passes and module changes, another `run`.
  * `base()` runs the step's own implementation, as `super.WorkflowState_<name>()` did in the subclass that overrode it.
  */
-export type FlowVariant = (ctx: {
-    workflow: any;
-    base(): Promise<unknown>;
-}) => unknown;
-export declare function registerFlowVariant(flowId: string, stepId: string, run: FlowVariant): void;
+export type FlowVariant<W extends Workflow = Workflow> = {
+    run(ctx: {
+        workflow: W;
+        base(): Promise<unknown>;
+    }): unknown;
+}["run"];
+export declare function registerFlowVariant<W extends Workflow>(flowId: string, stepId: string, run: FlowVariant<W>): void;
 export declare function flowVariant(flowId: string | undefined, stepId: string): FlowVariant | undefined;
 export declare function registerFlow(flow: Flow): void;
 export declare function getFlow(id: string): Flow | undefined;

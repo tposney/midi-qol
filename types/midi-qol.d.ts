@@ -53,18 +53,6 @@ export declare let midiFlags: {
 }[];
 export declare let allAttackTypes: string[];
 export declare let gameStats: RollStats;
-export declare let overTimeEffectsToDelete: Record<string, {
-    uuid: string;
-}>;
-export declare let savedOverTimeEffectsToDelete: Record<string, {
-    uuid: string;
-    saveCount?: number;
-    saveCountAction?: string;
-    saveConsecutive?: boolean;
-    failCount?: number;
-    failCountAction?: string;
-    failConsecutive?: boolean;
-}>;
 export declare let MQItemMacroLabel: string;
 export declare let MQActivityMacroLabel: string;
 export declare let MQOnUseOptions: Record<string, string>;

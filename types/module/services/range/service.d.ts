@@ -2,7 +2,8 @@ import type { Activity, TokenOrDocument } from "../../../globals.js";
 import { defineService } from "../../api/services.js";
 export interface RangeCheckResult {
     result: string;
-    attackingToken?: Token.Implementation;
+    /** A TokenDocument (section 18: no canvas Token crosses a contract) */
+    attackingToken?: TokenDocument.Implementation;
     range?: number;
     longRange?: number;
 }

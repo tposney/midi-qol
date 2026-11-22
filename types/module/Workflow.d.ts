@@ -1,3 +1,4 @@
+import type { RangeCheckResult } from "./services/range/service.js";
 import { type FixedDice } from "./lib/fixedDice.js";
 import { type StepContext } from "./steps/steps.js";
 import { type SaveRequest, type SaveRequestEntry } from "./services/saveRequests/service.js";
@@ -11,7 +12,7 @@ import { type ChoiceValue } from "./lib/choices.js";
 import { type WaitChoiceSpec } from "./lib/playerWaits.js";
 import { type ReactionResult, getOrCreateTokenForActor } from "./utils.js";
 import { OnUseMacros } from "./apps/Item.js";
-import { type RollBonusQuery } from "./services/rollBonuses/service.js";
+import { type OfferedBonus, type RollBonusQuery } from "./services/rollBonuses/service.js";
 import { type MidiCardSection, type SectionName } from "./ChatClasses/UsageCardMessage.js";
 import { Activity, ActivitySave, ActivityCheck, DamageDescription, DamageListEntry, TokenOrDocument, DND5ETargetDescriptor, CombinedTargetDescriptor, QueueSaveRollOptions, SaveDetails, ProcessTargetSaveContext, ModuleIntegrationFlags, ModuleIntegrationRequests, MonksTokenBarRequest, FlashRollsRequest, EpicRollsRequest, RollProcessConfig, RollDialogConfig } from "../globals.js";
 import { AnyMutableObject, AnyObject, EmptyObject, InexactPartial } from "fvtt-types/utils";
@@ -91,6 +92,16 @@ export interface WorkflowStepHost {
     fileFinished(): void;
 }
 export declare function workflowStepHost(workflow: Workflow): WorkflowStepHost;
+/** M29: a redirection of the use (lib/entries/redirection.ts) */
+export interface UseRedirection {
+    /** TokenDocument uuids: the target redirected, and the new one (none: dropped, or at a hit, missed) */
+    from: string;
+    to?: string;
+    /** What did it (the entry's label) */
+    label: string;
+    /** The event it happened at */
+    at: string;
+}
 export declare class Workflow {
     #private;
     WorkflowState_Suspend: StateMethod;
@@ -251,6 +262,12 @@ export declare class Workflow {
      */
     get choices(): Record<string, ChoiceValue>;
     setChoice(id: string, value: ChoiceValue): void;
+    /** M29: the use's redirections, in order: a target replaced by another (`to`), or dropped / missed (`to` absent) */
+    get redirections(): readonly UseRedirection[];
+    /** M29: `from` is replaced by `to` in the use (dropped from it when absent), and the change recorded */
+    redirect(from: TokenDocument.Implementation, to: TokenDocument.Implementation | undefined, record: Omit<UseRedirection, "from" | "to">): void;
+    /** M29: a redirection recorded without changing the targets (a hit turned into a miss: Mirror Image's duplicate) */
+    noteRedirection(record: UseRedirection): void;
     /** Snapshot tags fixed at the use's resolution (M26, lib/tags.ts) */
     get tagSnapshots(): readonly TagSnapshot[];
     recordTagSnapshot(snapshot: TagSnapshot): void;
@@ -656,17 +673,15 @@ export declare class Workflow {
     attackMode: string | undefined;
     itemUsesReaction: boolean | undefined;
     itemUsesBonusAction: boolean | undefined;
-    rangeDetails: {
-        result: string;
-        attackingToken?: Token.Implementation;
-        range?: number;
-        longRange?: number;
-    } | undefined;
+    /** The range check's answer (its attacking token a TokenDocument, as the range contract carries) */
+    rangeDetails: RangeCheckResult | undefined;
     sequenceId?: string;
     targetACModifiers: Map<string, number>;
     rollOptions: WorkflowRollOptions;
     castData: {
         castLevel?: number;
+        /** The applying save's DC, recorded on the effects the use applies (appliedCastData) */
+        saveDC?: number;
     } | undefined;
     constructor(actor: Actor.Implementation | null, activity: Activity | null, speaker: ChatMessage.SpeakerData | null, targets: Set<TokenOrDocument> | TokenOrDocument[] | null, options?: WorkflowConstructorOptions);
     /** Each target's sight, as setupCanSeeSense decided it, on its record (a point-in-time fact) */
@@ -837,6 +852,8 @@ export declare class Workflow {
         ammunitionSelfEffects: ActiveEffect<"base" | import("fvtt-types/src/foundry/common/abstract/document.mjs").default.ModuleSubType>[];
         ammunitionSelfAllEffects: ActiveEffect<"base" | import("fvtt-types/src/foundry/common/abstract/document.mjs").default.ModuleSubType>[];
     }>;
+    /** The use's cast data with the save DC it applied with, when its activity has one */
+    appliedCastData(): Workflow["castData"];
     /** What DAE is given with each application: metadata, the concentration origin and the roll context */
     effectsApplicationData(): {
         metaData: {
@@ -848,6 +865,8 @@ export declare class Workflow {
                     choices?: Record<string, ChoiceValue> | undefined;
                     castData: {
                         castLevel?: number;
+                        /** The applying save's DC, recorded on the effects the use applies (appliedCastData) */
+                        saveDC?: number;
                     } | undefined;
                 };
             };
@@ -868,6 +887,8 @@ export declare class Workflow {
                         choices?: Record<string, ChoiceValue> | undefined;
                         castData: {
                             castLevel?: number;
+                            /** The applying save's DC, recorded on the effects the use applies (appliedCastData) */
+                            saveDC?: number;
                         } | undefined;
                     };
                 };
@@ -881,10 +902,14 @@ export declare class Workflow {
             whisper: boolean;
             workflowOptions: InexactPartial<{
                 advantage: boolean;
+                /** A preview (MidiQOL.preview, M16): the rules are asked as for a use that has not started; nothing rolls or writes */
+                preview: boolean;
                 /** Every die the use rolls shows this face (M25: tests, examples): "min", "average", "max" or a position 0–1 in the die's range */
                 fixedDice: FixedDice;
                 /** The activity's choices (M28), by id: not asked */
                 choices: Record<string, ChoiceValue>;
+                /** M18: the use's presentation override ("none": no cues presented) */
+                presentation: "none" | import("./lib/cues.js").Cue["presentation"];
                 allowIncapacitated: boolean;
                 /**
                  * Caller-supplied control over per-target attack splitting: true forces it on, false off,
@@ -927,6 +952,8 @@ export declare class Workflow {
                 formulaDSN: boolean;
                 ignoreUserTargets: boolean;
                 isCritical: boolean;
+                /** The use was called as a fumble (midiOptions.isFumble) */
+                isFumble: boolean;
                 isMagicSave: boolean;
                 isReaction: boolean;
                 item: Item.Implementation;
@@ -1268,6 +1295,18 @@ export declare class Workflow {
      * Update the saves and failedSaves sets based on whether the target saved
      */
     updateSaveFailSets(target: TokenOrDocument, saved: boolean): void;
+    /** The use provokes reactions (an item or the use can turn them off) */
+    get provokesReactions(): boolean;
+    /**
+     * M32a step 3: what a failed save's bonus part sends with its reactions, when it has fail bonuses on offer (fail flags
+     * or a rollBonuses contributor's after-failure bonus); none: the reactions alone
+     */
+    failedSaveBonusSpec(target: TokenOrDocument, result: Roll[], rollType: string, rollAbility: string, dc: number): Promise<{
+        result: string;
+        rollType: string;
+        selector: string;
+        dc: number;
+    } | undefined>;
     /**
      * Apply fail bonuses (flags.midi-qol.save.fail) if the save failed
      */
@@ -1368,13 +1407,54 @@ export declare class Workflow {
         label: string;
     }): void;
     /**
-     * rollBonuses' preRoll phase (stage 7): automatic bonuses that add to the formula are collected before the roll and
-     * become parts of it (attackRollParts), so they show in the roll and dnd5e doubles their dice on a critical. Optional
-     * preRoll bonuses are not offered yet (the prompt opens after the roll).
+     * rollBonuses' preRoll phase (stage 7): bonuses that add to the formula are collected before the roll and become
+     * parts of it (attackRollParts), so they show in the roll and dnd5e doubles their dice on a critical. M32b: optional
+     * ones too, chosen before the roll (the actor's standing choices, the rest asked of its owner in one prompt), as the
+     * damage adds are (M15 5d).
      */
-    collectPreRollBonuses(kind: "attack"): Promise<void>;
+    collectPreRollBonuses(kind: "attack", options?: {
+        inDialog?: boolean;
+    }): Promise<void>;
+    /** Those taken: parts of the damage roll (damageRollParts), settled after it */
+    beforeDamageBonuses: OfferedBonus[];
+    /**
+     * Damage choices before the damage roll (M15 5d; proposal 13b part 2): the damage adds the use's bonuses offer (not
+     * those that react to the dice, `needsRoll`, nor targeted or several-type ones) are chosen now: automatic ones and
+     * those the actor's standing choices apply, the rest asked of the actor's owner in one prompt. Each taken becomes a
+     * part of the damage roll; the after-roll ask leaves them out. Optional flags stay after the roll.
+     */
+    chooseDamageBonusesBeforeRoll(options?: {
+        inDialog?: boolean;
+    }): Promise<OfferedBonus[]>;
+    dialogOffers(kind: "attack" | "damage"): readonly OfferedBonus[];
+    setDialogTicked(kind: "attack" | "damage", ids: Set<string>): void;
+    /** After the roll: the dialog's ticked adds are the roll's (settled with the other before-roll bonuses) */
+    takeDialogBonuses(kind: "attack" | "damage"): void;
+    /** The chosen before-roll damage bonuses as dnd5e damage roll configs: into the first roll, or their own (a type, no critical) */
+    addDamageBonusParts(rolls: {
+        parts?: string[];
+        data?: object;
+        options?: Record<string, unknown>;
+    }[]): void;
+    /** After the damage roll: the before-roll bonuses are recorded as used, their costs spent and their onChosen run */
+    settleBeforeDamageBonuses(roll: Roll | undefined): Promise<void>;
+    /** Offered before the damage roll already (5d) */
+    offeredBeforeDamage(id: string): boolean;
     /** After the roll: the preRoll bonuses it carries are recorded as used, their costs spent and their onChosen run. */
     settlePreRollBonuses(kind: "attack", roll: Roll): Promise<void>;
+    /** dnd5e's config of this use's latest attack and damage rolls (midi's roll wraps record them), for rollBonuses */
+    rollConfigs: {
+        attack?: {
+            config: object;
+            dialog: object;
+            message: object;
+        };
+        damage?: {
+            config: object;
+            dialog: object;
+            message: object;
+        };
+    };
     /** What rollBonuses contributors are told about this use's attack or damage roll. */
     rollBonusQuery(kind: "attack" | "damage"): RollBonusQuery;
     processAttackRollBonusFlags(): Promise<Roll<EmptyObject>>;
@@ -1493,10 +1573,14 @@ type WorkflowConstructorOptions = InexactPartial<{
 }>;
 export type WorkflowOptions = InexactPartial<{
     advantage: boolean;
+    /** A preview (MidiQOL.preview, M16): the rules are asked as for a use that has not started; nothing rolls or writes */
+    preview: boolean;
     /** Every die the use rolls shows this face (M25: tests, examples): "min", "average", "max" or a position 0–1 in the die's range */
     fixedDice: FixedDice;
     /** The activity's choices (M28), by id: not asked */
     choices: Record<string, ChoiceValue>;
+    /** M18: the use's presentation override ("none": no cues presented) */
+    presentation: "none" | import("./lib/cues.js").Cue["presentation"];
     allowIncapacitated: boolean;
     /**
      * Caller-supplied control over per-target attack splitting: true forces it on, false off,
@@ -1539,6 +1623,8 @@ export type WorkflowOptions = InexactPartial<{
     formulaDSN: boolean;
     ignoreUserTargets: boolean;
     isCritical: boolean;
+    /** The use was called as a fumble (midiOptions.isFumble) */
+    isFumble: boolean;
     isMagicSave: boolean;
     isReaction: boolean;
     item: Item.Implementation;

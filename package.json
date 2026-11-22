@@ -21,6 +21,8 @@
     "extractPacks": "npx gulp extractPacks",
     "surface": "node tools/surface.mjs",
     "surface:check": "node tools/surface.mjs --check",
+    "types": "node scripts/generate-types.mjs && node tools/build-types-package.mjs",
+    "check:package": "node tools/build-check-package.mjs",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:types": "tsc -p tsconfig.test.json"

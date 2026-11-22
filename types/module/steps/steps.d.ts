@@ -1,3 +1,4 @@
+import type { Workflow } from "../Workflow.js";
 import type { StepChange } from "./assembly.js";
 export interface Step {
     /** `midi-qol.<name>` for midi's steps. */
@@ -34,7 +35,7 @@ export interface Step {
 /** What an activity can do, from its type's fields (attack, damage...); `area`: its target has a template or emanation */
 export type ActivityCapability = "attack" | "damage" | "healing" | "save" | "check" | "utilityRoll" | "area" | "transform";
 export interface StepContext {
-    workflow: any;
+    workflow: Workflow;
     /** For a wrapper: run the step it wraps (and what that returns). */
     next(): Promise<unknown>;
     /** At a reaction step: who reacts to what (utils doReactions' arguments). */
@@ -52,8 +53,19 @@ export declare function registerStep(step: Step): void;
 export declare function setStepRun(id: string, run: NonNullable<Step["run"]>): void;
 export declare function unregisterStep(id: string): boolean;
 /** A change to every use's flow (the global layer), optionally only where `when` says. */
+/** What a change's `when` sees: the use, or in a flow preview a stand-in with its activity, item, actor and options */
+export type StepUse = Workflow | {
+    activity: unknown;
+    item: unknown;
+    actor: unknown;
+    workflowOptions: {
+        steps: unknown[];
+    };
+    flowId: string;
+    preview: true;
+};
 export type GlobalStepChange = StepChange & {
-    when?: (workflow: any) => boolean;
+    when?: (workflow: StepUse) => boolean;
 };
 export declare function addStepChange(change: GlobalStepChange): void;
 /** Remove the global changes a source made (by `source`), or one change. */
@@ -61,7 +73,7 @@ export declare function removeStepChanges(match: string | GlobalStepChange): num
 /** Every global change (the activity-type table shows the inserted steps) */
 export declare function allGlobalStepChanges(): readonly GlobalStepChange[];
 /** The global changes that apply to a use (a `when` that throws: not applied), as data. */
-export declare function globalStepChangesFor(workflow: unknown): StepChange[];
+export declare function globalStepChangesFor(workflow: StepUse): StepChange[];
 /** The fields a step promises to write: declared, and for midi's steps those SHARED_FIELDS lists it as writing. */
 export declare function stepWrites(id: string): string[];
 /** What a replacement leaves out of the step it replaces: the fields that step writes and the replacement doesn't declare. */
@@ -78,7 +90,8 @@ export declare function isMidiStep(id: string): boolean;
 export declare const STEP_ACTS_ON: Readonly<Record<string, readonly ActivityCapability[]>>;
 /**
  * Workflow fields more than one step writes or reads, and which (from the M2 state inventory). M3's step contracts
- * check a replacement step against these; until then they record who owns what. "use" is the code before the first
+ * check a replacement step against these. test/sharedFields.test.ts (M31) fails when a step body writes one directly
+ * without being listed as a writer. "use" is the code before the first
  * step (MidiActivityMixin.use), "GM" the GM's card actions.
  */
 export declare const SHARED_FIELDS: Readonly<Record<string, {

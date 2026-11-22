@@ -1,11 +1,19 @@
+import type { PromptResponses } from "./lib/promptCosts.js";
 import type { IncomingRequest } from "./lib/requests.js";
 import { MidiOptions } from "./utils.js";
 import { PreComputedAdvantage } from "./apps/MidiRollChoiceDialog.js";
 import Token = foundry.canvas.placeables.Token;
-import { Activity, ActivityUseConfiguration, RollDialogConfig, RollMessageConfig, RollProcessConfig } from "../globals.js";
+import { Activity, ActivityUseConfiguration, BasicRollConfig, RollDialogConfig, RollMessageConfig, RollProcessConfig } from "../globals.js";
 import { RollModifierTracker } from "./lib/RollModifierTracker.js";
 export declare const skipConcentrationActorUuids: Set<string | null>;
 export declare function getActorWoundedSemaphore(actorUuid: string | null): foundry.utils.Semaphore;
+/**
+ * Resolves once midi's status work for the actor on this client is done: the wounded, unconscious and dead changes its
+ * HP updates started (they run after the update resolves, on the active GM) and its queued fixed-id effect changes.
+ * For a caller changing the actor's effects right after an HP change (a reset deleting every effect), which otherwise
+ * races midi removing unconscious (MidiQOL.actorEffectsSettled).
+ */
+export declare function actorEffectsSettled(actor: Actor.Implementation | null | undefined): Promise<void>;
 export declare function initPatching(): void;
 export declare function readyPatching(): void;
 export declare let visionPatching: () => void;
@@ -21,6 +29,12 @@ export declare let actorAbilityRollPatching: () => void;
  * Called from actorOnUpdate (for HP changes) and updateItem hook (for vitality changes).
  */
 export declare function processWoundedStatus(actor: Actor.Implementation): Promise<void>;
+/**
+ * Link a save, check or tool roll to the card and activity it was rolled for, as dnd5e's own save buttons do:
+ * `system.origin` (dnd5e's MessageRegistry, getOriginatingMessage, summaries) and the activity's message sources.
+ */
+/** An activity's own save or check bonus as a roll's parts, as dnd5e's card buttons add it (14.6.14) */
+export declare function activityBonusRoll(activity: Activity | undefined, type: "save" | "check"): BasicRollConfig | undefined;
 export interface Options {
     advantage: boolean | undefined;
     disadvantage: boolean | undefined;
@@ -49,6 +63,16 @@ export declare function collectBonusFlags(actor: Actor.Implementation, category:
 export declare function bonusCheck(actor: Actor.Implementation, result: Roll, category: string, detail?: string, messageData?: any, prompt?: {
     request?: IncomingRequest;
     withinRequest?: IncomingRequest;
+    alsoFail?: {
+        category: string;
+        detail: string;
+    };
+    responses?: PromptResponses;
+    rollConfig?: {
+        config: object;
+        dialog: object;
+        message: object;
+    };
 }): Promise<Roll>;
 export declare function addDiceTermModifiers(): void;
 export declare function averageDice(roll: Roll): Roll<import("fvtt-types/utils").EmptyObject>;

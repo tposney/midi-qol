@@ -54,21 +54,4 @@ export declare function installAttackRolls(): void;
  * @returns RollModifierTracker with attack advantage attribution
  */
 export declare function computeAttackAdvantage(actor: Actor.Implementation, actionType: string, options: MidiOptions, abilityId?: string, tracker?: RollModifierTracker): Promise<RollModifierTracker>;
-/** The label of dnd5e's combined roll bonus term (its `@ruleBonus` part), which rollBonusSources breaks down. */
-export declare function rollBonusLabel(): string;
-/**
- * dnd5e's attack roll parts (getAttackData: `@mod`, `@prof`, `@bonus`, …) with a label in brackets, which each
- * evaluated term keeps as its flavor. Parts that aren't one of these references are left as they are.
- */
-export declare function labelAttackParts(parts: string[], ability: string | undefined): string[];
-/**
- * The effects behind dnd5e's combined roll bonus for this attack (`@ruleBonus`: the attack roll bonuses for the
- * ability, all attacks and the action type), each with its own value resolved against the actor's data. Only adding
- * changes have a value of their own; an override or custom change is listed without one.
- */
-export declare function rollBonusSources(activity: any, ability: string | undefined, actionType: string | undefined): Array<{
-    label: string;
-    value?: string;
-    img?: string;
-}>;
 export {};

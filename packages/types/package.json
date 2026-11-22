@@ -1,0 +1,16 @@
+{
+  "name": "@midi-qol/types",
+  "version": "15.0.0",
+  "private": true,
+  "description": "TypeScript types for midi-qol's public contract: its services, steps, entries, cues, outcomes and requests",
+  "types": "index.d.ts",
+  "files": [
+    "index.d.ts",
+    "dist",
+    "README.md"
+  ],
+  "peerDependencies": {
+    "fvtt-types": "14.370.0-beta.20261107215328"
+  },
+  "license": "MIT"
+}

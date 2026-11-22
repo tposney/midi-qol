@@ -38,6 +38,10 @@ export declare function initGMActionSetup(): void;
 export declare function whisperRollToPlayer(message: ChatMessage.Implementation): void;
 /** The request type a player's client answers with its roll dialog (rollAbility with the request) */
 export declare const SAVE_REQUEST = "midi-qol.save";
+/** An action save's roll (the player confirms using their action, then rolls) */
+export declare const ACTION_SAVE_REQUEST = "midi-qol.actionSave";
+/** An ActivityOverTime use on its owner's client */
+export declare const ACTIVITY_OVERTIME_REQUEST = "midi-qol.activityOverTime";
 export declare function rollAbility(data: {
     saveDetails: SaveDetails;
     displayOptions?: {
@@ -114,6 +118,17 @@ export declare function damageDetailMods(di: DamageDescription, options?: Damage
 /** The card tooltip's per-entry display data, taken from the CALCULATED damage detail. */
 export declare function buildDamageMods(damageDetail?: DamageDescription[], options?: DamageApplicationOptions): DamageModDisplay[];
 export declare let processUndoDamageCard: (message: ChatMessage.Implementation, html: HTMLElement, _data: unknown) => boolean;
+/**
+ * An action save on the player's client: confirm using the action, then roll. Asked through the request core
+ * (ACTION_SAVE_REQUEST): its dialog closes when the request is answered for the player (a GM, the time-out), and a
+ * confirmation after that is dropped.
+ */
+export declare function rollActionSave(data: {
+    actorUuid: string;
+    effectName: string;
+    saveDetails: SaveDetails;
+    displayOptions: object;
+}, request?: IncomingRequest): Promise<unknown>;
 type SerializedDamageOptions = Omit<DamageApplicationOptions, "downgrade" | "ignore"> & {
     downgrade?: true | string[];
     ignore?: true | {

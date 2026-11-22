@@ -18,7 +18,7 @@ export interface ChoiceDeclaration {
     max?: number | string;
     /** allocate: a formula over the activity's roll data ("2 + @item.level") */
     total?: string;
-    /** M15: kept per actor (declared now, not acted on) */
+    /** M15: kept per actor (declared, not read: every list-like choice can be remembered by the player, 5e) */
     remember?: "standing";
 }
 /** One stored answer (a list: ids may have dots, which an update reads as a path) */
@@ -36,6 +36,11 @@ interface Option {
 export declare function choiceOptions(declaration: ChoiceDeclaration, workflow: Workflow): Option[];
 /** A value is one this declaration can take (supplied values are checked, not trusted) */
 export declare function validChoice(declaration: ChoiceDeclaration, value: unknown, workflow: Workflow): value is ChoiceValue;
+/**
+ * M15 stage 6: an entry's own choice (`choose`), asked when the entry is taken: its value, or undefined when the
+ * dialog was closed. `choose.if` (an expression, checked by the caller) says when it is asked at all.
+ */
+export declare function askEntryChoice(declaration: ChoiceDeclaration, workflow: Workflow): Promise<ChoiceValue | undefined>;
 /**
  * The Choices step's work: the activity's choices answered and stored on the use. False when the user closed the
  * dialog (the use is abandoned).

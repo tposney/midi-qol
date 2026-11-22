@@ -27,5 +27,5 @@
 		"forceConsistentCasingInFileNames": true /* Disallow inconsistently-cased references to the same file. */
 	},
 	// Generated output: the declarations are built from src, never read back
-	"exclude": [ "node_modules", "types", "dist", "stage" ]
+	"exclude": [ "node_modules", "types", "dist", "stage", "packages" ]
 }

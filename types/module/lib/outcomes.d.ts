@@ -39,6 +39,11 @@ export interface TargetOutcome {
     damage?: DamageOutcome;
     /** uuids of the effects the use applied to the target that are still on it */
     effects: string[];
+    /** M29: the target this one replaced (the use was redirected to it), and by what */
+    redirectedFrom?: {
+        target: string;
+        label: string;
+    };
 }
 interface DamageEntryLike {
     damages: DamageDescription[];

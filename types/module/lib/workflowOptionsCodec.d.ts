@@ -17,6 +17,11 @@ export declare const encodeWorkflowOptions: <T>(options: T) => T;
 export declare const decodeWorkflowOptions: <T>(options: T) => T;
 /** What a child workflow inherits: exactly what transmission would carry. */
 export declare const inheritableWorkflowOptions: <T>(options: T) => T;
+/**
+ * midi's own option keys (WorkflowOptions, MidiOptions, and what midi reads from either). Any other key is another
+ * module's: stored on the card through a registered schema (its namespace), or, for now, as it is.
+ */
+export declare const MIDI_OPTION_KEYS: Set<string>;
 /** Internal: the change of rule above, when its time comes (and for tests) */
 export declare function setStoreUnregisteredWorkflowOptions(value: boolean): void;
 /**

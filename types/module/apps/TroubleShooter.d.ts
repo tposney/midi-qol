@@ -33,6 +33,9 @@ export declare class TroubleShooter extends TroubleShooter_base {
         errors: {
             template: string;
         };
+        automation: {
+            template: string;
+        };
         modules: {
             template: string;
         };

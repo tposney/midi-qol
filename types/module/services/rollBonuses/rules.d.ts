@@ -14,11 +14,22 @@ export type BonusEffect = {
     formula: string;
     damageType?: string;
     critical?: "double" | "never" | "force";
-} | {
+}
+/**
+ * dice "choose": only some dice are rerolled, up to `max` (a number or formula; default 1) of those below their
+ * average, lowest first (Empowered Spell: the best choice for the roller); `keep` is then "new"
+ */
+ | {
     kind: "reroll";
     keep: "new" | "higher" | "lower" | "ask";
-    dice?: "max" | "min";
+    dice?: "max" | "min" | "choose";
+    max?: number | string;
     addFormula?: string;
+}
+/** Advantage or disadvantage given after the roll (2024 Lucky): another d20, the higher or lower kept; with the other mode they cancel */
+ | {
+    kind: "mode";
+    mode: "advantage" | "disadvantage";
 } | {
     kind: "replace";
     formula: string;
@@ -68,8 +79,10 @@ export declare function shouldPrompt(phase: BonusPhase, s: {
     outcome?: Outcome;
     fumbleOffered?: boolean;
 }): boolean;
+/** Where a kind of effect comes in the application order (orderForApplication); unknown kinds last */
+export declare function effectOrder(kind: string | undefined): number;
 /**
- * The order chosen bonuses are applied in within a phase: replace, reroll, add, outcome/critical, riders; higher
+ * The order chosen bonuses are applied in within a phase: replace, reroll/mode, add, outcome/critical, riders; higher
  * priority first within each. A reroll rerolls the whole roll, so it comes before adds or it would drop them.
  */
 export declare function orderForApplication<T extends {
@@ -81,3 +94,8 @@ export declare function orderForApplication<T extends {
  * limit is floor((available - base) / step) + 1 steps (CAT's #getMaxScaling), 0 when even the base is unaffordable.
  */
 export declare function maxScaling(base: number, step: number, available: number, cap?: number): number;
+/**
+ * M15 stage 5b: whether adding between `min` and `max` to `total` could change success against `target` (total >=
+ * target succeeds): an add that can't reach the target, or a hit an add can't undo, can't matter.
+ */
+export declare function addCanMatter(total: number, target: number, min: number, max: number): boolean;

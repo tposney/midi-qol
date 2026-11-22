@@ -1,5 +1,5 @@
 import { defineService } from "../../api/services.js";
-export type RevealSubject = "challenge" | "saveResult" | "hitResult" | "ac" | "tableResult";
+export type RevealSubject = "challenge" | "saveResult" | "hitResult" | "ac" | "tableResult" | "attacker";
 export type SaveDetail = "outcome" | "total" | "dice";
 export interface RevealQuery {
     subject: RevealSubject;
@@ -11,6 +11,8 @@ export interface RevealQuery {
     /** The target has a player owner (saves: a player character's result) */
     playerOwned?: boolean;
     card?: ChatMessage.Implementation;
+    /** "attacker" (M32a): the target can see the creature acting on it */
+    seen?: boolean;
 }
 export interface SaveDetailQuery {
     user?: User.Implementation;

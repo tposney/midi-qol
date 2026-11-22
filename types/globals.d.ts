@@ -120,6 +120,8 @@ declare module "fvtt-types/configuration" {
             "dnd5e.postAttackRollConfiguration": (rolls: Roll[], config: RollProcessConfig, dialog: RollDialogConfig, message: RollMessageConfig) => boolean | void;
             "dnd5e.postRollConfiguration": (rolls: Roll[], config: RollProcessConfig, dialog: RollDialogConfig, message: RollMessageConfig) => boolean | void;
             "dnd5e.postBuildSkillRollConfig": (process: RollProcessConfig, config: BasicRollConfig, index: number) => void;
+            "dnd5e.buildAttackRollConfig": (app: foundry.applications.api.ApplicationV2, config: BasicRollConfig, formData: foundry.applications.ux.FormDataExtended | undefined, index: number) => void;
+            "dnd5e.buildDamageRollConfig": (app: foundry.applications.api.ApplicationV2, config: BasicRollConfig, formData: foundry.applications.ux.FormDataExtended | undefined, index: number) => void;
             "dnd5e.postBuildAbilityCheckRollConfig": (process: RollProcessConfig, config: BasicRollConfig, index: number) => void;
             "dnd5e.postBuildSavingThrowRollConfig": (process: RollProcessConfig, config: BasicRollConfig, index: number) => void;
             "dnd5e.postBuildDeathSaveRollConfig": (process: RollProcessConfig, config: BasicRollConfig, index: number) => void;
@@ -128,6 +130,7 @@ declare module "fvtt-types/configuration" {
                 ability?: string;
                 attackMode?: string;
             }, config: BasicRollConfig, index: number) => void;
+            "dnd5e.postBuildDamageRollConfig": (process: RollProcessConfig, config: BasicRollConfig, index: number) => void;
             "dnd5e.postSavingThrowRollConfiguration": (rolls: Roll[], config: RollProcessConfig, dialog: RollDialogConfig, message: RollMessageConfig) => boolean | void;
             "dnd5e.postSkillRollConfiguration": (rolls: Roll[], config: RollProcessConfig, dialog: RollDialogConfig, message: RollMessageConfig) => boolean | void;
             "dnd5e.postToolRollConfiguration": (rolls: Roll[], config: RollProcessConfig, dialog: RollDialogConfig, message: RollMessageConfig) => boolean | void;
@@ -213,6 +216,8 @@ declare module "fvtt-types/configuration" {
             "midi-qol.preAttackRollConfig": (workflow: Workflow) => Promise<void | boolean>;
             "midi-qol.AttackRollComplete": (workflow: Workflow) => Promise<void | boolean>;
             "midi-qol.DamageRollComplete": (workflow: Workflow) => Promise<void | boolean>;
+            /** M18: a use's cue, as it is raised (lib/cues.ts) */
+            "midi-qol.cue": (cue: import("./module/lib/cues.js").Cue) => void;
             "midi-qol.preSetReactionUsed": (actor: Actor.Implementation, effect: ActiveEffect.Implementation) => boolean | void;
             "midi-qol.setReactionUsed": (actor: Actor.Implementation, effect: ActiveEffect.Implementation) => void;
             "midi-qol.preSetBonusActionUsed": (actor: Actor.Implementation, effect: ActiveEffect.Implementation) => boolean | void;
@@ -225,6 +230,7 @@ declare module "fvtt-types/configuration" {
             "midi-qol.setup": (data: typeof globalThis.MidiQOL) => void;
             "midi-qol.dependentsRegistryChanged": (event: RegistryChangeEvent) => void;
             "midi-qol-setup-wizard.launch": () => void;
+            "getHeaderControlsItemSheet5e": (app: foundry.applications.api.DocumentSheetV2<Item>, controls: foundry.applications.api.ApplicationV2.HeaderControlsEntry[]) => void;
             "getHeaderControlsActivitySheet": (app: foundry.applications.api.Application, buttons: any[]) => void;
             "tidy5e-sheet.ready": (api: any) => void;
             "simplecover5eReady": () => void;
@@ -271,6 +277,9 @@ declare module "fvtt-types/configuration" {
         "midi-qol.ForceHideRoll": boolean;
         "midi-qol.EnableWorkflow": boolean;
         "midi-qol.BonusPrompt": string;
+        "midi-qol.ShowAllBonusOffers": boolean;
+        /** M18: per player, each channel's presenters in the order to try them */
+        "midi-qol.PresenterOrder": Partial<Record<"visual" | "sound" | "text", string[]>>;
         "midi-qol.hiddenGroundCue": boolean;
         "midi-qol.ownChatCardSummary": string;
         "midi-qol.hiddenGroundCueStyle": string;
@@ -358,6 +367,17 @@ declare module "fvtt-types/configuration" {
                 transfer?: boolean;
             };
             "midi-qol"?: {
+                /** M15: entries (lib/entries) */
+                entries?: import("./module/lib/entries/types.js").Entry[];
+                /** M15: an entry's counts on its effect (saves, fails, used), by entry id */
+                entryState?: Record<string, Record<string, number>>;
+                /** M11c-2: added by an overlay (true), or the marker enchantment recording which overlay and version */
+                overlayPart?: true | {
+                    overlay: string;
+                    version: string;
+                };
+                /** M28: the applying use's choices, copied to the effect */
+                choices?: Record<string, unknown>;
                 actionSaveSuccess?: boolean;
                 /** Applied by a midi region rule: the region behaviour and the source effect */
                 regionRule?: {
@@ -367,6 +387,8 @@ declare module "fvtt-types/configuration" {
                 castData?: {
                     castLevel?: number;
                     baseLevel?: number;
+                    /** The applying save's DC (M15: a repeated save uses it) */
+                    saveDC?: number;
                 };
                 dependentOn?: string;
                 overtime?: {
@@ -411,6 +433,14 @@ declare module "fvtt-types/configuration" {
                 previousActorIds?: string[];
             };
             "midi-qol"?: {
+                /** M15: per-turn and per-round entry limits, stamped (lib/entries/limits.ts) */
+                entryLimits?: import("./module/lib/entries/limits.js").StoredLimit[];
+                /** M15 stage 4d: entries offered as toggles, by toggle key (lib/entries/offers.ts): on or off */
+                toggles?: Record<string, boolean>;
+                /** M15 stage 5a: standing choices per bonus (services/rollBonuses/standing.ts) */
+                bonusChoices?: import("./module/services/rollBonuses/standing.js").StoredStanding[];
+                /** M15 stage 5e: choices remembered per question (lib/rememberedChoices.ts) */
+                rememberedChoices?: import("./module/lib/rememberedChoices.js").RememberedChoice[];
                 dependentOn?: string;
                 actions?: {
                     reaction?: boolean;
@@ -746,6 +776,19 @@ declare module "fvtt-types/configuration" {
                 };
             };
             "midi-qol"?: {
+                /** M15: entries (lib/entries) */
+                entries?: import("./module/lib/entries/types.js").Entry[];
+                /** M11: an overlay item (only the difference, for items with this identifier: lib/entries/rules.ts) */
+                overlay?: import("./module/lib/entries/rules.js").OverlayFlag;
+                /** M11c-2: added by an overlay (true), or the marker enchantment recording which overlay and version */
+                overlayPart?: true | {
+                    overlay: string;
+                    version: string;
+                };
+                /** M18: the item's presentation override (and per activity), "none" for every channel */
+                presentation?: "none" | (import("./module/lib/cues.js").Cue["presentation"] & {
+                    activities?: Record<string, import("./module/lib/cues.js").Cue["presentation"] | "none">;
+                });
                 dependentOn?: string;
                 onUseMacroParts?: OnUseMacros;
                 onUseMacroName?: string;
@@ -842,6 +885,8 @@ declare global {
                 args: unknown[];
                 userId?: string;
             }) => Promise<unknown>;
+            /** lib/cues.ts (M18): a use's cue, presented on the asked client */
+            "midi-qol.cue": (data: Record<string, unknown>) => Promise<boolean>;
         }
     }
     /** fvtt-types brands module sub-types, so midi's message types need declaring to be assignable. */
@@ -1545,6 +1590,7 @@ export type DamageListEntry = PreSetupDamageListEntry & {
 };
 export type ActivitySave = {
     ability: Set<string>;
+    bonus?: string;
     dc: {
         calculation: string;
         formula: string;
@@ -1554,6 +1600,7 @@ export type ActivitySave = {
 export type ActivityCheck = {
     ability: string;
     associated: Set<string>;
+    bonus?: string;
     dc: {
         calculation: string;
         formula: string;
@@ -1688,6 +1735,7 @@ export interface Activity extends AnyMutableObject {
     };
     refund: (consumed: unknown) => Promise<void>;
     getRollData: () => AnyMutableObject;
+    spellcastingAbility?: string;
     rollAttack?(config: RollProcessConfig, dialog: RollDialogConfig, message: RollMessageConfig): Promise<Roll[] | null>;
     rollDamage(config: RollProcessConfig, dialog: RollDialogConfig, message: RollMessageConfig): Promise<Roll[] | void>;
     rollFormula?(config: RollProcessConfig, dialog: RollDialogConfig, message: RollMessageConfig): Promise<Roll[] | void>;
@@ -1871,7 +1919,7 @@ export type DamageDescription = {
         active?: DamageDescription["active"];
     };
 };
-type BasicRollConfig = {
+export type BasicRollConfig = {
     parts?: string[];
     data?: AnyObject;
     situational?: boolean;
@@ -2254,6 +2302,8 @@ export type SaveDetails = {
         metaKey: boolean;
         shiftKey: boolean;
     };
+    /** M32a step 3: the use provokes reactions, so a failed save's bonuses are asked with its saveFailed reactions, not in the roll */
+    failBonusesWithReactions?: boolean;
 };
 export type ProcessTargetSaveContext = {
     rollDC: number | undefined;
@@ -2266,6 +2316,13 @@ export type ProcessTargetSaveContext = {
         elevation?: number;
     };
     D20Roll: typeof Roll;
+    /** M32a step 4: the event's reaction batch ticket (one request per user) */
+    reactionTicket?: import("./module/lib/reactionBatch.js").ReactionTicket;
+    /** M32a step 4: targets run at once up to their answer, then finish in target order */
+    order?: {
+        turn(): Promise<void>;
+        done(): void;
+    };
 };
 export type QueueSaveRollOptions = {
     target: TokenOrDocument;
@@ -2277,4 +2334,3 @@ export type QueueSaveRollOptions = {
     moduleFlags: ModuleIntegrationFlags;
     moduleRequests: ModuleIntegrationRequests;
 };
-export {};

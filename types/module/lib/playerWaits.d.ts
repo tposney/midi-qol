@@ -37,6 +37,8 @@ export interface WaitSpec<T> {
     keepDialogs?: boolean;
     /** What began the wait (a workflow): its waits end with it (endPlayerWaitsOwnedBy). */
     owner?: object;
+    /** M32e: the use's card it waits for (default: the owner's itemCardUuid) */
+    cardUuid?: string;
 }
 export interface WaitInfo {
     id: string;
@@ -54,6 +56,8 @@ export interface WaitInfo {
     /** The player disconnected while it was pending: it waits for the GM. */
     offline: boolean;
     source?: string;
+    /** M32e: the use's card it waits for (its "waiting for" line) */
+    cardUuid?: string;
 }
 /** A wait begun with beginPlayerWait. */
 export interface PlayerWait<T> {

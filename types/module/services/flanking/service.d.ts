@@ -1,10 +1,11 @@
 import { defineService } from "../../api/services.js";
+/** TokenDocuments (section 18: no canvas Token crosses a contract); a provider wanting geometry uses `.object` */
 export interface FlankingQuery {
-    attacker: Token.Implementation;
-    target: Token.Implementation;
+    attacker: TokenDocument.Implementation;
+    target: TokenDocument.Implementation;
 }
 export interface FlankedQuery {
-    target: Token.Implementation;
+    target: TokenDocument.Implementation;
 }
 type Answer = boolean | undefined | Promise<boolean | undefined>;
 export interface FlankingProvider {

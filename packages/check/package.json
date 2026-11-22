@@ -1,0 +1,15 @@
+{
+  "name": "@midi-qol/check",
+  "version": "15.0.0",
+  "private": true,
+  "description": "Checks a Foundry module against midi-qol's published names (surface 1.0.0): exports, hooks, settings, services, entry events",
+  "type": "module",
+  "bin": {
+    "midi-qol-check": "dist/bin.mjs"
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "license": "MIT"
+}

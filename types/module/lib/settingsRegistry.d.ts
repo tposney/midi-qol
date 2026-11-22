@@ -6,7 +6,8 @@ export interface SettingDeclaration {
     key: string;
     /** In midi's stored ConfigSettings, or a game setting of its module */
     store: "config" | "setting";
-    scope: "world" | "client";
+    /** world: the GM's, for everyone; user: each player's own, wherever they log in; client: this device's */
+    scope: "world" | "user" | "client";
     type: SettingType;
     default: unknown;
     /** The settings panel's group (its tabs for midi's; a module's own group name) */
@@ -21,7 +22,7 @@ export interface SettingDeclaration {
 }
 /** What a module gives to register a setting */
 export type SettingRegistration = Omit<SettingDeclaration, "store" | "module" | "scope" | "type"> & {
-    scope?: "world" | "client";
+    scope?: "world" | "user" | "client";
     type?: SettingType;
 };
 /**

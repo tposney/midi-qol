@@ -19,6 +19,15 @@ type ServiceId = keyof MidiServices & string;
 /** Where a provider's or contributor's failure is reported (midi sets the TroubleShooter; the console otherwise). */
 declare let problemReporter: (serviceId: string, providerId: string, message: string, err?: unknown) => void;
 export declare function setServiceProblemReporter(reporter: typeof problemReporter): void;
+export interface ServiceProblem {
+    serviceId: string;
+    providerId: string;
+    message: string;
+    count: number;
+    lastError?: string;
+}
+/** The problems reported this session, once each with a count (the TroubleShooter lists them as problems) */
+export declare function serviceProblems(): ServiceProblem[];
 /** A provider or contributor failed or gave an answer midi could not use: it is skipped, and the problem recorded. */
 export declare function reportServiceProblem(serviceId: string, providerId: string, message: string, err?: unknown): void;
 export interface WrapperOptions {
@@ -40,6 +49,7 @@ export declare function defineService<P>(id: string, options: {
     kind: ServiceKind;
     description: string;
     selector?: () => string | undefined;
+    contract?: number;
 }): {
     register: (providerId: string, provider: P, providerOptions?: ProviderOptions) => void;
     get: () => P | undefined;
@@ -85,6 +95,7 @@ export declare function list(): {
     id: string;
     kind: ServiceKind;
     description: string;
+    contract?: number;
 }[];
 /** Forget cached providers, e.g. after a setting that selects one changed. */
 export declare function refreshServices(): void;
@@ -101,5 +112,6 @@ export declare const servicesApi: {
     list: typeof list;
     activeProviderId: typeof activeProviderId;
     reportProblem: typeof reportServiceProblem;
+    problems: typeof serviceProblems;
 };
 export {};

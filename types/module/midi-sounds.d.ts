@@ -1,4 +1,6 @@
-import { Workflow } from "./Workflow.js";
+import type { Cue } from "./lib/cues.js";
+import type { Workflow } from "./Workflow.js";
+import type { Presenter } from "./services/presenters/service.js";
 interface SoundSpec {
     playlistName: string;
     soundName: string;
@@ -78,17 +80,28 @@ export declare class MidiSounds {
             readonly compendium: CompendiumCollection<"Playlist"> | null;
         }>, undefined>;
     };
-    static playSound(playListName: string, soundName: string): Promise<void | import("fvtt-types/src/foundry/client/audio/sound.mjs").default | null>;
+    static playSound(playListName: string, soundName: string, broadcast?: boolean): Promise<void | import("fvtt-types/src/foundry/client/audio/sound.mjs").default | null>;
     static ActionTypes(): Record<string, string>;
-    static playRandomSound(playListName: string): Promise<void | import("fvtt-types/src/foundry/client/audio/sound.mjs").default | null>;
+    static playRandomSound(playListName: string, broadcast?: boolean): Promise<void | import("fvtt-types/src/foundry/client/audio/sound.mjs").default | null>;
     static getSubtype(item?: Item.Implementation): string;
     static getWeaponBaseTypes(): Promise<void>;
     static getItemBaseTypes(type: string, weaponType: string): Promise<{
         [k: string]: string;
     }>;
     static getSpecFor(actorType: string, type: string, subtype: string, weaponSubType: string, selector: string): SoundSpec | undefined;
-    static playSpec(spec: SoundSpec): Promise<void | import("fvtt-types/src/foundry/client/audio/sound.mjs").default | null>;
+    static playSpec(spec: SoundSpec, broadcast?: boolean): Promise<void | import("fvtt-types/src/foundry/client/audio/sound.mjs").default | null>;
     static processHook(workflow: Workflow, selector: string): false | Promise<void | import("fvtt-types/src/foundry/client/audio/sound.mjs").default | null>;
+    /** The sound settings' spec for a cue's item keys and a selector (itemRoll, attack, hit, a damage type...) */
+    static specForCue(cue: Cue, selector: string): SoundSpec | undefined;
+    /**
+     * M18: the selectors a cue plays, in order, each the first of its alternatives that has a sound (the action type, else
+     * "attack"; the damage type, else "damage"). The attack's own sound is with the roll under Dice So Nice, else with its
+     * result, as the old hooks played it.
+     */
+    static selectorsFor(cue: Cue): string[][];
+    /** midi's sounds as the default sound presenter: Midi Sound Settings' lookups, played on this client */
+    static presenter: Presenter;
+    /** M18: the sounds are the default sound presenter (MidiSounds.presenter), on cues; the four hooks are gone */
     static midiSoundsReadyHooks(): void;
     static createDefaultPlayList(): Promise<Playlist.Implementation | undefined>;
     static setupDetailedSounds(): Promise<void>;
