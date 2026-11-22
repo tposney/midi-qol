@@ -69,7 +69,6 @@ export function choiceOptions(declaration: ChoiceDeclaration, workflow: Workflow
     case "damageType": return configOptions(dnd5e.damageTypes);
     case "ability": return configOptions(dnd5e.abilities);
     case "skill": return configOptions(dnd5e.skills);
-    // @ts-expect-error no dnd5e-types
     case "creatureType": return configOptions(dnd5e.creatureTypes);
     default: return [];
   }

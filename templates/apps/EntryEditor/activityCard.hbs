@@ -34,6 +34,30 @@
     {{#with open}}
     <fieldset class="midi-qol-activity-fields">
         <legend>{{localize "midi-qol.EntryEditor.Activity.Fields"}}</legend>
+        {{#each contributed}}
+        <div class="form-group">
+            <label>{{localize label}}</label>
+            <div class="form-fields">
+                {{#if isSelect}}<select name="{{field}}">{{#each options}}<option value="{{value}}" {{#if selected}}selected{{/if}}>{{label}}</option>{{/each}}</select>
+                {{else if isCheckbox}}<input type="checkbox" name="{{field}}" {{#if checked}}checked{{/if}}>
+                {{else if isNumber}}<input type="number" name="{{field}}" value="{{value}}">
+                {{else}}<input type="text" name="{{field}}" value="{{value}}">{{/if}}
+            </div>
+        </div>
+        {{/each}}
+        {{#if check}}
+        <div class="form-group">
+            <label>{{localize "midi-qol.EntryEditor.Activity.CheckField"}}</label>
+            <div class="form-fields"><select name="card.checkAbility">{{#each check.abilities}}<option value="{{value}}" {{#if selected}}selected{{/if}}>{{label}}</option>{{/each}}</select></div>
+        </div>
+        <div class="form-group">
+            <label>{{localize "midi-qol.EntryEditor.Activity.DCField.label"}}</label>
+            <div class="form-fields">
+                <select name="card.dcCalculation">{{#each check.calculations}}<option value="{{value}}" {{#if selected}}selected{{/if}}>{{label}}</option>{{/each}}</select>
+                {{#if check.custom}}<input type="text" name="card.dcFormula" value="{{check.formula}}" placeholder="15">{{/if}}
+            </div>
+        </div>
+        {{/if}}
         {{#if save}}
         <div class="form-group">
             <label>{{localize "midi-qol.EntryEditor.Activity.SaveField"}}</label>

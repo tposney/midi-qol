@@ -1140,6 +1140,9 @@ declare global {
       armorClasses: Record<string, {
         label: string
       }>;
+      creatureTypes: Record<string, {
+        label: string;
+      }>;
       consumableTypes: Record<string, {
         label: string;
         subtypes?: Record<string, string>;

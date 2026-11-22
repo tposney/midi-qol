@@ -39,7 +39,13 @@ export interface ActivityCardsContributor {
   /** Activity types it reads ("*": any) */
   types: readonly string[];
   card(data: ActivityData, text: CardText): ActivityCardModel | undefined;
+  /** Its own fields for the card, in place of midi's (the activity as it will be saved) */
+  fields?(data: ActivityData): readonly CardField[];
+  /** The activity update for its fields' values (paths relative to the activity; only what changed) */
+  update?(data: ActivityData, values: Record<string, unknown>): Record<string, unknown>;
 }
+/** A contributed card field: `name` is its key in the values `update` is given */
+export interface CardField { name: string, label: string, type: "text" | "number" | "select" | "checkbox", value: unknown, options?: readonly FieldOption[] }
 export interface EntryRecipesContributor {
   recipes(home: EntryHome): readonly Recipe[];
 }
@@ -96,11 +102,19 @@ export function optionList(listId: string): FieldOption[] {
   return [...seen.values()];
 }
 
-/** The card for an activity: the first contributor that reads its type, else one that reads any */
+/** The contributor for an activity type: the first that reads it, else the first that reads any */
+export function activityCardContributor(type: string): { id: string, provider: ActivityCardsContributor } | undefined {
+  let list: { id: string, provider: ActivityCardsContributor }[];
+  try { list = entries<ActivityCardsContributor>("activityCards"); } catch { return undefined; }
+  return list.find(e => e.provider.types.includes(type)) ?? list.find(e => e.provider.types.includes("*"));
+}
+
+/** The card for an activity, from its contributor */
 export function contributedActivityCard(data: ActivityData, text: CardText): ActivityCardModel | undefined {
-  const exact = ask<ActivityCardsContributor, ActivityCardModel>("activityCards", p => p.types.includes(data.type) ? p.card(data, text) : undefined)[0];
-  if (exact) return exact.result;
-  return ask<ActivityCardsContributor, ActivityCardModel>("activityCards", p => p.types.includes("*") ? p.card(data, text) : undefined)[0]?.result;
+  const found = activityCardContributor(data.type);
+  if (!found) return undefined;
+  try { return found.provider.card(data, text); }
+  catch (err) { reportServiceProblem("activityCards", found.id, "card() failed", err); return undefined; }
 }
 
 export function contributedRecipes(home: EntryHome): Recipe[] {

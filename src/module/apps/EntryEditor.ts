@@ -6,7 +6,7 @@ import { recipe, recipesFor } from "../lib/entries/recipes.js";
 import { activityOvertimeEntries, overtimeEntries } from "../lib/entries/overtime.js";
 import { ACTIVITY_REF } from "../lib/entries/activityActions.js";
 import { ConditionEditor } from "./ConditionEditor.js";
-import { contributedActivityCard, optionList } from "../lib/entries/editorServices.js";
+import { activityCardContributor, contributedActivityCard, optionList } from "../lib/entries/editorServices.js";
 import { activityCard, activityUpdate, BRANCH_EVENT, branchEntryId, isBranchEntry, partFormula, type ActivityBranch, type ActivityData, type BuiltInPart, type CardEdits, type CardText } from "../lib/entries/activityCard.js";
 
 /*
@@ -33,7 +33,7 @@ const VIEWS: readonly View[] = ["sentence", "form", "json"];
  * One document of the window: the item, one of its activities or one of its effects. `stored`: its entries as they
  * were read (only a changed home is written); an activity's `choices`: its midiChoices as JSON.
  */
-type Home = { document: EntryDocument, kind: EntryHome, label: string, drafts: Draft[], stored: string, choices?: string, choicesStored?: string, choicesProblem?: string, card?: CardEdits };
+type Home = { document: EntryDocument, kind: EntryHome, label: string, drafts: Draft[], stored: string, choices?: string, choicesStored?: string, choicesProblem?: string, card?: CardEdits, cardValues?: Record<string, unknown> };
 type Draft = { entry: Entry, raw: { do: string, choose: string, json?: string }, problems: string[] };
 
 const NEAR = "near";
@@ -148,6 +148,14 @@ function setByPath(target: Record<string, unknown>, path: string, value: unknown
     at = at[part] as Record<string, unknown>;
   }
   at[parts.at(-1)!] = value;
+}
+
+/** The card field a built-in part edits (its chip's data-field) */
+function cardFieldName(part: string): string {
+  if (part.startsWith("part.")) return `card.${part}.formula`;
+  if (part.startsWith("effect.")) return `card.${part}`;
+  const named: Record<string, string> = { save: "saveAbility", check: "checkAbility", dc: "dcCalculation", healing: "healing.formula" };
+  return `card.${named[part] ?? part}`;
 }
 
 /** Whether the user may edit a document's entries: GMs; its owners when the world allows players */
@@ -343,8 +351,13 @@ export class EntryEditor extends HandlebarsApplicationMixin(ApplicationV2) {
       ...context,
       list: this.#homes.map((h, at) => ({
         label: h.label, home: at, active: at === this.#at, single: this.#homes.length === 1,
-        entries: h.drafts.map((d, index) => ({ index, home: at, id: d.entry.id || "?", on: [d.entry.on].flat().join(", "), selected: at === this.#at && index === this.#selected,
-          invalid: d.problems.length > 0, first: index === 0, last: index === h.drafts.length - 1 }))
+        entries: h.drafts.map((d, index) => {
+          // A branch's actions are listed by the branch they belong to
+          const branch = h.card ? isBranchEntry(this.#entryForSave(d)) : undefined;
+          return { index, home: at, id: branch ? i18n(`midi-qol.EntryEditor.ActivityBranch.${branch}`) : d.entry.id || "?",
+            on: branch ? i18n("midi-qol.EntryEditor.Activity.BranchList") : [d.entry.on].flat().join(", "), selected: at === this.#at && index === this.#selected,
+          invalid: d.problems.length > 0, first: index === 0, last: index === h.drafts.length - 1 };
+        })
       })),
       homeLabel: this.#homes.length > 1 ? home.label : undefined,
       activityCard: this.#view === "form" && home.card ? this.#cardContext(home, this.#at) : undefined,
@@ -442,7 +455,16 @@ export class EntryEditor extends HandlebarsApplicationMixin(ApplicationV2) {
 
   /** The update the card's edits make to the activity (only what changed) */
   #cardUpdate(h: Home): Record<string, unknown> {
-    return h.card ? activityUpdate(this.#activitySource(h), h.card) : {};
+    if (!h.card) return {};
+    const source = this.#activitySource(h);
+    // A contributor with fields of its own writes its own update
+    const found = activityCardContributor(source.type);
+    if (found?.provider.fields && found.provider.update) {
+      if (!h.cardValues || !Object.keys(h.cardValues).length) return {};
+      try { return found.provider.update(source, h.cardValues) ?? {}; }
+      catch (err) { console.warn(`midi-qol | activityCards ${found.id}: update() failed`, err); return {}; }
+    }
+    return activityUpdate(source, h.card);
   }
 
   /** The activity as it will be once saved */
@@ -461,6 +483,14 @@ export class EntryEditor extends HandlebarsApplicationMixin(ApplicationV2) {
       ability: id => label(CONFIG.DND5E.abilities as Record<string, { label?: string }>, id),
       damageType: id => label({ ...(CONFIG.DND5E.damageTypes as Record<string, { label?: string }>), ...(CONFIG.DND5E.healingTypes as Record<string, { label?: string }>) }, id),
       effectName: id => item?.effects.get(id)?.name ?? id,
+      documentName: uuid => (fromUuidSync(uuid, { strict: false }) as { name?: string } | null)?.name ?? undefined,
+      activityName: id => {
+        const activity = (item?.system as { activities?: { get(id: string): { name?: string } | undefined } } | undefined)?.activities?.get(id);
+        return activity?.name || undefined;
+      },
+      typeLabel: (kind, id) => kind === "creature"
+        ? label(CONFIG.DND5E.creatureTypes as Record<string, { label?: string }>, id)
+        : label(CONFIG.Item.typeLabels as Record<string, string>, id),
       say: (key, data) => {
         const full = `midi-qol.EntryEditor.${key}`;
         const known = game.i18n?.has(full) ? full : key.startsWith("Activity.Type.") ? "midi-qol.EntryEditor.Activity.Used" : full;
@@ -493,7 +523,23 @@ export class EntryEditor extends HandlebarsApplicationMixin(ApplicationV2) {
         } : undefined
       };
     });
-    return { home: at, when: model.when.map(chip), branches, open: this.#cardOpen === at ? this.#cardFields(data) : undefined };
+    return { home: at, when: model.when.map(chip), branches, open: this.#cardOpen === at ? this.#openFields(h, data) : undefined };
+  }
+
+  /** The open card's fields: a contributor's own, else midi's */
+  #openFields(h: Home, data: ActivityData) {
+    const found = activityCardContributor(data.type);
+    if (!found?.provider.fields) return this.#cardFields(data);
+    let fields: readonly import("../lib/entries/editorServices.js").CardField[] = [];
+    try { fields = found.provider.fields(data); } catch (err) { console.warn(`midi-qol | activityCards ${found.id}: fields() failed`, err); }
+    return {
+      contributed: fields.map(f => {
+        const value = h.cardValues?.[f.name] ?? f.value;
+        return { ...f, field: `card.x.${f.name}`, value, checked: f.type === "checkbox" && !!value,
+          options: (f.options ?? []).map(o => ({ ...o, selected: o.value === String(value ?? "") })),
+          isSelect: f.type === "select", isCheckbox: f.type === "checkbox", isNumber: f.type === "number" };
+      })
+    };
   }
 
   /** The open card's fields: what can be edited here (the rest on the activity's sheet) */
@@ -503,8 +549,16 @@ export class EntryEditor extends HandlebarsApplicationMixin(ApplicationV2) {
     const healingTypes = Object.entries({ ...(CONFIG.DND5E.healingTypes as Record<string, { label?: string }>) }).map(([id, t]) => ({ id, label: t.label ?? id }));
     const option = (value: string, label: string, selected: boolean) => ({ value, label, selected });
     const save = data.type === "save";
-    const calculation = data.save?.dc?.calculation ?? "";
+    const check = data.type === "check";
+    const calculation = (check ? data.check?.dc?.calculation : data.save?.dc?.calculation) ?? "";
+    const dcChoices = [option("spellcasting", i18n("midi-qol.EntryEditor.Activity.DCField.spellcasting"), calculation === "spellcasting"),
+      ...abilities.map(a => option(a.id, a.label, calculation === a.id)),
+      option("", i18n("midi-qol.EntryEditor.Activity.DCField.custom"), calculation === "")];
     return {
+      check: check ? {
+        abilities: abilities.map(a => option(a.id, a.label, data.check?.ability === a.id)),
+        calculations: dcChoices, custom: calculation === "", formula: data.check?.dc?.formula ?? ""
+      } : undefined,
       save: save ? {
         abilities: abilities.map(a => option(a.id, a.label, (data.save?.ability ?? []).includes(a.id))),
         calculations: [option("spellcasting", i18n("midi-qol.EntryEditor.Activity.DCField.spellcasting"), calculation === "spellcasting"),
@@ -524,6 +578,10 @@ export class EntryEditor extends HandlebarsApplicationMixin(ApplicationV2) {
   #readCard(data: Record<string, unknown>) {
     const h = this.#cardOpen === undefined ? undefined : this.#homes[this.#cardOpen];
     if (!h?.card || !Object.keys(data).some(k => k.startsWith("card."))) return;
+    // A contributor's fields: their values as given
+    for (const [key, value] of Object.entries(data))
+      if (key.startsWith("card.x.")) (h.cardValues ??= {})[key.slice("card.x.".length)] = value;
+    if ("card.checkAbility" in data) h.card.checkAbility = String(data["card.checkAbility"] ?? "");
     const now = this.#activityNow(h);
     const edits = h.card;
     if ("card.saveAbility" in data) edits.saveAbility = ([] as unknown[]).concat(data["card.saveAbility"] ?? []).map(String).filter(Boolean);
@@ -544,7 +602,7 @@ export class EntryEditor extends HandlebarsApplicationMixin(ApplicationV2) {
   static #onEditActivity(this: EntryEditor, _event: Event, target: HTMLElement) {
     const at = Number(target.dataset.home ?? this.#at);
     this.#cardOpen = this.#cardOpen === at && !target.dataset.field ? undefined : at;
-    if (target.dataset.field) this.#focus = `card.${target.dataset.field === "save" ? "saveAbility" : target.dataset.field === "dc" ? "dcCalculation" : target.dataset.field.startsWith("part.") ? `${target.dataset.field}.formula` : target.dataset.field.startsWith("effect.") ? target.dataset.field : target.dataset.field === "healing" ? "healing.formula" : "saveAbility"}`;
+    if (target.dataset.field) this.#focus = cardFieldName(target.dataset.field);
     this.render();
   }
 

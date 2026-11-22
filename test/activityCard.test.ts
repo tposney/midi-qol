@@ -5,6 +5,9 @@ const t: CardText = {
   ability: id => id.toUpperCase(),
   damageType: id => id,
   effectName: id => `effect ${id}`,
+  documentName: uuid => uuid === "spell.uuid" ? "Detect Magic" : undefined,
+  activityName: id => id === "a1" ? "Wild Shape" : undefined,
+  typeLabel: (_kind, id) => id,
   say: (key, data) => `${key}${data ? JSON.stringify(data) : ""}`
 };
 
@@ -30,9 +33,17 @@ describe("activity cards", () => {
   });
 
   it("any other type: its type's wording and one branch for each target", () => {
-    const card = activityCard({ type: "summon" }, t);
-    expect(card.when[0].text).toBe("Activity.Type.summon");
+    const card = activityCard({ type: "utility" }, t);
+    expect(card.when[0].text).toBe("Activity.Type.utility");
     expect(card.branches.map(b => b.branch)).toEqual(["each"]);
+  });
+
+  it("other types say what they do: summon, cast, enchant, forward, check", () => {
+    expect(activityCard({ type: "summon", profiles: [{ name: "", uuid: "x", types: ["beast"], count: "2" }] }, t).when[0].text).toBe('Activity.Summons{"what":"beast ×2"}');
+    expect(activityCard({ type: "cast", spell: { uuid: "spell.uuid", level: 1 } }, t).when[0].text).toBe('Activity.CastsAt{"spell":"Detect Magic","level":"1"}');
+    expect(activityCard({ type: "enchant", restrictions: { type: "weapon" }, effects: [{ _id: "oil" }] }, t).branches[0].builtIn.map(p => p.text)).toEqual(["effect oil"]);
+    expect(activityCard({ type: "forward", activity: { id: "a1" } }, t).when[0].text).toBe('Activity.Forwards{"activity":"Wild Shape"}');
+    expect(activityCard({ type: "check", check: { ability: "int", dc: { calculation: "", formula: "12" } } }, t).when.map(p => p.text)).toEqual(['Activity.Check{"ability":"INT"}', 'Activity.DC.custom{"dc":"12"}']);
   });
 
   it("formulas: dice kept as dice, anything else custom", () => {

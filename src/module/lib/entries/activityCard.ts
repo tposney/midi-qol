@@ -33,6 +33,14 @@ export interface ActivityData {
   damage?: { onSave?: string, includeBase?: boolean, parts?: DamagePart[] };
   healing?: DamagePart;
   effects?: { _id: string, onSave?: boolean }[];
+  /** summon / transform: who or what */
+  profiles?: { name?: string, uuid?: string | null, count?: string, types?: string[] }[];
+  /** cast: the spell */
+  spell?: { uuid?: string | null, level?: number | null };
+  /** enchant: what can be enchanted */
+  restrictions?: { type?: string };
+  /** forward: the activity used */
+  activity?: { id?: string };
 }
 export interface DamagePart { number?: number | null, denomination?: number | null, bonus?: string, types?: string[], custom?: { enabled?: boolean, formula?: string }, scaling?: unknown }
 
@@ -63,6 +71,12 @@ export interface CardText {
   ability(id: string): string;
   damageType(id: string): string;
   effectName(id: string): string;
+  /** A document's name by uuid (a compendium's index), undefined when unknown */
+  documentName(uuid: string): string | undefined;
+  /** One of the item's activities by id */
+  activityName(id: string): string | undefined;
+  /** An item type's or creature type's label */
+  typeLabel(kind: "item" | "creature", id: string): string;
   /** A wording (`Activity.Type.<type>` falls back to `Activity.Used` when there is none) */
   say(key: string, data?: Record<string, string>): string;
 }
@@ -113,6 +127,46 @@ export function activityCard(data: ActivityData, t: CardText): ActivityCardModel
         ]
       };
     }
+    case "check": {
+      const check = data.check;
+      const skills = (check?.associated ?? []).join("/");
+      const ability = check?.ability ? t.ability(check.ability) : "?";
+      return {
+        when: [{ kind: "check", text: t.say("Activity.Check", { ability: skills ? `${ability} (${skills})` : ability }), field: "check" },
+          { kind: "check", text: dcText(check?.dc, t), field: DC_FIELD }],
+        branches: [{ branch: "each", builtIn: effects(data, t, () => true) }]
+      };
+    }
+    case "summon":
+    case "transform": {
+      const names = (data.profiles ?? []).map(p => {
+        const name = p.name || (p.uuid ? t.documentName(p.uuid) : undefined);
+        const types = (p.types ?? []).map(id => t.typeLabel("creature", id)).join("/");
+        const label = name && types ? `${name} (${types})` : name || types || "?";
+        return p.count && p.count !== "1" ? `${label} ×${p.count}` : label;
+      }).join(", ") || "?";
+      return {
+        when: [{ kind: "none", text: t.say(`Activity.${data.type === "summon" ? "Summons" : "Transforms"}`, { what: names }) }],
+        branches: [{ branch: "each", builtIn: effects(data, t, () => true) }]
+      };
+    }
+    case "cast": {
+      const spell = data.spell?.uuid ? t.documentName(data.spell.uuid) : undefined;
+      return {
+        when: [{ kind: "none", text: t.say(data.spell?.level ? "Activity.CastsAt" : "Activity.Casts", { spell: spell ?? "?", level: String(data.spell?.level ?? "") }) }],
+        branches: [{ branch: "each", builtIn: [] }]
+      };
+    }
+    case "enchant":
+      return {
+        when: [{ kind: "none", text: t.say("Activity.Enchants", { what: data.restrictions?.type ? t.typeLabel("item", data.restrictions.type) : t.say("Activity.AnItem") }) }],
+        branches: [{ branch: "each", builtIn: effects(data, t, () => true) }]
+      };
+    case "forward":
+      return {
+        when: [{ kind: "none", text: t.say("Activity.Forwards", { activity: (data.activity?.id && t.activityName(data.activity.id)) || "?" }) }],
+        branches: [{ branch: "each", builtIn: [] }]
+      };
     default: {
       const healing = data.healing && partFormula(data.healing)
         ? [{ kind: "healing" as const, field: "healing", text: t.say("Activity.Healing", { formula: partFormula(data.healing), type: (data.healing.types ?? []).map(id => t.damageType(id)).join("/") }) }] : [];
@@ -128,6 +182,7 @@ export function activityCard(data: ActivityData, t: CardText): ActivityCardModel
 /** The card's fields for an activity: what can be edited here */
 export interface CardEdits {
   saveAbility?: string[];
+  checkAbility?: string;
   dcCalculation?: string;
   dcFormula?: string;
   onSave?: string;
@@ -141,8 +196,12 @@ export function activityUpdate(data: ActivityData, edits: CardEdits): Record<str
   const update: Record<string, unknown> = {};
   const same = (a: unknown, b: unknown) => JSON.stringify(a) === JSON.stringify(b);
   if (edits.saveAbility && !same(edits.saveAbility, data.save?.ability ?? [])) update["save.ability"] = edits.saveAbility;
-  if (edits.dcCalculation !== undefined && edits.dcCalculation !== (data.save?.dc?.calculation ?? "")) update["save.dc.calculation"] = edits.dcCalculation;
-  if (edits.dcFormula !== undefined && edits.dcFormula !== (data.save?.dc?.formula ?? "")) update["save.dc.formula"] = edits.dcFormula;
+  // A check's DC is check.dc, a save's save.dc
+  const dcOf = data.type === "check" ? "check" : "save";
+  const dc = data.type === "check" ? data.check?.dc : data.save?.dc;
+  if (edits.checkAbility !== undefined && edits.checkAbility !== (data.check?.ability ?? "")) update["check.ability"] = edits.checkAbility;
+  if (edits.dcCalculation !== undefined && edits.dcCalculation !== (dc?.calculation ?? "")) update[`${dcOf}.dc.calculation`] = edits.dcCalculation;
+  if (edits.dcFormula !== undefined && edits.dcFormula !== (dc?.formula ?? "")) update[`${dcOf}.dc.formula`] = edits.dcFormula;
   if (edits.onSave !== undefined && edits.onSave !== (data.damage?.onSave ?? "half")) update["damage.onSave"] = edits.onSave;
   if (edits.parts) {
     const parts = (data.damage?.parts ?? []).map((part, i) => {
