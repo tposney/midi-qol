@@ -2,7 +2,7 @@
   "name": "Spirit Guardians",
   "system": {
     "description": {
-      "value": "<p>Protective spirits flit around you in a 15-foot Emanation for the duration. If you are good or neutral, their spectral form appears angelic or fey (your choice). If you are evil, they appear fiendish.</p><p>When you cast this spell, you can designate creatures to be unaffected by it. Any other creature's Speed is halved in the Emanation, and whenever the Emanation enters a creature's space and whenever a creature enters the Emanation or ends its turn there, the creature must make a Wisdom saving throw. On a failed save, the creature takes 3d8 Radiant damage (if you are good or neutral) or 3d8 Necrotic damage (if you are evil). On a successful save, the creature takes half as much damage. A creature makes this save only once per turn.</p><p><strong>Using a Higher-Level Spell Slot.</strong> The damage increases by 1d8 for each spell slot level above 3.</p><p><em>Automation (midi-qol): the emanation is attached to you and moves with you; your speed-halving aura is dnd5e's. An enemy that enters it, is in it when it is cast or moves onto it, or ends its turn in it makes the Wisdom save (once per turn): the \"Spirit Guardians Save\" activity, run by the region, not offered on its own. Its damage type is a setting of the spell (Entries in the sheet's menu, Settings): by your alignment (radiant, or necrotic when it is evil), or any damage type. Allies are not affected: midi can't ask you which creatures to leave out.</em></p>",
+      "value": "<p>Protective spirits flit around you in a 15-foot Emanation for the duration. If you are good or neutral, their spectral form appears angelic or fey (your choice). If you are evil, they appear fiendish.</p><p>When you cast this spell, you can designate creatures to be unaffected by it. Any other creature's Speed is halved in the Emanation, and whenever the Emanation enters a creature's space and whenever a creature enters the Emanation or ends its turn there, the creature must make a Wisdom saving throw. On a failed save, the creature takes 3d8 Radiant damage (if you are good or neutral) or 3d8 Necrotic damage (if you are evil). On a successful save, the creature takes half as much damage. A creature makes this save only once per turn.</p><p><strong>Using a Higher-Level Spell Slot.</strong> The damage increases by 1d8 for each spell slot level above 3.</p><p><em>Automation (midi-qol): the emanation is attached to you and moves with you; your speed-halving aura is dnd5e's. An enemy that enters it, is in it when it is cast or moves onto it, or ends its turn in it makes the Wisdom save (once per turn): the \"Spirit Guardians Save\" activity, run by the region, not offered on its own. Its damage is radiant, rolled as necrotic when your alignment is evil. Allies are not affected: midi can't ask you which creatures to leave out.</em></p>",
       "chat": ""
     },
     "source": {
@@ -257,28 +257,10 @@
         "friendlySave": "default",
         "midiEntries": [
           {
-            "id": "configured",
-            "on": "use.damageRolled",
-            "label": "Spirit Guardians: the damage type set for the spell",
-            "if": "!!config.damageType && config.damageType !== 'alignment' && config.damageType !== 'radiant'",
-            "do": [
-              {
-                "change": {
-                  "damageType": {
-                    "from": [
-                      "radiant"
-                    ],
-                    "to": "@config.damageType"
-                  }
-                }
-              }
-            ]
-          },
-          {
             "id": "necrotic",
-            "on": "use.damageRolled",
-            "label": "Spirit Guardians: necrotic (evil caster)",
-            "if": "(config.damageType ?? 'alignment') === 'alignment' && /evil/i.test(details.alignment ?? '')",
+            "on": "use.configure",
+            "label": "Spirit Guardians: necrotic for an evil caster",
+            "if": "/evil/i.test(details.alignment ?? '')",
             "do": [
               {
                 "change": {
@@ -492,26 +474,7 @@
         "version": "15.0.0"
       }
     },
-    "midi-qol": {
-      "configSpec": [
-        {
-          "key": "damageType",
-          "label": "Damage type",
-          "type": "select",
-          "options": {
-            "list": "damageTypes",
-            "extra": [
-              {
-                "value": "alignment",
-                "label": "By your alignment: radiant, or necrotic if evil"
-              }
-            ]
-          },
-          "default": "alignment",
-          "hint": "The guardians' damage. The spell says radiant if you are good or neutral, necrotic if you are evil."
-        }
-      ]
-    }
+    "midi-qol": {}
   },
   "_stats": {
     "compendiumSource": "Compendium.dnd5e.spells24.Item.phbsplSpiritGuar",

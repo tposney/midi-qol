@@ -11,8 +11,9 @@ import { itemOfEffect } from "./rules.js";
 /*
  * M15 stage 4b: the actions that change a use or act for it.
  * - `change` at `use.configure` changes the use before dnd5e's use runs: on the use's own copy of the item, so only this
- *   use is affected (the copy's source, so dnd5e's scaled copy for an upcast keeps it). At `use.damageRoll`: the
- *   damage type of the rolled damage.
+ *   use is affected (the copy's source, so dnd5e's scaled copy for an upcast keeps it). `damageType` / `damageDie`
+ *   before the damage is rolled (use.configure, use.targeted) change the activity's damage parts, so the damage is
+ *   rolled as that; at `use.damageRoll` / `use.damageRolled` they relabel the rolled damage and work it out again.
  * - `effect` applies or removes an effect: a status, one of the entry's item's effects, or (remove) the effects the
  *   entry's item applied.
  * - `table` draws a table and runs the drawn row's actions as the entry's.
@@ -84,11 +85,32 @@ async function useConfigureChange(run: ActionRun, spec: Record<string, unknown>)
   }
 }
 
+/** A damage type change's target type ("@config.x": read from the condition data) */
+function damageTypeTo(run: ActionRun, spec: { to?: string }): string {
+  return typeof spec.to === "string" && spec.to.startsWith("@") ? String(foundry.utils.getProperty(run.conditionData, spec.to.slice(1)) ?? "") : spec.to ?? "";
+}
+
+/** Before the damage roll: the activity's damage parts of the listed types (all when `from` is omitted) are rolled as `to` */
+async function damagePartTypeChange(run: ActionRun, spec: { from?: string | string[], to?: string }) {
+  const activity = run.context.workflow?.activity as Activity | undefined;
+  const parts = (activity as unknown as { _source?: { damage?: { parts?: { types?: string[] }[] } } } | undefined)?._source?.damage?.parts;
+  const to = damageTypeTo(run, spec);
+  if (!activity || !parts?.length || !to) return;
+  const from = spec.from === undefined ? undefined : [spec.from].flat();
+  let any = false;
+  const changedParts = parts.map(part => {
+    const types = part.types ?? [];
+    if (from && !types.some(t => from.includes(t))) return part;
+    any = true;
+    return { ...part, types: from ? [...new Set(types.map(t => from.includes(t) ? to : t))] : [to] };
+  });
+  if (any) await changeActivity(activity, { "damage.parts": changedParts });
+}
+
 /** The use's rolled damage of the listed types (all when `from` is omitted) becomes `to` ("@choices.x" read from the condition data) */
 function damageTypeChange(run: ActionRun, spec: { from?: string | string[], to?: string }) {
   const workflow = run.context.workflow!;
-  const to = typeof spec.to === "string" && spec.to.startsWith("@")
-    ? String(foundry.utils.getProperty(run.conditionData, spec.to.slice(1)) ?? "") : spec.to;
+  const to = damageTypeTo(run, spec);
   if (!to) return;
   const from = spec.from === undefined ? undefined : [spec.from].flat();
   let changed = false;
@@ -127,6 +149,12 @@ async function changeAction(run: ActionRun) {
     if (BEFORE_DAMAGE.has(run.eventId)) await damageDieChange(run, Number(spec.damageDie));
     else console.warn(`midi-qol | entry ${run.found.entry.id}: change damageDie can't be made at ${run.eventId} (use.configure or use.targeted)`);
     if (Object.keys(spec).length === 1) return;
+  }
+  // Before the damage is rolled: the parts are rolled as the new type (nothing to work out again afterwards)
+  if (spec.damageType && BEFORE_DAMAGE.has(run.eventId)) {
+    await damagePartTypeChange(run, spec.damageType as { from?: string[], to?: string });
+    const rest = Object.keys(spec).filter(k => k !== "damageType" && k !== "damageDie");
+    if (!rest.length) return;
   }
   if (run.eventId === "use.configure") await useConfigureChange(run, spec);
   else if (spec.damageType && ["use.damageRoll", "use.damageRolled"].includes(run.eventId)) damageTypeChange(run, spec.damageType as { from?: string[], to?: string });
