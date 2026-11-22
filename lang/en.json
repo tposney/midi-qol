@@ -2989,6 +2989,8 @@
   "midi-qol.EntryEditor.Activity.AddDamage": "Add damage",
   "midi-qol.EntryEditor.Activity.HealingField": "Healing",
   "midi-qol.EntryEditor.Activity.EffectOnSave": "also on a successful save",
+  "midi-qol.ItemAutomation.Title": "Automation (midi-qol)",
+  "midi-qol.ItemAutomation.Edit": "Edit",
   "midi-qol.EntryEditor.Settings.Title": "Settings",
   "midi-qol.EntryEditor.Settings.None": "This automation has no settings.",
   "midi-qol.EntryEditor.Settings.Spec": "Settings fields (for the automation's author)",

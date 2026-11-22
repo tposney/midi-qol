@@ -3,6 +3,7 @@ import { registerCardWaits } from "./module/lib/cardWaits.js";
 import { registerMidiActionSchemas } from "./module/lib/entries/actionSchemas.js";
 import { EntryEditor, registerEntryEditorControls } from "./module/apps/EntryEditor.js";
 import { VisualsEditor, registerVisualsEditorControls } from "./module/apps/VisualsEditor.js";
+import { registerItemAutomationSection } from "./module/apps/itemAutomationSection.js";
 import { registerRollDialogBonuses } from "./module/lib/rollDialogBonuses.js";
 import { defineSettingNeedsService } from "./module/services/settingNeeds/service.js";
 import { defineEntryEditorServices, registerMidiEditorContributors } from "./module/lib/entries/editorServices.js";
@@ -555,6 +556,7 @@ Hooks.once('init', async function () {
   registerRollDialogBonuses();
   registerEntryEditorControls();
   registerVisualsEditorControls();
+  registerItemAutomationSection();
   registerCardWaits();
   registerUseChanges();
   registerEntryOffers();

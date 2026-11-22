@@ -479,6 +479,19 @@ export class EntryEditor extends HandlebarsApplicationMixin(ApplicationV2) {
         when: note.when.length < 2 ? note.when.join("") : `${note.when.slice(0, -1).join(", ")} ${and} ${note.when.at(-1)}` }) ?? note.name }));
   }
 
+  /**
+   * Everything midi automates on the item, read-only (the item sheet's Automation section): its settings, entries,
+   * macros and what was added to activities. An activity with nothing of midi's is left to dnd5e's own list.
+   */
+  summary() {
+    return this.#sentences().map(home => {
+      const card = home.card && (home.card.branches.some(b => b.added) || home.card.macros.length) ? home.card : undefined;
+      const settings = home.settings?.fields.map(f => ({ label: f.label, shown: f.isSelect ? f.options.find(o => o.selected)?.label ?? String(f.value ?? "")
+        : f.isCheckbox ? i18n(f.checked ? "Yes" : "No") : String(f.value ?? "") }));
+      return { label: home.label, single: home.single, sentences: home.sentences, card, settings, automations: home.automations };
+    }).filter(home => home.sentences.length || home.card || home.settings?.length || home.automations.length);
+  }
+
   /* The item's automation settings (lib/entries/config.ts) */
 
   #settingsFields(h: Home): ConfigField[] {

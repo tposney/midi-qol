@@ -119,6 +119,8 @@ function catDescribe(document: object): AutomationNote[] {
   const all = registry ? [...registry.getAllMacros(), ...registry.getAllMacros({ genericOnly: true })] : [];
   const refs = new Map<string, CatMacroRef>();
   for (const list of Object.values(cat.macros ?? {})) for (const ref of list ?? []) if (ref.source && ref.identifier) refs.set(`${ref.source}|${ref.identifier}`, ref);
+  // midi's own notes for CAT's medkit (catIntegration.ts): a way of showing notes, not automation
+  refs.delete("midi-qol|automation-notes");
   const notes: AutomationNote[] = [];
   const sourceName = (id: string) => game.modules?.get(id)?.title ?? id;
   for (const ref of refs.values()) {

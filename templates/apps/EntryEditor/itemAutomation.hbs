@@ -1,0 +1,21 @@
+<section class="midi-qol-item-automation">
+    <div class="midi-qol-item-automation-title"><i class="fa-solid fa-diagram-project"></i> <strong>{{localize "midi-qol.ItemAutomation.Title"}}</strong>
+        {{#if canEdit}}<button type="button" class="midi-qol-item-automation-edit" data-midi-open-entries><i class="fa-solid fa-pen"></i> {{localize "midi-qol.ItemAutomation.Edit"}}</button>{{/if}}</div>
+    {{#each homes}}
+    <div class="midi-qol-item-automation-home">
+        {{#unless single}}<div class="midi-qol-item-automation-label">{{label}}</div>{{/unless}}
+        {{#each settings}}<div class="midi-qol-item-automation-line">{{localize label}}: <strong>{{shown}}</strong></div>{{/each}}
+        {{#each automations}}<div class="midi-qol-item-automation-line"><i class="fa-solid fa-code"></i> {{title}}: {{#each when}}{{this}}{{#unless @last}}; {{/unless}}{{/each}}</div>{{/each}}
+        {{#with card}}
+        {{#each branches}}{{#if added}}<div class="midi-qol-item-automation-line"><strong>{{label}}</strong> {{#each added.lines}}{{#each parts}}{{text}} {{/each}}{{/each}}</div>{{/if}}{{/each}}
+        {{#each macros}}<div class="midi-qol-item-automation-line"><i class="fa-solid fa-code"></i> {{sentence}}</div>{{/each}}
+        {{/with}}
+        {{#each sentences}}
+        <div class="midi-qol-item-automation-sentence">
+            {{#each lines}}<div style="padding-left: {{indent}}px">{{#each parts}}{{text}} {{/each}}</div>{{/each}}
+            {{#if options}}<div class="hint">{{options}}</div>{{/if}}
+        </div>
+        {{/each}}
+    </div>
+    {{/each}}
+</section>

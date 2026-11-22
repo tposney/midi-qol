@@ -169,6 +169,8 @@ declare module "fvtt-types/configuration" {
       "midi-qol-setup-wizard.launch": () => void;
       // dnd5e's item sheet (ItemSheet5e is not one of fvtt-types' application names)
       "getHeaderControlsItemSheet5e": (app: foundry.applications.api.DocumentSheetV2<Item>, controls: foundry.applications.api.ApplicationV2.HeaderControlsEntry[]) => void;
+      /** dnd5e's item sheet rendered (the item sheet's Automation section) */
+      "renderItemSheet5e": (app: foundry.applications.api.DocumentSheetV2<Item>, html: HTMLElement) => void;
       "getHeaderControlsActivitySheet": (app: foundry.applications.api.Application /*dnd5e.applications.activity.activitySheet*/ , buttons: any[]) => void;
       "tidy5e-sheet.ready": (api: any) => void;
       "simplecover5eReady": () => void;
