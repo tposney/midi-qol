@@ -2851,6 +2851,7 @@
   "midi-qol.Sentence.Action.state": "count: {pairs}",
   "midi-qol.Sentence.Action.change": "change the use: {what}",
   "midi-qol.Sentence.Action.table": "roll {formula} on a table",
+  "midi-qol.Sentence.Action.tableFind": "roll on the {name} table (yours, else the book's when its module is active)",
   "midi-qol.Sentence.Change.activation": "casting time",
   "midi-qol.Sentence.Change.range": "range",
   "midi-qol.Sentence.Change.duration": "duration",

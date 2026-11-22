@@ -15,7 +15,12 @@ import { rowFor, type TableRow } from "./tableRows.js";
  */
 
 export type { TableRow };
-export interface TableDeclaration { id: string, table?: string, formula?: string, rows?: TableRow[] }
+/**
+ * `find`: a table the world or a module supplies, found when drawn: a world table named `name`, else the first of `uuids`
+ * that resolves (a module's compendium table: nothing when the module isn't active), else the inline `rows`. So an item
+ * can roll on a table midi mustn't copy (a book's), and say what to do when there is none.
+ */
+export interface TableDeclaration { id: string, table?: string, find?: { name?: string, uuids?: string[] }, formula?: string, rows?: TableRow[] }
 export interface TableResultChoice { row: number, label: string, total: number }
 
 export function isTableResult(value: unknown): value is TableResultChoice {
@@ -24,7 +29,8 @@ export function isTableResult(value: unknown): value is TableResultChoice {
 
 function isTableDeclaration(value: unknown): value is TableDeclaration {
   if (!value || typeof value !== "object" || !("id" in value) || typeof value.id !== "string" || !value.id) return false;
-  return ("table" in value && typeof value.table === "string" && !!value.table) || ("rows" in value && Array.isArray(value.rows));
+  return ("table" in value && typeof value.table === "string" && !!value.table) || ("rows" in value && Array.isArray(value.rows))
+    || ("find" in value && !!value.find && typeof value.find === "object");
 }
 
 export function tableDeclaration(activity: Activity | undefined | null): TableDeclaration | undefined {
@@ -39,7 +45,21 @@ export interface TableDraw extends TableResultChoice { do?: unknown[] }
  * Draw a declared table (the RollTable step, M15's table action): a core table as core draws it (its chat card), inline
  * rows as a card note on the use (whispered per the reveal policy), or a chat message without a use.
  */
+/** A `find` declaration's table: a world table by name, else the first uuid that resolves to a table */
+async function foundTable(find: NonNullable<TableDeclaration["find"]>): Promise<string | undefined> {
+  const named = find.name ? game.tables?.getName(find.name) : undefined;
+  if (named) return named.uuid;
+  for (const uuid of find.uuids ?? []) {
+    try { if ((await fromUuid(uuid)) instanceof RollTable) return uuid; } catch { /* its module isn't active */ }
+  }
+  return undefined;
+}
+
 export async function rollTable(declaration: TableDeclaration, { workflow, rollData = {}, name = "" }: { workflow?: Workflow, rollData?: Record<string, unknown>, name?: string }): Promise<TableDraw | undefined> {
+  if (!declaration.table && declaration.find) {
+    const found = await foundTable(declaration.find);
+    if (found) declaration = { ...declaration, table: found };
+  }
   if (declaration.table) {
     const table = await fromUuid(declaration.table);
     if (!(table instanceof RollTable)) {

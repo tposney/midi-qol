@@ -91,9 +91,16 @@ function damageTypeChange(run: ActionRun, spec: { from?: string | string[], to?:
     ? String(foundry.utils.getProperty(run.conditionData, spec.to.slice(1)) ?? "") : spec.to;
   if (!to) return;
   const from = spec.from === undefined ? undefined : [spec.from].flat();
+  let changed = false;
   for (const roll of workflow.damageRolls ?? []) {
     const options = roll.options as { type?: string };
-    if (!from || from.includes(options.type ?? "")) options.type = to;
+    if ((!from || from.includes(options.type ?? "")) && options.type !== to) { options.type = to; changed = true; }
+  }
+  // Once rolled, the damage to apply was worked out from the rolls: work it out again, or only the label changes
+  if (changed && run.eventId === "use.damageRolled") {
+    workflow.deriveDamage();
+    workflow.damageDetail = foundry.utils.deepClone(workflow.rawDamageDetail);
+    workflow.syncDamageMessages();
   }
 }
 

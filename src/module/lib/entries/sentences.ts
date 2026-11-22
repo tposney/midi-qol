@@ -252,7 +252,11 @@ export function actionText(action: EntryAction, context: SentenceContext): strin
       if (k === "damageType") return say("Change.damageTypeTo", { from: or([part(v).from ?? []].flat().map(t => labelOf("damageTypes", t))), to: friendlyFormula(part(v).to ?? "?") });
       return `${has(`Change.${k}`) ? say(`Change.${k}`) : k} ${typeof v === "object" ? JSON.stringify(v) : friendlyFormula(v)}`;
     }).join(", ") });
-    case "table": return say("Action.table", { formula: friendlyFormula(part(a.table).formula ?? "?") });
+    case "table": {
+      const found = part(part(a.table).find);
+      if (typeof found.name === "string" && found.name) return say("Action.tableFind", { name: found.name });
+      return say("Action.table", { formula: friendlyFormula(part(a.table).formula ?? "?") });
+    }
     default: return key ? actionSchema(key).label : "?";
   }
 }

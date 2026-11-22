@@ -169,7 +169,9 @@ export async function attachRegionActivityBehavior(activity: MidiActivity, regio
       if (rule.action === "useActivity") {
         // @ts-expect-error no dnd5e types for activities
         const act = activity.item?.system.activities?.find(
-          (a: any) => (a.identifier || a.midiProperties?.identifier || a.id) === rule.targetId
+          // Its identifier (what the region editor stores), midi's identifier, or its id: dnd5e 6 gives every activity an
+          // identifier, so an id compared only when there is none would never match
+          (a: any) => [a.identifier, a.midiProperties?.identifier, a.id].includes(rule.targetId)
         );
         if (act) resolvedRules.push({ trigger: rule.trigger, action: rule.action, targetUuid: act.uuid });
       } else if (rule.action === "applyEffect" || rule.action === "removeEffect") {

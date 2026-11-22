@@ -4,7 +4,7 @@
   "img": "icons/magic/lightning/bolt-strike-forked-blue.webp",
   "system": {
     "description": {
-      "value": "<p>Once per turn, right after you cast a sorcerer spell with a spell slot, you can roll 1d20. On a 20, roll on the Wild Magic Surge table.</p><p><em>Automation (midi-qol entries):</em> asked after each sorcerer spell cast with a slot, once a turn; a 20 announces the surge (the table itself is the GM's).</p>",
+      "value": "<p>Once per turn, right after you cast a sorcerer spell with a spell slot, you can roll 1d20. On a 20, roll on the Wild Magic Surge table.</p><p><em>Automation (midi-qol entries):</em> having this feature is what turns it on: its entry (see Entries in the sheet's menu) runs when a use of yours ends, if it was a sorcerer spell cast with a slot, at most once a turn, asking you first. It rolls 1d20; on a 20 it rolls on the Wild Magic Surge table: a world table of that name if you have one (your own or a homebrew one), else the Player's Handbook's when that module is active, else it says to roll on yours. The table's text isn't part of midi.</em></p>",
       "chatFlavor": ""
     },
     "source": {
@@ -46,8 +46,30 @@
                       20,
                       20
                     ],
-                    "label": "Wild Magic Surge! Roll on the Wild Magic Surge table.",
-                    "do": []
+                    "label": "Wild Magic Surge!",
+                    "do": [
+                      {
+                        "table": {
+                          "find": {
+                            "name": "Wild Magic Surge",
+                            "uuids": [
+                              "Compendium.dnd-players-handbook.tables.RollTable.phbWildMagicSurg"
+                            ]
+                          },
+                          "formula": "1d100",
+                          "rows": [
+                            {
+                              "range": [
+                                1,
+                                100
+                              ],
+                              "label": "Roll on your Wild Magic Surge table (none was found: make a world table named Wild Magic Surge, or enable the Player's Handbook module).",
+                              "do": []
+                            }
+                          ]
+                        }
+                      }
+                    ]
                   }
                 ]
               }
