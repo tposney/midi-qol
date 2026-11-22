@@ -419,11 +419,13 @@ async function midiRollAttack(activity: AttackActivityLike, wrapped: RollAttack,
     }) : undefined;
     setMessageTargets(message, workflow);
     // rollBonuses' automatic preRoll bonuses join the formula (attackRollParts)
-    await workflow.collectPreRollBonuses("attack");
+    // Optional ones: in dnd5e's roll dialog when it shows (M32c), else asked first
+    await workflow.collectPreRollBonuses("attack", { inDialog: dialogShown(dialog.configure, config.event) });
     try {
       rolls = await workflow.keepRollMessageFlags(activity, () => wrapped(config, dialog, message));
     } finally {
       if (keepLastMode !== undefined) Hooks.off("preUpdateItem", keepLastMode);
+      workflow.takeDialogBonuses("attack");
     }
 
     if (!rolls || rolls.length === 0) return null;

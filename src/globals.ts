@@ -89,6 +89,9 @@ declare module "fvtt-types/configuration" {
       "dnd5e.postAttackRollConfiguration": (rolls: Roll[], config: RollProcessConfig, dialog: RollDialogConfig, message: RollMessageConfig) => boolean | void;
       "dnd5e.postRollConfiguration": (rolls: Roll[], config: RollProcessConfig, dialog: RollDialogConfig, message: RollMessageConfig) => boolean | void;
       "dnd5e.postBuildSkillRollConfig": (process: RollProcessConfig, config: BasicRollConfig, index: number) => void;
+      // A roll dialog building its rolls (M32c): the dialog, a roll's config, the dialog's form data, the roll's index
+      "dnd5e.buildAttackRollConfig": (app: foundry.applications.api.ApplicationV2, config: BasicRollConfig, formData: foundry.applications.ux.FormDataExtended | undefined, index: number) => void;
+      "dnd5e.buildDamageRollConfig": (app: foundry.applications.api.ApplicationV2, config: BasicRollConfig, formData: foundry.applications.ux.FormDataExtended | undefined, index: number) => void;
       "dnd5e.postBuildAbilityCheckRollConfig": (process: RollProcessConfig, config: BasicRollConfig, index: number) => void;
       "dnd5e.postBuildSavingThrowRollConfig": (process: RollProcessConfig, config: BasicRollConfig, index: number) => void;
       "dnd5e.postBuildDeathSaveRollConfig": (process: RollProcessConfig, config: BasicRollConfig, index: number) => void;

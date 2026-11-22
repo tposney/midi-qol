@@ -2498,6 +2498,7 @@
   "midi-qol.BonusPrompt.Apply": "Apply",
   "midi-qol.BonusPrompt.Skip": "Skip",
   "midi-qol.BonusPrompt.Scaling": "Level",
+  "midi-qol.RollDialogBonuses.Legend": "Bonuses",
   "midi-qol.BonusPrompt.Targets": "Targets (up to {max})",
   "midi-qol.BonusApproval.Title": "Use your bonus?",
   "midi-qol.BonusApproval.Content": "{requester} asks to use {label} ({actor})."

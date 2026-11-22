@@ -5,6 +5,8 @@
 // 2. Every midi template that shadows a dnd5e one (same path under templates/) must still contain
 //    each partial and field dnd5e's version uses, unless listed in INTENTIONAL below.
 // 3. A shadow identical to dnd5e's (ignoring whitespace) is reported as redundant.
+// 4. What midi's section in dnd5e's roll dialogs relies on (M32c, lib/rollDialogBonuses.ts): the dialog's configuration
+//    part, its per-roll build hook with the form data, and the attack and damage hook names.
 // Exit code 1 when anything needs looking at.
 
 import fs from "node:fs";
@@ -58,6 +60,14 @@ for (const file of walk(midiTemplates)) {
   for (const t of tokens(theirs))
     if (!have.has(t) && !skip.has(t)) problems.push(`content: templates/${rel} lacks dnd5e's ${t}`);
 }
+
+const code = fs.existsSync(path.join(DND5E, "dnd5e.mjs")) ? read(path.join(DND5E, "dnd5e.mjs")) : "";
+for (const [needle, what] of [
+  ["templates/dice/roll-configuration.hbs", "the roll dialog's configuration part (midi adds its section to it)"],
+  ["Hooks.callAll(`dnd5e.build${hookName.capitalize()}RollConfig`, this, config, formData, index)", "the roll dialog's build hook with the form data"],
+  ['hookNames: ["attack", "d20Test"]', "the attack roll's hook names (dnd5e.buildAttackRollConfig)"],
+  ['hookNames: ["damage"]', "the damage roll's hook names (dnd5e.buildDamageRollConfig)"]
+]) if (!code.includes(needle)) problems.push(`roll dialog: dnd5e.mjs no longer has ${what}: check lib/rollDialogBonuses.ts`);
 
 const version = JSON.parse(read(path.join(DND5E, "system.json"))).version;
 if (problems.length) {

@@ -45,7 +45,8 @@ import { applyRetarget, takeRetarget } from "./lib/entries/redirection.js";
 import { raiseStepCues } from "./lib/cues.js";
 import { coverAnswer, coverLevelFor } from "./services/cover/service.js";
 import { targetEvent } from "./lib/entries/responseEvents.js";
-import { collectBonusCandidates, spendBonusCost, type OfferedBonus, type RollBonusQuery } from "./services/rollBonuses/service.js";
+import { chooseDamageType, collectBonusCandidates, spendBonusCost, type OfferedBonus, type RollBonusQuery } from "./services/rollBonuses/service.js";
+import { bonusDamageTypeKey } from "./lib/rememberedChoices.js";
 import { approveBonus } from "./services/rollBonuses/approval.js";
 import { applyStandingChoices, setStandingChoice, standingKey } from "./services/rollBonuses/standing.js";
 import { askOffers } from "./lib/entries/offers.js";
@@ -525,6 +526,11 @@ export interface UseRedirection {
   label: string;
   /** The event it happened at */
   at: string;
+}
+
+/** M32c: an optional add the roller ticks in dnd5e's roll dialog: their own (no approval, no other spender), a part of the formula */
+function rollDialogOffer(c: OfferedBonus): boolean {
+  return c.effect.kind === "add" && !c.apply && !c.approve && !c.approver && !c.spender && !c.scaling && !c.inputs?.length && !c.configure;
 }
 
 export class Workflow {
@@ -7762,15 +7768,20 @@ export class Workflow {
    * ones too, chosen before the roll (the actor's standing choices, the rest asked of its owner in one prompt), as the
    * damage adds are (M15 5d).
    */
-  async collectPreRollBonuses(kind: "attack"): Promise<void> {
+  async collectPreRollBonuses(kind: "attack", options: { inDialog?: boolean } = {}): Promise<void> {
     const query = this.rollBonusQuery(kind);
     const zero = new Roll("0");
     const adds = (await collectBonusCandidates(query, "preRoll", zero)).filter(c => c.effect.kind === "add" && !c.apply);
     const chosen = adds.filter(c => !c.optional);
     const optional = adds.filter(c => c.optional);
+    this.#dialogOffers[kind] = [];
     if (optional.length) {
       const standing = applyStandingChoices(this.actor, optional, false);
       chosen.push(...standing.apply);
+      // M32c: dnd5e's roll dialog will show: the roller's own adds are ticked there, in the formula
+      const inDialog = options.inDialog ? standing.ask.filter(rollDialogOffer) : [];
+      this.#dialogOffers[kind] = inDialog;
+      standing.ask = standing.ask.filter(c => !inDialog.includes(c));
       if (standing.ask.length) {
         await this.flushCardWrites(); // a person decides next
         const formula = (c: OfferedBonus) => c.effect.kind === "add" ? ` (+${c.effect.formula})` : "";
@@ -7797,8 +7808,9 @@ export class Workflow {
    * those the actor's standing choices apply, the rest asked of the actor's owner in one prompt. Each taken becomes a
    * part of the damage roll; the after-roll ask leaves them out. Optional flags stay after the roll.
    */
-  async chooseDamageBonusesBeforeRoll(): Promise<OfferedBonus[]> {
+  async chooseDamageBonusesBeforeRoll(options: { inDialog?: boolean } = {}): Promise<OfferedBonus[]> {
     this.beforeDamageBonuses = [];
+    this.#dialogOffers.damage = [];
     // Saves still to come: contributors' damage bonuses wait until they are known (decision 4, offerDeferredDamageBonuses)
     if (this.hasSave && !this.#savesResolved) return [];
     const query = this.rollBonusQuery("damage");
@@ -7806,10 +7818,15 @@ export class Workflow {
     const offered: OfferedBonus[] = [];
     for (const phase of ["preRoll", "postResult"] as const)
       for (const c of await collectBonusCandidates(query, phase, zero))
-        if (c.effect.kind === "add" && !c.needsRoll && !c.targets?.length && (c.damageTypes?.length ?? 0) <= 1 && !c.apply && !offered.some(o => o.id === c.id)) offered.push(c);
+        if (c.effect.kind === "add" && !c.needsRoll && !c.targets?.length && !c.targeting && !c.apply && !offered.some(o => o.id === c.id)) offered.push(c);
     if (!offered.length) return [];
     for (const c of offered) this.#beforeDamageOffered.add(c.id);
     const standing = applyStandingChoices(this.actor, offered.filter(c => c.optional), !!this.isCritical);
+    // M32c: dnd5e's damage dialog will show: the adds that are parts of its first roll are ticked there
+    const inDialog = options.inDialog ? standing.ask.filter(c => rollDialogOffer(c) && (c.damageTypes?.length ?? 0) <= 1
+      && !(c.effect.kind === "add" && (c.effect.damageType || c.effect.critical === "never"))) : [];
+    this.#dialogOffers.damage = inDialog;
+    standing.ask = standing.ask.filter(c => !inDialog.includes(c));
     let askedIds: string[] = [];
     if (standing.ask.length) {
       await this.flushCardWrites(); // a person decides next
@@ -7819,8 +7836,33 @@ export class Workflow {
     const chosen = [...offered.filter(c => !c.optional), ...standing.apply, ...standing.ask.filter(c => askedIds.includes(c.id))];
     for (const c of standing.armed) await setStandingChoice(this.actor, standingKey(c), "ask", c.label);
     const ctx = { query, phase: "preRoll" as const, roll: zero };
-    for (const c of chosen) if (await approveBonus(c, ctx)) this.beforeDamageBonuses.push(c);
+    for (let c of chosen) {
+      if (!(await approveBonus(c, ctx))) continue;
+      // Several types (M32c): the remembered one, else asked; then its own typed roll
+      if (c.effect.kind === "add" && !c.effect.damageType && (c.damageTypes?.length ?? 0) > 1) {
+        const type = await chooseDamageType(c.damageTypes!, c.label, this.actor, bonusDamageTypeKey(standingKey(c)));
+        if (type) c = { ...c, effect: { ...c.effect, damageType: type } };
+      }
+      this.beforeDamageBonuses.push(c);
+    }
     return this.beforeDamageBonuses;
+  }
+
+  /** M32c: the optional adds offered in dnd5e's roll dialog for this roll, and the ones ticked there as it was built */
+  #dialogOffers: { attack?: OfferedBonus[], damage?: OfferedBonus[] } = {};
+  #dialogTicked: { attack?: Set<string>, damage?: Set<string> } = {};
+  dialogOffers(kind: "attack" | "damage"): readonly OfferedBonus[] { return this.#dialogOffers[kind] ?? []; }
+  setDialogTicked(kind: "attack" | "damage", ids: Set<string>) { this.#dialogTicked[kind] = ids; }
+
+  /** After the roll: the dialog's ticked adds are the roll's (settled with the other before-roll bonuses) */
+  takeDialogBonuses(kind: "attack" | "damage"): void {
+    const ticked = this.#dialogTicked[kind];
+    const taken = (this.#dialogOffers[kind] ?? []).filter(c => ticked?.has(c.id));
+    this.#dialogOffers[kind] = [];
+    this.#dialogTicked[kind] = undefined;
+    if (!taken.length) return;
+    if (kind === "attack") this.#preRollBonuses.attack = [...(this.#preRollBonuses.attack ?? []), ...taken];
+    else this.beforeDamageBonuses = [...this.beforeDamageBonuses, ...taken];
   }
 
   /** The chosen before-roll damage bonuses as dnd5e damage roll configs: into the first roll, or their own (a type, no critical) */

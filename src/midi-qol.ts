@@ -1,3 +1,4 @@
+import { registerRollDialogBonuses } from "./module/lib/rollDialogBonuses.js";
 import { defineSettingNeedsService } from "./module/services/settingNeeds/service.js";
 import { activityTypeSteps, activityTypeStepsMarkdown } from "./module/activities/activityTypeSteps.js";
 import { registerMidiIssueContributors } from "./module/services/economy/issues.js";
@@ -537,6 +538,7 @@ Hooks.once('init', async function () {
   watchOverlayAuthoring();
   definePresentersService();
   registerCues();
+  registerRollDialogBonuses();
   registerUseChanges();
   registerEntryOffers();
   registerResponseEvents();

@@ -6,7 +6,7 @@ import { isMidiActivityType } from "../activities/midiActivity.js";
 import { GameSystemConfig, MODULE_ID, debugEnabled, error, i18n, i18nFormat, warn } from "../../midi-qol.js";
 import { TroubleShooter } from "../apps/TroubleShooter.js";
 import { cardOtherConsumption } from "../lib/cardState.js";
-import { heldKeys } from "../lib/rollKeys.js";
+import { dialogShown, heldKeys } from "../lib/rollKeys.js";
 import { averageDice } from "../patching.js";
 import { configSettings, safeGetGameSetting } from "../settings.js";
 import { addRollTo, areMidiKeysPressed, callActivityHooks, displayDSNForRoll, evalActivationCondition, getSpeaker, isAutoFastForward, itemMagicAvailable, setMessageTargets, sumRolls } from "../utils.js";
@@ -160,8 +160,13 @@ async function midiRollDamage(activity: Activity, wrapped: RollDamage, config: R
       // The workflow's attack mode as of the roll (hooks and macros above may change it); dnd5e builds the roll data from it
       config.attackMode = workflow.attackMode;
       // Damage choices before the roll (M15 5d): the use's own damage roll only
-      if (config.midiOptions?.updateWorkflow !== false) await workflow.chooseDamageBonusesBeforeRoll();
-      result = await workflow.keepRollMessageFlags(activity, () => wrapped(config, dialog, message));
+      // Those that can be parts of the roll: in dnd5e's damage dialog when it shows (M32c)
+      if (config.midiOptions?.updateWorkflow !== false) await workflow.chooseDamageBonusesBeforeRoll({ inDialog: dialogShown(dialog.configure, config.event) });
+      try {
+        result = await workflow.keepRollMessageFlags(activity, () => wrapped(config, dialog, message));
+      } finally {
+        workflow.takeDialogBonuses("damage");
+      }
       if (!result) { // user backed out of roll
         workflow.beforeDamageBonuses = [];
         workflow.currentAction = "midi-qol.WaitForDamageRoll";

@@ -206,7 +206,7 @@ function outcomeVisible(query: RollBonusQuery): boolean {
  * The damage type a damage add with several types is taken as: the roller's remembered type (M15 5e) while it is one
  * of the types, else asked, with "Remember this choice"
  */
-async function chooseDamageType(types: readonly string[], label: string, actor?: Actor.Implementation, rememberKey?: string): Promise<string | undefined> {
+export async function chooseDamageType(types: readonly string[], label: string, actor?: Actor.Implementation, rememberKey?: string): Promise<string | undefined> {
   if (types.length <= 1) return types[0];
   const remembered = actor && rememberKey ? rememberedChoice(actor, rememberKey)?.value : undefined;
   if (typeof remembered === "string" && types.includes(remembered)) return remembered;
