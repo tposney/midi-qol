@@ -75,6 +75,13 @@
         {{else}}
         <p>{{localize "midi-qol.EntryEditor.None"}}</p>
         {{/if}}
+        {{#if overtime}}
+        <fieldset class="midi-qol-entry-overtime">
+            <legend>{{localize "midi-qol.EntryEditor.OverTime"}}</legend>
+            <p class="hint">{{localize "midi-qol.EntryEditor.OverTimeHint"}}</p>
+            <textarea rows="8" readonly spellcheck="false">{{overtime}}</textarea>
+        </fieldset>
+        {{/if}}
     </section>
 </div>
 <footer class="form-footer">

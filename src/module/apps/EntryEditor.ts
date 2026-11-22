@@ -1,6 +1,7 @@
 import { i18n, MODULE_ID } from "../../midi-qol.js";
 import { actionKeyOf, actionProblems, actionSchema, registeredActionKeys, registeredEvents, type ActionField } from "../lib/entries/engine.js";
 import type { Entry, EntryAction, EntryWho } from "../lib/entries/types.js";
+import { activityOvertimeEntries, overtimeEntries } from "../lib/entries/overtime.js";
 
 /*
  * M32d (plan ~/Documents/midi-next-M32-plan-2026-11-22.md): the entry editor. A document's entries (an activity's
@@ -129,8 +130,23 @@ export class EntryEditor extends HandlebarsApplicationMixin(ApplicationV2) {
       cardsShown: !!draft && this.#actionsOf(draft) !== undefined,
       rawChoose: draft?.raw.choose ?? "",
       problems: draft?.problems ?? [],
+      overtime: this.#overtimeShown(),
       canSave: this.#drafts.every(d => !d.problems.length)
     };
+  }
+
+  /**
+   * M32d step 3: an effect's OverTime and ActivityOverTime changes as the entries midi reads them as (read only: their
+   * values are worked out against the bearer as they are read, so a saved copy would fix them; conversion is M24's)
+   */
+  #overtimeShown(): string | undefined {
+    const effect = this.#document instanceof ActiveEffect ? this.#document as ActiveEffect.Implementation : undefined;
+    if (!effect) return undefined;
+    const actor = effect.parent instanceof Actor ? effect.parent as Actor.Implementation : (effect.parent as { actor?: Actor.Implementation } | null)?.actor ?? undefined;
+    try {
+      const read = [...(actor ? overtimeEntries(effect, actor) : []), ...activityOvertimeEntries(effect)];
+      return read.length ? JSON.stringify(read, null, 2) : undefined;
+    } catch { return undefined; }
   }
 
   /** The parsed action list, or undefined while its JSON doesn't parse */
@@ -317,6 +333,64 @@ export class EntryEditor extends HandlebarsApplicationMixin(ApplicationV2) {
   }
 }
 
+/** M32d step 4: what "Offer as a roll bonus" asks for, as an entry on the activity (the activity its cost) */
+export interface RollBonusOffer {
+  label: string;
+  rolls: string[];
+  when: "before" | "after";
+  for: "self" | "allies" | "enemies" | "anyone";
+  range: number;
+  effect: "add" | "reroll" | "advantage";
+  formula: string;
+}
+
+export function rollBonusEntry(activityId: string, offer: RollBonusOffer, id: string): Entry {
+  const bonus = offer.effect === "add" ? { kind: "add", formula: offer.formula || "1d4" }
+    : offer.effect === "reroll" ? { kind: "reroll", keep: "higher" } : { kind: "mode", mode: "advantage" };
+  const filter = offer.for === "allies" ? "near.ally" : offer.for === "enemies" ? "!near.ally" : undefined;
+  const who: EntryWho = offer.for === "self" ? "owner" : { within: offer.range || 30, of: "bearer", ...(filter ? { filter } : {}) };
+  return {
+    id, on: offer.when === "after" ? "roll.postResult" : "roll.preResult", who, offer: "ask", activity: activityId,
+    ...(offer.label ? { label: offer.label } : {}),
+    do: [{ bonus, rolls: offer.rolls.length ? offer.rolls : ["attack"] }]
+  };
+}
+
+/** Asks how the activity is offered as a roll bonus, adds that entry to it, and opens the editor on it */
+export async function offerAsRollBonus(activity: EntryDocument & { id?: string | null }): Promise<void> {
+  const esc = foundry.utils.escapeHTML;
+  const kinds = ["attack", "damage", "save", "check", "skill"];
+  const option = (name: string, values: string[], selected: string) => `<select name="${name}">${values.map(v =>
+    `<option value="${v}" ${v === selected ? "selected" : ""}>${esc(i18n(`midi-qol.RollBonusOffer.${name}.${v}`))}</option>`).join("")}</select>`;
+  const content = `<div class="standard-form">
+    <div class="form-group"><label>${esc(i18n("midi-qol.Entries.Field.label"))}</label><input type="text" name="label" value="${esc(activity.name ?? "")}"></div>
+    <div class="form-group"><label>${esc(i18n("midi-qol.Entries.Field.rolls"))}</label><div>${kinds.map(k =>
+      `<label class="checkbox"><input type="checkbox" name="rolls" value="${k}" ${k === "attack" ? "checked" : ""}> ${esc(i18n(`midi-qol.RollBonusOffer.rolls.${k}`))}</label>`).join(" ")}</div></div>
+    <div class="form-group"><label>${esc(i18n("midi-qol.RollBonusOffer.When"))}</label>${option("when", ["before", "after"], "before")}</div>
+    <div class="form-group"><label>${esc(i18n("midi-qol.RollBonusOffer.For"))}</label>${option("for", ["self", "allies", "enemies", "anyone"], "self")}
+      <input type="number" name="range" value="30" min="5" step="5"></div>
+    <div class="form-group"><label>${esc(i18n("midi-qol.RollBonusOffer.Effect"))}</label>${option("effect", ["add", "reroll", "advantage"], "add")}
+      <input type="text" name="formula" value="1d4"></div>
+  </div>`;
+  const result = await foundry.applications.api.DialogV2.prompt({
+    window: { title: i18n("midi-qol.RollBonusOffer.Title") },
+    content,
+    ok: { callback: (_event: Event, button: HTMLButtonElement) => {
+      const form = button.form!;
+      const data = new foundry.applications.ux.FormDataExtended(form).object as Record<string, unknown>;
+      const rolls = Array.from(form.querySelectorAll<HTMLInputElement>("input[name='rolls']:checked")).map(input => input.value);
+      return { label: String(data.label ?? ""), rolls, when: data.when, for: data.for, range: Number(data.range) || 30, effect: data.effect, formula: String(data.formula ?? "") } as RollBonusOffer;
+    } },
+    rejectClose: false
+  }).catch(() => undefined) as RollBonusOffer | undefined;
+  if (!result || !activity.id) return;
+  const existing = entriesOfDocument(activity);
+  let n = 1;
+  while (existing.some(e => e.id === `rollBonus${n}`)) n++;
+  await activity.update({ midiEntries: [...existing, rollBonusEntry(activity.id, result, `rollBonus${n}`)] });
+  void new EntryEditor(activity).render({ force: true });
+}
+
 /** The editor's header button on item, effect and activity sheets (GMs and the document's owners) */
 export function registerEntryEditorControls() {
   // onClick: Foundry 14's header controls (fvtt-types 13 doesn't have it)
@@ -337,6 +411,10 @@ export function registerEntryEditorControls() {
   Hooks.on("getHeaderControlsActivitySheet", (app, controls) => {
     // dnd5e's ActivitySheet: its activity
     const activity = (app as { activity?: EntryDocument & { item?: { isOwner?: boolean } } }).activity;
-    if (editable(activity?.item)) controls.push(control(() => activity));
+    if (!editable(activity?.item)) return;
+    controls.push(control(() => activity));
+    const offer: Control = { icon: "fa-solid fa-dice-d20", label: "midi-qol.RollBonusOffer.Title", action: "midiOfferRollBonus",
+      onClick: () => { if (activity) void offerAsRollBonus(activity); } };
+    controls.push(offer);
   });
 }

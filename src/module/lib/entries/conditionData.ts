@@ -16,6 +16,7 @@ import type { EventContext } from "./engine.js";
  * - `entry.origin`: the use that applied the effect (actor, item, activity, spellLevel, dc), `entry.owner`;
  * - `actor.economy`: the actor's action, bonus action and reaction this turn (`used`, `left`);
  * - helpers `nearby({ within, of, filter })`, `canSee(a, b)`, `dice.duplicates(roll, faces)`.
+ * - `near` (a near entry): `{ token, distance, ally }`, the creature the event is about (ally: its disposition is the holder's).
  */
 
 type TokenLike = TokenDocument.Implementation | Token.Implementation | Actor.Implementation | null | undefined;
@@ -150,6 +151,11 @@ export function entryConditionExtras(f: FoundEntry, context: EventContext, apply
     extra.outcomes = Object.fromEntries(byTarget);
     const target = context.target?.uuid;
     if (target) extra.outcome = byTarget.get(target) ?? {};
+  }
+  // A near entry's creature (M32d): its token, how far, and whether it is the holder's ally (same disposition)
+  if (f.near) {
+    const own = f.actor?.getActiveTokens(false, true)[0] as TokenDocument.Implementation | undefined;
+    extra.near = { token: f.near.token, distance: f.near.distance, ally: !!own && own.disposition === f.near.token.disposition };
   }
   const entry: Record<string, unknown> = { owner: f.actor };
   if (effect) entry.origin = originView(effect, applyingActivity, originActor);
