@@ -538,6 +538,7 @@
     "damageContributions",
     "damageModifiers",
     "distance",
+    "entryAutomations",
     "entryOptions",
     "entryRecipes",
     "entryTriggers",

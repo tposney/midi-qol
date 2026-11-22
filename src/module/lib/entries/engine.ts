@@ -470,6 +470,18 @@ export async function spendEntryLimit(f: FoundEntry, context: EventContext): Pro
 
 /* Running */
 
+/** The use's targets as condition data: each target's actor data with its name, uuid and statuses */
+function targetsData(workflow: Workflow): Record<string, unknown>[] {
+  const documents = (workflow.targets as { documents?: TokenDocument.Implementation[] } | undefined)?.documents ?? [];
+  return documents.map(token => {
+    const actor = token.actor;
+    if (!actor) return { name: token.name, uuid: token.uuid };
+    const data = actor.getRollData() as Record<string, unknown>;
+    return { attributes: data.attributes, abilities: data.abilities, details: data.details, traits: data.traits,
+      name: token.name, uuid: token.uuid, actorUuid: actor.uuid, statuses: [...actor.statuses] };
+  });
+}
+
 export function conditionDataFor(f: FoundEntry, context: EventContext): Record<string, unknown> {
   const effect = f.document instanceof ActiveEffect ? f.document : undefined;
   const { extra, entry } = entryConditionExtras(f, context, effect ? applyingActivity(effect) : undefined, effect ? originActor(effect) : undefined);
@@ -480,6 +492,8 @@ export function conditionDataFor(f: FoundEntry, context: EventContext): Record<s
       ...extra,
       event: f.near ? { ...context.event, creature: f.near.creature, creatureToken: f.near.token, distance: f.near.distance } : context.event ?? {},
       bearer: f.actor,
+      // The use's targets (a condition about any of them: "a target is missing hit points")
+      ...(context.workflow ? { targets: targetsData(context.workflow) } : {}),
       entry: { ...entry, id: f.entry.id, self: documentUuid(f.document), home: f.home, counts: effect ? entryState(effect, f.entry.id) : {} },
       choices: (effect?.getFlag(MODULE_ID, "choices") as Record<string, unknown> | undefined) ?? context.workflow?.choices ?? context.workflow?.workflowOptions?.choices ?? {}
     }

@@ -20,6 +20,7 @@ export type * from "../services/saveRequests/service.js";
 export type * from "../services/settingNeeds/service.js";
 export type * from "../services/tokenVisuals/service.js";
 export type * from "../lib/entries/editorServices.js";
+export type * from "../lib/entries/automations.js";
 export type * from "../services/targetConfirmation/service.js";
 export type * from "../services/tokenNames/service.js";
 export type * from "../services/rollBonuses/prompt.js";

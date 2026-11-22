@@ -46,7 +46,8 @@ const CONDITIONS: Record<string, string> = {
   "!tags.use.area": "NotArea",
   "!!tags.use.area": "Area",
   "!!tags.use.spellSlot": "SpellSlot",
-  "use.activity.range.units === 'touch'": "Touch"
+  "use.activity.range.units === 'touch'": "Touch",
+  "targets.some(t => t.attributes.hp.value < t.attributes.hp.max)": "TargetHurt"
 };
 
 /** The conditions offered as ready-made (the form's "add a common condition") */
@@ -247,6 +248,7 @@ export function actionText(action: EntryAction, context: SentenceContext): strin
     case "perception": return say(part(a.perception).invisible === false ? "Action.perception.noInvisible" : "Action.perception.other");
     case "state": return say("Action.state", { pairs: Object.entries(part(a.state)).map(([k, v]) => `${k} ${v}`).join(", ") });
     case "change": return say("Action.change", { what: Object.entries(part(a.change)).map(([k, v]) => {
+      if (k === "damageDie") return say("Change.damageDieTo", { die: String(v) });
       if (k === "damageType") return say("Change.damageTypeTo", { from: or([part(v).from ?? []].flat().map(t => labelOf("damageTypes", t))), to: friendlyFormula(part(v).to ?? "?") });
       return `${has(`Change.${k}`) ? say(`Change.${k}`) : k} ${typeof v === "object" ? JSON.stringify(v) : friendlyFormula(v)}`;
     }).join(", ") });

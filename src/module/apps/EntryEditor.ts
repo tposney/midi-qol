@@ -7,6 +7,7 @@ import { activityOvertimeEntries, overtimeEntries } from "../lib/entries/overtim
 import { ACTIVITY_REF } from "../lib/entries/activityActions.js";
 import { ConditionEditor } from "./ConditionEditor.js";
 import { activityCardContributor, contributedActivityCard, optionList } from "../lib/entries/editorServices.js";
+import { automationNotes } from "../lib/entries/automations.js";
 import { activityCard, activityUpdate, BRANCH_EVENT, branchEntryId, isBranchEntry, partFormula, type ActivityBranch, type ActivityData, type BuiltInPart, type CardEdits, type CardText } from "../lib/entries/activityCard.js";
 
 /*
@@ -361,6 +362,7 @@ export class EntryEditor extends HandlebarsApplicationMixin(ApplicationV2) {
       })),
       homeLabel: this.#homes.length > 1 ? home.label : undefined,
       activityCard: this.#view === "form" && home.card ? this.#cardContext(home, this.#at) : undefined,
+      automations: this.#view === "form" ? this.#automations(home) : undefined,
       homeChoices: this.#view === "form" ? home.choices : undefined,
       homeChoicesProblem: home.choicesProblem,
       ifPresets: conditionPresets(),
@@ -424,6 +426,7 @@ export class EntryEditor extends HandlebarsApplicationMixin(ApplicationV2) {
         choices: (Array.isArray(choices) ? choices : []).map(c => game.i18n?.format("midi-qol.EntryEditor.ChoiceLine", { label: c.label ?? c.id ?? "?", kind: c.kind ?? "?" }) ?? ""),
         recipes: this.#recipes === at ? recipesFor(kind).map(r => ({ id: r.id, home: at, label: i18n(`midi-qol.Recipe.${r.id}.Label`), hint: i18n(`midi-qol.Recipe.${r.id}.Hint`) })) : undefined,
         card: h.card ? this.#cardContext(h, at) : undefined,
+        automations: this.#automations(h),
         sentences: h.drafts.map((draft, index) => {
           const entry = this.#entryForSave(draft);
           const sentence = entrySentence(entry, { home: kind, activities });
@@ -445,12 +448,38 @@ export class EntryEditor extends HandlebarsApplicationMixin(ApplicationV2) {
     });
   }
 
+  /**
+   * Other automation on a home's document (entryAutomations) that isn't a step of using the item: auras, combat, rests.
+   * A macro run during a use is drawn in each activity's card instead (an item without activities keeps it here).
+   */
+  #automations(h: Home) {
+    const hasCards = this.#homes.some(home => home.card);
+    return automationNotes(h.document)
+      .filter(note => !(note.atUse && (h.card || (h.kind === "item" && hasCards))))
+      .map(note => ({ ...note, title: note.own ? i18n("midi-qol.EntryEditor.Automation.OwnMacroTitle") : game.i18n?.format("midi-qol.EntryEditor.Automation.Title", { source: note.source, name: note.name }) ?? note.source }));
+  }
+
+  /** The macros run during this activity's use: the item's and the activity's own, as steps of its card */
+  #cardMacros(h: Home) {
+    const item = this.#homes.find(home => home.kind === "item");
+    const notes = [...(item ? automationNotes(item.document) : []), ...automationNotes(h.document)].filter(note => note.atUse);
+    const and = game.i18n?.localize("midi-qol.Sentence.And") ?? "and";
+    return notes.map(note => ({ ...note,
+      sentence: game.i18n?.format("midi-qol.EntryEditor.Automation.Step", {
+        what: note.own ? i18n("midi-qol.EntryEditor.Automation.OwnMacro") : game.i18n?.format("midi-qol.EntryEditor.Automation.ModuleMacro", { source: note.source, name: note.name }) ?? note.name,
+        when: note.when.length < 2 ? note.when.join("") : `${note.when.slice(0, -1).join(", ")} ${and} ${note.when.at(-1)}` }) ?? note.name }));
+  }
+
   /* The activity card: what an activity does by itself, by branch, and what was added to each branch */
 
   /** The activity's own data as stored */
   #activitySource(h: Home): ActivityData {
     const source = (h.document as { _source?: ActivityData, type?: string })._source;
-    return foundry.utils.deepClone(source ?? { type: (h.document as { type?: string }).type ?? "" }) as ActivityData;
+    const data = foundry.utils.deepClone(source ?? { type: (h.document as { type?: string }).type ?? "" }) as ActivityData;
+    // A spell's level (how its damage scales), read from the item, not stored on the activity
+    const item = this.#item();
+    if (item && String(item.type) === "spell") data.spellLevel = Number((item.system as { level?: number }).level) || 0;
+    return data;
   }
 
   /** The update the card's edits make to the activity (only what changed) */
@@ -523,7 +552,7 @@ export class EntryEditor extends HandlebarsApplicationMixin(ApplicationV2) {
         } : undefined
       };
     });
-    return { home: at, when: model.when.map(chip), branches, open: this.#cardOpen === at ? this.#openFields(h, data) : undefined };
+    return { home: at, when: model.when.map(chip), branches, macros: this.#cardMacros(h), open: this.#cardOpen === at ? this.#openFields(h, data) : undefined };
   }
 
   /** The open card's fields: a contributor's own, else midi's */

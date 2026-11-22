@@ -88,5 +88,6 @@ export function registerMidiActionSchemas() {
     { path: "change.school", label: "midi-qol.Entries.Field.school", type: "select", options: { list: "spellSchools" } },
     { path: "change.spellLevel", label: "midi-qol.Entries.Field.spellLevel", type: "formula" },
     { path: "change.damageType.from", label: "midi-qol.Entries.Field.damageTypeFrom", type: "list" },
-    { path: "change.damageType.to", label: "midi-qol.Entries.Field.damageTypeTo", type: "string" }], initial: {} });
+    { path: "change.damageType.to", label: "midi-qol.Entries.Field.damageTypeTo", type: "string" },
+    { path: "change.damageDie", label: "midi-qol.Entries.Field.damageDie", type: "number" }], initial: {} });
 }

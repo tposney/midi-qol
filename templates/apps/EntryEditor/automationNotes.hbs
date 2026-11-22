@@ -1,0 +1,13 @@
+{{#each automations}}
+<details class="midi-qol-entry-automation" open>
+    <summary><i class="fa-solid fa-code"></i> <strong>{{title}}</strong>{{#if version}} <span class="hint">({{version}})</span>{{/if}}</summary>
+    <div class="midi-qol-entry-automation-body">
+        <div>{{localize "midi-qol.EntryEditor.Automation.RunsWhen"}}</div>
+        <ul>{{#each when}}<li>{{this}}</li>{{/each}}</ul>
+        {{#if notes}}<p>{{notes}}</p>{{/if}}
+        {{#if settings}}<div>{{localize "midi-qol.EntryEditor.Automation.Settings"}}</div><ul>{{#each settings}}<li>{{label}}: {{value}}</li>{{/each}}</ul>{{/if}}
+        <p class="hint">{{localize "midi-qol.EntryEditor.Automation.Unreadable"}}</p>
+        {{#if code}}<details class="midi-qol-entry-automation-code"><summary>{{localize "midi-qol.EntryEditor.Automation.Code"}}</summary><pre>{{code}}</pre></details>{{/if}}
+    </div>
+</details>
+{{/each}}

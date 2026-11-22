@@ -31,6 +31,15 @@
         {{/if}}
     </div>
     {{/each}}
+    {{#each macros}}
+    <div class="midi-qol-activity-macro">
+        <div><i class="fa-solid fa-code"></i> {{sentence}}{{#if version}} <span class="hint">({{version}})</span>{{/if}}</div>
+        {{#if notes}}<p class="hint">{{notes}}</p>{{/if}}
+        {{#if settings}}<ul>{{#each settings}}<li>{{label}}: {{value}}</li>{{/each}}</ul>{{/if}}
+        <p class="hint">{{localize "midi-qol.EntryEditor.Automation.Unreadable"}}</p>
+        {{#if code}}<details class="midi-qol-entry-automation-code"><summary>{{localize "midi-qol.EntryEditor.Automation.Code"}}</summary><pre>{{code}}</pre></details>{{/if}}
+    </div>
+    {{/each}}
     {{#with open}}
     <fieldset class="midi-qol-activity-fields">
         <legend>{{localize "midi-qol.EntryEditor.Activity.Fields"}}</legend>

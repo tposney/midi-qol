@@ -41,8 +41,10 @@ export interface ActivityData {
   restrictions?: { type?: string };
   /** forward: the activity used */
   activity?: { id?: string };
+  /** The item's spell level (0: a cantrip), when it is a spell: how its damage scales */
+  spellLevel?: number;
 }
-export interface DamagePart { number?: number | null, denomination?: number | null, bonus?: string, types?: string[], custom?: { enabled?: boolean, formula?: string }, scaling?: unknown }
+export interface DamagePart { number?: number | null, denomination?: number | null, bonus?: string, types?: string[], custom?: { enabled?: boolean, formula?: string }, scaling?: { mode?: string, number?: number | null, formula?: string } }
 
 /** A part's formula as dnd5e writes it (its custom formula, else NdX + bonus) */
 export function partFormula(part: DamagePart): string {
@@ -90,10 +92,16 @@ function dcText(dc: { calculation?: string, formula?: string } | undefined, t: C
   return t.say("Activity.DC.custom", { dc: dc?.formula || "?" });
 }
 
+/** How a part's damage grows: a cantrip's with the caster's level, a spell's with its slot */
+function scales(part: DamagePart, data: ActivityData, t: CardText): string {
+  if (!part.scaling?.mode || part.scaling.mode === "none" || data.spellLevel === undefined) return "";
+  return ` ${t.say(data.spellLevel === 0 ? "Activity.Scales.cantrip" : "Activity.Scales.slot")}`;
+}
+
 function damageParts(data: ActivityData, t: CardText, kind: "damage" | "half"): BuiltInPart[] {
   const parts = (data.damage?.parts ?? []).map((part, i) => ({
     kind, field: `part.${i}`,
-    text: t.say(kind === "half" ? "Activity.HalfDamage" : "Activity.Damage", { formula: partFormula(part) || "?", type: (part.types ?? []).map(id => t.damageType(id)).join("/") })
+    text: t.say(kind === "half" ? "Activity.HalfDamage" : "Activity.Damage", { formula: partFormula(part) || "?", type: (part.types ?? []).map(id => t.damageType(id)).join("/") }) + scales(part, data, t)
   } satisfies BuiltInPart));
   if (data.damage?.includeBase && data.type === "attack") parts.unshift({ kind, field: "", text: t.say(kind === "half" ? "Activity.HalfBase" : "Activity.BaseDamage") });
   return parts;

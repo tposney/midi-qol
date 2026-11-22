@@ -97,10 +97,30 @@ function damageTypeChange(run: ActionRun, spec: { from?: string | string[], to?:
   }
 }
 
-/** `{ change: { activation?, range?, duration?, components?, school?, spellLevel?, damageType? } }` */
+/** Before the damage roll: every damage die of the use's activity becomes `d<die>` (counts and scaling kept) */
+async function damageDieChange(run: ActionRun, die: number) {
+  const activity = run.context.workflow?.activity as Activity | undefined;
+  const source = (activity as unknown as { _source?: { damage?: { parts?: { denomination?: number | null, custom?: { enabled?: boolean, formula?: string } }[] } } } | undefined)?._source;
+  const parts = source?.damage?.parts;
+  if (!activity || !parts?.length || !Number.isInteger(die) || die < 2) return;
+  const changed = parts.map(part => part.custom?.enabled
+    ? { ...part, custom: { ...part.custom, formula: (part.custom.formula ?? "").replace(/(\d*)d\d+/g, `$1d${die}`) } }
+    : { ...part, denomination: die });
+  await changeActivity(activity, { "damage.parts": changed });
+}
+
+/** Where a damage die can still change: before the use's damage is rolled */
+const BEFORE_DAMAGE = new Set(["use.configure", "use.targeted"]);
+
+/** `{ change: { activation?, range?, duration?, components?, school?, spellLevel?, damageType?, damageDie? } }` */
 async function changeAction(run: ActionRun) {
   const spec = run.action.change as Record<string, unknown> | undefined;
   if (!run.context.workflow || !spec || typeof spec !== "object") return;
+  if (spec.damageDie !== undefined) {
+    if (BEFORE_DAMAGE.has(run.eventId)) await damageDieChange(run, Number(spec.damageDie));
+    else console.warn(`midi-qol | entry ${run.found.entry.id}: change damageDie can't be made at ${run.eventId} (use.configure or use.targeted)`);
+    if (Object.keys(spec).length === 1) return;
+  }
   if (run.eventId === "use.configure") await useConfigureChange(run, spec);
   else if (spec.damageType && ["use.damageRoll", "use.damageRolled"].includes(run.eventId)) damageTypeChange(run, spec.damageType as { from?: string[], to?: string });
   else console.warn(`midi-qol | entry ${run.found.entry.id}: change ${Object.keys(spec).join(", ")} can't be made at ${run.eventId}`);
