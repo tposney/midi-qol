@@ -2499,3 +2499,11 @@ body.midi-qol-hide-gambit-mirrors .gps-dialog-mirror:not(.midi-qol-gambit-shown)
 .midi-qol-visuals-editor .midi-qol-visual-warning { color: var(--color-level-warning, #d9a400); margin: 0; }
 .midi-qol-visuals-editor .midi-qol-visual-less { flex: 0 0 auto; white-space: nowrap; }
 .midi-qol-visuals-editor .midi-qol-visual-number { flex: 0 0 4rem; }
+.midi-qol-entry-editor .midi-qol-activity-card { border: 1px solid var(--color-border, #7a7971); border-radius: 4px; padding: 0.25rem 0.5rem; margin: 0.25rem 0 0.5rem; display: flex; flex-direction: column; gap: 0.25rem; }
+.midi-qol-entry-editor .midi-qol-activity-when, .midi-qol-entry-editor .midi-qol-activity-branch-line { display: flex; align-items: center; flex-wrap: wrap; gap: 0.25rem; }
+.midi-qol-entry-editor .midi-qol-activity-branch-line .midi-qol-branch-add { margin-left: auto; }
+.midi-qol-entry-editor .midi-qol-activity-when .midi-qol-activity-sheet, .midi-qol-entry-editor .midi-qol-branch-add { flex: 0 0 auto; width: auto; padding: 0 0.4rem; }
+.midi-qol-entry-editor .midi-qol-activity-branch { padding-left: 1rem; }
+.midi-qol-entry-editor .midi-qol-entry-chip.builtin { border-style: dashed; }
+.midi-qol-entry-editor .midi-qol-branch-added { padding-left: 1rem; }
+.midi-qol-entry-editor .midi-qol-activity-fields select[multiple] { min-height: 6rem; }

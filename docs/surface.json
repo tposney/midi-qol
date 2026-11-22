@@ -630,6 +630,11 @@
     "use.hit",
     "use.missed",
     "use.saves",
+    "use.target.each",
+    "use.target.hit",
+    "use.target.missed",
+    "use.target.saveFailed",
+    "use.target.saveSucceeded",
     "use.targeted"
   ],
   "entryActions": [

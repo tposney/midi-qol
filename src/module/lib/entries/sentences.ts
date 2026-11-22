@@ -158,6 +158,8 @@ function whoText(who: EntryWho | EntryWho[] | undefined, home: EntryHome): strin
 
 /** Whose "self" a sentence is being written for (an effect's bearer, else the owner) */
 let selfHome: EntryHome = "item";
+/** Whether the entry runs at a use's events: its damage and healing go to the use's targets by default, else to self */
+let atUse = false;
 const target = (to: unknown, fallback: string) => {
   const id = typeof to === "string" && to ? to : fallback;
   if (id === "self") return say(selfHome === "effect" ? "Subject.bearer" : "Subject.owner");
@@ -192,8 +194,8 @@ export function actionText(action: EntryAction, context: SentenceContext): strin
   switch (key) {
     case "damage":
       if (a.damage === "activity") return say("Action.damageActivity", { to: target(a.to, "target") });
-      return say("Action.damage", { formula: friendlyFormula(a.damage), type: a.type ? labelOf("damageTypes", a.type) : "", to: target(a.to, "self") }).replace(/\s+/g, " ");
-    case "heal": return say("Action.heal", { formula: friendlyFormula(a.heal), to: target(a.to, "self") });
+      return say("Action.damage", { formula: friendlyFormula(a.damage), type: a.type ? labelOf("damageTypes", a.type) : "", to: target(a.to, atUse ? "target" : "self") }).replace(/\s+/g, " ");
+    case "heal": return say("Action.heal", { formula: friendlyFormula(a.heal), to: target(a.to, atUse ? "target" : "self") });
     case "bonus": {
       const b = part(a.bonus);
       const kind = has(`Action.bonus.${b.kind}`) ? String(b.kind) : "other";
@@ -276,6 +278,7 @@ function actionLines(actions: EntryAction[], indent: number, path: string | unde
 export function entrySentence(entry: Entry, context: SentenceContext): EntrySentence {
   selfHome = context.home;
   const events = [entry.on ?? []].flat().filter(Boolean);
+  atUse = events.length > 0 && events.every(id => USE_EVENT(id));
   const first: SentencePart[] = [];
   if (events.length === 1 && events[0] === "action") {
     first.push(text(say("Button")), { text: entry.label || entry.id, kind: "when", focus: "on" }, text(say("ForWho")), { text: whoText(entry.who, context.home), kind: "who", focus: "who" });

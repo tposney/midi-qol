@@ -7,9 +7,10 @@
 {{#if sentenceView}}
 <section class="midi-qol-entry-sentences scrollable">
     {{#each sentences}}
-    <div class="midi-qol-entry-home {{#unless sentences.length}}empty{{/unless}}" data-home="{{home}}">
+    <div class="midi-qol-entry-home {{#unless (or sentences.length card)}}empty{{/unless}}" data-home="{{home}}">
         {{#unless single}}<h4 class="midi-qol-entry-home-label">{{label}}{{#if effect}} <span class="hint">{{localize "midi-qol.EntryEditor.Home.effectHint"}}</span>{{/if}}</h4>{{/unless}}
         {{#each choices}}<div class="midi-qol-entry-choice-line">{{this}}</div>{{/each}}
+        {{#with card}}{{> "modules/midi-qol/templates/apps/EntryEditor/activityCard.hbs"}}{{/with}}
         {{#each sentences}}
         <div class="midi-qol-entry-sentence {{#if problems.length}}invalid{{/if}}">
             <div class="midi-qol-entry-sentence-row">
@@ -80,6 +81,7 @@
         <div class="form-group stacked"><label>{{localize "midi-qol.EntryEditor.Field.homeChoices"}}</label><textarea name="homeChoices" rows="4" spellcheck="false">{{homeChoices}}</textarea>
             {{#if homeChoicesProblem}}<ul class="midi-qol-entry-problems"><li>{{homeChoicesProblem}}</li></ul>{{/if}}</div>
         {{/if}}
+        {{#with activityCard}}{{> "modules/midi-qol/templates/apps/EntryEditor/activityCard.hbs"}}{{/with}}
         {{#if hasEntry}}
         {{> "modules/midi-qol/templates/apps/EntryEditor/entryForm.hbs"}}
         {{else}}

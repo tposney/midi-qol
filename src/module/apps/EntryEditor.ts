@@ -6,6 +6,7 @@ import { recipe, recipesFor } from "../lib/entries/recipes.js";
 import { activityOvertimeEntries, overtimeEntries } from "../lib/entries/overtime.js";
 import { ACTIVITY_REF } from "../lib/entries/activityActions.js";
 import { ConditionEditor } from "./ConditionEditor.js";
+import { activityCard, activityUpdate, BRANCH_EVENT, branchEntryId, isBranchEntry, partFormula, type ActivityBranch, type ActivityData, type BuiltInPart, type CardEdits, type CardText } from "../lib/entries/activityCard.js";
 
 /*
  * M32d (plan ~/Documents/midi-next-M32-plan-2026-11-22.md): the entry editor. A document's entries (an activity's
@@ -31,7 +32,7 @@ const VIEWS: readonly View[] = ["sentence", "form", "json"];
  * One document of the window: the item, one of its activities or one of its effects. `stored`: its entries as they
  * were read (only a changed home is written); an activity's `choices`: its midiChoices as JSON.
  */
-type Home = { document: EntryDocument, kind: EntryHome, label: string, drafts: Draft[], stored: string, choices?: string, choicesStored?: string, choicesProblem?: string };
+type Home = { document: EntryDocument, kind: EntryHome, label: string, drafts: Draft[], stored: string, choices?: string, choicesStored?: string, choicesProblem?: string, card?: CardEdits };
 type Draft = { entry: Entry, raw: { do: string, choose: string, json?: string }, problems: string[] };
 
 const NEAR = "near";
@@ -186,6 +187,8 @@ export class EntryEditor extends HandlebarsApplicationMixin(ApplicationV2) {
   #picker: number | undefined;
   /** A field to put the cursor in after the next render (a sentence's part clicked) */
   #focus: string | undefined;
+  /** The activity home whose card's fields are open */
+  #cardOpen: number | undefined;
 
   /** `options.view`: the view to open in (else the user's last) */
   constructor(document: EntryDocument, options: { view?: View } & Record<string, unknown> = {}) {
@@ -204,7 +207,7 @@ export class EntryEditor extends HandlebarsApplicationMixin(ApplicationV2) {
       const entries = entriesOfDocument(d);
       const choices = kind === "activity" ? JSON.stringify((d as { midiChoices?: unknown[] }).midiChoices ?? [], null, 2) : undefined;
       const home: Home = {
-        document: d, kind, stored: JSON.stringify(entries), choices, choicesStored: choices,
+        document: d, kind, stored: JSON.stringify(entries), choices, choicesStored: choices, ...(kind === "activity" ? { card: {} } : {}),
         label: kind === "item" ? i18n("midi-qol.EntryEditor.Home.item") : game.i18n?.format(`midi-qol.EntryEditor.Home.${kind}`, { name: d.name ?? "" }) ?? d.name ?? "",
         drafts: entries.map(entry => ({ entry, raw: { do: JSON.stringify(entry.do ?? [], null, 2), choose: entry.choose ? JSON.stringify(entry.choose, null, 2) : "" }, problems: [] }))
       };
@@ -220,7 +223,8 @@ export class EntryEditor extends HandlebarsApplicationMixin(ApplicationV2) {
 
   /** Whether anything differs from what was read */
   #dirty(): boolean {
-    return this.#homes.some(h => h.choices !== h.choicesStored || JSON.stringify(h.drafts.map(d => this.#entryForSave(d))) !== h.stored);
+    return this.#homes.some(h => h.choices !== h.choicesStored || JSON.stringify(h.drafts.map(d => this.#entryForSave(d))) !== h.stored
+      || Object.keys(this.#cardUpdate(h)).length > 0);
   }
 
   /** Closing with unsaved changes asks first (`options.discard`: no question) */
@@ -280,6 +284,10 @@ export class EntryEditor extends HandlebarsApplicationMixin(ApplicationV2) {
       addRowAction: EntryEditor.#onAddRowAction,
       showRuns: EntryEditor.#onShowRuns,
       useRecipe: EntryEditor.#onUseRecipe,
+      editActivity: EntryEditor.#onEditActivity,
+      addToBranch: EntryEditor.#onAddToBranch,
+      addDamagePart: EntryEditor.#onAddDamagePart,
+      openActivitySheet: EntryEditor.#onOpenActivitySheet,
       save: EntryEditor.#onSave
     }
   };
@@ -338,6 +346,7 @@ export class EntryEditor extends HandlebarsApplicationMixin(ApplicationV2) {
           invalid: d.problems.length > 0, first: index === 0, last: index === h.drafts.length - 1 }))
       })),
       homeLabel: this.#homes.length > 1 ? home.label : undefined,
+      activityCard: this.#view === "form" && home.card ? this.#cardContext(home, this.#at) : undefined,
       homeChoices: this.#view === "form" ? home.choices : undefined,
       homeChoicesProblem: home.choicesProblem,
       ifPresets: conditionPresets(),
@@ -400,6 +409,7 @@ export class EntryEditor extends HandlebarsApplicationMixin(ApplicationV2) {
         home: at, label: h.label, single: this.#homes.length === 1, effect: kind === "effect",
         choices: (Array.isArray(choices) ? choices : []).map(c => game.i18n?.format("midi-qol.EntryEditor.ChoiceLine", { label: c.label ?? c.id ?? "?", kind: c.kind ?? "?" }) ?? ""),
         recipes: this.#recipes === at ? recipesFor(kind).map(r => ({ id: r.id, home: at, label: i18n(`midi-qol.Recipe.${r.id}.Label`), hint: i18n(`midi-qol.Recipe.${r.id}.Hint`) })) : undefined,
+        card: h.card ? this.#cardContext(h, at) : undefined,
         sentences: h.drafts.map((draft, index) => {
           const entry = this.#entryForSave(draft);
           const sentence = entrySentence(entry, { home: kind, activities });
@@ -416,9 +426,154 @@ export class EntryEditor extends HandlebarsApplicationMixin(ApplicationV2) {
                 selected: on.includes(choice.event) && (choice.who === undefined || (who ?? (kind === "effect" ? "bearer" : "this")) === choice.who) }))
             })) : undefined
           };
-        })
+        }).filter((_sentence, index) => !(h.card && isBranchEntry(this.#entryForSave(h.drafts[index]))))
       };
     });
+  }
+
+  /* The activity card: what an activity does by itself, by branch, and what was added to each branch */
+
+  /** The activity's own data as stored */
+  #activitySource(h: Home): ActivityData {
+    const source = (h.document as { _source?: ActivityData, type?: string })._source;
+    return foundry.utils.deepClone(source ?? { type: (h.document as { type?: string }).type ?? "" }) as ActivityData;
+  }
+
+  /** The update the card's edits make to the activity (only what changed) */
+  #cardUpdate(h: Home): Record<string, unknown> {
+    return h.card ? activityUpdate(this.#activitySource(h), h.card) : {};
+  }
+
+  /** The activity as it will be once saved */
+  #activityNow(h: Home): ActivityData {
+    const source = this.#activitySource(h);
+    return foundry.utils.mergeObject(source, foundry.utils.expandObject(this.#cardUpdate(h)), { inplace: false }) as ActivityData;
+  }
+
+  #cardText(): CardText {
+    const item = this.#item();
+    const label = (record: Record<string, { label?: string } | string> | undefined, id: string) => {
+      const value = record?.[id];
+      return typeof value === "string" ? value : value?.label ?? id;
+    };
+    return {
+      ability: id => label(CONFIG.DND5E.abilities as Record<string, { label?: string }>, id),
+      damageType: id => label({ ...(CONFIG.DND5E.damageTypes as Record<string, { label?: string }>), ...(CONFIG.DND5E.healingTypes as Record<string, { label?: string }>) }, id),
+      effectName: id => item?.effects.get(id)?.name ?? id,
+      say: (key, data) => {
+        const full = `midi-qol.EntryEditor.${key}`;
+        const known = game.i18n?.has(full) ? full : key.startsWith("Activity.Type.") ? "midi-qol.EntryEditor.Activity.Used" : full;
+        return data ? game.i18n?.format(known, data) ?? known : i18n(known);
+      }
+    };
+  }
+
+  #cardContext(h: Home, at: number) {
+    const data = this.#activityNow(h);
+    const model = activityCard(data, this.#cardText());
+    const activities = [...((this.#item()?.system as { activities?: Iterable<{ id: string, name?: string }> } | undefined)?.activities ?? [])];
+    const chip = (part: BuiltInPart) => ({ ...part, home: at });
+    const branches = model.branches.map(b => {
+      const index = h.drafts.findIndex(d => isBranchEntry(this.#entryForSave(d)) === b.branch);
+      const entry = index >= 0 ? this.#entryForSave(h.drafts[index]) : undefined;
+      const sentence = entry ? entrySentence(entry, { home: "activity", activities }) : undefined;
+      // The branch says when: its own entry's trigger line is left out, its condition kept
+      const condition = sentence?.lines[0]?.parts.slice(2) ?? [];
+      const lines = sentence ? [...(condition.length ? [{ indent: 0, parts: condition }] : []), ...sentence.lines.slice(1)] : [];
+      return {
+        branch: b.branch, home: at, label: i18n(`midi-qol.EntryEditor.ActivityBranch.${b.branch}`),
+        builtIn: b.builtIn.map(chip), nothing: !b.builtIn.length && !lines.length,
+        added: entry ? {
+          index, problems: h.drafts[index].problems,
+          lines: lines.map(line => ({ indent: line.indent * 22, parts: line.parts.map(part => ({ ...part, index, home: at })) })),
+          // Open under the branch in sentences; the form view has its own form
+          expanded: this.#view === "sentence" && this.#expanded && this.#at === at && this.#selected === index
+        } : undefined
+      };
+    });
+    return { home: at, when: model.when.map(chip), branches, open: this.#cardOpen === at ? this.#cardFields(data) : undefined };
+  }
+
+  /** The open card's fields: what can be edited here (the rest on the activity's sheet) */
+  #cardFields(data: ActivityData) {
+    const abilities = Object.entries(CONFIG.DND5E.abilities as Record<string, { label?: string }>).map(([id, a]) => ({ id, label: a.label ?? id }));
+    const damageTypes = Object.entries({ ...(CONFIG.DND5E.damageTypes as Record<string, { label?: string }>) }).map(([id, t]) => ({ id, label: t.label ?? id }));
+    const healingTypes = Object.entries({ ...(CONFIG.DND5E.healingTypes as Record<string, { label?: string }>) }).map(([id, t]) => ({ id, label: t.label ?? id }));
+    const option = (value: string, label: string, selected: boolean) => ({ value, label, selected });
+    const save = data.type === "save";
+    const calculation = data.save?.dc?.calculation ?? "";
+    return {
+      save: save ? {
+        abilities: abilities.map(a => option(a.id, a.label, (data.save?.ability ?? []).includes(a.id))),
+        calculations: [option("spellcasting", i18n("midi-qol.EntryEditor.Activity.DCField.spellcasting"), calculation === "spellcasting"),
+          ...abilities.map(a => option(a.id, a.label, calculation === a.id)),
+          option("", i18n("midi-qol.EntryEditor.Activity.DCField.custom"), calculation === "")],
+        custom: calculation === "", formula: data.save?.dc?.formula ?? "",
+        onSave: (data.damage?.parts?.length ?? 0) ? ["half", "none", "full"].map(v => option(v, i18n(`midi-qol.EntryEditor.Activity.OnSave.${v}`), (data.damage?.onSave ?? "half") === v)) : undefined
+      } : undefined,
+      parts: data.damage ? (data.damage.parts ?? []).map((part, i) => ({ i, formula: partFormula(part),
+        types: [option("", "—", !(part.types ?? []).length), ...damageTypes.map(t => option(t.id, t.label, (part.types ?? [])[0] === t.id))] })) : undefined,
+      healing: data.healing ? { formula: partFormula(data.healing), types: [option("", "—", !(data.healing.types ?? []).length), ...healingTypes.map(t => option(t.id, t.label, (data.healing!.types ?? [])[0] === t.id))] } : undefined,
+      effects: save ? (data.effects ?? []).map(e => ({ id: e._id, name: this.#cardText().effectName(e._id), onSave: !!e.onSave })) : undefined
+    };
+  }
+
+  /** The open card's fields read into its edits */
+  #readCard(data: Record<string, unknown>) {
+    const h = this.#cardOpen === undefined ? undefined : this.#homes[this.#cardOpen];
+    if (!h?.card || !Object.keys(data).some(k => k.startsWith("card."))) return;
+    const now = this.#activityNow(h);
+    const edits = h.card;
+    if ("card.saveAbility" in data) edits.saveAbility = ([] as unknown[]).concat(data["card.saveAbility"] ?? []).map(String).filter(Boolean);
+    if ("card.dcCalculation" in data) edits.dcCalculation = String(data["card.dcCalculation"] ?? "");
+    if ("card.dcFormula" in data) edits.dcFormula = String(data["card.dcFormula"] ?? "");
+    if ("card.onSave" in data) edits.onSave = String(data["card.onSave"] ?? "half");
+    const parts = (now.damage?.parts ?? []).map((part, i) => ({
+      formula: String(data[`card.part.${i}.formula`] ?? partFormula(part)), type: String(data[`card.part.${i}.type`] ?? (part.types ?? [])[0] ?? "")
+    }));
+    if (parts.length) edits.parts = parts;
+    if (now.healing && "card.healing.formula" in data) edits.healing = { formula: String(data["card.healing.formula"] ?? ""), type: String(data["card.healing.type"] ?? "") };
+    const onSave: Record<string, boolean> = {};
+    for (const e of now.effects ?? []) if (`card.effect.${e._id}` in data) onSave[e._id] = !!data[`card.effect.${e._id}`];
+    if (Object.keys(onSave).length) edits.effectsOnSave = { ...edits.effectsOnSave, ...onSave };
+  }
+
+  /** A built-in part clicked: the card's fields open (closed again by the same part) */
+  static #onEditActivity(this: EntryEditor, _event: Event, target: HTMLElement) {
+    const at = Number(target.dataset.home ?? this.#at);
+    this.#cardOpen = this.#cardOpen === at && !target.dataset.field ? undefined : at;
+    if (target.dataset.field) this.#focus = `card.${target.dataset.field === "save" ? "saveAbility" : target.dataset.field === "dc" ? "dcCalculation" : target.dataset.field.startsWith("part.") ? `${target.dataset.field}.formula` : target.dataset.field.startsWith("effect.") ? target.dataset.field : target.dataset.field === "healing" ? "healing.formula" : "saveAbility"}`;
+    this.render();
+  }
+
+  /** An action added to a branch: into the branch's own entry, made when it has none */
+  static #onAddToBranch(this: EntryEditor, _event: Event, target: HTMLElement) {
+    this.#goHome(target);
+    const branch = target.dataset.branch as ActivityBranch;
+    if (!(branch in BRANCH_EVENT)) return;
+    let index = this.#drafts.findIndex(d => isBranchEntry(this.#entryForSave(d)) === branch);
+    if (index < 0) {
+      this.#drafts.push(this.#draftOf({ id: branchEntryId(branch), on: BRANCH_EVENT[branch], do: [] }));
+      index = this.#drafts.length - 1;
+    }
+    this.#selected = index;
+    this.#expanded = true;
+    this.#picker = undefined;
+    this.#recipes = undefined;
+    this.#changeActions(list => list.push({ damage: "1d6", type: "fire" }));
+  }
+
+  static #onAddDamagePart(this: EntryEditor, _event: Event, target: HTMLElement) {
+    const h = this.#homes[Number(target.dataset.home ?? this.#at)];
+    if (!h?.card) return;
+    const now = this.#activityNow(h);
+    h.card.parts = [...(now.damage?.parts ?? []).map(part => ({ formula: partFormula(part), type: (part.types ?? [])[0] ?? "" })), { formula: "1d6", type: "" }];
+    this.render();
+  }
+
+  static #onOpenActivitySheet(this: EntryEditor, _event: Event, target: HTMLElement) {
+    const activity = this.#homes[Number(target.dataset.home ?? this.#at)]?.document as { sheet?: { render(options: object): unknown } };
+    activity?.sheet?.render({ force: true });
   }
 
   async _onRender(context: object, options: object) {
@@ -670,9 +825,10 @@ export class EntryEditor extends HandlebarsApplicationMixin(ApplicationV2) {
 
   static async #onChange(this: EntryEditor, _event: Event, _form: HTMLFormElement, formData: foundry.applications.ux.FormDataExtended) {
     const draft = this.#drafts[this.#selected];
-    // The sentence view's only fields are the entry open under its sentence
-    if (this.#view === "sentence" && !this.#expanded) return;
     const data = formData.object as Record<string, unknown>;
+    this.#readCard(data);
+    // The sentence view's other fields are the entry open under its sentence
+    if (this.#view === "sentence" && !this.#expanded) return void this.render();
     const home = this.#homes[this.#at];
     if (typeof data.homeChoices === "string" && home.choices !== undefined) {
       home.choices = data.homeChoices;
@@ -939,6 +1095,8 @@ export class EntryEditor extends HandlebarsApplicationMixin(ApplicationV2) {
       const changes: Record<string, unknown> = {};
       if (JSON.stringify(entries) !== home.stored) changes[home.kind === "activity" ? "midiEntries" : `flags.${MODULE_ID}.entries`] = entries;
       if (home.choices !== home.choicesStored) changes.midiChoices = JSON.parse(home.choices || "[]");
+      // The card's edits are the activity's own data (paths relative to the activity)
+      Object.assign(changes, this.#cardUpdate(home));
       if (Object.keys(changes).length) await home.document.update(changes);
     }
     this.#saved = true;

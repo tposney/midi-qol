@@ -1,0 +1,86 @@
+<div class="midi-qol-activity-card">
+    <div class="midi-qol-entry-line midi-qol-activity-when">
+        <span>{{localize "midi-qol.EntryEditor.Activity.When"}}</span>
+        {{#each when}}<button type="button" class="midi-qol-entry-chip builtin" data-action="editActivity" data-home="{{home}}" data-field="{{field}}">{{text}}</button> {{/each}}
+        <span class="midi-qol-entry-views-gap"></span>
+        <button type="button" class="midi-qol-activity-sheet" data-action="openActivitySheet" data-home="{{home}}" data-tooltip="{{localize "midi-qol.EntryEditor.Activity.Sheet"}}" aria-label="{{localize "midi-qol.EntryEditor.Activity.Sheet"}}"><i class="fa-solid fa-up-right-from-square"></i></button>
+    </div>
+    {{#each branches}}
+    <div class="midi-qol-activity-branch" data-branch="{{branch}}">
+        <div class="midi-qol-entry-line midi-qol-activity-branch-line">
+            <strong>{{label}}</strong>
+            {{#each builtIn}}<button type="button" class="midi-qol-entry-chip builtin" data-action="editActivity" data-home="{{home}}" data-field="{{field}}">{{text}}</button>{{#unless @last}}, {{/unless}}{{/each}}
+            {{#if nothing}}<span class="hint">{{localize "midi-qol.EntryEditor.Activity.Nothing"}}</span>{{/if}}
+            <button type="button" class="midi-qol-branch-add" data-action="addToBranch" data-home="{{home}}" data-branch="{{branch}}" data-tooltip="{{localize "midi-qol.EntryEditor.Activity.Add"}}" aria-label="{{localize "midi-qol.EntryEditor.Activity.Add"}}"><i class="fa-solid fa-plus"></i></button>
+        </div>
+        {{#if added}}
+        <div class="midi-qol-entry-sentence-row midi-qol-branch-added {{#if added.problems.length}}invalid{{/if}}">
+            <div class="midi-qol-entry-lines">
+                {{#each added.lines}}
+                <div class="midi-qol-entry-line" style="padding-left: {{indent}}px">{{#each parts}}{{#if kind}}<button type="button" class="midi-qol-entry-chip {{kind}} {{#if code}}code{{/if}}" data-action="focusPart" data-home="{{home}}" data-index="{{index}}" data-focus="{{focus}}">{{text}}</button>{{else}}<span>{{text}}</span>{{/if}} {{/each}}</div>
+                {{/each}}
+                {{#if added.problems.length}}<ul class="midi-qol-entry-problems">{{#each added.problems}}<li>{{this}}</li>{{/each}}</ul>{{/if}}
+            </div>
+            <button type="button" class="midi-qol-entry-edit" data-action="editEntry" data-home="{{home}}" data-index="{{added.index}}" data-tooltip="{{localize "midi-qol.EntryEditor.Edit"}}" aria-label="{{localize "midi-qol.EntryEditor.Edit"}}" aria-expanded="{{#if added.expanded}}true{{else}}false{{/if}}"><i class="fa-solid {{#if added.expanded}}fa-chevron-up{{else}}fa-pen{{/if}}"></i></button>
+        </div>
+        {{#if added.expanded}}
+        <div class="midi-qol-entry-inline">
+        {{> "modules/midi-qol/templates/apps/EntryEditor/entryForm.hbs" @root}}
+        </div>
+        {{/if}}
+        {{/if}}
+    </div>
+    {{/each}}
+    {{#with open}}
+    <fieldset class="midi-qol-activity-fields">
+        <legend>{{localize "midi-qol.EntryEditor.Activity.Fields"}}</legend>
+        {{#if save}}
+        <div class="form-group">
+            <label>{{localize "midi-qol.EntryEditor.Activity.SaveField"}}</label>
+            <div class="form-fields"><select name="card.saveAbility" multiple>{{#each save.abilities}}<option value="{{value}}" {{#if selected}}selected{{/if}}>{{label}}</option>{{/each}}</select></div>
+        </div>
+        <div class="form-group">
+            <label>{{localize "midi-qol.EntryEditor.Activity.DCField.label"}}</label>
+            <div class="form-fields">
+                <select name="card.dcCalculation">{{#each save.calculations}}<option value="{{value}}" {{#if selected}}selected{{/if}}>{{label}}</option>{{/each}}</select>
+                {{#if save.custom}}<input type="text" name="card.dcFormula" value="{{save.formula}}" placeholder="15">{{/if}}
+            </div>
+        </div>
+        {{#if save.onSave}}
+        <div class="form-group">
+            <label>{{localize "midi-qol.EntryEditor.Activity.OnSave.label"}}</label>
+            <div class="form-fields"><select name="card.onSave">{{#each save.onSave}}<option value="{{value}}" {{#if selected}}selected{{/if}}>{{label}}</option>{{/each}}</select></div>
+        </div>
+        {{/if}}
+        {{/if}}
+        {{#if parts}}
+        {{#each parts}}
+        <div class="form-group">
+            <label>{{localize "midi-qol.EntryEditor.Activity.DamageField"}}</label>
+            <div class="form-fields">
+                <input type="text" name="card.part.{{i}}.formula" value="{{formula}}">
+                <select name="card.part.{{i}}.type">{{#each types}}<option value="{{value}}" {{#if selected}}selected{{/if}}>{{label}}</option>{{/each}}</select>
+            </div>
+        </div>
+        {{/each}}
+        <button type="button" data-action="addDamagePart" data-home="{{../home}}"><i class="fa-solid fa-plus"></i> {{localize "midi-qol.EntryEditor.Activity.AddDamage"}}</button>
+        {{/if}}
+        {{#if healing}}
+        <div class="form-group">
+            <label>{{localize "midi-qol.EntryEditor.Activity.HealingField"}}</label>
+            <div class="form-fields">
+                <input type="text" name="card.healing.formula" value="{{healing.formula}}">
+                <select name="card.healing.type">{{#each healing.types}}<option value="{{value}}" {{#if selected}}selected{{/if}}>{{label}}</option>{{/each}}</select>
+            </div>
+        </div>
+        {{/if}}
+        {{#each effects}}
+        <div class="form-group">
+            <label>{{name}}</label>
+            <div class="form-fields"><label class="checkbox"><input type="checkbox" name="card.effect.{{id}}" {{#if onSave}}checked{{/if}}> {{localize "midi-qol.EntryEditor.Activity.EffectOnSave"}}</label></div>
+        </div>
+        {{/each}}
+        <p class="hint">{{localize "midi-qol.EntryEditor.Activity.FieldsHint"}}</p>
+    </fieldset>
+    {{/with}}
+</div>

@@ -27,6 +27,8 @@ interface EventAt {
   eventId: string;
   /** For each of these targets (a target event); a use event when absent */
   targets?: TargetsOf;
+  /** With `targets`: the user's event about each target (the use's own entries run, the target as `target`) */
+  asUse?: boolean;
   when?: (workflow: Workflow) => boolean;
 }
 
@@ -36,6 +38,9 @@ const hitTargets: TargetsOf = w => [...new Set([...documents(w.hitTargets), ...d
 const attacks = (w: Workflow) => !!w.activity?.attack;
 // @ts-expect-error item.type includes dnd5e subtypes
 const casts = (w: Workflow) => w.item?.type === "spell";
+const missedTargets: TargetsOf = w => { const hit = new Set(hitTargets(w)); return allTargets(w).filter(t => !hit.has(t)); };
+const failedTargets: TargetsOf = w => documents(w.failedSaves);
+const savedTargets: TargetsOf = w => documents(w.saves);
 
 /** The events each step pass raises, by "pre"/"post" and step id */
 const USE_EVENTS: Record<string, EventAt[]> = {
@@ -49,13 +54,19 @@ const USE_EVENTS: Record<string, EventAt[]> = {
   // reactions, so they share its prompt (lib/entries/responseEvents.ts)
   "post midi-qol.AttackRollComplete": [
     { eventId: "use.hit", when: w => attacks(w) && hitTargets(w).length > 0 },
-    { eventId: "use.missed", when: w => attacks(w) && !!w.attackRoll && hitTargets(w).length === 0 }
+    { eventId: "use.missed", when: w => attacks(w) && !!w.attackRoll && hitTargets(w).length === 0 },
+    { eventId: "use.target.hit", targets: hitTargets, asUse: true, when: attacks },
+    { eventId: "use.target.missed", targets: missedTargets, asUse: true, when: w => attacks(w) && !!w.attackRoll }
   ],
   "pre midi-qol.DamageRollStarted": [{ eventId: "use.damageRoll" }],
   "post midi-qol.DamageRollComplete": [{ eventId: "use.damageRolled" }],
   "pre midi-qol.WaitForSaves": [{ eventId: "use.saves", when: w => !!w.saveActivity }],
+  "post midi-qol.SavesComplete": [
+    { eventId: "use.target.saveFailed", targets: failedTargets, asUse: true, when: w => !!w.saveActivity },
+    { eventId: "use.target.saveSucceeded", targets: savedTargets, asUse: true, when: w => !!w.saveActivity }
+  ],
   "pre midi-qol.ApplyDynamicEffects": [{ eventId: "use.effects" }],
-  "post midi-qol.RollFinished": [{ eventId: "use.end" }]
+  "post midi-qol.RollFinished": [{ eventId: "use.end" }, { eventId: "use.target.each", targets: allTargets, asUse: true }]
 };
 
 const SITE_EVENTS = ["attacked", "hit", "missed", "saveRequested", "saveFailed", "saveSucceeded", "damaging", "healing", "damaged"];
@@ -67,6 +78,11 @@ export function isUseEvent(eventId: string): boolean { return USE_EVENT_IDS.has(
 /** The context of a use event: the user's */
 export function useContext(workflow: Workflow, event: Record<string, unknown> = {}): EventContext {
   return { actor: workflow.actor, workflow, activity: workflow.activity as Activity, item: workflow.item, event };
+}
+
+/** The context of the user's event about one target (use.target.*): the use's own entries run, the target as `target` */
+export function useTargetContext(workflow: Workflow, target: TokenDocument.Implementation, event: Record<string, unknown> = {}): EventContext {
+  return { ...useContext(workflow, { ...event, target: target.actor, targetToken: target }), target };
 }
 
 /** The context of a target event: the target is the actor; the user's use is `event.use` */
@@ -94,7 +110,7 @@ export async function raiseUseEvents(workflow: Workflow, prePost: "pre" | "post"
       continue;
     }
     for (const target of at.targets(workflow)) {
-      const context = targetContext(workflow, target);
+      const context = at.asUse ? useTargetContext(workflow, target) : targetContext(workflow, target);
       if (context && anyEntries(at.eventId, context)) await runEvent(at.eventId, context);
     }
   }
@@ -419,6 +435,11 @@ export function registerUseEvents() {
   registerEvent("use.saves", { label: "Before the use's targets are asked to save" });
   registerEvent("use.effects", { label: "Before the use's effects are applied" });
   registerEvent("use.end", { label: "The use finished" });
+  registerEvent("use.target.hit", { label: "Each target the use's attack hit (the use's own entries; the target as target)" });
+  registerEvent("use.target.missed", { label: "Each target the use's attack missed" });
+  registerEvent("use.target.saveFailed", { label: "Each target that failed its save against the use" });
+  registerEvent("use.target.saveSucceeded", { label: "Each target that made its save against the use" });
+  registerEvent("use.target.each", { label: "Each of the use's targets, once the use is done" });
   registerEvent("targeted", { label: "The bearer is targeted by a use" });
   registerEvent("attacked", { label: "The bearer is attacked: the roll is made, the result not yet known" });
   registerEvent("hit", { label: "The bearer is hit by an attack" });
