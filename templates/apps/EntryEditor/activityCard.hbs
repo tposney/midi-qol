@@ -92,7 +92,7 @@
             <label>{{localize "midi-qol.EntryEditor.Activity.DamageField"}}</label>
             <div class="form-fields">
                 <input type="text" name="card.part.{{i}}.formula" value="{{formula}}">
-                <select name="card.part.{{i}}.type">{{#each types}}<option value="{{value}}" {{#if selected}}selected{{/if}}>{{label}}</option>{{/each}}</select>
+                <select name="card.part.{{i}}.types" multiple class="midi-qol-entry-multiselect">{{#each types}}<option value="{{value}}" {{#if selected}}selected{{/if}}>{{label}}</option>{{/each}}</select>
             </div>
         </div>
         {{/each}}
@@ -103,7 +103,7 @@
             <label>{{localize "midi-qol.EntryEditor.Activity.HealingField"}}</label>
             <div class="form-fields">
                 <input type="text" name="card.healing.formula" value="{{healing.formula}}">
-                <select name="card.healing.type">{{#each healing.types}}<option value="{{value}}" {{#if selected}}selected{{/if}}>{{label}}</option>{{/each}}</select>
+                <select name="card.healing.types" multiple class="midi-qol-entry-multiselect">{{#each healing.types}}<option value="{{value}}" {{#if selected}}selected{{/if}}>{{label}}</option>{{/each}}</select>
             </div>
         </div>
         {{/if}}

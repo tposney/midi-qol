@@ -3103,6 +3103,7 @@
   "midi-qol.Entries.Field.spellLevel": "Spell level (a number, or +1)",
   "midi-qol.Entries.Field.damageTypeFrom": "Damage types changed (comma separated)",
   "midi-qol.Entries.Field.damageTypeTo": "Damage type they become",
+  "midi-qol.Entries.Option.none": "none (moved in full, no resistance)",
   "midi-qol.Entries.Field.damageDie": "Damage dice become d (before the damage roll)",
   "midi-qol.BonusPrompt.Targets": "Targets (up to {max})",
   "midi-qol.BonusApproval.Title": "Use your bonus?",

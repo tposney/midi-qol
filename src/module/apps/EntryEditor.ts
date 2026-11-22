@@ -574,8 +574,9 @@ export class EntryEditor extends HandlebarsApplicationMixin(ApplicationV2) {
   /** The open card's fields: what can be edited here (the rest on the activity's sheet) */
   #cardFields(data: ActivityData) {
     const abilities = Object.entries(CONFIG.DND5E.abilities as Record<string, { label?: string }>).map(([id, a]) => ({ id, label: a.label ?? id }));
-    const damageTypes = Object.entries({ ...(CONFIG.DND5E.damageTypes as Record<string, { label?: string }>) }).map(([id, t]) => ({ id, label: t.label ?? id }));
-    const healingTypes = Object.entries({ ...(CONFIG.DND5E.healingTypes as Record<string, { label?: string }>) }).map(([id, t]) => ({ id, label: t.label ?? id }));
+    // dnd5e's lists as midi's entryOptions gives them (modules' types included)
+    const damageTypes = optionList("damageTypes").map(o => ({ id: o.value, label: o.label }));
+    const healingTypes = optionList("healingTypes").map(o => ({ id: o.value, label: o.label }));
     const option = (value: string, label: string, selected: boolean) => ({ value, label, selected });
     const save = data.type === "save";
     const check = data.type === "check";
@@ -597,8 +598,8 @@ export class EntryEditor extends HandlebarsApplicationMixin(ApplicationV2) {
         onSave: (data.damage?.parts?.length ?? 0) ? ["half", "none", "full"].map(v => option(v, i18n(`midi-qol.EntryEditor.Activity.OnSave.${v}`), (data.damage?.onSave ?? "half") === v)) : undefined
       } : undefined,
       parts: data.damage ? (data.damage.parts ?? []).map((part, i) => ({ i, formula: partFormula(part),
-        types: [option("", "—", !(part.types ?? []).length), ...damageTypes.map(t => option(t.id, t.label, (part.types ?? [])[0] === t.id))] })) : undefined,
-      healing: data.healing ? { formula: partFormula(data.healing), types: [option("", "—", !(data.healing.types ?? []).length), ...healingTypes.map(t => option(t.id, t.label, (data.healing!.types ?? [])[0] === t.id))] } : undefined,
+        types: damageTypes.map(t => option(t.id, t.label, (part.types ?? []).includes(t.id))) })) : undefined,
+      healing: data.healing ? { formula: partFormula(data.healing), types: healingTypes.map(t => option(t.id, t.label, (data.healing!.types ?? []).includes(t.id))) } : undefined,
       effects: save ? (data.effects ?? []).map(e => ({ id: e._id, name: this.#cardText().effectName(e._id), onSave: !!e.onSave })) : undefined
     };
   }
@@ -617,11 +618,12 @@ export class EntryEditor extends HandlebarsApplicationMixin(ApplicationV2) {
     if ("card.dcCalculation" in data) edits.dcCalculation = String(data["card.dcCalculation"] ?? "");
     if ("card.dcFormula" in data) edits.dcFormula = String(data["card.dcFormula"] ?? "");
     if ("card.onSave" in data) edits.onSave = String(data["card.onSave"] ?? "half");
+    const typesOf = (key: string, fallback: string[] | undefined) => key in data ? ([] as unknown[]).concat(data[key] ?? []).map(String).filter(Boolean) : [...(fallback ?? [])];
     const parts = (now.damage?.parts ?? []).map((part, i) => ({
-      formula: String(data[`card.part.${i}.formula`] ?? partFormula(part)), type: String(data[`card.part.${i}.type`] ?? (part.types ?? [])[0] ?? "")
+      formula: String(data[`card.part.${i}.formula`] ?? partFormula(part)), types: typesOf(`card.part.${i}.types`, part.types)
     }));
     if (parts.length) edits.parts = parts;
-    if (now.healing && "card.healing.formula" in data) edits.healing = { formula: String(data["card.healing.formula"] ?? ""), type: String(data["card.healing.type"] ?? "") };
+    if (now.healing && "card.healing.formula" in data) edits.healing = { formula: String(data["card.healing.formula"] ?? ""), types: typesOf("card.healing.types", now.healing.types) };
     const onSave: Record<string, boolean> = {};
     for (const e of now.effects ?? []) if (`card.effect.${e._id}` in data) onSave[e._id] = !!data[`card.effect.${e._id}`];
     if (Object.keys(onSave).length) edits.effectsOnSave = { ...edits.effectsOnSave, ...onSave };
@@ -656,7 +658,7 @@ export class EntryEditor extends HandlebarsApplicationMixin(ApplicationV2) {
     const h = this.#homes[Number(target.dataset.home ?? this.#at)];
     if (!h?.card) return;
     const now = this.#activityNow(h);
-    h.card.parts = [...(now.damage?.parts ?? []).map(part => ({ formula: partFormula(part), type: (part.types ?? [])[0] ?? "" })), { formula: "1d6", type: "" }];
+    h.card.parts = [...(now.damage?.parts ?? []).map(part => ({ formula: partFormula(part), types: [...(part.types ?? [])] })), { formula: "1d6", types: [] }];
     this.render();
   }
 
@@ -747,10 +749,11 @@ export class EntryEditor extends HandlebarsApplicationMixin(ApplicationV2) {
   /** The choices of a field shown as a select; undefined for the others */
   #fieldOptions(field: ActionField): FieldOption[] | undefined {
     switch (field.type) {
-      case "select": {
+      case "select":
+      case "multiselect": {
         const options = field.options;
         if (typeof options === "function") return [...options()];
-        if (options && "list" in options) return optionList(options.list);
+        if (options && "list" in options) return [...(options.include ?? []).map(value => ({ value, label: i18n(`midi-qol.Entries.Option.${value}`) })), ...optionList(options.list)];
         return (options ?? []).map(v => ({ value: v, label: v || i18n("midi-qol.EntryEditor.Default") }));
       }
       case "activity": return this.#activityOptions();
@@ -769,6 +772,13 @@ export class EntryEditor extends HandlebarsApplicationMixin(ApplicationV2) {
     const value = getByPath(action, field.path);
     const name = `act.${path}.f.${field.path}`;
     if (field.type === "rollSpec") return { name, label: field.label, type: field.type, rollSpec: this.#rollSpecContext(name, value, key === "check") };
+    if (field.type === "multiselect") {
+      const chosen = [value ?? []].flat().map(String);
+      const options = this.#fieldOptions(field) ?? [];
+      // A value the list doesn't know (an old custom type) stays chosen and shown
+      const unknown = chosen.filter(v => !options.some(o => o.value === v)).map(v => ({ value: v, label: `${v} ?` }));
+      return { name, label: field.label, type: "multiselect", options: [...options, ...unknown].map(o => ({ ...o, selected: chosen.includes(o.value) })) };
+    }
     const options = this.#fieldOptions(field);
     const shown = shownValue(field, value, options);
     const widget = options ? "select" : shown.custom ? "text" : ["boolean", "number", "condition"].includes(field.type) ? field.type : "text";
@@ -838,6 +848,14 @@ export class EntryEditor extends HandlebarsApplicationMixin(ApplicationV2) {
       for (const field of [...(schema?.fields ?? []), CONDITION_FIELD]) {
         const name = `act.${path}.f.${field.path}`;
         if (field.type === "rollSpec") { this.#readRollSpec(action, field, name, data, key === "check"); continue; }
+        if (field.type === "multiselect") {
+          if (!(name in data)) continue;
+          const chosen = ([] as unknown[]).concat(data[name] ?? []).map(String).filter(Boolean);
+          if (JSON.stringify(chosen) === JSON.stringify([getByPath(before, field.path) ?? []].flat().map(String))) continue;
+          if (chosen.length) setByPath(action, field.path, chosen);
+          else deleteByPath(action, field.path);
+          continue;
+        }
         if (!(name in data) && field.type !== "boolean") continue;
         const shown = shownValue(field, getByPath(before, field.path), this.#fieldOptions(field));
         const submitted = field.type === "boolean" ? !!data[name] : String(data[name] ?? "");

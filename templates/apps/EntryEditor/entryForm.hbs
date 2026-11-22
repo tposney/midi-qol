@@ -79,7 +79,8 @@
                 {{/if}}
                 {{else}}
                 <div class="form-group"><label>{{localize label}}</label>
-                    {{#if (eq type "select")}}<select name="{{name}}">{{#each options}}<option value="{{value}}" {{#if selected}}selected{{/if}}>{{label}}</option>{{/each}}</select>
+                    {{#if (eq type "multiselect")}}<select name="{{name}}" multiple class="midi-qol-entry-multiselect">{{#each options}}<option value="{{value}}" {{#if selected}}selected{{/if}}>{{label}}</option>{{/each}}</select>
+                    {{else if (eq type "select")}}<select name="{{name}}">{{#each options}}<option value="{{value}}" {{#if selected}}selected{{/if}}>{{label}}</option>{{/each}}</select>
                     {{else if (eq type "boolean")}}<input type="checkbox" name="{{name}}" {{#if checked}}checked{{/if}}>
                     {{else if (eq type "number")}}<input type="number" name="{{name}}" value="{{value}}">
                     {{else if (eq type "condition")}}<input type="text" name="{{name}}" value="{{value}}"><button type="button" class="midi-qol-entry-condition" data-action="editCondition" data-field="{{name}}" data-tooltip="{{localize "midi-qol.EntryEditor.EditCondition"}}"><i class="fa-solid fa-code"></i></button>

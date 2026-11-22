@@ -77,9 +77,12 @@ export interface ActionField {
    * tristate: yes / no / unset (a false that means something); pairs: a map of names to values ("destroyed: +1");
    * effectRef: a status, one of the item's effects, or everything the item applied
    */
-  type: "string" | "formula" | "number" | "boolean" | "select" | "list" | "rollSpec" | "activity" | "condition" | "tristate" | "pairs" | "effectRef";
-  /** select: its values, a function giving them, or a named list (entryOptions: modules add to it) */
-  options?: readonly string[] | (() => readonly { value: string, label: string }[]) | { list: string };
+  type: "string" | "formula" | "number" | "boolean" | "select" | "multiselect" | "list" | "rollSpec" | "activity" | "condition" | "tristate" | "pairs" | "effectRef";
+  /**
+   * select / multiselect: its values, a function giving them, or a named list (entryOptions: modules add to it), with
+   * `include` values of the field's own before it (worded midi-qol.Entries.Option.<value>)
+   */
+  options?: readonly string[] | (() => readonly { value: string, label: string }[]) | { list: string, include?: readonly string[] };
   /** string / formula / pairs: a value that reads as a number is stored as one */
   numeric?: boolean;
 }

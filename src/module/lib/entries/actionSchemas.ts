@@ -36,7 +36,7 @@ export function registerMidiActionSchemas() {
     { path: "damageChange.stage", label: "midi-qol.Entries.Field.stage", type: "select", options: ["bonus", "flatReduction", "percentReduction", "complete"] },
     { path: "damageChange.amount", label: "midi-qol.Entries.Field.amount", type: "formula" },
     { path: "damageChange.multiplier", label: "midi-qol.Entries.Field.multiplier", type: "formula", numeric: true },
-    { path: "damageChange.types", label: "midi-qol.Entries.Field.types", type: "list" },
+    { path: "damageChange.types", label: "midi-qol.Entries.Field.types", type: "multiselect", options: { list: "damageTypes" } },
     { path: "for", label: "midi-qol.Entries.Field.for", type: "string" }, LABEL], initial: { stage: "flatReduction" } });
   setActionSchema("effect", { fields: [
     { path: "effect", label: "midi-qol.Entries.Field.effectMode", type: "select", options: ["apply", "remove"] },
@@ -51,7 +51,7 @@ export function registerMidiActionSchemas() {
     { path: "transfer.to", label: "midi-qol.Entries.Field.to", type: "select", options: ["origin", "bearer", "pool"] },
     { path: "transfer.amount", label: "midi-qol.Entries.Field.amount", type: "string" },
     { path: "transfer.keep", label: "midi-qol.Entries.Field.keep", type: "boolean" },
-    { path: "transfer.type", label: "DND5E.DamageType", type: "string" }, LABEL], initial: { to: "origin" } });
+    { path: "transfer.type", label: "DND5E.DamageType", type: "select", options: { list: "damageTypes", include: ["none"] } }, LABEL], initial: { to: "origin" } });
   const BY: ActionField = { path: "by", label: "midi-qol.Entries.Field.by", type: "select", options: ["", "attacker", "bearer"] };
   setActionSchema("save", { fields: [
     { path: "save", label: "midi-qol.Entries.Field.save", type: "rollSpec" }, BY,
@@ -87,7 +87,7 @@ export function registerMidiActionSchemas() {
     { path: "change.components", label: "midi-qol.Entries.Field.components", type: "list" },
     { path: "change.school", label: "midi-qol.Entries.Field.school", type: "select", options: { list: "spellSchools" } },
     { path: "change.spellLevel", label: "midi-qol.Entries.Field.spellLevel", type: "formula" },
-    { path: "change.damageType.from", label: "midi-qol.Entries.Field.damageTypeFrom", type: "list" },
-    { path: "change.damageType.to", label: "midi-qol.Entries.Field.damageTypeTo", type: "string" },
+    { path: "change.damageType.from", label: "midi-qol.Entries.Field.damageTypeFrom", type: "multiselect", options: { list: "damageTypes" } },
+    { path: "change.damageType.to", label: "midi-qol.Entries.Field.damageTypeTo", type: "select", options: { list: "damageTypes" } },
     { path: "change.damageDie", label: "midi-qol.Entries.Field.damageDie", type: "number" }], initial: {} });
 }

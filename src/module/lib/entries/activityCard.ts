@@ -194,8 +194,9 @@ export interface CardEdits {
   dcCalculation?: string;
   dcFormula?: string;
   onSave?: string;
-  parts?: { formula: string, type: string }[];
-  healing?: { formula: string, type: string };
+  /** A part's formula and its damage types (several: the roller chooses one, as dnd5e's sheet sets them) */
+  parts?: { formula: string, types: string[] }[];
+  healing?: { formula: string, types: string[] };
   effectsOnSave?: Record<string, boolean>;
 }
 
@@ -216,14 +217,14 @@ export function activityUpdate(data: ActivityData, edits: CardEdits): Record<str
       const edit = edits.parts![i];
       if (!edit) return part;
       const next = edit.formula === partFormula(part) ? part : partWithFormula(part, edit.formula);
-      return edit.type && !same([edit.type], part.types ?? []) ? { ...next, types: [edit.type] } : next;
+      return !same(edit.types, part.types ?? []) ? { ...next, types: edit.types } : next;
     });
-    for (const added of edits.parts.slice(parts.length)) if (added.formula.trim()) parts.push(partWithFormula({ types: added.type ? [added.type] : [] }, added.formula));
+    for (const added of edits.parts.slice(parts.length)) if (added.formula.trim()) parts.push(partWithFormula({ types: added.types }, added.formula));
     if (!same(parts, data.damage?.parts ?? [])) update["damage.parts"] = parts;
   }
   if (edits.healing && data.healing) {
     let healing = edits.healing.formula === partFormula(data.healing) ? data.healing : partWithFormula(data.healing, edits.healing.formula);
-    if (edits.healing.type && !same([edits.healing.type], data.healing.types ?? [])) healing = { ...healing, types: [edits.healing.type] };
+    if (!same(edits.healing.types, data.healing.types ?? [])) healing = { ...healing, types: edits.healing.types };
     if (!same(healing, data.healing)) update.healing = healing;
   }
   if (edits.effectsOnSave) {
