@@ -59,11 +59,11 @@
     {{#each branches}}
     <div class="midi-qol-activity-branch" data-branch="{{branch}}">
         <div class="midi-qol-entry-line midi-qol-activity-branch-line">
-            <strong>{{label}}</strong>
+            <span class="midi-qol-branch-what"><strong>{{label}}</strong>
             {{#each builtIn}}<button type="button" class="midi-qol-entry-chip builtin" data-action="editActivity" data-home="{{home}}" data-field="{{field}}" data-place="{{../branch}}">{{text}}</button>{{#unless @last}}, {{/unless}}{{/each}}
-            {{#if nothing}}<span class="hint">{{localize "midi-qol.EntryEditor.Activity.Nothing"}}</span>{{/if}}
-            <button type="button" class="midi-qol-branch-add" data-action="editActivity" data-home="{{home}}" data-field="newEffect" data-place="{{branch}}" data-tooltip="{{localize "midi-qol.EntryEditor.Activity.AddEffect"}}" aria-label="{{localize "midi-qol.EntryEditor.Activity.AddEffect"}}"><i class="fa-solid fa-wand-sparkles"></i></button>
-            <button type="button" class="midi-qol-branch-add midi-qol-branch-add-action" data-action="addToBranch" data-home="{{home}}" data-branch="{{branch}}" data-tooltip="{{localize "midi-qol.EntryEditor.Activity.Add"}}" aria-label="{{localize "midi-qol.EntryEditor.Activity.Add"}}"><i class="fa-solid fa-plus"></i></button>
+            {{#if nothing}}<span class="hint">{{localize "midi-qol.EntryEditor.Activity.Nothing"}}</span>{{/if}}</span>
+            <span class="midi-qol-branch-buttons"><button type="button" class="midi-qol-branch-add" data-action="editActivity" data-home="{{home}}" data-field="newEffect" data-place="{{branch}}" data-tooltip="{{localize "midi-qol.EntryEditor.Activity.AddEffect"}}" aria-label="{{localize "midi-qol.EntryEditor.Activity.AddEffect"}}"><i class="fa-solid fa-wand-sparkles"></i></button>
+            <button type="button" class="midi-qol-branch-add midi-qol-branch-add-action" data-action="addToBranch" data-home="{{home}}" data-branch="{{branch}}" data-tooltip="{{localize "midi-qol.EntryEditor.Activity.Add"}}" aria-label="{{localize "midi-qol.EntryEditor.Activity.Add"}}"><i class="fa-solid fa-plus"></i></button></span>
         </div>
         {{#if (eq ../popover.place branch)}}
     <div class="midi-qol-card-popover">

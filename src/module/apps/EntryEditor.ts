@@ -432,7 +432,7 @@ export class EntryEditor extends HandlebarsApplicationMixin(ApplicationV2) {
   };
 
   static PARTS = {
-    editor: { template: "modules/midi-qol/templates/apps/EntryEditor/entryEditor.hbs", scrollable: [".midi-qol-entry-list", ".midi-qol-entry-form"] }
+    editor: { template: "modules/midi-qol/templates/apps/EntryEditor/entryEditor.hbs", scrollable: [".midi-qol-entry-sentences", ".midi-qol-entry-list", ".midi-qol-entry-form"] }
   };
 
   get title() {
