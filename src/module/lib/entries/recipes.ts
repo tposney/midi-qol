@@ -1,4 +1,5 @@
 import type { Entry, EntryHome } from "./types.js";
+import { contributedRecipes } from "./editorServices.js";
 
 /*
  * Entry recipes (the entry editor's "Add from a recipe"): the patterns midi's own sample items use, each a starting
@@ -62,12 +63,14 @@ const recipes: Recipe[] = [
   }
 ];
 
+/** midi's recipes and the modules' (entryRecipes), a module's replacing midi's of the same id */
 export function recipesFor(home: EntryHome): Recipe[] {
-  return recipes.filter(recipe => recipe.homes.includes(home));
+  const added = contributedRecipes(home).filter(r => r.homes.includes(home));
+  return [...recipes.filter(r => r.homes.includes(home) && !added.some(a => a.id === r.id)), ...added];
 }
 
 export function recipe(id: string): Recipe | undefined {
-  return recipes.find(r => r.id === id);
+  return (["item", "activity", "effect"] as EntryHome[]).flatMap(home => contributedRecipes(home)).find(r => r.id === id) ?? recipes.find(r => r.id === id);
 }
 
 /** A module's recipe (or a replacement of one of midi's, by id) */

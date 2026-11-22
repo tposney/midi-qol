@@ -1,6 +1,7 @@
 import { ACTIVITY_REF } from "./activityActions.js";
 import { actionKeyOf, actionSchema } from "./engine.js";
 import type { Entry, EntryAction, EntryHome, EntryWho } from "./types.js";
+import { contributedActionText, contributedEventText, contributedTriggerGroups } from "./editorServices.js";
 
 /*
  * An entry read as a sentence (the entry editor's sentence view): "When the bearer is hit, if the attacker is the
@@ -148,8 +149,11 @@ function subject(who: EntryWho | undefined, home: EntryHome, forUse: boolean): s
 
 /** The trigger of one event for a who: "the bearer is hit", "this activity's use hits" */
 export function triggerText(eventId: string, who: EntryWho | undefined, home: EntryHome): string {
+  const s = subject(who, home, USE_EVENT(eventId));
+  const contributed = contributedEventText(eventId, s, home);
+  if (contributed) return contributed;
   if (!has(`Event.${eventId}`)) return eventId;
-  return say(`Event.${eventId}`, { s: subject(who, home, USE_EVENT(eventId)) });
+  return say(`Event.${eventId}`, { s });
 }
 
 function whoText(who: EntryWho | EntryWho[] | undefined, home: EntryHome): string {
@@ -191,6 +195,9 @@ export function actionText(action: EntryAction, context: SentenceContext): strin
   const key = actionKeyOf(action);
   const a = action as Record<string, unknown>;
   const part = (value: unknown) => (value && typeof value === "object" ? value : {}) as Record<string, unknown>;
+  // A module's wording first (entryWording)
+  const contributed = contributedActionText(action, key, context);
+  if (contributed) return contributed;
   switch (key) {
     case "damage":
       if (a.damage === "activity") return say("Action.damageActivity", { to: target(a.to, "target") });
@@ -342,6 +349,9 @@ export function triggerGroups(home: EntryHome, registered: readonly string[]): T
     groups.push(group(say("Group.time"), ["turnStart", "turnEnd", "roundStart"], undefined, true, false));
   }
   groups.push(group(say("Group.other"), ["action", "cover", "perception"], undefined, true, false));
+  // Modules' groups (entryTriggers): only events that are registered
+  for (const added of contributedTriggerGroups(home, registered))
+    groups.push({ label: added.label, choices: added.choices.filter(c => known.has(c.event)) });
   // Anything registered that no group names (a module's event)
   const grouped = new Set(groups.flatMap(g => g.choices.map(c => c.event)));
   const rest = registered.filter(id => !grouped.has(id) && (home === "effect" || !["ended", "originTurnStart", "originTurnEnd"].includes(id)));

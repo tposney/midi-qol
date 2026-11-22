@@ -1,0 +1,129 @@
+import { defineService, entries, register, reportServiceProblem } from "../../api/services.js";
+import type { EntryAction, EntryHome } from "./types.js";
+import type { SentenceContext, TriggerGroup } from "./sentences.js";
+import type { Recipe } from "./recipes.js";
+import { activityCard, type ActivityCardModel, type ActivityData, type CardText } from "./activityCard.js";
+
+/*
+ * The entry editor's vocabulary as contributor services, so modules extend what it offers and how it reads entries the
+ * way they extend the rest of midi (MidiQOL.services.register / wrap). Higher priority is asked first.
+ *
+ *   entryWording   how an action or event reads in the sentence view (the first answer wins; midi's own last)
+ *   entryTriggers  groups of triggers the sentence view's picker offers (after midi's, before "more")
+ *   entryOptions   named option lists fields pick from (`options: { list: "damageTypes" }`); every contributor's values
+ *                  for a list are merged, so a module adds to midi's lists as well as making its own
+ *   activityCards  what an activity type does by itself, for its card (the first contributor for its type, else "*")
+ *   entryRecipes   recipes offered where an entry is added
+ *
+ *   MidiQOL.services.register("entryWording", "my-module", {
+ *     action: (action, key) => key === "myAction" ? `summon ${action.myAction.count} wolves` : undefined
+ *   });
+ *   MidiQOL.services.register("entryOptions", "my-module", { lists: () => ({ damageTypes: [{ value: "sonic", label: "Sonic" }] }) });
+ */
+
+export interface FieldOption { value: string, label: string }
+
+export interface EntryWordingContributor {
+  /** An action in words, or undefined to leave it to others */
+  action?(action: EntryAction, key: string | undefined, context: SentenceContext): string | undefined;
+  /** An event in words; `subject` is who it happens to, already worded ("the bearer", "this activity") */
+  event?(eventId: string, subject: string, home: EntryHome): string | undefined;
+}
+export interface EntryTriggersContributor {
+  groups(home: EntryHome, registered: readonly string[]): readonly TriggerGroup[];
+}
+export interface EntryOptionsContributor {
+  lists(): Record<string, readonly FieldOption[]>;
+}
+export interface ActivityCardsContributor {
+  /** Activity types it reads ("*": any) */
+  types: readonly string[];
+  card(data: ActivityData, text: CardText): ActivityCardModel | undefined;
+}
+export interface EntryRecipesContributor {
+  recipes(home: EntryHome): readonly Recipe[];
+}
+
+declare module "../../api/services.js" {
+  interface MidiServices {
+    entryWording: EntryWordingContributor;
+    entryTriggers: EntryTriggersContributor;
+    entryOptions: EntryOptionsContributor;
+    activityCards: ActivityCardsContributor;
+    entryRecipes: EntryRecipesContributor;
+  }
+}
+
+export function defineEntryEditorServices() {
+  defineService<EntryWordingContributor>("entryWording", { kind: "contributors", description: "How an entry's actions and events read in the entry editor's sentences" });
+  defineService<EntryTriggersContributor>("entryTriggers", { kind: "contributors", description: "Groups of triggers the entry editor's picker offers" });
+  defineService<EntryOptionsContributor>("entryOptions", { kind: "contributors", description: "Named option lists the entry editor's fields pick from (merged across contributors)" });
+  defineService<ActivityCardsContributor>("activityCards", { kind: "contributors", description: "What an activity type does by itself, read as an entry (the entry editor's activity card)" });
+  defineService<EntryRecipesContributor>("entryRecipes", { kind: "contributors", description: "Recipes the entry editor offers where an entry is added" });
+}
+
+/** Each contributor asked in turn (highest priority first); a failing one is reported and skipped */
+function ask<P, R>(serviceId: string, call: (provider: P) => R | undefined): { id: string, result: R }[] {
+  const answers: { id: string, result: R }[] = [];
+  let list: { id: string, provider: P }[];
+  try { list = entries<P>(serviceId); } catch { return answers; }
+  for (const { id, provider } of list) {
+    try {
+      const result = call(provider);
+      if (result !== undefined) answers.push({ id, result });
+    } catch (err) { reportServiceProblem(serviceId, id, "failed and is skipped", err); }
+  }
+  return answers;
+}
+
+export function contributedActionText(action: EntryAction, key: string | undefined, context: SentenceContext): string | undefined {
+  return ask<EntryWordingContributor, string>("entryWording", p => p.action?.(action, key, context))[0]?.result;
+}
+
+export function contributedEventText(eventId: string, subject: string, home: EntryHome): string | undefined {
+  return ask<EntryWordingContributor, string>("entryWording", p => p.event?.(eventId, subject, home))[0]?.result;
+}
+
+export function contributedTriggerGroups(home: EntryHome, registered: readonly string[]): TriggerGroup[] {
+  return ask<EntryTriggersContributor, readonly TriggerGroup[]>("entryTriggers", p => p.groups(home, registered)).flatMap(a => [...a.result]);
+}
+
+/** A named list: every contributor's values, the first label for a value kept */
+export function optionList(listId: string): FieldOption[] {
+  const seen = new Map<string, FieldOption>();
+  for (const { result } of ask<EntryOptionsContributor, readonly FieldOption[]>("entryOptions", p => p.lists()[listId]))
+    for (const option of result) if (!seen.has(option.value)) seen.set(option.value, option);
+  return [...seen.values()];
+}
+
+/** The card for an activity: the first contributor that reads its type, else one that reads any */
+export function contributedActivityCard(data: ActivityData, text: CardText): ActivityCardModel | undefined {
+  const exact = ask<ActivityCardsContributor, ActivityCardModel>("activityCards", p => p.types.includes(data.type) ? p.card(data, text) : undefined)[0];
+  if (exact) return exact.result;
+  return ask<ActivityCardsContributor, ActivityCardModel>("activityCards", p => p.types.includes("*") ? p.card(data, text) : undefined)[0]?.result;
+}
+
+export function contributedRecipes(home: EntryHome): Recipe[] {
+  return ask<EntryRecipesContributor, readonly Recipe[]>("entryRecipes", p => p.recipes(home)).flatMap(a => [...a.result]);
+}
+
+/** dnd5e's config lists, by name */
+const CONFIG_LISTS: Record<string, string> = {
+  damageTypes: "damageTypes", healingTypes: "healingTypes", activationTypes: "activityActivationTypes", spellSchools: "spellSchools",
+  abilities: "abilities", skills: "skills", conditions: "conditionTypes"
+};
+
+/** midi's own contributors: dnd5e's lists and statuses, and the activity card for any type */
+export function registerMidiEditorContributors() {
+  register("entryOptions", "midi-qol.lists", {
+    lists: () => {
+      const dnd5e = CONFIG.DND5E as unknown as Record<string, Record<string, { label?: string } | string> | undefined>;
+      const lists: Record<string, FieldOption[]> = {};
+      for (const [name, key] of Object.entries(CONFIG_LISTS))
+        lists[name] = Object.entries(dnd5e[key] ?? {}).map(([value, data]) => ({ value, label: game.i18n?.localize(typeof data === "string" ? data : data.label ?? value) ?? value }));
+      lists.statuses = CONFIG.statusEffects.filter(s => s.id).map(s => ({ value: s.id, label: game.i18n?.localize(s.name ?? s.id) ?? s.id }));
+      return lists;
+    }
+  }, { label: "Midi-QOL: dnd5e's lists" });
+  register("activityCards", "midi-qol.activities", { types: ["*"], card: activityCard }, { label: "Midi-QOL: activities" });
+}

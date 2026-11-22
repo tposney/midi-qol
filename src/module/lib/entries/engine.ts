@@ -78,8 +78,8 @@ export interface ActionField {
    * effectRef: a status, one of the item's effects, or everything the item applied
    */
   type: "string" | "formula" | "number" | "boolean" | "select" | "list" | "rollSpec" | "activity" | "condition" | "tristate" | "pairs" | "effectRef";
-  /** select: its values, or a function giving them (damage types) */
-  options?: readonly string[] | (() => readonly { value: string, label: string }[]);
+  /** select: its values, a function giving them, or a named list (entryOptions: modules add to it) */
+  options?: readonly string[] | (() => readonly { value: string, label: string }[]) | { list: string };
   /** string / formula / pairs: a value that reads as a number is stored as one */
   numeric?: boolean;
 }

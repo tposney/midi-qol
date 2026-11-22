@@ -7,8 +7,6 @@ import { setActionSchema, type ActionField } from "./engine.js";
  */
 
 const dnd5e = () => (CONFIG as unknown as { DND5E?: Record<string, Record<string, { label?: string }>> }).DND5E ?? {};
-const typesOf = (key: "damageTypes" | "healingTypes" | "activityActivationTypes" | "spellSchools") => () =>
-  Object.entries(dnd5e()[key] ?? {}).map(([value, data]) => ({ value, label: game.i18n?.localize(data.label ?? value) ?? value }));
 
 const ROLL_KINDS = { path: "rolls", label: "midi-qol.Entries.Field.rolls", type: "list" as const };
 const TO = (options: string[]): ActionField => ({ path: "to", label: "midi-qol.Entries.Field.to", type: "select", options: ["", ...options] });
@@ -17,11 +15,11 @@ const LABEL: ActionField = { path: "label", label: "midi-qol.Entries.Field.label
 export function registerMidiActionSchemas() {
   setActionSchema("damage", { fields: [
     { path: "damage", label: "midi-qol.Entries.Field.formula", type: "formula" },
-    { path: "type", label: "DND5E.DamageType", type: "select", options: typesOf("damageTypes") },
+    { path: "type", label: "DND5E.DamageType", type: "select", options: { list: "damageTypes" } },
     TO(["target", "self", "event.creature"]), LABEL], initial: "1d6" });
   setActionSchema("heal", { fields: [
     { path: "heal", label: "midi-qol.Entries.Field.formula", type: "formula" },
-    { path: "type", label: "midi-qol.Entries.Field.healingType", type: "select", options: typesOf("healingTypes") },
+    { path: "type", label: "midi-qol.Entries.Field.healingType", type: "select", options: { list: "healingTypes" } },
     TO(["target", "self", "event.creature"]), LABEL], initial: "1d6" });
   setActionSchema("bonus", { fields: [
     { path: "bonus.kind", label: "midi-qol.Entries.Field.kind", type: "select", options: ["add", "reroll", "mode", "replace", "outcome"] },
@@ -58,7 +56,7 @@ export function registerMidiActionSchemas() {
   setActionSchema("save", { fields: [
     { path: "save", label: "midi-qol.Entries.Field.save", type: "rollSpec" }, BY,
     { path: "damage", label: "midi-qol.Entries.Field.damageOnFail", type: "formula" },
-    { path: "type", label: "DND5E.DamageType", type: "select", options: typesOf("damageTypes") },
+    { path: "type", label: "DND5E.DamageType", type: "select", options: { list: "damageTypes" } },
     { path: "onSave", label: "midi-qol.Entries.Field.onSave", type: "select", options: ["", "half", "none", "full"] },
     LABEL, { path: "flavor", label: "midi-qol.Entries.Field.flavor", type: "string" }], initial: "applying" });
   setActionSchema("check", { fields: [{ path: "check", label: "midi-qol.Entries.Field.check", type: "rollSpec" }, BY, LABEL], initial: { ability: "str", dc: 10 } });
@@ -83,11 +81,11 @@ export function registerMidiActionSchemas() {
     { path: "only", label: "midi-qol.Entries.Field.countOnly", type: "select", options: ["reset"] }], initial: "saves" });
   setActionSchema("state", { fields: [{ path: "state", label: "midi-qol.Entries.Field.state", type: "pairs", numeric: true }], initial: {} });
   setActionSchema("change", { fields: [
-    { path: "change.activation", label: "midi-qol.Entries.Field.activation", type: "select", options: typesOf("activityActivationTypes") },
+    { path: "change.activation", label: "midi-qol.Entries.Field.activation", type: "select", options: { list: "activationTypes" } },
     { path: "change.range", label: "midi-qol.Entries.Field.range", type: "formula", numeric: true },
     { path: "change.duration", label: "midi-qol.Entries.Field.duration", type: "formula", numeric: true },
     { path: "change.components", label: "midi-qol.Entries.Field.components", type: "list" },
-    { path: "change.school", label: "midi-qol.Entries.Field.school", type: "select", options: typesOf("spellSchools") },
+    { path: "change.school", label: "midi-qol.Entries.Field.school", type: "select", options: { list: "spellSchools" } },
     { path: "change.spellLevel", label: "midi-qol.Entries.Field.spellLevel", type: "formula" },
     { path: "change.damageType.from", label: "midi-qol.Entries.Field.damageTypeFrom", type: "list" },
     { path: "change.damageType.to", label: "midi-qol.Entries.Field.damageTypeTo", type: "string" }], initial: {} });

@@ -531,12 +531,17 @@
     "waitForDamageApplication"
   ],
   "services": [
+    "activityCards",
     "bonusPrompt",
     "chooseTokens",
     "cover",
     "damageContributions",
     "damageModifiers",
     "distance",
+    "entryOptions",
+    "entryRecipes",
+    "entryTriggers",
+    "entryWording",
     "flanking",
     "perception",
     "presenters",

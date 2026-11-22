@@ -5,6 +5,7 @@ import { EntryEditor, registerEntryEditorControls } from "./module/apps/EntryEdi
 import { VisualsEditor, registerVisualsEditorControls } from "./module/apps/VisualsEditor.js";
 import { registerRollDialogBonuses } from "./module/lib/rollDialogBonuses.js";
 import { defineSettingNeedsService } from "./module/services/settingNeeds/service.js";
+import { defineEntryEditorServices, registerMidiEditorContributors } from "./module/lib/entries/editorServices.js";
 import { defineTokenVisualsService, refreshTokenVisuals, setupTokenVisuals, tokenVisuals } from "./module/services/tokenVisuals/service.js";
 import { registerTokenVisualProviders } from "./module/services/tokenVisuals/providers.js";
 import { activityTypeSteps, activityTypeStepsMarkdown } from "./module/activities/activityTypeSteps.js";
@@ -557,6 +558,8 @@ Hooks.once('init', async function () {
   registerUseChanges();
   registerEntryOffers();
   registerResponseEvents();
+  defineEntryEditorServices();
+  registerMidiEditorContributors();
   // After every action is registered (M32d)
   registerMidiActionSchemas();
   setupLedgerEvents();

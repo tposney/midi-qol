@@ -6,6 +6,7 @@ import { recipe, recipesFor } from "../lib/entries/recipes.js";
 import { activityOvertimeEntries, overtimeEntries } from "../lib/entries/overtime.js";
 import { ACTIVITY_REF } from "../lib/entries/activityActions.js";
 import { ConditionEditor } from "./ConditionEditor.js";
+import { contributedActivityCard, optionList } from "../lib/entries/editorServices.js";
 import { activityCard, activityUpdate, BRANCH_EVENT, branchEntryId, isBranchEntry, partFormula, type ActivityBranch, type ActivityData, type BuiltInPart, type CardEdits, type CardText } from "../lib/entries/activityCard.js";
 
 /*
@@ -470,7 +471,8 @@ export class EntryEditor extends HandlebarsApplicationMixin(ApplicationV2) {
 
   #cardContext(h: Home, at: number) {
     const data = this.#activityNow(h);
-    const model = activityCard(data, this.#cardText());
+    const text = this.#cardText();
+    const model = contributedActivityCard(data, text) ?? activityCard(data, text);
     const activities = [...((this.#item()?.system as { activities?: Iterable<{ id: string, name?: string }> } | undefined)?.activities ?? [])];
     const chip = (part: BuiltInPart) => ({ ...part, home: at });
     const branches = model.branches.map(b => {
@@ -658,8 +660,12 @@ export class EntryEditor extends HandlebarsApplicationMixin(ApplicationV2) {
   /** The choices of a field shown as a select; undefined for the others */
   #fieldOptions(field: ActionField): FieldOption[] | undefined {
     switch (field.type) {
-      case "select": return typeof field.options === "function" ? [...field.options()]
-        : (field.options ?? []).map(v => ({ value: v, label: v || i18n("midi-qol.EntryEditor.Default") }));
+      case "select": {
+        const options = field.options;
+        if (typeof options === "function") return [...options()];
+        if (options && "list" in options) return optionList(options.list);
+        return (options ?? []).map(v => ({ value: v, label: v || i18n("midi-qol.EntryEditor.Default") }));
+      }
       case "activity": return this.#activityOptions();
       case "tristate": return [{ value: "true", label: i18n("Yes") }, { value: "false", label: i18n("No") }];
       case "effectRef": {
