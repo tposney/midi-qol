@@ -5,6 +5,10 @@
             {{#each list}}
             <li class="{{#if selected}}active{{/if}} {{#if invalid}}invalid{{/if}}">
                 <a data-action="select" data-index="{{index}}"><strong>{{id}}</strong> <span>{{on}}</span></a>
+                <span class="midi-qol-entry-move">
+                    {{#unless first}}<button type="button" data-action="moveEntry" data-index="{{index}}" data-dir="up" data-tooltip="{{localize "midi-qol.EntryEditor.MoveUp"}}"><i class="fa-solid fa-arrow-up"></i></button>{{/unless}}
+                    {{#unless last}}<button type="button" data-action="moveEntry" data-index="{{index}}" data-dir="down" data-tooltip="{{localize "midi-qol.EntryEditor.MoveDown"}}"><i class="fa-solid fa-arrow-down"></i></button>{{/unless}}
+                </span>
             </li>
             {{/each}}
         </ul>
@@ -19,6 +23,9 @@
         {{#if problems.length}}
         <ul class="midi-qol-entry-problems">{{#each problems}}<li>{{this}}</li>{{/each}}</ul>
         {{/if}}
+        {{#if warnings.length}}
+        <ul class="midi-qol-entry-warnings">{{#each warnings}}<li>{{this}}</li>{{/each}}</ul>
+        {{/if}}
         {{#if jsonView}}
         <textarea name="json" rows="24" spellcheck="false">{{json}}</textarea>
         {{else}}
@@ -30,10 +37,12 @@
         {{#if near}}
         <div class="form-group"><label>{{localize "midi-qol.EntryEditor.Field.within"}}</label><input type="text" name="within" value="{{near.within}}"></div>
         <div class="form-group"><label>{{localize "midi-qol.EntryEditor.Field.of"}}</label><input type="text" name="of" value="{{near.of}}"></div>
-        <div class="form-group"><label>{{localize "midi-qol.EntryEditor.Field.filter"}}</label><input type="text" name="filter" value="{{near.filter}}"></div>
+        <div class="form-group"><label>{{localize "midi-qol.EntryEditor.Field.filter"}}</label><input type="text" name="filter" value="{{near.filter}}">
+            <button type="button" class="midi-qol-entry-condition" data-action="editCondition" data-field="filter" data-tooltip="{{localize "midi-qol.EntryEditor.EditCondition"}}"><i class="fa-solid fa-code"></i></button></div>
         {{/if}}
         <div class="form-group"><label>{{localize "midi-qol.EntryEditor.Field.label"}}</label><input type="text" name="label" value="{{entry.label}}"></div>
-        <div class="form-group"><label>{{localize "midi-qol.EntryEditor.Field.if"}}</label><textarea name="if" rows="2" spellcheck="false">{{entry.if}}</textarea></div>
+        <div class="form-group"><label>{{localize "midi-qol.EntryEditor.Field.if"}}</label><textarea name="if" rows="2" spellcheck="false">{{entry.if}}</textarea>
+            <button type="button" class="midi-qol-entry-condition" data-action="editCondition" data-field="if" data-tooltip="{{localize "midi-qol.EntryEditor.EditCondition"}}"><i class="fa-solid fa-code"></i></button></div>
         <div class="form-group"><label>{{localize "midi-qol.EntryEditor.Field.offer"}}</label>
             <select name="offer">{{#each offers}}<option value="{{value}}" {{#if selected}}selected{{/if}}>{{label}}</option>{{/each}}</select></div>
         <div class="form-group"><label>{{localize "midi-qol.EntryEditor.Field.activity"}}</label>
@@ -46,23 +55,53 @@
         <div class="form-group stacked"><label>{{localize "midi-qol.EntryEditor.Field.do"}}</label>
             {{#if cardsShown}}
             {{#each actionCards}}
+            <div class="midi-qol-entry-nest" style="padding-left: {{indent}}px">
+            {{#if branchLabel}}<div class="midi-qol-entry-branch">{{branchLabel}}</div>{{/if}}
             <div class="midi-qol-entry-action">
                 <div class="midi-qol-entry-action-head">
-                    <select name="act.{{index}}.kind"><option value="" {{#unless key}}selected{{/unless}}>?</option>{{#each kinds}}<option value="{{value}}" {{#if selected}}selected{{/if}}>{{label}}</option>{{/each}}</select>
-                    <button type="button" data-action="removeAction" data-index="{{index}}" data-tooltip="{{localize "midi-qol.EntryEditor.Remove"}}"><i class="fa-solid fa-trash"></i></button>
+                    <select name="act.{{path}}.kind"><option value="" {{#unless key}}selected{{/unless}}>?</option>{{#each kinds}}<option value="{{value}}" {{#if selected}}selected{{/if}}>{{label}}</option>{{/each}}</select>
+                    {{#unless first}}<button type="button" data-action="moveAction" data-path="{{path}}" data-dir="up" data-tooltip="{{localize "midi-qol.EntryEditor.MoveUp"}}"><i class="fa-solid fa-arrow-up"></i></button>{{/unless}}
+                    {{#unless last}}<button type="button" data-action="moveAction" data-path="{{path}}" data-dir="down" data-tooltip="{{localize "midi-qol.EntryEditor.MoveDown"}}"><i class="fa-solid fa-arrow-down"></i></button>{{/unless}}
+                    <button type="button" data-action="removeAction" data-path="{{path}}" data-tooltip="{{localize "midi-qol.EntryEditor.Remove"}}"><i class="fa-solid fa-trash"></i></button>
                 </div>
                 {{#if fields}}
                 {{#each fields}}
+                {{#if (eq type "rollSpec")}}
+                <div class="form-group"><label>{{localize label}}</label>
+                    <select name="{{rollSpec.modeName}}">{{#each rollSpec.modes}}<option value="{{value}}" {{#if selected}}selected{{/if}}>{{label}}</option>{{/each}}</select></div>
+                {{#if rollSpec.activity}}
+                <div class="form-group"><label>{{localize "midi-qol.EntryEditor.Field.activityRef"}}</label>
+                    <select name="{{rollSpec.activityName}}">{{#each rollSpec.activities}}<option value="{{value}}" {{#if selected}}selected{{/if}}>{{label}}</option>{{/each}}</select></div>
+                {{/if}}
+                {{#if rollSpec.custom}}
+                <div class="form-group"><label>{{localize "midi-qol.EntryEditor.Field.ability"}}</label>
+                    <select name="{{rollSpec.abilityName}}">{{#each rollSpec.abilities}}<option value="{{value}}" {{#if selected}}selected{{/if}}>{{label}}</option>{{/each}}</select></div>
+                {{#if rollSpec.check}}
+                <div class="form-group"><label>{{localize "midi-qol.EntryEditor.Field.skill"}}</label>
+                    <select name="{{rollSpec.skillName}}">{{#each rollSpec.skills}}<option value="{{value}}" {{#if selected}}selected{{/if}}>{{label}}</option>{{/each}}</select></div>
+                {{/if}}
+                <div class="form-group"><label>{{localize "midi-qol.EntryEditor.Field.dc"}}</label><input type="text" name="{{rollSpec.dcName}}" value="{{rollSpec.dc}}"></div>
+                {{/if}}
+                {{else}}
                 <div class="form-group"><label>{{localize label}}</label>
                     {{#if (eq type "select")}}<select name="{{name}}">{{#each options}}<option value="{{value}}" {{#if selected}}selected{{/if}}>{{label}}</option>{{/each}}</select>
                     {{else if (eq type "boolean")}}<input type="checkbox" name="{{name}}" {{#if checked}}checked{{/if}}>
                     {{else if (eq type "number")}}<input type="number" name="{{name}}" value="{{value}}">
+                    {{else if (eq type "condition")}}<input type="text" name="{{name}}" value="{{value}}"><button type="button" class="midi-qol-entry-condition" data-action="editCondition" data-field="{{name}}" data-tooltip="{{localize "midi-qol.EntryEditor.EditCondition"}}"><i class="fa-solid fa-code"></i></button>
                     {{else}}<input type="text" name="{{name}}" value="{{value}}">{{/if}}
                 </div>
-                {{/each}}
-                {{else}}
-                <textarea name="act.{{index}}.json" rows="4" spellcheck="false">{{json}}</textarea>
                 {{/if}}
+                {{/each}}
+                {{#if canBranch}}
+                <div class="midi-qol-entry-branch-buttons">
+                    <button type="button" data-action="addBranch" data-path="{{path}}" data-branch="then"><i class="fa-solid fa-plus"></i> {{localize "midi-qol.EntryEditor.AddThen"}}</button>
+                    <button type="button" data-action="addBranch" data-path="{{path}}" data-branch="else"><i class="fa-solid fa-plus"></i> {{localize "midi-qol.EntryEditor.AddElse"}}</button>
+                </div>
+                {{/if}}
+                {{else}}
+                <textarea name="act.{{path}}.json" rows="4" spellcheck="false">{{json}}</textarea>
+                {{/if}}
+            </div>
             </div>
             {{/each}}
             <button type="button" data-action="addAction"><i class="fa-solid fa-plus"></i> {{localize "midi-qol.EntryEditor.AddAction"}}</button>

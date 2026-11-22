@@ -53,5 +53,14 @@ export function registerMidiActionSchemas() {
     { path: "transfer.amount", label: "midi-qol.Entries.Field.amount", type: "string" },
     { path: "transfer.keep", label: "midi-qol.Entries.Field.keep", type: "boolean" },
     { path: "transfer.type", label: "DND5E.DamageType", type: "string" }, LABEL] });
+  const BY: ActionField = { path: "by", label: "midi-qol.Entries.Field.by", type: "select", options: ["", "attacker", "bearer"] };
+  setActionSchema("save", { fields: [
+    { path: "save", label: "midi-qol.Entries.Field.save", type: "rollSpec" }, BY,
+    { path: "damage", label: "midi-qol.Entries.Field.damageOnFail", type: "formula" },
+    { path: "type", label: "DND5E.DamageType", type: "select", options: typesOf("damageTypes") },
+    { path: "onSave", label: "midi-qol.Entries.Field.onSave", type: "select", options: ["", "half", "none", "full"] },
+    LABEL, { path: "flavor", label: "midi-qol.Entries.Field.flavor", type: "string" }] });
+  setActionSchema("check", { fields: [{ path: "check", label: "midi-qol.Entries.Field.check", type: "rollSpec" }, BY, LABEL] });
+  setActionSchema("use", { fields: [{ path: "use", label: "midi-qol.Entries.Field.use", type: "string" }, LABEL] });
   setActionSchema("cover", { fields: [{ path: "cover", label: "midi-qol.Entries.Field.cover", type: "select", options: ["none", "half", "threeQuarters", "total"] }] });
 }

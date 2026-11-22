@@ -2432,10 +2432,19 @@ body.midi-qol-hide-gambit-mirrors .gps-dialog-mirror:not(.midi-qol-gambit-shown)
 .midi-qol-entry-editor .midi-qol-entry-toolbar { display: flex; gap: 6px; justify-content: flex-end; margin-bottom: 6px; }
 .midi-qol-entry-editor .midi-qol-entry-problems { color: var(--color-level-error, #c00); margin: 0 0 6px; }
 .midi-qol-entry-editor textarea { font-family: var(--font-mono, monospace); font-size: var(--font-size-12); }
-.midi-qol-entry-editor .midi-qol-entry-action { border: 1px solid var(--color-border-light-2, #999); border-radius: 4px; padding: 4px 6px; margin-bottom: 6px; }
+.midi-qol-entry-editor .midi-qol-entry-action { box-sizing: border-box; border: 1px solid var(--color-border-light-2, #999); border-radius: 4px; padding: 4px 6px; margin-bottom: 6px; }
 .midi-qol-entry-editor .midi-qol-entry-action-head { display: flex; gap: 6px; align-items: center; margin-bottom: 4px; }
 .midi-qol-entry-editor .midi-qol-entry-action-head select { flex: 1; }
 .midi-qol-entry-editor .midi-qol-entry-action-head button { flex: 0 0 auto; width: auto; }
 /* M32e: a use's card, waiting for players */
 .midi-qol-card-waiting { margin-top: 4px; padding: 2px 4px; font-size: var(--font-size-12); font-style: italic; border-top: 1px dashed var(--color-border-light-2, #999); }
+.midi-qol-entry-editor .midi-qol-entry-warnings { color: var(--color-level-warning, #b67500); margin: 0 0 6px; }
+.midi-qol-entry-editor .midi-qol-entry-branch { font-size: var(--font-size-12); font-weight: bold; margin: 2px 0; }
+.midi-qol-entry-editor .midi-qol-entry-branch-buttons { display: flex; gap: 6px; }
+.midi-qol-entry-editor .midi-qol-entry-condition, .midi-qol-entry-editor .midi-qol-entry-move button { flex: 0 0 auto; width: auto; }
+.midi-qol-entry-editor .midi-qol-entry-list li { display: flex; align-items: center; }
+.midi-qol-entry-editor .midi-qol-entry-list li a { flex: 1; }
+.midi-qol-entry-editor .midi-qol-entry-move { display: flex; }
+.midi-qol-entry-editor .midi-qol-entry-move button { padding: 0 4px; line-height: 1.2; min-height: 0; }
+.midi-qol-entry-editor .midi-qol-entry-nest { box-sizing: border-box; }
 

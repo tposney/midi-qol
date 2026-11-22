@@ -71,7 +71,11 @@ const events = new Registry<EventDefinition>();
 export interface ActionField {
   path: string;
   label: string;
-  type: "string" | "formula" | "number" | "boolean" | "select" | "list";
+  /**
+   * rollSpec: a save or check's what (the applying activity's, an activity's of the item, or ability / skill / DC);
+   * activity: one of the item's activities ("activity:<id>"); condition: a midi condition (the condition editor)
+   */
+  type: "string" | "formula" | "number" | "boolean" | "select" | "list" | "rollSpec" | "activity" | "condition";
   /** select: its values, or a function giving them (damage types) */
   options?: readonly string[] | (() => readonly { value: string, label: string }[]);
 }
