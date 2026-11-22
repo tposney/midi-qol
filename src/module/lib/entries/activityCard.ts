@@ -250,6 +250,8 @@ export interface CardEdits {
   removeEffects?: string[];
   /** The area's edits: whether it acts, what it is attached to, who, once per turn, its groups of rules */
   area?: AreaEdits;
+  /** Activation, duration, concentration, uses (the basics chip) */
+  basics?: Partial<Basics>;
   attackType?: string;
   attackClass?: string;
   saveAbility?: string[];
@@ -258,7 +260,7 @@ export interface CardEdits {
   dcFormula?: string;
   onSave?: string;
   /** A part's formula and its damage types (several: the roller chooses one, as dnd5e's sheet sets them) */
-  parts?: { formula: string, types: string[] }[];
+  parts?: { formula: string, types: string[], scaling?: { mode: string, number: number | null } }[];
   healing?: { formula: string, types: string[] };
   effectsOnSave?: Record<string, boolean>;
 }
@@ -281,8 +283,12 @@ export function activityUpdate(data: ActivityData, edits: CardEdits): Record<str
     const parts = (data.damage?.parts ?? []).map((part, i) => {
       const edit = edits.parts![i];
       if (!edit) return part;
-      const next = edit.formula === partFormula(part) ? part : partWithFormula(part, edit.formula);
-      return !same(edit.types, part.types ?? []) ? { ...next, types: edit.types } : next;
+      let next = edit.formula === partFormula(part) ? part : partWithFormula(part, edit.formula);
+      if (!same(edit.types, part.types ?? [])) next = { ...next, types: edit.types };
+      // How it grows (a spell's slot, a cantrip's level): "" none, "whole" each step, "half" every other step
+      if (edit.scaling && (edit.scaling.mode !== (part.scaling?.mode ?? "") || (edit.scaling.mode && edit.scaling.number !== (part.scaling?.number ?? null))))
+        next = { ...next, scaling: { ...(part.scaling ?? {}), mode: edit.scaling.mode, number: edit.scaling.mode ? edit.scaling.number ?? 1 : part.scaling?.number ?? null } };
+      return next;
     });
     for (const added of edits.parts.slice(parts.length)) if (added.formula.trim()) parts.push(partWithFormula({ types: added.types }, added.formula));
     if (!same(parts, data.damage?.parts ?? [])) update["damage.parts"] = parts;
@@ -563,4 +569,55 @@ export function editedRegion(rb: ActivityData["regionBehavior"], edits: AreaEdit
     ...(edits.oncePerTurn !== undefined ? { oncePerTurn: edits.oncePerTurn } : {}),
     rules: areaRules(edits.groups ?? split.groups, edits.other ?? split.other)
   };
+}
+
+/* The basics (the sentence view's basics chip): activation, duration, concentration, limited uses */
+
+export interface Basics {
+  activation: string; activationValue: number | null;
+  durationValue: string; durationUnits: string; concentration: boolean;
+  /** "" no limit, "recharge", or a dnd5e use period (lr, sr, day...) */
+  usesPeriod: string; usesMax: string; recharge: string;
+}
+
+/** Where each is kept: a spell's activity without its own reads the spell's; uses the item's when those are consumed */
+export interface BasicsWhere {
+  activationOnItem: boolean; durationOnItem: boolean; usesOnItem: boolean;
+  /** The spell's properties (concentration is one) */
+  itemProperties?: readonly string[];
+  /** The activity's consumption targets (an activity given uses consumes them) */
+  consumption?: readonly { type: string }[];
+}
+
+/** The updates for the edited basics, only the groups that changed: { activity paths, item paths } */
+export function basicsUpdate(current: Basics, edited: Basics, where: BasicsWhere): { activity: Record<string, unknown>, item: Record<string, unknown> } {
+  const activity: Record<string, unknown> = {};
+  const item: Record<string, unknown> = {};
+  const changed = (...keys: (keyof Basics)[]) => keys.some(k => current[k] !== edited[k]);
+  if (changed("activation", "activationValue")) {
+    if (where.activationOnItem) Object.assign(item, { "system.activation.type": edited.activation, "system.activation.value": edited.activationValue });
+    else Object.assign(activity, { "activation.type": edited.activation, "activation.value": edited.activationValue, "activation.override": true });
+  }
+  if (changed("durationValue", "durationUnits")) {
+    if (where.durationOnItem) Object.assign(item, { "system.duration.value": edited.durationValue, "system.duration.units": edited.durationUnits });
+    else Object.assign(activity, { "duration.value": edited.durationValue, "duration.units": edited.durationUnits, "duration.override": true });
+  }
+  if (changed("concentration")) {
+    if (where.durationOnItem) {
+      const props = (where.itemProperties ?? []).filter(p => p !== "concentration");
+      item["system.properties"] = edited.concentration ? [...props, "concentration"] : props;
+    } else Object.assign(activity, { "duration.concentration": edited.concentration, "duration.override": true });
+  }
+  if (changed("usesPeriod", "usesMax", "recharge")) {
+    const at = where.usesOnItem ? "system.uses." : "uses.";
+    const target = where.usesOnItem ? item : activity;
+    if (!edited.usesPeriod) Object.assign(target, { [`${at}max`]: "", [`${at}recovery`]: [] });
+    else if (edited.usesPeriod === "recharge") Object.assign(target, { [`${at}max`]: "1", [`${at}recovery`]: [{ period: "recharge", type: "recoverAll", formula: edited.recharge || "6" }] });
+    else Object.assign(target, { [`${at}max`]: edited.usesMax || "1", [`${at}recovery`]: [{ period: edited.usesPeriod, type: "recoverAll" }] });
+    // Uses only count down when the activity consumes them
+    const kind = where.usesOnItem ? "itemUses" : "activityUses";
+    if (edited.usesPeriod && !(where.consumption ?? []).some(c => c.type === kind))
+      activity["consumption.targets"] = [...(where.consumption ?? []), { type: kind, value: "1", target: "", scaling: { mode: "", formula: "" } }];
+  }
+  return { activity, item };
 }

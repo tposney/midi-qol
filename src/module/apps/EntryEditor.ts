@@ -10,6 +10,7 @@ import { activityCardContributor, contributedActivityCard, optionList } from "..
 import { automationNotes } from "../lib/entries/automations.js";
 import { configOptions, type ConfigField } from "../lib/entries/config.js";
 import { effectAction, mainBranch, newEffectData, type NewEffect } from "../lib/entries/activityCard.js";
+import { basicsUpdate, type Basics, type BasicsWhere } from "../lib/entries/activityCard.js";
 import { AREA_TRIGGERS, areaGroups, areaSaveActivity, areaView, editedRegion, type AreaGroup } from "../lib/entries/activityCard.js";
 import { convertActivity, editedTargeting, FROM_YOU_SHAPES, moveBranchEntry, POINT_SHAPES, ROLL_KINDS, TARGET_PRESETS, targetingUpdate, targetPreset, type RollKind, type TargetPreset, type Targeting } from "../lib/entries/activityCard.js";
 import { activityCard, activityUpdate, BRANCH_EVENT, branchEntryId, isBranchEntry, partFormula, type ActivityBranch, type ActivityData, type BuiltInPart, type CardEdits, type CardText } from "../lib/entries/activityCard.js";
@@ -200,6 +201,7 @@ function chipFields(fields: Record<string, unknown>, field: string): Record<stri
   if (field === "target") return { target: fields.target };
   if (field === "newEffect") return { newEffect: fields.newEffect };
   if (field === "area") return { area: fields.area };
+  if (field === "basics") return { basics: fields.basics };
   if (field.startsWith("area.")) return { areaGroup: fields.areaGroup };
   if (field === "save") return { save: fields.save };
   if (field === "dc") return fields.save ? { save: fields.save } : { check: fields.check };
@@ -327,7 +329,8 @@ export class EntryEditor extends HandlebarsApplicationMixin(ApplicationV2) {
       || (!!h.settings && (JSON.stringify(h.settings.values) !== h.settings.stored || h.settings.spec !== h.settings.specStored))
       || (!!h.changes && JSON.stringify(h.changes.rows) !== h.changes.stored)
       || (!!h.card?.target && (Object.keys(this.#targetingUpdates(h).activity).length > 0 || Object.keys(this.#targetingUpdates(h).item).length > 0))
-      || (!!h.card?.area && Object.keys(this.#areaUpdates(h).activity).length > 0));
+      || (!!h.card?.area && Object.keys(this.#areaUpdates(h).activity).length > 0)
+      || (!!h.card?.basics && (Object.keys(this.#basicsUpdates(h).activity).length > 0 || Object.keys(this.#basicsUpdates(h).item).length > 0)));
   }
 
   /** Closing with unsaved changes asks first (`options.discard`: no question) */
@@ -771,6 +774,9 @@ export class EntryEditor extends HandlebarsApplicationMixin(ApplicationV2) {
     // Its targeting edited too: the activity's own part goes into the replacement, the spell's onto the item
     const targeting = this.#targetingUpdates(h);
     const areaUpdate = this.#areaUpdates(h);
+    const basicsUpdates = this.#basicsUpdates(h);
+    Object.assign(targeting.activity, basicsUpdates.activity);
+    Object.assign(targeting.item, basicsUpdates.item);
     if (areaUpdate.newActivity) await item.update({ [`system.activities.${areaUpdate.newActivity._id}`]: areaUpdate.newActivity });
     const data = foundry.utils.mergeObject(converted, foundry.utils.expandObject({ ...edits, ...targeting.activity, ...areaUpdate.activity }), { inplace: false });
     await item.update({ [`system.activities.${activity.id}`]: new foundry.data.operators.ForcedReplacement(data) });
@@ -831,10 +837,8 @@ export class EntryEditor extends HandlebarsApplicationMixin(ApplicationV2) {
         } : undefined
       };
     });
-    const labels = (h.document as { labels?: Record<string, unknown> }).labels ?? {};
     // Range and targets are the Targets line's
-    const basics = [labels.activation, labels.concentrationDuration ?? labels.duration]
-      .filter((v): v is string => typeof v === "string" && !!v).join(" · ");
+    const basics = this.#basicsText(this.#basicsEdited(h)) || i18n("midi-qol.EntryEditor.Activity.Basics.none");
     const opened = this.#cardOpen === at ? { ...this.#openFields(h, data), home: at } : undefined;
     const all = this.#cardField === "all" || !this.#cardField;
     const area = areaView(data, text);
@@ -868,10 +872,11 @@ export class EntryEditor extends HandlebarsApplicationMixin(ApplicationV2) {
   /** The open card's fields: a contributor's own, else midi's */
   #openFields(h: Home, data: ActivityData) {
     const found = activityCardContributor(data.type);
-    if (!found?.provider.fields) return this.#cardFields(data);
+    if (!found?.provider.fields) return this.#cardFields(h, data);
     let fields: readonly import("../lib/entries/editorServices.js").CardField[] = [];
     try { fields = found.provider.fields(data); } catch (err) { console.warn(`midi-qol | activityCards ${found.id}: fields() failed`, err); }
     return {
+      basics: this.#basicsContext(h),
       contributed: fields.map(f => {
         const value = h.cardValues?.[f.name] ?? f.value;
         return { ...f, field: `card.x.${f.name}`, value, checked: f.type === "checkbox" && !!value,
@@ -882,7 +887,7 @@ export class EntryEditor extends HandlebarsApplicationMixin(ApplicationV2) {
   }
 
   /** The open card's fields: what can be edited here (the rest on the activity's sheet) */
-  #cardFields(data: ActivityData) {
+  #cardFields(h: Home, data: ActivityData) {
     const abilities = Object.entries(CONFIG.DND5E.abilities as Record<string, { label?: string }>).map(([id, a]) => ({ id, label: a.label ?? id }));
     // dnd5e's lists as midi's entryOptions gives them (modules' types included)
     const damageTypes = optionList("damageTypes").map(o => ({ id: o.value, label: o.label }));
@@ -933,10 +938,16 @@ export class EntryEditor extends HandlebarsApplicationMixin(ApplicationV2) {
         onSave: (data.damage?.parts?.length ?? 0) ? ["half", "none", "full"].map(v => option(v, i18n(`midi-qol.EntryEditor.Activity.OnSave.${v}`), (data.damage?.onSave ?? "half") === v)) : undefined
       } : undefined,
       parts: data.damage ? (data.damage.parts ?? []).map((part, i) => ({ i, formula: partFormula(part),
-        types: damageTypes.map(t => option(t.id, t.label, (part.types ?? []).includes(t.id))) })) : undefined,
+        types: damageTypes.map(t => option(t.id, t.label, (part.types ?? []).includes(t.id))),
+        // A spell's damage grows with its slot (a cantrip's with the caster's level)
+        scaling: data.spellLevel === undefined ? undefined : {
+          modes: ["", "whole", "half"].map(m => option(m, i18n(`midi-qol.EntryEditor.Activity.Scaling.${data.spellLevel === 0 ? "cantrip" : "slot"}.${m || "none"}`), (part.scaling?.mode ?? "") === m)),
+          number: part.scaling?.number ?? 1, on: !!part.scaling?.mode
+        } })) : undefined,
       healing: data.healing ? { formula: partFormula(data.healing), types: healingTypes.map(t => option(t.id, t.label, (data.healing!.types ?? []).includes(t.id))) } : undefined,
       effects: (data.effects ?? []).map(e => ({ id: e._id, name: this.#cardText().effectName(e._id), onSave: !!e.onSave, canOnSave: save })),
       newEffect: this.#newEffectContext(data),
+      basics: this.#basicsContext(h),
       ...this.#areaContext(data)
     };
   }
@@ -1034,6 +1045,74 @@ export class EntryEditor extends HandlebarsApplicationMixin(ApplicationV2) {
     return { activity: { regionBehavior: region }, ...(newActivity ? { newActivity } : {}) };
   }
 
+  /** The activity's activation, duration, concentration and uses as dnd5e resolves them, and where each is kept */
+  #basicsOf(h: Home): { current: Basics, where: BasicsWhere } {
+    type Prepared = {
+      _source?: { activation?: { override?: boolean }, duration?: { override?: boolean }, uses?: { max?: string, recovery?: { period?: string, formula?: string }[] }, consumption?: { targets?: { type: string }[] } },
+      activation?: { type?: string, value?: number | null }, duration?: { value?: unknown, units?: string, concentration?: boolean }, item?: Item.Implementation
+    };
+    const a = h.document as Prepared;
+    const item = a.item;
+    const system = item?.system as { _source?: { uses?: { max?: string, recovery?: { period?: string, formula?: string }[] } }, properties?: Set<string> } | undefined;
+    const spell = !!item && String(item.type) === "spell";
+    const durationOnItem = spell && !a._source?.duration?.override;
+    const usesOnItem = !a._source?.uses?.max && !!system?._source?.uses?.max;
+    const uses = usesOnItem ? system!._source!.uses! : a._source?.uses;
+    const recovery = uses?.max ? uses.recovery?.[0] : undefined;
+    return {
+      current: {
+        activation: a.activation?.type ?? "", activationValue: a.activation?.value ?? null,
+        durationValue: a.duration?.value === null || a.duration?.value === undefined ? "" : String(a.duration.value), durationUnits: a.duration?.units ?? "",
+        concentration: !!a.duration?.concentration || (durationOnItem && !!system?.properties?.has("concentration")),
+        usesPeriod: recovery?.period ?? "", usesMax: recovery ? String(uses?.max ?? "") : "", recharge: recovery?.period === "recharge" ? String(recovery.formula ?? "6") : ""
+      },
+      where: { activationOnItem: spell && !a._source?.activation?.override, durationOnItem, usesOnItem,
+        itemProperties: [...(system?.properties ?? [])], consumption: a._source?.consumption?.targets ?? [] }
+    };
+  }
+
+  #basicsEdited(h: Home): Basics {
+    return { ...this.#basicsOf(h).current, ...(h.card?.basics ?? {}) };
+  }
+
+  #basicsUpdates(h: Home): { activity: Record<string, unknown>, item: Record<string, unknown> } {
+    if (!h.card?.basics) return { activity: {}, item: {} };
+    const { current, where } = this.#basicsOf(h);
+    return basicsUpdate(current, this.#basicsEdited(h), where);
+  }
+
+  /** "Action · Concentration, up to 1 minute · 3 uses per Long Rest", as dnd5e words each */
+  #basicsText(b: Basics): string {
+    const dnd5e = CONFIG.DND5E as unknown as { activityActivationTypes: Record<string, { label?: string }>, timePeriods: Record<string, string>, timeUnits: Record<string, unknown>, limitedUsePeriods: Record<string, { label?: string }> };
+    const formatTime = (globalThis as { dnd5e?: { utils?: { formatTime?(value: number, unit: string): string } } }).dnd5e?.utils?.formatTime;
+    const parts: string[] = [];
+    const activation = dnd5e.activityActivationTypes[b.activation]?.label;
+    if (activation) parts.push(`${b.activationValue && b.activationValue > 1 ? `${b.activationValue} ` : ""}${i18n(activation)}`);
+    let duration = "";
+    if (b.durationUnits) duration = b.durationValue && b.durationUnits in dnd5e.timeUnits && formatTime ? formatTime(Number(b.durationValue) || 0, b.durationUnits) : i18n(dnd5e.timePeriods[b.durationUnits] ?? "");
+    if (duration) parts.push(b.concentration ? game.i18n?.format("midi-qol.EntryEditor.Activity.Basics.concentrationText", { duration }) ?? duration : duration);
+    if (b.usesPeriod === "recharge") parts.push(game.i18n?.format("midi-qol.EntryEditor.Activity.Basics.rechargeText", { range: b.recharge === "6" || !b.recharge ? "6" : `${b.recharge}–6` }) ?? "");
+    else if (b.usesPeriod) parts.push(game.i18n?.format("midi-qol.EntryEditor.Activity.Basics.usesText", { max: b.usesMax || "1", period: i18n(dnd5e.limitedUsePeriods[b.usesPeriod]?.label ?? b.usesPeriod) }) ?? "");
+    return parts.join(" · ");
+  }
+
+  /** The basics chip's fields */
+  #basicsContext(h: Home) {
+    const b = this.#basicsEdited(h);
+    const dnd5e = CONFIG.DND5E as unknown as { activityActivationTypes: Record<string, { label?: string, group?: string }>, timePeriods: Record<string, string>, scalarTimePeriods: Record<string, string>, limitedUsePeriods: Record<string, { label?: string }> };
+    const option = (value: string, label: string, selected: boolean) => ({ value, label, selected });
+    return {
+      activation: [option("", "—", !b.activation), ...Object.entries(dnd5e.activityActivationTypes).map(([k, v]) => option(k, i18n(v.label ?? k), b.activation === k))],
+      activationValue: b.activationValue ?? "", hasActivationValue: ["minute", "hour", "day", "legendary", "mythic", "crew"].includes(b.activation),
+      units: [option("", "—", !b.durationUnits), ...Object.entries(dnd5e.timePeriods).map(([k, v]) => option(k, i18n(v), b.durationUnits === k))],
+      durationValue: b.durationValue, scalar: b.durationUnits in dnd5e.scalarTimePeriods, concentration: b.concentration,
+      uses: [option("", i18n("midi-qol.EntryEditor.Activity.Basics.noLimit"), !b.usesPeriod), option("recharge", i18n("midi-qol.EntryEditor.Activity.Basics.recharge"), b.usesPeriod === "recharge"),
+        ...Object.entries(dnd5e.limitedUsePeriods).map(([k, v]) => option(k, game.i18n?.format("midi-qol.EntryEditor.Activity.Basics.per", { period: i18n(v.label ?? k) }) ?? k, b.usesPeriod === k))],
+      usesMax: b.usesMax || "1", isRecharge: b.usesPeriod === "recharge", hasMax: !!b.usesPeriod && b.usesPeriod !== "recharge",
+      recharge: ["2", "3", "4", "5", "6"].map(n => option(n, n === "6" ? "6" : `${n}–6`, (b.recharge || "6") === n))
+    };
+  }
+
   /** "Add": the effect joins the branch (created on the item when saved) */
   static #onConfirmEffect(this: EntryEditor, _event: Event, target: HTMLElement) {
     const h = this.#homes[Number(target.dataset.home ?? this.#at)];
@@ -1092,6 +1171,19 @@ export class EntryEditor extends HandlebarsApplicationMixin(ApplicationV2) {
       if (key.startsWith("card.x.")) (h.cardValues ??= {})[key.slice("card.x.".length)] = value;
     if ("card.checkAbility" in data) h.card.checkAbility = String(data["card.checkAbility"] ?? "");
     if ("card.attackType" in data) h.card.attackType = String(data["card.attackType"] ?? "");
+    if ("card.basics.activation" in data) {
+      const value = (key: string) => data[`card.basics.${key}`];
+      const b = { ...(h.card.basics ?? {}) };
+      b.activation = String(value("activation") ?? "");
+      if ("card.basics.activationValue" in data) b.activationValue = value("activationValue") === "" || value("activationValue") === null ? null : Number(value("activationValue"));
+      b.durationUnits = String(value("durationUnits") ?? "");
+      if ("card.basics.durationValue" in data) b.durationValue = String(value("durationValue") ?? "");
+      b.concentration = !!value("concentration");
+      b.usesPeriod = String(value("usesPeriod") ?? "");
+      if ("card.basics.usesMax" in data) b.usesMax = String(value("usesMax") ?? "");
+      if ("card.basics.recharge" in data) b.recharge = String(value("recharge") ?? "");
+      h.card.basics = b;
+    }
     // The area: its own settings, then the open group's
     if ("card.area.lingers" in data || "card.area.attach" in data) {
       h.card.area = { ...(h.card.area ?? {}),
@@ -1152,7 +1244,9 @@ export class EntryEditor extends HandlebarsApplicationMixin(ApplicationV2) {
     if ("card.onSave" in data) edits.onSave = String(data["card.onSave"] ?? "half");
     const typesOf = (key: string, fallback: string[] | undefined) => key in data ? ([] as unknown[]).concat(data[key] ?? []).map(String).filter(Boolean) : [...(fallback ?? [])];
     const parts = (now.damage?.parts ?? []).map((part, i) => ({
-      formula: String(data[`card.part.${i}.formula`] ?? partFormula(part)), types: typesOf(`card.part.${i}.types`, part.types)
+      formula: String(data[`card.part.${i}.formula`] ?? partFormula(part)), types: typesOf(`card.part.${i}.types`, part.types),
+      ...(`card.part.${i}.scaling.mode` in data ? { scaling: { mode: String(data[`card.part.${i}.scaling.mode`] ?? ""),
+        number: data[`card.part.${i}.scaling.number`] === undefined || data[`card.part.${i}.scaling.number`] === "" ? part.scaling?.number ?? 1 : Number(data[`card.part.${i}.scaling.number`]) } } : {})
     }));
     if (parts.length) edits.parts = parts;
     if (now.healing && "card.healing.formula" in data) edits.healing = { formula: String(data["card.healing.formula"] ?? ""), types: typesOf("card.healing.types", now.healing.types) };
@@ -1782,6 +1876,10 @@ export class EntryEditor extends HandlebarsApplicationMixin(ApplicationV2) {
       const areaUpdate = this.#areaUpdates(home);
       if (areaUpdate.newActivity) await (home.document as { item?: Item.Implementation }).item?.update({ [`system.activities.${areaUpdate.newActivity._id}`]: areaUpdate.newActivity });
       Object.assign(changes, areaUpdate.activity);
+      // Its basics: the activity's own, or the spell's / item's
+      const basicsUpdates = this.#basicsUpdates(home);
+      Object.assign(changes, basicsUpdates.activity);
+      if (Object.keys(basicsUpdates.item).length) await (home.document as { item?: Item.Implementation }).item?.update(basicsUpdates.item);
       // Its targeting: the activity's own, or the spell's
       const targeting = this.#targetingUpdates(home);
       Object.assign(changes, targeting.activity);

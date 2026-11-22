@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { areaGroups, areaRules, areaSaveActivity } from "../src/module/lib/entries/activityCard.js";
+import { areaGroups, areaRules, areaSaveActivity, basicsUpdate } from "../src/module/lib/entries/activityCard.js";
 import { activityEffects, editedTargeting, mainBranch, newEffectData, targetingUpdate, targetPreset } from "../src/module/lib/entries/activityCard.js";
 import { activityCard, activityUpdate, branchFor, convertActivity, isBranchEntry, partFormula, partWithFormula, type ActivityData, type CardText } from "../src/module/lib/entries/activityCard.js";
 
@@ -134,5 +134,19 @@ describe("activity cards", () => {
     expect(other).toEqual([{ trigger: "turnStart", action: "applyEffect", targetId: "odd" }]);
     expect(areaRules(groups, other)).toEqual(rules);
     expect(areaSaveActivity("a1", "Area Save", true)).toMatchObject({ type: "save", midiProperties: { automationOnly: true, confirmTargets: "never" } });
+  });
+
+  it("basics: a spell's activation, duration and concentration on the spell; an activity's own with override; uses consumed", () => {
+    const current = { activation: "action", activationValue: null, durationValue: "1", durationUnits: "minute", concentration: true, usesPeriod: "", usesMax: "", recharge: "" };
+    const onSpell = basicsUpdate(current, { ...current, activation: "bonus", concentration: false }, { activationOnItem: true, durationOnItem: true, usesOnItem: false, itemProperties: ["vocal", "concentration"] });
+    expect(onSpell.item).toEqual({ "system.activation.type": "bonus", "system.activation.value": null, "system.properties": ["vocal"] });
+    expect(onSpell.activity).toEqual({});
+    const own = basicsUpdate(current, { ...current, durationValue: "10", usesPeriod: "recharge", recharge: "5" }, { activationOnItem: false, durationOnItem: false, usesOnItem: false, consumption: [] });
+    expect(own.activity).toMatchObject({ "duration.value": "10", "duration.override": true, "uses.max": "1", "uses.recovery": [{ period: "recharge", formula: "5" }] });
+    expect((own.activity["consumption.targets"] as any[])[0].type).toBe("activityUses");
+    expect(basicsUpdate(current, { ...current }, { activationOnItem: false, durationOnItem: false, usesOnItem: false })).toEqual({ activity: {}, item: {} });
+    // A part's scaling
+    const data = { type: "save", damage: { parts: [{ number: 3, denomination: 8, types: ["radiant"], scaling: { mode: "", number: null } }] } } as any;
+    expect(activityUpdate(data, { parts: [{ formula: "3d8", types: ["radiant"], scaling: { mode: "whole", number: 1 } }] })["damage.parts"]).toEqual([{ number: 3, denomination: 8, types: ["radiant"], scaling: { mode: "whole", number: 1 } }]);
   });
 });

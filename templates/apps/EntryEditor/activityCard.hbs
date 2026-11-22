@@ -27,7 +27,15 @@
     </div>
     {{/if}}
     {{/if}}
-    {{#if basics}}<div class="midi-qol-activity-basics hint">{{basics}}</div>{{/if}}
+    <div class="midi-qol-activity-basics"><button type="button" class="midi-qol-entry-chip builtin" data-action="editActivity" data-home="{{home}}" data-field="basics" data-place="basics">{{basics}}</button></div>
+    {{#if (eq popover.place "basics")}}
+    <div class="midi-qol-card-popover">
+        {{#with popover.fields}}{{> "modules/midi-qol/templates/apps/EntryEditor/cardFields.hbs"}}{{/with}}
+        <div class="midi-qol-card-popover-buttons">
+            <button type="button" data-action="closeActivityField" data-home="{{home}}"><i class="fa-solid fa-check"></i> {{localize "midi-qol.EntryEditor.Activity.Done"}}</button>
+        </div>
+    </div>
+    {{/if}}
     {{#if midi}}<div class="midi-qol-activity-basics hint">{{localize "midi-qol.EntryEditor.Activity.Midi"}} {{midi}}</div>{{/if}}
     {{#if region}}
     <div class="midi-qol-activity-region">

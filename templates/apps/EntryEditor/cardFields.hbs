@@ -12,6 +12,19 @@
         {{#if target.canLinger}}<div class="form-group"><label></label><div class="form-fields"><label class="checkbox"><input type="checkbox" name="card.area.lingers" {{#if target.lingers}}checked{{/if}}> {{localize "midi-qol.EntryEditor.Activity.Area.lingers"}}</label></div></div>{{/if}}
         {{#if target.who}}<div class="form-group"><label>{{localize "midi-qol.EntryEditor.Activity.TargetWho"}}</label><div class="form-fields"><select name="card.target.who">{{#each target.who}}<option value="{{value}}" {{#if selected}}selected{{/if}}>{{label}}</option>{{/each}}</select></div></div>{{/if}}
         {{/if}}
+        {{#if basics}}
+        <div class="form-group"><label>{{localize "midi-qol.EntryEditor.Activity.Basics.activation"}}</label><div class="form-fields">
+            {{#if basics.hasActivationValue}}<input type="number" name="card.basics.activationValue" value="{{basics.activationValue}}" min="1" step="1">{{/if}}
+            <select name="card.basics.activation">{{#each basics.activation}}<option value="{{value}}" {{#if selected}}selected{{/if}}>{{label}}</option>{{/each}}</select></div></div>
+        <div class="form-group"><label>{{localize "midi-qol.EntryEditor.Activity.Basics.duration"}}</label><div class="form-fields">
+            {{#if basics.scalar}}<input type="text" name="card.basics.durationValue" value="{{basics.durationValue}}">{{/if}}
+            <select name="card.basics.durationUnits">{{#each basics.units}}<option value="{{value}}" {{#if selected}}selected{{/if}}>{{label}}</option>{{/each}}</select></div></div>
+        <div class="form-group"><label></label><div class="form-fields"><label class="checkbox"><input type="checkbox" name="card.basics.concentration" {{#if basics.concentration}}checked{{/if}}> {{localize "midi-qol.EntryEditor.Activity.Basics.concentration"}}</label></div></div>
+        <div class="form-group"><label>{{localize "midi-qol.EntryEditor.Activity.Basics.uses"}}</label><div class="form-fields">
+            {{#if basics.hasMax}}<input type="text" name="card.basics.usesMax" value="{{basics.usesMax}}">{{/if}}
+            {{#if basics.isRecharge}}<select name="card.basics.recharge">{{#each basics.recharge}}<option value="{{value}}" {{#if selected}}selected{{/if}}>{{label}}</option>{{/each}}</select>{{/if}}
+            <select name="card.basics.usesPeriod">{{#each basics.uses}}<option value="{{value}}" {{#if selected}}selected{{/if}}>{{label}}</option>{{/each}}</select></div></div>
+        {{/if}}
         {{#if area}}
         <div class="form-group"><label></label><div class="form-fields"><label class="checkbox"><input type="checkbox" name="card.area.lingers" {{#if area.lingers}}checked{{/if}}> {{localize "midi-qol.EntryEditor.Activity.Area.lingers"}}</label></div></div>
         <div class="form-group"><label>{{localize "midi-qol.EntryEditor.Activity.Area.attachLabel"}}</label><div class="form-fields"><select name="card.area.attach">{{#each area.attach}}<option value="{{value}}" {{#if selected}}selected{{/if}}>{{label}}</option>{{/each}}</select></div></div>
@@ -91,6 +104,11 @@
                 <select name="card.part.{{i}}.types" multiple class="midi-qol-entry-multiselect">{{#each types}}<option value="{{value}}" {{#if selected}}selected{{/if}}>{{label}}</option>{{/each}}</select>
             </div>
         </div>
+        {{#if scaling}}
+        <div class="form-group"><label>{{localize "midi-qol.EntryEditor.Activity.Scaling.label"}}</label><div class="form-fields">
+            {{#if scaling.on}}<input type="number" name="card.part.{{i}}.scaling.number" value="{{scaling.number}}" min="1" step="1">{{/if}}
+            <select name="card.part.{{i}}.scaling.mode">{{#each scaling.modes}}<option value="{{value}}" {{#if selected}}selected{{/if}}>{{label}}</option>{{/each}}</select></div></div>
+        {{/if}}
         {{/each}}
         {{#unless noAdd}}<button type="button" data-action="addDamagePart" data-home="{{home}}"><i class="fa-solid fa-plus"></i> {{localize "midi-qol.EntryEditor.Activity.AddDamage"}}</button>{{/unless}}
         {{/if}}
