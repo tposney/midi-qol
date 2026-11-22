@@ -1,3 +1,18 @@
+        {{#if roll}}
+        <div class="form-group">
+            <label>{{localize "midi-qol.EntryEditor.Activity.RollField"}}</label>
+            <div class="form-fields"><select name="card.rollKind">{{#each roll.kinds}}<option value="{{value}}" {{#if selected}}selected{{/if}}>{{label}}</option>{{/each}}</select></div>
+        </div>
+        {{#if roll.attack}}
+        <div class="form-group">
+            <label>{{localize "midi-qol.EntryEditor.Activity.AttackField"}}</label>
+            <div class="form-fields">
+                <select name="card.attackType">{{#each roll.attack.types}}<option value="{{value}}" {{#if selected}}selected{{/if}}>{{label}}</option>{{/each}}</select>
+                <select name="card.attackClass">{{#each roll.attack.classes}}<option value="{{value}}" {{#if selected}}selected{{/if}}>{{label}}</option>{{/each}}</select>
+            </div>
+        </div>
+        {{/if}}
+        {{/if}}
         {{#each contributed}}
         <div class="form-group">
             <label>{{localize label}}</label>

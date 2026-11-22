@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { activityCard, activityUpdate, isBranchEntry, partFormula, partWithFormula, type ActivityData, type CardText } from "../src/module/lib/entries/activityCard.js";
+import { activityCard, activityUpdate, branchFor, convertActivity, isBranchEntry, partFormula, partWithFormula, type ActivityData, type CardText } from "../src/module/lib/entries/activityCard.js";
 
 const t: CardText = {
   ability: id => id.toUpperCase(),
@@ -61,5 +61,32 @@ describe("activity cards", () => {
     expect(isBranchEntry({ id: "activity-saveFailed", on: "use.target.saveFailed", do: [] })).toBe("saveFailed");
     expect(isBranchEntry({ id: "activity-saveFailed", on: "use.end", do: [] })).toBeUndefined();
     expect(isBranchEntry({ id: "activity-hit", on: "use.target.hit", offer: "ask", do: [] })).toBeUndefined();
+  });
+
+  it("a save becomes an attack: shared data kept, the save's dropped, a failed save's actions are a hit's", () => {
+    const save = { _id: "a1", type: "save", name: "Burn", range: { value: "60" }, effects: [{ _id: "e" }],
+      save: { ability: ["dex"], dc: { calculation: "spellcasting" } }, damage: { onSave: "half", parts: [{ number: 3, denomination: 6, types: ["fire"] }] },
+      midiProperties: { automationOnly: true },
+      midiEntries: [{ id: "activity-saveFailed", on: "use.target.saveFailed", do: [{ damage: "1" }] }, { id: "other", on: "use.end", do: [] }] };
+    const attack = convertActivity(save, "attack", { spell: true }) as any;
+    expect(attack._id).toBe("a1");
+    expect(attack.type).toBe("attack");
+    expect(attack.save).toBeUndefined();
+    expect(attack.attack.type).toEqual({ value: "melee", classification: "spell" });
+    expect(attack.damage.parts).toEqual(save.damage.parts);
+    expect(attack.range).toEqual(save.range);
+    expect(attack.effects).toEqual(save.effects);
+    expect(attack.midiProperties).toEqual(save.midiProperties);
+    expect(attack.midiEntries.map((e: any) => [e.id, e.on])).toEqual([["activity-hit", "use.target.hit"], ["other", "use.end"]]);
+  });
+
+  it("other conversions: healing from damage, a save's defaults, a utility's roll; branches to the matching one", () => {
+    const damage = { type: "damage", damage: { parts: [{ number: 1, denomination: 8, types: ["healing"] }] } };
+    expect((convertActivity(damage, "heal", { spell: false }) as any).healing).toEqual(damage.damage.parts[0]);
+    expect((convertActivity({ type: "utility" }, "save", { spell: false }) as any).save).toEqual({ ability: ["dex"], dc: { calculation: "", formula: "10" } });
+    expect((convertActivity({ type: "save", save: {} }, "utility", { spell: false }) as any).roll).toBeDefined();
+    expect(branchFor("saveSucceeded", "attack")).toBe("missed");
+    expect(branchFor("each", "save")).toBe("saveFailed");
+    expect(branchFor("hit", "damage")).toBe("each");
   });
 });

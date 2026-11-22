@@ -9,6 +9,7 @@ import { ConditionEditor } from "./ConditionEditor.js";
 import { activityCardContributor, contributedActivityCard, optionList } from "../lib/entries/editorServices.js";
 import { automationNotes } from "../lib/entries/automations.js";
 import { configOptions, type ConfigField } from "../lib/entries/config.js";
+import { convertActivity, moveBranchEntry, ROLL_KINDS, type RollKind } from "../lib/entries/activityCard.js";
 import { activityCard, activityUpdate, BRANCH_EVENT, branchEntryId, isBranchEntry, partFormula, type ActivityBranch, type ActivityData, type BuiltInPart, type CardEdits, type CardText } from "../lib/entries/activityCard.js";
 
 /*
@@ -192,6 +193,8 @@ function onlyPart(focus: string): string | undefined {
 /** Of a card's fields, the ones a chip edits (its data-field): what its in-place editor shows */
 function chipFields(fields: Record<string, unknown>, field: string): Record<string, unknown> {
   if ("contributed" in fields) return { contributed: fields.contributed };
+  // What happens to the target: the roll, and that roll's own fields
+  if (field === "roll") return { roll: fields.roll, save: fields.save, check: fields.check };
   if (field === "save") return { save: fields.save };
   if (field === "dc") return fields.save ? { save: fields.save } : { check: fields.check };
   if (field === "check") return { check: fields.check };
@@ -213,7 +216,7 @@ function chipFields(fields: Record<string, unknown>, field: string): Record<stri
 function cardFieldName(part: string): string {
   if (part.startsWith("part.")) return `card.${part}.formula`;
   if (part.startsWith("effect.")) return `card.${part}`;
-  const named: Record<string, string> = { save: "saveAbility", check: "checkAbility", dc: "dcCalculation", healing: "healing.formula" };
+  const named: Record<string, string> = { roll: "rollKind", save: "saveAbility", check: "checkAbility", dc: "dcCalculation", healing: "healing.formula" };
   return `card.${named[part] ?? part}`;
 }
 
@@ -670,9 +673,21 @@ export class EntryEditor extends HandlebarsApplicationMixin(ApplicationV2) {
     return data;
   }
 
+  /** The activity's data once converted to the roll the card chose (its own type: unchanged) */
+  #convertedSource(h: Home): ActivityData {
+    const source = this.#activitySource(h);
+    const to = h.card?.convertTo;
+    if (!to || to === source.type) return source;
+    const item = this.#item();
+    return { ...(convertActivity(source as unknown as Record<string, unknown>, to, { spell: !!item && String(item.type) === "spell" }) as unknown as ActivityData),
+      spellLevel: source.spellLevel, areaLabel: source.areaLabel };
+  }
+
   /** The update the card's edits make to the activity (only what changed) */
   #cardUpdate(h: Home): Record<string, unknown> {
     if (!h.card) return {};
+    // A new roll: the whole activity is replaced on save; any change counts
+    if (h.card.convertTo && h.card.convertTo !== this.#activitySource(h).type) return { type: h.card.convertTo };
     const source = this.#activitySource(h);
     // A contributor with fields of its own writes its own update
     const found = activityCardContributor(source.type);
@@ -684,10 +699,26 @@ export class EntryEditor extends HandlebarsApplicationMixin(ApplicationV2) {
     return activityUpdate(source, h.card);
   }
 
-  /** The activity as it will be once saved */
+  /** The activity as it will be once saved (converted to the chosen roll, then the card's edits) */
   #activityNow(h: Home): ActivityData {
-    const source = this.#activitySource(h);
-    return foundry.utils.mergeObject(source, foundry.utils.expandObject(this.#cardUpdate(h)), { inplace: false }) as ActivityData;
+    const converting = !!h.card?.convertTo && h.card.convertTo !== this.#activitySource(h).type;
+    const source = this.#convertedSource(h);
+    // Unconverted: the card's update as saved (a module's own fields through its update())
+    const update = !h.card ? {} : converting ? activityUpdate(source, { ...h.card, convertTo: undefined }) : this.#cardUpdate(h);
+    return foundry.utils.mergeObject(source, foundry.utils.expandObject(update), { inplace: false }) as ActivityData;
+  }
+
+  /** Replaces the activity with its conversion (same id), with the card's edits, entries and choices */
+  async #saveConverted(h: Home, changes: Record<string, unknown>) {
+    const activity = h.document as unknown as { id: string, item?: Item.Implementation, _source: Record<string, unknown> };
+    const item = activity.item;
+    if (!item) return;
+    const converted = convertActivity(foundry.utils.deepClone(activity._source), h.card!.convertTo!, { spell: String(item.type) === "spell" });
+    if ("midiEntries" in changes) converted.midiEntries = changes.midiEntries;
+    if ("midiChoices" in changes) converted.midiChoices = changes.midiChoices;
+    const edits = activityUpdate(converted as unknown as ActivityData, { ...h.card!, convertTo: undefined });
+    const data = foundry.utils.mergeObject(converted, foundry.utils.expandObject(edits), { inplace: false });
+    await item.update({ [`system.activities.${activity.id}`]: new foundry.data.operators.ForcedReplacement(data) });
   }
 
   #cardText(): CardText {
@@ -803,7 +834,15 @@ export class EntryEditor extends HandlebarsApplicationMixin(ApplicationV2) {
     const dcChoices = [option("spellcasting", i18n("midi-qol.EntryEditor.Activity.DCField.spellcasting"), calculation === "spellcasting"),
       ...abilities.map(a => option(a.id, a.label, calculation === a.id)),
       option("", i18n("midi-qol.EntryEditor.Activity.DCField.custom"), calculation === "")];
+    const attack = data.type === "attack";
     return {
+      roll: {
+        kinds: ROLL_KINDS.map(k => option(k, i18n(`midi-qol.EntryEditor.Activity.Roll.${k}`), data.type === k)),
+        attack: attack ? {
+          types: ["melee", "ranged"].map(v => option(v, i18n(`midi-qol.EntryEditor.Activity.AttackType.${v}`), (data.attack?.type?.value ?? "melee") === v)),
+          classes: ["weapon", "spell", "unarmed"].map(v => option(v, i18n(`midi-qol.EntryEditor.Activity.AttackClass.${v}`), (data.attack?.type?.classification ?? "weapon") === v))
+        } : undefined
+      },
       check: check ? {
         abilities: abilities.map(a => option(a.id, a.label, data.check?.ability === a.id)),
         calculations: dcChoices, custom: calculation === "", formula: data.check?.dc?.formula ?? ""
@@ -831,6 +870,23 @@ export class EntryEditor extends HandlebarsApplicationMixin(ApplicationV2) {
     for (const [key, value] of Object.entries(data))
       if (key.startsWith("card.x.")) (h.cardValues ??= {})[key.slice("card.x.".length)] = value;
     if ("card.checkAbility" in data) h.card.checkAbility = String(data["card.checkAbility"] ?? "");
+    if ("card.attackType" in data) h.card.attackType = String(data["card.attackType"] ?? "");
+    if ("card.attackClass" in data) h.card.attackClass = String(data["card.attackClass"] ?? "");
+    if ("card.rollKind" in data) {
+      const to = String(data["card.rollKind"] ?? "") as RollKind;
+      const was = h.card.convertTo ?? this.#activitySource(h).type;
+      if (ROLL_KINDS.includes(to) && to !== was) {
+        h.card.convertTo = to === this.#activitySource(h).type ? undefined : to;
+        // Actions added to a branch follow it; the old roll's own edits don't apply to the new one
+        for (const draft of h.drafts) {
+          const moved = moveBranchEntry(this.#entryForSave(draft), to);
+          draft.entry.id = moved.id;
+          draft.entry.on = moved.on;
+        }
+        Object.assign(h.card, { saveAbility: undefined, checkAbility: undefined, dcCalculation: undefined, dcFormula: undefined, onSave: undefined, parts: undefined, healing: undefined, effectsOnSave: undefined, attackType: undefined, attackClass: undefined });
+        return;
+      }
+    }
     const now = this.#activityNow(h);
     const edits = h.card;
     if ("card.saveAbility" in data) edits.saveAbility = ([] as unknown[]).concat(data["card.saveAbility"] ?? []).map(String).filter(Boolean);
@@ -1456,6 +1512,11 @@ export class EntryEditor extends HandlebarsApplicationMixin(ApplicationV2) {
       const changes: Record<string, unknown> = {};
       if (JSON.stringify(entries) !== home.stored) changes[home.kind === "activity" ? "midiEntries" : `flags.${MODULE_ID}.entries`] = entries;
       if (home.choices !== home.choicesStored) changes.midiChoices = JSON.parse(home.choices || "[]");
+      // A new roll: the activity replaced whole, its id kept (its entries and choices with it)
+      if (home.card?.convertTo && home.card.convertTo !== this.#activitySource(home).type) {
+        await this.#saveConverted(home, changes);
+        continue;
+      }
       // The card's edits are the activity's own data (paths relative to the activity)
       Object.assign(changes, this.#cardUpdate(home));
       if (home.changes && JSON.stringify(home.changes.rows) !== home.changes.stored) changes[home.changes.path] = home.changes.rows.filter(row => String(row.key ?? "").trim());

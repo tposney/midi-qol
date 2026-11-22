@@ -761,6 +761,10 @@ declare global {
     class ForcedDeletion {
       constructor(value?: unknown);
     }
+    /** v14: replaces the value at its path whole (an activity changing type, keeping its id) */
+    class ForcedReplacement {
+      constructor(value?: unknown);
+    }
   }
 
   interface RegExpConstructor { escape(value: string): string } // ES2025, not in TypeScript 5.9's lib

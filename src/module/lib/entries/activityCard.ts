@@ -158,7 +158,7 @@ function activityCardOf(data: ActivityData, t: CardText): ActivityCardModel {
   switch (data.type) {
     case "attack":
       return {
-        when: [{ kind: "attack", text: t.say(`Activity.Attack.${data.attack?.type?.value === "ranged" ? "ranged" : "melee"}`), field: "attack" }],
+        when: [{ kind: "attack", text: t.say(`Activity.Attack.${data.attack?.type?.value === "ranged" ? "ranged" : "melee"}`), field: "roll" }],
         branches: [
           { branch: "hit", builtIn: [...damageParts(data, t, "damage"), ...effects(data, t, () => true)] },
           { branch: "missed", builtIn: [] }
@@ -170,7 +170,7 @@ function activityCardOf(data: ActivityData, t: CardText): ActivityCardModel {
       const succeeded: BuiltInPart[] = (data.damage?.parts?.length ?? 0) && onSave !== "none"
         ? onSave === "full" ? damageParts(data, t, "damage") : damageParts(data, t, "half") : [];
       return {
-        when: [{ kind: "save", text: t.say("Activity.Save", { ability: abilities }), field: "save" }, { kind: "save", text: dcText(data.save?.dc, t), field: DC_FIELD }],
+        when: [{ kind: "save", text: t.say("Activity.Save", { ability: abilities }), field: "roll" }, { kind: "save", text: dcText(data.save?.dc, t), field: DC_FIELD }],
         branches: [
           { branch: "saveFailed", builtIn: [...damageParts(data, t, "damage"), ...effects(data, t, () => true)] },
           { branch: "saveSucceeded", builtIn: [...succeeded, ...effects(data, t, onSave => onSave)] }
@@ -182,7 +182,7 @@ function activityCardOf(data: ActivityData, t: CardText): ActivityCardModel {
       const skills = (check?.associated ?? []).join("/");
       const ability = check?.ability ? t.ability(check.ability) : "?";
       return {
-        when: [{ kind: "check", text: t.say("Activity.Check", { ability: skills ? `${ability} (${skills})` : ability }), field: "check" },
+        when: [{ kind: "check", text: t.say("Activity.Check", { ability: skills ? `${ability} (${skills})` : ability }), field: "roll" },
           { kind: "check", text: dcText(check?.dc, t), field: DC_FIELD }],
         branches: [{ branch: "each", builtIn: effects(data, t, () => true) }]
       };
@@ -222,7 +222,7 @@ function activityCardOf(data: ActivityData, t: CardText): ActivityCardModel {
         ? [{ kind: "healing" as const, field: "healing", text: t.say("Activity.Healing", { formula: partFormula(data.healing), type: (data.healing.types ?? []).map(id => t.damageType(id)).join("/") }) }] : [];
       return {
         // Every other type (a module's too): what it does by its type's wording, else "is used"
-        when: [{ kind: "none", text: t.say(`Activity.Type.${data.type}`) }],
+        when: [{ kind: "none", text: t.say(`Activity.Type.${data.type}`), field: "roll" }],
         branches: [{ branch: "each", builtIn: [...damageParts(data, t, "damage"), ...healing, ...effects(data, t, () => true)] }]
       };
     }
@@ -231,6 +231,10 @@ function activityCardOf(data: ActivityData, t: CardText): ActivityCardModel {
 
 /** The card's fields for an activity: what can be edited here */
 export interface CardEdits {
+  /** Another roll for the activity: converted on save (same id) */
+  convertTo?: RollKind;
+  attackType?: string;
+  attackClass?: string;
   saveAbility?: string[];
   checkAbility?: string;
   dcCalculation?: string;
@@ -246,6 +250,8 @@ export interface CardEdits {
 export function activityUpdate(data: ActivityData, edits: CardEdits): Record<string, unknown> {
   const update: Record<string, unknown> = {};
   const same = (a: unknown, b: unknown) => JSON.stringify(a) === JSON.stringify(b);
+  if (edits.attackType && edits.attackType !== (data.attack?.type?.value ?? "")) update["attack.type.value"] = edits.attackType;
+  if (edits.attackClass && edits.attackClass !== (data.attack?.type?.classification ?? "")) update["attack.type.classification"] = edits.attackClass;
   if (edits.saveAbility && !same(edits.saveAbility, data.save?.ability ?? [])) update["save.ability"] = edits.saveAbility;
   // A check's DC is check.dc, a save's save.dc
   const dcOf = data.type === "check" ? "check" : "save";
@@ -274,4 +280,74 @@ export function activityUpdate(data: ActivityData, edits: CardEdits): Record<str
     if (!same(list, data.effects ?? [])) update.effects = list;
   }
   return update;
+}
+
+/* Converting an activity to another roll (the sentence view's roll chip): the author picks what happens to the target,
+   midi picks the activity type */
+
+export type RollKind = "attack" | "save" | "check" | "damage" | "heal" | "utility";
+export const ROLL_KINDS: readonly RollKind[] = ["attack", "save", "check", "damage", "heal", "utility"];
+
+/** Each type's own data, dropped when the activity becomes another type */
+const TYPE_KEYS = ["attack", "save", "check", "damage", "healing", "roll", "profiles", "summon", "creatureSizes", "creatureTypes",
+  "match", "bonuses", "spell", "restrictions", "enchant", "transform", "settings", "activity"];
+
+/** The branches each roll has */
+export function branchesOf(type: string): ActivityBranch[] {
+  return type === "attack" ? ["hit", "missed"] : type === "save" ? ["saveFailed", "saveSucceeded"] : ["each"];
+}
+
+/** Where a branch's actions go when the roll changes: a failure is a hit, a success a miss; "each" the main one */
+export function branchFor(from: ActivityBranch, to: string): ActivityBranch | undefined {
+  const branches = branchesOf(to);
+  if (branches.includes(from)) return from;
+  const main = branches[0], other = branches[1];
+  if (from === "hit" || from === "saveFailed" || from === "each") return main;
+  return other;
+}
+
+/** An activity's data as another roll: what the types share kept, the new roll's defaults filled */
+export function convertActivity(source: Record<string, unknown>, to: RollKind, options: { spell: boolean }): Record<string, unknown> {
+  // Plain stored data: no Foundry needed (unit-tested)
+  const clone = <T>(value: T): T => value === undefined ? value : structuredClone(value);
+  const next: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(source)) if (!TYPE_KEYS.includes(key)) next[key] = clone(value);
+  next.type = to;
+  const damage = source.damage as { parts?: DamagePart[], onSave?: string, includeBase?: boolean } | undefined;
+  const parts = clone(damage?.parts ?? (source.healing ? [source.healing as DamagePart] : []));
+  const dc = { calculation: options.spell ? "spellcasting" : "", formula: options.spell ? "" : "10" };
+  switch (to) {
+    case "attack":
+      next.attack = clone(source.attack) ?? { type: { value: "melee", classification: options.spell ? "spell" : "weapon" } };
+      next.damage = { parts, includeBase: damage?.includeBase ?? false };
+      break;
+    case "save":
+      next.save = clone(source.save) ?? { ability: ["dex"], dc };
+      next.damage = { parts, onSave: damage?.onSave ?? "half" };
+      break;
+    case "check":
+      next.check = clone(source.check) ?? { ability: "str", associated: [], dc };
+      break;
+    case "damage":
+      next.damage = { parts };
+      break;
+    case "heal":
+      next.healing = parts[0] ?? { number: 1, denomination: 8, bonus: "", types: ["healing"], custom: { enabled: false, formula: "" } };
+      break;
+    case "utility":
+      next.roll = clone(source.roll) ?? { formula: "", name: "", prompt: false, visible: false };
+      break;
+  }
+  // Actions added to a branch follow it to the matching branch
+  const entries = next.midiEntries;
+  if (Array.isArray(entries)) next.midiEntries = entries.map(e => moveBranchEntry(e as Entry, to));
+  return next;
+}
+
+/** A branch's own entry, moved to the branch it matches in a roll of `to` (anything else unchanged) */
+export function moveBranchEntry(entry: Entry, to: string): Entry {
+  const branch = isBranchEntry(entry);
+  const target = branch ? branchFor(branch, to) : undefined;
+  if (!branch || !target || target === branch) return entry;
+  return { ...entry, id: branchEntryId(target), on: BRANCH_EVENT[target] };
 }
