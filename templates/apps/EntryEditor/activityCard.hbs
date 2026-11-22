@@ -6,6 +6,7 @@
         <button type="button" class="midi-qol-activity-sheet" data-action="openActivitySheet" data-home="{{home}}" data-tooltip="{{localize "midi-qol.EntryEditor.Activity.Sheet"}}" aria-label="{{localize "midi-qol.EntryEditor.Activity.Sheet"}}"><i class="fa-solid fa-up-right-from-square"></i></button>
     </div>
     {{#if basics}}<div class="midi-qol-activity-basics hint">{{basics}}</div>{{/if}}
+    {{#if midi}}<div class="midi-qol-activity-basics hint">{{localize "midi-qol.EntryEditor.Activity.Midi"}} {{midi}}</div>{{/if}}
     {{#if region}}
     <div class="midi-qol-activity-region">
         <div>{{region.text}}</div>

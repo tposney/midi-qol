@@ -641,7 +641,28 @@ export class EntryEditor extends HandlebarsApplicationMixin(ApplicationV2) {
     const labels = (h.document as { labels?: Record<string, unknown> }).labels ?? {};
     const basics = [labels.activation, labels.range, labels.target, labels.concentrationDuration ?? labels.duration]
       .filter((v): v is string => typeof v === "string" && !!v).join(" · ");
-    return { home: at, when: model.when.map(chip), branches, basics, region: model.region, macros: this.#cardMacros(h), open: this.#cardOpen === at ? this.#openFields(h, data) : undefined };
+    return { home: at, when: model.when.map(chip), branches, basics, midi: this.#midiProperties(h), region: model.region, macros: this.#cardMacros(h), open: this.#cardOpen === at ? this.#openFields(h, data) : undefined };
+  }
+
+  /** midi's properties of the activity that differ from their defaults, by their schema labels */
+  #midiProperties(h: Home): string {
+    type Field = { label?: string, initial?: unknown, choices?: unknown };
+    const activity = h.document as { midiProperties?: Record<string, unknown>, schema?: { fields?: { midiProperties?: { fields?: Record<string, Field> } } } };
+    const fields = activity.schema?.fields?.midiProperties?.fields ?? {};
+    const plain = (v: unknown): unknown => v instanceof Set ? [...v] : v;
+    const empty = (v: unknown) => v === undefined || v === null || v === "" || (Array.isArray(v) && !v.length) || (typeof v === "object" && !Array.isArray(v) && !Object.keys(v as object).length);
+    const parts: string[] = [];
+    for (const [key, field] of Object.entries(fields)) {
+      const value = plain(activity.midiProperties?.[key]);
+      const initial = plain(typeof field.initial === "function" ? (field.initial as () => unknown)() : field.initial);
+      if (!field.label || (empty(value) && empty(initial)) || JSON.stringify(value) === JSON.stringify(initial)) continue;
+      const label = i18n(field.label);
+      const choices = field.choices && typeof field.choices === "object" ? field.choices as Record<string, string> : undefined;
+      const shown = typeof value === "boolean" ? i18n(value ? "Yes" : "No")
+        : Array.isArray(value) ? value.join(", ") : choices?.[String(value)] ? i18n(choices[String(value)]) : String(value);
+      parts.push(`${label}: ${shown}`);
+    }
+    return parts.join(" · ");
   }
 
   /** The open card's fields: a contributor's own, else midi's */

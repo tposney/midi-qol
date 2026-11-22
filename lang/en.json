@@ -2971,6 +2971,7 @@
   "midi-qol.EntryEditor.Activity.Type.transform": "it transforms a creature",
   "midi-qol.EntryEditor.Activity.Type.forward": "it uses another activity",
   "midi-qol.EntryEditor.Activity.Nothing": "nothing",
+  "midi-qol.EntryEditor.Activity.Midi": "Midi:",
   "midi-qol.EntryEditor.Activity.Region.makes": "It makes a {area}{attached}:",
   "midi-qol.EntryEditor.Activity.Region.anArea": "region",
   "midi-qol.EntryEditor.Activity.Region.attachedCaster": ", attached to you and moving with you",
