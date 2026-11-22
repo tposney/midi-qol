@@ -55,6 +55,7 @@ export async function preloadTemplates() {
     "modules/midi-qol/templates/chat/note.hbs",
     "modules/midi-qol/templates/apps/EntryEditor/entryForm.hbs",
     "modules/midi-qol/templates/apps/EntryEditor/activityCard.hbs",
+    "modules/midi-qol/templates/apps/EntryEditor/cardFields.hbs",
     "modules/midi-qol/templates/apps/EntryEditor/automationNotes.hbs",
     "modules/midi-qol/templates/apps/EntryEditor/settings.hbs",
     "modules/midi-qol/templates/apps/EntryEditor/itemAutomation.hbs"

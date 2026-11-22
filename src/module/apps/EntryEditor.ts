@@ -182,6 +182,26 @@ export function effectSummary(document: unknown): { statuses: string, changes: s
   return statuses || changes.length || duration ? { statuses, changes, duration } : undefined;
 }
 
+/** Of a card's fields, the ones a chip edits (its data-field): what its in-place editor shows */
+function chipFields(fields: Record<string, unknown>, field: string): Record<string, unknown> {
+  if ("contributed" in fields) return { contributed: fields.contributed };
+  if (field === "save") return { save: fields.save };
+  if (field === "dc") return fields.save ? { save: fields.save } : { check: fields.check };
+  if (field === "check") return { check: fields.check };
+  if (field === "healing") return { healing: fields.healing };
+  const part = /^part\.(\d+)$/.exec(field);
+  if (part) {
+    const row = (fields.parts as { i: number }[] | undefined)?.find(p => p.i === Number(part[1]));
+    return row ? { parts: [row] } : { empty: true };
+  }
+  const effect = /^effect\.(.+)$/.exec(field);
+  if (effect) {
+    const row = (fields.effects as { id: string }[] | undefined)?.find(e => e.id === effect[1]);
+    return row ? { effects: [row] } : { empty: true };
+  }
+  return { empty: true };
+}
+
 /** The card field a built-in part edits (its chip's data-field) */
 function cardFieldName(part: string): string {
   if (part.startsWith("part.")) return `card.${part}.formula`;
@@ -230,6 +250,9 @@ export class EntryEditor extends HandlebarsApplicationMixin(ApplicationV2) {
   #focus: string | undefined;
   /** The activity home whose card's fields are open */
   #cardOpen: number | undefined;
+  /** Which of them: a chip's field shown in place, under the line it is on ("all": the whole block) */
+  #cardField: string | undefined;
+  #cardPlace: string | undefined;
 
   /** `options.view`: the view to open in (else the user's last) */
   constructor(document: EntryDocument, options: { view?: View } & Record<string, unknown> = {}) {
@@ -332,6 +355,7 @@ export class EntryEditor extends HandlebarsApplicationMixin(ApplicationV2) {
       showRuns: EntryEditor.#onShowRuns,
       useRecipe: EntryEditor.#onUseRecipe,
       editActivity: EntryEditor.#onEditActivity,
+      closeActivityField: EntryEditor.#onCloseActivityField,
       addToBranch: EntryEditor.#onAddToBranch,
       addDamagePart: EntryEditor.#onAddDamagePart,
       addChange: EntryEditor.#onAddChange,
@@ -707,7 +731,11 @@ export class EntryEditor extends HandlebarsApplicationMixin(ApplicationV2) {
     const labels = (h.document as { labels?: Record<string, unknown> }).labels ?? {};
     const basics = [labels.activation, labels.range, labels.target, labels.concentrationDuration ?? labels.duration]
       .filter((v): v is string => typeof v === "string" && !!v).join(" · ");
-    return { home: at, when: model.when.map(chip), branches, basics, midi: this.#midiProperties(h), region: model.region, macros: this.#cardMacros(h), open: this.#cardOpen === at ? this.#openFields(h, data) : undefined };
+    const opened = this.#cardOpen === at ? { ...this.#openFields(h, data), home: at } : undefined;
+    const all = this.#cardField === "all" || !this.#cardField;
+    return { home: at, when: model.when.map(chip), branches, basics, midi: this.#midiProperties(h), region: model.region, macros: this.#cardMacros(h),
+      open: opened && all ? opened : undefined,
+      popover: opened && !all ? { place: this.#cardPlace, fields: { ...chipFields(opened, this.#cardField!), home: at, noAdd: true } } : undefined };
   }
 
   /** midi's properties of the activity that differ from their defaults, by their schema labels */
@@ -805,11 +833,27 @@ export class EntryEditor extends HandlebarsApplicationMixin(ApplicationV2) {
     if (Object.keys(onSave).length) edits.effectsOnSave = { ...edits.effectsOnSave, ...onSave };
   }
 
-  /** A built-in part clicked: the card's fields open (closed again by the same part) */
+  /**
+   * A built-in part clicked: its field opens in place, under the line it is on (the same part again closes it);
+   * "all" opens the activity's whole block of fields
+   */
   static #onEditActivity(this: EntryEditor, _event: Event, target: HTMLElement) {
     const at = Number(target.dataset.home ?? this.#at);
-    this.#cardOpen = this.#cardOpen === at && !target.dataset.field ? undefined : at;
-    if (target.dataset.field) this.#focus = cardFieldName(target.dataset.field);
+    const field = target.dataset.field || "all";
+    const place = target.dataset.place;
+    if (this.#cardOpen === at && this.#cardField === field && this.#cardPlace === place) {
+      this.#cardOpen = this.#cardField = this.#cardPlace = undefined;
+    } else {
+      this.#cardOpen = at;
+      this.#cardField = field;
+      this.#cardPlace = place;
+      if (field !== "all") this.#focus = cardFieldName(field);
+    }
+    this.render();
+  }
+
+  static #onCloseActivityField(this: EntryEditor) {
+    this.#cardOpen = this.#cardField = this.#cardPlace = undefined;
     this.render();
   }
 
