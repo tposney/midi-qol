@@ -2535,3 +2535,6 @@ body.midi-qol-hide-gambit-mirrors .gps-dialog-mirror:not(.midi-qol-gambit-shown)
 .midi-qol-entry-editor .midi-qol-part-hidden { display: none !important; }
 .midi-qol-entry-editor .midi-qol-entry-only-buttons { display: flex; gap: 0.3rem; justify-content: flex-end; }
 .midi-qol-entry-editor .midi-qol-entry-only-buttons button { flex: 0 0 auto; width: auto; font-size: var(--font-size-12, 12px); line-height: 1.6; min-height: 0; }
+.midi-qol-entry-editor .midi-qol-activity-region-line { display: flex; align-items: center; gap: 0.25rem; }
+.midi-qol-entry-editor .midi-qol-activity-region-line .midi-qol-branch-add { margin-left: auto; }
+.midi-qol-entry-editor .midi-qol-area-triggers { flex-wrap: wrap; gap: 0.3rem 0.8rem; }

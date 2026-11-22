@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { areaGroups, areaRules, areaSaveActivity } from "../src/module/lib/entries/activityCard.js";
 import { activityEffects, editedTargeting, mainBranch, newEffectData, targetingUpdate, targetPreset } from "../src/module/lib/entries/activityCard.js";
 import { activityCard, activityUpdate, branchFor, convertActivity, isBranchEntry, partFormula, partWithFormula, type ActivityData, type CardText } from "../src/module/lib/entries/activityCard.js";
 
@@ -121,5 +122,17 @@ describe("activity cards", () => {
     const effect = newEffectData({ _id: "prone", name: "Prone", statuses: ["prone"], duration: { value: 1, units: "minutes" }, repeatSave: true, branch: "saveFailed" }) as any;
     expect(effect).toMatchObject({ _id: "prone", transfer: false, statuses: ["prone"], duration: { value: 1, units: "minutes" } });
     expect(effect.flags["midi-qol"].entries[0]).toMatchObject({ on: "turnEnd", do: [{ save: "applying", then: [{ end: true }] }] });
+  });
+
+  it("area rules: grouped (an activity's triggers; an effect while inside) and written back unchanged", () => {
+    const rules = [
+      { trigger: "entry", action: "useActivity", targetId: "save" }, { trigger: "turnEnd", action: "useActivity", targetId: "save" },
+      { trigger: "entry", action: "applyEffect", targetId: "slow" }, { trigger: "exit", action: "removeEffect", targetId: "slow" },
+      { trigger: "turnStart", action: "applyEffect", targetId: "odd" }];
+    const { groups, other } = areaGroups(rules);
+    expect(groups).toEqual([{ kind: "use", targetId: "save", triggers: ["entry", "turnEnd"] }, { kind: "whileIn", targetId: "slow" }]);
+    expect(other).toEqual([{ trigger: "turnStart", action: "applyEffect", targetId: "odd" }]);
+    expect(areaRules(groups, other)).toEqual(rules);
+    expect(areaSaveActivity("a1", "Area Save", true)).toMatchObject({ type: "save", midiProperties: { automationOnly: true, confirmTargets: "never" } });
   });
 });

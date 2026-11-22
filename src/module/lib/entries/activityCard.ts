@@ -126,27 +126,33 @@ const RULE_TRIGGERS = ["entry", "exit", "turnStart", "turnEnd"];
 
 /** The area's rules, grouped by what they do: "an enemy that enters it or ends its turn in it: uses Spirit Guardians Save" */
 export function cardRegion(data: ActivityData, t: CardText): CardRegion | undefined {
+  const view = areaView(data, t);
+  if (!view || (!view.groups.length && !view.other.length && !view.dnd5e.length)) return undefined;
+  return { text: view.text, rules: [...view.groups, ...view.other, ...view.dnd5e] };
+}
+
+/** The area's wording: what it is, each group of rules, rules no group describes, dnd5e's own effects while inside */
+export function areaView(data: ActivityData, t: CardText): { text: string, groups: string[], other: string[], dnd5e: string[] } | undefined {
   const rb = data.regionBehavior;
-  const whileIn = (data.behaviors ?? []).filter(b => b.type === "applyActiveEffect").flatMap(b => b.config?.effects ?? []).map(uuid => t.documentName(uuid) ?? "?");
+  const dnd5e = (data.behaviors ?? []).filter(b => b.type === "applyActiveEffect").flatMap(b => b.config?.effects ?? []).map(uuid => t.documentName(uuid) ?? "?");
+  // Only an area that acts on creatures (midi's rules, or dnd5e's effects while inside) reads as one
+  if (!rb?.enabled && !dnd5e.length) return undefined;
   const rules = rb?.enabled ? rb.rules ?? [] : [];
-  if (!rules.length && !whileIn.length) return undefined;
   const area = data.areaLabel || t.say("Activity.Region.anArea");
   const attached = rb?.enabled && rb.attachToken === "caster" ? t.say("Activity.Region.attachedCaster") : rb?.enabled && rb.attachToken === "target" ? t.say("Activity.Region.attachedTarget") : "";
   const who = t.say(`Activity.Region.who.${rb?.dispositionFilter === 1 ? "ally" : rb?.dispositionFilter === 0 ? "any" : "enemy"}`);
-  const byAction = new Map<string, string[]>();
-  for (const rule of rules) {
-    const target = rule.action === "useActivity" ? t.activityName(rule.targetId) ?? rule.targetId : t.effectName(rule.targetId);
-    const does = t.say(`Activity.Region.action.${rule.action}`, { what: target });
-    const trigger = RULE_TRIGGERS.includes(rule.trigger) ? t.say(`Activity.Region.trigger.${rule.trigger}`) : rule.trigger;
-    byAction.set(does, [...(byAction.get(does) ?? []), trigger]);
-  }
   const or = t.say("Activity.Region.or");
-  // Once per turn limits the activities a creature is made to use, not effects
-  const uses = new Set(rules.filter(r => r.action === "useActivity").map(r => t.say("Activity.Region.action.useActivity", { what: t.activityName(r.targetId) ?? r.targetId })));
-  const lines = [...byAction].map(([does, triggers]) => t.say("Activity.Region.rule", { who, when: triggers.join(` ${or} `), does })
-    + (rb?.oncePerTurn && uses.has(does) ? ` ${t.say("Activity.Region.oncePerTurn")}` : ""));
-  if (whileIn.length) lines.push(t.say("Activity.Region.whileIn", { effects: whileIn.join(", ") }));
-  return { text: t.say("Activity.Region.makes", { area, attached }), rules: lines };
+  const { groups, other } = areaGroups(rules);
+  const groupText = (g: AreaGroup) => g.kind === "use"
+    ? t.say("Activity.Region.rule", { who, when: g.triggers.map(tr => t.say(`Activity.Region.trigger.${tr}`)).join(` ${or} `),
+      does: t.say("Activity.Region.action.useActivity", { what: t.activityName(g.targetId) ?? g.targetId }) }) + (rb?.oncePerTurn ? ` ${t.say("Activity.Region.oncePerTurn")}` : "")
+    : t.say("Activity.Region.whileIn", { effects: t.effectName(g.targetId) });
+  const ruleText = (r: RegionRule) => t.say("Activity.Region.rule", { who, when: AREA_TRIGGERS.includes(r.trigger) ? t.say(`Activity.Region.trigger.${r.trigger}`) : r.trigger,
+    does: t.say(`Activity.Region.action.${r.action}`, { what: r.action === "useActivity" ? t.activityName(r.targetId) ?? r.targetId : t.effectName(r.targetId) }) });
+  return {
+    text: t.say("Activity.Region.makes", { area, attached }),
+    groups: groups.map(groupText), other: other.map(ruleText), dnd5e: dnd5e.length ? [t.say("Activity.Region.whileIn", { effects: dnd5e.join(", ") })] : []
+  };
 }
 
 /** What the activity does by itself, by branch */
@@ -242,6 +248,8 @@ export interface CardEdits {
   newEffects?: NewEffect[];
   /** Effects taken off the activity (left on the item) */
   removeEffects?: string[];
+  /** The area's edits: whether it acts, what it is attached to, who, once per turn, its groups of rules */
+  area?: AreaEdits;
   attackType?: string;
   attackClass?: string;
   saveAbility?: string[];
@@ -486,4 +494,73 @@ export function newEffectData(added: NewEffect): Record<string, unknown> {
 /** A branch other than the main one applies an effect by an entry action (dnd5e's onSave means "also", not "only") */
 export function effectAction(added: NewEffect): EntryAction {
   return { effect: "apply", what: added._id, to: "target" };
+}
+
+/* Lingering areas (the sentence view's area line): midi's region rules read and written as groups */
+
+export interface RegionRule { trigger: string, action: string, targetId: string }
+/** "use": run an activity at these triggers; "whileIn": an effect applied on entering, removed on leaving */
+export type AreaGroup = { kind: "use", targetId: string, triggers: string[] } | { kind: "whileIn", targetId: string };
+export const AREA_TRIGGERS = ["entry", "turnStart", "turnEnd", "exit"];
+
+/** The rules as groups; rules no group describes are kept as they are */
+export function areaGroups(rules: readonly RegionRule[]): { groups: AreaGroup[], other: RegionRule[] } {
+  const groups: AreaGroup[] = [];
+  const other: RegionRule[] = [];
+  const used = new Set<RegionRule>();
+  for (const rule of rules) {
+    if (used.has(rule)) continue;
+    if (rule.action === "useActivity") {
+      let group = groups.find((g): g is Extract<AreaGroup, { kind: "use" }> => g.kind === "use" && g.targetId === rule.targetId);
+      if (!group) groups.push(group = { kind: "use", targetId: rule.targetId, triggers: [] });
+      if (!group.triggers.includes(rule.trigger)) group.triggers.push(rule.trigger);
+      used.add(rule);
+    } else if (rule.action === "applyEffect" && rule.trigger === "entry") {
+      const removal = rules.find(r => !used.has(r) && r !== rule && r.action === "removeEffect" && r.trigger === "exit" && r.targetId === rule.targetId);
+      if (removal) { groups.push({ kind: "whileIn", targetId: rule.targetId }); used.add(rule); used.add(removal); }
+      else { other.push(rule); used.add(rule); }
+    } else { other.push(rule); used.add(rule); }
+  }
+  return { groups, other };
+}
+
+/** The groups (and the rules kept as they were) written back as rules */
+export function areaRules(groups: readonly AreaGroup[], other: readonly RegionRule[] = []): RegionRule[] {
+  const rules: RegionRule[] = [];
+  for (const group of groups) {
+    if (group.kind === "use") for (const trigger of AREA_TRIGGERS.filter(t => group.triggers.includes(t))) rules.push({ trigger, action: "useActivity", targetId: group.targetId });
+    else rules.push({ trigger: "entry", action: "applyEffect", targetId: group.targetId }, { trigger: "exit", action: "removeEffect", targetId: group.targetId });
+  }
+  return [...rules, ...other];
+}
+
+/** A save activity the area runs, made for it: never offered on its own, never asking */
+export function areaSaveActivity(id: string, name: string, spell: boolean): Record<string, unknown> {
+  return {
+    _id: id, type: "save", name,
+    activation: { type: "", override: true },
+    target: { override: true, affects: { type: "creature", count: "1", choice: false }, template: { type: "", units: "ft" }, prompt: false },
+    range: { override: true, units: "any" },
+    save: { ability: ["dex"], dc: { calculation: spell ? "spellcasting" : "", formula: spell ? "" : "10" } },
+    damage: { onSave: "half", parts: [] }, effects: [],
+    midiProperties: { automationOnly: true, confirmTargets: "never", forceConsumeDialog: "never", otherActivityId: "none", otherActivityCompatible: false }
+  };
+}
+
+/** The area chip's edits; groups as edited (a "new" target: a save activity made for the area when saved) */
+export interface AreaEdits { enabled?: boolean, attach?: string, who?: number, oncePerTurn?: boolean, groups?: AreaGroup[], other?: RegionRule[] }
+
+/** The activity's region behaviour after the area's edits */
+export function editedRegion(rb: ActivityData["regionBehavior"], edits: AreaEdits | undefined): NonNullable<ActivityData["regionBehavior"]> {
+  const current = { enabled: false, attachToken: "default", dispositionFilter: -1, oncePerTurn: true, rules: [] as RegionRule[], ...(rb ?? {}) };
+  if (!edits) return current;
+  const split = areaGroups(current.rules ?? []);
+  return {
+    ...current,
+    ...(edits.enabled !== undefined ? { enabled: edits.enabled } : {}),
+    ...(edits.attach !== undefined ? { attachToken: edits.attach } : {}),
+    ...(edits.who !== undefined ? { dispositionFilter: edits.who } : {}),
+    ...(edits.oncePerTurn !== undefined ? { oncePerTurn: edits.oncePerTurn } : {}),
+    rules: areaRules(edits.groups ?? split.groups, edits.other ?? split.other)
+  };
 }

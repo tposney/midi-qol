@@ -31,8 +31,21 @@
     {{#if midi}}<div class="midi-qol-activity-basics hint">{{localize "midi-qol.EntryEditor.Activity.Midi"}} {{midi}}</div>{{/if}}
     {{#if region}}
     <div class="midi-qol-activity-region">
-        <div>{{region.text}}</div>
-        <ul>{{#each region.rules}}<li>{{this}}</li>{{/each}}</ul>
+        <div class="midi-qol-activity-region-line"><button type="button" class="midi-qol-entry-chip builtin" data-action="editActivity" data-home="{{region.home}}" data-field="area" data-place="area">{{region.text}}</button>
+            <button type="button" class="midi-qol-branch-add" data-action="addAreaGroup" data-home="{{region.home}}" data-tooltip="{{localize "midi-qol.EntryEditor.Activity.Area.add"}}" aria-label="{{localize "midi-qol.EntryEditor.Activity.Area.add"}}"><i class="fa-solid fa-plus"></i></button></div>
+        <ul>
+            {{#each region.groups}}<li><button type="button" class="midi-qol-entry-chip builtin" data-action="editActivity" data-home="{{home}}" data-field="area.{{index}}" data-place="area">{{text}}</button></li>{{/each}}
+            {{#each region.other}}<li>{{this}}</li>{{/each}}
+            {{#each region.dnd5e}}<li>{{this}}</li>{{/each}}
+        </ul>
+        {{#if (eq popover.place "area")}}
+        <div class="midi-qol-card-popover">
+            {{#with popover.fields}}{{> "modules/midi-qol/templates/apps/EntryEditor/cardFields.hbs"}}{{/with}}
+            <div class="midi-qol-card-popover-buttons">
+                <button type="button" data-action="closeActivityField" data-home="{{home}}"><i class="fa-solid fa-check"></i> {{localize "midi-qol.EntryEditor.Activity.Done"}}</button>
+            </div>
+        </div>
+        {{/if}}
     </div>
     {{/if}}
     {{#each branches}}

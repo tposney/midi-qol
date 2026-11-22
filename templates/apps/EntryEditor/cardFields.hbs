@@ -9,7 +9,20 @@
         {{#if target.hasSize}}<div class="form-group"><label>{{localize "midi-qol.EntryEditor.Activity.TargetSize"}}</label><div class="form-fields"><input type="number" name="card.target.size" value="{{target.size}}" min="0" step="5"></div></div>{{/if}}
         {{#if target.hasWidth}}<div class="form-group"><label>{{localize "midi-qol.EntryEditor.Activity.TargetWidth"}}</label><div class="form-fields"><input type="number" name="card.target.width" value="{{target.width}}" min="0" step="5"></div></div>{{/if}}
         {{#if target.hasRange}}<div class="form-group"><label>{{localize "midi-qol.EntryEditor.Activity.TargetRange"}}</label><div class="form-fields"><input type="number" name="card.target.range" value="{{target.range}}" min="0" step="5"></div></div>{{/if}}
+        {{#if target.canLinger}}<div class="form-group"><label></label><div class="form-fields"><label class="checkbox"><input type="checkbox" name="card.area.lingers" {{#if target.lingers}}checked{{/if}}> {{localize "midi-qol.EntryEditor.Activity.Area.lingers"}}</label></div></div>{{/if}}
         {{#if target.who}}<div class="form-group"><label>{{localize "midi-qol.EntryEditor.Activity.TargetWho"}}</label><div class="form-fields"><select name="card.target.who">{{#each target.who}}<option value="{{value}}" {{#if selected}}selected{{/if}}>{{label}}</option>{{/each}}</select></div></div>{{/if}}
+        {{/if}}
+        {{#if area}}
+        <div class="form-group"><label></label><div class="form-fields"><label class="checkbox"><input type="checkbox" name="card.area.lingers" {{#if area.lingers}}checked{{/if}}> {{localize "midi-qol.EntryEditor.Activity.Area.lingers"}}</label></div></div>
+        <div class="form-group"><label>{{localize "midi-qol.EntryEditor.Activity.Area.attachLabel"}}</label><div class="form-fields"><select name="card.area.attach">{{#each area.attach}}<option value="{{value}}" {{#if selected}}selected{{/if}}>{{label}}</option>{{/each}}</select></div></div>
+        <div class="form-group"><label>{{localize "midi-qol.EntryEditor.Activity.Area.whoLabel"}}</label><div class="form-fields"><select name="card.area.who">{{#each area.who}}<option value="{{value}}" {{#if selected}}selected{{/if}}>{{label}}</option>{{/each}}</select></div></div>
+        <div class="form-group"><label></label><div class="form-fields"><label class="checkbox"><input type="checkbox" name="card.area.once" {{#if area.once}}checked{{/if}}> {{localize "midi-qol.EntryEditor.Activity.Area.once"}}</label></div></div>
+        {{/if}}
+        {{#if areaGroup}}
+        <div class="form-group"><label>{{localize "midi-qol.EntryEditor.Activity.Area.kindLabel"}}</label><div class="form-fields"><select name="card.area.g.kind">{{#each areaGroup.kinds}}<option value="{{value}}" {{#if selected}}selected{{/if}}>{{label}}</option>{{/each}}</select></div></div>
+        <div class="form-group"><label>{{#if areaGroup.isUse}}{{localize "midi-qol.EntryEditor.Activity.Area.useLabel"}}{{else}}{{localize "midi-qol.EntryEditor.Activity.EffectWhat"}}{{/if}}</label><div class="form-fields"><select name="card.area.g.target">{{#each areaGroup.targets}}<option value="{{value}}" {{#if selected}}selected{{/if}}>{{label}}</option>{{/each}}</select></div></div>
+        {{#if areaGroup.triggers}}<div class="form-group"><label>{{localize "midi-qol.EntryEditor.Activity.Area.whenLabel"}}</label><div class="form-fields midi-qol-area-triggers">{{#each areaGroup.triggers}}<label class="checkbox"><input type="checkbox" name="card.area.g.trigger.{{value}}" {{#if checked}}checked{{/if}}> {{label}}</label>{{/each}}</div></div>{{/if}}
+        <button type="button" data-action="removeAreaGroup" data-home="{{home}}" data-index="{{areaGroup.index}}"><i class="fa-solid fa-trash"></i> {{localize "midi-qol.EntryEditor.Activity.Area.remove"}}</button>
         {{/if}}
         {{#if roll}}
         <div class="form-group">

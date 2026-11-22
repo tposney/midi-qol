@@ -10,6 +10,7 @@ import { activityCardContributor, contributedActivityCard, optionList } from "..
 import { automationNotes } from "../lib/entries/automations.js";
 import { configOptions, type ConfigField } from "../lib/entries/config.js";
 import { effectAction, mainBranch, newEffectData, type NewEffect } from "../lib/entries/activityCard.js";
+import { AREA_TRIGGERS, areaGroups, areaSaveActivity, areaView, editedRegion, type AreaGroup } from "../lib/entries/activityCard.js";
 import { convertActivity, editedTargeting, FROM_YOU_SHAPES, moveBranchEntry, POINT_SHAPES, ROLL_KINDS, TARGET_PRESETS, targetingUpdate, targetPreset, type RollKind, type TargetPreset, type Targeting } from "../lib/entries/activityCard.js";
 import { activityCard, activityUpdate, BRANCH_EVENT, branchEntryId, isBranchEntry, partFormula, type ActivityBranch, type ActivityData, type BuiltInPart, type CardEdits, type CardText } from "../lib/entries/activityCard.js";
 
@@ -198,6 +199,8 @@ function chipFields(fields: Record<string, unknown>, field: string): Record<stri
   if (field === "roll") return { roll: fields.roll, save: fields.save, check: fields.check };
   if (field === "target") return { target: fields.target };
   if (field === "newEffect") return { newEffect: fields.newEffect };
+  if (field === "area") return { area: fields.area };
+  if (field.startsWith("area.")) return { areaGroup: fields.areaGroup };
   if (field === "save") return { save: fields.save };
   if (field === "dc") return fields.save ? { save: fields.save } : { check: fields.check };
   if (field === "check") return { check: fields.check };
@@ -299,6 +302,17 @@ export class EntryEditor extends HandlebarsApplicationMixin(ApplicationV2) {
       for (const draft of home.drafts) draft.problems = this.#problemsOf(draft, home.drafts);
       return home;
     });
+    // An activity another one's area runs is titled by that (the author never made it to be used on its own)
+    type AreaOwner = { regionBehavior?: { enabled?: boolean, rules?: { action: string, targetId: string }[] } };
+    const runByArea = new Set(activities.flatMap(a => {
+      const rb = (a as AreaOwner).regionBehavior;
+      return rb?.enabled ? (rb.rules ?? []).filter(r => r.action === "useActivity").map(r => r.targetId) : [];
+    }));
+    for (const home of this.#homes) {
+      const a = home.document as { id?: string | null, identifier?: string, name?: string | null };
+      if (home.kind === "activity" && (runByArea.has(a.id ?? "") || runByArea.has(a.identifier ?? "")))
+        home.label = game.i18n?.format("midi-qol.EntryEditor.Home.activityRunByArea", { name: a.name ?? "" }) ?? home.label;
+    }
     this.#at = Math.max(0, this.#homes.findIndex(home => same(home.document, document)));
     const last = game.settings.get(MODULE_ID, "EntryEditorView") as View;
     this.#view = view ?? (VIEWS.includes(last) ? last : "sentence");
@@ -312,7 +326,8 @@ export class EntryEditor extends HandlebarsApplicationMixin(ApplicationV2) {
       || Object.keys(this.#cardUpdate(h)).length > 0
       || (!!h.settings && (JSON.stringify(h.settings.values) !== h.settings.stored || h.settings.spec !== h.settings.specStored))
       || (!!h.changes && JSON.stringify(h.changes.rows) !== h.changes.stored)
-      || (!!h.card?.target && (Object.keys(this.#targetingUpdates(h).activity).length > 0 || Object.keys(this.#targetingUpdates(h).item).length > 0)));
+      || (!!h.card?.target && (Object.keys(this.#targetingUpdates(h).activity).length > 0 || Object.keys(this.#targetingUpdates(h).item).length > 0))
+      || (!!h.card?.area && Object.keys(this.#areaUpdates(h).activity).length > 0));
   }
 
   /** Closing with unsaved changes asks first (`options.discard`: no question) */
@@ -379,6 +394,8 @@ export class EntryEditor extends HandlebarsApplicationMixin(ApplicationV2) {
       addToBranch: EntryEditor.#onAddToBranch,
       addDamagePart: EntryEditor.#onAddDamagePart,
       addChange: EntryEditor.#onAddChange,
+      addAreaGroup: EntryEditor.#onAddAreaGroup,
+      removeAreaGroup: EntryEditor.#onRemoveAreaGroup,
       confirmEffect: EntryEditor.#onConfirmEffect,
       removeEffect: EntryEditor.#onRemoveEffect,
       removeChange: EntryEditor.#onRemoveChange,
@@ -721,6 +738,7 @@ export class EntryEditor extends HandlebarsApplicationMixin(ApplicationV2) {
     const update = !h.card ? {} : converting ? activityUpdate(source, { ...h.card, convertTo: undefined }) : this.#cardUpdate(h);
     const now = foundry.utils.mergeObject(source, foundry.utils.expandObject(update), { inplace: false }) as ActivityData;
     if (h.card?.target && source.targeting) now.targeting = editedTargeting(source.targeting, h.card.target);
+    if (h.card?.area) now.regionBehavior = editedRegion(source.regionBehavior, h.card.area);
     return now;
   }
 
@@ -752,7 +770,9 @@ export class EntryEditor extends HandlebarsApplicationMixin(ApplicationV2) {
     const edits = activityUpdate(converted as unknown as ActivityData, { ...h.card!, convertTo: undefined });
     // Its targeting edited too: the activity's own part goes into the replacement, the spell's onto the item
     const targeting = this.#targetingUpdates(h);
-    const data = foundry.utils.mergeObject(converted, foundry.utils.expandObject({ ...edits, ...targeting.activity }), { inplace: false });
+    const areaUpdate = this.#areaUpdates(h);
+    if (areaUpdate.newActivity) await item.update({ [`system.activities.${areaUpdate.newActivity._id}`]: areaUpdate.newActivity });
+    const data = foundry.utils.mergeObject(converted, foundry.utils.expandObject({ ...edits, ...targeting.activity, ...areaUpdate.activity }), { inplace: false });
     await item.update({ [`system.activities.${activity.id}`]: new foundry.data.operators.ForcedReplacement(data) });
     if (Object.keys(targeting.item).length) await item.update(targeting.item);
   }
@@ -817,7 +837,9 @@ export class EntryEditor extends HandlebarsApplicationMixin(ApplicationV2) {
       .filter((v): v is string => typeof v === "string" && !!v).join(" · ");
     const opened = this.#cardOpen === at ? { ...this.#openFields(h, data), home: at } : undefined;
     const all = this.#cardField === "all" || !this.#cardField;
-    return { home: at, when: model.when.map(chip), branches, basics, targeting: model.targeting ? chip(model.targeting) : undefined, midi: this.#midiProperties(h), region: model.region, macros: this.#cardMacros(h),
+    const area = areaView(data, text);
+    const region = area ? { text: area.text, groups: area.groups.map((g, index) => ({ text: g, index, home: at })), other: area.other, dnd5e: area.dnd5e, home: at } : undefined;
+    return { home: at, when: model.when.map(chip), branches, basics, targeting: model.targeting ? chip(model.targeting) : undefined, midi: this.#midiProperties(h), region, macros: this.#cardMacros(h),
       open: opened && all ? { ...opened, newEffect: undefined } : undefined,
       popover: opened && !all ? { place: this.#cardPlace, fields: { ...chipFields(opened, this.#cardField!), home: at, noAdd: true } } : undefined };
   }
@@ -886,6 +908,8 @@ export class EntryEditor extends HandlebarsApplicationMixin(ApplicationV2) {
         size: ["point", "fromYou", "emanation"].includes(preset) ? Number(tg.size) || "" : undefined,
         width: tg.templateType === "line" ? Number(tg.width) || "" : undefined,
         hasSize: ["point", "fromYou", "emanation"].includes(preset), hasWidth: tg.templateType === "line", hasRange: ["one", "several", "point"].includes(preset),
+        // An area can linger and act on creatures in it (midi's region rules)
+        canLinger: ["point", "fromYou", "emanation"].includes(preset), lingers: !!data.regionBehavior?.enabled,
         who: ["self", "custom"].includes(preset) ? undefined : ["creature", "enemy", "ally"].map(w => option(w, i18n(`midi-qol.EntryEditor.Activity.Target.who.${w}s`), (tg.affectsType || "creature") === w)),
         onItem: undefined
       } : undefined,
@@ -912,7 +936,8 @@ export class EntryEditor extends HandlebarsApplicationMixin(ApplicationV2) {
         types: damageTypes.map(t => option(t.id, t.label, (part.types ?? []).includes(t.id))) })) : undefined,
       healing: data.healing ? { formula: partFormula(data.healing), types: healingTypes.map(t => option(t.id, t.label, (data.healing!.types ?? []).includes(t.id))) } : undefined,
       effects: (data.effects ?? []).map(e => ({ id: e._id, name: this.#cardText().effectName(e._id), onSave: !!e.onSave, canOnSave: save })),
-      newEffect: this.#newEffectContext(data)
+      newEffect: this.#newEffectContext(data),
+      ...this.#areaContext(data)
     };
   }
 
@@ -928,6 +953,85 @@ export class EntryEditor extends HandlebarsApplicationMixin(ApplicationV2) {
       duration: form.duration, units: ["", "rounds", "minutes", "hours"].map(u => ({ value: u, label: i18n(`midi-qol.EntryEditor.Activity.Units.${u || "none"}`), selected: u === form.units })),
       canRepeat: data.type === "save" && this.#cardPlace === mainBranch(data.type), repeat: form.repeat
     };
+  }
+
+  /** The area's fields: whether it acts, attached to, who, once per turn; each group's (what it does, when) */
+  #areaContext(data: ActivityData) {
+    const rb = data.regionBehavior;
+    const option = (value: string, label: string, selected: boolean) => ({ value, label, selected });
+    const activities = [...((this.#item()?.system as { activities?: Iterable<{ id: string, identifier?: string, name?: string, type?: string }> } | undefined)?.activities ?? [])];
+    const self = (this.#homes[this.#cardOpen ?? this.#at]?.document as { id?: string } | undefined)?.id;
+    const effects = [...(this.#item()?.effects ?? [])].filter(e => !(e as { transfer?: boolean }).transfer);
+    const groups = areaGroups(rb?.rules ?? []).groups;
+    const at = this.#cardField?.startsWith("area.") ? Number(this.#cardField.slice(5)) : -1;
+    const group = groups[at];
+    return {
+      area: {
+        lingers: !!rb?.enabled,
+        attach: ["default", "caster", "target"].map(v => option(v, i18n(`midi-qol.EntryEditor.Activity.Area.attach.${v}`), (rb?.attachToken ?? "default") === v)),
+        who: [["-1", "enemies"], ["0", "anyone"], ["1", "allies"]].map(([v, l]) => option(v, i18n(`midi-qol.EntryEditor.Activity.Area.who.${l}`), String(rb?.dispositionFilter ?? -1) === v)),
+        once: rb?.oncePerTurn ?? true
+      },
+      areaGroup: group ? {
+        index: at,
+        kinds: ["use", "whileIn"].map(k => option(k, i18n(`midi-qol.EntryEditor.Activity.Area.kind.${k}`), group.kind === k)),
+        isUse: group.kind === "use",
+        targets: group.kind === "use"
+          ? [...activities.filter(a => a.id !== self).map(a => option(a.identifier || a.id, a.name || a.id, [a.identifier, a.id].includes(group.targetId))),
+            option("new", i18n("midi-qol.EntryEditor.Activity.Area.newSave"), group.targetId === "new")]
+          : effects.map(e => option(e.id!, e.name, e.id === group.targetId)),
+        triggers: group.kind === "use" ? AREA_TRIGGERS.map(tr => ({ value: tr, label: i18n(`midi-qol.EntryEditor.Activity.Region.trigger.${tr}`), checked: group.triggers.includes(tr) })) : undefined
+      } : undefined
+    };
+  }
+
+  /** The area's groups as edited so far (from the activity's rules the first time) */
+  #areaGroupsOf(h: Home): AreaGroup[] {
+    if (!h.card) return [];
+    if (!h.card.area?.groups) {
+      const split = areaGroups(this.#activitySource(h).regionBehavior?.rules ?? []);
+      h.card.area = { ...(h.card.area ?? {}), groups: split.groups, other: split.other };
+    }
+    return h.card.area!.groups!;
+  }
+
+  static #onAddAreaGroup(this: EntryEditor, _event: Event, target: HTMLElement) {
+    const at = Number(target.dataset.home ?? this.#at);
+    const h = this.#homes[at];
+    if (!h?.card) return;
+    const groups = this.#areaGroupsOf(h);
+    const others = [...((this.#item()?.system as { activities?: Iterable<{ id: string, identifier?: string }> } | undefined)?.activities ?? [])]
+      .filter(a => a.id !== (h.document as { id?: string }).id);
+    groups.push({ kind: "use", targetId: others[0] ? others[0].identifier || others[0].id : "new", triggers: ["entry", "turnEnd"] });
+    h.card.area!.enabled = true;
+    this.#cardOpen = at;
+    this.#cardField = `area.${groups.length - 1}`;
+    this.#cardPlace = "area";
+    this.render();
+  }
+
+  static #onRemoveAreaGroup(this: EntryEditor, _event: Event, target: HTMLElement) {
+    const h = this.#homes[Number(target.dataset.home ?? this.#at)];
+    if (!h?.card) return;
+    this.#areaGroupsOf(h).splice(Number(target.dataset.index), 1);
+    this.#cardOpen = this.#cardField = this.#cardPlace = undefined;
+    this.render();
+  }
+
+  /** The area's update on save: the region behaviour, and a save activity made for it where a group asks for "a new save" */
+  #areaUpdates(h: Home): { activity: Record<string, unknown>, newActivity?: Record<string, unknown> } {
+    if (!h.card?.area) return { activity: {} };
+    const source = this.#activitySource(h);
+    const region = editedRegion(source.regionBehavior, h.card.area);
+    let newActivity: Record<string, unknown> | undefined;
+    if (region.rules?.some(r => r.targetId === "new")) {
+      const item = this.#item();
+      const id = foundry.utils.randomID();
+      newActivity = areaSaveActivity(id, game.i18n?.format("midi-qol.EntryEditor.Activity.Area.saveName", { name: item?.name ?? "" }) ?? "Save", !!item && String(item.type) === "spell");
+      region.rules = region.rules.map(r => r.targetId === "new" ? { ...r, targetId: id } : r);
+    }
+    if (JSON.stringify(region) === JSON.stringify({ enabled: false, attachToken: "default", dispositionFilter: -1, oncePerTurn: true, rules: [], ...(source.regionBehavior ?? {}) })) return { activity: {} };
+    return { activity: { regionBehavior: region }, ...(newActivity ? { newActivity } : {}) };
   }
 
   /** "Add": the effect joins the branch (created on the item when saved) */
@@ -988,6 +1092,26 @@ export class EntryEditor extends HandlebarsApplicationMixin(ApplicationV2) {
       if (key.startsWith("card.x.")) (h.cardValues ??= {})[key.slice("card.x.".length)] = value;
     if ("card.checkAbility" in data) h.card.checkAbility = String(data["card.checkAbility"] ?? "");
     if ("card.attackType" in data) h.card.attackType = String(data["card.attackType"] ?? "");
+    // The area: its own settings, then the open group's
+    if ("card.area.lingers" in data || "card.area.attach" in data) {
+      h.card.area = { ...(h.card.area ?? {}),
+        ...("card.area.lingers" in data ? { enabled: !!data["card.area.lingers"] } : {}),
+        ...("card.area.attach" in data ? { attach: String(data["card.area.attach"]) } : {}),
+        ...("card.area.who" in data ? { who: Number(data["card.area.who"]) } : {}),
+        ...("card.area.once" in data ? { oncePerTurn: !!data["card.area.once"] } : {}) };
+    }
+    if ("card.area.g.kind" in data) {
+      const groups = this.#areaGroupsOf(h);
+      const index = this.#cardField?.startsWith("area.") ? Number(this.#cardField.slice(5)) : -1;
+      const group = groups[index];
+      if (group) {
+        const kind = String(data["card.area.g.kind"]) as AreaGroup["kind"];
+        const targetId = String(data["card.area.g.target"] ?? "");
+        groups[index] = kind !== group.kind
+          ? kind === "use" ? { kind, targetId: "new", triggers: ["entry", "turnEnd"] } : { kind, targetId: [...(this.#item()?.effects ?? [])][0]?.id ?? "" }
+          : kind === "use" ? { kind, targetId, triggers: AREA_TRIGGERS.filter(tr => !!data[`card.area.g.trigger.${tr}`]) } : { kind, targetId };
+      }
+    }
     if ("card.new.what" in data) this.#effectForm = { what: String(data["card.new.what"] ?? ""), name: String(data["card.new.name"] ?? this.#effectForm.name),
       duration: String(data["card.new.duration"] ?? ""), units: String(data["card.new.units"] ?? ""), repeat: !!data["card.new.repeat"] };
     if (Object.keys(data).some(k => k.startsWith("card.target."))) {
@@ -1654,6 +1778,10 @@ export class EntryEditor extends HandlebarsApplicationMixin(ApplicationV2) {
       }
       // The card's edits are the activity's own data (paths relative to the activity)
       Object.assign(changes, this.#cardUpdate(home));
+      // Its area: a save made for it first, then the region behaviour
+      const areaUpdate = this.#areaUpdates(home);
+      if (areaUpdate.newActivity) await (home.document as { item?: Item.Implementation }).item?.update({ [`system.activities.${areaUpdate.newActivity._id}`]: areaUpdate.newActivity });
+      Object.assign(changes, areaUpdate.activity);
       // Its targeting: the activity's own, or the spell's
       const targeting = this.#targetingUpdates(home);
       Object.assign(changes, targeting.activity);
