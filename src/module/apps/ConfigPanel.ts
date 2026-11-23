@@ -1,3 +1,5 @@
+import { HUD_ROLES, ROLE_DEFAULT_KEY, hudChoices, tableChoice } from "../services/turnModel/hud.js";
+import { openTurnHudConfig } from "./TurnHudConfig.js";
 import { chooseJsonFile } from "../lib/fileDialogs.js";
 import { registeredSettings, settingValue } from "../lib/settingsRegistry.js";
 import { providers as servicesProviders } from "../api/services.js";
@@ -223,6 +225,9 @@ export class ConfigPanel extends HandlebarsApplicationMixin(ApplicationV2) {
       RecordAOOOptions: recordAOOOptions,
       EnforceReactionsOptions: EnforceReactionsOptions,
       EnforceMovementOptions: EnforceMovementOptions,
+      // M7b: the table's HUD per role
+      HudRoles: HUD_ROLES.map(role => ({ role, name: ROLE_DEFAULT_KEY[role], label: i18n(`midi-qol.Hud.Role.${role}`), hint: i18n(`midi-qol.Hud.RoleHint.${role}`),
+        choices: hudChoices(role), selected: tableChoice(role) })),
       OpportunityAttacksOptions: OpportunityAttacksOptions,
       ForcedMovementProviderOptions: ForcedMovementProviderOptions,
       ProneStandingOptions: ProneStandingOptions,
@@ -344,6 +349,7 @@ export class ConfigPanel extends HandlebarsApplicationMixin(ApplicationV2) {
 
   async _onRender(context, options) {
     super._onRender(context, options);
+    this.element.querySelector("[data-midi-open-turnhud]")?.addEventListener("click", () => openTurnHudConfig());
     // A block's options shown only while its switch is on (data-midi-reveal="<the checkbox's name>")
     const form = this.element as HTMLElement;
     const reveal = () => {

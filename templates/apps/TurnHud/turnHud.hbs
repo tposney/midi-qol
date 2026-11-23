@@ -1,13 +1,26 @@
 <div class="midi-qol-turn-hud-body">
-    {{formGroup choiceField value=choice localize=true}}
-    {{#if missing}}<p class="hint midi-qol-turn-hud-missing">{{localize "midi-qol.Hud.Missing"}}</p>{{/if}}
-    {{#if credit}}<p class="hint midi-qol-turn-hud-credit">{{{credit}}}</p>{{/if}}
-    {{#if ownSettings}}
+    <fieldset>
+        <legend>{{localize "midi-qol.Hud.Roles"}}</legend>
+        {{#each roles}}
+        {{#if readOnly}}
+        <div class="form-group">
+            <label>{{label}}</label>
+            <div class="form-fields"><span>{{shown}}</span></div>
+            <p class="hint">{{hint}}</p>
+        </div>
+        {{else}}
+        {{formGroup field value=value localize=true}}
+        {{/if}}
+        {{#if missing}}<p class="hint midi-qol-turn-hud-missing">{{localize "midi-qol.Hud.Missing"}}</p>{{/if}}
+        {{/each}}
+    </fieldset>
+    {{#each credits}}<p class="hint midi-qol-turn-hud-credit">{{{this}}}</p>{{/each}}
+    {{#each ownSettings}}
     <div class="form-group">
-        <label>{{localize "midi-qol.Hud.OwnSettings"}}</label>
-        <div class="form-fields"><button type="button" data-action="hudOwnSettings"><i class="fa-solid fa-gear"></i> {{localize "midi-qol.Hud.Configure"}}</button></div>
+        <label>{{label}}</label>
+        <div class="form-fields"><button type="button" data-action="hudOwnSettings" data-index="{{index}}"><i class="fa-solid fa-gear"></i> {{localize "midi-qol.Hud.Configure"}}</button></div>
     </div>
-    {{/if}}
+    {{/each}}
     {{#if hudTabs.length}}
     <nav class="tabs" data-group="hud">
         {{#each hudTabs}}

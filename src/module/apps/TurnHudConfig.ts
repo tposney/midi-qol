@@ -1,18 +1,24 @@
 import { i18n } from "../../midi-qol.js";
-import { FOUNDRY_HUD, NO_HUD, cycleHud, hudApi, hudChoice, hudChoices, hudProvider, setHudChoice, type HudTool } from "../services/turnModel/hud.js";
+import {
+  HUD_ROLES, PLAYER_ROLES, cycleHud, hudApi, hudChoice, hudChoices, hudProvider, playerChoice, setHudChoice, tableChoice,
+  type HudProvider, type HudRole, type HudSettings, type HudTool
+} from "../services/turnModel/hud.js";
 
 /*
- * M7b: midi's Turn HUD window, one per player: the choice (Foundry's hotbar, a registered HUD, none), then the chosen
- * HUD's settings as it described them when it registered (tabs of registered settings, drawn as Foundry's settings
- * form draws them; world settings only for the GM), its tools, its credit. Saved as they change. Opened from
- * Configure Settings (midi-qol: Turn HUD), the switcher on the hotbar or on a HUD, or MidiQOL.hud.openSettings().
+ * M7b: midi's Turn HUD window, one per player. Their combat HUD ("Table default" follows the GM's); the party and turn
+ * order HUDs, the table's (the same on every client: the GM chooses them here or in midi's config, players see them).
+ * Then the settings of the HUDs in use, as each described them when it registered (tabs of registered settings drawn as
+ * Foundry's settings form draws them, world settings only for the GM; a module's tabs shown once, a tab with roles only
+ * while one of them uses that module), its tools, its credit. Saved as they change. Opened from Configure Settings
+ * (midi-qol: Turn HUD), midi's config, the switcher, or MidiQOL.hud.openSettings().
  */
 
 const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
 type SettingConfig = { namespace: string, key: string, scope: string, name?: string, hint?: string, type?: unknown, choices?: Record<string, string>,
   range?: { min?: number, max?: number, step?: number }, default?: unknown, input?: unknown };
 
-const CHOICE_NAME = "midi-qol.turnHud";
+/** A role's choice field's name */
+const choiceName = (role: HudRole) => `midi-qol-hud.${role}`;
 
 /** A form field for a registered setting, as core's SettingsConfig builds one */
 function fieldFor(setting: SettingConfig) {
@@ -36,6 +42,19 @@ function editable(setting: SettingConfig | undefined): setting is SettingConfig 
   return !!setting && (setting.scope !== "world" || !!game.user?.isGM);
 }
 
+/** The HUDs in use, one per module (providers sharing a settings object): the roles each fills */
+function inUse(): { provider: HudProvider, roles: HudRole[] }[] {
+  const found: { provider: HudProvider, settings?: HudSettings, roles: HudRole[] }[] = [];
+  for (const role of HUD_ROLES) {
+    const provider = hudProvider(hudChoice(role));
+    if (!provider) continue;
+    const same = found.find(f => (f.settings && f.settings === provider.settings) || f.provider === provider);
+    if (same) same.roles.push(role);
+    else found.push({ provider, settings: provider.settings, roles: [role] });
+  }
+  return found;
+}
+
 export class TurnHudConfig extends HandlebarsApplicationMixin(ApplicationV2) {
   static DEFAULT_OPTIONS = {
     id: "midi-qol-turn-hud",
@@ -49,42 +68,58 @@ export class TurnHudConfig extends HandlebarsApplicationMixin(ApplicationV2) {
 
   static PARTS = { body: { template: "modules/midi-qol/templates/apps/TurnHud/turnHud.hbs", scrollable: [".midi-qol-turn-hud-tabs-body"] } };
 
-  /** The tools of the drawn tabs, by index (their buttons carry the index) */
+  /** The tools and own-settings openers drawn, by index (their buttons carry the index) */
   #tools: HudTool[] = [];
+  #own: (() => void)[] = [];
 
   async _prepareContext(options) {
     const context = await super._prepareContext(options);
-    const choice = hudChoice();
-    const choiceField = new foundry.data.fields.StringField({ required: true, choices: hudChoices() });
-    Object.assign(choiceField, { name: CHOICE_NAME, label: i18n("midi-qol.Hud.Name"), hint: i18n("midi-qol.Hud.Hint") });
-    const provider = choice === FOUNDRY_HUD || choice === NO_HUD ? undefined : hudProvider(choice);
+    const isGM = !!game.user?.isGM;
+    const roles = HUD_ROLES.map(role => {
+      const mine = PLAYER_ROLES.includes(role);
+      const id = hudChoice(role);
+      const missing = id !== "foundry" && id !== "none" && !hudProvider(id);
+      const label = i18n(`midi-qol.Hud.Role.${role}`);
+      // The table's roles: a select for the GM, the choice shown to a player
+      if ( !mine && !isGM ) return { readOnly: true, label, shown: hudChoices(role)[id] ?? id, hint: i18n("midi-qol.Hud.SetByGM"), missing };
+      const field = new foundry.data.fields.StringField({ required: true, choices: hudChoices(role, { withDefault: mine }) });
+      Object.assign(field, { name: choiceName(role), label,
+        hint: i18n(mine ? `midi-qol.Hud.RoleHint.${role}` : "midi-qol.Hud.TableRoleHint") });
+      return { field, value: mine ? playerChoice(role) : tableChoice(role), missing };
+    });
     this.#tools = [];
-    const tabs = (provider?.settings?.tabs ?? []).map(tab => {
-      const entries = tab.keys.map(settingConfig).filter(editable).map(setting => ({
-        field: fieldFor(setting), value: game.settings?.get(setting.namespace as never, setting.key as never), input: setting.input
-      }));
-      const tools = (tab.tools ?? []).filter(tool => !tool.gmOnly || game.user?.isGM).map(tool => {
-        this.#tools.push(tool);
-        return { index: this.#tools.length - 1, label: i18n(tool.label), hint: tool.hint ? i18n(tool.hint) : "", icon: tool.icon ?? "fa-solid fa-gear",
-          button: i18n(tool.button ?? tool.label) };
-      });
-      return { id: tab.id, label: i18n(tab.label), icon: tab.icon, entries, tools };
-    }).filter(tab => tab.entries.length || tab.tools.length);
+    this.#own = [];
+    const huds = inUse();
+    const tabs = huds.flatMap(({ provider, roles: used }) => (provider.settings?.tabs ?? [])
+      .filter(tab => !tab.roles || tab.roles.some(r => used.includes(r)))
+      .map(tab => {
+        const entries = tab.keys.map(settingConfig).filter(editable).map(setting => ({
+          field: fieldFor(setting), value: game.settings?.get(setting.namespace as never, setting.key as never), input: setting.input
+        }));
+        const tools = (tab.tools ?? []).filter(tool => !tool.gmOnly || isGM).map(tool => {
+          this.#tools.push(tool);
+          return { index: this.#tools.length - 1, label: i18n(tool.label), hint: tool.hint ? i18n(tool.hint) : "",
+            icon: tool.icon ?? "fa-solid fa-gear", button: i18n(tool.button ?? tool.label) };
+        });
+        return { id: `${provider.label}-${tab.id}`.slugify(), label: i18n(tab.label), icon: tab.icon, entries, tools };
+      })).filter(tab => tab.entries.length || tab.tools.length);
     const active = tabs.some(t => t.id === this.tabGroups.hud) ? this.tabGroups.hud : tabs[0]?.id;
     if (active) this.tabGroups.hud = active;
-    return {
-      ...context, choiceField, choice, hudTabs: tabs.map(t => ({ ...t, active: t.id === active })),
-      credit: provider?.credit ?? "", ownSettings: !!provider?.openSettings,
-      missing: choice !== FOUNDRY_HUD && choice !== NO_HUD && !provider
-    };
+    const credits = huds.filter(h => h.provider.credit).map(h => h.provider.credit);
+    const ownSettings = huds.filter(h => h.provider.openSettings).map(h => {
+      this.#own.push(() => h.provider.openSettings?.());
+      return { index: this.#own.length - 1, label: h.provider.label };
+    });
+    return { ...context, roles, hudTabs: tabs.map(t => ({ ...t, active: t.id === active })), credits, ownSettings };
   }
 
   static async #onChange(this: TurnHudConfig, event: Event, _form: HTMLFormElement, formData: { object: Record<string, unknown> }) {
     const name = (event.target as HTMLInputElement | null)?.name;
     if (!name || !(name in formData.object)) return;
     const value = formData.object[name];
-    if (name === CHOICE_NAME) {
-      await setHudChoice(String(value));
+    const role = HUD_ROLES.find(r => choiceName(r) === name);
+    if (role) {
+      await setHudChoice(String(value), role);
       return void this.render();
     }
     const setting = settingConfig(name);
@@ -96,8 +131,8 @@ export class TurnHudConfig extends HandlebarsApplicationMixin(ApplicationV2) {
     this.#tools[Number(target.dataset.index)]?.open();
   }
 
-  static #onOwnSettings(this: TurnHudConfig) {
-    hudProvider(hudChoice())?.openSettings?.();
+  static #onOwnSettings(this: TurnHudConfig, _event: PointerEvent, target: HTMLElement) {
+    this.#own[Number(target.dataset.index)]?.();
   }
 }
 
@@ -107,7 +142,7 @@ export function openTurnHudConfig() {
   void new TurnHudConfig().render({ force: true });
 }
 
-/* The switcher: a small menu at a button (the hotbar's, a HUD's) */
+/* The switcher: a small menu at a button (the hotbar's, a HUD's) for the player's combat HUD */
 
 let switcher: HTMLElement | undefined;
 function closeSwitcher() {
@@ -123,11 +158,11 @@ export function showHudSwitcher(anchor: HTMLElement) {
   if (switcher) return closeSwitcher();
   const menu = document.createElement("menu");
   menu.className = "midi-qol-hud-switcher";
-  const current = hudChoice();
-  for (const [id, label] of Object.entries(hudChoices())) {
+  const current = playerChoice("combat");
+  for (const [id, label] of Object.entries(hudChoices("combat", { withDefault: true }))) {
     const item = document.createElement("li");
     item.innerHTML = `<button type="button" class="${id === current ? "active" : ""}"><i class="fa-solid ${id === current ? "fa-check" : "fa-fw"}"></i> ${foundry.utils.escapeHTML(label)}</button>`;
-    item.querySelector("button")!.addEventListener("click", () => { closeSwitcher(); void setHudChoice(id); });
+    item.querySelector("button")!.addEventListener("click", () => { closeSwitcher(); void setHudChoice(id, "combat"); });
     menu.append(item);
   }
   const settings = document.createElement("li");
@@ -157,7 +192,7 @@ function addHotbarButton(_app: unknown, element: HTMLElement) {
   controls.prepend(button);
 }
 
-/** init: the menu in Configure Settings (every player), the keybinding, the switcher on the hotbar */
+/** init: the menu in Configure Settings (every player), the keybinding (next combat HUD), the switcher on the hotbar */
 export function registerTurnHudConfig() {
   game.settings?.registerMenu("midi-qol", "turnHudMenu", {
     name: "midi-qol.Hud.Name",

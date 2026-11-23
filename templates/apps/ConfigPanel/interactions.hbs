@@ -1,6 +1,24 @@
 <section id="midi-config-interactions" class="tab midi-scrollable-list{{#if tab.active}} active{{/if}}" data-group="{{tab.group}}" data-tab="{{tab.id}}">
 
     <div class="midi-qol-box">
+        {{localize "midi-qol.Config.Box.hud"}}
+        <div class="notes midi-qol-faint">{{localize "midi-qol.Hud.TableHint"}}</div>
+        {{#each HudRoles}}
+        <div class="form-group">
+            <label>{{label}}</label>
+            <select name="{{name}}" data-dtype="String">
+                {{selectOptions choices selected=selected}}
+            </select>
+            <div class="notes midi-qol-faint">{{hint}}</div>
+        </div>
+        {{/each}}
+        <div class="form-group">
+            <label>{{localize "midi-qol.Hud.PlayersChoose"}}</label>
+            <div class="form-fields"><button type="button" data-midi-open-turnhud><i class="fa-solid fa-table-cells"></i> {{localize "midi-qol.Hud.OpenWindow"}}</button></div>
+        </div>
+    </div>
+
+    <div class="midi-qol-box">
         {{localize "midi-qol.Config.Box.movement"}}
         <div class="form-group">
             <label>{{localize "midi-qol.EnforceMovement.Name"}}</label>

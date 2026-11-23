@@ -144,6 +144,10 @@ export class ConfigSettings {
   objectInteractions = false;
   /** M8: who makes grapples: auto (CAT's when CAT is active), midi-qol, cat */
   grappleProvider = "auto";
+  /** M7b: the table's HUD per role (a player's "Table default"): a registered HUD's id, foundry (combat: the hotbar), none */
+  hudDefaultCombat = "foundry";
+  hudDefaultParty = "none";
+  hudDefaultTurnOrder = "none";
   enforceSingleWeaponTarget: boolean = false;
   gmAttackDisplay: string = "full";
   gmDamageDisplay: string = "full";
@@ -662,6 +666,9 @@ export let fetchParams = () => {
   if (configSettings.interactions === undefined) configSettings.interactions = true;
   if (configSettings.objectInteractions === undefined) configSettings.objectInteractions = false;
   if (!configSettings.grappleProvider) configSettings.grappleProvider = "auto";
+  if (!configSettings.hudDefaultCombat) configSettings.hudDefaultCombat = "foundry";
+  if (!configSettings.hudDefaultParty) configSettings.hudDefaultParty = "none";
+  if (!configSettings.hudDefaultTurnOrder) configSettings.hudDefaultTurnOrder = "none";
   //@ts-expect-error legacy boolean value
   if (configSettings.autoItemEffects === false) configSettings.autoItemEffects = "off";
   if (configSettings.playerDamageCard === undefined) configSettings.playerDamageCard = "none";
