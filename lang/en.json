@@ -2930,6 +2930,8 @@
   "midi-qol.EntryEditor.Home.effectHint": "(acts for whoever has it)",
   "midi-qol.EntryEditor.ChoiceLine": "Asks the player: {label} ({kind})",
   "midi-qol.EntryEditor.AddRecipe": "Add from a recipe",
+  "midi-qol.Status.dashing": "Dashing",
+  "midi-qol.Status.disengaged": "Disengaged",
   "midi-qol.EntryEditor.MoreOptions": "More options ({n})",
   "midi-qol.EntryEditor.SheetLabel": "Midi-QOL: Sentences",
   "midi-qol.EntryEditor.DnD5eSheet": "dnd5e's sheet",

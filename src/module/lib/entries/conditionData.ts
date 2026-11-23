@@ -1,3 +1,4 @@
+import { movementState } from "../../services/economy/movement.js";
 import { MODULE_ID } from "../../../midi-qol.js";
 import type { Workflow } from "../../Workflow.js";
 import { canSee as midiCanSee } from "../../utils.js";
@@ -128,6 +129,8 @@ function economyView(actor: Actor.Implementation | undefined): Record<string, un
     const state = ledger(actor);
     return { action: state.action.used > 0, bonus: state.bonus.used > 0, reaction: state.reaction.used > 0 };
   } });
+  // M6: movement this turn (spent, allowed, remaining, dashes), in combat
+  Object.defineProperty(view, "movement", { enumerable: true, get: () => actor ? movementState(actor) : undefined });
   Object.defineProperty(view, "left", { enumerable: true, get: () => {
     const state = ledger(actor);
     return { action: !state.action.exhausted, bonus: !state.bonus.exhausted, reaction: !state.reaction.exhausted };

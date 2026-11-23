@@ -59,6 +59,8 @@ declare module "fvtt-types/configuration" {
       "dae.addAutoFields": (addAutoFields: Function, fields: { BooleanFormulaField?: any }) => void;
       "dae.ready": (api: any) => void;
       "catReady": () => void;
+      /** Sequencer's module ready */
+      "sequencerReady": () => void;
       /** Condition data being built (createConditionData): add fields an item's conditions can refer to. */
       "midi-qol.conditionData": (conditionData: Record<string, unknown>, data: { workflow?: unknown, actor?: unknown, item?: unknown, target?: unknown }) => void;
       "dae.setupComplete": (api: any) => void;

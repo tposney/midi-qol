@@ -1,3 +1,5 @@
+import { setupMovementActions } from "./module/services/economy/movement.js";
+import { setupSequencerLevelsFix } from "./module/lib/sequencerLevels.js";
 import { PlayerSettingsView } from "./module/apps/PlayerSettingsView.js";
 import { registerCardWaits } from "./module/lib/cardWaits.js";
 import { registerMidiActionSchemas } from "./module/lib/entries/actionSchemas.js";
@@ -578,6 +580,8 @@ Hooks.once('init', async function () {
   defineTokenVisualsService();
   registerTokenVisualProviders();
   setupTokenVisuals();
+  setupSequencerLevelsFix();
+  setupMovementActions();
   // Registered here, not in services/rollBonuses/prompt.ts: BonusPromptApp extends utils' RollModifyDialog and utils
   // imports prompt.ts, so prompt.ts importing the app would evaluate the class before its base exists
   bonusPromptService.register("midi-qol.phased", { open: data => new BonusPromptApp(data) }, { label: "Phased (tick and apply)" });
@@ -2135,6 +2139,15 @@ export function addMidiStatusEffects(statusEffects: typeof CONFIG.statusEffects 
       // showIcon 0: CONST.ACTIVE_EFFECT_SHOW_ICON.NEVER (Foundry 14, not in fvtt-types 13)
       ...(safeGetGameSetting("dae", "DependentConditions") ? { showIcon: 0 } : {}),
       flags: { dae: { specialDuration: ["1Attack", "1Spell", "DamageDealt"] } }
+    });
+  }
+  // M6: Dashing (one more speed this turn; the movement budget reads it) and Disengaged (no opportunity attacks), until the turn's end
+  for (const [id, img] of [["dashing", "icons/svg/wingfoot.svg"], ["disengaged", "icons/svg/door-exit.svg"]] as const) {
+    if (statusEffects.find(e => e._id === getStaticID(id))) continue;
+    statusEffects.push({
+      id, _id: getStaticID(id), name: i18n(`midi-qol.Status.${id}`), img,
+      duration: { expiry: "turnEnd" },
+      flags: { dae: { specialDuration: ["combatEnd"] } }
     });
   }
   if (!statusEffects.find(e => e._id === getStaticID("flanking"))) {

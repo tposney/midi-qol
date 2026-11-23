@@ -6897,9 +6897,12 @@ export async function removeBonusActionUsed(actor: Actor.Implementation, force =
 }
 
 
+/** The economy's windows DAE should end at combat end and turn start: the reaction and bonus action markers, the turn window */
+const LEDGER_WINDOWS = () => [getStaticID("reaction"), getStaticID("bonusaction"), getStaticID("turn")];
+
 /** Removes action markers DAE/dnd5e should have ended (turn start, combat end) but left. */
 async function removeLingeringMarkers(actor: Actor.Implementation, shouldHaveEnded: (marker: ActiveEffect.Implementation) => boolean) {
-  for (const id of [getStaticID("reaction"), getStaticID("bonusaction")]) {
+  for (const id of LEDGER_WINDOWS()) {
     const marker = actor.effects.get(id);
     if (marker && shouldHaveEnded(marker)) await queueActorEffects(actor, () => deleteEffectIfPresent(actor, id));
   }
@@ -6912,7 +6915,7 @@ export function setupMarkerChecks() {
     const ended = new Map<Actor.Implementation, Map<string, number | null | undefined>>();
     for (const actor of combat.combatants.contents.flatMap(c => c.actor ?? [])) {
       const markers = new Map<string, number | null | undefined>();
-      for (const id of [getStaticID("reaction"), getStaticID("bonusaction")]) {
+      for (const id of LEDGER_WINDOWS()) {
         const marker = actor.effects.get(id);
         if (marker) markers.set(id, marker._stats?.createdTime);
       }
@@ -8372,7 +8375,13 @@ export function activityTargetsSelf(activity: Activity | undefined | null): bool
   const target = activity?.target;
   if (target?.affects?.type === "self") return true;
   if (target?.affects?.type || target?.template?.type) return false;
-  return activity?.range?.units === "self" && ["utility", "heal"].includes(activity.type);
+  if (!activity || !["utility", "heal"].includes(activity.type)) return false;
+  // dnd5e gives every activity a range of Self by default: it counts only as the spell's own range (an activity reading
+  // the spell's) or the activity's own override, not for an item with no range (a feat's utility targets nobody)
+  const source = (activity as unknown as { _source?: { range?: { override?: boolean, units?: string } } })._source?.range;
+  const item = activity.item as { type?: string, system?: { range?: { units?: string } } } | undefined;
+  const units = source?.override ? source.units : item?.type === "spell" ? item.system?.range?.units : undefined;
+  return units === "self";
 }
 
 export function activityHasEmanationNoTemplate(activity: Activity) {
