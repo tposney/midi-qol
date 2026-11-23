@@ -868,8 +868,9 @@ export function setupHooks() {
 Hooks.on("dnd5e.preRollDamage", (rollConfig, dialogConfig, messageConfig) => {
   if (!rollConfig.subject) return true;
   // @ts-expect-error no dnd5e-types
-  if (rollConfig.subject.actor && rollConfig.subject.isSpell) {
-    const actorSpellBonus = foundry.utils.getProperty(rollConfig.subject as Actor.Implementation, "system.bonuses.spell.all.damage");
+  const { actor, isSpell } = rollConfig.subject;
+  if (actor && isSpell) {
+    const actorSpellBonus = foundry.utils.getProperty(actor as Actor.Implementation, "system.bonuses.spell.all.damage");
     // @ts-expect-error no dnd5e-types
     if (actorSpellBonus) rollConfig.rolls[0].parts.push(actorSpellBonus);
   }
