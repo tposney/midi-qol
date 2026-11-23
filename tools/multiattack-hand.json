@@ -1,0 +1,13 @@
+{
+ "Compendium.dnd-monster-manual.actors.Actor.mmModronQuadrone": {
+  "options": [
+   { "groups": [{ "n": 4, "refs": ["slam"] }], "extra": [] },
+   { "groups": [{ "n": 4, "refs": ["gears-launcher"] }], "extra": [] }
+  ],
+  "replace": []
+ },
+ "Compendium.dnd5e.actors24.Actor.mmAncientGoldDra": {
+  "options": [{ "groups": [{ "n": 3, "refs": ["rend"] }], "extra": [] }],
+  "replace": [{ "n": 1, "refs": ["spellcasting>guiding-bolt@4", "weakening-breath"] }]
+ }
+}

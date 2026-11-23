@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { readFileSync, existsSync, readdirSync } from "node:fs";
-import { parseMultiattack, type ParsedPlan, type RawRef, type Count } from "../src/module/lib/multiattack.js";
+import { parseMultiattack, resolvePlan, type ParsedPlan, type RawRef, type Count } from "../src/module/lib/multiattack.js";
 
 // SRD 5.2 (CC-BY 4.0) Multiattack descriptions from dnd5e's packs
 const srd: { actor: string, description: string }[] = JSON.parse(readFileSync(new URL("./fixtures/multiattack-srd52.json", import.meta.url), "utf8"));
@@ -151,8 +151,11 @@ describe("multiattack parser: whole corpora", () => {
   const corpusDir = new URL("../local/book-corpus/", import.meta.url);
   const books = existsSync(corpusDir) ? readdirSync(corpusDir).filter(f => f.endsWith(".json")) : [];
   it.skipIf(!books.length)("the local book corpus is present (npm run corpus:books)", () => expect(books.length).toBeGreaterThan(0));
+  // Creatures with a hand plan (tools/multiattack-hand.json) are the books' known errors
+  const hand: Record<string, unknown> = JSON.parse(readFileSync(new URL("../tools/multiattack-hand.json", import.meta.url), "utf8"));
   it.each(books)("every Multiattack in %s reads fully (local corpus)", file => {
-    const corpus: { actor: string, desc: string, items?: { name: string, identifier: string | null }[] }[] = JSON.parse(readFileSync(new URL(file, corpusDir), "utf8"));
+    const corpus: { actor: string, uuid?: string, desc: string, items?: { name: string, identifier: string | null }[] }[] = JSON.parse(readFileSync(new URL(file, corpusDir), "utf8"))
+      .filter((e: { uuid?: string }) => !e.uuid || !hand[e.uuid]);
     // The creature's item names, as the generator and midi pass them
     const names = (e: typeof corpus[number]) => (e.items ?? []).filter(i => !/^multiattack/.test(i.identifier ?? "")).map(i => i.name);
     const failed = corpus.filter(e => { const plan = parseMultiattack(e.desc, { names: names(e) }); return !plan || plan.unread.length; })
@@ -169,5 +172,38 @@ describe("multiattack parser: whole corpora", () => {
     const names = (e: typeof corpus[number]) => (e.items ?? []).filter(i => !/^multiattack/.test(i.identifier ?? "")).map(i => i.name);
     const plans = Object.fromEntries(corpus.map(e => [e.uuid ?? e.actor, compact(parseMultiattack(e.desc, { names: names(e) }))]));
     await expect(JSON.stringify(plans, null, 1)).toMatchFileSnapshot(`../local/book-corpus/__snapshots__/${file.replace(/\.json$/, "")}.plans.json`);
+  });
+});
+
+describe("multiattack plans: resolving against the creature", () => {
+  const items = [
+    { id: "mmRend0000000000", name: "Rend", identifier: "rend" },
+    { id: "mmSpellcasting00", name: "Spellcasting", identifier: "spellcasting", activities: [{ id: "castFogCloud0000", type: "cast", spell: "Compendium.x.spells.Item.fog" }] },
+    { id: "breath0000000000", name: "Weakening Breath", identifier: "weakening-breath" },
+    { id: "claw000000000000", name: "Claw (Oni Form Only)", identifier: "claw" },
+    { id: "noIdent000000000", name: "Gnashing Teeth" }
+  ];
+  const spell = (uuid: string) => ({ "Compendium.x.spells.Item.fog": { identifier: "fog-cloud", name: "Fog Cloud" } } as Record<string, { identifier: string, name: string }>)[uuid];
+  const resolve = (html: string, names: string[] = []) => resolvePlan(parseMultiattack(html, { names })!, { items, spell });
+
+  it("items by id, name, plural and qualifier; a missing identifier is its name's slug", () => {
+    const plan = resolve("It makes three [[/item .mmRend0000000000]] attacks and two claws attacks and one Gnashing Teeth attack.", ["Claw (Oni Form Only)", "Gnashing Teeth"]);
+    expect(plan.options[0].groups.map(g => g.refs)).toEqual([["rend"], ["claw"], ["gnashing-teeth"]]);
+    expect(plan.unresolved).toBeUndefined();
+  });
+  it("casts: a named spell, a level version, a cast activity link", () => {
+    expect(resolve("It makes three [[/item Rend]] attacks. It can replace one attack with a use of (A) [[/item Weakening Breath]] or (B) [[/item Spellcasting]] to cast @UUID[Compendium.y.spells.Item.gb]{Guiding Bolt} (level 4 version).").replace[0].refs)
+      .toEqual(["weakening-breath", "spellcasting>guiding-bolt@4"]);
+    expect(resolve("It makes three [[/item Rend]] attacks. It can replace one attack with a use of Spellcasting to cast [[/item .mmSpellcasting00.Activity.castFogCloud0000]].").replace[0].refs)
+      .toEqual(["spellcasting>fog-cloud"]);
+  });
+  it("any attack, by kind", () => {
+    expect(resolve("It makes two melee attacks or two ranged attacks.").options.map(o => o.groups[0].refs)).toEqual([["attack:melee"], ["attack:ranged"]]);
+  });
+  it("a link to an item the creature doesn't have falls back to its label; a name it doesn't have is unresolved", () => {
+    expect(resolve("It makes two [[/item .elsewhere00000000]]{rend} attacks.").options[0].groups[0].refs).toEqual(["rend"]);
+    const plan = resolve("It makes four [[/item Slam]] attacks.");
+    expect(plan.options[0].groups[0].refs).toEqual(["slam"]);
+    expect(plan.unresolved).toEqual(["Slam"]);
   });
 });

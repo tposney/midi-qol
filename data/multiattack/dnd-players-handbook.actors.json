@@ -1,0 +1,915 @@
+{
+ "source": "dnd-players-handbook.actors",
+ "plans": {
+  "Compendium.dnd-players-handbook.actors.Actor.phbabsBeholderki": {
+   "item": "phbaoiMultiattac",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": {
+         "formula": "floor(@flags.dnd5e.summon.level / 2)"
+        },
+        "refs": [
+         "attack"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-players-handbook.actors.Actor.phbabsMindFlayer": {
+   "item": "phbaoiMultiattac",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": {
+         "formula": "floor(@flags.dnd5e.summon.level / 2)"
+        },
+        "refs": [
+         "attack"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-players-handbook.actors.Actor.phbabsSlaadSpiri": {
+   "item": "phbaoiMultiattac",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": {
+         "formula": "floor(@flags.dnd5e.summon.level / 2)"
+        },
+        "refs": [
+         "attack"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-players-handbook.actors.Actor.phbbesBestialAir": {
+   "item": "phbaoiMultiattac",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": {
+         "formula": "floor(@flags.dnd5e.summon.level / 2)"
+        },
+        "refs": [
+         "rend"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-players-handbook.actors.Actor.phbbesBestialLan": {
+   "item": "phbaoiMultiattac",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": {
+         "formula": "floor(@flags.dnd5e.summon.level / 2)"
+        },
+        "refs": [
+         "rend"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-players-handbook.actors.Actor.phbbesBestialWat": {
+   "item": "phbaoiMultiattac",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": {
+         "formula": "floor(@flags.dnd5e.summon.level / 2)"
+        },
+        "refs": [
+         "rend"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-players-handbook.actors.Actor.phbcesAngelSpiri": {
+   "item": "phbaoiMultiattac",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": {
+         "formula": "floor(@flags.dnd5e.summon.level / 2)"
+        },
+        "refs": [
+         "attack"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-players-handbook.actors.Actor.phbcesDefenderSp": {
+   "item": "phbaoiMultiattac",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": {
+         "formula": "floor(@flags.dnd5e.summon.level / 2)"
+        },
+        "refs": [
+         "attack"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-players-handbook.actors.Actor.phbcosClayConstr": {
+   "item": "phbaoiMultiattac",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": {
+         "formula": "floor(@flags.dnd5e.summon.level / 2)"
+        },
+        "refs": [
+         "slam"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-players-handbook.actors.Actor.phbcosMetalConst": {
+   "item": "phbaoiMultiattac",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": {
+         "formula": "floor(@flags.dnd5e.summon.level / 2)"
+        },
+        "refs": [
+         "slam"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-players-handbook.actors.Actor.phbcosStoneConst": {
+   "item": "phbaoiMultiattac",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": {
+         "formula": "floor(@flags.dnd5e.summon.level / 2)"
+        },
+        "refs": [
+         "slam"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-players-handbook.actors.Actor.phbelsAirElement": {
+   "item": "phbaoiMultiattac",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": {
+         "formula": "floor(@flags.dnd5e.summon.level / 2)"
+        },
+        "refs": [
+         "slam"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-players-handbook.actors.Actor.phbelsEarthEleme": {
+   "item": "phbaoiMultiattac",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": {
+         "formula": "floor(@flags.dnd5e.summon.level / 2)"
+        },
+        "refs": [
+         "slam"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-players-handbook.actors.Actor.phbelsFireElemen": {
+   "item": "phbaoiMultiattac",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": {
+         "formula": "floor(@flags.dnd5e.summon.level / 2)"
+        },
+        "refs": [
+         "slam"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-players-handbook.actors.Actor.phbelsFumingFeyS": {
+   "item": "phbaoiMultiattac",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": {
+         "formula": "floor(@flags.dnd5e.summon.level / 2)"
+        },
+        "refs": [
+         "fey-blade"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-players-handbook.actors.Actor.phbelsMirthfulFe": {
+   "item": "phbaoiMultiattac",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": {
+         "formula": "floor(@flags.dnd5e.summon.level / 2)"
+        },
+        "refs": [
+         "fey-blade"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-players-handbook.actors.Actor.phbelsTricksyFey": {
+   "item": "phbaoiMultiattac",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": {
+         "formula": "floor(@flags.dnd5e.summon.level / 2)"
+        },
+        "refs": [
+         "fey-blade"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-players-handbook.actors.Actor.phbelsWaterEleme": {
+   "item": "phbaoiMultiattac",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": {
+         "formula": "floor(@flags.dnd5e.summon.level / 2)"
+        },
+        "refs": [
+         "slam"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-players-handbook.actors.Actor.phbfisDemonSpiri": {
+   "item": "phbaoiMultiattac",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": {
+         "formula": "floor(@flags.dnd5e.summon.level / 2)"
+        },
+        "refs": [
+         "attack"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-players-handbook.actors.Actor.phbfisDevilSpiri": {
+   "item": "phbaoiMultiattac",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": {
+         "formula": "floor(@flags.dnd5e.summon.level / 2)"
+        },
+        "refs": [
+         "attack"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-players-handbook.actors.Actor.phbfisYugolothSp": {
+   "item": "phbaoiMultiattac",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": {
+         "formula": "floor(@flags.dnd5e.summon.level / 2)"
+        },
+        "refs": [
+         "attack"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-players-handbook.actors.Actor.phbginGiantCenti": {
+   "item": "phbaoiMultiattac",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": {
+         "formula": "floor(@flags.dnd5e.summon.level / 2)"
+        },
+        "refs": [
+         "attack"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-players-handbook.actors.Actor.phbginGiantSpide": {
+   "item": "phbaoiMultiattac",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": {
+         "formula": "floor(@flags.dnd5e.summon.level / 2)"
+        },
+        "refs": [
+         "attack"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-players-handbook.actors.Actor.phbginGiantWasp0": {
+   "item": "phbaoiMultiattac",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": {
+         "formula": "floor(@flags.dnd5e.summon.level / 2)"
+        },
+        "refs": [
+         "attack"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-players-handbook.actors.Actor.phbmobAberrantSp": {
+   "item": "phbaoiMultiattac",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": {
+         "formula": "floor(@flags.dnd5e.summon.level / 2)"
+        },
+        "refs": [
+         "attack"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-players-handbook.actors.Actor.phbmobApe0000000": {
+   "item": "phbaoiMultiattac",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "fist"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-players-handbook.actors.Actor.phbmobBestialSpi": {
+   "item": "phbaoiMultiattac",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": {
+         "formula": "floor(@flags.dnd5e.summon.level / 2)"
+        },
+        "refs": [
+         "rend"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-players-handbook.actors.Actor.phbmobBlackBear0": {
+   "item": "phbaoiMultiattac",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "rend"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-players-handbook.actors.Actor.phbmobBrownBear0": {
+   "item": "phbaoiMultiattac",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 1,
+        "refs": [
+         "bite"
+        ]
+       },
+       {
+        "n": 1,
+        "refs": [
+         "claw"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-players-handbook.actors.Actor.phbmobCelestialS": {
+   "item": "phbaoiMultiattac",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": {
+         "formula": "floor(@flags.dnd5e.summon.level / 2)"
+        },
+        "refs": [
+         "attack"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-players-handbook.actors.Actor.phbmobConstructS": {
+   "item": "phbaoiMultiattac",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": {
+         "formula": "floor(@flags.dnd5e.summon.level / 2)"
+        },
+        "refs": [
+         "slam"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-players-handbook.actors.Actor.phbmobDraconicSp": {
+   "item": "phbaoiMultiattac",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": {
+         "formula": "floor(@flags.dnd5e.summon.level / 2)"
+        },
+        "refs": [
+         "rend"
+        ]
+       }
+      ],
+      "extra": [
+       {
+        "refs": [
+         "breath-weapon"
+        ]
+       }
+      ]
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-players-handbook.actors.Actor.phbmobElementalS": {
+   "item": "phbaoiMultiattac",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": {
+         "formula": "floor(@flags.dnd5e.summon.level / 2)"
+        },
+        "refs": [
+         "slam"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-players-handbook.actors.Actor.phbmobElephant00": {
+   "item": "phbaoiMultiattac",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "gore"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-players-handbook.actors.Actor.phbmobFeySpirit0": {
+   "item": "phbaoiMultiattac",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": {
+         "formula": "floor(@flags.dnd5e.summon.level / 2)"
+        },
+        "refs": [
+         "fey-blade"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-players-handbook.actors.Actor.phbmobFiendishSp": {
+   "item": "phbaoiMultiattac",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": {
+         "formula": "floor(@flags.dnd5e.summon.level / 2)"
+        },
+        "refs": [
+         "attack"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-players-handbook.actors.Actor.phbmobGiantInsec": {
+   "item": "phbaoiMultiattac",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": {
+         "formula": "floor(@flags.dnd5e.summon.level / 2)"
+        },
+        "refs": [
+         "attack"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-players-handbook.actors.Actor.phbmobLion000000": {
+   "item": "phbaoiMultiattac",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "rend"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": [
+     {
+      "n": 1,
+      "refs": [
+       "roar"
+      ]
+     }
+    ]
+   }
+  },
+  "Compendium.dnd-players-handbook.actors.Actor.phbmobPseudodrag": {
+   "item": "phbaoiMultiattac",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "bite"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-players-handbook.actors.Actor.phbmobUndeadSpir": {
+   "item": "phbaoiMultiattac",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": {
+         "formula": "floor(@flags.dnd5e.summon.level / 2)"
+        },
+        "refs": [
+         "attack"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-players-handbook.actors.Actor.phbudsGhostlySpi": {
+   "item": "phbaoiMultiattac",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": {
+         "formula": "floor(@flags.dnd5e.summon.level / 2)"
+        },
+        "refs": [
+         "attack"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-players-handbook.actors.Actor.phbudsPutridSpir": {
+   "item": "phbaoiMultiattac",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": {
+         "formula": "floor(@flags.dnd5e.summon.level / 2)"
+        },
+        "refs": [
+         "attack"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-players-handbook.actors.Actor.phbudsSkeletalSp": {
+   "item": "phbaoiMultiattac",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": {
+         "formula": "floor(@flags.dnd5e.summon.level / 2)"
+        },
+        "refs": [
+         "attack"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  }
+ }
+}

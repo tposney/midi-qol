@@ -1,0 +1,1584 @@
+{
+ "source": "dnd-tashas-cauldron.tcoe-actors",
+ "plans": {
+  "Compendium.dnd-tashas-cauldron.tcoe-actors.Actor.1zzRQps9jZdLZGqI": {
+   "item": "vLQAjoewGE5MAHn2",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 1,
+        "refs": [
+         "bite"
+        ]
+       },
+       {
+        "n": 1,
+        "refs": [
+         "claws"
+        ]
+       },
+       {
+        "n": 1,
+        "refs": [
+         "tail"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-tashas-cauldron.tcoe-actors.Actor.57DofLgRQx16ARoc": {
+   "item": "s88qLjZemkFRnB8Y",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "attack:melee"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": [],
+    "notes": true
+   }
+  },
+  "Compendium.dnd-tashas-cauldron.tcoe-actors.Actor.6oc29m5uzzzb0pk3": {
+   "item": "oWzM562ozNrlfOZe",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 1,
+        "refs": [
+         "beak"
+        ]
+       },
+       {
+        "n": 1,
+        "refs": [
+         "talons"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-tashas-cauldron.tcoe-actors.Actor.8SMQl75HLjhuSeau": {
+   "item": "PRiFJLZbvIt2nkTk",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "touch"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-tashas-cauldron.tcoe-actors.Actor.8pX2JhWUpTNNRBVx": {
+   "item": "qlBBeTku9uoaEv8G",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 1,
+        "refs": [
+         "bite"
+        ]
+       }
+      ],
+      "extra": [
+       {
+        "refs": [
+         "blinding-spittle"
+        ],
+        "ifAvailable": true
+       }
+      ]
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-tashas-cauldron.tcoe-actors.Actor.DDO9lDCDtNHkfShP": {
+   "item": "siO3h9XOkgPVi78F",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "attack"
+        ]
+       }
+      ],
+      "extra": [],
+      "limits": [
+       {
+        "refs": [
+         "bite"
+        ],
+        "max": 1
+       }
+      ]
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-tashas-cauldron.tcoe-actors.Actor.G9PENY6nw0xRxCJW": {
+   "item": "vnAmgF7ZkpmDIJSc",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 1,
+        "refs": [
+         "hooves"
+        ]
+       },
+       {
+        "n": 1,
+        "refs": [
+         "horn"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-tashas-cauldron.tcoe-actors.Actor.KCvt4FdOVJbuZ3T0": {
+   "item": "Eb4utmmDfdnqLOZV",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 1,
+        "refs": [
+         "bite"
+        ]
+       },
+       {
+        "n": 2,
+        "refs": [
+         "claw"
+        ]
+       },
+       {
+        "n": 1,
+        "refs": [
+         "horns"
+        ]
+       },
+       {
+        "n": 1,
+        "refs": [
+         "tail"
+        ]
+       }
+      ],
+      "extra": [
+       {
+        "refs": [
+         "frightful-presence"
+        ]
+       }
+      ]
+     }
+    ],
+    "replace": [
+     {
+      "n": 1,
+      "refs": [
+       "swallow"
+      ],
+      "of": [
+       "bite"
+      ]
+     }
+    ]
+   }
+  },
+  "Compendium.dnd-tashas-cauldron.tcoe-actors.Actor.L1w8yBkInMscfJ3F": {
+   "item": "7YSwI62Budsr6HzO",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "claw-oni-form-only",
+         "glaive"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-tashas-cauldron.tcoe-actors.Actor.NB6wUgVqeOQtsQKu": {
+   "item": "BLz58sp79C2HvinU",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "slam"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-tashas-cauldron.tcoe-actors.Actor.RCv5y7iWlfNxkinx": {
+   "item": "BFv56pkQ54pdTkYM",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 1,
+        "refs": [
+         "bite"
+        ]
+       },
+       {
+        "n": 1,
+        "refs": [
+         "claw"
+        ]
+       },
+       {
+        "n": 1,
+        "refs": [
+         "mace"
+        ]
+       },
+       {
+        "n": 1,
+        "refs": [
+         "tail"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-tashas-cauldron.tcoe-actors.Actor.SNT0JNVSngUTsj4m": {
+   "item": "gbM7g0hyrF6MMYqR",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 1,
+        "refs": [
+         "bite"
+        ]
+       },
+       {
+        "n": 2,
+        "refs": [
+         "claw"
+        ]
+       }
+      ],
+      "extra": [
+       {
+        "refs": [
+         "frightful-presence"
+        ]
+       }
+      ]
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-tashas-cauldron.tcoe-actors.Actor.UFW8M3JHzHkxUEGM": {
+   "item": "xZSeAPj02NKne0AK",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 1,
+        "refs": [
+         "rotting-fist"
+        ]
+       }
+      ],
+      "extra": [
+       {
+        "refs": [
+         "dreadful-glare"
+        ]
+       }
+      ]
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-tashas-cauldron.tcoe-actors.Actor.banHjKDMCegbUwYE": {
+   "item": "IyR3c30mCbL8VMCo",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "slam"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-tashas-cauldron.tcoe-actors.Actor.eORmAXuV5v3nWsQL": {
+   "item": "bdRuWKCO8gXQPu16",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "attack:melee"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-tashas-cauldron.tcoe-actors.Actor.egsSDYbqoLCelb0J": {
+   "item": "nEKlIbUhhx9akBjK",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 6,
+        "refs": [
+         "longsword"
+        ]
+       },
+       {
+        "n": 1,
+        "refs": [
+         "tail"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-tashas-cauldron.tcoe-actors.Actor.namJz755U1EhvEJa": {
+   "item": "9saHudPLoj6va2em",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "slam"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-tashas-cauldron.tcoe-actors.Actor.qXzMsRTHEodqO8l2": {
+   "item": "18NEVoD84KHDcWoG",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "claw"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-tashas-cauldron.tcoe-actors.Actor.sApYLZj9PTZ40wJr": {
+   "item": "A8nxS57cG2yZpu1m",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "slam"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-tashas-cauldron.tcoe-actors.Actor.sLdpiuaZF8lujJQy": {
+   "item": "JbDDt9MNYFyEbHsm",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 1,
+        "refs": [
+         "tail"
+        ]
+       },
+       {
+        "n": 2,
+        "refs": [
+         "claw"
+        ]
+       }
+      ],
+      "extra": []
+     },
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "hurl-flame"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-tashas-cauldron.tcoe-actors.Actor.t8WYD7ak07X7xpx8": {
+   "item": "uGJpXeUbei6zXTd1",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 1,
+        "refs": [
+         "rotting-fist"
+        ]
+       }
+      ],
+      "extra": [
+       {
+        "refs": [
+         "dreadful-glare"
+        ]
+       }
+      ]
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-tashas-cauldron.tcoe-actors.Actor.tcoeAberrantSpir": {
+   "item": "dkquE1CTTovIEufN",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": {
+         "formula": "floor(@attributes.hp.max/20)"
+        },
+        "refs": [
+         "attack"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-tashas-cauldron.tcoe-actors.Actor.tcoeAberrantbhol": {
+   "item": "dkquE1CTTovIEufN",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": {
+         "formula": "floor(@attributes.hp.max/20)"
+        },
+        "refs": [
+         "attack"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-tashas-cauldron.tcoe-actors.Actor.tcoeAberrantslaa": {
+   "item": "dkquE1CTTovIEufN",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": {
+         "formula": "floor(@attributes.hp.max/20)"
+        },
+        "refs": [
+         "attack"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-tashas-cauldron.tcoe-actors.Actor.tcoeAberrantstar": {
+   "item": "dkquE1CTTovIEufN",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": {
+         "formula": "floor(@attributes.hp.max/20)"
+        },
+        "refs": [
+         "attack"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-tashas-cauldron.tcoe-actors.Actor.tcoeAdultRedDrac": {
+   "item": "h3AwqLpWT0oR6Nnd",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 1,
+        "refs": [
+         "bite"
+        ]
+       },
+       {
+        "n": 2,
+        "refs": [
+         "claw"
+        ]
+       }
+      ],
+      "extra": [
+       {
+        "refs": [
+         "frightful-presence"
+        ]
+       }
+      ]
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-tashas-cauldron.tcoe-actors.Actor.tcoeAirElemental": {
+   "item": "9wXjIVrJ7e5Nb4RV",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": {
+         "formula": "max(2, floor(@flags.dnd5e.summon.level / 2))"
+        },
+        "refs": [
+         "attack"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-tashas-cauldron.tcoe-actors.Actor.tcoeAirSpirit000": {
+   "item": "1arCW2rttFXc6Ftf",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": {
+         "formula": "max(1, floor((@attributes.ac.value - @attributes.ac.flat)/2))"
+        },
+        "refs": [
+         "attack"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-tashas-cauldron.tcoe-actors.Actor.tcoeAvengerSpiri": {
+   "item": "cbSL1wMsqE4FPXVe",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": {
+         "formula": "max(2, floor(@flags.dnd5e.summon.level / 2))"
+        },
+        "refs": [
+         "attack"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-tashas-cauldron.tcoe-actors.Actor.tcoeBeastSpiritT": {
+   "item": "1arCW2rttFXc6Ftf",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": {
+         "formula": "max(1, floor((@attributes.ac.value - @attributes.ac.flat)/2))"
+        },
+        "refs": [
+         "attack"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-tashas-cauldron.tcoe-actors.Actor.tcoeCelestialSpi": {
+   "item": "cbSL1wMsqE4FPXVe",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": {
+         "formula": "max(2, floor(@flags.dnd5e.summon.level / 2))"
+        },
+        "refs": [
+         "attack"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-tashas-cauldron.tcoe-actors.Actor.tcoeClaySpirit00": {
+   "item": "BHrHbo03wWJAUxqI",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": {
+         "formula": "max(2, floor(@flags.dnd5e.summon.level / 2))"
+        },
+        "refs": [
+         "attack"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-tashas-cauldron.tcoe-actors.Actor.tcoeConstructSpi": {
+   "item": "BHrHbo03wWJAUxqI",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": {
+         "formula": "max(2, floor(@flags.dnd5e.summon.level / 2))"
+        },
+        "refs": [
+         "attack"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-tashas-cauldron.tcoe-actors.Actor.tcoeDao000000000": {
+   "item": "F7ntykDuFtaPVY9Z",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "fist"
+        ]
+       }
+      ],
+      "extra": []
+     },
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "maul"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-tashas-cauldron.tcoe-actors.Actor.tcoeDeathKnight0": {
+   "item": "Gl7Xa4m6Zm1QDrwU",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 3,
+        "refs": [
+         "longsword"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-tashas-cauldron.tcoe-actors.Actor.tcoeDeathSlaad00": {
+   "item": "77tQ9xD1NSrQK4HC",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 1,
+        "refs": [
+         "bite-slaad-form-only"
+        ]
+       },
+       {
+        "n": 2,
+        "refs": [
+         "claw-slaad-form-only",
+         "greatsword"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-tashas-cauldron.tcoe-actors.Actor.tcoeDefenderSpir": {
+   "item": "cbSL1wMsqE4FPXVe",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": {
+         "formula": "max(2, floor(@flags.dnd5e.summon.level / 2))"
+        },
+        "refs": [
+         "attack"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-tashas-cauldron.tcoe-actors.Actor.tcoeDemonSpirit0": {
+   "item": "2F88N4PDNG9jli9k",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": {
+         "formula": "max(3, floor(@flags.dnd5e.summon.level / 2))"
+        },
+        "refs": [
+         "attack"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-tashas-cauldron.tcoe-actors.Actor.tcoeDevilSpirit0": {
+   "item": "2F88N4PDNG9jli9k",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": {
+         "formula": "max(3, floor(@flags.dnd5e.summon.level / 2))"
+        },
+        "refs": [
+         "attack"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-tashas-cauldron.tcoe-actors.Actor.tcoeEarthElement": {
+   "item": "9wXjIVrJ7e5Nb4RV",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": {
+         "formula": "max(2, floor(@flags.dnd5e.summon.level / 2))"
+        },
+        "refs": [
+         "attack"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-tashas-cauldron.tcoe-actors.Actor.tcoeElementalSpi": {
+   "item": "9wXjIVrJ7e5Nb4RV",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": {
+         "formula": "max(2, floor(@flags.dnd5e.summon.level / 2))"
+        },
+        "refs": [
+         "attack"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-tashas-cauldron.tcoe-actors.Actor.tcoeFeySpiritTem": {
+   "item": "aZyqAiNfP9sXWC9d",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": {
+         "formula": "max(1, floor(@flags.dnd5e.summon.level / 2))"
+        },
+        "refs": [
+         "attack"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-tashas-cauldron.tcoe-actors.Actor.tcoeFiendishSpir": {
+   "item": "2F88N4PDNG9jli9k",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": {
+         "formula": "max(3, floor(@flags.dnd5e.summon.level / 2))"
+        },
+        "refs": [
+         "attack"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-tashas-cauldron.tcoe-actors.Actor.tcoeFireElementa": {
+   "item": "9wXjIVrJ7e5Nb4RV",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": {
+         "formula": "max(2, floor(@flags.dnd5e.summon.level / 2))"
+        },
+        "refs": [
+         "attack"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-tashas-cauldron.tcoe-actors.Actor.tcoeFlameskull00": {
+   "item": "EgdB2KdIVxHO6BD4",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "fire-ray"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-tashas-cauldron.tcoe-actors.Actor.tcoeFumingSpirit": {
+   "item": "aZyqAiNfP9sXWC9d",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": {
+         "formula": "max(1, floor(@flags.dnd5e.summon.level / 2))"
+        },
+        "refs": [
+         "attack"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-tashas-cauldron.tcoe-actors.Actor.tcoeGoblinBoss00": {
+   "item": "H2sTHM0QkYTOa5cD",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "scimitar"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": [],
+    "notes": true
+   }
+  },
+  "Compendium.dnd-tashas-cauldron.tcoe-actors.Actor.tcoeLandSpirit00": {
+   "item": "1arCW2rttFXc6Ftf",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": {
+         "formula": "max(1, floor((@attributes.ac.value - @attributes.ac.flat)/2))"
+        },
+        "refs": [
+         "attack"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-tashas-cauldron.tcoe-actors.Actor.tcoeLizardfolkQu": {
+   "item": "vZRZGTN7ytlSzUcl",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 1,
+        "refs": [
+         "bite"
+        ]
+       },
+       {
+        "n": 1,
+        "refs": [
+         "claws",
+         "trident"
+        ]
+       }
+      ],
+      "extra": []
+     },
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "trident"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-tashas-cauldron.tcoe-actors.Actor.tcoeMarid0000000": {
+   "item": "rM5eVTnB1ulnbZKM",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "trident"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-tashas-cauldron.tcoe-actors.Actor.tcoeMetalSpirit0": {
+   "item": "BHrHbo03wWJAUxqI",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": {
+         "formula": "max(2, floor(@flags.dnd5e.summon.level / 2))"
+        },
+        "refs": [
+         "attack"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-tashas-cauldron.tcoe-actors.Actor.tcoeMirthfulSpir": {
+   "item": "aZyqAiNfP9sXWC9d",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": {
+         "formula": "max(1, floor(@flags.dnd5e.summon.level / 2))"
+        },
+        "refs": [
+         "attack"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-tashas-cauldron.tcoe-actors.Actor.tcoeShadowDespai": {
+   "item": "nNryeJABmQAWaczs",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": {
+         "formula": "floor(@flags.dnd5e.summon.level / 2)"
+        },
+        "refs": [
+         "attack"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-tashas-cauldron.tcoe-actors.Actor.tcoeShadowFear00": {
+   "item": "tLZwznR3p2QvEB6n",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": {
+         "formula": "floor(@flags.dnd5e.summon.level / 2)"
+        },
+        "refs": [
+         "attack"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-tashas-cauldron.tcoe-actors.Actor.tcoeShadowFury00": {
+   "item": "rRYB9frMVJgEyFgF",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": {
+         "formula": "floor(@flags.dnd5e.summon.level / 2)"
+        },
+        "refs": [
+         "attack"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-tashas-cauldron.tcoe-actors.Actor.tcoeShadowSpirit": {
+   "item": "GeMS7zXBZ15o24uA",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": {
+         "formula": "floor(@flags.dnd5e.summon.level / 2)"
+        },
+        "refs": [
+         "attack"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-tashas-cauldron.tcoe-actors.Actor.tcoeStoneSpirit0": {
+   "item": "BHrHbo03wWJAUxqI",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": {
+         "formula": "max(2, floor(@flags.dnd5e.summon.level / 2))"
+        },
+        "refs": [
+         "attack"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-tashas-cauldron.tcoe-actors.Actor.tcoeTricksySpiri": {
+   "item": "aZyqAiNfP9sXWC9d",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": {
+         "formula": "max(1, floor(@flags.dnd5e.summon.level / 2))"
+        },
+        "refs": [
+         "attack"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-tashas-cauldron.tcoe-actors.Actor.tcoeUndeadGhostl": {
+   "item": "J69mDz7xsh4tTtn8",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": {
+         "formula": "floor(@flags.dnd5e.summon.level / 2)"
+        },
+        "refs": [
+         "attack"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-tashas-cauldron.tcoe-actors.Actor.tcoeUndeadPutrid": {
+   "item": "J69mDz7xsh4tTtn8",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": {
+         "formula": "floor(@flags.dnd5e.summon.level / 2)"
+        },
+        "refs": [
+         "attack"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-tashas-cauldron.tcoe-actors.Actor.tcoeUndeadSkelet": {
+   "item": "J69mDz7xsh4tTtn8",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": {
+         "formula": "floor(@flags.dnd5e.summon.level / 2)"
+        },
+        "refs": [
+         "attack"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-tashas-cauldron.tcoe-actors.Actor.tcoeUndeadSpirit": {
+   "item": "J69mDz7xsh4tTtn8",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": {
+         "formula": "floor(@flags.dnd5e.summon.level / 2)"
+        },
+        "refs": [
+         "attack"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-tashas-cauldron.tcoe-actors.Actor.tcoeWaterElement": {
+   "item": "9wXjIVrJ7e5Nb4RV",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": {
+         "formula": "max(2, floor(@flags.dnd5e.summon.level / 2))"
+        },
+        "refs": [
+         "attack"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-tashas-cauldron.tcoe-actors.Actor.tcoeWaterSpirit0": {
+   "item": "1arCW2rttFXc6Ftf",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": {
+         "formula": "max(1, floor((@attributes.ac.value - @attributes.ac.flat)/2))"
+        },
+        "refs": [
+         "attack"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-tashas-cauldron.tcoe-actors.Actor.tcoeYugolothSpir": {
+   "item": "2F88N4PDNG9jli9k",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": {
+         "formula": "max(3, floor(@flags.dnd5e.summon.level / 2))"
+        },
+        "refs": [
+         "attack"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-tashas-cauldron.tcoe-actors.Actor.uZ8NrRenwYZ4qNf6": {
+   "item": "qzphlErr2D2mRpxT",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 1,
+        "refs": [
+         "longsword"
+        ]
+       },
+       {
+        "n": 1,
+        "refs": [
+         "whip"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-tashas-cauldron.tcoe-actors.Actor.vFeFRlF2FOgf2HIL": {
+   "item": "Whn4pPAB1YSnvocN",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 1,
+        "refs": [
+         "bite"
+        ]
+       },
+       {
+        "n": 2,
+        "refs": [
+         "claw"
+        ]
+       }
+      ],
+      "extra": [
+       {
+        "refs": [
+         "frightful-presence"
+        ]
+       }
+      ]
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-tashas-cauldron.tcoe-actors.Actor.zpaZb7I8alY32vWV": {
+   "item": "Q9tHfkUiN6f1sguc",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "attack"
+        ]
+       }
+      ],
+      "extra": [],
+      "limits": [
+       {
+        "refs": [
+         "bite"
+        ],
+        "max": 1
+       }
+      ]
+     }
+    ],
+    "replace": []
+   }
+  }
+ }
+}

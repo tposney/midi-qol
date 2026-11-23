@@ -1,0 +1,4272 @@
+{
+ "source": "dnd5e.actors24",
+ "plans": {
+  "Compendium.dnd5e.actors24.Actor.dmgAvatarofDeath": {
+   "item": "dmgaoiMultiattac",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": {
+         "formula": "ceil(@prof/2)"
+        },
+        "refs": [
+         "reaping-scythe"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd5e.actors24.Actor.mmAboleth0000000": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "tentacle"
+        ]
+       }
+      ],
+      "extra": [
+       {
+        "refs": [
+         "consume-memories",
+         "dominate-mind"
+        ],
+        "ifAvailable": true
+       }
+      ]
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd5e.actors24.Actor.mmAdultBlackDrag": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 3,
+        "refs": [
+         "rend"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": [
+     {
+      "n": 1,
+      "refs": [
+       "spellcasting>acid-arrow@3"
+      ]
+     }
+    ]
+   }
+  },
+  "Compendium.dnd5e.actors24.Actor.mmAdultBlueDrago": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 3,
+        "refs": [
+         "rend"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": [
+     {
+      "n": 1,
+      "refs": [
+       "spellcasting>shatter"
+      ]
+     }
+    ]
+   }
+  },
+  "Compendium.dnd5e.actors24.Actor.mmAdultBrassDrag": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 3,
+        "refs": [
+         "rend"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": [
+     {
+      "n": 1,
+      "refs": [
+       "sleep-breath",
+       "spellcasting>scorching-ray"
+      ]
+     }
+    ]
+   }
+  },
+  "Compendium.dnd5e.actors24.Actor.mmAdultBronzeDra": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 3,
+        "refs": [
+         "rend"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": [
+     {
+      "n": 1,
+      "refs": [
+       "repulsion-breath",
+       "spellcasting>guiding-bolt@2"
+      ]
+     }
+    ]
+   }
+  },
+  "Compendium.dnd5e.actors24.Actor.mmAdultCopperDra": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 3,
+        "refs": [
+         "rend"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": [
+     {
+      "n": 1,
+      "refs": [
+       "slowing-breath",
+       "spellcasting>mind-spike@4"
+      ]
+     }
+    ]
+   }
+  },
+  "Compendium.dnd5e.actors24.Actor.mmAdultGoldDrago": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 3,
+        "refs": [
+         "rend"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": [
+     {
+      "n": 1,
+      "refs": [
+       "spellcasting>guiding-bolt@2",
+       "weakening-breath"
+      ]
+     }
+    ]
+   }
+  },
+  "Compendium.dnd5e.actors24.Actor.mmAdultGreenDrag": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 3,
+        "refs": [
+         "rend"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": [
+     {
+      "n": 1,
+      "refs": [
+       "spellcasting>mind-spike@3"
+      ]
+     }
+    ]
+   }
+  },
+  "Compendium.dnd5e.actors24.Actor.mmAdultRedDragon": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 3,
+        "refs": [
+         "rend"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": [
+     {
+      "n": 1,
+      "refs": [
+       "spellcasting>scorching-ray"
+      ]
+     }
+    ]
+   }
+  },
+  "Compendium.dnd5e.actors24.Actor.mmAdultSilverDra": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 3,
+        "refs": [
+         "rend"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": [
+     {
+      "n": 1,
+      "refs": [
+       "paralyzing-breath",
+       "spellcasting>ice-knife"
+      ]
+     }
+    ]
+   }
+  },
+  "Compendium.dnd5e.actors24.Actor.mmAdultWhiteDrag": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 3,
+        "refs": [
+         "rend"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd5e.actors24.Actor.mmAirElemental00": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "thunderous-slam"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd5e.actors24.Actor.mmAncientBlackDr": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 3,
+        "refs": [
+         "rend"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": [
+     {
+      "n": 1,
+      "refs": [
+       "spellcasting>acid-arrow@4"
+      ]
+     }
+    ]
+   }
+  },
+  "Compendium.dnd5e.actors24.Actor.mmAncientBlueDra": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 3,
+        "refs": [
+         "rend"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": [
+     {
+      "n": 1,
+      "refs": [
+       "spellcasting>shatter@3"
+      ]
+     }
+    ]
+   }
+  },
+  "Compendium.dnd5e.actors24.Actor.mmAncientBrassDr": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 3,
+        "refs": [
+         "rend"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": [
+     {
+      "n": 1,
+      "refs": [
+       "sleep-breath",
+       "spellcasting>scorching-ray@3"
+      ]
+     }
+    ]
+   }
+  },
+  "Compendium.dnd5e.actors24.Actor.mmAncientBronzeD": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 3,
+        "refs": [
+         "rend"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": [
+     {
+      "n": 1,
+      "refs": [
+       "repulsion-breath",
+       "spellcasting>guiding-bolt@2"
+      ]
+     }
+    ]
+   }
+  },
+  "Compendium.dnd5e.actors24.Actor.mmAncientCopperD": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 3,
+        "refs": [
+         "rend"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": [
+     {
+      "n": 1,
+      "refs": [
+       "slowing-breath",
+       "spellcasting>mind-spike@5"
+      ]
+     }
+    ]
+   }
+  },
+  "Compendium.dnd5e.actors24.Actor.mmAncientGoldDra": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 3,
+        "refs": [
+         "rend"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": [
+     {
+      "n": 1,
+      "refs": [
+       "spellcasting>guiding-bolt@4",
+       "weakening-breath"
+      ]
+     }
+    ]
+   },
+   "hand": true
+  },
+  "Compendium.dnd5e.actors24.Actor.mmAncientGreenDr": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 3,
+        "refs": [
+         "rend"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": [
+     {
+      "n": 1,
+      "refs": [
+       "spellcasting>mind-spike@5"
+      ]
+     }
+    ]
+   }
+  },
+  "Compendium.dnd5e.actors24.Actor.mmAncientRedDrag": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 3,
+        "refs": [
+         "rend"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": [
+     {
+      "n": 1,
+      "refs": [
+       "spellcasting>scorching-ray@3"
+      ]
+     }
+    ]
+   }
+  },
+  "Compendium.dnd5e.actors24.Actor.mmAncientSilverD": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 3,
+        "refs": [
+         "rend"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": [
+     {
+      "n": 1,
+      "refs": [
+       "paralyzing-breath",
+       "spellcasting>ice-knife@2"
+      ]
+     }
+    ]
+   }
+  },
+  "Compendium.dnd5e.actors24.Actor.mmAncientWhiteDr": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 3,
+        "refs": [
+         "rend"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd5e.actors24.Actor.mmAnimatedArmor0": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "slam"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd5e.actors24.Actor.mmAnkylosaurus00": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "tail"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd5e.actors24.Actor.mmApe00000000000": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "fist"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd5e.actors24.Actor.mmArchelon000000": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "bite"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd5e.actors24.Actor.mmArchmage000000": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 4,
+        "refs": [
+         "arcane-burst"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd5e.actors24.Actor.mmAssassin000000": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 3,
+        "refs": [
+         "shortsword",
+         "light-crossbow"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd5e.actors24.Actor.mmBalor000000000": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 1,
+        "refs": [
+         "flame-whip"
+        ]
+       },
+       {
+        "n": 1,
+        "refs": [
+         "lightning-blade"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd5e.actors24.Actor.mmBanditCaptain0": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "scimitar",
+         "pistol"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd5e.actors24.Actor.mmBarbedDevil000": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 1,
+        "refs": [
+         "claws"
+        ]
+       },
+       {
+        "n": 1,
+        "refs": [
+         "tail"
+        ]
+       }
+      ],
+      "extra": []
+     },
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "hurl-flame"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd5e.actors24.Actor.mmBeardedDevil00": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 1,
+        "refs": [
+         "beard"
+        ]
+       },
+       {
+        "n": 1,
+        "refs": [
+         "infernal-glaive"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd5e.actors24.Actor.mmBehir000000000": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 1,
+        "refs": [
+         "bite"
+        ]
+       }
+      ],
+      "extra": [
+       {
+        "refs": [
+         "constrict"
+        ]
+       }
+      ]
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd5e.actors24.Actor.mmBlackBear00000": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "rend"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd5e.actors24.Actor.mmBlackDragonWyr": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "rend"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd5e.actors24.Actor.mmBlueDragonWyrm": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "rend"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd5e.actors24.Actor.mmBoneDevil00000": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "claw"
+        ]
+       },
+       {
+        "n": 1,
+        "refs": [
+         "infernal-sting"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd5e.actors24.Actor.mmBronzeDragonWy": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "rend"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd5e.actors24.Actor.mmBrownBear00000": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 1,
+        "refs": [
+         "bite"
+        ]
+       },
+       {
+        "n": 1,
+        "refs": [
+         "claw"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd5e.actors24.Actor.mmBugbearStalker": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "javelin",
+         "morningstar"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd5e.actors24.Actor.mmBulette0000000": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "bite"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd5e.actors24.Actor.mmBullywugBogSag": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "bog-staff"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": [
+     {
+      "n": "any",
+      "refs": [
+       "spellcasting>ray-of-sickness"
+      ]
+     }
+    ]
+   }
+  },
+  "Compendium.dnd5e.actors24.Actor.mmCarrionCrawler": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 1,
+        "refs": [
+         "bite"
+        ]
+       }
+      ],
+      "extra": [
+       {
+        "refs": [
+         "paralyzing-tentacles"
+        ]
+       }
+      ]
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd5e.actors24.Actor.mmCentaurTrooper": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "pike",
+         "longbow"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd5e.actors24.Actor.mmChainDevil0000": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "chain"
+        ]
+       }
+      ],
+      "extra": [
+       {
+        "refs": [
+         "conjure-infernal-chain"
+        ]
+       }
+      ]
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd5e.actors24.Actor.mmChimera0000000": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 1,
+        "refs": [
+         "ram"
+        ]
+       },
+       {
+        "n": 1,
+        "refs": [
+         "bite"
+        ]
+       },
+       {
+        "n": 1,
+        "refs": [
+         "claw"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": [
+     {
+      "n": 1,
+      "refs": [
+       "fire-breath"
+      ],
+      "of": [
+       "claw"
+      ]
+     }
+    ]
+   }
+  },
+  "Compendium.dnd5e.actors24.Actor.mmChuul000000000": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "pincer"
+        ]
+       }
+      ],
+      "extra": [
+       {
+        "refs": [
+         "paralyzing-tentacles"
+        ]
+       }
+      ]
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd5e.actors24.Actor.mmClayGolem00000": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "slam"
+        ]
+       }
+      ],
+      "extra": []
+     },
+     {
+      "groups": [
+       {
+        "n": 3,
+        "refs": [
+         "slam"
+        ]
+       }
+      ],
+      "extra": [],
+      "condition": true
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd5e.actors24.Actor.mmCloaker0000000": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 1,
+        "refs": [
+         "attach"
+        ]
+       },
+       {
+        "n": 2,
+        "refs": [
+         "tail"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd5e.actors24.Actor.mmCloudGiant0000": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "thunderous-mace",
+         "thundercloud"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": [
+     {
+      "n": 1,
+      "refs": [
+       "spellcasting>fog-cloud"
+      ]
+     }
+    ]
+   }
+  },
+  "Compendium.dnd5e.actors24.Actor.mmDeathDog000000": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "bite"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd5e.actors24.Actor.mmDeva0000000000": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "holy-mace"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd5e.actors24.Actor.mmDjinni00000000": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 3,
+        "refs": [
+         "storm-blade",
+         "storm-bolt"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd5e.actors24.Actor.mmDoppelganger00": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "slam"
+        ]
+       }
+      ],
+      "extra": [
+       {
+        "refs": [
+         "unsettling-visage"
+        ],
+        "ifAvailable": true
+       }
+      ]
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd5e.actors24.Actor.mmDragonTurtle00": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 3,
+        "refs": [
+         "bite"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": [
+     {
+      "n": 1,
+      "refs": [
+       "tail"
+      ]
+     }
+    ]
+   }
+  },
+  "Compendium.dnd5e.actors24.Actor.mmDrider00000000": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 3,
+        "refs": [
+         "foreleg",
+         "poison-burst"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd5e.actors24.Actor.mmDruid000000000": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "vine-staff",
+         "verdant-wisp"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd5e.actors24.Actor.mmDryad000000000": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 1,
+        "refs": [
+         "vine-lash",
+         "thorn-burst"
+        ]
+       }
+      ],
+      "extra": [
+       {
+        "refs": [
+         "spellcasting>charm-monster"
+        ]
+       }
+      ]
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd5e.actors24.Actor.mmEarthElemental": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "slam",
+         "rock-launch"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd5e.actors24.Actor.mmEfreeti0000000": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 3,
+        "refs": [
+         "heated-blade",
+         "hurl-flame"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd5e.actors24.Actor.mmElephant000000": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "gore"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd5e.actors24.Actor.mmErinyes0000000": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 3,
+        "refs": [
+         "withering-sword"
+        ]
+       }
+      ],
+      "extra": [
+       {
+        "refs": [
+         "entangling-rope"
+        ]
+       }
+      ]
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd5e.actors24.Actor.mmEttercap000000": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 1,
+        "refs": [
+         "bite"
+        ]
+       },
+       {
+        "n": 1,
+        "refs": [
+         "claw"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd5e.actors24.Actor.mmEttin000000000": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 1,
+        "refs": [
+         "battleaxe"
+        ]
+       },
+       {
+        "n": 1,
+        "refs": [
+         "morningstar"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd5e.actors24.Actor.mmFireElemental0": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "burn"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd5e.actors24.Actor.mmFireGiant00000": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "flame-sword",
+         "hammer-throw"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd5e.actors24.Actor.mmFleshGolem0000": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "slam"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd5e.actors24.Actor.mmFrostGiant0000": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "frost-axe",
+         "great-bow"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd5e.actors24.Actor.mmGargoyle000000": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "claw"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd5e.actors24.Actor.mmGhost000000000": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "withering-touch"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd5e.actors24.Actor.mmGhoul000000000": {
+   "item": "hNlIY77VpneCqVEv",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "bite"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd5e.actors24.Actor.mmGiantApe000000": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "fist"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd5e.actors24.Actor.mmGiantConstrict": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 1,
+        "refs": [
+         "bite"
+        ]
+       }
+      ],
+      "extra": [
+       {
+        "refs": [
+         "constrict"
+        ]
+       }
+      ]
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd5e.actors24.Actor.mmGiantCrocodile": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 1,
+        "refs": [
+         "bite"
+        ]
+       },
+       {
+        "n": 1,
+        "refs": [
+         "tail"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd5e.actors24.Actor.mmGiantEagle0000": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "rend"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd5e.actors24.Actor.mmGiantScorpion0": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "claw"
+        ]
+       },
+       {
+        "n": 1,
+        "refs": [
+         "sting"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd5e.actors24.Actor.mmGiantShark0000": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "bite"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd5e.actors24.Actor.mmGlabrezu000000": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "pincer"
+        ]
+       }
+      ],
+      "extra": [
+       {
+        "refs": [
+         "pummel",
+         "spellcasting"
+        ]
+       }
+      ]
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd5e.actors24.Actor.mmGladiator00000": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 3,
+        "refs": [
+         "spear"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": [
+     {
+      "n": 1,
+      "refs": [
+       "shield-bash"
+      ]
+     }
+    ]
+   }
+  },
+  "Compendium.dnd5e.actors24.Actor.mmGoblinBoss0000": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "scimitar",
+         "shortbow"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd5e.actors24.Actor.mmGoldDragonWyrm": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "rend"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd5e.actors24.Actor.mmGreenDragonWyr": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "rend"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd5e.actors24.Actor.mmGreenHag000000": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "claw"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd5e.actors24.Actor.mmGrick000000000": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 1,
+        "refs": [
+         "beak"
+        ]
+       },
+       {
+        "n": 1,
+        "refs": [
+         "tentacles"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd5e.actors24.Actor.mmGriffon0000000": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "rend"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd5e.actors24.Actor.mmGuardCaptain00": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "javelin",
+         "longsword"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd5e.actors24.Actor.mmGuardianNaga00": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "bite"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": [
+     {
+      "n": "any",
+      "refs": [
+       "poisonous-spittle"
+      ]
+     }
+    ]
+   }
+  },
+  "Compendium.dnd5e.actors24.Actor.mmHalfdragon0000": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "claw"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd5e.actors24.Actor.mmHellHound00000": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "bite"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd5e.actors24.Actor.mmHezrou00000000": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 3,
+        "refs": [
+         "rend"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd5e.actors24.Actor.mmHillGiant00000": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "tree-club",
+         "trash-lob"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd5e.actors24.Actor.mmHippogriff0000": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "rend"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd5e.actors24.Actor.mmHippopotamus00": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "bite"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd5e.actors24.Actor.mmHobgoblinCapta": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "greatsword",
+         "longbow"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd5e.actors24.Actor.mmHornedDevil000": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 3,
+        "refs": [
+         "searing-fork",
+         "hurl-flame"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": [
+     {
+      "n": 1,
+      "refs": [
+       "infernal-tail"
+      ]
+     }
+    ]
+   }
+  },
+  "Compendium.dnd5e.actors24.Actor.mmHydra000000000": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": {
+         "text": true
+        },
+        "refs": [
+         "bite"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd5e.actors24.Actor.mmIceDevil000000": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 3,
+        "refs": [
+         "ice-spear"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": [
+     {
+      "n": 1,
+      "refs": [
+       "tail"
+      ]
+     }
+    ]
+   }
+  },
+  "Compendium.dnd5e.actors24.Actor.mmIncubus0000000": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "restless-touch"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd5e.actors24.Actor.mmInvisibleStalk": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 3,
+        "refs": [
+         "wind-swipe"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": [
+     {
+      "n": 1,
+      "refs": [
+       "vortex"
+      ]
+     }
+    ]
+   }
+  },
+  "Compendium.dnd5e.actors24.Actor.mmIronGolem00000": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "bladed-arm",
+         "fiery-bolt"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd5e.actors24.Actor.mmKnight00000000": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "greatsword",
+         "heavy-crossbow"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd5e.actors24.Actor.mmKraken00000000": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "tentacle"
+        ]
+       }
+      ],
+      "extra": [
+       {
+        "refs": [
+         "fling",
+         "lightning-strike",
+         "swallow"
+        ]
+       }
+      ]
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd5e.actors24.Actor.mmLamia000000000": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "claw"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": [
+     {
+      "n": 1,
+      "refs": [
+       "corrupting-touch"
+      ]
+     }
+    ]
+   }
+  },
+  "Compendium.dnd5e.actors24.Actor.mmLich0000000000": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 3,
+        "refs": [
+         "eldritch-burst",
+         "paralyzing-touch"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd5e.actors24.Actor.mmLion0000000000": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "rend"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": [
+     {
+      "n": 1,
+      "refs": [
+       "roar"
+      ]
+     }
+    ]
+   }
+  },
+  "Compendium.dnd5e.actors24.Actor.mmMage0000000000": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 3,
+        "refs": [
+         "arcane-burst"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd5e.actors24.Actor.mmMammoth0000000": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "gore"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd5e.actors24.Actor.mmManticore00000": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 3,
+        "refs": [
+         "rend",
+         "tail-spike"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd5e.actors24.Actor.mmMarilith000000": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 6,
+        "refs": [
+         "pact-blade"
+        ]
+       }
+      ],
+      "extra": [
+       {
+        "refs": [
+         "constrict"
+        ]
+       }
+      ]
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd5e.actors24.Actor.mmMedusa00000000": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "claw"
+        ]
+       },
+       {
+        "n": 1,
+        "refs": [
+         "snake-hair"
+        ]
+       }
+      ],
+      "extra": []
+     },
+     {
+      "groups": [
+       {
+        "n": 3,
+        "refs": [
+         "poison-ray"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd5e.actors24.Actor.mmMerrow00000000": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "bite",
+         "claw",
+         "harpoon"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd5e.actors24.Actor.mmMummy000000000": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "rotting-fist"
+        ]
+       }
+      ],
+      "extra": [
+       {
+        "refs": [
+         "dreadful-glare"
+        ]
+       }
+      ]
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd5e.actors24.Actor.mmMummyLord00000": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 1,
+        "refs": [
+         "rotting-fist",
+         "channel-negative-energy"
+        ]
+       }
+      ],
+      "extra": [
+       {
+        "refs": [
+         "dreadful-glare"
+        ]
+       }
+      ]
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd5e.actors24.Actor.mmNalfeshnee0000": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 3,
+        "refs": [
+         "rend"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd5e.actors24.Actor.mmNightHag000000": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "claw"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd5e.actors24.Actor.mmNothic00000000": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "claw"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd5e.actors24.Actor.mmOni00000000000": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "claw",
+         "nightmare-ray"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": [
+     {
+      "n": 1,
+      "refs": [
+       "spellcasting"
+      ]
+     }
+    ]
+   }
+  },
+  "Compendium.dnd5e.actors24.Actor.mmOtyugh00000000": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 1,
+        "refs": [
+         "bite"
+        ]
+       },
+       {
+        "n": 2,
+        "refs": [
+         "tentacle"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd5e.actors24.Actor.mmOwlbear0000000": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "rend"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd5e.actors24.Actor.mmPhaseSpider000": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "bite"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd5e.actors24.Actor.mmPirate00000000": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "dagger"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": [
+     {
+      "n": 1,
+      "refs": [
+       "enthralling-panache"
+      ]
+     }
+    ]
+   }
+  },
+  "Compendium.dnd5e.actors24.Actor.mmPirateCaptain0": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 3,
+        "refs": [
+         "rapier",
+         "pistol"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd5e.actors24.Actor.mmPitFiend000000": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 1,
+        "refs": [
+         "bite"
+        ]
+       },
+       {
+        "n": 2,
+        "refs": [
+         "devilish-claw"
+        ]
+       },
+       {
+        "n": 1,
+        "refs": [
+         "fiery-mace"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd5e.actors24.Actor.mmPlanetar000000": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 3,
+        "refs": [
+         "radiant-sword"
+        ]
+       }
+      ],
+      "extra": []
+     },
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "holy-burst"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd5e.actors24.Actor.mmPolarBear00000": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "rend"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd5e.actors24.Actor.mmPriest00000000": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "mace",
+         "radiant-flame"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd5e.actors24.Actor.mmPseudodragon00": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "bite"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd5e.actors24.Actor.mmPurpleWorm0000": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 1,
+        "refs": [
+         "bite"
+        ]
+       },
+       {
+        "n": 1,
+        "refs": [
+         "tail-stinger"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd5e.actors24.Actor.mmRakshasa000000": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 3,
+        "refs": [
+         "cursed-touch"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd5e.actors24.Actor.mmRedDragonWyrml": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "rend"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd5e.actors24.Actor.mmRoc00000000000": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "beak"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": [
+     {
+      "n": 1,
+      "refs": [
+       "talons"
+      ]
+     }
+    ]
+   }
+  },
+  "Compendium.dnd5e.actors24.Actor.mmRoper000000000": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "tentacle"
+        ]
+       },
+       {
+        "n": 2,
+        "refs": [
+         "bite"
+        ]
+       }
+      ],
+      "extra": [
+       {
+        "refs": [
+         "reel"
+        ]
+       }
+      ]
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd5e.actors24.Actor.mmRustMonster000": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 1,
+        "refs": [
+         "bite"
+        ]
+       },
+       {
+        "n": 2,
+        "refs": [
+         "antennae"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd5e.actors24.Actor.mmSabertoothedTi": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "rend"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd5e.actors24.Actor.mmSahuaginWarrio": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "claw"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd5e.actors24.Actor.mmSalamander0000": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "flame-spear"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": [
+     {
+      "n": 1,
+      "refs": [
+       "constrict"
+      ]
+     }
+    ]
+   }
+  },
+  "Compendium.dnd5e.actors24.Actor.mmScout000000000": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "shortsword",
+         "longbow"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd5e.actors24.Actor.mmShamblingMound": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 3,
+        "refs": [
+         "charged-tendril"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": [
+     {
+      "n": 1,
+      "refs": [
+       "engulf"
+      ]
+     }
+    ]
+   }
+  },
+  "Compendium.dnd5e.actors24.Actor.mmShieldGuardian": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "fist"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd5e.actors24.Actor.mmSilverDragonWy": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "rend"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd5e.actors24.Actor.mmSolar000000000": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "flying-sword"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": [
+     {
+      "n": 1,
+      "refs": [
+       "slaying-bow"
+      ]
+     }
+    ]
+   }
+  },
+  "Compendium.dnd5e.actors24.Actor.mmSphinxOfLore00": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 3,
+        "refs": [
+         "claw"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd5e.actors24.Actor.mmSphinxOfValor0": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "claw"
+        ]
+       }
+      ],
+      "extra": [
+       {
+        "refs": [
+         "roar"
+        ]
+       }
+      ]
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd5e.actors24.Actor.mmSpiritNaga0000": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 3,
+        "refs": [
+         "bite",
+         "necrotic-ray"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd5e.actors24.Actor.mmStoneGiant0000": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "stone-club",
+         "boulder"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd5e.actors24.Actor.mmStoneGolem0000": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "slam",
+         "force-bolt"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd5e.actors24.Actor.mmStormGiant0000": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "storm-sword",
+         "thunderbolt"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd5e.actors24.Actor.mmSuccubus000000": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 1,
+        "refs": [
+         "fiendish-touch"
+        ]
+       }
+      ],
+      "extra": [
+       {
+        "refs": [
+         "charm",
+         "draining-kiss"
+        ]
+       }
+      ]
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd5e.actors24.Actor.mmTarrasque00000": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 1,
+        "refs": [
+         "bite"
+        ]
+       },
+       {
+        "n": 3,
+        "refs": [
+         "claw",
+         "tail"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd5e.actors24.Actor.mmToughBoss00000": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "warhammer",
+         "heavy-crossbow"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd5e.actors24.Actor.mmTreant00000000": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "slam"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd5e.actors24.Actor.mmTriceratops000": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "gore"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd5e.actors24.Actor.mmTroll000000000": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 3,
+        "refs": [
+         "rend"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd5e.actors24.Actor.mmTyrannosaurusR": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 1,
+        "refs": [
+         "bite"
+        ]
+       },
+       {
+        "n": 1,
+        "refs": [
+         "tail"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd5e.actors24.Actor.mmUnicorn0000000": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 1,
+        "refs": [
+         "hooves"
+        ]
+       },
+       {
+        "n": 1,
+        "refs": [
+         "radiant-horn"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd5e.actors24.Actor.mmVampire0000000": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "grave-strike"
+        ]
+       }
+      ],
+      "extra": [
+       {
+        "refs": [
+         "bite"
+        ]
+       }
+      ]
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd5e.actors24.Actor.mmVampireFamilia": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "umbral-dagger"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd5e.actors24.Actor.mmVampireSpawn00": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "claw"
+        ]
+       }
+      ],
+      "extra": [
+       {
+        "refs": [
+         "bite"
+        ]
+       }
+      ]
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd5e.actors24.Actor.mmVioletFungus00": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "rotting-touch"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd5e.actors24.Actor.mmVrock000000000": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "shred"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd5e.actors24.Actor.mmWarriorVeteran": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "greatsword",
+         "heavy-crossbow"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd5e.actors24.Actor.mmWaterElemental": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "slam"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd5e.actors24.Actor.mmWerebear000000": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "handaxe",
+         "rend"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": [
+     {
+      "n": 1,
+      "refs": [
+       "bite"
+      ]
+     }
+    ]
+   }
+  },
+  "Compendium.dnd5e.actors24.Actor.mmWereboar000000": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "javelin",
+         "tusk"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": [
+     {
+      "n": 1,
+      "refs": [
+       "gore"
+      ]
+     }
+    ]
+   }
+  },
+  "Compendium.dnd5e.actors24.Actor.mmWererat0000000": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "scratch",
+         "hand-crossbow"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": [
+     {
+      "n": 1,
+      "refs": [
+       "bite"
+      ]
+     }
+    ]
+   }
+  },
+  "Compendium.dnd5e.actors24.Actor.mmWeretiger00000": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "scratch",
+         "longbow"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": [
+     {
+      "n": 1,
+      "refs": [
+       "bite"
+      ]
+     }
+    ]
+   }
+  },
+  "Compendium.dnd5e.actors24.Actor.mmWerewolf000000": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "scratch",
+         "longbow"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": [
+     {
+      "n": 1,
+      "refs": [
+       "bite"
+      ]
+     }
+    ]
+   }
+  },
+  "Compendium.dnd5e.actors24.Actor.mmWhiteDragonWyr": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "rend"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd5e.actors24.Actor.mmWight000000000": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "necrotic-sword",
+         "necrotic-bow"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": [
+     {
+      "n": 1,
+      "refs": [
+       "life-drain"
+      ]
+     }
+    ]
+   }
+  },
+  "Compendium.dnd5e.actors24.Actor.mmWyvern00000000": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 1,
+        "refs": [
+         "bite"
+        ]
+       },
+       {
+        "n": 1,
+        "refs": [
+         "sting"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd5e.actors24.Actor.mmXorn0000000000": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 1,
+        "refs": [
+         "bite"
+        ]
+       },
+       {
+        "n": 3,
+        "refs": [
+         "claw"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd5e.actors24.Actor.mmYoungBlackDrag": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 3,
+        "refs": [
+         "rend"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd5e.actors24.Actor.mmYoungBlueDrago": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 3,
+        "refs": [
+         "rend"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd5e.actors24.Actor.mmYoungBrassDrag": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 3,
+        "refs": [
+         "rend"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": [
+     {
+      "n": 2,
+      "refs": [
+       "sleep-breath"
+      ]
+     }
+    ]
+   }
+  },
+  "Compendium.dnd5e.actors24.Actor.mmYoungBronzeDra": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 3,
+        "refs": [
+         "rend"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": [
+     {
+      "n": 1,
+      "refs": [
+       "repulsion-breath"
+      ]
+     }
+    ]
+   }
+  },
+  "Compendium.dnd5e.actors24.Actor.mmYoungCopperDra": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 3,
+        "refs": [
+         "rend"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": [
+     {
+      "n": 1,
+      "refs": [
+       "slowing-breath"
+      ]
+     }
+    ]
+   }
+  },
+  "Compendium.dnd5e.actors24.Actor.mmYoungGoldDrago": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 3,
+        "refs": [
+         "rend"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": [
+     {
+      "n": 1,
+      "refs": [
+       "weakening-breath"
+      ]
+     }
+    ]
+   }
+  },
+  "Compendium.dnd5e.actors24.Actor.mmYoungGreenDrag": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 3,
+        "refs": [
+         "rend"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd5e.actors24.Actor.mmYoungRedDragon": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 3,
+        "refs": [
+         "rend"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd5e.actors24.Actor.mmYoungSilverDra": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 3,
+        "refs": [
+         "rend"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": [
+     {
+      "n": 1,
+      "refs": [
+       "paralyzing-breath"
+      ]
+     }
+    ]
+   }
+  },
+  "Compendium.dnd5e.actors24.Actor.mmYoungWhiteDrag": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 3,
+        "refs": [
+         "rend"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd5e.actors24.Actor.phbginGiantCenti": {
+   "item": "phbaoiMultiattac",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": {
+         "formula": "floor(@flags.dnd5e.summon.level / 2)"
+        },
+        "refs": [
+         "attack"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd5e.actors24.Actor.phbginGiantSpide": {
+   "item": "phbaoiMultiattac",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": {
+         "formula": "floor(@flags.dnd5e.summon.level / 2)"
+        },
+        "refs": [
+         "attack"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd5e.actors24.Actor.phbginGiantWasp0": {
+   "item": "phbaoiMultiattac",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": {
+         "formula": "floor(@flags.dnd5e.summon.level / 2)"
+        },
+        "refs": [
+         "attack"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd5e.actors24.Actor.phbmobDraconicSp": {
+   "item": "phbaoiMultiattac",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": {
+         "formula": "floor(@flags.dnd5e.summon.level / 2)"
+        },
+        "refs": [
+         "rend"
+        ]
+       }
+      ],
+      "extra": [
+       {
+        "refs": [
+         "breath-weapon"
+        ]
+       }
+      ]
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd5e.actors24.Actor.phbmobGiantInsec": {
+   "item": "phbaoiMultiattac",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": {
+         "formula": "floor(@flags.dnd5e.summon.level / 2)"
+        },
+        "refs": [
+         "attack"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  }
+ }
+}

@@ -1,0 +1,214 @@
+{
+ "source": "dnd-dungeon-masters-guide.actors",
+ "plans": {
+  "Compendium.dnd-dungeon-masters-guide.actors.Actor.YEFJjrSnvnSBFYOe": {
+   "item": "YO57HtdvpuGxJANB",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "attack:melee"
+        ]
+       }
+      ],
+      "extra": []
+     },
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "attack:ranged"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-dungeon-masters-guide.actors.Actor.dmgAvatarofDeath": {
+   "item": "dmgaoiMultiattac",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": {
+         "formula": "ceil(@prof/2)"
+        },
+        "refs": [
+         "reaping-scythe"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-dungeon-masters-guide.actors.Actor.dmgBlackBear0000": {
+   "item": "phbaoiMultiattac",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "rend"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-dungeon-masters-guide.actors.Actor.dmgBrownBear0000": {
+   "item": "phbaoiMultiattac",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 1,
+        "refs": [
+         "bite"
+        ]
+       },
+       {
+        "n": 1,
+        "refs": [
+         "claw"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-dungeon-masters-guide.actors.Actor.dmgElephant00000": {
+   "item": "phbaoiMultiattac",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "gore"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-dungeon-masters-guide.actors.Actor.dmgLion000000000": {
+   "item": "phbaoiMultiattac",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "rend"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": [
+     {
+      "n": 1,
+      "refs": [
+       "roar"
+      ]
+     }
+    ]
+   }
+  },
+  "Compendium.dnd-dungeon-masters-guide.actors.Actor.dmgPanther000000": {
+   "item": "phbaoiMultiattac",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 1,
+        "refs": [
+         "pounce"
+        ]
+       }
+      ],
+      "extra": [
+       {
+        "refs": [
+         "prowl"
+        ]
+       }
+      ]
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-dungeon-masters-guide.actors.Actor.dmgTiger00000000": {
+   "item": "phbaoiMultiattac",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 1,
+        "refs": [
+         "pounce"
+        ]
+       }
+      ],
+      "extra": [
+       {
+        "refs": [
+         "prowl"
+        ]
+       }
+      ]
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-dungeon-masters-guide.actors.Actor.hE6VktUlGj5eVRiF": {
+   "item": "46b7R0DbKIsxvWcv",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "attack:melee"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  }
+ }
+}

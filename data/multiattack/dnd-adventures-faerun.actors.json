@@ -1,0 +1,5371 @@
+{
+ "source": "dnd-adventures-faerun.actors",
+ "plans": {
+  "Compendium.dnd-adventures-faerun.actors.Actor.aifAarakocraAero": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "wind-staff"
+        ]
+       }
+      ],
+      "extra": [
+       {
+        "refs": [
+         "spellcasting>gust-of-wind"
+        ]
+       }
+      ]
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-adventures-faerun.actors.Actor.aifAberrantCulti": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "tentacle-lash"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": [
+     {
+      "n": "any",
+      "refs": [
+       "mind-rot"
+      ]
+     }
+    ]
+   }
+  },
+  "Compendium.dnd-adventures-faerun.actors.Actor.aifAdultBlackDra": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 3,
+        "refs": [
+         "rend"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": [
+     {
+      "n": 1,
+      "refs": [
+       "spellcasting>acid-arrow@3"
+      ]
+     }
+    ]
+   }
+  },
+  "Compendium.dnd-adventures-faerun.actors.Actor.aifAdultCopperDr": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 3,
+        "refs": [
+         "rend"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": [
+     {
+      "n": 1,
+      "refs": [
+       "slowing-breath",
+       "spellcasting>mind-spike@4"
+      ]
+     }
+    ]
+   }
+  },
+  "Compendium.dnd-adventures-faerun.actors.Actor.aifAdultDeepDrag": {
+   "item": "Pka7J1E64u6HDm5Y",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 3,
+        "refs": [
+         "rend"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-adventures-faerun.actors.Actor.aifAdultGoldDrag": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 3,
+        "refs": [
+         "rend"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": [
+     {
+      "n": 1,
+      "refs": [
+       "spellcasting>guiding-bolt@2",
+       "weakening-breath"
+      ]
+     }
+    ]
+   }
+  },
+  "Compendium.dnd-adventures-faerun.actors.Actor.aifAdultGreenDra": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 3,
+        "refs": [
+         "rend"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": [
+     {
+      "n": 1,
+      "refs": [
+       "spellcasting>mind-spike@3"
+      ]
+     }
+    ]
+   }
+  },
+  "Compendium.dnd-adventures-faerun.actors.Actor.aifAdultRedDrago": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 3,
+        "refs": [
+         "rend"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": [
+     {
+      "n": 1,
+      "refs": [
+       "spellcasting>scorching-ray"
+      ]
+     }
+    ]
+   }
+  },
+  "Compendium.dnd-adventures-faerun.actors.Actor.aifAdultSpiritDr": {
+   "item": "ZHatIjrWsNa52DO5",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 3,
+        "refs": [
+         "rend"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": [
+     {
+      "n": 1,
+      "refs": [
+       "time-warping-breath",
+       "spellcasting>thunderwave"
+      ]
+     }
+    ]
+   }
+  },
+  "Compendium.dnd-adventures-faerun.actors.Actor.aifAdultWhiteDra": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 3,
+        "refs": [
+         "rend"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-adventures-faerun.actors.Actor.aifAirElemental0": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "thunderous-slam"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-adventures-faerun.actors.Actor.aifAncientBlueDr": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 3,
+        "refs": [
+         "rend"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": [
+     {
+      "n": 1,
+      "refs": [
+       "spellcasting>shatter@3"
+      ]
+     }
+    ]
+   }
+  },
+  "Compendium.dnd-adventures-faerun.actors.Actor.aifAncientCopper": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 3,
+        "refs": [
+         "rend"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": [
+     {
+      "n": 1,
+      "refs": [
+       "slowing-breath",
+       "spellcasting>mind-spike@5"
+      ]
+     }
+    ]
+   }
+  },
+  "Compendium.dnd-adventures-faerun.actors.Actor.aifAncientDeepDr": {
+   "item": "6KQ0jtydGtXToyhR",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 3,
+        "refs": [
+         "rend"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-adventures-faerun.actors.Actor.aifAncientSpirit": {
+   "item": "S4gyaoQ04DBD3C2g",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 3,
+        "refs": [
+         "rend"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": [
+     {
+      "n": 1,
+      "refs": [
+       "time-warping-breath",
+       "spellcasting>thunderwave@2"
+      ]
+     }
+    ]
+   }
+  },
+  "Compendium.dnd-adventures-faerun.actors.Actor.aifAnimatedArmor": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "slam"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-adventures-faerun.actors.Actor.aifAranea0000000": {
+   "item": "vAZMtE5VRsH3W1Ds",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "bite-hybrid-or-spider-form-only",
+         "slam",
+         "sling"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-adventures-faerun.actors.Actor.aifArchelon00000": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "bite"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-adventures-faerun.actors.Actor.aifArchmage00000": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 4,
+        "refs": [
+         "arcane-burst"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-adventures-faerun.actors.Actor.aifArchpriest000": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 3,
+        "refs": [
+         "radiant-burst"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-adventures-faerun.actors.Actor.aifAssassin00000": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 3,
+        "refs": [
+         "shortsword",
+         "light-crossbow"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-adventures-faerun.actors.Actor.aifAzerPyromance": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "flame-burst"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-adventures-faerun.actors.Actor.aifBanditCaptain": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "scimitar",
+         "pistol"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-adventures-faerun.actors.Actor.aifBanditCrimeLo": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 3,
+        "refs": [
+         "scimitar",
+         "pistol"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-adventures-faerun.actors.Actor.aifBanditDeceive": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 3,
+        "refs": [
+         "dagger"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-adventures-faerun.actors.Actor.aifBanshee000000": {
+   "item": "GjTq3mMNgdefJyig",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "corrupting-touch"
+        ]
+       }
+      ],
+      "extra": [
+       {
+        "refs": [
+         "horrify"
+        ]
+       }
+      ]
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-adventures-faerun.actors.Actor.aifBarbedDevil00": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 1,
+        "refs": [
+         "claws"
+        ]
+       },
+       {
+        "n": 1,
+        "refs": [
+         "tail"
+        ]
+       }
+      ],
+      "extra": []
+     },
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "hurl-flame"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-adventures-faerun.actors.Actor.aifBarlgura00000": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 1,
+        "refs": [
+         "tormenting-bite"
+        ]
+       },
+       {
+        "n": 2,
+        "refs": [
+         "thrash"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-adventures-faerun.actors.Actor.aifBeardedDevil0": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 1,
+        "refs": [
+         "beard"
+        ]
+       },
+       {
+        "n": 1,
+        "refs": [
+         "infernal-glaive"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-adventures-faerun.actors.Actor.aifBeastofMalar0": {
+   "item": "xJqkPm03LPp8FTb8",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 3,
+        "refs": [
+         "bite",
+         "claws-land-or-sky-form-only"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-adventures-faerun.actors.Actor.aifBehir00000000": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 1,
+        "refs": [
+         "bite"
+        ]
+       }
+      ],
+      "extra": [
+       {
+        "refs": [
+         "constrict"
+        ]
+       }
+      ]
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-adventures-faerun.actors.Actor.aifBeholder00000": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 3,
+        "refs": [
+         "eye-rays"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-adventures-faerun.actors.Actor.aifBerserkerComm": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 3,
+        "refs": [
+         "greataxe",
+         "javelin"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-adventures-faerun.actors.Actor.aifBihaBabir0000": {
+   "item": "dX7m7P06nYinJaI7",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "marine-burst"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": [
+     {
+      "n": 1,
+      "refs": [
+       "tail-marid-form-only"
+      ]
+     }
+    ]
+   }
+  },
+  "Compendium.dnd-adventures-faerun.actors.Actor.aifBlobOfAnnihil": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "pseudopod"
+        ]
+       }
+      ],
+      "extra": [
+       {
+        "refs": [
+         "engulf"
+        ]
+       }
+      ]
+     }
+    ],
+    "replace": [
+     {
+      "n": 1,
+      "refs": [
+       "restraining-glob"
+      ]
+     }
+    ]
+   }
+  },
+  "Compendium.dnd-adventures-faerun.actors.Actor.aifBrownBear0000": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 1,
+        "refs": [
+         "bite"
+        ]
+       },
+       {
+        "n": 1,
+        "refs": [
+         "claw"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-adventures-faerun.actors.Actor.aifBugbearStalke": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "javelin",
+         "morningstar"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-adventures-faerun.actors.Actor.aifBulette000000": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "bite"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-adventures-faerun.actors.Actor.aifCambion000000": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "claw",
+         "fire-ray"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-adventures-faerun.actors.Actor.aifCarrionCrawle": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 1,
+        "refs": [
+         "bite"
+        ]
+       }
+      ],
+      "extra": [
+       {
+        "refs": [
+         "paralyzing-tentacles"
+        ]
+       }
+      ]
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-adventures-faerun.actors.Actor.aifCentaurWarden": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "forest-staff",
+         "sun-ray"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-adventures-faerun.actors.Actor.aifChainDevil000": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "chain"
+        ]
+       }
+      ],
+      "extra": [
+       {
+        "refs": [
+         "conjure-infernal-chain"
+        ]
+       }
+      ]
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-adventures-faerun.actors.Actor.aifChimera000000": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 1,
+        "refs": [
+         "ram"
+        ]
+       },
+       {
+        "n": 1,
+        "refs": [
+         "bite"
+        ]
+       },
+       {
+        "n": 1,
+        "refs": [
+         "claw"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": [
+     {
+      "n": 1,
+      "refs": [
+       "fire-breath"
+      ],
+      "of": [
+       "claw"
+      ]
+     }
+    ]
+   }
+  },
+  "Compendium.dnd-adventures-faerun.actors.Actor.aifChuul00000000": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "pincer"
+        ]
+       }
+      ],
+      "extra": [
+       {
+        "refs": [
+         "paralyzing-tentacles"
+        ]
+       }
+      ]
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-adventures-faerun.actors.Actor.aifCloaker000000": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 1,
+        "refs": [
+         "attach"
+        ]
+       },
+       {
+        "n": 2,
+        "refs": [
+         "tail"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-adventures-faerun.actors.Actor.aifCloudGiant000": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "thunderous-mace",
+         "thundercloud"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": [
+     {
+      "n": 1,
+      "refs": [
+       "spellcasting>fog-cloud"
+      ]
+     }
+    ]
+   }
+  },
+  "Compendium.dnd-adventures-faerun.actors.Actor.aifCultistHierop": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 3,
+        "refs": [
+         "pact-blade",
+         "radiant-ray"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-adventures-faerun.actors.Actor.aifCultistofBane": {
+   "item": "SwuJ4OOU901dPFv7",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 3,
+        "refs": [
+         "gauntlet",
+         "oppressive-burst"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": [
+     {
+      "n": 1,
+      "refs": [
+       "spellcasting>dominate-person"
+      ]
+     }
+    ]
+   }
+  },
+  "Compendium.dnd-adventures-faerun.actors.Actor.aifCultistofBhaa": {
+   "item": "Y7USj6nSCtRnyMUh",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 3,
+        "refs": [
+         "cursed-blade"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": [
+     {
+      "n": 1,
+      "refs": [
+       "spellcasting"
+      ]
+     }
+    ]
+   }
+  },
+  "Compendium.dnd-adventures-faerun.actors.Actor.aifCultistofMyrk": {
+   "item": "4roSCFlB3TVqdVfD",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 3,
+        "refs": [
+         "necrotic-burst"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-adventures-faerun.actors.Actor.aifCyclopsOracle": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 3,
+        "refs": [
+         "radiant-strike",
+         "flash-of-light"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-adventures-faerun.actors.Actor.aifDao0000000000": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 3,
+        "refs": [
+         "earthen-maul"
+        ]
+       }
+      ],
+      "extra": []
+     },
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "earth-burst"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-adventures-faerun.actors.Actor.aifDeadThreeScio": {
+   "item": "8jhVa7a2sEBljXB2",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "death-touch",
+         "mindwrack-bolt"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-adventures-faerun.actors.Actor.aifDeathCultist0": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 3,
+        "refs": [
+         "dread-scythe",
+         "deathly-ray"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-adventures-faerun.actors.Actor.aifDeathDog00000": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "bite"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-adventures-faerun.actors.Actor.aifDeathKnight00": {
+   "item": "zRi1rV70lZKUYIdE",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 3,
+        "refs": [
+         "dread-blade"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-adventures-faerun.actors.Actor.aifDeathKnightAs": {
+   "item": "RK3cy435TuQupyAI",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 3,
+        "refs": [
+         "dread-blade"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-adventures-faerun.actors.Actor.aifDeathTyrant00": {
+   "item": "Jc8TLnwidE3Kpshs",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 3,
+        "refs": [
+         "eye-rays"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-adventures-faerun.actors.Actor.aifDemilich00000": {
+   "item": "xCLWqlXiK3QU5zjL",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 3,
+        "refs": [
+         "necrotic-burst"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-adventures-faerun.actors.Actor.aifDireWorg00000": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 3,
+        "refs": [
+         "bite"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-adventures-faerun.actors.Actor.aifDisplacerBeas": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 1,
+        "refs": [
+         "rend"
+        ]
+       },
+       {
+        "n": 1,
+        "refs": [
+         "tentacle"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-adventures-faerun.actors.Actor.aifDoppelganger0": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "slam"
+        ]
+       }
+      ],
+      "extra": [
+       {
+        "refs": [
+         "unsettling-visage"
+        ],
+        "ifAvailable": true
+       }
+      ]
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-adventures-faerun.actors.Actor.aifDracolich0000": {
+   "item": "2Jw3o9k9NupXRvhn",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 3,
+        "refs": [
+         "rend"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": [
+     {
+      "n": 1,
+      "refs": [
+       "spellcasting>ray-of-sickness@2"
+      ]
+     }
+    ]
+   }
+  },
+  "Compendium.dnd-adventures-faerun.actors.Actor.aifDracolichSamm": {
+   "item": "X3DPJElVNPoe0at9",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 3,
+        "refs": [
+         "rend"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": [
+     {
+      "n": 1,
+      "refs": [
+       "spellcasting>blight",
+       "ray-of-sickness"
+      ]
+     }
+    ]
+   }
+  },
+  "Compendium.dnd-adventures-faerun.actors.Actor.aifDragonTurtle0": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 3,
+        "refs": [
+         "bite"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": [
+     {
+      "n": 1,
+      "refs": [
+       "tail"
+      ]
+     }
+    ]
+   }
+  },
+  "Compendium.dnd-adventures-faerun.actors.Actor.aifDrider0000000": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 3,
+        "refs": [
+         "foreleg",
+         "poison-burst"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-adventures-faerun.actors.Actor.aifDrowEliteWarr": {
+   "item": "d9eKxVSQuKD6LXNH",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "shortsword",
+         "drow-hand-crossbow"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-adventures-faerun.actors.Actor.aifDrowMageofLol": {
+   "item": "Vd1di30Ne60QIeTV",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 3,
+        "refs": [
+         "abyssal-burst"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-adventures-faerun.actors.Actor.aifDrowPriestess": {
+   "item": "e4eeDIoc1tcb7PaC",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 3,
+        "refs": [
+         "scourge"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-adventures-faerun.actors.Actor.aifDruid00000000": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "vine-staff",
+         "verdant-wisp"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-adventures-faerun.actors.Actor.aifDryad00000000": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 1,
+        "refs": [
+         "vine-lash",
+         "thorn-burst"
+        ]
+       }
+      ],
+      "extra": [
+       {
+        "refs": [
+         "spellcasting>charm-monster"
+        ]
+       }
+      ]
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-adventures-faerun.actors.Actor.aifEarthElementa": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "slam",
+         "rock-launch"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-adventures-faerun.actors.Actor.aifElementalCult": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 3,
+        "refs": [
+         "elemental-flail",
+         "elemental-claw"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-adventures-faerun.actors.Actor.aifEmpyrean00000": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "sacred-weapon",
+         "divine-ray"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-adventures-faerun.actors.Actor.aifErinyes000000": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 3,
+        "refs": [
+         "withering-sword"
+        ]
+       }
+      ],
+      "extra": [
+       {
+        "refs": [
+         "entangling-rope"
+        ]
+       }
+      ]
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-adventures-faerun.actors.Actor.aifEttercap00000": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 1,
+        "refs": [
+         "bite"
+        ]
+       },
+       {
+        "n": 1,
+        "refs": [
+         "claw"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-adventures-faerun.actors.Actor.aifEttin00000000": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 1,
+        "refs": [
+         "battleaxe"
+        ]
+       },
+       {
+        "n": 1,
+        "refs": [
+         "morningstar"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-adventures-faerun.actors.Actor.aifFiendCultist0": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 3,
+        "refs": [
+         "pact-axe"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-adventures-faerun.actors.Actor.aifFireElemental": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "burn"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-adventures-faerun.actors.Actor.aifFireGiant0000": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "flame-sword",
+         "hammer-throw"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-adventures-faerun.actors.Actor.aifFlameskull000": {
+   "item": "ksV5jL9CNp7n3r8G",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "fire-ray"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-adventures-faerun.actors.Actor.aifFlamingSkelet": {
+   "item": "juTK6jd3xDb5xZba",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "flame-scepter",
+         "hurl-flame"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-adventures-faerun.actors.Actor.aifFleshGolem000": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "slam"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-adventures-faerun.actors.Actor.aifFomorian00000": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "greatclub"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": [
+     {
+      "n": 1,
+      "refs": [
+       "warping-hex"
+      ]
+     }
+    ]
+   }
+  },
+  "Compendium.dnd-adventures-faerun.actors.Actor.aifFrostGiant000": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "frost-axe",
+         "great-bow"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-adventures-faerun.actors.Actor.aifGargoyle00000": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "claw"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-adventures-faerun.actors.Actor.aifGhastGravecal": {
+   "item": "LLl2zs1gDAwvqKDD",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "horrific-necrosis"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": [
+     {
+      "n": 1,
+      "refs": [
+       "claw"
+      ]
+     }
+    ]
+   }
+  },
+  "Compendium.dnd-adventures-faerun.actors.Actor.aifGhost00000000": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "withering-touch"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-adventures-faerun.actors.Actor.aifGhoul00000000": {
+   "item": "hNlIY77VpneCqVEv",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "bite"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-adventures-faerun.actors.Actor.aifGiantShark000": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "bite"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-adventures-faerun.actors.Actor.aifGithyankiKnig": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 3,
+        "refs": [
+         "silver-sword"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": [
+     {
+      "n": 1,
+      "refs": [
+       "spellcasting>telekinesis"
+      ]
+     }
+    ]
+   }
+  },
+  "Compendium.dnd-adventures-faerun.actors.Actor.aifGladiator0000": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 3,
+        "refs": [
+         "spear"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": [
+     {
+      "n": 1,
+      "refs": [
+       "shield-bash"
+      ]
+     }
+    ]
+   }
+  },
+  "Compendium.dnd-adventures-faerun.actors.Actor.aifGnollFangOfYe": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 1,
+        "refs": [
+         "bite"
+        ]
+       },
+       {
+        "n": 2,
+        "refs": [
+         "bone-flail"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-adventures-faerun.actors.Actor.aifGnollPackLord": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "bone-whip",
+         "bone-javelin"
+        ]
+       }
+      ],
+      "extra": [
+       {
+        "refs": [
+         "incite-rampage"
+        ],
+        "ifAvailable": true
+       }
+      ]
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-adventures-faerun.actors.Actor.aifGoblinBoss000": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "scimitar",
+         "shortbow"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-adventures-faerun.actors.Actor.aifGoblinHexer00": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "hex-stick"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": [
+     {
+      "n": 1,
+      "refs": [
+       "spellcasting"
+      ]
+     }
+    ]
+   }
+  },
+  "Compendium.dnd-adventures-faerun.actors.Actor.aifGoristro00000": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 1,
+        "refs": [
+         "brutal-gore"
+        ]
+       },
+       {
+        "n": 2,
+        "refs": [
+         "slam"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-adventures-faerun.actors.Actor.aifGreenHag00000": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "claw"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-adventures-faerun.actors.Actor.aifGrell00000000": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 1,
+        "refs": [
+         "beak"
+        ]
+       },
+       {
+        "n": 1,
+        "refs": [
+         "paralyzing-tentacles"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-adventures-faerun.actors.Actor.aifGrick00000000": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 1,
+        "refs": [
+         "beak"
+        ]
+       },
+       {
+        "n": 1,
+        "refs": [
+         "tentacles"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-adventures-faerun.actors.Actor.aifGrickAncient0": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 1,
+        "refs": [
+         "beak"
+        ]
+       },
+       {
+        "n": 1,
+        "refs": [
+         "slam"
+        ]
+       },
+       {
+        "n": 1,
+        "refs": [
+         "tentacles"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-adventures-faerun.actors.Actor.aifGuardCaptain0": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "javelin",
+         "longsword"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-adventures-faerun.actors.Actor.aifGuardianNaga0": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "bite"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": [
+     {
+      "n": "any",
+      "refs": [
+       "poisonous-spittle"
+      ]
+     }
+    ]
+   }
+  },
+  "Compendium.dnd-adventures-faerun.actors.Actor.aifGulthiasBligh": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "slam",
+         "thorn-volley"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-adventures-faerun.actors.Actor.aifHalfdragon000": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "claw"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-adventures-faerun.actors.Actor.aifHauntingReven": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "object-slam"
+        ]
+       }
+      ],
+      "extra": [
+       {
+        "refs": [
+         "invitation"
+        ]
+       }
+      ]
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-adventures-faerun.actors.Actor.aifHellHound0000": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "bite"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-adventures-faerun.actors.Actor.aifHelmedHorror0": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "arcane-sword"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-adventures-faerun.actors.Actor.aifHezrou0000000": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 3,
+        "refs": [
+         "rend"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-adventures-faerun.actors.Actor.aifHillGiant0000": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "tree-club",
+         "trash-lob"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-adventures-faerun.actors.Actor.aifHobgoblinCapt": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "greatsword",
+         "longbow"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-adventures-faerun.actors.Actor.aifHobgoblinWarl": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 3,
+        "refs": [
+         "javelin",
+         "longsword"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-adventures-faerun.actors.Actor.aifHookHorror000": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "hook"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-adventures-faerun.actors.Actor.aifHydra00000000": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": {
+         "text": true
+        },
+        "refs": [
+         "bite"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-adventures-faerun.actors.Actor.aifIceDevil00000": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 3,
+        "refs": [
+         "ice-spear"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": [
+     {
+      "n": 1,
+      "refs": [
+       "tail"
+      ]
+     }
+    ]
+   }
+  },
+  "Compendium.dnd-adventures-faerun.actors.Actor.aifIncubus000000": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "restless-touch"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-adventures-faerun.actors.Actor.aifIntellectDevo": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 1,
+        "refs": [
+         "claw"
+        ]
+       }
+      ],
+      "extra": [
+       {
+        "refs": [
+         "devour-intellect"
+        ]
+       }
+      ]
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-adventures-faerun.actors.Actor.aifIronGolem0000": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "bladed-arm",
+         "fiery-bolt"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-adventures-faerun.actors.Actor.aifKarasChembryl": {
+   "item": "G6qpu8BDPA3iOrMP",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "dread-dagger",
+         "tyrants-blade"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-adventures-faerun.actors.Actor.aifKnight0000000": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "greatsword",
+         "heavy-crossbow"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-adventures-faerun.actors.Actor.aifKraken0000000": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "tentacle"
+        ]
+       }
+      ],
+      "extra": [
+       {
+        "refs": [
+         "fling",
+         "lightning-strike",
+         "swallow"
+        ]
+       }
+      ]
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-adventures-faerun.actors.Actor.aifKuotoaMonitor": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "bone-whip"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-adventures-faerun.actors.Actor.aifLacedonGhoul0": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "icy-bite"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-adventures-faerun.actors.Actor.aifLamia00000000": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "claw"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": [
+     {
+      "n": 1,
+      "refs": [
+       "corrupting-touch"
+      ]
+     }
+    ]
+   }
+  },
+  "Compendium.dnd-adventures-faerun.actors.Actor.aifLich000000000": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 3,
+        "refs": [
+         "eldritch-burst",
+         "paralyzing-touch"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-adventures-faerun.actors.Actor.aifLichSammaster": {
+   "item": "Tvz0R0Z4iCdNGtUW",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 3,
+        "refs": [
+         "corrosive-burst",
+         "paralyzing-touch"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": [
+     {
+      "n": 2,
+      "refs": [
+       "spellcasting"
+      ]
+     }
+    ]
+   }
+  },
+  "Compendium.dnd-adventures-faerun.actors.Actor.aifLizardfolkGeo": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "earth-burst"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-adventures-faerun.actors.Actor.aifMage000000000": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 3,
+        "refs": [
+         "arcane-burst"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-adventures-faerun.actors.Actor.aifMammoth000000": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "gore"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-adventures-faerun.actors.Actor.aifManshoon00000": {
+   "item": "EzkZHaHw9JFvILI2",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 3,
+        "refs": [
+         "arcane-burst"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": [
+     {
+      "n": 2,
+      "refs": [
+       "spellcasting"
+      ]
+     }
+    ]
+   }
+  },
+  "Compendium.dnd-adventures-faerun.actors.Actor.aifManticore0000": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 3,
+        "refs": [
+         "rend",
+         "tail-spike"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-adventures-faerun.actors.Actor.aifMarid00000000": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 3,
+        "refs": [
+         "aquatic-lash"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-adventures-faerun.actors.Actor.aifMedusa0000000": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "claw"
+        ]
+       },
+       {
+        "n": 1,
+        "refs": [
+         "snake-hair"
+        ]
+       }
+      ],
+      "extra": []
+     },
+     {
+      "groups": [
+       {
+        "n": 3,
+        "refs": [
+         "poison-ray"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-adventures-faerun.actors.Actor.aifMerfolkWavebe": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "aquatic-burst"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-adventures-faerun.actors.Actor.aifMerrow0000000": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "bite",
+         "claw",
+         "harpoon"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-adventures-faerun.actors.Actor.aifMezzoloth0000": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "claws",
+         "mercurial-trident"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-adventures-faerun.actors.Actor.aifModronDuodron": {
+   "item": "7X7n41CogiCex6nX",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "clockwork-blade"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-adventures-faerun.actors.Actor.aifMummy00000000": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "rotting-fist"
+        ]
+       }
+      ],
+      "extra": [
+       {
+        "refs": [
+         "dreadful-glare"
+        ]
+       }
+      ]
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-adventures-faerun.actors.Actor.aifMyconidSovere": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 1,
+        "refs": [
+         "slam"
+        ]
+       }
+      ],
+      "extra": [
+       {
+        "refs": [
+         "pacifying-spores"
+        ]
+       }
+      ]
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-adventures-faerun.actors.Actor.aifNightHag00000": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "claw"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-adventures-faerun.actors.Actor.aifNimblewrightG": {
+   "item": "B4qI3iA243VwJiG1",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 3,
+        "refs": [
+         "scimitar",
+         "light-crossbow"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-adventures-faerun.actors.Actor.aifNimblewrightH": {
+   "item": "FlHruIvNux79kGtB",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 4,
+        "refs": [
+         "halting-slam",
+         "radiant-ray"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-adventures-faerun.actors.Actor.aifNobleProdigy0": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 3,
+        "refs": [
+         "beguiling-strike"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-adventures-faerun.actors.Actor.aifNothic0000000": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "claw"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-adventures-faerun.actors.Actor.aifNycaloth00000": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "mercurial-axe"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-adventures-faerun.actors.Actor.aifOni0000000000": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "claw",
+         "nightmare-ray"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": [
+     {
+      "n": 1,
+      "refs": [
+       "spellcasting"
+      ]
+     }
+    ]
+   }
+  },
+  "Compendium.dnd-adventures-faerun.actors.Actor.aifOtyugh0000000": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 1,
+        "refs": [
+         "bite"
+        ]
+       },
+       {
+        "n": 2,
+        "refs": [
+         "tentacle"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-adventures-faerun.actors.Actor.aifOwlbear000000": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "rend"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-adventures-faerun.actors.Actor.aifPerformerMaes": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 3,
+        "refs": [
+         "rapier"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-adventures-faerun.actors.Actor.aifPeryton000000": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 1,
+        "refs": [
+         "gore"
+        ]
+       },
+       {
+        "n": 1,
+        "refs": [
+         "talons"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-adventures-faerun.actors.Actor.aifPhaerimmAgent": {
+   "item": "mS8OJKUjevvbHeF7",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 3,
+        "refs": [
+         "dread-stinger",
+         "mindwarp-ray"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-adventures-faerun.actors.Actor.aifPhaerimmHatch": {
+   "item": "o0YlJ3FpoOroz3gl",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "stinger"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-adventures-faerun.actors.Actor.aifPhaseSpider00": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "bite"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-adventures-faerun.actors.Actor.aifPirate0000000": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "dagger"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": [
+     {
+      "n": 1,
+      "refs": [
+       "enthralling-panache"
+      ]
+     }
+    ]
+   }
+  },
+  "Compendium.dnd-adventures-faerun.actors.Actor.aifPirateCaptain": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 3,
+        "refs": [
+         "rapier",
+         "pistol"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-adventures-faerun.actors.Actor.aifPixieWonderbr": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "faerie-dust"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-adventures-faerun.actors.Actor.aifPolarBear0000": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "rend"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-adventures-faerun.actors.Actor.aifPolarSerpent0": {
+   "item": "T8S8IfWmE1uUlRAd",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 1,
+        "refs": [
+         "bite"
+        ]
+       }
+      ],
+      "extra": [
+       {
+        "refs": [
+         "constrict"
+        ]
+       }
+      ]
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-adventures-faerun.actors.Actor.aifPoltergeist00": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 1,
+        "refs": [
+         "object-slam"
+        ]
+       }
+      ],
+      "extra": [
+       {
+        "refs": [
+         "telekinetic-thrust"
+        ]
+       }
+      ]
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-adventures-faerun.actors.Actor.aifPriest0000000": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "mace",
+         "radiant-flame"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-adventures-faerun.actors.Actor.aifPrimevalOwlbe": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "ravage"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-adventures-faerun.actors.Actor.aifQueenForfalle": {
+   "item": "HFBtX2sHiAtw03q1",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 3,
+        "refs": [
+         "greataxe",
+         "handaxe"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-adventures-faerun.actors.Actor.aifQuestingKnigh": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 3,
+        "refs": [
+         "greatsword",
+         "longbow"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-adventures-faerun.actors.Actor.aifRedSlaad00000": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 3,
+        "refs": [
+         "injecting-claw"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-adventures-faerun.actors.Actor.aifRevenant00000": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "slam"
+        ]
+       }
+      ],
+      "extra": [
+       {
+        "refs": [
+         "vengeful-glare"
+        ]
+       }
+      ]
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-adventures-faerun.actors.Actor.aifRoper00000000": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "tentacle"
+        ]
+       },
+       {
+        "n": 2,
+        "refs": [
+         "bite"
+        ]
+       }
+      ],
+      "extra": [
+       {
+        "refs": [
+         "reel"
+        ]
+       }
+      ]
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-adventures-faerun.actors.Actor.aifRustMonster00": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 1,
+        "refs": [
+         "bite"
+        ]
+       },
+       {
+        "n": 2,
+        "refs": [
+         "antennae"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-adventures-faerun.actors.Actor.aifRustedBehemot": {
+   "item": "FhB6bAbSjYxp1LtW",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 3,
+        "refs": [
+         "slam",
+         "rusted-shot-put"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-adventures-faerun.actors.Actor.aifRustedBerserk": {
+   "item": "oJWU6A6Xy6Soh35o",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "greatsword",
+         "javelin"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-adventures-faerun.actors.Actor.aifRustedScout00": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "shortsword",
+         "longbow"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-adventures-faerun.actors.Actor.aifRustedWarrior": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "greatsword",
+         "heavy-crossbow"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-adventures-faerun.actors.Actor.aifRustedWyrm000": {
+   "item": "xZPSYipGHFlKxord",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "bite"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-adventures-faerun.actors.Actor.aifSahuaginBaron": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 3,
+        "refs": [
+         "trident"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-adventures-faerun.actors.Actor.aifSahuaginPries": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "spectral-jaws"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-adventures-faerun.actors.Actor.aifSahuaginWarri": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "claw"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-adventures-faerun.actors.Actor.aifSalamander000": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "flame-spear"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": [
+     {
+      "n": 1,
+      "refs": [
+       "constrict"
+      ]
+     }
+    ]
+   }
+  },
+  "Compendium.dnd-adventures-faerun.actors.Actor.aifSalamanderInf": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "flame-trident"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-adventures-faerun.actors.Actor.aifSatyrRevelmas": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 3,
+        "refs": [
+         "prance"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-adventures-faerun.actors.Actor.aifScout00000000": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "shortsword",
+         "longbow"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-adventures-faerun.actors.Actor.aifShadowDragon0": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 3,
+        "refs": [
+         "rend"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-adventures-faerun.actors.Actor.aifShamblingMoun": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 3,
+        "refs": [
+         "charged-tendril"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": [
+     {
+      "n": 1,
+      "refs": [
+       "engulf"
+      ]
+     }
+    ]
+   }
+  },
+  "Compendium.dnd-adventures-faerun.actors.Actor.aifShieldGuardia": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "fist"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-adventures-faerun.actors.Actor.aifSphinxOfSecre": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 3,
+        "refs": [
+         "claw"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": [
+     {
+      "n": 1,
+      "refs": [
+       "curse-of-the-riddle"
+      ]
+     }
+    ]
+   }
+  },
+  "Compendium.dnd-adventures-faerun.actors.Actor.aifSporeofMoande": {
+   "item": "d7ynIXoCq4fFKUDT",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 4,
+        "refs": [
+         "tendril"
+        ]
+       }
+      ],
+      "extra": []
+     },
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "tendril"
+        ]
+       }
+      ],
+      "extra": [
+       {
+        "refs": [
+         "consume"
+        ]
+       }
+      ]
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-adventures-faerun.actors.Actor.aifSpyMaster0000": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 3,
+        "refs": [
+         "rapier",
+         "hand-crossbow"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-adventures-faerun.actors.Actor.aifStoneGiant000": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "stone-club",
+         "boulder"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-adventures-faerun.actors.Actor.aifStoneGolem000": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "slam",
+         "force-bolt"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-adventures-faerun.actors.Actor.aifStormGiant000": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "storm-sword",
+         "thunderbolt"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-adventures-faerun.actors.Actor.aifSuccubus00000": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 1,
+        "refs": [
+         "fiendish-touch"
+        ]
+       }
+      ],
+      "extra": [
+       {
+        "refs": [
+         "charm",
+         "draining-kiss"
+        ]
+       }
+      ]
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-adventures-faerun.actors.Actor.aifSwanmay000000": {
+   "item": "D17VJYGJ50APIgNb",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "beak-swan-form-only",
+         "longbow",
+         "scimitar"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-adventures-faerun.actors.Actor.aifSwarmOfDretch": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "rend"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-adventures-faerun.actors.Actor.aifSwarmOfLemure": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "vile-slime"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-adventures-faerun.actors.Actor.aifToughBoss0000": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "warhammer",
+         "heavy-crossbow"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-adventures-faerun.actors.Actor.aifTreant0000000": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "slam"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-adventures-faerun.actors.Actor.aifTreeBlight000": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "branch"
+        ]
+       }
+      ],
+      "extra": [
+       {
+        "refs": [
+         "grasping-root"
+        ]
+       }
+      ]
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-adventures-faerun.actors.Actor.aifTroll00000000": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 3,
+        "refs": [
+         "rend"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-adventures-faerun.actors.Actor.aifTyrannosaurus": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 1,
+        "refs": [
+         "bite"
+        ]
+       },
+       {
+        "n": 1,
+        "refs": [
+         "tail"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-adventures-faerun.actors.Actor.aifUmberHulk0000": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 3,
+        "refs": [
+         "rend"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-adventures-faerun.actors.Actor.aifUnicorn000000": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 1,
+        "refs": [
+         "hooves"
+        ]
+       },
+       {
+        "n": 1,
+        "refs": [
+         "radiant-horn"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-adventures-faerun.actors.Actor.aifValindraShado": {
+   "item": "aW8NrmGmwOc68ryx",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 3,
+        "refs": [
+         "eldritch-burst",
+         "paralyzing-touch"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": [
+     {
+      "n": 2,
+      "refs": [
+       "spellcasting>lightning-bolt@5"
+      ]
+     }
+    ]
+   }
+  },
+  "Compendium.dnd-adventures-faerun.actors.Actor.aifVampire000000": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "grave-strike"
+        ]
+       }
+      ],
+      "extra": [
+       {
+        "refs": [
+         "bite"
+        ]
+       }
+      ]
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-adventures-faerun.actors.Actor.aifVampireNightb": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 1,
+        "refs": [
+         "bite"
+        ]
+       },
+       {
+        "n": 1,
+        "refs": [
+         "shadow-strike"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-adventures-faerun.actors.Actor.aifVampireSpawn0": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "claw"
+        ]
+       }
+      ],
+      "extra": [
+       {
+        "refs": [
+         "bite"
+        ]
+       }
+      ]
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-adventures-faerun.actors.Actor.aifVioletFungus0": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "rotting-touch"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-adventures-faerun.actors.Actor.aifVioletFungusN": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "rotting-slam"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-adventures-faerun.actors.Actor.aifVrock00000000": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "shred"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-adventures-faerun.actors.Actor.aifWarriorComman": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 3,
+        "refs": [
+         "greatsword",
+         "longbow"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-adventures-faerun.actors.Actor.aifWarriorVetera": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "greatsword",
+         "heavy-crossbow"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-adventures-faerun.actors.Actor.aifWaterElementa": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "slam"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-adventures-faerun.actors.Actor.aifWerebear00000": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "handaxe",
+         "rend"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": [
+     {
+      "n": 1,
+      "refs": [
+       "bite"
+      ]
+     }
+    ]
+   }
+  },
+  "Compendium.dnd-adventures-faerun.actors.Actor.aifWereboar00000": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "javelin",
+         "tusk"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": [
+     {
+      "n": 1,
+      "refs": [
+       "gore"
+      ]
+     }
+    ]
+   }
+  },
+  "Compendium.dnd-adventures-faerun.actors.Actor.aifWererat000000": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "scratch",
+         "hand-crossbow"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": [
+     {
+      "n": 1,
+      "refs": [
+       "bite"
+      ]
+     }
+    ]
+   }
+  },
+  "Compendium.dnd-adventures-faerun.actors.Actor.aifWeretiger0000": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "scratch",
+         "longbow"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": [
+     {
+      "n": 1,
+      "refs": [
+       "bite"
+      ]
+     }
+    ]
+   }
+  },
+  "Compendium.dnd-adventures-faerun.actors.Actor.aifWerewolf00000": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "scratch",
+         "longbow"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": [
+     {
+      "n": 1,
+      "refs": [
+       "bite"
+      ]
+     }
+    ]
+   }
+  },
+  "Compendium.dnd-adventures-faerun.actors.Actor.aifWerewyvern000": {
+   "item": "jBPSA2JjusTRxth1",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 3,
+        "refs": [
+         "javelin",
+         "rend"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": [
+     {
+      "n": 1,
+      "refs": [
+       "stinger-wyvern-or-hybrid-form-only"
+      ]
+     }
+    ]
+   }
+  },
+  "Compendium.dnd-adventures-faerun.actors.Actor.aifWight00000000": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "necrotic-sword",
+         "necrotic-bow"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": [
+     {
+      "n": 1,
+      "refs": [
+       "life-drain"
+      ]
+     }
+    ]
+   }
+  },
+  "Compendium.dnd-adventures-faerun.actors.Actor.aifWyvern0000000": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 1,
+        "refs": [
+         "bite"
+        ]
+       },
+       {
+        "n": 1,
+        "refs": [
+         "sting"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-adventures-faerun.actors.Actor.aifYeti000000000": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "claw",
+         "ice-throw"
+        ]
+       }
+      ],
+      "extra": [
+       {
+        "refs": [
+         "chilling-gaze"
+        ]
+       }
+      ]
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-adventures-faerun.actors.Actor.aifYochlol000000": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "caustic-lash"
+        ]
+       }
+      ],
+      "extra": [
+       {
+        "refs": [
+         "spellcasting>web",
+         "spellcasting>dominate-person"
+        ],
+        "ifAvailable": true
+       }
+      ]
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-adventures-faerun.actors.Actor.aifYoungBlackDra": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 3,
+        "refs": [
+         "rend"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-adventures-faerun.actors.Actor.aifYoungBlueDrag": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 3,
+        "refs": [
+         "rend"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-adventures-faerun.actors.Actor.aifYoungCopperDr": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 3,
+        "refs": [
+         "rend"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": [
+     {
+      "n": 1,
+      "refs": [
+       "slowing-breath"
+      ]
+     }
+    ]
+   }
+  },
+  "Compendium.dnd-adventures-faerun.actors.Actor.aifYoungDeepDrag": {
+   "item": "8xfI9gLDAMkKHIK0",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 3,
+        "refs": [
+         "rend"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-adventures-faerun.actors.Actor.aifYoungGreenDra": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 3,
+        "refs": [
+         "rend"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-adventures-faerun.actors.Actor.aifYoungRedDrago": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 3,
+        "refs": [
+         "rend"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-adventures-faerun.actors.Actor.aifYoungSpiritDr": {
+   "item": "t1CnfkxACRo3j93f",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 3,
+        "refs": [
+         "rend"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": [
+     {
+      "n": 1,
+      "refs": [
+       "time-warping-breath"
+      ]
+     }
+    ]
+   }
+  },
+  "Compendium.dnd-adventures-faerun.actors.Actor.aifYuantiAbomina": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "bite"
+        ]
+       }
+      ],
+      "extra": [
+       {
+        "refs": [
+         "spellcasting>suggestion"
+        ],
+        "ifAvailable": true
+       }
+      ]
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-adventures-faerun.actors.Actor.aifYuantiMalison": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "bite",
+         "poison-ray"
+        ]
+       }
+      ],
+      "extra": [
+       {
+        "refs": [
+         "spellcasting>suggestion"
+        ],
+        "ifAvailable": true
+       }
+      ]
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-adventures-faerun.actors.Actor.aifZhentilarPala": {
+   "item": "ORVnkShWnRppDYRm",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 3,
+        "refs": [
+         "longsword",
+         "oppressive-ray"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": [
+     {
+      "n": 1,
+      "refs": [
+       "spellcasting"
+      ]
+     }
+    ]
+   }
+  },
+  "Compendium.dnd-adventures-faerun.actors.Actor.aifZhentilarSold": {
+   "item": "AtKtNdzezps8yLQc",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "shortsword",
+         "pistol"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": [
+     {
+      "n": 1,
+      "refs": [
+       "knock-down"
+      ]
+     }
+    ]
+   }
+  },
+  "Compendium.dnd-adventures-faerun.actors.Actor.aifZlan000000000": {
+   "item": "5g56mjDdp99gdaCk",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 3,
+        "refs": [
+         "slam",
+         "bewildering-bolt"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": [
+     {
+      "n": 2,
+      "refs": [
+       "spellcasting"
+      ]
+     }
+    ]
+   }
+  },
+  "Compendium.dnd-adventures-faerun.actors.Actor.aifscoutcaptain0": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "shortsword",
+         "longbow"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-adventures-faerun.actors.Actor.mmBlueSlaad00000": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 3,
+        "refs": [
+         "mutating-claw"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-adventures-faerun.actors.Actor.mmCyclopsSentry0": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "greatclub",
+         "rock"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-adventures-faerun.actors.Actor.mmDjinni00000000": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 3,
+        "refs": [
+         "storm-blade",
+         "storm-bolt"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-adventures-faerun.actors.Actor.mmEfreeti0000000": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 3,
+        "refs": [
+         "heated-blade",
+         "hurl-flame"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-adventures-faerun.actors.Actor.mmGraySlaad00000": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "chaos-claw"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-adventures-faerun.actors.Actor.mmGreenSlaad0000": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 3,
+        "refs": [
+         "chaos-staff"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-adventures-faerun.actors.Actor.mmJackalwere0000": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "rend",
+         "slam"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd-adventures-faerun.actors.Actor.mmLion0000000000": {
+   "item": "mmMultiattack000",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "rend"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": [
+     {
+      "n": 1,
+      "refs": [
+       "roar"
+      ]
+     }
+    ]
+   }
+  }
+ }
+}

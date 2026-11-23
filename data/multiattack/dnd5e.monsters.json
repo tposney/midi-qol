@@ -1,0 +1,3590 @@
+{
+ "source": "dnd5e.monsters",
+ "plans": {
+  "Compendium.dnd5e.monsters.Actor.0m8QyDN52qw9zzOM": {
+   "item": "yczO5JpGxAk51Gp8",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 1,
+        "refs": [
+         "bite"
+        ]
+       },
+       {
+        "n": 1,
+        "refs": [
+         "claws"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd5e.monsters.Actor.13K3XK2A3wwxVKLD": {
+   "item": "NAmhPf8w89iV8CsY",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "attack:melee"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd5e.monsters.Actor.1OQbxoZI5BtlB2ME": {
+   "item": "ThVO3VFsGgg3GLc5",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 3,
+        "refs": [
+         "longsword",
+         "longbow"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": [
+     {
+      "n": 1,
+      "refs": [
+       "bite"
+      ]
+     }
+    ]
+   }
+  },
+  "Compendium.dnd5e.monsters.Actor.1cwfYaACm5F0l4y3": {
+   "item": "1CXV3h3U6qnpZ7cU",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 1,
+        "refs": [
+         "bite"
+        ]
+       },
+       {
+        "n": 1,
+        "refs": [
+         "claws",
+         "harpoon"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd5e.monsters.Actor.1zzRQps9jZdLZGqI": {
+   "item": "vLQAjoewGE5MAHn2",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 1,
+        "refs": [
+         "bite"
+        ]
+       },
+       {
+        "n": 1,
+        "refs": [
+         "claws"
+        ]
+       },
+       {
+        "n": 1,
+        "refs": [
+         "tail"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd5e.monsters.Actor.2MZNHeOZweXAYbv1": {
+   "item": "kRGZU8eMwOBt3kVd",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 3,
+        "refs": [
+         "claw"
+        ]
+       },
+       {
+        "n": 1,
+        "refs": [
+         "bite"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd5e.monsters.Actor.35Y64PEFFdvQS0ra": {
+   "item": "J1T00n4aCL5ybwJS",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 1,
+        "refs": [
+         "bite"
+        ]
+       },
+       {
+        "n": 2,
+        "refs": [
+         "claw"
+        ]
+       }
+      ],
+      "extra": [
+       {
+        "refs": [
+         "frightful-presence"
+        ]
+       }
+      ]
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd5e.monsters.Actor.3YwmvDupMwycWNCO": {
+   "item": "YSeYSzU3P0FooGIw",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 1,
+        "refs": [
+         "bite"
+        ]
+       },
+       {
+        "n": 1,
+        "refs": [
+         "tail"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd5e.monsters.Actor.3o2rQBqpzjIHmrBW": {
+   "item": "Fp0Jye7Qwk8KOvH7",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 3,
+        "refs": [
+         "attack"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd5e.monsters.Actor.3uIursokd3KdZrW3": {
+   "item": "QAzUtpWvNd9ptDjZ",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 1,
+        "refs": [
+         "bite"
+        ]
+       },
+       {
+        "n": 2,
+        "refs": [
+         "claw"
+        ]
+       }
+      ],
+      "extra": [
+       {
+        "refs": [
+         "frightful-presence"
+        ]
+       }
+      ]
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd5e.monsters.Actor.45Z5kogZEhawX1Ey": {
+   "item": "vgN2DlqQtt77mxKO",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "greatsword"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd5e.monsters.Actor.4ZlUHt4xmB7GdPfk": {
+   "item": "5kigRXx2FSlzVUWm",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 1,
+        "refs": [
+         "beak"
+        ]
+       },
+       {
+        "n": 1,
+        "refs": [
+         "talons"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd5e.monsters.Actor.57DofLgRQx16ARoc": {
+   "item": "s88qLjZemkFRnB8Y",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "attack:melee"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": [],
+    "notes": true
+   }
+  },
+  "Compendium.dnd5e.monsters.Actor.5P1VGAZQwOilwZQf": {
+   "item": "Q7JcaZkLaYQq4CE5",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 3,
+        "refs": [
+         "scimitar"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd5e.monsters.Actor.5TmstVMURpVtmNR3": {
+   "item": "MTqXmkJOXkp4bFMQ",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "longsword"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd5e.monsters.Actor.5kZNNWzZ6HrfKuWf": {
+   "item": "iYlIoEDfSCrggrca",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 1,
+        "refs": [
+         "pike"
+        ]
+       },
+       {
+        "n": 1,
+        "refs": [
+         "hooves"
+        ]
+       }
+      ],
+      "extra": []
+     },
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "longbow"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd5e.monsters.Actor.68bAMIpe4jvDeR9G": {
+   "item": "KUffpBEiNWnVK3W6",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "greatsword"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd5e.monsters.Actor.6oc29m5uzzzb0pk3": {
+   "item": "oWzM562ozNrlfOZe",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 1,
+        "refs": [
+         "beak"
+        ]
+       },
+       {
+        "n": 1,
+        "refs": [
+         "talons"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd5e.monsters.Actor.6wbasdWWqtXeIAyD": {
+   "item": "hVUH6pBt7hYD84ez",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "claw"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd5e.monsters.Actor.7198siHjPJf8g0cG": {
+   "item": "vnO8N4pro9PVOOQn",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 1,
+        "refs": [
+         "bite"
+        ]
+       },
+       {
+        "n": 1,
+        "refs": [
+         "stinger"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": [
+     {
+      "n": 1,
+      "refs": [
+       "claws"
+      ]
+     }
+    ],
+    "notes": true
+   }
+  },
+  "Compendium.dnd5e.monsters.Actor.7EmUVycEASn7SFL0": {
+   "item": "wjDktLNTUnueuX2X",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": {
+         "formula": "1d4"
+        },
+        "refs": [
+         "rotting-touch"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd5e.monsters.Actor.7tRhrxuknTpHpYcA": {
+   "item": "abhGXKzA0XGprXED",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 1,
+        "refs": [
+         "bite"
+        ]
+       },
+       {
+        "n": 1,
+        "refs": [
+         "claws",
+         "spear"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd5e.monsters.Actor.7vswgicsiMfS4ZTS": {
+   "item": "MUTDiPrzhDqLYlKU",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 1,
+        "refs": [
+         "bite"
+        ]
+       },
+       {
+        "n": 2,
+        "refs": [
+         "claw"
+        ]
+       }
+      ],
+      "extra": [
+       {
+        "refs": [
+         "frightful-presence"
+        ]
+       }
+      ]
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd5e.monsters.Actor.85ahD1jEo9B3POaQ": {
+   "item": "Ux1Gv0S29JzRaD27",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 1,
+        "refs": [
+         "bite"
+        ]
+       },
+       {
+        "n": 2,
+        "refs": [
+         "claw"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd5e.monsters.Actor.8MuL8xisavJW9bnw": {
+   "item": "NOajNyilBv8JIEVp",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "fist"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd5e.monsters.Actor.8SMQl75HLjhuSeau": {
+   "item": "PRiFJLZbvIt2nkTk",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "touch"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd5e.monsters.Actor.8pX2JhWUpTNNRBVx": {
+   "item": "qlBBeTku9uoaEv8G",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 1,
+        "refs": [
+         "bites"
+        ]
+       }
+      ],
+      "extra": [
+       {
+        "refs": [
+         "blinding-spittle"
+        ],
+        "ifAvailable": true
+       }
+      ]
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd5e.monsters.Actor.9bHoR8k5D2DKHaF3": {
+   "item": "QaRbm71tWEQzR4GK",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 1,
+        "refs": [
+         "beak"
+        ]
+       },
+       {
+        "n": 1,
+        "refs": [
+         "talons"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd5e.monsters.Actor.9g4N9sjyh8Ql46to": {
+   "item": "1k58ryEYEYijhYOb",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "greatclub"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd5e.monsters.Actor.9ggQBmAKXraOtz7S": {
+   "item": "iRRniNGmcgkUi4oH",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 1,
+        "refs": [
+         "beard"
+        ]
+       },
+       {
+        "n": 1,
+        "refs": [
+         "glaive"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd5e.monsters.Actor.AnseLn7HwuP97grf": {
+   "item": "sC1dqjfFZKnDmhec",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "claw"
+        ]
+       },
+       {
+        "n": 1,
+        "refs": [
+         "sting"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd5e.monsters.Actor.Aw2wmqGIatxe2ImI": {
+   "item": "pH1i4SwsZRV3rq3v",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "morningstar"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd5e.monsters.Actor.Buxe6dDK5Mw7kxe6": {
+   "item": "i49lwJ84vB720EPW",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "greataxe"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd5e.monsters.Actor.CqQ6pXQA5WXZNOm3": {
+   "item": "9efeESJpU7Zmfcyo",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 1,
+        "refs": [
+         "claws"
+        ]
+       },
+       {
+        "n": 1,
+        "refs": [
+         "club"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd5e.monsters.Actor.CrnUJhTbkdZjCZsH": {
+   "item": "ykZaywAeuqtWHAqQ",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "attack"
+        ]
+       }
+      ],
+      "extra": [],
+      "limits": [
+       {
+        "refs": [
+         "bite"
+        ],
+        "max": 1
+       }
+      ]
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd5e.monsters.Actor.Cy3A0rsNMPLZozam": {
+   "item": "cac4FpQc3XabBwTj",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "mace"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd5e.monsters.Actor.D5UqYD1EnTrJaMTO": {
+   "item": "46b7R0DbKIsxvWcv",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "attack:melee"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd5e.monsters.Actor.D5WjGwKskeUT8HXa": {
+   "item": "ZBWu2XGwEnsaVNsH",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 1,
+        "refs": [
+         "bite"
+        ]
+       },
+       {
+        "n": 1,
+        "refs": [
+         "claws"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd5e.monsters.Actor.DDO9lDCDtNHkfShP": {
+   "item": "siO3h9XOkgPVi78F",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "attack"
+        ]
+       }
+      ],
+      "extra": [],
+      "limits": [
+       {
+        "refs": [
+         "bite"
+        ],
+        "max": 1
+       }
+      ]
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd5e.monsters.Actor.EMvcuOpu7ABCmBWi": {
+   "item": "zaYTSI1nKtzBnQwf",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "shortsword"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd5e.monsters.Actor.FzvZ6xl3U9GoL9ju": {
+   "item": "oyNvUJRyGRVF22t8",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 1,
+        "refs": [
+         "bite"
+        ]
+       },
+       {
+        "n": 2,
+        "refs": [
+         "claw"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd5e.monsters.Actor.G9PENY6nw0xRxCJW": {
+   "item": "vnAmgF7ZkpmDIJSc",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 1,
+        "refs": [
+         "hooves"
+        ]
+       },
+       {
+        "n": 1,
+        "refs": [
+         "horn"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd5e.monsters.Actor.GP8JMSDugRxuLOD2": {
+   "item": "dhanHpeimPZOKFTP",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 1,
+        "refs": [
+         "bite"
+        ]
+       },
+       {
+        "n": 2,
+        "refs": [
+         "claw"
+        ]
+       }
+      ],
+      "extra": [
+       {
+        "refs": [
+         "frightful-presence"
+        ]
+       }
+      ]
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd5e.monsters.Actor.GxgIVRX5GbVTifiF": {
+   "item": "wpqra38jsZPRAuov",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "claw"
+        ]
+       },
+       {
+        "n": 1,
+        "refs": [
+         "sting"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd5e.monsters.Actor.HPUO3weiwRQnql0d": {
+   "item": "E76WCem1q8Dt8qkE",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 1,
+        "refs": [
+         "bite"
+        ]
+       },
+       {
+        "n": 1,
+        "refs": [
+         "tail"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd5e.monsters.Actor.HlddcPm4cWptj3ka": {
+   "item": "Fi45qe2ncVZHNq43",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 1,
+        "refs": [
+         "bite"
+        ]
+       },
+       {
+        "n": 1,
+        "refs": [
+         "tail"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": [],
+    "notes": true
+   }
+  },
+  "Compendium.dnd5e.monsters.Actor.Hm4o2FgPZsdbXjLq": {
+   "item": "mCNNxLGdzy54omRW",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "slam"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd5e.monsters.Actor.J8xjoG4Dxb8WkHtV": {
+   "item": "wziRdUn3HafZKJ8o",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "longsword"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd5e.monsters.Actor.J9hgSaZODGjrNl9B": {
+   "item": "599WNlvXk7snLj4O",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "attack"
+        ]
+       }
+      ],
+      "extra": [],
+      "limits": [
+       {
+        "refs": [
+         "tusks"
+        ],
+        "max": 1
+       }
+      ]
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd5e.monsters.Actor.K4vsSlHqbBAHUDHY": {
+   "item": "USl5HDilKxVI4BHh",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": {
+         "text": true
+        },
+        "refs": [
+         "bite"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd5e.monsters.Actor.K5cKmPoFkpuOotis": {
+   "item": "hbxC3Wg3H8cSIvM0",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "fist"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd5e.monsters.Actor.KCvt4FdOVJbuZ3T0": {
+   "item": "Eb4utmmDfdnqLOZV",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 1,
+        "refs": [
+         "bite"
+        ]
+       },
+       {
+        "n": 2,
+        "refs": [
+         "claw"
+        ]
+       },
+       {
+        "n": 1,
+        "refs": [
+         "horns"
+        ]
+       },
+       {
+        "n": 1,
+        "refs": [
+         "tail"
+        ]
+       }
+      ],
+      "extra": [
+       {
+        "refs": [
+         "frightful-presence"
+        ]
+       }
+      ]
+     }
+    ],
+    "replace": [
+     {
+      "n": 1,
+      "refs": [
+       "swallow"
+      ],
+      "of": [
+       "bite"
+      ]
+     }
+    ]
+   }
+  },
+  "Compendium.dnd5e.monsters.Actor.KLCkHep28HBfdsky": {
+   "item": "FcbmWHMk3H4MGdxy",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 1,
+        "refs": [
+         "battleaxe"
+        ]
+       },
+       {
+        "n": 1,
+        "refs": [
+         "morningstar"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd5e.monsters.Actor.KtM6IV9I5l1MWUDk": {
+   "item": "AGKUD82KJZaMKVRt",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "chain"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd5e.monsters.Actor.L1w8yBkInMscfJ3F": {
+   "item": "7YSwI62Budsr6HzO",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "claw-oni-form-only",
+         "glaive"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd5e.monsters.Actor.LTomFUTBrkRi0Pj5": {
+   "item": "2NzoIyouATBfPgdc",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "scimitar"
+        ]
+       }
+      ],
+      "extra": []
+     },
+     {
+      "groups": [],
+      "extra": [
+       {
+        "refs": [
+         "hurl-flame"
+        ]
+       }
+      ]
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd5e.monsters.Actor.M4eX4Mu5IHCr3TMf": {
+   "item": "P47jJ8bjQulsbdUg",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 1,
+        "refs": [
+         "bite"
+        ]
+       },
+       {
+        "n": 2,
+        "refs": [
+         "claw"
+        ]
+       }
+      ],
+      "extra": [
+       {
+        "refs": [
+         "frightful-presence"
+        ]
+       }
+      ]
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd5e.monsters.Actor.MADGs8pWMVyyFOf1": {
+   "item": "9FAl5YGUTmt1RnEF",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "fork"
+        ]
+       },
+       {
+        "n": 1,
+        "refs": [
+         "tail"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": [
+     {
+      "n": "any",
+      "refs": [
+       "hurl-flame"
+      ]
+     }
+    ]
+   }
+  },
+  "Compendium.dnd5e.monsters.Actor.MAoCGF5VkQwhmgvI": {
+   "item": "Wr6BSqrXAJZu28sp",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 1,
+        "refs": [
+         "bite"
+        ]
+       },
+       {
+        "n": 2,
+        "refs": [
+         "claw"
+        ]
+       }
+      ],
+      "extra": []
+     },
+     {
+      "groups": [
+       {
+        "n": 3,
+        "refs": [
+         "tail-spike"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd5e.monsters.Actor.MO382D2sxtAIuUC5": {
+   "item": "TUvgGNvTgO6MlepM",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 1,
+        "refs": [
+         "bite"
+        ]
+       },
+       {
+        "n": 2,
+        "refs": [
+         "claw"
+        ]
+       }
+      ],
+      "extra": [
+       {
+        "refs": [
+         "frightful-presence"
+        ]
+       }
+      ]
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd5e.monsters.Actor.MnoL59nOOfYatAkQ": {
+   "item": "LjPDX0VIEJRv0boG",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 1,
+        "refs": [
+         "claws"
+        ]
+       },
+       {
+        "n": 1,
+        "refs": [
+         "dagger",
+         "intoxicating-touch"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd5e.monsters.Actor.NB6wUgVqeOQtsQKu": {
+   "item": "BLz58sp79C2HvinU",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "slam"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd5e.monsters.Actor.NmQLj0zv4FmfuSan": {
+   "item": "xDjzXK9dbD2EV8hi",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 1,
+        "refs": [
+         "bite"
+        ]
+       },
+       {
+        "n": 2,
+        "refs": [
+         "claw"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd5e.monsters.Actor.O3ABqI55Ir1du1Xa": {
+   "item": "YO57HtdvpuGxJANB",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "shortsword"
+        ]
+       }
+      ],
+      "extra": []
+     },
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "longbow"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd5e.monsters.Actor.OGPHF4sCVOAi87TU": {
+   "item": "MCquBpEbQDXKRAju",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "pincer"
+        ]
+       },
+       {
+        "n": 2,
+        "refs": [
+         "fist"
+        ]
+       }
+      ],
+      "extra": []
+     },
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "pincer"
+        ]
+       }
+      ],
+      "extra": [
+       {
+        "refs": [
+         "spell"
+        ]
+       }
+      ]
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd5e.monsters.Actor.P6qC8jB3pnEH0tIE": {
+   "item": "OtOJ4eSobUE30d2S",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "pincer"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd5e.monsters.Actor.PH78NBdvoaszAb61": {
+   "item": "EHX3CeEnlmzwnnK5",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "bite"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd5e.monsters.Actor.PtotS52HpHX596cZ": {
+   "item": "Uo4oxB1xZmJcWVsZ",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 1,
+        "refs": [
+         "bite"
+        ]
+       },
+       {
+        "n": 1,
+        "refs": [
+         "tail-stinger"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd5e.monsters.Actor.QSytPah5WKoFJ1zt": {
+   "item": "VmQbXjALjJwKhT91",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 1,
+        "refs": [
+         "bite"
+        ]
+       },
+       {
+        "n": 2,
+        "refs": [
+         "claw"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd5e.monsters.Actor.RCv5y7iWlfNxkinx": {
+   "item": "BFv56pkQ54pdTkYM",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 1,
+        "refs": [
+         "bite"
+        ]
+       },
+       {
+        "n": 1,
+        "refs": [
+         "claw"
+        ]
+       },
+       {
+        "n": 1,
+        "refs": [
+         "mace"
+        ]
+       },
+       {
+        "n": 1,
+        "refs": [
+         "tail"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd5e.monsters.Actor.SNT0JNVSngUTsj4m": {
+   "item": "gbM7g0hyrF6MMYqR",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 1,
+        "refs": [
+         "bite"
+        ]
+       },
+       {
+        "n": 2,
+        "refs": [
+         "claw"
+        ]
+       }
+      ],
+      "extra": [
+       {
+        "refs": [
+         "frightful-presence"
+        ]
+       }
+      ]
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd5e.monsters.Actor.SOin81NWijHRvXFK": {
+   "item": "W7aeXkpOJ1TwM0dq",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "greatclub"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd5e.monsters.Actor.T2PExQE84ZcIbAXz": {
+   "item": "bUWbRbY7TpLSL1kO",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 1,
+        "refs": [
+         "beak"
+        ]
+       },
+       {
+        "n": 1,
+        "refs": [
+         "claws"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd5e.monsters.Actor.UFW8M3JHzHkxUEGM": {
+   "item": "xZSeAPj02NKne0AK",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 1,
+        "refs": [
+         "rotting-fist"
+        ]
+       }
+      ],
+      "extra": [
+       {
+        "refs": [
+         "dreadful-glare"
+        ]
+       }
+      ]
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd5e.monsters.Actor.VCuG0Z3MrO8kfDU0": {
+   "item": "Sn1RpgmvWb3DPz66",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 1,
+        "refs": [
+         "bite"
+        ]
+       },
+       {
+        "n": 2,
+        "refs": [
+         "claw"
+        ]
+       }
+      ],
+      "extra": [
+       {
+        "refs": [
+         "frightful-presence"
+        ]
+       }
+      ]
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd5e.monsters.Actor.XEByBLeOkDgL3mrr": {
+   "item": "LyxrhwvzMW4YbiYE",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "attack:melee"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd5e.monsters.Actor.YOqhbf8WsX0jH9Fu": {
+   "item": "g0R4u7liRAurxB04",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "slam"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd5e.monsters.Actor.ZHAFrnCwCz17dmLc": {
+   "item": "BA9WmovILanbvacP",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 1,
+        "refs": [
+         "bite"
+        ]
+       },
+       {
+        "n": 2,
+        "refs": [
+         "claw"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd5e.monsters.Actor.ZyIBOoZZD0nDaO2s": {
+   "item": "nF4ZHYj37UstHCUT",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 1,
+        "refs": [
+         "bite"
+        ]
+       },
+       {
+        "n": 2,
+        "refs": [
+         "claw"
+        ]
+       }
+      ],
+      "extra": [
+       {
+        "refs": [
+         "frightful-presence"
+        ]
+       }
+      ]
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd5e.monsters.Actor.aKt7vFAS1J0x3FQm": {
+   "item": "6eqd5bKL0SgwqRnm",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 1,
+        "refs": [
+         "bite"
+        ]
+       },
+       {
+        "n": 1,
+        "refs": [
+         "claws"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd5e.monsters.Actor.aTITHYYxthuZBPBn": {
+   "item": "UGfL5qnzzi2y2pNj",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 1,
+        "refs": [
+         "bite"
+        ]
+       },
+       {
+        "n": 2,
+        "refs": [
+         "claw"
+        ]
+       }
+      ],
+      "extra": [
+       {
+        "refs": [
+         "frightful-presence"
+        ]
+       }
+      ]
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd5e.monsters.Actor.banHjKDMCegbUwYE": {
+   "item": "IyR3c30mCbL8VMCo",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "slam"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd5e.monsters.Actor.bcapsJdIhY5WktpT": {
+   "item": "ApR7vtoU4ec7UulE",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 1,
+        "refs": [
+         "bite"
+        ]
+       },
+       {
+        "n": 2,
+        "refs": [
+         "claw"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd5e.monsters.Actor.cGM3iVYTtCsYXjzO": {
+   "item": "kWquVg3QhBwODyz3",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 1,
+        "refs": [
+         "bite"
+        ]
+       },
+       {
+        "n": 2,
+        "refs": [
+         "claw"
+        ]
+       }
+      ],
+      "extra": [
+       {
+        "refs": [
+         "frightful-presence"
+        ]
+       }
+      ]
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd5e.monsters.Actor.cJGY1ZywUOo6heNR": {
+   "item": "1lGtRKKScQMq9K3R",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 1,
+        "refs": [
+         "bite"
+        ]
+       },
+       {
+        "n": 1,
+        "refs": [
+         "claws"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd5e.monsters.Actor.ckOF3vQrnjFnZIDU": {
+   "item": "GlvW2Ae0hvh1zCOV",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 1,
+        "refs": [
+         "bite"
+        ]
+       },
+       {
+        "n": 2,
+        "refs": [
+         "claw"
+        ]
+       }
+      ],
+      "extra": [
+       {
+        "refs": [
+         "frightful-presence"
+        ]
+       }
+      ]
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd5e.monsters.Actor.eORmAXuV5v3nWsQL": {
+   "item": "bdRuWKCO8gXQPu16",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "slam"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd5e.monsters.Actor.ec3lhsNv1ZRu7Qaq": {
+   "item": "xQ1RYlOxb6lMRhdI",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 1,
+        "refs": [
+         "bite"
+        ]
+       },
+       {
+        "n": 2,
+        "refs": [
+         "claws"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd5e.monsters.Actor.egsSDYbqoLCelb0J": {
+   "item": "nEKlIbUhhx9akBjK",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 6,
+        "refs": [
+         "longsword"
+        ]
+       },
+       {
+        "n": 1,
+        "refs": [
+         "tail"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd5e.monsters.Actor.eiifqZwYGi71r2Yl": {
+   "item": "udfhkp3BOEpgThbR",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 1,
+        "refs": [
+         "snake-hair"
+        ]
+       },
+       {
+        "n": 2,
+        "refs": [
+         "shortsword"
+        ]
+       }
+      ],
+      "extra": []
+     },
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "longbow"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd5e.monsters.Actor.eykRfV85DQJoCkmc": {
+   "item": "dAoWnethMNHwPNDJ",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 1,
+        "refs": [
+         "bite"
+        ]
+       },
+       {
+        "n": 2,
+        "refs": [
+         "claw"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd5e.monsters.Actor.fsPruAIDOg4tVrgb": {
+   "item": "QuVUb9i809rjJWcL",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 3,
+        "refs": [
+         "attack:melee"
+        ]
+       }
+      ],
+      "extra": []
+     },
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "attack:ranged"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd5e.monsters.Actor.gGeLeV411iQ5Yijs": {
+   "item": "2aGoBVVEF54VcC9d",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "slam"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd5e.monsters.Actor.geM2F7HvVGhtk3h4": {
+   "item": "ajPmtUy0amdphs7D",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 1,
+        "refs": [
+         "bite"
+        ]
+       },
+       {
+        "n": 2,
+        "refs": [
+         "claw"
+        ]
+       }
+      ],
+      "extra": [
+       {
+        "refs": [
+         "frightful-presence"
+        ]
+       }
+      ]
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd5e.monsters.Actor.gf9QbHdMAfvFtxcv": {
+   "item": "shoHSForHM2cwBtd",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 1,
+        "refs": [
+         "bite"
+        ]
+       },
+       {
+        "n": 2,
+        "refs": [
+         "claw"
+        ]
+       }
+      ],
+      "extra": [
+       {
+        "refs": [
+         "frightful-presence"
+        ]
+       }
+      ]
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd5e.monsters.Actor.h052EIIUmRwJum65": {
+   "item": "wF7eGWgo8AZNTcyg",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 1,
+        "refs": [
+         "beak"
+        ]
+       },
+       {
+        "n": 1,
+        "refs": [
+         "claws"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd5e.monsters.Actor.h98AuPfomEPcCibP": {
+   "item": "UupAbZ0Pu4j3vLLg",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "attack:melee"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd5e.monsters.Actor.hb6pjvdCNYmLLp8V": {
+   "item": "hJyurwicMrRIt2TC",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 1,
+        "refs": [
+         "bite"
+        ]
+       },
+       {
+        "n": 1,
+        "refs": [
+         "claws"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd5e.monsters.Actor.ijsfYEDqSuwQXwNN": {
+   "item": "2m2mkUSBJi2QOZje",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 1,
+        "refs": [
+         "bite"
+        ]
+       },
+       {
+        "n": 2,
+        "refs": [
+         "claw"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd5e.monsters.Actor.irz834sqAxRihtSG": {
+   "item": "qfV8YlDhXHfI9Uin",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 1,
+        "refs": [
+         "bite"
+        ]
+       },
+       {
+        "n": 2,
+        "refs": [
+         "claw"
+        ]
+       }
+      ],
+      "extra": [
+       {
+        "refs": [
+         "frightful-presence"
+        ]
+       }
+      ]
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd5e.monsters.Actor.jcZblJ6lqtW0ePxe": {
+   "item": "O9otNESvCCUdwYhc",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 1,
+        "refs": [
+         "bite"
+        ]
+       },
+       {
+        "n": 2,
+        "refs": [
+         "tentacle"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd5e.monsters.Actor.kVg37NlPcACAzjCT": {
+   "item": "j4xzhdYjtz2migUE",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 3,
+        "refs": [
+         "tentacle"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": [
+     {
+      "n": "any",
+      "refs": [
+       "fling"
+      ]
+     }
+    ]
+   }
+  },
+  "Compendium.dnd5e.monsters.Actor.kr6r8bhSehACPfZ8": {
+   "item": "sAkv9mnK6l5nXmcz",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 1,
+        "refs": [
+         "bite"
+        ]
+       },
+       {
+        "n": 1,
+        "refs": [
+         "horns"
+        ]
+       },
+       {
+        "n": 1,
+        "refs": [
+         "claws"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": [
+     {
+      "n": 1,
+      "refs": [
+       "fire-breath"
+      ],
+      "of": [
+       "bite",
+       "horns"
+      ]
+     }
+    ]
+   }
+  },
+  "Compendium.dnd5e.monsters.Actor.kz2fW9xb5CcvXLX4": {
+   "item": "Ex0UN9pj0w7p4D9F",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 1,
+        "refs": [
+         "bite"
+        ]
+       },
+       {
+        "n": 1,
+        "refs": [
+         "claws"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd5e.monsters.Actor.lOYt73eaJojBDxAV": {
+   "item": "H0o9gjKN8xSdBHdB",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "greatsword"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd5e.monsters.Actor.lyNBFmJdbh4NLRzz": {
+   "item": "1aEgtsYuxz12hFn3",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 1,
+        "refs": [
+         "bite"
+        ]
+       },
+       {
+        "n": 1,
+        "refs": [
+         "claws",
+         "spear"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd5e.monsters.Actor.m4H3hjamBNMH09S9": {
+   "item": "P3T5BWT2TFHCxUkr",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "mace"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd5e.monsters.Actor.mNijwXPMhwR7yYfc": {
+   "item": "dGVHjuCt6WhGx0sX",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 1,
+        "refs": [
+         "bite"
+        ]
+       },
+       {
+        "n": 2,
+        "refs": [
+         "claw"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd5e.monsters.Actor.mWbrPhcKOz6oLXMV": {
+   "item": "Sr7ZTAYd1TQ6Nfto",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "attack:melee"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd5e.monsters.Actor.nEC1BRwM8Lx9hLXW": {
+   "item": "gddHh6xWKLMmCT1J",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "claw"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd5e.monsters.Actor.namJz755U1EhvEJa": {
+   "item": "9saHudPLoj6va2em",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "slam"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd5e.monsters.Actor.oDspGxRQFBhE74L2": {
+   "item": "bl0mrJpx4dqL9Ub8",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "slam"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd5e.monsters.Actor.oRBnO5OHoOZzlCOr": {
+   "item": "COcc6eoG6ScS4wGz",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "claw"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd5e.monsters.Actor.omcDpBoB69esCXeM": {
+   "item": "AVusgSNjauFD9XnU",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 1,
+        "refs": [
+         "bite"
+        ]
+       },
+       {
+        "n": 1,
+        "refs": [
+         "claws"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd5e.monsters.Actor.p980augbCIdpK9ZX": {
+   "item": "s5X12Eygxcpzd9eM",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 1,
+        "refs": [
+         "beak"
+        ]
+       },
+       {
+        "n": 1,
+        "refs": [
+         "talons"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd5e.monsters.Actor.pAuiNDr7nvpsW9nG": {
+   "item": "IiNKOgZ3djF0mBXR",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 1,
+        "refs": [
+         "bite"
+        ]
+       },
+       {
+        "n": 2,
+        "refs": [
+         "claw"
+        ]
+       }
+      ],
+      "extra": [
+       {
+        "refs": [
+         "frightful-presence"
+        ]
+       }
+      ]
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd5e.monsters.Actor.qNdFhY3JOkCfhG3d": {
+   "item": "RKsS1lZwBekMMGMt",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 1,
+        "refs": [
+         "bite"
+        ]
+       },
+       {
+        "n": 2,
+        "refs": [
+         "claw"
+        ]
+       }
+      ],
+      "extra": [
+       {
+        "refs": [
+         "frightful-presence"
+        ]
+       }
+      ]
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd5e.monsters.Actor.qW8cBwg7ghCA4Cw6": {
+   "item": "kk9fXkx19bCD5Qqv",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 1,
+        "refs": [
+         "bite"
+        ]
+       },
+       {
+        "n": 2,
+        "refs": [
+         "claw"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd5e.monsters.Actor.qXzMsRTHEodqO8l2": {
+   "item": "18NEVoD84KHDcWoG",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "claw"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd5e.monsters.Actor.qZyLwdx7lj5d1wfD": {
+   "item": "fyF8vQbuvkuLKmKf",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 4,
+        "refs": [
+         "tendril"
+        ]
+       },
+       {
+        "n": 1,
+        "refs": [
+         "bite"
+        ]
+       }
+      ],
+      "extra": [
+       {
+        "refs": [
+         "reel"
+        ]
+       }
+      ]
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd5e.monsters.Actor.qrasJNDC7SGj7xzG": {
+   "item": "uwDyoGhbCR8NoRmc",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 1,
+        "refs": [
+         "bite"
+        ]
+       },
+       {
+        "n": 2,
+        "refs": [
+         "claw"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd5e.monsters.Actor.rUg5JMnKNnZNBAq9": {
+   "item": "swlYyGYwkdNzuRkG",
+   "plan": {
+    "options": [
+     {
+      "groups": [],
+      "extra": [
+       {
+        "refs": [
+         "horror-nimbus"
+        ]
+       }
+      ],
+      "condition": true
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd5e.monsters.Actor.rb7OJt822wIO52qY": {
+   "item": "u3rhYD4gsxWEFbMc",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "scimitar"
+        ]
+       },
+       {
+        "n": 1,
+        "refs": [
+         "dagger"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd5e.monsters.Actor.rbyp54px2D0ql4QK": {
+   "item": "fKIUImfcNk0pU2HN",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "longsword"
+        ]
+       }
+      ],
+      "extra": []
+     },
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "longbow"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": [
+     {
+      "n": 1,
+      "refs": [
+       "life-drain"
+      ],
+      "of": [
+       "longsword"
+      ]
+     }
+    ]
+   }
+  },
+  "Compendium.dnd5e.monsters.Actor.sApYLZj9PTZ40wJr": {
+   "item": "A8nxS57cG2yZpu1m",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "slam"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd5e.monsters.Actor.sLdpiuaZF8lujJQy": {
+   "item": "JbDDt9MNYFyEbHsm",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 1,
+        "refs": [
+         "tail"
+        ]
+       },
+       {
+        "n": 2,
+        "refs": [
+         "claw"
+        ]
+       }
+      ],
+      "extra": []
+     },
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "hurl-flame"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd5e.monsters.Actor.shhHtE7b92PefCWB": {
+   "item": "5zfFkWqOMddCmxiR",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 3,
+        "refs": [
+         "tentacle"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd5e.monsters.Actor.t8WYD7ak07X7xpx8": {
+   "item": "uGJpXeUbei6zXTd1",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 1,
+        "refs": [
+         "rotting-fist"
+        ]
+       }
+      ],
+      "extra": [
+       {
+        "refs": [
+         "dreadful-glare"
+        ]
+       }
+      ]
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd5e.monsters.Actor.tFJX45zj3QDc3Zli": {
+   "item": "dw5lQaT8ySNuOVd4",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 1,
+        "refs": [
+         "tentacles"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": [],
+    "notes": true
+   }
+  },
+  "Compendium.dnd5e.monsters.Actor.tYfQIxCJT0WaaKmc": {
+   "item": "WfqCnxOUS8aXxd7O",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "attack:melee"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd5e.monsters.Actor.u0FWdplSOMTXGnN1": {
+   "item": "8GXBUXkbu1e62ZDK",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 1,
+        "refs": [
+         "bite"
+        ]
+       },
+       {
+        "n": 2,
+        "refs": [
+         "claw"
+        ]
+       }
+      ],
+      "extra": [
+       {
+        "refs": [
+         "frightful-presence"
+        ]
+       }
+      ]
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd5e.monsters.Actor.u1UQfHutP5eEKkjM": {
+   "item": "lRFwKaRqhFY4xNhJ",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 1,
+        "refs": [
+         "bite"
+        ]
+       },
+       {
+        "n": 2,
+        "refs": [
+         "claw"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd5e.monsters.Actor.uZ8NrRenwYZ4qNf6": {
+   "item": "qzphlErr2D2mRpxT",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 1,
+        "refs": [
+         "longsword"
+        ]
+       },
+       {
+        "n": 1,
+        "refs": [
+         "whip"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd5e.monsters.Actor.vFeFRlF2FOgf2HIL": {
+   "item": "Whn4pPAB1YSnvocN",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 1,
+        "refs": [
+         "bite"
+        ]
+       },
+       {
+        "n": 2,
+        "refs": [
+         "claw"
+        ]
+       }
+      ],
+      "extra": [
+       {
+        "refs": [
+         "frightful-presence"
+        ]
+       }
+      ]
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd5e.monsters.Actor.x47ZnpHfYl0ptDM9": {
+   "item": "LzR8BLFWMmqI6gTl",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 1,
+        "refs": [
+         "bite"
+        ]
+       },
+       {
+        "n": 1,
+        "refs": [
+         "constrict"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd5e.monsters.Actor.yVNPVJIBpQ2Mp3Xa": {
+   "item": "H9TCRB3zfkFwk192",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 1,
+        "refs": [
+         "spear"
+        ]
+       },
+       {
+        "n": 1,
+        "refs": [
+         "salamander-tail"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd5e.monsters.Actor.z3gSIXHHWYaHjfBT": {
+   "item": "Ym2CUTgDPucdmj1W",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "slam"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd5e.monsters.Actor.z85EsGS2GVWj46qE": {
+   "item": "7R1cDGKMv0mdxaE7",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "fist"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd5e.monsters.Actor.zIr3NaNF0mWz5Ahq": {
+   "item": "SmUCt79LtakgTJoa",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "scimitar"
+        ]
+       }
+      ],
+      "extra": []
+     },
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "longbow"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd5e.monsters.Actor.zY3W5MG7FjssENf6": {
+   "item": "R7Vx1RxO8OjXpzQd",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 1,
+        "refs": [
+         "beak"
+        ]
+       },
+       {
+        "n": 1,
+        "refs": [
+         "claws"
+        ]
+       }
+      ],
+      "extra": []
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd5e.monsters.Actor.zjqjcRWKDMc59Tnx": {
+   "item": "lQLxY76Q2g6iB9UT",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 1,
+        "refs": [
+         "bite"
+        ]
+       },
+       {
+        "n": 2,
+        "refs": [
+         "claw"
+        ]
+       }
+      ],
+      "extra": [
+       {
+        "refs": [
+         "frightful-presence"
+        ]
+       }
+      ]
+     }
+    ],
+    "replace": []
+   }
+  },
+  "Compendium.dnd5e.monsters.Actor.zpaZb7I8alY32vWV": {
+   "item": "Q9tHfkUiN6f1sguc",
+   "plan": {
+    "options": [
+     {
+      "groups": [
+       {
+        "n": 2,
+        "refs": [
+         "attack"
+        ]
+       }
+      ],
+      "extra": [],
+      "limits": [
+       {
+        "refs": [
+         "bite"
+        ],
+        "max": 1
+       }
+      ]
+     }
+    ],
+    "replace": []
+   }
+  }
+ }
+}

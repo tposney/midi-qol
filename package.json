@@ -25,6 +25,7 @@
     "check:package": "node tools/build-check-package.mjs",
     "test": "vitest run",
     "corpus:books": "node tools/book-corpus.mjs",
+    "plans:multiattack": "node tools/multiattack-plans.mjs",
     "test:watch": "vitest",
     "test:types": "tsc -p tsconfig.test.json"
   },

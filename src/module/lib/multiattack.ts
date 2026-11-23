@@ -95,8 +95,9 @@ export function tokenize(html: string, { names = [] }: ParseOptions = {}): Token
     .replace(/<[^>]+>/g, " ")
     .replace(/&amp;/g, "&").replace(/&nbsp;/g, " ").replace(/&#0?39;|&apos;|[’‘]/g, "'").replace(/&[a-z]+;/g, " ")
     .replace(/\s+/g, " ")
-    // The books' slips: "makes makes", "makes on Bite", "The it makes"
-    .replace(/\bmakes makes\b/gi, "makes").replace(/\bmakes on\b/gi, "makes one").replace(/\b[Tt]he it\b/g, "It");
+    // The books' slips: "makes makes", "makes on Bite", "The it makes", "The it two attacks" (the verb lost)
+    .replace(/\bmakes makes\b/gi, "makes").replace(/\bmakes on\b/gi, "makes one").replace(/\b[Tt]he it\b/g, "It")
+    .replace(new RegExp(`\\b([Ii]t) (?=${COUNT} (?:\\w+ )?attacks?\\b)`, "g"), "$1 makes ");
   // Attacks named without a link: the creature's item names, longest first
   const linked = refs.length;
   // A qualifier dropped ("Claw (Oni Form Only)" is "claw", the reference keeps the item's name); never a generic word
@@ -277,5 +278,109 @@ export function parseMultiattack(html: string, options: ParseOptions = {}): Pars
     else plan.unread.push(sentence);
   }
   if (limits.length) for (const option of plan.options) option.limits = limits;
+  // Replacements without the attacks they replace: the main sentence wasn't read
+  if (!plan.options.length && plan.replace.length) plan.unread.push(text);
   return plan.options.length || plan.replace.length ? plan : null;
+}
+
+/*
+ * Resolving a parsed plan against the creature: references become what a stored or registered plan holds, so a plan
+ * reads the same on a sheet in any language (M21 plan, 21a):
+ *   an item          its `system.identifier` ("rend"; the slug of its name when it has none)
+ *   a cast           "<casting item>><spell>" ("spellcasting>guiding-bolt"), "@<level>" for a level version
+ *   any attack       "attack", "attack:melee", "attack:ranged"
+ *   any spell        "spell"
+ * A name that matches none of the creature's items keeps its slug and is listed in `unresolved`.
+ */
+
+export type PlanRef = string;
+export interface PlanGroup { n: Count, refs: PlanRef[] }
+export interface PlanOption {
+  groups: PlanGroup[];
+  extra: { refs: PlanRef[], ifAvailable?: boolean }[];
+  condition?: string;
+  limits?: { refs: PlanRef[], max: number }[];
+}
+export interface PlanReplace { n: number | "any", refs: PlanRef[], of?: PlanRef[] }
+export interface MultiattackPlan {
+  options: PlanOption[];
+  replace: PlanReplace[];
+  notes?: string[];
+  /** References that matched none of the creature's items */
+  unresolved?: string[];
+}
+
+/** One of the creature's items, as the resolver needs it */
+export interface PlanItem {
+  id: string;
+  name: string;
+  identifier?: string | null;
+  activities?: { id: string, type?: string, spell?: string }[];
+}
+export interface PlanSources {
+  items: PlanItem[];
+  /** A spell's identifier and name from its uuid (a compendium index, or `fromUuidSync`) */
+  spell?(uuid: string): { identifier?: string | null, name?: string } | undefined;
+}
+
+/** dnd5e's identifier for a name (as `String#slugify({ strict: true })`) */
+export function slug(name: string): string {
+  return name.toLowerCase().replace(/['’]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+}
+
+export function resolvePlan(parsed: ParsedPlan, sources: PlanSources): MultiattackPlan {
+  const unresolved = new Set<string>();
+  const items = sources.items;
+  const identifierOf = (item: PlanItem) => item.identifier || slug(item.name);
+  const bare = (name: string) => name.replace(/\s*\([^)]*\)\s*$/, "").trim().toLowerCase();
+  const stem = (name: string) => bare(name).replace(/(?:es|s)$/, "");
+  const byName = (name: string) => items.find(i => i.name.toLowerCase() === name.toLowerCase())
+    ?? items.find(i => bare(i.name) === bare(name)) ?? items.find(i => stem(i.name) === stem(name));
+  const spellOf = (uuid?: string, name?: string): string => {
+    const found = uuid ? sources.spell?.(uuid) : undefined;
+    const id = found?.identifier || (found?.name ? slug(found.name) : undefined) || (name ? slug(name) : undefined);
+    if (!id) { unresolved.add(uuid ?? "spell"); return "spell"; }
+    return id;
+  };
+  /** A reference to an item, or to the spell its cast activity casts (`asSpell`) */
+  const resolve = (ref: RawRef, { asSpell = false } = {}): PlanRef => {
+    switch (ref.kind) {
+      case "attack": return ref.range ? `attack:${ref.range}` : "attack";
+      case "spell": return ref.uuid || ref.name ? spellOf(ref.uuid, ref.name) : "spell";
+      case "cast": {
+        const via = resolve(ref.via);
+        const spell = resolve(ref.spell, { asSpell: true });
+        return `${via}>${spell}${ref.level ? `@${ref.level}` : ""}`;
+      }
+      case "item": {
+        // A link to an item the creature doesn't have (a copy slip in the SRD 5.1 dragons): its label, by name
+        const item = (ref.id ? items.find(i => i.id === ref.id) : undefined)
+          ?? (ref.name ? byName(ref.name) : undefined) ?? (ref.label ? byName(ref.label) : undefined);
+        if (ref.activity) {
+          const activity = item?.activities?.find(a => a.id === ref.activity);
+          if (activity?.spell) {
+            const spell = spellOf(activity.spell);
+            return asSpell || !item ? spell : `${identifierOf(item)}>${spell}`;
+          }
+        }
+        if (item) return identifierOf(item);
+        const fallback = ref.name ? slug(ref.name) : (ref.id ?? "?");
+        unresolved.add(ref.name ?? ref.id ?? "?");
+        return fallback;
+      }
+    }
+  };
+  const list = (refs: RawRef[]) => [...new Set(refs.map(r => resolve(r)))];
+  const plan: MultiattackPlan = {
+    options: parsed.options.map(o => ({
+      groups: o.groups.map(g => ({ n: g.n, refs: list(g.refs) })),
+      extra: o.extra.map(e => ({ refs: list(e.refs), ...(e.ifAvailable ? { ifAvailable: true } : {}) })),
+      ...(o.condition ? { condition: o.condition } : {}),
+      ...(o.limits?.length ? { limits: o.limits.map(l => ({ refs: list(l.refs), max: l.max })) } : {})
+    })),
+    replace: parsed.replace.map(r => ({ n: r.n, refs: list(r.refs), ...(r.of ? { of: list(r.of) } : {}) })),
+    ...(parsed.notes?.length ? { notes: parsed.notes } : {})
+  };
+  if (unresolved.size) plan.unresolved = [...unresolved];
+  return plan;
 }

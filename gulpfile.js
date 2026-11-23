@@ -25,6 +25,8 @@ const ICON = "icons/";
 const PACK = "packs/";
 const CONFIG = "sample-config/";
 const SOUND = "sounds/";
+// Generated data shipped with the module (data/multiattack: npm run plans:multiattack)
+const DATA = "data/";
 
 var PACKAGE = JSON.parse(fs.readFileSync("package.json"));
 
@@ -220,6 +222,10 @@ function outputPackFiles(output = null) {
 
 function outputSoundFiles(output = null) {
   return () => gulp.src(SOUND + GLOB).pipe(gulp.dest((output || DIST) + SOUND));
+}
+
+function outputDataFiles(output = null) {
+  return () => gulp.src(DATA + GLOB).pipe(gulp.dest((output || DIST) + DATA));
 }
 
 function outputConfigFiles(output = null) {
@@ -609,6 +615,7 @@ exports.default = gulp.series(
     outputIconFiles(),
     outputPackFiles(),
     outputSoundFiles(),
+    outputDataFiles(),
     outputConfigFiles(),
   ),
   createPackSrcSymlink(),
@@ -629,6 +636,7 @@ exports.dev = gulp.series(
     outputIconFiles(DEV_DIST()),
     outputPackFiles(DEV_DIST()),
     outputSoundFiles(DEV_DIST()),
+    outputDataFiles(DEV_DIST()),
     outputConfigFiles(DEV_DIST()),
   ),
 );
@@ -648,6 +656,7 @@ exports.zip = gulp.series(
     outputIconFiles(),
     outputPackFiles(),
     outputSoundFiles(),
+    outputDataFiles(),
     outputConfigFiles(),
   ),
   compressDistribution(),
@@ -667,6 +676,7 @@ exports.watch = function () {
   gulp.watch(ICON + GLOB, gulp.series(pdel(DIST + ICON), outputIconFiles()));
   gulp.watch(PACK + GLOB, gulp.series(pdel(DIST + PACK), outputPackFiles()));
   gulp.watch(SOUND + GLOB, gulp.series(pdel(DIST + SOUND), outputSoundFiles()));
+  gulp.watch(DATA + GLOB, gulp.series(pdel(DIST + DATA), outputDataFiles()));
   gulp.watch(CONFIG + GLOB, gulp.series(pdel(DIST + CONFIG), outputConfigFiles()));
 };
 /**
@@ -737,6 +747,14 @@ exports.devWatch = function () {
       pdel(devDist + SOUND + GLOB, { force: true }),
       outputSoundFiles(devDist),
       plog("sounds done."),
+    ),
+  );
+  gulp.watch(
+    DATA + GLOB,
+    gulp.series(
+      pdel(devDist + DATA + GLOB, { force: true }),
+      outputDataFiles(devDist),
+      plog("data done."),
     ),
   );
   gulp.watch(
