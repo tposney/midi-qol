@@ -102,7 +102,7 @@ export const midiItemReactions: ResponseContributor = {
           }
           // The event and its event (M15 4f: attack total and AC, the save, the damage worked out) as entries see them
           const returnvalue = await evalReactionActivationCondition(options.workflow, reactionCondition, target, { async: true,
-            extraData: { reaction: reactionTriggerLabelFor(triggerType), eventId, event: eventDataFor(options.workflow, target, eventId) ?? {} } });
+            extraData: { reaction: reactionTriggerLabelFor(triggerType), eventId, event: eventDataFor(options.workflow, target, eventId) ?? options?.event ?? {} } });
           if (debugEnabled > 0) warn(`for ${target.actor.name} ${theItem.name} using condition ${reactionCondition} condition ${returnvalue}`, options.workflow?.conditionData);
           if (!returnvalue) continue;
           reactions.push(activity);

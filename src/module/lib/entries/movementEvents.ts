@@ -10,7 +10,8 @@ import { collectEntries, registerAction, registerEvent, runEvent, type ActionRun
  *   event.creatureToken, also the event's target). The move is split at that space (services/economy/opportunity.ts),
  *   so the entry's actions happen with the mover there (Polearm Master's Reactive Strike, Sentinel).
  * - moved: raised about a creature after any move of it (event.forced for forced movement and teleports; near entries
- *   hear it): event.distance, event.cost, event.action, event.from, event.to.
+ *   hear it): event.distance, event.cost, event.action, event.from, event.to. In a running combat its reaction items
+ *   with `reaction === "isMoved"` are then offered (the reactionmoved trigger, the same event as `event`).
  * - `{ opportunityAttack: true }`: the bearer is offered its melee attacks against event.creature as its reaction.
  * - `{ move: { push | pull | slide: feet, angle?, from? }, to? }`: the subjects pushed away from, or pulled towards,
  *   `from` (user: the use's token, default; bearer; area: the centre of the use's area), or slid at `angle` degrees,
@@ -116,17 +117,21 @@ async function opportunityAttackAction(run: ActionRun) {
   return { success: !!result?.name };
 }
 
-/** After any move: `moved` about the creature, on the moving user's client */
-function onMoveToken(token: TokenDocument.Implementation, movement: { passed?: { distance?: number, cost?: number, waypoints?: readonly { action?: string }[] }, origin?: Point, destination?: Point }, user: User.Implementation | undefined) {
-  if (!user?.isSelf || !token.actor) return;
+/** After any move: `moved` about the creature, then its isMoved reactions, on the moving user's client */
+function onMoveToken(token: TokenDocument.Implementation, movement: { method?: string, passed?: { distance?: number, cost?: number, waypoints?: readonly { action?: string }[] }, origin?: Point, destination?: Point }, user: User.Implementation | undefined) {
+  if (!user?.isSelf || !token.actor || movement.method === "undo") return;
   const action = movement.passed?.waypoints?.at(-1)?.action ?? "walk";
   const event = {
     distance: movement.passed?.distance ?? 0, cost: movement.passed?.cost ?? 0, action, forced: isForcedAction(action, token),
     from: movement.origin, to: movement.destination, creature: token.actor, creatureToken: token
   };
   const context: EventContext = { actor: token.actor, target: token, event };
-  if (!collectEntries(MOVED, context).length) return;
-  void runEvent(MOVED, context).catch(err => console.error(`midi-qol | moved entries of ${token.name}`, err));
+  void (async () => {
+    if (collectEntries(MOVED, context).length) await runEvent(MOVED, context);
+    // Reactions are turn-timed: in a running combat only
+    if ((token.combatant as { combat?: { started?: boolean } } | null)?.combat?.started && token.uuid)
+      await doReactions(token, token.uuid, null, "reactionmoved", { event });
+  })().catch(err => console.error(`midi-qol | moved entries / reactions of ${token.name}`, err));
 }
 
 export function registerMovementEvents() {
