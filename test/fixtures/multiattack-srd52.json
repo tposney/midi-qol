@@ -1,0 +1,750 @@
+[
+ {
+  "actor": "Aboleth",
+  "description": "<p>The [[lookup @name lowercase]] makes two [[/item .mmTentacle000000]] attacks and uses either [[/item .7gP0oX3L1RKRaBGH]] or [[/item .yiiKNaJ2svcUWqLi]] if available.</p>"
+ },
+ {
+  "actor": "Adult Black Dragon",
+  "description": "<p>The [[lookup @name lowercase]] makes three [[/item Rend]] attacks. It can replace one attack with a use of [[/item Spellcasting]] to cast <em>@UUID[Compendium.dnd5e.spells24.Item.phbsplMelfsAcidA]{Melf's Acid Arrow}</em> (level 3 version).</p>"
+ },
+ {
+  "actor": "Adult Blue Dragon",
+  "description": "<p>The [[lookup @name lowercase]] makes three [[/item Rend]] attacks. It can replace one attack with a use of [[/item Spellcasting]] to cast <em>@UUID[Compendium.dnd5e.spells24.Item.phbsplShatter000]{Shatter}</em>.</p>"
+ },
+ {
+  "actor": "Adult Brass Dragon",
+  "description": "<p>The [[lookup @name lowercase]] makes three [[/item Rend]] attacks. It can replace one attack with a use of (A) [[/item Sleep Breath]] or (B) [[/item Spellcasting]] to cast <em>@UUID[Compendium.dnd5e.spells24.Item.phbsplScorchingR]{Scorching Ray}</em>.</p>"
+ },
+ {
+  "actor": "Adult Bronze Dragon",
+  "description": "<p>The [[lookup @name lowercase]] makes three [[/item Rend]] attacks. It can replace one attack with a use of (A) [[/item Repulsion Breath]] or (B) [[/item Spellcasting]] to cast <em>@UUID[Compendium.dnd5e.spells24.Item.phbsplGuidingBol]{Guiding Bolt}</em> (level 2 version).</p>"
+ },
+ {
+  "actor": "Adult Copper Dragon",
+  "description": "<p>The [[lookup @name lowercase]] makes three [[/item Rend]] attacks. It can replace one attack with a use of (A) [[/item Slowing Breath]] or (B) [[/item Spellcasting]] to cast <em>@UUID[Compendium.dnd5e.spells24.Item.phbsplMindSpike0]{Mind Spike}</em> (level 4 version).</p>"
+ },
+ {
+  "actor": "Adult Gold Dragon",
+  "description": "<p>The [[lookup @name lowercase]] makes three [[/item Rend]] attacks. It can replace one attack with a use of (A) [[/item Spellcasting]] to cast <em>Guiding Bolt</em> (level 2 version) or (B) [[/item Weakening Breath]].</p>"
+ },
+ {
+  "actor": "Adult Green Dragon",
+  "description": "<p>The [[lookup @name lowercase]] makes three [[/item Rend]] attacks. It can replace one attack with a use of [[/item Spellcasting]] to cast <em>@UUID[Compendium.dnd5e.spells24.Item.phbsplMindSpike0]{Mind Spike}</em> (level 3 version).</p>"
+ },
+ {
+  "actor": "Adult Red Dragon",
+  "description": "<p>The [[lookup @name lowercase]] makes three [[/item Rend]] attacks. It can replace one attack with a use of [[/item Spellcasting]] to cast <em>@UUID[Compendium.dnd5e.spells24.Item.phbsplScorchingR]{Scorching Ray}</em>.</p>"
+ },
+ {
+  "actor": "Adult Silver Dragon",
+  "description": "<p>The [[lookup @name lowercase]] makes three [[/item Rend]] attacks. It can replace one attack with a use of (A) [[/item Paralyzing Breath]] or (B) [[/item Spellcasting]] to cast <em>@UUID[Compendium.dnd5e.spells24.Item.phbsplIceKnife00]{Ice Knife}</em>.</p>"
+ },
+ {
+  "actor": "Adult White Dragon",
+  "description": "<p>The [[lookup @name lowercase]] makes three [[/item Rend]] attacks.</p>"
+ },
+ {
+  "actor": "Air Elemental",
+  "description": "<p>The [[lookup @name lowercase]] makes two [[/item .mmThunderousSlam]] attacks.</p>"
+ },
+ {
+  "actor": "Ancient Black Dragon",
+  "description": "<p>The [[lookup @name lowercase]] makes three [[/item Rend]] attacks. It can replace one attack with a use of [[/item Spellcasting]] to cast <em>@UUID[Compendium.dnd5e.spells24.Item.phbsplMelfsAcidA]{Melf's Acid Arrow}</em> (level 4 version).</p>"
+ },
+ {
+  "actor": "Ancient Blue Dragon",
+  "description": "<p>The [[lookup @name lowercase]] makes three [[/item Rend]] attacks. It can replace one attack with a use of [[/item Spellcasting]] to cast @UUID[Compendium.dnd5e.spells24.Item.phbsplShatter000]{Shatter} (level 3 version).</p>"
+ },
+ {
+  "actor": "Ancient Brass Dragon",
+  "description": "<p>The [[lookup @name lowercase]] makes three [[/item Rend]] attacks. It can replace one attack with a use of (A) [[/item Sleep Breath]] or (B) [[/item Spellcasting]] to cast <em>@UUID[Compendium.dnd5e.spells24.Item.phbsplScorchingR]{Scorching Ray}</em> (level 3 version).</p>"
+ },
+ {
+  "actor": "Ancient Bronze Dragon",
+  "description": "<p>The [[lookup @name lowercase]] makes three [[/item Rend]]. It can replace one attack with a use of (A) [[/item Repulsion Breath]] or (B) [[/item Spellcasting]] to cast <em>Guiding Bolt</em> (level 2 version).</p>"
+ },
+ {
+  "actor": "Ancient Copper Dragon",
+  "description": "<p>The [[lookup @name lowercase]] makes three [[/item Rend]] attacks. It can replace one attack with a use of (A) [[/item Slowing Breath]] or (B) [[/item Spellcasting]] to cast <em>@UUID[Compendium.dnd5e.spells24.Item.phbsplMindSpike0]{Mind Spike}</em> (level 5 version).</p>"
+ },
+ {
+  "actor": "Ancient Gold Dragon",
+  "description": "<p>The [[lookup @name lowercase]] makes {count} [[/item]] attacks and uses [[/item]].</p>"
+ },
+ {
+  "actor": "Ancient Green Dragon",
+  "description": "<p><span style=\"font-family:'Roboto Condensed', sans-serif\">The </span>[[lookup @name lowercase]]<span style=\"font-family:'Roboto Condensed', sans-serif\"> makes three </span><span class=\"Apple-converted-space\"> </span>[[/item .mmRend0000000000]]<span style=\"font-family:'Roboto Condensed', sans-serif\"> attacks. It can replace one attack with a use of Spellcasting to cast </span><em>[[/item .mmSpellcasting00.Activity.hHQiQYfo3AV5ZW6F]]</em><span style=\"font-family:'Roboto Condensed', sans-serif\"> (level 5 version).</span></p>"
+ },
+ {
+  "actor": "Ancient Red Dragon",
+  "description": "<p>The [[lookup @name lowercase]] makes three [[/item .mmRend0000000000]] attacks. It can replace one attack with a use of Spellcasting to cast [[/item .mmSpellcasting00.Activity.bXJvvKCoI0uVBG4W]] (level 3 version).</p>"
+ },
+ {
+  "actor": "Ancient Silver Dragon",
+  "description": "<p>The [[lookup @name lowercase]] makes three [[/item .mmRend0000000000]] attacks. It can replace one attack with a use of (A) [[/item .mmParalyzingBrea]] or (B) Spellcasting to cast [[/item .mmSpellcasting00.Activity.DJGcakjcAlCCOOFg]] (level 2 version).</p>"
+ },
+ {
+  "actor": "Ancient White Dragon",
+  "description": "<p>The [[lookup @name lowercase]] makes three [[/item .mmRend0000000000]] attacks.</p>"
+ },
+ {
+  "actor": "Animated Armor",
+  "description": "<p>The [[lookup @name lowercase]] makes two [[/item Slam]] attacks.</p>"
+ },
+ {
+  "actor": "Ankylosaurus",
+  "description": "<p>The [[lookup @name lowercase]] makes two [[/item .mmTail0000000000]] attacks.</p>"
+ },
+ {
+  "actor": "Ape",
+  "description": "<p>The [[lookup @name lowercase]] makes two [[/item .mmFist0000000000]] attacks.</p>"
+ },
+ {
+  "actor": "Archelon",
+  "description": "<p>The [[lookup @name lowercase]] makes two [[/item .mmBite0000000000]] attacks.</p>"
+ },
+ {
+  "actor": "Archmage",
+  "description": "<p>The [[lookup @name lowercase]] makes four [[/item .mmArcaneBurst000]] attacks.</p>"
+ },
+ {
+  "actor": "Assassin",
+  "description": "<p>The [[lookup @name lowercase]] makes three attacks, using [[/item .jLa5l9pntsTVrMKH]] or [[/item .dL4668G7zXeC5zyY]] in any combination.</p>"
+ },
+ {
+  "actor": "Avatar of Death",
+  "description": "<p>The avatar makes a number of [[/item .dmgaoiReapingScy]]{Reaping Scythe} attacks equal to half the summoner's Proficiency Bonus (ro<span class=\"no-break\">unded up).</span></p><p>[[ceil(@prof/2)]]{Number of Attacks}</p>"
+ },
+ {
+  "actor": "Balor",
+  "description": "<p>The [[lookup @name lowercase]] makes one [[/item .mmFlameWhip00000]] attack and one [[/item .mmLightningBlade]] attack.</p>"
+ },
+ {
+  "actor": "Bandit Captain",
+  "description": "<p>The [[lookup @name lowercase]] makes two attacks, using [[/item .w3cX0piuU875Hc2M]] and [[/item .2TB9ZSIbtbi4UtSv]] in any combination.</p>"
+ },
+ {
+  "actor": "Barbed Devil",
+  "description": "<p>The [[lookup @name lowercase]] makes one [[/item .mmClaws000000000]] attack and one [[/item .mmTail0000000000]] attack, or it makes two [[/item .mmHurlFlame00000]] attacks.</p>"
+ },
+ {
+  "actor": "Bearded Devil",
+  "description": "<p>The [[lookup @name lowercase]] makes one [[/item .mmBeard000000000]] attack and one [[/item .mmInfernalGlaive]] attack.</p>"
+ },
+ {
+  "actor": "Behir",
+  "description": "<p>The [[lookup @name lowercase]] makes one [[/item .mmBite0000000000]] attack and uses [[/item .mmConstrict00000]].</p>"
+ },
+ {
+  "actor": "Black Bear",
+  "description": "<p>The [[lookup @name lowercase]] makes two [[/item .mmRend0000000000]] attacks.</p>"
+ },
+ {
+  "actor": "Black Dragon Wyrmling",
+  "description": "<p>The [[lookup @name lowercase]] makes two [[/item .mmRend0000000000]] attacks.</p>"
+ },
+ {
+  "actor": "Blue Dragon Wyrmling",
+  "description": "<p>The [[lookup @name lowercase]] makes two [[/item .mmRend0000000000]] attacks.</p>"
+ },
+ {
+  "actor": "Bone Devil",
+  "description": "<p>The [[lookup @name lowercase]] makes two [[/item .mmClaw0000000000]] attacks and one [[/item .mmInfernalSting0]] attack.</p>"
+ },
+ {
+  "actor": "Bronze Dragon Wyrmling",
+  "description": "<p>The [[lookup @name lowercase]] makes two [[/item .mmRend0000000000]] attacks.</p>"
+ },
+ {
+  "actor": "Brown Bear",
+  "description": "<p>The [[lookup @name lowercase]] makes one [[/item .mmBite0000000000]] attack and one [[/item .mmClaw0000000000]] attack.</p>"
+ },
+ {
+  "actor": "Bugbear Stalker",
+  "description": "<p>The [[lookup @name lowercase]] makes two [[/item .dN1CML4smcRrUkzD]] or [[/item .YFpjAATelvlz5oyb]] attacks.</p>"
+ },
+ {
+  "actor": "Bulette",
+  "description": "<p>The [[lookup @name lowercase]] makes two [[/item .mmBite0000000000]] attacks.</p>"
+ },
+ {
+  "actor": "Bullywug Bog Sage",
+  "description": "<p>The [[lookup @name lowercase]] makes two [[/item .mmBogStaff000000]] attacks. It can replace any attack with a use of Spellcasting to cast [[/item .mmSpellcasting00.Activity.voONeRFOu7rX8BqU]].</p>"
+ },
+ {
+  "actor": "Carrion Crawler",
+  "description": "<p><span style=\"font-family:'Roboto Condensed', sans-serif\">The </span>[[lookup @name lowercase]] <span style=\"font-family:'Roboto Condensed', sans-serif\">uses </span>[[/item .mmParalyzingTent]]<span style=\"font-family:'Roboto Condensed', sans-serif\"> and makes one </span>[[/item .mmBite0000000000]] <span style=\"font-family:'Roboto Condensed', sans-serif\">attack.</span></p>"
+ },
+ {
+  "actor": "Centaur Trooper",
+  "description": "<p>The [[lookup @name lowercase]] makes two attacks, using [[/item .XMKFiS5XUEC4fLCr]] or [[/item .4C5jy0VkmoTdrbTC]] in any combination.</p>"
+ },
+ {
+  "actor": "Chain Devil",
+  "description": "<p>The [[lookup @name lowercase]] makes two [[/item .mmChain000000000]] attacks and uses [[/item .mmConjureInferna]].</p>"
+ },
+ {
+  "actor": "Chimera",
+  "description": "<p>The [[lookup @name lowercase]] makes one [[/item .mmRam00000000000]] attack, one [[/item .mmBite0000000000]] attack, and one  [[/item .mmClaw0000000000]] attack. It can replace the Claw attack with a use of [[/item .mmFireBreath0000]] if available.</p>"
+ },
+ {
+  "actor": "Chuul",
+  "description": "<p>The [[lookup @name lowercase]] makes 2 [[/item Pincer]] attacks and uses [[/item Paralyzing Tentacles]].</p>"
+ },
+ {
+  "actor": "Clay Golem",
+  "description": "<p>The [[lookup @name lowercase]] makes two [[/item Slam]] attacks, or it makes three Slam attacks if it used Hasten this turn.</p>"
+ },
+ {
+  "actor": "Cloaker",
+  "description": "<p>The [[lookup @name lowercase]] makes one [[/item Attach]] attack and two [[/item Tail]] attacks.</p>"
+ },
+ {
+  "actor": "Cloud Giant",
+  "description": "<p class=\"feature\">The [[lookup @name lowercase]] makes two attacks, using [[/item .mmThunderousMace]] or [[/item .mmThundercloud00]] in any combination. It can replace one attack with a use of Spellcasting to cast <em>[[/item .mmSpellcasting00.Activity.NdueMCpXRc7fLDFa]]</em>.</p>"
+ },
+ {
+  "actor": "Death Dog",
+  "description": "<p>The [[lookup @name lowercase]] makes two [[/item .mmBite0000000000]] attacks.</p>"
+ },
+ {
+  "actor": "Deva",
+  "description": "<p>The [[lookup @name lowercase]] makes two [[/item Holy Mace]] attacks.</p>"
+ },
+ {
+  "actor": "Djinni",
+  "description": "<p>The [[lookup @name lowercase]] makes three attacks, using [[/item .mmStormBlade0000]] or [[/item .mmStormBolt00000]] in any combination.</p>"
+ },
+ {
+  "actor": "Doppelganger",
+  "description": "<p>The [[lookup @name lowercase]] makes two [[/item .mmSlam0000000000]] attacks and uses [[/item .mmUnsettlingVisa]] if available.</p>"
+ },
+ {
+  "actor": "Draconic Spirit",
+  "description": "<p>The spirit makes a number of [[/item Rend]] attacks equal to half the spell's level (round down), and it uses [[/item Breath Weapon]].</p><p class=\"hide-in-embed\">[[floor(@flags.dnd5e.summon.level / 2)]]{Number of attacks}</p>"
+ },
+ {
+  "actor": "Dragon Turtle",
+  "description": "<p>The [[lookup @name lowercase]] makes three [[/item .mmBite0000000000]] attacks. It can replace one attack with a [[/item .mmTail0000000000]].</p>"
+ },
+ {
+  "actor": "Drider",
+  "description": "<p><span style=\"font-family:'Roboto Condensed', sans-serif\">The </span>[[lookup @name lowercase]]<span style=\"font-family:'Roboto Condensed', sans-serif\"> makes three attacks, using </span>[[/item .mmForeleg0000000]] <span style=\"font-family:'Roboto Condensed', sans-serif\">or </span>[[/item .mmPoisonBurst000]] <span style=\"font-family:'Roboto Condensed', sans-serif\">in any combination.</span></p>"
+ },
+ {
+  "actor": "Druid",
+  "description": "<p>The [[lookup @name lowercase]] makes two attacks, using [[/item .mmVineStaff00000]] or [[/item .mmVerdantWisp000]] in any combination.</p>"
+ },
+ {
+  "actor": "Dryad",
+  "description": "<p>The [[lookup @name lowercase]] makes one [[/item .mmVineLash000000]] or [[/item .mmThornBurst0000]] attack, and it can use Spellcasting to cast [[/item .mmSpellcasting00.Activity.bAmZSyK4cn33HwwI]].</p>"
+ },
+ {
+  "actor": "Earth Elemental",
+  "description": "<p>The [[lookup @name lowercase]] makes two attacks, using [[/item .mmSlam0000000000]] or [[/item .mmRockLaunch0000]] in any combination.</p>"
+ },
+ {
+  "actor": "Efreeti",
+  "description": "<p>The [[lookup @name lowercase]] makes three attacks, using [[/item .mmHeatedBlade000]] or [[/item .mmHurlFlame00000]] in any combination.</p>"
+ },
+ {
+  "actor": "Elephant",
+  "description": "<p>The [[lookup @name lowercase]] makes two [[/item .mmGore0000000000]] attacks.</p>"
+ },
+ {
+  "actor": "Erinyes",
+  "description": "<p>The [[lookup @name lowercase]] makes three [[/item .mmWitheringSword]] attacks and can use [[/item .mmEntanglingRope]].</p>"
+ },
+ {
+  "actor": "Ettercap",
+  "description": "<p><span style=\"font-family:'Roboto Condensed', sans-serif\">The </span>[[lookup @name lowercase]]<span style=\"font-family:'Roboto Condensed', sans-serif\"> makes one </span>[[/item .mmBite0000000000]]<span style=\"font-family:'Roboto Condensed', sans-serif\"> attack and one </span>[[/item .mmClaw0000000000]]<span style=\"font-family:'Roboto Condensed', sans-serif\"> attack.</span></p>"
+ },
+ {
+  "actor": "Ettin",
+  "description": "<p class=\"feature\">The [[lookup @name lowercase]] makes one [[/item .2zUJENAN0VZgqxYm]] attack and one [[/item .5LN8JEIko2tgE2WO]] attack.</p>"
+ },
+ {
+  "actor": "Fire Elemental",
+  "description": "<p>The [[lookup @name lowercase]] makes two [[/item .mmBurn0000000000]] attacks.</p>"
+ },
+ {
+  "actor": "Fire Giant",
+  "description": "<p class=\"feature\">The [[lookup @name lowercase]] makes two attacks, using [[/item .mmFlameSword0000]] or [[/item .mmHammerThrow000]]in any combination.</p>"
+ },
+ {
+  "actor": "Flesh Golem",
+  "description": "<p>The [[lookup @name lowercase]] makes two [[/item Slam]] attacks.</p>"
+ },
+ {
+  "actor": "Frost Giant",
+  "description": "<p class=\"feature\">The [[lookup @name lowercase]] makes two attacks, using [[/item .mmFrostAxe000000]] or [[/item .mmGreatBow000000]] in any combination.</p>"
+ },
+ {
+  "actor": "Gargoyle",
+  "description": "<p>The [[lookup @name lowercase]] makes two [[/item .mmClaw0000000000]] attacks.</p>"
+ },
+ {
+  "actor": "Ghost",
+  "description": "<p>The [[lookup @name lowercase]] makes two [[/item .yf1Nf7oPWS4arOOL]] attacks.</p>"
+ },
+ {
+  "actor": "Ghoul",
+  "description": "<p>The [[lookup @name lowercase]] makes two [[/item .mafdXNIx6EIRujnK]] attacks.</p>"
+ },
+ {
+  "actor": "Giant Ape",
+  "description": "<p>The [[lookup @name lowercase]] makes two [[/item .mmFist0000000000]] attacks.</p>"
+ },
+ {
+  "actor": "Giant Centipede",
+  "description": "<p>The insect makes a number of attacks equal to half this spell's level (round down).</p><p>[[floor(@flags.dnd5e.summon.level / 2)]]{Number of attacks}</p>"
+ },
+ {
+  "actor": "Giant Constrictor Snake",
+  "description": "<p>The [[lookup @name lowercase]] makes one [[/item .mmBite0000000000]] attack and uses [[/item .mmConstrict00000]].</p>"
+ },
+ {
+  "actor": "Giant Crocodile",
+  "description": "<p>The [[lookup @name lowercase]] makes one [[/item .mmBite0000000000]] attack and one [[/item .mmTail0000000000]] attack</p>"
+ },
+ {
+  "actor": "Giant Eagle",
+  "description": "<p>The [[lookup @name lowercase]] makes two [[/item Rend]] attacks.</p>"
+ },
+ {
+  "actor": "Giant Insect",
+  "description": "<p>The insect makes a number of attacks equal to half this spell's level (round down).</p><p>[[floor(@flags.dnd5e.summon.level / 2)]]{Number of attacks}</p>"
+ },
+ {
+  "actor": "Giant Scorpion",
+  "description": "<p>The [[lookup @name lowercase]] makes two [[/item .mmClaw0000000000]] attacks and one [[/item .mmSting000000000]] attack.</p>"
+ },
+ {
+  "actor": "Giant Shark",
+  "description": "<p>The [[lookup @name lowercase]] makes two [[/item .mmBite0000000000]] attacks.</p>"
+ },
+ {
+  "actor": "Giant Spider",
+  "description": "<p>The insect makes a number of attacks equal to half this spell's level (round down).</p><p>[[floor(@flags.dnd5e.summon.level / 2)]]{Number of attacks}</p>"
+ },
+ {
+  "actor": "Giant Wasp",
+  "description": "<p>The insect makes a number of attacks equal to half this spell's level (round down).</p><p>[[floor(@flags.dnd5e.summon.level / 2)]]{Number of attacks}</p>"
+ },
+ {
+  "actor": "Glabrezu",
+  "description": "<p>The [[lookup @name lowercase]] makes two [[/item .mmPincer00000000]] attacks and uses [[/item .mmPummel00000000]] or [[/item .mmSpellcasting00]].</p>"
+ },
+ {
+  "actor": "Gladiator",
+  "description": "<p>The [[lookup @name lowercase]] makes three [[/item .vTZW4dSRGXTDWvRd]] attacks. It can replace one attack with a use of [[/item .mmShieldBash0000]].</p>"
+ },
+ {
+  "actor": "Goblin Boss",
+  "description": "<p>The [[lookup @name lowercase]] makes two attacks, using [[/item .8gwXLDcYj3mk6Kr3]] or [[/item .XbNHC5OBGT6VQF40]] in any combination.</p>"
+ },
+ {
+  "actor": "Gold Dragon Wyrmling",
+  "description": "<p>The [[lookup @name lowercase]] makes two [[/item .mmRend0000000000]] attacks.</p>"
+ },
+ {
+  "actor": "Green Dragon Wyrmling",
+  "description": "<p>The [[lookup @name lowercase]] makes two [[/item .mmRend0000000000]] attacks.</p>"
+ },
+ {
+  "actor": "Green Hag",
+  "description": "<p> The [[lookup @name lowercase]] makes two [[/item .mmClaw0000000000]] attacks.</p>"
+ },
+ {
+  "actor": "Grick",
+  "description": "<p>The [[lookup @name lowercase]] makes one [[/item Beak]] attack and one [[/item Tentacles]] attack.</p>"
+ },
+ {
+  "actor": "Griffon",
+  "description": "<p><span style=\"font-family:'Roboto Condensed', sans-serif\">The </span>[[lookup @name lowercase]] <span style=\"font-family:'Roboto Condensed', sans-serif\">makes two</span> [[/item .mmRend0000000000]] <span style=\"font-family:'Roboto Condensed', sans-serif\">attacks.</span></p>"
+ },
+ {
+  "actor": "Guard Captain",
+  "description": "<p>The [[lookup @name lowercase]] makes two attacks, using [[/item .qJUgq4viT1HD2ftt]] or [[/item .CneRFiVxRtCmo8Pl]] in any combination.</p>"
+ },
+ {
+  "actor": "Guardian Naga",
+  "description": "<p>The [[lookup @name lowercase]] makes two [[/item Bite]] attacks. It can replace any attack with a use of [[/item Poisonous Spittle]].</p>"
+ },
+ {
+  "actor": "Half-Dragon",
+  "description": "<p>The [[lookup @name lowercase]] makes two [[/item .mmClaw0000000000]] attacks.</p>"
+ },
+ {
+  "actor": "Hell Hound",
+  "description": "<p>The [[lookup @name lowercase]] makes two [[/item .mmBite0000000000]] attacks.</p>"
+ },
+ {
+  "actor": "Hezrou",
+  "description": "<p>The [[lookup @name lowercase]] makes three [[/item .mmRend0000000000]] attacks.</p>"
+ },
+ {
+  "actor": "Hill Giant",
+  "description": "<p>The [[lookup @name lowercase]] makes two attacks, using [[/item .mmTreeClub000000]] or [[/item .mmTrashLob000000]] in any combination.</p>"
+ },
+ {
+  "actor": "Hippogriff",
+  "description": "<p>The [[lookup @name lowercase]] makes two  [[/item .mmRend0000000000]] attacks.</p>"
+ },
+ {
+  "actor": "Hippopotamus",
+  "description": "<p>The [[lookup @name lowercase]] makes two [[/item .mmBite0000000000]] attacks.</p>"
+ },
+ {
+  "actor": "Hobgoblin Captain",
+  "description": "<p>The [[lookup @name lowercase]] makes two attacks, using [[/item .OZvhmmUFMgHZWnGB]] or [[/item .cryc72bvanyjmNdX]] in any combination.</p>"
+ },
+ {
+  "actor": "Horned Devil",
+  "description": "<p>The [[lookup @name lowercase]] makes three attacks, using [[/item .mmSearingFork000]] or [[/item .mmHurlFlame00000]] in any combination. It can replace one attack with a use of [[/item .mmInfernalTail00]].</p>"
+ },
+ {
+  "actor": "Hydra",
+  "description": "<p><span style=\"font-family:'Roboto Condensed', sans-serif\">The </span>[[lookup @name lowercase]] <span style=\"font-family:'Roboto Condensed', sans-serif\">makes as many </span> [[/item .mmBite0000000000]]<span style=\"font-family:'Roboto Condensed', sans-serif\"> attacks as it has heads.</span></p>"
+ },
+ {
+  "actor": "Ice Devil",
+  "description": "<p>The [[lookup @name lowercase]] makes three [[/item .mmIceSpear000000]] attacks. It can replace one attack with a [[/item .mmTail0000000000]] attack.</p>"
+ },
+ {
+  "actor": "Incubus",
+  "description": "<p>The [[lookup @name lowercase]] makes two [[/item .mmRestlessTouch0]] attacks.</p>"
+ },
+ {
+  "actor": "Invisible Stalker",
+  "description": "<p>The [[lookup @name lowercase]] makes three [[/item .mmWindSwipe00000]] attacks. It can replace one attack with a use of [[/item .mmVortex00000000]].</p>"
+ },
+ {
+  "actor": "Iron Golem",
+  "description": "<p>The [[lookup @name lowercase]] makes two attack, using [[/item Bladed Arm]] or [[/item Fiery Bolt]] in any combination.</p>"
+ },
+ {
+  "actor": "Knight",
+  "description": "<p>The [[lookup @name lowercase]]  makes two attacks, using [[/item .qFzUqCv1LU1T2l9W]] or [[/item .iqOpigRADMF7BFDu]] in any combination.</p>"
+ },
+ {
+  "actor": "Kraken",
+  "description": "<p>The [[lookup @name lowercase]]  makes two  [[/item .mmTentacle000000]] attacks and uses  [[/item .mmFling000000000]],  [[/item .mmLightningStrik]], or  [[/item .mmSwallow0000000]].</p>"
+ },
+ {
+  "actor": "Lamia",
+  "description": "<p>The [[lookup @name lowercase]] makes two [[/item .mmClaw0000000000]] attacks. It can replace one attack with a use of [[/item .mmCorruptingTouc]].</p>"
+ },
+ {
+  "actor": "Lich",
+  "description": "<p>The [[lookup @name lowercase]] makes three attacks, using [[/item .6qvUZeTimud7ekV8]] or [[/item .9p8yotv4r7nt3NWl]] in any combination.</p>"
+ },
+ {
+  "actor": "Lion",
+  "description": "<p>The [[lookup @name lowercase]] makes two [[/item .mmRend0000000000]] attacks. It can replace one attack with a use of [[/item .mmRoar0000000000]].</p>"
+ },
+ {
+  "actor": "Mage",
+  "description": "<p>The [[lookup @name lowercase]] makes three [[/item .mmArcaneBurst000]] attacks.</p>"
+ },
+ {
+  "actor": "Mammoth",
+  "description": "<p>The [[lookup @name lowercase]] makes two  [[/item .mmGore0000000000]] attacks.</p>"
+ },
+ {
+  "actor": "Manticore",
+  "description": "<p>The [[lookup @name lowercase]] makes three attacks, using [[/item .mmRend0000000000]] or [[/item .mmTailSpike00000]] in any combination.</p>"
+ },
+ {
+  "actor": "Marilith",
+  "description": "<p>The [[lookup @name lowercase]] makes six [[/item .mmPactBlade00000]] attacks and uses [[/item .mmConstrict00000]].</p>"
+ },
+ {
+  "actor": "Medusa",
+  "description": "<p><span style=\"font-family:'Roboto Condensed', sans-serif\">The </span>[[lookup @name lowercase]]<span style=\"font-family:'Roboto Condensed', sans-serif\"> makes two </span>[[/item .mmClaw0000000000]]<span style=\"font-family:'Roboto Condensed', sans-serif\"> attacks and one </span>[[/item .mmSnakeHair00000]]<span style=\"font-family:'Roboto Condensed', sans-serif\"> attack, or it makes three </span>[[/item .mmPoisonRay00000]]<span style=\"font-family:'Roboto Condensed', sans-serif\"> attacks.</span></p>"
+ },
+ {
+  "actor": "Merrow",
+  "description": "<p><span style=\"font-family:'Roboto Condensed', sans-serif\">The </span>[[lookup @name lowercase]]<span style=\"font-family:'Roboto Condensed', sans-serif\"> makes two attacks, using </span>[[/item .mmBite0000000000]]<span style=\"font-family:'Roboto Condensed', sans-serif\">, </span>[[/item .mmClaw0000000000]]<span style=\"font-family:'Roboto Condensed', sans-serif\">, or </span>[[/item .mmHarpoon0000000]]<span style=\"font-family:'Roboto Condensed', sans-serif\"> in any combination.</span></p>"
+ },
+ {
+  "actor": "Mummy",
+  "description": "<p>The mummy makes two [[/item .mmRottingFist000]] attacks and uses [[/item .mmDreadfulGlare0]].</p>"
+ },
+ {
+  "actor": "Mummy Lord",
+  "description": "<p>The [[lookup @name lowercase]] makes one [[/item .mmRottingFist000]] or [[/item .d6GVHcFrHv83C7eS]] attack, and it uses [[/item .mmDreadfulGlare0]].</p>"
+ },
+ {
+  "actor": "Nalfeshnee",
+  "description": "<p>The [[lookup @name lowercase]] makes three [[/item .mmRend0000000000]] attacks.</p>"
+ },
+ {
+  "actor": "Night Hag",
+  "description": "<p>The [[lookup @name lowercase]] makes two [[/item .mmClaw0000000000]] attacks.</p>"
+ },
+ {
+  "actor": "Nothic",
+  "description": "<p>The [[lookup @name lowercase]] makes two [[/item Claw]] attacks.</p>"
+ },
+ {
+  "actor": "Oni",
+  "description": "<p>The [[lookup @name lowercase]] makes two [[/item .mmClaw0000000000]] or [[/item .mmNightmareRay00]] attacks. It can replace one attack with a use of [[/item .mmSpellcasting00]].</p>"
+ },
+ {
+  "actor": "Otyugh",
+  "description": "<p>The [[lookup @name lowercase]] makes one [[/item Bite]] attack and two [[/item Tentacle]] attacks.</p>"
+ },
+ {
+  "actor": "Owlbear",
+  "description": "<p>The [[lookup @name lowercase]] makes two [[/item .mmRend0000000000]] attacks.</p>"
+ },
+ {
+  "actor": "Phase Spider",
+  "description": "<p><span style=\"font-family:'Roboto Condensed', sans-serif\">The </span>[[lookup @name lowercase]]<span style=\"font-family:'Roboto Condensed', sans-serif\"> makes two </span>[[/item .mmBite0000000000]]<span style=\"font-family:'Roboto Condensed', sans-serif\"> attacks.</span></p>"
+ },
+ {
+  "actor": "Pirate",
+  "description": "<p>The [[lookup @name lowercase]] makes two [[/item .MC6uJTSfGDW6jSdI]] attacks. It can replace one attack with a use of [[/item .mmEnthrallingPan]].</p>"
+ },
+ {
+  "actor": "Pirate Captain",
+  "description": "<p>The [[lookup @name lowercase]] makes three attacks, using [[/item .SHobhYTtELnIVQHw]] or [[/item .y2po5bpBbyIFIuVO]] in any combination.</p>"
+ },
+ {
+  "actor": "Pit Fiend",
+  "description": "<p>The [[lookup @name lowercase]] makes one [[/item .mmBite0000000000]] attack, two [[/item .mmDevilishClaw00]] attacks, and one [[/item .mmFieryMace00000]] attack.</p>"
+ },
+ {
+  "actor": "Planetar",
+  "description": "<p>The [[lookup @name lowercase]] makes three [[/item Radiant Sword]] attacks or uses [[/item Holy Burst]] twice.</p>"
+ },
+ {
+  "actor": "Polar Bear",
+  "description": "<p>The [[lookup @name lowercase]] makes two [[/item .mmRend0000000000]] attacks.</p>"
+ },
+ {
+  "actor": "Priest",
+  "description": "<p>The [[lookup @name lowercase]] makes two attacks, using [[/item .hRwqUlEyM9TjOmHy]] or [[/item .mmRadiantFlame00]] in any combination.</p>"
+ },
+ {
+  "actor": "Pseudodragon",
+  "description": "<p>The [[lookup @name lowercase]] makes two [[/item .mmBite0000000000]] attacks.</p>"
+ },
+ {
+  "actor": "Purple Worm",
+  "description": "<p>The [[lookup @name lowercase]] makes one [[/item .mmBite0000000000]] attack and one [[/item .mmTailStinger000]] attack.</p>"
+ },
+ {
+  "actor": "Rakshasa",
+  "description": "<p>The [[lookup @name lowercase]] makes three [[/item .mmCursedTouch000]] attacks.</p>"
+ },
+ {
+  "actor": "Red Dragon Wyrmling",
+  "description": "<p>The [[lookup @name lowercase]] makes two [[/item .mmRend0000000000]] attacks.</p>"
+ },
+ {
+  "actor": "Roc",
+  "description": "<p><span style=\"font-family:'Roboto Condensed', sans-serif\">The </span>[[lookup @name lowercase]] <span style=\"font-family:'Roboto Condensed', sans-serif\"> makes two </span> [[/item .mmBeak0000000000]]<span style=\"font-family:'Roboto Condensed', sans-serif\"> attacks. It can replace one attack with a </span> [[/item .mmTalons00000000]]<span style=\"font-family:'Roboto Condensed', sans-serif\"> attack.</span></p>"
+ },
+ {
+  "actor": "Roper",
+  "description": "<p>The [[lookup @name lowercase]] makes two [[/item Tentacle]] attacks, uses [[/item Reel]], and makes two [[/item Bite]] attacks.</p>"
+ },
+ {
+  "actor": "Rust Monster",
+  "description": "<p><span style=\"font-family:'Roboto Condensed', sans-serif\">The </span>[[lookup @name lowercase]]<span style=\"font-family:'Roboto Condensed', sans-serif\"> makes one </span>[[/item .mmBite0000000000]]<span style=\"font-family:'Roboto Condensed', sans-serif\"> attack and uses </span>[[/item .mmAntennae000000]]<span style=\"font-family:'Roboto Condensed', sans-serif\"> twice.</span></p>"
+ },
+ {
+  "actor": "Saber-Toothed Tiger",
+  "description": "<p>The [[lookup @name lowercase]] makes two [[/item .mmRend0000000000]] attacks.</p>"
+ },
+ {
+  "actor": "Sahuagin Warrior",
+  "description": "<p>The [[lookup @name lowercase]] makes two [[/item .mmClaw0000000000]] attacks.</p>"
+ },
+ {
+  "actor": "Salamander",
+  "description": "<p>The [[lookup @name lowercase]] makes two [[/item .mmFlameSpear0000]] attacks. It can replace one attack with a use of [[/item .mmConstrict00000]].</p>"
+ },
+ {
+  "actor": "Scout",
+  "description": "<p>The [[lookup @name lowercase]] makes two attacks, using [[/item .jdOlqVzYs89JuqTB]] and [[/item .qhM3PIWgXdyRCeul]] in any combination.</p>"
+ },
+ {
+  "actor": "Shambling Mound",
+  "description": "<p>The [[lookup @name lowercase]] makes three [[/item .mmChargedTendril]] attacks. It can replace one attack with a use of [[/item .mmEngulf00000000]].</p>"
+ },
+ {
+  "actor": "Shield Guardian",
+  "description": "<p>The [[lookup @name lowercase]] makes two [[/item Fist]] attacks.</p>"
+ },
+ {
+  "actor": "Silver Dragon Wyrmling",
+  "description": "<p>The [[lookup @name lowercase]] makes two [[/item .mmRend0000000000]] attacks.</p>"
+ },
+ {
+  "actor": "Solar",
+  "description": "<p>The [[lookup @name lowercase]] makes two [[/item Flying Sword]] attacks. It can replace one attack with a use of [[/item Slaying Bow]].</p>"
+ },
+ {
+  "actor": "Sphinx of Lore",
+  "description": "<p>The [[lookup @name lowercase]] makes three [[/item Claw]] attacks.</p>"
+ },
+ {
+  "actor": "Sphinx of Valor",
+  "description": "<p>The [[lookup @name lowercase]] makes two [[/item Claw]] attacks and uses [[/item Roar]].</p>"
+ },
+ {
+  "actor": "Spirit Naga",
+  "description": "<p>The [[lookup @name lowercase]] makes three attacks, using [[/item .mmBite0000000000]] or [[/item .mmNecroticRay000]] in any combination.</p>"
+ },
+ {
+  "actor": "Stone Giant",
+  "description": "<p>The [[lookup @name lowercase]] makes two attacks, using [[/item .mmStoneClub00000]] or [[/item .mmBoulder0000000]] in any combination.</p>"
+ },
+ {
+  "actor": "Stone Golem",
+  "description": "<p>The [[lookup @name lowercase]] makes two attacks, using [[/item Slam]] or [[/item Force Bolt]] in any combination.</p>"
+ },
+ {
+  "actor": "Storm Giant",
+  "description": "<p>The [[lookup @name lowercase]] makes two attacks, using [[/item .mmStormSword0000]] or [[/item .mmThunderbolt000]] in any combination.</p>"
+ },
+ {
+  "actor": "Succubus",
+  "description": "<p>The [[lookup @name lowercase]] makes one [[/item .mmFiendishTouch0]] attack and uses [[/item .mmCharm000000000]] or [[/item .mmDrainingKiss00]].</p>"
+ },
+ {
+  "actor": "Tarrasque",
+  "description": "<p>The [[lookup @name lowercase]] makes one [[/item .mmBite0000000000]] attack and three other attacks, using [[/item .mmClaw0000000000]] or [[/item .mmTail0000000000]] in any combination.</p>"
+ },
+ {
+  "actor": "Tough Boss",
+  "description": "<p>The [[lookup @name lowercase]] makes two attacks, using [[/item .iD5121TXziB6ZcSt]] or [[/item .7MS7v84QoTYESVax]] in any combination.</p>"
+ },
+ {
+  "actor": "Treant",
+  "description": "<p>The [[lookup @name lowercase]] makes two [[/item mmSlam0000000000]] attacks.</p>"
+ },
+ {
+  "actor": "Triceratops",
+  "description": "<p> The [[lookup @name lowercase]] makes two [[/item .mmGore0000000000]] attacks.</p>"
+ },
+ {
+  "actor": "Troll",
+  "description": "<p>The [[lookup @name lowercase]] makes three [[/item .mmRend0000000000]] attacks.</p>"
+ },
+ {
+  "actor": "Tyrannosaurus Rex",
+  "description": "<p>The [[lookup @name lowercase]] makes one [[/item .mmBite0000000000]] attack and one [[/item .mmTail0000000000]] attack.</p>"
+ },
+ {
+  "actor": "Unicorn",
+  "description": "<p>The [[lookup @name lowercase]] makes one [[/item Hooves]] attack and one [[/item Radiant Horn]] attack.</p>"
+ },
+ {
+  "actor": "Vampire",
+  "description": "<p>The [[lookup @name lowercase]] makes two [[/item .mmGraveStrike000]]{Grave Strike} attacks and uses [[/item .mmBite0000000000]]{Bite}.</p>"
+ },
+ {
+  "actor": "Vampire Familiar",
+  "description": "<p>The [[lookup @name lowercase]] makes two [[/item .mmUmbralDagger00]] attacks.</p>"
+ },
+ {
+  "actor": "Vampire Spawn",
+  "description": "<p>The [[lookup @name lowercase]] makes two [[/item .mmClaw0000000000]] attacks and uses [[/item .mmBite0000000000]].</p>"
+ },
+ {
+  "actor": "Violet Fungus",
+  "description": "<p>The [[lookup @name lowercase]] makes two [[/item .mmRottingTouch00]] attacks.</p>"
+ },
+ {
+  "actor": "Vrock",
+  "description": "<p>The [[lookup @name lowercase]] makes two [[/item .mmShred000000000]] attacks.</p>"
+ },
+ {
+  "actor": "Warrior Veteran",
+  "description": "<p>The [[lookup @name lowercase]] makes two [[/item .KkRkIIhD17sL5x30]] or [[/item .0nNkeR6HNC1e2uQ3]] attacks.</p>"
+ },
+ {
+  "actor": "Water Elemental",
+  "description": "<p>The [[lookup @name lowercase]] makes two [[/item .mmSlam0000000000]] attacks.</p>"
+ },
+ {
+  "actor": "Werebear",
+  "description": "<p>The [[lookup @name lowercase]] makes two attacks, using [[/item .JIRP6xpVCOyZotXc]]{Handaxe} or [[/item .mmRend0000000000]]{Rend} in any combination. It can replace one attack with a [[/item .mmBite0000000000]]{Bite} attack.</p>"
+ },
+ {
+  "actor": "Wereboar",
+  "description": "<p>The [[lookup @name lowercase]] makes two attacks, using [[/item .hhfnX7eT1ZFun8oQ]]{Javelin} or [[/item .mmTusk0000000000]]{Tusk} in any combination. It can replace one attack with a [[/item .mmGore0000000000]]{Gore} attack.</p>"
+ },
+ {
+  "actor": "Wererat",
+  "description": "<p class=\"feature\">The [[lookup @name lowercase]] makes two attacks, using [[/item .mmScratch0000000]]{Scratch} or [[/item .hd3JZprvOwTX7QK1]]{Hand Crossbow} in any combination. It can replace one attack with a [[/item .mmBite0000000000]]{Bite} attack.</p>"
+ },
+ {
+  "actor": "Weretiger",
+  "description": "<p>The [[lookup @name lowercase]] two attacks, using [[/item .mmScratch0000000]]{Scratch} or [[/item .Spw5gbTlI2AKsGWd]]{Longbow} in any combination. It can replace one attack with a [[/item .mmBite0000000000]]{Bite} attack.</p>"
+ },
+ {
+  "actor": "Werewolf",
+  "description": "<p>The [[lookup @name lowercase]] makes two attacks, using  [[/item .mmScratch0000000]]{Scratch} or [[/item .mYM6o8kM9SDVm45w]]{Longbow} in any combination. It can replace one attack with a  [[/item .mmBite0000000000]]{Bite} attack.</p>"
+ },
+ {
+  "actor": "White Dragon Wyrmling",
+  "description": "<p>The [[lookup @name lowercase]] makes two [[/item .mmRend0000000000]] attacks.</p>"
+ },
+ {
+  "actor": "Wight",
+  "description": "<p class=\"feature\">The [[lookup @name lowercase]] makes two attacks, using [[/item .mmNecroticSword0]] or [[/item .mmNecroticBow000]] in any combination. It can replace one attack with a use of [[/item .mmLifeDrain00000]].</p>"
+ },
+ {
+  "actor": "Wyvern",
+  "description": "<p>The [[lookup @name lowercase]] makes one [[/item .mmBite0000000000]] attack and one [[/item .mmSting000000000]] attack.</p>"
+ },
+ {
+  "actor": "Xorn",
+  "description": "<p>The [[lookup @name lowercase]] makes one [[/item .mmBite0000000000]] attack and three [[/item .mmClaw0000000000]] attacks.</p>"
+ },
+ {
+  "actor": "Young Black Dragon",
+  "description": "<p>The [[lookup @name lowercase]] makes three [[/item .mmRend0000000000]] attacks.</p>"
+ },
+ {
+  "actor": "Young Blue Dragon",
+  "description": "<p>The [[lookup @name lowercase]] makes three [[/item .mmRend0000000000]] attacks.</p>"
+ },
+ {
+  "actor": "Young Brass Dragon",
+  "description": "<p>The [[lookup @name lowercase]] makes three [[/item .mmRend0000000000]] attacks.  It can replace two attacks with a use of [[/item .mmSleepBreath000]].</p>"
+ },
+ {
+  "actor": "Young Bronze Dragon",
+  "description": "<p>The [[lookup @name lowercase]] makes three [[/item .mmRend0000000000]] attacks.It can replace one attack with a use of [[/item .mmRepulsionBreat]].</p>"
+ },
+ {
+  "actor": "Young Copper Dragon",
+  "description": "<p>The [[lookup @name lowercase]] makes three [[/item .mmRend0000000000]] attacks. It can replace one attack with a use of [[/item .mmSlowingBreath0]].</p>"
+ },
+ {
+  "actor": "Young Gold Dragon",
+  "description": "<p>The [[lookup @name lowercase]] makes three [[/item .mmRend0000000000]] attacks.  It can replace one attack with a use of [[/item .mmWeakeningBreat]].</p>"
+ },
+ {
+  "actor": "Young Green Dragon",
+  "description": "<p>The [[lookup @name lowercase]] makes three [[/item .mmRend0000000000]] attacks.</p>"
+ },
+ {
+  "actor": "Young Red Dragon",
+  "description": "<p>The [[lookup @name lowercase]] makes three [[/item .mmRend0000000000]] attacks.</p>"
+ },
+ {
+  "actor": "Young Silver Dragon",
+  "description": "<p>The [[lookup @name lowercase]] makes three [[/item .mmRend0000000000]] attacks. It can replace one attack with a use of [[/item .mmParalyzingBrea]].</p>"
+ },
+ {
+  "actor": "Young White Dragon",
+  "description": "<p>The [[lookup @name lowercase]] makes three [[/item .mmRend0000000000]] attacks.</p>"
+ }
+]
