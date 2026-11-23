@@ -1493,6 +1493,12 @@ function setupMidiFlags() {
   daeFieldBrowserFields.push(`flags.${MODULE_ID}.noOpportunityAttacks`);
   booleanFormula(`flags.${MODULE_ID}.ignoreDisengage`);
   daeFieldBrowserFields.push(`flags.${MODULE_ID}.ignoreDisengage`);
+  // M6/M8 movement rule values, changed by features' effects: extra feet per foot of dragging a grappled creature
+  // (1 by default; 0: none), the movement standing up from prone takes (half the speed by default; Athlete: 5)
+  untyped(`flags.${MODULE_ID}.movement.dragCost`);
+  daeFieldBrowserFields.push(`flags.${MODULE_ID}.movement.dragCost`);
+  untyped(`flags.${MODULE_ID}.movement.standCost`);
+  daeFieldBrowserFields.push(`flags.${MODULE_ID}.movement.standCost`);
   untyped(`flags.${MODULE_ID}.bloodsense`);
   daeFieldBrowserFields.push(`flags.${MODULE_ID}.bloodsense`);
   untyped(`flags.${MODULE_ID}.`);

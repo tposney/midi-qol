@@ -21,7 +21,8 @@ import { registerInteraction, type InteractionContext } from "./registry.js";
  * when the grappled creature escapes (an action: Athletics or Acrobatics against the DC), the grappler lets go (free),
  * the grappler is incapacitated, or the two are no longer within the grappler's reach (a teleport, forced movement).
  * The grappler's own moves drag the creature along, each foot costing one more unless it is Tiny or two sizes smaller
- * (recorded with the move, as standing up from prone). Shove: a push of 5 ft or Prone. With CAT active, its grapple
+ * (recorded with the move, as standing up from prone); the extra is the grappler's flags.midi-qol.movement.dragCost per foot (1;
+ * features change it). Shove: a push of 5 ft or Prone. With CAT active, its grapple
  * is used instead when chosen (Grapples made by), with its own Escape.
  */
 
@@ -180,19 +181,36 @@ async function onMoved(token: TokenDocument.Implementation, _movement: unknown, 
   if (mark && grappler && token.actor && footprintDistance(grappler, token) > meleeReach(grappler.actor) + 1e-6) await endGrapple(token.actor);
 }
 
-/** The creatures the token drags when it moves: those it grapples, unless Tiny or two sizes smaller */
-export function dragging(token: TokenDocument.Implementation): TokenDocument.Implementation[] {
+/**
+ * The extra feet each foot of dragging costs the creature: flags.midi-qol.movement.dragCost, 1 by default (2024 rules), a number
+ * features change with an ordinary effect change (override 0: no extra cost; the Grappler feat's Fast Wrestler, a
+ * monk's feature). Never below 0.
+ */
+export function dragCostOf(actor: Actor.Implementation | null | undefined): number {
+  const stored = foundry.utils.getProperty(actor ?? {}, `flags.${MODULE_ID}.movement.dragCost`);
+  const value = stored === undefined || stored === null || stored === "" ? 1 : Number(stored);
+  return Number.isFinite(value) ? Math.max(0, value) : 1;
+}
+
+/** The creatures whose drag costs the grappler extra: those it grapples, unless Tiny or two sizes smaller */
+export function costlyDrags(token: TokenDocument.Implementation): TokenDocument.Implementation[] {
   return grappledBy(token).filter(t => sizeOf(t.actor) !== 0 && sizeOf(t.actor) > sizeOf(token.actor) - 2);
+}
+
+/** Extra feet per foot of the token's own move for the creatures it drags (0 when none costs extra) */
+export function dragCostFor(token: TokenDocument.Implementation): number {
+  return costlyDrags(token).length ? dragCostOf(token.actor) : 0;
 }
 
 /** Dragging: each foot of the grappler's own move costs one more, unless the creature is Tiny or two sizes smaller */
 function onPreUpdate(token: TokenDocument.Implementation, changed: { _movementHistory?: { cost?: number | null, action?: string }[] }, options: { isUndo?: boolean }) {
   if (options.isUndo || !changed._movementHistory) return;
-  if (!dragging(token).length) return;
+  const perFoot = dragCostFor(token);
+  if (!perFoot) return;
   const fresh = changed._movementHistory.slice(token._source._movementHistory.length);
   if (!fresh.length || fresh.some(w => isForcedAction(w.action, token))) return;
   const cost = fresh.reduce((sum, w) => sum + (Number.isFinite(w.cost) ? Number(w.cost) : 0), 0);
-  fresh[0].cost = (fresh[0].cost ?? 0) + cost;
+  fresh[0].cost = (fresh[0].cost ?? 0) + cost * perFoot;
 }
 
 /** The grappler incapacitated: its grapples end (on the active GM) */

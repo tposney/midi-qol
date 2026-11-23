@@ -39,11 +39,16 @@ export function registerStandAction() {
 
 const inCombat = (token: TokenDocument.Implementation) => !!(token.combatant as { combat?: { started?: boolean } } | null)?.combat?.started;
 
-/** Half the creature's speed for the movement action, rounded down to whole units; undefined when it can't stand (speed 0) */
+/**
+ * The movement standing up takes: flags.midi-qol.movement.standCost when a feature sets it (the Athlete feat's Hop Up:
+ * 5), else half the creature's speed for the movement action, rounded down; undefined when it can't stand (speed 0)
+ */
 export function standCost(token: TokenDocument.Implementation, action = "walk"): number | undefined {
   const speed = speedFor(token.actor, action === STAND_ACTION ? "walk" : action);
   if (speed <= 0) return undefined;
-  return Math.floor(speed / 2);
+  const stored = foundry.utils.getProperty(token.actor ?? {}, "flags.midi-qol.movement.standCost");
+  const set = stored === undefined || stored === null || stored === "" ? NaN : Number(stored);
+  return Number.isFinite(set) ? Math.max(0, set) : Math.floor(speed / 2);
 }
 
 const markOf = (token: TokenDocument.Implementation) => foundry.utils.getProperty(token, `flags.midi-qol.${FLAG}`) as StandMark | undefined;

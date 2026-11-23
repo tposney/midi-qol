@@ -6,7 +6,7 @@ import { budget, spend } from "./ledger.js";
 import { actionKindOf, movementBudget } from "./movementRules.js";
 import { registerForcedAction } from "../forcedMovement/service.js";
 import { STAND_ACTION, standCost, standsUp } from "./prone.js";
-import { dragging } from "../interactions/grapple.js";
+import { dragCostFor } from "../interactions/grapple.js";
 
 export { actionKindOf, movementBudget };
 
@@ -133,7 +133,7 @@ export function checkMovement(token: TokenDocument.Implementation, move: Planned
   const standing = standsUp(token, waypoints) ? standCost(token, waypoints.find(w => w.action && w.action !== STAND_ACTION)?.action ?? "walk") ?? 0 : 0;
   // Dragging a grappled creature: each foot costs one more (recorded with the move: interactions/grapple.ts)
   const moveCost = cost(move.passed?.cost) + cost(move.pending?.cost);
-  const drag = dragging(token).length ? moveCost : 0;
+  const drag = moveCost * dragCostFor(token);
   const total = cost(move.history?.cost ?? state.spent) + moveCost + standing + drag;
   // The move's movement action decides the speed (a fly after a walk: the fly speed)
   const action = waypoints.at(-1)?.action ?? state.action;
