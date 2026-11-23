@@ -5265,7 +5265,8 @@ export const reactionTypes = {
   "reactionsave": { prompt: "midi-qol.reactionFlavorSave", triggerLabel: "isSave" },
   "reactionsavefail": { prompt: "midi-qol.reactionFlavorSaveFail", triggerLabel: "isSaveFail" },
   "reactionsavesuccess": { prompt: "midi-qol.reactionFlavorSaveSuccess", triggerLabel: "isSaveSuccess" },
-  "reactionmoved": { prompt: "midi-qol.reactionFlavorMoved", triggerLabel: "isMoved" }
+  "reactionmoved": { prompt: "midi-qol.reactionFlavorMoved", triggerLabel: "isMoved" },
+  "reactionopportunity": { prompt: "midi-qol.reactionFlavorOpportunity", triggerLabel: "isOpportunity" }
 };
 
 export function reactionPromptFor(triggerType: string): string {

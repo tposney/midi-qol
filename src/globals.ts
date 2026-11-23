@@ -61,6 +61,8 @@ declare module "fvtt-types/configuration" {
       "catReady": () => void;
       /** Sequencer's module ready */
       "sequencerReady": () => void;
+    /** M6c: return false and the mover's leaving the reactor's reach doesn't provoke */
+    "midi-qol.preOpportunityAttack": (mover: TokenDocument.Implementation, reactor: TokenDocument.Implementation, data: { movementAction: string, forced?: boolean }) => boolean | void;
       /** Condition data being built (createConditionData): add fields an item's conditions can refer to. */
       "midi-qol.conditionData": (conditionData: Record<string, unknown>, data: { workflow?: unknown, actor?: unknown, item?: unknown, target?: unknown }) => void;
       "dae.setupComplete": (api: any) => void;

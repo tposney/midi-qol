@@ -83,6 +83,17 @@ const FEATURE_OVERLAPS: FeatureOverlap[] = [
       await game.settings?.set(MIDI, "ConfigSettings", { ...configSettings, averageDamage });
     await safeSetGameSetting("custom-dnd5e", "use-average-damage", "neither");
   } },
+  // M6c: each offers (or takes) an opportunity attack on the same move; the fix keeps midi's
+  { id: "opportunityAttacks", sides: [
+    { source: MIDI, setting: "midi-qol.OpportunityAttacks.Name", keys: ["midi-qol.ConfigSettings"], active: () => configSettings.opportunityAttacks === "prompt" },
+    { source: "gambits-premades", setting: "midi-qol.Overlaps.Settings.gambitOpportunity", keys: ["gambits-premades.Enable Opportunity Attack"],
+      active: () => !!game.modules.get("gambits-premades")?.active && safeGetGameSetting("gambits-premades", "Enable Opportunity Attack") === true },
+    { source: "npc-tactics", setting: "midi-qol.Overlaps.Settings.npcTacticsOpportunity", keys: ["npc-tactics.opportunityAttacks"],
+      active: () => !!game.modules.get("npc-tactics")?.active && safeGetGameSetting("npc-tactics", "opportunityAttacks") === true },
+  ], fix: async () => {
+    if (game.modules.get("gambits-premades")?.active) await safeSetGameSetting("gambits-premades", "Enable Opportunity Attack", false);
+    if (game.modules.get("npc-tactics")?.active) await safeSetGameSetting("npc-tactics", "opportunityAttacks", false);
+  } },
   // These replace the whole use, with no midi equivalent: the fix turns them off.
   { id: "damageReplaced", sides: [
     { source: MIDI, setting: "midi-qol.Overlaps.Settings.midiDamage", keys: [], active: () => true },

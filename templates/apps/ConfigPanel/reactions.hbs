@@ -58,6 +58,14 @@
         </div>
 
         <div class="form-group">
+            <label>{{localize "midi-qol.OpportunityAttacks.Name"}}</label>
+            <select name="opportunityAttacks" data-dtype="String">
+                {{selectOptions OpportunityAttacksOptions selected=configSettings.opportunityAttacks localize=true}}
+            </select>
+            <div class="notes midi-qol-faint">{{{localize "midi-qol.OpportunityAttacks.Hint"}}}</div>
+        </div>
+
+        <div class="form-group">
             <label>{{localize "midi-qol.EnforceMovement.Name"}}</label>
             <select name="enforceMovement" data-dtype="String">
                 {{selectOptions EnforceMovementOptions selected=configSettings.enforceMovement localize=true}}

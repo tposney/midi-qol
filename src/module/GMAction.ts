@@ -2434,8 +2434,9 @@ async function _moveToken(data: { tokenUuid: string, newCenter: { x: number, y: 
   if (data.newCenter.level) newPosition.level = data.newCenter.level;
   // teleport uses dnd5e's "blink" action (as its Teleport activity does); walls and tokens are ignored below
   const action = teleport ? "blink" : CONFIG.Token.movement.defaultAction;
-  const waypoint = { ...newPosition, action, forced: true, snapped: true };
-  const moveOptions: Record<string, any> = { constrainOptions: { ignoreWalls: teleport || ignoreWalls, ignoreCost: true, ignoreTokens: teleport || ignoreTokens }, autoRotate };
+  const waypoint = { ...newPosition, action, snapped: true };
+  // Forced movement: no movement budget, no opportunity attacks (Foundry 14 waypoints have no forced flag)
+  const moveOptions: Record<string, any> = { midiForced: true, constrainOptions: { ignoreWalls: teleport || ignoreWalls, ignoreCost: true, ignoreTokens: teleport || ignoreTokens }, autoRotate };
   // Use animate: false for instant moves — this skips Foundry's #onUpdateAnimation entirely,
   // avoiding a Foundry core crash when the animation path is empty (e.g. movement fully blocked)
   if (teleport || !animate) moveOptions.animate = false;

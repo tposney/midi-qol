@@ -132,6 +132,8 @@ export class ConfigSettings {
   enforceBonusActions = "none";
   /** M6: the movement budget: not checked, shown, a warning past it, or a move past it refused (the GM's moves never) */
   enforceMovement = "displayOnly";
+  /** M6c: a creature leaving a hostile's reach offers the hostile an opportunity attack (the move split there) */
+  opportunityAttacks = "none";
   enforceSingleWeaponTarget: boolean = false;
   gmAttackDisplay: string = "full";
   gmDamageDisplay: string = "full";
@@ -644,6 +646,7 @@ export let fetchParams = () => {
   if (!configSettings.enforceReactions) configSettings.enforceReactions = "none";
   if (!configSettings.enforceBonusActions) configSettings.enforceBonusActions = "none";
   if (!configSettings.enforceMovement) configSettings.enforceMovement = "displayOnly";
+  if (!configSettings.opportunityAttacks) configSettings.opportunityAttacks = "none";
   //@ts-expect-error legacy boolean value
   if (configSettings.autoItemEffects === false) configSettings.autoItemEffects = "off";
   if (configSettings.playerDamageCard === undefined) configSettings.playerDamageCard = "none";
@@ -1444,6 +1447,7 @@ export const recordAOOOptions = keysToExtendedOptionsObj("RecordAOOOptions", [
 ]);
 
 export const EnforceMovementOptions = keysToExtendedOptionsObj("EnforceMovementOptions", ["none", "displayOnly", "warn", "enforce"]);
+export const OpportunityAttacksOptions = keysToExtendedOptionsObj("OpportunityAttacksOptions", ["none", "prompt"]);
 
 export const EnforceReactionsOptions = keysToExtendedOptionsObj("EnforceReactionsOptions", [
   "none",

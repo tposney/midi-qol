@@ -92,7 +92,7 @@ export function setupMovementActions() {
 
 /* M6b: the budget enforced on a move (preMoveToken, on the moving user's client) */
 
-interface MoveWaypoint { action?: string, forced?: boolean }
+interface MoveWaypoint { action?: string }
 export interface PlannedMove {
   method?: string;
   passed?: { cost?: number, waypoints?: readonly MoveWaypoint[] };
@@ -107,10 +107,10 @@ export function checkMovement(token: TokenDocument.Implementation, move: Planned
   const policy = options.policy ?? configSettings.enforceMovement ?? "displayOnly";
   const waypoints = [...(move.passed?.waypoints ?? []), ...(move.pending?.waypoints ?? [])];
   const actions = (CONFIG.Token as unknown as { movement?: { actions?: Record<string, { teleport?: boolean }> } }).movement?.actions ?? {};
-  // Never counted: the GM's moves, undo and paste, forced movement (midi's push and pull), teleports (blink, displace)
+  // Never counted: the GM's moves, undo and paste, cost ignored (midi's push and pull), teleports (blink, displace)
   if (options.gm ?? game.user?.isGM) return { verdict: "free" };
   if (["undo", "paste", "config"].includes(move.method ?? "") || move.constrainOptions?.ignoreCost) return { verdict: "free" };
-  if (waypoints.some(w => w.forced || (w.action && actions[w.action]?.teleport))) return { verdict: "free" };
+  if (waypoints.some(w => w.action && actions[w.action]?.teleport)) return { verdict: "free" };
   const state = movementState(token);
   if (!state || !["warn", "enforce"].includes(policy)) return { verdict: "free" };
   const cost = (n: number | undefined) => Number.isFinite(n) ? Number(n) : 0;
@@ -125,7 +125,9 @@ export function checkMovement(token: TokenDocument.Implementation, move: Planned
 }
 
 export function setupMovementEnforcement() {
-  Hooks.on("preMoveToken", (token, move) => {
+  Hooks.on("preMoveToken", (token, move, operation) => {
+    // Forced movement (midi's push and pull) is never the creature's own
+    if ((operation as { midiForced?: boolean }).midiForced) return;
     let result: MoveVerdict;
     try { result = checkMovement(token, move); }
     catch (err) { console.warn("midi-qol | movement check failed; the move goes ahead", err); return; }

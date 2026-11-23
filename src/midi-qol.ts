@@ -532,6 +532,7 @@ Hooks.once('init', async function () {
   defineDamageContributionsService();
   defineResponsesService();
   responsesService.register("midi-qol.items", midiItemReactions, { label: "Midi-QOL: reaction items" });
+  responsesService.register("midi-qol.opportunityAttacks", opportunityAttacks, { label: "Midi-QOL: opportunity attacks" });
   defineSaveRequestsService();
   registerMidiSaveProviders();
   damageModifiersService.register("midi-qol.targetedBonuses", targetedDamageBonusContributor, { label: "Midi-QOL: bonuses for particular targets" });
@@ -583,6 +584,7 @@ Hooks.once('init', async function () {
   setupSequencerLevelsFix();
   setupMovementActions();
   setupMovementEnforcement();
+  setupOpportunityAttacks();
   // Registered here, not in services/rollBonuses/prompt.ts: BonusPromptApp extends utils' RollModifyDialog and utils
   // imports prompt.ts, so prompt.ts importing the app would evaluate the class before its base exists
   bonusPromptService.register("midi-qol.phased", { open: data => new BonusPromptApp(data) }, { label: "Phased (tick and apply)" });
@@ -1187,6 +1189,7 @@ import { defineSaveRequestsService, MIDI_SAVE_PROVIDERS, requestSaves, settingsP
 import { midiSaveProviders, registerMidiSaveProviders } from "./module/services/saveRequests/providers.js";
 import { PendingSaves } from "./module/services/saveRequests/pending.js";
 import { midiItemReactions } from "./module/services/responses/provider.js";
+import { opportunityAttacks, setupOpportunityAttacks } from "./module/services/economy/opportunity.js";
 import { previewFlow, stepsApi } from "./module/steps/api.js";
 import { requestsApi, setupRequests } from "./module/lib/requests.js";
 import type { Activity } from "./globals.js";
@@ -1467,6 +1470,10 @@ function setupMidiFlags() {
   daeFieldBrowserFields.push(`flags.${MODULE_ID}.initiativeNoDisadv`);
   booleanFormula(`flags.${MODULE_ID}.ignoreNearbyFoes`);
   daeFieldBrowserFields.push(`flags.${MODULE_ID}.ignoreNearbyFoes`);
+  booleanFormula(`flags.${MODULE_ID}.noOpportunityAttacks`);
+  daeFieldBrowserFields.push(`flags.${MODULE_ID}.noOpportunityAttacks`);
+  booleanFormula(`flags.${MODULE_ID}.ignoreDisengage`);
+  daeFieldBrowserFields.push(`flags.${MODULE_ID}.ignoreDisengage`);
   untyped(`flags.${MODULE_ID}.bloodsense`);
   daeFieldBrowserFields.push(`flags.${MODULE_ID}.bloodsense`);
   untyped(`flags.${MODULE_ID}.`);

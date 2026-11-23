@@ -876,6 +876,7 @@
   "midi-qol.reactionFlavorSaveFail": "{actorName} failed a save because of {itemName} and can use a reaction",
   "midi-qol.reactionFlavorSaveSuccess": "{actorName} succeeded on a save because of {itemName} and can use a reaction",
   "midi-qol.reactionFlavorMoved": "{actorName} is moving and can use a reaction",
+  "midi-qol.reactionFlavorOpportunity": "A creature is leaving {actorName}'s reach: an opportunity attack?",
   "midi-qol.UnseenSource": "an unseen creature",
   "midi-qol.reactionUsed": "Reaction used",
   "midi-qol.bonusActionUsed": "Bonus Action used",
@@ -947,6 +948,12 @@
     "displayOnly": "Display status icon",
     "character": "Characters: prompt if used",
     "all": "All actors: prompt if used"
+  },
+  "midi-qol.OpportunityAttacks.Name": "Opportunity attacks",
+  "midi-qol.OpportunityAttacks.Hint": "In combat, a creature leaving a hostile's reach by its own movement stops at the edge while the hostile is offered a melee attack as its reaction. Forced movement, teleports, Disengaged and flags.midi-qol.noOpportunityAttacks don't provoke.",
+  "midi-qol.OpportunityAttacksOptions": {
+    "none": "Not offered",
+    "prompt": "Offer the attack"
   },
   "midi-qol.EnforceMovement.Name": "Movement budget",
   "midi-qol.EnforceMovement.Hint": "In combat, a creature's movement this turn against its speed (one more speed for each Dash). The GM's moves, forced movement, teleports and undo are never limited.",
@@ -1110,6 +1117,10 @@
   "midi-qol.Overlaps.StatusEffects": "Status effects",
   "midi-qol.Overlaps.initiative.Feature": "Initiative rerolled each round",
   "midi-qol.Overlaps.initiative.Advice": "Initiative is rolled twice each round. Turn one off; TroubleShooter Auto Fix turns off midi Auto reroll initiative, which can also break round/turn effect expiry.",
+  "midi-qol.Overlaps.opportunityAttacks.Feature": "Opportunity attacks",
+  "midi-qol.Overlaps.opportunityAttacks.Advice": "More than one module offers or takes opportunity attacks, so a creature leaving reach can be attacked twice or lose its reaction to the other one. Keep one; TroubleShooter's Auto Fix keeps midi's.",
+  "midi-qol.Overlaps.Settings.gambitOpportunity": "Enable Opportunity Attack",
+  "midi-qol.Overlaps.Settings.npcTacticsOpportunity": "Take opportunity attacks",
   "midi-qol.Overlaps.averageDamage.Feature": "Average damage",
   "midi-qol.Overlaps.averageDamage.Advice": "Custom D&D 5e's Average damage replaces the damage roll, so midi applies no damage. Use midi's 'All damage/critical rolls are average results' instead (same choices) and set Custom D&D 5e's to neither. TroubleShooter's Auto Fix does both.",
   "midi-qol.Overlaps.Settings.customAverageDamage": "Average damage",
