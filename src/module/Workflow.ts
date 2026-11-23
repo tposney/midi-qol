@@ -5,7 +5,7 @@ import { eventModifiers } from "./lib/rollKeys.js";
 import { TokenDocumentSet, hookTarget } from "./lib/tokenDocumentSet.js";
 import { CardRecords, RECORD_SETS, RecordSet, RecordFacts, STATE_KEYS, StateKey, attributionMap, attributionTriples, cardMidi, rollTypeOf, cardOtherConsumption, cardPreSelected, messagesFrom, recordList, recordPath, storedMidiFlag } from "./lib/cardState.js";
 import { preferredActiveGM, socketlibSocket, timedAwaitExecuteAsGM, timedExecuteAsGM, unTimedExecuteAsGM } from "./GMAction.js";
-import { beginPlayerWait, rollDialogsFor, trackPlayerWait } from "./lib/playerWaits.js";
+import { beginPlayerWait, endPlayerWaitsOwnedBy, rollDialogsFor, trackPlayerWait } from "./lib/playerWaits.js";
 import { installedModules } from "./setupModules.js";
 import { offerFollowUps } from "./followUps.js";
 import { configSettings, autoRemoveTargets, checkRule, checkMechanic, safeGetGameSetting, useWeakReferences, onUseMacroOptions, chatCardUpdates } from "./settings.js";
@@ -212,6 +212,24 @@ function jsonSafe(value: unknown): unknown {
   if (prototype !== Object.prototype && prototype !== null) return undefined;
   const kept = Object.entries(value as Record<string, unknown>).map(([key, v]) => [key, jsonSafe(v)] as const).filter(([, v]) => v !== undefined);
   return kept.length ? Object.fromEntries(kept) : undefined;
+}
+
+/** diffObject, surviving a value it can't compare (an object with no valueOf): such a key differs unless it is the same object */
+function diffOptions(original: WorkflowOptions, other: WorkflowOptions): WorkflowOptions {
+  try {
+    return foundry.utils.diffObject(original, other) as WorkflowOptions;
+  } catch {
+    const diff: Record<string, unknown> = {};
+    const before = original as Record<string, unknown>;
+    for (const [key, value] of Object.entries(other as Record<string, unknown>)) {
+      try {
+        Object.assign(diff, foundry.utils.diffObject(key in before ? { [key]: before[key] } : {}, { [key]: value }));
+      } catch {
+        if (before[key] !== value) diff[key] = value;
+      }
+    }
+    return diff as WorkflowOptions;
+  }
 }
 
 /** A roll another workflow added to a card (addedBy) */
@@ -532,6 +550,8 @@ export class Workflow {
     }
     // After the removal, which ends the id
     Workflow.#ended.delete(workflow.id);
+    // The actor's earlier uses still waiting on a roll were left unrolled
+    if (!workflow.readOnly) Workflow.endRollWaits(other => other !== workflow && !!workflow.actor && other.actor?.uuid === workflow.actor.uuid);
     if (useWeakReferences) Workflow.#workflows.set(workflow.id, new WeakRef(workflow));
     else Workflow.#workflows.set(workflow.id, workflow);
   }
@@ -547,6 +567,25 @@ export class Workflow {
   static templateWorkflowFlags(activity: Activity): { workflowId?: string, itemCardUuid?: string } {
     const workflow = Workflow.workflowFor(activity);
     return { workflowId: workflow?.itemCardUuid ? workflow.id : undefined, itemCardUuid: workflow?.itemCardUuid };
+  }
+
+  /**
+   * This user's use of `activity` that has stopped for that roll, the most recent if several: a roll started without a
+   * use (a sheet button, a macro, another module) is its roll, as a save rolled from the sheet answers a save request.
+   * Not while a roll dialog is open for the actor: that roll is already under way.
+   */
+  static awaitingRoll(activity: { uuid?: string | null }, kind: "attack" | "damage"): Workflow | undefined {
+    let found: Workflow | undefined;
+    for (const entry of Workflow.#workflows.values()) {
+      const workflow = entry instanceof WeakRef ? entry.deref() : entry;
+      if (!workflow || workflow.readOnly || workflow.aborted || !workflow.suspended || !workflow.#activity) continue;
+      if (!activity.uuid || workflow.#activity.uuid !== activity.uuid) continue;
+      if (workflow.chatCard && workflow.chatCard.author?.id !== game.user?.id) continue;
+      const state = kind === "attack" ? workflow.WorkflowState_WaitForAttackRoll : workflow.WorkflowState_WaitForDamageRoll;
+      if (workflow.currentAction === state) found = workflow;
+    }
+    if (found?.actor?.uuid && rollDialogsFor(found.actor.uuid).length) return undefined;
+    return found;
   }
 
   /** The item's workflow that is executing now (a macro inside its use), the most recently filed if several */
@@ -718,6 +757,13 @@ export class Workflow {
     return undefined;
   }
   static deleteWorkflow(id: string) {
+    // Its card is gone: nobody is waited for on its behalf
+    const entry = Workflow.#workflows.get(id);
+    const workflow = entry instanceof WeakRef ? entry.deref() : entry;
+    if (workflow) {
+      workflow.endRollWait();
+      endPlayerWaitsOwnedBy(workflow);
+    }
     Workflow.#workflows.delete(id);
   }
 
@@ -868,7 +914,7 @@ export class Workflow {
   }
   // Stored as #mergeWorkflowOptions stores them: the caller's options, with what this assignment changes from the merged ones
   set workflowOptions(workflowOptions: WorkflowOptions) {
-    this.#callerOptions = { ...this.#callerOptions, ...foundry.utils.diffObject(this.#mergedOptions, workflowOptions) };
+    this.#callerOptions = { ...this.#callerOptions, ...diffOptions(this.#mergedOptions, workflowOptions) };
     this.#mergedOptions = foundry.utils.deepClone(workflowOptions);
     const callerOptions = this.#callerOptions;
     this.#persisted.setWorkflowOptions(workflowOptions, () => encodeWorkflowOptions(callerOptions));
@@ -879,7 +925,8 @@ export class Workflow {
    * the rest (CAT's activity, the use's event, Sets) is per-use state, never stored.
    */
   #syncWorkflowOptions() {
-    const changed = jsonSafe(foundry.utils.diffObject(this.#mergedOptions, this.workflowOptions)) as WorkflowOptions | undefined;
+    // Only what can be stored is compared: the rest (an event, a module's object) need not be comparable
+    const changed = foundry.utils.diffObject((jsonSafe(this.#mergedOptions) ?? {}) as WorkflowOptions, (jsonSafe(this.workflowOptions) ?? {}) as WorkflowOptions) as WorkflowOptions;
     this.#mergedOptions = foundry.utils.deepClone(this.workflowOptions);
     if (!changed || foundry.utils.isEmpty(changed)) return;
     this.#callerOptions = foundry.utils.mergeObject(foundry.utils.deepClone(this.#callerOptions), changed) as WorkflowOptions;
@@ -2045,6 +2092,9 @@ export class Workflow {
       return;
     }
     if (workflow.postSummonHookId) Hooks.off("dnd5e.postSummon", workflow.postSummonHookId);
+    // Nobody is waited for on behalf of a use that is gone
+    workflow.endRollWait();
+    endPlayerWaitsOwnedBy(workflow);
     if (debugEnabled > 0) warn(`removeWorkflow deleting ${id}`, workflow);
     // Remove buttons while the workflow is still filed: removeItemCardButtons finds it by id, and an ended id is not rebuilt
     try {
@@ -2334,10 +2384,7 @@ export class Workflow {
 
   public async performState(newState: WorkflowState) {
     // The workflow moved on: a roll it waited on its player for is done
-    if (newState !== this.WorkflowState_Suspend && this.#rollWait) {
-      this.#rollWait.end();
-      this.#rollWait = undefined;
-    }
+    if (newState !== this.WorkflowState_Suspend) this.endRollWait();
     if (this.readOnly) {
       console.warn(`midi-qol | ${this.workflowName} is a read-only copy of another user's workflow: it does not run`);
       return;
@@ -2427,6 +2474,11 @@ export class Workflow {
       const message = `performState | ${this.workflowName} Workflow ${this.id}`;
       error(message, err);
       TroubleShooter.recordError(err, message);
+      // The run failed before it could wait properly: nobody is shown as waited for by a use that has stopped
+      if (!this.suspended) {
+        this.endRollWait();
+        endPlayerWaitsOwnedBy(this);
+      }
     } finally {
       // The run ended (finished, aborted, or an error): nothing stays queued
       try {
@@ -2585,18 +2637,48 @@ export class Workflow {
    * them, with the choices the roll dialog offers. Not for a GM's own use.
    */
   waitOnPlayerRoll(kind: "attack" | "damage" | "utility") {
-    this.#rollWait?.end();
-    this.#rollWait = undefined;
+    this.endRollWait();
     if (!game.user || game.user.isGM || !this.actor) return;
+    // midi isn't checking hits, so it can't know a damage roll is due
+    if (kind === "damage" && this.activity.attack && configSettings.autoCheckHit === "none") return;
+    // The actor's earlier uses still waiting were left unrolled
+    Workflow.endRollWaits(workflow => workflow !== this && workflow.actor?.uuid === this.actor.uuid);
+    const dismiss = { label: "midi-qol.PlayerWaits.Choice.dismiss", value: () => undefined };
     const choice = (mode: string) => ({ label: `midi-qol.PlayerWaits.Choice.${mode}`, value: () => this.rollForPlayer(kind, mode) });
-    const choices = kind === "attack" ? { normal: choice("normal"), advantage: choice("advantage"), disadvantage: choice("disadvantage") }
-      : kind === "damage" ? { normal: choice("normal"), critical: choice("critical") }
-      : { roll: { label: "midi-qol.PlayerWaits.Choice.roll", value: () => this.rollForPlayer(kind, "normal") } };
-    this.#rollWait = beginPlayerWait({
+    const choices = kind === "attack" ? { normal: choice("normal"), advantage: choice("advantage"), disadvantage: choice("disadvantage"), dismiss }
+      : kind === "damage" ? { normal: choice("normal"), critical: choice("critical"), dismiss }
+      : { roll: { label: "midi-qol.PlayerWaits.Choice.roll", value: () => this.rollForPlayer(kind, "normal") }, dismiss };
+    this.#rollWait = beginPlayerWait<unknown>({
       kind, userId: game.user.id!, actorUuid: this.actor.uuid, tokenUuid: this.tokenDocument?.uuid, keepDialogs: true,
       label: i18nFormat(`midi-qol.PlayerWaits.${kind}Label`, { item: this.item?.name ?? "" }),
-      choices
+      choices,
+      onSettled: () => { this.#rollWait = undefined; Workflow.#rollWaiters.delete(this); }
     });
+    if (this.#rollWait) Workflow.#rollWaiters.add(this);
+  }
+
+  /**
+   * The roll's dialog is opening for the player: show the wait if it isn't shown yet. A dialog can open although
+   * rolls are fast-forwarded (a thrown weapon's attack mode, ammunition, the roll dialog key, an activity that
+   * forces it), which the step that started the roll couldn't know.
+   */
+  ensureRollWait(kind: "attack" | "damage" | "utility") {
+    if (!this.#rollWait) this.waitOnPlayerRoll(kind);
+  }
+
+  /** This client's uses waiting on their player's roll. */
+  static #rollWaiters = new Set<Workflow>();
+
+  /** The roll is made, or no longer expected: the wait is no longer shown. The use itself is unchanged. */
+  endRollWait() {
+    this.#rollWait?.end();
+    this.#rollWait = undefined;
+    Workflow.#rollWaiters.delete(this);
+  }
+
+  /** Ends the roll waits of uses left unrolled: a deleted card, another use by the actor. */
+  static endRollWaits(matches: (workflow: Workflow) => boolean = () => true) {
+    for (const workflow of [...Workflow.#rollWaiters]) if (matches(workflow)) workflow.endRollWait();
   }
 
   /** Roll for the player as their roll dialog would: press its button when it is open, else roll without it. */
@@ -3306,6 +3388,10 @@ export class Workflow {
      * applicableEffects: that drops onSave. A profile names a local effect or, by uuid, a standalone
      * one such as a compendium effect, which only resolves asynchronously.
      */
+    // An effect the use's region applies on entry reaches the creatures in the area through the region, not from the use as well
+    const regionBehavior = this.activity.regionBehavior as { enabled?: boolean, rules?: { trigger: string, action: string, targetId: string }[] } | undefined;
+    const regionRules = this.templateUuids.some(uuid => uuid.includes(".Region.")) && regionBehavior?.enabled ? regionBehavior.rules ?? [] : [];
+    const regionEffectIds = new Set<string>(regionRules.filter(rule => rule.action === "applyEffect" && rule.trigger === "entry").map(rule => rule.targetId));
     const resolveEffects = async (activity: Activity | undefined | null) => {
       const resolved = { applied: [] as ActiveEffect.Implementation[], onSave: [] as ActiveEffect.Implementation[] };
       if (!activity) return resolved;
@@ -3318,6 +3404,7 @@ export class Workflow {
         const effect = await profile.getEffect();
         // @ts-expect-error no dnd5e-types
         if (!effect || effect.transfer || effect.type === "enchantment") continue;
+        if (activity === this.activity && effect.id && regionEffectIds.has(effect.id)) continue;
         (profile.onSave === true ? resolved.onSave : resolved.applied).push(effect);
       }
       return resolved;
@@ -4081,6 +4168,9 @@ export class Workflow {
     if (this.workflowOptions?.disadvantage) {
       this.attackRollModifierTracker.disadvantage.add("workflowOptions", i18n("midi-qol.WorkflowOptions"));
     }
+    // A use called as a critical or fumble (midiOptions.isCritical / isFumble): the reset above cleared what the use set
+    if (this.workflowOptions?.isCritical) this.attackRollModifierTracker.critical.setOverride(true, "activity.use", i18n("midi-qol.ActivityUse"));
+    if (this.workflowOptions?.isFumble) this.attackRollModifierTracker.fumble.setOverride(true, "activity.use", i18n("midi-qol.ActivityUse"));
     // Long range disadvantage (set in WorkflowState_ValidateRoll)
     if (this.longRangeAttack) {
       this.attackRollModifierTracker.disadvantage.add('range', 'Long Range');
@@ -6597,7 +6687,7 @@ export class Workflow {
     const requestIds = [target.id, target.actor?.uuid].filter((id): id is string => !!id);
     const what = [...rollInfo.abilities, ...rollInfo.skills, ...rollInfo.tools].map(key => key.toUpperCase()).join("/");
     const promise = trackPlayerWait<Roll[] | Roll | null>({
-      kind: rollInfo.type === "save" ? "save" : "check",
+      kind: rollInfo.type === "save" ? "save" : "check", owner: this,
       userId: player.id!,
       actorUuid: target.actor?.uuid,
       tokenUuid: getTokenDocument(target)?.uuid,
@@ -6832,7 +6922,7 @@ export class Workflow {
     } else {
       // The GM can answer for a player who hasn't decided (the player list): the roll stands
       newRoll = await trackPlayerWait<Roll>({
-        kind: "bonus", userId: owner.id!, actorUuid: target.actor?.uuid, tokenUuid: getTokenDocument(target)?.uuid,
+        kind: "bonus", owner: this, userId: owner.id!, actorUuid: target.actor?.uuid, tokenUuid: getTokenDocument(target)?.uuid,
         label: i18nFormat("midi-qol.PlayerWaits.BonusLabel", { item: this.item?.name ?? "" }),
         choices: { skip: () => result[0] }
       }, () => socketlibSocket.executeAsUser("bonusCheck", owner?.id, {
@@ -7828,6 +7918,32 @@ export class Workflow {
 
       // Already in the attack roll for a single target (attackRollParts)
       const midiFlagsAttackBonus = this.grantedAttackBonusInRollUuid === targetActor.uuid ? undefined : targetActor.flags?.[MODULE_ID]?.grants?.attack?.bonus;
+      // The auto successes and failures in force, in the order they apply (the last decides): the attacker's (dnd5e's roll
+      // fields, then midi's flag for every roll), then those the target grants
+      const forcedResults = async (): Promise<{ flag: string, hit: boolean }[]> => {
+        const conditionData = createConditionData({ workflow: this, target: targetToken, actor: this.actor });
+        const actionType = this.activity.actionType;
+        const attackFields = [`abilities.${this.activity.ability}.attack.roll`, "rolls.attack", `rolls.attack.${actionType}`];
+        const firstMatch = async (kind: "fail" | "success"): Promise<string | undefined> => {
+          for (const path of attackFields)
+            if (await evalAllConditionsAsync(this.actor, `system.${path}.${kind}`, conditionData)) return `${path}.${kind}`;
+          if (await evalAllConditionsAsync(this.actor, midiFlag(`${kind}.all`), conditionData)) return `${kind}.all`;
+          return undefined;
+        };
+        const granted = async (kind: "fail" | "success"): Promise<string | undefined> => {
+          if (!targetActor.flags?.[MODULE_ID]?.grants?.attack?.[kind]) return undefined;
+          for (const flag of [`grants.attack.${kind}.${actionType}`, `grants.attack.${kind}.all`])
+            if (await evalAllConditionsAsync(targetActor, midiFlag(flag), conditionData)) return flag;
+          return undefined;
+        };
+        const results: { flag: string, hit: boolean }[] = [];
+        const add = (flag: string | undefined, hit: boolean) => { if (flag) results.push({ flag, hit }); };
+        add(await firstMatch("fail"), false);
+        add(await firstMatch("success"), true);
+        add(await granted("success"), true);
+        add(await granted("fail"), false);
+        return results;
+      };
       let reactionACDelta = 0;
       let reactionItemName: string | undefined;
       if (!this.isFumble) {
@@ -7878,6 +7994,12 @@ export class Workflow {
         if (!isFinite(targetAC)) isHit = false; // total cover (coverTotal status or TOTAL_COVER from computeCoverBonus)
 
         if (targetEC) isHitEC = challengeModeArmorSet && attackTotal <= targetAC && attackTotal >= targetEC && isFinite(targetAC);
+        // A forced hit or miss decides which reactions are offered (hit or missed), not the roll against AC
+        const forcedHit = (await forcedResults()).at(-1)?.hit;
+        if (forcedHit !== undefined) {
+          isHit = forcedHit;
+          isHitEC = false;
+        }
         // check to see if the roll hit the target
         if ((isHit || isHitEC) && this.activity.attack && this.attackRoll && targetToken !== null && !foundry.utils.getProperty(this, `item.flags.${MODULE_ID}.noProvokeReaction`) && !this.workflowOptions.noProvokeReaction) {
           const workflowOptions = foundry.utils.mergeObject(this.workflowOptions, { sourceActorUuid: this.actor.uuid, sourceItemUuid: this.item.uuid }, { inplace: false, overwrite: true });
@@ -7934,63 +8056,13 @@ export class Workflow {
         hitResultNumeric = this.isCritical ? "++" : !isFinite(targetAC) ? `${attackTotal}/∞` : `${attackTotal}/${Math.abs(attackTotal - targetAC)}`;
       }
 
-      // An auto success or failure decides the hit whatever the AC
+      // An auto success or failure decides the hit whatever the AC; tested again here, as a reaction may have added one
       let forcedResult = false;
-      {
-        const conditionData = createConditionData({ workflow: this, target: targetToken, actor: this.actor });
-        const actionType = this.activity.actionType;
-        const attackFields = [`abilities.${this.activity.ability}.attack.roll`, "rolls.attack", `rolls.attack.${actionType}`];
-        // dnd5e's roll fields, then midi's flag for every roll
-        const firstMatch = async (kind: "fail" | "success"): Promise<string | undefined> => {
-          for (const path of attackFields)
-            if (await evalAllConditionsAsync(this.actor, `system.${path}.${kind}`, conditionData)) return `${path}.${kind}`;
-          if (await evalAllConditionsAsync(this.actor, midiFlag(`${kind}.all`), conditionData)) return `${kind}.all`;
-          return undefined;
-        };
-        const failFlag = await firstMatch("fail");
-        if (failFlag) {
-          isHit = false;
-          isHitEC = false;
-          forcedResult = true;
-          this.attackRollModifierTracker.critical.setOverride(false, failFlag, getFlagDisplayName(failFlag));
-        }
-        const successFlag = await firstMatch("success");
-        if (successFlag) {
-          isHit = true;
-          isHitEC = false;
-          forcedResult = true;
-          this.attackRollModifierTracker.fumble.setOverride(false, successFlag, getFlagDisplayName(successFlag));
-        }
-      }
-
-      const midiFlagsGrantsAttackSuccess = targetActor.flags?.[MODULE_ID]?.grants?.attack?.success;
-      const midiFlagsGrantsAttackFail = targetActor.flags?.[MODULE_ID]?.grants?.attack?.fail;
-      let conditionData;
-      if (midiFlagsGrantsAttackSuccess || midiFlagsGrantsAttackFail) {
-        conditionData = createConditionData({ workflow: this, target: targetToken, actor: this.actor });
-
-        let grantsSuccessFlag: string | undefined;
-        if (await evalAllConditionsAsync(targetActor, midiFlag(`grants.attack.success.${this.activity.actionType}`), conditionData))
-          grantsSuccessFlag = `grants.attack.success.${this.activity.actionType}`;
-        else if (await evalAllConditionsAsync(targetActor, midiFlag(`grants.attack.success.all`), conditionData))
-          grantsSuccessFlag = "grants.attack.success.all";
-        if (grantsSuccessFlag) {
-          isHit = true;
-          isHitEC = false;
-          forcedResult = true;
-          this.attackRollModifierTracker.fumble.setOverride(false, grantsSuccessFlag, getFlagDisplayName(grantsSuccessFlag));
-        }
-        let grantsFailFlag: string | undefined;
-        if (await evalAllConditionsAsync(targetActor, midiFlag(`grants.attack.fail.${this.activity.actionType}`), conditionData))
-          grantsFailFlag = `grants.attack.fail.${this.activity.actionType}`;
-        else if (await evalAllConditionsAsync(targetActor, midiFlag(`grants.attack.fail.all`), conditionData))
-          grantsFailFlag = "grants.attack.fail.all";
-        if (grantsFailFlag) {
-          isHit = false;
-          isHitEC = false;
-          forcedResult = true;
-          this.attackRollModifierTracker.critical.setOverride(false, grantsFailFlag, getFlagDisplayName(grantsFailFlag));
-        }
+      for (const { flag, hit } of await forcedResults()) {
+        isHit = hit;
+        isHitEC = false;
+        forcedResult = true;
+        (hit ? this.attackRollModifierTracker.fumble : this.attackRollModifierTracker.critical).setOverride(false, flag, getFlagDisplayName(flag));
       }
 
       let hitScale = 1;
@@ -8674,7 +8746,7 @@ export class ActiveDefenceWorkflow extends Workflow {
           return result;
         };
         promises.push(trackPlayerWait({
-          kind: "defence", userId: player.id!, actorUuid: target.actor.uuid, tokenUuid: getTokenDocument(target)?.uuid,
+          kind: "defence", owner: this, userId: player.id!, actorUuid: target.actor.uuid, tokenUuid: getTokenDocument(target)?.uuid,
           label: i18nFormat("midi-qol.PlayerWaits.DefenceLabel", { item: this.item?.name ?? "" }),
           choices: { roll: rollForThem },
           onSettled: () => {
@@ -9314,6 +9386,8 @@ export type WorkflowOptions = InexactPartial<{
   formulaDSN: boolean;
   ignoreUserTargets: boolean;
   isCritical: boolean;
+  /** The use was called as a fumble (midiOptions.isFumble) */
+  isFumble: boolean;
   isMagicSave: boolean;
   isReaction: boolean;
   item: Item.Implementation;

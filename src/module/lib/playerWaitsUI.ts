@@ -10,7 +10,7 @@
 import { MODULE_ID, i18n, i18nFormat } from "../../midi-qol.js";
 import { configSettings, safeGetGameSetting } from "../settings.js";
 import { playerForActor } from "../utils.js";
-import { knownPlayerWaits, onPlayerWaitsChanged, settlePlayerWait, WaitInfo } from "./playerWaits.js";
+import { knownPlayerWaits, onPlayerWaitsChanged, ownDismissable, settlePlayerWait, WaitInfo } from "./playerWaits.js";
 
 const BADGE = "midi-qol-player-wait";
 const POPOVER = "midi-qol-player-wait-popover";
@@ -175,12 +175,10 @@ function decorate(root: HTMLElement | undefined) {
     badge.innerHTML = segment("reaction", "fa-bolt", reactions) + segment("roll", "fa-dice-d20", rolls);
     if (isGM || own) badge.addEventListener("click", event => {
       event.stopPropagation();
-      if (own) bringPromptsForward();
-      else {
-        game.tooltip?.deactivate();
-        delete badge.dataset.tooltipHtml;
-        openPopover(userId, badge);
-      }
+      if (own && !isGM && openPrompts().length) bringPromptsForward();
+      game.tooltip?.deactivate();
+      delete badge.dataset.tooltipHtml;
+      openPopover(userId, badge);
     });
     row.append(badge);
   }
@@ -221,7 +219,7 @@ function renderPopover() {
   const user = game.users?.get(userId);
   // Rebuilt only when what it lists changes, so a button isn't replaced between pressing and releasing it (the click
   // would be lost); otherwise the times and Gambit's titles (which carry its countdown) are updated in place.
-  const shown = [user?.active, ...waits.map(wait => `${wait.id}:${wait.choices.map(choice => choice.id).join(",")}`),
+  const shown = [user?.active, ...waits.map(wait => `${wait.id}:${wait.choices.map(choice => choice.id).join(",")}:${ownDismissable(wait.id)}`),
     ...gambit.map(prompt => prompt.app.id)].join("|");
   if (shown === popover.shown) {
     for (const wait of waits) {
@@ -248,6 +246,8 @@ function renderPopover() {
     const buttons = document.createElement("div");
     buttons.className = "midi-qol-player-wait-choices";
     buttons.append(...wait.choices.map(choice => choiceButton(wait, choice)));
+    // A player's own roll they won't make (a GM's list has it among the choices)
+    if (!game.user?.isGM && ownDismissable(wait.id)) buttons.append(choiceButton(wait, { id: "dismiss" }));
     row.append(text, buttons);
     element.append(row);
   }

@@ -10,7 +10,7 @@ import { midiButtonVisibility } from "../ChatClasses/UsageCardMessage.js";
 import { ConditionEditor } from "../apps/ConditionEditor.js";
 import { followUpTargetModes, runFollowUp } from "../followUps.js";
 import { RegionBehaviorEditor } from "../apps/RegionBehaviorEditor.js";
-import { averageDice, skipConcentrationActorUuids } from "../patching.js"
+import { averageDice, onceForSubject, skipConcentrationActorUuids } from "../patching.js"
 import {
   aoeTargetTypeOptions,
   autoCEEffectsOptions,
@@ -999,7 +999,13 @@ export let MidiActivityMixin = Base => {
 
     async rollDamage(config: RollProcessConfig, dialog: RollDialogConfig = {}, message: RollMessageConfig = {}) {
       const workflow = config?.workflow;
-      if (!workflow) return this._midiRollDamage(config, dialog, message);
+      if (!workflow) {
+        // No use given (a sheet button, a macro): this user's use waiting for this damage roll takes it, as its card's button
+        const waiting = Workflow.awaitingRoll(this, "damage");
+        if (waiting) return waiting.activityFor(this).rollDamage({ event: config?.event, workflow: waiting,
+          midiOptions: { isCritical: waiting.workflowOptions?.isCritical || waiting.isCritical } }, {}, { create: false });
+        return this._midiRollDamage(config, dialog, message);
+      }
       return workflow.whileExecuting(() => this._midiRollDamage(config, dialog, message));
     }
 
@@ -1062,7 +1068,7 @@ export let MidiActivityMixin = Base => {
           if (config.workflow.rollOptions?.rollToggle) dialog.configure = !dialog.configure;
           // If the activity damage has any choice force configuration dialog
           // if (dialog.configure) config.midiOptions.isCritical = false;
-          preRollDamageHookId = Hooks.once("dnd5e.preRollDamage", (rollConfig, dialogConfig, messageConfig) => {
+          preRollDamageHookId = onceForSubject("dnd5e.preRollDamage", this, 0, (rollConfig, dialogConfig, messageConfig) => {
             const targetDescriptors = foundry.utils.getProperty(messageConfig, "data.system.targets") as Array<DND5ETargetDescriptor>;
             // since saves might have been rolled merge the target descriptors
             if (targetDescriptors && config.workflow) {
@@ -1084,6 +1090,7 @@ export let MidiActivityMixin = Base => {
             else if ((rollConfig.ammunition?.system.damage.base?.types.size ?? 0) > 1) dialogConfig.configure = true;
             else if ((this.healing?.types?.size ?? 0) > 1) dialogConfig.configure = true;
             if (dialogConfig.configure) {
+              config.workflow?.ensureRollWait("damage");
               dialogConfig.options ??= {};
               if (rollConfig.isCritical || rollConfig.midiOptions?.isCritical) {
                 dialogConfig.options.defaultButton = "critical";
@@ -1091,7 +1098,7 @@ export let MidiActivityMixin = Base => {
             } return true;
 
           });
-          rollDamageHookId = Hooks.once("dnd5e.rollDamage", rolls => {
+          rollDamageHookId = onceForSubject("dnd5e.rollDamage", this, 1, rolls => {
             if (rolls[0] && config.workflow && config.midiOptions?.updateWorkflow !== false) 
               //@ts-expect-error no dnd5e-types
               config.workflow.isCritical = rolls[0].options.isCritical;
@@ -2102,6 +2109,7 @@ export let MidiActivityMixin = Base => {
       if (rbConfig?.enabled) {
         const resolvedRules: Array<{trigger: string, action: string, targetUuid: string}> = [];
         const effectUuids: string[] = [];
+        const entryEffectIds = new Set((rbConfig.rules ?? []).filter(rule => rule.action === "applyEffect" && rule.trigger === "entry").map(rule => rule.targetId));
         for (const rule of rbConfig.rules ?? []) {
           if (rule.action === "useActivity") {
             // @ts-expect-error no dnd5e types for activities
@@ -2109,10 +2117,13 @@ export let MidiActivityMixin = Base => {
               (a: any) => (a.identifier || a.midiProperties?.identifier || a.id) === rule.targetId
             );
             if (act) resolvedRules.push({ trigger: rule.trigger, action: rule.action, targetUuid: act.uuid });
-          } else if (rule.action === "applyEffect") {
-            // Applied on entry and removed on exit by dnd5e; removeEffect rules are implied.
+          } else if (rule.action === "applyEffect" || rule.action === "removeEffect") {
             const effect = this.item?.effects.get(rule.targetId);
-            if (effect) effectUuids.push(effect.uuid);
+            if (!effect) continue;
+            // Applied on entry (and removed on exit, implied) is dnd5e's behaviour; at any other moment the rule is midi's own
+            if (rule.action === "applyEffect" && rule.trigger === "entry") effectUuids.push(effect.uuid);
+            else if (!(rule.action === "removeEffect" && rule.trigger === "exit" && entryEffectIds.has(rule.targetId)))
+              resolvedRules.push({ trigger: rule.trigger, action: rule.action, targetUuid: effect.uuid });
           }
         }
         effectBehavior(effectUuids, rbConfig.dispositionFilter ?? -1, rbConfig.excludeSource ?? true);

@@ -363,6 +363,9 @@ export function initHooks() {
 
 
   Hooks.on("combatTurnChange", moveRegionsOnTurnChange);
+  // A roll a player left unmade stops being shown as waited for when its card goes. Not on a turn change: like a
+  // save with no time-out, the use can still be completed, so its badge stays (decided 2026-11-19)
+  Hooks.on("deleteChatMessage", (message: ChatMessage.Implementation) => Workflow.endRollWaits(workflow => workflow.itemCardUuid === message.uuid));
 
   Hooks.on("updateCombat", (combat, data, options, user) => {
     if (data.round === undefined && data.turn === undefined) return;

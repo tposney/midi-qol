@@ -5,6 +5,7 @@ import { Workflow } from "../Workflow.js";
 import { decideRollDialog, dialogShown, heldKeys } from "../lib/rollKeys.js";
 import { RollModifierTracker, AdvantageFlags, computeAdvantageFlags, computeRollModifiers, applyRollModifiers, RollModifierFlags, applyTrackerAdvantage } from "../lib/RollModifierTracker.js";
 import { MidiOptions } from "../utils.js";
+import { onceForSubject } from "../patching.js";
 import { replaceDefaultActivities, configSettings, confirmTargetOptions, ammunitionPerTargetOptions } from "../settings.js";
 import { addAttribution, areMidiKeysPressed, callActivityHooks, addUpdatesCache, displayDSNForRoll, getSpeaker, isAutoFastForward, updateUserTargets, validTargetTokens, getToken, tokenSourceCenter } from "../utils.js";
 import { MidiActivityMixin, MidiActivityMixinSheet, findAmmunitionActivity } from "./MidiActivityMixin.js";
@@ -431,7 +432,16 @@ let defineMidiAttackActivityClass = <T extends Activity>(ActivityClass: T) => {
 
     async rollAttack(config: RollProcessConfig = {}, dialog: RollDialogConfig = {}, message: RollMessageConfig = {}): Promise<Roll[] | null> {
       const workflow = config.workflow;
-      if (!workflow) return this._midiRollAttack(config, dialog, message);
+      if (!workflow) {
+        // No use given (a sheet button, a macro): this user's use waiting for this attack takes the roll, as its card's button
+        const waiting = Workflow.awaitingRoll(this, "attack");
+        if (waiting) {
+          waiting.advantage = undefined;
+          waiting.disadvantage = undefined;
+          return waiting.activityFor(this).rollAttack({ event: config.event, workflow: waiting }, {}, {});
+        }
+        return this._midiRollAttack(config, dialog, message);
+      }
       if (workflow.currentAction === workflow.WorkflowState_Completed || workflow.currentAction === workflow.WorkflowState_Abort) {
         const usage = await MidiAttackActivity.attackAgain(this, workflow, config.event);
         config.workflow = usage.workflow;
@@ -507,7 +517,7 @@ let defineMidiAttackActivityClass = <T extends Activity>(ActivityClass: T) => {
 
         dialog.options ??= {};
 
-        hookIds["dnd5e.preRollAttack"] = Hooks.once("dnd5e.preRollAttack", (rollConfig, dialogConfig, messageConfig) => {
+        hookIds["dnd5e.preRollAttack"] = onceForSubject("dnd5e.preRollAttack", this, 0, (rollConfig, dialogConfig, messageConfig) => {
           if (workflow?.aborted) return false;
           if (configSettings.checkTwoHanded && ["twoHanded", "offhand"].includes(rollConfig.attackMode)) {
             // check equipment - shield other weapons for equipped status
@@ -542,7 +552,10 @@ let defineMidiAttackActivityClass = <T extends Activity>(ActivityClass: T) => {
             if (modifiers.length) foundry.utils.setProperty(roll, `options.${MODULE_ID}.attackModifiers`, modifiers);
           }
 
-          if (dialogConfig.configure && workflow) showAttackTargets(workflow);
+          if (dialogConfig.configure && workflow) {
+            showAttackTargets(workflow);
+            workflow.ensureRollWait("attack");
+          }
           return true;
         });
         // dnd5e adds its own parts when it builds each roll (with or without the dialog, and again when the dialog
@@ -557,7 +570,7 @@ let defineMidiAttackActivityClass = <T extends Activity>(ActivityClass: T) => {
           const sources = rollBonusSources(this, ability, this.getActionType?.(options.attackMode ?? process?.attackMode) ?? this.actionType);
           foundry.utils.setProperty(config, `options.${MODULE_ID}.rollBonusSources`, sources);
         });
-        hookIds["dnd5e.rollAttack"] = Hooks.once("dnd5e.rollAttack", (rolls, { ammoUpdate, subject }) => {
+        hookIds["dnd5e.rollAttack"] = onceForSubject("dnd5e.rollAttack", this, 1, (rolls, { ammoUpdate, subject }) => {
           if (ammoUpdate) {
             // dnd5e spends one; the activity's Ammunition setting may spend none (a later target, one per use) or one each
             const ammo = this.actor?.items.get(ammoUpdate.id);
@@ -572,7 +585,7 @@ let defineMidiAttackActivityClass = <T extends Activity>(ActivityClass: T) => {
             if (workflow) workflow.spentAmmunitionData = this.actor.items.get(ammoUpdate.id).toObject();
           }
         });
-        hookIds["dnd5e.postAttackRollConfiguration"] = Hooks.once("dnd5e.postAttackRollConfiguration", (rolls, config, dialog, message) => {
+        hookIds["dnd5e.postAttackRollConfiguration"] = onceForSubject("dnd5e.postAttackRollConfiguration", this, 1, (rolls, config, dialog, message) => {
           if (rolls?.length === 0) {
             // if (config.workflow) config.workflow.aborted = true;
             return false;
@@ -605,7 +618,7 @@ let defineMidiAttackActivityClass = <T extends Activity>(ActivityClass: T) => {
           return true;
         })
         // Capture target descriptors last, after all other modules have had a chance to modify AC (e.g. cover)
-        hookIds["dnd5e.postRollConfiguration"] = Hooks.once("dnd5e.postRollConfiguration", (rolls, config, dialog, message) => {
+        hookIds["dnd5e.postRollConfiguration"] = onceForSubject("dnd5e.postRollConfiguration", this, 1, (rolls, config, dialog, message) => {
           const targetDescriptors = foundry.utils.getProperty(message, "data.system.targets") as DND5ETargetDescriptor[] | undefined;
           if (targetDescriptors && workflow) {
             // Don't mutate td.ac — it's a shared reference with the chat message data.
@@ -620,17 +633,36 @@ let defineMidiAttackActivityClass = <T extends Activity>(ActivityClass: T) => {
 
         message ??= {};
         message.create ??= config.midiOptions.chatMessage;
-        config.attackMode ??= this.attackMode ?? "oneHanded";
+        const callerAttackMode = config.attackMode;
+        // dnd5e's last used mode for this activity, else the activity's own; an off-hand activity stays off-hand
+        const lastAttackMode = this.item.flags.dnd5e?.last?.[this.id]?.attackMode;
+        const keepsLastMode = !this.attackMode?.endsWith("offhand") || lastAttackMode?.endsWith("offhand");
+        config.attackMode ??= (keepsLastMode ? lastAttackMode : undefined) ?? this.attackMode ?? "oneHanded";
         // Without the dialog dnd5e spends its last-used or first ammunition, not midi's choice
         // @ts-expect-error no dnd5e-types
         if (this.item.system.properties?.has("amm")) config.ammunition ??= split?.ammunition || this.ammunition || undefined;
+        let versatileKey = false;
         // @ts-expect-error isVersatile is a dnd5e getter
         if (config.event && areMidiKeysPressed(config.event, "Versatile") && this.item.isVersatile) {
           config.attackMode = "twoHanded";
+          versatileKey = true;
         }
+        // A mode named by the caller or forced by the Versatile key is rolled once: dnd5e's remembered mode is kept
+        const forcedMode = versatileKey ? "twoHanded" : callerAttackMode;
+        const keepLastMode = forcedMode ? Hooks.on("preUpdateItem", (item, changes) => {
+          if (item.uuid !== this.item.uuid) return;
+          const last = changes.flags?.dnd5e?.last?.[this.id];
+          if (!last || last.attackMode !== forcedMode) return;
+          if (lastAttackMode) last.attackMode = lastAttackMode;
+          else delete last.attackMode;
+        }) : undefined;
         // @ts-expect-error weirdness with how I did the types
         const rollAttack = (): Promise<Roll[] | null> => super.rollAttack(config, dialog, message);
-        rolls = workflow ? await workflow.keepRollMessageFlags(this, rollAttack) : await rollAttack();
+        try {
+          rolls = workflow ? await workflow.keepRollMessageFlags(this, rollAttack) : await rollAttack();
+        } finally {
+          if (keepLastMode !== undefined) Hooks.off("preUpdateItem", keepLastMode);
+        }
 
         if (!rolls || rolls.length === 0) {
           // if (workflow) workflow.aborted = true;

@@ -1,5 +1,20 @@
+### 14.6.15
+This is the last 14.6 release. Later releases (14.7.0 onward) are for dnd5e 6.1 or later. The update check offers 14.7 (Foundry warns that it needs dnd5e 6.1); a world staying on dnd5e 6.0 installs 14.6.15 from its own manifest: https://github.com/tposney/midi-qol/releases/download/v14.6.15/module.json
+* Fix: during a combat, a condition evaluated a second time on the same data (an effect's flag conditions checked across several effects, a macro reusing condition data) always failed with an error in the console.
+* Fix: a use called with `midiOptions.isCritical` or `isFumble` (macros, `completeItemUse`) is a critical or fumble again: the attack and its damage were rolled as normal since 13.0.42.
+* Fix: the attack mode chosen in the attack roll dialog (one-handed, two-handed, thrown...) is remembered for the item's next attack; a mode set by a macro or the Versatile key is not, and an off-hand activity stays off-hand.
+* Fix: a reaction spell with a free casting from a feat (dnd5e's forward activity, e.g. Magic Initiate's Feather Fall) stopped every reaction prompt for the character; the free casting is now offered as a reaction while its use is unspent.
+* Fix: an attack forced to hit or miss (`grants.attack.success`/`fail`, `success`/`fail.all`, dnd5e's attack success and fail fields) offered the reactions for the roll against AC: a forced hit now offers the hit reactions, a forced miss the missed ones.
+* Fix: saves, checks, skill, tool and death save rolls made at the same moment by different actors (a use's targets saving together, a contested roll) could cross: one roll took the other's advantage, forced success or failure and card link, and the other got none.
+* Fix: an attack or damage roll waiting at its roll dialog lost its own handling when another actor rolled meanwhile (a reaction or opportunity attack, an over-time damage roll): a critical hit was no longer recorded as one, and the activity's ammunition setting and ammunition check were skipped.
+* Fix: a use stopped with `v0.valueOf is not a function` when its workflow options held a value Foundry can't compare.
+* Fix: an effect applied by an activity's region rule on entry was applied twice to creatures in the area when the activity was used and also listed the effect.
+* Region rules: *Apply Effect* and *Remove Effect* at *Turn Start*, *Turn End* or *Token Exits* now happen then (they were treated as on entry).
+* Waiting on players: a roll dialog that opens although rolls are fast-forwarded (a thrown weapon's attack mode, ammunition, the roll dialog key, an activity that forces it, a damage roll with several damage types) now shows the badge.
+* Waiting on players: a roll a player never makes no longer leaves their badge up. The wait ends when the actor starts another use or the card is deleted; the player (and the GM) can dismiss it with *Not rolling*; no damage roll is waited for after an attack when *Auto Check Hits* is off; and a use that is removed (undo) or stops on an error takes its waits with it.
+* Damage rolls on the card show formula, dice, then total, as attack rolls and dnd5e do (the total came before the dice).
+* An attack or damage roll started without its use (a Tidy 5e sheet button, a macro, another module) is taken by this user's use of that activity waiting for it, as a save rolled from the sheet answers a save request; it was a separate dnd5e roll and the use kept waiting.
 ### 14.6.14
-This is the last 14.6 release. Later releases (14.7.0 onward) are for dnd5e 6.1 or later. Once 14.7.0 is out, the update check offers it (Foundry warns that it needs dnd5e 6.1); a world staying on dnd5e 6.0 installs 14.6.14 from its own manifest: https://github.com/tposney/midi-qol/releases/download/v14.6.14/module.json
 * Fixed: *Activity Prefix* off still named midi's activities "Midi …" (since 14.6.9), and Boss Loot FX no longer turned the prefix off, so its animations by activity name didn't play.
 * Fixed: with Simple Cover chosen for *Walls block ranged attacks* or to calculate cover, total cover followed sight walls: a curtain blocked an attack and a window didn't. Total cover from walls is now midi's (walls that block movement) whichever module is chosen; Simple Cover supplies partial cover. AutoCover is unchanged.
 * Fixed: target confirmation for a target in cover ignored a cover status on the target.
