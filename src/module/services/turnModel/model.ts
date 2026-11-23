@@ -7,6 +7,8 @@ import { economyPolicy, issues, type UseIssue } from "../economy/issues.js";
 import { budget, budgetKinds, isTracked, type BudgetKindId } from "../economy/ledger.js";
 import { movementState, type MovementState } from "../economy/movement.js";
 import { availableInteractions, type InteractionOffer } from "../interactions/registry.js";
+import { nextActivities, openRun, runFit } from "../multiattack/run.js";
+import type { PlanSource } from "../multiattack/plans.js";
 
 /*
  * M7a: the turn model (proposal section 9; plan ~/Documents/midi-next-M7-plan-2026-11-23.md). One read of what a HUD
@@ -23,6 +25,8 @@ export interface WindowState { used: number, max: number, exhausted: boolean, tr
 
 export interface ActivityCell {
   uuid: string;
+  /** M21b: allowed next by the creature's open Multiattack */
+  multiattack?: boolean;
   itemUuid: string;
   itemName: string;
   name: string;
@@ -55,6 +59,8 @@ export interface TurnModel {
     granted: AttackGrant[];
     objectInteraction: { tracked: boolean, used: boolean };
     movement?: MovementState;
+    /** M21b: the creature's Multiattack opened this turn: attacks left (null: unbounded), uses made, the activities allowed next and used */
+    multiattack?: { source: PlanSource, attacksLeft: number | null, made: number, complete: boolean, allowed: string[], used: string[] };
   };
   activities: ActivityCell[];
   interactions: { self: InteractionOffer[], target: InteractionOffer[], targetUuid?: string };
@@ -114,6 +120,11 @@ export async function buildTurnModel(ref: TokenRef): Promise<TurnModel | undefin
     return [id, { used: state.used, max: state.max, exhausted: state.exhausted, tracked: isTracked(actor, id), label, ...(img ? { img } : {}), core }];
   })) as Record<BudgetKindId, WindowState>;
   const turn = budget(actor, "action");
+  const open = openRun(actor);
+  const fit = open ? runFit(actor, open.run) : null;
+  const allowed = open ? nextActivities(actor, open.run).map(a => a.uuid) : [];
+  const activities = await cellsOf(actor);
+  for (const cell of activities) if (allowed.includes(cell.uuid)) cell.multiattack = true;
   const target = [...(game.user?.targets ?? [])].map(t => t.document as TokenDocument.Implementation).find(t => t !== token);
   return {
     actorUuid: actor.uuid ?? "", ...(token?.uuid ? { tokenUuid: token.uuid } : {}),
@@ -123,9 +134,13 @@ export async function buildTurnModel(ref: TokenRef): Promise<TurnModel | undefin
       attacksLeft: Number(turn.counters.attacksLeft ?? 0),
       granted: grantedAttacks(actor),
       objectInteraction: { tracked: configSettings.objectInteractions === true, used: !!turn.counters.objectInteraction },
-      ...(token ? { movement: movementState(token) } : {})
+      ...(token ? { movement: movementState(token) } : {}),
+      ...(open ? { multiattack: {
+        source: open.run.source, attacksLeft: fit && Number.isFinite(fit.attacksLeft) ? fit.attacksLeft : null,
+        made: open.run.uses.length, complete: allowed.length === 0, allowed, used: open.run.uses.map(u => u.activityUuid)
+      } } : {})
     },
-    activities: await cellsOf(actor),
+    activities,
     interactions: {
       self: token ? availableInteractions(token) : [],
       target: token && target ? availableInteractions(token, target) : [],
