@@ -14,9 +14,9 @@
     {{#each held}}
     <fieldset class="midi-qol-holds-use" data-card="{{card}}">
         <legend>{{speaker}}: {{item}} <span class="hint">({{point}})</span></legend>
-        {{#if attack}}
-        <label class="midi-qol-holds-critical"><input type="checkbox" data-edit="critical" {{checked critical}}> {{localize "midi-qol.Hold.Critical"}}</label>
-        {{/if}}
+        {{#if attack}}{{#if critical}}
+        <label class="midi-qol-holds-critical"><input type="checkbox" data-edit="critical" {{checked criticalValue}}> {{localize "midi-qol.Hold.Critical"}}</label>
+        {{/if}}{{/if}}
         {{#each targets}}
         <div class="midi-qol-holds-target">
             {{#if img}}<img src="{{img}}" alt="">{{/if}}<span class="midi-qol-holds-name">{{name}}</span>

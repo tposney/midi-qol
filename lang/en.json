@@ -965,6 +965,7 @@
   "midi-qol.Hold.Point.saves": "Saves",
   "midi-qol.Hold.Point.damage": "Damage",
   "midi-qol.Hold.Point.effects": "Effects",
+  "midi-qol.Hold.Point.confirm": "Confirm roll",
   "midi-qol.Hold.Critical": "Critical",
   "midi-qol.Hold.Hit": "Hit",
   "midi-qol.Hold.Saved": "Saved",

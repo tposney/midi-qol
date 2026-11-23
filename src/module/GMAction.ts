@@ -204,6 +204,7 @@ async function confirmDamageRollComplete(data: { workflowId: string, activityUui
     return confirmDamageRollCompleteMiss(data);
   }
 
+  workflow.hold = undefined;
   return workflow.performState("midi-qol.RollConfirmed")
 }
 
@@ -219,6 +220,7 @@ async function confirmDamageRollCompleteHit(data: { workflowId: string, activity
     return "midi-qol | You must roll damage before completing the roll - you can only confirm miss until then";
   }
   // TODO make sure this needs to be awaited
+  workflow.hold = undefined;
   if (workflow.hitTargets.count === workflow.targets.count) {
     return workflow.performState("midi-qol.RollConfirmed")
     // TODO confirm this needs to be awaited
@@ -258,6 +260,7 @@ async function confirmDamageRollCompleteMiss(data: { workflowId: string, activit
     }
     await workflow.displayHits(workflow.whisperAttackCard, true);
   }
+  workflow.hold = undefined;
   // Make sure this needs to be awaited
   return workflow.performState("midi-qol.RollConfirmed").then(() => Workflow.removeWorkflow(workflow?.id));
 }

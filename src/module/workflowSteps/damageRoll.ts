@@ -44,6 +44,8 @@ export function registerDamageRollSteps(): void {
   setStepRun("midi-qol.ConfirmRoll", async ({ workflow }: { workflow: Workflow }): Promise<WorkflowState> => {
     if (configSettings.confirmAttackDamage !== "none" && (workflow.activity.attack || workflow.activity.damage)) {
       await workflow.displayDamageRolls();
+      // M20: the confirm hold, listed in the GM's hold panel; the card's confirm buttons (or the panel) release it
+      if (workflow.hold?.kind !== "confirm") workflow.hold = { point: "confirm", kind: "confirm", since: Date.now() };
       return "midi-qol.Suspend"; // wait for the confirm button
     }
     return "midi-qol.DamageRollStarted";

@@ -17,6 +17,8 @@ import type { DamageModifierContributor } from "../services/damageModifiers/serv
  * the critical, a save made or failed, the damage a target takes (scaled, plus or minus an amount: a damageModifiers
  * contributor reading the card, so the damage card lists it). Released, the hold step runs again and goes on.
  * Only while a GM is connected: with none, a use is never held.
+ * The Confirm Roll Button's stop (`ConfirmRoll`) is a hold too, of kind "confirm": listed here, released by its card
+ * buttons (whoever the setting allows) or by the GM with changes, through the same confirm handler.
  */
 
 export const HOLD_POINTS = ["attack", "saves", "damage", "effects"] as const;
@@ -65,8 +67,10 @@ async function runHold(workflow: Workflow, point: HoldPoint): Promise<string> {
 export function heldUses(): { card: ChatMessage.Implementation, hold: UseHold }[] {
   const held: { card: ChatMessage.Implementation, hold: UseHold }[] = [];
   for (const card of game.messages?.contents ?? []) {
-    const hold = cardMidi(card).state?.hold as UseHold | undefined;
-    if (hold?.point) held.push({ card, hold });
+    const midi = cardMidi(card);
+    const hold = midi.state?.hold as UseHold | undefined;
+    // A use removed or finished meanwhile isn't waiting any more
+    if (hold?.point && !midi.progress?.allRemoved && !midi.progress?.finished) held.push({ card, hold });
   }
   return held.sort((a, b) => b.hold.since - a.hold.since);
 }
@@ -128,6 +132,11 @@ async function releaseHere(card: string, edits?: GmEdits): Promise<string | unde
   const hold = workflow?.hold;
   if (!workflow || !hold) return "midi-qol | the use isn't held";
   if (edits) await applyGmEdits(workflow, edits);
+  // The Confirm Roll Button's hold: released as its Confirm button does (no hits left: a miss)
+  if (hold.kind === "confirm") {
+    const answer = await queryUser(game.user, "confirmDamageRollComplete", { workflowId: card, activityUuid: workflow.activity?.uuid, itemCardUuid: card });
+    return typeof answer === "string" ? answer : undefined;
+  }
   workflow.releaseHoldPoint(hold.point);
   workflow.hold = undefined;
   await workflow.flushCardWrites();
@@ -144,9 +153,16 @@ export async function dropHold(card: string): Promise<string | undefined> {
   const author = message.author;
   if (author?.active && !author.isSelf) return queryUser(author, "midiDropHold", card);
   const workflow = Workflow.findWorkflow(card);
-  if (!workflow?.hold) return "midi-qol | the use isn't held";
+  if (!workflow) {
+    // The use is gone (removed, or ended elsewhere) but its card still says held: the card is cleared
+    if (!cardMidi(message).state?.hold) return "midi-qol | the use isn't held";
+    await message.update({ "system.midi.state.hold": null, "system.midi.progress": { allRemoved: true } } as ChatMessage.UpdateData);
+    return undefined;
+  }
+  if (!workflow.hold) return "midi-qol | the use isn't held";
   workflow.hold = undefined;
   await workflow.flushCardWrites();
+  // The Confirm Roll Button's hold is dropped as its Cancel button cancels the use
   void workflow.performState("midi-qol.Cancel");
   return undefined;
 }

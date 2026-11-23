@@ -63,11 +63,14 @@ export class HoldPanel extends HandlebarsApplicationMixin(ApplicationV2) {
       };
     });
     const point = hold.point as HoldPoint;
+    // The Confirm Roll Button's hold: after the damage roll, hit or miss and the damage can still change
+    const confirm = hold.kind === "confirm";
     return {
-      card: card.uuid, point: pointLabel(point), speaker: card.alias,
+      card: card.uuid, point: confirm ? i18n("midi-qol.Hold.Point.confirm") : pointLabel(point), speaker: card.alias,
       item: (card as { getAssociatedItem?: () => Item.Implementation | null }).getAssociatedItem?.()?.name ?? "",
-      attack: point === "attack", saves: point === "saves", damage: point === "damage",
-      critical: edits.critical ?? !!midi.state?.isCritical,
+      attack: point === "attack" || (confirm && !!midi.hasAttack), saves: point === "saves", damage: point === "damage" || confirm,
+      critical: !confirm,
+      criticalValue: edits.critical ?? !!midi.state?.isCritical,
       multipliers: MULTIPLIERS.map(value => ({ value, label: `×${value === 0.5 ? "½" : value}` })),
       targets
     };
