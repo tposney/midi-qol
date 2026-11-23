@@ -2502,7 +2502,12 @@ async function setDeadStatus(actor: Actor.Implementation, options: { effect: CON
 
   // Only update defeated status if the toggle actually changed something
   if (useDefeated && result !== undefined) {
-    const combatants = (actor.id ? game.combat?.getCombatantsByActor(actor.id) : undefined) ?? [];
+    const combat = game.combat;
+    const tokenId = actor.token?.id;
+    const matches = actor.isToken
+      ? (tokenId ? combat?.getCombatantsByToken(tokenId) : undefined)
+      : (actor.id ? combat?.getCombatantsByActor(actor.id) : undefined);
+    const combatants = matches ?? [];
     for (let combatant of combatants) await combatant.update({ defeated: makeDead }, {});
   }
 }
