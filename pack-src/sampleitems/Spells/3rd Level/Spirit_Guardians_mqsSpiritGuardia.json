@@ -389,7 +389,7 @@
           "forceConsumeDialog": "default",
           "forceRollDialog": "default",
           "forceDamageDialog": "default",
-          "confirmTargets": "default",
+          "confirmTargets": "never",
           "autoTargetType": "any",
           "autoTargetAction": "default",
           "automationOnly": false,
