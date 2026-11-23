@@ -29,8 +29,8 @@ export interface DeferredOptions {
   trigger?: string;
   /** "turnStart": dropped at the readier's next turn start (in combat); "never": until released or dropped */
   lapse?: "turnStart" | "never";
-  /** Hold concentration while readied (a readied spell) */
-  concentration?: boolean;
+  /** Hold concentration while readied (a readied spell); `name`: the held effect's name */
+  concentration?: boolean | { name?: string };
   /** The module's own data, kept with it */
   data?: Record<string, unknown>;
 }
@@ -67,13 +67,13 @@ export function deferredUses(filter: { actor?: Actor.Implementation } = {}): Def
 }
 
 /** A concentration effect for a readied use: dnd5e treats it as the creature's concentration (checks on damage) */
-async function holdConcentration(workflow: Workflow): Promise<string | undefined> {
+async function holdConcentration(workflow: Workflow, name?: string): Promise<string | undefined> {
   const actor = workflow.actor as Actor.Implementation | undefined;
   const statusId = systemConcentrationId;
   const status = CONFIG.statusEffects.find(effect => effect.id === statusId);
   if (!actor || !status) return undefined;
   const [effect] = await actor.createEmbeddedDocuments("ActiveEffect", [{
-    name: `${status.name ? game.i18n?.localize(status.name) : statusId}: ${workflow.item?.name ?? ""}`,
+    name: name ?? `${status.name ? game.i18n?.localize(status.name) : statusId}: ${workflow.item?.name ?? ""}`,
     img: workflow.item?.img ?? status.img,
     statuses: [statusId],
     origin: workflow.item?.uuid
@@ -84,7 +84,8 @@ async function holdConcentration(workflow: Workflow): Promise<string | undefined
 async function runDeferred(workflow: Workflow): Promise<string> {
   if (workflow.holdsReleased.includes(POINT)) return CONTINUE;
   const options = (workflow.workflowOptions as { deferred?: DeferredOptions }).deferred ?? {};
-  const concentration = options.concentration ? await holdConcentration(workflow) : undefined;
+  const held = options.concentration;
+  const concentration = held ? await holdConcentration(workflow, typeof held === "object" ? held.name : undefined) : undefined;
   workflow.hold = { point: POINT, kind: "deferred", since: Date.now(), ...(concentration ? { data: { concentration } } : {}) };
   await workflow.flushCardWrites();
   Hooks.callAll("midi-qol.deferredReady", workflow);
@@ -141,7 +142,15 @@ async function releaseHere(id: string, { targets, reaction = true }: { targets?:
 }
 
 /** Drop a readied use: cancelled where it runs; `refund`: what it paid given back */
+const dropping = new Set<string>();
 export async function dropDeferred(id: string, options: { refund?: boolean } = {}): Promise<string | undefined> {
+  if (dropping.has(id)) return undefined;
+  dropping.add(id);
+  try { return await dropHere(id, options); }
+  finally { dropping.delete(id); }
+}
+
+async function dropHere(id: string, options: { refund?: boolean }): Promise<string | undefined> {
   const message = fromUuidSync(id) as ChatMessage.Implementation | null;
   if (!message) return "midi-qol | no such readied use";
   const author = message.author;
