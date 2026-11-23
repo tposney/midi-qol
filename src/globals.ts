@@ -62,6 +62,9 @@ declare module "fvtt-types/configuration" {
       /** Sequencer's module ready */
       "sequencerReady": () => void;
     /** M6c: return false and the mover's leaving the reactor's reach doesn't provoke */
+    /** M6d: a push, pull or slide about to be made; change `distance` or return false to cancel */
+    "midi-qol.preForcedMovement": (request: import("./module/services/forcedMovement/service.js").ForcedMoveRequest) => boolean | void;
+    "midi-qol.forcedMovement": (request: import("./module/services/forcedMovement/service.js").ForcedMoveRequest, result: import("./module/services/forcedMovement/service.js").ForcedMoveResult) => void;
     "midi-qol.preOpportunityAttack": (mover: TokenDocument.Implementation, reactor: TokenDocument.Implementation, data: { movementAction: string, forced?: boolean }) => boolean | void;
       /** Condition data being built (createConditionData): add fields an item's conditions can refer to. */
       "midi-qol.conditionData": (conditionData: Record<string, unknown>, data: { workflow?: unknown, actor?: unknown, item?: unknown, target?: unknown }) => void;
@@ -881,6 +884,8 @@ declare global {
     utils: {
       automationUtils: { updateItem: (item: Item.Implementation, options?: object) => Promise<unknown> };
       effectUtils: { getOriginActivitySync: (effect: ActiveEffect.Implementation) => unknown };
+      /** CAT 0.1.x: push (positive) or pull (negative, with sourceToken) along a line, short of occupied spaces */
+      tokenUtils?: { slideToken?: (token: TokenDocument.Implementation, options: { sourceToken?: TokenDocument.Implementation, distance?: number, ray?: foundry.canvas.geometry.Ray, action?: string }) => Promise<unknown> };
     };
   } | undefined;
   var MidiDAEEval: {
@@ -1261,6 +1266,8 @@ export interface MoveTokenOptions {
   ignoreTokens?: boolean;
   /** Rotate token to face movement direction (default: false) */
   autoRotate?: boolean;
+  /** The movement action (default midi's "forced": no movement spent, never provokes; "blink" with teleport) */
+  action?: string;
 }
 
 export interface TeleportTokenDestination {

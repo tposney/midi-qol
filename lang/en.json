@@ -949,6 +949,14 @@
     "character": "Characters: prompt if used",
     "all": "All actors: prompt if used"
   },
+  "midi-qol.Movement.Forced": "Forced movement",
+  "midi-qol.ForcedMovementProvider.Name": "Pushes and pulls made by",
+  "midi-qol.ForcedMovementProvider.Hint": "Forced movement (pushed, pulled, slid) uses none of the creature's movement and never provokes opportunity attacks. Automatic: CAT's when CAT is active (its features that react to a push still work), else midi's.",
+  "midi-qol.ForcedMovementProviderOptions": {
+    "auto": "Automatic",
+    "midi-qol": "Midi-QOL",
+    "cat": "CAT"
+  },
   "midi-qol.OpportunityAttacks.Name": "Opportunity attacks",
   "midi-qol.OpportunityAttacks.Hint": "In combat, a creature leaving a hostile's reach by its own movement stops at the edge while the hostile is offered a melee attack as its reaction. Forced movement, teleports, Disengaged and flags.midi-qol.noOpportunityAttacks don't provoke.",
   "midi-qol.OpportunityAttacksOptions": {

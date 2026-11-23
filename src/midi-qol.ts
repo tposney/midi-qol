@@ -390,6 +390,7 @@ Object.assign(globalThis.MidiQOL, {
   modifyDamageBy,
   moveToken,
   moveTokenAwayFromPoint,
+  forcedMovement,
   MQfromActorUuid: fromActorUuid,
   MQfromUuid: fromUuidSync,
   playerFor,
@@ -525,6 +526,7 @@ Hooks.once('init', async function () {
   window.customElements.define("midi-damage-application", DamageApplicationElementMidi as unknown as CustomElementConstructor);
   setupActivities();
   defineCoverService();
+  defineForcedMovementService();
   definePerceptionService();
   defineRollModifiersService();
   registerAttackRollRules();
@@ -1190,6 +1192,7 @@ import { midiSaveProviders, registerMidiSaveProviders } from "./module/services/
 import { PendingSaves } from "./module/services/saveRequests/pending.js";
 import { midiItemReactions } from "./module/services/responses/provider.js";
 import { opportunityAttacks, setupOpportunityAttacks } from "./module/services/economy/opportunity.js";
+import { defineForcedMovementService, forcedMovement } from "./module/services/forcedMovement/service.js";
 import { previewFlow, stepsApi } from "./module/steps/api.js";
 import { requestsApi, setupRequests } from "./module/lib/requests.js";
 import type { Activity } from "./globals.js";

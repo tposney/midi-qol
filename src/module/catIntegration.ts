@@ -1,3 +1,5 @@
+import { register } from "./api/services.js";
+import { catForcedMovement } from "./services/forcedMovement/service.js";
 import { MODULE_ID } from "../midi-qol.js";
 import { addNotes } from "./catMacros/automationNotes.mjs";
 import { registerCATMacros } from "./catMacros/macros.mjs";
@@ -69,6 +71,9 @@ export function setupCATIntegration() {
     setupCATCastActivityFix();
     setupActorlessNotes();
     registerCATMacros(MODULE_ID);
+    // CAT's push and pull for midi's forcedMovement service, registered for CAT until CAT registers its own
+    if (typeof globalThis.cat?.utils?.tokenUtils?.slideToken === "function")
+      register("forcedMovement", "cat", catForcedMovement, { label: "CAT", priority: 10, available: () => !!game.modules.get("cat")?.active });
     await globalThis.cat?.api.registerAutomationModule(MODULE_ID, {
       infoFetcherCallback: automationInfo
     });

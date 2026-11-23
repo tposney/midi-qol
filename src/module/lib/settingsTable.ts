@@ -103,6 +103,7 @@ export const MIDI_SETTINGS: Record<string, MidiSettingEntry> = {
   "playerRequireAmmunition": { group: "player", label: "midi-qol.RequireAmmunition.Name" },
   "removeButtons": { group: "player", label: "midi-qol.RemoveButtons.Name", choices: "removeButtonsOptions" },
   "doReactions": { group: "reactions", label: "midi-qol.DoReactions.Name", choices: "doReactionsOptions" },
+  "forcedMovementProvider": { group: "reactions", label: "midi-qol.ForcedMovementProvider.Name", hint: "midi-qol.ForcedMovementProvider.Hint", choices: "ForcedMovementProviderOptions" },
   "opportunityAttacks": { group: "reactions", label: "midi-qol.OpportunityAttacks.Name", hint: "midi-qol.OpportunityAttacks.Hint", choices: "OpportunityAttacksOptions" },
   "enforceMovement": { group: "reactions", label: "midi-qol.EnforceMovement.Name", hint: "midi-qol.EnforceMovement.Hint", choices: "EnforceMovementOptions" },
   "enforceBonusActions": { group: "reactions", label: "midi-qol.EnforceBonusActions.Name", hint: "midi-qol.EnforceReactions.Hint", choices: "EnforceReactionsOptions" },

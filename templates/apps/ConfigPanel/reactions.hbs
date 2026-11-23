@@ -66,6 +66,14 @@
         </div>
 
         <div class="form-group">
+            <label>{{localize "midi-qol.ForcedMovementProvider.Name"}}</label>
+            <select name="forcedMovementProvider" data-dtype="String">
+                {{selectOptions ForcedMovementProviderOptions selected=configSettings.forcedMovementProvider localize=true}}
+            </select>
+            <div class="notes midi-qol-faint">{{{localize "midi-qol.ForcedMovementProvider.Hint"}}}</div>
+        </div>
+
+        <div class="form-group">
             <label>{{localize "midi-qol.EnforceMovement.Name"}}</label>
             <select name="enforceMovement" data-dtype="String">
                 {{selectOptions EnforceMovementOptions selected=configSettings.enforceMovement localize=true}}

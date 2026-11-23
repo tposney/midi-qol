@@ -2,15 +2,15 @@ import type { Activity } from "../../../globals.js";
 import { configSettings } from "../../settings.js";
 import { canSee, checkIncapacitated, createConditionData, doReactions, evalAllConditionsAsync, getTokenDocument, hasNoReactionsMarker, hasUsedReaction, midiFlag } from "../../utils.js";
 import type { ResponseContributor } from "../responses/service.js";
-import { isDisengaged, speedFor } from "./movement.js";
+import { isDisengaged, isForcedAction, speedFor } from "./movement.js";
 
 /*
  * M6c: opportunity attacks. A creature leaving a hostile's reach by its own movement provokes; the move is split there
  * (decision 1: no regions): it is refused in preMoveToken and made again in two parts, up to the last space in reach,
  * the attack offered through midi's reaction prompt, then the rest (unless the mover can no longer move). Each part is
  * its own movement, so Ctrl+Z gives each back. Not provoking:
- *  - forced movement (a move given `midiForced: true`: midi's push and pull), teleports (Foundry's `displace` included),
- *    undo, a move given `midiOpportunity: { provokes: false }`;
+ *  - forced movement and teleports: a movement action costing none of its movement (isForcedAction: dnd5e's fall,
+ *    Foundry's displace, CAT's catForce, midi's forced: its push and pull), undo, `midiOpportunity: { provokes: false }`;
  *  - Disengaged (midi's status, Gambit's oaImmunity) unless the reactor has flags.midi-qol.ignoreDisengage;
  *  - flags.midi-qol.noOpportunityAttacks on the mover: a condition with the reactor as `target`, `movementAction` and
  *    `attackedThisTurn` (the mover attacked the reactor this turn: Mobile, Fancy Footwork), true for always (Flyby:
@@ -120,7 +120,7 @@ interface PlannedMove {
   pending?: { waypoints?: readonly PathWaypoint[] };
   autoRotate?: boolean; showRuler?: boolean; constrainOptions?: object;
 }
-interface MidiMoveOptions { midiForced?: boolean, midiOpportunity?: { provokes?: boolean, offered?: string[] } }
+interface MidiMoveOptions { midiOpportunity?: { provokes?: boolean, offered?: string[] } }
 
 const WAYPOINT_FIELDS = ["x", "y", "elevation", "width", "height", "depth", "shape", "level", "action", "snapped", "explicit", "checkpoint"];
 const waypoint = (w: PathWaypoint) => Object.fromEntries(WAYPOINT_FIELDS.filter(k => w[k] !== undefined).map(k => [k, w[k]]));
@@ -157,10 +157,9 @@ async function splitMove(mover: TokenDocument.Implementation, explicit: PathWayp
 /** preMoveToken: a move that leaves a hostile's reach is refused and made again split (async, after the hook) */
 function onPreMove(mover: TokenDocument.Implementation, move: PlannedMove, options: MidiMoveOptions): boolean | void {
   if (configSettings.opportunityAttacks !== "prompt") return;
-  if (options.midiForced || options.midiOpportunity?.provokes === false || ["undo", "paste", "config"].includes(move.method ?? "")) return;
+  if (options.midiOpportunity?.provokes === false || ["undo", "paste", "config"].includes(move.method ?? "")) return;
   const all = [...(move.passed?.waypoints ?? []), ...(move.pending?.waypoints ?? [])];
-  const actions = CONFIG.Token.movement?.actions as Record<string, { teleport?: boolean }> | undefined;
-  if (!all.length || all.some(w => w.action && actions?.[w.action]?.teleport)) return;
+  if (!all.length || all.some(w => isForcedAction(w.action))) return;
   const reactors = possibleReactors(mover);
   if (!reactors.length) return;
   const origin = move.origin ?? { x: mover.x, y: mover.y, elevation: mover.elevation, width: mover.width, height: mover.height };

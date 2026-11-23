@@ -3,6 +3,7 @@ import { i18nFormat } from "../../../midi-qol.js";
 import { getTokenDocument, toggleStatus } from "../../utils.js";
 import { budget, spend } from "./ledger.js";
 import { actionKindOf, movementBudget } from "./movementRules.js";
+import { registerForcedAction } from "../forcedMovement/service.js";
 
 export { actionKindOf, movementBudget };
 
@@ -81,6 +82,7 @@ export function isDisengaged(actor: Actor.Implementation | null | undefined): bo
 
 /** A use of a Dash or Disengage activity takes it (dnd5e's Cunning Action, CPR's Dash and Disengage items, a monster's) */
 export function setupMovementActions() {
+  registerForcedAction();
   Hooks.on("midi-qol.RollComplete", async (workflow: { activity?: { name?: string | null, identifier?: string, item?: Item.Implementation }, actor?: Actor.Implementation, aborted?: boolean }) => {
     if (workflow.aborted || !workflow.actor?.isOwner) return;
     const kind = actionKindOf(workflow.activity);
@@ -89,6 +91,21 @@ export function setupMovementActions() {
   });
 }
 
+
+/**
+ * Forced movement, in dnd5e's form: a movement action that uses none of the creature's movement (costMultiplier 0:
+ * dnd5e's fall, Foundry's displace, CAT's catForce, midi's forced) or a teleport. It costs nothing and never provokes.
+ */
+export function isForcedAction(action: string | undefined | null, token?: TokenDocument.Implementation): boolean {
+  if (!action) return false;
+  type CostFunction = (cost: number, from: object, to: object, distance: number, segment: object) => number;
+  const config = (CONFIG.Token.movement?.actions as Record<string, { teleport?: boolean, getCostFunction?: (token: object, options: object) => CostFunction }> | undefined)?.[action];
+  if (!config) return false;
+  if (config.teleport) return true;
+  // Foundry turns an action's costMultiplier into its cost function when it prepares the config: ask the function
+  try { return config.getCostFunction?.(token ?? {}, {})?.(1, {}, {}, 1, {}) === 0; }
+  catch { return false; }
+}
 
 /* M6b: the budget enforced on a move (preMoveToken, on the moving user's client) */
 
@@ -106,11 +123,10 @@ export type MoveVerdict = { verdict: "free" } | { verdict: "ok" | "warn" | "refu
 export function checkMovement(token: TokenDocument.Implementation, move: PlannedMove, options: { gm?: boolean, policy?: string } = {}): MoveVerdict {
   const policy = options.policy ?? configSettings.enforceMovement ?? "displayOnly";
   const waypoints = [...(move.passed?.waypoints ?? []), ...(move.pending?.waypoints ?? [])];
-  const actions = (CONFIG.Token as unknown as { movement?: { actions?: Record<string, { teleport?: boolean }> } }).movement?.actions ?? {};
-  // Never counted: the GM's moves, undo and paste, cost ignored (midi's push and pull), teleports (blink, displace)
+  // Never counted: the GM's moves, undo and paste, cost ignored, forced movement and teleports (isForcedAction)
   if (options.gm ?? game.user?.isGM) return { verdict: "free" };
   if (["undo", "paste", "config"].includes(move.method ?? "") || move.constrainOptions?.ignoreCost) return { verdict: "free" };
-  if (waypoints.some(w => w.action && actions[w.action]?.teleport)) return { verdict: "free" };
+  if (waypoints.some(w => isForcedAction(w.action))) return { verdict: "free" };
   const state = movementState(token);
   if (!state || !["warn", "enforce"].includes(policy)) return { verdict: "free" };
   const cost = (n: number | undefined) => Number.isFinite(n) ? Number(n) : 0;
@@ -125,9 +141,7 @@ export function checkMovement(token: TokenDocument.Implementation, move: Planned
 }
 
 export function setupMovementEnforcement() {
-  Hooks.on("preMoveToken", (token, move, operation) => {
-    // Forced movement (midi's push and pull) is never the creature's own
-    if ((operation as { midiForced?: boolean }).midiForced) return;
+  Hooks.on("preMoveToken", (token, move) => {
     let result: MoveVerdict;
     try { result = checkMovement(token, move); }
     catch (err) { console.warn("midi-qol | movement check failed; the move goes ahead", err); return; }
