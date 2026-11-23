@@ -139,7 +139,7 @@ If you prefer to configure settings manually, here's the recommended full automa
 | v12.4.27+ | v12 | v4.2+ | [manifest](https://gitlab.com/tposney/midi-qol/raw/v12dnd4/package/module.json) |
 | v13.0.52+ | v13 | v5.2.4+ / v5.3 | [manifest](https://github.com/tposney/midi-qol/releases/download/latest-v13/module.json) |
 | v14.0.x | v14 (14.368+) | v5.3 | [manifest](https://github.com/tposney/midi-qol/releases/download/latest-v14/module.json) |
-| v14.6.x | v14 (14.369+) | v6.0.x | [manifest](https://github.com/tposney/midi-qol/releases/download/v14.6.14/module.json) (14.6.14 is the last 14.6 release) |
+| v14.6.x | v14 (14.369+) | v6.0.x | [manifest](https://github.com/tposney/midi-qol/releases/download/v14.6.15/module.json) (14.6.15 is the last 14.6 release) |
 | v14.7.x | v14 (14.369+) | v6.1.x | [manifest](https://github.com/tposney/midi-qol/releases/download/latest-dnd6/module.json) |
 
 ## Required Modules

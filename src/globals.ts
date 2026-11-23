@@ -262,6 +262,8 @@ declare module "fvtt-types/configuration" {
       };
       "midi-qol"?: {
         actionSaveSuccess?: boolean;
+        /** Applied by a midi region rule: the region behaviour and the source effect */
+        regionRule?: { behavior?: string; effect?: string };
         castData?: {
           castLevel?: number;
           baseLevel?: number;
@@ -613,6 +615,8 @@ declare module "fvtt-types/configuration" {
         };
         cachedFor?: Item;
         dependentOn?: string;
+        /** dnd5e's last used roll choices, by activity id */
+        last?: Record<string, { ability?: string; ammunition?: string; attackMode?: string; mastery?: string }>;
         riders?: {
           activity?: string[];
         }
@@ -797,7 +801,7 @@ declare global {
     tokenAtPosition: typeof utils.tokenAtPosition;
     computeDistance: typeof utils.computeDistance;
     getDistance: typeof utils.getDistance;
-    playerWaits: { begin: typeof playerWaits.beginPlayerWait, track: typeof playerWaits.trackPlayerWait, settle: typeof playerWaits.settlePlayerWait, claim: typeof playerWaits.claimPlayerWait, known: typeof playerWaits.knownPlayerWaits };
+    playerWaits: { begin: typeof playerWaits.beginPlayerWait, track: typeof playerWaits.trackPlayerWait, settle: typeof playerWaits.settlePlayerWait, claim: typeof playerWaits.claimPlayerWait, known: typeof playerWaits.knownPlayerWaits, endOwnedBy: typeof playerWaits.endPlayerWaitsOwnedBy };
     addCardNote: typeof cardNotes.addCardNote;
     removeCardNote: typeof cardNotes.removeCardNote;
     registerCardNoteRenderer: typeof cardNotes.registerCardNoteRenderer;
@@ -875,7 +879,7 @@ declare global {
     computeToolAdvantage: typeof patching.computeToolAdvantage;
     ConfigPanel: typeof ConfigPanel;
     configSettings: () => typeof configSettings;
-    playerWaits: { begin: typeof playerWaits.beginPlayerWait, track: typeof playerWaits.trackPlayerWait, settle: typeof playerWaits.settlePlayerWait, claim: typeof playerWaits.claimPlayerWait, known: typeof playerWaits.knownPlayerWaits };
+    playerWaits: { begin: typeof playerWaits.beginPlayerWait, track: typeof playerWaits.trackPlayerWait, settle: typeof playerWaits.settlePlayerWait, claim: typeof playerWaits.claimPlayerWait, known: typeof playerWaits.knownPlayerWaits, endOwnedBy: typeof playerWaits.endPlayerWaitsOwnedBy };
     addCardNote: typeof cardNotes.addCardNote;
     removeCardNote: typeof cardNotes.removeCardNote;
     registerCardNoteRenderer: typeof cardNotes.registerCardNoteRenderer;

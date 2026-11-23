@@ -1,5 +1,21 @@
+### 14.7.1
+* Fixed: during a combat, an effect or item with a condition sometimes did nothing and logged an error (advantage, bonuses or effects that depend on a condition were skipped the second time the condition was checked).
+* Fixed: a macro or module that asks for a critical hit or a fumble gets one again; the attack and damage were rolled as ordinary rolls.
+* Fixed: the attack mode you pick in the attack dialog (one-handed, two-handed, thrown...) is offered first the next time you attack with that weapon. A mode chosen for you by a macro or the Versatile key is not remembered, and an off-hand attack stays off-hand.
+* Fixed: a character with a free casting of a reaction spell from a feat (Magic Initiate's Feather Fall, for example) was never asked about any reaction. The free casting is now offered as a reaction while it is unspent.
+* Fixed: when an effect makes an attack hit or miss automatically, the target was offered the wrong reactions (Shield on an attack that was going to hit anyway, or nothing on one forced to hit). A forced hit now offers the reactions for a hit, a forced miss those for a miss.
+* Fixed: when several creatures rolled saves or checks at the same moment (an area spell's targets, a contested roll), one creature could get another's advantage or automatic success or failure, and the other got none.
+* Fixed: if another creature rolled while your attack or damage roll dialog was open (a reaction, an opportunity attack, damage at the start of a turn), your roll could lose its critical hit and skip its ammunition.
+* Fixed: some uses stopped part way with the error `v0.valueOf is not a function`.
+* Fixed: an area that applies an effect to creatures entering it applied the effect twice to creatures already inside when it was cast.
+* Fixed: an area set to apply or remove an effect at the start or end of a turn, or when a token leaves, now does it then; it did it when the token entered.
+* Waiting on players: the badge now shows when a roll dialog opens for a player even though rolls are set to fast-forward (choosing how to throw a weapon, picking ammunition, holding the roll dialog key, a damage roll with a choice of damage type).
+* Waiting on players: a badge no longer stays up for a roll that is never made. It goes when the character does something else, when the card is deleted or the use is undone, and the player or the GM can dismiss it with *Not rolling*. With *Auto Check Hits* off, no damage roll is waited for after an attack.
+* Damage rolls on the chat card show the formula, then the dice, then the total, like attack rolls (the total came first).
+* An attack or damage roll made from a sheet button, a macro or another module while a use of that weapon is waiting for it now completes that use; it was posted as a separate roll and the use kept waiting.
+
 ### 14.7.0
-midi 14.7.0 requires dnd5e 6.1 and DAE 14.6.10. Worlds on dnd5e 6.0 stay on midi 14.6.x: Foundry warns before updating them to 14.7.0, and the last 14.6 release installs from https://github.com/tposney/midi-qol/releases/download/v14.6.14/module.json. midi's CAT integration requires Coven's Automation Toolkit 0.1.8.
+midi 14.7.0 requires dnd5e 6.1 and DAE 14.6.10. Worlds on dnd5e 6.0 stay on midi 14.6.x: Foundry warns before updating them to 14.7.0, and the last 14.6 release installs from https://github.com/tposney/midi-qol/releases/download/v14.6.15/module.json. midi's CAT integration requires Coven's Automation Toolkit 0.1.8.
 
 **What dnd5e 6.1 changes**
 
