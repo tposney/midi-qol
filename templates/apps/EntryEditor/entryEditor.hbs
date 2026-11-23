@@ -1,4 +1,14 @@
 <div class="midi-qol-entry-editor-root">
+{{#if sheetHead}}
+<header class="midi-qol-entry-sheet-head">
+    <img src="{{sheetHead.img}}" data-action="editImage" data-edit="img" alt="" width="48" height="48">
+    <div class="midi-qol-entry-sheet-name">
+        <input type="text" name="sheetName" value="{{sheetHead.name}}" placeholder="{{localize "Name"}}">
+        <details class="midi-qol-entry-sheet-description"><summary>{{localize "midi-qol.EntryEditor.Description"}}</summary>
+            <prose-mirror name="sheetDescription" value="{{sheetHead.description}}" toggled>{{{sheetHead.enriched}}}</prose-mirror></details>
+    </div>
+</header>
+{{/if}}
 <nav class="midi-qol-entry-views">
     {{#each views}}<button type="button" data-action="setView" data-view="{{value}}" class="{{#if active}}active{{/if}}" aria-pressed="{{#if active}}true{{else}}false{{/if}}">{{label}}</button>{{/each}}
     <span class="midi-qol-entry-views-gap"></span>

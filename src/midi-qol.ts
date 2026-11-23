@@ -1,7 +1,7 @@
 import { PlayerSettingsView } from "./module/apps/PlayerSettingsView.js";
 import { registerCardWaits } from "./module/lib/cardWaits.js";
 import { registerMidiActionSchemas } from "./module/lib/entries/actionSchemas.js";
-import { EntryEditor, registerEntryEditorControls } from "./module/apps/EntryEditor.js";
+import { EntryEditor, EntrySheet, registerEntryEditorControls, registerEntrySheet } from "./module/apps/EntryEditor.js";
 import { VisualsEditor, registerVisualsEditorControls } from "./module/apps/VisualsEditor.js";
 import { registerItemAutomationSection } from "./module/apps/itemAutomationSection.js";
 import { registerRollDialogBonuses } from "./module/lib/rollDialogBonuses.js";
@@ -454,6 +454,7 @@ Object.assign(globalThis.MidiQOL, {
     TargetConfirmationDialog,
     TroubleShooter,
     EntryEditor,
+    EntrySheet,
     VisualsEditor,
     PlayerSettingsView,
     UndoWorkflow,
@@ -556,6 +557,7 @@ Hooks.once('init', async function () {
   registerCues();
   registerRollDialogBonuses();
   registerEntryEditorControls();
+  registerEntrySheet();
   registerVisualsEditorControls();
   registerItemAutomationSection();
   registerCardWaits();

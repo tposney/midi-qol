@@ -25,7 +25,14 @@ import { activityCard, activityUpdate, BRANCH_EVENT, branchEntryId, isBranchEntr
  * flagged), or the whole entry as JSON. Saved only when every entry is valid.
  */
 
-const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
+const { DocumentSheetV2, HandlebarsApplicationMixin } = foundry.applications.api;
+
+/** The item an entry document belongs to (itself, an activity's, an item effect's); none for an effect on an actor */
+function entryRoot(document: EntryDocument): Item.Implementation | undefined {
+  const parent = (document as { parent?: unknown }).parent;
+  return isActivity(document) ? document.item : document instanceof Item ? document as Item.Implementation
+    : parent instanceof Item ? parent as Item.Implementation : undefined;
+}
 
 /** An activity, item or effect: what the editor reads and writes (method-style update, so a document's own fits) */
 interface EntryDocument {
@@ -251,7 +258,10 @@ export function entriesOfDocument(document: EntryDocument): Entry[] {
   return Array.isArray(list) ? foundry.utils.deepClone(list) as Entry[] : [];
 }
 
-export class EntryEditor extends HandlebarsApplicationMixin(ApplicationV2) {
+export class EntryEditor extends HandlebarsApplicationMixin(DocumentSheetV2)<
+  foundry.abstract.Document.Any,
+  foundry.applications.api.DocumentSheetV2.RenderContext<foundry.abstract.Document.Any>
+> {
   /** The item's documents that can hold entries (or the one document, for an effect on an actor) */
   #homes: Home[] = [];
   /** The home being edited */
@@ -285,13 +295,19 @@ export class EntryEditor extends HandlebarsApplicationMixin(ApplicationV2) {
   /** The "+ effect" form as filled in so far */
   #effectForm: { what: string, name: string, duration: string, units: string, repeat: boolean, param: string } = { what: "", name: "", duration: "", units: "", repeat: false, param: "" };
 
-  /** `options.view`: the view to open in (else the user's last) */
-  constructor(document: EntryDocument, options: { view?: View } & Record<string, unknown> = {}) {
+  /** `options.view`: the view to open in (else the user's last); `options.sheet`: the item's sheet (EntrySheet) */
+  constructor(document: EntryDocument, options: { view?: View, sheet?: boolean } & Record<string, unknown> = {}) {
     const { view, ...rest } = options;
-    super(rest);
-    const parent = (document as { parent?: unknown }).parent;
-    this.#root = isActivity(document) ? document.item : document instanceof Item ? document as Item.Implementation
-      : parent instanceof Item ? parent as Item.Implementation : undefined;
+    // A document sheet's document: the item an activity or an item's effect belongs to, else the effect itself
+    super({ ...rest, document: (entryRoot(document) ?? document) as foundry.abstract.Document.Any });
+    this.#load(document);
+    const last = game.settings.get(MODULE_ID, "EntryEditorView") as View;
+    this.#view = view ?? (VIEWS.includes(last) ? last : "sentence");
+  }
+
+  /** The item's (or the document's) homes and entries as stored, `document`'s home the one being edited */
+  #load(document: EntryDocument) {
+    this.#root = entryRoot(document);
     const root = this.#root;
     const activities = [...((root?.system as { activities?: Iterable<EntryDocument> } | undefined)?.activities ?? [])];
     const documents: EntryDocument[] = root ? [root as unknown as EntryDocument, ...activities, ...[...root.effects] as unknown as EntryDocument[]] : [document];
@@ -332,8 +348,6 @@ export class EntryEditor extends HandlebarsApplicationMixin(ApplicationV2) {
       home.label = game.i18n?.format(home.runByArea ? "midi-qol.EntryEditor.Home.activityRunByArea" : "midi-qol.EntryEditor.Home.activity", { name }) ?? home.label;
     }
     this.#at = Math.max(0, this.#homes.findIndex(home => same(home.document, document)));
-    const last = game.settings.get(MODULE_ID, "EntryEditorView") as View;
-    this.#view = view ?? (VIEWS.includes(last) ? last : "sentence");
   }
 
   get #jsonView() { return this.#view === "json"; }
@@ -348,6 +362,7 @@ export class EntryEditor extends HandlebarsApplicationMixin(ApplicationV2) {
       || (!!h.card?.area && Object.keys(this.#areaUpdates(h).activity).length > 0)
       || ((!!h.card?.basics || !!h.card?.basicsExtra) && (Object.keys(this.#basicsUpdates(h).activity).length > 0 || Object.keys(this.#basicsUpdates(h).item).length > 0)))
       || (!!this.#onUse && onUseString(this.#onUse.rows) !== this.#onUse.stored)
+      || Object.keys(this.#sheetUpdate()).length > 0
       || this.#homes.some(h => Object.keys(this.#weaponUpdates(h)).length > 0);
   }
 
@@ -384,6 +399,8 @@ export class EntryEditor extends HandlebarsApplicationMixin(ApplicationV2) {
   static DEFAULT_OPTIONS = {
     tag: "form" as const,
     classes: ["midi-qol", "midi-qol-entry-editor"],
+    // Opened from a button, beside the item's own sheet: not a sheet to configure; the item sheet (EntrySheet) is
+    sheetConfig: false, ownershipConfig: false, canImport: false,
     window: { title: "midi-qol.EntryEditor.Title", resizable: true, contentClasses: ["standard-form"] },
     position: { width: 760, height: 640 },
     form: { submitOnChange: true, closeOnSubmit: false, handler: EntryEditor.#onChange },
@@ -437,6 +454,24 @@ export class EntryEditor extends HandlebarsApplicationMixin(ApplicationV2) {
 
   get title() {
     return `${i18n("midi-qol.EntryEditor.Title")}: ${this.#root?.name ?? this.#document.name ?? ""}`;
+  }
+
+  /** Whether this is the item's sheet (EntrySheet) rather than an editor opened beside it */
+  get isItemSheet(): boolean {
+    return !!(this.options as { sheet?: boolean }).sheet;
+  }
+
+  /** An editor beside the sheet can be opened more than once for an item; the item's sheet once */
+  _initializeApplicationOptions(options: Parameters<foundry.applications.api.DocumentSheetV2<foundry.abstract.Document.Any>["_initializeApplicationOptions"]>[0]) {
+    const initialized = super._initializeApplicationOptions(options);
+    if (!(options as { sheet?: boolean }).sheet) (initialized as { uniqueId?: string }).uniqueId = `${this.constructor.name}-${foundry.utils.randomID()}`;
+    return initialized;
+  }
+
+  /** An editor beside the sheet keeps its drafts as they are: it isn't re-rendered when the item changes (the sheet is) */
+  async _onFirstRender(context: Parameters<foundry.applications.api.DocumentSheetV2<foundry.abstract.Document.Any>["_onFirstRender"]>[0], options: Parameters<foundry.applications.api.DocumentSheetV2<foundry.abstract.Document.Any>["_onFirstRender"]>[1]) {
+    await super._onFirstRender(context, options);
+    if (!this.isItemSheet) delete (this.document as unknown as { apps: Record<string, unknown> }).apps[this.id];
   }
 
   #draftOf(entry: Entry): Draft {
@@ -500,6 +535,7 @@ export class EntryEditor extends HandlebarsApplicationMixin(ApplicationV2) {
       hasEntry: !!entry,
       jsonView: this.#jsonView,
       sentenceView: this.#view === "sentence",
+      sheetHead: await this.#sheetHeadContext(),
       addWhat: this.#root ? { open: this.#addWhatOpen, kinds: [...NEW_KINDS.map(k => ({ value: k,
         label: i18n(`midi-qol.EntryEditor.AddWhat.${k}`), hint: i18n(`midi-qol.EntryEditor.AddWhat.${k}Hint`) })),
         ...(this.#addWhatOpen ? addKindDefs(this.#root).map(def => ({ value: `x:${def.id}`, label: i18n(def.label), hint: def.hint ? i18n(def.hint) : "" })) : [])] } : undefined,
@@ -1793,6 +1829,7 @@ export class EntryEditor extends HandlebarsApplicationMixin(ApplicationV2) {
   static async #onChange(this: EntryEditor, _event: Event, _form: HTMLFormElement, formData: foundry.applications.ux.FormDataExtended) {
     const draft = this.#drafts[this.#selected];
     const data = formData.object as Record<string, unknown>;
+    this.#readSheetHead(data);
     this.#readCard(data);
     this.#readSettings(data);
     this.#readChanges(data);
@@ -2159,8 +2196,58 @@ export class EntryEditor extends HandlebarsApplicationMixin(ApplicationV2) {
     // The item's on-use macros (midi prepares its parts from this string)
     if (this.#root && this.#onUse && onUseString(this.#onUse.rows) !== this.#onUse.stored)
       await this.#root.setFlag(MODULE_ID, "onUseMacroName", onUseString(this.#onUse.rows));
+    const head = this.#sheetUpdate();
+    if (this.#root && Object.keys(head).length) await this.#root.update(head);
     this.#saved = true;
-    await this.close();
+    // The item's sheet stays open on what was saved; an editor beside it closes
+    if (!this.isItemSheet) return void await this.close();
+    this.#reloadSaved();
+  }
+
+  /** After a save: everything read again from the item, the same home being edited */
+  #reloadSaved() {
+    const focus = this.#homes[this.#at]?.document ?? (this.#root as unknown as EntryDocument);
+    this.#saved = false;
+    this.#selected = 0;
+    this.#picker = undefined;
+    this.#expanded = false;
+    this.#only = undefined;
+    this.#cardOpen = this.#cardField = this.#cardPlace = undefined;
+    this.#addWhatOpen = false;
+    this.#sheetEdits = {};
+    this.#load(this.#root ? ((isActivity(focus) ? (this.#root.system as { activities?: { get(id: string): EntryDocument | undefined } }).activities?.get(String((focus as { id?: string | null }).id)) : undefined) ?? focus) : focus);
+    void this.render();
+  }
+
+  /** The sheet's header edits: name, image, description */
+  #sheetEdits: { name?: string, img?: string, description?: string } = {};
+
+  #readSheetHead(data: Record<string, unknown>) {
+    if (!this.isItemSheet || !this.#root) return;
+    if (typeof data.sheetName === "string") this.#sheetEdits.name = data.sheetName;
+    if (typeof data.img === "string" && data.img) this.#sheetEdits.img = data.img;
+    if (typeof data.sheetDescription === "string") this.#sheetEdits.description = data.sheetDescription;
+  }
+
+  /** The item update for the header's edits (only what changed) */
+  #sheetUpdate(): Record<string, unknown> {
+    const item = this.#root;
+    if (!item) return {};
+    const description = String(foundry.utils.getProperty(item, "system.description.value") ?? "");
+    const update: Record<string, unknown> = {};
+    if (this.#sheetEdits.name !== undefined && this.#sheetEdits.name.trim() && this.#sheetEdits.name !== item.name) update.name = this.#sheetEdits.name.trim();
+    if (this.#sheetEdits.img !== undefined && this.#sheetEdits.img !== item.img) update.img = this.#sheetEdits.img;
+    if (this.#sheetEdits.description !== undefined && this.#sheetEdits.description !== description) update["system.description.value"] = this.#sheetEdits.description;
+    return update;
+  }
+
+  /** The sheet's header: the item's image, name and description (as edited) */
+  async #sheetHeadContext() {
+    const item = this.#root;
+    if (!this.isItemSheet || !item) return undefined;
+    const description = this.#sheetEdits.description ?? String(foundry.utils.getProperty(item, "system.description.value") ?? "");
+    const enriched = await foundry.applications.ux.TextEditor.implementation.enrichHTML(description, { relativeTo: item, rollData: item.getRollData() });
+    return { name: this.#sheetEdits.name ?? item.name, img: this.#sheetEdits.img ?? item.img, description, enriched };
   }
 }
 
@@ -2248,4 +2335,34 @@ export function registerEntryEditorControls() {
       onClick: () => { if (activity) void offerAsRollBonus(activity); } };
     controls.push(offer);
   });
+}
+
+/**
+ * The entry editor as an item sheet ("Midi-QOL: Sentences" in Configure Sheet): an item set to it opens in the
+ * sentence view, with its image, name and description above; dnd5e's sheet a button away.
+ */
+export class EntrySheet extends EntryEditor {
+  constructor(options: { document: Item.Implementation } & Record<string, unknown>) {
+    super(options.document as unknown as EntryDocument, { ...options, sheet: true,
+      classes: ["midi-qol", "midi-qol-entry-editor", "midi-qol-entry-sheet"], sheetConfig: true, ownershipConfig: true,
+      actions: { dnd5eSheet: EntrySheet.#onDnd5eSheet } });
+  }
+
+  /** The header's controls, with dnd5e's sheet */
+  _getHeaderControls() {
+    return [...super._getHeaderControls(), { icon: "fa-solid fa-file-lines", label: "midi-qol.EntryEditor.DnD5eSheet", action: "dnd5eSheet" }];
+  }
+
+  /** dnd5e's own sheet for the item, without changing the item's sheet */
+  static #onDnd5eSheet(this: EntrySheet) {
+    const item = this.document as Item.Implementation;
+    const classes = (CONFIG.Item as unknown as { sheetClasses?: Record<string, Record<string, { cls: unknown, id: string }>> }).sheetClasses?.[String(item.type)] ?? {};
+    const own = Object.values(classes).find(c => c.id.startsWith("dnd5e."))?.cls as (new (options: { document: Item.Implementation }) => { render(options: { force: boolean }): unknown }) | undefined;
+    if (own) void new own({ document: item }).render({ force: true });
+  }
+}
+
+/** "Midi-QOL: Sentences" for every item type */
+export function registerEntrySheet() {
+  foundry.applications.apps.DocumentSheetConfig.registerSheet(Item, MODULE_ID, EntrySheet as never, { label: "midi-qol.EntryEditor.SheetLabel", makeDefault: false });
 }
