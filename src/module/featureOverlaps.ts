@@ -44,6 +44,12 @@ const statusMissing = (id: string | undefined) => !!id && id !== "none" && !CONF
   && !ceInterface?.findEffect?.({ effectId: id.replace("zce-", "ce-") });
 const deadStatusMissing = () => statusMissing(configSettings.midiDeadCondition) || statusMissing(configSettings.midiUnconsciousCondition);
 
+/** Simple Cover applies cover itself unless in library mode or midi calculates cover with it */
+const simpleCoverApplies = () => !!game.modules.get("simplecover5e")?.active && safeGetGameSetting("simplecover5e", "libraryMode") !== true
+  && configSettings.optionalRules?.coverCalculation !== "simplecover5e";
+const levelsAutoCoverApplies = () => !!game.modules.get("levelsautocover")?.active
+  && (safeGetGameSetting("levelsautocover", "automation") ?? "combatTurn") !== "never" && safeGetGameSetting("levelsautocover", "applyEffects") !== false;
+
 const FEATURE_OVERLAPS: FeatureOverlap[] = [
   { id: "wounded", sides: [
     { source: MIDI, setting: "midi-qol.AddWounded.Name", keys: ["midi-qol.ConfigSettings"], active: () => (configSettings.addWounded ?? 0) > 0 },
@@ -93,6 +99,17 @@ const FEATURE_OVERLAPS: FeatureOverlap[] = [
   ], fix: async () => {
     if (game.modules.get("gambits-premades")?.active) await safeSetGameSetting("gambits-premades", "Enable Opportunity Attack", false);
     if (game.modules.get("npc-tactics")?.active) await safeSetGameSetting("npc-tactics", "opportunityAttacks", false);
+  } },
+  // Each applies and clears the target's cover status; both clearing it at a turn change races (and DAE's Dependent
+  // Conditions copy of it): "ActiveEffect dnd5ecoverHalf00 does not exist". The fix keeps the one midi calculates cover with.
+  { id: "coverAutomation", sides: [
+    { source: "simplecover5e", setting: "midi-qol.Overlaps.Settings.simpleCoverAutomation", keys: ["simplecover5e.libraryMode", "midi-qol.ConfigSettings"],
+      active: simpleCoverApplies },
+    { source: "levelsautocover", setting: "midi-qol.Overlaps.Settings.levelsAutoCoverAutomation", keys: ["levelsautocover.automation", "levelsautocover.applyEffects"],
+      active: levelsAutoCoverApplies },
+  ], fix: async () => {
+    if (configSettings.optionalRules?.coverCalculation === "levelsautocover") await safeSetGameSetting("simplecover5e", "libraryMode", true);
+    else await safeSetGameSetting("levelsautocover", "automation", "never");
   } },
   // These replace the whole use, with no midi equivalent: the fix turns them off.
   { id: "damageReplaced", sides: [
