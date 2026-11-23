@@ -208,6 +208,8 @@ declare module "fvtt-types/configuration" {
     "midi-qol.playerControlsInvisibleTokens": boolean;
     "midi-qol.RollStats": Record<string, Stats>;
     "midi-qol.acknowledgedOverlaps": string[];
+    /** M21: the GM's Multiattack plans, by creature key (compendium source, else actor:<uuid>) */
+    "midi-qol.multiattackPlans": Record<string, import("./module/lib/multiattack.js").MultiattackPlan>;
     "midi-qol.ConfigSettings": typeof configSettings;
     "midi-qol.CriticalDamage": string;
     "midi-qol.CriticalDamageGM": string;

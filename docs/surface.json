@@ -138,6 +138,7 @@
     "MQfromActorUuid",
     "MQfromUuid",
     "MQOnUseOptions",
+    "multiattack",
     "outcomes",
     "planTeleport",
     "playerFor",

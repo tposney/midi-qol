@@ -5,6 +5,7 @@ import { hudApi, registerHudSetting, setupHuds } from "./module/services/turnMod
 import { registerTurnHudConfig } from "./module/apps/TurnHudConfig.js";
 import { setupArgon } from "./module/services/turnModel/argon.js";
 import { clickToAttackApi, setupClickToAttack } from "./module/services/clickToAttack/service.js";
+import { multiattackApi, setupMultiattackPlans } from "./module/services/multiattack/plans.js";
 import { setupInteractionsHUD } from "./module/services/interactions/hud.js";
 import { registerDefaultInteractions } from "./module/services/interactions/defaults.js";
 import { registerGrappleInteractions } from "./module/services/interactions/grapple.js";
@@ -442,6 +443,8 @@ Object.assign(globalThis.MidiQOL, {
   hud: hudApi,
   // M7: click to attack (prime an attack, then click a token; Alt+click; the midi-qol.claimClick hook)
   attack: clickToAttackApi,
+  // M21: a creature's Multiattack plan (the GM's, registered ones, midi's table from the books, the text parsed, a guess)
+  multiattack: multiattackApi,
   // Section 18, rule 4: anything's TokenDocument, and a TokenDocument's canvas Token (lib/tokenResolver.ts)
   tokenFor, tokenOf, isEphemeralToken,
   TokenDocumentSet,
@@ -712,6 +715,7 @@ Hooks.once('init', async function () {
   // Register custom sheets (if any)
   initPatching();
   setupClickToAttack();
+  setupMultiattackPlans();
   registerDamageApplication();
   registerDamageMessageSummary();
   addDiceTermModifiers();

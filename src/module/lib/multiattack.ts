@@ -294,18 +294,19 @@ export function parseMultiattack(html: string, options: ParseOptions = {}): Pars
  */
 
 export type PlanRef = string;
-export interface PlanGroup { n: Count, refs: PlanRef[] }
+/** A shipped plan holds no text from the books: `true` marks a count rule, condition or notes to read from the creature's own description */
+export interface PlanGroup { n: number | "any" | { formula: string } | { text: string | true }, refs: PlanRef[] }
 export interface PlanOption {
   groups: PlanGroup[];
   extra: { refs: PlanRef[], ifAvailable?: boolean }[];
-  condition?: string;
+  condition?: string | true;
   limits?: { refs: PlanRef[], max: number }[];
 }
 export interface PlanReplace { n: number | "any", refs: PlanRef[], of?: PlanRef[] }
 export interface MultiattackPlan {
   options: PlanOption[];
   replace: PlanReplace[];
-  notes?: string[];
+  notes?: string[] | true;
   /** References that matched none of the creature's items */
   unresolved?: string[];
 }

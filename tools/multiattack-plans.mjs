@@ -73,6 +73,12 @@ for (const file of readdirSync(corpusDir).filter(f => f.endsWith(".json")).sort(
   }
   total += Object.keys(sorted).length;
 }
+// The packs midi has plans for (the runtime fetches only these)
+{
+  const index = JSON.stringify(readdirSync(corpusDir).filter(f => f.endsWith(".json")).map(f => f.replace(/\.json$/, "")).sort(), null, 1) + "\n";
+  const target = new URL("index.json", outDir);
+  if ((existsSync(target) ? readFileSync(target, "utf8") : null) !== index) { changed++; if (!check) writeFileSync(target, index); }
+}
 for (const uuid of Object.keys(hand)) if (!usedHand.has(uuid)) problems.push(`tools/multiattack-hand.json: ${uuid} matches no creature in the corpus`);
 console.log(`${total} plans; ${changed} file(s) ${check ? "differ" : "changed"}`);
 if (problems.length) { console.log(`\n${problems.length} left out (add a hand plan in tools/multiattack-hand.json):`); problems.forEach(p => console.log("  " + p)); }
