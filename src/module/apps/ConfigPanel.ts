@@ -1,4 +1,3 @@
-import { listHuds } from "../services/turnModel/hud.js";
 import { chooseJsonFile } from "../lib/fileDialogs.js";
 import { registeredSettings, settingValue } from "../lib/settingsRegistry.js";
 import { providers as servicesProviders } from "../api/services.js";
@@ -224,8 +223,6 @@ export class ConfigPanel extends HandlebarsApplicationMixin(ApplicationV2) {
       RecordAOOOptions: recordAOOOptions,
       EnforceReactionsOptions: EnforceReactionsOptions,
       EnforceMovementOptions: EnforceMovementOptions,
-      // M7: the registered HUDs
-      HudOptions: { none: i18n("midi-qol.Hud.none"), ...Object.fromEntries(listHuds().map(h => [h.id, h.label])) },
       OpportunityAttacksOptions: OpportunityAttacksOptions,
       ForcedMovementProviderOptions: ForcedMovementProviderOptions,
       ProneStandingOptions: ProneStandingOptions,

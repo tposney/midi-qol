@@ -1,14 +1,4 @@
 <section id="midi-config-interactions" class="tab midi-scrollable-list{{#if tab.active}} active{{/if}}" data-group="{{tab.group}}" data-tab="{{tab.id}}">
-    <div class="midi-qol-box">
-        {{localize "midi-qol.Config.Box.hud"}}
-        <div class="form-group">
-            <label>{{localize "midi-qol.Hud.Name"}}</label>
-            <select name="hud" data-dtype="String">
-                {{selectOptions HudOptions selected=configSettings.hud}}
-            </select>
-            <div class="notes midi-qol-faint">{{{localize "midi-qol.Hud.Hint"}}}</div>
-        </div>
-    </div>
 
     <div class="midi-qol-box">
         {{localize "midi-qol.Config.Box.movement"}}

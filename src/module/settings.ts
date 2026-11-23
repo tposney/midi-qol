@@ -144,8 +144,6 @@ export class ConfigSettings {
   objectInteractions = false;
   /** M8: who makes grapples: auto (CAT's when CAT is active), midi-qol, cat */
   grappleProvider = "auto";
-  /** M7: the HUD in use (a registered HUD's id; none) */
-  hud = "none";
   enforceSingleWeaponTarget: boolean = false;
   gmAttackDisplay: string = "full";
   gmDamageDisplay: string = "full";
@@ -664,7 +662,6 @@ export let fetchParams = () => {
   if (configSettings.interactions === undefined) configSettings.interactions = true;
   if (configSettings.objectInteractions === undefined) configSettings.objectInteractions = false;
   if (!configSettings.grappleProvider) configSettings.grappleProvider = "auto";
-  if (!configSettings.hud) configSettings.hud = "none";
   //@ts-expect-error legacy boolean value
   if (configSettings.autoItemEffects === false) configSettings.autoItemEffects = "off";
   if (configSettings.playerDamageCard === undefined) configSettings.playerDamageCard = "none";

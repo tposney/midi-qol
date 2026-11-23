@@ -1,0 +1,34 @@
+<div class="midi-qol-turn-hud-body">
+    {{formGroup choiceField value=choice localize=true}}
+    {{#if missing}}<p class="hint midi-qol-turn-hud-missing">{{localize "midi-qol.Hud.Missing"}}</p>{{/if}}
+    {{#if credit}}<p class="hint midi-qol-turn-hud-credit">{{{credit}}}</p>{{/if}}
+    {{#if ownSettings}}
+    <div class="form-group">
+        <label>{{localize "midi-qol.Hud.OwnSettings"}}</label>
+        <div class="form-fields"><button type="button" data-action="hudOwnSettings"><i class="fa-solid fa-gear"></i> {{localize "midi-qol.Hud.Configure"}}</button></div>
+    </div>
+    {{/if}}
+    {{#if hudTabs.length}}
+    <nav class="tabs" data-group="hud">
+        {{#each hudTabs}}
+        <a data-action="tab" data-group="hud" data-tab="{{id}}" class="{{#if active}}active{{/if}}">{{#if icon}}<i class="{{icon}}"></i> {{/if}}{{label}}</a>
+        {{/each}}
+    </nav>
+    <div class="midi-qol-turn-hud-tabs-body">
+        {{#each hudTabs}}
+        <section class="tab{{#if active}} active{{/if}}" data-group="hud" data-tab="{{id}}">
+            {{#each entries}}
+            {{formGroup field value=value input=input localize=true}}
+            {{/each}}
+            {{#each tools}}
+            <div class="form-group">
+                <label>{{label}}</label>
+                <div class="form-fields"><button type="button" data-action="hudTool" data-index="{{index}}"><i class="{{icon}}"></i> {{button}}</button></div>
+                {{#if hint}}<p class="hint">{{hint}}</p>{{/if}}
+            </div>
+            {{/each}}
+        </section>
+        {{/each}}
+    </div>
+    {{/if}}
+</div>

@@ -2566,3 +2566,14 @@ body.midi-qol-hide-gambit-mirrors .gps-dialog-mirror:not(.midi-qol-gambit-shown)
 .midi-qol-entry-editor .midi-qol-card-popover button[data-action="removeAreaGroup"] { margin-top: 0.5rem; }
 .midi-qol-entry-editor .midi-qol-home-choice { border-bottom: 1px dashed var(--color-border-light-2, #999); padding-bottom: 0.3rem; margin-bottom: 0.3rem; }
 .midi-qol-entry-editor .midi-qol-home-choice-id { flex: 0 0 8rem; font-family: var(--font-mono, monospace); }
+
+/* Turn HUD: core's hotbar hidden when a HUD replaces it, or with none */
+body.midi-qol-no-hotbar #hotbar { display: none; }
+.midi-qol-hud-switcher { position: fixed; z-index: calc(var(--z-index-tooltip, 100) + 1); margin: 0; padding: 4px; list-style: none;
+  background: var(--color-cool-5, #1c1c24); border: 1px solid var(--color-border, #444); border-radius: 6px; box-shadow: 0 2px 8px #0008; }
+.midi-qol-hud-switcher button { display: flex; gap: 6px; align-items: center; width: 100%; justify-content: flex-start; white-space: nowrap; }
+.midi-qol-hud-switcher button.active { font-weight: bold; }
+.midi-qol-hud-switcher-settings { border-top: 1px solid var(--color-border, #444); margin-top: 4px; padding-top: 4px; }
+.midi-qol-turn-hud .midi-qol-turn-hud-tabs-body { flex: 1; min-height: 0; }
+.midi-qol-turn-hud .midi-qol-turn-hud-credit { font-style: italic; }
+.midi-qol-turn-hud nav.tabs a { display: flex; flex-direction: row; gap: 0.3rem; align-items: center; justify-content: center; white-space: nowrap; }

@@ -1,7 +1,8 @@
 import { isEphemeralToken, tokenFor, tokenOf } from "./module/lib/tokenResolver.js";
 import { interactionsApi } from "./module/services/interactions/registry.js";
 import { setupTurnModel, turnModelApi } from "./module/services/turnModel/model.js";
-import { hudApi, setupHuds } from "./module/services/turnModel/hud.js";
+import { hudApi, registerHudSetting, setupHuds } from "./module/services/turnModel/hud.js";
+import { registerTurnHudConfig } from "./module/apps/TurnHudConfig.js";
 import { setupInteractionsHUD } from "./module/services/interactions/hud.js";
 import { registerDefaultInteractions } from "./module/services/interactions/defaults.js";
 import { registerGrappleInteractions } from "./module/services/interactions/grapple.js";
@@ -685,6 +686,8 @@ Hooks.once('init', async function () {
 
   // Register custom module settings
   registerSettings();
+  registerHudSetting();
+  registerTurnHudConfig();
   setupCompatibilityLine();
   // From 14.8.0 token sets give TokenDocuments whatever the setting says
   setupTokenSetMode(isRemoved("14.8.0") || !!game.settings.get("midi-qol", "tokenDocumentSets"));
