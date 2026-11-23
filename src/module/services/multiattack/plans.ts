@@ -1,5 +1,6 @@
 import { defineService, entries, reportServiceProblem } from "../../api/services.js";
-import { openMultiattack, openRun, setupMultiattackRuns } from "./run.js";
+import { openMultiattack, openRun } from "./run.js";
+import { multiattackState } from "./service.js";
 import { MultiattackRunSheet, setupMultiattackSheet } from "../../apps/multiattack/MultiattackRunSheet.js";
 import { MultiattackPlanEditor, registerMultiattackSection } from "../../apps/multiattack/MultiattackPlanEditor.js";
 import { parseMultiattack, resolvePlan, slug, tokenize, type MultiattackPlan, type PlanItem, type PlanRef } from "../../lib/multiattack.js";
@@ -240,7 +241,6 @@ export async function multiattackPlan(actor: Actor.Implementation | null | undef
 }
 
 export function setupMultiattackPlans() {
-  setupMultiattackRuns();
   setupMultiattackSheet();
   registerMultiattackSection();
   game.settings?.register("midi-qol", SETTING, { scope: "world", config: false, type: Object, default: {} });
@@ -257,6 +257,8 @@ export const multiattackApi = {
   resolve: resolvePlan,
   // M21b: the open run (this turn's), opening one (as using Multiattack does), the run sheet
   open: (actor: Actor.Implementation) => openRun(actor)?.run,
+  // The active multiattack provider's state (midi's or a replacement's)
+  state: multiattackState,
   start: openMultiattack,
   sheet: (actor: Actor.Implementation) => MultiattackRunSheet.show(actor),
   edit: (actor: Actor.Implementation) => MultiattackPlanEditor.open(actor)

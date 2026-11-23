@@ -1,11 +1,11 @@
 import type { Activity } from "../../../globals.js";
 import type { Workflow } from "../../Workflow.js";
 import { fitUses, nextUses, slug, type MultiattackPlan, type PlanFit } from "../../lib/multiattack.js";
-import { registerCostContributor } from "../economy/cost.js";
+import { defineMultiattackService, type MultiattackProvider, type MultiattackState } from "./service.js";
 import { isMultiattackItem, multiattackItem, multiattackPlan, spellInfo, type PlanSource } from "./plans.js";
 
 /*
- * M21b: using a Multiattack (M21 plan, 21b). Using the Multiattack feature (its activity) opens its plan for the turn,
+ * M21b: midi's multiattack provider (service.ts; M21 plan, 21b). Using the Multiattack feature (its activity) opens its plan for the turn,
  * on the feature (flags.midi-qol.multiattackRun, stamped with the combat, round and turn: a later turn closes it; out of
  * combat it lasts until the next Multiattack). While it is open, a use that fits the plan costs no action (a cost
  * contributor, so charging, issues and the turn model agree) and is recorded in it; the run sheet lists what's left as
@@ -133,7 +133,7 @@ export async function openMultiattack(actor: Actor.Implementation): Promise<Mult
 }
 
 /** After a use is charged: a Multiattack opens its plan; a use that fits the open plan is recorded in it */
-export async function multiattackAfterCharge(workflow: Workflow) {
+async function afterCharge(workflow: Workflow) {
   const actor = workflow.actor as Actor.Implementation | undefined;
   const activity = workflow.activity as ActivityLike | undefined;
   if (!actor || !activity?.item) return;
@@ -148,30 +148,45 @@ export async function multiattackAfterCharge(workflow: Workflow) {
   });
 }
 
-export function setupMultiattackRuns() {
-  // A use that fits the open plan costs no action (charging, issues and the turn model all read the cost)
-  registerCostContributor("midi-qol.multiattack", ({ activity, actor, cost }) => {
-    if (!cost.action) return undefined;
-    const used = activity as ActivityLike;
-    if (!used.item || isMultiattackItem(used.item)) return undefined;
-    const open = openRun(actor);
-    if (!open || !runFit(actor, open.run, useKeys(used))) return undefined;
-    return { ...cost, action: 0 };
+/** A use that fits the open plan costs no action */
+function free({ activity, actor }: { activity: Activity, actor: Actor.Implementation }): boolean {
+  const used = activity as ActivityLike;
+  if (!used.item || isMultiattackItem(used.item)) return false;
+  const open = openRun(actor);
+  return !!open && !!runFit(actor, open.run, useKeys(used));
+}
+
+/** A recorded use's targets, hit and damage */
+function completed(workflow: Workflow) {
+  const actor = workflow.actor as Actor.Implementation | undefined;
+  const open = openRun(actor);
+  if (!open || !workflow.id || !open.run.uses.some(u => u.workflowId === workflow.id)) return;
+  const targets = [...(workflow.targets?.documents ?? [])].map(t => t.name ?? "");
+  const hit = workflow.hitTargets?.size;
+  void updateRun(open.item, run => {
+    const use = run.uses.find(u => u.workflowId === workflow.id);
+    if (!use) return undefined;
+    use.targets = targets;
+    if ((workflow.activity as ActivityLike | undefined)?.type === "attack") use.hit = (hit ?? 0) > 0;
+    if (workflow.damageTotal) use.damage = workflow.damageTotal;
+    return run;
   });
-  // Each use's targets, hit and damage, when it completes
-  Hooks.on("midi-qol.RollComplete" as never, ((workflow: Workflow) => {
-    const actor = workflow.actor as Actor.Implementation | undefined;
-    const open = openRun(actor);
-    if (!open || !workflow.id || !open.run.uses.some(u => u.workflowId === workflow.id)) return;
-    const targets = [...(workflow.targets?.documents ?? [])].map(t => t.name ?? "");
-    const hit = workflow.hitTargets?.size;
-    void updateRun(open.item, run => {
-      const use = run.uses.find(u => u.workflowId === workflow.id);
-      if (!use) return undefined;
-      use.targets = targets;
-      if ((workflow.activity as ActivityLike | undefined)?.type === "attack") use.hit = (hit ?? 0) > 0;
-      if (workflow.damageTotal) use.damage = workflow.damageTotal;
-      return run;
-    });
-  }) as never);
+}
+
+function state(actor: Actor.Implementation): MultiattackState | undefined {
+  const open = openRun(actor);
+  if (!open) return undefined;
+  const fit = runFit(actor, open.run);
+  const allowed = nextActivities(actor, open.run).map(a => a.uuid);
+  return {
+    source: open.run.source, attacksLeft: fit && Number.isFinite(fit.attacksLeft) ? fit.attacksLeft : null,
+    made: open.run.uses.length, complete: allowed.length === 0, allowed, used: open.run.uses.map(u => u.activityUuid)
+  };
+}
+
+export const midiMultiattack: MultiattackProvider = { afterCharge, free, completed, state };
+
+/** midi's provider (the default of the multiattack service) */
+export function defineMidiMultiattack() {
+  defineMultiattackService(midiMultiattack);
 }

@@ -8,6 +8,7 @@ import { clickToAttackApi, setupClickToAttack } from "./module/services/clickToA
 import { defineMultiattackPlansService, multiattackApi, setupMultiattackPlans } from "./module/services/multiattack/plans.js";
 // midi's Multiattack table registers as another module would (in midi-qol.registerServices)
 import "./module/services/multiattack/official.js";
+import { defineMidiMultiattack } from "./module/services/multiattack/run.js";
 import { setupInteractionsHUD } from "./module/services/interactions/hud.js";
 import { registerDefaultInteractions } from "./module/services/interactions/defaults.js";
 import { registerGrappleInteractions } from "./module/services/interactions/grapple.js";
@@ -611,6 +612,7 @@ Hooks.once('init', async function () {
   defineSettingNeedsService();
   defineTokenVisualsService();
   defineMultiattackPlansService();
+  defineMidiMultiattack();
   registerTokenVisualProviders();
   setupTokenVisuals();
   setupSequencerLevelsFix();
