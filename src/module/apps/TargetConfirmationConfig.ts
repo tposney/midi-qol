@@ -1,6 +1,12 @@
 import { i18n } from "../../midi-qol.js"
+import type { DeepPartial } from "fvtt-types/utils";
 import { defaultTargetConfirmationSettings, targetConfirmation } from "../settings.js";
+import { playerSetting, setPlayerSetting } from "./PlayerSettingsView.js";
 const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
+
+function targetConfirmationSetting() {
+  return game.settings!.settings.get("midi-qol.TargetConfirmation" as never) as unknown as Parameters<typeof playerSetting>[0];
+}
 
 export class TargetConfirmationConfig extends HandlebarsApplicationMixin(ApplicationV2) {
   gridMappings = {
@@ -14,7 +20,21 @@ export class TargetConfirmationConfig extends HandlebarsApplicationMixin(Applica
       "midi-qol-grid8": {x: 0, y: 1},
       "midi-qol-grid9": {x: 1, y: 1}
     };
-  selectedPosition: {x: number, y: number} = targetConfirmation.gridPosition ?? foundry.utils.duplicate(defaultTargetConfirmationSettings.gridPosition);
+  /** The player whose settings these are (Players' settings opens it for one); none: the current user's */
+  userId: string | undefined;
+  /** The settings edited: the current user's live ones, or a copy of the player's */
+  settings: typeof defaultTargetConfirmationSettings;
+  selectedPosition: {x: number, y: number};
+
+  constructor({ userId: forUser, ...options }: { userId?: string } & DeepPartial<foundry.applications.api.ApplicationV2.Configuration> = {}) {
+    const userId = forUser && forUser !== game.user?.id ? forUser : undefined;
+    super(userId ? { ...options, id: `midi-qol-target-confirmation-config-${userId}` } : options);
+    this.userId = userId;
+    this.settings = userId
+      ? foundry.utils.mergeObject(foundry.utils.deepClone(defaultTargetConfirmationSettings), (playerSetting(targetConfirmationSetting(), userId) ?? {}) as object, { inplace: false })
+      : targetConfirmation;
+    this.selectedPosition = this.settings.gridPosition ?? foundry.utils.duplicate(defaultTargetConfirmationSettings.gridPosition);
+  }
 
   static override PARTS = {
     main: { template: "modules/midi-qol/templates/apps/TargetConfirmationConfig/targetConfirmationConfig.hbs" }
@@ -46,7 +66,7 @@ export class TargetConfirmationConfig extends HandlebarsApplicationMixin(Applica
     checkboxes.forEach((checkbox) => {
       checkbox.addEventListener("click", () => {
         // @ts-expect-error
-        targetConfirmation[checkbox.name] = !targetConfirmation[checkbox.name];
+        this.settings[checkbox.name] = !this.settings[checkbox.name];
         this.render({force: true});
       })
     })
@@ -63,18 +83,20 @@ export class TargetConfirmationConfig extends HandlebarsApplicationMixin(Applica
   }
 
   get title() {
-    return i18n("Target Confirmation Config") ?? "Target Confirmation Config";
+    const title = i18n("Target Confirmation Config") ?? "Target Confirmation Config";
+    return this.userId ? `${title}: ${game.users?.get(this.userId)?.name ?? ""}` : title;
   }
 
   async _prepareContext(options) {
     const context: any = await super._prepareContext(options);
-    context.targetConfirmation = targetConfirmation;
+    context.targetConfirmation = this.settings;
     return context;
   }
 
   async _preClose(options) {
-    targetConfirmation.gridPosition = this.selectedPosition;
-    await game.settings.set("midi-qol", "TargetConfirmation", targetConfirmation);
+    this.settings.gridPosition = this.selectedPosition;
+    if (this.userId) await setPlayerSetting(targetConfirmationSetting(), this.userId, this.settings);
+    else await game.settings.set("midi-qol", "TargetConfirmation", this.settings);
   }
 
   static async #onSubmit(this: TargetConfirmationConfig, event, target) {

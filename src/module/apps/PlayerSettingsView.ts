@@ -10,6 +10,15 @@ const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
 
 type SettingConfig = { key: string, namespace: string, scope: string, name?: string, type?: unknown, choices?: Record<string, string>, default?: unknown };
 
+/** Object-valued settings: no grid input (a text box would save a string over the object); their editor, opened for one player */
+const OBJECT_EDITORS: Record<string, (userId: string) => void> = {
+  TargetConfirmation: userId => {
+    void import("./TargetConfirmationConfig.js").then(({ TargetConfirmationConfig }) => new TargetConfirmationConfig({ userId }).render({ force: true }));
+  }
+};
+const isObjectSetting = (setting: SettingConfig) => setting.type === Object || setting.type === Array;
+const NAMES: Record<string, string> = { TargetConfirmation: "midi-qol.TargetConfirmationConfig.Name" };
+
 function midiUserSettings(): SettingConfig[] {
   return [...(game.settings?.settings.values() ?? [])].map(s => s as unknown as SettingConfig)
     .filter(s => s.namespace === MODULE_ID && s.scope === "user");
@@ -41,7 +50,8 @@ export class PlayerSettingsView extends HandlebarsApplicationMixin(ApplicationV2
     classes: ["midi-qol", "midi-qol-player-settings"],
     window: { title: "midi-qol.PlayerSettings.Title", resizable: true, contentClasses: ["standard-form"] },
     position: { width: 720, height: "auto" as const },
-    form: { submitOnChange: true, closeOnSubmit: false, handler: PlayerSettingsView.#onChange }
+    form: { submitOnChange: true, closeOnSubmit: false, handler: PlayerSettingsView.#onChange },
+    actions: { editObject: PlayerSettingsView.#onEditObject, resetObject: PlayerSettingsView.#onResetObject }
   };
 
   static PARTS = { table: { template: "modules/midi-qol/templates/apps/PlayerSettings/playerSettings.hbs", scrollable: [""] } };
@@ -50,10 +60,15 @@ export class PlayerSettingsView extends HandlebarsApplicationMixin(ApplicationV2
     const context = await super._prepareContext(options);
     const players = (game.users?.contents ?? []).filter(u => !u.isGM);
     const rows = midiUserSettings().map(setting => ({
-      label: i18n(setting.name ?? setting.key),
+      label: i18n(setting.name ?? NAMES[setting.key] ?? setting.key),
       cells: players.map(user => {
         const value = playerSetting(setting, user.id!);
         const name = `${setting.key}|${user.id}`;
+        if (isObjectSetting(setting)) {
+          const changed = !foundry.utils.isEmpty(foundry.utils.diffObject((setting.default ?? {}) as object, (value ?? {}) as object));
+          return { name, object: true, status: i18n(changed ? "midi-qol.PlayerSettings.Changed" : "midi-qol.PlayerSettings.Default"),
+            changed, editable: !!OBJECT_EDITORS[setting.key], key: setting.key, userId: user.id };
+        }
         if (setting.type === Boolean) return { name, checkbox: true, checked: !!value };
         if (setting.choices) return { name, options: Object.entries(setting.choices).map(([v, l]) => ({ value: v, label: i18n(l), selected: v === String(value) })) };
         return { name, text: true, value: value ?? "" };
@@ -67,9 +82,21 @@ export class PlayerSettingsView extends HandlebarsApplicationMixin(ApplicationV2
     if (!input?.name?.includes("|")) return;
     const [key, userId] = input.name.split("|");
     const setting = midiUserSettings().find(s => s.key === key);
-    if (!setting) return;
+    if (!setting || isObjectSetting(setting)) return;
     let value: unknown = input instanceof HTMLInputElement && input.type === "checkbox" ? input.checked : input.value;
     if (setting.type === Number) value = Number(value);
     await setPlayerSetting(setting, userId, value);
+  }
+
+  static #onEditObject(this: PlayerSettingsView, _event: PointerEvent, target: HTMLElement) {
+    const { key, user } = target.dataset;
+    if (key && user) OBJECT_EDITORS[key]?.(user);
+  }
+
+  static async #onResetObject(this: PlayerSettingsView, _event: PointerEvent, target: HTMLElement) {
+    const setting = midiUserSettings().find(s => s.key === target.dataset.key);
+    if (!setting || !target.dataset.user) return;
+    await setPlayerSetting(setting, target.dataset.user, foundry.utils.deepClone(setting.default ?? {}));
+    void this.render();
   }
 }

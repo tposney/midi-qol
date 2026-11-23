@@ -12,6 +12,9 @@
                 {{#each cells}}
                 <td>
                     {{#if checkbox}}<input type="checkbox" name="{{name}}" {{#if checked}}checked{{/if}}>
+                    {{else if object}}<span class="{{#unless changed}}midi-qol-faint{{/unless}}">{{status}}</span>
+                    {{#if editable}}<button type="button" class="inline-control icon fa-solid fa-pen" data-action="editObject" data-key="{{key}}" data-user="{{userId}}" data-tooltip="{{localize "midi-qol.PlayerSettings.Edit"}}"></button>{{/if}}
+                    {{#if changed}}<button type="button" class="inline-control icon fa-solid fa-rotate-left" data-action="resetObject" data-key="{{key}}" data-user="{{userId}}" data-tooltip="{{localize "midi-qol.PlayerSettings.Reset"}}"></button>{{/if}}
                     {{else if options}}<select name="{{name}}">{{#each options}}<option value="{{value}}" {{#if selected}}selected{{/if}}>{{label}}</option>{{/each}}</select>
                     {{else}}<input type="text" name="{{name}}" value="{{value}}">{{/if}}
                 </td>
