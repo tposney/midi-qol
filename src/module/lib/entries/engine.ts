@@ -4,6 +4,7 @@ import type { Workflow } from "../../Workflow.js";
 import type { Activity } from "../../../globals.js";
 import { createConditionData, evalCondition, expireEffects, hasUsedReaction, setReactionUsed } from "../../utils.js";
 import { getDistance } from "../../services/distance/service.js";
+import { meleeReach } from "../../services/economy/reach.js";
 import { unTimedExecuteAsGM } from "../../GMAction.js";
 import { currentKept, keepRecord, keepStamp, limitKey, limitStamp, selectGroups, spendStoredLimit, withinLimit, type CombatPosition, type KeptRecord, type StoredLimit } from "./limits.js";
 import type { Entry, EntryAction, EntryHome, EntryWho, FoundEntry } from "./types.js";
@@ -291,15 +292,8 @@ function eventToken(context: EventContext): TokenDocument.Implementation | undef
   return context.actor.getActiveTokens(false, true)[0] as TokenDocument.Implementation | undefined;
 }
 
-/** A creature's reach: its longest equipped melee weapon's, else 5 */
-function reachOf(actor: Actor.Implementation): number {
-  let reach = 5;
-  for (const item of actor.items) {
-    const system = item.system as { equipped?: boolean, range?: { reach?: number | null }, type?: { value?: string } };
-    if (["weapon"].includes(item.type) && system.equipped && system.range?.reach) reach = Math.max(reach, Number(system.range.reach) || 0);
-  }
-  return reach;
-}
+/** A creature's reach: the longest of its melee attacks (services/economy/reach.ts, as opportunity attacks measure it) */
+const reachOf = (actor: Actor.Implementation) => meleeReach(actor);
 
 function nearEntries(context: EventContext, eventId: string): FoundEntry[] {
   const about = eventToken(context);

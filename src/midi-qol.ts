@@ -28,6 +28,7 @@ import { registerOvertimeEntries } from "./module/lib/entries/overtime.js";
 import { registerEntryRollBonuses } from "./module/lib/entries/rollBonuses.js";
 import { registerUseEvents } from "./module/lib/entries/useEvents.js";
 import { registerBearerEvents } from "./module/lib/entries/bearerEvents.js";
+import { registerMovementEvents } from "./module/lib/entries/movementEvents.js";
 import { registerServiceEvents } from "./module/lib/entries/serviceEvents.js";
 import { registerRedirection } from "./module/lib/entries/redirection.js";
 import { rulesApi } from "./module/lib/entries/rules.js";
@@ -554,6 +555,7 @@ Hooks.once('init', async function () {
   registerOvertimeEntries();
   registerUseEvents();
   registerBearerEvents();
+  registerMovementEvents();
   registerActivityActions();
   registerServiceEvents();
   registerRedirection();

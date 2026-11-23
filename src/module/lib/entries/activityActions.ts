@@ -6,6 +6,7 @@ import { askUser } from "../requests.js";
 import { configSettings } from "../../settings.js";
 import type { SaveDetails } from "../../../globals.js";
 import { getDistance } from "../../services/distance/service.js";
+import { meleeReach } from "../../services/economy/reach.js";
 import { isTracked, spend } from "../../services/economy/ledger.js";
 import { onTurnEvent } from "../turnEvents.js";
 import { actorEffectEntries, applyingActivity, conditionDataFor, entryHolds, registerEvent, takeEntry, type ActionRun, type EventContext } from "./engine.js";
@@ -210,7 +211,7 @@ function mayTake(f: FoundEntry, taker: Actor.Implementation): boolean {
       const from = bearer?.getActiveTokens(false, true)[0] as TokenDocument.Implementation | undefined;
       const to = taker.getActiveTokens(false, true).find(t => t.parent === from?.parent) as TokenDocument.Implementation | undefined;
       if (!from || !to || to === from) continue;
-      const within = spec.within === "reach" ? 5 : Number(spec.within);
+      const within = spec.within === "reach" ? meleeReach(bearer) : Number(spec.within);
       const distance = getDistance(from, to, { wallsBlock: false });
       if (distance >= 0 && distance <= within) return true;
     }

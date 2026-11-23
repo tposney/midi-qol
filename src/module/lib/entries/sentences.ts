@@ -252,6 +252,13 @@ export function actionText(action: EntryAction, context: SentenceContext): strin
     }
     case "check": return (a.by ? `${target(a.by, "self")}: ` : "") + rollSpec(a.check, true, context);
     case "use": return say("Action.use", { activity: activityName(a.use, context) });
+    case "move": {
+      const m = part(a.move);
+      const kind = m.pull !== undefined ? "pull" : m.slide !== undefined ? "slide" : "push";
+      const from = say(`Action.move.from.${has(`Action.move.from.${m.from}`) ? m.from : "user"}`);
+      return say(`Action.move.${kind}`, { who: target(a.to, "target"), n: friendlyFormula(m[kind] ?? "?"), from });
+    }
+    case "opportunityAttack": return say("Action.opportunityAttack");
     case "cover":
       if (typeof a.cover === "string") return say("Action.cover.level", { level: say(`Cover.${a.cover}`) });
       return say("Action.cover.ignore", { levels: and([part(a.cover).ignore ?? []].flat().map(l => say(`Cover.${l}`))) });

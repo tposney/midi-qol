@@ -2,6 +2,10 @@ import type { Activity } from "../../../globals.js";
 import { configSettings } from "../../settings.js";
 import { canSee, checkIncapacitated, createConditionData, doReactions, evalAllConditionsAsync, getTokenDocument, hasNoReactionsMarker, hasUsedReaction, midiFlag } from "../../utils.js";
 import type { ResponseContributor } from "../responses/service.js";
+import { meleeAttacks, meleeReach } from "./reach.js";
+import { ENTERS_REACH, LEAVES_REACH, hasOwnEntries, raiseReachEvent } from "../../lib/entries/movementEvents.js";
+
+export { meleeReach };
 import { isDisengaged, isForcedAction, speedFor } from "./movement.js";
 
 /*
@@ -22,22 +26,6 @@ const OPPORTUNITY = "reactionopportunity";
 
 interface Position { x: number, y: number, elevation?: number, width?: number, height?: number, level?: string }
 interface PathWaypoint extends Position { action?: string, intermediate?: boolean, explicit?: boolean, [key: string]: unknown }
-
-/** The longest reach of the creature's melee attacks (equipped weapons, natural weapons, a feature's attack); 5 ft at least */
-export function meleeReach(actor: Actor.Implementation | null | undefined): number {
-  let reach = 5;
-  for (const item of actor?.items ?? []) {
-    const system = item.system as { equipped?: boolean, type?: { value?: string }, range?: { reach?: number | null }, activities?: { contents?: Activity[] } };
-    if ((item.type as string) === "weapon" && system.equipped === false && system.type?.value !== "natural") continue;
-    for (const activity of meleeAttacks(item)) reach = Math.max(reach, Number(activity.range?.reach ?? system.range?.reach ?? 5) || 5);
-  }
-  return reach;
-}
-
-function meleeAttacks(item: Item.Implementation): Activity[] {
-  const activities = (item.system as { activities?: { contents?: Activity[] } }).activities?.contents ?? [];
-  return activities.filter(a => a.type === "attack" && (a as { attack?: { type?: { value?: string } } }).attack?.type?.value === "melee");
-}
 
 /** Distance between two token footprints, nearest space to nearest space (diagonals by the scene's rule); gridless, edge to edge */
 export function footprintDistance(a: Position, b: Position): number {
@@ -101,14 +89,45 @@ export function possibleReactors(mover: TokenDocument.Implementation): { token: 
   return reactors;
 }
 
-export interface OpportunitySplit { index: number, reactors: TokenDocument.Implementation[] }
+/** A creature whose reach matters to a move: an opportunity attack on leaving it, its own reach events */
+interface Watcher { token: TokenDocument.Implementation, reach: number, attacks: boolean, enters: boolean, leaves: boolean }
+export interface Crossing { index: number, leaving: Watcher[], entering: Watcher[] }
 
-/** The first position on the path where the mover leaves a reactor's reach: the index of the last position in reach */
-export function firstLeaving(path: Position[], reactors: { token: TokenDocument.Implementation, reach: number }[], skip: Set<string> = new Set()): OpportunitySplit | undefined {
+const leaveKey = (w: Watcher) => `${w.token.uuid}:leave`;
+const enterKey = (w: Watcher) => `${w.token.uuid}:enter`;
+
+/** The creatures whose reach the mover's path is checked against (in its running combat, on its level) */
+function watchersFor(mover: TokenDocument.Implementation): Watcher[] {
+  const combat = (mover.combatant as { combat?: Combat.Implementation } | null)?.combat;
+  if (!combat?.started || !mover.actor) return [];
+  const watchers = new Map<string, Watcher>();
+  if (configSettings.opportunityAttacks === "prompt")
+    for (const { token, reach } of possibleReactors(mover)) watchers.set(token.uuid ?? token.id ?? "", { token, reach, attacks: true, enters: false, leaves: false });
+  for (const combatant of combat.combatants) {
+    const token = combatant.token as TokenDocument.Implementation | null;
+    const actor = token?.actor;
+    if (!token || !actor || token === mover || token.parent !== mover.parent) continue;
+    if ((token as { level?: string }).level !== (mover as { level?: string }).level) continue;
+    const enters = hasOwnEntries(ENTERS_REACH, actor), leaves = hasOwnEntries(LEAVES_REACH, actor);
+    if (!enters && !leaves) continue;
+    const key = token.uuid ?? token.id ?? "";
+    const known = watchers.get(key);
+    watchers.set(key, { token, reach: known?.reach ?? meleeReach(actor), attacks: !!known?.attacks, enters, leaves });
+  }
+  return [...watchers.values()];
+}
+
+/**
+ * The first place on the path a watcher's reach is crossed: leaving at the last space in reach (index), entering at
+ * the first space in it. Leaving first where both happen on one step (the rest is checked again after the split).
+ */
+export function firstCrossing(path: Position[], watchers: Watcher[], skip: Set<string> = new Set()): Crossing | undefined {
+  const inReach = (p: Position, w: Watcher) => footprintDistance(p, w.token) <= w.reach + 1e-6;
   for (let i = 1; i < path.length; i++) {
-    const leaving = reactors.filter(({ token, reach }) => !skip.has(token.uuid ?? "")
-      && footprintDistance(path[i - 1], token) <= reach + 1e-6 && footprintDistance(path[i], token) > reach + 1e-6);
-    if (leaving.length) return { index: i - 1, reactors: leaving.map(r => r.token) };
+    const leaving = watchers.filter(w => (w.attacks || w.leaves) && !skip.has(leaveKey(w)) && inReach(path[i - 1], w) && !inReach(path[i], w));
+    if (leaving.length) return { index: i - 1, leaving, entering: [] };
+    const entering = watchers.filter(w => w.enters && !skip.has(enterKey(w)) && !inReach(path[i - 1], w) && inReach(path[i], w));
+    if (entering.length) return { index: i, leaving: [], entering };
   }
   return undefined;
 }
@@ -138,49 +157,55 @@ async function animationDone(token: TokenDocument.Implementation) {
   if (promise) await promise.catch(() => undefined);
 }
 
-/** The split move: up to the last space in reach, the attacks offered, then the rest (checked again for the next reactor) */
-async function splitMove(mover: TokenDocument.Implementation, explicit: PathWaypoint[], split: number, at: PathWaypoint, rest: PathWaypoint[], reactors: TokenDocument.Implementation[], move: PlannedMove, offered: string[]) {
+/**
+ * The split move: up to the crossing, then what happens there (leavesReach entries, opportunity attacks, entersReach
+ * entries), then the rest (checked again for the next crossing) unless the mover can't go on
+ */
+async function splitMove(mover: TokenDocument.Implementation, path: PathWaypoint[], crossing: Crossing, provoked: Watcher[], move: PlannedMove, handled: string[], action: string) {
   const common = { method: move.method, autoRotate: move.autoRotate, showRuler: move.showRuler, constrainOptions: move.constrainOptions };
-  const nowOffered = [...offered, ...reactors.map(r => r.uuid ?? "")];
-  if (split > 0 || explicit.length) {
-    await mover.move([...explicit, { ...waypoint(at), explicit: true }] as never, { ...common, midiOpportunity: { offered: nowOffered } } as never);
+  const { index } = crossing;
+  const explicit = path.slice(1, index).filter(w => !w.intermediate);
+  const rest = path.slice(index + 1).filter((w, i, list) => !w.intermediate || i === list.length - 1);
+  const options = { ...common, midiOpportunity: { offered: handled } };
+  if (index > 0) {
+    await mover.move([...explicit, { ...waypoint(path[index]), explicit: true }].map(w => waypoint(w as PathWaypoint)) as never, options as never);
     await animationDone(mover);
   }
-  for (const reactor of reactors) {
-    try { await doReactions(reactor, mover.uuid, null, OPPORTUNITY, { opportunity: true }); }
+  for (const w of crossing.leaving.filter(w => w.leaves)) await raiseReachEvent(LEAVES_REACH, w.token, mover, { movementAction: action, reach: w.reach });
+  for (const w of provoked) {
+    try { await doReactions(w.token, mover.uuid, null, OPPORTUNITY, { opportunity: true }); }
     catch (err) { console.error("midi-qol | opportunity attack", err); }
   }
+  for (const w of crossing.entering) await raiseReachEvent(ENTERS_REACH, w.token, mover, { movementAction: action, reach: w.reach });
   if (!rest.length || stopped(mover, String(rest.at(-1)?.action ?? "walk"))) return;
-  await mover.move(rest.map(waypoint) as never, { ...common, midiOpportunity: { offered: nowOffered } } as never);
+  await mover.move(rest.map(waypoint) as never, options as never);
 }
 
-/** preMoveToken: a move that leaves a hostile's reach is refused and made again split (async, after the hook) */
+/** preMoveToken: a move crossing a watcher's reach is refused and made again split there (async, after the hook) */
 function onPreMove(mover: TokenDocument.Implementation, move: PlannedMove, options: MidiMoveOptions): boolean | void {
-  if (configSettings.opportunityAttacks !== "prompt") return;
   if (options.midiOpportunity?.provokes === false || ["undo", "paste", "config"].includes(move.method ?? "")) return;
   const all = [...(move.passed?.waypoints ?? []), ...(move.pending?.waypoints ?? [])];
+  // Forced movement and teleports are not the creature's own: they neither provoke nor raise reach events
   if (!all.length || all.some(w => isForcedAction(w.action))) return;
-  const reactors = possibleReactors(mover);
-  if (!reactors.length) return;
+  const watchers = watchersFor(mover);
+  if (!watchers.length) return;
   const origin = move.origin ?? { x: mover.x, y: mover.y, elevation: mover.elevation, width: mover.width, height: mover.height };
   const path = (mover as unknown as { getCompleteMovementPath(w: PathWaypoint[]): PathWaypoint[] }).getCompleteMovementPath([origin, ...all]);
-  const offered = new Set(options.midiOpportunity?.offered ?? []);
-  const found = firstLeaving(path, reactors, offered);
-  if (!found) return;
-  const { index } = found;
+  const skip = new Set(options.midiOpportunity?.offered ?? []);
+  const crossing = firstCrossing(path, watchers, skip);
+  if (!crossing) return;
+  const handled = [...skip, ...crossing.leaving.map(leaveKey), ...crossing.entering.map(enterKey)];
   // The doesn't-provoke rules are async (conditions): checked before the move is made again
   void (async () => {
-    const action = String(path[index + 1]?.action ?? (mover as { movementAction?: string }).movementAction ?? "walk");
-    const provoked: TokenDocument.Implementation[] = [];
-    for (const reactor of found.reactors) if (await provokes(mover, reactor, { movementAction: action })) provoked.push(reactor);
-    const explicit = path.slice(1, index).filter(w => !w.intermediate);
-    const rest = path.slice(index + 1).filter((w, i, list) => !w.intermediate || i === list.length - 1);
-    if (!provoked.length) {
-      // Not provoked here: the move goes on as planned, these reactors not asked again on it
-      await mover.move(all.map(waypoint) as never, { method: move.method, autoRotate: move.autoRotate, showRuler: move.showRuler, constrainOptions: move.constrainOptions, midiOpportunity: { offered: [...offered, ...found.reactors.map(r => r.uuid ?? "")] } } as never);
+    const action = String(path[crossing.index + 1]?.action ?? path[crossing.index]?.action ?? (mover as { movementAction?: string }).movementAction ?? "walk");
+    const provoked: Watcher[] = [];
+    for (const w of crossing.leaving.filter(w => w.attacks)) if (await provokes(mover, w.token, { movementAction: action })) provoked.push(w);
+    if (!provoked.length && !crossing.entering.length && !crossing.leaving.some(w => w.leaves)) {
+      // Nothing happens here: the move goes on as planned, these not asked again on it
+      await mover.move(all.map(waypoint) as never, { method: move.method, autoRotate: move.autoRotate, showRuler: move.showRuler, constrainOptions: move.constrainOptions, midiOpportunity: { offered: handled } } as never);
       return;
     }
-    await splitMove(mover, explicit, index, path[index], rest, provoked, move, [...offered, ...found.reactors.filter(r => !provoked.includes(r)).map(r => r.uuid ?? "")]);
+    await splitMove(mover, path, crossing, provoked, move, handled, action);
   })().catch(err => console.error("midi-qol | opportunity attack move", err));
   return false;
 }

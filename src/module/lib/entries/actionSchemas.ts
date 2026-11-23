@@ -13,6 +13,14 @@ const TO = (options: string[]): ActionField => ({ path: "to", label: "midi-qol.E
 const LABEL: ActionField = { path: "label", label: "midi-qol.Entries.Field.label", type: "string" };
 
 export function registerMidiActionSchemas() {
+  setActionSchema("move", { fields: [
+    { path: "move.push", label: "midi-qol.Entries.Field.push", type: "formula", numeric: true },
+    { path: "move.pull", label: "midi-qol.Entries.Field.pull", type: "formula", numeric: true },
+    { path: "move.slide", label: "midi-qol.Entries.Field.slide", type: "formula", numeric: true },
+    { path: "move.angle", label: "midi-qol.Entries.Field.angle", type: "number" },
+    { path: "move.from", label: "midi-qol.Entries.Field.from", type: "select", options: ["", "user", "bearer", "area"] },
+    TO(["target", "self", "event.creature"])], initial: { push: 10 } });
+  setActionSchema("opportunityAttack", { fields: [], initial: true });
   setActionSchema("damage", { fields: [
     { path: "damage", label: "midi-qol.Entries.Field.formula", type: "formula" },
     { path: "type", label: "DND5E.DamageType", type: "select", options: { list: "damageTypes" } },
