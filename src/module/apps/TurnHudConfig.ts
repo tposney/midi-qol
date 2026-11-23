@@ -14,14 +14,14 @@ import {
  */
 
 const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
-type SettingConfig = { namespace: string, key: string, scope: string, name?: string, hint?: string, type?: unknown, choices?: Record<string, string>,
+export type SettingConfig = { namespace: string, key: string, scope: string, name?: string, hint?: string, type?: unknown, choices?: Record<string, string>,
   range?: { min?: number, max?: number, step?: number }, default?: unknown, input?: unknown };
 
 /** A role's choice field's name */
 const choiceName = (role: HudRole) => `midi-qol-hud.${role}`;
 
 /** A form field for a registered setting, as core's SettingsConfig builds one */
-function fieldFor(setting: SettingConfig) {
+export function fieldFor(setting: SettingConfig) {
   const fields = foundry.data.fields;
   let field: foundry.data.fields.DataField.Any;
   if (setting.type instanceof fields.DataField) field = setting.type as foundry.data.fields.DataField.Any;

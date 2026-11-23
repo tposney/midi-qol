@@ -1,5 +1,6 @@
 import { i18n } from "../../midi-qol.js";
 import { configSettings } from "../settings.js";
+import { HiddenGroundCueConfig } from "../apps/HiddenGroundCueConfig.js";
 
 // Shades the squares of lower floors, seen through openings in the viewed level's floor, where a creature
 // standing there would not be shown: the line from the eye is blocked by a floor edge or a lower level's wall.
@@ -67,11 +68,20 @@ type CueStyle = typeof STYLES[number];
 
 export function registerHiddenGroundCueSetting() {
   const redraw = () => { lastKey = ""; schedule(); };
+  // Each player's own, in one window (Configure Settings: midi-qol, Hidden ground)
+  game.settings?.registerMenu("midi-qol", "hiddenGroundCueMenu", {
+    name: "midi-qol.HiddenGroundCue.Menu.Name",
+    label: "midi-qol.HiddenGroundCue.Menu.Label",
+    hint: "midi-qol.HiddenGroundCue.Menu.Hint",
+    icon: "fa-solid fa-layer-group",
+    type: HiddenGroundCueConfig as never,
+    restricted: false
+  });
   game.settings?.register("midi-qol", "hiddenGroundCue", {
     name: i18n("midi-qol.HiddenGroundCue.Name"),
     hint: i18n("midi-qol.HiddenGroundCue.Hint"),
     scope: "client",
-    config: true,
+    config: false,
     type: Boolean,
     default: false,
     onChange: redraw
@@ -80,7 +90,7 @@ export function registerHiddenGroundCueSetting() {
     name: i18n("midi-qol.HiddenGroundCue.Style.Name"),
     hint: i18n("midi-qol.HiddenGroundCue.Style.Hint"),
     scope: "client",
-    config: true,
+    config: false,
     type: String,
     choices: Object.fromEntries(STYLES.map(style => [style, i18n(`midi-qol.HiddenGroundCue.Style.${style}`)])),
     default: "hatch",
@@ -90,7 +100,7 @@ export function registerHiddenGroundCueSetting() {
     name: i18n("midi-qol.HiddenGroundCue.Color.Name"),
     hint: i18n("midi-qol.HiddenGroundCue.Color.Hint"),
     scope: "client",
-    config: true,
+    config: false,
     type: new foundry.data.fields.ColorField({ nullable: false, initial: "#ff0000" }),
     default: "#ff0000",
     onChange: redraw
@@ -99,7 +109,7 @@ export function registerHiddenGroundCueSetting() {
     name: i18n("midi-qol.HiddenGroundCue.Opacity.Name"),
     hint: i18n("midi-qol.HiddenGroundCue.Opacity.Hint"),
     scope: "client",
-    config: true,
+    config: false,
     type: Number,
     range: { min: 0.1, max: 1, step: 0.05 },
     default: 0.6,
