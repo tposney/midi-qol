@@ -63,6 +63,8 @@ declare module "fvtt-types/configuration" {
       "sequencerReady": () => void;
     /** M6c: return false and the mover's leaving the reactor's reach doesn't provoke */
     /** M6d: a push, pull or slide about to be made; change `distance` or return false to cancel */
+    /** M8: an interaction was done (Hide, Grapple, a door...) */
+    "midi-qol.interaction": (data: { id: string, subject: TokenDocument.Implementation, target?: TokenDocument.Implementation | WallDocument.Implementation, result: unknown }) => void;
     "midi-qol.preForcedMovement": (request: import("./module/services/forcedMovement/service.js").ForcedMoveRequest) => boolean | void;
     "midi-qol.forcedMovement": (request: import("./module/services/forcedMovement/service.js").ForcedMoveRequest, result: import("./module/services/forcedMovement/service.js").ForcedMoveResult) => void;
     "midi-qol.preOpportunityAttack": (mover: TokenDocument.Implementation, reactor: TokenDocument.Implementation, data: { movementAction: string, forced?: boolean }) => boolean | void;
