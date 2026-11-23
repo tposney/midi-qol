@@ -1,6 +1,8 @@
 import { i18n } from "../../../midi-qol.js";
 import { isMultiattackItem } from "../../services/multiattack/plans.js";
 import { nextActivities, openRun, runFit } from "../../services/multiattack/run.js";
+import { MultiattackPlanEditor } from "./MultiattackPlanEditor.js";
+import { providers as serviceProviders } from "../../api/services.js";
 import { planView } from "./planView.js";
 
 const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
@@ -20,12 +22,14 @@ export class MultiattackRunSheet extends HandlebarsApplicationMixin(ApplicationV
     classes: ["midi-qol", "midi-qol-multiattack-run"],
     window: { title: "midi-qol.Multiattack.Title", icon: "fa-solid fa-burst", resizable: true },
     position: { width: 400, height: "auto" as const },
-    actions: { multiattackUse: MultiattackRunSheet.#onUse }
+    actions: { multiattackUse: MultiattackRunSheet.#onUse, multiattackEdit: MultiattackRunSheet.#onEdit }
   };
 
   static PARTS = { body: { template: "modules/midi-qol/templates/apps/Multiattack/run.hbs", scrollable: [""] } };
 
   actor: Actor.Implementation;
+  /** "About this plan" stays as the user left it across re-renders (closed at first) */
+  #aboutOpen = false;
 
   constructor(actor: Actor.Implementation) {
     super({ id: `midi-qol-multiattack-run-${actor.id}` });
@@ -53,7 +57,8 @@ export class MultiattackRunSheet extends HandlebarsApplicationMixin(ApplicationV
   async _prepareContext(options) {
     const context = await super._prepareContext(options);
     const open = openRun(this.actor);
-    if (!open) return { ...context, closed: true };
+    const gm = !!game.user?.isGM;
+    if (!open) return { ...context, closed: true, gm };
     const { run } = open;
     const fit = runFit(this.actor, run);
     const next = (nextActivities(this.actor, run) as unknown as Usable[]).map(activity => {
@@ -63,7 +68,10 @@ export class MultiattackRunSheet extends HandlebarsApplicationMixin(ApplicationV
     return {
       ...context,
       closed: false,
+      gm,
+      aboutOpen: this.#aboutOpen,
       source: i18n(`midi-qol.Multiattack.Source.${run.source}`),
+      provider: run.provider ? serviceProviders("multiattackPlans").find(p => p.id === run.provider)?.label ?? run.provider : undefined,
       guess: run.source === "guess",
       skipped: run.skipped ?? [],
       view: run.plan ? planView(this.actor, run.plan) : undefined,
@@ -84,6 +92,17 @@ export class MultiattackRunSheet extends HandlebarsApplicationMixin(ApplicationV
     const activity = uuid ? fromUuidSync(uuid) as Usable | null : null;
     if (!activity?.use) return;
     await activity.use({ event });
+  }
+
+  async _onRender(context, options) {
+    await super._onRender(context, options);
+    this.element.querySelector("details.midi-qol-multiattack-about")?.addEventListener("toggle", event => {
+      this.#aboutOpen = (event.currentTarget as HTMLDetailsElement).open;
+    });
+  }
+
+  static #onEdit(this: MultiattackRunSheet) {
+    void MultiattackPlanEditor.open(this.actor);
   }
 
   _onClose(options) {

@@ -1,5 +1,5 @@
 import { defineService, entries, reportServiceProblem } from "../../api/services.js";
-import { openMultiattack, openRun } from "./run.js";
+import { openMultiattack, openRun, replanRun } from "./run.js";
 import { multiattackState } from "./service.js";
 import { MultiattackRunSheet, setupMultiattackSheet } from "../../apps/multiattack/MultiattackRunSheet.js";
 import { MultiattackPlanEditor, registerMultiattackSection } from "../../apps/multiattack/MultiattackPlanEditor.js";
@@ -70,13 +70,16 @@ export function multiattackItem(actor: Actor.Implementation | null | undefined):
   return actor?.items.find(isMultiattackItem);
 }
 
-/** The creature's keys: its compendium source, then `id:<identifier>` (CAT's actor identifier, else its name's slug) */
+/** The creature's keys: its compendium source, then `id:<identifier>` (CAT's actor identifier, else its name's slug; a token's base actor's name too) */
 export function creatureKeys(actor: Actor.Implementation): string[] {
   const stats = (actor as { _stats?: { compendiumSource?: string | null } })._stats;
   const base = (actor as { token?: { baseActor?: { _stats?: { compendiumSource?: string | null } } } | null }).token?.baseActor;
   const source = stats?.compendiumSource ?? base?._stats?.compendiumSource ?? (actor.flags as { core?: { sourceId?: string } })?.core?.sourceId;
   const identifier = (actor.flags as { cat?: { identifier?: string } })?.cat?.identifier ?? slug(actor.name ?? "");
-  return [...(source ? [source] : []), ...(identifier ? [`id:${identifier}`] : [])];
+  // A token renamed on the scene ("Red Ettin") is still its base actor
+  const baseName = (actor as { token?: { baseActor?: { name?: string | null } } | null }).token?.baseActor?.name;
+  const ids = [identifier, baseName ? slug(baseName) : ""].filter((id, i, all) => id && all.indexOf(id) === i);
+  return [...(source ? [source] : []), ...ids.map(id => `id:${id}`)];
 }
 
 /** The creature's items as the resolver and the checks need them */
@@ -187,6 +190,7 @@ export async function setGmPlan(actor: Actor.Implementation, plan: MultiattackPl
   const key = planKey(actor);
   if (plan) plans[key] = plan; else delete plans[key];
   await game.settings?.set("midi-qol", SETTING, plans);
+  await replanRun(actor);
 }
 
 /** The guess when no text reads: one group of the attacks the text links, its count a digit in the text or unknown */

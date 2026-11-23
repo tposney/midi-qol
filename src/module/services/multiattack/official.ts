@@ -15,13 +15,49 @@ const load = (name: string) => {
   return files.get(name)!;
 };
 
-async function lookup(_actor: Actor.Implementation, keys: string[]): Promise<MultiattackPlan | undefined> {
-  const packs = await load("index") as unknown as string[] | undefined;
-  for (const key of keys) {
-    const pack = key.match(/^Compendium\.([^.]+\.[^.]+)\.Actor\./)?.[1];
-    if (!pack || !packs?.includes(pack)) continue;
-    const plan = (await load(pack))?.plans?.[key]?.plan;
+/** index.json: the packs with plans; by name (midi's `id:<slug>` key) each book creature's [uuid, rules] */
+type Index = { packs?: string[], names?: Record<string, [string, string | null][]> };
+const packOf = (uuid: string) => uuid.match(/^Compendium\.([^.]+\.[^.]+)\.Actor\./)?.[1];
+
+async function planFor(index: Index, uuid: string): Promise<MultiattackPlan | undefined> {
+  const pack = packOf(uuid);
+  if (!pack || !index.packs?.includes(pack)) return undefined;
+  return (await load(pack))?.plans?.[uuid]?.plan;
+}
+
+/** The creature's items as a plan names them (identifier, else the name's slug, as midi's keys) */
+function itemIds(actor: Actor.Implementation): Set<string> {
+  const slug = (name: string) => name.toLowerCase().replace(/['’]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+  return new Set(actor.items.map(item => (item.system as { identifier?: string }).identifier || slug(item.name ?? "")));
+}
+
+const ANY = new Set(["attack", "attack:melee", "attack:ranged", "spell"]);
+
+/** Every item the plan names is on the creature (a cast by its casting item; "attack"/"spell" are anything) */
+function fits(plan: MultiattackPlan, ids: Set<string>): boolean {
+  const refs = [...plan.options.flatMap(o => [...o.groups.flatMap(g => g.refs), ...o.extra.flatMap(e => e.refs)]), ...plan.replace.flatMap(r => [...r.refs, ...(r.of ?? [])])];
+  return refs.every(ref => {
+    const bare = ref.replace(/@\d+$/, "");
+    return ANY.has(bare) || ids.has(bare.split(">")[0]);
+  });
+}
+
+async function lookup(actor: Actor.Implementation, keys: string[]): Promise<MultiattackPlan | undefined> {
+  const index = await load("index") as Index | undefined;
+  if (!index) return undefined;
+  for (const key of keys.filter(k => k.startsWith("Compendium."))) {
+    const plan = await planFor(index, key);
     if (plan) return plan;
+  }
+  // Built in the world: a book creature of the same name and rules whose attacks it has
+  const rules = (actor.system as { source?: { rules?: string } }).source?.rules || null;
+  const ids = itemIds(actor);
+  for (const key of keys.filter(k => k.startsWith("id:"))) {
+    for (const [uuid, bookRules] of index.names?.[key.slice(3)] ?? []) {
+      if (rules && bookRules && rules !== bookRules) continue;
+      const plan = await planFor(index, uuid);
+      if (plan && fits(plan, ids)) return plan;
+    }
   }
   return undefined;
 }

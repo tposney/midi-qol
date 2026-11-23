@@ -2594,6 +2594,10 @@ body.midi-qol-attack-primed #board { cursor: crosshair; }
 .midi-qol-multiattack-next img { width: 24px; height: 24px; border: none; }
 .midi-qol-multiattack-made { margin: 0; padding-left: 1.4rem; }
 .midi-qol-multiattack-done { color: var(--color-level-success, green); }
+.midi-qol-multiattack-run .midi-qol-multiattack-source { display: flex; align-items: center; gap: 0.4rem; flex-wrap: wrap; }
+.midi-qol-multiattack-run .midi-qol-multiattack-edit { flex: none; width: auto; margin-left: auto; }
+.midi-qol-multiattack-run .midi-qol-multiattack-about summary { cursor: pointer; color: var(--color-text-secondary, inherit); }
+.midi-qol-multiattack-run .midi-qol-multiattack-about[open] summary { margin-bottom: 0.3rem; }
 /* M21: the Multiattack plan section and editor */
 .midi-qol-multiattack-section-buttons, .midi-qol-multiattack-add { display: flex; gap: 0.3rem; flex-wrap: wrap; }
 .midi-qol-multiattack-editor .midi-qol-multiattack-row { display: flex; align-items: center; gap: 0.4rem; margin: 0.25rem 0; }

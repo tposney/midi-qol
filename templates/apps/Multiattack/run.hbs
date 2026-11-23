@@ -2,10 +2,17 @@
     {{#if closed}}
     <p class="hint">{{localize "midi-qol.Multiattack.Closed"}}</p>
     {{else}}
-    <p class="hint midi-qol-multiattack-source">{{source}}{{#if guess}} — {{localize "midi-qol.Multiattack.GuessHint"}}{{/if}}</p>
-    {{#each skipped}}<p class="hint midi-qol-multiattack-skipped"><i class="fa-solid fa-triangle-exclamation"></i> {{this}}</p>{{/each}}
     {{#if view}}
-    {{> "modules/midi-qol/templates/apps/Multiattack/plan.hbs" view=view}}
+    {{#if done}}
+    <p class="midi-qol-multiattack-done"><i class="fa-solid fa-check"></i> {{localize "midi-qol.Multiattack.Done"}}</p>
+    {{else if next.length}}
+    <h4>{{localize "midi-qol.Multiattack.Next"}}{{#if attacksLeft}} ({{localize "midi-qol.Multiattack.AttacksLeft"}}: {{attacksLeft}}){{/if}}</h4>
+    <div class="midi-qol-multiattack-next">
+        {{#each next}}
+        <button type="button" data-action="multiattackUse" data-uuid="{{uuid}}"><img src="{{img}}" alt=""> {{label}}</button>
+        {{/each}}
+    </div>
+    {{/if}}
     {{else}}
     <p>{{localize "midi-qol.Multiattack.NoPlan"}}</p>
     {{/if}}
@@ -17,17 +24,12 @@
         {{/each}}
     </ol>
     {{/if}}
-    {{#if done}}
-    <p class="midi-qol-multiattack-done"><i class="fa-solid fa-check"></i> {{localize "midi-qol.Multiattack.Done"}}</p>
-    {{else}}
-    {{#if next.length}}
-    <h4>{{localize "midi-qol.Multiattack.Next"}}{{#if attacksLeft}} ({{localize "midi-qol.Multiattack.AttacksLeft"}}: {{attacksLeft}}){{/if}}</h4>
-    <div class="midi-qol-multiattack-next">
-        {{#each next}}
-        <button type="button" data-action="multiattackUse" data-uuid="{{uuid}}"><img src="{{img}}" alt=""> {{label}}</button>
-        {{/each}}
-    </div>
-    {{/if}}
-    {{/if}}
+    <details class="midi-qol-multiattack-about"{{#if aboutOpen}} open{{/if}}>
+        <summary>{{localize "midi-qol.Multiattack.About"}}</summary>
+        <p class="hint midi-qol-multiattack-source">{{source}}{{#if provider}} ({{provider}}){{/if}}{{#if guess}} — {{localize "midi-qol.Multiattack.GuessHint"}}{{/if}}
+            {{#if gm}}<button type="button" class="midi-qol-multiattack-edit" data-action="multiattackEdit"><i class="fa-solid fa-pen"></i> {{localize "midi-qol.Multiattack.Edit"}}</button>{{/if}}</p>
+        {{#each skipped}}<p class="hint midi-qol-multiattack-skipped"><i class="fa-solid fa-triangle-exclamation"></i> {{this}}</p>{{/each}}
+        {{#if view}}{{> "modules/midi-qol/templates/apps/Multiattack/plan.hbs" view=view}}{{/if}}
+    </details>
     {{/if}}
 </div>

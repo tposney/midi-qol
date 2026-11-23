@@ -2,7 +2,7 @@
 /*
  * Generates midi's default Multiattack plans (the `midi-qol.official` registration, M21a) from the local book corpus
  * (npm run corpus:books) into data/multiattack/<pack>.json, committed and shipped. Keyed by the creature's compendium
- * uuid; a plan holds counts and identifiers only, never the books' text: a condition or notes are flagged, and midi
+ * uuid (index.json also lists them by name, for a creature built in the world with no compendium source); a plan holds counts and identifiers only, never the books' text: a condition or notes are flagged, and midi
  * shows their words from the creature's own description in the world.
  *
  *   npm run plans:multiattack            regenerate, report problems
@@ -24,7 +24,7 @@ if (!existsSync(corpusDir)) {
 }
 
 const bundle = await esbuild.build({ entryPoints: [new URL("src/module/lib/multiattack.ts", root).pathname], bundle: true, format: "esm", write: false, logLevel: "error" });
-const { parseMultiattack, resolvePlan } = await import(`data:text/javascript;base64,${Buffer.from(bundle.outputFiles[0].text).toString("base64")}`);
+const { parseMultiattack, resolvePlan, slug } = await import(`data:text/javascript;base64,${Buffer.from(bundle.outputFiles[0].text).toString("base64")}`);
 
 const spells = JSON.parse(readFileSync(new URL("local/book-spells.json", root), "utf8"));
 const handPath = new URL("tools/multiattack-hand.json", root);
@@ -49,6 +49,8 @@ if (!check) mkdirSync(outDir, { recursive: true });
 let changed = 0, total = 0;
 const problems = [];
 const usedHand = new Set();
+/** By name (midi's `id:<slug>` key): [uuid, rules] of each creature with a plan */
+const names = {};
 for (const file of readdirSync(corpusDir).filter(f => f.endsWith(".json")).sort()) {
   const corpus = JSON.parse(readFileSync(new URL(file, corpusDir), "utf8"));
   const plans = {};
@@ -63,6 +65,7 @@ for (const file of readdirSync(corpusDir).filter(f => f.endsWith(".json")).sort(
     plans[entry.uuid] = { item: entry.itemId, plan: shipped(plan) };
   }
   const sorted = Object.fromEntries(Object.keys(plans).sort().map(k => [k, plans[k]]));
+  for (const entry of corpus) if (plans[entry.uuid]) (names[slug(entry.actor)] ??= []).push([entry.uuid, entry.rules ?? null]);
   const text = JSON.stringify({ source: file.replace(/\.json$/, ""), plans: sorted }, null, 1) + "\n";
   const target = new URL(file, outDir);
   const before = existsSync(target) ? readFileSync(target, "utf8") : null;
@@ -73,9 +76,13 @@ for (const file of readdirSync(corpusDir).filter(f => f.endsWith(".json")).sort(
   }
   total += Object.keys(sorted).length;
 }
-// The packs midi has plans for (the runtime fetches only these)
+// The packs midi has plans for (the runtime fetches only these), and the creatures by name
 {
-  const index = JSON.stringify(readdirSync(corpusDir).filter(f => f.endsWith(".json")).map(f => f.replace(/\.json$/, "")).sort(), null, 1) + "\n";
+  const packs = readdirSync(corpusDir).filter(f => f.endsWith(".json")).map(f => f.replace(/\.json$/, "")).sort();
+  // The Monster Manual's and the SRD's creatures first, then the other books'
+  const rank = uuid => /^Compendium\.dnd-monster-manual\./.test(uuid) ? 0 : /^Compendium\.dnd5e\./.test(uuid) ? 1 : 2;
+  const byName = Object.fromEntries(Object.keys(names).sort().map(k => [k, names[k].sort((a, b) => rank(a[0]) - rank(b[0]))]));
+  const index = JSON.stringify({ packs, names: byName }) + "\n";
   const target = new URL("index.json", outDir);
   if ((existsSync(target) ? readFileSync(target, "utf8") : null) !== index) { changed++; if (!check) writeFileSync(target, index); }
 }

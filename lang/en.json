@@ -956,6 +956,7 @@
   "midi-qol.Multiattack.SeeDescription": "See the Multiattack's description.",
   "midi-qol.Multiattack.Section": "Multiattack plan",
   "midi-qol.Multiattack.Edit": "Edit plan",
+  "midi-qol.Multiattack.About": "About this plan",
   "midi-qol.Multiattack.Confirm": "Confirm",
   "midi-qol.Multiattack.Reset": "Reset",
   "midi-qol.Multiattack.Save": "Save",

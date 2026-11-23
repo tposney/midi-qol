@@ -66,11 +66,23 @@ export function useKeys(activity: ActivityLike): string[] {
 
 /** The open run on the creature: its Multiattack's flag, while the turn it was opened in lasts */
 export function openRun(actor: Actor.Implementation | null | undefined): { item: Item.Implementation, run: MultiattackRun } | undefined {
+  const current = currentRun(actor);
+  return current?.run.plan ? current : undefined;
+}
+
+/** The creature's turn now: a started combat (any, not only game.combat: several may run) whose current combatant it is */
+function turnOf(actor: Actor.Implementation | null | undefined): { id: string, round: number, turn: number } | undefined {
+  if (!actor) return undefined;
+  const combat = game.combats?.find(c => !!c.started && !!c.id && c.combatant?.actor === actor);
+  return combat?.id ? { id: combat.id, round: combat.round, turn: combat.turn ?? 0 } : undefined;
+}
+
+/** This turn's run, with or without a plan (a creature with none still has one, for the GM to give it a plan) */
+function currentRun(actor: Actor.Implementation | null | undefined): { item: Item.Implementation, run: MultiattackRun } | undefined {
   const item = multiattackItem(actor);
   const run = item?.flags?.["midi-qol"]?.multiattackRun;
-  if (!item || !run?.plan) return undefined;
-  const combat = game.combat;
-  const now = combat?.started && combat.id && combat.combatant?.actor === actor ? { id: combat.id, round: combat.round, turn: combat.turn ?? 0 } : undefined;
+  if (!item || !run) return undefined;
+  const now = turnOf(actor);
   if (run.combat) {
     if (!now || now.id !== run.combat.id || now.round !== run.combat.round || now.turn !== run.combat.turn) return undefined;
   } else if (now) return undefined;
@@ -95,6 +107,9 @@ export function nextActivities(actor: Actor.Implementation, run: MultiattackRun)
   return nextUses(run.plan, run.uses.map(u => u.keys), candidates, { evaluate: evaluator(actor) }).map(c => c.activity);
 }
 
+/** A run is written whole: a merge would keep keys the new one lacks (an earlier combat, a plan replanned away) */
+const replaced = (run: MultiattackRun) => new foundry.data.operators.ForcedReplacement(run);
+
 /** Writes to one Multiattack's run in order (a use recorded right after opening, results as uses complete) */
 const writes = new Map<string, Promise<unknown>>();
 async function updateRun(item: Item.Implementation, change: (run: MultiattackRun) => MultiattackRun | undefined) {
@@ -103,7 +118,7 @@ async function updateRun(item: Item.Implementation, change: (run: MultiattackRun
     const current = item.flags?.["midi-qol"]?.multiattackRun;
     if (!current) return;
     const changed = change(foundry.utils.deepClone(current));
-    if (changed) await item.update({ "flags.midi-qol.multiattackRun": changed } as never);
+    if (changed) await item.update({ "flags.midi-qol.multiattackRun": replaced(changed) } as never);
   }).catch(err => console.error("midi-qol | multiattack", err));
   writes.set(key, next);
   return next;
@@ -114,22 +129,34 @@ export async function openMultiattack(actor: Actor.Implementation): Promise<Mult
   const item = multiattackItem(actor);
   if (!item) return undefined;
   const found = await multiattackPlan(actor);
-  const combat = game.combat;
+  const now = turnOf(actor);
   const run: MultiattackRun = {
     ...(found?.plan ? { plan: found.plan } : {}),
     source: found?.source ?? "none",
     ...(found?.provider ? { provider: found.provider } : {}),
     ...(found?.skipped ? { skipped: found.skipped } : {}),
     uses: [],
-    ...(combat?.started && combat.combatant?.actor === actor && combat.id ? { combat: { id: combat.id, round: combat.round, turn: combat.turn ?? 0 } } : {})
+    ...(now ? { combat: now } : {})
   };
   const key = item.uuid ?? "";
-  const write = (writes.get(key) ?? Promise.resolve()).then(() => item.update({ "flags.midi-qol.multiattackRun": run } as never))
+  const write = (writes.get(key) ?? Promise.resolve()).then(() => item.update({ "flags.midi-qol.multiattackRun": replaced(run) } as never))
     .catch(err => console.error("midi-qol | multiattack", err));
   writes.set(key, write);
   await write;
   Hooks.callAll("midi-qol.multiattackOpened", actor, run);
   return run;
+}
+
+/** The GM changed the creature's plan: this turn's run takes it, keeping the uses made */
+export async function replanRun(actor: Actor.Implementation) {
+  const current = currentRun(actor);
+  if (!current) return;
+  const found = await multiattackPlan(actor);
+  await updateRun(current.item, run => {
+    const { plan: _plan, provider: _provider, skipped: _skipped, ...rest } = run;
+    return { ...rest, ...(found?.plan ? { plan: found.plan } : {}), source: found?.source ?? "none",
+      ...(found?.provider ? { provider: found.provider } : {}), ...(found?.skipped ? { skipped: found.skipped } : {}) };
+  });
 }
 
 /** After a use is charged: a Multiattack opens its plan; a use that fits the open plan is recorded in it */
