@@ -4,6 +4,8 @@ import { parseMultiattack, type ParsedPlan, type RawRef, type Count } from "../s
 
 // SRD 5.2 (CC-BY 4.0) Multiattack descriptions from dnd5e's packs
 const srd: { actor: string, description: string }[] = JSON.parse(readFileSync(new URL("./fixtures/multiattack-srd52.json", import.meta.url), "utf8"));
+// SRD 5.1 (CC-BY 4.0, the 2014 rules): the older prose
+const srd51: { actor: string, description: string, items: string[] }[] = JSON.parse(readFileSync(new URL("./fixtures/multiattack-srd51.json", import.meta.url), "utf8"));
 const srdText = (actor: string) => {
   const entry = srd.find(e => e.actor === actor);
   if (!entry) throw new Error(`no SRD creature ${actor}`);
@@ -20,9 +22,9 @@ function compact(plan: ParsedPlan | null): string {
   const options = plan.options.map(o => [
     ...o.groups.map(g => `${count(g.n)}×[${g.refs.map(ref).join("|")}]`),
     ...o.extra.map(e => `+use[${e.refs.map(ref).join("|")}]${e.ifAvailable ? "?" : ""}`)
-  ].join(" ") + (o.condition ? ` {${o.condition}}` : "")).join(" OR ");
+  ].join(" ") + (o.condition ? ` {${o.condition}}` : "") + (o.limits ?? []).map(l => ` max ${l.max} of [${l.refs.map(ref).join("|")}]`).join("")).join(" OR ");
   const replace = plan.replace.map(r => ` / REPLACE ${r.n}${r.of ? ` of ${r.of.map(ref).join("|")}` : ""} with [${r.refs.map(ref).join("|")}]`).join("");
-  return options + replace + (plan.unread.length ? ` UNREAD ${JSON.stringify(plan.unread)}` : "");
+  return options + replace + (plan.notes?.length ? ` NOTES ${JSON.stringify(plan.notes)}` : "") + (plan.unread.length ? ` UNREAD ${JSON.stringify(plan.unread)}` : "");
 }
 
 describe("multiattack parser: the SRD 5.2 sentence families", () => {
@@ -97,6 +99,49 @@ describe("multiattack parser: forms", () => {
   });
 });
 
+describe("multiattack parser: the 2014 prose (SRD 5.1)", () => {
+  const read = (actor: string) => { const e = srd51.find(x => x.actor === actor)!; return compact(parseMultiattack(e.description, { names: e.items })); };
+  it("\"N attacks: one with its X and two with its Y\"; a use first, \"It then makes\"", () => {
+    expect(compact(parseMultiattack("The hezrou makes three attacks: one with its [[/item Bite]]{bite} and two with its [[/item Claws]]{claws}.")))
+      .toBe("1×[Bite] 2×[Claws]");
+    expect(compact(parseMultiattack("The dragon can use its [[/item Frightful Presence]]. It then makes three attacks: one with its [[/item Bite]] and two with its [[/item Claw]].")))
+      .toBe("1×[Bite] 2×[Claw] +use[Frightful Presence]");
+  });
+  it("plain lowercase names, singular or plural, a qualifier dropped", () => {
+    expect(compact(parseMultiattack("The oni makes two attacks, either with its claws or its glaive.", { names: ["Claw (Oni Form Only)", "Glaive"] })))
+      .toBe("2×[Claw (Oni Form Only)|Glaive]");
+    expect(compact(parseMultiattack("The marilith can make seven attacks: six with its longswords and one with its tail.", { names: ["Longsword", "Tail", "Attack"] })))
+      .toBe("6×[Longsword] 1×[Tail]");
+  });
+  it("\"Alternatively\" and \"Or the captain makes\" as options", () => {
+    expect(compact(parseMultiattack("The devil makes three melee attacks: one with its [[/item Tail]]{tail} and two with its [[/item Claw]]{claws}. Alternatively, it can use [[/item Hurl Flame]] twice.")))
+      .toBe("1×[Tail] 2×[Claw] OR 2×[Hurl Flame]");
+  });
+  it("replacements: instead of its bite, in place of any attack, each of which it can replace", () => {
+    expect(compact(parseMultiattack("It makes two [[/item Claw]] attacks. It can use its [[/item Swallow]] instead of its [[/item Bite]].")))
+      .toBe("2×[Claw] / REPLACE 1 of Bite with [Swallow]");
+    expect(compact(parseMultiattack("It makes two melee attacks: one with its [[/item Bite]] and one with its [[/item Claw]]. It can use [[/item Web]] in place of any melee attack.")))
+      .toBe("1×[Bite] 1×[Claw] / REPLACE any with [Web]");
+    expect(compact(parseMultiattack("It makes two [[/item Slam]] attacks, each of which it can replace with one use of [[/item Fling]].")))
+      .toBe("2×[Slam] / REPLACE any with [Fling]");
+  });
+  it("limits and notes", () => {
+    expect(compact(parseMultiattack("The vampire makes two attacks, only one of which can be a [[/item Bite]] attack.")))
+      .toBe("2×[ANY] max 1 of [Bite]");
+    expect(compact(parseMultiattack("The lizardfolk makes two melee attacks, each one with a different weapon.")))
+      .toBe("2×[ANY-melee] NOTES [\"each attack with a different weapon\"]");
+    expect(read("Grick")).toMatch(/NOTES \["If that attack hits, the grick can make one beak attack against the same target"\]/);
+  });
+  it("every SRD 5.1 Multiattack reads fully", () => {
+    const failed = srd51.filter(e => { const plan = parseMultiattack(e.description, { names: e.items }); return !plan || plan.unread.length; }).map(e => e.actor);
+    expect(failed).toEqual([]);
+  });
+  it("the SRD 5.1 plans are unchanged", async () => {
+    const plans = Object.fromEntries(srd51.map(e => [e.actor, compact(parseMultiattack(e.description, { names: e.items }))]));
+    await expect(JSON.stringify(plans, null, 1)).toMatchFileSnapshot("./__snapshots__/multiattack-srd51.plans.json");
+  });
+});
+
 describe("multiattack parser: whole corpora", () => {
   it("every SRD 5.2 Multiattack reads fully (but the Ancient Gold Dragon's unfilled template)", () => {
     const failed = srd.filter(e => { const plan = parseMultiattack(e.description); return !plan || plan.unread.length; }).map(e => e.actor);
@@ -106,16 +151,23 @@ describe("multiattack parser: whole corpora", () => {
   const corpusDir = new URL("../local/book-corpus/", import.meta.url);
   const books = existsSync(corpusDir) ? readdirSync(corpusDir).filter(f => f.endsWith(".json")) : [];
   it.skipIf(!books.length)("the local book corpus is present (npm run corpus:books)", () => expect(books.length).toBeGreaterThan(0));
-  // 2014-rules books write Multiattack in the older prose ("one with its bite and two with its claws"), which the parser
-  // doesn't read (2024 only, user rule); their creatures get the link guess / the GM's plan
-  const LEGACY_2014 = ["dnd-tashas-cauldron."];
-  const legacy = (file: string) => LEGACY_2014.some(prefix => file.startsWith(prefix));
-  it.each(books.filter(f => !legacy(f)))("every Multiattack in %s reads fully (local corpus)", file => {
+  it.each(books)("every Multiattack in %s reads fully (local corpus)", file => {
     const corpus: { actor: string, desc: string, items?: { name: string, identifier: string | null }[] }[] = JSON.parse(readFileSync(new URL(file, corpusDir), "utf8"));
     // The creature's item names, as the generator and midi pass them
     const names = (e: typeof corpus[number]) => (e.items ?? []).filter(i => !/^multiattack/.test(i.identifier ?? "")).map(i => i.name);
     const failed = corpus.filter(e => { const plan = parseMultiattack(e.desc, { names: names(e) }); return !plan || plan.unread.length; })
       .map(e => `${e.actor}: ${e.desc.replace(/<[^>]+>/g, "").slice(0, 160)}`);
     expect(failed).toEqual([]);
+  });
+  // Every plan frozen: a change to how any creature reads fails here (`npx vitest run -u` after checking it's intended)
+  it("the SRD 5.2 plans are unchanged", async () => {
+    const plans = Object.fromEntries(srd.map(e => [e.actor, compact(parseMultiattack(e.description))]));
+    await expect(JSON.stringify(plans, null, 1)).toMatchFileSnapshot("./__snapshots__/multiattack-srd52.plans.json");
+  });
+  it.each(books)("the plans of %s are unchanged (local snapshot)", async file => {
+    const corpus: { actor: string, uuid?: string, desc: string, items?: { name: string, identifier: string | null }[] }[] = JSON.parse(readFileSync(new URL(file, corpusDir), "utf8"));
+    const names = (e: typeof corpus[number]) => (e.items ?? []).filter(i => !/^multiattack/.test(i.identifier ?? "")).map(i => i.name);
+    const plans = Object.fromEntries(corpus.map(e => [e.uuid ?? e.actor, compact(parseMultiattack(e.desc, { names: names(e) }))]));
+    await expect(JSON.stringify(plans, null, 1)).toMatchFileSnapshot(`../local/book-corpus/__snapshots__/${file.replace(/\.json$/, "")}.plans.json`);
   });
 });

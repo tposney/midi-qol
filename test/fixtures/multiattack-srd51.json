@@ -1,0 +1,1820 @@
+[
+ {
+  "actor": "Aboleth",
+  "description": "<p>The aboleth makes three [[/item .sgauK8Lyt8qxsxOH]]{tentacle} attacks.</p>",
+  "items": [
+   "Enslave",
+   "Detect",
+   "Tail Swipe",
+   "Psychic Drain",
+   "Mucous Cloud",
+   "Probing Telepathy",
+   "Tentacle",
+   "Tail",
+   "Amphibious",
+   "Legendary Actions"
+  ]
+ },
+ {
+  "actor": "Adult Black Dragon",
+  "description": "<p>The dragon can use its [[/item .A3azHlbNcHLRgogu]]{Frightful Presence}. It then makes three attacks: one with its [[/item .amUUCouL69OK1GZU]]{bite} and two with its [[/item .uXxifk618IakGfYG]]{claws}.</p>",
+  "items": [
+   "Bite",
+   "Claw",
+   "Tail",
+   "Frightful Presence",
+   "Amphibious",
+   "Legendary Resistance",
+   "Acid Breath",
+   "Legendary Actions",
+   "Tail Attack",
+   "Wing Attack",
+   "Detect"
+  ]
+ },
+ {
+  "actor": "Adult Blue Dragon",
+  "description": "<p>The dragon can use its [[/item .zMT1Uj814On8O1Hg]]{Frightful Presence}. It then makes three attacks: one with its [[/item .tz3vYeFf3GLouPGC]]{bite} and two with its [[/item .kYySllKlNPBsT7Ho]]{claws}.</p>",
+  "items": [
+   "Bite",
+   "Claw",
+   "Detect",
+   "Frightful Presence",
+   "Legendary Actions",
+   "Legendary Resistance",
+   "Lightning Breath",
+   "Tail",
+   "Tail Attack",
+   "Wing Attack"
+  ]
+ },
+ {
+  "actor": "Adult Brass Dragon",
+  "description": "<p>The dragon can use its [[/item .cVkEgorVxYQJkS8M]]{Frightful Presence}. It then makes three attacks: one with its [[/item .Rr34cx78OgioMSHH]]{bite} and two with its [[/item .Gx6DVWF7D9lzZjse]]{claws}.</p>",
+  "items": [
+   "Bite",
+   "Claw",
+   "Detect",
+   "Frightful Presence",
+   "Legendary Actions",
+   "Legendary Resistance",
+   "Tail",
+   "Tail Attack",
+   "Wing Attack",
+   "Breath Weapons"
+  ]
+ },
+ {
+  "actor": "Adult Bronze Dragon",
+  "description": "<p>The dragon can use its [[/item .m7dF0hheApwoJLpp]]{Frightful Presence}. It then makes three attacks: one with its [[/item .zMFGBLVpXSZC1Vjm]]{bite} and two with its [[/item .P0ycd36lowML3rTc]]{claws}.</p>",
+  "items": [
+   "Amphibious",
+   "Bite",
+   "Legendary Resistance",
+   "Claw",
+   "Tail",
+   "Frightful Presence",
+   "Change Shape",
+   "Legendary Actions",
+   "Detect",
+   "Tail Attack",
+   "Wing Attack",
+   "Breath Weapons"
+  ]
+ },
+ {
+  "actor": "Adult Copper Dragon",
+  "description": "<p>The dragon can use its [[/item .3ovBwWW2b9S8LYId]]{Frightful Presence}. It then makes three attacks: one with its [[/item .jLzmwSFLsR0jhWHF]]{bite} and two with its [[/item .rIzRUQvEexZL1wZx]]{claws}.</p>",
+  "items": [
+   "Legendary Resistance",
+   "Bite",
+   "Claw",
+   "Tail",
+   "Frightful Presence",
+   "Legendary Actions",
+   "Detect",
+   "Tail Attack",
+   "Wing Attack",
+   "Breath Weapons"
+  ]
+ },
+ {
+  "actor": "Adult Gold Dragon",
+  "description": "<p>The dragon can use its [[/item .v92F1DGzRWSEMPxH]]{Frightful Presence}. It then makes three attacks: one with its [[/item .tx5M41t7JlSuVQ9R]]{bite} and two with its [[/item .ORrcO13EbgjVvNjA]]{claws}.</p>",
+  "items": [
+   "Amphibious",
+   "Legendary Resistance",
+   "Bite",
+   "Claw",
+   "Tail",
+   "Frightful Presence",
+   "Change Shape",
+   "Legendary Actions",
+   "Detect",
+   "Tail Attack",
+   "Wing Attack",
+   "Breath Weapons"
+  ]
+ },
+ {
+  "actor": "Adult Green Dragon",
+  "description": "<p>The dragon can use its [[/item .k9uTT39kBp2sDDUE]]{Frightful Presence}. It then makes three attacks: one with its [[/item .ZJR61a1mg2JHdHE0]]{bite} and two with its [[/item .I4ycwNCADZj1bun0]]{claws}.</p>",
+  "items": [
+   "Amphibious",
+   "Legendary Resistance",
+   "Bite",
+   "Claw",
+   "Tail",
+   "Frightful Presence",
+   "Poison Breath",
+   "Legendary Actions",
+   "Detect",
+   "Tail Attack",
+   "Wing Attack"
+  ]
+ },
+ {
+  "actor": "Adult Red Dragon",
+  "description": "<p>The dragon can use its [[/item .ftqEpCKoioTST72K]]{Frightful Presence}. It then makes three attacks: one with its [[/item .060hAjIEDdMDfVoE]]{bite} and two with its [[/item .pzDFBmC7wfQsMJzw]]{claws}.</p>",
+  "items": [
+   "Legendary Resistance",
+   "Frightful Presence",
+   "Fire Breath",
+   "Bite",
+   "Claw",
+   "Tail",
+   "Legendary Actions",
+   "Detect",
+   "Tail Attack",
+   "Wing Attack"
+  ]
+ },
+ {
+  "actor": "Adult Silver Dragon",
+  "description": "<p>The dragon can use its [[/item .F8gfPJkHrrlTwVUs]]{Frightful Presence}. It then makes three attacks: one with its [[/item .3WM5UpCTIb6fQaWA]]{bite} and two with its [[/item .nO1hKkZifzX3UJ2y]]{claws}.</p>",
+  "items": [
+   "Legendary Resistance",
+   "Bite",
+   "Claw",
+   "Tail",
+   "Frightful Presence",
+   "Change Shape",
+   "Legendary Actions",
+   "Detect",
+   "Tail Attack",
+   "Wing Attack",
+   "Breath Weapons"
+  ]
+ },
+ {
+  "actor": "Adult White Dragon",
+  "description": "<p>The dragon can use its [[/item .nKX7IFrwLJsAsWXU]]{Frightful Presence}. It then makes three attacks: one with its [[/item .542eNLhAx7XYJErk]]{bite} and two with its [[/item .FhUOX8awKhQrGBV0]]{claws}.</p>",
+  "items": [
+   "Bite",
+   "Claw",
+   "Cold Breath",
+   "Detect",
+   "Frightful Presence",
+   "Ice Walk",
+   "Legendary Actions",
+   "Legendary Resistance",
+   "Tail",
+   "Tail Attack",
+   "Wing Attack"
+  ]
+ },
+ {
+  "actor": "Air Elemental",
+  "description": "<p>The elemental makes two [[/item .qzLZFBO75loU77TZ]]{slam} attacks.</p>",
+  "items": [
+   "Air Form",
+   "Slam",
+   "Whirlwind"
+  ]
+ },
+ {
+  "actor": "Ancient Black Dragon",
+  "description": "<p>The dragon can use its [[/item .M3VJyuM63OKH7JH0]]{Frightful Presence}. It then makes three attacks: one with its [[/item .YauNxZeIeT4uDcTf]]{bite} and two with its [[/item .GQLQiLBrkoOiNc8q]]{claws}.</p>",
+  "items": [
+   "Amphibious",
+   "Legendary Resistance",
+   "Bite",
+   "Claw",
+   "Tail",
+   "Frightful Presence",
+   "Acid Breath",
+   "Legendary Actions",
+   "Detect",
+   "Tail Attack",
+   "Wing Attack"
+  ]
+ },
+ {
+  "actor": "Ancient Blue Dragon",
+  "description": "<p>The dragon can use its [[/item .NhYVY7hHFu2YsFpN]]{Frightful Presence}. It then makes three attacks: one with its [[/item .F29wEcjTlpKWcfO3]]{bite} and two with its [[/item .Hoc6KiovAZiBi5HV]]{claws}.</p>",
+  "items": [
+   "Legendary Resistance",
+   "Bite",
+   "Legendary Actions",
+   "Detect",
+   "Claw",
+   "Frightful Presence",
+   "Lightning Breath",
+   "Tail",
+   "Tail Attack",
+   "Wing Attack"
+  ]
+ },
+ {
+  "actor": "Ancient Brass Dragon",
+  "description": "<p>The dragon can use its [[/item .yJGmBczsD2hSQuzI]]{Frightful Presence}. It then makes three attacks: one with its [[/item .M8QrGIl4ESY4kh6A]]{bite} and two with its [[/item .Iy1UXphRvuXgybrn]]{claws}.</p>",
+  "items": [
+   "Legendary Resistance",
+   "Bite",
+   "Claw",
+   "Frightful Presence",
+   "Tail",
+   "Breath Weapons",
+   "Change Shape",
+   "Legendary Actions",
+   "Detect",
+   "Tail Attack",
+   "Wing Attack"
+  ]
+ },
+ {
+  "actor": "Ancient Bronze Dragon",
+  "description": "<p>The dragon can use its [[/item .QUlBJuNL7JOevT7b]]{Frightful Presence}. It then makes three attacks: one with its [[/item .17bKqeydGVM0tR6p]]{bite} and two with its [[/item .qd5qScYvDjNbDERs]]{claws}.</p>",
+  "items": [
+   "Amphibious",
+   "Legendary Resistance",
+   "Bite",
+   "Claw",
+   "Tail",
+   "Frightful Presence",
+   "Breath Weapons",
+   "Change Shape",
+   "Legendary Actions",
+   "Tail Attack",
+   "Wing Attack",
+   "Detect"
+  ]
+ },
+ {
+  "actor": "Ancient Copper Dragon",
+  "description": "<p>The dragon can use its [[/item .YkCurZ53A7ciRit3]]{Frightful Presence}. It then makes three attacks: one with its [[/item .eCpXCLFLV7W22orV]]{bite} and two with its [[/item .lsey8RJZiuByt97z]]{claws}.</p>",
+  "items": [
+   "Legendary Actions",
+   "Legendary Resistance",
+   "Bite",
+   "Claw",
+   "Tail",
+   "Frightful Presence",
+   "Change Shape",
+   "Detect",
+   "Tail Attack",
+   "Wing Attack",
+   "Breath Weapons"
+  ]
+ },
+ {
+  "actor": "Ancient Gold Dragon",
+  "description": "<p>The dragon can use its [[/item .ncKFI8v5vPO7kOFi]]{Frightful Presence}. It then makes three attacks: one with its [[/item .BFbR0db4At8TQY91]]{bite} and two with its [[/item .iqduxJQPzhHPTJp2]]{claws}.</p>",
+  "items": [
+   "Amphibious",
+   "Legendary Resistance",
+   "Bite",
+   "Claw",
+   "Tail",
+   "Frightful Presence",
+   "Breath Weapons",
+   "Legendary Actions",
+   "Detect",
+   "Tail Attack",
+   "Wing Attack",
+   "Change Shape"
+  ]
+ },
+ {
+  "actor": "Ancient Green Dragon",
+  "description": "<p>The dragon can use its [[/item .kZAndihX3RcDqN5P]]{Frightful Presence}. It then makes three attacks: one with its [[/item .qq17e5u6Bey1aHqo]]{bite} and two with its [[/item .Ja5vvhGRJnCi9YGT]]{claws}.</p>",
+  "items": [
+   "Amphibious",
+   "Legendary Resistance",
+   "Bite",
+   "Claw",
+   "Tail",
+   "Frightful Presence",
+   "Poison Breath",
+   "Legendary Actions",
+   "Detect",
+   "Tail Attack",
+   "Wing Attack"
+  ]
+ },
+ {
+  "actor": "Ancient Red Dragon",
+  "description": "<p>The dragon can use its [[/item .LQKBexRS91dTMEKa]]{Frightful Presence}. It then makes three attacks: one with its [[/item .nOBAY4ulYbWMc8Pz]]{bite} and two with its [[/item .AheA06jKecElYrVt]]{claws}.</p>",
+  "items": [
+   "Bite",
+   "Claw",
+   "Tail",
+   "Frightful Presence",
+   "Fire Breath",
+   "Legendary Resistance",
+   "Legendary Actions",
+   "Tail Attack",
+   "Wing Attack",
+   "Detect"
+  ]
+ },
+ {
+  "actor": "Ancient Silver Dragon",
+  "description": "<p>The dragon can use its [[/item .ohWgcdw603aWWXum]]{Frightful Presence}. It then makes three attacks: one with its [[/item .YCbR7M5CKKCFWLvk]]{bite} and two with its [[/item .YHoeJdvSJaT3qblq]]{claws}.</p>",
+  "items": [
+   "Legendary Resistance",
+   "Bite",
+   "Claw",
+   "Tail",
+   "Frightful Presence",
+   "Breath Weapons",
+   "Change Shape",
+   "Legendary Actions",
+   "Tail Attack",
+   "Wing Attack",
+   "Detect"
+  ]
+ },
+ {
+  "actor": "Ancient White Dragon",
+  "description": "<p>The dragon can use its [[/item .sYtyFXYWqxWT1uUI]]{Frightful Presence}. It then makes three attacks: one with its [[/item .NB88hf8oRtLwBolX]]{bite} and two with its [[/item .Cz5xqvQ50f5zxuNY]]{claws}.</p>",
+  "items": [
+   "Bite",
+   "Claw",
+   "Cold Breath",
+   "Detect",
+   "Frightful Presence",
+   "Ice Walk",
+   "Legendary Actions",
+   "Legendary Resistance",
+   "Tail",
+   "Tail Attack",
+   "Wing Attack"
+  ]
+ },
+ {
+  "actor": "Androsphinx",
+  "description": "<p>The sphinx makes two [[/item .yotsIj19d5spOVGb]]{claw} attacks.</p>",
+  "items": [
+   "Inscrutable",
+   "Magic Weapons",
+   "Spellcasting",
+   "Claw",
+   "Roar",
+   "First Roar",
+   "Second Roar",
+   "Third Roar",
+   "Claw Attack",
+   "Teleport",
+   "Cast a Spell",
+   "Sacred Flame",
+   "Spare the Dying",
+   "Thaumaturgy",
+   "Command",
+   "Detect Evil and Good",
+   "Detect Magic",
+   "Lesser Restoration",
+   "Zone of Truth",
+   "Dispel Magic",
+   "Tongues",
+   "Banishment",
+   "Freedom of Movement",
+   "Flame Strike",
+   "Greater Restoration",
+   "Heroes' Feast"
+  ]
+ },
+ {
+  "actor": "Animated Armor",
+  "description": "<p>The armor makes two [[/item .vUqKQJ1GGWbKg6cX]]{melee} attacks.</p>",
+  "items": [
+   "Antimagic Susceptibility",
+   "False Appearance",
+   "Slam"
+  ]
+ },
+ {
+  "actor": "Ape",
+  "description": "<p>The ape makes two [[/item .jxC1VNaCf2VXlD6C]]{fist} attacks.</p>",
+  "items": [
+   "Fist",
+   "Rock"
+  ]
+ },
+ {
+  "actor": "Assassin",
+  "description": "<p>The assassin makes two [[/item .Kbg12IJ0YW79vP06]] attacks.</p>",
+  "items": [
+   "Studded Leather Armor",
+   "Assassinate",
+   "Evasion",
+   "Sneak Attack",
+   "Shortsword",
+   "Light Crossbow"
+  ]
+ },
+ {
+  "actor": "Balor",
+  "description": "<p>The balor makes two attacks: one with its [[/item .6ZAh5TkiXwQMUfDB]]{longsword} and one with its [[/item .1oGgJQB1ItqyKoZ5]]{whip}.</p>",
+  "items": [
+   "Death Throes",
+   "Fire Aura",
+   "Magic Resistance",
+   "Magic Weapons",
+   "Teleport",
+   "Longsword",
+   "Whip"
+  ]
+ },
+ {
+  "actor": "Bandit Captain",
+  "description": "<p>The captain makes three melee attacks: two with its [[/item .tSPkVJScEndipsFU]]{scimitar} and one with its [[/item .mBUKIzY6aUW5Fnlm]]{dagger}. Or the captain makes two ranged attacks with its daggers.</p>",
+  "items": [
+   "Studded Leather Armor",
+   "Scimitar",
+   "Dagger",
+   "Parry"
+  ]
+ },
+ {
+  "actor": "Barbed Devil",
+  "description": "<p>The devil makes three melee attacks: one with its [[/item .mlWql992zSZ6hvl6]]{tail} and two with its [[/item .pya9jchjLkwMedEr]]{claws}. Alternatively, it can use [[/item .syCZDlwGoyT1GvJv]]{Hurl Flame} twice.</p>",
+  "items": [
+   "Barbed Hide",
+   "Devil's Sight",
+   "Magic Resistance",
+   "Claw",
+   "Tail",
+   "Hurl Flame"
+  ]
+ },
+ {
+  "actor": "Bearded Devil",
+  "description": "<p>The devil makes two attacks: one with its [[/item .ndwCjJFBLTujojCl]]{beard} and one with its [[/item .RgZ4lGrNf9AaIyrG]]{glaive}.</p>",
+  "items": [
+   "Devil's Sight",
+   "Magic Resistance",
+   "Steadfast",
+   "Beard",
+   "Glaive"
+  ]
+ },
+ {
+  "actor": "Behir",
+  "description": "<p>The behir makes two attacks: one with its [[/item .4fNbTxkAFYHxDdJX]]{bite} and one to [[/item .GCUh42hMUnKtxx8j]]{constrict}.</p>",
+  "items": [
+   "Bite",
+   "Constrict",
+   "Lightning Breath",
+   "Swallow"
+  ]
+ },
+ {
+  "actor": "Black Bear",
+  "description": "<p>The bear makes two attacks: one with its [[/item .8VdhUFhUE9m12piC]]{bite} and one with its [[/item .gaxofmkFqQG1zqK9]]{claws}.</p>",
+  "items": [
+   "Keen Smell",
+   "Bite",
+   "Claws"
+  ]
+ },
+ {
+  "actor": "Bone Devil",
+  "description": "<p>The devil makes three attacks: two with its [[/item .KjxsSFx9xv2HLtMX]]{claws} and one with its [[/item .iFHGL8wlqBtZAdHr]]{sting}.</p>",
+  "items": [
+   "Claw",
+   "Sting",
+   "Devil Sight",
+   "Magic Resistance"
+  ]
+ },
+ {
+  "actor": "Brown Bear",
+  "description": "<p>The bear makes two attacks: one with its [[/item .tOPVA2liaPY9pwgO]]{bite} and one with its [[/item .MozRn0kqcm5IG3WI]]{claws}.</p>",
+  "items": [
+   "Bite",
+   "Claws",
+   "Keen Smell"
+  ]
+ },
+ {
+  "actor": "Centaur",
+  "description": "<p>The centaur makes two attacks: one with its [[/item .uhqyN44IRWXixgxU]]{pike} and one with its [[/item .ICbiLFrPjwIfA1Nj]]{hooves} or two with its [[/item .v7ForWMLPJp1u78X]]{longbow}.</p>",
+  "items": [
+   "Pike",
+   "Hooves",
+   "Longbow",
+   "Charge"
+  ]
+ },
+ {
+  "actor": "Chain Devil",
+  "description": "<p>The devil makes two attacks with its [[/item .9SWi4zPVGsMD5l2Y]]{chains}.</p>",
+  "items": [
+   "Chain",
+   "Unnerving Mask",
+   "Devil's Sight",
+   "Magic Resistance",
+   "Animate Chains"
+  ]
+ },
+ {
+  "actor": "Chimera",
+  "description": "<p>The chimera makes three attacks: one with its [[/item .dDrIfOa408VFGv4a]]{bite}, one with its [[/item .m5xGw7RgVRGTklJT]]{horns}, and one with its [[/item .J98n5dL3pMkWGu69]]{claws}. When its [[/item .c4fLDKOomwlaFcac]]{fire breath} is available, it can use the breath in place of its bite or horns.</p>",
+  "items": [
+   "Bite",
+   "Claws",
+   "Fire Breath",
+   "Horns"
+  ]
+ },
+ {
+  "actor": "Chuul",
+  "description": "<p>The chuul makes two [[/item .7lnXqe8AnWhtnQh7]]{pincer} attacks. If the chuul is grappling a creature, the chuul can also use its [[/item .XUzROtGqVZS61Ofm]]{tentacles} once.</p>",
+  "items": [
+   "Pincer",
+   "Tentacles",
+   "Amphibious",
+   "Sense Magic"
+  ]
+ },
+ {
+  "actor": "Clay Golem",
+  "description": "<p>The golem makes two [[/item .vEEJei0CNaNbfQ2w]]{slam} attacks.</p>",
+  "items": [
+   "Slam",
+   "Haste",
+   "Magic Resistance",
+   "Berserk",
+   "Immutable Form",
+   "Magic Weapons",
+   "Acid Absorption"
+  ]
+ },
+ {
+  "actor": "Cloaker",
+  "description": "<p>The cloaker makes two attacks: one with its [[/item .afXMbT7smRaCJbhc]]{bite} and one with its [[/item .ZRvdvg8n7pQdJ1Mj]]{tail}.</p>",
+  "items": [
+   "Bite",
+   "Damage Transfer",
+   "False Appearance",
+   "Light Sensitivity",
+   "Tail",
+   "Moan",
+   "Phantasms"
+  ]
+ },
+ {
+  "actor": "Cloud Giant",
+  "description": "<p>The giant makes two [[/item .Jr0CfxY8xuFT6hoa]]{morningstar} attacks.</p>",
+  "items": [
+   "Keen Smell",
+   "Innate Spellcasting",
+   "Morningstar",
+   "Rock",
+   "Detect Magic",
+   "Fog Cloud",
+   "Light",
+   "Feather Fall",
+   "Fly",
+   "Misty Step",
+   "Telekinesis",
+   "Control Weather",
+   "Gaseous Form"
+  ]
+ },
+ {
+  "actor": "Cult Fanatic",
+  "description": "<p>The fanatic makes two melee attacks.</p>",
+  "items": [
+   "Leather Armor",
+   "Dark Devotion",
+   "Spellcasting",
+   "Dagger",
+   "Light",
+   "Sacred Flame",
+   "Thaumaturgy",
+   "Command",
+   "Inflict Wounds",
+   "Shield of Faith",
+   "Hold Person",
+   "Spiritual Weapon"
+  ]
+ },
+ {
+  "actor": "Death Dog",
+  "description": "<p>The dog makes two [[/item .TKV9mS1lvqMAyCaB]]{bite} attacks.</p>",
+  "items": [
+   "Bite",
+   "Two-Headed"
+  ]
+ },
+ {
+  "actor": "Deva",
+  "description": "<p>The deva makes two [[/item .qADu4OS68yINJCnZ]]{melee} attacks.</p>",
+  "items": [
+   "Angelic Weapons",
+   "Change Shape",
+   "Healing Touch",
+   "Innate Spellcasting",
+   "Magic Resistance",
+   "Mace",
+   "Detect Evil and Good",
+   "Commune",
+   "Raise Dead"
+  ]
+ },
+ {
+  "actor": "Djinni",
+  "description": "<p>The djinni makes three [[/item .DGP7lnAJT1cv8SA4]]{scimitar} attacks.</p>",
+  "items": [
+   "Elemental Demise",
+   "Innate Spellcasting",
+   "Scimitar",
+   "Create Whirlwind",
+   "Conjure Air Elemental",
+   "Detect Evil and Good",
+   "Detect Magic",
+   "Thunderwave",
+   "Create Food and Water",
+   "Tongues",
+   "Wind Walk",
+   "Creation",
+   "Gaseous Form",
+   "Invisibility",
+   "Major Image",
+   "Plane Shift"
+  ]
+ },
+ {
+  "actor": "Doppelganger",
+  "description": "<p>The doppelganger makes two melee attacks.</p>",
+  "items": [
+   "Ambusher",
+   "Surprise Attack",
+   "Slam",
+   "Read Thoughts",
+   "Shapechanger"
+  ]
+ },
+ {
+  "actor": "Dragon Turtle",
+  "description": "<p>The dragon turtle makes three attacks: one with its [[/item .7QJr0VCtVk2wtZ78]]{bite} and two with its [[/item .P4joxK4BwyYsPfJv]]{claws}. It can make one [[/item .zNDI1LvLKZ9Hi2Ew]]{tail} attack in place of its two claw attacks.</p>",
+  "items": [
+   "Amphibious",
+   "Bite",
+   "Claw",
+   "Tail",
+   "Steam Breath"
+  ]
+ },
+ {
+  "actor": "Dretch",
+  "description": "<p>The dretch makes two attacks: one with its [[/item .2So9DIMKKgeGHVru]]{bite} and one with its [[/item .5fa9Rdzy2YYpkAgS]]{claws}.</p>",
+  "items": [
+   "Bite",
+   "Claws",
+   "Fetid Cloud"
+  ]
+ },
+ {
+  "actor": "Drider",
+  "description": "<p>The drider makes three attacks, either with its [[/item .xqwxVn28J0zx8Y7H]]{longsword} or its [[/item .3XAtYmmaED1rxaaE]]{longbow}. It can replace one of those attacks with a [[/item .rUvv8Vnh7XbqbCLd]]{bite} attack.</p>",
+  "items": [
+   "Fey Ancestry",
+   "Innate Spellcasting",
+   "Spider Climb",
+   "Sunlight Sensitivity",
+   "Web Walker",
+   "Bite",
+   "Longsword",
+   "Longbow",
+   "Dancing Lights",
+   "Darkness",
+   "Faerie Fire"
+  ]
+ },
+ {
+  "actor": "Earth Elemental",
+  "description": "<p>The elemental makes two [[/item .2AD5aTLMPDmQFhGZ]]{slam} attacks.</p>",
+  "items": [
+   "Earth Glide",
+   "Siege Monster",
+   "Slam"
+  ]
+ },
+ {
+  "actor": "Efreeti",
+  "description": "<p>The efreeti makes two [[/item .tR7JGJjIz6H1oerb]]{scimitar} attacks or uses its [[/item .9D7vAr8iJbSa4g5N]]{Hurl Flame} twice.</p>",
+  "items": [
+   "Elemental Demise",
+   "Innate Spellcasting",
+   "Conjure Elemental (fire elemental only)",
+   "Scimitar",
+   "Hurl Flame",
+   "Detect Magic",
+   "Enlarge/Reduce",
+   "Tongues",
+   "Gaseous Form",
+   "Invisibility",
+   "Major Image",
+   "Plane Shift",
+   "Wall of Fire"
+  ]
+ },
+ {
+  "actor": "Erinyes",
+  "description": "<p>The erinyes makes three attacks.</p>",
+  "items": [
+   "Hellish Weapons",
+   "Longsword",
+   "Parry",
+   "Magic Resistance",
+   "Plate Armor",
+   "Longbow"
+  ]
+ },
+ {
+  "actor": "Ettercap",
+  "description": "<p>The ettercap makes two attacks: one with its [[/item .qpUx52QbFUCSPSln]]{bite} and one with its [[/item .T8XMTiCIOQP4dYEp]]{claws}.</p>",
+  "items": [
+   "Spider Climb",
+   "Web Sense",
+   "Web Walker",
+   "Bite",
+   "Claws",
+   "Web"
+  ]
+ },
+ {
+  "actor": "Ettin",
+  "description": "<p>The ettin makes two attacks: one with its [[/item .T1QQrbvnvnM73eIe]]{battleaxe} and one with its [[/item .5ri5zr7IJKsaZNF7]]{morningstar}.</p>",
+  "items": [
+   "Two Heads",
+   "Wakeful",
+   "Battleaxe",
+   "Morningstar"
+  ]
+ },
+ {
+  "actor": "Fire Elemental",
+  "description": "<p>The elemental makes two [[/item .fdt2FIirmBRCpRBm]]{touch} attacks.</p>",
+  "items": [
+   "Fire Form",
+   "Illumination",
+   "Water Susceptibility",
+   "Touch"
+  ]
+ },
+ {
+  "actor": "Fire Giant",
+  "description": "<p>The giant makes two [[/item .c8b8jy3sM3Z8gxm0]]{greatsword} attacks.</p>",
+  "items": [
+   "Plate Armor",
+   "Greatsword",
+   "Rock"
+  ]
+ },
+ {
+  "actor": "Flesh Golem",
+  "description": "<p>The golem makes two [[/item .mjn0iMGrjGTOn42w]]{slam} attacks.</p>",
+  "items": [
+   "Berserk",
+   "Aversion of Fire",
+   "Immutable Form",
+   "Lightning Absorption",
+   "Magic Resistance",
+   "Magic Weapons",
+   "Slam"
+  ]
+ },
+ {
+  "actor": "Frost Giant",
+  "description": "<p>The giant makes two [[/item .LVOGKiIm4UTD4fpj]]{greataxe} attacks.</p>",
+  "items": [
+   "Rock",
+   "Patchwork Armor",
+   "Greataxe"
+  ]
+ },
+ {
+  "actor": "Gargoyle",
+  "description": "<p>The gargoyle makes two attacks: one with its [[/item .A6GBvah75Y7fGjc5]]{bite} and one with its [[/item .ipJwA0j2zfzmq5GW]]{claws}.</p>",
+  "items": [
+   "False Appearance",
+   "Bite",
+   "Claws"
+  ]
+ },
+ {
+  "actor": "Giant Ape",
+  "description": "<p>The ape makes two [[/item .N86NeUNsfvruyJGq]]{fist} attacks.</p>",
+  "items": [
+   "Fist",
+   "Rock"
+  ]
+ },
+ {
+  "actor": "Giant Badger",
+  "description": "<p>The badger makes two attacks: one with its [[/item .NTUVjYVsAjweAj1R]]{bite} and one with its [[/item .BToZtvd0HCyQvoXC]]{claws}.</p>",
+  "items": [
+   "Keen Smell",
+   "Bite",
+   "Claws"
+  ]
+ },
+ {
+  "actor": "Giant Crocodile",
+  "description": "<p>The crocodile makes two attacks: one with its [[/item .u7eurp95tuW3tYGl]]{bite} and one with its [[/item .VkCVMF2SvsuYWWYg]]{tail}.</p>",
+  "items": [
+   "Hold Breath",
+   "Bite",
+   "Tail"
+  ]
+ },
+ {
+  "actor": "Giant Eagle",
+  "description": "<p>The eagle makes two attacks: one with its [[/item .vyI1tbobhrYMxj76]]{beak} and one with its [[/item .sh91NilUd5bUZyiG]]{talons}.</p>",
+  "items": [
+   "Keen Sight",
+   "Beak",
+   "Talons"
+  ]
+ },
+ {
+  "actor": "Giant Scorpion",
+  "description": "<p>The scorpion makes three attacks: two with its [[/item .OJ2b64O3e1nni21W]]{claws} and one with its [[/item .q6uVUHWyzht5OpwV]]{sting}.</p>",
+  "items": [
+   "Claw",
+   "Sting"
+  ]
+ },
+ {
+  "actor": "Giant Vulture",
+  "description": "<p>The vulture makes two attacks: one with its [[/item .t6TG4rgkOXBefYZQ]]{beak} and one with its [[/item .AXKWmB2ZU1hebo5S]]{talons}.</p>",
+  "items": [
+   "Keen Sight and Smell",
+   "Pack Tactics",
+   "Beak",
+   "Talons"
+  ]
+ },
+ {
+  "actor": "Gibbering Mouther",
+  "description": "<p>The gibbering mouther makes one [[/item .lfUDtJ8hdeULQzqa]]{bite} attack and, if it can, uses its [[/item .KQRvDGowc6ihejLu]]{Blinding Spittle}.</p>",
+  "items": [
+   "Aberrant Ground",
+   "Gibbering",
+   "Bites",
+   "Blinding Spittle"
+  ]
+ },
+ {
+  "actor": "Glabrezu",
+  "description": "<p>The glabrezu makes four attacks: two with its [[/item .pEUD99mri5iDNGH7]]{pincers} and two with its [[/item .VGFZM2Zvp0NT5Yb9]]{fists}. Alternatively, it makes two attacks with its pincers and casts one spell.</p>",
+  "items": [
+   "Innate Spellcasting",
+   "Magic Resistance",
+   "Pincer",
+   "Fist",
+   "Darkness",
+   "Detect Magic",
+   "Dispel Magic",
+   "Confusion",
+   "Fly",
+   "Power Word Stun"
+  ]
+ },
+ {
+  "actor": "Gladiator",
+  "description": "<p>The gladiator makes three melee attacks or two ranged attacks.</p><p>Melee: [[/item .eL15erXXE9EuXWSB]], [[/item .GrUneCbXCYngdpjf]]</p><p>Ranged: [[/item .eL15erXXE9EuXWSB]]</p>",
+  "items": [
+   "Studded Leather Armor",
+   "Shield",
+   "Brave",
+   "Brute",
+   "Spear",
+   "Shield Bash",
+   "Parry"
+  ]
+ },
+ {
+  "actor": "Grick",
+  "description": "<p>The grick makes one attack with its [[/item .tkVlxJxg4LBVJvuX]]{tentacles}. If that attack hits, the grick can make one [[/item .AGLjE9RSCjg1vQ6R]]{beak} attack against the same target.</p>",
+  "items": [
+   "Stone Camouflage",
+   "Tentacles",
+   "Beak"
+  ]
+ },
+ {
+  "actor": "Griffon",
+  "description": "<p>The griffon makes two attacks: one with its [[/item .T2JS1VEL7U2s92Fj]]{beak} and one with its [[/item .ldVEDIAP2PHxLHsL]]{claws}.</p>",
+  "items": [
+   "Keen Sight",
+   "Beak",
+   "Claws"
+  ]
+ },
+ {
+  "actor": "Gynosphinx",
+  "description": "<p>The sphinx makes two [[/item .gVFZXBtgx450yiH7]]{claw} attacks.</p>",
+  "items": [
+   "Inscrutable",
+   "Magic Weapons",
+   "Spellcasting",
+   "Claw",
+   "Claw Attack",
+   "Teleport",
+   "Cast a Spell",
+   "Mage Hand",
+   "Minor Illusion",
+   "Prestidigitation",
+   "Detect Magic",
+   "Identify",
+   "Shield",
+   "Dispel Magic",
+   "Darkness",
+   "Locate Object",
+   "Suggestion",
+   "Remove Curse",
+   "Tongues",
+   "Banishment",
+   "Greater Invisibility",
+   "Legend Lore"
+  ]
+ },
+ {
+  "actor": "Half-Red Dragon Veteran",
+  "description": "<p>The veteran makes two [[/item .93eWZ75LncoC5U8d]]{longsword} attacks. If it has a [[/item .pl7hO2z20EnTaPZt]]{shortsword} drawn, it can also make a shortsword attack.</p>",
+  "items": [
+   "Plate Armor",
+   "Longsword",
+   "Shortsword",
+   "Heavy Crossbow",
+   "Fire Breath"
+  ]
+ },
+ {
+  "actor": "Harpy",
+  "description": "<p>The harpy makes two attacks: one with its [[/item .WqD5jsrWCeNHoD9O]]{claws} and one with its [[/item .ywVQhULZvd4Jn51c]]{club}.</p>",
+  "items": [
+   "Claws",
+   "Club",
+   "Luring Song"
+  ]
+ },
+ {
+  "actor": "Hezrou",
+  "description": "<p>The hezrou makes three attacks: one with its [[/item .UNNl5XqsXZuKOm69]]{bite} and two with its [[/item .HEQqPUsmmNs178Mj]]{claws}.</p>",
+  "items": [
+   "Magic Resistance",
+   "Stench",
+   "Bite",
+   "Claws"
+  ]
+ },
+ {
+  "actor": "Hill Giant",
+  "description": "<p>The giant makes two [[/item .250gOq5bpqIHb7rw]]{greatclub} attacks.</p>",
+  "items": [
+   "Greatclub",
+   "Rock"
+  ]
+ },
+ {
+  "actor": "Hippogriff",
+  "description": "<p>The hippogriff makes two attacks: one with its [[/item .CNurXa30GaCRT8MC]]{beak} and one with its [[/item .pJN1LKPv23YgFC8w]]{claws}.</p>",
+  "items": [
+   "Keen Sight",
+   "Beak",
+   "Claws"
+  ]
+ },
+ {
+  "actor": "Horned Devil",
+  "description": "<p>The devil makes three melee attacks: two with its [[/item .g8r9DZeHyfNzerHP]]{fork} and one with its [[/item .VpvOoT7mbR0XNZiL]]{tail}. It can use [[/item .GFYzWSyeuW9O4a0I]]{Hurl Flame} in place of any melee attack.</p>",
+  "items": [
+   "Fork",
+   "Devil's Sight",
+   "Magic Resistance",
+   "Tail",
+   "Hurl Flame"
+  ]
+ },
+ {
+  "actor": "Hydra",
+  "description": "<p>The hydra makes as many [[/item .fYE4f0Oa2I0MetId]]{bite} attacks as it has heads.</p>",
+  "items": [
+   "Hold Breath",
+   "Multiple Heads",
+   "Reactive Heads",
+   "Wakeful",
+   "Bite"
+  ]
+ },
+ {
+  "actor": "Ice Devil",
+  "description": "<p>The devil makes three attacks: one with its [[/item .DV4KS0OE541vGOtI]]{bite}, one with its [[/item .E6iXljYXLdQyfk1l]]{claws}, and one with its [[/item .AQ551xglVn90BdwU]]{tail}.</p>",
+  "items": [
+   "Bite",
+   "Devil's Sight",
+   "Magic Resistance",
+   "Wall of Ice",
+   "Tail",
+   "Claws"
+  ]
+ },
+ {
+  "actor": "Invisible Stalker",
+  "description": "<p>The stalker makes two [[/item .rpKiEPQVeOZTLwjf]]{slam} attacks.</p>",
+  "items": [
+   "Faultless Tracker",
+   "Invisibility",
+   "Slam"
+  ]
+ },
+ {
+  "actor": "Iron Golem",
+  "description": "<p>The golem makes two melee attacks.</p>",
+  "items": [
+   "Fire Absorption",
+   "Immutable Form",
+   "Magic Resistance",
+   "Magic Weapons",
+   "Slam",
+   "Sword",
+   "Poison Breath"
+  ]
+ },
+ {
+  "actor": "Knight",
+  "description": "<p>The knight makes two [[/item .iPLa96izrYFiVtaO]]{melee} attacks.</p>",
+  "items": [
+   "Plate Armor",
+   "Greatsword",
+   "Heavy Crossbow",
+   "Leadership",
+   "Parry",
+   "Brave"
+  ]
+ },
+ {
+  "actor": "Kraken",
+  "description": "<p>The kraken makes three [[/item .lfg28JvVAru30yJ4]]{tentacle} attacks, each of which it can replace with one use of [[/item .bwwyMBn4QwiNd4SM]]{Fling}.</p>",
+  "items": [
+   "Amphibious",
+   "Freedom of Movement",
+   "Siege Monster",
+   "Bite",
+   "Tentacle",
+   "Fling",
+   "Lightning Storm",
+   "Legendary Actions",
+   "Lair Actions",
+   "Regional Effects",
+   "Tentacle Attack or Fling",
+   "Lightning Storm",
+   "Ink Cloud"
+  ]
+ },
+ {
+  "actor": "Lamia",
+  "description": "<p>The lamia makes two attacks: one with its [[/item .lqr5NeudKmKQfSpZ]]{claws} and one with its [[/item .jMTZfqYRB58CwXyw]]{dagger} or [[/item .cd8MN5gJkmUn1RTE]]{Intoxicating Touch}.</p>",
+  "items": [
+   "Disguise Self (any humanoid form)",
+   "Innate Spellcasting",
+   "Claws",
+   "Dagger",
+   "Intoxicating Touch",
+   "Major Image",
+   "Charm Person",
+   "Mirror Image",
+   "Scrying",
+   "Suggestion",
+   "Geas"
+  ]
+ },
+ {
+  "actor": "Lizardfolk",
+  "description": "<p>The lizardfolk makes two melee attacks, each one with a different weapon.</p>",
+  "items": [
+   "Hold Breath",
+   "Bite",
+   "Heavy Club",
+   "Javelin",
+   "Spiked Shield",
+   "Shield"
+  ]
+ },
+ {
+  "actor": "Manticore",
+  "description": "<p>The manticore makes three attacks: one with its [[/item .thSJXAlyfHGmVWN5]]{bite} and two with its [[/item .4WFf0M2tCPwiLPxG]]{claws} or three with its [[/item .bYJjJPKhiDOTMlmS]]{tail spikes}.</p>",
+  "items": [
+   "Tail Spike Regrowth",
+   "Bite",
+   "Claw",
+   "Tail Spike"
+  ]
+ },
+ {
+  "actor": "Marilith",
+  "description": "<p>The marilith can make seven attacks: six with its [[/item .VzPNwzlwJ7knJ9MC]]{longswords} and one with its [[/item .BoIambnHLbZXr85T]]{tail}.</p>",
+  "items": [
+   "Magic Resistance",
+   "Magic Weapons",
+   "Reactive",
+   "Longsword",
+   "Tail",
+   "Teleport",
+   "Parry"
+  ]
+ },
+ {
+  "actor": "Medusa",
+  "description": "<p>The medusa makes either three melee attacks - one with its [[/item .1N53jrQmsZuhiREF]]{snake hair} and two with its [[/item .ixrzcEmkn9jaDOZ0]]{shortsword} - or two ranged attacks with its [[/item .4U98oe3Qr28BGbzG]]{longbow}.</p>",
+  "items": [
+   "Petrifying Gaze",
+   "Snake Hair",
+   "Shortsword",
+   "Longbow"
+  ]
+ },
+ {
+  "actor": "Merrow",
+  "description": "<p>The merrow makes two attacks: one with its [[/item .doFYltsiw2Fgp5gn]]{bite} and one with its [[/item .bbB0SMNW3l2SHEz5]]{claws} or [[/item .7XgQY1kwKPuoWX7t]]{harpoon}.</p>",
+  "items": [
+   "Amphibious",
+   "Bite",
+   "Claws",
+   "Harpoon"
+  ]
+ },
+ {
+  "actor": "Mummy",
+  "description": "<p>The mummy can use its [[/item .8Jju4CVZaIDab6Ju]]{Dreadful Glare} and makes one attack with its [[/item .ik1IkSZi4fpiGbB3]]{rotting fist}.</p>",
+  "items": [
+   "Rotting Fist",
+   "Dreadful Glare"
+  ]
+ },
+ {
+  "actor": "Mummy Lord",
+  "description": "<p>The mummy can use its [[/item .yHydHrxw4vlDlyjf]]{Dreadful Glare} and makes one attack with its [[/item .M6t9H8pMhzQxM9qv]]{rotting fist}.</p>",
+  "items": [
+   "Blinding Dust",
+   "Blasphemous Word",
+   "Channel Negative Energy",
+   "Magic Resistance",
+   "Rejuvenation",
+   "Spellcasting",
+   "Rotting Fist",
+   "Dreadful Glare",
+   "Legendary Actions",
+   "Lair Actions",
+   "Regional Effects",
+   "Attack",
+   "Whirlwind of Sand",
+   "Sacred Flame",
+   "Thaumaturgy",
+   "Command",
+   "Guiding Bolt",
+   "Shield of Faith",
+   "Hold Person",
+   "Silence",
+   "Spiritual Weapon",
+   "Animate Dead",
+   "Dispel Magic",
+   "Divination",
+   "Guardian of Faith",
+   "Contagion",
+   "Insect Plague",
+   "Harm"
+  ]
+ },
+ {
+  "actor": "Nalfeshnee",
+  "description": "<p>The nalfeshnee uses [[/item .RFPDYIhkmBW2B47S]]{Horror Nimbus} if it can. It then makes three attacks: one with its [[/item .524dkWbpWUJKFaj2]]{bite} and two with its [[/item .xhKo80CbyA57Kl1l]]{claws}.</p>",
+  "items": [
+   "Magic Resistance",
+   "Bite",
+   "Claw",
+   "Horror Nimbus",
+   "Teleport"
+  ]
+ },
+ {
+  "actor": "Oni",
+  "description": "<p>The oni makes two attacks, either with its [[/item .q7J7PERrJb2vxtlt]]{claws} or its [[/item .FC0FNE8O4rnbth8s]]{glaive}.</p>",
+  "items": [
+   "Chain Mail",
+   "Glaive",
+   "Claw (Oni Form Only)",
+   "Innate Spellcasting",
+   "Regeneration",
+   "Magic Weapons",
+   "Change Shape",
+   "Darkness",
+   "Invisibility",
+   "Charm Person",
+   "Cone of Cold",
+   "Gaseous Form",
+   "Sleep"
+  ]
+ },
+ {
+  "actor": "Otyugh",
+  "description": "<p>The otyugh makes three attacks: one with its [[/item .CCawltKiVU4Mup9i]]{bite} and two with its [[/item .BPYsBEkmZMcGYZDh]]{tentacles}.</p>",
+  "items": [
+   "Limited Telepathy",
+   "Bite",
+   "Tentacle",
+   "Tentacle Slam"
+  ]
+ },
+ {
+  "actor": "Owlbear",
+  "description": "<p>The owlbear makes two attacks: one with its [[/item .CwKQlVkFc2uJW0HL]]{beak} and one with its [[/item .FpbBzMs3wu1NK3Zu]]{claws}.</p>",
+  "items": [
+   "Keen Sight and Smell",
+   "Beak",
+   "Claws"
+  ]
+ },
+ {
+  "actor": "Pit Fiend",
+  "description": "<p>The pit fiend makes four attacks: one with its [[/item .GjIQl7UOQUtsrj2v]]{bite}, one with its [[/item .RkuPEGbAXHhxfNWJ]]{claw}, one with its [[/item .gpjBebqxqbQA35st]]{mace}, and one with its [[/item .Gh1DbMpJiaTlTwWp]]{tail}.</p>",
+  "items": [
+   "Fear Aura",
+   "Magic Resistance",
+   "Magic Weapons",
+   "Innate Spellcasting",
+   "Bite",
+   "Claw",
+   "Mace",
+   "Tail",
+   "Detect Magic",
+   "Fireball",
+   "Hold Monster",
+   "Wall of Fire"
+  ]
+ },
+ {
+  "actor": "Planetar",
+  "description": "<p>The planetar makes two melee attacks.</p>",
+  "items": [
+   "Angelic Weapons",
+   "Divine Awareness",
+   "Innate Spellcasting",
+   "Invisibility (self only)",
+   "Magic Resistance",
+   "Greatsword",
+   "Healing Touch",
+   "Detect Evil and Good",
+   "Blade Barrier",
+   "Dispel Evil and Good",
+   "Flame Strike",
+   "Raise Dead",
+   "Commune",
+   "Control Weather",
+   "Insect Plague"
+  ]
+ },
+ {
+  "actor": "Polar Bear",
+  "description": "<p>The bear makes two attacks: one with its [[/item .c8cisRQ7Ki3qiXgL]]{bite} and one with its [[/item .jFBgpP0EO1Y2HRL0]]{claws}.</p>",
+  "items": [
+   "Keen Smell",
+   "Bite",
+   "Claws"
+  ]
+ },
+ {
+  "actor": "Purple Worm",
+  "description": "<p>The worm makes two attacks: one with its [[/item .dlzFJ5UjbMAfJ6Sb]]{bite} and one with its stinger.</p>",
+  "items": [
+   "Tunneler",
+   "Bite",
+   "Tail Stinger"
+  ]
+ },
+ {
+  "actor": "Rakshasa",
+  "description": "<p>The rakshasa makes two [[/item .pHBLWUN5VKEjSBh6]]{claw} attacks.</p>",
+  "items": [
+   "Limited Magic Immunity",
+   "Innate Spellcasting",
+   "Claw",
+   "Detect Thoughts",
+   "Disguise Self",
+   "Mage Hand",
+   "Minor Illusion",
+   "Charm Person",
+   "Detect Magic",
+   "Invisibility",
+   "Major Image",
+   "Suggestion",
+   "Dominate Person",
+   "Fly",
+   "Plane Shift",
+   "True Seeing"
+  ]
+ },
+ {
+  "actor": "Roc",
+  "description": "<p>The roc makes two attacks: one with its [[/item .PZWkwOa8C0Y2tSCR]]{beak} and one with its [[/item .XMiiDwLIMYWFqxyv]]{talons}.</p>",
+  "items": [
+   "Beak",
+   "Keen Sight",
+   "Talons"
+  ]
+ },
+ {
+  "actor": "Roper",
+  "description": "<p>The roper makes four attacks with its [[/item .bTiw89tDx64zTqDk]]{tendrils}, uses [[/item .iGuyFLbKazqPCcXY]]{Reel}, and makes one attack with its [[/item .mBRjMwEitGrPDm5I]]{bite}.</p>",
+  "items": [
+   "False Appearance",
+   "Grasping Tendrils",
+   "Spider Climb",
+   "Bite",
+   "Tendril",
+   "Reel"
+  ]
+ },
+ {
+  "actor": "Sahuagin",
+  "description": "<p>The sahuagin makes two melee attacks: one with its [[/item .NSdAR332o65ZE3hC]]{bite} and one with its [[/item .VJlDAg21VwBOjbuR]]{claws} or [[/item .UqpaWsGVgiCMSZEw]]{spear}.</p>",
+  "items": [
+   "Spear",
+   "Bite",
+   "Blood Frenzy",
+   "Claws",
+   "Limited Amphibiousness",
+   "Shark Telepathy"
+  ]
+ },
+ {
+  "actor": "Salamander",
+  "description": "<p>The salamander makes two attacks: one with its [[/item .SKwOsrThcwqMXCZv]]{spear} and one with its [[/item .rvRy41yt9zowrAr1]]{tail}.</p>",
+  "items": [
+   "Heated Body",
+   "Heated Weapons",
+   "Tail",
+   "Spear"
+  ]
+ },
+ {
+  "actor": "Scout",
+  "description": "<p>The scout makes two [[/item .YDoOa6D6QDoR2Htu]]{melee} attacks or two [[/item .E2fYrhLigMeVH09l]]{ranged} attacks.</p>",
+  "items": [
+   "Leather Armor",
+   "Keen Hearing and Sight",
+   "Shortsword",
+   "Longbow"
+  ]
+ },
+ {
+  "actor": "Shambling Mound",
+  "description": "<p>The shambling mound makes two [[/item .lOIA9YKQU8xSx7Lj]]{slam} attacks. If both attacks hit a Medium or smaller target, the target is grappled <strong>escape DC 14</strong>, and the shambling mound uses its [[/item .N42BQALoCmeYphD1]]{Engulf} on it.</p>",
+  "items": [
+   "Lightning Absorption",
+   "Engulf",
+   "Slam"
+  ]
+ },
+ {
+  "actor": "Shield Guardian",
+  "description": "<p>The guardian makes two [[/item .r6GQ1TwNK7pinX0a]]{fist} attacks.</p>",
+  "items": [
+   "Bound",
+   "Regeneration",
+   "Spell Storing",
+   "Fist",
+   "Shield"
+  ]
+ },
+ {
+  "actor": "Solar",
+  "description": "<p>The solar makes two [[/item .QssrfCioglFdfd8I]]{greatsword} attacks.</p>",
+  "items": [
+   "Angelic Weapons",
+   "Divine Awareness",
+   "Flying Sword",
+   "Healing Touch",
+   "Innate Spellcasting",
+   "Magic Resistance",
+   "Greatsword",
+   "Slaying Longbow",
+   "Legendary Actions",
+   "Teleport",
+   "Searing Burst",
+   "Blinding Gaze",
+   "Detect Evil and Good",
+   "Invisibility",
+   "Blade Barrier",
+   "Dispel Evil and Good",
+   "Resurrection",
+   "Commune",
+   "Control Weather"
+  ]
+ },
+ {
+  "actor": "Spy",
+  "description": "<p>The spy makes two melee attacks.</p>",
+  "items": [
+   "Cunning Action",
+   "Sneak Attack",
+   "Shortsword",
+   "Hand Crossbow"
+  ]
+ },
+ {
+  "actor": "Stone Giant",
+  "description": "<p>The giant makes two [[/item .Tm2NY0eSI6InRcsa]]{greatclub} attacks.</p>",
+  "items": [
+   "Greatclub",
+   "Rock",
+   "Rock Catching",
+   "Stone Camouflage"
+  ]
+ },
+ {
+  "actor": "Stone Golem",
+  "description": "<p>The golem makes two [[/item .DelAxHnRbNHC6OoV]]{slam} attacks.</p>",
+  "items": [
+   "Immutable Form",
+   "Magic Resistance",
+   "Magic Weapons",
+   "Slam",
+   "Slow"
+  ]
+ },
+ {
+  "actor": "Storm Giant",
+  "description": "<p>The giant makes two [[/item .iwN0z7f5LF9AAbRJ]]{greatsword} attacks.</p>",
+  "items": [
+   "Scale Mail",
+   "Amphibious",
+   "Greatsword",
+   "Innate Spellcasting",
+   "Lightning Strike",
+   "Rock",
+   "Detect Magic",
+   "Feather Fall",
+   "Levitate",
+   "Light",
+   "Control Weather",
+   "Water Breathing"
+  ]
+ },
+ {
+  "actor": "Tarrasque",
+  "description": "<p>The tarrasque can use its [[/item .3mtn5D2GoD19WDVW]]{Frightful Presence}. It then makes five attacks: one with its [[/item .suUr7bJqBqE7xk2F]]{bite}, two with its [[/item .7DRko62ztr6FjZLA]]{claws}, one with its [[/item .E1RZdzEY2qnG2jLn]]{horns}, and one with its [[/item .Lo4LU9FBxez1Nzqm]]{tail}. It can use its [[/item .7ycN6rrAEJQP3ZOs]]{Swallow} instead of its bite.</p>",
+  "items": [
+   "Legendary Resistance",
+   "Magic Resistance",
+   "Reflective Carapace",
+   "Siege Monster",
+   "Bite",
+   "Claw",
+   "Horns",
+   "Tail",
+   "Frightful Presence",
+   "Swallow",
+   "Lair Actions",
+   "Legendary Actions",
+   "Regional Effects",
+   "Attack",
+   "Move",
+   "Chomp"
+  ]
+ },
+ {
+  "actor": "Thug",
+  "description": "<p>The thug makes two [[/item .6gRu9IFFkvxesFfK]]{melee} attacks.</p>",
+  "items": [
+   "Leather Armor",
+   "Pack Tactics",
+   "Heavy Crossbow",
+   "Mace"
+  ]
+ },
+ {
+  "actor": "Treant",
+  "description": "<p>The treant makes two [[/item .lisZZTaupqInGEi1]]{slam} attacks.</p>",
+  "items": [
+   "Animate Trees",
+   "False Appearance",
+   "Treant - Rock",
+   "Siege Monster",
+   "Slam"
+  ]
+ },
+ {
+  "actor": "Troll",
+  "description": "<p>The troll makes three attacks: one with its [[/item .R7DpgLP3aFNmAgOc]]{bite} and two with its [[/item .ahGwFmyt6nItUOAK]]{claws}.</p>",
+  "items": [
+   "Bite",
+   "Claw",
+   "Keen Smell",
+   "Regeneration"
+  ]
+ },
+ {
+  "actor": "Tyrannosaurus Rex",
+  "description": "<p>The tyrannosaurus makes two attacks: one with its [[/item .O8pEyHMhxCwROJ6O]]{bite} and one with its [[/item .jw9SyNUWRzgHe37B]]{tail}. It can't make both attacks against the same target.</p>",
+  "items": [
+   "Bite",
+   "Tail"
+  ]
+ },
+ {
+  "actor": "Unicorn",
+  "description": "<p>The unicorn makes two attacks: one with its [[/item .f7m44y4TqYYcunMj]]{hooves} and one with its [[/item .ORrGdhTLKLTKK3BH]]{horn}.</p>",
+  "items": [
+   "Charge",
+   "Innate Spellcasting",
+   "Magic Resistance",
+   "Magic Weapons",
+   "Hooves",
+   "Horn",
+   "Healing Touch",
+   "Teleport",
+   "Legendary Actions",
+   "Hooves",
+   "Shimmering Shield",
+   "Heal Self",
+   "Detect Evil and Good",
+   "Druidcraft",
+   "Pass without Trace",
+   "Calm Emotions",
+   "Dispel Evil and Good",
+   "Entangle"
+  ]
+ },
+ {
+  "actor": "Vampire",
+  "description": "<p>The vampire makes two attacks, only one of which can be a bite attack.</p>",
+  "items": [
+   "Shapechanger",
+   "Legendary Resistance",
+   "Misty Escape",
+   "Regeneration",
+   "Spider Climb",
+   "Vampire Weaknesses",
+   "Unarmed Strike (Vampire Form Only)",
+   "Bite (Bat or Vampire Form Only)",
+   "Charm",
+   "Children of the Night",
+   "Legendary Actions",
+   "Lair Actions",
+   "Regional Effects",
+   "Move",
+   "Unarmed Strike",
+   "Bite"
+  ]
+ },
+ {
+  "actor": "Vampire Spawn",
+  "description": "<p>The vampire makes two attacks, only one of which can be a [[/item .HebvJc2NqYvdR79s]]{bite} attack.</p>",
+  "items": [
+   "Bite",
+   "Claws",
+   "Regeneration",
+   "Spider Climb",
+   "Vampire Weaknesses"
+  ]
+ },
+ {
+  "actor": "Veteran",
+  "description": "<p>The veteran makes two [[/item .WaEunPCFG0EddNTt]]{longsword} attacks. If it has a [[/item .cXf5q5xw30ICGxZg]]{shortsword} drawn, it can also make a shortsword attack.</p>",
+  "items": [
+   "Splint Armor",
+   "Longsword",
+   "Shortsword",
+   "Heavy Crossbow"
+  ]
+ },
+ {
+  "actor": "Violet Fungus",
+  "description": "<p>The fungus makes 1d4 [[/item .OEx9iy4HDipiYsPt]]{Rotting Touch} attacks.</p>",
+  "items": [
+   "Rotting Touch",
+   "False Appearance"
+  ]
+ },
+ {
+  "actor": "Vrock",
+  "description": "<p>The vrock makes two attacks: one with its [[/item .JwAFMjU7vHDDL2Ib]]{beak} and one with its [[/item .H5JJE8uS39dTI3Vg]]{talons}.</p>",
+  "items": [
+   "Magic Resistance",
+   "Beak",
+   "Talons",
+   "Spores",
+   "Stunning Screech"
+  ]
+ },
+ {
+  "actor": "Water Elemental",
+  "description": "<p>The elemental makes two [[/item .7xDGPsWicxgP6feT]]{slam} attacks.</p>",
+  "items": [
+   "Freeze",
+   "Water Form",
+   "Slam",
+   "Whelm"
+  ]
+ },
+ {
+  "actor": "Werebear",
+  "description": "<p>In bear form, the werebear makes two [[/item .pEYcOjAF2fovrXRP]]{claw} attacks. In humanoid form, it makes two [[/item .UeXfHUO5RZp72PIs]]{greataxe} attacks. In hybrid form, it can attack like a bear or a humanoid.</p>",
+  "items": [
+   "Shapechanger",
+   "Keen Smell",
+   "Bite (Bear or Hybrid Form Only)",
+   "Claw (Bear or Hybrid Form Only)",
+   "Greataxe (Humanoid or Hybrid Form Only)"
+  ]
+ },
+ {
+  "actor": "Wereboar",
+  "description": "<p>The wereboar makes two attacks, only one of which can be with its tusks.</p>",
+  "items": [
+   "Charge (Boar or Hybrid Form Only)",
+   "Relentless",
+   "Shapechanger",
+   "Tusks (Boar or Hybrid Form Only)",
+   "Maul (Humanoid or Hybrid Form Only)"
+  ]
+ },
+ {
+  "actor": "Wererat",
+  "description": "<p>The wererat makes two attacks, only one of which can be a bite.</p>",
+  "items": [
+   "Shapechanger",
+   "Keen Smell",
+   "Bite (Rat or Hybrid Form Only)",
+   "Hand Crossbow (Humanoid or Hybrid Form Only)",
+   "Shortsword (Humanoid or Hybrid Form Only)"
+  ]
+ },
+ {
+  "actor": "Weretiger",
+  "description": "<p>In humanoid form, the weretiger makes two [[/item .vtnEGCOptmp2bcqG]]{scimitar} attacks or two [[/item .onmNGMiE4AyvYxDQ]]{longbow} attacks.</p><p>In hybrid form, it can attack like a humanoid or make two [[/item .HPmjVRKpG08bgohb]]{claw} attacks.</p>",
+  "items": [
+   "Shapechanger",
+   "Keen Hearing and Smell",
+   "Pounce (Tiger or Hybrid Form Only)",
+   "Bite (Tiger or Hybrid Form Only)",
+   "Claw (Tiger or Hybrid Form Only)",
+   "Scimitar (Humanoid or Hybrid Form Only)",
+   "Longbow (Humanoid or Hybrid Form Only)"
+  ]
+ },
+ {
+  "actor": "Werewolf",
+  "description": "<p>The werewolf makes two attacks: one with its [[/item .tWfR8uJNnQxpXgDw]]{bite} and one with its [[/item .36H4LGNMMEYS1Irm]]{claws} or [[/item .TiKtAuqd6urQ45Ds]]{spear}.</p>",
+  "items": [
+   "Bite (Wolf or Hybrid Form Only)",
+   "Spear (Humanoid Form Only)",
+   "Claws (Hybrid Form Only)",
+   "Shapechanger",
+   "Keen Hearing and Smell"
+  ]
+ },
+ {
+  "actor": "Wight",
+  "description": "<p>The wight makes two [[/item .WZ3XGh48UoyAvBhS]]{longsword} attacks or two [[/item .PUYwkzEiKopyM6YL]]{longbow} attacks. It can use its [[/item .NX8cqG6aZMns8wvY]]{Life Drain} in place of one longsword attack.</p>",
+  "items": [
+   "Studded Leather Armor",
+   "Sunlight Sensitivity",
+   "Longbow",
+   "Longsword",
+   "Life Drain"
+  ]
+ },
+ {
+  "actor": "Wyvern",
+  "description": "<p>The wyvern makes two attacks: one with its [[/item .j1LTHxGLXWdnEbwq]]{bite} and one with its [[/item .HzLuzqlmtBSeSS4Q]]{stinger}. While flying, it can use its [[/item .Wa8BU72wRqyBCqkI]]{claws} in place of one other attack.</p>",
+  "items": [
+   "Bite",
+   "Claws",
+   "Stinger"
+  ]
+ },
+ {
+  "actor": "Xorn",
+  "description": "<p>The xorn makes three [[/item .LRjB7lk0aa4TOd16]]{claw} attacks and one [[/item .ODAa1IROPs40MUI2]]{bite} attack.</p>",
+  "items": [
+   "Bite",
+   "Claw",
+   "Earth Glide",
+   "Stone Camouflage",
+   "Treasure Sense"
+  ]
+ },
+ {
+  "actor": "Young Black Dragon",
+  "description": "<p>The dragon makes three attacks: one with its [[/item .kuTDtAq2QL2Tmr4h]]{bite} and two with its [[/item .gy0FMKec2tea9YI1]]{claws}.</p>",
+  "items": [
+   "Acid Breath",
+   "Amphibious",
+   "Bite",
+   "Claw"
+  ]
+ },
+ {
+  "actor": "Young Blue Dragon",
+  "description": "<p>The dragon makes three attacks: one with its [[/item .42AGHJQzJZfUYxF9]]{bite} and two with its [[/item .YSVencwrBzRdfm62]]{claws}.</p>",
+  "items": [
+   "Bite",
+   "Claw",
+   "Lightning Breath"
+  ]
+ },
+ {
+  "actor": "Young Brass Dragon",
+  "description": "<p>The dragon makes three attacks: one with its [[/item .dYJy66Ftt58qpTUi]]{bite} and two with its [[/item .YHom7FFObzrKEBLQ]]{claws}.</p>",
+  "items": [
+   "Bite",
+   "Breath Weapons",
+   "Claw"
+  ]
+ },
+ {
+  "actor": "Young Bronze Dragon",
+  "description": "<p>The dragon makes three attacks: one with its [[/item .22lf3TLPObmD4s6h]]{bite} and two with its [[/item .LGFPSpA0pvVpj3cF]]{claws}.</p>",
+  "items": [
+   "Amphibious",
+   "Bite",
+   "Claw",
+   "Breath Weapons"
+  ]
+ },
+ {
+  "actor": "Young Copper Dragon",
+  "description": "<p>The dragon makes three attacks: one with its [[/item .Km7rUn5tu44KuVbz]]{bite} and two with its [[/item .DlxAB4bcOmBIn0UG]]{claws}.</p>",
+  "items": [
+   "Bite",
+   "Claw",
+   "Breath Weapons"
+  ]
+ },
+ {
+  "actor": "Young Gold Dragon",
+  "description": "<p>The dragon makes three attacks: one with its [[/item .IiZoBYBEjE5gGjeD]]{bite} and two with its [[/item .qRuJSlOzJITBzcjv]]{claws}.</p>",
+  "items": [
+   "Amphibious",
+   "Bite",
+   "Claw",
+   "Breath Weapons"
+  ]
+ },
+ {
+  "actor": "Young Green Dragon",
+  "description": "<p>The dragon makes three attacks: one with its [[/item .0Ob35HZxhSF7p2ys]]{bite} and two with its [[/item .WvvHslcDhMq7MD1s]]{claws}.</p>",
+  "items": [
+   "Amphibious",
+   "Bite",
+   "Claw",
+   "Poison Breath"
+  ]
+ },
+ {
+  "actor": "Young Red Dragon",
+  "description": "<p>The dragon makes three attacks: one with its [[/item .KuuOPjJ1YeTtjGbN]]{bite} and two with its [[/item .3UHmbpT3v3FTlplI]]{claws}.</p>",
+  "items": [
+   "Bite",
+   "Claw",
+   "Fire Breath"
+  ]
+ },
+ {
+  "actor": "Young Silver Dragon",
+  "description": "<p>The dragon makes three attacks: one with its [[/item .qsfDO6B4wLP1UeKS]]{bite} and two with its [[/item .GvAgPChKDJLm64Za]]{claws}.</p>",
+  "items": [
+   "Bite",
+   "Claw",
+   "Breath Weapons"
+  ]
+ },
+ {
+  "actor": "Young White Dragon",
+  "description": "<p>The dragon makes three attacks: one with its [[/item .qFfEF7lLt2kH3RbA]]{bite} and two with its [[/item .d9xXEIYNNQjIMGF8]]{claws}.</p>",
+  "items": [
+   "Bite",
+   "Claw",
+   "Cold Breath",
+   "Ice Walk"
+  ]
+ }
+]
