@@ -14,12 +14,23 @@ import { asyncHooksCall, asyncHooksCallAll, createEffectWithId, deleteEffectIfPr
  * Budgets are actor data set by effects: `flags.midi-qol.actions.reactionsMax` (two reactions), `reactionsReset`
  * (eachTurn / rest / never). Writes go through the actor's effect queue (lib: queueActorEffects), so spends on one actor
  * never race; the fixed id keeps one window per kind whoever creates it.
+ * A module adds a kind (MidiQOL.economy.registerKind: legendary actions, a class resource spent per turn): its window,
+ * flags `flags.midi-qol.actions.<id>`/`<id>Used`/`<id>Max`/`<id>Reset`, its spends, issues and the turn model's view, as
+ * the three built in.
  */
 
-export type BudgetKindId = "action" | "bonus" | "reaction";
+/** midi's own kinds */
+export type CoreBudgetKindId = "action" | "bonus" | "reaction";
+/** A budget kind: midi's own, or one a module registered */
+export type BudgetKindId = CoreBudgetKindId | (string & {});
 
 interface BudgetKind {
   id: BudgetKindId;
+  /** Shown by HUDs */
+  label: string;
+  img?: string;
+  /** The budget when the actor has no `<id>Max` flag */
+  defaultMax?: number;
   /** The window effect's id: a status's (the marker) or its own */
   windowId: () => string;
   flags: { exhausted: string, used: string, max: string, round: string, reset: string };
@@ -30,25 +41,56 @@ interface BudgetKind {
 const bySetting = (setting: () => string) => (actor: Actor.Implementation) =>
   ["all", "displayOnly"].includes(setting()) || setting() === actor.type;
 
-const KINDS: Record<BudgetKindId, BudgetKind> = {
+const KINDS: Record<string, BudgetKind> = {
   // The turn's window: the action, and the turn's counters (attacks left from the Attack action, a leveled spell cast).
   // Not a status: no token icon, no HUD toggle
   action: {
-    id: "action", windowId: () => getStaticID("turn"),
+    id: "action", label: "DND5E.Action", windowId: () => getStaticID("turn"),
     flags: { exhausted: "action", used: "actionsUsed", max: "actionsMax", round: "actionCombatRound", reset: "actionsReset" },
     tracked: () => true
   },
   reaction: {
-    id: "reaction", windowId: () => getStaticID("reaction"),
+    id: "reaction", label: "DND5E.Reaction", img: "modules/midi-qol/icons/reaction.svg", windowId: () => getStaticID("reaction"),
     flags: { exhausted: "reaction", used: "reactionsUsed", max: "reactionsMax", round: "reactionCombatRound", reset: "reactionsReset" },
     tracked: bySetting(() => configSettings.enforceReactions)
   },
   bonus: {
-    id: "bonus", windowId: () => getStaticID("bonusaction"),
+    id: "bonus", label: "DND5E.BonusAction", img: "modules/midi-qol/icons/bonus-action.svg", windowId: () => getStaticID("bonusaction"),
     flags: { exhausted: "bonus", used: "bonusActionsUsed", max: "bonusActionsMax", round: "bonusActionCombatRound", reset: "bonusActionsReset" },
     tracked: bySetting(() => configSettings.enforceBonusActions)
   }
 };
+
+/** What a module gives to add a budget kind */
+export interface BudgetKindDefinition {
+  /** A short id: its window effect's id is made from it, its flags are named after it */
+  id: string;
+  label: string;
+  img?: string;
+  /** The budget when the actor has no `<id>Max` flag (default 1) */
+  max?: number;
+  /** Tracked for this actor (default: always) */
+  tracked?: (actor: Actor.Implementation) => boolean;
+}
+
+/** Adds a budget kind (MidiQOL.economy.registerKind); returns its removal */
+export function registerBudgetKind(definition: BudgetKindDefinition): () => void {
+  const id = definition.id;
+  if (["action", "bonus", "reaction"].includes(id)) throw new Error(`midi-qol | ${id} is a built-in budget kind`);
+  KINDS[id] = {
+    id, label: definition.label, img: definition.img, defaultMax: definition.max, windowId: () => getStaticID(id),
+    flags: { exhausted: id, used: `${id}Used`, max: `${id}Max`, round: `${id}CombatRound`, reset: `${id}Reset` },
+    tracked: definition.tracked ?? (() => true)
+  };
+  return () => { delete KINDS[id]; };
+}
+
+/** Every budget kind: midi's three, then the registered ones; given an actor, whether each is tracked for it */
+export function budgetKinds(ref?: ActorRef): { id: BudgetKindId, label: string, img?: string, core: boolean, tracked?: boolean }[] {
+  const actor = actorOf(ref);
+  return Object.values(KINDS).map(kind => ({ id: kind.id, label: i18n(kind.label), img: kind.img, core: ["action", "bonus", "reaction"].includes(kind.id),
+    ...(actor ? { tracked: kind.tracked(actor) } : {}) }));
+}
 
 /** A window's counters besides its count: `flags.midi-qol.actions.<name>` (attacksLeft, leveledSpell, objectInteraction) */
 export type WindowCounters = Record<string, number | boolean>;
@@ -89,8 +131,9 @@ function actionFlags(actor: Actor.Implementation): Record<string, unknown> {
 function template(kind: BudgetKindId): ActiveEffect.Implementation | undefined {
   if (kind === "reaction") return getReactionEffect();
   if (kind === "bonus") return getBonusActionEffect();
+  const own = KINDS[kind];
   const data: ActiveEffect.CreateData = {
-    _id: KINDS.action.windowId(), name: i18n("midi-qol.Economy.TurnWindow"), img: "icons/svg/clockwork.svg",
+    _id: own.windowId(), name: kind === "action" ? i18n("midi-qol.Economy.TurnWindow") : i18n(own.label), img: own.img ?? "icons/svg/clockwork.svg",
     // showIcon 0: CONST.ACTIVE_EFFECT_SHOW_ICON.NEVER
     showIcon: 0,
     duration: { expiry: "targetStart" }, flags: { dae: { specialDuration: ["combatEnd", "shortRest"] } }
@@ -145,17 +188,19 @@ export function budget(ref: ActorRef, kindId: BudgetKindId): BudgetState {
   const window = effect?.active ? effect : undefined;
   // The action's count is the window's alone (an old world's stored `actions.action` flag is not a count)
   const used = numberOf(flags[kind.flags.used], 0);
-  const max = numberOf(flags[kind.flags.max], 1);
+  const max = numberOf(flags[kind.flags.max], kind.defaultMax ?? 1);
   return { used, max, exhausted: used >= max, window, counters: windowCounters(window, kind) };
 }
 
 /** The ledger for an actor or token: each budget kind's state (MidiQOL.economy.ledger) */
-export function ledger(ref: ActorRef): Record<BudgetKindId, BudgetState> {
-  return { action: budget(ref, "action"), bonus: budget(ref, "bonus"), reaction: budget(ref, "reaction") };
+export function ledger(ref: ActorRef): Record<CoreBudgetKindId, BudgetState> & Record<string, BudgetState> {
+  const registered = Object.keys(KINDS).filter(id => !["action", "bonus", "reaction"].includes(id));
+  return { action: budget(ref, "action"), bonus: budget(ref, "bonus"), reaction: budget(ref, "reaction"),
+    ...Object.fromEntries(registered.map(id => [id, budget(ref, id)])) };
 }
 
 function windowChanges(actor: Actor.Implementation, kind: BudgetKind, count: number, counters: WindowCounters = {}) {
-  const max = numberOf(actionFlags(actor)[kind.flags.max], 1);
+  const max = numberOf(actionFlags(actor)[kind.flags.max], kind.defaultMax ?? 1);
   return [
     { key: `flags.${MODULE_ID}.actions.${kind.flags.exhausted}`, type: "override", value: String(count >= max) },
     { key: `flags.${MODULE_ID}.actions.${kind.flags.used}`, type: "override", value: String(count) },

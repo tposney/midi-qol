@@ -919,6 +919,7 @@
   "midi-qol.bonusActionUsed": "Bonus Action used",
   "midi-qol.Economy.TurnWindow": "Turn: actions used",
   "midi-qol.Economy.ActionUsed": "The action has already been used this turn",
+  "midi-qol.Economy.KindUsed": "{kind} already used",
   "midi-qol.Economy.LeveledSpellThisTurn": "A spell with a spell slot has already been cast this turn",
   "midi-qol._comment for translators_DeferText": "The text below is searched for by midi in the onUseMacro field in item data. If you change it every item with an onUseMacro will need to be changed to match",
   "midi-qol._comment for translators_ItemMacroText": "The text below is searched for by midi in the onUseMacro field in item data. If you change it every item with an onUseMacro will need to be changed to match",

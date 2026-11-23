@@ -6,7 +6,7 @@ import { checkMechanic, configSettings, safeGetGameSetting } from "../../setting
 import { checkIncapacitated, createConditionData, evalCondition, hasNoReactionsMarker } from "../../utils.js";
 import { tagValue } from "../../lib/tags.js";
 import { cost, type UseCost } from "./cost.js";
-import { budget, type BudgetKindId } from "./ledger.js";
+import { budget, type BudgetKindId, budgetKinds } from "./ledger.js";
 
 /*
  * Why a use is not legal now (M4 stage 4; plan ~/Documents/midi-next-M4-plan-2026-11-20.md): `issues(activity)`
@@ -87,7 +87,7 @@ export async function issues(activity: Activity, options: { workflow?: Workflow,
 
 /* midi's issue contributors */
 
-const BUDGET_ISSUES: Record<BudgetKindId, { id: string, label: string }> = {
+const BUDGET_ISSUES: Record<string, { id: string, label: string }> = {
   reaction: { id: "reactionUsed", label: "midi-qol.EnforceReactions.Content" },
   bonus: { id: "bonusActionUsed", label: "midi-qol.EnforceBonusActions.Content" },
   action: { id: "actionUsed", label: "midi-qol.Economy.ActionUsed" }
@@ -95,10 +95,13 @@ const BUDGET_ISSUES: Record<BudgetKindId, { id: string, label: string }> = {
 
 function budgetIssues({ actor, cost: due }: IssueQuery): UseIssue[] {
   const raised: UseIssue[] = [];
-  for (const kind of ["reaction", "bonus", "action"] as BudgetKindId[]) {
+  for (const { id: kind, label } of budgetKinds()) {
     if (!due[kind]) continue;
     const used = budget(actor, kind).exhausted || (kind === "reaction" && hasNoReactionsMarker(actor));
-    if (used) raised.push({ id: BUDGET_ISSUES[kind].id, label: i18n(BUDGET_ISSUES[kind].label), source: "midi-qol.budget", kind });
+    if (!used) continue;
+    const own = BUDGET_ISSUES[kind];
+    raised.push(own ? { id: own.id, label: i18n(own.label), source: "midi-qol.budget", kind }
+      : { id: `${kind}Used`, label: i18n("midi-qol.Economy.KindUsed").replace("{kind}", label), source: "midi-qol.budget", kind });
   }
   return raised;
 }

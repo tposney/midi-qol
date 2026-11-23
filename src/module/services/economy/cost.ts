@@ -2,7 +2,7 @@ import { Registry } from "../../api/registry.js";
 import type { Workflow } from "../../Workflow.js";
 import type { Activity } from "../../../globals.js";
 import { tagValue } from "../../lib/tags.js";
-import { actionFlag, budget, spend, type BudgetKindId } from "./ledger.js";
+import { actionFlag, budget, spend, type BudgetKindId, budgetKinds } from "./ledger.js";
 
 /*
  * What a use costs and its charge (M4 stage 3; plan ~/Documents/midi-next-M4-plan-2026-11-20.md).
@@ -17,7 +17,8 @@ import { actionFlag, budget, spend, type BudgetKindId } from "./ledger.js";
  * Refunds: undo restores the actor as it was before the use (its snapshot is taken before the charge), window included.
  */
 
-export interface UseCost { action: number, bonus: number, reaction: number }
+/** What a use costs: midi's three kinds, and any registered kind a cost contributor charges */
+export interface UseCost { action: number, bonus: number, reaction: number, [kind: string]: number }
 
 export interface CostQuery {
   activity: Activity;
@@ -59,7 +60,8 @@ export function cost(activity: Activity, workflow?: Workflow): UseCost {
   for (const entry of contributors.entries()) {
     try {
       const changed = entry.value({ activity, actor, workflow, cost: { ...current } });
-      if (changed) current = { action: changed.action ?? 0, bonus: changed.bonus ?? 0, reaction: changed.reaction ?? 0 };
+      // A registered kind a contributor charges stays in the cost
+      if (changed) current = { ...changed, action: changed.action ?? 0, bonus: changed.bonus ?? 0, reaction: changed.reaction ?? 0 };
     } catch (err) {
       console.warn(`midi-qol | economy cost contributor ${entry.id} failed`, err);
     }
@@ -94,7 +96,7 @@ export async function grantAttacks(actor: Actor.Implementation, grant: AttackGra
 /** The granted attacks open on the actor's windows */
 export function grantedAttacks(actor: Actor.Implementation): (AttackGrant & { key: string })[] {
   const out: (AttackGrant & { key: string })[] = [];
-  for (const kind of ["action", "bonus", "reaction"] as BudgetKindId[]) {
+  for (const { id: kind } of budgetKinds()) {
     for (const [key, value] of Object.entries(budget(actor, kind).counters)) {
       if (!key.startsWith(GRANTED) || !(Number(value) > 0)) continue;
       const [filter, spends] = key.slice(GRANTED.length).split(".");
@@ -164,10 +166,11 @@ export async function chargeUse(workflow: Workflow): Promise<UseCost> {
   const charged: UseCost = { action: 0, bonus: 0, reaction: 0 };
   if (!actor || !workflow.activity) return charged;
   const due = cost(workflow.activity, workflow);
-  for (const kind of ["reaction", "bonus"] as BudgetKindId[]) {
+  // The reaction, the bonus action and any registered kind the use costs; the action after (granted attacks first)
+  for (const kind of ["reaction", "bonus", ...budgetKinds().filter(k => !k.core).map(k => k.id)]) {
     if (!due[kind] || budget(actor, kind).exhausted) continue;
-    await spend(actor, kind);
-    charged[kind] = 1;
+    await spend(actor, kind, { count: due[kind] });
+    charged[kind] = due[kind];
   }
   const weaponAttack = ["mwak", "rwak"].includes(String(tagValue(workflow, "use.attack") ?? ""));
   const leveledSpell = workflow.inCombat && workflow.isTurn && Number(tagValue(workflow, "use.spellSlot") ?? 0) > 0;

@@ -4,7 +4,7 @@ import { tokenFor, type TokenRef } from "../../lib/tokenResolver.js";
 import { configSettings } from "../../settings.js";
 import { cost, grantedAttacks, type AttackGrant, type UseCost } from "../economy/cost.js";
 import { economyPolicy, issues, type UseIssue } from "../economy/issues.js";
-import { budget, isTracked, type BudgetKindId } from "../economy/ledger.js";
+import { budget, budgetKinds, isTracked, type BudgetKindId } from "../economy/ledger.js";
 import { movementState, type MovementState } from "../economy/movement.js";
 import { availableInteractions, type InteractionOffer } from "../interactions/registry.js";
 
@@ -19,7 +19,7 @@ import { availableInteractions, type InteractionOffer } from "../interactions/re
  *   const model = await MidiQOL.turnModel.get(token);   // or .peek(token) for the cached one
  */
 
-export interface WindowState { used: number, max: number, exhausted: boolean, tracked: boolean }
+export interface WindowState { used: number, max: number, exhausted: boolean, tracked: boolean, label: string, img?: string, core: boolean }
 
 export interface ActivityCell {
   uuid: string;
@@ -63,7 +63,6 @@ export interface TurnModel {
   computedAt: number;
 }
 
-const KINDS: readonly BudgetKindId[] = ["action", "bonus", "reaction"];
 
 
 function combatOf(token: TokenDocument.Implementation | undefined) {
@@ -110,9 +109,9 @@ export async function buildTurnModel(ref: TokenRef): Promise<TurnModel | undefin
   const combat = combatOf(token);
   const inCombat = !!combat?.started;
   const isTurn = inCombat && combat?.combatant?.tokenId === token?.id;
-  const windows = Object.fromEntries(KINDS.map(kind => {
-    const state = budget(actor, kind);
-    return [kind, { used: state.used, max: state.max, exhausted: state.exhausted, tracked: isTracked(actor, kind) }];
+  const windows = Object.fromEntries(budgetKinds().map(({ id, label, img, core }) => {
+    const state = budget(actor, id);
+    return [id, { used: state.used, max: state.max, exhausted: state.exhausted, tracked: isTracked(actor, id), label, ...(img ? { img } : {}), core }];
   })) as Record<BudgetKindId, WindowState>;
   const turn = budget(actor, "action");
   const target = [...(game.user?.targets ?? [])].map(t => t.document as TokenDocument.Implementation).find(t => t !== token);
