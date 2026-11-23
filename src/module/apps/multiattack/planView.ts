@@ -14,7 +14,8 @@ type ItemSystem = { identifier?: string, activities?: { contents?: ActivityData[
 const unslug = (s: string) => s.replace(/-/g, " ").replace(/\b\w/g, c => c.toUpperCase());
 
 /** The creature's name for a plan reference */
-export function refName(actor: Actor.Implementation, ref: PlanRef): string {
+/** `full`: always name the activity ("Pincer: Attack"), as the editor's picker does */
+export function refName(actor: Actor.Implementation, ref: PlanRef, { full = false }: { full?: boolean } = {}): string {
   const level = ref.match(/@(\d+)$/)?.[1];
   const bare = ref.replace(/@\d+$/, "");
   const levelText = level ? ` ${i18n("midi-qol.Multiattack.Level").replace("{level}", level)}` : "";
@@ -44,7 +45,7 @@ export function refName(actor: Actor.Implementation, ref: PlanRef): string {
     const activity = all.find(a => a.id === exact.activity);
     const choices = all.filter(a => selectable({ id: a.id, activation: a.activation?.type, automationOnly: a.midiProperties?.automationOnly }));
     const name = item?.name ?? unslug(exact.item);
-    return activity && (choices.length > 1 || !choices.includes(activity)) ? `${name}: ${activity.name}` : name;
+    return activity && (full || choices.length > 1 || !choices.includes(activity)) ? `${name}: ${activity.name}` : name;
   }
   const item = itemFor(bare);
   return `${item?.name ?? unslug(bare)}${levelText}`;

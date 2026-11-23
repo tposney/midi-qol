@@ -1,5 +1,5 @@
 import { i18n } from "../../../midi-qol.js";
-import { activityRef, planRefs, selectable, slug, type MultiattackPlan, type PlanGroup, type PlanOption, type PlanReplace } from "../../lib/multiattack.js";
+import { activityRef, planRefs, slug, type MultiattackPlan, type PlanGroup, type PlanOption, type PlanReplace } from "../../lib/multiattack.js";
 import { isMultiattackItem, multiattackPlan, planKey, setGmPlan, spellInfo } from "../../services/multiattack/plans.js";
 import { planView, refName } from "./planView.js";
 
@@ -21,16 +21,17 @@ function refChoices(actor: Actor.Implementation, plan: MultiattackPlan): { value
     if (isMultiattackItem(item)) continue;
     const system = item.system as ItemSystem;
     const id = system.identifier || slug(item.name ?? "");
-    // Each activity a Multiattack could use (never an Escape Check: "special"); a cast by its spell
+    // Every activity, named with its item ("Pincer: Attack", "Pincer: Escape Check"), the GM choosing; not midi's
+    // automation-only ones (another activity triggers them); a cast by its spell
     for (const activity of system.activities?.contents ?? []) {
-      if (!selectable({ id: activity.id, activation: activity.activation?.type, automationOnly: activity.midiProperties?.automationOnly })) continue;
+      if (activity.midiProperties?.automationOnly) continue;
       const info = activity.spell?.uuid ? spellInfo(activity.spell.uuid) : undefined;
       const spell = info?.identifier || (info?.name ? slug(info.name) : undefined);
       values.add(spell ? `${id}>${spell}` : activityRef(id, activity.id));
     }
   }
   for (const ref of planRefs(plan)) values.add(ref);
-  return [...values].map(value => ({ value, label: refName(actor, value) })).sort((a, b) => a.label.localeCompare(b.label));
+  return [...values].map(value => ({ value, label: refName(actor, value, { full: true }) })).sort((a, b) => a.label.localeCompare(b.label));
 }
 
 const countToText = (n: PlanGroup["n"]) => typeof n === "number" ? String(n) : n === "any" ? "any" : "formula" in n ? n.formula : (n.text === true ? "?" : n.text);
