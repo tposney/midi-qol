@@ -1,3 +1,4 @@
+import { tokenFor } from "../tokenResolver.js";
 import { doReactions } from "../../utils.js";
 import { forcedMovement, type Point } from "../../services/forcedMovement/service.js";
 import { isForcedAction } from "../../services/economy/movement.js";
@@ -46,7 +47,7 @@ function moveSubjects(run: ActionRun): TokenDocument.Implementation[] {
   const to = typeof run.action.to === "string" ? run.action.to : "target";
   if (to === "self") {
     const bearer = found.actor ?? context.actor;
-    const token = bearer?.getActiveTokens(false, true)[0] as TokenDocument.Implementation | undefined;
+    const token = tokenFor(bearer, { near: context.target ?? null });
     return token ? [token] : [];
   }
   if (to === "event.creature") {
@@ -74,10 +75,10 @@ function areaCentre(run: ActionRun): Point | undefined {
 
 function moveSource(run: ActionRun, from: unknown): TokenDocument.Implementation | Point | undefined {
   if (from === "area") return areaCentre(run);
-  if (from === "bearer") return (run.found.actor ?? run.context.actor)?.getActiveTokens(false, true)[0] as TokenDocument.Implementation | undefined;
+  if (from === "bearer") return tokenFor(run.found.actor ?? run.context.actor, { near: run.context.target ?? null });
   const useToken = run.context.workflow?.token as { document?: TokenDocument.Implementation } | TokenDocument.Implementation | undefined;
   if (useToken) return useToken instanceof TokenDocument ? useToken : useToken.document;
-  return (run.found.actor ?? run.context.actor)?.getActiveTokens(false, true)[0] as TokenDocument.Implementation | undefined;
+  return tokenFor(run.found.actor ?? run.context.actor, { near: run.context.target ?? null });
 }
 
 async function amount(value: unknown, run: ActionRun): Promise<number> {
@@ -111,7 +112,7 @@ async function moveAction(run: ActionRun) {
 async function opportunityAttackAction(run: ActionRun) {
   const event = run.context.event as { creatureToken?: TokenDocument.Implementation, bearerToken?: TokenDocument.Implementation } | undefined;
   const creature = event?.creatureToken ?? run.context.target;
-  const bearer = event?.bearerToken ?? (run.found.actor ?? run.context.actor)?.getActiveTokens(false, true).find(t => t.parent === creature?.parent) as TokenDocument.Implementation | undefined;
+  const bearer = event?.bearerToken ?? tokenFor(run.found.actor ?? run.context.actor, { scene: creature?.parent ?? null, near: creature ?? null });
   if (!creature?.uuid || !bearer) return { success: false };
   const result = await doReactions(bearer, creature.uuid, null, "reactionopportunity", { opportunity: true });
   return { success: !!result?.name };

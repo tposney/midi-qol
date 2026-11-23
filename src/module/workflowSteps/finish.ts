@@ -1,3 +1,4 @@
+import { tokenFor, tokenOf } from "../lib/tokenResolver.js";
 import { debugEnabled, error, log, warn } from "../../midi-qol.js";
 import { autoTeleport, isTeleportActivity } from "../activities/teleport.js";
 import { TroubleShooter } from "../apps/TroubleShooter.js";
@@ -27,7 +28,7 @@ export function registerFinishSteps(): void {
       "1Reaction",
     ];
     await workflow.expireTargetEffects(specialExpiries)
-    let selfTarget = workflow.token ?? getOrCreateTokenForActor(workflow.actor);
+    let selfTarget = workflow.token ?? tokenOf(tokenFor(workflow.actor, { create: true }));
     await workflow.finishHitDisplay();
     await workflow.finishCardProgress();
     await workflow.finishSummonedCreatures(selfTarget);

@@ -1,3 +1,4 @@
+import { tokenFor } from "../tokenResolver.js";
 import { movementState } from "../../services/economy/movement.js";
 import { MODULE_ID } from "../../../midi-qol.js";
 import type { Workflow } from "../../Workflow.js";
@@ -26,7 +27,7 @@ type TokenLike = TokenDocument.Implementation | Token.Implementation | Actor.Imp
 function tokenDocumentOf(ref: TokenLike): TokenDocument.Implementation | undefined {
   if (!ref) return undefined;
   if (ref instanceof TokenDocument) return ref;
-  if (ref instanceof Actor) return (ref.getActiveTokens(false, true)[0] as TokenDocument.Implementation | undefined) ?? undefined;
+  if (ref instanceof Actor) return tokenFor(ref as Actor.Implementation) ?? undefined;
   return (ref as Token.Implementation).document;
 }
 
@@ -158,7 +159,7 @@ export function entryConditionExtras(f: FoundEntry, context: EventContext, apply
   }
   // A near entry's creature (M32d): its token, how far, and whether it is the holder's ally (same disposition)
   if (f.near) {
-    const own = f.actor?.getActiveTokens(false, true)[0] as TokenDocument.Implementation | undefined;
+    const own = tokenFor(f.actor);
     extra.near = { token: f.near.token, distance: f.near.distance, ally: !!own && own.disposition === f.near.token.disposition };
   }
   const entry: Record<string, unknown> = { owner: f.actor };

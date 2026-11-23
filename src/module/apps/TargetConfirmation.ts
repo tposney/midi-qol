@@ -1,3 +1,4 @@
+import { tokenFor, tokenOf } from "../lib/tokenResolver.js";
 import { computeFlankingStatus } from "../services/flanking/service.js";
 import { Activity } from "../../globals.js";
 import { i18n, error, i18nFormat } from "../../midi-qol.js";
@@ -55,7 +56,7 @@ export class TargetConfirmationDialog extends HandlebarsApplicationMixin(Applica
  
     if (["ceflanked", "ceflankedNoconga", "midiFlanked", "midiFlankedNoConga"].includes(checkRule("checkFlanking") as string) && game.user?.targets) {
       const actor = this.data.activity.actor;
-      const token = tokenForActor(actor);
+      const token = tokenOf(tokenFor(actor));
       if (token)
         for (let target of game.user?.targets)
           markFlanking(token, target)
@@ -197,7 +198,7 @@ export class TargetConfirmationDialog extends HandlebarsApplicationMixin(Applica
       if (this.data.options?.workflowOptions?.excludeTargets && this.data.options.workflowOptions.excludeTargets?.includes(token.document.uuid)) return false;
 
       const actor = this.data.activity.actor;
-      const attackerToken = tokenForActor(actor);
+      const attackerToken = tokenOf(tokenFor(actor));
       // Skip targets that do not match the activity's target type
       switch (this.data.activity.target?.affects?.type ?? "any") {
         case "enemy":
@@ -234,7 +235,7 @@ export class TargetConfirmationDialog extends HandlebarsApplicationMixin(Applica
     const targets = Array.from(game.user?.targets ?? []);
     context.targets = [];
     const actor = this.data.activity.actor;
-    const token = tokenForActor(actor);
+    const token = tokenOf(tokenFor(actor));
     for (let target of targets) {
       // if (maxTargets && data.targets.length >= maxTargets) break;
 
@@ -366,25 +367,25 @@ export class TargetConfirmationDialog extends HandlebarsApplicationMixin(Applica
       for (let i of Array.from(imgs)) {
         i.style.border = 'none';
         i.closest(".midi-qol-box")?.addEventListener("contextmenu", (event) => {
-          const token = getToken(i.id);
+          const token = tokenOf(tokenFor(i.id));
           if (token) {
             token.setTarget(false, { releaseOthers: false });
             this.render();
           }
         });
         i.closest(".midi-qol-box")?.addEventListener('click', async function () {
-          const token = getToken(i.id);
+          const token = tokenOf(tokenFor(i.id));
           if (token) await canvas.ping(token.center);
         });
         i.closest(".midi-qol-box")?.addEventListener('mouseover', function () {
-          const token = getToken(i.id);
+          const token = tokenOf(tokenFor(i.id));
           if (token) {
             token.hover = true;
             token.refresh();
           }
         });
         i.closest(".midi-qol-box")?.addEventListener('mouseout', function () {
-          const token = getToken(i.id);
+          const token = tokenOf(tokenFor(i.id));
           if (token) {
             token.hover = false;
             token.refresh();
@@ -430,7 +431,7 @@ export class TargetConfirmationDialog extends HandlebarsApplicationMixin(Applica
     const refresh = foundry.utils.debounce(() => { if (this.rendered) this.render(); }, 100);
     this.moveHookId = Hooks.on("updateToken", (tokenDocument, changed) => {
       if (!("x" in changed || "y" in changed || "elevation" in changed)) return;
-      const attacker = tokenForActor(this.data.actor);
+      const attacker = tokenOf(tokenFor(this.data.actor));
       if (tokenDocument.id === attacker?.id || [...(game.user?.targets ?? [])].some(t => t.id === tokenDocument.id)) refresh();
     });
   }

@@ -1,3 +1,4 @@
+import { tokenFor, tokenOf } from "../lib/tokenResolver.js";
 import { MidiActivity } from "./midiActivity.js";
 import { TokenDocumentSet, memberCount } from "../lib/tokenDocumentSet.js";
 import { ActivityUseConfiguration, RollDialogConfig, RollMessageConfig } from "../../globals.js";
@@ -62,7 +63,7 @@ export async function setupTargets(activity: MidiActivity, config: ActivityUseCo
       workflow.setTargets(validTargetTokens(userTargets));
     } else {
       foundry.utils.setProperty(config, "midiOptions.workflowOptions.targetConfirmation", "none");
-      let potentialTarget = getOrCreateTokenForActor(activity.actor);
+      let potentialTarget = tokenOf(tokenFor(activity.actor, { create: true }));
       workflow.setTargets(new Set());
       if (potentialTarget) workflow.setTargets(workflow.targets.add(potentialTarget));
     }

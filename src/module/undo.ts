@@ -1,3 +1,4 @@
+import { tokenFor, tokenOf } from "./lib/tokenResolver.js";
 
 import { queryUser } from "./lib/midiQueries.js";
 import { debugEnabled, error, log, warn, busyWait, MODULE_ID } from "../midi-qol.js";
@@ -147,7 +148,7 @@ export function startUndoWorkflow(undoData: UndoData): boolean {
       let token: TokenDocument.Implementation | null | undefined;
       if (dependent instanceof ActiveEffect) dependent = dependent.parent;
       if (dependent instanceof Actor && dependent.isToken) token = dependent.token;
-      else if (dependent instanceof Actor) token = dependent.getActiveTokens(false, true)[0];
+      else if (dependent instanceof Actor) token = tokenFor(dependent as Actor.Implementation);
       if (!token) continue;
       const targetData = createTargetData(token.uuid);
       if (targetData) undoData.allTargets.set(dependent.uuid, targetData);
@@ -235,7 +236,7 @@ export function queueUndoData(data: UndoData): boolean {
         let token;
         if (dependent instanceof ActiveEffect) dependent = dependent.parent;
         if (dependent instanceof Actor && dependent.isToken) token = dependent.token;
-        else if (dependent instanceof Actor) token = dependent.getActiveTokens()[0];
+        else if (dependent instanceof Actor) token = tokenOf(tokenFor(dependent as Actor.Implementation));
         if (!token) continue;
         const targetData = createTargetData(token.uuid)
         if (targetData && !inProgress.allTargets.get(token.actor.uuid)) {

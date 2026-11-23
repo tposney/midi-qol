@@ -1,3 +1,4 @@
+import {tokenFor} from '../../lib/tokenResolver.js';
 import {documentUtils, effectUtils, workflowUtils} from '../proxy.mjs';
 import {toggleStatus} from '../../utils.js';
 // Swallow (Behir, Purple Worm, Remorhaz, Tarrasque, Kraken, Giant Frog, Giant Toad). For each creature swallowed the
@@ -38,7 +39,7 @@ function turnStamp(combat = game.combat, round = combat?.round, turn = combat?.t
     return combat?.started ? `${combat.id}.${round}.${turn}` : null;
 }
 function holderToken(actor, scene = canvas.scene) {
-    return actor.token ?? actor.getActiveTokens(false, true).find(t => t.parent === scene);
+    return tokenFor(actor, {scene});
 }
 function holderEffects(item) {
     return item.actor?.effects.filter(e => e.flags?.[MODULE]?.swallowing?.itemUuid === item.uuid) ?? [];

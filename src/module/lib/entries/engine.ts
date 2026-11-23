@@ -1,3 +1,4 @@
+import { tokenFor } from "../tokenResolver.js";
 import { MODULE_ID } from "../../../midi-qol.js";
 import { Registry } from "../../api/registry.js";
 import type { Workflow } from "../../Workflow.js";
@@ -289,7 +290,7 @@ function eventToken(context: EventContext): TokenDocument.Implementation | undef
   if (context.target) return context.target;
   const useToken = context.workflow?.token as { document?: TokenDocument.Implementation } | TokenDocument.Implementation | undefined;
   if (useToken && context.workflow?.actor === context.actor) return useToken instanceof TokenDocument ? useToken : useToken.document;
-  return context.actor.getActiveTokens(false, true)[0] as TokenDocument.Implementation | undefined;
+  return tokenFor(context.actor);
 }
 
 /** A creature's reach: the longest of its melee attacks (services/economy/reach.ts, as opportunity attacks measure it) */
@@ -309,7 +310,7 @@ function nearEntries(context: EventContext, eventId: string): FoundEntry[] {
       let from: TokenDocument.Implementation | undefined = holderToken;
       if (who.of === "origin") {
         const origin = f.document instanceof ActiveEffect ? originActor(f.document) : undefined;
-        from = origin?.getActiveTokens(false, true).find(t => t.parent === scene) as TokenDocument.Implementation | undefined;
+        from = tokenFor(origin, { scene, near: about });
       } else if (who.of !== "bearer") {
         console.warn(`midi-qol | entry ${f.entry.id}: who.of "${who.of}" is not supported (bearer or origin)`);
         continue;

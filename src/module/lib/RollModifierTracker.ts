@@ -1,3 +1,4 @@
+import { tokenFor, tokenOf } from "./tokenResolver.js";
 /**
  * Tracks roll modifiers: advantage/disadvantage, auto-fail/success, min/max with attribution.
  */
@@ -762,14 +763,14 @@ function advantageFlagContext(actor: Actor.Implementation, options: MidiOptions)
   // The opposing entity that grants advantage/disadvantage.
   // For attacks: the defender. For saves: the caster. Falls back to actor's own token.
   const grantsActor = options.grantsActor ?? options.workflow?.actor;
-  const grantsToken = options.grantsToken ?? (grantsActor ? tokenForActor(grantsActor) : undefined);
+  const grantsToken = options.grantsToken ?? (grantsActor ? tokenOf(tokenFor(grantsActor)) : undefined);
   const item = options.item ?? options.itemUuid ?? options.saveItem ?? options.saveItemUuid;
   return {
     actor, grantsActor,
     grantsName: grantsToken?.name ?? grantsActor?.name ?? "",
-    conditionData: createConditionData({ workflow: options.workflow, target: grantsToken ?? tokenForActor(actor), actor, item }),
+    conditionData: createConditionData({ workflow: options.workflow, target: grantsToken ?? tokenOf(tokenFor(actor)), actor, item }),
     grantsConditionData: grantsActor
-      ? createConditionData({ workflow: options.workflow, target: tokenForActor(actor), actor: grantsActor, token: grantsToken, item })
+      ? createConditionData({ workflow: options.workflow, target: tokenOf(tokenFor(actor)), actor: grantsActor, token: grantsToken, item })
       : undefined
   };
 }
@@ -915,7 +916,7 @@ export function computeRollModifiers(
   tracker: RollModifierTracker,
   options?: { workflow?: any }
 ): void {
-  const conditionData = createConditionData({ workflow: options?.workflow, actor, target: tokenForActor(actor) });
+  const conditionData = createConditionData({ workflow: options?.workflow, actor, target: tokenOf(tokenFor(actor)) });
 
   // Evaluate auto-fail: the dnd5e roll fields, then midi flags
   const failField = (flags.fieldPaths ?? []).find(path => evalAllConditions(actor, `system.${path}.fail`, conditionData, false));
@@ -1030,7 +1031,7 @@ export async function computeCriticalModifiers(
   tracker: RollModifierTracker,
   options?: { workflow?: any, actionType?: string }
 ): Promise<void> {
-  const conditionData = createConditionData({ workflow: options?.workflow, actor, target: tokenForActor(actor) });
+  const conditionData = createConditionData({ workflow: options?.workflow, actor, target: tokenOf(tokenFor(actor)) });
 
   // Evaluate critical flags - force critical
   for (const flag of flags.criticalFlags) {
@@ -1085,7 +1086,7 @@ export async function computeTargetCriticalModifiers(
   const conditionData = createConditionData({
     workflow: options?.workflow,
     actor: options?.grantsActor,
-    target: tokenForActor(targetActor)
+    target: tokenOf(tokenFor(targetActor))
   });
 
   // Evaluate grants.critical flags

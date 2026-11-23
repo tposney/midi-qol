@@ -1,3 +1,4 @@
+import { tokenFor, tokenOf } from "../../lib/tokenResolver.js";
 /*
  * midi's range check: the "midi-qol" provider of the range service (service.ts). Range, long range, the range flags,
  * sharpshooter and spell sniper, thrown weapons, total cover and units, measured with the distance service.
@@ -179,9 +180,9 @@ export function midiActivityRange(activityIn: Activity, tokenRef: TokenOrDocumen
     }
   }
 
-  const tokenIn = getToken(tokenRef);
+  const tokenIn = tokenOf(tokenFor(tokenRef));
   // An array: a Set's map can't give the same value twice (two targets with no Token)
-  const targetsIn = targetsRef ? new Set([...targetsRef].map(t => getToken(t)).filter(t => !!t)) : undefined;
+  const targetsIn = targetsRef ? new Set([...targetsRef].map(t => tokenOf(tokenFor(t))).filter(t => !!t)) : undefined;
   if (!tokenIn || !targetsIn) return { result: "fail", attackingToken: undefined };
   // The contract carries TokenDocuments; the checks below measure canvas tokens
   let attackingToken = tokenIn;

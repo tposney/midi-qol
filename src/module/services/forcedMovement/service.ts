@@ -1,3 +1,4 @@
+import { tokenFor } from "../../lib/tokenResolver.js";
 import { moveToken } from "../../../midi-qol.js";
 import { defineService, entries } from "../../api/services.js";
 import { configSettings } from "../../settings.js";
@@ -184,7 +185,7 @@ async function run(request: ForcedMoveRequest): Promise<ForcedMoveResult> {
   return result;
 }
 
-const doc = (ref: TokenRef) => getTokenDocument(ref);
+const doc = (ref: TokenRef) => tokenFor(ref);
 
 export const forcedMovement = {
   push(target: TokenRef, options: { from: TokenRef | Point, distance: number }) {

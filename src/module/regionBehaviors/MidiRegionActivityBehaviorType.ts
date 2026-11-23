@@ -1,3 +1,4 @@
+import { tokenFor, tokenOf } from "../lib/tokenResolver.js";
 import { MODULE_ID, i18n, error } from "../../midi-qol.js";
 import { queryUser } from "../lib/midiQueries.js";
 import { completeActivityUse, fromActorUuid, getToken, isValidTarget, itemIsMagical, playerForActor } from "../utils.js";
@@ -99,7 +100,7 @@ export class MidiRegionActivityBehaviorType extends foundry.data.regionBehaviors
 
     const sourceActorUuid = self.sourceActorUuid as string;
     const sourceActor = sourceActorUuid ? fromActorUuid(sourceActorUuid) : null;
-    const sourceToken = sourceActor ? getToken(sourceActor) : null;
+    const sourceToken = sourceActor ? tokenOf(tokenFor(sourceActor)) : null;
     if (!sourceToken) return true;
 
     const sourceDisposition = sourceToken.document.disposition;
@@ -416,7 +417,7 @@ export class MidiRegionActivityBehaviorType extends foundry.data.regionBehaviors
     const targetTokens: Set<Token.Implementation> = new Set();
     for (const uuid of data.targetUuids) {
       const tokenDoc = fromUuidSync(uuid) as TokenDocument.Implementation | null;
-      const token = tokenDoc?.object ?? (tokenDoc ? getToken(tokenDoc) : null);
+      const token = tokenDoc?.object ?? (tokenDoc ? tokenOf(tokenFor(tokenDoc)) : null);
       if (token) targetTokens.add(token);
     }
     if (!targetTokens.size) return;

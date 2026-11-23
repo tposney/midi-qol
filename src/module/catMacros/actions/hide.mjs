@@ -1,3 +1,4 @@
+import {tokenFor} from '../../lib/tokenResolver.js';
 import {dialogUtils, documentUtils, effectUtils, tokenUtils} from '../proxy.mjs';
 import {applyStatusCondition} from '../../utils.js';
 import {addCardNote} from '../../lib/cardNotes.js';
@@ -70,7 +71,7 @@ Hooks.on('createActiveEffect', async (effect, options, userId) => {
     const dc = effect.flags?.[MODULE]?.hidden?.dc;
     if (dc === undefined) return;
     const actor = effect.parent;
-    const token = actor.getActiveTokens(false, true)[0];
+    const token = tokenFor(actor);
     // Enemies the hide doesn't fool, with why: vision disabled (sees everything unless Force vision) or passive Perception
     const perceive = token ? token.parent.tokens.filter(t => t.actor && tokenUtils.isEnemy(token, t) && !hiddenFrom(token, t)) : [];
     const why = t => t.sight.enabled ? `passive ${passivePerception(t.actor)}` : 'vision disabled';
@@ -122,7 +123,7 @@ function inSight(searcher, target) {
 }
 async function search({workflow}) {
     const actor = workflow.actor;
-    const searcher = workflow.token?.document ?? actor.getActiveTokens(false, true)[0];
+    const searcher = workflow.token?.document ?? tokenFor(actor);
     const total = workflow.tokenSaves?.[searcher?.uuid]?.total;
     if (!Number.isFinite(total)) return;
     const candidates = searcher.parent.tokens.filter(t => t.id !== searcher.id && hidingCondition(t.actor) && tokenUtils.isEnemy(searcher, t) && inSight(searcher, t));

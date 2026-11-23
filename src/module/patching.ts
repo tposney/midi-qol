@@ -1,3 +1,4 @@
+import { tokenFor, tokenOf } from "./lib/tokenResolver.js";
 import type { PromptResponses } from "./lib/promptCosts.js";
 import { requestForRollClaim } from "./lib/bonusDecisions.js";
 import { toggleBudgetStatus } from "./services/economy/ledger.js";
@@ -1385,7 +1386,7 @@ function applyCardRollOptions(actor: Actor.Implementation, kind: D20RollKind, co
   const speakerToken = speaker?.token ? game.scenes?.get(speaker.scene ?? "")?.tokens.get(speaker.token) : undefined;
   foundry.utils.setProperty(message, "flags.midi-qol.requestId", speakerToken?.uuid ?? actor.uuid);
   // Its row on the card, whoever the save message's speaker is (an actor with no token, another of its tokens)
-  const targetUuid = speakerToken?.uuid ?? getTokenDocument(actor)?.uuid;
+  const targetUuid = speakerToken?.uuid ?? tokenFor(actor)?.uuid;
   if (targetUuid) foundry.utils.setProperty(message, "data.flags.midi-qol.targetUuid", targetUuid);
   if (configSettings.autoCheckSaves === "whisper") config.target = undefined;
 }
@@ -2185,7 +2186,7 @@ async function midiTemplatePlace(this: any, wrapped: () => Promise<any>) {
   const regions = canvas?.regions as unknown as { placeRegions: (data: object[], options?: object) => Promise<unknown> } | undefined;
   if (!regions) return wrapped();
   const activity = this.config?.activity ?? this.config?.midiActivity;
-  const sourceToken = activity?.actor ? tokenForActor(activity.actor) : undefined;
+  const sourceToken = activity?.actor ? tokenOf(tokenFor(activity.actor)) : undefined;
   const maxRange = configSettings.constrainTemplatePlacement ? this.config?.midiMaxRange : undefined;
   const anchorToToken = this.config?.midiAnchorToToken;
   const cubeAgainstToken = this.config?.midiCubeAgainstToken;

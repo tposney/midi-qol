@@ -1,3 +1,4 @@
+import { tokenFor } from '../../lib/tokenResolver.js';
 import {getTokenDocument} from '../../utils.js';
 import {forcedMovement as forced} from '../../services/forcedMovement/service.js';
 import {actorUtils, dialogUtils, distanceUtils, effectUtils, tokenUtils} from '../proxy.mjs';
@@ -35,7 +36,7 @@ async function moved({document: item, workflow}) {
     const matches = e => !e.activity || e.activity === workflow.activity?.id || (e.when === 'failedSave' && e.activity === workflow.saveActivity?.id);
     for (const entry of entries.filter(matches)) {
         for (const target of targetsFor(workflow, entry.when)) {
-            const targetDoc = getTokenDocument(target);
+            const targetDoc = tokenFor(target);
             if (targetDoc === source || !targetDoc.actor) continue;
             if (entry.maxSize && actorUtils.getSize(targetDoc.actor) > SIZES.indexOf(entry.maxSize)) continue;
             if (entry.targetArmor === 'nonmagicalMetal' && !wearsNonmagicalMetal(targetDoc.actor)) continue;

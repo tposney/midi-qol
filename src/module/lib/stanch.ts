@@ -1,3 +1,4 @@
+import { tokenFor, tokenOf } from "./tokenResolver.js";
 import { computeDistance } from "../services/distance/provider.js";
 import { MODULE_ID } from "../../midi-qol.js";
 import { convertLengthTo, itemIsMagical, itemIsSpell } from "../utils.js";
@@ -114,7 +115,7 @@ export function registerStanchHooks() {
   // The roller's own effects, and those of the creatures its user targets
   Hooks.on("dnd5e.rollSkill", async (rolls, { skill, subject } = {}) => {
     if (!rolls?.length || !skill || !subject) return;
-    const roller = subject.getActiveTokens()[0];
+    const roller = tokenOf(tokenFor(subject));
     if (!roller) return;
     const has = (actor: Actor.Implementation | null | undefined) => stanchableEffects(actor).some(({ details }) => details.skill === skill);
     const targets = [...(game.user?.targets ?? [])].filter(token => has(token.actor));

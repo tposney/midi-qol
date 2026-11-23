@@ -1,3 +1,4 @@
+import { tokenFor, tokenOf } from "../lib/tokenResolver.js";
 import { registerSheetExtras } from "./activitySheets.js";
 import type { MidiActivity } from "./midiActivity.js";
 import { registerCardActions } from "./cardActions.js";
@@ -101,7 +102,7 @@ function tokenLevel(document: TokenDocument.Implementation): string | undefined 
 /** The card's Teleport button: the tokens its targets list shows, ticked, in the Targeted or Selected view. */
 function cardPlanTeleport(this: Activity, event: PointerEvent, target: HTMLElement, message: ChatMessage.Implementation) {
   const list = target?.closest("[data-message-id]")?.querySelector("recorded-targets") as (HTMLElement & { targets: Iterable<string> }) | null;
-  const listed = list ? Array.from(list.targets, uuid => getToken(uuid)).filter((t): t is Token.Implementation => !!t) : undefined;
+  const listed = list ? Array.from(list.targets, uuid => tokenOf(tokenFor(uuid))).filter((t): t is Token.Implementation => !!t) : undefined;
   if (!isTeleportActivity(this)) return;
   return planTeleport(this, { message, listed });
 }
@@ -125,7 +126,7 @@ export function sceneMaxDistance(activity: TeleportingActivity): number | null {
 }
 
 export function casterToken(activity: TeleportingActivity): Token.Implementation | undefined {
-  return getToken(activity.actor);
+  return tokenOf(tokenFor(activity.actor));
 }
 
 /**
@@ -221,7 +222,7 @@ export function teleportWorkflowTargets(activity: TeleportingActivity, workflow:
   if (workflow?.targets?.tokens.length) return workflow.targets.tokens;
   // @ts-expect-error no dnd5e-types
   const descriptors: { token?: string }[] = message?.system?.targets ?? [];
-  return descriptors.map(d => getToken(d.token)).filter((t): t is Token.Implementation => !!t);
+  return descriptors.map(d => tokenOf(tokenFor(d.token))).filter((t): t is Token.Implementation => !!t);
 }
 
 /** Run the item's on-use macros for a teleport pass; true when one returned false (cancel). */

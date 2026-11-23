@@ -1,3 +1,4 @@
+import { tokenFor, tokenOf } from "../lib/tokenResolver.js";
 import { debug, debugEnabled, error, i18nFormat, warn } from "../../midi-qol.js";
 import { choiceDeclarations, resolveChoices } from "../lib/choices.js";
 import { isTransformActivity, transformActor } from "../activities/transform.js";
@@ -22,13 +23,13 @@ function needsTransform(workflow: Workflow): boolean {
 /** The use places an emanation around its token (activityHasAutoPlaceTemplate / activityHasEmanationNoTemplate) */
 function needsEmanation(workflow: Workflow): boolean {
   const activity = workflow.activity;
-  if (!activity || !(workflow.token ?? getToken(activity.item?.parent))) return false;
+  if (!activity || !(workflow.token ?? tokenOf(tokenFor(activity.item?.parent)))) return false;
   return activityHasAutoPlaceTemplate(activity) || activityHasEmanationNoTemplate(activity);
 }
 
 async function placeEmanation(workflow: Workflow): Promise<void> {
   const activity = workflow.activity;
-  const token = workflow.token ?? getToken(activity.item?.parent);
+  const token = workflow.token ?? tokenOf(tokenFor(activity.item?.parent));
   if (!token) return;
   if (activityHasAutoPlaceTemplate(activity)) {
     const templates = isMidiActivityType(activity) ? await placeEmanationTemplate(activity, workflow) : undefined;
@@ -157,7 +158,7 @@ export function registerPreambleSteps(): void {
 
     // Range: melee weapons too (a thrown weapon is mwak; checkActivityRange keeps the long range only for those)
     if (checkMechanic("checkRange") !== "none" && !workflow.AoO && isRangeCheckable(workflow.activity) && workflow.tokenUuid) {
-      const { result, attackingToken } = checkActivityRange(workflow.activity, getToken(workflow.token) ?? "invalid", new Set(workflow.targets.tokens));
+      const { result, attackingToken } = checkActivityRange(workflow.activity, tokenOf(tokenFor(workflow.token)) ?? "invalid", new Set(workflow.targets.tokens));
       switch (result) {
         case "fail": workflow.outcome = "invalid"; return "midi-qol.RollFinished";
         case "dis": workflow.longRangeAttack = true;

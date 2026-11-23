@@ -1,3 +1,4 @@
+import { tokenFor } from '../../lib/tokenResolver.js';
 import {workflowUtils} from '../proxy.mjs';
 import {toggleStatus, getTokenDocument} from '../../utils.js';
 // Life Drain style: a target's hit point maximum drops by a fraction of the damage it took, until a long rest (dnd5e
@@ -10,7 +11,7 @@ import {toggleStatus, getTokenDocument} from '../../utils.js';
 // healSelf (the user regains the amount), drainMax: false (heal only, by the damage to the creatures hit by `activity`).
 const MODULE = 'midi-qol';
 function damageTaken(workflow, token, type) {
-    const doc = getTokenDocument(token);
+    const doc = tokenFor(token);
     return (workflow.damageList ?? []).filter(e => [e.tokenUuid, e.targetUuid].includes(doc.uuid) || e.actorUuid === doc.actor?.uuid)
         .reduce((total, e) => {
             const lost = Math.max(0, (e.oldHP ?? 0) - (e.newHP ?? 0)) + Math.max(0, (e.oldTempHP ?? 0) - (e.newTempHP ?? 0));
@@ -29,7 +30,7 @@ async function drain(actor, amount) {
 }
 async function apply(workflow, entry, target, amount) {
     if (amount <= 0) return;
-    if (entry.drainMax !== false) await drain(getTokenDocument(target)?.actor, amount);
+    if (entry.drainMax !== false) await drain(tokenFor(target)?.actor, amount);
     if (entry.healSelf && workflow.actor) {
         const hp = workflow.actor.system.attributes.hp;
         await workflow.actor.update({'system.attributes.hp.value': Math.min(hp.effectiveMax ?? hp.max, hp.value + amount)});
@@ -57,7 +58,7 @@ async function finished({document: item, workflow}) {
             for (const target of workflow.hitTargets.documents) {
                 const taken = damageTaken(workflow, target, entry.damageType);
                 if (!save || !taken) continue;
-                const saveWorkflow = await workflowUtils.syntheticActivityRoll(save, [getTokenDocument(target)], {consumeUsage: false, consumeResources: false});
+                const saveWorkflow = await workflowUtils.syntheticActivityRoll(save, [tokenFor(target)], {consumeUsage: false, consumeResources: false});
                 if (saveWorkflow?.failedSaves?.count) await apply(workflow, entry, target, Math.floor(taken * fraction));
             }
         } else {

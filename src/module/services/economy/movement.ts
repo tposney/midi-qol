@@ -1,3 +1,4 @@
+import { tokenFor } from "../../lib/tokenResolver.js";
 import { configSettings } from "../../settings.js";
 import { i18nFormat } from "../../../midi-qol.js";
 import { getTokenDocument, toggleStatus } from "../../utils.js";
@@ -31,10 +32,6 @@ export interface MovementState {
 
 type MovementRef = Actor.Implementation | TokenDocument.Implementation;
 
-function tokenOf(ref: MovementRef): TokenDocument.Implementation | undefined {
-  if (ref instanceof TokenDocument) return ref as TokenDocument.Implementation;
-  return getTokenDocument(ref as Actor.Implementation) ?? undefined;
-}
 
 /** dnd5e's speed for a movement action, after conditions, bonus and multiplier; walk where the creature has none */
 export function speedFor(actor: Actor.Implementation | null | undefined, action: string): number {
@@ -45,7 +42,7 @@ export function speedFor(actor: Actor.Implementation | null | undefined, action:
 
 /** The token's movement this turn, while its combat is running (none outside combat: Foundry records no history) */
 export function movementState(ref: MovementRef): MovementState | undefined {
-  const token = tokenOf(ref);
+  const token = tokenFor(ref);
   const actor = token?.actor;
   const combatant = token?.combatant as { combat?: { started?: boolean } } | null | undefined;
   if (!token || !actor || !combatant?.combat?.started) return undefined;

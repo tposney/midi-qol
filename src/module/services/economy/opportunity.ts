@@ -1,3 +1,4 @@
+import { tokenFor } from "../../lib/tokenResolver.js";
 import type { Activity } from "../../../globals.js";
 import { configSettings } from "../../settings.js";
 import { canSee, checkIncapacitated, createConditionData, doReactions, evalAllConditionsAsync, getTokenDocument, hasNoReactionsMarker, hasUsedReaction, midiFlag } from "../../utils.js";
@@ -232,7 +233,7 @@ export function setupOpportunityAttacks() {
     const uuid = workflow.actor?.uuid;
     if (!uuid) return;
     const set = attacked.get(uuid) ?? new Set<string>();
-    for (const target of workflow.targets ?? []) { const doc = getTokenDocument(target as never); if (doc?.uuid) set.add(doc.uuid); }
+    for (const target of workflow.targets ?? []) { const doc = tokenFor(target as never); if (doc?.uuid) set.add(doc.uuid); }
     attacked.set(uuid, set);
   });
 }

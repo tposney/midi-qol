@@ -1,3 +1,4 @@
+import { tokenFor } from "./lib/tokenResolver.js";
 import { reveals } from "./services/revealPolicy/service.js";
 import type { ReactionTicket } from "./lib/reactionBatch.js";
 import { activityCostBadges, offerCostBadges, wirePickOne, type PromptResponses, type PromptRow } from "./lib/promptCosts.js";
@@ -149,22 +150,14 @@ export function createDamageDetail({
   return detail;
 }
 
-export function getOrCreateTokenForActor(actor?: Actor.Implementation) {
-  if (!actor) return;
-  if (actor.token?.object) return actor.token.object; //actor.token is a token document.
-  const token = tokenForActor(actor);
-  if (token) return token;
-  const tokenData = { ...actor.prototypeToken.toObject(), actorId: actor.id };
-  const cls = globalThis.getDocumentClass("Token");
-  // TODO check this - not sure if actor is set correctly
-  const tokenDocument = new cls(tokenData, { parent: canvas.scene });
-  const synthetic = new CONFIG.Token.objectClass(tokenDocument);
-  rememberSyntheticToken(synthetic);
-  return synthetic;
+/** Legacy (workflow.token, MidiQOL.getTokenForActor): the actor's canvas Token, midi's stand-in when none is drawn. midi's code uses tokenOf(tokenFor(actor, { create: true })) */
+export function getOrCreateTokenForActor(actor?: Actor.Implementation | null): Token.Implementation | undefined {
+  return tokenOf(tokenFor(actor, { create: true }));
 }
 
+
 export function getOrCreateTokenForActorAsSet(actor: Actor.Implementation): Set<Token.Implementation> {
-  const selfTarget = getOrCreateTokenForActor(actor);
+  const selfTarget = tokenOf(tokenFor(actor, { create: true }));
   if (selfTarget) return new Set([selfTarget]);
   return new Set();
 }
@@ -333,7 +326,7 @@ export async function applyTokenDamage(
         uncannyDodge: foundry.utils.getProperty(actor, `flags.${MODULE_ID}.uncanny-dodge`) && item?.hasAttack,
         // some options for ripper's module
         save: saved,
-        targetUuid: getTokenDocument(token)?.uuid ?? "",
+        targetUuid: tokenFor(token)?.uuid ?? "",
         fumbleSave: false,
         criticalSave: false,
         isCritical: false,
@@ -355,7 +348,7 @@ export async function applyTokenDamage(
       semiSuperSaver,
       superSaver,
       totalDamage,
-      targetUuid: getTokenDocument(token)?.uuid ?? "",
+      targetUuid: tokenFor(token)?.uuid ?? "",
     }, actor);
     if (fullDamage) allDamages[actor.uuid] = fullDamage;
   }
@@ -368,7 +361,7 @@ export async function applyTokenDamage(
     autoApplyDamage: configSettings.autoApplyDamage,
     actorId: (workflow?.actor ?? item?.actor)?.id,
     actorUuid: (workflow?.actor ?? item?.actor)?.uuid,
-    charName: workflow?.token?.name ?? workflow?.actor?.name ?? (item?.actor ? tokenForActor(item.actor)?.name ?? item.actor.name : undefined) ?? game.user?.name,
+    charName: workflow?.token?.name ?? workflow?.actor?.name ?? (item?.actor ? tokenOf(tokenFor(item.actor))?.name ?? item.actor.name : undefined) ?? game.user?.name,
     damageList: prepareDamageListToJSON(Object.values(allDamages)),
     chatCardUuid: workflow?.itemCardUuid,
     updateOptions: options.updateOptions,
@@ -416,7 +409,7 @@ export async function applyTokenDamageMany(
         sourceActorUuid: (workflow?.actor ?? item?.actor)?.uuid ?? undefined,
         uncannyDodge: false,
         save: false,
-        targetUuid: getTokenDocument(entry.token)?.uuid ?? "",
+        targetUuid: tokenFor(entry.token)?.uuid ?? "",
         fumbleSave: false,
         criticalSave: false,
         isCritical: false,
@@ -438,7 +431,7 @@ export async function applyTokenDamageMany(
       semiSuperSaver: false,
       superSaver: false,
       totalDamage: entry.totalDamage,
-      targetUuid: getTokenDocument(entry.token)?.uuid ?? "",
+      targetUuid: tokenFor(entry.token)?.uuid ?? "",
     }, actor);
     if (fullDamage) allDamages[actor.uuid] = fullDamage;
   }
@@ -451,7 +444,7 @@ export async function applyTokenDamageMany(
     autoApplyDamage: configSettings.autoApplyDamage,
     actorId: (workflow?.actor ?? item?.actor)?.id,
     actorUuid: (workflow?.actor ?? item?.actor)?.uuid,
-    charName: workflow?.token?.name ?? workflow?.actor?.name ?? (item?.actor ? tokenForActor(item.actor)?.name ?? item.actor.name : undefined) ?? game.user?.name,
+    charName: workflow?.token?.name ?? workflow?.actor?.name ?? (item?.actor ? tokenOf(tokenFor(item.actor))?.name ?? item.actor.name : undefined) ?? game.user?.name,
     damageList: prepareDamageListToJSON(Object.values(allDamages)),
     chatCardUuid: workflow?.itemCardUuid,
     updateOptions: options.updateOptions,
@@ -1544,7 +1537,7 @@ export async function localActivityOverTimeEffect(actor: Actor.Implementation, e
     let targetsToUse: Set<Token> | undefined = undefined;
     const checkGMstatus = rollAsChoice === "source" && rollActor !== actor && !rollActor.isOwner;
     // Overtime effects always target the actor bearing the effect
-    const token = tokenForActor(actor);
+    const token = tokenOf(tokenFor(actor));
     if (token) targetsToUse = new Set([token]);
 
     const overTimeWorkflow: Workflow = await completeActivityUse(overTimeActivity,
@@ -1553,7 +1546,7 @@ export async function localActivityOverTimeEffect(actor: Actor.Implementation, e
       { create: true }) as Workflow;
 
     // Check save condition
-    if (activity.overTimeProperties?.saveRemoves && overTimeWorkflow?.saves.has(getOrCreateTokenForActor(actor)!)) {
+    if (activity.overTimeProperties?.saveRemoves && overTimeWorkflow?.saves.has(tokenOf(tokenFor(actor, { create: true }))!)) {
       await effect.delete();
       return;
     }
@@ -2050,7 +2043,7 @@ export function getEffectStackCount(effect: ActiveEffect.Implementation | undefi
   if (!effect) return 1;
   let stacks = (effect.flags?.dae as any)?.stacks ?? 1;
   if (globalThis.EffectCounter && token) {
-    const counter = globalThis.EffectCounter.findCounter(getTokenDocument(token), effect.img ?? (effect as any).icon);
+    const counter = globalThis.EffectCounter.findCounter(tokenFor(token), effect.img ?? (effect as any).icon);
     if (counter) stacks = counter.getValue();
   }
   return Number(stacks) || 1;
@@ -2357,7 +2350,7 @@ export async function completeActivityUse(activityRef: Activity | string | undef
     const entity = typeof ref === "string" ? fromUuidSync(ref, { strict: false }) : ref;
     if (entity instanceof TokenDocument || entity instanceof foundry.canvas.placeables.Token) targetsToUse.add(entity as TokenOrDocument);
     else {
-      const token = getToken(entity as Actor.Implementation | null);
+      const token = tokenOf(tokenFor(entity as Actor.Implementation | null));
       if (token) targetsToUse.add(token);
     }
   };
@@ -2383,7 +2376,7 @@ export async function completeActivityUse(activityRef: Activity | string | undef
       const maxWait = 90; // If the activity usage doesn't complete in 90 seconds then we have a problem
       // The use's targets travel with the use; the player's targets are left alone (M2 stage 7)
       if (game.user && memberCount(targetsToUse) === 0 && activityTargetsSelf(activity)) {
-        const selfTarget = getToken(activity.item.actor);
+        const selfTarget = tokenOf(tokenFor(activity.item.actor));
         if (selfTarget) targetsToUse = new TokenDocumentSet([selfTarget]);
       } else if (memberCount(targetsToUse) === 0 && !usage.midiOptions!.ignoreUserTargets) {
         targetsToUse = new TokenDocumentSet(game.user?.targets);
@@ -3227,7 +3220,7 @@ export function getPerimeterDistanceToPoint(token: Token, point: { x: number, y:
  * position at all: `token.x`/`token.y` read 0 there.
  */
 export function tokenSourcePosition(tokenRef: any): { x: number, y: number, elevation: number, width: number, height: number } {
-  const doc = getTokenDocument(tokenRef) ?? tokenRef;
+  const doc = tokenFor(tokenRef) ?? tokenRef;
   const source = doc?._source;
   const committed = (key: string, fallback: number): number =>
     Number.isFinite(source?.[key]) ? source[key] : (Number.isFinite(doc?.[key]) ? doc[key] : fallback);
@@ -3236,7 +3229,7 @@ export function tokenSourcePosition(tokenRef: any): { x: number, y: number, elev
 
 /** Centre of a token at its committed position. */
 export function tokenSourceCenter(tokenRef: any): { x: number, y: number } {
-  const doc = getTokenDocument(tokenRef) ?? tokenRef;
+  const doc = tokenFor(tokenRef) ?? tokenRef;
   const pos = tokenSourcePosition(doc);
   if (typeof doc?.getCenterPoint === "function") {
     try { return doc.getCenterPoint({ ...pos }); } catch { /* fall through */ }
@@ -3337,8 +3330,8 @@ export type CoverPosition = { x: number, y: number, elevation?: number };
 /** The targets an activity that needs targets it can see is used against that its token can't see */
 export function unseenTargets(activity: Activity, token: TokenOrDocument | undefined, targets: Iterable<TokenOrDocument>): TokenOrDocument[] {
   if (!activity.midiProperties?.targetMustBeSeen || !token) return [];
-  const tokenDocument = getTokenDocument(token);
-  return [...targets].filter(target => getTokenDocument(target) !== tokenDocument && !canSee(token, target));
+  const tokenDocument = tokenFor(token);
+  return [...targets].filter(target => tokenFor(target) !== tokenDocument && !canSee(token, target));
 }
 
 /** Warn about targets the activity needs to see and can't; false when *Targets you can see* is enforced and one isn't seen */
@@ -3360,9 +3353,9 @@ export function checkTargetsSeen(activity: Activity, token: TokenOrDocument | un
 export function totalCoverTargets(activity: Activity, token: TokenOrDocument | undefined, targets: Iterable<TokenOrDocument>): TokenOrDocument[] {
   const coverCalculation = configSettings.optionalRules.coverCalculation;
   if (!coverCalculation || coverCalculation === "none" || !token || activity.midiProperties?.ignoreFullCover) return [];
-  const tokenDocument = getTokenDocument(token);
-  return [...targets].filter(target => getTokenDocument(target) !== tokenDocument
-    && (hasCoverTotal(getTokenDocument(target)?.actor)
+  const tokenDocument = tokenFor(token);
+  return [...targets].filter(target => tokenFor(target) !== tokenDocument
+    && (hasCoverTotal(tokenFor(target)?.actor)
       || (coverCalculation !== "dnd5eStatus" && computeCoverBonus(token, target, activity) === TOTAL_COVER)));
 }
 
@@ -3467,8 +3460,8 @@ let autoCoverFailed = false;
 export function autoCoverTier(attacker: TokenOrDocument | undefined, target: TokenOrDocument, origin?: CoverPosition): AutoCoverTier | undefined {
   if (!installedModules.get("levelsautocover")) return undefined;
   const api = game.modules.get("levelsautocover")?.api;
-  const targetDocument = getTokenDocument(target);
-  const attackerDocument = getTokenDocument(attacker);
+  const targetDocument = tokenFor(target);
+  const attackerDocument = tokenFor(attacker);
   if (!api?.computeCover || !targetDocument?.parent) return undefined;
   try {
     // A point source sits above its floor as AutoCover's own area cover places it
@@ -3492,8 +3485,8 @@ export function autoCoverTier(attacker: TokenOrDocument | undefined, target: Tok
 
 export function computeCoverBonus(attackerIn: TokenOrDocument | undefined, targetIn: TokenOrDocument, activity?: Activity,
   options: { position?: CoverPosition, origin?: CoverPosition } = {}): number {
-  let attacker = getTokenDocument(attackerIn);
-  const target = getTokenDocument(targetIn);
+  let attacker = tokenFor(attackerIn);
+  const target = tokenFor(targetIn);
   // As if the attacker stood at `position`: a document at that place, whose canvas token is there too
   if (attacker?.object && options.position) attacker = tokenAtPosition(attacker.object, options.position).document;
   if (activity instanceof Item) {
@@ -3802,7 +3795,7 @@ export function displayTokenName(uuid: string | undefined, name: string): string
   if (game.user?.isGM || !uuid) return name;
   const document = fromUuidSync(uuid);
   const token = document instanceof TokenDocument ? document
-    : document instanceof Actor ? (document.token ?? document.getActiveTokens(false, true)[0]) : null;
+    : document instanceof Actor ? (tokenFor(document as Actor.Implementation) ?? null) : null;
   if (!token || token.actor?.isOwner) return name;
   return hiddenTokenName(token) ?? name;
 }
@@ -3815,8 +3808,7 @@ function hiddenTokenName(token: TokenOrDocument, user: User.Implementation | nul
 export function getSpeaker(actor: Actor.Implementation) {
   const speaker = speakerFor({ actor });
   if (!configSettings.useTokenNames) return speaker;
-  let token = actor.token;
-  if (!token) token = actor.getActiveTokens(false, true)[0];
+  const token = tokenFor(actor);
   if (token) speaker.alias = token.name;
   return speaker;
 }
@@ -3898,7 +3890,7 @@ export function findNearby(
     relative: true
   }
 ) {
-  const token = getToken(tokenRef);
+  const token = tokenOf(tokenFor(tokenRef));
   if (!token) return [];
   if (!canvas || !canvas.scene) return [];
   try {
@@ -3953,7 +3945,7 @@ export function checkNearby(
     relative: true
   }
 ): boolean {
-  const token = getToken(tokenRef);
+  const token = tokenOf(tokenFor(tokenRef));
   const tokenDisposition = token?.document.disposition;
   if (tokenDisposition === 0) options.relative = false;
   if (!token) return false;
@@ -4019,7 +4011,7 @@ export function hasCondition(
 }
 
 export async function removeInvisibleCondition(tokenRef?: TokenOrDocument | string) {
-  const token = getToken(tokenRef);
+  const token = tokenOf(tokenFor(tokenRef));
   if (!token) return;
 
   await removeTokenConditionEffect(token, i18n(`midi-qol.invisible`) ?? "");
@@ -4032,7 +4024,7 @@ export async function removeInvisibleCondition(tokenRef?: TokenOrDocument | stri
 }
 
 export async function removeHiddenCondition(tokenRef?: TokenOrDocument | string) {
-  const token = getToken(tokenRef);
+  const token = tokenOf(tokenFor(tokenRef));
   if (!token) return;
   if (!token.actor) return
   if (CONFIG.statusEffects.find(se => se.id === "hidden")) {
@@ -4533,7 +4525,7 @@ async function displayBeforeAfterRolls(data: {
     // names its target, so the card shows each viewer as much of it as of that target's save (applySaveVisibility).
     const bonuses = foundry.utils.escapeHTML((options.bonusLabels ?? []).join(", ") || title);
     let html = `<strong>${bonuses}</strong>: ${originalRoll.toAnchor().outerHTML} → ${newRoll.toAnchor().outerHTML}`;
-    const targetUuid = anchor === "saves" ? (actor?.token ?? actor?.getActiveTokens(false, true)[0])?.uuid : undefined;
+    const targetUuid = anchor === "saves" ? tokenFor(actor)?.uuid : undefined;
     if (targetUuid) html = `<span data-midi-save-target="${targetUuid}">${html}</span>`;
     const note = await addCardNote(card, html, { anchor, whisper });
     if (note) return note;
@@ -4796,7 +4788,7 @@ export async function bonusDialog(
   if (!(this instanceof Workflow) && this.optionalBonusEffectsAC) {
     let sourceToken = (fromUuidSync(this.triggerTokenUuid) as TokenDocument.Implementation | undefined)?.object;
     const sourceActor = sourceToken?.actor ?? fromUuidSync(this.optionalBonusEffectsAC.workflowOptions?.sourceActorUuid) as Actor.Implementation | undefined;
-    if (!sourceToken && sourceActor) sourceToken = getOrCreateTokenForActor(sourceActor);
+    if (!sourceToken && sourceActor) sourceToken = tokenOf(tokenFor(sourceActor, { create: true }));
     parameters = {
       ...this.optionalBonusEffectsAC,
       actor: sourceActor,
@@ -4934,7 +4926,7 @@ export async function bonusDialog(
   // Inside a roll answering a request (a player's requested save): the requester holds the decision, on its deadline and
   // with the GM's skip (lib/bonusDecisions.ts)
   const decision = !options.request && options.withinRequest
-    ? await askBonusDecision(options.withinRequest, { actorUuid: this.actor?.uuid, tokenUuid: (this.actor?.token ?? this.actor?.getActiveTokens(false, true)[0])?.uuid, label: title })
+    ? await askBonusDecision(options.withinRequest, { actorUuid: this.actor?.uuid, tokenUuid: tokenFor(this.actor)?.uuid ?? undefined, label: title })
     : undefined;
   const request: IncomingRequest | undefined = options.request ?? decision?.incoming;
   /** The prompt is done: dice marked shown, the change recorded, what wasn't taken declined, the before and after shown */
@@ -5289,8 +5281,8 @@ async function acBonusCandidates(actor: Actor.Implementation, tokenUuid: string 
   if (!acKey) return undefined;
   const phase: BonusPhase = acKey === "acOnAttack" ? "preResult" : "postResult";
   const query: RollBonusQuery = {
-    kind: "ac", actor, token: tokenUuid ? getTokenDocument(tokenUuid) : undefined,
-    target: triggerTokenUuid ? getTokenDocument(triggerTokenUuid) : undefined,
+    kind: "ac", actor, token: tokenUuid ? tokenFor(tokenUuid) : undefined,
+    target: triggerTokenUuid ? tokenFor(triggerTokenUuid) : undefined,
     workflow: options.workflow instanceof Workflow ? options.workflow : undefined, activity: options.activity, item: options.item
   };
   return { query, phase, candidates: await collectBonusCandidates(query, phase, acRoll) };
@@ -5298,7 +5290,7 @@ async function acBonusCandidates(actor: Actor.Implementation, tokenUuid: string 
 
 export async function doReactions(targetRef: TokenOrDocument | string, triggerTokenRef: string | null | undefined, triggeringRoll: Roll | null | undefined, triggerType: string, options: any = {}): Promise<{ name?: string, uuid?: string, ac?: number, itemName?: string }> {
   const triggerTokenUuid = triggerTokenRef ?? undefined;
-  const target = getToken(targetRef);
+  const target = tokenOf(tokenFor(targetRef));
   try {
     const noResult = { name: undefined, uuid: undefined, ac: undefined };
     if (!target) return noResult;
@@ -5306,7 +5298,7 @@ export async function doReactions(targetRef: TokenOrDocument | string, triggerTo
 
     if (checkIncapacitated(target.actor, debugEnabled > 0, false)) return noResult;
     if (hasNoReactionsMarker(target.actor)) return noResult;
-    let player = playerFor(getTokenDocument(target));
+    let player = playerFor(tokenFor(target));
     const usedReaction = hasUsedReaction(target.actor);
     if (getReactionSetting(player) === "none") return noResult;
     if (!player || !player.active) player = ChatMessage.getWhisperRecipients("GM").find(u => u.active);
@@ -5361,7 +5353,7 @@ export async function doReactions(targetRef: TokenOrDocument | string, triggerTo
         }).length;
       // @ts-expect-error no dnd5e-types
       const acNow = await new Roll(`${target.actor.system.attributes.ac.value}`).roll();
-      reactionCount += (await acBonusCandidates(target.actor, getTokenDocument(target)?.uuid ?? undefined, triggerTokenRef, triggerType, acNow, options))?.candidates.length ?? 0;
+      reactionCount += (await acBonusCandidates(target.actor, tokenFor(target)?.uuid ?? undefined, triggerTokenRef, triggerType, acNow, options))?.candidates.length ?? 0;
     }
 
     // M32a step 3: a failed save's bonuses are asked with its reactions, so the request goes with no reaction on offer
@@ -5373,7 +5365,7 @@ export async function doReactions(targetRef: TokenOrDocument | string, triggerTo
 
     let chatMessage: ChatMessage.Implementation | undefined;
     // M32a step 5: what acts on the creature, if its user may know (an unseen attacker isn't named, nor its total)
-    const attacker = triggerTokenUuid ? getToken(triggerTokenUuid) : undefined;
+    const attacker = triggerTokenUuid ? tokenOf(tokenFor(triggerTokenUuid)) : undefined;
     const seen = attacker && attacker !== target ? canSee(target, attacker, { forceVision: true }) : true;
     const named = reveals({ subject: "attacker", user: player, caster: workflow?.actor ?? undefined, target: target.actor, seen });
     const reactionFlavor = game.i18n?.format(reactionPromptFor(triggerType), { itemName: named ? (options.item?.name ?? "unknown") : i18n("midi-qol.UnseenSource"), actorName: target.name });
@@ -5839,7 +5831,7 @@ export async function reactionDialog(
             createWorkflow: true,
             configureDialog: !buttons.some(b => b.auto),
             checkGMStatus: false,
-            targetUuids: effectiveTargetType !== "self" ? [triggerTokenUuid] : [getOrCreateTokenForActor(actor)?.document?.uuid],
+            targetUuids: effectiveTargetType !== "self" ? [triggerTokenUuid] : [tokenOf(tokenFor(actor, { create: true }))?.document?.uuid],
             isReaction: true,
             workflowOptions: { targetConfirmation: "none" },
             ignoreUserTargets: true
@@ -6434,7 +6426,7 @@ export function createConditionData(data: {
   try {
     if (data.target) {
       // The target's document: a target with no canvas token has no Token
-      const theTarget = getToken(data.target)?.document ?? getTokenDocument(data.target);
+      const theTarget = tokenOf(tokenFor(data.target))?.document ?? tokenFor(data.target);
       if (theTarget) {
         const theTargetActor = theTarget.actor as Actor;
 
@@ -6495,7 +6487,7 @@ export function createConditionData(data: {
       rollData.hasDamage = data.workflow.activity.hasDamage;
       // Tags (M26), worked out when read: about the target when there is one
       const workflow = data.workflow;
-      const tagTarget = data.target ? getTokenDocument(data.target) : undefined;
+      const tagTarget = data.target ? tokenFor(data.target) : undefined;
       rollData.choices = workflow.choices;
       Object.defineProperty(rollData, "tags", { get: () => tagsView(workflow, tagTarget), enumerable: false, configurable: true });
     }
@@ -6513,7 +6505,7 @@ export function createConditionData(data: {
     if (data.effect) {
       rollData.effect = data.effect;
       // DAE rewrites @stackCount on a deep clone that never reaches effect.system.changes, so supply it here.
-      rollData.stackCount = getEffectStackCount(data.effect, getOrCreateTokenForActor(actor ?? undefined));
+      rollData.stackCount = getEffectStackCount(data.effect, tokenOf(tokenFor(actor ?? undefined, { create: true })));
     }
     if (game.combat) {
       const combat = game.combat;
@@ -7723,8 +7715,8 @@ export function canSense(tokenEntity: TokenOrDocument | string, targetEntity: To
   return canSenseModes(tokenEntity, targetEntity, validModes, options).length > 0;
 }
 export function canSenseModes(tokenEntity: TokenOrDocument | string, targetEntity: TokenOrDocument | string, validModes: Array<string> = ["all"], options: SenseOptions = {}): Array<string> {
-  const token = getToken(tokenEntity);
-  const target = getToken(targetEntity);
+  const token = tokenOf(tokenFor(tokenEntity));
+  const target = tokenOf(tokenFor(targetEntity));
   if (!token || !target) return [];
   return sensesModes(token.document, target.document, { modes: validModes, forceVision: options.forceVision });
 }
@@ -7878,22 +7870,10 @@ export function _canSenseModes(token: Token.Implementation, target: Token.Implem
   return Array.from(matchedModes);
 }
 
-export function tokensForActor(actorRef: Actor.Implementation | string | undefined | null): Token.Implementation[] {
-  let actor: Actor | null;
-  if (!actorRef) return []
-  if (typeof actorRef === "string") actor = fromActorUuid(actorRef);
-  else actor = actorRef;
-  if (!(actor instanceof Actor)) return [];
-  if (actor.token) return [actor.token.object].filter(t => !!t);
-  const tokens = actor.getActiveTokens();
-  if (!tokens.length) return [];
-  const controlled = tokens.filter(t => t.controlled);
-  return controlled.length ? controlled : tokens;
-}
 
-export function tokenForActor(actor: Actor.Implementation | string | undefined | null): Token | undefined {
-  const tokens = tokensForActor(actor);
-  return tokens[0];
+/** Legacy (MidiQOL.tokenForActor): the actor's drawn canvas Token. midi's code uses tokenOf(tokenFor(actor)) */
+export function tokenForActor(actor: Actor.Implementation | string | undefined | null): Token.Implementation | undefined {
+  return tokenOf(tokenFor(typeof actor === "string" ? fromActorUuid(actor) as Actor.Implementation | null : actor));
 }
 
 export async function doConcentrationCheck(actor: Actor.Implementation, saveDC: number) {
@@ -8196,37 +8176,22 @@ export function getActor(actorRef?: Actor.Implementation | TokenOrDocument | str
   return null;
 }
 
+/** Legacy (MidiQOL.getTokenDocument): midi's code uses tokenFor */
 export function getTokenDocument(tokenRef?: Actor.Implementation | TokenOrDocument | string | null): TokenDocument.Implementation | undefined {
-  if (!tokenRef) return undefined;
-  const entity = (typeof tokenRef === "string") ? fromUuidSync(tokenRef) : tokenRef;
-  if (entity instanceof TokenDocument) return entity;
-  if (entity instanceof foundry.canvas.placeables.Token) return entity.document;
-  if (entity instanceof Actor) return tokenForActor(entity)?.document;
-  return undefined;
+  return tokenFor(tokenRef);
 }
 
+/** Legacy (MidiQOL.getToken): a canvas Token as given, else tokenOf(tokenFor(ref)), which midi's code uses */
 export function getToken(tokenRef?: Actor.Implementation | TokenOrDocument | string | null): Token.Implementation | undefined {
-  if (!tokenRef) return undefined;
-  const entity = (typeof tokenRef === "string") ? fromUuidSync(tokenRef) : tokenRef;
-  if (entity instanceof foundry.canvas.placeables.Token) return entity;
-  if (entity instanceof TokenDocument) return tokenOf(entity as TokenDocument.Implementation);
-  if (entity instanceof Actor) return tokenForActor(entity);
-  if (entity instanceof Item && entity.parent instanceof Actor) return tokenForActor(entity.parent);
-  if (entity instanceof ActiveEffect && entity.parent instanceof Actor) return tokenForActor(entity.parent);
-  if (entity instanceof ActiveEffect && entity.parent instanceof Item && entity.parent.parent instanceof Actor) return tokenForActor(entity.parent?.parent);
-  return undefined;
+  if (tokenRef instanceof foundry.canvas.placeables.Token) return tokenRef as Token.Implementation;
+  return tokenOf(tokenFor(tokenRef));
 }
 
 export function getPlaceable(tokenRef?: Actor.Implementation | TokenOrDocument | string | foundry.canvas.placeables.PlaceableObject | undefined): foundry.canvas.placeables.PlaceableObject | undefined | null {
   if (!tokenRef) return undefined;
   const entity = (typeof tokenRef === "string") ? fromUuidSync(tokenRef) : tokenRef;
   if (entity instanceof foundry.canvas.placeables.PlaceableObject) return entity;
-  if (entity instanceof Actor) return tokenForActor(entity);
-  if (entity instanceof Item && entity.parent instanceof Actor) return tokenForActor(entity.parent);
-  if (entity instanceof ActiveEffect && entity.parent instanceof Actor) return tokenForActor(entity.parent);
-  if (entity instanceof ActiveEffect && entity.parent instanceof Item && entity.parent.parent instanceof Actor) return tokenForActor(entity.parent?.parent);
-  if (entity instanceof TokenDocument) return tokenOf(entity as TokenDocument.Implementation);
-  return undefined;
+  return tokenOf(tokenFor(entity as never));
 }
 
 type TokenCoverCalculator = { targetCover(target: TokenOrDocument): number };
@@ -8243,8 +8208,8 @@ function tokenCoverCalculator(attacker: Token.Implementation, origin?: CoverPosi
 }
 
 export function calcTokenCover(attacker: TokenOrDocument, target: TokenOrDocument, origin?: CoverPosition): number {
-  const attackerToken = getToken(attacker);
-  const targetToken = getToken(target);
+  const attackerToken = tokenOf(tokenFor(attacker));
+  const targetToken = tokenOf(tokenFor(target));
   const coverCalc = attackerToken ? tokenCoverCalculator(attackerToken, origin) : undefined;
   if (!attackerToken || !targetToken || !coverCalc) {
     let message = "midi-qol | calcTokenCover | failed";
@@ -8287,7 +8252,7 @@ export async function videoThumbnail(src: string): Promise<string> {
 
 export function getTokenName(entity?: TokenOrDocument | null): string {
   // No canvas token (another scene or level): named from its document
-  const token = getToken(entity) ?? getTokenDocument(entity);
+  const token = tokenOf(tokenFor(entity)) ?? tokenFor(entity);
   if (!token) return "<unknown>";
   return getTokenNameExact(token) ?? "<unknown>";
 }
@@ -8540,8 +8505,8 @@ export async function chooseEffect({ actor, token, item, workflow, options }: {
 }
 
 export function canSee(tokenEntity: TokenOrDocument, targetEntity: TokenOrDocument, options: SenseOptions = {}): boolean {
-  const token = getToken(tokenEntity);
-  const target = getToken(targetEntity);
+  const token = tokenOf(tokenFor(tokenEntity));
+  const target = tokenOf(tokenFor(targetEntity));
   if (!token || !target) return false;
   return sensesModes(token.document, target.document, { modes: "sight", forceVision: options.forceVision }).length > 0;
 }

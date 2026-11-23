@@ -1,3 +1,4 @@
+import { tokenFor, tokenOf } from "../lib/tokenResolver.js";
 import { MidiActivity } from "./midiActivity.js";
 import { issuePolicy, issues } from "../services/economy/issues.js";
 import { getDistance } from "../services/distance/service.js";
@@ -42,7 +43,7 @@ export async function setupCanSeeSense(activity: MidiActivity, usage: { workflow
     if (bloodsenseRange > 0) {
       for (const target of workflow.targets.tokens) {
         if (workflow.tokenCanSense.has(target) && workflow.tokenCanSee.has(target)) continue;
-        const targetToken = getToken(target);
+        const targetToken = tokenOf(tokenFor(target));
         if (!targetToken?.actor) continue;
         // @ts-expect-error no dnd5e-types
         const hp = targetToken.actor.system.attributes?.hp;

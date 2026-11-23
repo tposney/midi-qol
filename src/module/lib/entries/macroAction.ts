@@ -1,3 +1,4 @@
+import { tokenFor, tokenOf } from "../tokenResolver.js";
 import type { Activity } from "../../../globals.js";
 import { resolveActivityMacro, resolveItemMacro } from "../../utils.js";
 import { entryItem } from "./config.js";
@@ -38,7 +39,7 @@ async function macroAction(run: ActionRun) {
     return;
   }
   const actor = run.context.actor;
-  await macro.execute({ actor, token: actor.getActiveTokens()[0], item, activity: own, entry: run.found.entry, ...data } as never);
+  await macro.execute({ actor, token: tokenOf(tokenFor(actor)), item, activity: own, entry: run.found.entry, ...data } as never);
 }
 
 export function registerMacroAction() {

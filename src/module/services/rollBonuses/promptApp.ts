@@ -1,3 +1,4 @@
+import { tokenFor } from "../../lib/tokenResolver.js";
 import { RollModifyDialog } from "../../utils.js";
 import { parseFlagValue } from "../../rules/optionalFlags.js";
 import { effectOrder } from "./rules.js";
@@ -199,7 +200,7 @@ interface PromptControl {
 /** The creatures a bonus may pick: within its range of the roller, by disposition to it, the roller only when `self` */
 function eligibleTargets(actor: Actor.Implementation | undefined, targeting: NonNullable<OfferedBonus["targeting"]>): TokenDocument.Implementation[] {
   if (targeting.candidates) return targeting.candidates.map(uuid => fromUuidSync(uuid)).filter((t): t is TokenDocument.Implementation => t instanceof TokenDocument);
-  const own = actor?.getActiveTokens(false, true)[0] as TokenDocument.Implementation | undefined;
+  const own = tokenFor(actor);
   return (canvas?.scene?.tokens.contents ?? []).filter(token => {
     if (!token.actor) return false;
     if (own && token.uuid === own.uuid) return !!targeting.self;

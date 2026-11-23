@@ -1,3 +1,4 @@
+import { tokenFor, tokenOf } from "./lib/tokenResolver.js";
 import { bindRollClaim, registerBonusDecisions } from "./lib/bonusDecisions.js";
 import { afterDamageApplied, applyCalculatedDamage, applyDamageWithOptions } from "./damage/application.js";
 import { type MidiQueryHandler, queryUser, registerMidiQuery } from "./lib/midiQueries.js";
@@ -2445,8 +2446,8 @@ async function _moveToken(data: { tokenUuid: string, newCenter: { x: number, y: 
 
 
 async function _moveTokenAwayFromPoint(data: { targetUuid: string, point: { x: number, y: number }, distance: number, options?: MoveTokenOptions }): Promise<void> {
-  const targetToken = getToken(data.targetUuid);
-  const targetTokenDocument = getTokenDocument(targetToken);
+  const targetToken = tokenOf(tokenFor(data.targetUuid));
+  const targetTokenDocument = tokenFor(targetToken);
   if (!canvas || !canvas.dimensions || !canvas.grid || !targetToken || !data.point || !targetTokenDocument?.uuid) {
     const message = `moveTokenAwayFromPoint | token not found or canvas not ready: ${data.targetUuid}`;
     error(message);

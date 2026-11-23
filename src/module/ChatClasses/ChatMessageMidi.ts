@@ -1,3 +1,4 @@
+import { tokenFor, tokenOf } from "../lib/tokenResolver.js";
 import type { TokenDocumentSet } from "../lib/tokenDocumentSet.js";
 import { deprecation } from "../lib/compatLine.js";
 import { MESSAGE_TYPES, MODULE_ID, MQDamageRollTypes, debugEnabled, error, i18n, log } from "../../midi-qol.js";
@@ -308,7 +309,7 @@ export function defineChatMessageMidiClass(baseClass: ChatMessage.Implementation
       else uuids = targetUuids.filter(uuid => !hitTargetUuids.includes(uuid));
       canvas.tokens?.releaseAll();
       uuids.forEach(uuid => {
-        const token = getToken(uuid);
+        const token = tokenOf(tokenFor(uuid));
         if (!token?.actor || !game.user) return;
         if (token.isVisible && token.actor.testUserPermission(game.user, "OWNER")) {
           token.control({ releaseOthers: false });

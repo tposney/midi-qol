@@ -1,3 +1,4 @@
+import { tokenFor, tokenOf } from "./tokenResolver.js";
 import { checkMechanic, configSettings } from "../settings.js";
 import type { Activity } from "../../globals.js";
 import { DummyWorkflow, type AttributionEntry } from "../Workflow.js";
@@ -94,8 +95,8 @@ async function previewTarget(activity: Activity, attacker: Token.Implementation 
 
 /** What a use of `activity` against `targets` would do, without making it (MidiQOL.preview) */
 export async function preview(activity: Activity, targets: Iterable<Token.Implementation | TokenDocument.Implementation> = [], options: PreviewOptions = {}): Promise<UsePreview> {
-  const documents = [...targets].map(target => getTokenDocument(target)).filter((document): document is TokenDocument.Implementation => !!document);
-  const attacker = getToken(options.token) ?? (activity.actor ? getOrCreateTokenForActor(activity.actor) : undefined) ?? undefined;
+  const documents = [...targets].map(target => tokenFor(target)).filter((document): document is TokenDocument.Implementation => !!document);
+  const attacker = tokenOf(tokenFor(options.token)) ?? (activity.actor ? tokenOf(tokenFor(activity.actor, { create: true })) : undefined) ?? undefined;
   const save = activity.save as { dc?: { value?: number }, ability?: Set<string> } | undefined;
   const steps = (() => {
     try {

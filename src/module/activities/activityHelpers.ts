@@ -1,3 +1,4 @@
+import { tokenFor, tokenOf } from "../lib/tokenResolver.js";
 import { confirmTargets } from "../services/targetConfirmation/service.js";
 import { isMidiActivityType } from "./midiActivity.js";
 import { setupCanSeeSense } from "./useChecks.js";
@@ -151,7 +152,7 @@ export function requiresTargetConfirmation(activity: Activity, options: MidiOpti
   const targets: Set<TokenOrDocument> = memberCount(options.targetsToUse) ? options.targetsToUse! : new Set(game.user?.targets ?? []);
   // Every target as a document (with a canvas token or not): what the checks read is the token's, not the canvas's
   const targetDocuments = targets instanceof TokenDocumentSet ? targets.documents
-    : [...targets].map(target => getTokenDocument(target)).filter((document): document is TokenDocument.Implementation => !!document);
+    : [...targets].map(target => tokenFor(target)).filter((document): document is TokenDocument.Implementation => !!document);
   const targetCount = targetDocuments.length;
   if (["enchant", "summon"].includes(activity.type)) return false;
   /*
@@ -173,7 +174,7 @@ export function requiresTargetConfirmation(activity: Activity, options: MidiOpti
   // @ts-expect-error no dnd5e-types
   if (numTargets === 0 && activity.item.type === "weapon" && shouldEnforceSingleTarget(activity))
     numTargets = 1;
-  const token = tokenForActor(activity.actor);
+  const token = tokenOf(tokenFor(activity.actor));
   if (targetConfirmation.enabled) {
     if (targetConfirmation.always && (activity.target?.affects.type ?? "") !== "self") {
       if (debugEnabled > 0) warn("target confirmation triggered from targetConfirmation.always");
@@ -385,9 +386,9 @@ function isTokenInside(template: foundry.canvas.placeables.MeasuredTemplate.Impl
 }
 export function isAoETargetable(targetToken: TokenOrDocument, options: { selfToken?: TokenOrDocument | string | null | undefined, ignoreSelf?: boolean, AoETargetType?: string, autoTarget?: string } = { ignoreSelf: false, AoETargetType: "any" }): boolean {
   if (!isValidTarget(targetToken)) return false;
-  const targetDocument = getTokenDocument(targetToken)!;
+  const targetDocument = tokenFor(targetToken)!;
   const autoTarget = options.autoTarget ?? configSettings.autoTarget;
-  const selfToken = getToken(options.selfToken);
+  const selfToken = tokenOf(tokenFor(options.selfToken));
   if (["wallsBlockIgnoreIncapacitated", "alwaysIgnoreIncapacitated"].includes(autoTarget) && checkIncapacitated(targetToken.actor, false, false)) return false;
   if (["wallsBlockIgnoreDefeated", "alwaysIgnoreDefeated"].includes(autoTarget) && checkDefeated(targetToken)) return false;
   if (targetDocument.uuid === selfToken?.document.uuid && options.ignoreSelf) return false;
@@ -429,7 +430,7 @@ export function isAoETargetable(targetToken: TokenOrDocument, options: { selfTok
  */
 export function midiTemplateFlags(activity: any): Record<string, unknown> {
   const flags: Record<string, unknown> = { activityTemplate: true };
-  const casterToken = activity?.actor ? tokenForActor(activity.actor) : undefined;
+  const casterToken = activity?.actor ? tokenOf(tokenFor(activity.actor)) : undefined;
   if (casterToken) flags.sourceTokenUuid = casterToken.document.uuid;
   if (activity?.item) flags.itemUuid = activity.item.uuid;
   if (activity?.actor) flags.actorUuid = activity.actor.uuid;
@@ -534,7 +535,7 @@ function templateBand(activity: any, shape: any, { level, token, attached = fals
   const template = activity?.target?.template ?? {};
   const type: string | undefined = template.type;
   if (!type || ["circle", "square"].includes(type)) return undefined;
-  const source = token ?? (activity?.actor ? tokenForActor(activity.actor)?.document
+  const source = token ?? (activity?.actor ? tokenOf(tokenFor(activity.actor))?.document
     ?? canvas?.scene?.tokens.find(t => t.actor === activity.actor) : undefined);
   if (!source) return undefined;
   const sceneUnits = (value: unknown): number | undefined => {
@@ -633,7 +634,7 @@ export function lineOfEffectClear(region: RegionDocument.Implementation, token: 
  * The 2D shape and walls are tested separately.
  */
 export function areaReachesToken(region: RegionDocument.Implementation, token: TokenOrDocument): boolean {
-  const document = getTokenDocument(token);
+  const document = tokenFor(token);
   if (!document) return false;
   let band: { bottom: number, top: number, topInclusive?: boolean };
   if (onRegionLevel(region, token)) band = regionElevationBand(region);
@@ -653,7 +654,7 @@ export function computeOffLevelTemplateTargets(activity: Activity | undefined, t
   const autoTarget = getActivityAutoTargetAction(activity);
   const scene = canvas?.scene;
   if (autoTarget === "none" || !scene || !hasMoveSurfaces(scene as unknown as SceneV14)) return [];
-  const selfToken = getToken(activity?.actor);
+  const selfToken = tokenOf(tokenFor(activity?.actor));
   const ignoreSelf = (activity?.target?.affects.special ?? "").split(";").includes("-self");
   const AoETargetType = activity ? getAoETargetType(activity) : "any";
   const wallsBlockTargeting = ["wallsBlock", "wallsBlockIgnoreDefeated", "wallsBlockIgnoreIncapacitated"].includes(autoTarget);
@@ -822,7 +823,7 @@ export function computeActivityTemplateTargets(
   const autoTarget = getActivityAutoTargetAction(activity);
   if (autoTarget === "none") return undefined;
   const ignoreSelf = (activity?.target?.affects.special ?? "").split(";").includes("-self");
-  const tokens = computeTargetsFromTemplates(templates, getToken(activity?.actor), ignoreSelf,
+  const tokens = computeTargetsFromTemplates(templates, tokenOf(tokenFor(activity?.actor)), ignoreSelf,
     activity ? getAoETargetType(activity) : "any", autoTarget);
   const maxTargets = Number(activity?.target?.affects.count) || 0;
   return maxTargets > 0 ? tokens.slice(0, maxTargets) : tokens;
@@ -902,7 +903,7 @@ export function computeTargetsFromTemplate(
     }
   }
 
-  const selfToken = getToken(selfTokenRef);
+  const selfToken = tokenOf(tokenFor(selfTokenRef));
   let targetTokens: Token.Implementation[] = [];
 
   const lvtCandidates = installedModules.get("levelsvolumetrictemplates") && !useWalledTemplates
@@ -1011,7 +1012,7 @@ function withinBand(band: { bottom: number, top: number, topInclusive?: boolean 
 /** As core: a region contains only tokens on its levels. */
 function onRegionLevel(regionDoc: RegionDocument.Implementation, token: TokenOrDocument): boolean {
   const region = regionDoc as unknown as { includedInLevel?: (level: string | undefined) => boolean };
-  const document = getTokenDocument(token);
+  const document = tokenFor(token);
   return region.includedInLevel && document ? region.includedInLevel(tokenLevel(document)) : true;
 }
 
@@ -1094,7 +1095,7 @@ function computeTargetsFromRegion(
   AoETargetType: string,
   autoTarget: string
 ): Token.Implementation[] {
-  const selfToken = getToken(selfTokenRef);
+  const selfToken = tokenOf(tokenFor(selfTokenRef));
   const wallsBlockTargeting = ["wallsBlock", "wallsBlockIgnoreDefeated", "wallsBlockIgnoreIncapacitated"].includes(autoTarget);
   const candidates = (canvas.tokens?.placeables ?? []).filter(token =>
     token.actor && isAoETargetable(token, { selfToken, ignoreSelf, AoETargetType, autoTarget }));

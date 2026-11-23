@@ -1,3 +1,4 @@
+import { tokenFor, tokenOf } from "../lib/tokenResolver.js";
 import { MidiActivity } from "./midiActivity.js";
 import { tokenSourceCenter } from "../utils.js";
 import { Activity, EmanationShapeData } from "../../globals.js";
@@ -43,7 +44,7 @@ export async function writeRegion(
 // Region update deferred from placeEmanationTemplate, consumed by
 // attachRegionActivityBehavior later in the same use flow (same activity clone)
 export async function resolveAttachTokenId(activity: MidiActivity, workflow: Workflow | undefined, mode: "caster" | "target"): Promise<string | undefined> {
-  if (mode === "caster") return (workflow?.token ?? getToken(activity.actor))?.document.id ?? undefined;
+  if (mode === "caster") return (workflow?.token ?? tokenOf(tokenFor(activity.actor)))?.document.id ?? undefined;
   const fromWorkflow = workflow?.targets.tokens ?? [];
   const targets = fromWorkflow.length > 0
     ? fromWorkflow
@@ -84,7 +85,7 @@ export async function promptAttachTargetPicker(activity: MidiActivity, targets: 
 export async function placeEmanationTemplate(activity: MidiActivity, workflow: Workflow | undefined) {
   const autoCreateTemplate = activityHasAutoPlaceTemplate(activity);
   const actor = activity.item.parent;
-  const tokenToUse = workflow?.token ?? getToken(actor);
+  const tokenToUse = workflow?.token ?? tokenOf(tokenFor(actor));
   if (!tokenToUse) return;
   if (autoCreateTemplate) {
     const templateDocuments = await createActivityTemplateRegions(activity, [{

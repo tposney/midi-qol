@@ -1,3 +1,4 @@
+import { tokenFor } from "../lib/tokenResolver.js";
 import { attackAgain } from "../rolls/attack.js";
 import { registerSheetExtras, type ActivitySheetApp } from "./activitySheets.js";
 import type { AnyMutableObject } from "fvtt-types/utils";
@@ -77,7 +78,7 @@ const TYPES: Record<string, TypeSetup> = {
       //@ts-expect-error
       Hooks.on("dnd5e.summonToken", (activity, profile, tokenData, options) => {
         if (!activity.friendlySummon) return;
-        const caster = getTokenDocument(activity.actor);
+        const caster = tokenFor(activity.actor);
         if (caster) tokenData.disposition = caster.disposition;
       });
     }

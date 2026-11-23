@@ -1,3 +1,4 @@
+import { isEphemeralToken, tokenFor, tokenOf } from "./module/lib/tokenResolver.js";
 import { setupMovementActions, setupMovementEnforcement } from "./module/services/economy/movement.js";
 import { setupSequencerLevelsFix } from "./module/lib/sequencerLevels.js";
 import { PlayerSettingsView } from "./module/apps/PlayerSettingsView.js";
@@ -423,6 +424,8 @@ Object.assign(globalThis.MidiQOL, {
   actorEffectsSettled,
   queueActorEffects,
   tokenForActor,
+  // Section 18, rule 4: anything's TokenDocument, and a TokenDocument's canvas Token (lib/tokenResolver.ts)
+  tokenFor, tokenOf, isEphemeralToken,
   TokenDocumentSet,
   setTokenDocumentSets,
   tokenDocumentSets: tokenSetDocumentMode,
@@ -1342,7 +1345,7 @@ export async function moveToken(tokenRef: TokenOrDocument | string, newCenter: {
   } else {
     resolvedOptions = options;
   }
-  const tokenUuid = getTokenDocument(tokenRef)?.uuid;
+  const tokenUuid = tokenFor(tokenRef)?.uuid;
   if (tokenUuid) return unTimedExecuteAsGM("moveToken", { tokenUuid, newCenter, options: resolvedOptions });
 }
 
@@ -1363,13 +1366,13 @@ export async function moveTokenAwayFromPoint(targetRef: TokenOrDocument | string
   } else {
     resolvedOptions = options;
   }
-  const targetUuid = getTokenDocument(targetRef)?.uuid;
+  const targetUuid = tokenFor(targetRef)?.uuid;
   if (point && targetUuid && distance)
     return unTimedExecuteAsGM("moveTokenAwayFromPoint", { targetUuid, distance, point, options: resolvedOptions })
 }
 
 export async function teleportToken(tokenRef: TokenOrDocument | string, destination: TeleportTokenDestination) {
-  const tokenUuid = getTokenDocument(tokenRef)?.uuid;
+  const tokenUuid = tokenFor(tokenRef)?.uuid;
   if (tokenUuid) return unTimedExecuteAsGM("teleportToken", { tokenUuid, destination });
 }
 

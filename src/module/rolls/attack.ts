@@ -1,3 +1,4 @@
+import { tokenFor, tokenOf } from "../lib/tokenResolver.js";
 import { AdvantageFlags, RollModifierTracker, computeAdvantageFlags } from "../lib/RollModifierTracker.js";
 import { attackBonusSources, labelD20Parts, setBonusSources } from "../lib/rollParts.js";
 import { GameSystemConfig } from "../../midi-qol.js";
@@ -52,7 +53,7 @@ type RollAttack = (config?: RollProcessConfig, dialog?: RollDialogConfig, messag
  */
 function showAttackTargets(workflow: Workflow) {
   if (!canvas?.ready) return;
-  const tokens = (workflow.targets?.tokens ?? []).map(target => getToken(target))
+  const tokens = (workflow.targets?.tokens ?? []).map(target => tokenOf(tokenFor(target)))
     .filter((token): token is Token.Implementation => !!token && token.scene === canvas.scene);
   if (!tokens.length) return;
   updateUserTargets(tokens.map(token => token.id));

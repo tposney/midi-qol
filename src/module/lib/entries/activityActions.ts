@@ -1,3 +1,4 @@
+import { tokenFor } from "../tokenResolver.js";
 import type { Activity } from "../../../globals.js";
 import type { Workflow } from "../../Workflow.js";
 import { completeActivityUse, playerForActor } from "../../utils.js";
@@ -70,7 +71,7 @@ function subjectsOf(run: ActionRun): TokenDocument.Implementation[] {
     return documents(workflow.targets);
   }
   const bearer = found.actor ?? context.actor;
-  const token = bearer?.getActiveTokens(false, true)[0] as TokenDocument.Implementation | undefined;
+  const token = tokenFor(bearer);
   return token ? [token] : [];
 }
 
@@ -208,8 +209,8 @@ function mayTake(f: FoundEntry, taker: Actor.Implementation): boolean {
     if (who === "bearer" && taker === bearer) return true;
     if (who && typeof who === "object" && "within" in who) {
       const spec = who as { within: number | "reach" };
-      const from = bearer?.getActiveTokens(false, true)[0] as TokenDocument.Implementation | undefined;
-      const to = taker.getActiveTokens(false, true).find(t => t.parent === from?.parent) as TokenDocument.Implementation | undefined;
+      const from = tokenFor(bearer);
+      const to = from ? tokenFor(taker, { scene: from.parent, near: from }) : undefined;
       if (!from || !to || to === from) continue;
       const within = spec.within === "reach" ? meleeReach(bearer) : Number(spec.within);
       const distance = getDistance(from, to, { wallsBlock: false });

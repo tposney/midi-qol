@@ -66,7 +66,8 @@ export function rememberSyntheticToken(token: Token.Implementation) {
  * A member's Token now: its canvas token, else midi's own for a token never created; none on another scene or level, or deleted.
  * A document with no id is midi's own: Foundry's lazy `object` would create another Token for it.
  */
-export function tokenOf(document: TokenDocument.Implementation): Token.Implementation | undefined {
+export function tokenOf(document: TokenDocument.Implementation | null | undefined): Token.Implementation | undefined {
+  if (!document) return undefined;
   if (!document.id) {
     const synthetic = syntheticPlaceables.get(document);
     return synthetic && !synthetic.destroyed ? synthetic : undefined;

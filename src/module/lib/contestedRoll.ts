@@ -1,3 +1,4 @@
+import { tokenFor, tokenOf } from "./tokenResolver.js";
 /**
  * MidiQOL.contestedRoll, and an example of a card note drawn by its own renderer, written only against the card note
  * API as another module would be (cardNotes.ts): the note's data says who rolls what, its two checks are its messages
@@ -93,8 +94,8 @@ export async function contestedRoll(data: {
 }): Promise<{ result: number | undefined, rolls: any[] }> {
   const source = data.source;
   const target = data.target;
-  const sourceToken = getToken(source?.token);
-  const targetToken = getToken(target?.token);
+  const sourceToken = tokenOf(tokenFor(source?.token));
+  const targetToken = tokenOf(tokenFor(target?.token));
   const { success, failure, drawn, displayResults, itemCardUuid, flavor } = data;
 
   let canProceed = true;
@@ -140,8 +141,8 @@ export async function contestedRoll(data: {
   const contestData: ContestNoteData = {
     flavor: contestFlavor,
     sides: {
-      source: { name: sourceToken?.name ?? "", uuid: getTokenDocument(sourceToken)?.uuid ?? undefined, label: rollLabel(source.rollType, source.ability) },
-      target: { name: targetToken?.name ?? "", uuid: getTokenDocument(targetToken)?.uuid ?? undefined, label: rollLabel(target.rollType, target.ability) }
+      source: { name: sourceToken?.name ?? "", uuid: tokenFor(sourceToken)?.uuid ?? undefined, label: rollLabel(source.rollType, source.ability) },
+      target: { name: targetToken?.name ?? "", uuid: tokenFor(targetToken)?.uuid ?? undefined, label: rollLabel(target.rollType, target.ability) }
     }
   };
   const note = onCard ? await addCardNote(card, foundry.utils.escapeHTML(contestFlavor), {

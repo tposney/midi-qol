@@ -1,3 +1,4 @@
+import { tokenFor, tokenOf } from "../tokenResolver.js";
 import { GameSystemConfig, MODULE_ID, i18n } from "../../../midi-qol.js";
 import { preferredActiveGM } from "../../GMAction.js";
 import { OnUseMacros } from "../../apps/Item.js";
@@ -158,7 +159,7 @@ let previousTick: Promise<void> = Promise.resolve();
 async function runTickUse(actor: Actor.Implementation, effect: ActiveEffect.Implementation, tick: Tick, permanent: boolean): Promise<Workflow | undefined | null> {
   const details = { ...tick, turn: "start", saveCount: undefined, failCount: undefined, actionSave: undefined } as OvertimeDetails;
   const { itemData, activityData } = await buildOvertimeItemData({ actor, effect, details, label: tick.label, isPermanent: permanent });
-  const target = getOrCreateTokenForActor(actor)!;
+  const target = tokenOf(tokenFor(actor, { create: true }))!;
   if (tick.damageRoll && activityData.damage?.parts?.[0]) {
     let formula = tick.damageRoll;
     if (tick.multiplyByStacks) for (let i = 1; i < getEffectStackCount(effect, target); i++) formula = `${formula} + ${tick.damageRoll}`;

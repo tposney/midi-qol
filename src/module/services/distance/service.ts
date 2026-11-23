@@ -1,3 +1,4 @@
+import { tokenFor } from "../../lib/tokenResolver.js";
 import { defineService, reportServiceProblem } from "../../api/services.js";
 import { getTokenDocument } from "../../utils.js";
 import { midiDistance, unmeasurable } from "./provider.js";
@@ -98,5 +99,5 @@ export function measureDistance(t1: unknown, t2: unknown, options: DistanceOptio
 }
 
 function toDocument(token: unknown): TokenDocument.Implementation | undefined {
-  return getTokenDocument(token as Token.Implementation | TokenDocument.Implementation | string) ?? undefined;
+  return tokenFor(token as Token.Implementation | TokenDocument.Implementation | string) ?? undefined;
 }

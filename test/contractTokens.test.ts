@@ -51,3 +51,40 @@ describe("contract types (section 18)", () => {
     expect(problems).toEqual([]);
   });
 });
+
+/* Section 18, rule 4: an actor's token comes from the resolver (lib/tokenResolver.ts), not a first-found lookup */
+describe("actor to token (section 18, rule 4)", () => {
+  const files: string[] = [];
+  const walk = (dir: string) => {
+    for (const e of fs.readdirSync(dir, { withFileTypes: true })) {
+      const full = path.join(dir, e.name);
+      if (e.isDirectory()) walk(full);
+      else if (e.name.endsWith(".ts") || e.name.endsWith(".mjs")) files.push(full);
+    }
+  };
+  walk(root);
+  it("no getActiveTokens()[0] or getActiveTokens().find(...) picks a token for an actor", () => {
+    const problems: string[] = [];
+    for (const file of files) {
+      const lines = fs.readFileSync(file, "utf8").split("\n");
+      lines.forEach((line, i) => {
+        if (/getActiveTokens\([^)]*\)\s*(\[0\]|\.find\()/.test(line)) problems.push(`${path.relative(root, file)}:${i + 1}`);
+      });
+    }
+    expect(problems).toEqual([]);
+  });
+
+  // Two primitives: tokenFor (anything to its TokenDocument) and tokenOf (a TokenDocument's canvas Token); the older
+  // names are wrappers kept for macros and other modules, defined in utils.ts and exported on MidiQOL only
+  it("midi's code uses tokenFor / tokenOf, not the legacy token helpers", () => {
+    const legacy = /(?<![\w.$])(getTokenDocument|getToken|tokenForActor|getOrCreateTokenForActor|tokensForActor)\(/;
+    const problems: string[] = [];
+    for (const file of files) {
+      const lines = fs.readFileSync(file, "utf8").split("\n");
+      lines.forEach((line, i) => {
+        if (legacy.test(line) && !/^\s*export function /.test(line)) problems.push(`${path.relative(root, file)}:${i + 1}`);
+      });
+    }
+    expect(problems).toEqual([]);
+  });
+});

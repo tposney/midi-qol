@@ -1,3 +1,4 @@
+import { tokenFor, tokenOf } from "./lib/tokenResolver.js";
 import { registerDamageCalculationStep, runDamageCalculation } from "./steps/damageCalculation.js";
 import { deprecation } from "./lib/compatLine.js";
 import { afterDamageApplied, consumeDamageApplication, runAfterDamageApplied, stampDamageApplication } from "./damage/application.js";
@@ -472,7 +473,7 @@ async function executeMacroSpec(macroSpec: string, actor: Actor.Implementation, 
 
     if (!macro?.command) return;
 
-    const token = tokenForActor(actor);
+    const token = tokenOf(tokenFor(actor));
     const args = [{ actor, token, effect, item: macroItem, activity: macroActivity, reason: "replacementEffect" }];
     const scope: Macro.UnknownScope = { actor, token, effect, item: macroItem, activity: macroActivity, args };
 

@@ -1,3 +1,4 @@
+import { tokenFor } from "../tokenResolver.js";
 import type { Activity } from "../../../globals.js";
 import { unTimedExecuteAsGM } from "../../GMAction.js";
 import { rollTable, type TableDeclaration } from "../tables.js";
@@ -172,7 +173,7 @@ function entryItem(run: ActionRun): Item.Implementation | undefined {
 /** The creatures on the scene of the entry's actor */
 function sceneActors(run: ActionRun): Actor.Implementation[] {
   const actor = run.found.actor ?? run.context.actor;
-  const scene = (actor.getActiveTokens(false, true)[0] as TokenDocument.Implementation | undefined)?.parent ?? canvas?.scene;
+  const scene = tokenFor(actor)?.parent ?? canvas?.scene;
   const actors = new Set<Actor.Implementation>();
   for (const token of scene?.tokens ?? []) if (token.actor) actors.add(token.actor);
   return [...actors];

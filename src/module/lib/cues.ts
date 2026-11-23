@@ -1,3 +1,4 @@
+import { tokenFor } from "./tokenResolver.js";
 import { MODULE_ID } from "../../midi-qol.js";
 import type { Workflow } from "../Workflow.js";
 import { outcomes, type TargetOutcome } from "./outcomes.js";
@@ -96,7 +97,7 @@ export function cueFor(workflow: Workflow, cue: string): Cue {
   return {
     cue,
     useId: workflow.id,
-    source: getTokenDocument(workflow.token)?.uuid ?? undefined,
+    source: tokenFor(workflow.token)?.uuid ?? undefined,
     targets: workflow.targets.documents.map(t => t.uuid).filter((uuid): uuid is string => !!uuid),
     outcomes: [...byTarget.values()],
     activity: workflow.activity?.uuid,

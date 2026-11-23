@@ -1,3 +1,4 @@
+import {tokenFor} from '../../lib/tokenResolver.js';
 import {activityUtils, effectUtils, tokenUtils, workflowUtils} from '../proxy.mjs';
 // Fear Aura: an enemy that starts its turn in the emanation makes the item's Wisdom save; on a
 // failure it is Frightened until the start of its next turn (the activity's effect), on a success it is immune to this
@@ -6,7 +7,7 @@ const MODULE = 'midi-qol';
 // For a nearby pass `token` is the token whose turn starts; the aura's token is the item actor's on that scene.
 async function turnStart({document: item, token: starter}) {
     const holder = item.actor;
-    const auraToken = holder?.token ?? holder?.getActiveTokens(false, true).find(t => t.parent === starter?.parent);
+    const auraToken = tokenFor(holder, {scene: starter?.parent ?? null, near: starter ?? null});
     const target = starter?.actor;
     if (!holder || !target || !auraToken || starter === auraToken || holder.statuses.has('incapacitated')) return;
     const activity = item.system.activities.find(a => a.isLike('save'));

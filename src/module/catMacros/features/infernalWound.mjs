@@ -1,3 +1,4 @@
+import { tokenFor } from '../../lib/tokenResolver.js';
 import {getTokenDocument} from '../../utils.js';
 import {automationUtils, documentUtils, workflowUtils} from '../proxy.mjs';
 // Infernal wound (2024 Bearded Devil's Infernal Glaive, Horned Devil's Infernal Tail). A creature without a wound that
@@ -60,7 +61,7 @@ async function turnStart({document: effect, actor, token}) {
     const wound = effect?.getFlag(MODULE, FLAG);
     if (!wound?.formula || !actor) return;
     const roll = await new Roll(wound.formula).evaluate();
-    await roll.toMessage({flavor: `${effect.name}: hit points lost`, speaker: ChatMessage.getSpeaker({actor, token: getTokenDocument(token)})});
+    await roll.toMessage({flavor: `${effect.name}: hit points lost`, speaker: ChatMessage.getSpeaker({actor, token: tokenFor(token)})});
     // Hit points lost, not damage: no type, so nothing reduces it
     await actor.applyDamage(roll.total);
 }

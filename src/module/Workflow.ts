@@ -1,3 +1,4 @@
+import { tokenFor } from "./lib/tokenResolver.js";
 import type { RangeCheckResult } from "./services/range/service.js";
 import { ReactionBatch } from "./lib/reactionBatch.js";
 import { isRollOf } from "./rolls/common.js";
@@ -2153,7 +2154,7 @@ export class Workflow {
   }
   /** A target's save roll (a Token, TokenDocument or token uuid); undefined until it has rolled */
   saveRoll(token: TokenOrDocument | string): Roll | undefined {
-    const uuid = typeof token === "string" ? token : getTokenDocument(token)?.uuid;
+    const uuid = typeof token === "string" ? token : tokenFor(token)?.uuid;
     if (!uuid) return undefined;
     return this.targetSaveDetails ? this.targetSaveDetails[uuid]?.saveRoll : this.#restoredSaves?.[uuid];
   }
@@ -2221,7 +2222,7 @@ export class Workflow {
       if (speaker.token) this.token = canvas.tokens?.get(speaker.token);
       if (options.token) this.token = options.token;
       if (!this.token) {
-        this.token = getOrCreateTokenForActor(this.actor);
+        this.token = tokenOf(tokenFor(this.actor, { create: true }));
       }
       // Kept as a token set: a plain copy would read as the canvas tokens only
       const given = targets ? new TokenDocumentSet(targets) : undefined;
@@ -2378,7 +2379,7 @@ export class Workflow {
     this.#disadvantageSaves = new TokenDocumentSet(records.filter(record => record.saveMode === -1).map(record => record.uuid));
     const speaker = this.chatCard?.speaker;
     const speakerToken = speaker?.token ? game.scenes?.get(speaker.scene ?? "")?.tokens.get(speaker.token)?.object : undefined;
-    this.token = speakerToken ?? getOrCreateTokenForActor(this.actor) ?? undefined;
+    this.token = speakerToken ?? tokenOf(tokenFor(this.actor, { create: true })) ?? undefined;
     if (this.damageRolls?.length) this.deriveDamage();
     if (this.bonusDamageRolls?.length) this.deriveBonusDamage();
     if (this.otherDamageRolls?.length) this.deriveOtherDamage();
@@ -3016,7 +3017,7 @@ export class Workflow {
     const ask = () => (replaced ?? doReactions)(target, triggerTokenUuid, triggeringRoll, triggerType, options) as Promise<ReactionResult>;
     if (!id) return ask();
     // A step's context gives TokenDocuments (proposal section 18): the target as given goes only to midi's own ask
-    return (await this.runInlineStep(id, ask, { reaction: { target: getTokenDocument(target), triggerTokenUuid, triggeringRoll, triggerType, options } })) ?? {};
+    return (await this.runInlineStep(id, ask, { reaction: { target: tokenFor(target), triggerTokenUuid, triggeringRoll, triggerType, options } })) ?? {};
   }
 
   async #runOwn(id: string): Promise<string | undefined> {
@@ -3681,7 +3682,7 @@ export class Workflow {
     let selfEffects: ActiveEffect.Implementation[] = [];
     if (this.effectTargets.documents.length > 0) selfEffects = activitySelfEffects;
     else selfEffects = activitySelfAllEffect;
-    const selfToken = getOrCreateTokenForActor(this.actor);
+    const selfToken = tokenOf(tokenFor(this.actor, { create: true }));
     if (selfEffects.length > 0 && selfToken) {
       await globalThis.DAE.doActivityEffects(this.activity, true, [selfToken], selfEffects.map(ef => ef.uuid), doEffectsData)
     }
@@ -4118,7 +4119,7 @@ export class Workflow {
     await this.checkTargetAdvantage();
     // Long range, flanking, unseen/invisible/hidden, nearby foe and heavy weapon are midi's rollModifiers contributors (services/attackRollRules.ts)
     await collectRollModifiers({
-      kind: "attack", actor: this.actor, token: getTokenDocument(this.token), target: this.targets.documents[0],
+      kind: "attack", actor: this.actor, token: tokenFor(this.token), target: this.targets.documents[0],
       activity: this.activity, item: this.item, workflow: this, ...(this.workflowOptions?.preview ? { preview: true } : {})
     }, this.attackRollModifierTracker);
   }
@@ -4312,7 +4313,7 @@ export class Workflow {
     if (!this.targets?.count) return;
     const actionType = this.activity.actionType ?? "";
     const firstTargetDocument = this.targets.documents[0];
-    const firstTarget = getToken(firstTargetDocument);
+    const firstTarget = tokenOf(tokenFor(firstTargetDocument));
     if (!firstTargetDocument || !firstTarget) return;
 
     // Check nearby ally disadvantage for ranged attacks
@@ -4333,7 +4334,7 @@ export class Workflow {
     let results: Record<string, unknown[]> = {};
     // Every target, with a canvas token or not (targetMacroOptions)
     for (let target of targets instanceof TokenDocumentSet ? targets.documents : targets) {
-      const uuid = getTokenDocument(target)?.uuid ?? "";
+      const uuid = tokenFor(target)?.uuid ?? "";
       results[uuid] = [];
       let result = results[uuid];
       const actorOnUseMacros = target.actor?.flags?.[MODULE_ID]?.onUseMacroParts ?? new OnUseMacros();
@@ -5002,7 +5003,7 @@ export class Workflow {
     if (!macro?.command) return undefined;
 
     const actorToUse = (options.actor as Actor.Implementation | undefined) ?? this.actor;
-    const token = tokenForActor(actorToUse);
+    const token = tokenOf(tokenFor(actorToUse));
     const targetOptions: { token?: Token.Implementation | null; tokenDocument?: TokenDocument.Implementation } = options;
     const scope: Macro.UnknownScope = {
       workflow: this,
@@ -5292,7 +5293,7 @@ export class Workflow {
       // and nothing per viewer (oneCard, collapsibleTargets, isGM are added when drawn)
       const entries = Object.entries(this.hitDisplayData ?? {});
       // Its own card draws the rows from the records (UsageCardMessage); another's stores them
-      if (this.ownsCard) this.#persisted.setHitRows(entries.map(([, hit]: [string, any]) => [getTokenDocument(hit?.target), {
+      if (this.ownsCard) this.#persisted.setHitRows(entries.map(([, hit]: [string, any]) => [tokenFor(hit?.target), {
         hitClass: hit?.hitClass ?? "", hitSymbol: hit?.hitSymbol || null, hitShowAC: hit?.showAC || null,
         acDisplay: hit?.acDisplay || null, acTooltip: hit?.acTooltip || null, acIcons: hit?.acIcons?.length ? hit.acIcons : null
       }] as [TokenDocument.Implementation | undefined, RecordFacts]).filter((e): e is [TokenDocument.Implementation, RecordFacts] => !!e[0]));
@@ -5578,7 +5579,7 @@ export class Workflow {
    * @returns Promise resolving to the image URL string
    */
   protected async getTargetPortraitImage(target: TokenOrDocument): Promise<string> {
-    const document = getTokenDocument(target);
+    const document = tokenFor(target);
     return document ? tokenPortrait(document) : target.actor?.img ?? "";
   }
 
@@ -5677,7 +5678,7 @@ export class Workflow {
     let rollHTML = await renderSaveRollHTML(saveRoll);
     //@ts-expect-error midiChosenId is a custom roll option
     const midiChosenId: string | undefined = saveRoll.options?.midiChosenId;
-    const targetDocUuid = getTokenDocument(target)?.uuid ?? "none";
+    const targetDocUuid = tokenFor(target)?.uuid ?? "none";
 
     // Tagged so the roll can be found on the card: `rollType` the way every other midi roll is
     // tagged, and the target uuid because saves are per-target and the card has no other way back.
@@ -5724,7 +5725,7 @@ export class Workflow {
     if (totalSaveCover >= TOTAL_COVER) coverLabel = "systems/dnd5e/icons/svg/statuses/cover-total.svg";
     else if (totalSaveCover >= THREE_QUARTERS_COVER) coverLabel = "systems/dnd5e/icons/svg/statuses/cover-three-quarters.svg";
     else if (totalSaveCover >= HALF_COVER) coverLabel = "systems/dnd5e/icons/svg/statuses/cover-half.svg";
-    const targetDocument = getTokenDocument(target);
+    const targetDocument = tokenFor(target);
     if (targetDocument) this.#persisted.setRecordFacts(targetDocument, {
       saveTotal: isFinite(saveRollTotal) ? saveRollTotal : null,
       saveCover: totalSaveCover >= TOTAL_COVER ? "total" : totalSaveCover >= THREE_QUARTERS_COVER ? "threeQuarters" : totalSaveCover >= HALF_COVER ? "half" : undefined,
@@ -5807,7 +5808,7 @@ export class Workflow {
     const playerChat = !player?.isGM && ["chat"].includes(configSettings.playerRollSaves);
 
     if (player?.isGM) {
-      const targetDocument = getTokenDocument(target);
+      const targetDocument = tokenFor(target);
       const monksTBSetting = targetDocument?.isLinked ? configSettings.rollNPCLinkedSaves === "mtb" : configSettings.rollNPCSaves === "mtb";
       const flashTBSetting = targetDocument?.isLinked ? configSettings.rollNPCLinkedSaves === "ftb" : configSettings.rollNPCSaves === "ftb";
       const epicRollsSetting = targetDocument?.isLinked ? configSettings.rollNPCLinkedSaves === "rer" : configSettings.rollNPCSaves === "rer";
@@ -5888,7 +5889,7 @@ export class Workflow {
       moduleCoverBonus = computeCoverBonus(this.token, target, this.activity);
     }
     // An entry's cover for the target counts as at least that much; cover the use's entries ignore is none (status too)
-    const entryCover = entryCoverFor(this, getTokenDocument(target));
+    const entryCover = entryCoverFor(this, tokenFor(target));
     if (entryCover?.level) moduleCoverBonus = Math.max(moduleCoverBonus, coverAnswer(entryCover.level).bonus);
     const effectiveCoverBonus = Math.max(moduleCoverBonus, statusCoverBonus);
     if (entryCover?.ignore?.includes(coverLevelFor(effectiveCoverBonus))) return -statusCoverBonus;
@@ -6468,7 +6469,7 @@ export class Workflow {
       data,
       kind: rollType === "save" ? "save" : "check",
       actorUuid: target.actor?.uuid ?? undefined,
-      tokenUuid: getTokenDocument(target)?.uuid ?? undefined,
+      tokenUuid: tokenFor(target)?.uuid ?? undefined,
       label: i18nFormat("midi-qol.PlayerWaits.SaveLabel", {
         what, type: i18n(rollType === "save" ? "DND5E.SavingThrow" : "DND5E.AbilityCheck"), item: this.item?.name ?? ""
       }),
@@ -6492,12 +6493,12 @@ export class Workflow {
       kind: rollInfo.type === "save" ? "save" : "check", owner: this,
       userId: player.id!,
       actorUuid: target.actor?.uuid ?? undefined,
-      tokenUuid: getTokenDocument(target)?.uuid ?? undefined,
+      tokenUuid: tokenFor(target)?.uuid ?? undefined,
       label: i18nFormat("midi-qol.PlayerWaits.SaveLabel", {
         what, type: i18n(rollInfo.type === "save" ? "DND5E.SavingThrow" : "DND5E.AbilityCheck"), item: this.item?.name ?? ""
       }),
       choices: this.gmSaveChoices(saveDetails, player, displayOptions.showRoll),
-      onSettled: () => this.pendingSaves.cancel(getTokenDocument(target)?.uuid)
+      onSettled: () => this.pendingSaves.cancel(tokenFor(target)?.uuid)
     }, () => queuedPromise);
   }
 
@@ -6545,7 +6546,7 @@ export class Workflow {
       data: { saveDetails, displayOptions: { fastForward: displayOptions.simulate || !displayOptions.showRollDialog, chatMessage: true, rollMode, showTargetDC: true } },
       kind: rollInfo.type === "save" ? "save" : "check",
       actorUuid: target.actor?.uuid ?? undefined,
-      tokenUuid: getTokenDocument(target)?.uuid ?? undefined,
+      tokenUuid: tokenFor(target)?.uuid ?? undefined,
       label: i18nFormat("midi-qol.PlayerWaits.SaveLabel", {
         what, type: i18n(rollInfo.type === "save" ? "DND5E.SavingThrow" : "DND5E.AbilityCheck"), item: this.item?.name ?? ""
       }),
@@ -6614,7 +6615,7 @@ export class Workflow {
     // (bonuses first, the save re-checked, the reactions only if it still fails); the roll left them for this
     // (failBonusesWithReactions), as it does when its roller doesn't see the DC
     const failBonus = !saved && provokes ? await this.failedSaveBonusSpec(target, result, rollType ?? "", rollAbility ?? "", resultDC) : undefined;
-    const answer = await targetEvent(this, getTokenDocument(target), saved ? "saveSucceeded" : "saveFailed", { total: saveRollTotal, dc: resultDC, saved, critical: isCritical, fumble: isFumble },
+    const answer = await targetEvent(this, tokenFor(target), saved ? "saveSucceeded" : "saveFailed", { total: saveRollTotal, dc: resultDC, saved, critical: isCritical, fumble: isFumble },
       provokes ? () => this.askReactionsStep(target, this.tokenUuid, this.attackRoll, saved ? "reactionsavesuccess" : "reactionsavefail",
         { workflow: this, activity: this.activity, item: this.item, ...(failBonus ? { failedSaveBonus: failBonus } : {}), ...(context.reactionTicket ? { reactionTicket: context.reactionTicket } : {}) }) : undefined);
     // M32a step 4: answered (or nothing to ask): the rest in target order
@@ -6635,7 +6636,7 @@ export class Workflow {
     // Trigger target macros that might modify the roll
     if (configSettings.allowUseMacro && this.workflowOptions.noTargetOnUseMacro !== true) {
       const rollResults = await this.triggerTargetMacros(["isSave", "isSaveSuccess", "isSaveFailure"], new Set([target]), { saved }) as Record<string, Roll[]>;
-      const newRolls = rollResults[getTokenDocument(target)?.uuid ?? ""];
+      const newRolls = rollResults[tokenFor(target)?.uuid ?? ""];
       if (newRolls?.[0] instanceof Roll) {
         saveRolls = newRolls;
         saveRollTotal = newRolls.reduce((acc, r) => acc + (r?.total ?? 0), 0);
@@ -6755,7 +6756,7 @@ export class Workflow {
         owner: this,
         type: BONUS_REQUEST,
         data: { actorUuid: (target.actor as Actor).uuid, result: JSON.stringify(result[0].toJSON()), rollType, selector },
-        kind: "bonus", actorUuid: target.actor?.uuid ?? undefined, tokenUuid: getTokenDocument(target)?.uuid ?? undefined,
+        kind: "bonus", actorUuid: target.actor?.uuid ?? undefined, tokenUuid: tokenFor(target)?.uuid ?? undefined,
         label: i18nFormat("midi-qol.PlayerWaits.BonusLabel", { item: this.item?.name ?? "" }),
         timeoutMs: (configSettings.playerSaveTimeout ?? 0) * 1000,
         fallback: () => result[0],
@@ -6818,7 +6819,7 @@ export class Workflow {
     }
   ): Promise<SaveDetails> {
     const { rollDC, rollType, isMagicSave, actorDisposition, rollAbilities, rollSkills, rollTools } = context;
-    const targetDocument = getTokenDocument(target);
+    const targetDocument = tokenFor(target);
 
     const saveDetails: SaveDetails = {
       actorUuid: target.actor?.uuid ?? "",
@@ -6969,7 +6970,7 @@ export class Workflow {
         const showRoll = !simulate;
         // M15 4f: saveRequested, sharing the reaction prompt
         const provokes = !this.item.flags?.[MODULE_ID]?.noProvokeReaction && !this.workflowOptions.noProvokeReaction;
-        await targetEvent(this, getTokenDocument(target), "saveRequested", { dc: rollDC, rollType },
+        await targetEvent(this, tokenFor(target), "saveRequested", { dc: rollDC, rollType },
           provokes ? () => this.askReactionsStep(target, this.tokenUuid, this.attackRoll ?? new Roll(""), "reactionsave", { workflow: this, activity: this.activity, item: this.item }) : undefined);
 
         // Build save details for this target
@@ -6990,11 +6991,11 @@ export class Workflow {
 
         this.saveDetails = saveDetails;
         // Store per-target saveDetails for later retrieval during result processing
-        const targetUuid = getTokenDocument(target)?.uuid;
+        const targetUuid = tokenFor(target)?.uuid;
         if (targetUuid && this.targetSaveDetails) this.targetSaveDetails[targetUuid] = saveDetails;
         // preTargetSave: modules and target macros may change saveDetails/tracker before the roll. Every target, as its
         // Token, or its TokenDocument when it has none (another scene or level)
-        const saver = getToken(target) ?? getTokenDocument(target);
+        const saver = tokenOf(tokenFor(target)) ?? tokenFor(target);
         await asyncHooksCallAll("midi-qol.preTargetSave", saver && hookTarget(saver), this, saveDetails);
         if (saver && configSettings.allowUseMacro && this.workflowOptions.noTargetOnUseMacro !== true) await this.triggerTargetMacros(["preTargetSave"], new Set([saver]));
 
@@ -7238,7 +7239,7 @@ export class Workflow {
     if ((damages.hpDamage !== 0 || damages.tempDamage > 0 || damagedAtZero) && (this.hitTargets.has(token) || this.hitTargetsEC.has(token) || this.otherActivity?.save || this.otherActivity?.check)) {
       let healedDamaged = damages.hpDamage < 0 ? "isHealed" : "isDamaged";
       await asyncHooksCallAll(`midi-qol.${healedDamaged}`, hookTarget(token), { item: this.item, workflow: this, damageItem: damages, ditem: damages });
-      if (healedDamaged === "isDamaged") await raiseDamaged(this, getTokenDocument(token), damages as unknown as Record<string, unknown>);
+      if (healedDamaged === "isDamaged") await raiseDamaged(this, tokenFor(token), damages as unknown as Record<string, unknown>);
       const actorOnUseMacros = foundry.utils.getProperty(token.actor ?? {}, midiFlag(`onUseMacroParts`)) as OnUseMacros ?? new OnUseMacros();
       // It seems applyTokenDamageMany without a this gets through to here - so a silly guard in place TODO come back and fix this properly
       if (this.callMacros) await this.callMacros(this.item,
@@ -7923,7 +7924,7 @@ export class Workflow {
   /** What rollBonuses contributors are told about this use's attack or damage roll. */
   rollBonusQuery(kind: "attack" | "damage"): RollBonusQuery {
     return {
-      kind, actor: this.actor, token: getTokenDocument(this.token), workflow: this, activity: this.activity, item: this.item,
+      kind, actor: this.actor, token: tokenFor(this.token), workflow: this, activity: this.activity, item: this.item,
       target: this.targets.count === 1 ? this.targets.documents[0] : undefined, actionType: this.activity?.actionType,
       ...(this.rollConfigs[kind] ? { rollConfig: this.rollConfigs[kind] } : {})
     };
@@ -8144,7 +8145,7 @@ export class Workflow {
       // applies attack-specific reductions (ignoreFullCover, sharpShooter, spellSniper, ignoreCover),
       // and incorporates targetACMod.
       let acResult = this.token && drawnToken
-        ? computeTargetAC(this.token, drawnToken, this.activity, { ignoreCover, targetACMod, entryCover: entryCoverFor(this, getTokenDocument(targetToken)) })
+        ? computeTargetAC(this.token, drawnToken, this.activity, { ignoreCover, targetACMod, entryCover: entryCoverFor(this, tokenFor(targetToken)) })
         : undefined;
 
       let targetAC = vehicleACOverride ?? acResult?.effectiveAC
@@ -8229,7 +8230,7 @@ export class Workflow {
               // Spell reaction (e.g. Shield) was used but didn't return ac directly.
               // The actor's AC has been updated by the reaction workflow — recompute effective AC.
               const postReactionACResult = this.token && drawnToken
-                ? computeTargetAC(this.token, drawnToken, this.activity, { ignoreCover, targetACMod, entryCover: entryCoverFor(this, getTokenDocument(targetToken)) })
+                ? computeTargetAC(this.token, drawnToken, this.activity, { ignoreCover, targetACMod, entryCover: entryCoverFor(this, tokenFor(targetToken)) })
                 : undefined;
               if (postReactionACResult && postReactionACResult.effectiveAC !== targetAC) {
                 // Show the reaction's contribution separately: restore pre-reaction baseAC and track the delta
@@ -8282,7 +8283,7 @@ export class Workflow {
           } else if (result?.uuid) {
             // Spell reaction was used but didn't return ac directly — recompute effective AC.
             const postReactionACResult = this.token && drawnToken
-              ? computeTargetAC(this.token, drawnToken, this.activity, { ignoreCover, targetACMod, entryCover: entryCoverFor(this, getTokenDocument(targetToken)) })
+              ? computeTargetAC(this.token, drawnToken, this.activity, { ignoreCover, targetACMod, entryCover: entryCoverFor(this, tokenFor(targetToken)) })
               : undefined;
             if (postReactionACResult && postReactionACResult.effectiveAC !== targetAC) {
               const preReactionBaseAC = acResult?.baseAC ?? postReactionACResult.baseAC;
@@ -8763,7 +8764,7 @@ export class ActiveDefenceWorkflow extends Workflow {
       for (let targetToken of this.targets.tokens) {
         let targetAC: number | undefined;
         let adRoll: Roll | undefined;
-        const targetTokenDocument = getTokenDocument(targetToken);
+        const targetTokenDocument = tokenFor(targetToken);
         if (!targetTokenDocument) continue;
         const rollKey = targetTokenDocument.uuid ?? "";
         if (this.activeDefenceRolls[rollKey]) {
@@ -8959,7 +8960,7 @@ export class ActiveDefenceWorkflow extends Workflow {
         // Asked through the request core (M5b): its deadline, the GM's "roll for them" from the player list, and on
         // time-out or disconnect the roll made for them (one way to answer, where there were a socket reply and a
         // chat listener with a timer each side)
-        promises.push(requestPCActiveDefence(player, target.actor, this.item.name, getTokenDocument(target)?.uuid ?? undefined,
+        promises.push(requestPCActiveDefence(player, target.actor, this.item.name, tokenFor(target)?.uuid ?? undefined,
           { formula, rollOptions: options, bonus: dcMod, coverBonus, rollForThem, owner: this }));
       } else {  // must be a GM so can do the roll direct
         promises.push(
@@ -8978,7 +8979,7 @@ export class ActiveDefenceWorkflow extends Workflow {
     for (let target of this.targets.tokens) {
       if (!target.actor) continue; // these were skipped when doing the rolls so they can be skipped now
       if (!results[i]) {
-        const message = `Token ${target?.name} ${getTokenDocument(target)?.uuid}, "could not roll active defence assuming 1`;
+        const message = `Token ${target?.name} ${tokenFor(target)?.uuid}, "could not roll active defence assuming 1`;
         error(message, target);
         TroubleShooter.recordError(new Error(message), message);
         results[i] = await new BasicRoll("1").evaluate();
@@ -9002,7 +9003,7 @@ export class ActiveDefenceWorkflow extends Workflow {
         if (!this.item.flags?.[MODULE_ID]?.noProvokeReaction && !this.workflowOptions.noProvokeReaction) {
           //@ts-expect-error no dnd5e-types
           const savedAC = target.actor.system.attributes.ac.value;
-          reaction = await targetEvent(this, getTokenDocument(target), "hit", { roll: this.attackRoll, defence: results[i], critical: this.isCritical },
+          reaction = await targetEvent(this, tokenFor(target), "hit", { roll: this.attackRoll, defence: results[i], critical: this.isCritical },
             () => this.askReactionsStep(target, this.tokenUuid, this.attackRoll, "reaction", { activity: this.activity, item: this.item, workflow: this, workflowOptions })) ?? {};
           //@ts-expect-error no dnd5e-types
           const acChange = target.actor.system.attributes.ac.value - savedAC;
@@ -9020,7 +9021,7 @@ export class ActiveDefenceWorkflow extends Workflow {
             name?: string;
             uuid?: string;
             ac?: number;
-          } = await targetEvent(this, getTokenDocument(target), "missed", { roll: this.attackRoll, defence: results[i] },
+          } = await targetEvent(this, tokenFor(target), "missed", { roll: this.attackRoll, defence: results[i] },
             () => this.askReactionsStep(target, this.tokenUuid, this.attackRoll, "reactionmissed", { activity: this.activity, item: this.item, workflow: this, workflowOptions })) ?? {};
           //@ts-expect-error no dnd5e-types
           const acChange = target.actor.system.attributes.ac.value - savedAC;
@@ -9029,7 +9030,7 @@ export class ActiveDefenceWorkflow extends Workflow {
         }
       }
       isHit = this.isCritical || rollTotal < (this.activeDefenceDC ?? 0);
-      this.activeDefenceRolls[getTokenDocument(target)?.uuid ?? ""] = results[i];
+      this.activeDefenceRolls[tokenFor(target)?.uuid ?? ""] = results[i];
       if (isHit)
         this.hitTargets = this.hitTargets.add(target);
       else {
@@ -9081,7 +9082,7 @@ export class DamageOnlyWorkflow extends Workflow {
     if (options.storeWorkflow === undefined) options.storeWorkflow = true;
     if (!actor) actor = token.actor ?? targets[0]?.actor;
     // A target with no canvas token (another level or scene) stays as its document
-    const theTargets = Array.from(targets).map(t => getToken(t) ?? getTokenDocument(t)).filter(t => !!t);
+    const theTargets = Array.from(targets).map(t => tokenOf(tokenFor(t)) ?? tokenFor(t)).filter(t => !!t);
     let damageRoll = roll;
     if (!damageRoll) {
       // @ts-expect-error no dnd5e-types
