@@ -45,7 +45,8 @@ export class HoldPanel extends HandlebarsApplicationMixin(ApplicationV2) {
       point, label: pointLabel(point), world: world.includes(point),
       selected: selected.length > 0 && selected.every(actor => actorPoints(actor).includes(point))
     }));
-    const held = heldUses().map(({ card, hold }) => this.#heldView(card, hold, pointLabel));
+    // Readied uses (deferred) are their owner's or their module's to release, not the GM's to edit
+    const held = heldUses().filter(({ hold }) => hold.kind !== "deferred").map(({ card, hold }) => this.#heldView(card, hold, pointLabel));
     return { ...context, where, selectedNames: selected.map(a => a.name).join(", "), held };
   }
 

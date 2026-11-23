@@ -975,6 +975,8 @@
   "midi-qol.Hold.DamageChanged": "Changed by the GM",
   "midi-qol.Hold.Waiting": "Waiting for the GM",
   "midi-qol.Hold.Review": "Review",
+  "midi-qol.Deferred.Readied": "Readied",
+  "midi-qol.Deferred.Release": "Release",
   "midi-qol.Multiattack.About": "About this plan",
   "midi-qol.Multiattack.Confirm": "Confirm",
   "midi-qol.Multiattack.Reset": "Reset",

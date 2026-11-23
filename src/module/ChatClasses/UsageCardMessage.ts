@@ -76,6 +76,8 @@ export function midiButtonVisibility(message: Dnd5eChatMessage | undefined, acti
     // The Confirm Roll Button's hold (kind "confirm") shows its confirm buttons instead
     held: !done && midi.state?.hold?.kind === "gm",
     heldReview: !done && midi.state?.hold?.kind === "gm" && !!game.user?.isGM,
+    // M22a: a readied use (deferred): Release (at the user's targets) and Drop, for its owner or the GM
+    readied: !done && midi.state?.hold?.kind === "deferred",
     // Every template the use places is on the card (cards before 14.6.9 recorded it in progress)
     templatesPlaced: !!progress.templatesPlaced || (activityHasAreaTarget(activity)
       && (midi.state?.templateUuids?.length ?? 0) >= (Number(activity?.target?.template?.count) || 1))

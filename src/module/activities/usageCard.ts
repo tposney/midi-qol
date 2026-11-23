@@ -10,6 +10,7 @@ import { runFollowUp } from "../followUps.js";
 import { configSettings } from "../settings.js";
 import { getAutoRollAttack, getAutoRollDamage, getRemoveAttackButtons, getRemoveDamageButtons, HEALING_BUTTON_KEY, getConsumptionData } from "../utils.js";
 import { HoldPanel } from "../apps/HoldPanel.js";
+import { dropDeferred, releaseDeferred } from "../lib/deferred.js";
 
 /*
  * midi's part of a use card: its data at creation (dnd5e's usage message hooks), the buttons shared by every activity type, and the confirm-before-damage step.
@@ -32,7 +33,17 @@ export function setupUsageCard() {
     refundOtherActivity: cardRefundOtherActivity,
     consumeOtherActivity: cardConsumeOtherActivity,
     // M20: a use held for the GM: the GM's hold panel
-    midiReviewHold: () => { if (game.user?.isGM) HoldPanel.open(); }
+    midiReviewHold: () => { if (game.user?.isGM) HoldPanel.open(); },
+    // M22a: a readied use released at the user's targets, or dropped (its owner or the GM)
+    midiReleaseDeferred: async (_event: PointerEvent, _target: HTMLElement, message: ChatMessage.Implementation) => {
+      const targets = [...(game.user?.targets ?? [])].map(t => t.document.uuid).filter((u): u is string => !!u);
+      const problem = await releaseDeferred(message.uuid ?? "", { targets });
+      if (problem) ui.notifications?.warn(problem);
+    },
+    midiDropDeferred: async (_event: PointerEvent, _target: HTMLElement, message: ChatMessage.Implementation) => {
+      const problem = await dropDeferred(message.uuid ?? "");
+      if (problem) ui.notifications?.warn(problem);
+    }
   });
   // Only where the activity type has no handler of its own: save and check activities keep theirs.
   registerCardAction("rollSave", cardRollOtherSave, { whenAbsent: true });

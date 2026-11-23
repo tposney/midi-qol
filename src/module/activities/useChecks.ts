@@ -246,9 +246,11 @@ export async function postChatCardChecks(activity: MidiActivity, usage: Activity
     let isAoETargeting = !isEmanationTargeting && activityHasAreaTarget(activity);
     let selfTarget = activityTargetsSelf(activity);
     const inCombat = activity.actor && isInCombat(activity.actor);
-    const requiresTargets = configSettings.requiresTargets === "always"
+    // M22a: a readied use (deferred) gets its targets when it is released
+    const deferred = !!(usage.midiOptions?.workflowOptions as { deferred?: unknown } | undefined)?.deferred;
+    const requiresTargets = !deferred && (configSettings.requiresTargets === "always"
       || (configSettings.requiresTargets === "tokens" && (canvas?.scene?.tokens.size ?? 0) > 0)
-      || (configSettings.requiresTargets === "combat" && inCombat);
+      || (configSettings.requiresTargets === "combat" && inCombat));
     let speaker = getSpeaker(activity.actor!);
 
     let shouldAllowRoll = !options.checkTargets || !requiresTargets // we don't care about targets

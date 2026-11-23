@@ -528,6 +528,8 @@ export interface UseHold {
   kind: string;
   /** When it was held (ms) */
   since: number;
+  /** What the hold keeps (a deferred use: the concentration it holds) */
+  data?: Record<string, unknown>;
 }
 /** M20: the GM's change to one target's outcome at a hold */
 export interface GmTargetEdit {

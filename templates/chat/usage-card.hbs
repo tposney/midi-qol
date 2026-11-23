@@ -70,6 +70,14 @@
   </div>
   {{/if}}
 
+  {{#if midi.buttons.readied}}
+  <div class="midi-qol-held midi-qol-readied flexrow">
+    <span><i class="fa-solid fa-hourglass-half"></i> {{localize "midi-qol.Deferred.Readied"}}</span>
+    <button type="button" data-action="midiReleaseDeferred">{{localize "midi-qol.Deferred.Release"}}</button>
+    <button type="button" data-action="midiDropDeferred">{{localize "midi-qol.Hold.Drop"}}</button>
+  </div>
+  {{/if}}
+
   {{#if midi.buttons.confirm}}
   <div class="midi-qol-confirm-damage-roll">
     {{#if midi.buttons.confirmHitMiss}}

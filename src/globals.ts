@@ -76,6 +76,9 @@ declare module "fvtt-types/configuration" {
     "midi-qol.held": (workflow: import("./module/Workflow.js").Workflow, point: string) => void;
     "midi-qol.holdReleased": (workflow: import("./module/Workflow.js").Workflow, point: string) => void;
     "midi-qol.holdOpened": (card: string) => void;
+    "midi-qol.deferredReady": (workflow: import("./module/Workflow.js").Workflow) => void;
+    "midi-qol.deferredReleased": (workflow: import("./module/Workflow.js").Workflow) => void;
+    "midi-qol.deferredDropped": (id: string) => void;
     "midi-qol.multiattackOpened": (actor: Actor.Implementation, run: import("./module/services/multiattack/run.js").MultiattackRun) => void;
       /** Condition data being built (createConditionData): add fields an item's conditions can refer to. */
       "midi-qol.conditionData": (conditionData: Record<string, unknown>, data: { workflow?: unknown, actor?: unknown, item?: unknown, target?: unknown }) => void;
