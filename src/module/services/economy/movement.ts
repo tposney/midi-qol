@@ -1,3 +1,5 @@
+import { configSettings } from "../../settings.js";
+import { i18nFormat } from "../../../midi-qol.js";
 import { getTokenDocument, toggleStatus } from "../../utils.js";
 import { budget, spend } from "./ledger.js";
 import { actionKindOf, movementBudget } from "./movementRules.js";
@@ -87,3 +89,51 @@ export function setupMovementActions() {
   });
 }
 
+
+/* M6b: the budget enforced on a move (preMoveToken, on the moving user's client) */
+
+interface MoveWaypoint { action?: string, forced?: boolean }
+export interface PlannedMove {
+  method?: string;
+  passed?: { cost?: number, waypoints?: readonly MoveWaypoint[] };
+  pending?: { cost?: number, waypoints?: readonly MoveWaypoint[] };
+  history?: { cost?: number };
+  constrainOptions?: { ignoreCost?: boolean };
+}
+export type MoveVerdict = { verdict: "free" } | { verdict: "ok" | "warn" | "refuse", total: number, allowed: number, remaining: number, units: string };
+
+/** A move checked against the budget: free (not counted), within it, or past it (warned or refused, as the setting says) */
+export function checkMovement(token: TokenDocument.Implementation, move: PlannedMove, options: { gm?: boolean, policy?: string } = {}): MoveVerdict {
+  const policy = options.policy ?? configSettings.enforceMovement ?? "displayOnly";
+  const waypoints = [...(move.passed?.waypoints ?? []), ...(move.pending?.waypoints ?? [])];
+  const actions = (CONFIG.Token as unknown as { movement?: { actions?: Record<string, { teleport?: boolean }> } }).movement?.actions ?? {};
+  // Never counted: the GM's moves, undo and paste, forced movement (midi's push and pull), teleports (blink, displace)
+  if (options.gm ?? game.user?.isGM) return { verdict: "free" };
+  if (["undo", "paste", "config"].includes(move.method ?? "") || move.constrainOptions?.ignoreCost) return { verdict: "free" };
+  if (waypoints.some(w => w.forced || (w.action && actions[w.action]?.teleport))) return { verdict: "free" };
+  const state = movementState(token);
+  if (!state || !["warn", "enforce"].includes(policy)) return { verdict: "free" };
+  const cost = (n: number | undefined) => Number.isFinite(n) ? Number(n) : 0;
+  const total = cost(move.history?.cost ?? state.spent) + cost(move.passed?.cost) + cost(move.pending?.cost);
+  // The move's movement action decides the speed (a fly after a walk: the fly speed)
+  const action = waypoints.at(-1)?.action ?? state.action;
+  const speed = speedFor(token.actor, action);
+  const { allowed } = movementBudget(0, speed, state.dashes);
+  const remaining = Math.max(0, allowed - cost(move.history?.cost ?? state.spent));
+  if (total <= allowed + 1e-6) return { verdict: "ok", total, allowed, remaining, units: state.units };
+  return { verdict: policy === "enforce" ? "refuse" : "warn", total, allowed, remaining, units: state.units };
+}
+
+export function setupMovementEnforcement() {
+  Hooks.on("preMoveToken", (token, move) => {
+    let result: MoveVerdict;
+    try { result = checkMovement(token, move); }
+    catch (err) { console.warn("midi-qol | movement check failed; the move goes ahead", err); return; }
+    if (result.verdict === "warn")
+      ui.notifications?.warn(i18nFormat("midi-qol.EnforceMovement.Warn", { name: token.name ?? "", total: String(result.total), allowed: String(result.allowed), units: result.units }));
+    if (result.verdict === "refuse") {
+      ui.notifications?.warn(i18nFormat("midi-qol.EnforceMovement.Refused", { name: token.name ?? "", remaining: String(result.remaining), units: result.units }));
+      return false;
+    }
+  });
+}

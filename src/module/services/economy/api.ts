@@ -1,4 +1,4 @@
-import { isDisengaged, movementState, takeDash, takeDisengage } from "./movement.js";
+import { checkMovement, isDisengaged, movementState, takeDash, takeDisengage } from "./movement.js";
 import { budget, ledger, refund, reset, spend } from "./ledger.js";
 import { cost, costContributorsApi } from "./cost.js";
 import { economyPolicy, issueContributorsApi, issues } from "./issues.js";
@@ -10,6 +10,6 @@ import { economyPolicy, issueContributorsApi, issues } from "./issues.js";
 export const economyApi = {
   ledger, budget, spend, refund, reset, cost, issues, policy: economyPolicy,
   // M6: the movement budget, and taking a Dash or Disengage
-  movement: movementState, takeDash, takeDisengage, isDisengaged,
+  movement: movementState, checkMovement, takeDash, takeDisengage, isDisengaged,
   costContributors: costContributorsApi, issueContributors: issueContributorsApi
 };

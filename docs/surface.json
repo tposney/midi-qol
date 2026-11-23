@@ -414,6 +414,7 @@
     "doReactions",
     "enforceBonusActions",
     "enforceDeathSaves",
+    "enforceMovement",
     "enforceReactions",
     "enforceSingleWeaponTarget",
     "gmAttackDamageCards",

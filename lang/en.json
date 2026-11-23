@@ -948,6 +948,16 @@
     "character": "Characters: prompt if used",
     "all": "All actors: prompt if used"
   },
+  "midi-qol.EnforceMovement.Name": "Movement budget",
+  "midi-qol.EnforceMovement.Hint": "In combat, a creature's movement this turn against its speed (one more speed for each Dash). The GM's moves, forced movement, teleports and undo are never limited.",
+  "midi-qol.EnforceMovementOptions": {
+    "none": "Do not check",
+    "displayOnly": "Show the movement left",
+    "warn": "Warn past the speed",
+    "enforce": "Refuse a move past the speed"
+  },
+  "midi-qol.EnforceMovement.Warn": "{name} moves {total} {units} of {allowed} {units} this turn.",
+  "midi-qol.EnforceMovement.Refused": "{name} can't move that far: {remaining} {units} left this turn.",
   "midi-qol.EnforceReactions.Title": "Reaction Used",
   "midi-qol.EnforceReactions.Content": "You have used your reaction this round. Do you want to proceed anyway?",
   "midi-qol.EnforceBonusActions.Title": "Bonus Action Used",

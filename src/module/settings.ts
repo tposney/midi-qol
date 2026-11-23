@@ -130,6 +130,8 @@ export class ConfigSettings {
   doReactions: string = "all";
   enforceReactions = "none";
   enforceBonusActions = "none";
+  /** M6: the movement budget: not checked, shown, a warning past it, or a move past it refused (the GM's moves never) */
+  enforceMovement = "displayOnly";
   enforceSingleWeaponTarget: boolean = false;
   gmAttackDisplay: string = "full";
   gmDamageDisplay: string = "full";
@@ -641,6 +643,7 @@ export let fetchParams = () => {
   if (!configSettings.recordAOO) configSettings.recordAOO = "none";
   if (!configSettings.enforceReactions) configSettings.enforceReactions = "none";
   if (!configSettings.enforceBonusActions) configSettings.enforceBonusActions = "none";
+  if (!configSettings.enforceMovement) configSettings.enforceMovement = "displayOnly";
   //@ts-expect-error legacy boolean value
   if (configSettings.autoItemEffects === false) configSettings.autoItemEffects = "off";
   if (configSettings.playerDamageCard === undefined) configSettings.playerDamageCard = "none";
@@ -1439,6 +1442,8 @@ export const recordAOOOptions = keysToExtendedOptionsObj("RecordAOOOptions", [
   "character",
   "all"
 ]);
+
+export const EnforceMovementOptions = keysToExtendedOptionsObj("EnforceMovementOptions", ["none", "displayOnly", "warn", "enforce"]);
 
 export const EnforceReactionsOptions = keysToExtendedOptionsObj("EnforceReactionsOptions", [
   "none",

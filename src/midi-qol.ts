@@ -1,4 +1,4 @@
-import { setupMovementActions } from "./module/services/economy/movement.js";
+import { setupMovementActions, setupMovementEnforcement } from "./module/services/economy/movement.js";
 import { setupSequencerLevelsFix } from "./module/lib/sequencerLevels.js";
 import { PlayerSettingsView } from "./module/apps/PlayerSettingsView.js";
 import { registerCardWaits } from "./module/lib/cardWaits.js";
@@ -582,6 +582,7 @@ Hooks.once('init', async function () {
   setupTokenVisuals();
   setupSequencerLevelsFix();
   setupMovementActions();
+  setupMovementEnforcement();
   // Registered here, not in services/rollBonuses/prompt.ts: BonusPromptApp extends utils' RollModifyDialog and utils
   // imports prompt.ts, so prompt.ts importing the app would evaluate the class before its base exists
   bonusPromptService.register("midi-qol.phased", { open: data => new BonusPromptApp(data) }, { label: "Phased (tick and apply)" });

@@ -58,6 +58,14 @@
         </div>
 
         <div class="form-group">
+            <label>{{localize "midi-qol.EnforceMovement.Name"}}</label>
+            <select name="enforceMovement" data-dtype="String">
+                {{selectOptions EnforceMovementOptions selected=configSettings.enforceMovement localize=true}}
+            </select>
+            <div class="notes midi-qol-faint">{{{localize "midi-qol.EnforceMovement.Hint"}}}</div>
+        </div>
+
+        <div class="form-group">
             <label>{{localize "midi-qol.RecordAOO.Name"}}</label>
             <select name="recordAOO" data-dtype="String">
                 {{selectOptions RecordAOOOptions selected=configSettings.recordAOO localize=true}}
