@@ -1096,12 +1096,13 @@ function configureDamage(this: CONFIG.Dice.DamageRoll, wrapped, options: any = {
   useDefaultCritical ||= (getCriticalDamage() === "explodeCharacter" && this.data.actorType !== "character");
   useDefaultCritical ||= (getCriticalDamage() === "explodeNPC" && this.data.actorType !== "npc");
   const criticalNotAllowed = this.options.critical?.allow === false || options.critical?.allow === false;
+  options.critical ??= {};
+  //@ts-expect-error "dnd5e"
+  options.critical.multiplyNumeric ??= this.options.critical?.multiplyNumeric ?? game.settings.get("dnd5e", "criticalDamageModifiers");
   if (criticalNotAllowed || !this.isCritical || useDefaultCritical) {
     const effectiveIsCritical = criticalNotAllowed ? false : this.isCritical;
     options.critical.allow = effectiveIsCritical;
     this.options.isCritical = effectiveIsCritical;
-    //@ts-expect-error "dnd5e"
-    options.critical.multiplyNumeric ??= game.settings.get("dnd5e", "criticalDamageModifiers");
     //@ts-expect-error "dnd5e"
     options.critical.powerfulCritical ??= game.settings.get("dnd5e", "criticalDamageMaxDice");
     wrapped({ critical: options.critical });
@@ -1181,7 +1182,7 @@ function configureDamage(this: CONFIG.Dice.DamageRoll, wrapped, options: any = {
           critTerm.options = foundry.utils.deepClone(term.options);
           critTerm.options.criticalBonusDamage = true;
           addExtra(term, critTerm);
-        } else if (term instanceof NumericTerm && options.multiplyNumeric) {
+        } else if (term instanceof NumericTerm && options.critical.multiplyNumeric) {
           term.number *= cm;
         }
         break;
@@ -1189,7 +1190,7 @@ function configureDamage(this: CONFIG.Dice.DamageRoll, wrapped, options: any = {
         if (term instanceof DiceTerm) {
           term.alter(cm, cb);
           term.modifiers.push(`min${term.faces}`);
-        } else if (term instanceof NumericTerm && this.options.multiplyNumeric) {
+        } else if (term instanceof NumericTerm && options.critical.multiplyNumeric) {
           term.number *= cm;
         }
         break;
@@ -1203,7 +1204,7 @@ function configureDamage(this: CONFIG.Dice.DamageRoll, wrapped, options: any = {
         if (term instanceof DiceTerm) {
           //term.alter(cm, cb);
           term.modifiers.push("mx2");
-        } else if (term instanceof NumericTerm && this.options.multiplyNumeric) {
+        } else if (term instanceof NumericTerm && options.critical.multiplyNumeric) {
           term.number *= cm;
         }
         break;
