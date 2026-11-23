@@ -21,6 +21,12 @@ export function registerMidiActionSchemas() {
     { path: "move.from", label: "midi-qol.Entries.Field.from", type: "select", options: ["", "user", "bearer", "area"] },
     TO(["target", "self", "event.creature"])], initial: { push: 10 } });
   setActionSchema("opportunityAttack", { fields: [], initial: true });
+  setActionSchema("grantAttacks", { fields: [
+    { path: "grantAttacks.count", label: "midi-qol.Entries.Field.count", type: "formula" },
+    { path: "grantAttacks.filter", label: "midi-qol.Entries.Field.attackFilter", type: "select", options: ["weapon", "unarmed", "light"] },
+    { path: "grantAttacks.kind", label: "midi-qol.Entries.Field.window", type: "select", options: ["", "action", "bonus", "reaction"] },
+    { path: "grantAttacks.spends", label: "midi-qol.Entries.Field.spends", type: "select", options: ["", "action", "bonus", "reaction"] }],
+    initial: { count: 2, filter: "unarmed" } });
   setActionSchema("damage", { fields: [
     { path: "damage", label: "midi-qol.Entries.Field.formula", type: "formula" },
     { path: "type", label: "DND5E.DamageType", type: "select", options: { list: "damageTypes" } },

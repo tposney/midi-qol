@@ -679,6 +679,7 @@
     "damageChange",
     "effect",
     "end",
+    "grantAttacks",
     "heal",
     "macro",
     "modifier",

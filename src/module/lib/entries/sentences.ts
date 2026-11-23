@@ -259,6 +259,12 @@ export function actionText(action: EntryAction, context: SentenceContext): strin
       return say(`Action.move.${kind}`, { who: target(a.to, "target"), n: friendlyFormula(m[kind] ?? "?"), from });
     }
     case "opportunityAttack": return say("Action.opportunityAttack");
+    case "grantAttacks": {
+      const g = part(a.grantAttacks);
+      const filter = has(`Action.grantAttacks.filter.${g.filter}`) ? say(`Action.grantAttacks.filter.${g.filter}`) : String(g.filter ?? say("Action.grantAttacks.filter.weapon"));
+      const kind = g.kind ? say(`Action.grantAttacks.kind.${g.kind}`) : say("Action.grantAttacks.kind.use");
+      return say(g.spends ? "Action.grantAttacks.spends" : "Action.grantAttacks.free", { n: friendlyFormula(g.count ?? 1), filter, kind, spends: g.spends ? say(`Action.grantAttacks.kind.${g.spends}`) : "" });
+    }
     case "cover":
       if (typeof a.cover === "string") return say("Action.cover.level", { level: say(`Cover.${a.cover}`) });
       return say("Action.cover.ignore", { levels: and([part(a.cover).ignore ?? []].flat().map(l => say(`Cover.${l}`))) });

@@ -35,6 +35,7 @@ import { registerEntryRollBonuses } from "./module/lib/entries/rollBonuses.js";
 import { registerUseEvents } from "./module/lib/entries/useEvents.js";
 import { registerBearerEvents } from "./module/lib/entries/bearerEvents.js";
 import { registerMovementEvents } from "./module/lib/entries/movementEvents.js";
+import { registerEconomyActions } from "./module/lib/entries/economyActions.js";
 import { registerServiceEvents } from "./module/lib/entries/serviceEvents.js";
 import { registerRedirection } from "./module/lib/entries/redirection.js";
 import { rulesApi } from "./module/lib/entries/rules.js";
@@ -566,6 +567,7 @@ Hooks.once('init', async function () {
   registerUseEvents();
   registerBearerEvents();
   registerMovementEvents();
+  registerEconomyActions();
   registerActivityActions();
   registerServiceEvents();
   registerRedirection();
@@ -1497,6 +1499,9 @@ function setupMidiFlags() {
   daeFieldBrowserFields.push(`flags.${MODULE_ID}.ignoreDisengage`);
   // M6/M8 movement rule values, changed by features' effects: extra feet per foot of dragging a grappled creature
   // (1 by default; 0: none), the movement standing up from prone takes (half the speed by default; Athlete: 5)
+  // The Light property's extra attacks each turn (1 by default; 0: none)
+  untyped(`flags.${MODULE_ID}.actions.offhandAttacks`);
+  daeFieldBrowserFields.push(`flags.${MODULE_ID}.actions.offhandAttacks`);
   untyped(`flags.${MODULE_ID}.movement.dragCost`);
   daeFieldBrowserFields.push(`flags.${MODULE_ID}.movement.dragCost`);
   untyped(`flags.${MODULE_ID}.movement.standCost`);

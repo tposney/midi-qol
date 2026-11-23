@@ -72,6 +72,92 @@ function attacksMax(actor: Actor.Implementation): number {
   return Number.isFinite(value) && value >= 1 ? Math.floor(value) : 1;
 }
 
+/*
+ * Granted attacks (M8; user 2026-11-23: Flurry of Blows, Two-Weapon Fighting, Nick, a monster's bonus attack, as data):
+ * a use or entry grants attacks on a kind's turn window: `count` of them, usable by attacks its `filter` allows
+ * (unarmed: Unarmed Strikes; light: Light weapons; weapon: any weapon; else an item identifier), each spending `spends`
+ * (none: already paid, as Flurry's bonus action; "bonus": Two-Weapon Fighting's off-hand attack). Stored as the window's
+ * counter `granted.<filter>.<spends|free>`. An attack use takes a granted attack its filter allows (and whose spend is
+ * affordable) before charging the action, so Flurry's Unarmed Strikes leave the action alone.
+ */
+export interface AttackGrant { kind: BudgetKindId, count: number, filter: string, spends?: BudgetKindId }
+const GRANTED = "granted.";
+const OTHER_LIGHT = "lightnot-";
+
+export async function grantAttacks(actor: Actor.Implementation, grant: AttackGrant): Promise<void> {
+  if (!(grant.count > 0)) return;
+  const key = `${GRANTED}${grant.filter}.${grant.spends ?? "free"}`;
+  const now = Number(budget(actor, grant.kind).counters[key] ?? 0);
+  await spend(actor, grant.kind, { count: 0, counters: { [key]: now + Math.floor(grant.count) } });
+}
+
+/** The granted attacks open on the actor's windows */
+export function grantedAttacks(actor: Actor.Implementation): (AttackGrant & { key: string })[] {
+  const out: (AttackGrant & { key: string })[] = [];
+  for (const kind of ["action", "bonus", "reaction"] as BudgetKindId[]) {
+    for (const [key, value] of Object.entries(budget(actor, kind).counters)) {
+      if (!key.startsWith(GRANTED) || !(Number(value) > 0)) continue;
+      const [filter, spends] = key.slice(GRANTED.length).split(".");
+      out.push({ kind, key, count: Number(value), filter, ...(spends && spends !== "free" ? { spends: spends as BudgetKindId } : {}) });
+    }
+  }
+  return out;
+}
+
+/** Whether a grant's filter allows an attack with this item */
+export function grantAllows(filter: string, item: Item.Implementation | undefined | null): boolean {
+  if (!item) return false;
+  const system = item.system as { identifier?: string, properties?: Set<string>, type?: { value?: string } };
+  switch (filter) {
+    case "weapon": return (item.type as string) === "weapon";
+    case "unarmed": return system.identifier === "unarmed-strike";
+    case "light": return (item.type as string) === "weapon" && !!system.properties?.has("lgt");
+    default:
+      // The Light property's extra attack: a different Light weapon
+      if (filter.startsWith(OTHER_LIGHT)) return grantAllows("light", item) && item.id !== filter.slice(OTHER_LIGHT.length);
+      return system.identifier === filter;
+  }
+}
+
+/** The weapon's Nick mastery, when the actor has mastered it (dnd5e's masteryOptions) */
+const hasNick = (item: Item.Implementation | undefined) =>
+  !!(item?.system as { masteryOptions?: { value: string }[] | null } | undefined)?.masteryOptions?.some(o => o.value === "nick");
+
+/**
+ * An attack use takes a granted attack its filter allows (its spend affordable): true when it did. The Light property's
+ * extra attack made with a Nick weapon is part of the Attack action: it spends nothing (and needs no bonus action left)
+ */
+async function useGrantedAttack(actor: Actor.Implementation, item: Item.Implementation | undefined): Promise<boolean> {
+  const free = (g: AttackGrant) => g.filter.startsWith(OTHER_LIGHT) && hasNick(item);
+  const grant = grantedAttacks(actor).find(g => grantAllows(g.filter, item) && (!g.spends || free(g) || !budget(actor, g.spends).exhausted));
+  if (!grant) return false;
+  await spend(actor, grant.kind, { count: 0, counters: { [grant.key]: grant.count - 1 } });
+  if (grant.spends && !free(grant)) await spend(actor, grant.spends);
+  return true;
+}
+
+/** The Light property's extra attacks: flags.midi-qol.actions.offhandAttacks, 1 by default (2024); a feature changes it, 0: none */
+function offhandAttacks(actor: Actor.Implementation): number {
+  const value = actionFlag(actor, "offhandAttacks");
+  if (value === undefined || value === null || value === "") return 1;
+  const n = Number(value);
+  return Number.isFinite(n) ? Math.max(0, Math.floor(n)) : 1;
+}
+
+/**
+ * The Light property (2024, every creature): an Attack action attack with a Light weapon allows, once a turn, an extra
+ * attack with a different Light weapon as a bonus action (a Nick weapon: as part of the Attack action). Granted here, so
+ * the player just makes it
+ */
+async function grantLightExtraAttack(actor: Actor.Implementation, item: Item.Implementation | undefined) {
+  if (!grantAllows("light", item) || !item?.id) return;
+  if (budget(actor, "action").counters.offhandGranted) return;
+  const count = offhandAttacks(actor);
+  if (!count) return;
+  await spend(actor, "action", { count: 0, counters: { offhandGranted: true } });
+  await grantAttacks(actor, { kind: "bonus", count, filter: `${OTHER_LIGHT}${item.id}`, spends: "bonus" });
+}
+
 /** Charge the use's cost on the ledger; returns what was charged */
 export async function chargeUse(workflow: Workflow): Promise<UseCost> {
   const actor = workflow.actor;
@@ -85,14 +171,21 @@ export async function chargeUse(workflow: Workflow): Promise<UseCost> {
   }
   const weaponAttack = ["mwak", "rwak"].includes(String(tagValue(workflow, "use.attack") ?? ""));
   const leveledSpell = workflow.inCombat && workflow.isTurn && Number(tagValue(workflow, "use.spellSlot") ?? 0) > 0;
+  // A granted attack (Flurry of Blows, Two-Weapon Fighting) is used before the action
+  if (due.action && weaponAttack && await useGrantedAttack(actor, workflow.item as Item.Implementation | undefined)) {
+    if (leveledSpell) await spend(actor, "action", { count: 0, counters: { leveledSpell: true } });
+    return charged;
+  }
   if (due.action) {
     const turn = budget(actor, "action");
     const attacksLeft = Number(turn.counters.attacksLeft ?? 0);
     if (weaponAttack && turn.window && attacksLeft > 0) {
       await spend(actor, "action", { count: 0, counters: { attacksLeft: attacksLeft - 1, ...(leveledSpell ? { leveledSpell: true } : {}) } });
+      await grantLightExtraAttack(actor, workflow.item as Item.Implementation | undefined);
     } else if (!turn.exhausted) {
       await spend(actor, "action", { counters: { ...(weaponAttack ? { attacksLeft: attacksMax(actor) - 1 } : {}), ...(leveledSpell ? { leveledSpell: true } : {}) } });
       charged.action = 1;
+      if (weaponAttack) await grantLightExtraAttack(actor, workflow.item as Item.Implementation | undefined);
     }
   } else if (leveledSpell) await spend(actor, "action", { count: 0, counters: { leveledSpell: true } });
   return charged;
