@@ -950,6 +950,15 @@
     "all": "All actors: prompt if used"
   },
   "midi-qol.Movement.Forced": "Forced movement",
+  "midi-qol.Movement.Stand": "Stand up",
+  "midi-qol.Movement.StandUp": "Stand up (half your speed)",
+  "midi-qol.Movement.CantStand": "{name} can't stand up: its speed is 0.",
+  "midi-qol.ProneStanding.Name": "Standing up from prone",
+  "midi-qol.ProneStanding.Hint": "In combat, a prone creature's move that isn't a crawl stands it up first, for half its speed (recorded with the move: Ctrl+Z puts Prone back). The Token HUD's Stand up button stands it in place.",
+  "midi-qol.ProneStandingOptions": {
+    "none": "Free (not tracked)",
+    "combat": "Half the creature's speed, in combat"
+  },
   "midi-qol.ForcedMovementProvider.Name": "Pushes and pulls made by",
   "midi-qol.ForcedMovementProvider.Hint": "Forced movement (pushed, pulled, slid) uses none of the creature's movement and never provokes opportunity attacks. Automatic: CAT's when CAT is active (its features that react to a push still work), else midi's.",
   "midi-qol.ForcedMovementProviderOptions": {

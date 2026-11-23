@@ -501,6 +501,7 @@
     "playerWaitGM",
     "playerWaitShowPlayers",
     "preferredGM",
+    "proneStanding",
     "rangeTarget",
     "reactionTimeout",
     "recordAOO",

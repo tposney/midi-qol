@@ -66,6 +66,14 @@
         </div>
 
         <div class="form-group">
+            <label>{{localize "midi-qol.ProneStanding.Name"}}</label>
+            <select name="proneStanding" data-dtype="String">
+                {{selectOptions ProneStandingOptions selected=configSettings.proneStanding localize=true}}
+            </select>
+            <div class="notes midi-qol-faint">{{{localize "midi-qol.ProneStanding.Hint"}}}</div>
+        </div>
+
+        <div class="form-group">
             <label>{{localize "midi-qol.ForcedMovementProvider.Name"}}</label>
             <select name="forcedMovementProvider" data-dtype="String">
                 {{selectOptions ForcedMovementProviderOptions selected=configSettings.forcedMovementProvider localize=true}}

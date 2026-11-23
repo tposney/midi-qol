@@ -4,6 +4,7 @@ import { getTokenDocument, toggleStatus } from "../../utils.js";
 import { budget, spend } from "./ledger.js";
 import { actionKindOf, movementBudget } from "./movementRules.js";
 import { registerForcedAction } from "../forcedMovement/service.js";
+import { STAND_ACTION, standCost, standsUp } from "./prone.js";
 
 export { actionKindOf, movementBudget };
 
@@ -130,7 +131,9 @@ export function checkMovement(token: TokenDocument.Implementation, move: Planned
   const state = movementState(token);
   if (!state || !["warn", "enforce"].includes(policy)) return { verdict: "free" };
   const cost = (n: number | undefined) => Number.isFinite(n) ? Number(n) : 0;
-  const total = cost(move.history?.cost ?? state.spent) + cost(move.passed?.cost) + cost(move.pending?.cost);
+  // A prone creature's move stands it up first: half its speed (recorded with the move: prone.ts)
+  const standing = standsUp(token, waypoints) ? standCost(token, waypoints.find(w => w.action && w.action !== STAND_ACTION)?.action ?? "walk") ?? 0 : 0;
+  const total = cost(move.history?.cost ?? state.spent) + cost(move.passed?.cost) + cost(move.pending?.cost) + standing;
   // The move's movement action decides the speed (a fly after a walk: the fly speed)
   const action = waypoints.at(-1)?.action ?? state.action;
   const speed = speedFor(token.actor, action);

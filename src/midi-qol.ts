@@ -589,6 +589,7 @@ Hooks.once('init', async function () {
   setupMovementActions();
   setupMovementEnforcement();
   setupOpportunityAttacks();
+  setupProneStanding();
   // Registered here, not in services/rollBonuses/prompt.ts: BonusPromptApp extends utils' RollModifyDialog and utils
   // imports prompt.ts, so prompt.ts importing the app would evaluate the class before its base exists
   bonusPromptService.register("midi-qol.phased", { open: data => new BonusPromptApp(data) }, { label: "Phased (tick and apply)" });
@@ -1194,6 +1195,7 @@ import { midiSaveProviders, registerMidiSaveProviders } from "./module/services/
 import { PendingSaves } from "./module/services/saveRequests/pending.js";
 import { midiItemReactions } from "./module/services/responses/provider.js";
 import { opportunityAttacks, setupOpportunityAttacks } from "./module/services/economy/opportunity.js";
+import { setupProneStanding } from "./module/services/economy/prone.js";
 import { defineForcedMovementService, forcedMovement } from "./module/services/forcedMovement/service.js";
 import { previewFlow, stepsApi } from "./module/steps/api.js";
 import { requestsApi, setupRequests } from "./module/lib/requests.js";

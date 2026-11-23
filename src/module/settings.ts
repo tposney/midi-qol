@@ -136,6 +136,8 @@ export class ConfigSettings {
   opportunityAttacks = "none";
   /** M6d: which provider pushes and pulls: auto (CAT's when CAT is active, else midi's), midi-qol, cat */
   forcedMovementProvider = "auto";
+  /** M6: standing up from prone costs half the creature's speed in combat (combat) or nothing (none) */
+  proneStanding = "combat";
   enforceSingleWeaponTarget: boolean = false;
   gmAttackDisplay: string = "full";
   gmDamageDisplay: string = "full";
@@ -650,6 +652,7 @@ export let fetchParams = () => {
   if (!configSettings.enforceMovement) configSettings.enforceMovement = "displayOnly";
   if (!configSettings.opportunityAttacks) configSettings.opportunityAttacks = "none";
   if (!configSettings.forcedMovementProvider) configSettings.forcedMovementProvider = "auto";
+  if (!configSettings.proneStanding) configSettings.proneStanding = "combat";
   //@ts-expect-error legacy boolean value
   if (configSettings.autoItemEffects === false) configSettings.autoItemEffects = "off";
   if (configSettings.playerDamageCard === undefined) configSettings.playerDamageCard = "none";
@@ -1452,6 +1455,7 @@ export const recordAOOOptions = keysToExtendedOptionsObj("RecordAOOOptions", [
 export const EnforceMovementOptions = keysToExtendedOptionsObj("EnforceMovementOptions", ["none", "displayOnly", "warn", "enforce"]);
 export const OpportunityAttacksOptions = keysToExtendedOptionsObj("OpportunityAttacksOptions", ["none", "prompt"]);
 export const ForcedMovementProviderOptions = keysToExtendedOptionsObj("ForcedMovementProviderOptions", ["auto", "midi-qol", "cat"]);
+export const ProneStandingOptions = keysToExtendedOptionsObj("ProneStandingOptions", ["none", "combat"]);
 
 export const EnforceReactionsOptions = keysToExtendedOptionsObj("EnforceReactionsOptions", [
   "none",
