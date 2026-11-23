@@ -759,6 +759,7 @@
     "ignoreNearbyFoes",
     "isConcentrationCheck",
     "itemData",
+    "keptChoices",
     "magical",
     "magicResistance",
     "magicResistance.all",

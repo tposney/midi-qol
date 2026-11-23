@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { limitStamp, pruneLimits, selectGroups, spendStoredLimit, withinLimit, type StoredLimit } from "../src/module/lib/entries/limits.js";
+import { limitStamp, pruneLimits, selectGroups, spendStoredLimit, withinLimit, type StoredLimit, currentKept, keepRecord, keepStamp } from "../src/module/lib/entries/limits.js";
 
 const combat = { id: "c1", round: 2, turn: 1 };
 
@@ -40,5 +40,17 @@ describe("entry limits", () => {
       { id: 4, entry: {} }
     ];
     expect(selectGroups(list).map(x => x.id)).toEqual([1, 3, 4]);
+  });
+
+  it("a kept choice: stamped like a limit (world time outside combat), found for its item while current, stale records dropped", () => {
+    const combat = { id: "c1", round: 2, turn: 1 };
+    expect(keepStamp("turn", combat, 100)).toBe("c1:2:1");
+    expect(keepStamp("round", combat, 100)).toBe("c1:2");
+    expect(keepStamp("turn", undefined, 100)).toBe("time:100");
+    const records = keepRecord([{ key: "old", stamp: "c1:1:0", item: "i", value: 1 }], { key: "careful", stamp: "c1:2:1", item: "spell", value: ["orc"] }, ["c1:2:1", "c1:2"]);
+    expect(records).toEqual([{ key: "careful", stamp: "c1:2:1", item: "spell", value: ["orc"] }]);
+    expect(currentKept(records, "careful", "spell", "c1:2:1")).toEqual({ value: ["orc"] });
+    expect(currentKept(records, "careful", "other", "c1:2:1")).toBeUndefined();
+    expect(currentKept(records, "careful", "spell", "c1:2:2")).toBeUndefined();
   });
 });

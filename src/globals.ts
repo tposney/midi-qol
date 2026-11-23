@@ -351,7 +351,7 @@ declare module "fvtt-types/configuration" {
         /** M15: per-turn and per-round entry limits, stamped (lib/entries/limits.ts) */
         entryLimits?: import("./module/lib/entries/limits.js").StoredLimit[];
         /** Entries' choices kept beyond their use (choose.keep), by entry id */
-        keptChoices?: Record<string, import("./module/lib/entries/keptChoices.js").KeptChoice>;
+        keptChoices?: import("./module/lib/entries/limits.js").KeptRecord[];
         /** M15 stage 4d: entries offered as toggles, by toggle key (lib/entries/offers.ts): on or off */
         toggles?: Record<string, boolean>;
         /** M15 stage 5a: standing choices per bonus (services/rollBonuses/standing.ts) */

@@ -66,3 +66,25 @@ export function selectGroups<T extends { entry: { group?: string, stacks?: boole
     return !!entry.stacks;
   });
 }
+
+/*
+ * A choice kept beyond its use (`choose.keep: { per }`): kept under the same stamp as a limit of that period, for the
+ * item it was made for, and taken again while the stamp is current. Outside combat a turn or round is "until world
+ * time moves on" (Careful Spell's protected creatures for an area's saves out of combat).
+ */
+export interface KeptRecord { key: string, stamp: string, item: string, value: unknown }
+
+export function keepStamp(per: "turn" | "round", combat: CombatPosition | undefined, worldTime: number): string {
+  return limitStamp(per, combat) ?? `time:${worldTime}`;
+}
+
+/** The kept value for `key` and `item` under the current stamp */
+export function currentKept(records: readonly KeptRecord[], key: string, item: string, stamp: string): { value: unknown } | undefined {
+  const record = records.find(r => r.key === key && r.item === item && r.stamp === stamp);
+  return record ? { value: record.value } : undefined;
+}
+
+/** The records after keeping `record`: stale ones (not under a current stamp) dropped, the entry's earlier one replaced */
+export function keepRecord(records: readonly KeptRecord[], record: KeptRecord, current: readonly string[]): KeptRecord[] {
+  return [...records.filter(r => r.key !== record.key && current.includes(r.stamp)), record];
+}

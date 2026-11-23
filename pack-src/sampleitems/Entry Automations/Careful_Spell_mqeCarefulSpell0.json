@@ -119,7 +119,9 @@
             "kind": "targets",
             "max": "max(1, @abilities.cha.mod)",
             "label": "Careful Spell: protected creatures",
-            "keep": "turn"
+            "keep": {
+              "per": "turn"
+            }
           },
           "do": [
             {

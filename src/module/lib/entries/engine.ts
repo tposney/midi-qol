@@ -1,4 +1,3 @@
-import { keepChoice, keptChoice } from "./keptChoices.js";
 import { MODULE_ID } from "../../../midi-qol.js";
 import { Registry } from "../../api/registry.js";
 import type { Workflow } from "../../Workflow.js";
@@ -6,7 +5,7 @@ import type { Activity } from "../../../globals.js";
 import { createConditionData, evalCondition, expireEffects, hasUsedReaction, setReactionUsed } from "../../utils.js";
 import { getDistance } from "../../services/distance/service.js";
 import { unTimedExecuteAsGM } from "../../GMAction.js";
-import { limitKey, limitStamp, selectGroups, spendStoredLimit, withinLimit, type CombatPosition, type StoredLimit } from "./limits.js";
+import { currentKept, keepRecord, keepStamp, limitKey, limitStamp, selectGroups, spendStoredLimit, withinLimit, type CombatPosition, type KeptRecord, type StoredLimit } from "./limits.js";
 import type { Entry, EntryAction, EntryHome, EntryWho, FoundEntry } from "./types.js";
 import { addEconomy, entryConditionExtras } from "./conditionData.js";
 import { hasRules, itemOfEffect, matchesRole, ruleFor } from "./rules.js";
@@ -470,6 +469,39 @@ export async function spendEntryLimit(f: FoundEntry, context: EventContext): Pro
       await updateDocument(f.actor, { [`flags.${MODULE_ID}.entryLimits`]: spendStoredLimit(storedLimits(f.actor), key, stamp, combat) });
     }
   }
+}
+
+/** A choice's keep period (choose.keep: { per: "turn" | "round" }) */
+function keepPer(f: FoundEntry): "turn" | "round" | undefined {
+  const per = ((f.entry.choose as { keep?: { per?: unknown } } | undefined)?.keep)?.per;
+  return per === "turn" || per === "round" ? per : undefined;
+}
+
+function storedKept(actor: Actor.Implementation | undefined): KeptRecord[] {
+  const stored = actor?.getFlag(MODULE_ID, "keptChoices");
+  return Array.isArray(stored) ? stored : [];
+}
+
+const useItemUuid = (context: EventContext) => context.workflow?.item?.uuid ?? context.item?.uuid ?? undefined;
+
+/** The entry's choice kept from earlier for this use's item, while its period lasts */
+export function keptChoice(f: FoundEntry, context: EventContext): { value: unknown } | undefined {
+  const per = keepPer(f);
+  const item = useItemUuid(context);
+  if (!per || !item || !f.actor) return undefined;
+  return currentKept(storedKept(f.actor), limitKey(documentUuid(f.document), f.entry.id), item, keepStamp(per, combatPosition(context), game.time.worldTime));
+}
+
+/** Keep a choice just made, for its period */
+async function keepChoice(f: FoundEntry, context: EventContext, value: unknown): Promise<void> {
+  const per = keepPer(f);
+  const item = useItemUuid(context);
+  if (!per || !item || !f.actor) return;
+  const combat = combatPosition(context);
+  const time = game.time.worldTime;
+  const record: KeptRecord = { key: limitKey(documentUuid(f.document), f.entry.id), stamp: keepStamp(per, combat, time), item, value };
+  const current = [keepStamp("turn", combat, time), keepStamp("round", combat, time)];
+  await updateDocument(f.actor, { [`flags.${MODULE_ID}.keptChoices`]: keepRecord(storedKept(f.actor), record, current) });
 }
 
 /* Running */
