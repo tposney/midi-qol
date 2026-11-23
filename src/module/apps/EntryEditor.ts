@@ -1,7 +1,7 @@
 import { i18n, MODULE_ID } from "../../midi-qol.js";
 import { actionKeyOf, actionProblems, actionSchema, entryChecks, registeredActionKeys, registeredEvents, type ActionField } from "../lib/entries/engine.js";
 import type { Entry, EntryAction, EntryHome, EntryWho } from "../lib/entries/types.js";
-import { conditionPresets, entrySentence, triggerGroups } from "../lib/entries/sentences.js";
+import { choiceName, conditionPresets, entrySentence, triggerGroups } from "../lib/entries/sentences.js";
 import { recipe, recipesFor } from "../lib/entries/recipes.js";
 import { activityOvertimeEntries, overtimeEntries } from "../lib/entries/overtime.js";
 import { ACTIVITY_REF } from "../lib/entries/activityActions.js";
@@ -528,6 +528,7 @@ export class EntryEditor extends HandlebarsApplicationMixin(ApplicationV2) {
       // An empty list is falsy in Handlebars: whether the list parsed
       cardsShown: !!draft && this.#actionsOf(draft) !== undefined,
       rawChoose: draft?.raw.choose ?? "",
+      choice: draft ? this.#choiceContext(draft) : undefined,
       problems: draft?.problems ?? [],
       // Not wrong, but likely a mistake: an effect-only event on an item or activity
       warnings: this.#document instanceof ActiveEffect ? [] : on.filter(id => EFFECT_ONLY.has(id))
@@ -1529,9 +1530,37 @@ export class EntryEditor extends HandlebarsApplicationMixin(ApplicationV2) {
    * M32d step 2 (and the follow-up): each action as a card, its nested then / else actions (a save's or check's) as
    * cards under it, each card's path its place (`0`, `0_then_1`); an action without a schema is its own JSON
    */
+  /** The entry's own choice as parsed from its JSON: its key (the entry's id) and its name for the actions' For / To lists */
+  #choiceOf(draft: Draft): { declaration: Record<string, unknown>, id: string, name: string } | undefined {
+    let declaration: unknown;
+    try { declaration = draft.raw.choose ? JSON.parse(draft.raw.choose) : undefined; } catch { return undefined; }
+    if (!declaration || typeof declaration !== "object" || Array.isArray(declaration)) return undefined;
+    const id = this.#entryForSave(draft).id ?? "";
+    const record = declaration as Record<string, unknown>;
+    return { declaration: record, id, name: choiceName(record.label) ?? id };
+  }
+
+  /** The choice's fields: what is chosen, its label, how many, how long it is kept */
+  #choiceContext(draft: Draft) {
+    const choice = this.#choiceOf(draft)?.declaration ?? {};
+    const kind = typeof choice.kind === "string" ? choice.kind : "";
+    const keep = (choice.keep as { per?: string } | undefined)?.per ?? "";
+    const option = (value: string, label: string, selected: boolean) => ({ value, label, selected });
+    return {
+      has: !!kind,
+      kinds: ["", "targets", "option", "damageType", "ability", "skill", "creatureType", "number", "allocate"].map(k => option(k, i18n(`midi-qol.EntryEditor.ChoiceKind.${k || "none"}`), k === kind)),
+      label: typeof choice.label === "string" ? choice.label : "",
+      min: choice.min ?? "", max: choice.max ?? "",
+      keeps: ["", "turn", "round"].map(k => option(k, i18n(`midi-qol.EntryEditor.ChoiceKeep.${k || "use"}`), k === keep))
+    };
+  }
+
   #actionCards(draft: Draft) {
     const list = this.#actionsOf(draft);
     if (!list) return undefined;
+    // The For / To lists offer the entry's own choice by name
+    const own = this.#choiceOf(draft);
+    this.#cardsChoice = own && own.declaration.kind === "targets" && own.id ? { id: own.id, name: own.name } : undefined;
     const kinds = registeredActionKeys().sort().map(key => ({ value: key, label: actionSchema(key).label }));
     const cards: object[] = [];
     const walk = (actions: EntryAction[], prefix: string | undefined, depth: number, branch?: string) => {
@@ -1563,8 +1592,18 @@ export class EntryEditor extends HandlebarsApplicationMixin(ApplicationV2) {
     return cards;
   }
 
+  /** The entry's own choice of targets while its action cards are built (For / To can name it) */
+  #cardsChoice: { id: string, name: string } | undefined;
+
   /** The choices of a field shown as a select; undefined for the others */
   #fieldOptions(field: ActionField): FieldOption[] | undefined {
+    // Who an action is for / goes to: the use's target, yourself, the attacker, or the entry's choice of targets
+    if (field.path === "for" || field.path === "to") {
+      const listed = field.type === "select" && Array.isArray(field.options) ? field.options as string[] : ["", "target", "self", "attacker"];
+      const own = this.#cardsChoice;
+      return [...listed.map(v => ({ value: v, label: i18n(`midi-qol.EntryEditor.Who.${v || "default"}`) })),
+        ...(own ? [{ value: own.id, label: game.i18n?.format("midi-qol.EntryEditor.Who.choice", { name: own.name }) ?? own.name }] : [])];
+    }
     switch (field.type) {
       case "select":
       case "multiselect": {
@@ -1804,6 +1843,23 @@ export class EntryEditor extends HandlebarsApplicationMixin(ApplicationV2) {
     if (typeof data.do === "string") draft.raw.do = data.do;
     else this.#readActionCards(draft, data);
     draft.raw.choose = String(data.choose ?? "");
+    // The choice's fields over its JSON: no kind, no choice
+    if ("chooseKind" in data) {
+      let choice: Record<string, unknown> = {};
+      try { const parsed = draft.raw.choose ? JSON.parse(draft.raw.choose) : {}; if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) choice = parsed; } catch { /* the JSON's problem is reported */ }
+      const kind = String(data.chooseKind ?? "");
+      if (!kind) draft.raw.choose = "";
+      else {
+        const text = (key: string) => String(data[key] ?? "").trim();
+        const keep = text("chooseKeep");
+        const next: Record<string, unknown> = { ...choice, kind, label: text("chooseLabel") || undefined, min: text("chooseMin") || undefined, max: text("chooseMax") || undefined,
+          keep: keep ? { per: keep } : undefined };
+        for (const key of Object.keys(next)) if (next[key] === undefined) delete next[key];
+        // A number field's value stays a number
+        for (const key of ["min", "max"]) if (typeof next[key] === "string" && Number.isNumeric(next[key])) next[key] = Number(next[key]);
+        draft.raw.choose = JSON.stringify(next);
+      }
+    }
     draft.raw.json = undefined;
     for (const d of this.#drafts) d.problems = this.#problemsOf(d);
     this.render();
