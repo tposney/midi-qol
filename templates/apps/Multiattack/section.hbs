@@ -1,0 +1,11 @@
+<fieldset class="midi-qol-multiattack-section">
+    <legend><i class="fa-solid fa-burst"></i> {{localize "midi-qol.Multiattack.Section"}}</legend>
+    <p class="hint">{{source}}{{#if provider}} ({{provider}}){{/if}}</p>
+    {{#each skipped}}<p class="hint"><i class="fa-solid fa-triangle-exclamation"></i> {{this}}</p>{{/each}}
+    {{#if view}}{{> "modules/midi-qol/templates/apps/Multiattack/plan.hbs" view=view}}{{else}}<p>{{localize "midi-qol.Multiattack.NoPlan"}}</p>{{/if}}
+    <div class="midi-qol-multiattack-section-buttons">
+        <button type="button" data-ma-edit><i class="fa-solid fa-pen"></i> {{localize "midi-qol.Multiattack.Edit"}}</button>
+        {{#if guess}}<button type="button" data-ma-confirm><i class="fa-solid fa-check"></i> {{localize "midi-qol.Multiattack.Confirm"}}</button>{{/if}}
+        {{#if gm}}<button type="button" data-ma-reset><i class="fa-solid fa-rotate-left"></i> {{localize "midi-qol.Multiattack.Reset"}}</button>{{/if}}
+    </div>
+</fieldset>

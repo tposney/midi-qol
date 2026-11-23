@@ -1,0 +1,65 @@
+<div class="midi-qol-multiattack-editor-body">
+    <p class="hint">{{scope}}</p>
+    {{#each options}}
+    <fieldset>
+        <legend>{{#if @first}}{{localize "midi-qol.Multiattack.Attacks"}}{{else}}{{localize "midi-qol.Multiattack.OrAttacks"}}{{/if}}
+            {{#unless @first}}<a data-action="maRemove" data-kind="option" data-option="{{index}}" data-tooltip="midi-qol.Multiattack.Remove"><i class="fa-solid fa-trash"></i></a>{{/unless}}</legend>
+        {{#each groups}}
+        <div class="midi-qol-multiattack-row">
+            <input type="text" name="options.{{../index}}.groups.{{index}}.count" value="{{count}}" data-tooltip="midi-qol.Multiattack.CountHint" class="midi-qol-multiattack-count">
+            <span>×</span>
+            <multi-select name="options.{{../index}}.groups.{{index}}.refs">{{#each choices}}<option value="{{value}}" {{#if selected}}selected{{/if}}>{{label}}</option>{{/each}}</multi-select>
+            <a data-action="maRemove" data-kind="group" data-option="{{../index}}" data-index="{{index}}"><i class="fa-solid fa-xmark"></i></a>
+        </div>
+        {{/each}}
+        {{#each extra}}
+        <div class="midi-qol-multiattack-row">
+            <span>{{localize "midi-qol.Multiattack.AlsoUses"}}</span>
+            <multi-select name="options.{{../index}}.extra.{{index}}.refs">{{#each choices}}<option value="{{value}}" {{#if selected}}selected{{/if}}>{{label}}</option>{{/each}}</multi-select>
+            <label><input type="checkbox" name="options.{{../index}}.extra.{{index}}.ifAvailable" {{checked ifAvailable}}> {{localize "midi-qol.Multiattack.IfAvailable"}}</label>
+            <a data-action="maRemove" data-kind="extra" data-option="{{../index}}" data-index="{{index}}"><i class="fa-solid fa-xmark"></i></a>
+        </div>
+        {{/each}}
+        {{#each limits}}
+        <div class="midi-qol-multiattack-row">
+            <span>{{localize "midi-qol.Multiattack.AtMost"}}</span>
+            <input type="number" min="0" name="options.{{../index}}.limits.{{index}}.max" value="{{max}}" class="midi-qol-multiattack-count">
+            <multi-select name="options.{{../index}}.limits.{{index}}.refs">{{#each choices}}<option value="{{value}}" {{#if selected}}selected{{/if}}>{{label}}</option>{{/each}}</multi-select>
+            <a data-action="maRemove" data-kind="limit" data-option="{{../index}}" data-index="{{index}}"><i class="fa-solid fa-xmark"></i></a>
+        </div>
+        {{/each}}
+        <div class="form-group">
+            <label>{{localize "midi-qol.Multiattack.Condition"}}</label>
+            <div class="form-fields"><input type="text" name="options.{{index}}.condition" value="{{condition}}"></div>
+        </div>
+        <div class="midi-qol-multiattack-add">
+            <button type="button" data-action="maAdd" data-kind="group" data-option="{{index}}"><i class="fa-solid fa-plus"></i> {{localize "midi-qol.Multiattack.AddGroup"}}</button>
+            <button type="button" data-action="maAdd" data-kind="extra" data-option="{{index}}"><i class="fa-solid fa-plus"></i> {{localize "midi-qol.Multiattack.AddExtra"}}</button>
+            <button type="button" data-action="maAdd" data-kind="limit" data-option="{{index}}"><i class="fa-solid fa-plus"></i> {{localize "midi-qol.Multiattack.AddLimit"}}</button>
+        </div>
+    </fieldset>
+    {{/each}}
+    <button type="button" data-action="maAdd" data-kind="option"><i class="fa-solid fa-plus"></i> {{localize "midi-qol.Multiattack.AddOption"}}</button>
+    <fieldset>
+        <legend>{{localize "midi-qol.Multiattack.Replacements"}}</legend>
+        {{#each replace}}
+        <div class="midi-qol-multiattack-row">
+            <span>{{localize "midi-qol.Multiattack.ReplaceRow"}}</span>
+            <input type="text" name="replace.{{index}}.n" value="{{n}}" data-tooltip="midi-qol.Multiattack.ReplaceCountHint" class="midi-qol-multiattack-count">
+            <multi-select name="replace.{{index}}.of" data-tooltip="midi-qol.Multiattack.OfHint">{{#each of}}<option value="{{value}}" {{#if selected}}selected{{/if}}>{{label}}</option>{{/each}}</multi-select>
+            <span>{{localize "midi-qol.Multiattack.With"}}</span>
+            <multi-select name="replace.{{index}}.refs">{{#each choices}}<option value="{{value}}" {{#if selected}}selected{{/if}}>{{label}}</option>{{/each}}</multi-select>
+            <a data-action="maRemove" data-kind="replace" data-index="{{index}}"><i class="fa-solid fa-xmark"></i></a>
+        </div>
+        {{/each}}
+        <button type="button" data-action="maAdd" data-kind="replace"><i class="fa-solid fa-plus"></i> {{localize "midi-qol.Multiattack.AddReplace"}}</button>
+    </fieldset>
+    <div class="form-group stacked">
+        <label>{{localize "midi-qol.Multiattack.Notes"}}</label>
+        <textarea name="notes" rows="2">{{notes}}</textarea>
+    </div>
+    <fieldset>
+        <legend>{{localize "midi-qol.Multiattack.Preview"}}</legend>
+        {{> "modules/midi-qol/templates/apps/Multiattack/plan.hbs" view=preview}}
+    </fieldset>
+</div>
