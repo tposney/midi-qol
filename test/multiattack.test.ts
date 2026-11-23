@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { readFileSync, existsSync, readdirSync } from "node:fs";
-import { parseMultiattack, resolvePlan, type ParsedPlan, type RawRef, type Count } from "../src/module/lib/multiattack.js";
+import { parseMultiattack, resolvePlan, fitUses, nextUses, type ParsedPlan, type RawRef, type Count, type MultiattackPlan } from "../src/module/lib/multiattack.js";
 
 // SRD 5.2 (CC-BY 4.0) Multiattack descriptions from dnd5e's packs
 const srd: { actor: string, description: string }[] = JSON.parse(readFileSync(new URL("./fixtures/multiattack-srd52.json", import.meta.url), "utf8"));
@@ -205,5 +205,62 @@ describe("multiattack plans: resolving against the creature", () => {
     const plan = resolve("It makes four [[/item Slam]] attacks.");
     expect(plan.options[0].groups[0].refs).toEqual(["slam"]);
     expect(plan.unresolved).toEqual(["Slam"]);
+  });
+});
+
+describe("multiattack plans: fitting uses", () => {
+  const plan = (p: Partial<MultiattackPlan> & { options: MultiattackPlan["options"] }): MultiattackPlan => ({ replace: [], ...p });
+  const fit = (p: MultiattackPlan, uses: string[][], o = {}) => fitUses(p, uses, o);
+  const dragon = plan({ options: [{ groups: [{ n: 3, refs: ["rend"] }], extra: [] }],
+    replace: [{ n: 1, refs: ["repulsion-breath", "spellcasting>guiding-bolt@2"] }] });
+
+  it("a group fills; one more doesn't fit", () => {
+    expect(fit(dragon, [["rend"], ["rend"]])).toEqual({ option: 0, attacksLeft: 1 });
+    expect(fit(dragon, [["rend"], ["rend"], ["rend"]])).toEqual({ option: 0, attacksLeft: 0 });
+    expect(fit(dragon, [["rend"], ["rend"], ["rend"], ["rend"]])).toBeNull();
+    expect(fit(dragon, [["bite", "attack"]])).toBeNull();
+  });
+  it("a replacement takes one attack's place, once; a cast by its spell, any level", () => {
+    expect(fit(dragon, [["spellcasting>guiding-bolt", "guiding-bolt", "spell"], ["rend"], ["rend"]])).toEqual({ option: 0, attacksLeft: 0 });
+    expect(fit(dragon, [["repulsion-breath"], ["spellcasting>guiding-bolt", "guiding-bolt"]])).toBeNull();
+  });
+  it("a replacement of a named attack only takes that one's place (Chimera)", () => {
+    const chimera = plan({ options: [{ groups: [{ n: 1, refs: ["ram"] }, { n: 1, refs: ["bite"] }, { n: 1, refs: ["claw"] }], extra: [] }],
+      replace: [{ n: 1, refs: ["fire-breath"], of: ["claw"] }] });
+    expect(fit(chimera, [["fire-breath"], ["ram"], ["bite"]])).toEqual({ option: 0, attacksLeft: 0 });
+    expect(fit(chimera, [["fire-breath"], ["claw"]])).toBeNull();
+  });
+  it("options: the uses decide which (Barbed Devil); mixing them doesn't fit", () => {
+    const devil = plan({ options: [
+      { groups: [{ n: 1, refs: ["claws"] }, { n: 1, refs: ["tail"] }], extra: [] },
+      { groups: [{ n: 2, refs: ["hurl-flame"] }], extra: [] }] });
+    expect(fit(devil, [["hurl-flame"]])).toEqual({ option: 1, attacksLeft: 1 });
+    expect(fit(devil, [["tail"]])?.option).toBe(0);
+    expect(fit(devil, [["tail"], ["hurl-flame"]])).toBeNull();
+    expect(nextUses(devil, [["tail"]], [{ id: "a", keys: ["claws"] }, { id: "b", keys: ["hurl-flame"] }, { id: "c", keys: ["tail"] }]).map(c => c.id)).toEqual(["a"]);
+  });
+  it("any combination, any attack, by kind", () => {
+    const assassin = plan({ options: [{ groups: [{ n: 3, refs: ["shortsword", "light-crossbow"] }], extra: [] }] });
+    expect(fit(assassin, [["shortsword"], ["light-crossbow"], ["shortsword"]])?.attacksLeft).toBe(0);
+    const scout = plan({ options: [{ groups: [{ n: 2, refs: ["attack:melee"] }], extra: [] }, { groups: [{ n: 2, refs: ["attack:ranged"] }], extra: [] }] });
+    expect(fit(scout, [["shortsword", "attack", "attack:melee"]])?.option).toBe(0);
+    expect(fit(scout, [["longbow", "attack", "attack:ranged"]])?.option).toBe(1);
+  });
+  it("extra uses: once each, in any order (Aboleth), alongside the attacks", () => {
+    const aboleth = plan({ options: [{ groups: [{ n: 2, refs: ["tentacle"] }], extra: [{ refs: ["consume-memories", "dominate-mind"], ifAvailable: true }] }] });
+    expect(fit(aboleth, [["dominate-mind"], ["tentacle"], ["tentacle"]])?.attacksLeft).toBe(0);
+    expect(fit(aboleth, [["dominate-mind"], ["consume-memories"]])).toBeNull();
+  });
+  it("limits: only one of which can be a bite (Vampire)", () => {
+    const vampire = plan({ options: [{ groups: [{ n: 2, refs: ["attack"] }], extra: [], limits: [{ refs: ["bite"], max: 1 }] }] });
+    expect(fit(vampire, [["bite", "attack"], ["unarmed-strike", "attack"]])?.attacksLeft).toBe(0);
+    expect(fit(vampire, [["bite", "attack"], ["bite", "attack"]])).toBeNull();
+  });
+  it("counts: a formula evaluated by the caller; a rule in words is unbounded (Hydra)", () => {
+    const wasp = plan({ options: [{ groups: [{ n: { formula: "floor(@level / 2)" }, refs: ["attack"] }], extra: [] }] });
+    expect(fit(wasp, [["sting", "attack"]], { evaluate: () => 2 })?.attacksLeft).toBe(1);
+    expect(fit(wasp, [["sting", "attack"], ["sting", "attack"], ["sting", "attack"]], { evaluate: () => 2 })).toBeNull();
+    const hydra = plan({ options: [{ groups: [{ n: { text: "it has heads" }, refs: ["bite"] }], extra: [] }] });
+    expect(fit(hydra, Array(7).fill(["bite"]))?.attacksLeft).toBe(Infinity);
   });
 });

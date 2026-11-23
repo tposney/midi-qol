@@ -385,3 +385,75 @@ export function resolvePlan(parsed: ParsedPlan, sources: PlanSources): Multiatta
   if (unresolved.size) plan.unresolved = [...unresolved];
   return plan;
 }
+
+/*
+ * Fitting uses into a plan (M21 plan, 21b): while a plan is open, each use made is placed in it, and a use fits when
+ * all the uses so far can still be placed. A use is described by its keys (the creature's item identifier; a cast
+ * "<item>><spell>" and the spell; "attack" and "attack:melee"/"attack:ranged" for an attack; "spell" for a spell). A use
+ * goes in a group whose refs it matches (its count not yet reached), or replaces one of a group's attacks (a
+ * replacement's refs; `of`: only that group), or is an extra use (each once). Options: every use in the same one.
+ * Counts: a formula is evaluated by the caller (`evaluate`); a rule in words ("as many as it has heads") is unbounded.
+ */
+
+export interface PlanFit {
+  /** The option all the uses fit */
+  option: number;
+  /** Attacks still to make in it (its groups' remaining counts; Infinity when unbounded) */
+  attacksLeft: number;
+}
+
+const refMatches = (ref: PlanRef, keys: string[]) => keys.includes(ref.replace(/@\d+$/, ""));
+
+function groupCount(n: PlanGroup["n"], evaluate?: (formula: string) => number): number {
+  if (typeof n === "number") return n;
+  if (n === "any") return Infinity;
+  if ("formula" in n) { const value = evaluate?.(n.formula); return Number.isFinite(value) ? Math.max(0, Math.floor(value!)) : Infinity; }
+  return Infinity;
+}
+
+/** Where the uses fit, or null when they can't all be placed (`option`: only that one) */
+export function fitUses(plan: MultiattackPlan, uses: string[][], { option, evaluate }: { option?: number, evaluate?: (formula: string) => number } = {}): PlanFit | null {
+  const order = option === undefined ? plan.options.map((_, i) => i) : [option];
+  for (const index of order) {
+    const chosen = plan.options[index];
+    if (!chosen) continue;
+    // Limits ("only one of which can be a bite") hold over all the uses, wherever they are placed
+    if ((chosen.limits ?? []).some(limit => uses.filter(keys => limit.refs.some(ref => refMatches(ref, keys))).length > limit.max)) continue;
+    const groupLeft = chosen.groups.map(g => groupCount(g.n, evaluate));
+    const replaceLeft = plan.replace.map(r => r.n === "any" ? Infinity : r.n);
+    const extraUsed = chosen.extra.map(() => false);
+    const place = (i: number): boolean => {
+      if (i === uses.length) return true;
+      const keys = uses[i];
+      for (const [g, group] of chosen.groups.entries()) {
+        if (groupLeft[g] <= 0 || !group.refs.some(ref => refMatches(ref, keys))) continue;
+        groupLeft[g]--;
+        if (place(i + 1)) return true;
+        groupLeft[g]++;
+      }
+      for (const [r, replace] of plan.replace.entries()) {
+        if (replaceLeft[r] <= 0 || !replace.refs.some(ref => refMatches(ref, keys))) continue;
+        for (const [g, group] of chosen.groups.entries()) {
+          if (groupLeft[g] <= 0 || (replace.of && !group.refs.some(ref => replace.of!.includes(ref)))) continue;
+          groupLeft[g]--; replaceLeft[r]--;
+          if (place(i + 1)) return true;
+          groupLeft[g]++; replaceLeft[r]++;
+        }
+      }
+      for (const [e, extra] of chosen.extra.entries()) {
+        if (extraUsed[e] || !extra.refs.some(ref => refMatches(ref, keys))) continue;
+        extraUsed[e] = true;
+        if (place(i + 1)) return true;
+        extraUsed[e] = false;
+      }
+      return false;
+    };
+    if (place(0)) return { option: index, attacksLeft: groupLeft.reduce((sum, n) => sum + n, 0) };
+  }
+  return null;
+}
+
+/** Which of the candidates can be used next (each `{ id, keys }`) */
+export function nextUses<T extends { keys: string[] }>(plan: MultiattackPlan, uses: string[][], candidates: T[], options: { option?: number, evaluate?: (formula: string) => number } = {}): T[] {
+  return candidates.filter(candidate => fitUses(plan, [...uses, candidate.keys], options) !== null);
+}
