@@ -142,6 +142,8 @@ export class ConfigSettings {
   interactions = true;
   /** M8: doors and the free object interaction (a fourth economy kind); off by default */
   objectInteractions = false;
+  /** M8: who makes grapples: auto (CAT's when CAT is active), midi-qol, cat */
+  grappleProvider = "auto";
   enforceSingleWeaponTarget: boolean = false;
   gmAttackDisplay: string = "full";
   gmDamageDisplay: string = "full";
@@ -659,6 +661,7 @@ export let fetchParams = () => {
   if (!configSettings.proneStanding) configSettings.proneStanding = "combat";
   if (configSettings.interactions === undefined) configSettings.interactions = true;
   if (configSettings.objectInteractions === undefined) configSettings.objectInteractions = false;
+  if (!configSettings.grappleProvider) configSettings.grappleProvider = "auto";
   //@ts-expect-error legacy boolean value
   if (configSettings.autoItemEffects === false) configSettings.autoItemEffects = "off";
   if (configSettings.playerDamageCard === undefined) configSettings.playerDamageCard = "none";

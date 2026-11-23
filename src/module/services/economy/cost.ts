@@ -98,4 +98,21 @@ export async function chargeUse(workflow: Workflow): Promise<UseCost> {
   return charged;
 }
 
+/**
+ * One attack of the Attack action, outside a use (2024 Grapple and Shove replace one attack): an attack left on the
+ * turn window if there is one, else the action, leaving the rest of its attacks (Extra Attack)
+ */
+export async function spendAttack(actor: Actor.Implementation): Promise<void> {
+  const turn = budget(actor, "action");
+  const attacksLeft = Number(turn.counters.attacksLeft ?? 0);
+  if (turn.window && attacksLeft > 0) await spend(actor, "action", { count: 0, counters: { attacksLeft: attacksLeft - 1 } });
+  else if (!turn.exhausted) await spend(actor, "action", { counters: { attacksLeft: attacksMax(actor) - 1 } });
+}
+
+/** Whether the actor has an attack left this turn (one left on the turn window, or its action) */
+export function canAttack(actor: Actor.Implementation): boolean {
+  const turn = budget(actor, "action");
+  return (!!turn.window && Number(turn.counters.attacksLeft ?? 0) > 0) || !turn.exhausted;
+}
+
 export const costContributorsApi = { register: registerCostContributor, entries: () => contributors.entries().map(entry => entry.id) };

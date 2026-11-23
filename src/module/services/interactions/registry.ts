@@ -52,6 +52,8 @@ export interface InteractionDefinition {
   cost?: InteractionCost;
   /** The reason it can't be done now (a string), or nothing when it can */
   available?(context: InteractionContext): string | undefined | null | false | void;
+  /** Whether it is offered at all here (Escape only to a grappled creature); default: always */
+  relevant?(context: InteractionContext): boolean;
   /** An action item's activity used against the target (its use charges its own cost) */
   activity?(context: InteractionContext): Activity | undefined | null;
   run?(context: InteractionContext): Promise<unknown> | unknown;
@@ -143,6 +145,8 @@ export function availableInteractions(subjectRef: TargetRef, targetRef?: TargetR
   for (const { id, value: definition } of interactions.entries()) {
     if (![definition.targets].flat().includes(kind)) continue;
     const context: InteractionContext = { id, subject, target, targetKind: kind, options };
+    try { if (definition.relevant && !definition.relevant(context)) continue; }
+    catch (err) { console.warn(`midi-qol | interaction ${id}: relevant failed`, err); continue; }
     const reason = reasonFor(definition, context);
     offers.push({ id, label: label(definition.label), icon: definition.icon, img: definition.img, hint: definition.hint ? label(definition.hint) : undefined, ...(reason ? { reason } : {}) });
   }

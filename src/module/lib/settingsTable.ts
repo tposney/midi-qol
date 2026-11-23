@@ -104,6 +104,7 @@ export const MIDI_SETTINGS: Record<string, MidiSettingEntry> = {
   "removeButtons": { group: "player", label: "midi-qol.RemoveButtons.Name", choices: "removeButtonsOptions" },
   "doReactions": { group: "reactions", label: "midi-qol.DoReactions.Name", choices: "doReactionsOptions" },
   "interactions": { group: "reactions", label: "midi-qol.InteractionsSetting.Name", hint: "midi-qol.InteractionsSetting.Hint" },
+  "grappleProvider": { group: "reactions", label: "midi-qol.GrappleProvider.Name", hint: "midi-qol.GrappleProvider.Hint", choices: "ForcedMovementProviderOptions" },
   "objectInteractions": { group: "reactions", label: "midi-qol.ObjectInteractions.Name", hint: "midi-qol.ObjectInteractions.Hint" },
   "proneStanding": { group: "reactions", label: "midi-qol.ProneStanding.Name", hint: "midi-qol.ProneStanding.Hint", choices: "ProneStandingOptions" },
   "forcedMovementProvider": { group: "reactions", label: "midi-qol.ForcedMovementProvider.Name", hint: "midi-qol.ForcedMovementProvider.Hint", choices: "ForcedMovementProviderOptions" },

@@ -72,6 +72,14 @@
         </div>
 
         <div class="form-group">
+            <label>{{localize "midi-qol.GrappleProvider.Name"}}</label>
+            <select name="grappleProvider" data-dtype="String">
+                {{selectOptions ForcedMovementProviderOptions selected=configSettings.grappleProvider localize=true}}
+            </select>
+            <div class="notes midi-qol-faint">{{{localize "midi-qol.GrappleProvider.Hint"}}}</div>
+        </div>
+
+        <div class="form-group">
             <label>{{localize "midi-qol.ObjectInteractions.Name"}}</label>
             <input type="checkbox" name="objectInteractions" data-dtype="Boolean" {{checked configSettings.objectInteractions}} />
             <div class="notes midi-qol-faint">{{{localize "midi-qol.ObjectInteractions.Hint"}}}</div>

@@ -82,6 +82,7 @@ export let setupSocket = () => {
   registerSocketAndQuery("flashTokenBarSaves", flashTokenBarSaves);
   registerSocketAndQuery("moveToken", _moveToken);
   registerSocketAndQuery("moveTokenAwayFromPoint", _moveTokenAwayFromPoint);
+  registerSocketAndQuery("moveTokensTogether", _moveTokensTogether);
   registerSocketAndQuery("teleportToken", _teleportToken);
   registerSocketAndQuery("queueUndoData", queueUndoData);
   registerSocketAndQuery("queueUndoDataDirect", _queueUndoDataDirect);
@@ -2444,6 +2445,13 @@ async function _moveToken(data: { tokenUuid: string, newCenter: { x: number, y: 
   return tokenDocument.move(waypoint, moveOptions);
 }
 
+
+/** Several tokens of one scene moved in one update (a grappler and the creature it drags: interactions/grapple.ts) */
+async function _moveTokensTogether(data: { sceneUuid: string, instructions: Record<string, object>, options?: object }): Promise<Record<string, boolean> | undefined> {
+  const scene = fromUuidSync(data.sceneUuid) as Scene.Implementation | null;
+  if (!scene) return undefined;
+  return (scene as unknown as { moveTokens(instructions: object, options?: object): Promise<Record<string, boolean>> }).moveTokens(data.instructions, data.options ?? {});
+}
 
 async function _moveTokenAwayFromPoint(data: { targetUuid: string, point: { x: number, y: number }, distance: number, options?: MoveTokenOptions }): Promise<void> {
   const targetToken = tokenOf(tokenFor(data.targetUuid));

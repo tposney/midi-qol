@@ -440,6 +440,7 @@
     "gmDoReactions",
     "gmRemoveButtons",
     "gmRequireAmmunition",
+    "grappleProvider",
     "griddedGridless",
     "gridlessFudge",
     "hideNPCNames",
