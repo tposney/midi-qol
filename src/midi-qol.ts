@@ -3,6 +3,7 @@ import { interactionsApi } from "./module/services/interactions/registry.js";
 import { setupTurnModel, turnModelApi } from "./module/services/turnModel/model.js";
 import { hudApi, registerHudSetting, setupHuds } from "./module/services/turnModel/hud.js";
 import { registerTurnHudConfig } from "./module/apps/TurnHudConfig.js";
+import { setupArgon } from "./module/services/turnModel/argon.js";
 import { setupInteractionsHUD } from "./module/services/interactions/hud.js";
 import { registerDefaultInteractions } from "./module/services/interactions/defaults.js";
 import { registerGrappleInteractions } from "./module/services/interactions/grapple.js";
@@ -614,6 +615,7 @@ Hooks.once('init', async function () {
   registerDoorInteractions();
   setupTurnModel();
   setupHuds();
+  setupArgon();
   // Registered here, not in services/rollBonuses/prompt.ts: BonusPromptApp extends utils' RollModifyDialog and utils
   // imports prompt.ts, so prompt.ts importing the app would evaluate the class before its base exists
   bonusPromptService.register("midi-qol.phased", { open: data => new BonusPromptApp(data) }, { label: "Phased (tick and apply)" });
