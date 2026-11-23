@@ -170,6 +170,11 @@
         "activity": [],
         "effect": []
       }
+    },
+    "cat": {
+      "automation": {
+        "version": "15.0.0"
+      }
     }
   },
   "_stats": {
