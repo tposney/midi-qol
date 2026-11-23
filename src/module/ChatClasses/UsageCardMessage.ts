@@ -72,6 +72,9 @@ export function midiButtonVisibility(message: Dnd5eChatMessage | undefined, acti
     allRemoved: done,
     savesResolved: !!progress.savesResolved,
     teleported: !!progress.teleported,
+    // M20: held for the GM (the GM reviews it in the hold panel)
+    held: !done && !!midi.state?.hold,
+    heldReview: !done && !!midi.state?.hold && !!game.user?.isGM,
     // Every template the use places is on the card (cards before 14.6.9 recorded it in progress)
     templatesPlaced: !!progress.templatesPlaced || (activityHasAreaTarget(activity)
       && (midi.state?.templateUuids?.length ?? 0) >= (Number(activity?.target?.template?.count) || 1))

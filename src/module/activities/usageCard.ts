@@ -9,6 +9,7 @@ import { TroubleShooter } from "../apps/TroubleShooter.js";
 import { runFollowUp } from "../followUps.js";
 import { configSettings } from "../settings.js";
 import { getAutoRollAttack, getAutoRollDamage, getRemoveAttackButtons, getRemoveDamageButtons, HEALING_BUTTON_KEY, getConsumptionData } from "../utils.js";
+import { HoldPanel } from "../apps/HoldPanel.js";
 
 /*
  * midi's part of a use card: its data at creation (dnd5e's usage message hooks), the buttons shared by every activity type, and the confirm-before-damage step.
@@ -29,7 +30,9 @@ export function setupUsageCard() {
     midiApplyEffects: cardApplyEffects,
     midiFollowUp: cardFollowUp,
     refundOtherActivity: cardRefundOtherActivity,
-    consumeOtherActivity: cardConsumeOtherActivity
+    consumeOtherActivity: cardConsumeOtherActivity,
+    // M20: a use held for the GM: the GM's hold panel
+    midiReviewHold: () => { if (game.user?.isGM) HoldPanel.open(); }
   });
   // Only where the activity type has no handler of its own: save and check activities keep theirs.
   registerCardAction("rollSave", cardRollOtherSave, { whenAbsent: true });

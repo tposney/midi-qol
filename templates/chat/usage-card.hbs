@@ -63,6 +63,13 @@
   <button data-action="midiApplyEffects">{{ localize "midi-qol.ApplyEffects" }}</button>
   {{/if}}
 
+  {{#if midi.buttons.held}}
+  <div class="midi-qol-held flexrow">
+    <span><i class="fa-solid fa-hand"></i> {{localize "midi-qol.Hold.Waiting"}}</span>
+    {{#if midi.buttons.heldReview}}<button type="button" data-action="midiReviewHold">{{localize "midi-qol.Hold.Review"}}</button>{{/if}}
+  </div>
+  {{/if}}
+
   {{#if midi.buttons.confirm}}
   <div class="midi-qol-confirm-damage-roll">
     {{#if midi.buttons.confirmHitMiss}}

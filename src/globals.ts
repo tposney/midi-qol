@@ -73,6 +73,9 @@ declare module "fvtt-types/configuration" {
     /** Click to attack: return false to take the click (midi then does nothing) */
     "midi-qol.claimClick": (data: { target: TokenDocument.Implementation, attacker: Actor.Implementation | null | undefined, activity: unknown, event: unknown }) => boolean | void;
     /** M21b: a creature's Multiattack opened for the turn, on the client that used it (the run sheet opens) */
+    "midi-qol.held": (workflow: import("./module/Workflow.js").Workflow, point: string) => void;
+    "midi-qol.holdReleased": (workflow: import("./module/Workflow.js").Workflow, point: string) => void;
+    "midi-qol.holdOpened": (card: string) => void;
     "midi-qol.multiattackOpened": (actor: Actor.Implementation, run: import("./module/services/multiattack/run.js").MultiattackRun) => void;
       /** Condition data being built (createConditionData): add fields an item's conditions can refer to. */
       "midi-qol.conditionData": (conditionData: Record<string, unknown>, data: { workflow?: unknown, actor?: unknown, item?: unknown, target?: unknown }) => void;
@@ -212,6 +215,8 @@ declare module "fvtt-types/configuration" {
     "midi-qol.acknowledgedOverlaps": string[];
     /** M21: the GM's Multiattack plans, by creature key (compendium source, else actor:<uuid>) */
     "midi-qol.multiattackPlans": Record<string, import("./module/lib/multiattack.js").MultiattackPlan>;
+    /** M20: the points the GM holds every use at (lib/holds.ts) */
+    "midi-qol.gmHoldPoints": import("./module/lib/holds.js").HoldPoint[];
     "midi-qol.ConfigSettings": typeof configSettings;
     "midi-qol.CriticalDamage": string;
     "midi-qol.CriticalDamageGM": string;
@@ -375,6 +380,8 @@ declare module "fvtt-types/configuration" {
         bonusChoices?: import("./module/services/rollBonuses/standing.js").StoredStanding[];
         /** M15 stage 5e: choices remembered per question (lib/rememberedChoices.ts) */
         rememberedChoices?: import("./module/lib/rememberedChoices.js").RememberedChoice[];
+        /** M20: the points the GM holds this creature's uses at (lib/holds.ts) */
+        gmHold?: import("./module/lib/holds.js").HoldPoint[];
         dependentOn?: string; // UUID of parent document for midi-qol dependent tracking
         actions?: {
           // This really should be structured but actions.reaction is used in other modules and macros

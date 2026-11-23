@@ -44,7 +44,13 @@ export const STATE_KEYS = [
   // The use's choices (M28, lib/choices.ts): a list of { id, value }
   "choices",
   // The use's redirections (M29, lib/entries/redirection.ts): a list of { from, to?, label, at }
-  "redirections"
+  "redirections",
+  // M20: where the use is held (lib/holds.ts): { point, kind, since }, absent when not held
+  "hold",
+  // M20: the hold points already released (a resumed hold step goes on)
+  "holdsReleased",
+  // M20: the GM's changes to the outcome made at a hold (lib/holds.ts GmEdits)
+  "gmEdits"
 ] as const;
 export type StateKey = typeof STATE_KEYS[number];
 
@@ -120,6 +126,9 @@ export function cardStateSchema() {
       damageMessages: new ArrayField(new SchemaField({ key: new StringField({ blank: false }), id: new StringField({ blank: false }) }), unset),
       tagSnapshots: new ArrayField(new ObjectField(), unset),
       choices: new ArrayField(new ObjectField(), unset),
+      hold: new ObjectField({ ...unset, nullable: true }),
+      holdsReleased: new ArrayField(new StringField(), unset),
+      gmEdits: new ObjectField({ ...unset, nullable: true }),
       damageRules: new SchemaField({
         downgrade: new ArrayField(new StringField(), unset),
         ignore: new SchemaField(Object.fromEntries(RULE_IGNORES.map(category => [category, new ArrayField(new StringField(), unset)])), unset)

@@ -1,0 +1,37 @@
+<div class="midi-qol-holds-body">
+    <fieldset class="midi-qol-holds-where">
+        <legend>{{localize "midi-qol.Hold.Where"}}</legend>
+        <div class="midi-qol-holds-grid">
+            <span></span>
+            {{#each where}}<span class="midi-qol-holds-head">{{label}}</span>{{/each}}
+            <span>{{localize "midi-qol.Hold.EveryUse"}}</span>
+            {{#each where}}<input type="checkbox" data-action="holdWhere" data-scope="world" data-point="{{point}}" {{checked world}}>{{/each}}
+            <span>{{#if selectedNames}}{{selectedNames}}{{else}}<em>{{localize "midi-qol.Hold.NoneSelected"}}</em>{{/if}}</span>
+            {{#each where}}<input type="checkbox" data-action="holdWhere" data-scope="selected" data-point="{{point}}" {{checked selected}} {{#unless ../selectedNames}}disabled{{/unless}}>{{/each}}
+        </div>
+    </fieldset>
+    {{#unless held.length}}<p class="hint">{{localize "midi-qol.Hold.NothingHeld"}}</p>{{/unless}}
+    {{#each held}}
+    <fieldset class="midi-qol-holds-use" data-card="{{card}}">
+        <legend>{{speaker}}: {{item}} <span class="hint">({{point}})</span></legend>
+        {{#if attack}}
+        <label class="midi-qol-holds-critical"><input type="checkbox" data-edit="critical" {{checked critical}}> {{localize "midi-qol.Hold.Critical"}}</label>
+        {{/if}}
+        {{#each targets}}
+        <div class="midi-qol-holds-target">
+            {{#if img}}<img src="{{img}}" alt="">{{/if}}<span class="midi-qol-holds-name">{{name}}</span>
+            {{#if ../attack}}<label><input type="checkbox" data-edit="hit" data-target="{{uuid}}" {{checked hit}}> {{localize "midi-qol.Hold.Hit"}}</label>{{/if}}
+            {{#if ../saves}}<label><input type="checkbox" data-edit="saved" data-target="{{uuid}}" {{checked saved}}> {{localize "midi-qol.Hold.Saved"}}</label>{{/if}}
+            {{#if ../damage}}
+            <select data-edit="multiplier" data-target="{{uuid}}">{{#each ../multipliers}}<option value="{{value}}" {{#if (eq value ../multiplier)}}selected{{/if}}>{{label}}</option>{{/each}}</select>
+            <input type="number" data-edit="amount" data-target="{{uuid}}" value="{{amount}}" step="1" data-tooltip="midi-qol.Hold.AmountHint">
+            {{/if}}
+        </div>
+        {{/each}}
+        <div class="midi-qol-holds-buttons">
+            <button type="button" data-action="holdContinue"><i class="fa-solid fa-play"></i> {{localize "midi-qol.Hold.Continue"}}</button>
+            <button type="button" data-action="holdDrop"><i class="fa-solid fa-xmark"></i> {{localize "midi-qol.Hold.Drop"}}</button>
+        </div>
+    </fieldset>
+    {{/each}}
+</div>

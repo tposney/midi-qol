@@ -2605,3 +2605,16 @@ body.midi-qol-attack-primed #board { cursor: crosshair; }
 .midi-qol-multiattack-editor .midi-qol-multiattack-row multi-select { flex: 1 1 0; min-width: 0; }
 .midi-qol-multiattack-editor .midi-qol-multiattack-row input.midi-qol-multiattack-count { flex: 0 0 4rem; width: 4rem; }
 .midi-qol-multiattack-editor-body { flex: 1; min-height: 0; }
+/* M20: the GM's hold */
+.midi-qol-held { align-items: center; gap: 0.4rem; margin: 0.25rem 0; font-style: italic; }
+.midi-qol-held button { flex: 0 0 auto; width: auto; }
+.midi-qol-holds .midi-qol-holds-body { display: flex; flex-direction: column; gap: 0.4rem; }
+.midi-qol-holds .midi-qol-holds-grid { display: grid; grid-template-columns: 1fr repeat(4, auto); gap: 0.25rem 0.6rem; align-items: center; }
+.midi-qol-holds .midi-qol-holds-head { font-size: var(--font-size-12, 12px); text-align: center; }
+.midi-qol-holds .midi-qol-holds-grid input { justify-self: center; }
+.midi-qol-holds .midi-qol-holds-target { display: flex; align-items: center; gap: 0.5rem; margin: 0.2rem 0; }
+.midi-qol-holds .midi-qol-holds-target img { width: 28px; height: 28px; border: none; }
+.midi-qol-holds .midi-qol-holds-name { flex: 1; }
+.midi-qol-holds .midi-qol-holds-target select { flex: 0 0 4.5rem; }
+.midi-qol-holds .midi-qol-holds-target input[type="number"] { flex: 0 0 4rem; width: 4rem; }
+.midi-qol-holds .midi-qol-holds-buttons { display: flex; gap: 0.4rem; margin-top: 0.3rem; }

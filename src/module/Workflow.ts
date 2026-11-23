@@ -520,6 +520,34 @@ const stepForwarders = new WeakSet<Function>();
 export function workflowStepHost(workflow: Workflow): WorkflowStepHost { return stepHostOf(workflow); }
 
 /** M29: a redirection of the use (lib/entries/redirection.ts) */
+/** M20: a use held for the GM at a hold point (lib/holds.ts) */
+export interface UseHold {
+  /** "attack" | "saves" | "damage" | "effects" */
+  point: string;
+  /** "gm": the GM's hold; "confirm": the Confirm Roll Button's (the player may release it when the setting allows) */
+  kind: string;
+  /** When it was held (ms) */
+  since: number;
+}
+/** M20: the GM's change to one target's outcome at a hold */
+export interface GmTargetEdit {
+  /** The target's TokenDocument uuid */
+  uuid: string;
+  hit?: boolean;
+  saved?: boolean;
+  /** Damage this target takes: scaled by `multiplier`, then `amount` added (negative reduces) */
+  multiplier?: number;
+  amount?: number;
+}
+/**
+ * M20: the GM's changes to a use's outcome at a hold. A list per target, not an object keyed by uuid: a card update
+ * reads the dots in a key as a path
+ */
+export interface GmEdits {
+  critical?: boolean;
+  targets?: GmTargetEdit[];
+}
+
 export interface UseRedirection {
   /** TokenDocument uuids: the target redirected, and the new one (none: dropped, or at a hit, missed) */
   from: string;
@@ -1130,6 +1158,16 @@ export class Workflow {
     this.#persisted.setScalar("choices", [...kept, { id, value }]);
   }
   /** M29: the use's redirections, in order: a target replaced by another (`to`), or dropped / missed (`to` absent) */
+  /** M20: where the use is held for the GM (lib/holds.ts), stored on its card; undefined when it isn't */
+  get hold(): UseHold | undefined { return this.#persisted.scalar<UseHold | undefined>("hold", undefined) ?? undefined; }
+  set hold(hold: UseHold | undefined) { if (!this.readOnly) this.#persisted.setScalar("hold", hold); }
+  /** M20: the hold points released (the hold step, run again, goes on) */
+  get holdsReleased(): readonly string[] { return this.#persisted.scalar<string[]>("holdsReleased", []); }
+  releaseHoldPoint(point: string): void { if (!this.readOnly && !this.holdsReleased.includes(point)) this.#persisted.setScalar("holdsReleased", [...this.holdsReleased, point]); }
+  /** M20: the GM's changes to the outcome (lib/holds.ts) */
+  get gmEdits(): GmEdits { return this.#persisted.scalar<GmEdits | undefined>("gmEdits", undefined) ?? {}; }
+  set gmEdits(edits: GmEdits) { if (!this.readOnly) this.#persisted.setScalar("gmEdits", edits); }
+
   get redirections(): readonly UseRedirection[] { return this.#persisted.scalar<UseRedirection[]>("redirections", []); }
   /** M29: `from` is replaced by `to` in the use (dropped from it when absent), and the change recorded */
   redirect(from: TokenDocument.Implementation, to: TokenDocument.Implementation | undefined, record: Omit<UseRedirection, "from" | "to">): void {
