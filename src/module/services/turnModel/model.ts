@@ -13,7 +13,8 @@ import { availableInteractions, type InteractionOffer } from "../interactions/re
  * shows for a creature, computed by midi's services (the ledger, movement, cost and issues, interactions, the request
  * core) and cached: midi's bar, an Argon adapter, any HUD reads the same legality. Recomputed lazily after a change
  * that matters (the actor, its items and effects, the combat's turn, targets, the token's position), announced once per
- * change burst with `midi-qol.turnModelChanged` (the actor's uuid).
+ * change burst with `midi-qol.turnModelChanged` (the actor's uuid); a model already read is rebuilt before the
+ * announcement, so a reader's peek then has the new one.
  *
  *   const model = await MidiQOL.turnModel.get(token);   // or .peek(token) for the cached one
  */
@@ -152,7 +153,14 @@ function invalidate(actorUuid: string | undefined | null) {
     announce = undefined;
     const changed = [...dirty];
     dirty.clear();
-    for (const uuid of changed) Hooks.callAll("midi-qol.turnModelChanged", uuid);
+    // A model a HUD has read is rebuilt first, so the announcement's readers get the new one (peek, never the stale)
+    void Promise.all(changed.map(async uuid => {
+      if (settled.has(uuid)) {
+        const actor = fromUuidSync(uuid) as Actor.Implementation | null;
+        if (actor) { try { await getTurnModel(actor); } catch (err) { console.warn("midi-qol | turn model rebuild", err); } }
+      }
+      Hooks.callAll("midi-qol.turnModelChanged", uuid);
+    }));
   }, 100);
 }
 const invalidateAll = () => { for (const uuid of [...cache.keys(), ...settled.keys()]) invalidate(uuid); };
