@@ -2618,3 +2618,9 @@ body.midi-qol-attack-primed #board { cursor: crosshair; }
 .midi-qol-holds .midi-qol-holds-target select { flex: 0 0 4.5rem; }
 .midi-qol-holds .midi-qol-holds-target input[type="number"] { flex: 0 0 4rem; width: 4rem; }
 .midi-qol-holds .midi-qol-holds-buttons { display: flex; gap: 0.4rem; margin-top: 0.3rem; }
+/* M22b: the turn checklist */
+.midi-qol-checklist .midi-qol-checklist-body { display: flex; flex-direction: column; gap: 0.3rem; }
+.midi-qol-checklist .midi-qol-checklist-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0.2rem; }
+.midi-qol-checklist .midi-qol-checklist-list i { width: 1.2rem; text-align: center; }
+.midi-qol-checklist .midi-qol-checklist-limit { color: var(--color-level-warning, #c9a227); }
+.midi-qol-checklist .midi-qol-checklist-ending { font-style: italic; }

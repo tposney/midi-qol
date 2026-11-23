@@ -1,3 +1,4 @@
+import { combatOfToken } from "../../lib/tokenResolver.js";
 import { configSettings } from "../../settings.js";
 import { toggleStatus } from "../../utils.js";
 import { isForcedAction, speedFor } from "./movement.js";
@@ -37,7 +38,7 @@ export function registerStandAction() {
   };
 }
 
-const inCombat = (token: TokenDocument.Implementation) => !!(token.combatant as { combat?: { started?: boolean } } | null)?.combat?.started;
+const inCombat = (token: TokenDocument.Implementation) => !!combatOfToken(token);
 
 /**
  * The movement standing up takes: flags.midi-qol.movement.standCost when a feature sets it (the Athlete feat's Hop Up:

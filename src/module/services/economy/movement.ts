@@ -1,4 +1,4 @@
-import { tokenFor } from "../../lib/tokenResolver.js";
+import { tokenFor, combatOfToken } from "../../lib/tokenResolver.js";
 import { configSettings } from "../../settings.js";
 import { i18nFormat } from "../../../midi-qol.js";
 import { getTokenDocument, toggleStatus } from "../../utils.js";
@@ -45,8 +45,7 @@ export function speedFor(actor: Actor.Implementation | null | undefined, action:
 export function movementState(ref: MovementRef): MovementState | undefined {
   const token = tokenFor(ref);
   const actor = token?.actor;
-  const combatant = token?.combatant as { combat?: { started?: boolean } } | null | undefined;
-  if (!token || !actor || !combatant?.combat?.started) return undefined;
+  if (!token || !actor || !combatOfToken(token)) return undefined;
   const history = (token as unknown as { movementHistory?: { cost?: number | null }[] }).movementHistory ?? [];
   const spent = history.reduce((sum, waypoint) => sum + (Number.isFinite(waypoint.cost) ? Number(waypoint.cost) : 0), 0);
   const action = String((token as unknown as { movementAction?: string }).movementAction ?? "walk");

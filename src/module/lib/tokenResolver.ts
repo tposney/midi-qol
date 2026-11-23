@@ -106,3 +106,15 @@ function standInFor(actor: Actor.Implementation): TokenDocument.Implementation |
   standInDocs.add(doc);
   return doc;
 }
+
+
+/**
+ * The started combat a token is in. Core's `TokenDocument#combatant` looks only in the viewed combat (`game.combat`),
+ * which is another one when a world runs several (a scene-less one, another scene's): every started combat is asked.
+ */
+export function combatOfToken(token: TokenDocument.Implementation | null | undefined): Combat.Implementation | undefined {
+  if (!token) return undefined;
+  const own = (token.combatant as { combat?: Combat.Implementation } | null | undefined)?.combat;
+  if (own?.started) return own;
+  return game.combats?.find(combat => !!combat.started && combat.combatants.some(c => c.tokenId === token.id && (c.sceneId ?? combat.scene?.id) === token.parent?.id));
+}

@@ -220,6 +220,8 @@ declare module "fvtt-types/configuration" {
     "midi-qol.multiattackPlans": Record<string, import("./module/lib/multiattack.js").MultiattackPlan>;
     /** M20: the points the GM holds every use at (lib/holds.ts) */
     "midi-qol.gmHoldPoints": import("./module/lib/holds.js").HoldPoint[];
+    /** M22b: the player's turn checklist window */
+    "midi-qol.turnChecklist": boolean;
     "midi-qol.ConfigSettings": typeof configSettings;
     "midi-qol.CriticalDamage": string;
     "midi-qol.CriticalDamageGM": string;

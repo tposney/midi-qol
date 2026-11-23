@@ -12,6 +12,8 @@ import { defineMidiMultiattack } from "./module/services/multiattack/run.js";
 import { holdsApi, registerHolds } from "./module/lib/holds.js";
 import { HoldPanel, setupHoldPanel } from "./module/apps/HoldPanel.js";
 import { deferredApi, registerDeferredUses } from "./module/lib/deferred.js";
+import { checklistApi, setupChecklist } from "./module/lib/checklist.js";
+import { ChecklistPanel, registerChecklistSetting, setupChecklistPanel } from "./module/apps/ChecklistPanel.js";
 import { setupInteractionsHUD } from "./module/services/interactions/hud.js";
 import { registerDefaultInteractions } from "./module/services/interactions/defaults.js";
 import { registerGrappleInteractions } from "./module/services/interactions/grapple.js";
@@ -453,6 +455,7 @@ Object.assign(globalThis.MidiQOL, {
   multiattack: multiattackApi,
   holds: { ...holdsApi, open: () => HoldPanel.open() },
   deferred: deferredApi,
+  checklist: { ...checklistApi, open: (actor: Actor.Implementation) => ChecklistPanel.open(actor) },
   // Section 18, rule 4: anything's TokenDocument, and a TokenDocument's canvas Token (lib/tokenResolver.ts)
   tokenFor, tokenOf, isEphemeralToken,
   TokenDocumentSet,
@@ -623,6 +626,9 @@ Hooks.once('init', async function () {
   setupHoldPanel();
   // M22a: deferred uses (Readied Actions)
   registerDeferredUses();
+  // M22b: the turn checklist (contributors, panel)
+  setupChecklist();
+  setupChecklistPanel();
   registerTokenVisualProviders();
   setupTokenVisuals();
   setupSequencerLevelsFix();
@@ -710,6 +716,7 @@ Hooks.once('init', async function () {
   // Register custom module settings
   registerSettings();
   registerHudSetting();
+  registerChecklistSetting();
   registerTurnHudConfig();
   setupCompatibilityLine();
   // From 14.8.0 token sets give TokenDocuments whatever the setting says

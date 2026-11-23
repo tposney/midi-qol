@@ -1,0 +1,11 @@
+<div class="midi-qol-checklist-body">
+    <h4>{{localize "midi-qol.Checklist.Now"}}</h4>
+    {{#if now.length}}
+    <ul class="midi-qol-checklist-list">{{#each now}}<li class="midi-qol-checklist-{{kind}}"><i class="{{icon}}"></i> {{label}}{{#if detail}} <span class="hint">{{detail}}</span>{{/if}}</li>{{/each}}</ul>
+    {{else}}<p class="hint">{{localize "midi-qol.Checklist.Nothing"}}</p>{{/if}}
+    <h4>{{localize "midi-qol.Checklist.Before"}}</h4>
+    {{#if before.length}}
+    <ul class="midi-qol-checklist-list">{{#each before}}<li class="midi-qol-checklist-{{kind}}"><i class="{{icon}}"></i> {{label}}{{#if detail}} <span class="hint">{{detail}}</span>{{/if}}</li>{{/each}}</ul>
+    {{else}}<p class="hint">{{localize "midi-qol.Checklist.Nothing"}}</p>{{/if}}
+    {{#if canEnd}}<button type="button" data-action="checklistEndTurn"><i class="fa-solid fa-forward"></i> {{localize "midi-qol.Checklist.EndTurn"}}</button>{{/if}}
+</div>

@@ -33,6 +33,7 @@
     "checkActivityRange",
     "checkDistance",
     "checkIncapacitated",
+    "checklist",
     "checkNearby",
     "checkRule",
     "chooseEffect",

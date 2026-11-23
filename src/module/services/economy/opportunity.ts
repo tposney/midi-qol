@@ -1,4 +1,4 @@
-import { tokenFor } from "../../lib/tokenResolver.js";
+import { tokenFor, combatOfToken } from "../../lib/tokenResolver.js";
 import type { Activity } from "../../../globals.js";
 import { configSettings } from "../../settings.js";
 import { canSee, checkIncapacitated, createConditionData, doReactions, evalAllConditionsAsync, getTokenDocument, hasNoReactionsMarker, hasUsedReaction, midiFlag } from "../../utils.js";
@@ -73,7 +73,7 @@ export async function provokes(mover: TokenDocument.Implementation, reactor: Tok
 
 /** The hostiles that could take an opportunity attack at the mover now: in its combat, a reaction left, seeing it, a melee attack */
 export function possibleReactors(mover: TokenDocument.Implementation): { token: TokenDocument.Implementation, reach: number }[] {
-  const combat = (mover.combatant as { combat?: Combat.Implementation } | null)?.combat;
+  const combat = combatOfToken(mover);
   if (!combat?.started || !mover.actor) return [];
   const reactors: { token: TokenDocument.Implementation, reach: number }[] = [];
   for (const combatant of combat.combatants) {
@@ -99,7 +99,7 @@ const enterKey = (w: Watcher) => `${w.token.uuid}:enter`;
 
 /** The creatures whose reach the mover's path is checked against (in its running combat, on its level) */
 function watchersFor(mover: TokenDocument.Implementation): Watcher[] {
-  const combat = (mover.combatant as { combat?: Combat.Implementation } | null)?.combat;
+  const combat = combatOfToken(mover);
   if (!combat?.started || !mover.actor) return [];
   const watchers = new Map<string, Watcher>();
   if (configSettings.opportunityAttacks === "prompt")

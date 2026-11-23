@@ -1,6 +1,6 @@
 import type { Activity } from "../../../globals.js";
 import { requestsFor } from "../../lib/requests.js";
-import { tokenFor, type TokenRef } from "../../lib/tokenResolver.js";
+import { combatOfToken, tokenFor, type TokenRef } from "../../lib/tokenResolver.js";
 import { configSettings } from "../../settings.js";
 import { cost, grantedAttacks, type AttackGrant, type UseCost } from "../economy/cost.js";
 import { economyPolicy, issues, type UseIssue } from "../economy/issues.js";
@@ -8,6 +8,7 @@ import { budget, budgetKinds, isTracked, type BudgetKindId } from "../economy/le
 import { movementState, type MovementState } from "../economy/movement.js";
 import { availableInteractions, type InteractionOffer } from "../interactions/registry.js";
 import { multiattackState, type MultiattackState } from "../multiattack/service.js";
+import { checklistFor, type ChecklistItem } from "../../lib/checklist.js";
 
 /*
  * M7a: the turn model (proposal section 9; plan ~/Documents/midi-next-M7-plan-2026-11-23.md). One read of what a HUD
@@ -65,14 +66,14 @@ export interface TurnModel {
   interactions: { self: InteractionOffer[], target: InteractionOffer[], targetUuid?: string };
   /** Requests waiting on this creature (saves, reactions, offers) */
   pending: number;
+  /** M22b: the turn checklist: `start` items (now), `end` items (before ending) */
+  checklist: ChecklistItem[];
   computedAt: number;
 }
 
 
 
-function combatOf(token: TokenDocument.Implementation | undefined) {
-  return (token?.combatant as { combat?: Combat.Implementation } | null | undefined)?.combat;
-}
+const combatOf = (token: TokenDocument.Implementation | undefined) => combatOfToken(token);
 
 async function cellsOf(actor: Actor.Implementation): Promise<ActivityCell[]> {
   const cells: ActivityCell[] = [];
@@ -141,6 +142,8 @@ export async function buildTurnModel(ref: TokenRef): Promise<TurnModel | undefin
       ...(target?.uuid ? { targetUuid: target.uuid } : {})
     },
     pending: actor.uuid ? requestsFor(actor.uuid).length : 0,
+    // M22b: the turn checklist (start: now; end: before ending)
+    checklist: checklistFor(actor),
     computedAt: Date.now()
   };
 }
