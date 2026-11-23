@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { readFileSync, existsSync } from "node:fs";
+import { readFileSync, existsSync, readdirSync } from "node:fs";
 import { parseMultiattack, type ParsedPlan, type RawRef, type Count } from "../src/module/lib/multiattack.js";
 
 // SRD 5.2 (CC-BY 4.0) Multiattack descriptions from dnd5e's packs
@@ -11,7 +11,7 @@ const srdText = (actor: string) => {
 };
 
 /** A compact form of a plan: "2×[a|b] +use[c]? OR ... / REPLACE 1 of x with [y]" */
-const ref = (r: RawRef): string => r.kind === "attack" ? "ANY"
+const ref = (r: RawRef): string => r.kind === "attack" ? (r.range ? `ANY-${r.range}` : "ANY")
   : r.kind === "cast" ? `cast(${ref(r.via)}>${ref(r.spell)}${r.level ? "@" + r.level : ""})`
     : r.kind === "spell" ? (r.name ?? r.uuid ?? "?") : (r.name ?? r.activity ?? r.id ?? "?");
 const count = (n: Count) => typeof n === "object" ? ("formula" in n ? n.formula : n.text) : String(n);
@@ -76,6 +76,9 @@ describe("multiattack parser: forms", () => {
       .toBe("3×[mmDreadScythe000|mmDeathlyRay0000]");
     expect(compact(parseMultiattack("The [[lookup @name lowercase]] makes three [[/item Rend]]."))).toBe("3×[Rend]");
   });
+  it("attacks by kind (DMG 2024)", () => {
+    expect(compact(parseMultiattack("The scout makes two melee attacks or two ranged attacks."))).toBe("2×[ANY-melee] OR 2×[ANY-ranged]");
+  });
   it("replace any attack; replace with an attack", () => {
     expect(compact(parseMultiattack("It makes two [[/item .mmTentacleLash00]] attacks. It can replace any attack with a use of [[/item .mmMindRot0000000]].")))
       .toBe("2×[mmTentacleLash00] / REPLACE any with [mmMindRot0000000]");
@@ -99,11 +102,20 @@ describe("multiattack parser: whole corpora", () => {
     const failed = srd.filter(e => { const plan = parseMultiattack(e.description); return !plan || plan.unread.length; }).map(e => e.actor);
     expect(failed).toEqual(["Ancient Gold Dragon"]);
   });
-  // The 2024 Monster Manual's text is not committed: MIDI_MM_CORPUS names a local extract ([{ actor, desc }])
-  const mm = process.env.MIDI_MM_CORPUS;
-  it.skipIf(!mm || !existsSync(mm))("every Monster Manual 2024 Multiattack reads fully (local corpus)", () => {
-    const corpus: { actor: string, desc: string }[] = JSON.parse(readFileSync(mm!, "utf8"));
-    const failed = corpus.filter(e => { const plan = parseMultiattack(e.desc); return !plan || plan.unread.length; }).map(e => e.actor);
+  // The books' own text is never committed: `npm run corpus:books` extracts it from an installed Foundry into local/book-corpus/
+  const corpusDir = new URL("../local/book-corpus/", import.meta.url);
+  const books = existsSync(corpusDir) ? readdirSync(corpusDir).filter(f => f.endsWith(".json")) : [];
+  it.skipIf(!books.length)("the local book corpus is present (npm run corpus:books)", () => expect(books.length).toBeGreaterThan(0));
+  // 2014-rules books write Multiattack in the older prose ("one with its bite and two with its claws"), which the parser
+  // doesn't read (2024 only, user rule); their creatures get the link guess / the GM's plan
+  const LEGACY_2014 = ["dnd-tashas-cauldron."];
+  const legacy = (file: string) => LEGACY_2014.some(prefix => file.startsWith(prefix));
+  it.each(books.filter(f => !legacy(f)))("every Multiattack in %s reads fully (local corpus)", file => {
+    const corpus: { actor: string, desc: string, items?: { name: string, identifier: string | null }[] }[] = JSON.parse(readFileSync(new URL(file, corpusDir), "utf8"));
+    // The creature's item names, as the generator and midi pass them
+    const names = (e: typeof corpus[number]) => (e.items ?? []).filter(i => !/^multiattack/.test(i.identifier ?? "")).map(i => i.name);
+    const failed = corpus.filter(e => { const plan = parseMultiattack(e.desc, { names: names(e) }); return !plan || plan.unread.length; })
+      .map(e => `${e.actor}: ${e.desc.replace(/<[^>]+>/g, "").slice(0, 160)}`);
     expect(failed).toEqual([]);
   });
 });

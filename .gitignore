@@ -6,3 +6,5 @@ dist
 SRD
 stage/
 packages/*/dist
+# The books' text (npm run corpus:books): local only, never committed or packaged
+local/

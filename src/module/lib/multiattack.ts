@@ -25,7 +25,8 @@ export type RawRef =
   | { kind: "item", id?: string, activity?: string, name?: string }
   | { kind: "spell", uuid?: string, name?: string }
   | { kind: "cast", via: RawRef, spell: RawRef, level?: number }
-  | { kind: "attack" };
+  /** Any attack, or any melee / ranged one ("two melee attacks or two ranged attacks") */
+  | { kind: "attack", range?: "melee" | "ranged" };
 
 /** How many: a number, as many as allowed (replace any), a formula (summons), or a rule in words (the Hydra's heads) */
 export type Count = number | "any" | { formula: string } | { text: string };
@@ -89,8 +90,9 @@ export function tokenize(html: string, { names = [] }: ParseOptions = {}): Token
     // The books' slips: "makes makes", "makes on Bite", "The it makes"
     .replace(/\bmakes makes\b/gi, "makes").replace(/\bmakes on\b/gi, "makes one").replace(/\b[Tt]he it\b/g, "It");
   // Attacks named without a link: the creature's item names, longest first
+  const linked = refs.length;
   for (const name of [...names].filter(n => n && n.length > 2).sort((a, b) => b.length - a.length)) {
-    const re = new RegExp(`(?<![\\w⟦])${escape(name)}(?![\\w⟧])`, "g");
+    const re = new RegExp(`(?<![\\w⟦])${escape(name)}(?![\\w⟧])`, "gi");
     text = text.split(/(⟦[^⟧]*⟧)/).map(part => part.startsWith("⟦") ? part : part.replace(re, () => token({ kind: "item", name }))).join("");
   }
   // Without names: Title Case words before "attack(s)", and a spell named after "to cast"
@@ -101,7 +103,9 @@ export function tokenize(html: string, { names = [] }: ParseOptions = {}): Token
     .replace(/(?<=\buses )((?:[A-Z][\w'-]*)(?: [A-Z][\w'-]*)*)/g, (name: string) => token({ kind: "item", name }))
     .replace(/\bSpellcasting(?= to cast\b)/g, () => token({ kind: "item", name: "Spellcasting" })))
     .join("");
-  // A link with its name repeated in plain words after it (a slip: "[[/item .mmDreadScythe000]]Dread Scythe")
+  // A link with its name repeated in plain words after it (a slip: "[[/item .mmDreadScythe000]]Dread Scythe"): a
+  // name-matched reference right after a link is that repetition
+  text = text.replace(/(⟦(\d+)⟧)\s+⟦(\d+)⟧/g, (all: string, first: string, a: string, b: string) => Number(a) < linked && Number(b) >= linked ? first : all);
   text = text.replace(/(⟦\d+⟧) (?:[A-Z][\w'-]*)(?: [A-Z][\w'-]*)*(?= (?:or|and|in|attacks?)\b|,)/g, "$1");
   // "X to cast Y (level N version)": one cast reference
   text = text.replace(new RegExp(`⟦(\\d+)⟧\\s*to cast\\s*⟦(\\d+)⟧(?:\\s*\\(level (\\d+) version\\))?`, "g"), (_, via: string, spell: string, level?: string) =>
@@ -141,6 +145,8 @@ function readOption(body: string, refs: RawRef[], rolls: string[], unread: strin
       m => extra.push({ refs: refsIn(m[1], refs), ...(m[2] ? { ifAvailable: true } : {}) })],
     [new RegExp(`^(${COUNT}) (${LIST}) attacks?`, "i"),
       m => groups.push({ n: countOf(m[1]), refs: refsIn(m[2], refs) })],
+    [new RegExp(`^(${COUNT}) (melee|ranged) attacks?\\b`, "i"),
+      m => groups.push({ n: countOf(m[1]), refs: [{ kind: "attack", range: m[2].toLowerCase() as "melee" | "ranged" }] })],
     [new RegExp(`^(${COUNT}) attacks?\\b`, "i"),
       m => groups.push({ n: countOf(m[1]), refs: [{ kind: "attack" }] })],
     // "makes three Rend." (the word "attacks" missing)
