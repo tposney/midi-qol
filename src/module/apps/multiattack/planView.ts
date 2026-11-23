@@ -1,6 +1,6 @@
 import { i18n } from "../../../midi-qol.js";
 import type { MultiattackPlan, PlanGroup, PlanRef } from "../../lib/multiattack.js";
-import { slug } from "../../lib/multiattack.js";
+import { parseActivityRef, selectable, slug } from "../../lib/multiattack.js";
 import { spellInfo } from "../../services/multiattack/plans.js";
 
 /*
@@ -8,7 +8,8 @@ import { spellInfo } from "../../services/multiattack/plans.js";
  * creature's own item (its sheet's language), a cast as "Spellcasting: Guiding Bolt (level 2)".
  */
 
-type ItemSystem = { identifier?: string, activities?: { contents?: { type?: string, spell?: { uuid?: string } }[] } };
+type ActivityData = { id: string, name?: string | null, type?: string, spell?: { uuid?: string }, activation?: { type?: string }, midiProperties?: { automationOnly?: boolean } };
+type ItemSystem = { identifier?: string, activities?: { contents?: ActivityData[] } };
 
 const unslug = (s: string) => s.replace(/-/g, " ").replace(/\b\w/g, c => c.toUpperCase());
 
@@ -34,6 +35,16 @@ export function refName(actor: Actor.Implementation, ref: PlanRef): string {
       }
     }
     return `${casting?.name ?? unslug(via)}: ${spellName ?? unslug(spell)}${levelText}`;
+  }
+  // One activity: its item's name, with the activity's when the item has several to choose from ("Javelin: Thrown")
+  const exact = parseActivityRef(bare);
+  if (exact) {
+    const item = itemFor(exact.item);
+    const all = (item?.system as ItemSystem | undefined)?.activities?.contents ?? [];
+    const activity = all.find(a => a.id === exact.activity);
+    const choices = all.filter(a => selectable({ id: a.id, activation: a.activation?.type, automationOnly: a.midiProperties?.automationOnly }));
+    const name = item?.name ?? unslug(exact.item);
+    return activity && (choices.length > 1 || !choices.includes(activity)) ? `${name}: ${activity.name}` : name;
   }
   const item = itemFor(bare);
   return `${item?.name ?? unslug(bare)}${levelText}`;

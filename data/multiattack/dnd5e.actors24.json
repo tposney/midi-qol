@@ -12,7 +12,7 @@
          "formula": "ceil(@prof/2)"
         },
         "refs": [
-         "reaping-scythe"
+         "reaping-scythe.wVctw0oezV09wwg9"
         ]
        }
       ],
@@ -31,15 +31,15 @@
        {
         "n": 2,
         "refs": [
-         "tentacle"
+         "tentacle.EeiSFNs2NulOBg6i"
         ]
        }
       ],
       "extra": [
        {
         "refs": [
-         "consume-memories",
-         "dominate-mind"
+         "consume-memories.uI3HDQ1grN123Or3",
+         "dominate-mind.zdXAMnjaOcsVmLZP"
         ],
         "ifAvailable": true
        }
@@ -58,7 +58,7 @@
        {
         "n": 3,
         "refs": [
-         "rend"
+         "rend.VP3t6lmmuXKGCRwX"
         ]
        }
       ],
@@ -84,7 +84,7 @@
        {
         "n": 3,
         "refs": [
-         "rend"
+         "rend.VP3t6lmmuXKGCRwX"
         ]
        }
       ],
@@ -110,7 +110,7 @@
        {
         "n": 3,
         "refs": [
-         "rend"
+         "rend.VP3t6lmmuXKGCRwX"
         ]
        }
       ],
@@ -121,7 +121,8 @@
      {
       "n": 1,
       "refs": [
-       "sleep-breath",
+       "sleep-breath.6ce9oevQRWomSVSF",
+       "sleep-breath.EZma0lCmQeTuVuAL",
        "spellcasting>scorching-ray"
       ]
      }
@@ -137,7 +138,7 @@
        {
         "n": 3,
         "refs": [
-         "rend"
+         "rend.VP3t6lmmuXKGCRwX"
         ]
        }
       ],
@@ -148,7 +149,7 @@
      {
       "n": 1,
       "refs": [
-       "repulsion-breath",
+       "repulsion-breath.zuf9EEVj4nI1joaH",
        "spellcasting>guiding-bolt@2"
       ]
      }
@@ -164,7 +165,7 @@
        {
         "n": 3,
         "refs": [
-         "rend"
+         "rend.VP3t6lmmuXKGCRwX"
         ]
        }
       ],
@@ -175,7 +176,7 @@
      {
       "n": 1,
       "refs": [
-       "slowing-breath",
+       "slowing-breath.teMMQNDDIE9XkPN3",
        "spellcasting>mind-spike@4"
       ]
      }
@@ -191,7 +192,7 @@
        {
         "n": 3,
         "refs": [
-         "rend"
+         "rend.VP3t6lmmuXKGCRwX"
         ]
        }
       ],
@@ -203,7 +204,7 @@
       "n": 1,
       "refs": [
        "spellcasting>guiding-bolt@2",
-       "weakening-breath"
+       "weakening-breath.EGZ4bS4HpJkfNG9s"
       ]
      }
     ]
@@ -218,7 +219,7 @@
        {
         "n": 3,
         "refs": [
-         "rend"
+         "rend.VP3t6lmmuXKGCRwX"
         ]
        }
       ],
@@ -244,7 +245,7 @@
        {
         "n": 3,
         "refs": [
-         "rend"
+         "rend.VP3t6lmmuXKGCRwX"
         ]
        }
       ],
@@ -270,7 +271,7 @@
        {
         "n": 3,
         "refs": [
-         "rend"
+         "rend.VP3t6lmmuXKGCRwX"
         ]
        }
       ],
@@ -281,7 +282,7 @@
      {
       "n": 1,
       "refs": [
-       "paralyzing-breath",
+       "paralyzing-breath.r4MGqEq5U9aaseBh",
        "spellcasting>ice-knife"
       ]
      }
@@ -297,7 +298,7 @@
        {
         "n": 3,
         "refs": [
-         "rend"
+         "rend.VP3t6lmmuXKGCRwX"
         ]
        }
       ],
@@ -316,7 +317,7 @@
        {
         "n": 2,
         "refs": [
-         "thunderous-slam"
+         "thunderous-slam.pVkZ2YEgR7d0AjOg"
         ]
        }
       ],
@@ -335,7 +336,7 @@
        {
         "n": 3,
         "refs": [
-         "rend"
+         "rend.VP3t6lmmuXKGCRwX"
         ]
        }
       ],
@@ -361,7 +362,7 @@
        {
         "n": 3,
         "refs": [
-         "rend"
+         "rend.VP3t6lmmuXKGCRwX"
         ]
        }
       ],
@@ -387,7 +388,7 @@
        {
         "n": 3,
         "refs": [
-         "rend"
+         "rend.VP3t6lmmuXKGCRwX"
         ]
        }
       ],
@@ -398,7 +399,8 @@
      {
       "n": 1,
       "refs": [
-       "sleep-breath",
+       "sleep-breath.6ce9oevQRWomSVSF",
+       "sleep-breath.EZma0lCmQeTuVuAL",
        "spellcasting>scorching-ray@3"
       ]
      }
@@ -414,7 +416,7 @@
        {
         "n": 3,
         "refs": [
-         "rend"
+         "rend.VP3t6lmmuXKGCRwX"
         ]
        }
       ],
@@ -425,7 +427,7 @@
      {
       "n": 1,
       "refs": [
-       "repulsion-breath",
+       "repulsion-breath.zuf9EEVj4nI1joaH",
        "spellcasting>guiding-bolt@2"
       ]
      }
@@ -441,7 +443,7 @@
        {
         "n": 3,
         "refs": [
-         "rend"
+         "rend.VP3t6lmmuXKGCRwX"
         ]
        }
       ],
@@ -452,7 +454,7 @@
      {
       "n": 1,
       "refs": [
-       "slowing-breath",
+       "slowing-breath.teMMQNDDIE9XkPN3",
        "spellcasting>mind-spike@5"
       ]
      }
@@ -468,7 +470,7 @@
        {
         "n": 3,
         "refs": [
-         "rend"
+         "rend.VP3t6lmmuXKGCRwX"
         ]
        }
       ],
@@ -480,7 +482,7 @@
       "n": 1,
       "refs": [
        "spellcasting>guiding-bolt@4",
-       "weakening-breath"
+       "weakening-breath.EGZ4bS4HpJkfNG9s"
       ]
      }
     ]
@@ -496,7 +498,7 @@
        {
         "n": 3,
         "refs": [
-         "rend"
+         "rend.VP3t6lmmuXKGCRwX"
         ]
        }
       ],
@@ -522,7 +524,7 @@
        {
         "n": 3,
         "refs": [
-         "rend"
+         "rend.VP3t6lmmuXKGCRwX"
         ]
        }
       ],
@@ -548,7 +550,7 @@
        {
         "n": 3,
         "refs": [
-         "rend"
+         "rend.VP3t6lmmuXKGCRwX"
         ]
        }
       ],
@@ -559,7 +561,7 @@
      {
       "n": 1,
       "refs": [
-       "paralyzing-breath",
+       "paralyzing-breath.r4MGqEq5U9aaseBh",
        "spellcasting>ice-knife@2"
       ]
      }
@@ -575,7 +577,7 @@
        {
         "n": 3,
         "refs": [
-         "rend"
+         "rend.VP3t6lmmuXKGCRwX"
         ]
        }
       ],
@@ -594,7 +596,7 @@
        {
         "n": 2,
         "refs": [
-         "slam"
+         "slam.mEQjWdqU7zGv6Ott"
         ]
        }
       ],
@@ -613,7 +615,7 @@
        {
         "n": 2,
         "refs": [
-         "tail"
+         "tail.LLodCm31qWyIpHyK"
         ]
        }
       ],
@@ -632,7 +634,7 @@
        {
         "n": 2,
         "refs": [
-         "fist"
+         "fist.PklEq9HUdtd7Vghz"
         ]
        }
       ],
@@ -651,7 +653,7 @@
        {
         "n": 2,
         "refs": [
-         "bite"
+         "bite.xWlMeXFjELfSUWX9"
         ]
        }
       ],
@@ -670,7 +672,7 @@
        {
         "n": 4,
         "refs": [
-         "arcane-burst"
+         "arcane-burst.YeB7cBHXeaBqxxK2"
         ]
        }
       ],
@@ -689,8 +691,8 @@
        {
         "n": 3,
         "refs": [
-         "shortsword",
-         "light-crossbow"
+         "shortsword.42jdrHDfDRCcYeL4",
+         "light-crossbow.UYlAFnNzdcc3L81u"
         ]
        }
       ],
@@ -709,13 +711,13 @@
        {
         "n": 1,
         "refs": [
-         "flame-whip"
+         "flame-whip.sPRQe6Llftsg9xiX"
         ]
        },
        {
         "n": 1,
         "refs": [
-         "lightning-blade"
+         "lightning-blade.Pd0OXDusQbSepRl7"
         ]
        }
       ],
@@ -734,8 +736,8 @@
        {
         "n": 2,
         "refs": [
-         "scimitar",
-         "pistol"
+         "scimitar.YOx3cikY6oPu6Ojh",
+         "pistol.Zyg4dqUmd4VkNdov"
         ]
        }
       ],
@@ -754,13 +756,13 @@
        {
         "n": 1,
         "refs": [
-         "claws"
+         "claws.sd9m31XuipJgWhlM"
         ]
        },
        {
         "n": 1,
         "refs": [
-         "tail"
+         "tail.LLodCm31qWyIpHyK"
         ]
        }
       ],
@@ -771,7 +773,7 @@
        {
         "n": 2,
         "refs": [
-         "hurl-flame"
+         "hurl-flame.8smms17uUvt02XEm"
         ]
        }
       ],
@@ -790,13 +792,13 @@
        {
         "n": 1,
         "refs": [
-         "beard"
+         "beard.m3VvZz74hV95zwaB"
         ]
        },
        {
         "n": 1,
         "refs": [
-         "infernal-glaive"
+         "infernal-glaive.QV1oMxksn8BT14zw"
         ]
        }
       ],
@@ -815,14 +817,14 @@
        {
         "n": 1,
         "refs": [
-         "bite"
+         "bite.xWlMeXFjELfSUWX9"
         ]
        }
       ],
       "extra": [
        {
         "refs": [
-         "constrict"
+         "constrict.IgOMjRxAt7UISkJq"
         ]
        }
       ]
@@ -840,7 +842,7 @@
        {
         "n": 2,
         "refs": [
-         "rend"
+         "rend.VP3t6lmmuXKGCRwX"
         ]
        }
       ],
@@ -859,7 +861,7 @@
        {
         "n": 2,
         "refs": [
-         "rend"
+         "rend.VP3t6lmmuXKGCRwX"
         ]
        }
       ],
@@ -878,7 +880,7 @@
        {
         "n": 2,
         "refs": [
-         "rend"
+         "rend.VP3t6lmmuXKGCRwX"
         ]
        }
       ],
@@ -897,13 +899,13 @@
        {
         "n": 2,
         "refs": [
-         "claw"
+         "claw.W1T7dZnG8GMMwyEP"
         ]
        },
        {
         "n": 1,
         "refs": [
-         "infernal-sting"
+         "infernal-sting.nc4l1efsfjkTcPyT"
         ]
        }
       ],
@@ -922,7 +924,7 @@
        {
         "n": 2,
         "refs": [
-         "rend"
+         "rend.VP3t6lmmuXKGCRwX"
         ]
        }
       ],
@@ -941,13 +943,13 @@
        {
         "n": 1,
         "refs": [
-         "bite"
+         "bite.xWlMeXFjELfSUWX9"
         ]
        },
        {
         "n": 1,
         "refs": [
-         "claw"
+         "claw.W1T7dZnG8GMMwyEP"
         ]
        }
       ],
@@ -966,8 +968,8 @@
        {
         "n": 2,
         "refs": [
-         "javelin",
-         "morningstar"
+         "javelin.r1hUkUrLD8kqx8X0",
+         "morningstar.QIpweawAzbt4xw5h"
         ]
        }
       ],
@@ -986,7 +988,7 @@
        {
         "n": 2,
         "refs": [
-         "bite"
+         "bite.xWlMeXFjELfSUWX9"
         ]
        }
       ],
@@ -1005,7 +1007,7 @@
        {
         "n": 2,
         "refs": [
-         "bog-staff"
+         "bog-staff.2E6djFGr6W0o4fXc"
         ]
        }
       ],
@@ -1031,14 +1033,14 @@
        {
         "n": 1,
         "refs": [
-         "bite"
+         "bite.xWlMeXFjELfSUWX9"
         ]
        }
       ],
       "extra": [
        {
         "refs": [
-         "paralyzing-tentacles"
+         "paralyzing-tentacles.p157Iqz8s0M0VilW"
         ]
        }
       ]
@@ -1056,8 +1058,8 @@
        {
         "n": 2,
         "refs": [
-         "pike",
-         "longbow"
+         "pike.HjEJjclqCeGjAymL",
+         "longbow.b04WToYLVtgE03Dm"
         ]
        }
       ],
@@ -1076,14 +1078,14 @@
        {
         "n": 2,
         "refs": [
-         "chain"
+         "chain.xxaJRogpJ10CtbNx"
         ]
        }
       ],
       "extra": [
        {
         "refs": [
-         "conjure-infernal-chain"
+         "conjure-infernal-chain.9vCVJrzUZL0ra4w2"
         ]
        }
       ]
@@ -1101,19 +1103,20 @@
        {
         "n": 1,
         "refs": [
-         "ram"
+         "ram.z58sUDUmqxECJgT3"
         ]
        },
        {
         "n": 1,
         "refs": [
-         "bite"
+         "bite.xWlMeXFjELfSUWX9",
+         "bite.HN2sfAtHqDMjMLXF"
         ]
        },
        {
         "n": 1,
         "refs": [
-         "claw"
+         "claw.W1T7dZnG8GMMwyEP"
         ]
        }
       ],
@@ -1124,10 +1127,10 @@
      {
       "n": 1,
       "refs": [
-       "fire-breath"
+       "fire-breath.bDqgmtLG3zcVuqdi"
       ],
       "of": [
-       "claw"
+       "claw.W1T7dZnG8GMMwyEP"
       ]
      }
     ]
@@ -1142,14 +1145,14 @@
        {
         "n": 2,
         "refs": [
-         "pincer"
+         "pincer.3L2u4vI16JJ6lA0p"
         ]
        }
       ],
       "extra": [
        {
         "refs": [
-         "paralyzing-tentacles"
+         "paralyzing-tentacles.p157Iqz8s0M0VilW"
         ]
        }
       ]
@@ -1167,7 +1170,7 @@
        {
         "n": 2,
         "refs": [
-         "slam"
+         "slam.mEQjWdqU7zGv6Ott"
         ]
        }
       ],
@@ -1178,7 +1181,7 @@
        {
         "n": 3,
         "refs": [
-         "slam"
+         "slam.mEQjWdqU7zGv6Ott"
         ]
        }
       ],
@@ -1198,13 +1201,13 @@
        {
         "n": 1,
         "refs": [
-         "attach"
+         "attach.il0R60nmuwzk4EEU"
         ]
        },
        {
         "n": 2,
         "refs": [
-         "tail"
+         "tail.LLodCm31qWyIpHyK"
         ]
        }
       ],
@@ -1223,8 +1226,8 @@
        {
         "n": 2,
         "refs": [
-         "thunderous-mace",
-         "thundercloud"
+         "thunderous-mace.2NSwHPpxx2VDFUnb",
+         "thundercloud.YOCWTezNd6HcNU2j"
         ]
        }
       ],
@@ -1250,7 +1253,7 @@
        {
         "n": 2,
         "refs": [
-         "bite"
+         "bite.xWlMeXFjELfSUWX9"
         ]
        }
       ],
@@ -1269,7 +1272,7 @@
        {
         "n": 2,
         "refs": [
-         "holy-mace"
+         "holy-mace.75czZx6Tn56yWc59"
         ]
        }
       ],
@@ -1288,8 +1291,8 @@
        {
         "n": 3,
         "refs": [
-         "storm-blade",
-         "storm-bolt"
+         "storm-blade.52QxZ1kKyg39JYr6",
+         "storm-bolt.yFK9YkQVSAkJ5yIK"
         ]
        }
       ],
@@ -1308,14 +1311,14 @@
        {
         "n": 2,
         "refs": [
-         "slam"
+         "slam.mEQjWdqU7zGv6Ott"
         ]
        }
       ],
       "extra": [
        {
         "refs": [
-         "unsettling-visage"
+         "unsettling-visage.USxIbGZPLvfPnnoI"
         ],
         "ifAvailable": true
        }
@@ -1334,7 +1337,7 @@
        {
         "n": 3,
         "refs": [
-         "bite"
+         "bite.xWlMeXFjELfSUWX9"
         ]
        }
       ],
@@ -1345,7 +1348,7 @@
      {
       "n": 1,
       "refs": [
-       "tail"
+       "tail.LLodCm31qWyIpHyK"
       ]
      }
     ]
@@ -1360,8 +1363,8 @@
        {
         "n": 3,
         "refs": [
-         "foreleg",
-         "poison-burst"
+         "foreleg.5FBLocCqNmbD0Ntf",
+         "poison-burst.am9XxYZtSyBqs4RM"
         ]
        }
       ],
@@ -1380,8 +1383,8 @@
        {
         "n": 2,
         "refs": [
-         "vine-staff",
-         "verdant-wisp"
+         "vine-staff.aZLlS74cFCSgUbgg",
+         "verdant-wisp.B1OsrKxihj11gTHf"
         ]
        }
       ],
@@ -1400,8 +1403,8 @@
        {
         "n": 1,
         "refs": [
-         "vine-lash",
-         "thorn-burst"
+         "vine-lash.ViVXiFKnkpJofRtx",
+         "thorn-burst.z1CblIG3JjciJtO0"
         ]
        }
       ],
@@ -1426,8 +1429,8 @@
        {
         "n": 2,
         "refs": [
-         "slam",
-         "rock-launch"
+         "slam.mEQjWdqU7zGv6Ott",
+         "rock-launch.z4zn1dHXUn2ergXr"
         ]
        }
       ],
@@ -1446,8 +1449,8 @@
        {
         "n": 3,
         "refs": [
-         "heated-blade",
-         "hurl-flame"
+         "heated-blade.cM2KxAt6vAkdHLNC",
+         "hurl-flame.8smms17uUvt02XEm"
         ]
        }
       ],
@@ -1466,7 +1469,7 @@
        {
         "n": 2,
         "refs": [
-         "gore"
+         "gore.OeVR19Hp2kvxSNZv"
         ]
        }
       ],
@@ -1485,14 +1488,14 @@
        {
         "n": 3,
         "refs": [
-         "withering-sword"
+         "withering-sword.8WMmLWwn9re7DC9v"
         ]
        }
       ],
       "extra": [
        {
         "refs": [
-         "entangling-rope"
+         "entangling-rope.n8nEah4vbrEPphNF"
         ]
        }
       ]
@@ -1510,13 +1513,13 @@
        {
         "n": 1,
         "refs": [
-         "bite"
+         "bite.xWlMeXFjELfSUWX9"
         ]
        },
        {
         "n": 1,
         "refs": [
-         "claw"
+         "claw.W1T7dZnG8GMMwyEP"
         ]
        }
       ],
@@ -1535,13 +1538,13 @@
        {
         "n": 1,
         "refs": [
-         "battleaxe"
+         "battleaxe.WkTYphqhrW8RuuUm"
         ]
        },
        {
         "n": 1,
         "refs": [
-         "morningstar"
+         "morningstar.QIpweawAzbt4xw5h"
         ]
        }
       ],
@@ -1560,7 +1563,7 @@
        {
         "n": 2,
         "refs": [
-         "burn"
+         "burn.vhh6yvfoNiLDRNW8"
         ]
        }
       ],
@@ -1579,8 +1582,8 @@
        {
         "n": 2,
         "refs": [
-         "flame-sword",
-         "hammer-throw"
+         "flame-sword.TvkvoA1rnU7aUMQw",
+         "hammer-throw.eXyEiQcMktlGdyt8"
         ]
        }
       ],
@@ -1599,7 +1602,7 @@
        {
         "n": 2,
         "refs": [
-         "slam"
+         "slam.mEQjWdqU7zGv6Ott"
         ]
        }
       ],
@@ -1618,8 +1621,8 @@
        {
         "n": 2,
         "refs": [
-         "frost-axe",
-         "great-bow"
+         "frost-axe.iFTGcmvp6oEsMCDL",
+         "great-bow.7KL1ez7ganbU0Axi"
         ]
        }
       ],
@@ -1638,7 +1641,7 @@
        {
         "n": 2,
         "refs": [
-         "claw"
+         "claw.W1T7dZnG8GMMwyEP"
         ]
        }
       ],
@@ -1657,7 +1660,7 @@
        {
         "n": 2,
         "refs": [
-         "withering-touch"
+         "withering-touch.IbPE7bNI8RotVtpv"
         ]
        }
       ],
@@ -1676,7 +1679,7 @@
        {
         "n": 2,
         "refs": [
-         "bite"
+         "bite.xWlMeXFjELfSUWX9"
         ]
        }
       ],
@@ -1695,7 +1698,7 @@
        {
         "n": 2,
         "refs": [
-         "fist"
+         "fist.PklEq9HUdtd7Vghz"
         ]
        }
       ],
@@ -1714,14 +1717,14 @@
        {
         "n": 1,
         "refs": [
-         "bite"
+         "bite.xWlMeXFjELfSUWX9"
         ]
        }
       ],
       "extra": [
        {
         "refs": [
-         "constrict"
+         "constrict.IgOMjRxAt7UISkJq"
         ]
        }
       ]
@@ -1739,13 +1742,13 @@
        {
         "n": 1,
         "refs": [
-         "bite"
+         "bite.xWlMeXFjELfSUWX9"
         ]
        },
        {
         "n": 1,
         "refs": [
-         "tail"
+         "tail.LLodCm31qWyIpHyK"
         ]
        }
       ],
@@ -1764,7 +1767,7 @@
        {
         "n": 2,
         "refs": [
-         "rend"
+         "rend.VP3t6lmmuXKGCRwX"
         ]
        }
       ],
@@ -1783,13 +1786,13 @@
        {
         "n": 2,
         "refs": [
-         "claw"
+         "claw.W1T7dZnG8GMMwyEP"
         ]
        },
        {
         "n": 1,
         "refs": [
-         "sting"
+         "sting.ExJB3aZAPF3shVJA"
         ]
        }
       ],
@@ -1808,7 +1811,7 @@
        {
         "n": 2,
         "refs": [
-         "bite"
+         "bite.xWlMeXFjELfSUWX9"
         ]
        }
       ],
@@ -1827,15 +1830,20 @@
        {
         "n": 2,
         "refs": [
-         "pincer"
+         "pincer.3L2u4vI16JJ6lA0p"
         ]
        }
       ],
       "extra": [
        {
         "refs": [
-         "pummel",
-         "spellcasting"
+         "pummel.aae828c0Hue0XOMP",
+         "spellcasting>darkness",
+         "spellcasting>detect-magic",
+         "spellcasting>dispel-magic",
+         "spellcasting>confusion",
+         "spellcasting>fly",
+         "spellcasting>power-word-stun"
         ]
        }
       ]
@@ -1853,7 +1861,7 @@
        {
         "n": 3,
         "refs": [
-         "spear"
+         "spear.HiR3FA2Uc0oOAHU9"
         ]
        }
       ],
@@ -1864,7 +1872,7 @@
      {
       "n": 1,
       "refs": [
-       "shield-bash"
+       "shield-bash.eIErvLccVVCXiCSl"
       ]
      }
     ]
@@ -1879,8 +1887,10 @@
        {
         "n": 2,
         "refs": [
-         "scimitar",
-         "shortbow"
+         "scimitar.YOx3cikY6oPu6Ojh",
+         "scimitar.Hrmzb66QMA8iWGzN",
+         "shortbow.XTpNEcni4iwfmaeA",
+         "shortbow.txsTyS6AEG7lkbcF"
         ]
        }
       ],
@@ -1899,7 +1909,7 @@
        {
         "n": 2,
         "refs": [
-         "rend"
+         "rend.VP3t6lmmuXKGCRwX"
         ]
        }
       ],
@@ -1918,7 +1928,7 @@
        {
         "n": 2,
         "refs": [
-         "rend"
+         "rend.VP3t6lmmuXKGCRwX"
         ]
        }
       ],
@@ -1937,7 +1947,7 @@
        {
         "n": 2,
         "refs": [
-         "claw"
+         "claw.W1T7dZnG8GMMwyEP"
         ]
        }
       ],
@@ -1956,13 +1966,13 @@
        {
         "n": 1,
         "refs": [
-         "beak"
+         "beak.Z4M0zMA6a5PidURr"
         ]
        },
        {
         "n": 1,
         "refs": [
-         "tentacles"
+         "tentacles.nWfAZlRGSlOZbasr"
         ]
        }
       ],
@@ -1981,7 +1991,7 @@
        {
         "n": 2,
         "refs": [
-         "rend"
+         "rend.VP3t6lmmuXKGCRwX"
         ]
        }
       ],
@@ -2000,8 +2010,8 @@
        {
         "n": 2,
         "refs": [
-         "javelin",
-         "longsword"
+         "javelin.r1hUkUrLD8kqx8X0",
+         "longsword.BFZXotvvF4YaAKeT"
         ]
        }
       ],
@@ -2020,7 +2030,7 @@
        {
         "n": 2,
         "refs": [
-         "bite"
+         "bite.xWlMeXFjELfSUWX9"
         ]
        }
       ],
@@ -2031,7 +2041,7 @@
      {
       "n": "any",
       "refs": [
-       "poisonous-spittle"
+       "poisonous-spittle.r4plP8QiJxzFZZO7"
       ]
      }
     ]
@@ -2046,7 +2056,7 @@
        {
         "n": 2,
         "refs": [
-         "claw"
+         "claw.W1T7dZnG8GMMwyEP"
         ]
        }
       ],
@@ -2065,7 +2075,7 @@
        {
         "n": 2,
         "refs": [
-         "bite"
+         "bite.xWlMeXFjELfSUWX9"
         ]
        }
       ],
@@ -2084,7 +2094,7 @@
        {
         "n": 3,
         "refs": [
-         "rend"
+         "rend.VP3t6lmmuXKGCRwX"
         ]
        }
       ],
@@ -2103,8 +2113,8 @@
        {
         "n": 2,
         "refs": [
-         "tree-club",
-         "trash-lob"
+         "tree-club.uFMz2nKxqcVOJIGn",
+         "trash-lob.A6sqhe9XSGopzHCc"
         ]
        }
       ],
@@ -2123,7 +2133,7 @@
        {
         "n": 2,
         "refs": [
-         "rend"
+         "rend.VP3t6lmmuXKGCRwX"
         ]
        }
       ],
@@ -2142,7 +2152,7 @@
        {
         "n": 2,
         "refs": [
-         "bite"
+         "bite.xWlMeXFjELfSUWX9"
         ]
        }
       ],
@@ -2161,8 +2171,8 @@
        {
         "n": 2,
         "refs": [
-         "greatsword",
-         "longbow"
+         "greatsword.zi3BW6RGO2ugOyXu",
+         "longbow.b04WToYLVtgE03Dm"
         ]
        }
       ],
@@ -2181,8 +2191,8 @@
        {
         "n": 3,
         "refs": [
-         "searing-fork",
-         "hurl-flame"
+         "searing-fork.LL3qb6UYJsLkc4HX",
+         "hurl-flame.8smms17uUvt02XEm"
         ]
        }
       ],
@@ -2193,7 +2203,9 @@
      {
       "n": 1,
       "refs": [
-       "infernal-tail"
+       "infernal-tail.tJYeyUk3iPYJq9xM",
+       "infernal-tail.zZfCQ0IeJZCjPLzE",
+       "infernal-tail.Y1gjsHGtpvAX7J6J"
       ]
      }
     ]
@@ -2210,7 +2222,7 @@
          "text": true
         },
         "refs": [
-         "bite"
+         "bite.xWlMeXFjELfSUWX9"
         ]
        }
       ],
@@ -2229,7 +2241,7 @@
        {
         "n": 3,
         "refs": [
-         "ice-spear"
+         "ice-spear.Iwlro2vXHOQQgIWg"
         ]
        }
       ],
@@ -2240,7 +2252,7 @@
      {
       "n": 1,
       "refs": [
-       "tail"
+       "tail.LLodCm31qWyIpHyK"
       ]
      }
     ]
@@ -2255,7 +2267,7 @@
        {
         "n": 2,
         "refs": [
-         "restless-touch"
+         "restless-touch.EbLsg8CKlFLegU6p"
         ]
        }
       ],
@@ -2274,7 +2286,7 @@
        {
         "n": 3,
         "refs": [
-         "wind-swipe"
+         "wind-swipe.I1Wr7g5gPMPEe68k"
         ]
        }
       ],
@@ -2285,7 +2297,7 @@
      {
       "n": 1,
       "refs": [
-       "vortex"
+       "vortex.cZy0VYbCVY8aRB4z"
       ]
      }
     ]
@@ -2300,8 +2312,8 @@
        {
         "n": 2,
         "refs": [
-         "bladed-arm",
-         "fiery-bolt"
+         "bladed-arm.HhaIrcdH5A1WO9PG",
+         "fiery-bolt.cTIUSr5mWEJl1bhK"
         ]
        }
       ],
@@ -2320,8 +2332,8 @@
        {
         "n": 2,
         "refs": [
-         "greatsword",
-         "heavy-crossbow"
+         "greatsword.zi3BW6RGO2ugOyXu",
+         "heavy-crossbow.bZgdThKc69XEv43i"
         ]
        }
       ],
@@ -2340,16 +2352,18 @@
        {
         "n": 2,
         "refs": [
-         "tentacle"
+         "tentacle.EeiSFNs2NulOBg6i"
         ]
        }
       ],
       "extra": [
        {
         "refs": [
-         "fling",
-         "lightning-strike",
-         "swallow"
+         "fling.E7YKnUIWsavrnNzK",
+         "lightning-strike.v39JwGqgfaKiA4vc",
+         "swallow.zrWNjO9mkbN28spL",
+         "swallow.rGeGukkm2t2fXsoy",
+         "swallow.zSgQfHj7hyFnvfCK"
         ]
        }
       ]
@@ -2367,7 +2381,7 @@
        {
         "n": 2,
         "refs": [
-         "claw"
+         "claw.W1T7dZnG8GMMwyEP"
         ]
        }
       ],
@@ -2378,7 +2392,7 @@
      {
       "n": 1,
       "refs": [
-       "corrupting-touch"
+       "corrupting-touch.F4cByCi1IEouN08a"
       ]
      }
     ]
@@ -2393,8 +2407,8 @@
        {
         "n": 3,
         "refs": [
-         "eldritch-burst",
-         "paralyzing-touch"
+         "eldritch-burst.7SIsHe0xi4iBECPp",
+         "paralyzing-touch.rb8gqaec8uNffDCN"
         ]
        }
       ],
@@ -2413,7 +2427,7 @@
        {
         "n": 2,
         "refs": [
-         "rend"
+         "rend.VP3t6lmmuXKGCRwX"
         ]
        }
       ],
@@ -2424,7 +2438,7 @@
      {
       "n": 1,
       "refs": [
-       "roar"
+       "roar.Igeu89TALGlNPXDg"
       ]
      }
     ]
@@ -2439,7 +2453,7 @@
        {
         "n": 3,
         "refs": [
-         "arcane-burst"
+         "arcane-burst.YeB7cBHXeaBqxxK2"
         ]
        }
       ],
@@ -2458,7 +2472,7 @@
        {
         "n": 2,
         "refs": [
-         "gore"
+         "gore.OeVR19Hp2kvxSNZv"
         ]
        }
       ],
@@ -2477,8 +2491,8 @@
        {
         "n": 3,
         "refs": [
-         "rend",
-         "tail-spike"
+         "rend.VP3t6lmmuXKGCRwX",
+         "tail-spike.Hi3L4aVfmPvLRGMv"
         ]
        }
       ],
@@ -2497,14 +2511,14 @@
        {
         "n": 6,
         "refs": [
-         "pact-blade"
+         "pact-blade.eJZuoJjhMQzj3YKs"
         ]
        }
       ],
       "extra": [
        {
         "refs": [
-         "constrict"
+         "constrict.IgOMjRxAt7UISkJq"
         ]
        }
       ]
@@ -2522,13 +2536,13 @@
        {
         "n": 2,
         "refs": [
-         "claw"
+         "claw.W1T7dZnG8GMMwyEP"
         ]
        },
        {
         "n": 1,
         "refs": [
-         "snake-hair"
+         "snake-hair.1sGLrSobbfYouESi"
         ]
        }
       ],
@@ -2539,7 +2553,7 @@
        {
         "n": 3,
         "refs": [
-         "poison-ray"
+         "poison-ray.uv0fdmzTYDH7Uvg3"
         ]
        }
       ],
@@ -2558,9 +2572,9 @@
        {
         "n": 2,
         "refs": [
-         "bite",
-         "claw",
-         "harpoon"
+         "bite.xWlMeXFjELfSUWX9",
+         "claw.W1T7dZnG8GMMwyEP",
+         "harpoon.hyK7Ua3oC3S3KqGu"
         ]
        }
       ],
@@ -2579,14 +2593,14 @@
        {
         "n": 2,
         "refs": [
-         "rotting-fist"
+         "rotting-fist.8A7HEjh4kbkf9WwX"
         ]
        }
       ],
       "extra": [
        {
         "refs": [
-         "dreadful-glare"
+         "dreadful-glare.8LmlZfevSQkOxGSN"
         ]
        }
       ]
@@ -2604,15 +2618,15 @@
        {
         "n": 1,
         "refs": [
-         "rotting-fist",
-         "channel-negative-energy"
+         "rotting-fist.8A7HEjh4kbkf9WwX",
+         "channel-negative-energy.eURk5CrGOxmhQFbC"
         ]
        }
       ],
       "extra": [
        {
         "refs": [
-         "dreadful-glare"
+         "dreadful-glare.8LmlZfevSQkOxGSN"
         ]
        }
       ]
@@ -2630,7 +2644,7 @@
        {
         "n": 3,
         "refs": [
-         "rend"
+         "rend.VP3t6lmmuXKGCRwX"
         ]
        }
       ],
@@ -2649,7 +2663,7 @@
        {
         "n": 2,
         "refs": [
-         "claw"
+         "claw.W1T7dZnG8GMMwyEP"
         ]
        }
       ],
@@ -2668,7 +2682,7 @@
        {
         "n": 2,
         "refs": [
-         "claw"
+         "claw.W1T7dZnG8GMMwyEP"
         ]
        }
       ],
@@ -2687,8 +2701,8 @@
        {
         "n": 2,
         "refs": [
-         "claw",
-         "nightmare-ray"
+         "claw.W1T7dZnG8GMMwyEP",
+         "nightmare-ray.d2L9fUjAz35UAQ6q"
         ]
        }
       ],
@@ -2699,7 +2713,10 @@
      {
       "n": 1,
       "refs": [
-       "spellcasting"
+       "spellcasting>charm-person",
+       "spellcasting>darkness",
+       "spellcasting>gaseous-form",
+       "spellcasting>sleep"
       ]
      }
     ]
@@ -2714,13 +2731,13 @@
        {
         "n": 1,
         "refs": [
-         "bite"
+         "bite.xWlMeXFjELfSUWX9"
         ]
        },
        {
         "n": 2,
         "refs": [
-         "tentacle"
+         "tentacle.EeiSFNs2NulOBg6i"
         ]
        }
       ],
@@ -2739,7 +2756,7 @@
        {
         "n": 2,
         "refs": [
-         "rend"
+         "rend.VP3t6lmmuXKGCRwX"
         ]
        }
       ],
@@ -2758,7 +2775,7 @@
        {
         "n": 2,
         "refs": [
-         "bite"
+         "bite.xWlMeXFjELfSUWX9"
         ]
        }
       ],
@@ -2777,7 +2794,7 @@
        {
         "n": 2,
         "refs": [
-         "dagger"
+         "dagger.3SJSAL3pv9gKkAM9"
         ]
        }
       ],
@@ -2788,7 +2805,7 @@
      {
       "n": 1,
       "refs": [
-       "enthralling-panache"
+       "enthralling-panache.66IPjaLIJqqwvmrL"
       ]
      }
     ]
@@ -2803,8 +2820,8 @@
        {
         "n": 3,
         "refs": [
-         "rapier",
-         "pistol"
+         "rapier.0PGNisis4CVkSml5",
+         "pistol.Zyg4dqUmd4VkNdov"
         ]
        }
       ],
@@ -2823,19 +2840,19 @@
        {
         "n": 1,
         "refs": [
-         "bite"
+         "bite.xWlMeXFjELfSUWX9"
         ]
        },
        {
         "n": 2,
         "refs": [
-         "devilish-claw"
+         "devilish-claw.kml5NewVnZDx8Jry"
         ]
        },
        {
         "n": 1,
         "refs": [
-         "fiery-mace"
+         "fiery-mace.rHFw1T1I4Usm7cdj"
         ]
        }
       ],
@@ -2854,7 +2871,7 @@
        {
         "n": 3,
         "refs": [
-         "radiant-sword"
+         "radiant-sword.TxUnKwrsEHV6L5Ce"
         ]
        }
       ],
@@ -2865,7 +2882,7 @@
        {
         "n": 2,
         "refs": [
-         "holy-burst"
+         "holy-burst.HrgMO1rsQla47fff"
         ]
        }
       ],
@@ -2884,7 +2901,7 @@
        {
         "n": 2,
         "refs": [
-         "rend"
+         "rend.VP3t6lmmuXKGCRwX"
         ]
        }
       ],
@@ -2903,8 +2920,8 @@
        {
         "n": 2,
         "refs": [
-         "mace",
-         "radiant-flame"
+         "mace.KiHlb6kIDAvWmnhv",
+         "radiant-flame.DrH0dYeZLpW1dvVV"
         ]
        }
       ],
@@ -2923,7 +2940,7 @@
        {
         "n": 2,
         "refs": [
-         "bite"
+         "bite.xWlMeXFjELfSUWX9"
         ]
        }
       ],
@@ -2942,13 +2959,13 @@
        {
         "n": 1,
         "refs": [
-         "bite"
+         "bite.xWlMeXFjELfSUWX9"
         ]
        },
        {
         "n": 1,
         "refs": [
-         "tail-stinger"
+         "tail-stinger.zYAOR7GLu8t8ypzY"
         ]
        }
       ],
@@ -2967,7 +2984,7 @@
        {
         "n": 3,
         "refs": [
-         "cursed-touch"
+         "cursed-touch.HcqBp8F64ob9OEZi"
         ]
        }
       ],
@@ -2986,7 +3003,7 @@
        {
         "n": 2,
         "refs": [
-         "rend"
+         "rend.VP3t6lmmuXKGCRwX"
         ]
        }
       ],
@@ -3005,7 +3022,7 @@
        {
         "n": 2,
         "refs": [
-         "beak"
+         "beak.Z4M0zMA6a5PidURr"
         ]
        }
       ],
@@ -3016,7 +3033,7 @@
      {
       "n": 1,
       "refs": [
-       "talons"
+       "talons.xdrDC5kFs6sCOFiE"
       ]
      }
     ]
@@ -3031,20 +3048,20 @@
        {
         "n": 2,
         "refs": [
-         "tentacle"
+         "tentacle.EeiSFNs2NulOBg6i"
         ]
        },
        {
         "n": 2,
         "refs": [
-         "bite"
+         "bite.xWlMeXFjELfSUWX9"
         ]
        }
       ],
       "extra": [
        {
         "refs": [
-         "reel"
+         "reel.jWkEQYHBd7aht1kG"
         ]
        }
       ]
@@ -3062,13 +3079,13 @@
        {
         "n": 1,
         "refs": [
-         "bite"
+         "bite.xWlMeXFjELfSUWX9"
         ]
        },
        {
         "n": 2,
         "refs": [
-         "antennae"
+         "antennae.dcSC7EuknnM0uoqY"
         ]
        }
       ],
@@ -3087,7 +3104,7 @@
        {
         "n": 2,
         "refs": [
-         "rend"
+         "rend.VP3t6lmmuXKGCRwX"
         ]
        }
       ],
@@ -3106,7 +3123,7 @@
        {
         "n": 2,
         "refs": [
-         "claw"
+         "claw.W1T7dZnG8GMMwyEP"
         ]
        }
       ],
@@ -3125,7 +3142,7 @@
        {
         "n": 2,
         "refs": [
-         "flame-spear"
+         "flame-spear.s066Mk4LF1hYNdhB"
         ]
        }
       ],
@@ -3136,7 +3153,7 @@
      {
       "n": 1,
       "refs": [
-       "constrict"
+       "constrict.IgOMjRxAt7UISkJq"
       ]
      }
     ]
@@ -3151,8 +3168,8 @@
        {
         "n": 2,
         "refs": [
-         "shortsword",
-         "longbow"
+         "shortsword.42jdrHDfDRCcYeL4",
+         "longbow.b04WToYLVtgE03Dm"
         ]
        }
       ],
@@ -3171,7 +3188,7 @@
        {
         "n": 3,
         "refs": [
-         "charged-tendril"
+         "charged-tendril.l6jh00E0M7go9od0"
         ]
        }
       ],
@@ -3182,7 +3199,9 @@
      {
       "n": 1,
       "refs": [
-       "engulf"
+       "engulf.5o0Bh8PQaojx5XMx",
+       "engulf.Exfa4q7O4SvXjGt7",
+       "engulf.Ps27Q3biyThByJeQ"
       ]
      }
     ]
@@ -3197,7 +3216,7 @@
        {
         "n": 2,
         "refs": [
-         "fist"
+         "fist.PklEq9HUdtd7Vghz"
         ]
        }
       ],
@@ -3216,7 +3235,7 @@
        {
         "n": 2,
         "refs": [
-         "rend"
+         "rend.VP3t6lmmuXKGCRwX"
         ]
        }
       ],
@@ -3235,7 +3254,7 @@
        {
         "n": 2,
         "refs": [
-         "flying-sword"
+         "flying-sword.ZfY0kFhF2VC1rGy4"
         ]
        }
       ],
@@ -3246,7 +3265,7 @@
      {
       "n": 1,
       "refs": [
-       "slaying-bow"
+       "slaying-bow.C7BMf8hIfCjxRSWC"
       ]
      }
     ]
@@ -3261,7 +3280,7 @@
        {
         "n": 3,
         "refs": [
-         "claw"
+         "claw.W1T7dZnG8GMMwyEP"
         ]
        }
       ],
@@ -3280,14 +3299,16 @@
        {
         "n": 2,
         "refs": [
-         "claw"
+         "claw.W1T7dZnG8GMMwyEP"
         ]
        }
       ],
       "extra": [
        {
         "refs": [
-         "roar"
+         "roar.Igeu89TALGlNPXDg",
+         "roar.uFTndQPvULZVHT9R",
+         "roar.Td8ArIMDfxWDLbE9"
         ]
        }
       ]
@@ -3305,8 +3326,8 @@
        {
         "n": 3,
         "refs": [
-         "bite",
-         "necrotic-ray"
+         "bite.xWlMeXFjELfSUWX9",
+         "necrotic-ray.3Nx1sgEZtJ1OZjvT"
         ]
        }
       ],
@@ -3325,8 +3346,8 @@
        {
         "n": 2,
         "refs": [
-         "stone-club",
-         "boulder"
+         "stone-club.kl4hjoHrHh7nArDI",
+         "boulder.7ut7fKOPklypkFWa"
         ]
        }
       ],
@@ -3345,8 +3366,8 @@
        {
         "n": 2,
         "refs": [
-         "slam",
-         "force-bolt"
+         "slam.mEQjWdqU7zGv6Ott",
+         "force-bolt.S5O0aUU1pU4syS7J"
         ]
        }
       ],
@@ -3365,8 +3386,8 @@
        {
         "n": 2,
         "refs": [
-         "storm-sword",
-         "thunderbolt"
+         "storm-sword.WQ4iyI5JLgewSPuk",
+         "thunderbolt.8jqOskiu8rme8GbX"
         ]
        }
       ],
@@ -3385,15 +3406,15 @@
        {
         "n": 1,
         "refs": [
-         "fiendish-touch"
+         "fiendish-touch.x3tWUbetPLpqYAen"
         ]
        }
       ],
       "extra": [
        {
         "refs": [
-         "charm",
-         "draining-kiss"
+         "charm>dominate-person",
+         "draining-kiss.kFyuof0SS3nohP0f"
         ]
        }
       ]
@@ -3411,14 +3432,14 @@
        {
         "n": 1,
         "refs": [
-         "bite"
+         "bite.xWlMeXFjELfSUWX9"
         ]
        },
        {
         "n": 3,
         "refs": [
-         "claw",
-         "tail"
+         "claw.W1T7dZnG8GMMwyEP",
+         "tail.LLodCm31qWyIpHyK"
         ]
        }
       ],
@@ -3437,8 +3458,8 @@
        {
         "n": 2,
         "refs": [
-         "warhammer",
-         "heavy-crossbow"
+         "warhammer.jf99rIxqlwX1YLPc",
+         "heavy-crossbow.bZgdThKc69XEv43i"
         ]
        }
       ],
@@ -3457,7 +3478,7 @@
        {
         "n": 2,
         "refs": [
-         "slam"
+         "slam.mEQjWdqU7zGv6Ott"
         ]
        }
       ],
@@ -3476,7 +3497,8 @@
        {
         "n": 2,
         "refs": [
-         "gore"
+         "gore.OeVR19Hp2kvxSNZv",
+         "gore.iBenqFiBu40bUxkH"
         ]
        }
       ],
@@ -3495,7 +3517,7 @@
        {
         "n": 3,
         "refs": [
-         "rend"
+         "rend.VP3t6lmmuXKGCRwX"
         ]
        }
       ],
@@ -3514,13 +3536,13 @@
        {
         "n": 1,
         "refs": [
-         "bite"
+         "bite.xWlMeXFjELfSUWX9"
         ]
        },
        {
         "n": 1,
         "refs": [
-         "tail"
+         "tail.LLodCm31qWyIpHyK"
         ]
        }
       ],
@@ -3539,13 +3561,13 @@
        {
         "n": 1,
         "refs": [
-         "hooves"
+         "hooves.6U2Wc2qWocyuASbe"
         ]
        },
        {
         "n": 1,
         "refs": [
-         "radiant-horn"
+         "radiant-horn.rcQA5ENnF8qFMnmi"
         ]
        }
       ],
@@ -3564,14 +3586,15 @@
        {
         "n": 2,
         "refs": [
-         "grave-strike"
+         "grave-strike.cyu0AKgdlXdB7Mys"
         ]
        }
       ],
       "extra": [
        {
         "refs": [
-         "bite"
+         "bite.ngPzlEI5pVSdBv86",
+         "bite.oLqtEY8JoKIopB6u"
         ]
        }
       ]
@@ -3589,7 +3612,7 @@
        {
         "n": 2,
         "refs": [
-         "umbral-dagger"
+         "umbral-dagger.VWOxHrZXIWO7ZZeW"
         ]
        }
       ],
@@ -3608,14 +3631,14 @@
        {
         "n": 2,
         "refs": [
-         "claw"
+         "claw.W1T7dZnG8GMMwyEP"
         ]
        }
       ],
       "extra": [
        {
         "refs": [
-         "bite"
+         "bite.7mBlINHfcabm0DAr"
         ]
        }
       ]
@@ -3633,7 +3656,7 @@
        {
         "n": 2,
         "refs": [
-         "rotting-touch"
+         "rotting-touch.bIkOhgNITiwpcoBf"
         ]
        }
       ],
@@ -3652,7 +3675,7 @@
        {
         "n": 2,
         "refs": [
-         "shred"
+         "shred.FqjFemwAEXTADVsh"
         ]
        }
       ],
@@ -3671,8 +3694,8 @@
        {
         "n": 2,
         "refs": [
-         "greatsword",
-         "heavy-crossbow"
+         "greatsword.zi3BW6RGO2ugOyXu",
+         "heavy-crossbow.bZgdThKc69XEv43i"
         ]
        }
       ],
@@ -3691,7 +3714,7 @@
        {
         "n": 2,
         "refs": [
-         "slam"
+         "slam.mEQjWdqU7zGv6Ott"
         ]
        }
       ],
@@ -3710,8 +3733,8 @@
        {
         "n": 2,
         "refs": [
-         "handaxe",
-         "rend"
+         "handaxe.rkjuC3ZV4s9UpD0i",
+         "rend.VP3t6lmmuXKGCRwX"
         ]
        }
       ],
@@ -3722,7 +3745,7 @@
      {
       "n": 1,
       "refs": [
-       "bite"
+       "bite.xWlMeXFjELfSUWX9"
       ]
      }
     ]
@@ -3737,8 +3760,9 @@
        {
         "n": 2,
         "refs": [
-         "javelin",
-         "tusk"
+         "javelin.r1hUkUrLD8kqx8X0",
+         "tusk.4WhhkoNFnRKp1sv5",
+         "tusk.aoO5F7lV8yW9zdiD"
         ]
        }
       ],
@@ -3749,7 +3773,7 @@
      {
       "n": 1,
       "refs": [
-       "gore"
+       "gore.OeVR19Hp2kvxSNZv"
       ]
      }
     ]
@@ -3764,8 +3788,8 @@
        {
         "n": 2,
         "refs": [
-         "scratch",
-         "hand-crossbow"
+         "scratch.m9s3pmhoNA9tnQzX",
+         "hand-crossbow.CJjRI7JX8tziGFSo"
         ]
        }
       ],
@@ -3776,7 +3800,7 @@
      {
       "n": 1,
       "refs": [
-       "bite"
+       "bite.xWlMeXFjELfSUWX9"
       ]
      }
     ]
@@ -3791,8 +3815,8 @@
        {
         "n": 2,
         "refs": [
-         "scratch",
-         "longbow"
+         "scratch.m9s3pmhoNA9tnQzX",
+         "longbow.b04WToYLVtgE03Dm"
         ]
        }
       ],
@@ -3803,7 +3827,7 @@
      {
       "n": 1,
       "refs": [
-       "bite"
+       "bite.xWlMeXFjELfSUWX9"
       ]
      }
     ]
@@ -3818,8 +3842,8 @@
        {
         "n": 2,
         "refs": [
-         "scratch",
-         "longbow"
+         "scratch.m9s3pmhoNA9tnQzX",
+         "longbow.b04WToYLVtgE03Dm"
         ]
        }
       ],
@@ -3830,7 +3854,7 @@
      {
       "n": 1,
       "refs": [
-       "bite"
+       "bite.xWlMeXFjELfSUWX9"
       ]
      }
     ]
@@ -3845,7 +3869,7 @@
        {
         "n": 2,
         "refs": [
-         "rend"
+         "rend.VP3t6lmmuXKGCRwX"
         ]
        }
       ],
@@ -3864,8 +3888,8 @@
        {
         "n": 2,
         "refs": [
-         "necrotic-sword",
-         "necrotic-bow"
+         "necrotic-sword.FVbf8oZYqxmgsPgK",
+         "necrotic-bow.BlfhtejqUaKF5pUy"
         ]
        }
       ],
@@ -3876,7 +3900,8 @@
      {
       "n": 1,
       "refs": [
-       "life-drain"
+       "life-drain.FA4Mt9cXsYfHDDcs",
+       "life-drain.UbdasnhYW7Y78wUs"
       ]
      }
     ]
@@ -3891,13 +3916,13 @@
        {
         "n": 1,
         "refs": [
-         "bite"
+         "bite.xWlMeXFjELfSUWX9"
         ]
        },
        {
         "n": 1,
         "refs": [
-         "sting"
+         "sting.ExJB3aZAPF3shVJA"
         ]
        }
       ],
@@ -3916,13 +3941,13 @@
        {
         "n": 1,
         "refs": [
-         "bite"
+         "bite.xWlMeXFjELfSUWX9"
         ]
        },
        {
         "n": 3,
         "refs": [
-         "claw"
+         "claw.W1T7dZnG8GMMwyEP"
         ]
        }
       ],
@@ -3941,7 +3966,7 @@
        {
         "n": 3,
         "refs": [
-         "rend"
+         "rend.VP3t6lmmuXKGCRwX"
         ]
        }
       ],
@@ -3960,7 +3985,7 @@
        {
         "n": 3,
         "refs": [
-         "rend"
+         "rend.VP3t6lmmuXKGCRwX"
         ]
        }
       ],
@@ -3979,7 +4004,7 @@
        {
         "n": 3,
         "refs": [
-         "rend"
+         "rend.VP3t6lmmuXKGCRwX"
         ]
        }
       ],
@@ -3990,7 +4015,8 @@
      {
       "n": 2,
       "refs": [
-       "sleep-breath"
+       "sleep-breath.6ce9oevQRWomSVSF",
+       "sleep-breath.EZma0lCmQeTuVuAL"
       ]
      }
     ]
@@ -4005,7 +4031,7 @@
        {
         "n": 3,
         "refs": [
-         "rend"
+         "rend.VP3t6lmmuXKGCRwX"
         ]
        }
       ],
@@ -4016,7 +4042,7 @@
      {
       "n": 1,
       "refs": [
-       "repulsion-breath"
+       "repulsion-breath.zuf9EEVj4nI1joaH"
       ]
      }
     ]
@@ -4031,7 +4057,7 @@
        {
         "n": 3,
         "refs": [
-         "rend"
+         "rend.VP3t6lmmuXKGCRwX"
         ]
        }
       ],
@@ -4042,7 +4068,7 @@
      {
       "n": 1,
       "refs": [
-       "slowing-breath"
+       "slowing-breath.teMMQNDDIE9XkPN3"
       ]
      }
     ]
@@ -4057,7 +4083,7 @@
        {
         "n": 3,
         "refs": [
-         "rend"
+         "rend.VP3t6lmmuXKGCRwX"
         ]
        }
       ],
@@ -4068,7 +4094,7 @@
      {
       "n": 1,
       "refs": [
-       "weakening-breath"
+       "weakening-breath.EGZ4bS4HpJkfNG9s"
       ]
      }
     ]
@@ -4083,7 +4109,7 @@
        {
         "n": 3,
         "refs": [
-         "rend"
+         "rend.VP3t6lmmuXKGCRwX"
         ]
        }
       ],
@@ -4102,7 +4128,7 @@
        {
         "n": 3,
         "refs": [
-         "rend"
+         "rend.VP3t6lmmuXKGCRwX"
         ]
        }
       ],
@@ -4121,7 +4147,7 @@
        {
         "n": 3,
         "refs": [
-         "rend"
+         "rend.VP3t6lmmuXKGCRwX"
         ]
        }
       ],
@@ -4132,7 +4158,7 @@
      {
       "n": 1,
       "refs": [
-       "paralyzing-breath"
+       "paralyzing-breath.r4MGqEq5U9aaseBh"
       ]
      }
     ]
@@ -4147,7 +4173,7 @@
        {
         "n": 3,
         "refs": [
-         "rend"
+         "rend.VP3t6lmmuXKGCRwX"
         ]
        }
       ],
@@ -4231,14 +4257,14 @@
          "formula": "floor(@flags.dnd5e.summon.level / 2)"
         },
         "refs": [
-         "rend"
+         "rend.dnd5eactivity000"
         ]
        }
       ],
       "extra": [
        {
         "refs": [
-         "breath-weapon"
+         "breath-weapon.dnd5eactivity000"
         ]
        }
       ]

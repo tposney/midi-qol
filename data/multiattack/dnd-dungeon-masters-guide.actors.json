@@ -42,7 +42,7 @@
          "formula": "ceil(@prof/2)"
         },
         "refs": [
-         "reaping-scythe"
+         "reaping-scythe.wVctw0oezV09wwg9"
         ]
        }
       ],
@@ -61,7 +61,7 @@
        {
         "n": 2,
         "refs": [
-         "rend"
+         "rend.dnd5eactivity000"
         ]
        }
       ],
@@ -80,13 +80,13 @@
        {
         "n": 1,
         "refs": [
-         "bite"
+         "bite.dnd5eactivity000"
         ]
        },
        {
         "n": 1,
         "refs": [
-         "claw"
+         "claw.dnd5eactivity000"
         ]
        }
       ],
@@ -105,7 +105,7 @@
        {
         "n": 2,
         "refs": [
-         "gore"
+         "gore.dnd5eactivity000"
         ]
        }
       ],
@@ -124,7 +124,7 @@
        {
         "n": 2,
         "refs": [
-         "rend"
+         "rend.dnd5eactivity000"
         ]
        }
       ],
@@ -135,7 +135,7 @@
      {
       "n": 1,
       "refs": [
-       "roar"
+       "roar.dnd5eactivity000"
       ]
      }
     ]
@@ -150,14 +150,15 @@
        {
         "n": 1,
         "refs": [
-         "pounce"
+         "pounce.dnd5eactivity000",
+         "pounce.u6a7AR35PeLyFBw2"
         ]
        }
       ],
       "extra": [
        {
         "refs": [
-         "prowl"
+         "prowl.wQz9oa45HwcFYOjf"
         ]
        }
       ]
@@ -175,14 +176,15 @@
        {
         "n": 1,
         "refs": [
-         "pounce"
+         "pounce.dnd5eactivity000",
+         "pounce.Z24TI5GCHsymeIMf"
         ]
        }
       ],
       "extra": [
        {
         "refs": [
-         "prowl"
+         "prowl.Lrw1JpEOduwDOS0x"
         ]
        }
       ]

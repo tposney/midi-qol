@@ -3,7 +3,7 @@ import { openMultiattack, openRun, replanRun } from "./run.js";
 import { multiattackState } from "./service.js";
 import { MultiattackRunSheet, setupMultiattackSheet } from "../../apps/multiattack/MultiattackRunSheet.js";
 import { MultiattackPlanEditor, registerMultiattackSection } from "../../apps/multiattack/MultiattackPlanEditor.js";
-import { parseMultiattack, resolvePlan, slug, tokenize, type MultiattackPlan, type PlanItem, type PlanRef } from "../../lib/multiattack.js";
+import { activityRef, bindPlan, parseMultiattack, planRefs, resolvePlan, slug, tokenize, type MultiattackPlan, type PlanItem } from "../../lib/multiattack.js";
 
 /*
  * M21a: a creature's Multiattack plan (M21 plan, 21a). Looked up in order:
@@ -56,7 +56,7 @@ const urlCache = new Map<string, Promise<Record<string, unknown> | undefined>>()
 const SETTING = "multiattackPlans" as const;
 
 type Described = { system?: { description?: { value?: string }, identifier?: string, activities?: { contents?: Activity5e[] } }, flags?: Record<string, unknown> };
-type Activity5e = { id: string, type?: string, spell?: { uuid?: string } };
+type Activity5e = { id: string, type?: string, name?: string, spell?: { uuid?: string }, activation?: { type?: string }, midiProperties?: { automationOnly?: boolean } };
 
 /** Before `midi-qol.registerServices`: providers (midi's table among them) register in that hook */
 export function defineMultiattackPlansService() {
@@ -88,7 +88,10 @@ function planItems(actor: Actor.Implementation): PlanItem[] {
     const system = (item as Described).system;
     return {
       id: item.id ?? "", name: item.name ?? "", identifier: system?.identifier ?? null,
-      activities: (system?.activities?.contents ?? []).map(a => ({ id: a.id, type: a.type, ...(a.spell?.uuid ? { spell: a.spell.uuid } : {}) }))
+      activities: (system?.activities?.contents ?? []).map(a => ({
+        id: a.id, type: a.type, ...(a.name ? { name: a.name } : {}), ...(a.activation?.type ? { activation: a.activation.type } : {}),
+        ...(a.midiProperties?.automationOnly ? { automationOnly: true } : {}), ...(a.spell?.uuid ? { spell: a.spell.uuid } : {})
+      }))
     };
   });
 }
@@ -98,31 +101,29 @@ export const spellInfo = (uuid: string) => {
   return found ? { name: found.name, identifier: found.system?.identifier ?? null } : undefined;
 };
 
-/** The references a plan may use on this creature: item identifiers, casts and any attack/spell */
-function knownRefs(items: PlanItem[]): Set<string> {
-  const known = new Set<string>(["attack", "attack:melee", "attack:ranged", "spell"]);
+/** The references a plan may use on this creature: its activities, casts and any attack/spell; and its items (a cast's) */
+function knownRefs(items: PlanItem[]): { refs: Set<string>, items: Set<string> } {
+  const refs = new Set<string>(["attack", "attack:melee", "attack:ranged", "spell"]);
+  const ids = new Set<string>();
   for (const item of items) {
     const id = item.identifier || slug(item.name);
-    known.add(id);
+    ids.add(id);
     for (const activity of item.activities ?? []) {
+      refs.add(activityRef(id, activity.id));
       if (!activity.spell) continue;
       const spell = spellInfo(activity.spell);
       const spellId = spell?.identifier || (spell?.name ? slug(spell.name) : undefined);
-      if (spellId) { known.add(spellId); known.add(`${id}>${spellId}`); }
+      if (spellId) { refs.add(spellId); refs.add(`${id}>${spellId}`); }
     }
   }
-  return known;
+  return { refs, items: ids };
 }
 
-/** Refs of a plan the creature doesn't have ("spellcasting>guiding-bolt@4": its casting item counts) */
-function missingRefs(plan: MultiattackPlan, known: Set<string>): string[] {
-  const refs: PlanRef[] = [
-    ...plan.options.flatMap(o => [...o.groups.flatMap(g => g.refs), ...o.extra.flatMap(e => e.refs), ...(o.limits ?? []).flatMap(l => l.refs)]),
-    ...plan.replace.flatMap(r => [...r.refs, ...(r.of ?? [])])
-  ];
-  return [...new Set(refs.filter(ref => {
+/** Refs of a (bound) plan the creature doesn't have ("spellcasting>guiding-bolt@4": its casting item counts) */
+function missingRefs(plan: MultiattackPlan, known: { refs: Set<string>, items: Set<string> }): string[] {
+  return [...new Set(planRefs(plan).filter(ref => {
     const bare = ref.replace(/@\d+$/, "");
-    return !known.has(bare) && !known.has(bare.split(">")[0]);
+    return !known.refs.has(bare) && !(bare.includes(">") && known.items.has(bare.split(">")[0]));
   }))];
 }
 
@@ -218,16 +219,24 @@ export async function multiattackPlan(actor: Actor.Implementation | null | undef
   const names = items.filter(i => !/^multiattack/.test(i.identifier ?? "")).map(i => i.name);
   const known = knownRefs(items);
   const skipped: string[] = [];
+  // Each item reference made this creature's exact activities, once, as the plan is chosen (lib bindPlan)
+  const bind = (plan: MultiattackPlan) => bindPlan(plan, items, spellInfo);
   const done = (plan: MultiattackPlan, source: PlanSource, provider?: string): PlanLookup =>
     ({ plan: fillText(plan, item, names), source, ...(provider ? { provider } : {}), item, key, ...(skipped.length ? { skipped } : {}) });
 
   const gm = gmPlans()[key];
-  if (gm) return done(gm, "gm");
+  if (gm) {
+    const plan = bind(gm);
+    const missing = missingRefs(plan, known);
+    if (!missing.length) return done(plan, "gm");
+    skipped.push(`gm: ${missing.join(", ")} not on the creature`);
+  }
   for (const entry of entries(SERVICE)) {
     let plan: MultiattackPlan | undefined;
     try { plan = await fromProvider(entry.provider, actor, keys); }
     catch (err) { reportServiceProblem(SERVICE, entry.id, "its lookup failed and is skipped", err); continue; }
     if (!plan) continue;
+    plan = bind(plan);
     const missing = missingRefs(plan, known);
     if (missing.length) { skipped.push(`${entry.id}: ${missing.join(", ")} not on the creature`); continue; }
     return done(plan, "registered", entry.id);
@@ -235,12 +244,15 @@ export async function multiattackPlan(actor: Actor.Implementation | null | undef
   for (const text of textsOf(item)) {
     const parsed = parseMultiattack(text, { names });
     if (!parsed || parsed.unread.length) continue;
-    const plan = resolvePlan(parsed, { items, spell: spellInfo });
-    if (plan.unresolved) { skipped.push(`text: ${plan.unresolved.join(", ")} not on the creature`); continue; }
+    const resolved = resolvePlan(parsed, { items, spell: spellInfo });
+    if (resolved.unresolved) { skipped.push(`text: ${resolved.unresolved.join(", ")} not on the creature`); continue; }
+    const plan = bind(resolved);
+    const missing = missingRefs(plan, known);
+    if (missing.length) { skipped.push(`text: nothing usable on ${missing.join(", ")}`); continue; }
     return done(plan, "parsed");
   }
   const guess = guessPlan(item, items, names);
-  if (guess) return done(guess, "guess");
+  if (guess) return done(bind(guess), "guess");
   return { source: "none", item, key, ...(skipped.length ? { skipped } : {}) };
 }
 

@@ -10,13 +10,13 @@
        {
         "n": 1,
         "refs": [
-         "bite"
+         "bite.1DCPRqgfjI4oWbOC"
         ]
        },
        {
         "n": 1,
         "refs": [
-         "claws"
+         "claws.55JRHybjMZkpC1xz"
         ]
        }
       ],
@@ -54,8 +54,8 @@
        {
         "n": 3,
         "refs": [
-         "longsword",
-         "longbow"
+         "longsword.LGW3t2X2nfUFJZds",
+         "longbow.wUbkfkNeWbJ8jCwb"
         ]
        }
       ],
@@ -66,7 +66,7 @@
      {
       "n": 1,
       "refs": [
-       "bite"
+       "bite.BIC2AYcNH0OI1Qr5"
       ]
      }
     ]
@@ -81,14 +81,14 @@
        {
         "n": 1,
         "refs": [
-         "bite"
+         "bite.trR8sQ71cNzJkdST"
         ]
        },
        {
         "n": 1,
         "refs": [
-         "claws",
-         "harpoon"
+         "claws.u9CizsNHW7WkK8aT",
+         "harpoon.qdwNLQ3ccNkueQsZ"
         ]
        }
       ],
@@ -107,19 +107,19 @@
        {
         "n": 1,
         "refs": [
-         "bite"
+         "bite.dBx1TXvYYuXNKM65"
         ]
        },
        {
         "n": 1,
         "refs": [
-         "claws"
+         "claws.XPzKvnxmI7skPDUz"
         ]
        },
        {
         "n": 1,
         "refs": [
-         "tail"
+         "tail.FHOOWrMPxW40D20z"
         ]
        }
       ],
@@ -138,13 +138,13 @@
        {
         "n": 3,
         "refs": [
-         "claw"
+         "claw.V8AJRmzcYEgQL1Ds"
         ]
        },
        {
         "n": 1,
         "refs": [
-         "bite"
+         "bite.ToWwlIKLPbwuDPzM"
         ]
        }
       ],
@@ -163,20 +163,20 @@
        {
         "n": 1,
         "refs": [
-         "bite"
+         "bite.sBRhYjbbOPYry09i"
         ]
        },
        {
         "n": 2,
         "refs": [
-         "claw"
+         "claw.UmCTA8BwNxEjRNKh"
         ]
        }
       ],
       "extra": [
        {
         "refs": [
-         "frightful-presence"
+         "frightful-presence.2VOmvThI0bGdUsMt"
         ]
        }
       ]
@@ -194,13 +194,13 @@
        {
         "n": 1,
         "refs": [
-         "bite"
+         "bite.wmVXOmE3ddrgeBoq"
         ]
        },
        {
         "n": 1,
         "refs": [
-         "tail"
+         "tail.kGx5U5uLk1I9B9Ln"
         ]
        }
       ],
@@ -238,20 +238,20 @@
        {
         "n": 1,
         "refs": [
-         "bite"
+         "bite.9nwGbnNd9m6Tii4H"
         ]
        },
        {
         "n": 2,
         "refs": [
-         "claw"
+         "claw.WWvJGNtFT8ptAa4p"
         ]
        }
       ],
       "extra": [
        {
         "refs": [
-         "frightful-presence"
+         "frightful-presence.2VOmvThI0bGdUsMt"
         ]
        }
       ]
@@ -269,7 +269,7 @@
        {
         "n": 2,
         "refs": [
-         "greatsword"
+         "greatsword.8i6ZXsc5CRmGDsTJ"
         ]
        }
       ],
@@ -288,13 +288,13 @@
        {
         "n": 1,
         "refs": [
-         "beak"
+         "beak.mWBeRGlImJoySOrs"
         ]
        },
        {
         "n": 1,
         "refs": [
-         "talons"
+         "talons.bNps14bwzbRigzbt"
         ]
        }
       ],
@@ -333,7 +333,7 @@
        {
         "n": 3,
         "refs": [
-         "scimitar"
+         "scimitar.9uVMnJt6VcQmQLbp"
         ]
        }
       ],
@@ -352,7 +352,7 @@
        {
         "n": 2,
         "refs": [
-         "longsword"
+         "longsword.ZKzVOj8Lbvidoww0"
         ]
        }
       ],
@@ -371,13 +371,13 @@
        {
         "n": 1,
         "refs": [
-         "pike"
+         "pike.YlrG2T6BiMi3NE2c"
         ]
        },
        {
         "n": 1,
         "refs": [
-         "hooves"
+         "hooves.RkZcsxPzrqbF2SAS"
         ]
        }
       ],
@@ -388,7 +388,7 @@
        {
         "n": 2,
         "refs": [
-         "longbow"
+         "longbow.1ASAlWuZJlSpczSQ"
         ]
        }
       ],
@@ -407,7 +407,7 @@
        {
         "n": 2,
         "refs": [
-         "greatsword"
+         "greatsword.E2i5pPsf2Ob2O2bq"
         ]
        }
       ],
@@ -426,13 +426,13 @@
        {
         "n": 1,
         "refs": [
-         "beak"
+         "beak.lkibmRoOjNJ69VI1"
         ]
        },
        {
         "n": 1,
         "refs": [
-         "talons"
+         "talons.QEjyxKiDwYu2RYwW"
         ]
        }
       ],
@@ -451,7 +451,7 @@
        {
         "n": 2,
         "refs": [
-         "claw"
+         "claw.gapVDhmceJluckrC"
         ]
        }
       ],
@@ -470,13 +470,13 @@
        {
         "n": 1,
         "refs": [
-         "bite"
+         "bite.Lijuep4fa4UsSRNT"
         ]
        },
        {
         "n": 1,
         "refs": [
-         "stinger"
+         "stinger.wCU69sKMe2hPwIDA"
         ]
        }
       ],
@@ -487,7 +487,7 @@
      {
       "n": 1,
       "refs": [
-       "claws"
+       "claws.IV9aQWUvM8NMLnMJ"
       ]
      }
     ],
@@ -505,7 +505,7 @@
          "formula": "1d4"
         },
         "refs": [
-         "rotting-touch"
+         "rotting-touch.sgANbULItYQotifM"
         ]
        }
       ],
@@ -524,14 +524,14 @@
        {
         "n": 1,
         "refs": [
-         "bite"
+         "bite.9uTPD4hARRwFVuEZ"
         ]
        },
        {
         "n": 1,
         "refs": [
-         "claws",
-         "spear"
+         "claws.PgCGBioCQjiFzkux",
+         "spear.LZuT0kb3akVQ18gE"
         ]
        }
       ],
@@ -550,20 +550,20 @@
        {
         "n": 1,
         "refs": [
-         "bite"
+         "bite.6LLAhYHofQDuBBMz"
         ]
        },
        {
         "n": 2,
         "refs": [
-         "claw"
+         "claw.SBkWRvg4VheuyzmL"
         ]
        }
       ],
       "extra": [
        {
         "refs": [
-         "frightful-presence"
+         "frightful-presence.2VOmvThI0bGdUsMt"
         ]
        }
       ]
@@ -581,13 +581,13 @@
        {
         "n": 1,
         "refs": [
-         "bite"
+         "bite.7WNtVvJm9KV0p9gL"
         ]
        },
        {
         "n": 2,
         "refs": [
-         "claw"
+         "claw.i6qPvLGaTR36AbC8"
         ]
        }
       ],
@@ -606,7 +606,7 @@
        {
         "n": 2,
         "refs": [
-         "fist"
+         "fist.CqeyxHNsJDFH0D5H"
         ]
        }
       ],
@@ -625,7 +625,7 @@
        {
         "n": 2,
         "refs": [
-         "touch"
+         "touch.8AVbNMC2R4WCRU2P"
         ]
        }
       ],
@@ -644,14 +644,14 @@
        {
         "n": 1,
         "refs": [
-         "bites"
+         "bites.OvjlXOIYK3BASh3A"
         ]
        }
       ],
       "extra": [
        {
         "refs": [
-         "blinding-spittle"
+         "blinding-spittle.lIu1LNYAMT8FLBjR"
         ],
         "ifAvailable": true
        }
@@ -670,13 +670,13 @@
        {
         "n": 1,
         "refs": [
-         "beak"
+         "beak.Uj9eIClggy9D2twF"
         ]
        },
        {
         "n": 1,
         "refs": [
-         "talons"
+         "talons.0RSULshTJz2rUwEW"
         ]
        }
       ],
@@ -695,7 +695,7 @@
        {
         "n": 2,
         "refs": [
-         "greatclub"
+         "greatclub.bgQBDuHrYUhaj8jL"
         ]
        }
       ],
@@ -714,13 +714,13 @@
        {
         "n": 1,
         "refs": [
-         "beard"
+         "beard.mUG3YzXgashryiUW"
         ]
        },
        {
         "n": 1,
         "refs": [
-         "glaive"
+         "glaive.TU1j8fVk8TBXzMhl"
         ]
        }
       ],
@@ -739,13 +739,13 @@
        {
         "n": 2,
         "refs": [
-         "claw"
+         "claw.x8jHFZXZ6uSo3gSo"
         ]
        },
        {
         "n": 1,
         "refs": [
-         "sting"
+         "sting.SbiE2YyVwGiMRhp9"
         ]
        }
       ],
@@ -764,7 +764,7 @@
        {
         "n": 2,
         "refs": [
-         "morningstar"
+         "morningstar.HQWZhf9d6XWrPvqH"
         ]
        }
       ],
@@ -783,7 +783,7 @@
        {
         "n": 2,
         "refs": [
-         "greataxe"
+         "greataxe.LIB2QTQLrUHRijgA"
         ]
        }
       ],
@@ -802,13 +802,13 @@
        {
         "n": 1,
         "refs": [
-         "claws"
+         "claws.knax2PutduYG3Zon"
         ]
        },
        {
         "n": 1,
         "refs": [
-         "club"
+         "club.qkxHf81DGV25Jdf7"
         ]
        }
       ],
@@ -835,7 +835,7 @@
       "limits": [
        {
         "refs": [
-         "bite"
+         "bite.qfRSJgzbvfERgYJZ"
         ],
         "max": 1
        }
@@ -854,7 +854,7 @@
        {
         "n": 2,
         "refs": [
-         "mace"
+         "mace.Je2CIq96fuxMM98X"
         ]
        }
       ],
@@ -892,13 +892,13 @@
        {
         "n": 1,
         "refs": [
-         "bite"
+         "bite.PRA9mAKjfNsyjuEk"
         ]
        },
        {
         "n": 1,
         "refs": [
-         "claws"
+         "claws.oVqMtEiNwjO4Kf7W"
         ]
        }
       ],
@@ -925,7 +925,7 @@
       "limits": [
        {
         "refs": [
-         "bite"
+         "bite.7e7JMHdQoduWIiuN"
         ],
         "max": 1
        }
@@ -944,7 +944,7 @@
        {
         "n": 2,
         "refs": [
-         "shortsword"
+         "shortsword.DrjfQpjmYzkLXt1d"
         ]
        }
       ],
@@ -963,13 +963,13 @@
        {
         "n": 1,
         "refs": [
-         "bite"
+         "bite.CJfLU5RwQsSvSlt1"
         ]
        },
        {
         "n": 2,
         "refs": [
-         "claw"
+         "claw.bYNQf8JH8hyuEm9B"
         ]
        }
       ],
@@ -988,13 +988,13 @@
        {
         "n": 1,
         "refs": [
-         "hooves"
+         "hooves.MdDNojDK4vzgDsjU"
         ]
        },
        {
         "n": 1,
         "refs": [
-         "horn"
+         "horn.wioeORGdqnKXvk0B"
         ]
        }
       ],
@@ -1013,20 +1013,20 @@
        {
         "n": 1,
         "refs": [
-         "bite"
+         "bite.1E0iN6MV1lPPLeBe"
         ]
        },
        {
         "n": 2,
         "refs": [
-         "claw"
+         "claw.LUDSWNEXKz26naBu"
         ]
        }
       ],
       "extra": [
        {
         "refs": [
-         "frightful-presence"
+         "frightful-presence.2VOmvThI0bGdUsMt"
         ]
        }
       ]
@@ -1044,13 +1044,13 @@
        {
         "n": 2,
         "refs": [
-         "claw"
+         "claw.paXEQuoV3d4GVMRq"
         ]
        },
        {
         "n": 1,
         "refs": [
-         "sting"
+         "sting.BRDFOEVTGa4nSNNF"
         ]
        }
       ],
@@ -1069,13 +1069,13 @@
        {
         "n": 1,
         "refs": [
-         "bite"
+         "bite.PCDsjerLBKL8Ha5B"
         ]
        },
        {
         "n": 1,
         "refs": [
-         "tail"
+         "tail.B8vN7g6hCEV1QnnM"
         ]
        }
       ],
@@ -1094,13 +1094,13 @@
        {
         "n": 1,
         "refs": [
-         "bite"
+         "bite.XbMXjCM3rqFcQOlF"
         ]
        },
        {
         "n": 1,
         "refs": [
-         "tail"
+         "tail.YlHv59asNLRqQBT1"
         ]
        }
       ],
@@ -1120,7 +1120,7 @@
        {
         "n": 2,
         "refs": [
-         "slam"
+         "slam.hTs3I9jTENakoufi"
         ]
        }
       ],
@@ -1139,7 +1139,7 @@
        {
         "n": 2,
         "refs": [
-         "longsword"
+         "longsword.WiPiwHetnFkuRIlW"
         ]
        }
       ],
@@ -1166,7 +1166,7 @@
       "limits": [
        {
         "refs": [
-         "tusks"
+         "tusks.yD8VnkAQE3aSjm5d"
         ],
         "max": 1
        }
@@ -1187,7 +1187,7 @@
          "text": true
         },
         "refs": [
-         "bite"
+         "bite.RuswIbMTHwQjttYU"
         ]
        }
       ],
@@ -1206,7 +1206,7 @@
        {
         "n": 2,
         "refs": [
-         "fist"
+         "fist.abxlpbSPfRsEdDrL"
         ]
        }
       ],
@@ -1225,32 +1225,32 @@
        {
         "n": 1,
         "refs": [
-         "bite"
+         "bite.92Xy9sVAW1SGLDqU"
         ]
        },
        {
         "n": 2,
         "refs": [
-         "claw"
+         "claw.3uG0isVfCgGXrTki"
         ]
        },
        {
         "n": 1,
         "refs": [
-         "horns"
+         "horns.BfV0SMIIK4FZErFf"
         ]
        },
        {
         "n": 1,
         "refs": [
-         "tail"
+         "tail.A1miPzeeyp5pJLvD"
         ]
        }
       ],
       "extra": [
        {
         "refs": [
-         "frightful-presence"
+         "frightful-presence.2VOmvThI0bGdUsMt"
         ]
        }
       ]
@@ -1260,10 +1260,10 @@
      {
       "n": 1,
       "refs": [
-       "swallow"
+       "swallow.CfImu0j0eosWKdUO"
       ],
       "of": [
-       "bite"
+       "bite.92Xy9sVAW1SGLDqU"
       ]
      }
     ]
@@ -1278,13 +1278,13 @@
        {
         "n": 1,
         "refs": [
-         "battleaxe"
+         "battleaxe.lhhKYuLx7INexKvy"
         ]
        },
        {
         "n": 1,
         "refs": [
-         "morningstar"
+         "morningstar.1WIZlTWUCSRIx78G"
         ]
        }
       ],
@@ -1303,7 +1303,7 @@
        {
         "n": 2,
         "refs": [
-         "chain"
+         "chain.ha55OpmlvLYr0Sul"
         ]
        }
       ],
@@ -1322,8 +1322,9 @@
        {
         "n": 2,
         "refs": [
-         "claw-oni-form-only",
-         "glaive"
+         "claw-oni-form-only.g2x5QBL3gFRLCI98",
+         "glaive.gjPjqYhlKAk1tfGh",
+         "glaive.Rev09LWfUvsYkKwA"
         ]
        }
       ],
@@ -1342,7 +1343,7 @@
        {
         "n": 2,
         "refs": [
-         "scimitar"
+         "scimitar.4hJpASbmoD3v4PYe"
         ]
        }
       ],
@@ -1353,7 +1354,7 @@
       "extra": [
        {
         "refs": [
-         "hurl-flame"
+         "hurl-flame.xZJ09WeLSyJnsSrB"
         ]
        }
       ]
@@ -1371,20 +1372,20 @@
        {
         "n": 1,
         "refs": [
-         "bite"
+         "bite.DqSkjkOiXau92oGx"
         ]
        },
        {
         "n": 2,
         "refs": [
-         "claw"
+         "claw.JMAIJu4Yu2FrJS30"
         ]
        }
       ],
       "extra": [
        {
         "refs": [
-         "frightful-presence"
+         "frightful-presence.2VOmvThI0bGdUsMt"
         ]
        }
       ]
@@ -1402,13 +1403,13 @@
        {
         "n": 2,
         "refs": [
-         "fork"
+         "fork.GOj1PqH6UiCMpGE6"
         ]
        },
        {
         "n": 1,
         "refs": [
-         "tail"
+         "tail.Q2gyRnxRHxsSynrJ"
         ]
        }
       ],
@@ -1419,7 +1420,7 @@
      {
       "n": "any",
       "refs": [
-       "hurl-flame"
+       "hurl-flame.uTYhYlyZzG1zSeyc"
       ]
      }
     ]
@@ -1434,13 +1435,13 @@
        {
         "n": 1,
         "refs": [
-         "bite"
+         "bite.O8z7Cs8P9xFyz0sR"
         ]
        },
        {
         "n": 2,
         "refs": [
-         "claw"
+         "claw.eXwDAp6nwgR8UEU6"
         ]
        }
       ],
@@ -1451,7 +1452,7 @@
        {
         "n": 3,
         "refs": [
-         "tail-spike"
+         "tail-spike.j8OnWkTeN78TCLtw"
         ]
        }
       ],
@@ -1470,20 +1471,20 @@
        {
         "n": 1,
         "refs": [
-         "bite"
+         "bite.CYCyKd3yiMmYWXyh"
         ]
        },
        {
         "n": 2,
         "refs": [
-         "claw"
+         "claw.pDLU2g4oFV2W6xac"
         ]
        }
       ],
       "extra": [
        {
         "refs": [
-         "frightful-presence"
+         "frightful-presence.2VOmvThI0bGdUsMt"
         ]
        }
       ]
@@ -1501,14 +1502,14 @@
        {
         "n": 1,
         "refs": [
-         "claws"
+         "claws.1JP6zkCoXPJplOOT"
         ]
        },
        {
         "n": 1,
         "refs": [
-         "dagger",
-         "intoxicating-touch"
+         "dagger.1avamuTZVLYDu9tD",
+         "intoxicating-touch.3V6d0ubwK1XFr8yh"
         ]
        }
       ],
@@ -1527,7 +1528,7 @@
        {
         "n": 2,
         "refs": [
-         "slam"
+         "slam.aihBfPFVxXjMEPvS"
         ]
        }
       ],
@@ -1546,13 +1547,13 @@
        {
         "n": 1,
         "refs": [
-         "bite"
+         "bite.AuLEdCWLl2j0BHNQ"
         ]
        },
        {
         "n": 2,
         "refs": [
-         "claw"
+         "claw.0DeqrW42tQIOZ0yn"
         ]
        }
       ],
@@ -1571,7 +1572,7 @@
        {
         "n": 2,
         "refs": [
-         "shortsword"
+         "shortsword.1mPDAi9iuW8KCQrE"
         ]
        }
       ],
@@ -1582,7 +1583,7 @@
        {
         "n": 2,
         "refs": [
-         "longbow"
+         "longbow.V5covUT5xk8rUrVo"
         ]
        }
       ],
@@ -1601,13 +1602,13 @@
        {
         "n": 2,
         "refs": [
-         "pincer"
+         "pincer.wI906VcbZeDOJ8HT"
         ]
        },
        {
         "n": 2,
         "refs": [
-         "fist"
+         "fist.wCqEnfpnItvNyPj2"
         ]
        }
       ],
@@ -1618,7 +1619,7 @@
        {
         "n": 2,
         "refs": [
-         "pincer"
+         "pincer.wI906VcbZeDOJ8HT"
         ]
        }
       ],
@@ -1643,7 +1644,7 @@
        {
         "n": 2,
         "refs": [
-         "pincer"
+         "pincer.jCeyehMdpYV9FDa2"
         ]
        }
       ],
@@ -1662,7 +1663,7 @@
        {
         "n": 2,
         "refs": [
-         "bite"
+         "bite.wUrff11MI9tM41Bx"
         ]
        }
       ],
@@ -1681,13 +1682,13 @@
        {
         "n": 1,
         "refs": [
-         "bite"
+         "bite.oMB9uuqRLAc5qVXG"
         ]
        },
        {
         "n": 1,
         "refs": [
-         "tail-stinger"
+         "tail-stinger.LmNp8XIzKZAdNKyy"
         ]
        }
       ],
@@ -1706,13 +1707,13 @@
        {
         "n": 1,
         "refs": [
-         "bite"
+         "bite.WhrzWLxscqPrnwdY"
         ]
        },
        {
         "n": 2,
         "refs": [
-         "claw"
+         "claw.Kpwot7I6EO9GPGQN"
         ]
        }
       ],
@@ -1731,25 +1732,25 @@
        {
         "n": 1,
         "refs": [
-         "bite"
+         "bite.FwBmw1fKbjf4r7Fm"
         ]
        },
        {
         "n": 1,
         "refs": [
-         "claw"
+         "claw.dLSo535zC0amzPaJ"
         ]
        },
        {
         "n": 1,
         "refs": [
-         "mace"
+         "mace.BQgv1qZJeBWfYajj"
         ]
        },
        {
         "n": 1,
         "refs": [
-         "tail"
+         "tail.FBEeJj038NWWJaFH"
         ]
        }
       ],
@@ -1768,20 +1769,20 @@
        {
         "n": 1,
         "refs": [
-         "bite"
+         "bite.FiR7tdvkjreBzH8o"
         ]
        },
        {
         "n": 2,
         "refs": [
-         "claw"
+         "claw.7RUTJb9VWa8DsEyW"
         ]
        }
       ],
       "extra": [
        {
         "refs": [
-         "frightful-presence"
+         "frightful-presence.2VOmvThI0bGdUsMt"
         ]
        }
       ]
@@ -1799,7 +1800,7 @@
        {
         "n": 2,
         "refs": [
-         "greatclub"
+         "greatclub.0KnjXUfqPEAOde4c"
         ]
        }
       ],
@@ -1818,13 +1819,13 @@
        {
         "n": 1,
         "refs": [
-         "beak"
+         "beak.d6RdjPRSpU9NpPnt"
         ]
        },
        {
         "n": 1,
         "refs": [
-         "claws"
+         "claws.HTzSau7TScee5yKC"
         ]
        }
       ],
@@ -1843,14 +1844,14 @@
        {
         "n": 1,
         "refs": [
-         "rotting-fist"
+         "rotting-fist.jv3Uz0EcvkblTQiY"
         ]
        }
       ],
       "extra": [
        {
         "refs": [
-         "dreadful-glare"
+         "dreadful-glare.vBP1Ivo8gjkv4DVp"
         ]
        }
       ]
@@ -1868,20 +1869,20 @@
        {
         "n": 1,
         "refs": [
-         "bite"
+         "bite.guDbUP7UYOBJApzo"
         ]
        },
        {
         "n": 2,
         "refs": [
-         "claw"
+         "claw.MZQ5IElXCyYA3ftP"
         ]
        }
       ],
       "extra": [
        {
         "refs": [
-         "frightful-presence"
+         "frightful-presence.2VOmvThI0bGdUsMt"
         ]
        }
       ]
@@ -1918,7 +1919,7 @@
        {
         "n": 2,
         "refs": [
-         "slam"
+         "slam.BvArXzjf1Nf9tlsz"
         ]
        }
       ],
@@ -1937,13 +1938,13 @@
        {
         "n": 1,
         "refs": [
-         "bite"
+         "bite.njRxaQdS20BD1xbB"
         ]
        },
        {
         "n": 2,
         "refs": [
-         "claw"
+         "claw.l0vkYRXP4wQzne0M"
         ]
        }
       ],
@@ -1962,20 +1963,20 @@
        {
         "n": 1,
         "refs": [
-         "bite"
+         "bite.gy2zyxW3KtliG5Lr"
         ]
        },
        {
         "n": 2,
         "refs": [
-         "claw"
+         "claw.g9BaIe0jiu4SOdkI"
         ]
        }
       ],
       "extra": [
        {
         "refs": [
-         "frightful-presence"
+         "frightful-presence.2VOmvThI0bGdUsMt"
         ]
        }
       ]
@@ -1993,13 +1994,13 @@
        {
         "n": 1,
         "refs": [
-         "bite"
+         "bite.bVe7NI1oMIIDZFtW"
         ]
        },
        {
         "n": 1,
         "refs": [
-         "claws"
+         "claws.Y6UnYXsJBQ9YDNaR"
         ]
        }
       ],
@@ -2018,20 +2019,20 @@
        {
         "n": 1,
         "refs": [
-         "bite"
+         "bite.Y7PXRUvePPyCIKRn"
         ]
        },
        {
         "n": 2,
         "refs": [
-         "claw"
+         "claw.EWWd3aT1Vm8VIsJq"
         ]
        }
       ],
       "extra": [
        {
         "refs": [
-         "frightful-presence"
+         "frightful-presence.2VOmvThI0bGdUsMt"
         ]
        }
       ]
@@ -2049,7 +2050,7 @@
        {
         "n": 2,
         "refs": [
-         "slam"
+         "slam.3mDZxjv6zjBnFhP1"
         ]
        }
       ],
@@ -2068,13 +2069,13 @@
        {
         "n": 1,
         "refs": [
-         "bite"
+         "bite.qepPwTFb858W2XhE"
         ]
        },
        {
         "n": 2,
         "refs": [
-         "claw"
+         "claw.G6gbdmw4q4bRCIbS"
         ]
        }
       ],
@@ -2093,20 +2094,20 @@
        {
         "n": 1,
         "refs": [
-         "bite"
+         "bite.41FDpL4xge2xPaaT"
         ]
        },
        {
         "n": 2,
         "refs": [
-         "claw"
+         "claw.OHXV7VMZ9jPyp7YE"
         ]
        }
       ],
       "extra": [
        {
         "refs": [
-         "frightful-presence"
+         "frightful-presence.2VOmvThI0bGdUsMt"
         ]
        }
       ]
@@ -2124,13 +2125,13 @@
        {
         "n": 1,
         "refs": [
-         "bite"
+         "bite.5sIEQMJUOHi0U2yV"
         ]
        },
        {
         "n": 1,
         "refs": [
-         "claws"
+         "claws.hl4yrjwBynXySDdb"
         ]
        }
       ],
@@ -2149,20 +2150,20 @@
        {
         "n": 1,
         "refs": [
-         "bite"
+         "bite.2Uui3pY3SznnAUeI"
         ]
        },
        {
         "n": 2,
         "refs": [
-         "claw"
+         "claw.HVSLj8taf6IXcCe7"
         ]
        }
       ],
       "extra": [
        {
         "refs": [
-         "frightful-presence"
+         "frightful-presence.2VOmvThI0bGdUsMt"
         ]
        }
       ]
@@ -2180,7 +2181,7 @@
        {
         "n": 2,
         "refs": [
-         "slam"
+         "slam.nDd47lh9gTY9FyI5"
         ]
        }
       ],
@@ -2199,13 +2200,13 @@
        {
         "n": 1,
         "refs": [
-         "bite"
+         "bite.cY8p7Ce4gMraDHeo"
         ]
        },
        {
         "n": 2,
         "refs": [
-         "claws"
+         "claws.UcF34TzuiJ1ygCcz"
         ]
        }
       ],
@@ -2224,13 +2225,13 @@
        {
         "n": 6,
         "refs": [
-         "longsword"
+         "longsword.jESnw2fwUUBwYqrk"
         ]
        },
        {
         "n": 1,
         "refs": [
-         "tail"
+         "tail.gXLH8C1oOyQiIDoJ"
         ]
        }
       ],
@@ -2249,13 +2250,13 @@
        {
         "n": 1,
         "refs": [
-         "snake-hair"
+         "snake-hair.qfpiY1DP6UnpdJXb"
         ]
        },
        {
         "n": 2,
         "refs": [
-         "shortsword"
+         "shortsword.bN4HKmALSTSxQgLS"
         ]
        }
       ],
@@ -2266,7 +2267,7 @@
        {
         "n": 2,
         "refs": [
-         "longbow"
+         "longbow.btgLVJOYfXxbIVAl"
         ]
        }
       ],
@@ -2285,13 +2286,13 @@
        {
         "n": 1,
         "refs": [
-         "bite"
+         "bite.Z7O5AnW2r5H85zqG"
         ]
        },
        {
         "n": 2,
         "refs": [
-         "claw"
+         "claw.csbsHiKVzWcpNrsf"
         ]
        }
       ],
@@ -2340,7 +2341,7 @@
        {
         "n": 2,
         "refs": [
-         "slam"
+         "slam.nm03XHjdHsSX4VG2"
         ]
        }
       ],
@@ -2359,20 +2360,20 @@
        {
         "n": 1,
         "refs": [
-         "bite"
+         "bite.oEtxRtj1P38sv7Wl"
         ]
        },
        {
         "n": 2,
         "refs": [
-         "claw"
+         "claw.UFkJMHOD2eGruoN4"
         ]
        }
       ],
       "extra": [
        {
         "refs": [
-         "frightful-presence"
+         "frightful-presence.2VOmvThI0bGdUsMt"
         ]
        }
       ]
@@ -2390,20 +2391,20 @@
        {
         "n": 1,
         "refs": [
-         "bite"
+         "bite.0FLT9se4d2caBraE"
         ]
        },
        {
         "n": 2,
         "refs": [
-         "claw"
+         "claw.fHEfC68h7SFKbq2g"
         ]
        }
       ],
       "extra": [
        {
         "refs": [
-         "frightful-presence"
+         "frightful-presence.2VOmvThI0bGdUsMt"
         ]
        }
       ]
@@ -2421,13 +2422,13 @@
        {
         "n": 1,
         "refs": [
-         "beak"
+         "beak.V426Yj2vogoBYnvH"
         ]
        },
        {
         "n": 1,
         "refs": [
-         "claws"
+         "claws.VFVFZXJPIgX50VRY"
         ]
        }
       ],
@@ -2465,13 +2466,13 @@
        {
         "n": 1,
         "refs": [
-         "bite"
+         "bite.r3KzkbLDvuc7AeNO"
         ]
        },
        {
         "n": 1,
         "refs": [
-         "claws"
+         "claws.c6rfwIFdpg5Xz1p7"
         ]
        }
       ],
@@ -2490,13 +2491,13 @@
        {
         "n": 1,
         "refs": [
-         "bite"
+         "bite.K99jewYF6rSzbYcU"
         ]
        },
        {
         "n": 2,
         "refs": [
-         "claw"
+         "claw.dB1ARqTthnAXU642"
         ]
        }
       ],
@@ -2515,20 +2516,20 @@
        {
         "n": 1,
         "refs": [
-         "bite"
+         "bite.32rE7dA5tg1Lvuel"
         ]
        },
        {
         "n": 2,
         "refs": [
-         "claw"
+         "claw.0MEgk8ilop0E7LVg"
         ]
        }
       ],
       "extra": [
        {
         "refs": [
-         "frightful-presence"
+         "frightful-presence.2VOmvThI0bGdUsMt"
         ]
        }
       ]
@@ -2546,13 +2547,13 @@
        {
         "n": 1,
         "refs": [
-         "bite"
+         "bite.oAH5PPIJwHjFJ4TD"
         ]
        },
        {
         "n": 2,
         "refs": [
-         "tentacle"
+         "tentacle.ZxmWa2TEZOlGYnGd"
         ]
        }
       ],
@@ -2571,7 +2572,7 @@
        {
         "n": 3,
         "refs": [
-         "tentacle"
+         "tentacle.3DduUcVgHehbNLfl"
         ]
        }
       ],
@@ -2582,7 +2583,7 @@
      {
       "n": "any",
       "refs": [
-       "fling"
+       "fling.sJvtsq6W2RMb5ekp"
       ]
      }
     ]
@@ -2597,19 +2598,19 @@
        {
         "n": 1,
         "refs": [
-         "bite"
+         "bite.14xxw348h8nOjeyj"
         ]
        },
        {
         "n": 1,
         "refs": [
-         "horns"
+         "horns.dehUm2egStzGiTmH"
         ]
        },
        {
         "n": 1,
         "refs": [
-         "claws"
+         "claws.KbRTR4geYKi84FOB"
         ]
        }
       ],
@@ -2620,11 +2621,11 @@
      {
       "n": 1,
       "refs": [
-       "fire-breath"
+       "fire-breath.hgZyMXNDniRUKwjz"
       ],
       "of": [
-       "bite",
-       "horns"
+       "bite.14xxw348h8nOjeyj",
+       "horns.dehUm2egStzGiTmH"
       ]
      }
     ]
@@ -2639,13 +2640,13 @@
        {
         "n": 1,
         "refs": [
-         "bite"
+         "bite.o1neeolx8p8YS6Xq"
         ]
        },
        {
         "n": 1,
         "refs": [
-         "claws"
+         "claws.KlF5M94TQaJQnqxZ"
         ]
        }
       ],
@@ -2664,7 +2665,7 @@
        {
         "n": 2,
         "refs": [
-         "greatsword"
+         "greatsword.dnd5eactivity000"
         ]
        }
       ],
@@ -2683,14 +2684,14 @@
        {
         "n": 1,
         "refs": [
-         "bite"
+         "bite.MfaELsohwxdvMf3r"
         ]
        },
        {
         "n": 1,
         "refs": [
-         "claws",
-         "spear"
+         "claws.eMvpywKi1Rc6v4Hj",
+         "spear.tIsZfejd2Hp1B8tc"
         ]
        }
       ],
@@ -2709,7 +2710,7 @@
        {
         "n": 2,
         "refs": [
-         "mace"
+         "mace.M8lPcafjU9MMGswf"
         ]
        }
       ],
@@ -2728,13 +2729,13 @@
        {
         "n": 1,
         "refs": [
-         "bite"
+         "bite.cYV8ujqP4bkhYX6u"
         ]
        },
        {
         "n": 2,
         "refs": [
-         "claw"
+         "claw.bUrcp6X5enDY8LzR"
         ]
        }
       ],
@@ -2772,7 +2773,7 @@
        {
         "n": 2,
         "refs": [
-         "claw"
+         "claw.jm8c4TLwHfyFJGYS"
         ]
        }
       ],
@@ -2791,7 +2792,7 @@
        {
         "n": 2,
         "refs": [
-         "slam"
+         "slam.FZDeCzSni5i3A4Iw"
         ]
        }
       ],
@@ -2810,7 +2811,7 @@
        {
         "n": 2,
         "refs": [
-         "slam"
+         "slam.sNtjR6slxMe2GYJb"
         ]
        }
       ],
@@ -2829,7 +2830,7 @@
        {
         "n": 2,
         "refs": [
-         "claw"
+         "claw.81fzcSes1UdjRU30"
         ]
        }
       ],
@@ -2848,13 +2849,13 @@
        {
         "n": 1,
         "refs": [
-         "bite"
+         "bite.u39pQpOJKfrmP1RX"
         ]
        },
        {
         "n": 1,
         "refs": [
-         "claws"
+         "claws.DRiTXqfcOglYVjoz"
         ]
        }
       ],
@@ -2873,13 +2874,13 @@
        {
         "n": 1,
         "refs": [
-         "beak"
+         "beak.m936JSwkd0zIbX5l"
         ]
        },
        {
         "n": 1,
         "refs": [
-         "talons"
+         "talons.NAV9V7Jt3KY9qYqQ"
         ]
        }
       ],
@@ -2898,20 +2899,20 @@
        {
         "n": 1,
         "refs": [
-         "bite"
+         "bite.5Z0jybBI8MwnsD61"
         ]
        },
        {
         "n": 2,
         "refs": [
-         "claw"
+         "claw.dnd5eactivity000"
         ]
        }
       ],
       "extra": [
        {
         "refs": [
-         "frightful-presence"
+         "frightful-presence.2VOmvThI0bGdUsMt"
         ]
        }
       ]
@@ -2929,20 +2930,20 @@
        {
         "n": 1,
         "refs": [
-         "bite"
+         "bite.GMQaeBoStSpCgyv9"
         ]
        },
        {
         "n": 2,
         "refs": [
-         "claw"
+         "claw.Iow7Kz6W2quNDUSz"
         ]
        }
       ],
       "extra": [
        {
         "refs": [
-         "frightful-presence"
+         "frightful-presence.2VOmvThI0bGdUsMt"
         ]
        }
       ]
@@ -2960,13 +2961,13 @@
        {
         "n": 1,
         "refs": [
-         "bite"
+         "bite.JiWopTmontrQr61u"
         ]
        },
        {
         "n": 2,
         "refs": [
-         "claw"
+         "claw.vsIDDMQkwnjUq0B8"
         ]
        }
       ],
@@ -2985,7 +2986,7 @@
        {
         "n": 2,
         "refs": [
-         "claw"
+         "claw.edPztdn9nDIBu6Pc"
         ]
        }
       ],
@@ -3004,20 +3005,20 @@
        {
         "n": 4,
         "refs": [
-         "tendril"
+         "tendril.V3G7YupPtK1OuiYB"
         ]
        },
        {
         "n": 1,
         "refs": [
-         "bite"
+         "bite.VHvpgO6rRZHKwY2Y"
         ]
        }
       ],
       "extra": [
        {
         "refs": [
-         "reel"
+         "reel.dnd5eactivity000"
         ]
        }
       ]
@@ -3035,13 +3036,13 @@
        {
         "n": 1,
         "refs": [
-         "bite"
+         "bite.66qCN3IZ3JJ7OJxh"
         ]
        },
        {
         "n": 2,
         "refs": [
-         "claw"
+         "claw.3GxyaefD36zKjUua"
         ]
        }
       ],
@@ -3060,7 +3061,7 @@
       "extra": [
        {
         "refs": [
-         "horror-nimbus"
+         "horror-nimbus.dnd5eactivity000"
         ]
        }
       ],
@@ -3079,13 +3080,13 @@
        {
         "n": 2,
         "refs": [
-         "scimitar"
+         "scimitar.465ehp02Pgw0rrHQ"
         ]
        },
        {
         "n": 1,
         "refs": [
-         "dagger"
+         "dagger.1HSvCXm1vFGVjVAx"
         ]
        }
       ],
@@ -3104,7 +3105,7 @@
        {
         "n": 2,
         "refs": [
-         "longsword"
+         "longsword.sy3eCnZTye87VFVD"
         ]
        }
       ],
@@ -3115,7 +3116,7 @@
        {
         "n": 2,
         "refs": [
-         "longbow"
+         "longbow.alXVJtrivmlytWms"
         ]
        }
       ],
@@ -3126,10 +3127,10 @@
      {
       "n": 1,
       "refs": [
-       "life-drain"
+       "life-drain.F5Zw30mKmjb3pJyI"
       ],
       "of": [
-       "longsword"
+       "longsword.sy3eCnZTye87VFVD"
       ]
      }
     ]
@@ -3144,7 +3145,7 @@
        {
         "n": 2,
         "refs": [
-         "slam"
+         "slam.17587DWsLJYTcguE"
         ]
        }
       ],
@@ -3163,13 +3164,13 @@
        {
         "n": 1,
         "refs": [
-         "tail"
+         "tail.mrhmnhWiwOepbuib"
         ]
        },
        {
         "n": 2,
         "refs": [
-         "claw"
+         "claw.96mLCHGSPTGKAPKh"
         ]
        }
       ],
@@ -3180,7 +3181,7 @@
        {
         "n": 2,
         "refs": [
-         "hurl-flame"
+         "hurl-flame.OYxhOrPcIbUdBQSV"
         ]
        }
       ],
@@ -3199,7 +3200,7 @@
        {
         "n": 3,
         "refs": [
-         "tentacle"
+         "tentacle.2NE6eGFoExGfnvBO"
         ]
        }
       ],
@@ -3218,14 +3219,14 @@
        {
         "n": 1,
         "refs": [
-         "rotting-fist"
+         "rotting-fist.jv3Uz0EcvkblTQiY"
         ]
        }
       ],
       "extra": [
        {
         "refs": [
-         "dreadful-glare"
+         "dreadful-glare.vBP1Ivo8gjkv4DVp"
         ]
        }
       ]
@@ -3243,7 +3244,7 @@
        {
         "n": 1,
         "refs": [
-         "tentacles"
+         "tentacles.OAD78uTfJrmNBFxr"
         ]
        }
       ],
@@ -3282,20 +3283,20 @@
        {
         "n": 1,
         "refs": [
-         "bite"
+         "bite.X6siNdYF97zOuYzV"
         ]
        },
        {
         "n": 2,
         "refs": [
-         "claw"
+         "claw.kovuvZZgS4bVUNJF"
         ]
        }
       ],
       "extra": [
        {
         "refs": [
-         "frightful-presence"
+         "frightful-presence.2VOmvThI0bGdUsMt"
         ]
        }
       ]
@@ -3313,13 +3314,13 @@
        {
         "n": 1,
         "refs": [
-         "bite"
+         "bite.s4JjRKyIFDyrVmAf"
         ]
        },
        {
         "n": 2,
         "refs": [
-         "claw"
+         "claw.P91sIZ6siXFHfptW"
         ]
        }
       ],
@@ -3338,13 +3339,13 @@
        {
         "n": 1,
         "refs": [
-         "longsword"
+         "longsword.dnd5eactivity000"
         ]
        },
        {
         "n": 1,
         "refs": [
-         "whip"
+         "whip.YGM2eLITR0pDcdb6"
         ]
        }
       ],
@@ -3363,20 +3364,20 @@
        {
         "n": 1,
         "refs": [
-         "bite"
+         "bite.48SWm1ImazXc5Vz4"
         ]
        },
        {
         "n": 2,
         "refs": [
-         "claw"
+         "claw.OiowNXL1vO7gB4qU"
         ]
        }
       ],
       "extra": [
        {
         "refs": [
-         "frightful-presence"
+         "frightful-presence.2VOmvThI0bGdUsMt"
         ]
        }
       ]
@@ -3394,13 +3395,13 @@
        {
         "n": 1,
         "refs": [
-         "bite"
+         "bite.H6rWFktj3zuD8SOb"
         ]
        },
        {
         "n": 1,
         "refs": [
-         "constrict"
+         "constrict.hd9HaFEwKs6aIqbu"
         ]
        }
       ],
@@ -3419,13 +3420,13 @@
        {
         "n": 1,
         "refs": [
-         "spear"
+         "spear.8tb2lFotMNj9wBqm"
         ]
        },
        {
         "n": 1,
         "refs": [
-         "salamander-tail"
+         "salamander-tail.IxUgO1yBhgDUQRa7"
         ]
        }
       ],
@@ -3444,7 +3445,7 @@
        {
         "n": 2,
         "refs": [
-         "slam"
+         "slam.LqmlhOJFC7GcWqUx"
         ]
        }
       ],
@@ -3463,7 +3464,7 @@
        {
         "n": 2,
         "refs": [
-         "fist"
+         "fist.sPd9FrzDW2iYeT9o"
         ]
        }
       ],
@@ -3482,7 +3483,7 @@
        {
         "n": 2,
         "refs": [
-         "scimitar"
+         "scimitar.OlTkINGctPX0GuUh"
         ]
        }
       ],
@@ -3493,7 +3494,7 @@
        {
         "n": 2,
         "refs": [
-         "longbow"
+         "longbow.GEP56tYbgZHXuapo"
         ]
        }
       ],
@@ -3512,13 +3513,13 @@
        {
         "n": 1,
         "refs": [
-         "beak"
+         "beak.WUo1bNZ4AbNYQjuH"
         ]
        },
        {
         "n": 1,
         "refs": [
-         "claws"
+         "claws.Aymlfbhn2KXrc7oV"
         ]
        }
       ],
@@ -3537,20 +3538,20 @@
        {
         "n": 1,
         "refs": [
-         "bite"
+         "bite.wypPq7iLvOVj4wHT"
         ]
        },
        {
         "n": 2,
         "refs": [
-         "claw"
+         "claw.HM0GY7AZbsQ5fpco"
         ]
        }
       ],
       "extra": [
        {
         "refs": [
-         "frightful-presence"
+         "frightful-presence.2VOmvThI0bGdUsMt"
         ]
        }
       ]
@@ -3576,7 +3577,7 @@
       "limits": [
        {
         "refs": [
-         "bite"
+         "bite.Y3OF7ilrZH7nRDlp"
         ],
         "max": 1
        }

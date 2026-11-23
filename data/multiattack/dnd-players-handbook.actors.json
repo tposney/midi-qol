@@ -75,7 +75,7 @@
          "formula": "floor(@flags.dnd5e.summon.level / 2)"
         },
         "refs": [
-         "rend"
+         "rend.dnd5eactivity000"
         ]
        }
       ],
@@ -96,7 +96,7 @@
          "formula": "floor(@flags.dnd5e.summon.level / 2)"
         },
         "refs": [
-         "rend"
+         "rend.dnd5eactivity000"
         ]
        }
       ],
@@ -117,7 +117,7 @@
          "formula": "floor(@flags.dnd5e.summon.level / 2)"
         },
         "refs": [
-         "rend"
+         "rend.dnd5eactivity000"
         ]
        }
       ],
@@ -180,7 +180,7 @@
          "formula": "floor(@flags.dnd5e.summon.level / 2)"
         },
         "refs": [
-         "slam"
+         "slam.dnd5eactivity000"
         ]
        }
       ],
@@ -201,7 +201,7 @@
          "formula": "floor(@flags.dnd5e.summon.level / 2)"
         },
         "refs": [
-         "slam"
+         "slam.dnd5eactivity000"
         ]
        }
       ],
@@ -222,7 +222,7 @@
          "formula": "floor(@flags.dnd5e.summon.level / 2)"
         },
         "refs": [
-         "slam"
+         "slam.dnd5eactivity000"
         ]
        }
       ],
@@ -243,7 +243,7 @@
          "formula": "floor(@flags.dnd5e.summon.level / 2)"
         },
         "refs": [
-         "slam"
+         "slam.dnd5eactivity000"
         ]
        }
       ],
@@ -264,7 +264,7 @@
          "formula": "floor(@flags.dnd5e.summon.level / 2)"
         },
         "refs": [
-         "slam"
+         "slam.dnd5eactivity000"
         ]
        }
       ],
@@ -285,7 +285,7 @@
          "formula": "floor(@flags.dnd5e.summon.level / 2)"
         },
         "refs": [
-         "slam"
+         "slam.dnd5eactivity000"
         ]
        }
       ],
@@ -306,7 +306,7 @@
          "formula": "floor(@flags.dnd5e.summon.level / 2)"
         },
         "refs": [
-         "fey-blade"
+         "fey-blade.dnd5eactivity000"
         ]
        }
       ],
@@ -327,7 +327,7 @@
          "formula": "floor(@flags.dnd5e.summon.level / 2)"
         },
         "refs": [
-         "fey-blade"
+         "fey-blade.dnd5eactivity000"
         ]
        }
       ],
@@ -348,7 +348,7 @@
          "formula": "floor(@flags.dnd5e.summon.level / 2)"
         },
         "refs": [
-         "fey-blade"
+         "fey-blade.dnd5eactivity000"
         ]
        }
       ],
@@ -369,7 +369,7 @@
          "formula": "floor(@flags.dnd5e.summon.level / 2)"
         },
         "refs": [
-         "slam"
+         "slam.dnd5eactivity000"
         ]
        }
       ],
@@ -535,7 +535,7 @@
        {
         "n": 2,
         "refs": [
-         "fist"
+         "fist.dnd5eactivity000"
         ]
        }
       ],
@@ -556,7 +556,7 @@
          "formula": "floor(@flags.dnd5e.summon.level / 2)"
         },
         "refs": [
-         "rend"
+         "rend.dnd5eactivity000"
         ]
        }
       ],
@@ -575,7 +575,7 @@
        {
         "n": 2,
         "refs": [
-         "rend"
+         "rend.dnd5eactivity000"
         ]
        }
       ],
@@ -594,13 +594,13 @@
        {
         "n": 1,
         "refs": [
-         "bite"
+         "bite.dnd5eactivity000"
         ]
        },
        {
         "n": 1,
         "refs": [
-         "claw"
+         "claw.dnd5eactivity000"
         ]
        }
       ],
@@ -642,7 +642,7 @@
          "formula": "floor(@flags.dnd5e.summon.level / 2)"
         },
         "refs": [
-         "slam"
+         "slam.dnd5eactivity000"
         ]
        }
       ],
@@ -663,14 +663,14 @@
          "formula": "floor(@flags.dnd5e.summon.level / 2)"
         },
         "refs": [
-         "rend"
+         "rend.dnd5eactivity000"
         ]
        }
       ],
       "extra": [
        {
         "refs": [
-         "breath-weapon"
+         "breath-weapon.dnd5eactivity000"
         ]
        }
       ]
@@ -690,7 +690,7 @@
          "formula": "floor(@flags.dnd5e.summon.level / 2)"
         },
         "refs": [
-         "slam"
+         "slam.dnd5eactivity000"
         ]
        }
       ],
@@ -709,7 +709,7 @@
        {
         "n": 2,
         "refs": [
-         "gore"
+         "gore.dnd5eactivity000"
         ]
        }
       ],
@@ -730,7 +730,7 @@
          "formula": "floor(@flags.dnd5e.summon.level / 2)"
         },
         "refs": [
-         "fey-blade"
+         "fey-blade.dnd5eactivity000"
         ]
        }
       ],
@@ -791,7 +791,7 @@
        {
         "n": 2,
         "refs": [
-         "rend"
+         "rend.dnd5eactivity000"
         ]
        }
       ],
@@ -802,7 +802,7 @@
      {
       "n": 1,
       "refs": [
-       "roar"
+       "roar.dnd5eactivity000"
       ]
      }
     ]
@@ -817,7 +817,7 @@
        {
         "n": 2,
         "refs": [
-         "bite"
+         "bite.dnd5eactivity000"
         ]
        }
       ],

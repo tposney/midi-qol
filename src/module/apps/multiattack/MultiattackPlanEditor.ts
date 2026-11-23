@@ -1,8 +1,7 @@
 import { i18n } from "../../../midi-qol.js";
-import { slug, type MultiattackPlan, type PlanGroup, type PlanOption, type PlanReplace } from "../../lib/multiattack.js";
+import { activityRef, planRefs, selectable, slug, type MultiattackPlan, type PlanGroup, type PlanOption, type PlanReplace } from "../../lib/multiattack.js";
 import { isMultiattackItem, multiattackPlan, planKey, setGmPlan, spellInfo } from "../../services/multiattack/plans.js";
 import { planView, refName } from "./planView.js";
-import { takesPart } from "../../services/multiattack/run.js";
 
 const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
 
@@ -13,7 +12,7 @@ const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
  * and cast activities, never typed. Saved for the creature's compendium source (every copy shares it), else the actor.
  */
 
-type ItemSystem = { identifier?: string, activities?: { contents?: { type?: string, spell?: { uuid?: string }, activation?: { type?: string }, midiProperties?: { automationOnly?: boolean }, item: Item.Implementation }[] } };
+type ItemSystem = { identifier?: string, activities?: { contents?: { id: string, type?: string, spell?: { uuid?: string }, activation?: { type?: string }, midiProperties?: { automationOnly?: boolean } }[] } };
 
 /** The references the creature's plan can use: its items, its casts, any attack/spell; and any the plan already has */
 function refChoices(actor: Actor.Implementation, plan: MultiattackPlan): { value: string, label: string }[] {
@@ -21,20 +20,16 @@ function refChoices(actor: Actor.Implementation, plan: MultiattackPlan): { value
   for (const item of actor.items) {
     if (isMultiattackItem(item)) continue;
     const system = item.system as ItemSystem;
-    // Only what can be one of a Multiattack's uses (an attack item by its attacks, never a lone Escape Check)
-    const activities = (system.activities?.contents ?? []).filter(takesPart);
-    if (!activities.length) continue;
     const id = system.identifier || slug(item.name ?? "");
-    values.add(id);
-    for (const activity of activities) {
+    // Each activity a Multiattack could use (never an Escape Check: "special"); a cast by its spell
+    for (const activity of system.activities?.contents ?? []) {
+      if (!selectable({ id: activity.id, activation: activity.activation?.type, automationOnly: activity.midiProperties?.automationOnly })) continue;
       const info = activity.spell?.uuid ? spellInfo(activity.spell.uuid) : undefined;
       const spell = info?.identifier || (info?.name ? slug(info.name) : undefined);
-      if (spell) values.add(`${id}>${spell}`);
+      values.add(spell ? `${id}>${spell}` : activityRef(id, activity.id));
     }
   }
-  const used = [...plan.options.flatMap(o => [...o.groups.flatMap(g => g.refs), ...o.extra.flatMap(e => e.refs), ...(o.limits ?? []).flatMap(l => l.refs)]),
-    ...plan.replace.flatMap(r => [...r.refs, ...(r.of ?? [])])];
-  for (const ref of used) values.add(ref);
+  for (const ref of planRefs(plan)) values.add(ref);
   return [...values].map(value => ({ value, label: refName(actor, value) })).sort((a, b) => a.label.localeCompare(b.label));
 }
 

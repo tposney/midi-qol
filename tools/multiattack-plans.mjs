@@ -2,7 +2,7 @@
 /*
  * Generates midi's default Multiattack plans (the `midi-qol.official` registration, M21a) from the local book corpus
  * (npm run corpus:books) into data/multiattack/<pack>.json, committed and shipped. Keyed by the creature's compendium
- * uuid (index.json also lists them by name, for a creature built in the world with no compendium source); a plan holds counts and identifiers only, never the books' text: a condition or notes are flagged, and midi
+ * uuid, each item reference bound to the creature's exact activities (index.json also lists them by name, for a creature built in the world with no compendium source); a plan holds counts and identifiers only, never the books' text: a condition or notes are flagged, and midi
  * shows their words from the creature's own description in the world.
  *
  *   npm run plans:multiattack            regenerate, report problems
@@ -24,7 +24,7 @@ if (!existsSync(corpusDir)) {
 }
 
 const bundle = await esbuild.build({ entryPoints: [new URL("src/module/lib/multiattack.ts", root).pathname], bundle: true, format: "esm", write: false, logLevel: "error" });
-const { parseMultiattack, resolvePlan, slug } = await import(`data:text/javascript;base64,${Buffer.from(bundle.outputFiles[0].text).toString("base64")}`);
+const { parseMultiattack, resolvePlan, slug, bindPlan, planRefs, parseActivityRef } = await import(`data:text/javascript;base64,${Buffer.from(bundle.outputFiles[0].text).toString("base64")}`);
 
 const spells = JSON.parse(readFileSync(new URL("local/book-spells.json", root), "utf8"));
 const handPath = new URL("tools/multiattack-hand.json", root);
@@ -55,14 +55,30 @@ for (const file of readdirSync(corpusDir).filter(f => f.endsWith(".json")).sort(
   const corpus = JSON.parse(readFileSync(new URL(file, corpusDir), "utf8"));
   const plans = {};
   for (const entry of corpus) {
-    if (hand[entry.uuid]) { plans[entry.uuid] = { item: entry.itemId, plan: hand[entry.uuid], hand: true }; usedHand.add(entry.uuid); continue; }
+    // Item references become the book creature's exact activities (bindPlan); an item left unbound is a problem
+    const bound = plan => {
+      const out = bindPlan(plan, entry.items, uuid => spells[uuid]);
+      // An item stored without activities (Tasha's: dnd5e makes them as the data loads) stays an item reference, bound
+      // when the plan is chosen for a creature
+      const stored = new Set(entry.items.filter(i => !(i.activities ?? []).length).map(i => i.identifier || slug(i.name)));
+      const loose = planRefs(out).filter(r => !/^attack(:|$)|^spell$/.test(r) && !r.includes(">") && !parseActivityRef(r) && !stored.has(r));
+      if (loose.length) problems.push(`${file} ${entry.actor} (${entry.uuid}): nothing usable on ${loose.join(", ")}`);
+      return loose.length ? undefined : out;
+    };
+    if (hand[entry.uuid]) {
+      usedHand.add(entry.uuid);
+      const plan = bound(hand[entry.uuid]);
+      if (plan) plans[entry.uuid] = { item: entry.itemId, plan, hand: true };
+      continue;
+    }
     const names = entry.items.filter(i => !/^multiattack/.test(i.identifier ?? "")).map(i => i.name);
     const parsed = parseMultiattack(entry.desc, { names });
     if (!parsed) { problems.push(`${file} ${entry.actor} (${entry.uuid}): no plan read`); continue; }
     if (parsed.unread.length) { problems.push(`${file} ${entry.actor} (${entry.uuid}): unread ${JSON.stringify(parsed.unread)}`); continue; }
     const plan = resolvePlan(parsed, { items: entry.items, spell: uuid => spells[uuid] });
     if (plan.unresolved) { problems.push(`${file} ${entry.actor} (${entry.uuid}): unresolved ${JSON.stringify(plan.unresolved)}`); continue; }
-    plans[entry.uuid] = { item: entry.itemId, plan: shipped(plan) };
+    const final = bound(shipped(plan));
+    if (final) plans[entry.uuid] = { item: entry.itemId, plan: final };
   }
   const sorted = Object.fromEntries(Object.keys(plans).sort().map(k => [k, plans[k]]));
   for (const entry of corpus) if (plans[entry.uuid]) (names[slug(entry.actor)] ??= []).push([entry.uuid, entry.rules ?? null]);

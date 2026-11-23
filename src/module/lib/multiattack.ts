@@ -311,12 +311,24 @@ export interface MultiattackPlan {
   unresolved?: string[];
 }
 
+/** One of an item's activities, as the resolver and binding need it */
+export interface PlanActivity {
+  id: string;
+  type?: string;
+  name?: string;
+  /** A cast activity's spell uuid */
+  spell?: string;
+  /** Its activation type ("action", "bonus", "special"...) */
+  activation?: string;
+  /** midi's automation-only marker: triggered by another activity, never used on its own */
+  automationOnly?: boolean;
+}
 /** One of the creature's items, as the resolver needs it */
 export interface PlanItem {
   id: string;
   name: string;
   identifier?: string | null;
-  activities?: { id: string, type?: string, spell?: string }[];
+  activities?: PlanActivity[];
 }
 export interface PlanSources {
   items: PlanItem[];
@@ -327,6 +339,93 @@ export interface PlanSources {
 /** dnd5e's identifier for a name (as `String#slugify({ strict: true })`) */
 export function slug(name: string): string {
   return name.toLowerCase().replace(/['’]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+}
+
+/** A reference to one activity: `<item identifier>.<activity id>` */
+export const activityRef = (item: string, activity: string): PlanRef => `${item}.${activity}`;
+const ACTIVITY_REF = /^([a-z0-9-]+)\.([A-Za-z0-9]{16})$/;
+/** The item and activity of an activity reference */
+export function parseActivityRef(ref: PlanRef): { item: string, activity: string } | undefined {
+  const m = ref.match(ACTIVITY_REF);
+  return m ? { item: m[1], activity: m[2] } : undefined;
+}
+/** An activity reference made an item reference again (a plan adopted from another creature, whose ids differ) */
+export function unbindRef(ref: PlanRef): PlanRef {
+  return parseActivityRef(ref)?.item ?? ref;
+}
+
+/** An activity that can be one of a Multiattack's uses: it takes an action (dnd5e's default when none is stored) and isn't automation-only */
+export const usable = (activity: PlanActivity) => (activity.activation ?? "action") === "action" && !activity.automationOnly;
+
+/** An activity a GM may pick for a plan (the editor; named with its item when its item has several): not "special", not automation-only */
+export const selectable = (activity: PlanActivity) => !activity.automationOnly && activity.activation !== "special";
+
+/**
+ * The activities an item reference means: the item's usable attacks, else its usable activities (Spellcasting: its
+ * casts); an item with none that take an action (the Roper's Reel, a bonus action its Multiattack uses), any not
+ * "special" (never an Escape Check) or automation-only.
+ */
+export function itemActivities(item: PlanItem): PlanActivity[] {
+  const all = item.activities ?? [];
+  const own = all.filter(usable);
+  const attacks = own.filter(a => a.type === "attack");
+  if (attacks.length) return attacks;
+  if (own.length) return own;
+  return all.filter(a => !a.automationOnly && a.activation !== "special");
+}
+
+const isGeneric = (ref: PlanRef) => ref === "attack" || ref.startsWith("attack:") || ref === "spell";
+
+/**
+ * The plan with each item reference made the activities it means on this creature (`itemActivities`), once, when the
+ * plan is chosen for it: what's stored and shown then names exact activities (a cast by its spell: `<item>><spell>`). Activity, cast and any-attack/spell
+ * references are kept; an item the creature lacks, or one with nothing usable, is kept as it is (reported missing).
+ */
+export function bindPlan(plan: MultiattackPlan, items: PlanItem[], spell?: PlanSources["spell"]): MultiattackPlan {
+  const identifierOf = (item: PlanItem) => item.identifier || slug(item.name);
+  const spellId = (uuid: string) => { const found = spell?.(uuid); return found?.identifier || (found?.name ? slug(found.name) : undefined); };
+  const bind = (refs: PlanRef[]): PlanRef[] => [...new Set(refs.flatMap(ref => {
+    if (isGeneric(ref) || ref.includes(">") || parseActivityRef(ref)) return [ref];
+    const item = items.find(i => identifierOf(i) === ref);
+    const activities = item ? itemActivities(item) : [];
+    if (!activities.length) return [ref];
+    // A cast is named by its spell, as the text names it; anything else by its activity
+    return activities.map(a => {
+      const spell = a.spell ? spellId(a.spell) : undefined;
+      return spell ? `${ref}>${spell}` : activityRef(ref, a.id);
+    });
+  }))];
+  return {
+    ...plan,
+    options: plan.options.map(o => ({
+      ...o,
+      groups: o.groups.map(g => ({ ...g, refs: bind(g.refs) })),
+      extra: o.extra.map(e => ({ ...e, refs: bind(e.refs) })),
+      ...(o.limits ? { limits: o.limits.map(l => ({ ...l, refs: bind(l.refs) })) } : {})
+    })),
+    replace: plan.replace.map(r => ({ ...r, refs: bind(r.refs), ...(r.of ? { of: bind(r.of) } : {}) }))
+  };
+}
+
+/** Every reference in a plan */
+export function planRefs(plan: MultiattackPlan): PlanRef[] {
+  return [...plan.options.flatMap(o => [...o.groups.flatMap(g => g.refs), ...o.extra.flatMap(e => e.refs), ...(o.limits ?? []).flatMap(l => l.refs)]),
+    ...plan.replace.flatMap(r => [...r.refs, ...(r.of ?? [])])];
+}
+
+/** The plan with every reference changed by `change` (duplicates in a list dropped) */
+export function mapRefs(plan: MultiattackPlan, change: (ref: PlanRef) => PlanRef): MultiattackPlan {
+  const list = (refs: PlanRef[]) => [...new Set(refs.map(change))];
+  return {
+    ...plan,
+    options: plan.options.map(o => ({
+      ...o,
+      groups: o.groups.map(g => ({ ...g, refs: list(g.refs) })),
+      extra: o.extra.map(e => ({ ...e, refs: list(e.refs) })),
+      ...(o.limits ? { limits: o.limits.map(l => ({ ...l, refs: list(l.refs) })) } : {})
+    })),
+    replace: plan.replace.map(r => ({ ...r, refs: list(r.refs), ...(r.of ? { of: list(r.of) } : {}) }))
+  };
 }
 
 export function resolvePlan(parsed: ParsedPlan, sources: PlanSources): MultiattackPlan {
@@ -363,6 +462,8 @@ export function resolvePlan(parsed: ParsedPlan, sources: PlanSources): Multiatta
             const spell = spellOf(activity.spell);
             return asSpell || !item ? spell : `${identifierOf(item)}>${spell}`;
           }
+          // The text links the activity itself
+          if (item && activity) return activityRef(identifierOf(item), activity.id);
         }
         if (item) return identifierOf(item);
         const fallback = ref.name ? slug(ref.name) : (ref.id ?? "?");
@@ -388,7 +489,7 @@ export function resolvePlan(parsed: ParsedPlan, sources: PlanSources): Multiatta
 
 /*
  * Fitting uses into a plan (M21 plan, 21b): while a plan is open, each use made is placed in it, and a use fits when
- * all the uses so far can still be placed. A use is described by its keys (the creature's item identifier; a cast
+ * all the uses so far can still be placed. A use is described by its keys (its activity reference; a cast
  * "<item>><spell>" and the spell; "attack" and "attack:melee"/"attack:ranged" for an attack; "spell" for a spell). A use
  * goes in a group whose refs it matches (its count not yet reached), or replaces one of a group's attacks (a
  * replacement's refs; `of`: only that group), or is an extra use (each once). Options: every use in the same one.

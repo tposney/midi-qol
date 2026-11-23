@@ -49,8 +49,11 @@ async function readPack(source) {
   }
 }
 
-/** An item's activities: id, type, and a cast activity's spell */
-const activitiesOf = item => Object.entries(item.system?.activities ?? {}).map(([id, a]) => ({ id, type: a.type, ...(a.spell?.uuid ? { spell: a.spell.uuid } : {}) }));
+/** An item's activities: id, type, name, activation, midi's automation-only marker, and a cast activity's spell */
+const activitiesOf = item => Object.entries(item.system?.activities ?? {}).map(([id, a]) => ({
+  id, type: a.type, ...(a.name ? { name: a.name } : {}), ...(a.activation?.type ? { activation: a.activation.type } : {}),
+  ...(a.midiProperties?.automationOnly ? { automationOnly: true } : {}), ...(a.spell?.uuid ? { spell: a.spell.uuid } : {})
+}));
 const spells = {};
 
 let total = 0;

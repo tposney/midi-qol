@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { readFileSync, existsSync, readdirSync } from "node:fs";
-import { parseMultiattack, resolvePlan, fitUses, nextUses, type ParsedPlan, type RawRef, type Count, type MultiattackPlan } from "../src/module/lib/multiattack.js";
+import { parseMultiattack, resolvePlan, fitUses, nextUses, bindPlan, type ParsedPlan, type RawRef, type Count, type MultiattackPlan, type PlanItem } from "../src/module/lib/multiattack.js";
 
 // SRD 5.2 (CC-BY 4.0) Multiattack descriptions from dnd5e's packs
 const srd: { actor: string, description: string }[] = JSON.parse(readFileSync(new URL("./fixtures/multiattack-srd52.json", import.meta.url), "utf8"));
@@ -273,5 +273,43 @@ describe("multiattack plans: midi's table registers as another module would", ()
     expect(source).not.toMatch(/\bimport\s*\(/);
     expect(source).not.toMatch(/globalThis\.MidiQOL|game\.modules\.get\(["']midi-qol["']\)/);
     expect(source).toMatch(/Hooks\.once\("midi-qol\.registerServices"/);
+  });
+});
+
+describe("multiattack plans: binding item references to exact activities", () => {
+  const id = (s: string) => s.padEnd(16, "0");
+  const items: PlanItem[] = [
+    { id: "i1", name: "Pincer", identifier: "pincer", activities: [{ id: id("pincerAttack"), type: "attack", activation: "action" }, { id: id("pincerEscape"), type: "check", activation: "special", name: "Escape Check" }] },
+    { id: "i2", name: "Javelin", identifier: "javelin", activities: [{ id: id("javMelee"), type: "attack", activation: "action" }, { id: id("javThrown"), type: "attack", activation: "action" }] },
+    { id: "i3", name: "Bite", identifier: "bite", activities: [{ id: id("biteAttack"), type: "attack", activation: "action" }, { id: id("biteSave"), type: "save", activation: "action" }, { id: id("biteRider"), type: "damage", activation: "action", automationOnly: true }] },
+    { id: "i4", name: "Spellcasting", identifier: "spellcasting", activities: [{ id: id("castA"), type: "cast", activation: "action", spell: "uuid.fire-bolt" }, { id: id("castB"), type: "cast", activation: "action", spell: "uuid.shield" }] },
+    { id: "i5", name: "Reel", identifier: "reel", activities: [{ id: id("reelUse"), type: "utility", activation: "bonus" }] },
+    { id: "i6", name: "Slam", identifier: "slam", activities: [] },
+    { id: "i7", name: "Claw", identifier: "claw", activities: [{ id: id("clawLegacy"), type: "attack" }] }
+  ];
+  const spell = (uuid: string) => ({ identifier: uuid.split(".")[1] });
+  const plan = (refs: string[]): MultiattackPlan => ({ options: [{ groups: [{ n: 2, refs }], extra: [] }], replace: [] });
+  const bound = (refs: string[]) => bindPlan(plan(refs), items, spell).options[0].groups[0].refs;
+
+  it("an attack item: its attacks only (never its Escape Check, rider save or automation-only damage)", () => {
+    expect(bound(["pincer"])).toEqual([`pincer.${id("pincerAttack")}`]);
+    expect(bound(["bite"])).toEqual([`bite.${id("biteAttack")}`]);
+  });
+  it("several attacks: each, as alternatives", () => {
+    expect(bound(["javelin"])).toEqual([`javelin.${id("javMelee")}`, `javelin.${id("javThrown")}`]);
+  });
+  it("Spellcasting: its casts, by spell", () => {
+    expect(bound(["spellcasting"])).toEqual(["spellcasting>fire-bolt", "spellcasting>shield"]);
+  });
+  it("nothing taking an action: what isn't special (the Roper's Reel)", () => {
+    expect(bound(["reel"])).toEqual([`reel.${id("reelUse")}`]);
+  });
+  it("no activation stored is an action (dnd5e's default); no activities, or an item it lacks: kept", () => {
+    expect(bound(["claw"])).toEqual([`claw.${id("clawLegacy")}`]);
+    expect(bound(["slam", "tail"])).toEqual(["slam", "tail"]);
+  });
+  it("exact, cast and any-attack references are kept as they are", () => {
+    const refs = [`pincer.${id("pincerEscape")}`, "spellcasting>shield@2", "attack:melee", "spell"];
+    expect(bound(refs)).toEqual(refs);
   });
 });

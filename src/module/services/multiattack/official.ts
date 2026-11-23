@@ -1,4 +1,4 @@
-import type { MultiattackPlan } from "../../lib/multiattack.js";
+import type { MultiattackPlan, PlanRef } from "../../lib/multiattack.js";
 
 /*
  * midi's Multiattack table (`midi-qol.official`): plans generated from the books (tools/multiattack-plans.mjs), one
@@ -31,6 +31,20 @@ function itemIds(actor: Actor.Implementation): Set<string> {
   return new Set(actor.items.map(item => (item.system as { identifier?: string }).identifier || slug(item.name ?? "")));
 }
 
+/** Activity references ("battleaxe.<id>") made item references ("battleaxe") */
+function byItem(plan: MultiattackPlan): MultiattackPlan {
+  const item = (ref: PlanRef) => ref.match(/^([a-z0-9-]+)\.[A-Za-z0-9]{16}$/)?.[1] ?? ref;
+  const list = (refs: PlanRef[]) => [...new Set(refs.map(item))];
+  return {
+    ...plan,
+    options: plan.options.map(o => ({
+      ...o, groups: o.groups.map(g => ({ ...g, refs: list(g.refs) })), extra: o.extra.map(e => ({ ...e, refs: list(e.refs) })),
+      ...(o.limits ? { limits: o.limits.map(l => ({ ...l, refs: list(l.refs) })) } : {})
+    })),
+    replace: plan.replace.map(r => ({ ...r, refs: list(r.refs), ...(r.of ? { of: list(r.of) } : {}) }))
+  };
+}
+
 const ANY = new Set(["attack", "attack:melee", "attack:ranged", "spell"]);
 
 /** Every item the plan names is on the creature (a cast by its casting item; "attack"/"spell" are anything) */
@@ -38,7 +52,7 @@ function fits(plan: MultiattackPlan, ids: Set<string>): boolean {
   const refs = [...plan.options.flatMap(o => [...o.groups.flatMap(g => g.refs), ...o.extra.flatMap(e => e.refs)]), ...plan.replace.flatMap(r => [...r.refs, ...(r.of ?? [])])];
   return refs.every(ref => {
     const bare = ref.replace(/@\d+$/, "");
-    return ANY.has(bare) || ids.has(bare.split(">")[0]);
+    return ANY.has(bare) || ids.has(bare.split(">")[0].split(".")[0]);
   });
 }
 
@@ -56,7 +70,8 @@ async function lookup(actor: Actor.Implementation, keys: string[]): Promise<Mult
     for (const [uuid, bookRules] of index.names?.[key.slice(3)] ?? []) {
       if (rules && bookRules && rules !== bookRules) continue;
       const plan = await planFor(index, uuid);
-      if (plan && fits(plan, ids)) return plan;
+      // Its activity ids are the book creature's: named by item again, midi binds them to this creature's
+      if (plan && fits(plan, ids)) return byItem(plan);
     }
   }
   return undefined;
