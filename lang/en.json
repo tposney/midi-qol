@@ -2563,7 +2563,7 @@
   "midi-qol.Entries.Field.stage": "Stage",
   "midi-qol.Entries.Field.amount": "Amount",
   "midi-qol.Entries.Field.multiplier": "Multiplier",
-  "midi-qol.Entries.Field.types": "Types (comma separated)",
+  "midi-qol.Entries.Field.types": "Damage types (none: any)",
   "midi-qol.Entries.Field.effectMode": "Apply or remove",
   "midi-qol.Entries.Field.what": "What (status, effect name or id)",
   "midi-qol.Entries.Field.end": "End the effect",

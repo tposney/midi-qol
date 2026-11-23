@@ -96,7 +96,7 @@
                 {{/if}}
                 {{else}}
                 <div class="form-group"><label>{{localize label}}</label>
-                    {{#if (eq type "multiselect")}}<select name="{{name}}" multiple class="midi-qol-entry-multiselect">{{#each options}}<option value="{{value}}" {{#if selected}}selected{{/if}}>{{label}}</option>{{/each}}</select>
+                    {{#if (eq type "multiselect")}}<multi-select name="{{name}}">{{#each options}}<option value="{{value}}" {{#if selected}}selected{{/if}}>{{label}}</option>{{/each}}</multi-select>
                     {{else if (eq type "select")}}<select name="{{name}}">{{#each options}}<option value="{{value}}" {{#if selected}}selected{{/if}}>{{label}}</option>{{/each}}</select>
                     {{else if (eq type "boolean")}}<input type="checkbox" name="{{name}}" {{#if checked}}checked{{/if}}>
                     {{else if (eq type "number")}}<input type="number" name="{{name}}" value="{{value}}">
