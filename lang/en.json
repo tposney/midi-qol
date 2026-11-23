@@ -575,6 +575,10 @@
       "modules": "Modules"
     }
   },
+  "midi-qol.Config.Box.hud": "HUD",
+  "midi-qol.Hud.Name": "Turn HUD",
+  "midi-qol.Hud.Hint": "The HUD that shows a creature's turn (actions, movement, attacks left, what it can use and why not, interactions), from midi's turn model. HUD modules register here.",
+  "midi-qol.Hud.none": "None",
   "midi-qol.Config.Box.movement": "Movement",
   "midi-qol.Config.Box.opportunityAttacks": "Opportunity attacks",
   "midi-qol.Config.Box.interactions": "Interactions",

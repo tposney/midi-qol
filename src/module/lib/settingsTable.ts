@@ -103,6 +103,7 @@ export const MIDI_SETTINGS: Record<string, MidiSettingEntry> = {
   "playerRequireAmmunition": { group: "player", label: "midi-qol.RequireAmmunition.Name" },
   "removeButtons": { group: "player", label: "midi-qol.RemoveButtons.Name", choices: "removeButtonsOptions" },
   "doReactions": { group: "reactions", label: "midi-qol.DoReactions.Name", choices: "doReactionsOptions" },
+  "hud": { group: "interactions", label: "midi-qol.Hud.Name", hint: "midi-qol.Hud.Hint" },
   "interactions": { group: "interactions", label: "midi-qol.InteractionsSetting.Name", hint: "midi-qol.InteractionsSetting.Hint" },
   "grappleProvider": { group: "interactions", label: "midi-qol.GrappleProvider.Name", hint: "midi-qol.GrappleProvider.Hint", choices: "ForcedMovementProviderOptions" },
   "objectInteractions": { group: "interactions", label: "midi-qol.ObjectInteractions.Name", hint: "midi-qol.ObjectInteractions.Hint" },

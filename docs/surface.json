@@ -103,6 +103,7 @@
     "hasUsedReaction",
     "hasVitalitySystem",
     "highlightTokens",
+    "hud",
     "humanoid",
     "importSettingsFromJSON",
     "incapacitatedConditions",
@@ -207,6 +208,7 @@
     "totalCoverTargets",
     "TrapWorkflow",
     "turnEvents",
+    "turnModel",
     "typeOrRace",
     "undoMostRecentWorkflow",
     "UNMEASURABLE_DISTANCE",
@@ -336,6 +338,7 @@
     "midi-qol.setup",
     "midi-qol.StatsUpdated",
     "midi-qol.targetingComplete",
+    "midi-qol.turnModelChanged",
     "midi-qol.workflowRebuilt"
   ],
   "settings": [
@@ -446,6 +449,7 @@
     "hideNPCNames",
     "highLightCriticalAttackOnly",
     "highlightSuccess",
+    "hud",
     "ignoreSpellReactionRestriction",
     "interactions",
     "itemTypeList",

@@ -1,5 +1,7 @@
 import { isEphemeralToken, tokenFor, tokenOf } from "./module/lib/tokenResolver.js";
 import { interactionsApi } from "./module/services/interactions/registry.js";
+import { setupTurnModel, turnModelApi } from "./module/services/turnModel/model.js";
+import { hudApi, setupHuds } from "./module/services/turnModel/hud.js";
 import { setupInteractionsHUD } from "./module/services/interactions/hud.js";
 import { registerDefaultInteractions } from "./module/services/interactions/defaults.js";
 import { registerGrappleInteractions } from "./module/services/interactions/grapple.js";
@@ -432,6 +434,9 @@ Object.assign(globalThis.MidiQOL, {
   tokenForActor,
   // M8: interactions (Hide, Search, Help, Grapple, doors...): register, available, run
   interactions: interactionsApi,
+  // M7: the turn model a HUD reads (economy, movement, things to use with reasons, interactions, pending)
+  turnModel: turnModelApi,
+  hud: hudApi,
   // Section 18, rule 4: anything's TokenDocument, and a TokenDocument's canvas Token (lib/tokenResolver.ts)
   tokenFor, tokenOf, isEphemeralToken,
   TokenDocumentSet,
@@ -606,6 +611,8 @@ Hooks.once('init', async function () {
   registerDefaultInteractions();
   registerGrappleInteractions();
   registerDoorInteractions();
+  setupTurnModel();
+  setupHuds();
   // Registered here, not in services/rollBonuses/prompt.ts: BonusPromptApp extends utils' RollModifyDialog and utils
   // imports prompt.ts, so prompt.ts importing the app would evaluate the class before its base exists
   bonusPromptService.register("midi-qol.phased", { open: data => new BonusPromptApp(data) }, { label: "Phased (tick and apply)" });
