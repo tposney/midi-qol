@@ -13,7 +13,7 @@ import { budget, type BudgetKindId } from "./ledger.js";
  * (MidiQOL.economy.issues) asks issue contributors (MidiQOL.economy.issueContributors.register), so the pre-use checks, and later
  * the HUD's greying-out, ask one place. midi's own: the budget (a reaction, bonus action or action already used up, or
  * dnd5e's No Reactions marker), the one-spell-slot-per-turn rule (dnd5e's modern rules), a spell's components
- * (`flags.midi-qol.fail.spell.*`: Silence and the like), incapacitated.
+ * (`flags.midi-qol.fail.spell.*`: Silence and the like), incapacitated, a two-handed weapon's attack with a shield equipped.
  * What an issue does is its policy: off (not raised), show (tracked, nothing asked), warn (asked: use anyway?),
  * enforce (refused). An economy issue's comes from the actor type's policy (today's Enforce reactions / bonus actions
  * settings: none = off, display only = show, all or the actor's type = warn; actions and the spell rule: show); a rule
@@ -139,11 +139,22 @@ function incapacitatedIssue({ actor, workflow }: IssueQuery): UseIssue | undefin
   return { id: "incapacitated", label: String(condition), source: "midi-qol.incapacitated", policy: mechanic === "enforce" ? "enforce" : "show" };
 }
 
+/** midi's Check two-handed: a two-handed weapon's attack is refused with a shield (the roll's check, asked up front) */
+function handsIssue({ activity, actor }: IssueQuery): UseIssue | undefined {
+  if (!configSettings.checkTwoHanded || activity.type !== "attack") return undefined;
+  // @ts-expect-error no dnd5e-types
+  if (!activity.item?.system.properties?.has("two")) return undefined;
+  // @ts-expect-error no dnd5e-types
+  if (!(actor.system.attributes?.ac?.shield > 0)) return undefined;
+  return { id: "twoHandedShield", label: i18n("midi-qol.TwoHandedShieldWarning"), source: "midi-qol.hands", policy: "enforce" };
+}
+
 export function registerMidiIssueContributors() {
   registerIssueContributor("midi-qol.budget", budgetIssues, { priority: 100 });
   registerIssueContributor("midi-qol.leveledSpell", leveledSpellIssue, { priority: 90 });
   registerIssueContributor("midi-qol.components", componentIssues, { priority: 80 });
   registerIssueContributor("midi-qol.incapacitated", incapacitatedIssue, { priority: 70 });
+  registerIssueContributor("midi-qol.hands", handsIssue, { priority: 60 });
 }
 
 export const issueContributorsApi = { register: registerIssueContributor, entries: () => contributors.entries().map(entry => entry.id) };
