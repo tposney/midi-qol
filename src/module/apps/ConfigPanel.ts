@@ -49,6 +49,7 @@ export class ConfigPanel extends HandlebarsApplicationMixin(ApplicationV2) {
     workflow: { template: "modules/midi-qol/templates/apps/ConfigPanel/workflow.hbs" },
     concentration: { template: "modules/midi-qol/templates/apps/ConfigPanel/concentration.hbs" },
     reactions: { template: "modules/midi-qol/templates/apps/ConfigPanel/reactions.hbs" },
+    interactions: { template: "modules/midi-qol/templates/apps/ConfigPanel/interactions.hbs" },
     misc: { template: "modules/midi-qol/templates/apps/ConfigPanel/misc.hbs" },
     mechanics: { template: "modules/midi-qol/templates/apps/ConfigPanel/mechanics.hbs" },
     rules: { template: "modules/midi-qol/templates/apps/ConfigPanel/rules.hbs" },
@@ -66,6 +67,7 @@ export class ConfigPanel extends HandlebarsApplicationMixin(ApplicationV2) {
         {id: "workflow"},
         {id: "concentration"},
         {id: "reactions"},
+        {id: "interactions"},
         {id: "misc"},
         {id: "mechanics"},
         {id: "rules"},
@@ -342,6 +344,17 @@ export class ConfigPanel extends HandlebarsApplicationMixin(ApplicationV2) {
 
   async _onRender(context, options) {
     super._onRender(context, options);
+    // A block's options shown only while its switch is on (data-midi-reveal="<the checkbox's name>")
+    const form = this.element as HTMLElement;
+    const reveal = () => {
+      for (const el of Array.from(form.querySelectorAll<HTMLElement>("[data-midi-reveal]"))) {
+        const toggle = form.querySelector<HTMLInputElement>(`input[type="checkbox"][name="${el.dataset.midiReveal}"]`);
+        el.hidden = !!toggle && !toggle.checked;
+      }
+    };
+    for (const name of new Set(Array.from(form.querySelectorAll<HTMLElement>("[data-midi-reveal]")).map(el => el.dataset.midiReveal)))
+      form.querySelector<HTMLInputElement>(`input[type="checkbox"][name="${name}"]`)?.addEventListener("change", reveal);
+    reveal();
     // Don't think this was doing anything
     // html.find(".playlist").change(this._playList.bind(this));
     this.element.querySelector(".itemTypeListEdit")?.addEventListener("click", event => {

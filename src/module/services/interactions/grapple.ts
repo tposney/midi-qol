@@ -126,7 +126,7 @@ async function escape({ subject, options }: InteractionContext) {
   const skills = (actor.system as { skills?: Record<string, { total?: number }> }).skills ?? {};
   const skill = (skills.ath?.total ?? 0) >= (skills.acr?.total ?? 0) ? "ath" : "acr";
   const rolls = await (actor as unknown as { rollSkill(config: object, dialog?: object): Promise<{ total?: number }[] | null> })
-    .rollSkill({ skill, target: mark.dc }, options.fastForward ? { configure: false } : {});
+    .rollSkill({ skill, target: mark.dc });
   const total = rolls?.[0]?.total;
   if (total === undefined) return false;
   if (total >= mark.dc) await endGrapple(actor);

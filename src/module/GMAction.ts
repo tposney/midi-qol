@@ -83,6 +83,8 @@ export let setupSocket = () => {
   registerSocketAndQuery("moveToken", _moveToken);
   registerSocketAndQuery("moveTokenAwayFromPoint", _moveTokenAwayFromPoint);
   registerSocketAndQuery("moveTokensTogether", _moveTokensTogether);
+  registerSocketAndQuery("updateDoor", _updateDoor);
+  registerSocketAndQuery("applyDamageToActor", _applyDamageToActor);
   registerSocketAndQuery("teleportToken", _teleportToken);
   registerSocketAndQuery("queueUndoData", queueUndoData);
   registerSocketAndQuery("queueUndoDataDirect", _queueUndoDataDirect);
@@ -2445,6 +2447,21 @@ async function _moveToken(data: { tokenUuid: string, newCenter: { x: number, y: 
   return tokenDocument.move(waypoint, moveOptions);
 }
 
+
+/** A door's state or midi data changed for a player (locking, unlocking, its trap: interactions/doors.ts) */
+async function _updateDoor(data: { wallUuid: string, changes: Record<string, unknown>, options?: Record<string, unknown> }): Promise<void> {
+  const wall = fromUuidSync(data.wallUuid) as WallDocument.Implementation | null;
+  if (!wall || !((wall.door ?? 0) > 0)) return;
+  // Only the door's state and midi's door data
+  const allowed = Object.fromEntries(Object.entries(data.changes).filter(([key]) => key === "ds" || key.startsWith("flags.midi-qol.door")));
+  await wall.update(allowed, data.options ?? {});
+}
+
+/** dnd5e's applyDamage on an actor the asking user can't change (a door trap) */
+async function _applyDamageToActor(data: { actorUuid: string, damages: { value: number, type: string }[] }): Promise<void> {
+  const actor = fromActorUuid(data.actorUuid);
+  await (actor as unknown as { applyDamage?(d: object[]): Promise<unknown> } | null)?.applyDamage?.(data.damages);
+}
 
 /** Several tokens of one scene moved in one update (a grappler and the creature it drags: interactions/grapple.ts) */
 async function _moveTokensTogether(data: { sceneUuid: string, instructions: Record<string, object>, options?: object }): Promise<Record<string, boolean> | undefined> {

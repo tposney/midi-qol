@@ -21,13 +21,36 @@ function entry(offer: InteractionOffer, onClick: () => void): HTMLElement {
   return a;
 }
 
+const COMPASS = ["E", "SE", "S", "SW", "W", "NW", "N", "NE"];
+
+/** The doors near the token, each with what can be done at it now (a door none can be done at is left out) */
+function doorOffers(subject: TokenDocument.Implementation): { offer: InteractionOffer, against: WallDocument.Implementation }[] {
+  const scene = subject.parent;
+  if (!scene) return [];
+  const size = scene.grid.size;
+  const centre = { x: subject._source.x + (subject.width * size) / 2, y: subject._source.y + (subject.height * size) / 2 };
+  const out: { offer: InteractionOffer, against: WallDocument.Implementation }[] = [];
+  for (const wall of scene.walls.contents as WallDocument.Implementation[]) {
+    if (!((wall.door ?? 0) > 0)) continue;
+    const [x0, y0, x1, y1] = wall.c;
+    const mid = { x: (x0 + x1) / 2, y: (y0 + y1) / 2 };
+    if (Math.hypot(mid.x - centre.x, mid.y - centre.y) > 2 * size) continue;
+    const offers = availableInteractions(subject, wall).filter(o => !o.reason || !/range/i.test(o.reason));
+    if (!offers.length) continue;
+    const angle = Math.atan2(mid.y - centre.y, mid.x - centre.x);
+    const where = COMPASS[(Math.round(angle / (Math.PI / 4)) + 8) % 8];
+    for (const offer of offers) out.push({ offer: { ...offer, label: `${offer.label} (${where})` }, against: wall });
+  }
+  return out;
+}
+
 function onRenderTokenHUD(hud: { document?: TokenDocument.Implementation, close?: () => unknown }, html: HTMLElement) {
   const subject = hud.document;
   if (!subject?.isOwner || !subject.actor) return;
   const target = [...(game.user?.targets ?? [])].map(t => t.document as TokenDocument.Implementation).find(t => t !== subject);
   const own = availableInteractions(subject).map(offer => ({ offer, against: undefined as TokenDocument.Implementation | undefined }));
-  const atTarget = target ? availableInteractions(subject, target).map(offer => ({ offer, against: target })) : [];
-  const offers = [...own, ...atTarget];
+  const atTarget = target ? availableInteractions(subject, target).map(offer => ({ offer, against: target as TokenDocument.Implementation | WallDocument.Implementation | undefined })) : [];
+  const offers = [...own, ...atTarget, ...doorOffers(subject)];
   if (!offers.length) return;
   const column = html.querySelector(".col.right") ?? html.querySelector(".col.left");
   if (!column) return;
@@ -46,7 +69,7 @@ function onRenderTokenHUD(hud: { document?: TokenDocument.Implementation, close?
   for (const { offer, against } of offers) {
     palette.append(entry(offer, () => {
       void hud.close?.();
-      void runInteraction(offer.id, subject, against).then(result => {
+      void runInteraction(offer.id, subject, against as never).then(result => {
         if (!result.done && result.reason) ui.notifications?.warn(result.reason);
       });
     }));

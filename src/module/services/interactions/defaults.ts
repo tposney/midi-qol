@@ -14,10 +14,10 @@ import { registerInteraction, type InteractionContext } from "./registry.js";
 const say = (key: string, data?: Record<string, string>) => (data ? game.i18n?.format(`midi-qol.Interactions.${key}`, data) : game.i18n?.localize(`midi-qol.Interactions.${key}`)) ?? key;
 
 type SkillRoll = { total?: number, isSuccess?: boolean } | undefined;
-/** dnd5e's skill roll (its dialog unless the caller asked for none: options.fastForward) */
+/** dnd5e's skill roll; its dialog as midi's fast-forward settings say for the user rolling (isAutoFastForward) */
 async function rollSkill(context: InteractionContext, actor: Actor.Implementation, skill: string, target?: number): Promise<SkillRoll> {
   const roller = actor as unknown as { rollSkill(config: object, dialog?: object): Promise<SkillRoll[] | null> };
-  const rolls = await roller.rollSkill({ skill, ...(target ? { target } : {}) }, context.options.fastForward ? { configure: false } : {});
+  const rolls = await roller.rollSkill({ skill, ...(target ? { target } : {}) });
   return rolls?.[0];
 }
 

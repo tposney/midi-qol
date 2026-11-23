@@ -26,7 +26,15 @@ import { tokenFor } from "../../lib/tokenResolver.js";
  */
 
 export type InteractionTargetKind = "self" | "creature" | "door";
-export type InteractionCost = Partial<Record<BudgetKindId, number>>;
+/**
+ * What an interaction costs this turn: the ledger's kinds, and `object`: the free object interaction (the turn window's
+ * objectInteraction counter, with the Doors and object interactions setting), or the action once it is used (2024:
+ * the Utilize action)
+ */
+export type InteractionCost = Partial<Record<BudgetKindId | "object", number>>;
+
+const objectUsed = (actor: Actor.Implementation) => !!budget(actor, "action").counters.objectInteraction;
+const trackObjects = () => configSettings.objectInteractions === true;
 
 export interface InteractionContext {
   id: string;
@@ -120,10 +128,17 @@ function reasonFor(definition: InteractionDefinition, context: InteractionContex
     const distance = distanceTo(subject, target);
     if (distance < 0 || distance > range + 1e-6) return label("midi-qol.Interactions.Reason.range", { range: String(range) });
   }
-  for (const [kind, count] of Object.entries(definition.cost ?? {}) as [BudgetKindId, number][]) {
-    if (!count || !subject.actor || !inCombat(subject) || !isTracked(subject.actor, kind)) continue;
-    const state = budget(subject.actor, kind);
-    if (state.used + count > state.max) return label("midi-qol.Interactions.Reason.cost", { kind: label(`midi-qol.Interactions.Cost.${kind}`) });
+  for (const [key, count] of Object.entries(definition.cost ?? {}) as [BudgetKindId | "object", number][]) {
+    if (!count || !subject.actor || !inCombat(subject)) continue;
+    // The free object interaction, else the action
+    if (key === "object") {
+      if (!trackObjects() || !objectUsed(subject.actor)) continue;
+      if (budget(subject.actor, "action").exhausted) return label("midi-qol.Interactions.Reason.object");
+      continue;
+    }
+    if (!isTracked(subject.actor, key)) continue;
+    const state = budget(subject.actor, key);
+    if (state.used + count > state.max) return label("midi-qol.Interactions.Reason.cost", { kind: label(`midi-qol.Interactions.Cost.${key}`) });
   }
   try {
     const own = definition.available?.(context);
@@ -175,8 +190,16 @@ export async function runInteraction(id: string, subjectRef: TargetRef, targetRe
   if (!definition.run) return { done: false, reason: label("midi-qol.Interactions.Reason.unknown") };
   const result = await definition.run(context);
   if (result === false) return { done: false };
-  for (const [kind, count] of Object.entries(definition.cost ?? {}) as [BudgetKindId, number][])
-    if (count && subject.actor && inCombat(subject) && isTracked(subject.actor, kind)) await spend(subject.actor, kind, { count });
+  for (const [key, count] of Object.entries(definition.cost ?? {}) as [BudgetKindId | "object", number][]) {
+    if (!count || !subject.actor || !inCombat(subject)) continue;
+    if (key === "object") {
+      if (!trackObjects()) continue;
+      if (!objectUsed(subject.actor)) await spend(subject.actor, "action", { count: 0, counters: { objectInteraction: true } });
+      else await spend(subject.actor, "action");
+      continue;
+    }
+    if (isTracked(subject.actor, key)) await spend(subject.actor, key, { count });
+  }
   Hooks.callAll("midi-qol.interaction", { id, subject, target, result });
   return { done: true, result };
 }

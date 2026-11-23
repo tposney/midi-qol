@@ -58,58 +58,6 @@
         </div>
 
         <div class="form-group">
-            <label>{{localize "midi-qol.OpportunityAttacks.Name"}}</label>
-            <select name="opportunityAttacks" data-dtype="String">
-                {{selectOptions OpportunityAttacksOptions selected=configSettings.opportunityAttacks localize=true}}
-            </select>
-            <div class="notes midi-qol-faint">{{{localize "midi-qol.OpportunityAttacks.Hint"}}}</div>
-        </div>
-
-        <div class="form-group">
-            <label>{{localize "midi-qol.InteractionsSetting.Name"}}</label>
-            <input type="checkbox" name="interactions" data-dtype="Boolean" {{checked configSettings.interactions}} />
-            <div class="notes midi-qol-faint">{{{localize "midi-qol.InteractionsSetting.Hint"}}}</div>
-        </div>
-
-        <div class="form-group">
-            <label>{{localize "midi-qol.GrappleProvider.Name"}}</label>
-            <select name="grappleProvider" data-dtype="String">
-                {{selectOptions ForcedMovementProviderOptions selected=configSettings.grappleProvider localize=true}}
-            </select>
-            <div class="notes midi-qol-faint">{{{localize "midi-qol.GrappleProvider.Hint"}}}</div>
-        </div>
-
-        <div class="form-group">
-            <label>{{localize "midi-qol.ObjectInteractions.Name"}}</label>
-            <input type="checkbox" name="objectInteractions" data-dtype="Boolean" {{checked configSettings.objectInteractions}} />
-            <div class="notes midi-qol-faint">{{{localize "midi-qol.ObjectInteractions.Hint"}}}</div>
-        </div>
-
-        <div class="form-group">
-            <label>{{localize "midi-qol.ProneStanding.Name"}}</label>
-            <select name="proneStanding" data-dtype="String">
-                {{selectOptions ProneStandingOptions selected=configSettings.proneStanding localize=true}}
-            </select>
-            <div class="notes midi-qol-faint">{{{localize "midi-qol.ProneStanding.Hint"}}}</div>
-        </div>
-
-        <div class="form-group">
-            <label>{{localize "midi-qol.ForcedMovementProvider.Name"}}</label>
-            <select name="forcedMovementProvider" data-dtype="String">
-                {{selectOptions ForcedMovementProviderOptions selected=configSettings.forcedMovementProvider localize=true}}
-            </select>
-            <div class="notes midi-qol-faint">{{{localize "midi-qol.ForcedMovementProvider.Hint"}}}</div>
-        </div>
-
-        <div class="form-group">
-            <label>{{localize "midi-qol.EnforceMovement.Name"}}</label>
-            <select name="enforceMovement" data-dtype="String">
-                {{selectOptions EnforceMovementOptions selected=configSettings.enforceMovement localize=true}}
-            </select>
-            <div class="notes midi-qol-faint">{{{localize "midi-qol.EnforceMovement.Hint"}}}</div>
-        </div>
-
-        <div class="form-group">
             <label>{{localize "midi-qol.RecordAOO.Name"}}</label>
             <select name="recordAOO" data-dtype="String">
                 {{selectOptions RecordAOOOptions selected=configSettings.recordAOO localize=true}}
