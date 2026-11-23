@@ -1,3 +1,6 @@
+import { i18n } from "../../../midi-qol.js";
+import { movementWatches, offerRelease } from "../../lib/deferredTriggers.js";
+import type { DeferredUse } from "../../lib/deferred.js";
 import { tokenFor, combatOfToken } from "../../lib/tokenResolver.js";
 import type { Activity } from "../../../globals.js";
 import { configSettings } from "../../settings.js";
@@ -91,16 +94,23 @@ export function possibleReactors(mover: TokenDocument.Implementation): { token: 
 }
 
 /** A creature whose reach matters to a move: an opportunity attack on leaving it, its own reach events */
-interface Watcher { token: TokenDocument.Implementation, reach: number, attacks: boolean, enters: boolean, leaves: boolean }
+interface Watcher {
+  token: TokenDocument.Implementation, reach: number, attacks: boolean, enters: boolean, leaves: boolean,
+  /** M22a: a readied use watching this distance around its readier (lib/deferredTriggers.ts) */
+  readied?: DeferredUse, key?: string
+}
 export interface Crossing { index: number, leaving: Watcher[], entering: Watcher[] }
 
-const leaveKey = (w: Watcher) => `${w.token.uuid}:leave`;
-const enterKey = (w: Watcher) => `${w.token.uuid}:enter`;
+const leaveKey = (w: Watcher) => `${w.key ?? w.token.uuid}:leave`;
+const enterKey = (w: Watcher) => `${w.key ?? w.token.uuid}:enter`;
 
 /** The creatures whose reach the mover's path is checked against (in its running combat, on its level) */
 function watchersFor(mover: TokenDocument.Implementation): Watcher[] {
+  // Readied uses watch in or out of combat
+  const readied: Watcher[] = movementWatches(mover).map(({ use, readier, within, enters, leaves }) =>
+    ({ token: readier, reach: within, attacks: false, enters, leaves, readied: use, key: `readied:${use.id}` }));
   const combat = combatOfToken(mover);
-  if (!combat?.started || !mover.actor) return [];
+  if (!combat?.started || !mover.actor) return readied;
   const watchers = new Map<string, Watcher>();
   if (configSettings.opportunityAttacks === "prompt")
     for (const { token, reach } of possibleReactors(mover)) watchers.set(token.uuid ?? token.id ?? "", { token, reach, attacks: true, enters: false, leaves: false });
@@ -115,7 +125,7 @@ function watchersFor(mover: TokenDocument.Implementation): Watcher[] {
     const known = watchers.get(key);
     watchers.set(key, { token, reach: known?.reach ?? meleeReach(actor), attacks: !!known?.attacks, enters, leaves });
   }
-  return [...watchers.values()];
+  return [...watchers.values(), ...readied];
 }
 
 /**
@@ -172,12 +182,19 @@ async function splitMove(mover: TokenDocument.Implementation, path: PathWaypoint
     await mover.move([...explicit, { ...waypoint(path[index]), explicit: true }].map(w => waypoint(w as PathWaypoint)) as never, options as never);
     await animationDone(mover);
   }
-  for (const w of crossing.leaving.filter(w => w.leaves)) await raiseReachEvent(LEAVES_REACH, w.token, mover, { movementAction: action, reach: w.reach });
+  const moverName = mover.name ?? "";
+  for (const w of crossing.leaving.filter(w => w.leaves)) {
+    if (w.readied) await offerRelease(w.readied, mover, i18n("midi-qol.Deferred.Left").replace("{name}", moverName), { awaitUse: true });
+    else await raiseReachEvent(LEAVES_REACH, w.token, mover, { movementAction: action, reach: w.reach });
+  }
   for (const w of provoked) {
     try { await doReactions(w.token, mover.uuid, null, OPPORTUNITY, { opportunity: true }); }
     catch (err) { console.error("midi-qol | opportunity attack", err); }
   }
-  for (const w of crossing.entering) await raiseReachEvent(ENTERS_REACH, w.token, mover, { movementAction: action, reach: w.reach });
+  for (const w of crossing.entering) {
+    if (w.readied) await offerRelease(w.readied, mover, i18n("midi-qol.Deferred.Entered").replace("{name}", moverName), { awaitUse: true });
+    else await raiseReachEvent(ENTERS_REACH, w.token, mover, { movementAction: action, reach: w.reach });
+  }
   if (!rest.length || stopped(mover, String(rest.at(-1)?.action ?? "walk"))) return;
   await mover.move(rest.map(waypoint) as never, options as never);
 }

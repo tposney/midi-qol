@@ -25,8 +25,15 @@ import { systemConcentrationId } from "../../midi-qol.js";
  */
 
 export interface DeferredOptions {
-  /** The module's description of what releases it (shown, not acted on) */
-  trigger?: string;
+  /**
+   * What releases it: a description (shown, the module watches for it), or a trigger midi watches for
+   * (lib/deferredTriggers.ts: `{ on, who?, within? }`)
+   */
+  trigger?: string | import("./deferredTriggers.js").DeferredTrigger;
+  /** The request handler type that asks the owner when the trigger happens (a module's own prompt); midi's Release / Hold otherwise */
+  prompt?: string;
+  /** How long the owner has to decide (ms); then it holds */
+  timeoutMs?: number;
   /** "turnStart": dropped at the readier's next turn start (in combat); "never": until released or dropped */
   lapse?: "turnStart" | "never";
   /** Hold concentration while readied (a readied spell); `name`: the held effect's name */

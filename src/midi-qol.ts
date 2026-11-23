@@ -12,6 +12,7 @@ import { defineMidiMultiattack } from "./module/services/multiattack/run.js";
 import { holdsApi, registerHolds } from "./module/lib/holds.js";
 import { HoldPanel, setupHoldPanel } from "./module/apps/HoldPanel.js";
 import { deferredApi, registerDeferredUses } from "./module/lib/deferred.js";
+import { registerDeferredTriggers } from "./module/lib/deferredTriggers.js";
 import { checklistApi, setupChecklist } from "./module/lib/checklist.js";
 import { ChecklistPanel, registerChecklistSetting, setupChecklistPanel } from "./module/apps/ChecklistPanel.js";
 import { setupInteractionsHUD } from "./module/services/interactions/hud.js";
@@ -626,6 +627,7 @@ Hooks.once('init', async function () {
   setupHoldPanel();
   // M22a: deferred uses (Readied Actions)
   registerDeferredUses();
+  registerDeferredTriggers();
   // M22b: the turn checklist (contributors, panel)
   setupChecklist();
   setupChecklistPanel();
