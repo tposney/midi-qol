@@ -138,6 +138,10 @@ export class ConfigSettings {
   forcedMovementProvider = "auto";
   /** M6: standing up from prone costs half the creature's speed in combat (combat) or nothing (none) */
   proneStanding = "combat";
+  /** M8: interactions (Hide, Search, Stabilize, Help, Grapple / Shove) on the Token HUD and to macros */
+  interactions = true;
+  /** M8: doors and the free object interaction (a fourth economy kind); off by default */
+  objectInteractions = false;
   enforceSingleWeaponTarget: boolean = false;
   gmAttackDisplay: string = "full";
   gmDamageDisplay: string = "full";
@@ -653,6 +657,8 @@ export let fetchParams = () => {
   if (!configSettings.opportunityAttacks) configSettings.opportunityAttacks = "none";
   if (!configSettings.forcedMovementProvider) configSettings.forcedMovementProvider = "auto";
   if (!configSettings.proneStanding) configSettings.proneStanding = "combat";
+  if (configSettings.interactions === undefined) configSettings.interactions = true;
+  if (configSettings.objectInteractions === undefined) configSettings.objectInteractions = false;
   //@ts-expect-error legacy boolean value
   if (configSettings.autoItemEffects === false) configSettings.autoItemEffects = "off";
   if (configSettings.playerDamageCard === undefined) configSettings.playerDamageCard = "none";

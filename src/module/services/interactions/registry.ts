@@ -1,6 +1,7 @@
 import type { Activity } from "../../../globals.js";
 import { Registry } from "../../api/registry.js";
 import { completeActivityUse } from "../../utils.js";
+import { configSettings } from "../../settings.js";
 import { getDistance } from "../distance/service.js";
 import { budget, isTracked, spend, type BudgetKindId } from "../economy/ledger.js";
 import { meleeReach } from "../economy/reach.js";
@@ -20,7 +21,7 @@ import { tokenFor } from "../../lib/tokenResolver.js";
  * `targets`: what it acts on (self, a creature, a door). `available` gives the reason it can't be done now, or
  * nothing; the registry adds the common ones (wrong kind of target, out of range, the cost not affordable this turn).
  * `run` does it, or `activity` names an action item's activity to use against the target (its own use charges its
- * cost); a `run` interaction's cost is spent here. Interactions are offered on the Token HUD (8b) and to macros
+ * cost); a `run` interaction's cost is spent here. Costs are turn costs: only in a running combat. Interactions are offered on the Token HUD (8b) and to macros
  * (`MidiQOL.interactions.run`).
  */
 
@@ -70,6 +71,9 @@ export interface InteractionOffer {
 
 const interactions = new Registry<InteractionDefinition>();
 
+/** The Interactions setting (midi's and other modules' interactions alike) */
+const interactionsEnabled = () => configSettings.interactions !== false;
+
 export function registerInteraction(id: string, definition: InteractionDefinition): () => void {
   interactions.set(id, definition, { priority: definition.priority });
   return () => { interactions.delete(id); };
@@ -99,6 +103,9 @@ function distanceTo(subject: TokenDocument.Implementation, target: TokenDocument
   return canvas!.grid!.measurePath([centre, mid] as never, {} as never).distance;
 }
 
+/** Costs are turn costs: checked and spent only in a running combat (as a use's action is) */
+const inCombat = (token: TokenDocument.Implementation) => !!(token.combatant as { combat?: { started?: boolean } } | null)?.combat?.started;
+
 const label = (key: string, data?: Record<string, string>) => (data ? game.i18n?.format(key, data) : game.i18n?.localize(key)) ?? key;
 
 /** The common reasons, then the interaction's own */
@@ -112,7 +119,7 @@ function reasonFor(definition: InteractionDefinition, context: InteractionContex
     if (distance < 0 || distance > range + 1e-6) return label("midi-qol.Interactions.Reason.range", { range: String(range) });
   }
   for (const [kind, count] of Object.entries(definition.cost ?? {}) as [BudgetKindId, number][]) {
-    if (!count || !subject.actor || !isTracked(subject.actor, kind)) continue;
+    if (!count || !subject.actor || !inCombat(subject) || !isTracked(subject.actor, kind)) continue;
     const state = budget(subject.actor, kind);
     if (state.used + count > state.max) return label("midi-qol.Interactions.Reason.cost", { kind: label(`midi-qol.Interactions.Cost.${kind}`) });
   }
@@ -128,6 +135,7 @@ function reasonFor(definition: InteractionDefinition, context: InteractionContex
 
 /** What the subject is offered against the target (none: itself): every interaction for that kind of target, with the reason it can't be done now */
 export function availableInteractions(subjectRef: TargetRef, targetRef?: TargetRef, options: Record<string, unknown> = {}): InteractionOffer[] {
+  if (!interactionsEnabled()) return [];
   const subject = tokenFor(subjectRef as TokenDocument.Implementation);
   if (!subject) return [];
   const { target, kind } = targetOf(subject, targetRef);
@@ -145,6 +153,7 @@ export interface InteractionResult { done: boolean, reason?: string, result?: un
 
 /** Do an interaction: refused with its reason when it can't be done now */
 export async function runInteraction(id: string, subjectRef: TargetRef, targetRef?: TargetRef, options: Record<string, unknown> = {}): Promise<InteractionResult> {
+  if (!interactionsEnabled()) return { done: false, reason: label("midi-qol.Interactions.Reason.off") };
   const entry = interactions.get(id);
   const subject = tokenFor(subjectRef as TokenDocument.Implementation);
   if (!entry || !subject) return { done: false, reason: label("midi-qol.Interactions.Reason.unknown") };
@@ -163,7 +172,7 @@ export async function runInteraction(id: string, subjectRef: TargetRef, targetRe
   const result = await definition.run(context);
   if (result === false) return { done: false };
   for (const [kind, count] of Object.entries(definition.cost ?? {}) as [BudgetKindId, number][])
-    if (count && subject.actor && isTracked(subject.actor, kind)) await spend(subject.actor, kind, { count });
+    if (count && subject.actor && inCombat(subject) && isTracked(subject.actor, kind)) await spend(subject.actor, kind, { count });
   Hooks.callAll("midi-qol.interaction", { id, subject, target, result });
   return { done: true, result };
 }

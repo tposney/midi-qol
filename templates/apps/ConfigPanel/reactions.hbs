@@ -66,6 +66,18 @@
         </div>
 
         <div class="form-group">
+            <label>{{localize "midi-qol.InteractionsSetting.Name"}}</label>
+            <input type="checkbox" name="interactions" data-dtype="Boolean" {{checked configSettings.interactions}} />
+            <div class="notes midi-qol-faint">{{{localize "midi-qol.InteractionsSetting.Hint"}}}</div>
+        </div>
+
+        <div class="form-group">
+            <label>{{localize "midi-qol.ObjectInteractions.Name"}}</label>
+            <input type="checkbox" name="objectInteractions" data-dtype="Boolean" {{checked configSettings.objectInteractions}} />
+            <div class="notes midi-qol-faint">{{{localize "midi-qol.ObjectInteractions.Hint"}}}</div>
+        </div>
+
+        <div class="form-group">
             <label>{{localize "midi-qol.ProneStanding.Name"}}</label>
             <select name="proneStanding" data-dtype="String">
                 {{selectOptions ProneStandingOptions selected=configSettings.proneStanding localize=true}}

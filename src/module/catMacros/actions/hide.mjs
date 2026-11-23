@@ -3,7 +3,7 @@ import {dialogUtils, documentUtils, effectUtils, tokenUtils} from '../proxy.mjs'
 import {applyStatusCondition} from '../../utils.js';
 import {addCardNote} from '../../lib/cardNotes.js';
 import {Workflow} from '../../Workflow.js';
-import {HIDING, hiddenDC, hiddenFrom, hidingCondition, hidingConditionId, passivePerception} from '../../lib/hiding.js';
+import {endHide, hiddenDC, hiddenFrom, hidingCondition, hidingConditionId, inSight, markHidden, passivePerception, searchHidden} from '../../lib/hiding.js';
 // 2024 Hide and Search. Hide is a DC 15 Stealth check; on a success the creature gets dnd5e's Hiding condition, carrying
 // the check's total as the DC to find it (flags.midi-qol.hidden.dc). midi treats Hiding as Invisible towards each creature
 // that doesn't perceive the hider (lib/hiding.ts). The activity's configured effect (with CPR before 2.1.8 active,
@@ -43,21 +43,6 @@ const dependsOn = (effect, uuid) => !!effect.flags?.dnd5e?.dependents?.some(d =>
 // The hide effect's data: no statuses (the condition is the hide), the condition its dependent.
 function asHideEffect(actor) {
     return {statuses: [], flags: {dnd5e: {dependents: [{uuid: conditionUuid(actor)}]}}};
-}
-// Ends a hide: its Hide effect goes with the condition (dependents). A searcher may not own the hider: CAT deletes as GM.
-async function endHide(actor) {
-    const condition = hidingCondition(actor);
-    if (condition) await documentUtils.deleteDocument(condition);
-}
-async function markHidden(actor, effect, dc, origin) {
-    // Hiding afresh: the old hide (condition and Hide effects) ends first, in one deletion, so nothing chases it.
-    const old = [hidingCondition(actor), ...actor.effects.filter(e => e !== effect && dependsOn(e, conditionUuid(actor)))].filter(e => e);
-    if (old.length) await actor.deleteEmbeddedDocuments('ActiveEffect', old.map(e => e.id));
-    await applyStatusCondition(actor, HIDING, {prepare: data => {
-        foundry.utils.setProperty(data, `flags.${MODULE}.hidden.dc`, dc);
-        if (origin) foundry.utils.setProperty(data, `flags.${MODULE}.hidden.card`, origin);
-        foundry.utils.setProperty(data, 'flags.dnd5e.dependents', [{uuid: effect.uuid}]);
-    }});
 }
 // The card of the use that applied a condition without one recorded (CPR's): its item's running workflow on this client.
 function useCard(effect) {
@@ -103,7 +88,7 @@ Hooks.on('createActiveEffect', async effect => {
     const pending = pendingFor(effect);
     if (!pending) return;
     pendingHide.delete(effect.parent.uuid);
-    await markHidden(effect.parent, effect, pending.total, pending.card);
+    await markHidden(effect.parent, pending.total, {timer: effect, card: pending.card});
 });
 async function hide({document: activity, workflow}) {
     if (cprHides(activity)) return;
@@ -116,21 +101,16 @@ async function hide({document: activity, workflow}) {
     data.origin = source.uuid;
     await effectUtils.createEffects(workflow.actor, [data]);
 }
-function inSight(searcher, target) {
-    const viewer = searcher.object, other = target.object;
-    if (!viewer || !other) return false;
-    return !viewer.checkCollision(other.center, {origin: viewer.center, type: viewer.vision ? 'sight' : 'move', mode: 'any'});
-}
 async function search({workflow}) {
     const actor = workflow.actor;
     const searcher = workflow.token?.document ?? tokenFor(actor);
     const total = workflow.tokenSaves?.[searcher?.uuid]?.total;
     if (!Number.isFinite(total)) return;
-    const candidates = searcher.parent.tokens.filter(t => t.id !== searcher.id && hidingCondition(t.actor) && tokenUtils.isEnemy(searcher, t) && inSight(searcher, t));
-    if (!candidates.length) return;
+    const result = searchHidden(searcher, total);
+    if (!result.found.length && !result.missed.length) return;
     const dc = t => hiddenDC(t.actor);
-    const found = candidates.filter(t => total >= dc(t));
-    const missed = candidates.filter(t => total < dc(t)).map(t => `${t.name} (DC ${dc(t)})`).join(', ');
+    const found = result.found;
+    const missed = result.missed.map(t => `${t.name} (DC ${dc(t)})`).join(', ');
     if (!found.length) return post(actor, `<p>${actor.name} (Perception ${total}) finds no one${missed ? `; still hidden: ${missed}` : ''}.</p>`, workflow.itemCardId, gmWhisper());
     const list = found.map(t => `${t.name} (DC ${dc(t)})`).join(', ');
     const go = !option(workflow.activity, 'search', 'confirm', true) || await dialogUtils.confirm(workflow.item.name, `${actor.name} rolled Perception ${total}. Found: ${list}.${missed ? ` Still hidden: ${missed}.` : ''} Reveal them?`, {userId: (game.users.activeGM ?? game.user).id});

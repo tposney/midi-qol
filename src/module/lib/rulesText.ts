@@ -15,12 +15,19 @@ const PLACEHOLDER = /No rules text \([\s\S]*?(?=<\/em>|<\/p>)/;
 type Match = "exact" | "otherRules" | "name";
 type IndexEntry = { _id: string; name: string; type: string; system?: { identifier?: string; source?: unknown } };
 
-// Each pack's index, being read or read (concurrent fills share one read); a failed read isn't kept
-const indexes = new Map<string, Promise<IndexEntry[] | null>>();
+// Each pack's index, being read or read (concurrent fills share one read); a failed read isn't kept. Keyed by the pack
+// itself: a pack deleted and made again under the same name is another pack (its old index would name items gone)
+const indexes = new WeakMap<CompendiumCollection<"Item">, Promise<IndexEntry[] | null>>();
+/** A pack's items changed: its index is read again next time */
+const forgetIndex = (item: Item.Implementation) => {
+  const pack = item.pack ? game.packs?.get(item.pack) as CompendiumCollection<"Item"> | undefined : undefined;
+  if (pack) indexes.delete(pack);
+};
 // Items being filled: one fill at a time per item, so concurrent triggers can't add the text twice
 const filling = new Set<string | null>();
 
 export function registerRulesTextSettings() {
+  for (const hook of ["createItem", "updateItem", "deleteItem"] as const) Hooks.on(hook, (item: Item.Implementation) => forgetIndex(item));
   Hooks.on("createItem", (item: Item.Implementation, _options: unknown, userId: string) => {
     if (userId !== game.user?.id || !(item.parent instanceof Actor) || !lacksRulesText(item)) return;
     if (!configSettings.rulesTextFill) return;
@@ -127,11 +134,11 @@ function sourcePacks(): CompendiumCollection<"Item">[] {
 }
 
 function packIndex(pack: CompendiumCollection<"Item">): Promise<IndexEntry[] | null> {
-  let read = indexes.get(pack.collection);
+  let read = indexes.get(pack);
   if (!read) {
     read = readIndex(pack);
-    indexes.set(pack.collection, read);
-    void read.then(entries => { if (!entries) indexes.delete(pack.collection); });
+    indexes.set(pack, read);
+    void read.then(entries => { if (!entries) indexes.delete(pack); });
   }
   return read;
 }
