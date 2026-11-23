@@ -5,7 +5,9 @@ import { hudApi, registerHudSetting, setupHuds } from "./module/services/turnMod
 import { registerTurnHudConfig } from "./module/apps/TurnHudConfig.js";
 import { setupArgon } from "./module/services/turnModel/argon.js";
 import { clickToAttackApi, setupClickToAttack } from "./module/services/clickToAttack/service.js";
-import { multiattackApi, setupMultiattackPlans } from "./module/services/multiattack/plans.js";
+import { defineMultiattackPlansService, multiattackApi, setupMultiattackPlans } from "./module/services/multiattack/plans.js";
+// midi's Multiattack table registers as another module would (in midi-qol.registerServices)
+import "./module/services/multiattack/official.js";
 import { setupInteractionsHUD } from "./module/services/interactions/hud.js";
 import { registerDefaultInteractions } from "./module/services/interactions/defaults.js";
 import { registerGrappleInteractions } from "./module/services/interactions/grapple.js";
@@ -608,6 +610,7 @@ Hooks.once('init', async function () {
   defineBonusPromptService(() => `midi-qol.${safeGetGameSetting("midi-qol", "BonusPrompt") ?? "phased"}`);
   defineSettingNeedsService();
   defineTokenVisualsService();
+  defineMultiattackPlansService();
   registerTokenVisualProviders();
   setupTokenVisuals();
   setupSequencerLevelsFix();

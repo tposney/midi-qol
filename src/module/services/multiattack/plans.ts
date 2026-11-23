@@ -1,4 +1,4 @@
-import { Registry } from "../../api/registry.js";
+import { defineService, entries, reportServiceProblem } from "../../api/services.js";
 import { openMultiattack, openRun, setupMultiattackRuns } from "./run.js";
 import { MultiattackRunSheet, setupMultiattackSheet } from "../../apps/multiattack/MultiattackRunSheet.js";
 import { MultiattackPlanEditor, registerMultiattackSection } from "../../apps/multiattack/MultiattackPlanEditor.js";
@@ -8,8 +8,8 @@ import { parseMultiattack, resolvePlan, slug, tokenize, type MultiattackPlan, ty
  * M21a: a creature's Multiattack plan (M21 plan, 21a). Looked up in order:
  *   1. the GM's own plan for this creature (world setting multiattackPlans, keyed by the creature's compendium source so
  *      every copy and later import shares it; a creature with no source by its actor uuid);
- *   2. registered plans, higher priority first (MidiQOL.multiattack.registerPlans): a module's own, then midi's table
- *      (`midi-qol.official`, data/multiattack/<pack>.json generated from the books, fetched per pack on first use);
+ *   2. the multiattackPlans service's providers, higher priority first: a module's own, then midi's table
+ *      (`midi-qol.official`, official.ts, registered as any other module registers);
  *   3. the English text parsed: the item's description, Babele's original, the compendium source item's;
  *   4. a guess from the attacks the text links, for the GM to confirm.
  * A plan naming an attack the creature doesn't have (an edited creature) is passed over for the next source, the reason
@@ -34,24 +34,32 @@ export interface PlanLookup {
   skipped?: string[];
 }
 
-/** A registration: plans keyed by compendium uuid or `id:<actor identifier>`, a URL of such a JSON object, or a lookup */
+/**
+ * A multiattackPlans provider: plans keyed by compendium uuid or `id:<actor identifier>`, a URL of such a JSON object,
+ * or a lookup. Returning no plan (or one naming attacks the creature lacks) passes to the next provider.
+ *
+ *   MidiQOL.services.register("multiattackPlans", "my-module", { url: "modules/my-module/plans.json" }, { priority: 10 });
+ */
 export interface PlanProvider {
   plans?: Record<string, { item?: string, plan: MultiattackPlan } | MultiattackPlan>;
   url?: string;
   lookup?: (actor: Actor.Implementation, keys: string[]) => MultiattackPlan | undefined | Promise<MultiattackPlan | undefined>;
 }
 
-const providers = new Registry<PlanProvider>();
+declare module "../../api/services.js" {
+  interface MidiServices { multiattackPlans: PlanProvider }
+}
+
+const SERVICE = "multiattackPlans" as const;
 const urlCache = new Map<string, Promise<Record<string, unknown> | undefined>>();
 const SETTING = "multiattackPlans" as const;
-const OFFICIAL = "midi-qol.official";
 
 type Described = { system?: { description?: { value?: string }, identifier?: string, activities?: { contents?: Activity5e[] } }, flags?: Record<string, unknown> };
 type Activity5e = { id: string, type?: string, spell?: { uuid?: string } };
 
-export function registerPlans(id: string, provider: PlanProvider, { priority = 0 }: { priority?: number } = {}): () => void {
-  providers.set(id, provider, { priority });
-  return () => { providers.delete(id); };
+/** Before `midi-qol.registerServices`: providers (midi's table among them) register in that hook */
+export function defineMultiattackPlansService() {
+  defineService<PlanProvider>(SERVICE, { kind: "contributors", description: "Multiattack plans for creatures, asked in priority order before the description is read" });
 }
 
 export const isMultiattackItem = (item: Item.Implementation) =>
@@ -161,21 +169,6 @@ async function fromProvider(provider: PlanProvider, actor: Actor.Implementation,
   return undefined;
 }
 
-/** midi's table: the file for the creature's pack, when midi has one */
-let officialIndex: Promise<string[]> | undefined;
-async function officialLookup(_actor: Actor.Implementation, keys: string[]): Promise<MultiattackPlan | undefined> {
-  officialIndex ??= fetch(foundry.utils.getRoute("modules/midi-qol/data/multiattack/index.json")).then(r => r.ok ? r.json() : []).catch(() => []);
-  const packs = await officialIndex;
-  for (const key of keys) {
-    const pack = key.match(/^Compendium\.([^.]+\.[^.]+)\.Actor\./)?.[1];
-    if (!pack || !packs.includes(pack)) continue;
-    const file = await fromUrl(foundry.utils.getRoute(`modules/midi-qol/data/multiattack/${pack}.json`));
-    const plan = tablePlan((file?.plans as Record<string, unknown> | undefined)?.[key]);
-    if (plan) return plan;
-  }
-  return undefined;
-}
-
 /** The GM's plans, by creature key */
 function gmPlans(): Record<string, MultiattackPlan> {
   try { return game.settings?.get("midi-qol", SETTING) ?? {}; }
@@ -225,10 +218,10 @@ export async function multiattackPlan(actor: Actor.Implementation | null | undef
 
   const gm = gmPlans()[key];
   if (gm) return done(gm, "gm");
-  for (const entry of providers.entries()) {
+  for (const entry of entries(SERVICE)) {
     let plan: MultiattackPlan | undefined;
-    try { plan = await fromProvider(entry.value, actor, keys); }
-    catch (err) { console.warn(`midi-qol | multiattack plans ${entry.id} failed`, err); continue; }
+    try { plan = await fromProvider(entry.provider, actor, keys); }
+    catch (err) { reportServiceProblem(SERVICE, entry.id, "its lookup failed and is skipped", err); continue; }
     if (!plan) continue;
     const missing = missingRefs(plan, known);
     if (missing.length) { skipped.push(`${entry.id}: ${missing.join(", ")} not on the creature`); continue; }
@@ -251,13 +244,11 @@ export function setupMultiattackPlans() {
   setupMultiattackSheet();
   registerMultiattackSection();
   game.settings?.register("midi-qol", SETTING, { scope: "world", config: false, type: Object, default: {} });
-  registerPlans(OFFICIAL, { lookup: officialLookup }, { priority: -100 });
 }
 
 export const multiattackApi = {
   plan: multiattackPlan,
-  registerPlans,
-  providers: () => providers.entries().map(e => e.id),
+  providers: () => entries(SERVICE).map(e => e.id),
   setPlan: setGmPlan,
   key: planKey,
   keys: creatureKeys,

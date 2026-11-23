@@ -264,3 +264,14 @@ describe("multiattack plans: fitting uses", () => {
     expect(fit(hydra, Array(7).fill(["bite"]))?.attacksLeft).toBe(Infinity);
   });
 });
+
+describe("multiattack plans: midi's table registers as another module would", () => {
+  it("official.ts imports only types and registers in midi-qol.registerServices", () => {
+    const source = readFileSync(new URL("../src/module/services/multiattack/official.ts", import.meta.url), "utf8");
+    const imports = [...source.matchAll(/^\s*import\s[^;]*;/gm)].map(m => m[0]);
+    expect(imports.filter(i => !/^\s*import\s+type\s/.test(i))).toEqual([]);
+    expect(source).not.toMatch(/\bimport\s*\(/);
+    expect(source).not.toMatch(/globalThis\.MidiQOL|game\.modules\.get\(["']midi-qol["']\)/);
+    expect(source).toMatch(/Hooks\.once\("midi-qol\.registerServices"/);
+  });
+});
