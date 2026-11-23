@@ -32,7 +32,7 @@ export interface MultiattackRun {
 }
 
 type ActivityLike = Activity & { id: string, type?: string, uuid: string, name?: string | null, item: Item.Implementation,
-  attack?: { type?: { value?: string } }, spell?: { uuid?: string }, activation?: { type?: string } };
+  attack?: { type?: { value?: string } }, spell?: { uuid?: string }, activation?: { type?: string }, midiProperties?: { automationOnly?: boolean } };
 type ItemSystem = { identifier?: string, activities?: { contents?: ActivityLike[] } };
 
 /** A use's keys (lib/multiattack.ts fitUses): its item's identifier, a cast and its spell, attack kind, spell */
@@ -62,6 +62,18 @@ export function useKeys(activity: ActivityLike): string[] {
     if (cast?.item) keys.push(`${(cast.item.system as ItemSystem).identifier || slug(cast.item.name ?? "")}>${id}`);
   }
   return [...new Set(keys)];
+}
+
+/**
+ * Whether a use of this activity can be one of a Multiattack's: it takes an action, isn't midi's automation-only, and on
+ * an item with attacks is one of them (the item's other activities, an Escape Check, a rider save or damage, belong to
+ * its attack or to the target).
+ */
+type PartLike = { type?: string, activation?: { type?: string }, midiProperties?: { automationOnly?: boolean }, item: Item.Implementation };
+export function takesPart(activity: PartLike): boolean {
+  if (activity.activation?.type !== "action" || activity.midiProperties?.automationOnly) return false;
+  if (activity.type === "attack") return true;
+  return !((activity.item.system as ItemSystem).activities?.contents ?? []).some(a => a.type === "attack");
 }
 
 /** The open run on the creature: its Multiattack's flag, while the turn it was opened in lasts */
@@ -103,7 +115,7 @@ export function runFit(actor: Actor.Implementation, run: MultiattackRun, extra?:
 export function nextActivities(actor: Actor.Implementation, run: MultiattackRun): ActivityLike[] {
   if (!run.plan) return [];
   const candidates = actor.items.filter(item => !isMultiattackItem(item))
-    .flatMap(item => ((item.system as ItemSystem).activities?.contents ?? []).map(activity => ({ activity, keys: useKeys(activity) })));
+    .flatMap(item => ((item.system as ItemSystem).activities?.contents ?? []).filter(takesPart).map(activity => ({ activity, keys: useKeys(activity) })));
   return nextUses(run.plan, run.uses.map(u => u.keys), candidates, { evaluate: evaluator(actor) }).map(c => c.activity);
 }
 
@@ -166,7 +178,7 @@ async function afterCharge(workflow: Workflow) {
   if (!actor || !activity?.item) return;
   if (isMultiattackItem(activity.item)) { await openMultiattack(actor); return; }
   const open = openRun(actor);
-  if (!open || activity.activation?.type !== "action") return;
+  if (!open || !takesPart(activity)) return;
   const keys = useKeys(activity);
   if (!runFit(actor, open.run, keys)) return;
   await updateRun(open.item, run => {
@@ -178,7 +190,7 @@ async function afterCharge(workflow: Workflow) {
 /** A use that fits the open plan costs no action */
 function free({ activity, actor }: { activity: Activity, actor: Actor.Implementation }): boolean {
   const used = activity as ActivityLike;
-  if (!used.item || isMultiattackItem(used.item)) return false;
+  if (!used.item || isMultiattackItem(used.item) || !takesPart(used)) return false;
   const open = openRun(actor);
   return !!open && !!runFit(actor, open.run, useKeys(used));
 }

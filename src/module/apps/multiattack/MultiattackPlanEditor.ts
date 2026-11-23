@@ -2,6 +2,7 @@ import { i18n } from "../../../midi-qol.js";
 import { slug, type MultiattackPlan, type PlanGroup, type PlanOption, type PlanReplace } from "../../lib/multiattack.js";
 import { isMultiattackItem, multiattackPlan, planKey, setGmPlan, spellInfo } from "../../services/multiattack/plans.js";
 import { planView, refName } from "./planView.js";
+import { takesPart } from "../../services/multiattack/run.js";
 
 const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
 
@@ -12,7 +13,7 @@ const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
  * and cast activities, never typed. Saved for the creature's compendium source (every copy shares it), else the actor.
  */
 
-type ItemSystem = { identifier?: string, activities?: { contents?: { type?: string, spell?: { uuid?: string } }[] } };
+type ItemSystem = { identifier?: string, activities?: { contents?: { type?: string, spell?: { uuid?: string }, activation?: { type?: string }, midiProperties?: { automationOnly?: boolean }, item: Item.Implementation }[] } };
 
 /** The references the creature's plan can use: its items, its casts, any attack/spell; and any the plan already has */
 function refChoices(actor: Actor.Implementation, plan: MultiattackPlan): { value: string, label: string }[] {
@@ -20,7 +21,8 @@ function refChoices(actor: Actor.Implementation, plan: MultiattackPlan): { value
   for (const item of actor.items) {
     if (isMultiattackItem(item)) continue;
     const system = item.system as ItemSystem;
-    const activities = system.activities?.contents ?? [];
+    // Only what can be one of a Multiattack's uses (an attack item by its attacks, never a lone Escape Check)
+    const activities = (system.activities?.contents ?? []).filter(takesPart);
     if (!activities.length) continue;
     const id = system.identifier || slug(item.name ?? "");
     values.add(id);
