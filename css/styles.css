@@ -2581,3 +2581,6 @@ body.midi-qol-no-hotbar #hotbar { display: none; }
 /* M7d: an Argon button midi says can't be used now: greyed, the reasons on a badge */
 .midi-qol-argon-unusable::after { content: ""; position: absolute; inset: 0; pointer-events: none; backdrop-filter: grayscale(1) brightness(0.6); }
 .midi-qol-argon-reason { position: absolute; top: 2px; right: 2px; font-size: 14px; color: #e05050; text-shadow: 0 0 3px #000; filter: none; pointer-events: auto; z-index: 2; }
+
+/* M7: an attack waiting for its target: a crosshair over the canvas */
+body.midi-qol-attack-primed #board { cursor: crosshair; }

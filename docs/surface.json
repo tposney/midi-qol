@@ -23,6 +23,7 @@
     "applyTokenDamageMany",
     "apps",
     "attachRegionActivityBehavior",
+    "attack",
     "canSee",
     "canSense",
     "canSenseModes",
@@ -229,6 +230,7 @@
   "hooks": [
     "midi-qol.addUndoEntry",
     "midi-qol.AttackRollComplete",
+    "midi-qol.claimClick",
     "midi-qol.conditionData",
     "midi-qol.ConfigSettingsChanged",
     "midi-qol.cue",
@@ -404,6 +406,7 @@
     "blindRollDisplay",
     "chatCardSummaries",
     "checkTwoHanded",
+    "clickToAttack",
     "collapsibleTargets",
     "coloredBorders",
     "concentrationAutomation",

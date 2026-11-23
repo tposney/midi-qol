@@ -4,6 +4,7 @@ import { setupTurnModel, turnModelApi } from "./module/services/turnModel/model.
 import { hudApi, registerHudSetting, setupHuds } from "./module/services/turnModel/hud.js";
 import { registerTurnHudConfig } from "./module/apps/TurnHudConfig.js";
 import { setupArgon } from "./module/services/turnModel/argon.js";
+import { clickToAttackApi, setupClickToAttack } from "./module/services/clickToAttack/service.js";
 import { setupInteractionsHUD } from "./module/services/interactions/hud.js";
 import { registerDefaultInteractions } from "./module/services/interactions/defaults.js";
 import { registerGrappleInteractions } from "./module/services/interactions/grapple.js";
@@ -439,6 +440,8 @@ Object.assign(globalThis.MidiQOL, {
   // M7: the turn model a HUD reads (economy, movement, things to use with reasons, interactions, pending)
   turnModel: turnModelApi,
   hud: hudApi,
+  // M7: click to attack (prime an attack, then click a token; Alt+click; the midi-qol.claimClick hook)
+  attack: clickToAttackApi,
   // Section 18, rule 4: anything's TokenDocument, and a TokenDocument's canvas Token (lib/tokenResolver.ts)
   tokenFor, tokenOf, isEphemeralToken,
   TokenDocumentSet,
@@ -708,6 +711,7 @@ Hooks.once('init', async function () {
   preloadTemplates();
   // Register custom sheets (if any)
   initPatching();
+  setupClickToAttack();
   registerDamageApplication();
   registerDamageMessageSummary();
   addDiceTermModifiers();

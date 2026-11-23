@@ -1,3 +1,4 @@
+import { clickToAttackTakes } from "./services/clickToAttack/service.js";
 import { tokenFor, tokenOf } from "./lib/tokenResolver.js";
 import type { PromptResponses } from "./lib/promptCosts.js";
 import { requestForRollClaim } from "./lib/bonusDecisions.js";
@@ -337,6 +338,12 @@ function userInitiatedTargetWrapper(this: any, wrapped: Function, ...args: any[]
   }
 }
 
+/** Token._onClickLeft: click to attack takes the click when it attacks (services/clickToAttack), else the targeting flag as above */
+function tokenClickLeftWrapper(this: Token.Implementation, wrapped: Function, ...args: [object, ...unknown[]]) {
+  if (clickToAttackTakes(this, args[0])) return;
+  return userInitiatedTargetWrapper.call(this, wrapped, ...args);
+}
+
 export function readyPatching() {
   // Constrain template placement to range / anchor cones to the caster while dragging. Only the
   // interactive step is wrapped; dnd5e still builds and creates the template regions.
@@ -357,8 +364,9 @@ export function readyPatching() {
 
   libWrapper.register(MODULE_ID, "foundry.applications.ui.Notifications.prototype.notify", notificationNotify, "MIXED");
 
-  // User-initiated targeting detection — set flag so targetToken hook can distinguish user clicks from programmatic targeting
-  libWrapper.register(MODULE_ID, "foundry.canvas.placeables.Token.prototype._onClickLeft", userInitiatedTargetWrapper, "WRAPPER");
+  // User-initiated targeting detection — set flag so targetToken hook can distinguish user clicks from programmatic targeting.
+  // A token's left click is offered to click to attack first (one wrapper per method for midi)
+  libWrapper.register(MODULE_ID, "foundry.canvas.placeables.Token.prototype._onClickLeft", tokenClickLeftWrapper, "MIXED");
   libWrapper.register(MODULE_ID, "foundry.canvas.placeables.Token.prototype._onClickRight2", userInitiatedTargetWrapper, "WRAPPER");
   libWrapper.register(MODULE_ID, "foundry.canvas.layers.TokenLayer.prototype.selectObjects", userInitiatedTargetWrapper, "WRAPPER");
 

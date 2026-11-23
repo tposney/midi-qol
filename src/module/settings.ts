@@ -145,6 +145,8 @@ export class ConfigSettings {
   /** M8: who makes grapples: auto (CAT's when CAT is active), midi-qol, cat */
   grappleProvider = "auto";
   /** M7b: the table's HUD per role (a player's "Table default"): a registered HUD's id, foundry (combat: the hotbar), none */
+  /** M7: click to attack (a HUD's primed attack, Alt+click, the Attack interaction); off by default */
+  clickToAttack = false;
   hudDefaultCombat = "foundry";
   hudDefaultParty = "none";
   hudDefaultTurnOrder = "none";
@@ -666,6 +668,7 @@ export let fetchParams = () => {
   if (configSettings.interactions === undefined) configSettings.interactions = true;
   if (configSettings.objectInteractions === undefined) configSettings.objectInteractions = false;
   if (!configSettings.grappleProvider) configSettings.grappleProvider = "auto";
+  if (configSettings.clickToAttack === undefined) configSettings.clickToAttack = false;
   if (!configSettings.hudDefaultCombat) configSettings.hudDefaultCombat = "foundry";
   if (!configSettings.hudDefaultParty) configSettings.hudDefaultParty = "none";
   if (!configSettings.hudDefaultTurnOrder) configSettings.hudDefaultTurnOrder = "none";

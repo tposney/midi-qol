@@ -105,6 +105,7 @@ export const MIDI_SETTINGS: Record<string, MidiSettingEntry> = {
   "doReactions": { group: "reactions", label: "midi-qol.DoReactions.Name", choices: "doReactionsOptions" },
   "interactions": { group: "interactions", label: "midi-qol.InteractionsSetting.Name", hint: "midi-qol.InteractionsSetting.Hint" },
   "grappleProvider": { group: "interactions", label: "midi-qol.GrappleProvider.Name", hint: "midi-qol.GrappleProvider.Hint", choices: "ForcedMovementProviderOptions" },
+  "clickToAttack": { group: "interactions", label: "midi-qol.ClickToAttack.Name", hint: "midi-qol.ClickToAttack.Hint" },
   "hudDefaultCombat": { group: "interactions", label: "midi-qol.Hud.Role.combat", hint: "midi-qol.Hud.RoleHint.combat" },
   "hudDefaultParty": { group: "interactions", label: "midi-qol.Hud.Role.party", hint: "midi-qol.Hud.RoleHint.party" },
   "hudDefaultTurnOrder": { group: "interactions", label: "midi-qol.Hud.Role.turnOrder", hint: "midi-qol.Hud.RoleHint.turnOrder" },

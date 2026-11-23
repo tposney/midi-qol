@@ -74,6 +74,15 @@
     </div>
 
     <div class="midi-qol-box">
+        {{localize "midi-qol.ClickToAttack.Name"}}
+        <div class="form-group">
+            <label>{{localize "midi-qol.ClickToAttack.Name"}}</label>
+            <input type="checkbox" name="clickToAttack" data-dtype="Boolean" {{checked configSettings.clickToAttack}} />
+            <div class="notes midi-qol-faint">{{localize "midi-qol.ClickToAttack.Hint"}}</div>
+        </div>
+    </div>
+
+    <div class="midi-qol-box">
         {{localize "midi-qol.Config.Box.objects"}}
         <div class="form-group">
             <label>{{localize "midi-qol.ObjectInteractions.Name"}}</label>

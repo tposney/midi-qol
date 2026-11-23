@@ -70,6 +70,8 @@ declare module "fvtt-types/configuration" {
     "midi-qol.preForcedMovement": (request: import("./module/services/forcedMovement/service.js").ForcedMoveRequest) => boolean | void;
     "midi-qol.forcedMovement": (request: import("./module/services/forcedMovement/service.js").ForcedMoveRequest, result: import("./module/services/forcedMovement/service.js").ForcedMoveResult) => void;
     "midi-qol.preOpportunityAttack": (mover: TokenDocument.Implementation, reactor: TokenDocument.Implementation, data: { movementAction: string, forced?: boolean }) => boolean | void;
+    /** Click to attack: return false to take the click (midi then does nothing) */
+    "midi-qol.claimClick": (data: { target: TokenDocument.Implementation, attacker: Actor.Implementation | null | undefined, activity: unknown, event: unknown }) => boolean | void;
       /** Condition data being built (createConditionData): add fields an item's conditions can refer to. */
       "midi-qol.conditionData": (conditionData: Record<string, unknown>, data: { workflow?: unknown, actor?: unknown, item?: unknown, target?: unknown }) => void;
       "dae.setupComplete": (api: any) => void;
