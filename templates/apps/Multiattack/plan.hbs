@@ -1,0 +1,13 @@
+<div class="midi-qol-multiattack-plan">
+    {{#each view.options}}
+    {{#unless @first}}<p class="midi-qol-multiattack-or">{{localize "midi-qol.Multiattack.Or"}}</p>{{/unless}}
+    <ul>
+        {{#each groups}}<li>{{count}} × {{names}}</li>{{/each}}
+        {{#each extras}}<li>{{localize "midi-qol.Multiattack.AlsoUses"}} {{names}}{{#if ifAvailable}} {{localize "midi-qol.Multiattack.IfAvailable"}}{{/if}}</li>{{/each}}
+        {{#each limits}}<li>{{this}}</li>{{/each}}
+        {{#if condition}}<li class="hint">{{condition}}</li>{{/if}}
+    </ul>
+    {{/each}}
+    {{#each view.replace}}<p>{{text}}</p>{{/each}}
+    {{#each view.notes}}<p class="hint">{{this}}</p>{{/each}}
+</div>

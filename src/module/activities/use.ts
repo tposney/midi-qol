@@ -1,5 +1,6 @@
 import { MidiActivity } from "./midiActivity.js";
 import { chargeUse } from "../services/economy/cost.js";
+import { multiattackAfterCharge } from "../services/multiattack/run.js";
 import { postChatCardChecks, preChatChecks, preTargetingChecks, setupCanSeeSense } from "./useChecks.js";
 import { setupTargets } from "./useTargets.js";
 import { skipConcentrationActorUuids } from "../patching.js";
@@ -288,6 +289,8 @@ export async function finishUse(used: MidiActivity, state: UseState, useResults:
   // The use's action, bonus action or reaction on the economy ledger (M4); after castData: the spell slot rule reads the
   // level cast
   await chargeUse(usage.workflow);
+  // M21b: a Multiattack opens its plan; a use that fits the open plan (charged nothing) is recorded in it
+  await multiattackAfterCharge(usage.workflow);
   // Scaling is now handled by the workflow's activity getter (reads from chat card flags).
   await usage.workflow.performState("midi-qol.Start");
   return useResults;

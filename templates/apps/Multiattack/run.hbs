@@ -1,0 +1,33 @@
+<div class="midi-qol-multiattack">
+    {{#if closed}}
+    <p class="hint">{{localize "midi-qol.Multiattack.Closed"}}</p>
+    {{else}}
+    <p class="hint midi-qol-multiattack-source">{{source}}{{#if guess}} — {{localize "midi-qol.Multiattack.GuessHint"}}{{/if}}</p>
+    {{#each skipped}}<p class="hint midi-qol-multiattack-skipped"><i class="fa-solid fa-triangle-exclamation"></i> {{this}}</p>{{/each}}
+    {{#if view}}
+    {{> "modules/midi-qol/templates/apps/Multiattack/plan.hbs" view=view}}
+    {{else}}
+    <p>{{localize "midi-qol.Multiattack.NoPlan"}}</p>
+    {{/if}}
+    {{#if uses.length}}
+    <h4>{{localize "midi-qol.Multiattack.Made"}}</h4>
+    <ol class="midi-qol-multiattack-made">
+        {{#each uses}}
+        <li>{{name}}{{#if targets}} → {{targets}}{{/if}}{{#if result}}: {{result}}{{/if}}{{#if damage}} ({{damage}}){{/if}}</li>
+        {{/each}}
+    </ol>
+    {{/if}}
+    {{#if done}}
+    <p class="midi-qol-multiattack-done"><i class="fa-solid fa-check"></i> {{localize "midi-qol.Multiattack.Done"}}</p>
+    {{else}}
+    {{#if next.length}}
+    <h4>{{localize "midi-qol.Multiattack.Next"}}{{#if attacksLeft}} ({{localize "midi-qol.Multiattack.AttacksLeft"}}: {{attacksLeft}}){{/if}}</h4>
+    <div class="midi-qol-multiattack-next">
+        {{#each next}}
+        <button type="button" data-action="multiattackUse" data-uuid="{{uuid}}"><img src="{{img}}" alt=""> {{label}}</button>
+        {{/each}}
+    </div>
+    {{/if}}
+    {{/if}}
+    {{/if}}
+</div>

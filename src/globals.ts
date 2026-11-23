@@ -72,6 +72,8 @@ declare module "fvtt-types/configuration" {
     "midi-qol.preOpportunityAttack": (mover: TokenDocument.Implementation, reactor: TokenDocument.Implementation, data: { movementAction: string, forced?: boolean }) => boolean | void;
     /** Click to attack: return false to take the click (midi then does nothing) */
     "midi-qol.claimClick": (data: { target: TokenDocument.Implementation, attacker: Actor.Implementation | null | undefined, activity: unknown, event: unknown }) => boolean | void;
+    /** M21b: a creature's Multiattack opened for the turn, on the client that used it (the run sheet opens) */
+    "midi-qol.multiattackOpened": (actor: Actor.Implementation, run: import("./module/services/multiattack/run.js").MultiattackRun) => void;
       /** Condition data being built (createConditionData): add fields an item's conditions can refer to. */
       "midi-qol.conditionData": (conditionData: Record<string, unknown>, data: { workflow?: unknown, actor?: unknown, item?: unknown, target?: unknown }) => void;
       "dae.setupComplete": (api: any) => void;
@@ -718,6 +720,8 @@ declare module "fvtt-types/configuration" {
         trapWorkflow?: {
           ignoreSelf?: boolean;
         }
+        /** M21b: a Multiattack opened this turn (on the creature's Multiattack feature) */
+        multiattackRun?: import("./module/services/multiattack/run.js").MultiattackRun;
       };
       dae?: {
         macro?: Macro.CreateData;

@@ -36,6 +36,8 @@ export async function preloadTemplates() {
     "modules/midi-qol/templates/apps/ConfigPanel/rules.hbs",
     "modules/midi-qol/templates/apps/ConfigPanel/workflow.hbs",
     "modules/midi-qol/templates/apps/DependentsExplorer/dependentsExplorer.hbs",
+    "modules/midi-qol/templates/apps/Multiattack/plan.hbs",
+    "modules/midi-qol/templates/apps/Multiattack/run.hbs",
     "modules/midi-qol/templates/apps/ItemOnUseMacrosConfig/itemOnUseMacrosConfig.hbs",
     "modules/midi-qol/templates/apps/OverTimeEditor/overTimeEditor.hbs",
     "modules/midi-qol/templates/apps/RollStatsDisplay/config.hbs",

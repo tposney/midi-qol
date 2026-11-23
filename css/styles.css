@@ -2584,3 +2584,14 @@ body.midi-qol-no-hotbar #hotbar { display: none; }
 
 /* M7: an attack waiting for its target: a crosshair over the canvas */
 body.midi-qol-attack-primed #board { cursor: crosshair; }
+
+/* M21b: the Multiattack run sheet */
+.midi-qol-multiattack-run .midi-qol-multiattack { display: flex; flex-direction: column; gap: 0.4rem; }
+.midi-qol-multiattack-plan ul { margin: 0.2rem 0; padding-left: 1.2rem; }
+.midi-qol-multiattack-or { margin: 0; font-style: italic; }
+.midi-qol-multiattack-next { display: flex; flex-direction: column; gap: 0.25rem; }
+.midi-qol-multiattack-next button { display: flex; align-items: center; gap: 0.4rem; justify-content: flex-start; }
+.midi-qol-multiattack-next img { width: 24px; height: 24px; border: none; }
+.midi-qol-multiattack-made { margin: 0; padding-left: 1.4rem; }
+.midi-qol-multiattack-done { color: var(--color-level-success, green); }
+
