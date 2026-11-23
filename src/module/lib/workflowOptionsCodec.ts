@@ -66,7 +66,7 @@ export const MIDI_OPTION_KEYS = new Set([
   "fastForward", "fastForwardAbility", "fastForwardAttack", "fastForwardDamage", "fastForwardSet", "fixedDice",
   "forceCompletion", "forceTemplateTargeting", "formulaDSN", "fumble", "grantsActor", "grantsToken", "ignoreUserTargets",
   "includeTargets", "isConcentrationCheck", "isCritical", "isDummy", "isFumble", "isMagicSave", "isOverTime", "isReaction",
-  "isTriggered", "item", "itemCardUuid", "itemUuid", "noConcentrationCheck", "noOnUseMacro", "noProvokeReaction",
+  "isTriggered", "item", "itemCardUuid", "itemUuid", "noConcentrationCheck", "noOnUseMacro", "noProvokeReaction", "areaTargets",
   "noTargetOnUseMacro", "noUseWarning", "notBonusAction", "notReaction", "onlyOnUseItemMacros", "other",
   "overTimeEffectUuid", "parts", "powerLevel", "preSelectedTargetUuids", "presentation", "preview", "proceedChecks", "recomputeAdvantage",
   "requestClaim", "rollAs", "rollAttackPerTarget", "rollOptions", "rollToggle", "rollType", "saveActivityUuid", "saveDC",

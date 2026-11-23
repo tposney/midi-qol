@@ -287,7 +287,8 @@ export async function postChatCardChecks(activity: MidiActivity, usage: Activity
     }
 
     // Check for too many targets
-    if (options.checkTargets && requiresTargets && workflow.targets.count > allowedTargets) {
+    // An area's targets are the area's: the activity's count doesn't limit them
+    if (options.checkTargets && requiresTargets && workflow.targets.count > allowedTargets && !workflow.workflowOptions?.areaTargets) {
       ui.notifications?.warn(i18nFormat("midi-qol.wrongNumberTargets", { allowedTargets }));
       if (debugEnabled > 0) warn(`${game.user?.name} ${i18nFormat(`midi-qol.${MODULE_ID}.wrongNumberTargets`, { allowedTargets })}`);
       return removeWorkflow(workflow);

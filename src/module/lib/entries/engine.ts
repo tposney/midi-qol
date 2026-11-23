@@ -484,6 +484,13 @@ function storedKept(actor: Actor.Implementation | undefined): KeptRecord[] {
 
 const useItemUuid = (context: EventContext) => context.workflow?.item?.uuid ?? context.item?.uuid ?? undefined;
 
+/** A kept choice being asked for (entry and item): another use of that item waits for its answer rather than asking too */
+const pendingKeeps = new Map<string, { promise: Promise<void>, use: object | undefined }>();
+function keepKeyOf(f: FoundEntry, context: EventContext): string | undefined {
+  const item = useItemUuid(context);
+  return keepPer(f) && item ? `${limitKey(documentUuid(f.document), f.entry.id)}|${item}` : undefined;
+}
+
 /** The entry's choice kept from earlier for this use's item, while its period lasts */
 export function keptChoice(f: FoundEntry, context: EventContext): { value: unknown } | undefined {
   const per = keepPer(f);
@@ -627,10 +634,22 @@ async function runAction(action: EntryAction, run: Omit<ActionRun, "action">, ra
 export async function runEvent(eventId: string, context: EventContext): Promise<EntryRunResult[]> {
   type Candidate = { found: FoundEntry, conditionData: Record<string, unknown>, entry: Entry, ask: boolean, kept?: { value: unknown } };
   const candidates: Candidate[] = [];
+  // Keep choices being asked: this use's own asks, released once taken or declined
+  const asking: (() => void)[] = [];
+  try {
   for (const f of collectEntries(eventId, context)) {
     const offer = f.entry.offer ?? "always";
+    // Another use of this item is asking for this choice (an area's saves for several creatures at once): its answer first
+    const keepKey = f.entry.choose ? keepKeyOf(f, context) : undefined;
+    const pending = keepKey ? pendingKeeps.get(keepKey) : undefined;
+    if (pending && pending.use !== context.workflow) await pending.promise;
     // A choice kept from earlier (choose.keep): taken again by itself, already paid for
     const kept = f.entry.choose ? keptChoice(f, context) : undefined;
+    if (keepKey && !kept && (offer === "ask" || offer === "reaction") && !pendingKeeps.has(keepKey)) {
+      let release!: () => void;
+      pendingKeeps.set(keepKey, { promise: new Promise<void>(resolve => { release = resolve; }), use: context.workflow });
+      asking.push(() => { pendingKeeps.delete(keepKey); release(); });
+    }
     if (kept && context.offers && context.offers !== "automatic") continue;
     const ask = (offer === "ask" || offer === "reaction") && !kept;
     if (context.offers === "automatic" && ask) continue;
@@ -661,6 +680,7 @@ export async function runEvent(eventId: string, context: EventContext): Promise<
     results.push(result);
   }
   return results;
+  } finally { for (const release of asking) release(); }
 }
 
 /** The entry's group (if any) has no entry taken yet this use, or it stacks */

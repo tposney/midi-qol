@@ -313,7 +313,18 @@ export class EntryEditor extends HandlebarsApplicationMixin(DocumentSheetV2)<
     const documents: EntryDocument[] = root ? [root as unknown as EntryDocument, ...activities, ...[...root.effects] as unknown as EntryDocument[]] : [document];
     const same = (a: EntryDocument, b: EntryDocument) => a === b || (!!a.uuid && a.uuid === b.uuid);
     if (!documents.some(d => same(d, document))) documents.push(document);
-    this.#homes = documents.map(d => {
+    this.#homes = documents.map(d => this.#homeOf(d));
+    if (root) {
+      const stored = String(foundry.utils.getProperty(root, "_source.flags.midi-qol.onUseMacroName") ?? "");
+      this.#onUse = { rows: parseOnUse(stored), stored: onUseString(parseOnUse(stored)) };
+    }
+    this.#relabelActivities();
+    this.#at = Math.max(0, this.#homes.findIndex(home => same(home.document, document)));
+  }
+
+  /** A document's home: its entries as stored (drafts), and the activity's card, the item's settings, an effect's changes */
+  #homeOf(d: EntryDocument): Home {
+    {
       const kind: EntryHome = isActivity(d) ? "activity" : d instanceof ActiveEffect ? "effect" : "item";
       const entries = entriesOfDocument(d);
       const choices = kind === "activity" ? JSON.stringify((d as { midiChoices?: unknown[] }).midiChoices ?? [], null, 2) : undefined;
@@ -328,12 +339,13 @@ export class EntryEditor extends HandlebarsApplicationMixin(DocumentSheetV2)<
       };
       for (const draft of home.drafts) draft.problems = this.#problemsOf(draft, home.drafts);
       return home;
-    });
-    if (root) {
-      const stored = String(foundry.utils.getProperty(root, "_source.flags.midi-qol.onUseMacroName") ?? "");
-      this.#onUse = { rows: parseOnUse(stored), stored: onUseString(parseOnUse(stored)) };
     }
-    // An activity another one's area runs is titled by that (the author never made it to be used on its own)
+  }
+
+  /** Activities titled by what they do (one an area runs by that), named by their own name or, with none, the item's */
+  #relabelActivities() {
+    const root = this.#root;
+    const activities = this.#homes.filter(h => h.kind === "activity").map(h => h.document);
     type AreaOwner = { regionBehavior?: { enabled?: boolean, rules?: { action: string, targetId: string }[] } };
     const runByArea = new Set(activities.flatMap(a => {
       const rb = (a as AreaOwner).regionBehavior;
@@ -347,7 +359,6 @@ export class EntryEditor extends HandlebarsApplicationMixin(DocumentSheetV2)<
       home.runByArea = runByArea.has(a.id ?? "") || runByArea.has(a.identifier ?? "");
       home.label = game.i18n?.format(home.runByArea ? "midi-qol.EntryEditor.Home.activityRunByArea" : "midi-qol.EntryEditor.Home.activity", { name }) ?? home.label;
     }
-    this.#at = Math.max(0, this.#homes.findIndex(home => same(home.document, document)));
   }
 
   get #jsonView() { return this.#view === "json"; }
@@ -435,6 +446,8 @@ export class EntryEditor extends HandlebarsApplicationMixin(DocumentSheetV2)<
       addDamagePart: EntryEditor.#onAddDamagePart,
       addChange: EntryEditor.#onAddChange,
       addAreaGroup: EntryEditor.#onAddAreaGroup,
+      addHomeChoice: EntryEditor.#onAddHomeChoice,
+      removeHomeChoice: EntryEditor.#onRemoveHomeChoice,
       addOnUse: EntryEditor.#onAddOnUse,
       removeOnUse: EntryEditor.#onRemoveOnUse,
       removeAreaGroup: EntryEditor.#onRemoveAreaGroup,
@@ -530,6 +543,7 @@ export class EntryEditor extends HandlebarsApplicationMixin(DocumentSheetV2)<
       settings: this.#view === "form" ? this.#settingsContext(home, true) : undefined,
       effectEditor: this.#view === "form" && home.changes ? this.#effectEditorContext(home) : undefined,
       homeChoices: this.#view === "form" ? home.choices : undefined,
+      homeChoiceRows: this.#view === "form" && home.choices !== undefined ? this.#homeChoiceRows(home) : undefined,
       homeChoicesProblem: home.choicesProblem,
       ifPresets: conditionPresets(),
       hasEntry: !!entry,
@@ -1147,7 +1161,9 @@ export class EntryEditor extends HandlebarsApplicationMixin(DocumentSheetV2)<
           ? [...activities.filter(a => a.id !== self).map(a => option(a.identifier || a.id, a.name || a.id, [a.identifier, a.id].includes(group.targetId))),
             option("new", i18n("midi-qol.EntryEditor.Activity.Area.newSave"), group.targetId === "new")]
           : effects.map(e => option(e.id!, e.name, e.id === group.targetId)),
-        triggers: group.kind === "use" ? AREA_TRIGGERS.map(tr => ({ value: tr, label: i18n(`midi-qol.EntryEditor.Activity.Region.trigger.${tr}`), checked: group.triggers.includes(tr) })) : undefined
+        triggers: group.kind === "use" ? AREA_TRIGGERS.map(tr => ({ value: tr, checked: group.triggers.includes(tr),
+          short: i18n(`midi-qol.EntryEditor.Activity.Area.short.${tr}`), hint: i18n(`midi-qol.EntryEditor.Activity.Region.trigger.${tr}`),
+          icon: ({ entry: "fa-right-to-bracket", turnStart: "fa-hourglass-start", turnEnd: "fa-hourglass-end", exit: "fa-right-from-bracket" } as Record<string, string>)[tr] ?? "fa-circle" })) : undefined
       } : undefined
     };
   }
@@ -1160,6 +1176,65 @@ export class EntryEditor extends HandlebarsApplicationMixin(DocumentSheetV2)<
       h.card.area = { ...(h.card.area ?? {}), groups: split.groups, other: split.other };
     }
     return h.card.area!.groups!;
+  }
+
+  /** An activity's choices as rows of fields: id, label, what is chosen, how many, a list's options */
+  #homeChoiceRows(home: Home) {
+    let list: Record<string, unknown>[] = [];
+    try { const parsed = JSON.parse(home.choices || "[]"); if (Array.isArray(parsed)) list = parsed; } catch { return undefined; }
+    const option = (value: string, label: string, selected: boolean) => ({ value, label, selected });
+    return list.map((c, i) => {
+      const kind = typeof c.kind === "string" ? c.kind : "option";
+      const options = Array.isArray(c.options) ? (c.options as unknown[]).map(o => typeof o === "string" ? o : (o as { value?: string })?.value ?? "").filter(Boolean).join(", ") : "";
+      return { i, id: c.id ?? "", label: c.label ?? "", min: c.min ?? "", max: c.max ?? "", options, isOption: kind === "option",
+        // A list from a source (the damage parts' types, the activity's effects) has no options of its own
+        source: typeof c.source === "string" ? c.source : "",
+        kinds: ["targets", "option", "damageType", "ability", "skill", "creatureType", "number", "allocate"].map(k => option(k, i18n(`midi-qol.EntryEditor.ChoiceKind.${k}`), k === kind)) };
+    });
+  }
+
+  /** The choices' JSON after their fields (rows by index; keys the fields don't show kept) */
+  #homeChoicesFromFields(data: Record<string, unknown>, json: string): string {
+    if (!Object.keys(data).some(k => k.startsWith("hc."))) return json;
+    let list: Record<string, unknown>[];
+    try { const parsed = JSON.parse(json || "[]"); if (!Array.isArray(parsed)) return json; list = parsed; } catch { return json; }
+    const text = (key: string) => String(data[key] ?? "").trim();
+    const next = list.map((c, i) => {
+      if (!(`hc.${i}.kind` in data)) return c;
+      const kind = text(`hc.${i}.kind`) || "option";
+      const updated: Record<string, unknown> = { ...c, id: text(`hc.${i}.id`) || c.id, label: text(`hc.${i}.label`) || undefined, kind,
+        min: text(`hc.${i}.min`) || undefined, max: text(`hc.${i}.max`) || undefined };
+      if (kind === "option" && !c.source && `hc.${i}.options` in data) {
+        const values = text(`hc.${i}.options`).split(",").map(v => v.trim()).filter(Boolean);
+        // An option's label kept where it had one
+        const before = Array.isArray(c.options) ? c.options as (string | { value: string, label?: string })[] : [];
+        updated.options = values.map(v => before.find(o => typeof o === "object" && o.value === v) ?? v);
+      }
+      for (const key of ["min", "max"]) if (typeof updated[key] === "string" && Number.isNumeric(updated[key])) updated[key] = Number(updated[key]);
+      for (const key of Object.keys(updated)) if (updated[key] === undefined) delete updated[key];
+      return updated;
+    });
+    return JSON.stringify(next, null, 2);
+  }
+
+  static #onAddHomeChoice(this: EntryEditor) {
+    const home = this.#homes[this.#at];
+    if (!home || home.choices === undefined) return;
+    let list: unknown[] = [];
+    try { const parsed = JSON.parse(home.choices || "[]"); if (Array.isArray(parsed)) list = parsed; } catch { return; }
+    list.push({ id: `choice${list.length + 1}`, label: i18n("midi-qol.EntryEditor.Choice.newLabel"), kind: "option", options: [] });
+    home.choices = JSON.stringify(list, null, 2);
+    this.render();
+  }
+
+  static #onRemoveHomeChoice(this: EntryEditor, _event: Event, target: HTMLElement) {
+    const home = this.#homes[this.#at];
+    if (!home || home.choices === undefined) return;
+    let list: unknown[] = [];
+    try { const parsed = JSON.parse(home.choices || "[]"); if (Array.isArray(parsed)) list = parsed; } catch { return; }
+    list.splice(Number(target.dataset.index), 1);
+    home.choices = JSON.stringify(list, null, 2);
+    this.render();
   }
 
   static #onAddAreaGroup(this: EntryEditor, _event: Event, target: HTMLElement) {
@@ -1606,12 +1681,20 @@ export class EntryEditor extends HandlebarsApplicationMixin(DocumentSheetV2)<
         const { schema } = key ? actionSchema(key) : { schema: undefined };
         const branches = !!key && BRANCHING.has(key);
         const hasBranches = !!action && typeof action === "object" && ("then" in action || "else" in action);
-        const fields = schema && (branches || !hasBranches)
-          ? [...schema.fields, CONDITION_FIELD].map(field => this.#fieldContext(path, field, action, key)) : undefined;
+        const all = schema && (branches || !hasBranches) ? [...schema.fields, CONDITION_FIELD] : undefined;
+        // Its main field and the fields in use first; the others under "More options" (still in the form)
+        const inUse = (field: ActionField) => {
+          const value = getByPath(action, field.path);
+          return !(value === undefined || value === null || value === "" || value === false || (Array.isArray(value) && !value.length)
+            || (typeof value === "object" && !Array.isArray(value) && !Object.keys(value as object).length));
+        };
+        const shown = all?.filter((field, n) => n === 0 || inUse(field));
+        const fields = shown?.map(field => this.#fieldContext(path, field, action, key));
+        const more = all?.filter(field => !shown!.includes(field)).map(field => this.#fieldContext(path, field, action, key));
         cards.push({
           path, key, depth, indent: depth * 16, branchLabel: i === 0 && (branch === "then" || branch === "else") ? i18n(`midi-qol.EntryEditor.Branch.${branch}`) : undefined,
           first: i === 0, last: i === actions.length - 1, canBranch: branches && !!fields, canAddRow: key === "table" && !!fields,
-          kinds: kinds.map(k => ({ ...k, selected: k.value === key })), fields, json: fields ? undefined : JSON.stringify(action, null, 2)
+          kinds: kinds.map(k => ({ ...k, selected: k.value === key })), fields, more, json: fields ? undefined : JSON.stringify(action, null, 2)
         });
         if (fields && branches) for (const b of ["then", "else"] as const) {
           const nested = (action as Record<string, unknown>)[b];
@@ -1837,7 +1920,7 @@ export class EntryEditor extends HandlebarsApplicationMixin(DocumentSheetV2)<
     if (this.#view === "sentence" && !this.#expanded) return void this.render();
     const home = this.#homes[this.#at];
     if (typeof data.homeChoices === "string" && home.choices !== undefined) {
-      home.choices = data.homeChoices;
+      home.choices = this.#homeChoicesFromFields(data, data.homeChoices);
       home.choicesProblem = undefined;
       try { if (!Array.isArray(JSON.parse(home.choices || "[]"))) home.choicesProblem = i18n("midi-qol.EntryEditor.Problem.Choices"); }
       catch (err) { home.choicesProblem = `${i18n("midi-qol.EntryEditor.Problem.Choices")}: ${(err as Error).message}`; }
@@ -2100,7 +2183,6 @@ export class EntryEditor extends HandlebarsApplicationMixin(DocumentSheetV2)<
     // midi's kinds, or a registered one (addKinds service)
     const registered = kind.startsWith("x:") && item ? addKindDefs(item).find(def => def.id === kind.slice(2)) : undefined;
     if (!item || (!registered && !NEW_KINDS.includes(kind as NewKind))) return;
-    if (this.#dirty()) return void ui.notifications?.warn(i18n("midi-qol.EntryEditor.AddWhat.saveFirst"));
     const spell = String(item.type) === "spell";
     let made: { activities: readonly Record<string, unknown>[], effects?: readonly Record<string, unknown>[] };
     if (registered) {
@@ -2112,11 +2194,23 @@ export class EntryEditor extends HandlebarsApplicationMixin(DocumentSheetV2)<
     const activities = made.activities.map(a => ({ ...a, _id: typeof a._id === "string" && a._id ? a._id : foundry.utils.randomID() }));
     if (!activities.length) return;
     await item.update(Object.fromEntries(activities.map(a => [`system.activities.${a._id}`, a])));
-    const activity = (item.system as { activities?: { get(id: string): EntryDocument | undefined } }).activities?.get(activities[0]._id);
-    if (!activity) return;
-    const position = { left: this.position.left, top: this.position.top, width: this.position.width, height: this.position.height };
-    await this.close({ discard: true });
-    await new EntryEditor(activity, { view: "sentence", position }).render({ force: true });
+    // Their homes join the editor's (after the other activities', the effects' last): unsaved edits elsewhere are kept
+    const collection = (item.system as { activities?: { get(id: string): EntryDocument | undefined } }).activities;
+    const newActivities = activities.map(a => collection?.get(String(a._id))).filter((d): d is EntryDocument => !!d);
+    const newEffects = (made.effects ?? []).map(e => item.effects.get(String(e._id))).filter(d => !!d) as unknown as EntryDocument[];
+    if (!newActivities.length) return;
+    const lastActivity = this.#homes.map(h => h.kind).lastIndexOf("activity");
+    const at = lastActivity >= 0 ? lastActivity + 1 : 1;
+    this.#homes.splice(at, 0, ...newActivities.map(d => this.#homeOf(d)));
+    this.#homes.push(...newEffects.map(e => this.#homeOf(e)));
+    this.#relabelActivities();
+    this.#at = at;
+    this.#selected = 0;
+    this.#picker = undefined;
+    this.#expanded = false;
+    this.#addWhatOpen = false;
+    this.#cardOpen = this.#cardField = this.#cardPlace = undefined;
+    this.render();
   }
 
   static #onUseRecipe(this: EntryEditor, _event: Event, target: HTMLElement) {

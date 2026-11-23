@@ -128,7 +128,7 @@ export function registerPreambleSteps(): void {
       return "midi-qol.Abort";
     }
     const hasScaledTargetCount = activityHasScaledTargetCount(workflow.activity);
-    if (hasScaledTargetCount) {
+    if (hasScaledTargetCount && !workflow.workflowOptions?.areaTargets) {
       const allowedTargets = Number(workflow.activity.target?.affects?.count);
       if (allowedTargets && workflow.targets.count > allowedTargets) {
         ui.notifications?.warn(i18nFormat("midi-qol.wrongNumberTargets", { allowedTargets }));

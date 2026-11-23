@@ -49,7 +49,8 @@
         {{#if areaGroup}}
         <div class="form-group"><label>{{localize "midi-qol.EntryEditor.Activity.Area.kindLabel"}}</label><div class="form-fields"><select name="card.area.g.kind">{{#each areaGroup.kinds}}<option value="{{value}}" {{#if selected}}selected{{/if}}>{{label}}</option>{{/each}}</select></div></div>
         <div class="form-group"><label>{{#if areaGroup.isUse}}{{localize "midi-qol.EntryEditor.Activity.Area.useLabel"}}{{else}}{{localize "midi-qol.EntryEditor.Activity.EffectWhat"}}{{/if}}</label><div class="form-fields"><select name="card.area.g.target">{{#each areaGroup.targets}}<option value="{{value}}" {{#if selected}}selected{{/if}}>{{label}}</option>{{/each}}</select></div></div>
-        {{#if areaGroup.triggers}}<div class="form-group"><label>{{localize "midi-qol.EntryEditor.Activity.Area.whenLabel"}}</label><div class="form-fields midi-qol-area-triggers">{{#each areaGroup.triggers}}<label class="checkbox"><input type="checkbox" name="card.area.g.trigger.{{value}}" {{#if checked}}checked{{/if}}> {{label}}</label>{{/each}}</div></div>{{/if}}
+        {{#if areaGroup.triggers}}<div class="form-group stacked"><label>{{localize "midi-qol.EntryEditor.Activity.Area.whenLabel"}}</label>
+            <div class="midi-qol-area-triggers">{{#each areaGroup.triggers}}<label class="midi-qol-trigger-tile" data-tooltip="{{hint}}"><input type="checkbox" name="card.area.g.trigger.{{value}}" {{#if checked}}checked{{/if}}><i class="fa-solid {{icon}}"></i><span>{{short}}</span></label>{{/each}}</div></div>{{/if}}
         <button type="button" data-action="removeAreaGroup" data-home="{{home}}" data-index="{{areaGroup.index}}"><i class="fa-solid fa-trash"></i> {{localize "midi-qol.EntryEditor.Activity.Area.remove"}}</button>
         {{/if}}
         {{#if roll}}

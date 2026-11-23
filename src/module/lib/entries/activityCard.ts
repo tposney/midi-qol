@@ -638,7 +638,8 @@ export function areaSaveActivity(id: string, name: string, spell: boolean): Reco
   return {
     _id: id, type: "save", name,
     activation: { type: "", override: true },
-    target: { override: true, affects: { type: "creature", count: "1", choice: false }, template: { type: "", units: "ft" }, prompt: false },
+    // The area decides who saves: no count of its own
+    target: { override: true, affects: { type: "creature", count: "", choice: false }, template: { type: "", units: "ft" }, prompt: false },
     range: { override: true, units: "any" },
     save: { ability: ["dex"], dc: { calculation: spell ? "spellcasting" : "", formula: spell ? "" : "10" } },
     damage: { onSave: "half", parts: [] }, effects: [],

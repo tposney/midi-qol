@@ -107,7 +107,7 @@
           },
           "affects": {
             "choice": false,
-            "count": "1",
+            "count": "",
             "type": "creature",
             "special": ""
           },

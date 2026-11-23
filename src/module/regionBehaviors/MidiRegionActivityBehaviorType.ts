@@ -354,13 +354,33 @@ export class MidiRegionActivityBehaviorType extends foundry.data.regionBehaviors
     const sourceItem = (fromUuidSync(activityUuid) as { item?: Item.Implementation } | null)?.item;
     if (itemIsMagical(sourceItem) && token.actor?.statuses.has("antimagic")) return;
 
-    const triggerData = {
+    // Creatures triggering it together (all those inside as the area appears, turns ending together) are one use: one
+    // card, one roll, and one question (Careful Spell's creatures chosen among them all)
+    await this._batchTrigger(activityUuid, tokenUuid, targetUuids => this._dispatchTrigger({
       activityUuid,
-      targetUuids: [tokenUuid],
+      targetUuids,
       castLevel,
       sourceActorUuid,
       damageType: (self.damageType as string | undefined) || undefined,
-    };
+    }));
+  }
+
+  /** Triggers of one activity within a moment, gathered: each caller waits for the one use that has them all */
+  _batches = new Map<string, { uuids: string[], done: Promise<void> }>();
+  _batchTrigger(key: string, tokenUuid: string, run: (uuids: string[]) => Promise<void>): Promise<void> {
+    let batch = this._batches.get(key);
+    if (!batch) {
+      const uuids: string[] = [];
+      const done = new Promise<void>(resolve => setTimeout(resolve, 100)).then(() => { this._batches.delete(key); return run(uuids); });
+      batch = { uuids, done };
+      this._batches.set(key, batch);
+    }
+    if (!batch.uuids.includes(tokenUuid)) batch.uuids.push(tokenUuid);
+    return batch.done;
+  }
+
+  async _dispatchTrigger(triggerData: { activityUuid: string, targetUuids: string[], castLevel: number, sourceActorUuid: string, damageType?: string }): Promise<void> {
+    const sourceActorUuid = triggerData.sourceActorUuid;
 
     // Resolve the source actor's player owner so the triggered activity is attributed
     // to them (chat author, speaker, rolls). Dispatch directly to that user when
@@ -409,7 +429,7 @@ export class MidiRegionActivityBehaviorType extends foundry.data.regionBehaviors
         targetsToUse: targetTokens,
         spellLevel: data.castLevel || undefined,
         checkGMstatus: false,
-        workflowOptions: { noProvokeReaction: true, autoConsumeResource: "both", ...(data.damageType ? { damageTypeChoice: data.damageType } : {}) },
+        workflowOptions: { noProvokeReaction: true, autoConsumeResource: "both", areaTargets: true, ...(data.damageType ? { damageTypeChoice: data.damageType } : {}) },
       },
     }, {
       configure: false,

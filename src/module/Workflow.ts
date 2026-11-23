@@ -9340,6 +9340,8 @@ export type WorkflowOptions = InexactPartial<{
   choices: Record<string, ChoiceValue>;
   /** The damage type a part with several types is rolled as, decided earlier (a region's cast): not asked */
   damageTypeChoice: string;
+  /** The targets were chosen by an area (a region's rule): the activity's own target count doesn't apply */
+  areaTargets: boolean;
   /** M18: the use's presentation override ("none": no cues presented) */
   presentation: "none" | import("./lib/cues.js").Cue["presentation"];
   allowIncapacitated: boolean;

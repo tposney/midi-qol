@@ -1,3 +1,31 @@
+{{#*inline "midiActionField"}}
+                {{#if (eq type "rollSpec")}}
+                <div class="form-group"><label>{{localize label}}</label>
+                    <select name="{{rollSpec.modeName}}">{{#each rollSpec.modes}}<option value="{{value}}" {{#if selected}}selected{{/if}}>{{label}}</option>{{/each}}</select></div>
+                {{#if rollSpec.activity}}
+                <div class="form-group"><label>{{localize "midi-qol.EntryEditor.Field.activityRef"}}</label>
+                    <select name="{{rollSpec.activityName}}">{{#each rollSpec.activities}}<option value="{{value}}" {{#if selected}}selected{{/if}}>{{label}}</option>{{/each}}</select></div>
+                {{/if}}
+                {{#if rollSpec.custom}}
+                <div class="form-group"><label>{{localize "midi-qol.EntryEditor.Field.ability"}}</label>
+                    <select name="{{rollSpec.abilityName}}">{{#each rollSpec.abilities}}<option value="{{value}}" {{#if selected}}selected{{/if}}>{{label}}</option>{{/each}}</select></div>
+                {{#if rollSpec.check}}
+                <div class="form-group"><label>{{localize "midi-qol.EntryEditor.Field.skill"}}</label>
+                    <select name="{{rollSpec.skillName}}">{{#each rollSpec.skills}}<option value="{{value}}" {{#if selected}}selected{{/if}}>{{label}}</option>{{/each}}</select></div>
+                {{/if}}
+                <div class="form-group"><label>{{localize "midi-qol.EntryEditor.Field.dc"}}</label><input type="text" name="{{rollSpec.dcName}}" value="{{rollSpec.dc}}"></div>
+                {{/if}}
+                {{else}}
+                <div class="form-group"><label>{{localize label}}</label>
+                    {{#if (eq type "multiselect")}}<multi-select name="{{name}}">{{#each options}}<option value="{{value}}" {{#if selected}}selected{{/if}}>{{label}}</option>{{/each}}</multi-select>
+                    {{else if (eq type "select")}}<select name="{{name}}">{{#each options}}<option value="{{value}}" {{#if selected}}selected{{/if}}>{{label}}</option>{{/each}}</select>
+                    {{else if (eq type "boolean")}}<input type="checkbox" name="{{name}}" {{#if checked}}checked{{/if}}>
+                    {{else if (eq type "number")}}<input type="number" name="{{name}}" value="{{value}}">
+                    {{else if (eq type "condition")}}<input type="text" name="{{name}}" value="{{value}}"><button type="button" class="midi-qol-entry-condition" data-action="editCondition" data-field="{{name}}" data-tooltip="{{localize "midi-qol.EntryEditor.EditCondition"}}"><i class="fa-solid fa-code"></i></button>
+                    {{else}}<input type="text" name="{{name}}" value="{{value}}" {{#if custom}}class="midi-qol-entry-custom" spellcheck="false" data-tooltip="{{localize "midi-qol.EntryEditor.CustomHint"}}"{{/if}}>{{/if}}
+                </div>
+                {{/if}}
+{{/inline}}
         {{#if only}}<div class="midi-qol-entry-only-buttons">
             <button type="button" data-action="allEntryFields"><i class="fa-solid fa-list"></i> {{localize "midi-qol.EntryEditor.Activity.AllFields"}}</button>
             <button type="button" data-action="doneEntryPart"><i class="fa-solid fa-check"></i> {{localize "midi-qol.EntryEditor.Activity.Done"}}</button>
@@ -78,33 +106,13 @@
                 </div>
                 {{#if fields}}
                 {{#each fields}}
-                {{#if (eq type "rollSpec")}}
-                <div class="form-group"><label>{{localize label}}</label>
-                    <select name="{{rollSpec.modeName}}">{{#each rollSpec.modes}}<option value="{{value}}" {{#if selected}}selected{{/if}}>{{label}}</option>{{/each}}</select></div>
-                {{#if rollSpec.activity}}
-                <div class="form-group"><label>{{localize "midi-qol.EntryEditor.Field.activityRef"}}</label>
-                    <select name="{{rollSpec.activityName}}">{{#each rollSpec.activities}}<option value="{{value}}" {{#if selected}}selected{{/if}}>{{label}}</option>{{/each}}</select></div>
-                {{/if}}
-                {{#if rollSpec.custom}}
-                <div class="form-group"><label>{{localize "midi-qol.EntryEditor.Field.ability"}}</label>
-                    <select name="{{rollSpec.abilityName}}">{{#each rollSpec.abilities}}<option value="{{value}}" {{#if selected}}selected{{/if}}>{{label}}</option>{{/each}}</select></div>
-                {{#if rollSpec.check}}
-                <div class="form-group"><label>{{localize "midi-qol.EntryEditor.Field.skill"}}</label>
-                    <select name="{{rollSpec.skillName}}">{{#each rollSpec.skills}}<option value="{{value}}" {{#if selected}}selected{{/if}}>{{label}}</option>{{/each}}</select></div>
-                {{/if}}
-                <div class="form-group"><label>{{localize "midi-qol.EntryEditor.Field.dc"}}</label><input type="text" name="{{rollSpec.dcName}}" value="{{rollSpec.dc}}"></div>
-                {{/if}}
-                {{else}}
-                <div class="form-group"><label>{{localize label}}</label>
-                    {{#if (eq type "multiselect")}}<multi-select name="{{name}}">{{#each options}}<option value="{{value}}" {{#if selected}}selected{{/if}}>{{label}}</option>{{/each}}</multi-select>
-                    {{else if (eq type "select")}}<select name="{{name}}">{{#each options}}<option value="{{value}}" {{#if selected}}selected{{/if}}>{{label}}</option>{{/each}}</select>
-                    {{else if (eq type "boolean")}}<input type="checkbox" name="{{name}}" {{#if checked}}checked{{/if}}>
-                    {{else if (eq type "number")}}<input type="number" name="{{name}}" value="{{value}}">
-                    {{else if (eq type "condition")}}<input type="text" name="{{name}}" value="{{value}}"><button type="button" class="midi-qol-entry-condition" data-action="editCondition" data-field="{{name}}" data-tooltip="{{localize "midi-qol.EntryEditor.EditCondition"}}"><i class="fa-solid fa-code"></i></button>
-                    {{else}}<input type="text" name="{{name}}" value="{{value}}" {{#if custom}}class="midi-qol-entry-custom" spellcheck="false" data-tooltip="{{localize "midi-qol.EntryEditor.CustomHint"}}"{{/if}}>{{/if}}
-                </div>
-                {{/if}}
+                {{> midiActionField}}
                 {{/each}}
+                {{#if more.length}}<details class="midi-qol-entry-more"><summary>{{localize "midi-qol.EntryEditor.MoreOptions" n=more.length}}</summary>
+                {{#each more}}
+                {{> midiActionField}}
+                {{/each}}
+                </details>{{/if}}
                 {{#if canAddRow}}
                 <div class="midi-qol-entry-branch-buttons">
                     <button type="button" data-action="addRow" data-path="{{path}}"><i class="fa-solid fa-plus"></i> {{localize "midi-qol.EntryEditor.AddRow"}}</button>
