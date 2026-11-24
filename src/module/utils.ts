@@ -2485,6 +2485,8 @@ export type MidiOptions = {
   unattended?: boolean;
   /** A save asked through the request core (lib/requests.ts): its roll is the one that claims the request */
   requestClaim?: string;
+  /** The mode picked in the hub's inbox for a requested roll: applied as dnd5e's dialog applies its button */
+  inboxMode?: "normal" | "advantage" | "disadvantage";
   cardNote?: SaveDetails["cardNote"];
   activityIdentifier?: string;
   advantage?: boolean;

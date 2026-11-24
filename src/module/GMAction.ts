@@ -744,7 +744,7 @@ async function _D20Roll(params: { request?: string, targetUuid: string, formula:
     const mode = await askRollInline(request, `${actor.name}: ${params.flavor}`);
     if (mode === "settled" || mode === "none") { if (timeoutId) clearTimeout(timeoutId); return resolve({}); }
     if (mode !== "dialog") {
-      if (mode !== "normal") { config.advantage = mode === "advantage"; config.disadvantage = mode === "disadvantage"; }
+      (config.midiOptions as { inboxMode?: string }).inboxMode = mode;
       config.dialog = false;
       (dialog as { configure?: boolean }).configure = false;
     }
@@ -784,9 +784,9 @@ async function rollConcentration(data: { actorUuid: string, target: number, whis
     // The inbox (the hub, while it runs): the mode picked there, rolled without the dialog
     const mode = await askRollInline(request, rollRequestTitle(actor, "concentration", { dc: data.target }));
     if (mode === "settled" || mode === "none") return {};
-    const picked = mode === "dialog" ? {} : { advantage: mode === "advantage", disadvantage: mode === "disadvantage" };
+    const inboxMode = mode === "dialog" ? {} : { inboxMode: mode };
     //@ts-expect-error no dnd5e types
-    return await actor.rollConcentration({ target: data.target, legacy: false, midiOptions: { requestClaim: claim }, ...picked }, mode === "dialog" ? dialog : { configure: false }, messageConfig);
+    return await actor.rollConcentration({ target: data.target, legacy: false, midiOptions: { requestClaim: claim, ...inboxMode } }, mode === "dialog" ? dialog : { configure: false }, messageConfig);
   } finally {
     Hooks.off("dnd5e.postRollConfiguration", hookId);
     unbind();
@@ -801,6 +801,19 @@ export function whisperRollToPlayer(message: ChatMessage.Implementation) {
   const userId = foundry.utils.getProperty(message, `flags.${MODULE_ID}.rollFor`);
   if (typeof userId !== "string" || !message.whisper.length || message.blind || message.whisper.includes(userId)) return;
   message.updateSource({ whisper: [...message.whisper, userId] });
+}
+
+/** A mode picked in the hub's inbox: set on each roll as dnd5e's roll dialog sets its button's (_finalizeConfig), after
+ * dnd5e computed one from advantage and disadvantage (applyKeybindings); dnd5e keeps a mode already set */
+export function registerInboxRollMode() {
+  Hooks.on("dnd5e.postBuildRollConfig" as never, ((config: { midiOptions?: { inboxMode?: string } }, rollConfig: { options?: { advantageMode?: number } }) => {
+    const mode = config.midiOptions?.inboxMode;
+    if (!mode) return;
+    // @ts-expect-error no dnd5e-types
+    const modes = CONFIG.Dice.D20Roll?.ADV_MODE as Record<string, number> | undefined;
+    if (!modes) return;
+    (rollConfig.options ??= {}).advantageMode = mode === "advantage" ? modes.ADVANTAGE : mode === "disadvantage" ? modes.DISADVANTAGE : modes.NORMAL;
+  }) as never);
 }
 
 /** The inbox's title for a roll request: "Krîspy: Dexterity saving throw (DC 14)" */
@@ -834,6 +847,8 @@ export async function rollAbility(data: {
     forUserId?: string;
     /** Rolled for another player's creature with no GM connected: nobody here may answer its prompts */
     unattended?: boolean;
+    /** Already picked in the hub's inbox (an action save): rolled with that mode, as the dialog's button */
+    inboxMode?: "normal" | "advantage" | "disadvantage";
   };
   // Legacy fields from pre-13.0.44 callers
   request?: string;
@@ -943,6 +958,7 @@ export async function rollAbility(data: {
     disadvantage,
     cardNote: sd.cardNote,
     unattended: disp?.unattended,
+    ...(disp?.inboxMode ? { inboxMode: disp.inboxMode } : {}),
   };
 
   let config: RollProcessConfig = {
@@ -1073,9 +1089,9 @@ export async function rollAbility(data: {
       void askRollInline(request, rollRequestTitle(actor, normalizedRequest, { ability, skill, tool, dc: disp?.showTargetDC ? rollDC : undefined })).then(mode => {
         if (mode === "settled" || mode === "none") return done();
         if (mode !== "dialog") {
+          // As the roll dialog's button: the mode set on the roll (inboxModeAsButton), whatever was computed
           dialog.configure = false;
-          config.advantage = mode === "advantage" || (mode === "normal" && advantage);
-          config.disadvantage = mode === "disadvantage" || (mode === "normal" && disadvantage);
+          midiOptions.inboxMode = mode;
         }
         void roll();
       });
@@ -2610,8 +2626,7 @@ export async function rollActionSave(data: { actorUuid: string; effectName: stri
   if (mode === "settled" || mode === "none") return undefined;
   if (mode !== "dialog") {
     if (request && (request.settledHow || !await request.claim())) return undefined;
-    const saveDetails = { ...data.saveDetails, ...(mode === "advantage" ? { advantage: true } : mode === "disadvantage" ? { disadvantage: true } : {}) };
-    return rollAbility({ saveDetails, displayOptions: { ...data.displayOptions, fastForward: true } });
+    return rollAbility({ saveDetails: data.saveDetails, displayOptions: { ...data.displayOptions, fastForward: true, inboxMode: mode } });
   }
   const confirmed = await DialogV2.confirm({
     window: { title: `${actor?.name ?? ""}: ${data.effectName}` },

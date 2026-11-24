@@ -97,7 +97,7 @@ import { initHooks, readyHooks, setupHooks } from './module/Hooks.js';
 import { setupCATIntegration } from './module/catIntegration.js';
 import { setupRegionMagic } from './module/regionMagic.js';
 import { setupMagicSight, drawnMagicSight } from './module/magicSight.js';
-import { SaferSocket, initGMActionSetup, setupSocket, socketlibSocket, unTimedExecuteAsGM } from './module/GMAction.js';
+import { SaferSocket, initGMActionSetup, registerInboxRollMode, setupSocket, socketlibSocket, unTimedExecuteAsGM } from './module/GMAction.js';
 import { setupSheetQol } from './module/sheetQOL.js';
 import { TrapWorkflow, DamageOnlyWorkflow, Workflow, DummyWorkflow, UserWorkflow, targetedDamageBonusContributor } from './module/Workflow.js';
 import { addConcentrationDependent, addRollTo, addRollToAsync, applyTokenDamage, applyTokenDamageMany, canSee, canSense, canSenseModes, checkDistance, checkIncapacitated, checkNearby, chooseEffect, completeItemUse, computeCoverBonus, getCoverBonus, tokenAtPosition, createConditionData, throttledUpdate, displayDSNForRoll, doConcentrationCheck, doOverTimeEffect, evalAllConditions, evalCondition, findNearby, findNearbyCount, getCachedDocument, getChanges, getConcentrationEffect, getTokenDocument, getOrCreateTokenForActor, getOrCreateTokenForActorAsSet, getTokenPlayerName, getTokenPlayerNameForUser, getTraitMult, hasCondition, hasUsedBonusAction, hasUsedReaction, isValidTarget, midiRenderAttackRoll, midiRenderBonusDamageRoll, midiRenderDamageRoll, midiRenderOtherDamageRoll, midiRenderRoll, fromActorUuid, playerFor, playerForActor, raceOrType, reactionDialog, removeHiddenCondition, removeInvisibleCondition, removeReactionUsed, setActionUsed, setBonusActionUsed, setReactionUsed, hasUsedAction, tokenForActor, typeOrRace, validRollAbility, actorFromUuid, removeActionUsed, removeBonusActionUsed, getCheckRollModeFor, getSaveRollModeFor, completeActivityUse, checkActivityRange, unseenTargets, totalCoverTargets, modifyDamageBy, convertDuration, splitOvertimeSpec, isRangeCheckable, activityRanges, getItemFromEffectOrigin, addDependent, updatesCache, createDamageDetail, activityHasEmanationNoTemplate, getVitalityItem, getVitalityValue, getVitalityMax, hasVitalitySystem, resolveItemMacro, resolveActivityMacro, setupMidiFlagTypes, initCoverConstants, ReactionDialog, RollModifyDialog, sizeNumeric, restoreWorkflowTokenSets, setupMarkerChecks, setupCheckVision, toggleStatus, queueActorEffects } from "./module/utils.js";
@@ -1004,6 +1004,7 @@ Hooks.once('setup', function () {
   itemPatching();
   visionPatching();
   initGMActionSetup();
+  registerInboxRollMode();
   setupHooks();
   // An untyped damage roll in a use with nothing typed to take a type from: midi's No Type (applied, no resistance)
   MidiQOL.MQdefaultDamageType = "none";

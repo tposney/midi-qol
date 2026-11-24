@@ -1504,7 +1504,8 @@ async function doD20Roll(this: Actor.Implementation, wrapped, kind: D20RollKind,
     postRollHookId = onceForSubject(`dnd5e.post${kind.hook}RollConfiguration`, this, 1, (rolls: Roll[], configData: RollProcessConfig, dialogData: RollDialogConfig, messageDetails: RollMessageConfig) => {
       // record the configured message data for later display
       message = messageDetails;
-      dialogShown = !!dialogData.configure;
+      // A mode picked in the hub's inbox counts as the dialog's button
+      dialogShown = !!dialogData.configure || !!configData.midiOptions?.inboxMode;
       // The choice made in the dialog
       if (configData[kind.idKey] && configData[kind.idKey] !== rollId) rollId = configData[kind.idKey];
       const tracker = advantageMap[rollId ?? ""]?.tracker;
