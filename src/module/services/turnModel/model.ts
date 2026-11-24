@@ -22,6 +22,12 @@ import { legendaryState } from "../multiattack/legendary.js";
  *   const model = await MidiQOL.turnModel.get(token);   // or .peek(token) for the cached one
  */
 
+/** An activity's own image: none when it has only its type's icon (dnd5e's default), so the item's is used */
+function ownImg(activity: unknown): string | undefined {
+  const { img, metadata } = activity as { img?: string, metadata?: { img?: string } };
+  return img && img !== metadata?.img ? img : undefined;
+}
+
 export interface WindowState { used: number, max: number, exhausted: boolean, tracked: boolean, label: string, img?: string, core: boolean }
 
 export interface ActivityCell {
@@ -98,7 +104,7 @@ async function cellsOf(actor: Actor.Implementation): Promise<ActivityCell[]> {
       const slots = level ? Number((actor.system as { spells?: Record<string, { value?: number }> }).spells?.[`spell${level}`]?.value ?? 0) : undefined;
       cells.push({
         uuid: activity.uuid ?? "", itemUuid: item.uuid ?? "", itemName: item.name, name: activity.name || item.name,
-        img: (activity as { img?: string }).img || item.img || "", activation, type: activity.type,
+        img: ownImg(activity) || item.img || "", activation, type: activity.type,
         cost: cost(activity), issues: found, usable: stopping.length === 0, ...(found[0] ? { reason: found[0].label } : {}),
         ...(counted ? { uses: { value: Number(counted.value ?? 0), max: Number(counted.max ?? 0) } } : {}),
         ...(level !== undefined ? { spellLevel: level, slotsLeft: slots } : {}),
