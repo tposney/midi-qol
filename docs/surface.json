@@ -575,6 +575,7 @@
     "cover",
     "damageContributions",
     "damageModifiers",
+    "deferredTriggers",
     "distance",
     "effectPresets",
     "entryAutomations",

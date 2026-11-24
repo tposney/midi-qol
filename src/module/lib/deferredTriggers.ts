@@ -6,6 +6,7 @@ import { onTurnEvent } from "./turnEvents.js";
 import { tokenFor } from "./tokenResolver.js";
 import { checkActivityRange } from "../utils.js";
 import { getDistance } from "../services/distance/service.js";
+import { defineService } from "../api/services.js";
 
 /*
  * M22a: what releases a readied use (plan ~/Documents/midi-next-M20-M22-plan-2026-11-24.md, "midi helping with
@@ -18,6 +19,15 @@ import { getDistance } from "../services/distance/service.js";
  * character it is first; else the GM) is asked once through the request core, with the module's prompt (`prompt`: a
  * request handler type) or midi's Release / Hold; a GM can answer from the player list; time out: hold. Released: the
  * triggering creature is the target unless the prompt chose others.
+ *
+ * deferredTriggers (single service): midi notices the events and asks the active provider what they set off; midi's
+ * own (the rules above) is the default. A module replaces it (its own matching, deciding, asking), or wraps it to
+ * change one part; the pieces are exported on MidiQOL.deferred (offer, matches, readier) for a provider to reuse.
+ *
+ *   MidiQOL.services.register("deferredTriggers", "my-module", {
+ *     async event({ on, subject }) { for (const use of MidiQOL.deferred.list()) if (…) await MidiQOL.deferred.release(use.id, { targets: [subject.uuid] }); },
+ *     movementWatches: () => [], crossed: async () => {}
+ *   }, { priority: 10 });
  */
 
 export type DeferredTriggerOn = "attack" | "cast" | "use" | "turnStart" | "turnEnd" | "enters" | "leaves";
@@ -130,8 +140,41 @@ export async function raiseTrigger(on: DeferredTriggerOn, subject: TokenDocument
 }
 
 /** The readied uses watching movement on this scene (opportunity.ts checks a move against them) */
-export function movementWatches(mover: TokenDocument.Implementation): { use: DeferredUse, readier: TokenDocument.Implementation, within: number, enters: boolean, leaves: boolean }[] {
-  const out: { use: DeferredUse, readier: TokenDocument.Implementation, within: number, enters: boolean, leaves: boolean }[] = [];
+/** A distance around a readier a mover's path is checked against */
+export interface MovementWatch { use: DeferredUse, readier: TokenDocument.Implementation, within: number, enters: boolean, leaves: boolean }
+
+/** What the deferredTriggers service's provider answers */
+export interface DeferredTriggerProvider {
+  /** A creature started or ended its turn, or made a use (attack, cast, any use): what it sets off */
+  event?(event: { on: Exclude<DeferredTriggerOn, "enters" | "leaves">, subject: TokenDocument.Implementation, reason: string, item?: string }): Promise<void> | void;
+  /** The distances around readiers a mover's path is checked against (midi stops it where one is crossed) */
+  movementWatches?(mover: TokenDocument.Implementation): MovementWatch[];
+  /** A watched distance was crossed; the mover waits until this resolves */
+  crossed?(crossing: { watch: MovementWatch, mover: TokenDocument.Implementation, kind: "enters" | "leaves", reason: string }): Promise<void> | void;
+}
+
+declare module "../api/services.js" {
+  interface MidiServices { deferredTriggers: DeferredTriggerProvider }
+}
+
+let triggersService: ReturnType<typeof defineService<DeferredTriggerProvider>> | undefined;
+const provider = () => triggersService?.get();
+
+/** midi's watchers for this mover, from the active provider (none when it has none) */
+export function movementWatches(mover: TokenDocument.Implementation): MovementWatch[] {
+  try { return provider()?.movementWatches?.(mover) ?? []; }
+  catch (err) { console.warn("midi-qol | deferredTriggers movementWatches", err); return []; }
+}
+
+/** A watched distance crossed (opportunity.ts, the mover stopped): the active provider decides */
+export async function watchCrossed(watch: MovementWatch, mover: TokenDocument.Implementation, kind: "enters" | "leaves", reason: string): Promise<void> {
+  try { await provider()?.crossed?.({ watch, mover, kind, reason }); }
+  catch (err) { console.warn("midi-qol | deferredTriggers crossed", err); }
+}
+
+/** midi's rule: the readied uses with an enters/leaves trigger whose who matches the mover */
+function midiMovementWatches(mover: TokenDocument.Implementation): MovementWatch[] {
+  const out: MovementWatch[] = [];
   for (const use of deferredUses()) {
     const trigger = triggerOf(use);
     if (!trigger || (trigger.on !== "enters" && trigger.on !== "leaves")) continue;
@@ -168,12 +211,34 @@ async function defaultPrompt(data: DeferredPromptData, request: IncomingRequest)
 
 const tokenName = (token: TokenDocument.Implementation | null | undefined) => token?.name ?? "";
 
+/** midi's default provider: its matching (who, reach), asking (the request core) and releasing */
+const midiTriggers: DeferredTriggerProvider = {
+  event: ({ on, subject, reason, item }) => raiseTrigger(on, subject, reason, item),
+  movementWatches: midiMovementWatches,
+  crossed: async ({ watch, mover, kind, reason }) => { await offerRelease(watch.use, mover, reason, { awaitUse: true, on: kind }); }
+};
+
+/** Before `midi-qol.registerServices` */
+export function defineDeferredTriggersService() {
+  triggersService = defineService<DeferredTriggerProvider>("deferredTriggers", {
+    kind: "single",
+    description: "What sets off a readied use: a creature's turn, use or move matched against readied uses, and the owner asked"
+  });
+  triggersService.register("midi-qol", midiTriggers, { label: "Midi-QOL readied triggers" });
+}
+
+/** Whether a provider watches triggers now */
+export const watchesTriggers = () => !!provider();
+
+const raise = (event: Parameters<NonNullable<DeferredTriggerProvider["event"]>>[0]) =>
+  Promise.resolve(provider()?.event?.(event)).catch(err => console.error("midi-qol | readied trigger", err));
+
 export function registerDeferredTriggers() {
   registerRequestHandler(DEFAULT_PROMPT, defaultPrompt);
   // A creature's turn starts or ends (the active GM): detached, it asks a player
   for (const [event, on, key] of [["turnStart", "turnStart", "midi-qol.Deferred.TurnStart"], ["turnEnd", "turnEnd", "midi-qol.Deferred.TurnEnd"]] as const) {
     onTurnEvent(event, `midi-qol.deferredTrigger.${on}`, async ({ token }) => {
-      await raiseTrigger(on, token ?? undefined, i18n(key).replace("{name}", tokenName(token)));
+      if (token) await raise({ on, subject: token, reason: i18n(key).replace("{name}", tokenName(token)) });
     }, { detached: true });
   }
   // A use resolved (on the client that made it)
@@ -184,9 +249,9 @@ export function registerDeferredTriggers() {
     const item = activity.item;
     const name = tokenName(subject), used = item?.name ?? activity.name ?? "";
     void (async () => {
-      if (activity.type === "attack") await raiseTrigger("attack", subject, i18n("midi-qol.Deferred.Attacked").replace("{name}", name).replace("{item}", used), used);
-      if ((item?.type as string) === "spell") await raiseTrigger("cast", subject, i18n("midi-qol.Deferred.Cast").replace("{name}", name).replace("{item}", used), used);
-      await raiseTrigger("use", subject, i18n("midi-qol.Deferred.Used").replace("{name}", name).replace("{item}", used), used);
-    })().catch(err => console.error("midi-qol | readied trigger", err));
+      if (activity.type === "attack") await raise({ on: "attack", subject, reason: i18n("midi-qol.Deferred.Attacked").replace("{name}", name).replace("{item}", used), item: used });
+      if ((item?.type as string) === "spell") await raise({ on: "cast", subject, reason: i18n("midi-qol.Deferred.Cast").replace("{name}", name).replace("{item}", used), item: used });
+      await raise({ on: "use", subject, reason: i18n("midi-qol.Deferred.Used").replace("{name}", name).replace("{item}", used), item: used });
+    })();
   }) as never);
 }

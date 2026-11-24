@@ -1,6 +1,5 @@
 import { i18n } from "../../../midi-qol.js";
-import { movementWatches, offerRelease } from "../../lib/deferredTriggers.js";
-import type { DeferredUse } from "../../lib/deferred.js";
+import { movementWatches, watchCrossed, type MovementWatch } from "../../lib/deferredTriggers.js";
 import { tokenFor, combatOfToken } from "../../lib/tokenResolver.js";
 import type { Activity } from "../../../globals.js";
 import { configSettings } from "../../settings.js";
@@ -97,7 +96,7 @@ export function possibleReactors(mover: TokenDocument.Implementation): { token: 
 interface Watcher {
   token: TokenDocument.Implementation, reach: number, attacks: boolean, enters: boolean, leaves: boolean,
   /** M22a: a readied use watching this distance around its readier (lib/deferredTriggers.ts) */
-  readied?: DeferredUse, key?: string
+  readied?: MovementWatch, key?: string
 }
 export interface Crossing { index: number, leaving: Watcher[], entering: Watcher[] }
 
@@ -107,8 +106,8 @@ const enterKey = (w: Watcher) => `${w.key ?? w.token.uuid}:enter`;
 /** The creatures whose reach the mover's path is checked against (in its running combat, on its level) */
 function watchersFor(mover: TokenDocument.Implementation): Watcher[] {
   // Readied uses watch in or out of combat
-  const readied: Watcher[] = movementWatches(mover).map(({ use, readier, within, enters, leaves }) =>
-    ({ token: readier, reach: within, attacks: false, enters, leaves, readied: use, key: `readied:${use.id}` }));
+  const readied: Watcher[] = movementWatches(mover).map(watch =>
+    ({ token: watch.readier, reach: watch.within, attacks: false, enters: watch.enters, leaves: watch.leaves, readied: watch, key: `readied:${watch.use.id}` }));
   const combat = combatOfToken(mover);
   if (!combat?.started || !mover.actor) return readied;
   const watchers = new Map<string, Watcher>();
@@ -184,7 +183,7 @@ async function splitMove(mover: TokenDocument.Implementation, path: PathWaypoint
   }
   const moverName = mover.name ?? "";
   for (const w of crossing.leaving.filter(w => w.leaves)) {
-    if (w.readied) await offerRelease(w.readied, mover, i18n("midi-qol.Deferred.Left").replace("{name}", moverName), { awaitUse: true, on: "leaves" });
+    if (w.readied) await watchCrossed(w.readied, mover, "leaves", i18n("midi-qol.Deferred.Left").replace("{name}", moverName));
     else await raiseReachEvent(LEAVES_REACH, w.token, mover, { movementAction: action, reach: w.reach });
   }
   for (const w of provoked) {
@@ -192,7 +191,7 @@ async function splitMove(mover: TokenDocument.Implementation, path: PathWaypoint
     catch (err) { console.error("midi-qol | opportunity attack", err); }
   }
   for (const w of crossing.entering) {
-    if (w.readied) await offerRelease(w.readied, mover, i18n("midi-qol.Deferred.Entered").replace("{name}", moverName), { awaitUse: true, on: "enters" });
+    if (w.readied) await watchCrossed(w.readied, mover, "enters", i18n("midi-qol.Deferred.Entered").replace("{name}", moverName));
     else await raiseReachEvent(ENTERS_REACH, w.token, mover, { movementAction: action, reach: w.reach });
   }
   if (!rest.length || stopped(mover, String(rest.at(-1)?.action ?? "walk"))) return;

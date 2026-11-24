@@ -201,8 +201,6 @@ export function registerDeferredUses() {
 }
 
 export const deferredApi = {
-  /** midi watches a readied use's trigger (`{ on, who, within }`) and asks its owner (lib/deferredTriggers.ts) */
-  watchesTriggers: true,
   ready: readyActivity,
   list: deferredUses,
   release: releaseDeferred,

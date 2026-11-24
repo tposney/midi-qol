@@ -12,7 +12,7 @@ import { defineMidiMultiattack } from "./module/services/multiattack/run.js";
 import { holdsApi, registerHolds } from "./module/lib/holds.js";
 import { HoldPanel, setupHoldPanel } from "./module/apps/HoldPanel.js";
 import { deferredApi, registerDeferredUses } from "./module/lib/deferred.js";
-import { registerDeferredTriggers } from "./module/lib/deferredTriggers.js";
+import { defineDeferredTriggersService, offerRelease, readierOf, registerDeferredTriggers, watchesTriggers, whoMatches } from "./module/lib/deferredTriggers.js";
 import { checklistApi, setupChecklist } from "./module/lib/checklist.js";
 import { ChecklistPanel, registerChecklistSetting, setupChecklistPanel } from "./module/apps/ChecklistPanel.js";
 import { setupInteractionsHUD } from "./module/services/interactions/hud.js";
@@ -455,7 +455,13 @@ Object.assign(globalThis.MidiQOL, {
   // M21: a creature's Multiattack plan (the GM's, registered ones, midi's table from the books, the text parsed, a guess)
   multiattack: multiattackApi,
   holds: { ...holdsApi, open: () => HoldPanel.open() },
-  deferred: deferredApi,
+  deferred: {
+    ...deferredApi,
+    /** A provider watches readied uses' triggers (the deferredTriggers service: midi's by default) */
+    get watchesTriggers() { return watchesTriggers(); },
+    // The default provider's pieces, for a provider to reuse
+    offer: offerRelease, matches: whoMatches, readier: readierOf
+  },
   checklist: { ...checklistApi, open: (actor: Actor.Implementation) => ChecklistPanel.open(actor) },
   // Section 18, rule 4: anything's TokenDocument, and a TokenDocument's canvas Token (lib/tokenResolver.ts)
   tokenFor, tokenOf, isEphemeralToken,
@@ -627,6 +633,7 @@ Hooks.once('init', async function () {
   setupHoldPanel();
   // M22a: deferred uses (Readied Actions)
   registerDeferredUses();
+  defineDeferredTriggersService();
   registerDeferredTriggers();
   // M22b: the turn checklist (contributors, panel)
   setupChecklist();
