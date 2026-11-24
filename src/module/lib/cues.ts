@@ -23,6 +23,8 @@ export interface Cue {
   outcomes: TargetOutcome[];
   activity?: string;
   item?: string;
+  /** The item's name at the use (the item may be gone when the cue is read: a consumed potion) */
+  itemName?: string;
   tags: { kind?: string, attack?: string, school?: string, damageTypes: string[], spellLevel?: number, actionType?: string, defaultDamageType?: string };
   /** What midi's sound lookup keys on */
   sound: { actorType?: string, itemType?: string, subtype?: string, baseItem?: string };
@@ -102,6 +104,7 @@ export function cueFor(workflow: Workflow, cue: string): Cue {
     outcomes: [...byTarget.values()],
     activity: workflow.activity?.uuid,
     item: item?.uuid ?? undefined,
+    itemName: item?.name ?? undefined,
     tags: {
       kind: tag("use.kind") as string | undefined, attack: tag("use.attack") as string | undefined, school: tag("use.school") as string | undefined,
       damageTypes: damageTypes instanceof Set ? [...damageTypes] as string[] : [], spellLevel: tag("use.spellLevel") as number | undefined,
@@ -143,5 +146,10 @@ export function raiseCreatureCue(cue: string, token: TokenDocument.Implementatio
 }
 
 export function registerCues() {
-  CONFIG.queries[CUE_QUERY] = async (data: unknown) => { await presentCue(data as Cue); return true; };
+  // On the other clients: presented, and raised as midi-qol.cueReceived (a recorder on every client sees every cue)
+  CONFIG.queries[CUE_QUERY] = async (data: unknown) => {
+    Hooks.callAll("midi-qol.cueReceived", data as Cue);
+    await presentCue(data as Cue);
+    return true;
+  };
 }

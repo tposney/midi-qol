@@ -2786,3 +2786,5 @@ fieldset.midi-qol-use-options .midi-qol-use-options-cost { opacity: 0.8; }
 .midi-qol-hub.midi-hub-layout-tablet .midi-hub-filter { padding: 0.35rem 0.6rem; }
 .midi-qol-hub.midi-hub-layout-tablet button { min-height: 40px; }
 .midi-qol-hub.midi-hub-keys .midi-hub-use[data-key]::after { content: attr(data-key); position: absolute; right: 2px; top: 0; font-size: 0.65rem; text-shadow: 0 0 3px #000; color: #fff; }
+.midi-qol-hub .midi-hub-since { font-size: 0.8rem; margin: 2px 0; }
+.midi-qol-hub .midi-hub-since ul { margin: 0; padding-left: 1rem; }

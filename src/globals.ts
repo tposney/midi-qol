@@ -178,6 +178,7 @@ declare module "fvtt-types/configuration" {
       "midi-qol.DamageRollComplete": (workflow: Workflow) => Promise<void | boolean>;
       /** M18: a use's cue, as it is raised (lib/cues.ts) */
       "midi-qol.cue": (cue: import("./module/lib/cues.js").Cue) => void;
+      "midi-qol.cueReceived": (cue: import("./module/lib/cues.js").Cue) => void;
       "midi-qol.preSetReactionUsed": (actor: Actor.Implementation, effect: ActiveEffect.Implementation) => boolean | void;
       "midi-qol.setReactionUsed": (actor: Actor.Implementation, effect: ActiveEffect.Implementation) => void;
       "midi-qol.preSetBonusActionUsed": (actor: Actor.Implementation, effect: ActiveEffect.Implementation) => boolean | void;

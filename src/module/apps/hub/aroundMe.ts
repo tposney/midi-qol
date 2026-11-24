@@ -1,4 +1,5 @@
 import { i18n } from "../../../midi-qol.js";
+import { knowledgeHtml } from "./recordViews.js";
 import { escape } from "./sections.js";
 import { getDistance } from "../../services/distance/service.js";
 import { possibleReactors } from "../../services/economy/opportunity.js";
@@ -114,5 +115,5 @@ function helping(token: Token.Implementation, actor: Actor.Implementation): stri
 export function aroundMeHtml(token: TokenDocument.Implementation | undefined, actor: Actor.Implementation): string {
   const object = token?.object as Token.Implementation | undefined;
   if (!object) return "";
-  return [threats(object, actor), standing(object), helping(object, actor)].join("");
+  return [threats(object, actor), standing(object), knowledgeHtml(), helping(object, actor)].join("");
 }
