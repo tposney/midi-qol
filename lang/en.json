@@ -1019,6 +1019,10 @@
   "midi-qol.Hub.All": "All",
   "midi-qol.Hub.Active": "Active",
   "midi-qol.Hub.Asked": "You are asked to choose",
+  "midi-qol.Hub.PactSlots": "Pact slots (level {n})",
+  "midi-qol.Hub.DeathSaves": "Dying: {s} successes, {f} failures",
+  "midi-qol.Hub.Concentrating": "Concentrating",
+  "midi-qol.Hub.ReactionUsed": "Reaction used",
   "midi-qol.Hub.ShowRequest": "Show its window",
   "midi-qol.Hub.WaitingFor": "Waiting for {user}",
   "midi-qol.Hub.ActiveHint": "In use: what running spells and items in effect give (a summoned weapon's attack, an enchanted weapon)",
@@ -1059,6 +1063,7 @@
     "features": "Features",
     "items": "Items",
     "actions": "Actions",
+    "resources": "Resources",
     "choices": "Choices"
   },
   "midi-qol.Hub.DropHere": "Drop here to add",

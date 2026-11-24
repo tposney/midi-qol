@@ -1,3 +1,5 @@
+import { hasUsedReaction } from "../../utils.js";
+import { getDistance } from "../../services/distance/service.js";
 import { listToggles, setToggle } from "../../lib/entries/offers.js";
 import { setStandingChoice, STANDING_CHOICES, storedStandings, type StandingChoice } from "../../services/rollBonuses/standing.js";
 import { forgetChoice, rememberedChoices } from "../../lib/rememberedChoices.js";
@@ -132,7 +134,41 @@ async function saveBar(ctx: HubContext, entries: string[] | undefined) {
   await game.user?.setFlag("midi-qol", "hubBars", entries ? [...bars, { actor: ctx.actor.uuid ?? "", entries }] : bars);
 }
 
-const TABS = ["bar", "weapons", "spells", "features", "items", "actions", "choices"] as const;
+const TABS = ["bar", "weapons", "spells", "features", "items", "actions", "resources", "choices"] as const;
+
+type Recovery = { period?: string };
+type UsesData = { value?: number, max?: number | string, recovery?: Recovery[] };
+/** What gives a resource back, as a label (the first period: Long rest, Short rest, Dawn...) */
+function recoveryLabel(recovery: Recovery[] | undefined): string {
+  const period = recovery?.[0]?.period;
+  const periods = (CONFIG as unknown as { DND5E: { limitedUsePeriods: Record<string, { label?: string, abbreviation?: string }> } }).DND5E.limitedUsePeriods;
+  return period ? i18n(periods[period]?.label ?? period) : "";
+}
+
+/** The Resources tab: spell slots, hit dice and every use that recovers, with what gives it back */
+function resourcesHtml(actor: Actor.Implementation): string {
+  const system = actor.system as { spells?: SpellSlots, attributes?: { hd?: { value?: number, max?: number } } };
+  const row = (label: string, value: number, max: number, when: string) => `<div class="midi-hub-resource${value <= 0 ? " midi-hub-no-slots" : ""}">
+    <span class="midi-hub-label">${escape(label)}</span><span class="midi-hub-resource-count">${value}/${max}</span>${when ? `<span class="hint">${escape(when)}</span>` : ""}</div>`;
+  const rows: string[] = [];
+  const spells = system.spells ?? {};
+  const longRest = i18n("DND5E.REST.Long.Label");
+  const shortRest = i18n("DND5E.REST.Short.Label");
+  for (let level = 1; level <= 9; level++) {
+    const slot = spells[`spell${level}`];
+    if (Number(slot?.max)) rows.push(row(i18n("midi-qol.Hub.Level").replace("{n}", String(level)), Number(slot?.value ?? 0), Number(slot?.max), longRest));
+  }
+  const pact = spells.pact;
+  if (Number(pact?.max)) rows.push(row(i18n("midi-qol.Hub.PactSlots").replace("{n}", String(pact?.level ?? "")), Number(pact?.value ?? 0), Number(pact?.max), shortRest));
+  const hd = system.attributes?.hd;
+  if (Number(hd?.max)) rows.push(row(i18n("DND5E.HitDice"), Number(hd?.value ?? 0), Number(hd?.max), longRest));
+  for (const item of actor.items) {
+    const uses = (item.system as { uses?: UsesData }).uses;
+    if (!Number(uses?.max) || !uses?.recovery?.length) continue;
+    rows.push(row(item.name ?? "", Number(uses.value ?? 0), Number(uses.max), recoveryLabel(uses.recovery)));
+  }
+  return rows.join("");
+}
 
 /** The Choices tab: the creature's toggles, its bonuses' standing choices and its remembered choices (the sheet's
  * Toggles and choices window), changed at once; shown when it has any */
@@ -311,6 +347,9 @@ function drawerHtml(ctx: HubContext): string {
         return entries.length ? `<div class="midi-hub-row midi-hub-filtered"><span class="midi-hub-label">${escape(i18n(`midi-qol.Hub.Tab.${tab}`))}</span>${entries.map(e => entryButton(e)).join("")}</div>` : "";
       })
     ].join("");
+  } else if (ctx.tab === "resources") {
+    title = i18n("midi-qol.Hub.Tab.resources");
+    body = resourcesHtml(ctx.actor);
   } else if (ctx.tab === "choices") {
     title = i18n("midi-qol.Hub.Tab.choices");
     body = choicesHtml(ctx.actor);
@@ -500,6 +539,44 @@ export function registerMidiHubSections() {
         hubOffers.splice(hubOffers.indexOf(offer), 1);
         offer.resolve(target.dataset.uuid || undefined);
         ctx.refresh();
+      }
+    }
+  });
+
+  // The party: the other player characters on the scene, each a chip (HP state, concentration, reaction spent,
+  // dying with its death saves, conditions, distance); a click targets it, Shift+click pings it
+  registerHubSection({
+    id: "midi-qol.party", area: "right", order: 5,
+    render: ({ token }) => {
+      const members = (canvas?.tokens?.placeables ?? []).filter(t => t.document !== token && t.actor?.hasPlayerOwner && (t.actor.type as string) === "character" && t.visible);
+      if (!members.length) return "";
+      const here = token?.object;
+      return `<div class="midi-hub-party">${members.map(t => {
+        const actor = t.actor as Actor.Implementation;
+        const attributes = (actor.system as { attributes?: { hp?: { value?: number, max?: number, pct?: number, bloodied?: number }, death?: { success?: number, failure?: number } } }).attributes;
+        const hp = attributes?.hp ?? {};
+        const down = (hp.value ?? 0) <= 0;
+        const bloodied = !down && hp.pct !== undefined && hp.bloodied !== undefined && hp.pct < 100 && hp.pct <= hp.bloodied;
+        const marks = [
+          down ? `<i class="fa-solid fa-skull" data-tooltip="${escape(i18n("midi-qol.Hub.DeathSaves").replace("{s}", String(attributes?.death?.success ?? 0)).replace("{f}", String(attributes?.death?.failure ?? 0)))}"></i>` : "",
+          actor.statuses.has("concentrating") ? `<i class="fa-solid fa-brain" data-tooltip="${escape(i18n("midi-qol.Hub.Concentrating"))}"></i>` : "",
+          hasUsedReaction(actor) ? `<span class="midi-hub-mark midi-hub-mark-reaction midi-hub-spent" data-tooltip="${escape(i18n("midi-qol.Hub.ReactionUsed"))}"></span>` : ""
+        ].join("");
+        const conditions = [...actor.statuses].filter(id => !["concentrating", "bloodied"].includes(id)).map(id => CONFIG.statusEffects.find(s => s.id === id)?.name).filter(Boolean).map(n => i18n(n!)).join(", ");
+        const distance = here ? Math.round(getDistance(here, t)) : undefined;
+        const tip = [`<strong>${escape(t.name ?? "")}</strong>`, `${hp.value ?? 0}/${hp.max ?? 0}`, ...(conditions ? [escape(conditions)] : []),
+          ...(distance !== undefined ? [`${distance} ${escape(canvas?.scene?.grid.units ?? "")}`] : [])].join("<br>");
+        return `<button type="button" class="midi-hub-member${down ? " midi-hub-member-down" : bloodied ? " midi-hub-member-bloodied" : ""}${t.isTargeted ? " midi-hub-member-targeted" : ""}"
+          data-hub-action="member" data-token="${escape(t.id ?? "")}" data-tooltip-html="${escape(tip)}" data-tooltip-direction="UP">
+          <img src="${escape(t.document.texture?.src ?? actor.img ?? "")}" alt=""><span class="midi-hub-member-marks">${marks}</span></button>`;
+      }).join("")}</div>`;
+    },
+    actions: {
+      member: (_ctx, target, event) => {
+        const t = canvas?.tokens?.get(target.dataset.token ?? "");
+        if (!t) return;
+        if ((event as MouseEvent | undefined)?.shiftKey) { void canvas?.ping(t.center); return; }
+        t.setTarget(!t.isTargeted, { releaseOthers: false });
       }
     }
   });

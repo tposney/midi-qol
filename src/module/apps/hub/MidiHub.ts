@@ -290,6 +290,13 @@ export class MidiHub extends ApplicationV2 {
 
 /** Re-render on a change to the shown creature's model */
 export function setupHubRefresh() {
+  // The party strip: another character's state or targeting changed (debounced: a turn changes several at once)
+  const partyChanged = foundry.utils.debounce(() => { void MidiHub.shown?.render(); }, 200);
+  const isMember = (actor: Actor.Implementation | null | undefined) => !!actor?.hasPlayerOwner && actor !== MidiHub.shown?.actor;
+  Hooks.on("updateActor", (actor: Actor.Implementation) => { if (MidiHub.shown && isMember(actor)) partyChanged(); });
+  for (const hook of ["createActiveEffect", "deleteActiveEffect"] as const)
+    Hooks.on(hook, (effect: ActiveEffect.Implementation) => { if (MidiHub.shown && effect.parent instanceof Actor && isMember(effect.parent as Actor.Implementation)) partyChanged(); });
+  Hooks.on("targetToken", () => { if (MidiHub.shown) partyChanged(); });
   // The inbox: what this user is asked, and the requests this client waits on
   for (const hook of ["midi-qol.incomingRequestsChanged", "midi-qol.requestStarted", "midi-qol.requestSettled"])
     Hooks.on(hook as never, (() => { void MidiHub.shown?.render(); }) as never);
