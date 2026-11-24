@@ -274,6 +274,10 @@ export function quickenHint(item: Item.Implementation | null | undefined, activa
 
 /** A feature CAT automates on rolls itself (its roll macros): midi doesn't offer it as well */
 const catRolls = (feature: Item.Implementation) => ((feature.flags as { cat?: { macros?: { roll?: unknown[] } } }).cat?.macros?.roll?.length ?? 0) > 0;
+/** A feature with its own midi entries (an entries automation of it) offers itself: not offered twice */
+const ownEntries = (feature: Item.Implementation) => ((feature.flags as { "midi-qol"?: { entries?: unknown[] } })["midi-qol"]?.entries?.length ?? 0) > 0;
+/** Automated elsewhere: by CAT on rolls, or by its own entries */
+const automatedElsewhere = (feature: Item.Implementation) => catRolls(feature) || ownEntries(feature);
 
 /** Empowered (damage) and Seeking (a missed attack) after a spell's roll: roll bonuses paid in Sorcery Points */
 function rolledOptions(query: RollBonusQuery): BonusCandidate[] {
@@ -282,7 +286,7 @@ function rolledOptions(query: RollBonusQuery): BonusCandidate[] {
   const id = query.kind === "damage" ? "empowered-spell" : query.kind === "attack" ? "seeking-spell" : undefined;
   const feature = id ? itemFor(actor, id) : undefined;
   const pool = pools(actor)[0];
-  if (!id || !feature || catRolls(feature) || !pool?.uuid || points(actor) < 1) return [];
+  if (!id || !feature || automatedElsewhere(feature) || !pool?.uuid || points(actor) < 1) return [];
   const paid = { cost: { itemUses: { [pool.uuid]: { cost: 1, available: points(actor) } } }, spendsOwnCost: true,
     onChosen: async () => { await spend(actor, 1); } };
   if (id === "empowered-spell") return [{
@@ -309,7 +313,7 @@ export function registerMetamagic() {
       for (const id of ORDER) {
         const feature = itemFor(actor, id);
         const option = OPTIONS[id];
-        if (!feature || !option.eligible(item, activity as ActivityData)) continue;
+        if (!feature || ownEntries(feature) || !option.eligible(item, activity as ActivityData)) continue;
         options.push({ id, label: feature.name ?? id, img: feature.img ?? undefined, cost: option.cost,
           ...(option.cost > left ? { disabled: i18n("midi-qol.Metamagic.NotEnough") } : {}) });
       }

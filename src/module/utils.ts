@@ -6906,9 +6906,14 @@ export function setupMarkerChecks() {
   // A combatant leaving (each one as its combat ends): raised after the system's own exit (dnd5e 6 deletes the
   // combat's markers there), so midi never deletes one alongside it. Only markers made before it left: a window opened
   // since (a reaction just after) is not this combat's
-  onTurnEvent("exitCombat", "midi-qol.lingeringMarkers", ({ actor }) => {
+  // When each combatant left (its combat deleted, or it was removed): core starts the exits just before these hooks
+  const leftAt = new Map<string, number>();
+  Hooks.on("deleteCombat", (combat: Combat.Implementation) => { for (const c of combat.combatants) leftAt.set(c.id ?? "", Date.now()); });
+  Hooks.on("deleteCombatant", (combatant: Combatant.Implementation) => { leftAt.set(combatant.id ?? "", Date.now()); });
+  onTurnEvent("exitCombat", "midi-qol.lingeringMarkers", ({ actor, combatant }) => {
     if (!actor) return;
-    const left = Date.now();
+    const left = leftAt.get(combatant?.id ?? "") ?? Date.now();
+    leftAt.delete(combatant?.id ?? "");
     return removeLingeringMarkers(actor, marker => (marker._stats?.createdTime ?? 0) <= left
       && !!marker.flags?.dae?.specialDuration?.includes("combatEnd"));
   });
