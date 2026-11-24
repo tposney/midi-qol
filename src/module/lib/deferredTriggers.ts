@@ -31,7 +31,11 @@ export interface DeferredTrigger {
 /** What a prompt answers */
 export interface DeferredAnswer { release: boolean, targets?: string[] }
 /** What a prompt is given */
-export interface DeferredPromptData { id: string, readier?: string, subject?: string, reason: string, label: string }
+export interface DeferredPromptData {
+  id: string, readier?: string, subject?: string, reason: string, label: string,
+  /** What happened (a module words its own reason from these) */
+  on?: DeferredTriggerOn, within?: number, item?: string
+}
 
 export const DEFAULT_PROMPT = "midi-qol.deferredPrompt";
 const TIMEOUT_MS = 30_000;
@@ -53,7 +57,8 @@ export function whoMatches(trigger: DeferredTrigger, readier: TokenDocument.Impl
   const who = trigger.who ?? "hostile";
   if (who === "any") return true;
   if (who === "hostile") return subject.disposition !== readier.disposition && subject.disposition !== CONST.TOKEN_DISPOSITIONS.NEUTRAL;
-  if (who === "ally") return subject.disposition === readier.disposition;
+  // A neutral readier has no allies
+  if (who === "ally") return readier.disposition !== CONST.TOKEN_DISPOSITIONS.NEUTRAL && subject.disposition === readier.disposition;
   return subject.uuid === who;
 }
 
@@ -64,7 +69,9 @@ function inReach(use: DeferredUse, trigger: DeferredTrigger, readier: TokenDocum
     return distance >= 0 && distance <= trigger.within + 1e-6;
   }
   if (!use.activity) return false;
-  return checkActivityRange(use.activity, readier, new Set([subject]), false).result !== "fail";
+  // The range check measures drawn tokens (given documents it fails at reach)
+  const from = readier.object ?? readier, to = subject.object ?? subject;
+  return checkActivityRange(use.activity, from, new Set([to]), false).result !== "fail";
 }
 
 /** Who decides for a readier: an active player owner (its character's player first), else the active GM */
@@ -77,7 +84,8 @@ function deciderFor(actor: Actor.Implementation | null | undefined): User.Implem
 const asking = new Set<string>();
 
 /** Ask the readier's owner whether to release now; released at the creature (or the prompt's targets) */
-export async function offerRelease(use: DeferredUse, subject: TokenDocument.Implementation | undefined, reason: string, { awaitUse = false }: { awaitUse?: boolean } = {}): Promise<boolean> {
+export async function offerRelease(use: DeferredUse, subject: TokenDocument.Implementation | undefined, reason: string,
+  { awaitUse = false, on, item }: { awaitUse?: boolean, on?: DeferredTriggerOn, item?: string } = {}): Promise<boolean> {
   if (asking.has(use.id)) return false;
   const user = deciderFor(use.actor);
   if (!user) return false;
@@ -85,7 +93,9 @@ export async function offerRelease(use: DeferredUse, subject: TokenDocument.Impl
   try {
     const readier = readierOf(use);
     const label = use.activity?.item?.name ?? use.activity?.name ?? "";
-    const data: DeferredPromptData = { id: use.id, ...(readier?.uuid ? { readier: readier.uuid } : {}), ...(subject?.uuid ? { subject: subject.uuid } : {}), reason, label };
+    const within = triggerOf(use)?.within;
+    const data: DeferredPromptData = { id: use.id, ...(readier?.uuid ? { readier: readier.uuid } : {}), ...(subject?.uuid ? { subject: subject.uuid } : {}), reason, label,
+      ...(on ? { on } : {}), ...(within !== undefined ? { within } : {}), ...(item ? { item } : {}) };
     const hold = (): DeferredAnswer => ({ release: false });
     const release = (): DeferredAnswer => ({ release: true, ...(subject?.uuid ? { targets: [subject.uuid] } : {}) });
     const { value } = await askUser<DeferredAnswer>(user, {
@@ -109,13 +119,13 @@ export async function offerRelease(use: DeferredUse, subject: TokenDocument.Impl
 }
 
 /** The readied uses a creature's action sets off, asked about one after another */
-export async function raiseTrigger(on: DeferredTriggerOn, subject: TokenDocument.Implementation | undefined, reason: string): Promise<void> {
+export async function raiseTrigger(on: DeferredTriggerOn, subject: TokenDocument.Implementation | undefined, reason: string, item?: string): Promise<void> {
   if (!subject) return;
   for (const use of deferredUses()) {
     const trigger = triggerOf(use);
     const readier = readierOf(use);
     if (trigger?.on !== on || !readier || !whoMatches(trigger, readier, subject) || !inReach(use, trigger, readier, subject)) continue;
-    await offerRelease(use, subject, reason);
+    await offerRelease(use, subject, reason, { on, item });
   }
 }
 
@@ -174,9 +184,9 @@ export function registerDeferredTriggers() {
     const item = activity.item;
     const name = tokenName(subject), used = item?.name ?? activity.name ?? "";
     void (async () => {
-      if (activity.type === "attack") await raiseTrigger("attack", subject, i18n("midi-qol.Deferred.Attacked").replace("{name}", name).replace("{item}", used));
-      if ((item?.type as string) === "spell") await raiseTrigger("cast", subject, i18n("midi-qol.Deferred.Cast").replace("{name}", name).replace("{item}", used));
-      await raiseTrigger("use", subject, i18n("midi-qol.Deferred.Used").replace("{name}", name).replace("{item}", used));
+      if (activity.type === "attack") await raiseTrigger("attack", subject, i18n("midi-qol.Deferred.Attacked").replace("{name}", name).replace("{item}", used), used);
+      if ((item?.type as string) === "spell") await raiseTrigger("cast", subject, i18n("midi-qol.Deferred.Cast").replace("{name}", name).replace("{item}", used), used);
+      await raiseTrigger("use", subject, i18n("midi-qol.Deferred.Used").replace("{name}", name).replace("{item}", used), used);
     })().catch(err => console.error("midi-qol | readied trigger", err));
   }) as never);
 }

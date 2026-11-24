@@ -184,7 +184,7 @@ async function splitMove(mover: TokenDocument.Implementation, path: PathWaypoint
   }
   const moverName = mover.name ?? "";
   for (const w of crossing.leaving.filter(w => w.leaves)) {
-    if (w.readied) await offerRelease(w.readied, mover, i18n("midi-qol.Deferred.Left").replace("{name}", moverName), { awaitUse: true });
+    if (w.readied) await offerRelease(w.readied, mover, i18n("midi-qol.Deferred.Left").replace("{name}", moverName), { awaitUse: true, on: "leaves" });
     else await raiseReachEvent(LEAVES_REACH, w.token, mover, { movementAction: action, reach: w.reach });
   }
   for (const w of provoked) {
@@ -192,7 +192,7 @@ async function splitMove(mover: TokenDocument.Implementation, path: PathWaypoint
     catch (err) { console.error("midi-qol | opportunity attack", err); }
   }
   for (const w of crossing.entering) {
-    if (w.readied) await offerRelease(w.readied, mover, i18n("midi-qol.Deferred.Entered").replace("{name}", moverName), { awaitUse: true });
+    if (w.readied) await offerRelease(w.readied, mover, i18n("midi-qol.Deferred.Entered").replace("{name}", moverName), { awaitUse: true, on: "enters" });
     else await raiseReachEvent(ENTERS_REACH, w.token, mover, { movementAction: action, reach: w.reach });
   }
   if (!rest.length || stopped(mover, String(rest.at(-1)?.action ?? "walk"))) return;
