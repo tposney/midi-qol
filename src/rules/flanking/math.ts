@@ -1,3 +1,4 @@
+/* The flanking geometry's pure helpers (no Foundry): segment crossing, opposite sides, opposing angles */
 /*
  * Flanking geometry. Pure: no Foundry globals.
  * Square grids: two creatures flank a target when a line between their cells crosses opposite sides of its box.
@@ -40,4 +41,3 @@ export function opposedByAngle(centre: Point, a: Point, b: Point, minDegrees = 1
 }
 
 /** The Check flanking settings whose rule is "the target is flanked" (rather than "the attacker is flanking"). */
-export const FLANKED_MODES: readonly string[] = ["ceflanked", "ceflankedNoconga", "midiFlanked", "midiFlankedNoConga"];

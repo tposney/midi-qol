@@ -60,6 +60,9 @@ export async function collectRollModifiers(query: RollQuery, tracker: RollModifi
       const modifiers = await provider.for(query);
       if (!modifiers?.length) continue;
       const problems = applyRollModifiers(tracker, modifiers, id);
+      // An attack's reasons with an image are shown on its roll (attackRollParts)
+      if (query.kind === "attack") for (const m of modifiers) if (m.img && (m.effect === "advantage" || m.effect === "disadvantage"))
+        query.workflow?.attackReasons.push({ kind: "bonus", label: m.label, img: m.img, ...(m.effect === "advantage" ? { advantage: true } : { disadvantage: true }) });
       if (problems.length) reportServiceProblem("rollModifiers", id, problems.join("; "));
     } catch (err) {
       reportServiceProblem("rollModifiers", id, `failed for a ${query.kind} roll`, err);

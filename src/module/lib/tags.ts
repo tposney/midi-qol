@@ -1,4 +1,5 @@
 import type { Workflow } from "../Workflow.js";
+import { attackFlanked } from "../../rules/flanking/index.js";
 import { getDistance } from "../services/distance/service.js";
 import { findNearby } from "../utils.js";
 import { outcomes } from "./outcomes.js";
@@ -206,7 +207,7 @@ export function registerMidiTags(): void {
   }));
   registerTag("use.area", use("Has an area", ({ workflow }) => !!workflow.activity?.target?.template?.type));
   // M11 (the viability items' tags)
-  registerTag("use.flanking", use("The attack has flanking advantage", ({ workflow }) => !!workflow.flankingAdvantage));
+  registerTag("use.flanking", use("The attack is flanking (the flanking rule)", ({ workflow }) => attackFlanked(workflow)));
   registerTag("use.ammunition", use("The ammunition's identifier", ({ workflow }) => {
     // @ts-expect-error no dnd5e-types
     const identifier: unknown = workflow.ammunition?.system?.identifier;

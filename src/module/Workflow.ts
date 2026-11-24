@@ -36,7 +36,7 @@ import { installedModules } from "./setupModules.js";
 import { offerFollowUps } from "./followUps.js";
 import { configSettings, autoRemoveTargets, checkRule, checkMechanic, safeGetGameSetting, useWeakReferences, onUseMacroOptions, chatCardUpdates } from "./settings.js";
 import { challengeVisibleToPlayers, saveDisplayMode } from "./lib/saveVisibility.js";
-import { BONUS_REQUEST, createDamageDetail, processDamageRoll, reconstructDamageLists, untargetDeadTokens, checkIncapacitated, getAutoRollDamage, isAutoFastForward, getAutoRollAttack, checkNearby, expireMyEffects, validTargetTokens, userTargetsKeepingUndrawn, HEALING_BUTTON_KEY, isActivityType, getOrCreateTokenForActorAsSet, doReactions, type ReactionResult, playerFor, requestPCActiveDefence, evalActivationCondition, asyncHooksCallAll, asyncHooksCall, renderSaveRollHTML, markFlanking, tokenForActor, getOrCreateTokenForActor, createConditionData, evalCondition, computeCoverBonus, computeTargetAC, TOTAL_COVER, THREE_QUARTERS_COVER, HALF_COVER, hasCoverTotal, isInCombat, displayDSNForRoll, setActionUsed, getTokenDocument, getToken, addRollTo, sumRolls, throttledUpdate, getCachedDocument, getUpdatesCache, clearUpdatesCache, getDamageType, getTokenName, tokenPortrait, setRollOperatorEvaluated, evalAllConditions, evalAllConditionsAsync, getAppliedEffects, CEAddEffectWith, getCEEffectByName, CEHasEffectApplied, CERemoveEffect, CEToggleEffect, getActivityDefaultDamageType, activityHasAreaTarget, DSNMarkDiceDisplayed, expectedTemplateCount, getSaveMultiplierForActivity, checkActivityRange, isRangeCheckable, getActivityAutoTargetAction, activityHasEmanationNoTemplate, completeActivityUse, getActor, getConcentrationEffect, convertDuration, getRemoveAllButtons, requestPCSave, pcSaveOptions, addUpdatesCache, MidiOptions, getOptionalCountRemainingShortFlag, bonusDialog, getTargetDescriptor, queueUpdate, addAttribution, renderAttributionTooltip, getAdvantageModeTitle, resolveItemMacro, resolveActivityMacro, midiFlag, updateUserTargets, getConsumptionData, toMessageMode, toLegacyRollMode, isDnd5eRollMessage, rollAnswersRequest, type SaveRequestKind, dnd5eRollType, tokenSourceElevation, applyStatusCondition } from "./utils.js";
+import { BONUS_REQUEST, createDamageDetail, processDamageRoll, reconstructDamageLists, untargetDeadTokens, checkIncapacitated, getAutoRollDamage, isAutoFastForward, getAutoRollAttack, checkNearby, expireMyEffects, validTargetTokens, userTargetsKeepingUndrawn, HEALING_BUTTON_KEY, isActivityType, getOrCreateTokenForActorAsSet, doReactions, type ReactionResult, playerFor, requestPCActiveDefence, evalActivationCondition, asyncHooksCallAll, asyncHooksCall, renderSaveRollHTML, tokenForActor, getOrCreateTokenForActor, createConditionData, evalCondition, computeCoverBonus, computeTargetAC, TOTAL_COVER, THREE_QUARTERS_COVER, HALF_COVER, hasCoverTotal, isInCombat, displayDSNForRoll, setActionUsed, getTokenDocument, getToken, addRollTo, sumRolls, throttledUpdate, getCachedDocument, getUpdatesCache, clearUpdatesCache, getDamageType, getTokenName, tokenPortrait, setRollOperatorEvaluated, evalAllConditions, evalAllConditionsAsync, getAppliedEffects, CEAddEffectWith, getCEEffectByName, CEHasEffectApplied, CERemoveEffect, CEToggleEffect, getActivityDefaultDamageType, activityHasAreaTarget, DSNMarkDiceDisplayed, expectedTemplateCount, getSaveMultiplierForActivity, checkActivityRange, isRangeCheckable, getActivityAutoTargetAction, activityHasEmanationNoTemplate, completeActivityUse, getActor, getConcentrationEffect, convertDuration, getRemoveAllButtons, requestPCSave, pcSaveOptions, addUpdatesCache, MidiOptions, getOptionalCountRemainingShortFlag, bonusDialog, getTargetDescriptor, queueUpdate, addAttribution, renderAttributionTooltip, getAdvantageModeTitle, resolveItemMacro, resolveActivityMacro, midiFlag, updateUserTargets, getConsumptionData, toMessageMode, toLegacyRollMode, isDnd5eRollMessage, rollAnswersRequest, type SaveRequestKind, dnd5eRollType, tokenSourceElevation, applyStatusCondition } from "./utils.js";
 import { OnUseMacros } from "./apps/Item.js";
 import { bonusCheck, collectBonusFlags, defaultRollOptions, buildPreComputedAdvantageMap, checkActivityAbilities } from "./patching.js";
 import { collectRollModifiers } from "./services/rollModifiers/service.js";
@@ -494,7 +494,9 @@ class CardStateStore {
 
 /** A reason shown on the attack roll: a bonus part (value) or the source of advantage. */
 /** A reason the attack roll shows: flanking, a target-granted bonus, or a roll bonus added to the formula (rollBonuses preRoll) */
-export interface AttackModifier { kind: "flanking" | "flanked" | "granted" | "bonus", label: string, value?: string, advantage?: boolean }
+export interface AttackModifier { kind: "flanking" | "flanked" | "granted" | "bonus", label: string, value?: string, advantage?: boolean, disadvantage?: boolean,
+  /** The image shown for it (a contributor's); else one by kind */
+  img?: string }
 
 /** The workflow's own copy of an assigned set: a TokenDocumentSet is kept, so sets assigned from one another stay shared */
 function asTokenDocumentSet(tokens: Set<TokenOrDocument> | undefined | null): TokenDocumentSet | undefined {
@@ -2166,13 +2168,10 @@ export class Workflow {
   needsHitTargetsDisplayed: boolean = true;
   // TODO: Type this
   conditionData: any | undefined;
-  flankingAdvantage: boolean | undefined;
-  /** A fixed flanking bonus for this single-target melee attack, added to the roll (attackRollParts). */
-  flankingRollBonus: { bonus: number, kind: AttackModifier["kind"], label: string } | undefined;
   /** The target whose granted attack bonus is already in the attack roll, so checkHits doesn't add it again. */
   grantedAttackBonusInRollUuid: string | null | undefined;
-  /** Flanking that gave this attack advantage, shown on the attack roll ("flanking" or "flanked"). */
-  flankingAdvantageKind: AttackModifier["kind"] | undefined;
+  /** The attack's advantage and disadvantage reasons that carry an image (rollModifiers contributors), shown on its roll */
+  attackReasons: AttackModifier[] = [];
   macroPass: string | undefined;
   tag: string | undefined;
   activeDefenceDC: number | undefined;
@@ -4123,6 +4122,7 @@ export class Workflow {
   public async checkAttackAdvantage() {
     // Reset tracker so it can be safely re-called (e.g. after preAttackRoll hooks modify flags)
     this.attackRollModifierTracker.reset();
+    this.attackReasons = [];
 
     // Add workflowOptions and rollOptions attribution first (before flag-based checks)
     if (this.workflowOptions?.advantage) {
@@ -4135,8 +4135,7 @@ export class Workflow {
     // cleared them since 13.0.42, so the attack and its damage were rolled as normal)
     if (this.workflowOptions?.isCritical) this.attackRollModifierTracker.critical.setOverride(true, "activity.use", i18n("midi-qol.ActivityUse"));
     if (this.workflowOptions?.isFumble) this.attackRollModifierTracker.fumble.setOverride(true, "activity.use", i18n("midi-qol.ActivityUse"));
-    // Sets this.flankingAdvantage, which the midi-qol.flanking rollModifiers contributor reads
-    await this.checkFlankingAdvantage();
+    // Flanking: the optional rule's contributors give its advantage or bonus as the roll is made (src/rules/flanking)
 
     // This should never happen
     if (!this.actor) return;
@@ -4254,55 +4253,6 @@ export class Workflow {
     if (this.attackRoll && (criticalChanged || noCriticalChanged)) addAttribution(this.attackRoll, this.attackAttribution);
   }
 
-  async checkFlankingAdvantage(): Promise<boolean> {
-    if (!canvas) {
-      console.warn("midi-qol | checkFlankingAdvantage | abandoned - no canvas defined")
-      return false;
-    }
-    this.flankingAdvantage = false;
-    this.flankingRollBonus = undefined;
-    this.flankingAdvantageKind = undefined;
-    if (this.item && !(["mwak", "msak"].includes(this.activity.actionType ?? ""))) return false;
-    // Flanking is between an attacker and one enemy: an attack roll against several targets gets none.
-    // Roll a separate attack per target gives each roll its own.
-    if (this.targets.count !== 1) return false;
-
-    const token = (fromUuidSync(this.tokenUuid) as TokenDocument)?.object;
-    // Flanking is measured on the canvas: none for a target with no canvas token
-    const target = this.targets.tokens[0];
-    if (!target) return false;
-    const flankingMode = checkRule("checkFlanking") as string;
-    const isFlankedMode = ["ceflanked", "ceflankedNoconga", "midiFlanked", "midiFlankedNoConga"].includes(flankingMode);
-    const isFlankingMode = ["advonly", "ceonly", "midiFlanking"].includes(flankingMode);
-    if (!isFlankedMode && !isFlankingMode) return false;
-    const flankingBonusSetting = configSettings.optionalRules.flankingBonus ?? "advantage";
-
-    // A fixed bonus goes into the attack roll as a labelled part (attackRollParts)
-    if (flankingBonusSetting !== "advantage") {
-      const bonus = Number(flankingBonusSetting) || 0;
-      const flanked = isFlankedMode ? await computeFlankedStatus(target!) : !!token && await computeFlankingStatus(token, target!);
-      if (bonus && flanked) this.flankingRollBonus = { bonus, kind: isFlankedMode ? "flanked" : "flanking", label: i18n(isFlankedMode ? "midi-qol.Flanked" : "midi-qol.Flanking") };
-      return false;
-    }
-
-    // Flanked modes: markFlanking applies the flanked status to the target, which grants advantage
-    if (isFlankedMode) {
-      if (await markFlanking(token, target)) this.flankingAdvantageKind = "flanked";
-      return false;
-    }
-
-    // Flanking modes (advonly, ceonly, midiFlanking): markFlanking applies the attacker's status (ceonly, midiFlanking)
-    const needsFlanking = await markFlanking(token, target);
-    if (needsFlanking) this.flankingAdvantageKind = "flanking";
-    if (needsFlanking && this.actor) {
-      foundry.utils.setProperty(this.actor, "flags.midi.evaluated.advantage.attack.flanking", { value: true, effects: ["Flanking"] });
-    }
-    if (flankingMode === "advonly") {
-      this.flankingAdvantage = needsFlanking;
-    }
-    return needsFlanking;
-  }
-
   /**
    * Parts added to a single-target attack roll before it is rolled, labelled so the roll shows them: a fixed
    * flanking bonus and the target's granted attack bonus (flags.midi-qol.grants.attack.bonus). With several
@@ -4317,15 +4267,10 @@ export class Workflow {
     for (const bonus of this.#preRollBonuses.attack ?? []) {
       if (bonus.effect.kind !== "add") continue;
       parts.push(`${bonus.effect.formula}[${bonus.label}]`);
-      modifiers.push({ kind: "bonus", label: bonus.label, value: `+${bonus.effect.formula}` });
+      modifiers.push({ kind: "bonus", label: bonus.label, value: `+${bonus.effect.formula}`, ...(bonus.img ? { img: bonus.img } : {}) });
     }
-    if (this.flankingAdvantageKind)
-      modifiers.push({ kind: this.flankingAdvantageKind, label: i18n(this.flankingAdvantageKind === "flanked" ? "midi-qol.Flanked" : "midi-qol.Flanking"), advantage: true });
+    modifiers.push(...this.attackReasons);
     if (this.targets.count !== 1) return { parts, modifiers };
-    if (this.flankingRollBonus) {
-      parts.push(`${this.flankingRollBonus.bonus}[${this.flankingRollBonus.label}]`);
-      modifiers.push({ kind: this.flankingRollBonus.kind, label: this.flankingRollBonus.label, value: `+${this.flankingRollBonus.bonus}` });
-    }
     const targetActor = this.targets.documents[0]?.actor;
     const granted = targetActor?.flags?.[MODULE_ID]?.grants?.attack?.bonus;
     if (!targetActor || !granted) return { parts, modifiers };

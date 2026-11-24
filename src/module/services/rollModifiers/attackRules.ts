@@ -32,14 +32,6 @@ const longRange: RollModifierContributor = {
   }
 };
 
-/** Reads the flanking verdict checkFlankingAdvantage reached for the workflow. */
-const flanking: RollModifierContributor = {
-  for(query) {
-    const context = attackContext(query);
-    return context?.workflow.flankingAdvantage ? [{ effect: "advantage", key: "flanking", label: i18n("midi-qol.Flanking") }] : [];
-  }
-};
-
 /** Heavy weapons: 2024 needs STR/DEX 13; 2014 small and tiny creatures. flags.midi-qol.fail.disadvantage.heavy waives it. */
 const heavyWeapon: RollModifierContributor = {
   async for(query) {
@@ -69,7 +61,6 @@ const heavyWeapon: RollModifierContributor = {
 /** midi's attack rules, registered as providers of rollModifiers (midi-qol.<rule>). */
 export const attackRollRules: Record<string, { label: string, contributor: RollModifierContributor }> = {
   "midi-qol.range": { label: "Long range disadvantage", contributor: longRange },
-  "midi-qol.flanking": { label: "Flanking advantage", contributor: flanking },
   "midi-qol.heavyWeapon": { label: "Heavy weapon disadvantage", contributor: heavyWeapon }
 };
 

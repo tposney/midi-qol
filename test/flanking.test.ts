@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { crossesOppositeSides, opposedByAngle, segmentsIntersect } from "../src/module/services/flanking/rules.js";
+import { crossesOppositeSides, opposedByAngle, segmentsIntersect } from "../src/rules/flanking/math.js";
 
 // A 1x1 target on a 100px grid: cell (1,1), box from (100,100) to (200,200). Cell centres are at 50, 150, 250.
 const target = { x: 100, y: 100, width: 100, height: 100 };

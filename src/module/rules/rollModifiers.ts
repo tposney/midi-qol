@@ -20,6 +20,8 @@ export interface RollModifier {
   source?: string;
   /** The exact attribution key instead of provider:source, for a key other modules already rely on (midi's own rules). */
   key?: string;
+  /** An attack's advantage or disadvantage: an image the attack roll shows beside its total for this reason */
+  img?: string;
 }
 
 interface SideTracker { add(source?: string, displayName?: string): void; suppress(source?: string, displayName?: string): void }

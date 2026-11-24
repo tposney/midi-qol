@@ -2,13 +2,15 @@
  * midi's flanking geometry: the "midi-qol" provider of the flanking service (service.ts). Reads the canvas (positions,
  * sizes, dispositions, the grid) and asks rules.ts for the geometry.
  */
-import { getDistance } from "../distance/service.js";
-import { computePerimeterDistance } from "../distance/provider.js";
-import { debugEnabled, MODULE_ID } from "../../../midi-qol.js";
-import { checkRule, configSettings } from "../../settings.js";
-import { installedModules } from "../../setupModules.js";
-import { canSense, CEHasEffectApplied, checkIncapacitated, createConditionData, evalCondition, findNearby, getFlankedEffect, hasCondition, isValidTarget, tokenSourceCenter, tokenSourcePosition } from "../../utils.js";
-import { crossesOppositeSides, FLANKED_MODES, opposedByAngle } from "./rules.js";
+import { crossesOppositeSides, opposedByAngle } from "./math.js";
+import { currentFlankingMode, isFlankedMode } from "./index.js";
+import { getDistance } from "../../module/services/distance/service.js";
+import { computePerimeterDistance } from "../../module/services/distance/provider.js";
+import { debugEnabled, MODULE_ID } from "../../midi-qol.js";
+import { checkRule, configSettings } from "../../module/settings.js";
+import { installedModules } from "../../module/setupModules.js";
+import { canSense, CEHasEffectApplied, checkIncapacitated, createConditionData, evalCondition, findNearby, getFlankedEffect, hasCondition, isValidTarget, tokenSourceCenter, tokenSourcePosition } from "../../module/utils.js";
+
 export function heightIntersects(targetDocument: TokenDocument.Implementation, flankerDocument: TokenDocument.Implementation): boolean {
   const target = tokenSourcePosition(targetDocument);
   const flanker = tokenSourcePosition(flankerDocument);
@@ -169,7 +171,7 @@ function isAngleFlanking(
 // TODO: Can definitely probably clean this up some
 /** midi's flanked geometry: the "midi-qol" provider of the flanking service */
 export async function midiFlankedStatus(target: Token.Implementation): Promise<boolean> {
-  if (!checkRule("checkFlanking") || !FLANKED_MODES.includes(checkRule("checkFlanking") as string)) return false;
+  if (!isFlankedMode()) return false;
   if (!canvas || !target) return false;
   const allies = findPotentialFlankers(target);
   if (allies.length <= 1) return false; // length 1 means no other allies nearby
@@ -185,11 +187,11 @@ export async function midiFlankedStatus(target: Token.Implementation): Promise<b
     const token = allies.pop();
     if (!token) break;
     if (!heightIntersects(target.document, token.document)) continue;
-    if (checkRule("checkFlanking") === "ceflankedNoconga" && installedModules.get("dfreds-convenient-effects")) {
+    if (currentFlankingMode() === "ceflankedNoconga" && installedModules.get("dfreds-convenient-effects")) {
       const CEFlanked = getFlankedEffect();
       const hasFlanked = token.actor && CEFlanked && CEHasEffectApplied({ effectName: CEFlanked.name, uuid: token.actor.uuid });
       if (hasFlanked) continue;
-    } else if (checkRule("checkFlanking") === "midiFlankedNoConga") {
+    } else if (currentFlankingMode() === "midiFlankedNoConga") {
       const hasFlanked = token.actor && hasCondition(token.actor, "flanked");
       if (hasFlanked) continue;
     }
@@ -220,12 +222,12 @@ export async function midiFlankedStatus(target: Token.Implementation): Promise<b
       if (actor?.system.attributes?.hp?.value <= 0) continue;
       if (!heightIntersects(target.document, ally.document)) continue;
       if (hasCondition(actor, "incapacitated")) continue;
-      if (checkRule("checkFlanking") === "ceflankedNoconga" && installedModules.get("dfreds-convenient-effects")) {
+      if (currentFlankingMode() === "ceflankedNoconga" && installedModules.get("dfreds-convenient-effects")) {
         const CEFlanked = getFlankedEffect();
         const hasFlanked = CEFlanked && CEHasEffectApplied({ effectName: CEFlanked.name, uuid: ally.actor?.uuid ?? "" });
         if (hasFlanked) continue;
       }
-      if (checkRule("checkFlanking") === "midiFlankedNoConga") {
+      if (currentFlankingMode() === "midiFlankedNoConga") {
         const hasFlanked = hasCondition(actor, "flanked");
         if (hasFlanked) continue
       }
@@ -263,7 +265,7 @@ export async function midiFlankedStatus(target: Token.Implementation): Promise<b
 // TODO Can definitely probably clean this up
 /** midi's flanking geometry: the "midi-qol" provider of the flanking service */
 export async function midiFlankingStatus(token: Token.Implementation, target: Token.Implementation): Promise<boolean> {
-  if (!checkRule("checkFlanking") || checkRule("checkFlanking") === "off") return false;
+  if (currentFlankingMode() === "off") return false;
   if (!canvas) return false;
   if (!token) return false;
   // For the target see how many square between this token and any friendly targets

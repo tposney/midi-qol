@@ -1,4 +1,5 @@
 import { registerLoadouts } from "./module/services/loadouts.js";
+import { registerCheckFlankingRule } from "./rules/flanking/index.js";
 import { defineOutcomeServices } from "./module/services/outcomeRules/service.js";
 import { registerNearbyAllyRangedRule } from "./rules/nearbyAllyRanged.js";
 import { registerCriticalSavesRule } from "./rules/criticalSaves.js";
@@ -619,6 +620,8 @@ Hooks.once('init', async function () {
   registerEntryRollBonuses();
   registerBonusApprovalQuery();
   defineFlankingService();
+  // After rollBonuses and flanking are defined: the flanking rule registers with both
+  registerCheckFlankingRule();
   defineDistanceService();
   registerMidiTags();
   defineRevealPolicyService();
@@ -2333,26 +2336,12 @@ export function setupMidiStatusEffects() {
 }
 
 function getFlankingStatusChanges(): object[] {
-  const bonus = configSettings.optionalRules?.flankingBonus ?? "advantage";
-  if (bonus === "advantage") {
-    return [
-      { key: "flags.midi-qol.advantage.attack.mwak", type: "custom", value: "true" },
-      { key: "flags.midi-qol.advantage.attack.msak", type: "custom", value: "true" }
-    ];
-  }
-  // Fixed bonus: flanking status is visual-only; bonus computed per-target in recordFlankingBonuses
+  // A marker: the flanking rule's contributors give the advantage or bonus (src/rules/flanking)
   return [];
 }
 
 function getFlankedStatusChanges(): object[] {
-  const bonus = configSettings.optionalRules?.flankingBonus ?? "advantage";
-  if (bonus === "advantage") {
-    return [
-      { key: "flags.midi-qol.grants.advantage.attack.mwak", type: "custom", value: "true" },
-      { key: "flags.midi-qol.grants.advantage.attack.msak", type: "custom", value: "true" }
-    ];
-  }
-  // Fixed bonus: flanked status is visual-only; bonus computed per-target in recordFlankingBonuses
+  // A marker: the flanking rule's contributors give the advantage or bonus (src/rules/flanking)
   return [];
 }
 

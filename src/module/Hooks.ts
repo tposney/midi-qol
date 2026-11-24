@@ -1,4 +1,5 @@
 import { tokenFor, tokenOf } from "./lib/tokenResolver.js";
+import { chackFlanking as checkFlanking, updateFlankingHighlight } from "../rules/flanking/marking.js";
 import { saveOutcomeOverride } from "./services/outcomeRules/service.js";
 import { registerDamageCalculationStep, runDamageCalculation } from "./steps/damageCalculation.js";
 import { deprecation } from "./lib/compatLine.js";
@@ -9,7 +10,7 @@ import { excludeRegionSourceEffect, moveRegionsOnTurnChange } from "./regionBeha
 import { colorChatMessageHandler, nsaMessageHandler, hideStuffHandler, hideRollUpdate, hideRollRender, checkOverTimeSaves } from "./chatMessageHandling.js";
 import { preferredActiveGM, processUndoDamageCard, whisperRollToPlayer } from "./GMAction.js";
 import { addViewAsPlayerOption } from "./ChatClasses/DamageCardMessage.js";
-import { damageActiveHas, untargetDeadTokens, untargetAllTokens, midiCustomEffect, removeReactionUsed, removeBonusActionUsed, chackFlanking as checkFlanking, expireRollEffect, removeActionUsed, setupOptionalBonusResets, clearUpdatesCache, expireEffects, processConcentrationRequestMessage, doConcentrationCheck, completeActivityUse, isAutoFastForward, areMidiKeysPressed, throttledScrollBottom, getVitalityItem, tokenForActor, resolveItemMacro, resolveActivityMacro, doSyncRoll, getTokenPerimeterPolygon, closestPointOnPerimeter, measurePointDistance, updateFlankingHighlight, onUserManualTarget, toggleStatus, videoThumbnail } from "./utils.js";
+import { damageActiveHas, untargetDeadTokens, untargetAllTokens, midiCustomEffect, removeReactionUsed, removeBonusActionUsed, expireRollEffect, removeActionUsed, setupOptionalBonusResets, clearUpdatesCache, expireEffects, processConcentrationRequestMessage, doConcentrationCheck, completeActivityUse, isAutoFastForward, areMidiKeysPressed, throttledScrollBottom, getVitalityItem, tokenForActor, resolveItemMacro, resolveActivityMacro, doSyncRoll, getTokenPerimeterPolygon, closestPointOnPerimeter, measurePointDistance, onUserManualTarget, toggleStatus, videoThumbnail } from "./utils.js";
 import { releaseForcedNormalKeys } from "./lib/rollKeys.js";
 import { computeAdvantageFlagsSync } from "./lib/RollModifierTracker.js";
 import { checkRule, configSettings, dragDropTargeting } from "./settings.js";

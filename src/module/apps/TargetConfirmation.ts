@@ -1,9 +1,11 @@
 import { tokenFor, tokenOf } from "../lib/tokenResolver.js";
+import { isFlankedMode } from "../../rules/flanking/index.js";
+import { markFlanking } from "../../rules/flanking/marking.js";
 import { computeFlankingStatus } from "../services/flanking/service.js";
 import { Activity } from "../../globals.js";
 import { i18n, error, i18nFormat } from "../../midi-qol.js";
 import { checkMechanic, checkRule, configSettings, targetConfirmation } from "../settings.js";
-import { TOTAL_COVER, HALF_COVER, THREE_QUARTERS_COVER, activityHasAreaTarget, checkActivityRange, getCoverBonus, getToken, isInCombat, isValidTarget, markFlanking, tokenForActor, updateUserTargets, getTokenName } from "../utils.js";
+import { TOTAL_COVER, HALF_COVER, THREE_QUARTERS_COVER, activityHasAreaTarget, checkActivityRange, getCoverBonus, getToken, isInCombat, isValidTarget, tokenForActor, updateUserTargets, getTokenName } from "../utils.js";
 import { shouldEnforceSingleTarget } from "../activities/activityHelpers.js";
 import { getTokenPlayerName } from "../utils.js";
 import { TroubleShooter } from "./TroubleShooter.js";
@@ -54,7 +56,7 @@ export class TargetConfirmationDialog extends HandlebarsApplicationMixin(Applica
     // Make sure the current targets respect the targeting rules of the activity
     this.validateAndUpdateTargets();
  
-    if (["ceflanked", "ceflankedNoconga", "midiFlanked", "midiFlankedNoConga"].includes(checkRule("checkFlanking") as string) && game.user?.targets) {
+    if (isFlankedMode() && game.user?.targets) {
       const actor = this.data.activity.actor;
       const token = tokenOf(tokenFor(actor));
       if (token)
@@ -247,7 +249,7 @@ export class TargetConfirmationDialog extends HandlebarsApplicationMixin(Applica
       }
 
       let details: string[] = [];
-      if (["ceflanked", "ceflankedNoconga", "midiFlanked", "midiFlankedNoConga"].includes(checkRule("checkFlanking") as string)) {
+      if (isFlankedMode()) {
         if (token && await computeFlankingStatus(token, target)) details.push((i18n("midi-qol.Flanked") ?? "Flanked"));
       }
 
