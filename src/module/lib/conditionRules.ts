@@ -1,4 +1,6 @@
 import { i18n, MODULE_ID } from "../../midi-qol.js";
+import { ruleActive } from "../../rules/registry.js";
+import { INVIS_RULE } from "../../rules/invisAdvantage.js";
 import { checkRule } from "../settings.js";
 
 // Apply condition rules (optional rule conditionRules): the parts of each condition dnd5e doesn't apply itself.
@@ -21,7 +23,7 @@ function conditionChanges(status: string): ConditionChange[] {
   switch (status) {
     case "blinded":
       // Covered by the can't-see rules unless they are off
-      if (checkRule("invisAdvantage") && checkRule("invisAdvantage") !== "none") return [];
+      if (ruleActive(INVIS_RULE)) return [];
       return [attackDisadvantage, grantsAdvantage];
     case "frightened":
       return [attackDisadvantage, checkDisadvantage];

@@ -1,4 +1,8 @@
 import { registerLoadouts } from "./module/services/loadouts.js";
+import { optionalRulesApi } from "./rules/registry.js";
+import { registerNearbyFoeRule } from "./rules/nearbyFoe.js";
+import { registerInvisAdvantageRule } from "./rules/invisAdvantage.js";
+import { registerHiddenAdvantageRule } from "./rules/hiddenAdvantage.js";
 import { defineCombatRecordService } from "./module/services/combatRecord/service.js";
 import { registerCombatRecorder } from "./plugins/combatRecorder.js";
 import { registerLayoutSettings } from "./module/apps/hub/layout.js";
@@ -464,6 +468,7 @@ Object.assign(globalThis.MidiQOL, {
   // M7: click to attack (prime an attack, then click a token; Alt+click; the midi-qol.claimClick hook)
   attack: clickToAttackApi,
   useOptions: useOptionsApi,
+  optionalRules: optionalRulesApi,
   dice: diceApi,
   // M21: a creature's Multiattack plan (the GM's, registered ones, midi's table from the books, the text parsed, a guess)
   multiattack: multiattackApi,
@@ -588,6 +593,10 @@ Hooks.once('init', async function () {
   definePerceptionService();
   defineRollModifiersService();
   registerAttackRollRules();
+  // M30: optional rules as rule units (src/rules)
+  registerNearbyFoeRule();
+  registerInvisAdvantageRule();
+  registerHiddenAdvantageRule();
   defineDamageModifiersService();
   defineDamageContributionsService();
   defineResponsesService();

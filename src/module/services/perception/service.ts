@@ -1,5 +1,5 @@
 import { defineService } from "../../api/services.js";
-import { midiHiddenFrom } from "../../lib/hiding.js";
+import { perObserverHidden } from "../../../rules/hiddenAdvantage.js";
 import { _canSenseModes } from "../../utils.js";
 
 /*
@@ -61,7 +61,8 @@ export const midiPerception: MidiPerceptionProvider = {
     if (!observer.object || !target.object) return [];
     return _canSenseModes(observer.object, target.object, modeList(modes), { forceVision });
   },
-  hiddenFrom: (target, observer) => midiHiddenFrom(target, observer),
+  // The optional rule hiddenAdvantage per observer (src/rules/hiddenAdvantage.ts)
+  hiddenFrom: (target, observer) => perObserverHidden(target, observer),
   // vision-5e marks its imprecise modes (blindsight, tremorsense...)
   imprecise(modeId) {
     const mode: object | undefined = CONFIG.Canvas.detectionModes[modeId];

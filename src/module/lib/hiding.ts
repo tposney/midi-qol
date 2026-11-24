@@ -66,17 +66,6 @@ export function hiddenFrom(target: TokenDocument.Implementation, viewer: TokenDo
   return isHiddenFrom(target, viewer);
 }
 
-/** midi's answer (the perception service's default provider) */
-export function midiHiddenFrom(target: TokenDocument.Implementation, viewer: TokenDocument.Implementation): boolean {
-  const mode = checkRule("hiddenAdvantage");
-  if (mode !== "perObserver" && mode !== "perObserverPassive") return false;
-  if (target === viewer || !target.actor?.statuses.has(HIDING)) return false;
-  if (target.disposition === viewer.disposition) return false;
-  if (!viewer.sight.enabled && !configSettings.optionalRules.invisVision) return false;
-  if (mode === "perObserverPassive" && passivePerception(viewer.actor) >= (hiddenDC(target.actor) ?? DEFAULT_DC)) return false;
-  return true;
-}
-
 /*
  * M8: Hide and Search, shared by the Hide / Search interactions and the CAT-triggered macros (catMacros/actions/hide.mjs).
  * A hide is dnd5e's Hiding status with midi's data on it: the find DC (the Stealth total), the card it was reported
