@@ -1,4 +1,5 @@
 import { registerLoadouts } from "./module/services/loadouts.js";
+import { registerLayoutSettings } from "./module/apps/hub/layout.js";
 import { registerRemindersSetting } from "./module/apps/hub/reminders.js";
 import { useOptionsApi } from "./module/services/useOptions/registry.js";
 import { diceApi } from "./module/lib/dicePicker.js";
@@ -741,6 +742,7 @@ Hooks.once('init', async function () {
   registerHudSetting();
   registerClickToAttackSetting();
   registerRemindersSetting();
+  registerLayoutSettings();
   setupUserSettings();
   registerChecklistSetting();
   registerTurnHudConfig();

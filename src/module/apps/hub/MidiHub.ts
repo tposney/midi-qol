@@ -7,6 +7,7 @@ import { hudApi } from "../../services/turnModel/hud.js";
 import { useOrPrime } from "../../services/clickToAttack/service.js";
 import { averageBonus, clearHighlights, coordinationLines, hitChance, showHighlights, validTargets } from "./targetHighlight.js";
 import { reveals } from "../../services/revealPolicy/service.js";
+import { applyLayout, hubKey } from "./layout.js";
 
 /*
  * M27: midi's hub (plan ~/Documents/midi-next-M27-plan-2026-11-24.md): the one place a creature's turn is run from,
@@ -137,6 +138,7 @@ export class MidiHub extends ApplicationV2 {
     // A redraw replaces the hovered button without a mouseout
     this.#previewing = "";
     clearHighlights();
+    applyLayout(this.element);
     this.element.classList.toggle("midi-hub-is-docked", !MidiHub.windowed);
     if (!MidiHub.windowed) return;
     this.element.classList.remove("theme-light", "theme-dark");
@@ -167,6 +169,8 @@ export class MidiHub extends ApplicationV2 {
     // The drawer closes on Escape or a click outside the hub
     document.addEventListener("pointerdown", this.#onOutside, true);
     document.addEventListener("keydown", this.#onEscape);
+    // Keys (a user setting): before Foundry's own, so the hotbar's number keys don't also fire
+    document.addEventListener("keydown", this.#onKey, true);
     // Docked: in Foundry's interface layer, at the bottom (where the hotbar was)
     if (!MidiHub.windowed) document.getElementById("interface")?.append(element);
   }
@@ -174,6 +178,12 @@ export class MidiHub extends ApplicationV2 {
   #onOutside = (event: PointerEvent) => {
     if (!this.rendered || this.#pinned || !this.drawerOpen) return;
     if (!this.element.contains(event.target as Node)) this.closeDrawer();
+  };
+
+  #onKey = (event: KeyboardEvent) => {
+    if (!this.rendered || !hubKey(this.element, event)) return;
+    event.preventDefault();
+    event.stopImmediatePropagation();
   };
 
   #onEscape = (event: KeyboardEvent) => {
@@ -186,6 +196,7 @@ export class MidiHub extends ApplicationV2 {
     window.clearInterval(this.#tick);
     document.removeEventListener("pointerdown", this.#onOutside, true);
     document.removeEventListener("keydown", this.#onEscape);
+    document.removeEventListener("keydown", this.#onKey, true);
     await super._onClose?.(options as never);
   }
 

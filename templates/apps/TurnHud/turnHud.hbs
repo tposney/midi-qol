@@ -19,6 +19,7 @@
         {{#if click.note}}<p class="hint">{{click.note}}</p>{{/if}}
         {{/if}}
         {{#if reminders}}{{formGroup reminders.field value=reminders.value localize=true}}{{/if}}
+        {{#each hubSettings}}{{formGroup field value=value localize=true}}{{/each}}
     </fieldset>
     {{#each credits}}<p class="hint midi-qol-turn-hud-credit">{{{this}}}</p>{{/each}}
     {{#each ownSettings}}
