@@ -4,13 +4,15 @@ import type { Workflow } from "../../Workflow.js";
 import { stepsApi } from "../../steps/api.js";
 import { addUseRollModifier } from "../../lib/entries/useEvents.js";
 import { registerUseOptions, type UseOption, type UseOptionContext } from "./registry.js";
+import { register } from "../../api/services.js";
+import type { BonusCandidate, RollBonusQuery } from "../rollBonuses/service.js";
 
 /*
  * M27: midi's Metamagic (2024), as use options on a spell: chosen in dnd5e's usage dialog when the spell is cast, never a
  * feature used first. The options are the caster's features by identifier (any source: midi's, CAT's, the PHB's), so a
  * sorcerer needs nothing midi-specific. Sorcery Points are Metamagic Adept's uses, then Font of Magic's. One option per
- * casting; two with Sorcery Incarnate while Innate Sorcery is active. Empowered and Seeking act on rolls and are offered
- * after them (not here).
+ * casting; two with Sorcery Incarnate while Innate Sorcery is active. Empowered and Seeking act on rolls: offered after
+ * them as roll bonuses (the bonus prompt, standing choices), alongside any other option.
  */
 
 const PROVIDER = "midi-qol.metamagic";
@@ -270,7 +272,34 @@ export function quickenHint(item: Item.Implementation | null | undefined, activa
   return i18n("midi-qol.Metamagic.QuickenHint").replace("{name}", feature.name ?? "").replace("{n}", String(cost));
 }
 
+/** A feature CAT automates on rolls itself (its roll macros): midi doesn't offer it as well */
+const catRolls = (feature: Item.Implementation) => ((feature.flags as { cat?: { macros?: { roll?: unknown[] } } }).cat?.macros?.roll?.length ?? 0) > 0;
+
+/** Empowered (damage) and Seeking (a missed attack) after a spell's roll: roll bonuses paid in Sorcery Points */
+function rolledOptions(query: RollBonusQuery): BonusCandidate[] {
+  const { actor, item } = query;
+  if (!item || (item.type as string) !== "spell") return [];
+  const id = query.kind === "damage" ? "empowered-spell" : query.kind === "attack" ? "seeking-spell" : undefined;
+  const feature = id ? itemFor(actor, id) : undefined;
+  const pool = pools(actor)[0];
+  if (!id || !feature || catRolls(feature) || !pool?.uuid || points(actor) < 1) return [];
+  const paid = { cost: { itemUses: { [pool.uuid]: { cost: 1, available: points(actor) } } }, spendsOwnCost: true,
+    onChosen: async () => { await spend(actor, 1); } };
+  if (id === "empowered-spell") return [{
+    id, label: feature.name ?? id, img: feature.img ?? undefined, phases: ["postResult"], optional: true, ...paid,
+    effect: { kind: "reroll", keep: "new", dice: "choose", max: chaMax(actor) },
+    description: i18n("midi-qol.Metamagic.EmpoweredHint").replace("{n}", String(chaMax(actor)))
+  }];
+  return [{
+    id, label: feature.name ?? id, img: feature.img ?? undefined, phases: ["postResult"], optional: true, ...paid,
+    effect: { kind: "reroll", keep: "new" },
+    validate: ctx => ctx.outcome?.success === false ? true : i18n("midi-qol.Metamagic.SeekingMiss"),
+    description: i18n("midi-qol.Metamagic.SeekingHint")
+  }];
+}
+
 export function registerMetamagic() {
+  register("rollBonuses", "midi-qol.metamagic", { kinds: ["damage", "attack"], for: rolledOptions });
   registerUseOptions(PROVIDER, {
     label: "midi-qol.Metamagic.Label",
     offer: ({ activity, item, actor }) => {
