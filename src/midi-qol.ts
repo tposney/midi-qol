@@ -1,6 +1,6 @@
 import { registerLoadouts } from "./module/services/loadouts.js";
 import { defineCombatRecordService } from "./module/services/combatRecord/service.js";
-import { registerMidiCombatRecord } from "./module/services/combatRecord/stub.js";
+import { registerCombatRecorder } from "./plugins/combatRecorder.js";
 import { registerLayoutSettings } from "./module/apps/hub/layout.js";
 import { registerRemindersSetting } from "./module/apps/hub/reminders.js";
 import { useOptionsApi } from "./module/services/useOptions/registry.js";
@@ -606,7 +606,8 @@ Hooks.once('init', async function () {
   registerMidiTags();
   defineRevealPolicyService();
   defineCombatRecordService();
-  registerMidiCombatRecord();
+  // midi's combatRecord provider, a plugin given midi's public API (it can move into a module as it is)
+  registerCombatRecorder({ services: servicesApi, reveals, tokenFor });
   defineTokenNamesService();
   registerMidiIssueContributors();
   registerMidiEntryActions();
