@@ -1,4 +1,5 @@
 import { tokenFor } from "./lib/tokenResolver.js";
+import { attackCritical, saveOutcomeOverride, saveSucceeded } from "./services/outcomeRules/service.js";
 import type { RangeCheckResult } from "./services/range/service.js";
 import { ReactionBatch } from "./lib/reactionBatch.js";
 import { isRollOf } from "./rolls/common.js";
@@ -4360,18 +4361,7 @@ export class Workflow {
     const firstTarget = tokenOf(tokenFor(firstTargetDocument));
     if (!firstTargetDocument || !firstTarget) return;
 
-    // Check nearby ally disadvantage for ranged attacks
-    if ((checkRule("nearbyAllyRanged") as number) > 0 && ["rwak", "rsak"].includes(actionType)) {
-      if ((firstTargetDocument.width ?? 1) * (firstTargetDocument.height ?? 1) < Number(checkRule("nearbyAllyRanged"))) {
-        const nearbyAlly = checkNearby(-1, firstTarget, (canvas.dimensions?.distance ?? 5)); // targets near a friend that is not too big
-        // TODO include thrown weapons in check
-        if (nearbyAlly) {
-          if (debugEnabled > 0) warn("checkTargetAdvantage | ranged attack with disadvantage because target is near a friend");
-          this.attackRollModifierTracker.disadvantage.add('nearbyAlly', 'Nearby Ally');
-          foundry.utils.setProperty(this.actor, "flags.midi.evaluated.disadvantage.attack.nearbyAlly", { value: true, effects: ["Nearby Ally"] });
-        }
-      }
-    }
+    // A ranged attack at a target beside its ally: the optional rule nearbyAllyRanged (src/rules), a rollModifiers contributor
   }
 
   async triggerTargetMacros(triggerList: string[], targets: TokenDocumentSet | Set<TokenOrDocument> = this.targets, options: { saved?: boolean } = {}) {
@@ -5690,10 +5680,8 @@ export class Workflow {
     const newSaveRoll = addRollTo(saveRoll, rollBonus);
     const newSaveRollTotal = newSaveRoll.total!;
 
-    let saved = newSaveRollTotal >= resultDC;
-    if (checkRule("criticalSaves")) {
-      saved = (isCritical || newSaveRollTotal >= resultDC) && !isFumble;
-    }
+    // A save rule (critical saves) may decide instead of total >= DC
+    const saved = saveSucceeded({ total: newSaveRollTotal, dc: resultDC, critical: !!isCritical, fumble: !!isFumble, actor: target.actor ?? undefined });
 
     return { saveRoll: newSaveRoll, saveRollTotal: newSaveRollTotal, saved };
   }
@@ -6647,9 +6635,9 @@ export class Workflow {
     };
     let saved = judged(saveRolls, saveRollTotal);
 
-    if (checkRule("criticalSaves")) {
-      saved = (isCritical || saveRollTotal >= resultDC) && !isFumble;
-    }
+    // A save rule (critical saves) decides over midi's answer
+    const ruled = saveOutcomeOverride({ total: saveRollTotal, dc: resultDC, critical: !!isCritical, fumble: !!isFumble });
+    if (ruled !== undefined) saved = ruled;
     if (this.checkSculptOrCarefulSpells(target)) {
       saved = true;
     }
@@ -8353,16 +8341,9 @@ export class Workflow {
           await targetEvent(this, targetDocument, "missed", { roll: this.attackRoll, attackTotal, ac: targetAC, fumble: this.isFumble },
             provokes ? () => this.askReactionsStep(targetToken, this.tokenUuid, this.attackRoll, "reactionmissed", { activity: this.activity, item: this.item, workflow: this, workflowOptions }) : undefined);
         }
-        const optionalCrits = checkRule("optionalCritRule") as number;
-        if (this.targets.documents.length === 1 && configSettings.optionalRulesEnabled && optionalCrits > -1) {
-          if (checkRule("criticalNat20") && this.isCritical) {
-            // criticalNat20 rule: natural 20 always crits, so don't change
-          } else {
-            // Optional crit rule: only crit if attack exceeds AC by optionalCrits
-            const optionalCrit = attackTotal >= targetAC + optionalCrits;
-            this.attackRollModifierTracker.critical.setOverride(optionalCrit, "optionalCritRule", i18n("midi-qol.OptionalCritRule"));
-          }
-        }
+        // A hit rule (a critical by a margin over the AC) decides the critical
+        const ruledCritical = attackCritical({ total: attackTotal, ac: targetAC, critical: !!this.isCritical, targetCount: this.targets.documents.length, workflow: this });
+        if (ruledCritical) this.attackRollModifierTracker.critical.setOverride(ruledCritical.critical, ruledCritical.key, ruledCritical.label);
         hitResultNumeric = this.isCritical ? "++" : !isFinite(targetAC) ? `${attackTotal}/∞` : `${attackTotal}/${Math.abs(attackTotal - targetAC)}`;
       }
 

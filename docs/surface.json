@@ -581,6 +581,7 @@
   "services": [
     "activityCards",
     "addKinds",
+    "attackOutcome",
     "basicsFields",
     "bonusPrompt",
     "chooseTokens",
@@ -606,6 +607,7 @@
     "revealPolicy",
     "rollBonuses",
     "rollModifiers",
+    "saveOutcome",
     "saveRequests",
     "settingNeeds",
     "targetConfirmation",

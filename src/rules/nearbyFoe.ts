@@ -35,6 +35,7 @@ const nearbyFoe: RollModifierContributor = {
 };
 
 export function registerNearbyFoeRule() {
-  const rule = declareRule({ id: ruleId("nearbyFoe"), setting: "nearbyFoe", service: "rollModifiers", label: "Nearby foe disadvantage on ranged attacks" });
+  const rule = declareRule({ id: ruleId("nearbyFoe"), setting: "nearbyFoe", service: "rollModifiers", label: "Nearby foe disadvantage on ranged attacks",
+    settings: [{ key: "nearbyFoe", type: "number", label: "midi-qol.NearbyFoe.Name", default: 5 }] });
   rollModifiersService.register(rule.id, nearbyFoe, { label: rule.label, available: () => ruleOn("nearbyFoe") });
 }

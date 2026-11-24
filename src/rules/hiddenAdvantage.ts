@@ -1,4 +1,4 @@
-import { configSettings } from "../module/settings.js";
+import { configSettings, hiddenAdvantageOptions } from "../module/settings.js";
 import { installedModules } from "../module/setupModules.js";
 import { HIDING, hiddenDC, passivePerception, DEFAULT_DC } from "../module/lib/hiding.js";
 import { rollModifiersService, type RollModifier, type RollModifierContributor } from "../module/services/rollModifiers/service.js";
@@ -49,7 +49,11 @@ const perceptive: RollModifierContributor = {
 };
 
 export function registerHiddenAdvantageRule() {
-  const rule = declareRule({ id: ruleId("hiddenAdvantage", "perceptive"), setting: "hiddenAdvantage", service: "rollModifiers", label: "Hidden attackers and targets (Perceptive)" });
+  const rule = declareRule({ id: ruleId("hiddenAdvantage", "perceptive"), setting: "hiddenAdvantage", service: "rollModifiers", label: "Hidden attackers and targets (Perceptive)",
+    settings: [
+      { key: "hiddenAdvantage", type: "string", label: "midi-qol.HiddenAdvantage.Name", hint: "midi-qol.HiddenAdvantage.Hint", choices: hiddenAdvantageOptions, default: "none" },
+      { key: "invisVision", type: "boolean", label: "midi-qol.InvisVision.Name", hint: "midi-qol.InvisVision.Hint", default: false }
+    ] });
   rollModifiersService.register(rule.id, perceptive, { label: rule.label,
     available: () => ruleValue("hiddenAdvantage") === "perceptive" && !!installedModules.get("perceptive") });
 }

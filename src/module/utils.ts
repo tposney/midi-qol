@@ -1,4 +1,5 @@
 import { tokenFor } from "./lib/tokenResolver.js";
+import { saveOutcomeOverride } from "./services/outcomeRules/service.js";
 import { reveals } from "./services/revealPolicy/service.js";
 import type { ReactionTicket } from "./lib/reactionBatch.js";
 import { activityCostBadges, offerCostBadges, wirePickOne, type PromptResponses, type PromptRow } from "./lib/promptCosts.js";
@@ -1888,7 +1889,8 @@ export async function handleActionSaveRollResponse(
     return null; // continue to next effect
   }
 
-  const success = options.saveToUse?.options?.success || options.saveToUse?.total >= saveDC || (checkRule("criticalSaves") && options.saveToUse.isCritical);
+  const success = options.saveToUse?.options?.success || options.saveToUse?.total >= saveDC
+    || (!!options.saveToUse?.isCritical && saveOutcomeOverride({ total: options.saveToUse.total, dc: saveDC, critical: true, fumble: false }) === true);
   if (success !== undefined) {
     const chatCardUuids = effect.getFlag(MODULE_ID, "overtimeChatCardUuids");
     for (let chatcardUuid of chatCardUuids ?? []) {

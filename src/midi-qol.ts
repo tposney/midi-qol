@@ -1,4 +1,8 @@
 import { registerLoadouts } from "./module/services/loadouts.js";
+import { defineOutcomeServices } from "./module/services/outcomeRules/service.js";
+import { registerNearbyAllyRangedRule } from "./rules/nearbyAllyRanged.js";
+import { registerCriticalSavesRule } from "./rules/criticalSaves.js";
+import { registerOptionalCritRule } from "./rules/optionalCritRule.js";
 import { optionalRulesApi } from "./rules/registry.js";
 import { registerNearbyFoeRule } from "./rules/nearbyFoe.js";
 import { registerInvisAdvantageRule } from "./rules/invisAdvantage.js";
@@ -592,11 +596,15 @@ Hooks.once('init', async function () {
   defineForcedMovementService();
   definePerceptionService();
   defineRollModifiersService();
+  defineOutcomeServices();
   registerAttackRollRules();
   // M30: optional rules as rule units (src/rules)
   registerNearbyFoeRule();
   registerInvisAdvantageRule();
   registerHiddenAdvantageRule();
+  registerNearbyAllyRangedRule();
+  registerCriticalSavesRule();
+  registerOptionalCritRule();
   defineDamageModifiersService();
   defineDamageContributionsService();
   defineResponsesService();

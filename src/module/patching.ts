@@ -1,4 +1,5 @@
 import { clickToAttackTakes } from "./services/clickToAttack/service.js";
+import { saveCriticalsCount } from "./services/outcomeRules/service.js";
 import { tokenFor, tokenOf } from "./lib/tokenResolver.js";
 import type { PromptResponses } from "./lib/promptCosts.js";
 import { requestForRollClaim } from "./lib/bonusDecisions.js";
@@ -1438,7 +1439,7 @@ async function doD20Roll(this: Actor.Implementation, wrapped, kind: D20RollKind,
       }
     }
 
-    if (isAbility && config.target !== undefined && !checkRule("criticalSaves")) { // checking for success, not criticals
+    if (isAbility && config.target !== undefined && !saveCriticalsCount()) { // checking for success, not criticals (unless a save rule uses them)
       config.midiOptions.critical = 21;
       config.midiOptions.fumble = 0;
     }

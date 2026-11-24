@@ -1,6 +1,7 @@
 import { log } from "../midi-qol.js";
 import { invisibilityDenied } from "../module/lib/entries/serviceEvents.js";
 import { hasCondition } from "../module/utils.js";
+import { invisAdvantageOptions } from "../module/settings.js";
 import { rollModifiersService, type RollModifier, type RollModifierContributor } from "../module/services/rollModifiers/service.js";
 import { attackContext } from "../module/services/rollModifiers/attackRules.js";
 import { declareRule, ruleId, ruleOn, ruleValue } from "./registry.js";
@@ -55,6 +56,7 @@ const invisible: RollModifierContributor = {
 export const INVIS_RULE = ruleId("invisAdvantage");
 
 export function registerInvisAdvantageRule() {
-  const rule = declareRule({ id: INVIS_RULE, setting: "invisAdvantage", service: "rollModifiers", label: "Unseen and invisible attackers and targets" });
+  const rule = declareRule({ id: INVIS_RULE, setting: "invisAdvantage", service: "rollModifiers", label: "Unseen and invisible attackers and targets",
+    settings: [{ key: "invisAdvantage", type: "string", label: "midi-qol.InvisAdvantage.Name", hint: "midi-qol.RAW2014Invisible.Hint", choices: invisAdvantageOptions, default: "none" }] });
   rollModifiersService.register(rule.id, invisible, { label: rule.label, available: () => ruleOn("invisAdvantage") });
 }

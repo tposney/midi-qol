@@ -1,4 +1,5 @@
 import { tokenFor, tokenOf } from "./lib/tokenResolver.js";
+import { saveOutcomeOverride } from "./services/outcomeRules/service.js";
 import { registerDamageCalculationStep, runDamageCalculation } from "./steps/damageCalculation.js";
 import { deprecation } from "./lib/compatLine.js";
 import { afterDamageApplied, consumeDamageApplication, runAfterDamageApplied, stampDamageApplication } from "./damage/application.js";
@@ -1613,7 +1614,7 @@ Hooks.on("dnd5e.rollConcentration", (rolls, { subject }) => {
   if (configSettings.doConcentrationCheck === "item") return;
   for (let roll of rolls) {
     // @ts-expect-error no dnd5e-types
-    if (checkRule("criticalSaves") && roll.isCritical) roll.options.success = true;
+    if (roll.isCritical && saveOutcomeOverride({ total: roll.total ?? 0, dc: Number(roll.options.target ?? Infinity), critical: true, fumble: false }) === true) roll.options.success = true;
   }
   if (configSettings.removeConcentration && failed) {
     // @ts-expect-error no dnd5e-types

@@ -3,6 +3,7 @@
  * advantage presentation and the damage tray. Design notes: dnd5e-v6-checklist, M13.
  */
 
+import { saveSucceeded } from "../services/outcomeRules/service.js";
 import { reveals } from "../services/revealPolicy/service.js";
 import { activityPolicy } from "../activities/activityPrototype.js";
 import { midiButtonHidden } from "../activities/usageButtons.js";
@@ -442,7 +443,7 @@ export function setupUsageCardMessage() {
         const total = roll.total ?? 0;
         const rollDC = Number.isFinite(roll.options.target) ? roll.options.target : dc;
         let saved = rollDC !== undefined && total >= rollDC;
-        if (rollDC !== undefined && checkRule("criticalSaves")) saved = (!!roll.isCritical || total >= rollDC) && !roll.isFumble;
+        if (rollDC !== undefined) saved = saveSucceeded({ total, dc: rollDC, critical: !!roll.isCritical, fumble: !!roll.isFumble });
         return saveRow(uuid, { roll, total, saved, dc: rollDC });
       };
       const records = recordList(this.midi?.records).filter(record => record.targets);
