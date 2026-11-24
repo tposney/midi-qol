@@ -1,6 +1,6 @@
 import { activeHud, registerHud } from "../../services/turnModel/hud.js";
 import { i18n } from "../../../midi-qol.js";
-import { setOfferCloser, setOfferPresenter } from "../../services/multiattack/legendary.js";
+import { OFFER_DIALOG, setOfferCloser, setOfferPresenter } from "../../services/multiattack/legendary.js";
 import { MidiHub, setupHubRefresh } from "./MidiHub.js";
 import { hubOffers, inlineAsks, registerMidiHubSections } from "./midiSections.js";
 import { incomingRequests, registerRequestPresenter } from "../../lib/requests.js";
@@ -34,8 +34,9 @@ export function setupHub() {
   }) as never);
   Hooks.on("closeMidiHub" as never, (() => {
     setOfferPresenter(undefined);
-    // Requests waiting in the inbox go to their own dialogs
+    // Requests and legendary/lair offers waiting in the inbox go to their own dialogs
     for (const ask of inlineAsks.splice(0)) ask.resolve(undefined);
+    for (const offer of hubOffers.splice(0)) offer.resolve(OFFER_DIALOG);
   }) as never);
   // The inbox: a request that takes a simple choice is answered in the hub while it runs (else its own dialog)
   // CONFIG.debug.midiInbox = false: requests keep their own dialogs (tests that drive the dialogs)

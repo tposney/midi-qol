@@ -49,7 +49,9 @@ export function setOfferCloser(close: (() => void) | undefined) { closeHubOffers
 
 /** An offer for the GM: a creature's legendary or lair choices; the answer the activity chosen, or none */
 export interface LegendaryOffer { actor: Actor.Implementation, title: string, reason: string, choices: { uuid: string, label: string, cost?: number }[] }
+/** The chosen activity's uuid, undefined for none, or OFFER_DIALOG: the presenter gave it up (the hub closed), the dialog asks */
 type OfferPresenter = (offer: LegendaryOffer) => Promise<string | undefined>;
+export const OFFER_DIALOG = "midi-qol.offerDialog";
 let presenter: OfferPresenter | undefined;
 /** Where the offers are shown instead of a dialog (midi's hub while it runs for the GM); none: the dialog */
 export function setOfferPresenter(next: OfferPresenter | undefined) { presenter = next; }
@@ -59,7 +61,7 @@ async function offer(actor: Actor.Implementation, title: string, reason: string,
   if (!choices.length) return undefined;
   if (presenter) {
     const uuid = await presenter({ actor, title, reason, choices: choices.map(a => ({ uuid: a.uuid, label: `${a.item.name ?? ""}${a.activation?.type === "lair" ? "" : ` (${cost(a)})`}`, ...(a.activation?.type === "lair" ? {} : { cost: cost(a) }) })) });
-    return choices.find(a => a.uuid === uuid);
+    if (uuid !== OFFER_DIALOG) return choices.find(a => a.uuid === uuid);
   }
   const escape = foundry.utils.escapeHTML;
   let dialog: foundry.applications.api.DialogV2 | undefined;
