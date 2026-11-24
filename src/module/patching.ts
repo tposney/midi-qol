@@ -350,9 +350,9 @@ export function readyPatching() {
   // Constrain template placement to range / anchor cones to the caster while dragging. Only the
   // interactive step is wrapped; dnd5e still builds and creates the template regions.
   libWrapper.register(MODULE_ID, "game.dnd5e.canvas.TemplatePlacement.prototype._place", midiTemplatePlace, "MIXED");
-  libWrapper.register(MODULE_ID, "CONFIG.Actor.sheetClasses.character['dnd5e.CharacterActorSheet'].cls.prototype._filterItems", _filterItems, "WRAPPER");
-  libWrapper.register(MODULE_ID, "CONFIG.Actor.sheetClasses.npc['dnd5e.NPCActorSheet'].cls.prototype._filterItems", _filterItems, "WRAPPER");
-  libWrapper.register(MODULE_ID, "CONFIG.ActiveEffect.documentClass.createConcentrationEffectData", createConcentrationEffectData, "WRAPPER");
+  // dnd5e filters reactions itself (6.1): the cached copy of a spell an item casts is listed once, as the item
+  Hooks.on("dnd5e.filterItem", (_sheet: unknown, item: Item.Implementation, filters: Set<string>) =>
+    filters.has("reaction") && item.getFlag("dnd5e", "cachedFor") ? false : undefined);
   // Register _onUpdate wrapper for wounded/dead status handling
   // This runs AFTER dnd5e's _onUpdate, checking current state rather than stale update data
   libWrapper.register(MODULE_ID, "CONFIG.Actor.documentClass.prototype._onUpdate", actorOnUpdate, "WRAPPER");
@@ -2581,14 +2581,6 @@ async function setDeadStatus(actor: Actor.Implementation, options: { effect: CON
   }
 }
 
-function createConcentrationEffectData(this: ActiveEffect.Implementation, wrapped, activity: Activity, data: any = {}) {
-  const effectData: ActiveEffect.CreateData = wrapped(activity, data);
-  if (!effectData.flags?.dnd5e?.itemUuid) {
-    foundry.utils.setProperty(effectData, "flags.dnd5e.itemUuid", activity.uuid);
-  }
-  return effectData;
-}
-
 export async function challengeConcentration(this: Actor.Implementation, wrapped, { dc = 10, ability = null } = {}) {
   // Set.delete() returns true if the uuid was in the set (check + remove in one operation)
   if (skipConcentrationActorUuids.delete(this.uuid)) {
@@ -2601,29 +2593,8 @@ export async function challengeConcentration(this: Actor.Implementation, wrapped
   if (!isConcentrating) return null;
   // @ts-expect-error no dnd5e-types
   if (configSettings.concentrationIncapacitatedConditionCheck && (hasCondition(this, "incapacitated") || this.system.attributes.hp.value <= 0)) return;
-  if (["chat"].includes(configSettings.doConcentrationCheck)) {
-    const dataset = {
-      action: "concentration",
-      dc,
-    };
-    //@ts-expect-error no dnd5e-types
-    if (ability && ability in game.system?.config.abilities) dataset.ability = ability;
-    const config = {
-      type: "concentration",
-      format: "short",
-      icon: true
-    }
-    //@ts-expect-error no dnd5e-types
-    const enrichers = game.system?.enrichers;
-    return ChatMessage.implementation.create({
-      content: `<div class="dnd5e chat-card request-card" data-action="concentration" data-dc="${dc}" data-type="midi-concentration">
-      <div><span class="visible-dc">${enrichers.createRollLabel({ ...dataset, ...config })} ${i18n("DND5E.Roll")}</span></div>
-      <div><span class="hidden-dc">${enrichers.createRollLabel({ ...dataset, ...config, hideDC: true })} ${i18n("DND5E.Roll")}</span></div>
-      </div>`,
-      whisper: game.users?.filter(user => this.testUserPermission(user, "OWNER")).map(user => user.id),
-      speaker: speakerFor({ actor: this })
-    });
-  }
+  // dnd5e's concentration prompt; midi asks the owner to roll it as it renders (utils processConcentrationRequestMessage)
+  if (["chat"].includes(configSettings.doConcentrationCheck)) return wrapped({ dc, ability });
   // item rolls are picked up when the damage is updated in dnd5e.damageActor
   return;
 }
@@ -2861,13 +2832,3 @@ function itemGetRollData(this: Item.Implementation, wrapped, ...args) {
   data.item.itemType = this.type;
   return data;
 }
-function _filterItems(wrapped, items, filters) {
-  if (!filters.has("reaction")) return wrapped(items, filters);
-  const revisedFilters = new Set(filters);
-  revisedFilters.delete("reaction");
-  return wrapped(items, revisedFilters).filter(item => {
-    if (item.getFlag("dnd5e", "cachedFor")) return false; // proxy for a cast activity
-    return item.system.activities?.some(activity =>
-      (activity.effectiveActivationType ?? activity.activation?.type)?.includes("reaction"));
-  });
-};

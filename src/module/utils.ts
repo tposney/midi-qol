@@ -8586,43 +8586,37 @@ export async function deleteAppliedEffects(actor: Actor.Implementation, effects:
 /** Concentration requests already claimed by this client: a new message renders twice (log and notification). */
 const concentrationRequestsHandled = new Set<string>();
 
-export async function processConcentrationRequestMessage(message: ChatMessage.Implementation, html: HTMLElement, data) {
+export async function processConcentrationRequestMessage(message: ChatMessage.Implementation, _html: HTMLElement, _data: unknown) {
   if (configSettings.doConcentrationCheck !== "chat") return;
-  let elt = html.querySelectorAll<HTMLElement>("[data-action=concentration]");
+  // dnd5e's concentration prompt (challengeConcentration in midi's chat mode): one concentration button
+  const system = message.system as { buttons?: { type?: string, dc?: number }[] };
+  const button = (message.type as string) === "prompt" && system.buttons?.length === 1 && system.buttons[0].type === "concentration" ? system.buttons[0] : undefined;
   const hasRolled = foundry.utils.getProperty(message, `flags.${MODULE_ID}.concentrationRolled`);
-  if (hasRolled || !preferredActiveGM()?.isSelf || concentrationRequestsHandled.has(message.id!)) return;
-  if (elt.length === 1 && !hasRolled) {
-    let { action, dc: dcStr, type } = elt[0].dataset;
-    let token: TokenDocument.Implementation | undefined, actor: Actor.Implementation | undefined | null;
-    if (action === "concentration" && type === "midi-concentration") {
-      let dc = Number(dcStr);
-      let { actor: actorId, scene, token: tokenId } = message.speaker;
-      if (scene && tokenId) token = game.scenes?.get(scene)?.tokens.get(tokenId);
-      if (token) actor = token.actor;
-      if (!actor && actorId) actor = game.actors?.get(actorId);
-      if (actor) {
-        // Claimed before the await, so a second render of the same message cannot roll again.
-        concentrationRequestsHandled.add(message.id!);
-        await message.setFlag(MODULE_ID, "concentrationRolled", true);
-        const user = playerForActor(actor);
-        // @ts-expect-error no dnd5e-types
-        const gmRoll = () => actor.rollConcentration({ legacy: false, target: dc }, { configure: false }, { create: true, rollMode: "gm" });
-        // The player's roll through the request core (M5b): their dialog shows the deadline; on time-out, disconnect or the
-        // GM's choice the GM rolls it here, and a roll the player confirms after that is cancelled (dnd5e's
-        // rollConcentration hook ends concentration wherever it's rolled, so two rolls could both count)
-        if (user?.active && !user.isSelf) void askUser<unknown>(user, {
-          type: CONCENTRATION_REQUEST, data: { actorUuid: actor.uuid, target: dc, create: true, rollMode: "gm" },
-          kind: "concentration", actorUuid: actor.uuid ?? undefined, tokenUuid: token?.uuid ?? undefined,
-          label: i18nFormat("midi-qol.PlayerWaits.ConcentrationLabel", { dc }),
-          timeoutMs: (configSettings.playerSaveTimeout ?? 0) * 1000,
-          fallback: gmRoll,
-          gmChoices: { roll: { label: "midi-qol.PlayerWaits.Choice.normal", value: gmRoll } }
-        }).settled.catch(err => error("concentration | the roll could not be made", err));
-        // @ts-expect-error no dnd5e-types
-        else actor.rollConcentration({ legacy: false, target: dc }, {}, { create: true, rollMode: "gm" });
-      }
-    }
-  }
+  if (!button || hasRolled || !preferredActiveGM()?.isSelf || concentrationRequestsHandled.has(message.id!)) return;
+  const dc = Number(button.dc ?? 10);
+  const { actor: actorId, scene, token: tokenId } = message.speaker;
+  const token: TokenDocument.Implementation | undefined = scene && tokenId ? game.scenes?.get(scene)?.tokens.get(tokenId) : undefined;
+  const actor = token?.actor ?? (actorId ? game.actors?.get(actorId) : undefined);
+  if (!actor) return;
+  // Claimed before the await, so a second render of the same message cannot roll again.
+  concentrationRequestsHandled.add(message.id!);
+  await message.setFlag(MODULE_ID, "concentrationRolled", true);
+  const user = playerForActor(actor);
+  // @ts-expect-error no dnd5e-types
+  const gmRoll = () => actor.rollConcentration({ legacy: false, target: dc }, { configure: false }, { create: true, rollMode: "gm" });
+  // The player's roll through the request core (M5b): their dialog shows the deadline; on time-out, disconnect or the
+  // GM's choice the GM rolls it here, and a roll the player confirms after that is cancelled (dnd5e's
+  // rollConcentration hook ends concentration wherever it's rolled, so two rolls could both count)
+  if (user?.active && !user.isSelf) void askUser<unknown>(user, {
+    type: CONCENTRATION_REQUEST, data: { actorUuid: actor.uuid, target: dc, create: true, rollMode: "gm" },
+    kind: "concentration", actorUuid: actor.uuid ?? undefined, tokenUuid: token?.uuid ?? undefined,
+    label: i18nFormat("midi-qol.PlayerWaits.ConcentrationLabel", { dc }),
+    timeoutMs: (configSettings.playerSaveTimeout ?? 0) * 1000,
+    fallback: gmRoll,
+    gmChoices: { roll: { label: "midi-qol.PlayerWaits.Choice.normal", value: gmRoll } }
+  }).settled.catch(err => error("concentration | the roll could not be made", err));
+  // @ts-expect-error no dnd5e-types
+  else actor.rollConcentration({ legacy: false, target: dc }, {}, { create: true, rollMode: "gm" });
 }
 
 export function setRollOperatorEvaluated(roll: Roll) {
