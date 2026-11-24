@@ -4,7 +4,7 @@ import { setupTurnModel, turnModelApi } from "./module/services/turnModel/model.
 import { hudApi, registerHudSetting, setupHuds } from "./module/services/turnModel/hud.js";
 import { registerTurnHudConfig } from "./module/apps/TurnHudConfig.js";
 import { setupArgon } from "./module/services/turnModel/argon.js";
-import { clickToAttackApi, setupClickToAttack } from "./module/services/clickToAttack/service.js";
+import { clickToAttackApi, registerClickToAttackSetting, setupClickToAttack } from "./module/services/clickToAttack/service.js";
 import { defineMultiattackPlansService, multiattackApi, setupMultiattackPlans } from "./module/services/multiattack/plans.js";
 // midi's Multiattack table registers as another module would (in midi-qol.registerServices)
 import "./module/services/multiattack/official.js";
@@ -730,6 +730,7 @@ Hooks.once('init', async function () {
   // Register custom module settings
   registerSettings();
   registerHudSetting();
+  registerClickToAttackSetting();
   setupUserSettings();
   registerChecklistSetting();
   registerTurnHudConfig();

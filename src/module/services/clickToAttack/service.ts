@@ -23,7 +23,26 @@ let primed: { activity: Activity, actorUuid: string, attackMode?: string } | und
 /** Each actor's last attack (this session) */
 const lastAttack = new Map<string, string>();
 
-export const clickToAttackEnabled = () => configSettings.clickToAttack === true;
+/** The player's own choice (a user setting, so the GM can set it for them in the Turn HUD window) */
+export const CLICK_TO_ATTACK_SETTING = "clickToAttackOn";
+
+/** The table allows click to attack (midi's world setting) */
+export const clickToAttackAllowed = () => configSettings.clickToAttack === true;
+/** Click to attack for this user: allowed by the table, and the player hasn't turned it off */
+export const clickToAttackEnabled = () => clickToAttackAllowed()
+  && game.settings?.get("midi-qol", CLICK_TO_ATTACK_SETTING as never) !== false;
+
+/** The player's choice (init) */
+export function registerClickToAttackSetting() {
+  game.settings?.register("midi-qol", CLICK_TO_ATTACK_SETTING as never, {
+    name: "midi-qol.ClickToAttack.UserName",
+    hint: "midi-qol.ClickToAttack.UserHint",
+    scope: "user",
+    config: false,
+    type: Boolean,
+    default: true
+  } as never);
+}
 
 /** An attack made against one clicked token: an attack activity with no area (a cone or line is placed, not clicked) */
 const isAttack = (activity: Activity | null | undefined): activity is Activity => (activity as { type?: string } | null)?.type === "attack"
@@ -110,4 +129,4 @@ export function setupClickToAttack() {
   });
 }
 
-export const clickToAttackApi = { prime: primeAttack, cancel: cancelPrimed, enabled: clickToAttackEnabled, defaultAttack, attack: attackTarget };
+export const clickToAttackApi = { prime: primeAttack, cancel: cancelPrimed, enabled: clickToAttackEnabled, allowed: clickToAttackAllowed, defaultAttack, attack: attackTarget };

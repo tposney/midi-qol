@@ -1,5 +1,6 @@
 import { i18n } from "../../midi-qol.js";
 import { setUserSetting, userSettingValue } from "../lib/userSettings.js";
+import { CLICK_TO_ATTACK_SETTING, clickToAttackAllowed } from "../services/clickToAttack/service.js";
 import {
   HUD_ROLES, PLAYER_ROLES, cycleHud, hudApi, hudChoice, hudChoices, hudProvider, playerChoice, setHudChoice, tableChoice,
   type HudProvider, type HudRole, type HudSettings, type HudTool
@@ -113,9 +114,12 @@ export class TurnHudConfig extends HandlebarsApplicationMixin(ApplicationV2) {
     this.#tools = [];
     this.#own = [];
     const huds = inUse(userId);
-    const tabs = huds.flatMap(({ provider, roles: used }) => (provider.settings?.tabs ?? [])
-      .filter(tab => !tab.roles || tab.roles.some(r => used.includes(r)))
-      .map(tab => {
+    // midi's own per-player settings that apply whatever HUD is in use: click to attack, while the table allows it
+    const midiTab = clickToAttackAllowed() ? [{ owner: "midi-qol", roles: [...HUD_ROLES],
+      tab: { id: "midi", label: "midi-qol.Hud.MidiTab", icon: "fa-solid fa-hand-pointer", keys: [`midi-qol.${CLICK_TO_ATTACK_SETTING}`] } as HudSettings["tabs"][number] }] : [];
+    const tabs = [...midiTab, ...huds.flatMap(({ provider, roles }) => (provider.settings?.tabs ?? []).map(tab => ({ owner: provider.label, roles, tab })))]
+      .filter(({ tab, roles: used }) => !tab.roles || tab.roles.some(r => used.includes(r)))
+      .map(({ owner, tab }) => {
         const entries = tab.keys.map(settingConfig).filter(setting => editable(setting, userId)).map(setting => ({
           field: fieldFor(setting), value: settingValue(setting, userId), input: setting.input
         }));
@@ -124,8 +128,8 @@ export class TurnHudConfig extends HandlebarsApplicationMixin(ApplicationV2) {
           return { index: this.#tools.length - 1, label: i18n(tool.label), hint: tool.hint ? i18n(tool.hint) : "",
             icon: tool.icon ?? "fa-solid fa-gear", button: i18n(tool.button ?? tool.label) };
         });
-        return { id: `${provider.label}-${tab.id}`.slugify(), label: i18n(tab.label), icon: tab.icon, entries, tools };
-      })).filter(tab => tab.entries.length || tab.tools.length);
+        return { id: `${owner}-${tab.id}`.slugify(), label: i18n(tab.label), icon: tab.icon, entries, tools };
+      }).filter(tab => tab.entries.length || tab.tools.length);
     const active = tabs.some(t => t.id === this.tabGroups.hud) ? this.tabGroups.hud : tabs[0]?.id;
     if (active) this.tabGroups.hud = active;
     const credits = huds.filter(h => h.provider.credit).map(h => h.provider.credit);
