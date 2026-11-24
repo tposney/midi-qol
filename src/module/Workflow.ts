@@ -6,7 +6,7 @@ import { eventModifiers } from "./lib/rollKeys.js";
 import { TokenDocumentSet, hookTarget, tokenOf } from "./lib/tokenDocumentSet.js";
 import { CardRecords, RECORD_SETS, RecordSet, RecordFacts, STATE_KEYS, StateKey, attributionMap, attributionTriples, cardMidi, rollTypeOf, cardOtherConsumption, cardPreSelected, messagesFrom, recordList, recordPath, recordPathOfUuid, storedMidiFlag } from "./lib/cardState.js";
 import { preferredActiveGM, socketlibSocket, timedAwaitExecuteAsGM, timedExecuteAsGM, unTimedExecuteAsGM } from "./GMAction.js";
-import { beginPlayerWait, endPlayerWaitsOwnedBy, rollDialogsFor, trackPlayerWait } from "./lib/playerWaits.js";
+import { beginPlayerWait, endPlayerWaitsOwnedBy, rollDialogsFor, trackPlayerWait, withdrawPlayerWaitsOwnedBy } from "./lib/playerWaits.js";
 import { installedModules } from "./setupModules.js";
 import { offerFollowUps } from "./followUps.js";
 import { configSettings, autoRemoveTargets, checkRule, checkMechanic, safeGetGameSetting, useWeakReferences, onUseMacroOptions, chatCardUpdates } from "./settings.js";
@@ -516,6 +516,18 @@ function asTokenDocumentSet(tokens: Set<TokenOrDocument> | undefined | null): To
 function targetMacroOptions(target: TokenOrDocument) {
   const tokenDocument = target instanceof TokenDocument ? target : target.document;
   return { actor: target.actor, token: tokenOf(tokenDocument) ?? null, tokenDocument };
+}
+
+/**
+ * A card roll button's handler, for anyone who may press it: pressed on another user's card whose use waits for that
+ * roll, the roll is that use's (Workflow.askAuthorToRoll); otherwise the handler runs as it always did.
+ */
+export function authorRolls<A extends unknown[]>(kind: "attack" | "damage" | "utility", mode: string,
+  handler: (this: Activity, event: PointerEvent, target: HTMLElement, message: ChatMessage.Implementation, ...rest: A) => unknown) {
+  return async function (this: Activity, event: PointerEvent, target: HTMLElement, message: ChatMessage.Implementation, ...rest: A) {
+    if (await Workflow.askAuthorToRoll(message, kind, mode)) return undefined;
+    return handler.call(this, event, target, message, ...rest);
+  };
 }
 
 export class Workflow {
@@ -2498,6 +2510,15 @@ export class Workflow {
         } finally {
           this.#queueingWrites -= 1;
         }
+        // Stopped from outside while the step ran (undone): it goes no further. `aborted` alone doesn't do this: set
+        // during a step it reads as an abort already under way, and the next step runs.
+        if (this.#stopped && !this.#stopRouted) {
+          this.#stopRouted = true;
+          if (this.currentAction !== this.WorkflowState_Abort) {
+            newState = this.WorkflowState_Abort;
+            continue;
+          }
+        }
         if (nextState === this.WorkflowState_Suspend || MILESTONE_STATES.has(this.currentAction?.name ?? "")) await this.flushCardWrites();
         else if (chatCardUpdates === "everyStep") await this.flushCardWrites(true);
 
@@ -2695,10 +2716,12 @@ export class Workflow {
     // The actor's earlier uses still waiting were left unrolled
     Workflow.endRollWaits(workflow => workflow !== this && workflow.actor?.uuid === this.actor.uuid);
     const dismiss = { label: "midi-qol.PlayerWaits.Choice.dismiss", value: () => undefined };
+    // The GM calls the use off: it is undone and its card removed
+    const cancel = { label: "midi-qol.PlayerWaits.Choice.cancel", value: () => this.cancelWaitingUse() };
     const choice = (mode: string) => ({ label: `midi-qol.PlayerWaits.Choice.${mode}`, value: () => this.rollForPlayer(kind, mode) });
-    const choices = kind === "attack" ? { normal: choice("normal"), advantage: choice("advantage"), disadvantage: choice("disadvantage"), dismiss }
-      : kind === "damage" ? { normal: choice("normal"), critical: choice("critical"), dismiss }
-      : { roll: { label: "midi-qol.PlayerWaits.Choice.roll", value: () => this.rollForPlayer(kind, "normal") }, dismiss };
+    const choices = kind === "attack" ? { normal: choice("normal"), advantage: choice("advantage"), disadvantage: choice("disadvantage"), dismiss, cancel }
+      : kind === "damage" ? { normal: choice("normal"), critical: choice("critical"), dismiss, cancel }
+      : { roll: { label: "midi-qol.PlayerWaits.Choice.roll", value: () => this.rollForPlayer(kind, "normal") }, dismiss, cancel };
     this.#rollWait = beginPlayerWait<unknown>({
       kind, userId: game.user.id!, actorUuid: this.actor.uuid ?? undefined, tokenUuid: this.tokenDocument?.uuid ?? undefined, keepDialogs: true,
       label: i18nFormat(`midi-qol.PlayerWaits.${kind}Label`, { item: this.item?.name ?? "" }),
@@ -2733,6 +2756,77 @@ export class Workflow {
   }
 
   /** Roll for the player as their roll dialog would: press its button when it is open, else roll without it. */
+  /**
+   * On the client running it: the use was undone while still running or waiting (a roll not made, a save not rolled).
+   * It stops: nothing more is rolled or applied for it, nobody is asked or waited for on its behalf, and the prompts
+   * it opened close. Without this an undone use carried on (a pending save timed out and its damage was applied).
+   * False when the use isn't in memory here or has already finished.
+   */
+  #stopped = false;
+  #stopRouted = false;
+
+  static async stopUndone(id: string): Promise<boolean> {
+    const entry = Workflow.#workflows.get(id);
+    const workflow = entry instanceof WeakRef ? entry.deref() : entry;
+    if (!workflow || workflow.readOnly) return false;
+    if (workflow.currentAction === workflow.WorkflowState_Completed || workflow.currentAction === workflow.WorkflowState_Abort) return false;
+    workflow.aborted = true;
+    workflow.#stopped = true;
+    // Saves asked for are no longer rolled when their time runs out
+    for (const timeout of Object.values(workflow.saveTimeouts ?? {})) clearTimeout(timeout);
+    workflow.endRollWait();
+    withdrawPlayerWaitsOwnedBy(workflow);
+    if (workflow.actor?.uuid) for (const dialog of rollDialogsFor(workflow.actor.uuid)) await dialog.close();
+    // Waiting for a roll: it ends now; mid-step, its loop ends it when the step returns
+    if (workflow.suspended) {
+      workflow.#stopRouted = true;
+      await workflow.performState(workflow.WorkflowState_Abort);
+    }
+    return true;
+  }
+
+  /** The use is called off while it waits for a roll: cancelled as its card's cancel does, and its roll dialog closed */
+  async cancelWaitingUse() {
+    if (!this.aborted) await this.performState(this.WorkflowState_Cancel);
+    if (this.actor?.uuid) for (const dialog of rollDialogsFor(this.actor.uuid)) await dialog.close();
+  }
+
+  /**
+   * A read-only copy (another user's use) is asked for a roll (a GM pressing Attack or Damage on a player's card):
+   * the roll belongs to the use on its author's client, which is asked to make it, as the GM's choice on the player's
+   * wait does. A roll made here instead would be a second use or a loose roll, and the author's use would wait for
+   * ever. False when the author is away or their use isn't waiting for that roll: the caller carries on as before.
+   */
+  async rollByAuthor(kind: "attack" | "damage" | "utility", mode: string): Promise<boolean> {
+    return this.readOnly ? Workflow.askAuthorToRoll(this.chatCard, kind, mode) : false;
+  }
+
+  /**
+   * A roll button pressed on another user's card (a GM on a player's): if that user's use of the card is waiting for
+   * the roll, their client makes it. For GMs, and for an owner of the card's actor.
+   */
+  static async askAuthorToRoll(card: ChatMessage.Implementation | undefined | null, kind: "attack" | "damage" | "utility", mode: string): Promise<boolean> {
+    const author = card?.author;
+    if (!card?.uuid || !author?.active || author === game.user || !author.id) return false;
+    const actor = card.speakerActor ?? (card.speaker?.actor ? game.actors?.get(card.speaker.actor) : undefined);
+    if (!game.user?.isGM && !actor?.isOwner) return false;
+    try {
+      return !!await socketlibSocket.executeAsUser("rollWaitingUse", author.id, { cardUuid: card.uuid, kind, mode });
+    } catch { return false; }
+  }
+
+  /** On the author's client: this client's use of the card, if it waits for that roll, makes it */
+  static rollWaitingUse({ cardUuid, kind, mode }: { cardUuid: string, kind: "attack" | "damage" | "utility", mode: string }): boolean {
+    const workflow = Workflow.findWorkflow(cardUuid);
+    if (!workflow || workflow.readOnly || workflow.aborted || !workflow.suspended) return false;
+    const waitsFor = workflow.currentAction === workflow.WorkflowState_WaitForAttackRoll ? "attack"
+      : workflow.currentAction === workflow.WorkflowState_WaitForDamageRoll ? "damage"
+      : workflow.currentAction === workflow.WorkflowState_WaitForUtilityRoll ? "utility" : undefined;
+    if (waitsFor !== kind) return false;
+    workflow.rollForPlayer(kind, mode).catch(err => console.error(`${MODULE_ID} | rolling a waiting use for another user`, err));
+    return true;
+  }
+
   async rollForPlayer(kind: "attack" | "damage" | "utility", mode: string) {
     const dialog = this.actor.uuid ? rollDialogsFor(this.actor.uuid)[0] : undefined;
     const button = dialog?.element?.querySelector<HTMLButtonElement>(`button[data-action="${mode}"]`)

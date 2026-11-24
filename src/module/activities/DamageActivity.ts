@@ -1,7 +1,7 @@
 import { AnyMutableObject } from "fvtt-types/utils";
 import { Activity } from "../../globals.js";
 import { debugEnabled, GameSystemConfig, warn } from "../../midi-qol.js";
-import { Workflow } from "../Workflow.js";
+import { authorRolls, Workflow } from "../Workflow.js";
 import { configSettings } from "../settings.js";
 import { isAutoFastForward } from "../utils.js";
 import { MidiActivityMixin, MidiActivityMixinSheet } from "./MidiActivityMixin.js";
@@ -34,7 +34,7 @@ let defineMidiDamageActivityClass = <T extends Activity>(ActivityClass: T) => {
            * removed in 6.2 (`activity/mixin.mjs#legacyUsageContent`) regardless. See AttackActivity.
            */
           actions: {
-            rollDamage: MidiDamageActivity.#rollDamage
+            rollDamage: authorRolls("damage", "normal", MidiDamageActivity.#rollDamage)
           },
         }
       }, { inplace: false, insertKeys: true, insertValues: true });

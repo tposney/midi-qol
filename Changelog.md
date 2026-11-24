@@ -1,3 +1,10 @@
+### 14.7.2
+* Fixed: when one of several identical unlinked NPCs in a combat dropped to 0 hit points, all of them were marked defeated in the combat tracker, and healing one cleared the mark on all of them (since 14.7.0). Thanks @MotoMoto1234 for finding it and for the fix ([#48](https://github.com/tposney/midi-qol/pull/48)).
+* Fixed: with several identical unlinked NPCs in a combat, a reaction that depends on whose turn it is could go by the wrong copy's turn (since 14.7.0).
+* Fixed: when the GM pressed Attack or Damage on a player's chat card while the player's roll was still awaited, the player's use was left waiting for ever and its waiting badge never went away. Attack ran a second, separate use as the GM and Damage made a roll that was never applied. The GM's press now makes the roll for the player's own use, as rolling from the badge does.
+* Fixed: a use undone while it was still in progress carried on. Undoing a spell while a player's save was still awaited removed its card, but when the save's time ran out the save was counted as failed and the damage applied anyway, and the player's save prompt stayed open. An undone use now stops: its prompts close, nobody is waited for, and nothing more is rolled or applied.
+* Waiting on players: the GM's list for a roll a player hasn't made has *Cancel the use*. It calls the use off: what it did so far is undone and its card removed.
+
 ### 14.7.1
 * Fixed: during a combat, an effect or item with a condition sometimes did nothing and logged an error (advantage, bonuses or effects that depend on a condition were skipped the second time the condition was checked).
 * Fixed: a macro or module that asks for a critical hit or a fumble gets one again; the attack and damage were rolled as ordinary rolls.

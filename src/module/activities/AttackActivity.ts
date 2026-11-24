@@ -1,7 +1,7 @@
 import { TokenDocumentSet } from "../lib/tokenDocumentSet.js";
 import { debugEnabled, warn, error, busyWait, GameSystemConfig, debug, i18n, MODULE_ID, i18nFormat } from "../../midi-qol.js";
 import { unTimedExecuteAsGM } from "../GMAction.js";
-import { Workflow } from "../Workflow.js";
+import { authorRolls, Workflow } from "../Workflow.js";
 import { decideRollDialog, dialogShown, heldKeys } from "../lib/rollKeys.js";
 import { RollModifierTracker, AdvantageFlags, computeAdvantageFlags, computeRollModifiers, applyRollModifiers, RollModifierFlags, applyTrackerAdvantage } from "../lib/RollModifierTracker.js";
 import { MidiOptions } from "../utils.js";
@@ -207,12 +207,12 @@ let defineMidiAttackActivityClass = <T extends Activity>(ActivityClass: T) => {
            * `usage.chatCard` is deprecated in dnd5e 6.0 and removed in 6.2, so this had to go anyway.
            */
           actions: {
-            rollAttack: MidiAttackActivity.#rollAttack,
-            rollAttackAdvantage: MidiAttackActivity.#rollAttackAdvantage,
-            rollAttackDisadvantage: MidiAttackActivity.#rollAttackDisadvantage,
-            rollDamage: MidiAttackActivity.#rollDamage,
-            rollDamageNoCritical: MidiAttackActivity.#rollDamageNoCritical,
-            rollDamageCritical: MidiAttackActivity.#rollDamageCritical,
+            rollAttack: authorRolls("attack", "normal", MidiAttackActivity.#rollAttack),
+            rollAttackAdvantage: authorRolls("attack", "advantage", MidiAttackActivity.#rollAttackAdvantage),
+            rollAttackDisadvantage: authorRolls("attack", "disadvantage", MidiAttackActivity.#rollAttackDisadvantage),
+            rollDamage: authorRolls("damage", "normal", MidiAttackActivity.#rollDamage),
+            rollDamageNoCritical: authorRolls("damage", "normal", MidiAttackActivity.#rollDamageNoCritical),
+            rollDamageCritical: authorRolls("damage", "critical", MidiAttackActivity.#rollDamageCritical),
           }
         },
       }, { inplace: false, insertKeys: true, insertValues: true })
@@ -441,6 +441,11 @@ let defineMidiAttackActivityClass = <T extends Activity>(ActivityClass: T) => {
           return waiting.activityFor(this).rollAttack({ event: config.event, workflow: waiting }, {}, {});
         }
         return this._midiRollAttack(config, dialog, message);
+      }
+      // Another user's use waiting for this attack: its author's client rolls it
+      if (workflow.readOnly) {
+        const options = config.midiOptions?.workflowOptions;
+        if (await workflow.rollByAuthor("attack", options?.advantage ? "advantage" : options?.disadvantage ? "disadvantage" : "normal")) return null;
       }
       if (workflow.currentAction === workflow.WorkflowState_Completed || workflow.currentAction === workflow.WorkflowState_Abort) {
         const usage = await MidiAttackActivity.attackAgain(this, workflow, config.event);

@@ -4,13 +4,13 @@ import { TokenDocumentSet, memberCount } from "../lib/tokenDocumentSet.js";
 import { Activity, ActivityEffectData, ActivityUseConfiguration, RollDialogConfig, DND5ETargetDescriptor, RollMessageConfig, RollProcessConfig, MidiUsageChatContext, Dnd5eSystem, EmanationShapeData } from "../../globals.js";
 import { GameSystemConfig, MODULE_ID, debugEnabled, error, i18n, i18nFormat, warn, busyWait, specialDurationChoices } from "../../midi-qol.js";
 import { socketlibSocket, timedAwaitExecuteAsGM } from "../GMAction.js";
-import { ActiveDefenceWorkflow, AugmentedEvent, TrapWorkflow, Workflow, SavesFirstWorkflow } from "../Workflow.js";
+import { ActiveDefenceWorkflow, AugmentedEvent, authorRolls, TrapWorkflow, Workflow, SavesFirstWorkflow } from "../Workflow.js";
 import { TroubleShooter } from "../apps/TroubleShooter.js";
 import { midiButtonVisibility } from "../ChatClasses/UsageCardMessage.js";
 import { ConditionEditor } from "../apps/ConditionEditor.js";
 import { followUpTargetModes, runFollowUp } from "../followUps.js";
 import { RegionBehaviorEditor } from "../apps/RegionBehaviorEditor.js";
-import { averageDice, onceForSubject, skipConcentrationActorUuids } from "../patching.js"
+import { actorCombatants, averageDice, onceForSubject, skipConcentrationActorUuids } from "../patching.js"
 import {
   aoeTargetTypeOptions,
   autoCEEffectsOptions,
@@ -427,9 +427,9 @@ export let MidiActivityMixin = Base => {
         dialog: MidiActivityUsageDialog,
         actions: {
           placeTemplate: MidiActivityMixin.#placeTemplate,
-          rollDamage: MidiActivityMixin.#rollDamage,
-          rollDamageNoCritical: MidiActivityMixin.#rollDamageNoCritical,
-          rollDamageCritical: MidiActivityMixin.#rollDamageCritical,
+          rollDamage: authorRolls("damage", "normal", MidiActivityMixin.#rollDamage),
+          rollDamageNoCritical: authorRolls("damage", "normal", MidiActivityMixin.#rollDamageNoCritical),
+          rollDamageCritical: authorRolls("damage", "critical", MidiActivityMixin.#rollDamageCritical),
           confirmDamageRollCancel: MidiActivityMixin.#confirmDamageRollCancel,
           confirmDamageRollComplete: MidiActivityMixin.#confirmDamageRollComplete,
           confirmDamageRollCompleteHit: MidiActivityMixin.#confirmDamageRollCompleteHit,
@@ -1008,6 +1008,8 @@ export let MidiActivityMixin = Base => {
           midiOptions: { isCritical: waiting.workflowOptions?.isCritical || waiting.isCritical } }, {}, { create: false });
         return this._midiRollDamage(config, dialog, message);
       }
+      // Another user's use waiting for this damage roll: its author's client rolls it
+      if (workflow.readOnly && await workflow.rollByAuthor("damage", config.midiOptions?.isCritical ? "critical" : "normal")) return undefined;
       return workflow.whileExecuting(() => this._midiRollDamage(config, dialog, message));
     }
 
@@ -1714,7 +1716,7 @@ export let MidiActivityMixin = Base => {
       // Classified unless the caller says otherwise; follows checkReaction when not given. An attack per target's
       // per-target uses check no reactions (the first use did) but classify every target.
       if (inReactionContext && reactingActor && (options.checkAoO ?? options.checkReaction)) {
-        const isTurn = game.combat?.combatant === (reactingActor.id ? game.combat?.getCombatantsByActor(reactingActor.id) : undefined)?.[0];
+        const isTurn = game.combat?.combatant === actorCombatants(reactingActor)[0];
         if (!isTurn && needsAOOCheck(reactingActor) && this.attack && this.effectiveActivationType !== "special")
           workflow.AoO = true;
       }

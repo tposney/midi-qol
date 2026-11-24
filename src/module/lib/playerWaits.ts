@@ -245,6 +245,19 @@ export function endPlayerWaitsOwnedBy(owner: object) {
   for (const wait of [...localWaits.values()]) if (wait.owner === owner) wait.end();
 }
 
+/**
+ * The owner (a use) was stopped, by an undo: its waits end and can no longer be answered (a late answer's claim is
+ * refused), and the roll dialogs the players have open for them close.
+ */
+export function withdrawPlayerWaitsOwnedBy(owner: object) {
+  for (const wait of [...localWaits.values()]) {
+    if (wait.owner !== owner) continue;
+    settledIds.add(wait.info.id);
+    closePlayerRollDialogs(wait.info);
+    wait.end();
+  }
+}
+
 /** A wait of this client's own that its player may dismiss (a roll they won't make). */
 export function ownDismissable(id: string): boolean {
   const wait = localWaits.get(id);

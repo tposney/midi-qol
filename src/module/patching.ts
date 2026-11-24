@@ -2519,7 +2519,7 @@ async function setDeadStatus(actor: Actor.Implementation, options: { effect: CON
 
   // Only update defeated status if the toggle actually changed something
   if (useDefeated && result !== undefined) {
-    const combatants = (actor.id ? game.combat?.getCombatantsByActor(actor.id) : undefined) ?? [];
+    const combatants = actorCombatants(actor);
     for (let combatant of combatants) await combatant.update({ defeated: makeDead }, {});
   }
 }
@@ -2778,6 +2778,18 @@ function actorGetRollData(this: Actor.Implementation, wrapped, ...args) {
 // dnd5e resolves dependentOn with fromUuidSync during item preparation. For an item on an unlinked token that goes back
 // through the token's lazy delta while it is being built (Foundry 14.369) and recurses, so resolve UUIDs inside the
 // item's own token actor from the actor.
+function isStoredActor(actor: Actor.Implementation): actor is Actor.Stored {
+  return !!actor.id;
+}
+
+/**
+ * The actor's combatants in the viewed combat. Looked up by the actor, never by its id: unlinked copies of one NPC
+ * share an id, and Foundry looks an unlinked actor up by its token (PR #48).
+ */
+export function actorCombatants(actor: Actor.Implementation): Combatant.Implementation[] {
+  return isStoredActor(actor) ? game.combat?.getCombatantsByActor(actor) ?? [] : [];
+}
+
 function isStoredItem(item: Item.Implementation): item is Item.Stored {
   return item.id !== null;
 }

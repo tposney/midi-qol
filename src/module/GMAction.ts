@@ -38,6 +38,8 @@ export let setupSocket = () => {
   socketlibSocket.register("confirmDamageRollCompleteHit", confirmDamageRollCompleteHit);
   socketlibSocket.register("confirmDamageRollCompleteMiss", confirmDamageRollCompleteMiss);
   socketlibSocket.register("cancelWorkflow", cancelWorkflow);
+  socketlibSocket.register("rollWaitingUse", Workflow.rollWaitingUse);
+  socketlibSocket.register("stopUndoneWorkflow", Workflow.stopUndone);
   socketlibSocket.register("createActor", createActor);
   socketlibSocket.register("createChatMessage", _createChatMessage);
   socketlibSocket.register("createEffects", createEffects);

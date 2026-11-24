@@ -1,7 +1,7 @@
 import { AnyMutableObject } from "fvtt-types/utils";
 import { Activity, ActivityUseConfiguration, RollDialogConfig, RollMessageConfig, RollProcessConfig } from "../../globals.js";
 import { debugEnabled, warn, i18n, GameSystemConfig } from "../../midi-qol.js";
-import { Workflow } from "../Workflow.js";
+import { authorRolls, Workflow } from "../Workflow.js";
 import { configSettings, safeGetGameSetting } from "../settings.js";
 import { getTokenDocument, isAutoFastForward, speakerFor } from "../utils.js";
 import { activityBonusRoll } from "../patching.js";
@@ -37,7 +37,7 @@ let defineMidiSaveActivityClass = <T extends Activity>(ActivityClass: T) => {
            * removed in 6.2 (`activity/mixin.mjs#legacyUsageContent`) regardless. See AttackActivity.
            */
           actions: {
-            rollDamage: MidiSaveActivity.#rollDamage,
+            rollDamage: authorRolls("damage", "normal", MidiSaveActivity.#rollDamage),
             rollSave: MidiSaveActivity.#rollSave, // Having this means needing to track the dnd5e SaveActivity.#rollSave changes
             // Currently needed to tag the request id for midi-qol to pick up chat card saves as being for the current activity
           }

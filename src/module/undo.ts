@@ -501,8 +501,20 @@ async function refundUse(card: ChatMessage.Implementation) {
   }
 }
 
+/** The use being undone may still be running or waiting on its user's client: it stops there first */
+async function stopUndoneUse(undoData: UndoData) {
+  if (!undoData.id || !undoData.userId) return;
+  try {
+    if (undoData.userId === game.user?.id) await Workflow.stopUndone(undoData.id);
+    else if (game.users?.get(undoData.userId)?.active) await socketlibSocket.executeAsUser("stopUndoneWorkflow", undoData.userId, undoData.id);
+  } catch (err) {
+    console.warn("midi-qol | undo: the use could not be stopped on its user's client", err);
+  }
+}
+
 export async function undoWorkflow(undoData?: UndoData) {
   if (!undoData) return;
+  await stopUndoneUse(undoData);
   log(`Undoing workflow for Player ${undoData.userName} Token: ${undoData.actorEntry?.actorData?.name} Item: ${undoData.itemName ?? ""}`)
   for (let templateUuid of undoData.templateUuids)
     await (fromUuidSync(templateUuid) as MeasuredTemplateDocument.Implementation | undefined)?.delete();

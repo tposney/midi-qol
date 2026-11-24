@@ -1,6 +1,6 @@
 import { Activity, RollDialogConfig, RollMessageConfig, RollProcessConfig } from "../../globals.js";
 import { debugEnabled, i18n, warn, error, GameSystemConfig } from "../../midi-qol.js";
-import { Workflow } from "../Workflow.js";
+import { authorRolls, Workflow } from "../Workflow.js";
 import { TroubleShooter } from "../apps/TroubleShooter.js";
 import { configSettings } from "../settings.js";
 import { heldKeys } from "../lib/rollKeys.js";
@@ -38,7 +38,7 @@ let defineMidiUtilityActivityClass = <T extends Activity>(ActivityClass: T) => {
            * removed in 6.2 (`activity/mixin.mjs#legacyUsageContent`) regardless. See AttackActivity.
            */
           actions: {
-            rollFormula: MidiUtilityActivity.#rollFormula
+            rollFormula: authorRolls("utility", "normal", MidiUtilityActivity.#rollFormula)
           }
         }
       }, { inplace: false, insertKeys: true, insertValues: true });
@@ -85,6 +85,8 @@ let defineMidiUtilityActivityClass = <T extends Activity>(ActivityClass: T) => {
         TroubleShooter.recordError(new Error("No Workflow Found"), errorMessage);
         return;
       }
+      // Another user's use waiting for this roll: its author's client rolls it
+      if (workflow.readOnly && await workflow.rollByAuthor("utility", "normal")) return;
       config.midiOptions ??= {};
       config.midiOptions.fastForwardDamage ??= isAutoFastForward("damage", { workflow })
       if (debugEnabled > 0) {
