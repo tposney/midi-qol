@@ -1,5 +1,6 @@
 import { registerLoadouts } from "./module/services/loadouts.js";
 import { useOptionsApi } from "./module/services/useOptions/registry.js";
+import { diceApi } from "./module/lib/dicePicker.js";
 import { registerMetamagic } from "./module/services/useOptions/metamagic.js";
 import { installAfterUseDialog } from "./module/activities/afterUseDialog.js";
 import { isEphemeralToken, tokenFor, tokenOf } from "./module/lib/tokenResolver.js";
@@ -459,6 +460,7 @@ Object.assign(globalThis.MidiQOL, {
   // M7: click to attack (prime an attack, then click a token; Alt+click; the midi-qol.claimClick hook)
   attack: clickToAttackApi,
   useOptions: useOptionsApi,
+  dice: diceApi,
   // M21: a creature's Multiattack plan (the GM's, registered ones, midi's table from the books, the text parsed, a guess)
   multiattack: multiattackApi,
   holds: { ...holdsApi, open: () => HoldPanel.open() },

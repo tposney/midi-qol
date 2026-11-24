@@ -6903,20 +6903,14 @@ async function removeLingeringMarkers(actor: Actor.Implementation, shouldHaveEnd
 
 /** On the turn events (M4, core's active GM): after DAE and core have had their go at expiring the markers */
 export function setupMarkerChecks() {
-  onTurnEvent("combatEnd", "midi-qol.lingeringMarkers", ({ combat }) => {
-    // Only the markers there when the combat ended: a window opened since (a reaction just after) is not this combat's
-    const ended = new Map<Actor.Implementation, Map<string, number | null | undefined>>();
-    for (const actor of combat.combatants.contents.flatMap(c => c.actor ?? [])) {
-      const markers = new Map<string, number | null | undefined>();
-      for (const id of LEDGER_WINDOWS()) {
-        const marker = actor.effects.get(id);
-        if (marker) markers.set(id, marker._stats?.createdTime);
-      }
-      if (markers.size) ended.set(actor, markers);
-    }
-    setTimeout(() => ended.forEach((markers, actor) => removeLingeringMarkers(actor, marker =>
-      markers.has(marker.id ?? "") && markers.get(marker.id ?? "") === marker._stats?.createdTime
-      && !!marker.flags?.dae?.specialDuration?.includes("combatEnd"))), 500);
+  // A combatant leaving (each one as its combat ends): raised after the system's own exit (dnd5e 6 deletes the
+  // combat's markers there), so midi never deletes one alongside it. Only markers made before it left: a window opened
+  // since (a reaction just after) is not this combat's
+  onTurnEvent("exitCombat", "midi-qol.lingeringMarkers", ({ actor }) => {
+    if (!actor) return;
+    const left = Date.now();
+    return removeLingeringMarkers(actor, marker => (marker._stats?.createdTime ?? 0) <= left
+      && !!marker.flags?.dae?.specialDuration?.includes("combatEnd"));
   });
   onTurnEvent("turnStart", "midi-qol.lingeringMarkers", ({ actor, skipped }) => {
     if (actor && !skipped) setTimeout(() => removeLingeringMarkers(actor, isEffectExpired), 500);

@@ -2383,6 +2383,22 @@ body.midi-qol-hide-gambit-mirrors .gps-dialog-mirror:not(.midi-qol-gambit-shown)
 .midi-qol-bonus-prompt .midi-qol-prompt-input input[type="number"] {
   width: 4em;
 }
+.midi-qol-dice-picker {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+.midi-qol-die {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 0 4px;
+  border: 1px solid var(--color-border, #7a7971);
+  border-radius: 4px;
+}
+.midi-qol-die:has(input:checked) {
+  border-color: var(--color-warm-2, #ee9b3a);
+}
 .midi-qol-bonus-prompt .midi-qol-prompt-disabled {
   font-size: var(--font-size-11);
   font-style: italic;
@@ -2700,7 +2716,8 @@ li.midi-qol-after-cast-idle button { opacity: 0.5; }
 .midi-qol-hub .midi-hub-menu-choice { display: flex; gap: 0.4rem; align-items: center; justify-content: flex-start; width: 100%; }
 .midi-qol-hub .midi-hub-menu-choice.midi-hub-unusable { opacity: 0.45; }
 .midi-qol-hub .midi-hub-active { border-bottom: 1px dashed #d4af37; padding-bottom: 2px; }
-.midi-qol-hub .midi-hub-filters { display: inline-flex; gap: 0.5rem; margin-left: auto; align-items: center; font-size: 0.8rem; }
+.midi-qol-hub .midi-hub-filters { display: inline-flex; gap: 0.5rem; align-items: center; font-size: 0.8rem; padding-left: 0.6rem; border-left: 1px solid var(--color-border-dark-5, #555); }
+.midi-qol-hub .midi-hub-drawer-header .midi-hub-filters { font-weight: normal; }
 .midi-qol-hub .midi-hub-filter { display: inline-flex; gap: 0.2rem; align-items: center; padding: 0 0.35rem; border: 1px solid transparent; border-radius: 4px; opacity: 0.75; }
 .midi-qol-hub .midi-hub-filter.active { border-color: currentColor; opacity: 1; font-weight: bold; }
 .midi-qol-hub .midi-hub-filter-active i { color: #d4af37; }
@@ -2745,15 +2762,6 @@ fieldset.midi-qol-use-options .midi-qol-use-options-cost { opacity: 0.8; }
 .midi-qol-hub .midi-hub-standing { flex: none; width: auto; padding: 0 0.4rem; line-height: 1.4rem; font-size: 0.75rem; }
 .midi-qol-hub .midi-hub-standing.active { border-color: currentColor; font-weight: bold; }
 /* M27 party strip */
-.midi-qol-hub .midi-hub-party { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 4px; }
-.midi-qol-hub .midi-hub-member { position: relative; width: 34px; height: 34px; padding: 0; border-radius: 50%; overflow: visible; border: 2px solid #3fae4a; flex: none; }
-.midi-qol-hub .midi-hub-member img { width: 100%; height: 100%; border-radius: 50%; border: none; object-fit: cover; }
-.midi-qol-hub .midi-hub-member-bloodied { border-color: #e08a1e; }
-.midi-qol-hub .midi-hub-member-down { border-color: #888; }
-.midi-qol-hub .midi-hub-member-down img { filter: grayscale(1); }
-.midi-qol-hub .midi-hub-member-targeted { box-shadow: 0 0 0 2px #ff6400; }
-.midi-qol-hub .midi-hub-member-marks { position: absolute; right: -4px; bottom: -4px; display: flex; gap: 1px; font-size: 10px; }
-.midi-qol-hub .midi-hub-member-marks .midi-hub-mark { width: 9px; height: 9px; }
 .midi-qol-hub .midi-hub-resource { display: flex; gap: 0.5rem; align-items: baseline; }
 .midi-qol-hub .midi-hub-resource .midi-hub-label { min-width: 10rem; }
 .midi-qol-hub .midi-hub-resource-count { font-variant-numeric: tabular-nums; font-weight: bold; min-width: 3rem; }

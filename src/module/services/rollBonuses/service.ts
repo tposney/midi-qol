@@ -1,4 +1,5 @@
 import type { Activity } from "../../../globals.js";
+import { suggestLowDice } from "../../lib/dicePicker.js";
 import { defineService, entries, reportServiceProblem } from "../../api/services.js";
 import type { Workflow } from "../../Workflow.js";
 import { addRollToAsync, setBonusActionUsed, setReactionUsed, setActionUsed, refreshRollTotal } from "../../utils.js";
@@ -69,6 +70,8 @@ export interface BonusSelection {
   damageType?: string;
   /** Token document uuids picked (targeting) */
   targets: string[];
+  /** The roll's dice picked for a "choose" reroll ("die-result" indices into roll.dice) */
+  dice?: string[];
 }
 
 /** Contract 4: configure's answer for a selection: the bonus as it now is */
@@ -312,21 +315,21 @@ export async function applyRollMode(roll: Roll, mode: "advantage" | "disadvantag
 
 /** The roll after one bonus's effect, from the roll data of the use. */
 /** Reroll up to `max` dice that rolled below their average, lowest first; a copy, the old results kept as rerolled */
-async function rerollLowDice(roll: Roll, max: number | string | undefined, rollData: object): Promise<Roll> {
+async function rerollLowDice(roll: Roll, max: number | string | undefined, rollData: object, picked?: string[]): Promise<Roll> {
   let count = typeof max === "number" ? max : 1;
   if (typeof max === "string" && max.trim()) {
     const evaluated = await new Roll(max, { ...roll.data, ...rollData }).evaluate();
     count = evaluated.total ?? 1;
   }
   const changed = (roll.constructor as typeof Roll).fromData(JSON.parse(JSON.stringify(roll))) as Roll;
-  const low: { term: foundry.dice.terms.DiceTerm, index: number, result: number }[] = [];
-  for (const term of changed.dice) {
-    term.results.forEach((result, index) => {
-      if (result.active && !result.discarded && result.result < (term.faces! + 1) / 2) low.push({ term, index, result: result.result });
-    });
-  }
-  low.sort((a, b) => (a.result / a.term.faces!) - (b.result / b.term.faces!));
-  for (const { term, index } of low.slice(0, Math.max(0, count))) {
+  const keys = (picked ?? suggestLowDice(changed, count)).slice(0, Math.max(0, count));
+  const chosen = keys.flatMap(key => {
+    const [die, index] = key.split("-").map(Number);
+    const term = changed.dice[die];
+    const result = term?.results[index];
+    return term && result?.active && !result.discarded ? [{ term, index }] : [];
+  });
+  for (const { term, index } of chosen) {
     const old = term.results[index];
     old.rerolled = true;
     old.active = false;
@@ -347,7 +350,7 @@ export async function applyBonusEffect(roll: Roll, effect: BonusEffect, rollData
       return addRollToAsync(roll, bonus);
     }
     case "reroll": {
-      if (effect.dice === "choose") return rerollLowDice(roll, effect.max, rollData);
+      if (effect.dice === "choose") return rerollLowDice(roll, effect.max, rollData, effect.picked);
       const options = effect.dice === "max" ? { maximize: true } : effect.dice === "min" ? { minimize: true } : {};
       const RollClass = roll.constructor as typeof Roll;
       const rerolled: Roll = effect.addFormula
@@ -453,6 +456,7 @@ export async function applyOfferedBonus(bonus: OfferedBonus, ctx: BonusContext, 
     }
     let effect = bonus.effect;
     if (effect.kind === "add" && !effect.damageType && selection?.damageType) effect = { ...effect, damageType: selection.damageType };
+    if (effect.kind === "reroll" && effect.dice === "choose" && selection?.dice) effect = { ...effect, picked: selection.dice };
     if (effect.kind === "add" && !effect.damageType && bonus.damageTypes?.length)
       effect = { ...effect, damageType: await chooseDamageType(bonus.damageTypes, bonus.label, ctx.query.actor, bonusDamageTypeKey(standingKey(bonus))) };
     const targets = selection?.targets.length ? selection.targets : bonus.targets;

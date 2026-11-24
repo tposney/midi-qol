@@ -1035,9 +1035,6 @@
   "midi-qol.Hub.UndoNothing": "Nothing to undo",
   "midi-qol.Hub.UndoNotLatest": "Someone has used something since your last use: ask the GM",
   "midi-qol.Hub.PactSlots": "Pact slots (level {n})",
-  "midi-qol.Hub.DeathSaves": "Dying: {s} successes, {f} failures",
-  "midi-qol.Hub.Concentrating": "Concentrating",
-  "midi-qol.Hub.ReactionUsed": "Reaction used",
   "midi-qol.Hub.ShowRequest": "Show its window",
   "midi-qol.Hub.WaitingFor": "Waiting for {user}",
   "midi-qol.Hub.ActiveHint": "In use: what running spells and items in effect give (a summoned weapon's attack, an enchanted weapon)",
@@ -3806,6 +3803,7 @@
   "midi-qol.Entries.Option.none": "none (moved in full, no resistance)",
   "midi-qol.Entries.Field.damageDie": "Damage dice become d (before the damage roll)",
   "midi-qol.BonusPrompt.Targets": "Targets (up to {max})",
+  "midi-qol.BonusPrompt.Dice": "Dice to reroll (up to {max})",
   "midi-qol.BonusApproval.Title": "Use your bonus?",
   "midi-qol.BonusApproval.Content": "{requester} asks to use {label} ({actor})."
 }

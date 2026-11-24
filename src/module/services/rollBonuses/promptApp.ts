@@ -7,6 +7,7 @@ import { bonusCostBadges, wirePickOne, type PromptResponses } from "../../lib/pr
 import { bonusDamageTypeKey, rememberedChoice } from "../../lib/rememberedChoices.js";
 import { getDistance } from "../distance/service.js";
 import type { BonusConfigured, BonusSelection } from "./service.js";
+import { diceOptions, pickedIn, suggestLowDice, wireDicePickers } from "../../lib/dicePicker.js";
 import { standingChoice, standingKey, STANDING_CHOICES, wireStandingSelects } from "./standing.js";
 
 /*
@@ -50,6 +51,7 @@ export class BonusPromptApp extends RollModifyDialog {
   async _onRender(context, options) {
     await super._onRender(context, options);
     wirePickOne(this.element);
+    wireDicePickers(this.element);
     for (const row of Array.from(this.element.querySelectorAll<HTMLElement>("li.midi-qol-prompt-inputs")))
       row.addEventListener("change", event => void this.#onControl(row, event.target as HTMLInputElement));
     this.element.querySelector("[data-bonus-action='apply']")?.addEventListener("click", () => this.applyTicked());
@@ -133,12 +135,32 @@ export class BonusPromptApp extends RollModifyDialog {
       const max = this.#configured.get(id)?.maxTargets ?? candidate.targeting.max;
       controls.push({ kind: "targets", name: "targets", label: game.i18n?.format("midi-qol.BonusPrompt.Targets", { max: String(max) }) ?? "Targets", options });
     }
+    // A reroll of chosen dice: the roll's dice to pick, up to its max (the lowest suggested)
+    const effect = candidate.effect;
+    const roll: Roll | undefined = this.data.currentRoll;
+    if (effect.kind === "reroll" && effect.dice === "choose" && roll) {
+      const max = this.#diceMax(effect.max, roll);
+      if (first) selection.dice = suggestLowDice(roll, max);
+      const options = diceOptions(roll).map(d => ({ value: d.key, label: d.label, selected: !!selection!.dice?.includes(d.key) }));
+      controls.push({ kind: "dice", name: "dice", label: game.i18n?.format("midi-qol.BonusPrompt.Dice", { max: String(max) }) ?? "Dice", max, options });
+    }
     if (!controls.length) return undefined;
     if (first) {
       this.#selections.set(id, selection);
       if (candidate.configure) void this.#configure(id, candidate, selection, false);
     }
     return controls;
+  }
+
+  /** How many dice a "choose" reroll may take (a formula on the roller's data; 1 when it can't be read) */
+  #diceMax(max: number | string | undefined, roll: Roll): number {
+    if (typeof max === "number") return max;
+    if (!max?.trim()) return 1;
+    try {
+      return new Roll(max, { ...roll.data, ...(this.data.actor?.getRollData() ?? {}) }).evaluateSync({ strict: false }).total || 1;
+    } catch {
+      return 1;
+    }
   }
 
   /** A control changed: the selection, its targets limit, the bonus configured for it */
@@ -153,6 +175,10 @@ export class BonusPromptApp extends RollModifyDialog {
       const max = this.#configured.get(candidate.id)?.maxTargets ?? candidate.targeting?.max ?? 1;
       if (ticked.length > max) for (const other of ticked.filter(t => t !== input).slice(0, ticked.length - max)) other.checked = false;
       selection.targets = Array.from(row.querySelectorAll<HTMLInputElement>("input[name='targets']:checked")).map(t => t.value);
+    } else if (input.name === "dice") {
+      // The picker keeps its max (wireDicePickers, wired first)
+      const picker = row.querySelector<HTMLElement>(".midi-qol-dice-picker");
+      selection.dice = picker ? pickedIn(picker) : [];
     } else if (input.name === "scaling") selection.scaling = Number(input.value);
     else if (input.name === "damageType") selection.damageType = input.value;
     else if (input.name.startsWith("in.")) {
@@ -188,7 +214,7 @@ export class BonusPromptApp extends RollModifyDialog {
 }
 
 interface PromptControl {
-  kind: "number" | "select" | "multi" | "checkbox" | "text" | "targets";
+  kind: "number" | "select" | "multi" | "checkbox" | "text" | "targets" | "dice";
   name: string;
   label: string;
   min?: number;

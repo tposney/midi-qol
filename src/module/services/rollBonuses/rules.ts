@@ -24,9 +24,10 @@ export type BonusEffect =
   | { kind: "add"; formula: string; damageType?: string; critical?: "double" | "never" | "force" }
   /**
    * dice "choose": only some dice are rerolled, up to `max` (a number or formula; default 1) of those below their
-   * average, lowest first (Empowered Spell: the best choice for the roller); `keep` is then "new"
+   * average, lowest first (Empowered Spell: the best choice for the roller), or those the roller picked in the prompt
+   * (`picked`: "die-result" indices into the roll's dice); `keep` is then "new"
    */
-  | { kind: "reroll"; keep: "new" | "higher" | "lower" | "ask"; dice?: "max" | "min" | "choose"; max?: number | string; addFormula?: string }
+  | { kind: "reroll"; keep: "new" | "higher" | "lower" | "ask"; dice?: "max" | "min" | "choose"; max?: number | string; addFormula?: string; picked?: string[] }
   /** Advantage or disadvantage given after the roll (2024 Lucky): another d20, the higher or lower kept; with the other mode they cancel */
   | { kind: "mode"; mode: "advantage" | "disadvantage" }
   | { kind: "replace"; formula: string }

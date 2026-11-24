@@ -62,6 +62,7 @@
     "debug",
     "decodeWorkflowOptions",
     "deferred",
+    "dice",
     "displayDSNForRoll",
     "doConcentrationCheck",
     "doOverTimeEffect",

@@ -1,8 +1,6 @@
 import { currentLoadout, loadoutsOf, removeLoadout, saveLoadout, swapLoadout } from "../../services/loadouts.js";
 import { configSettings } from "../../settings.js";
 import { unTimedExecuteAsGM } from "../../GMAction.js";
-import { hasUsedReaction } from "../../utils.js";
-import { getDistance } from "../../services/distance/service.js";
 import { listToggles, setToggle } from "../../lib/entries/offers.js";
 import { setStandingChoice, STANDING_CHOICES, storedStandings, type StandingChoice } from "../../services/rollBonuses/standing.js";
 import { forgetChoice, rememberedChoices } from "../../lib/rememberedChoices.js";
@@ -207,7 +205,7 @@ const LISTS = ["weapons", "spells", "features", "items"] as const;
 
 /** The filter chips: All, then each filter the creature has a use for (in the open tab, else in all of them), with its
  * count of usable ones. With a tab open a chip narrows the tab; with none it lists that filter's uses across them */
-function filterChips(ctx: HubContext): string {
+function filterChips(ctx: HubContext, { labelled = false }: { labelled?: boolean } = {}): string {
   const tabs = ctx.tab !== "bar" && ctx.tab !== "actions" ? [ctx.tab] : [...LISTS];
   const counts = FILTERS.map(kind => {
     const entries = tabs.flatMap(tab => tabEntries(ctx.model, tab, kind));
@@ -215,8 +213,10 @@ function filterChips(ctx: HubContext): string {
   }).filter(f => f.any || f.kind === ctx.filter);
   if (!counts.length) return "";
   const icon = (kind: string) => kind === "active" ? `<i class="fa-solid fa-wand-sparkles"></i>` : mark(kind as Kind);
-  return `<div class="midi-hub-filters"><a class="midi-hub-filter" data-hub-action="filter" data-filter="">${escape(i18n("midi-qol.Hub.All"))}</a>${counts.map(f =>
-    `<a class="midi-hub-filter midi-hub-filter-${f.kind}${ctx.filter === f.kind ? " active" : ""}" data-hub-action="filter" data-filter="${f.kind}" data-tooltip="${escape(i18n(f.kind === "active" ? "midi-qol.Hub.ActiveHint" : `midi-qol.Hub.Cost.${f.kind}`))}">${icon(f.kind)} ${f.n}</a>`).join("")}</div>`;
+  const name = (kind: string) => i18n(kind === "active" ? "midi-qol.Hub.Active" : `midi-qol.Hub.Cost.${kind}`);
+  // In a list's drawer: each filter named (the bar's row keeps the marks and counts)
+  return `<div class="midi-hub-filters${labelled ? " midi-hub-filters-labelled" : ""}"><a class="midi-hub-filter${ctx.filter ? "" : " active"}" data-hub-action="filter" data-filter="">${escape(i18n("midi-qol.Hub.All"))}</a>${counts.map(f =>
+    `<a class="midi-hub-filter midi-hub-filter-${f.kind}${ctx.filter === f.kind ? " active" : ""}" data-hub-action="filter" data-filter="${f.kind}" data-tooltip="${escape(i18n(f.kind === "active" ? "midi-qol.Hub.ActiveHint" : `midi-qol.Hub.Cost.${f.kind}`))}">${icon(f.kind)}${labelled ? ` ${escape(name(f.kind))}` : ""} ${f.n}</a>`).join("")}</div>`;
 }
 
 /** An entry's button: one activity's, or an item's (its choices in a menu on click; one choice used directly) */
@@ -379,8 +379,10 @@ function drawerHtml(ctx: HubContext): string {
     const entries = tabEntries(ctx.model, ctx.tab, ctx.filter);
     body = entries.length ? `<div class="midi-hub-row">${entries.map(e => entryButton(e)).join("")}</div>` : "";
   }
+  // A list's drawer filters by cost in its header
+  const chips = LISTS.includes(ctx.tab as typeof LISTS[number]) ? filterChips(ctx, { labelled: true }) : "";
   return `<div class="midi-hub-drawer">
-    <header class="midi-hub-drawer-header"><span>${escape(title)}</span>
+    <header class="midi-hub-drawer-header"><span>${escape(title)}</span>${chips}
       <a data-hub-action="drawerPin" class="${ctx.pinned ? "active" : ""}" data-tooltip="${escape(i18n(ctx.pinned ? "midi-qol.Hub.Unpin" : "midi-qol.Hub.Pin"))}"><i class="fa-solid fa-thumbtack"></i></a>
       <a data-hub-action="drawerClose" data-tooltip="${escape(i18n("Close"))}"><i class="fa-solid fa-xmark"></i></a></header>
     <div class="midi-hub-drawer-body">${body || `<span class="hint">${escape(i18n("midi-qol.Hub.Nothing"))}</span>`}</div>
@@ -563,44 +565,6 @@ export function registerMidiHubSections() {
         hubOffers.splice(hubOffers.indexOf(offer), 1);
         offer.resolve(target.dataset.uuid || undefined);
         ctx.refresh();
-      }
-    }
-  });
-
-  // The party: the other player characters on the scene, each a chip (HP state, concentration, reaction spent,
-  // dying with its death saves, conditions, distance); a click targets it, Shift+click pings it
-  registerHubSection({
-    id: "midi-qol.party", area: "right", order: 5,
-    render: ({ token }) => {
-      const members = (canvas?.tokens?.placeables ?? []).filter(t => t.document !== token && t.actor?.hasPlayerOwner && (t.actor.type as string) === "character" && t.visible);
-      if (!members.length) return "";
-      const here = token?.object;
-      return `<div class="midi-hub-party">${members.map(t => {
-        const actor = t.actor as Actor.Implementation;
-        const attributes = (actor.system as { attributes?: { hp?: { value?: number, max?: number, pct?: number, bloodied?: number }, death?: { success?: number, failure?: number } } }).attributes;
-        const hp = attributes?.hp ?? {};
-        const down = (hp.value ?? 0) <= 0;
-        const bloodied = !down && hp.pct !== undefined && hp.bloodied !== undefined && hp.pct < 100 && hp.pct <= hp.bloodied;
-        const marks = [
-          down ? `<i class="fa-solid fa-skull" data-tooltip="${escape(i18n("midi-qol.Hub.DeathSaves").replace("{s}", String(attributes?.death?.success ?? 0)).replace("{f}", String(attributes?.death?.failure ?? 0)))}"></i>` : "",
-          actor.statuses.has("concentrating") ? `<i class="fa-solid fa-brain" data-tooltip="${escape(i18n("midi-qol.Hub.Concentrating"))}"></i>` : "",
-          hasUsedReaction(actor) ? `<span class="midi-hub-mark midi-hub-mark-reaction midi-hub-spent" data-tooltip="${escape(i18n("midi-qol.Hub.ReactionUsed"))}"></span>` : ""
-        ].join("");
-        const conditions = [...actor.statuses].filter(id => !["concentrating", "bloodied"].includes(id)).map(id => CONFIG.statusEffects.find(s => s.id === id)?.name).filter(Boolean).map(n => i18n(n!)).join(", ");
-        const distance = here ? Math.round(getDistance(here, t)) : undefined;
-        const tip = [`<strong>${escape(t.name ?? "")}</strong>`, `${hp.value ?? 0}/${hp.max ?? 0}`, ...(conditions ? [escape(conditions)] : []),
-          ...(distance !== undefined ? [`${distance} ${escape(canvas?.scene?.grid.units ?? "")}`] : [])].join("<br>");
-        return `<button type="button" class="midi-hub-member${down ? " midi-hub-member-down" : bloodied ? " midi-hub-member-bloodied" : ""}${t.isTargeted ? " midi-hub-member-targeted" : ""}"
-          data-hub-action="member" data-token="${escape(t.id ?? "")}" data-tooltip-html="${escape(tip)}" data-tooltip-direction="UP">
-          <img src="${escape(t.document.texture?.src ?? actor.img ?? "")}" alt=""><span class="midi-hub-member-marks">${marks}</span></button>`;
-      }).join("")}</div>`;
-    },
-    actions: {
-      member: (_ctx, target, event) => {
-        const t = canvas?.tokens?.get(target.dataset.token ?? "");
-        if (!t) return;
-        if ((event as MouseEvent | undefined)?.shiftKey) { void canvas?.ping(t.center); return; }
-        t.setTarget(!t.isTargeted, { releaseOthers: false });
       }
     }
   });
