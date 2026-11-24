@@ -140,8 +140,17 @@ export class MidiHub extends ApplicationV2 {
   }
 
   /** Listeners once, on the element (kept across renders: only its content is replaced) */
+  /** The inbox's countdowns (data-ends: when, ms), redrawn twice a second while the hub is open */
+  #tick: number | undefined;
+  #drawCountdowns() {
+    for (const span of Array.from(this.element?.querySelectorAll<HTMLElement>("[data-ends]") ?? [])) {
+      span.textContent = `${Math.max(0, Math.ceil((Number(span.dataset.ends) - Date.now()) / 1000))}s`;
+    }
+  }
+
   async _onFirstRender(context: object, options: object) {
     await super._onFirstRender?.(context as never, options as never);
+    this.#tick = window.setInterval(() => this.#drawCountdowns(), 500);
     const element = this.element;
     element.addEventListener("click", this.#onClick);
     element.addEventListener("contextmenu", this.#onContext);
@@ -167,6 +176,7 @@ export class MidiHub extends ApplicationV2 {
   };
 
   async _onClose(options: object) {
+    window.clearInterval(this.#tick);
     document.removeEventListener("pointerdown", this.#onOutside, true);
     document.removeEventListener("keydown", this.#onEscape);
     await super._onClose?.(options as never);
@@ -280,6 +290,9 @@ export class MidiHub extends ApplicationV2 {
 
 /** Re-render on a change to the shown creature's model */
 export function setupHubRefresh() {
+  // The inbox: what this user is asked, and the requests this client waits on
+  for (const hook of ["midi-qol.incomingRequestsChanged", "midi-qol.requestStarted", "midi-qol.requestSettled"])
+    Hooks.on(hook as never, (() => { void MidiHub.shown?.render(); }) as never);
   Hooks.on("midi-qol.turnModelChanged" as never, ((actorUuid: string) => {
     const hub = MidiHub.shown;
     if (hub?.actor?.uuid === actorUuid) void hub.render();

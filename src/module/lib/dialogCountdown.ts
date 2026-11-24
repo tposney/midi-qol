@@ -13,6 +13,8 @@ export interface CountdownOptions {
   onExpire: () => void;
   /** The user paused or resumed it (e.g. pause the matching timer on the client waiting for the answer). */
   onPause?: (paused: boolean) => void;
+  /** Shown in this dialog (the window answering a request, for the hub's inbox to bring forward) */
+  onAttach?: (dialog: HTMLElement) => void;
 }
 
 const TICK_MS = 200;
@@ -95,6 +97,7 @@ export class DialogCountdown {
 
   /** Show the countdown at the top of the dialog's content (again after a re-render). */
   attach(dialog: HTMLElement | null | undefined) {
+    if (dialog) this.#options.onAttach?.(dialog);
     if (!dialog || !this.#total) return;
     const content = dialog.querySelector<HTMLElement>(".window-content") ?? dialog;
     let element = content.querySelector<HTMLElement>(":scope > .midi-qol-countdown");

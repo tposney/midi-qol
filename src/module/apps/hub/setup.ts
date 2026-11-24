@@ -1,7 +1,8 @@
 import { activeHud, registerHud } from "../../services/turnModel/hud.js";
 import { setOfferCloser, setOfferPresenter } from "../../services/multiattack/legendary.js";
 import { MidiHub, setupHubRefresh } from "./MidiHub.js";
-import { hubOffers, registerMidiHubSections } from "./midiSections.js";
+import { hubOffers, inlineAsks, registerMidiHubSections } from "./midiSections.js";
+import { registerRequestPresenter } from "../../lib/requests.js";
 import { hubSections, registerHubSection } from "./sections.js";
 
 /*
@@ -30,6 +31,19 @@ export function setupHub() {
     setOfferPresenter(hubRunning() ? offer => new Promise(resolve => { hubOffers.push({ ...offer, resolve }); void MidiHub.shown?.render(); }) : undefined);
   }) as never);
   Hooks.on("closeMidiHub" as never, (() => setOfferPresenter(undefined)) as never);
+  // The inbox: a request that takes a simple choice is answered in the hub while it runs (else its own dialog)
+  registerRequestPresenter((request, choice) => {
+    if (!hubRunning()) return undefined;
+    return new Promise(resolve => {
+      const ask = { request, choice, resolve };
+      inlineAsks.push(ask);
+      request.onSettled(() => {
+        const at = inlineAsks.indexOf(ask);
+        if (at >= 0) { inlineAsks.splice(at, 1); resolve([]); void MidiHub.shown?.render(); }
+      });
+      void MidiHub.shown?.render();
+    });
+  });
   setOfferCloser(() => { for (const offer of hubOffers.splice(0)) offer.resolve(undefined); void MidiHub.shown?.render(); });
 }
 

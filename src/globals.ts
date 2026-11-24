@@ -95,6 +95,8 @@ declare module "fvtt-types/configuration" {
       "midi-qol.playerWaitEnded": (info: playerWaits.WaitInfo, result: { choice?: string, claimed?: boolean }) => void;
       /** lib/requests.ts: a request this client holds was sent, or settled (how) */
       "midi-qol.requestStarted": (request: requestCore.RequestView) => void;
+      /** What this client is being asked changed (lib/requests.ts incomingRequests) */
+      "midi-qol.incomingRequestsChanged": () => void;
       "midi-qol.requestSettled": (request: requestCore.RequestView, how: requestCore.SettledHow) => void;
       "midi-qol.playerWaitsChanged": (waits: playerWaits.WaitInfo[]) => void;
       /** A service's providers or wrappers changed (api/services.ts) */
@@ -817,7 +819,7 @@ declare global {
     interface Queries {
       "midi-qol.bonusApproval": (data: { label: string, actorName: string, requester: string }) => Promise<boolean>;
       /** lib/requests.ts: the asked client runs the request's handler; its answer settles the request */
-      "midi-qol.request": (data: { type: string, id: string, holderId: string, remaining: number, data: object }) => Promise<unknown>;
+      "midi-qol.request": (data: { type: string, id: string, holderId: string, remaining: number, data: object, label?: string, kind?: string, actorUuid?: string }) => Promise<unknown>;
       /** lib/requests.ts: pause/resume/claim to the requester, settled/paused/resumed to the asked client */
       "midi-qol.requestEvent": (data: { to: "holder" | "asked", id: string, event: string, how?: string, remaining?: number }) => { ok: boolean, remaining?: number };
       /** lib/midiQueries.ts: one of midi's GM actions or commands to a user (a socketlib handler's name), in place of socketlib */

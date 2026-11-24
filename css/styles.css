@@ -2735,3 +2735,12 @@ fieldset.midi-qol-use-options label.checkbox { display: flex; gap: 0.4rem; align
 fieldset.midi-qol-use-options label.checkbox img { width: 20px; height: 20px; border: none; }
 fieldset.midi-qol-use-options label.checkbox.disabled { opacity: 0.5; }
 fieldset.midi-qol-use-options .midi-qol-use-options-cost { opacity: 0.8; }
+/* M27 hub inbox */
+.midi-qol-hub .midi-hub-inbox label.checkbox { display: flex; gap: 0.3rem; align-items: center; font-size: 0.8rem; }
+.midi-qol-hub .midi-hub-inbox label.checkbox img { width: 18px; height: 18px; border: none; }
+.midi-qol-hub .midi-hub-countdown { font-variant-numeric: tabular-nums; opacity: 0.8; margin-left: 0.3rem; }
+.midi-qol-hub .midi-hub-inbox-waiting { opacity: 0.8; }
+.midi-qol-hub .midi-hub-choice { display: flex; flex-wrap: wrap; gap: 0.25rem; align-items: center; margin: 0.15rem 0; }
+.midi-qol-hub .midi-hub-choice .midi-hub-label { min-width: 10rem; }
+.midi-qol-hub .midi-hub-standing { flex: none; width: auto; padding: 0 0.4rem; line-height: 1.4rem; font-size: 0.75rem; }
+.midi-qol-hub .midi-hub-standing.active { border-color: currentColor; font-weight: bold; }

@@ -253,6 +253,7 @@
     "midi-qol.hitsChecked",
     "midi-qol.holdOpened",
     "midi-qol.holdReleased",
+    "midi-qol.incomingRequestsChanged",
     "midi-qol.interaction",
     "midi-qol.itemUseActivitySelect",
     "midi-qol.midiReady",

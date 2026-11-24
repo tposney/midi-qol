@@ -165,6 +165,15 @@ function offerContent(options: OfferOption[]): string {
 
 /** On the asked client: the dialog, with the requester's countdown; closed when answered for the player */
 async function answerOffer(data: { title: string, options: OfferOption[] }, request: IncomingRequest): Promise<string[]> {
+  // In the hub's inbox while it runs, when every option can be ticked on its own (no group to choose one of)
+  const inline = data.options.every(o => !o.group || o.stacks)
+    ? request.present({ title: data.title, multiple: true, choices: data.options.map(o => ({ value: o.key, label: o.label, img: o.img, hint: o.description })) })
+    : undefined;
+  if (inline) {
+    const picked = await inline;
+    if (request.settledHow || !picked?.length || !await request.claim()) return [];
+    return picked;
+  }
   const countdown = request.countdown();
   let dialog: foundry.applications.api.DialogV2 | undefined;
   request.onSettled(() => { void dialog?.close(); });

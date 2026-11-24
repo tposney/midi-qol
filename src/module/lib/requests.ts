@@ -104,7 +104,8 @@ export function askUser<T>(user: User.Implementation, spec: AskSpec<T>): MidiReq
     if (!keepForGM()) request.settleWith(spec.fallback, "disconnect");
     return request;
   }
-  void user.query(REQUEST_QUERY, { type: spec.type, id: request.id, holderId: game.user!.id, remaining: request.deadline.remaining, data: spec.data ?? {} })
+  void user.query(REQUEST_QUERY, { type: spec.type, id: request.id, holderId: game.user!.id, remaining: request.deadline.remaining, data: spec.data ?? {},
+    label: spec.label, kind: spec.kind, actorUuid: spec.actorUuid })
     .then(value => { request.settle(value as T, "player"); })
     .catch(err => {
       if (!request.pending) return;
@@ -129,9 +130,32 @@ export function requestsFor(actorUuid: string): MidiRequest<unknown>[] {
 }
 
 /** A request on the asked client: its deadline (shown, owned by the requester), claim, and whether it was settled for them. */
+/** What a request is, as the asked client knows it (the hub's inbox) */
+export interface IncomingMeta { type: string, label?: string, kind?: string, actorUuid?: string }
+
+/** A request shown in a choice the asked client's own UI can answer inline (the hub), instead of the handler's dialog */
+export interface InlineChoice {
+  title: string;
+  /** Each a choice; several may be picked when `multiple` */
+  choices: { value: string, label: string, img?: string, hint?: string }[];
+  multiple?: boolean;
+}
+type Presenter = (request: IncomingRequest, choice: InlineChoice) => Promise<string[] | undefined> | undefined;
+let presenter: Presenter | undefined;
+/** The hub (while it runs) answers inline choices; returns how to stop */
+export function registerRequestPresenter(fn: Presenter): () => void {
+  presenter = fn;
+  return () => { if (presenter === fn) presenter = undefined; };
+}
+
 export class IncomingRequest {
   readonly id: string;
   readonly holderId: string;
+  readonly meta: IncomingMeta;
+  /** The window answering it (its countdown's), for the inbox to bring forward */
+  window: HTMLElement | undefined;
+  /** Started (the inbox's order) */
+  readonly started = Date.now();
   /** Time left as last told by the requester (on asking, then on each pause and resume), and when */
   #toldRemaining: number;
   #toldAt = Date.now();
@@ -142,9 +166,10 @@ export class IncomingRequest {
   #closers: ((how: SettledHow) => void)[] = [];
   #settledHow: SettledHow | undefined;
 
-  constructor(id: string, holderId: string, remaining: number) {
+  constructor(id: string, holderId: string, remaining: number, meta: IncomingMeta = { type: "" }) {
     this.id = id;
     this.holderId = holderId;
+    this.meta = meta;
     this.#toldRemaining = remaining;
     this.#hasDeadline = remaining > 0;
   }
@@ -161,6 +186,11 @@ export class IncomingRequest {
     const countdown: DialogCountdown = new DialogCountdown({
       seconds: this.remaining / 1000,
       onExpire: () => { },
+      onAttach: element => {
+        if (this.window === element) return;
+        this.window = element;
+        Hooks.callAll("midi-qol.incomingRequestsChanged");
+      },
       onPause: paused => {
         void sendEvent(this.holderId, { to: "holder", id: this.id, event: paused ? "pause" : "resume" }).then(answer => {
           if (!answer.ok && paused) countdown.resume(false);
@@ -173,6 +203,12 @@ export class IncomingRequest {
     });
     this.#countdowns.push(countdown);
     return countdown;
+  }
+
+  /** Asked inline by the client's own UI (the hub's inbox) when it takes choices: the picked values; undefined: not
+   * shown there, so the handler shows its own dialog */
+  present(choice: InlineChoice): Promise<string[] | undefined> | undefined {
+    return presenter?.(this, choice);
   }
 
   /** The player has decided: false when it was already answered for them (drop what they chose). */
@@ -215,16 +251,23 @@ export class IncomingRequest {
   }
 }
 
-async function onRequest({ type, id, holderId, remaining, data }: { type: string, id: string, holderId: string, remaining: number, data: object }) {
+async function onRequest({ type, id, holderId, remaining, data, label, kind, actorUuid }: { type: string, id: string, holderId: string, remaining: number, data: object, label?: string, kind?: string, actorUuid?: string }) {
   const handler = handlers.get(type);
   if (!handler) throw new Error(`midi-qol | no request handler ${type} on ${game.user?.name}`);
-  const request = new IncomingRequest(id, holderId, remaining);
+  const request = new IncomingRequest(id, holderId, remaining, { type, label, kind, actorUuid });
   incoming.set(id, request);
+  Hooks.callAll("midi-qol.incomingRequestsChanged");
   try { return await handler(data, request); }
   finally {
     incoming.delete(id);
     request._end();
+    Hooks.callAll("midi-qol.incomingRequestsChanged");
   }
+}
+
+/** What this client is being asked now, oldest first (the hub's inbox) */
+export function incomingRequests(): IncomingRequest[] {
+  return [...incoming.values()].sort((a, b) => a.started - b.started);
 }
 
 function onRequestEvent(data: { to: "holder" | "asked", id: string, event: string, how?: string, remaining?: number }): { ok: boolean, remaining?: number } {
@@ -267,4 +310,4 @@ export function setupRequests() {
   });
 }
 
-export const requestsApi = { ask: askUser, registerHandler: registerRequestHandler, settle: settleRequest, pause: pauseRequest, held: heldRequests, for: requestsFor };
+export const requestsApi = { ask: askUser, registerHandler: registerRequestHandler, settle: settleRequest, pause: pauseRequest, held: heldRequests, for: requestsFor, incoming: incomingRequests };

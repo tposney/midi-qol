@@ -1,3 +1,7 @@
+import { listToggles, setToggle } from "../../lib/entries/offers.js";
+import { setStandingChoice, STANDING_CHOICES, storedStandings, type StandingChoice } from "../../services/rollBonuses/standing.js";
+import { forgetChoice, rememberedChoices } from "../../lib/rememberedChoices.js";
+import { heldRequests, incomingRequests, type IncomingRequest, type InlineChoice } from "../../lib/requests.js";
 import { METAMAGIC_OPTIONS, quickenHint } from "../../services/useOptions/metamagic.js";
 import { i18n } from "../../../midi-qol.js";
 import type { ActivityCell, TurnModel } from "../../services/turnModel/model.js";
@@ -128,7 +132,21 @@ async function saveBar(ctx: HubContext, entries: string[] | undefined) {
   await game.user?.setFlag("midi-qol", "hubBars", entries ? [...bars, { actor: ctx.actor.uuid ?? "", entries }] : bars);
 }
 
-const TABS = ["bar", "weapons", "spells", "features", "items", "actions"] as const;
+const TABS = ["bar", "weapons", "spells", "features", "items", "actions", "choices"] as const;
+
+/** The Choices tab: the creature's toggles, its bonuses' standing choices and its remembered choices (the sheet's
+ * Toggles and choices window), changed at once; shown when it has any */
+const hasChoices = (actor: Actor.Implementation) => !!(listToggles(actor).length || storedStandings(actor).length || rememberedChoices(actor).length);
+function choicesHtml(actor: Actor.Implementation): string {
+  const toggles = listToggles(actor).map(t => `<label class="checkbox midi-hub-choice"><input type="checkbox" data-hub-action="choiceToggle" data-key="${escape(t.key)}"${t.on ? " checked" : ""}> ${escape(t.label)}</label>`).join("");
+  const standings = storedStandings(actor).map(s => `<div class="midi-hub-choice"><span class="midi-hub-label">${escape(s.label)}</span>${STANDING_CHOICES.map(c =>
+    `<button type="button" class="midi-hub-standing${c === s.choice ? " active" : ""}" data-hub-action="standing" data-key="${escape(s.key)}" data-label="${escape(s.label)}" data-choice="${c}">${escape(i18n(`midi-qol.Standing.${c}`))}</button>`).join("")}</div>`).join("");
+  const remembered = rememberedChoices(actor).map(c => `<div class="midi-hub-choice"><span class="midi-hub-label">${escape(c.label)}: ${escape(c.valueLabel ?? String(c.value))}</span>
+    <button type="button" data-hub-action="forgetChoice" data-key="${escape(c.key)}">${escape(i18n("midi-qol.RememberChoice.Forget"))}</button></div>`).join("");
+  return [toggles && `<div class="midi-hub-row midi-hub-choices-toggles">${toggles}</div>`,
+    standings && `<p class="hint">${escape(i18n("midi-qol.Standing.Hint"))}</p>${standings}`,
+    remembered && `<p class="hint">${escape(i18n("midi-qol.RememberChoice.Hint"))}</p>${remembered}`].filter(Boolean).join("");
+}
 /** A tab's entries, narrowed by a filter to the choices that match it (an entry with none dropped) */
 function tabEntries(model: TurnModel, tab: string, filter = ""): Entry[] {
   return itemEntries(available(model).filter(cell => matches(cell, filter)).filter(cell => {
@@ -212,6 +230,36 @@ async function openChoices(ctx: HubContext, button: HTMLElement) {
   setTimeout(() => { document.addEventListener("click", close, true); document.addEventListener("keydown", close, true); }, 0);
 }
 
+/** Requests answered inline in the hub (its presenter, setup.ts): the choice, and how to answer */
+export const inlineAsks: { request: IncomingRequest, choice: InlineChoice, resolve(values: string[] | undefined): void }[] = [];
+
+/** The inbox: what this user is asked (inline when it can be, else a line to bring its window forward), and what this
+ * client waits on from others; each with its countdown */
+function inboxHtml(): string {
+  const parts: string[] = [];
+  const ends = (ms: number) => ms > 0 ? ` <span class="midi-hub-countdown" data-ends="${Date.now() + ms}">${Math.ceil(ms / 1000)}s</span>` : "";
+  inlineAsks.forEach((ask, index) => {
+    const choices = ask.choice.choices.map(c => ask.choice.multiple
+      ? `<label class="checkbox"${c.hint ? ` data-tooltip="${escape(c.hint)}"` : ""}><input type="checkbox" data-inbox-value="${escape(c.value)}">${c.img ? `<img src="${escape(c.img)}" alt="">` : ""} ${escape(c.label)}</label>`
+      : `<button type="button" data-hub-action="inboxAnswer" data-ask="${index}" data-value="${escape(c.value)}"${c.hint ? ` data-tooltip="${escape(c.hint)}"` : ""}>${escape(c.label)}</button>`).join("");
+    parts.push(`<div class="midi-hub-offer midi-hub-inbox" data-ask="${index}"><div class="midi-hub-label">${escape(ask.choice.title)}${ends(ask.request.remaining)}</div>${choices}
+      ${ask.choice.multiple ? `<button type="button" data-hub-action="inboxAnswer" data-ask="${index}">${escape(i18n("midi-qol.Use"))}</button>` : ""}
+      <button type="button" data-hub-action="inboxAnswer" data-ask="${index}" data-none="1">${escape(i18n("midi-qol.UseOptions.None"))}</button></div>`);
+  });
+  const inline = new Set(inlineAsks.map(a => a.request));
+  for (const request of incomingRequests().filter(r => !inline.has(r))) {
+    const label = request.meta.label || i18n("midi-qol.Hub.Asked");
+    parts.push(`<div class="midi-hub-note midi-hub-inbox-owed"><i class="fa-solid fa-inbox"></i> ${escape(label)}${ends(request.remaining)}
+      ${request.window ? `<a data-hub-action="inboxShow" data-id="${escape(request.id)}" data-tooltip="${escape(i18n("midi-qol.Hub.ShowRequest"))}"><i class="fa-solid fa-up-right-from-square"></i></a>` : ""}</div>`);
+  }
+  for (const request of heldRequests().filter(r => r.pending && r.spec.userId && r.spec.userId !== game.userId)) {
+    const user = game.users?.get(request.spec.userId!)?.name ?? "";
+    const actor = request.spec.actorUuid ? (fromUuidSync(request.spec.actorUuid) as { name?: string } | null)?.name : undefined;
+    parts.push(`<div class="midi-hub-note midi-hub-inbox-waiting"><i class="fa-solid fa-hourglass-half"></i> ${escape(i18n("midi-qol.Hub.WaitingFor").replace("{user}", user))}${actor ? ` (${escape(actor)})` : ""}${ends(request.deadline.remaining)}</div>`);
+  }
+  return parts.join("");
+}
+
 /** Offers the GM is to answer in the hub (legendary and lair): set by the hub's presenter */
 export const hubOffers: { actor: Actor.Implementation, title: string, reason: string, choices: { uuid: string, label: string }[], resolve(uuid: string | undefined): void }[] = [];
 
@@ -263,6 +311,9 @@ function drawerHtml(ctx: HubContext): string {
         return entries.length ? `<div class="midi-hub-row midi-hub-filtered"><span class="midi-hub-label">${escape(i18n(`midi-qol.Hub.Tab.${tab}`))}</span>${entries.map(e => entryButton(e)).join("")}</div>` : "";
       })
     ].join("");
+  } else if (ctx.tab === "choices") {
+    title = i18n("midi-qol.Hub.Tab.choices");
+    body = choicesHtml(ctx.actor);
   } else if (ctx.tab === "actions") {
     title = i18n("midi-qol.Hub.Tab.actions");
     const offers = [...ctx.model.interactions.self, ...ctx.model.interactions.target].map(o =>
@@ -359,7 +410,7 @@ export function registerMidiHubSections() {
   registerHubSection({
     id: "midi-qol.use", area: "center", order: 10,
     render: (ctx) => {
-      const tabs = TABS.filter(tab => tab !== "bar").map(tab => `<a class="midi-hub-tab${ctx.tab === tab ? " active" : ""}" data-hub-action="tab" data-tab="${tab}">${escape(i18n(`midi-qol.Hub.Tab.${tab}`))}</a>`).join("");
+      const tabs = TABS.filter(tab => tab !== "bar" && (tab !== "choices" || hasChoices(ctx.actor))).map(tab => `<a class="midi-hub-tab${ctx.tab === tab ? " active" : ""}" data-hub-action="tab" data-tab="${tab}">${escape(i18n(`midi-qol.Hub.Tab.${tab}`))}</a>`).join("");
       const chips = filterChips(ctx);
       // The bar: always shown, always the same height. First what something in use gives: a running spell's after-cast
       // activities, and granted items not already on the bar
@@ -378,6 +429,11 @@ export function registerMidiHubSections() {
       dash: async ({ actor }) => { await takeDash(actor); },
       disengage: async ({ actor }) => { await takeDisengage(actor); },
       choose: async (ctx, target) => { await openChoices(ctx, target); },
+      choiceToggle: async ({ actor }, target) => { await setToggle(actor, target.dataset.key ?? "", (target as HTMLInputElement).checked); },
+      standing: async ({ actor }, target) => {
+        await setStandingChoice(actor, target.dataset.key ?? "", target.dataset.choice as StandingChoice, target.dataset.label ?? "");
+      },
+      forgetChoice: async ({ actor }, target) => { await forgetChoice(actor, target.dataset.key ?? ""); },
       jump: (_ctx, target) => {
         target.closest(".midi-hub-drawer")?.querySelector(`.midi-hub-level[data-level="${target.dataset.level}"]`)?.scrollIntoView({ block: "nearest" });
       },
@@ -404,8 +460,8 @@ export function registerMidiHubSections() {
   registerHubSection({
     id: "midi-qol.waiting", area: "right", order: 10,
     render: ({ actor, model, gm }) => {
-      const parts: string[] = [];
-      if (model.pending) parts.push(`<div class="midi-hub-note"><i class="fa-solid fa-inbox"></i> ${escape(i18n("midi-qol.Checklist.Requests").replace("{count}", String(model.pending)))}</div>`);
+      const parts: string[] = [inboxHtml()];
+      if (model.pending && !incomingRequests().length) parts.push(`<div class="midi-hub-note"><i class="fa-solid fa-inbox"></i> ${escape(i18n("midi-qol.Checklist.Requests").replace("{count}", String(model.pending)))}</div>`);
       for (const use of deferredUses({ actor })) parts.push(`<div class="midi-hub-note"><i class="fa-solid fa-hourglass-half"></i> ${escape(i18n("midi-qol.Checklist.Readied").replace("{name}", use.activity?.item?.name ?? ""))}
         <a data-hub-action="release" data-id="${escape(use.id)}" data-tooltip="${escape(i18n("midi-qol.Deferred.Release"))}"><i class="fa-solid fa-bolt"></i></a>
         <a data-hub-action="drop" data-id="${escape(use.id)}" data-tooltip="${escape(i18n("midi-qol.Hold.Drop"))}"><i class="fa-solid fa-xmark"></i></a></div>`);
@@ -422,6 +478,22 @@ export function registerMidiHubSections() {
       release: async (_ctx, target) => { if (target.dataset.id) await releaseDeferred(target.dataset.id, { targets: [...(game.user?.targets ?? [])].map(t => t.document.uuid ?? "") }); },
       drop: async (_ctx, target) => { if (target.dataset.id) await dropDeferred(target.dataset.id); },
       holds: () => { HoldPanel.open(); },
+      inboxAnswer: (ctx, target) => {
+        const ask = inlineAsks[Number(target.dataset.ask)];
+        if (!ask) return;
+        const box = target.closest<HTMLElement>(".midi-hub-inbox");
+        const values = target.dataset.none ? [] : target.dataset.value !== undefined ? [target.dataset.value]
+          : Array.from(box?.querySelectorAll<HTMLInputElement>("input[data-inbox-value]:checked") ?? []).map(i => i.dataset.inboxValue ?? "");
+        inlineAsks.splice(inlineAsks.indexOf(ask), 1);
+        ask.resolve(values);
+        ctx.refresh();
+      },
+      inboxShow: (_ctx, target) => {
+        const request = incomingRequests().find(r => r.id === target.dataset.id);
+        const app = request?.window ? foundry.applications.instances.get(request.window.id) as { bringToFront?(): void } | undefined : undefined;
+        app?.bringToFront?.();
+        request?.window?.scrollIntoView?.({ block: "nearest" });
+      },
       offer: (ctx, target) => {
         const offer = hubOffers[Number(target.dataset.offer)];
         if (!offer) return;
