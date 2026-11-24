@@ -9,6 +9,7 @@ import { movementState, type MovementState } from "../economy/movement.js";
 import { availableInteractions, type InteractionOffer } from "../interactions/registry.js";
 import { multiattackState, type MultiattackState } from "../multiattack/service.js";
 import { checklistFor, type ChecklistItem } from "../../lib/checklist.js";
+import { legendaryState } from "../multiattack/legendary.js";
 
 /*
  * M7a: the turn model (proposal section 9; plan ~/Documents/midi-next-M7-plan-2026-11-23.md). One read of what a HUD
@@ -61,6 +62,8 @@ export interface TurnModel {
     movement?: MovementState;
     /** M21b: the creature's Multiattack opened this turn: attacks left (null: unbounded), uses made, the activities allowed next and used */
     multiattack?: MultiattackState;
+    /** M21 stage 2: dnd5e's legendary action uses, for a creature that has them */
+    legendary?: { max: number, value: number };
   };
   activities: ActivityCell[];
   interactions: { self: InteractionOffer[], target: InteractionOffer[], targetUuid?: string };
@@ -133,7 +136,8 @@ export async function buildTurnModel(ref: TokenRef): Promise<TurnModel | undefin
       granted: grantedAttacks(actor),
       objectInteraction: { tracked: configSettings.objectInteractions === true, used: !!turn.counters.objectInteraction },
       ...(token ? { movement: movementState(token) } : {}),
-      ...(multiattack ? { multiattack } : {})
+      ...(multiattack ? { multiattack } : {}),
+      ...(legendaryState(actor) ? { legendary: legendaryState(actor)! } : {})
     },
     activities,
     interactions: {

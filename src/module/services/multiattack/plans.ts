@@ -2,6 +2,7 @@ import { defineService, entries, reportServiceProblem } from "../../api/services
 import { openMultiattack, openRun, replanRun } from "./run.js";
 import { multiattackState } from "./service.js";
 import { removeSampleCopies, sampleCopies, setupSampleRetirement } from "./retireSample.js";
+import { setupLegendary } from "./legendary.js";
 import { MultiattackRunSheet, setupMultiattackSheet } from "../../apps/multiattack/MultiattackRunSheet.js";
 import { MultiattackPlanEditor, registerMultiattackSection } from "../../apps/multiattack/MultiattackPlanEditor.js";
 import { activityRef, bindPlan, parseMultiattack, planRefs, resolvePlan, slug, tokenize, type MultiattackPlan, type PlanItem } from "../../lib/multiattack.js";
@@ -261,6 +262,8 @@ export function setupMultiattackPlans() {
   setupMultiattackSheet();
   // M21c: the old Multiattack Automation sample's copies, offered for removal once
   setupSampleRetirement();
+  // M21 stage 2: legendary and lair actions, Legendary Resistance
+  setupLegendary();
   registerMultiattackSection();
   game.settings?.register("midi-qol", SETTING, { scope: "world", config: false, type: Object, default: {} });
 }

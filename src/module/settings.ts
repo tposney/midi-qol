@@ -145,6 +145,10 @@ export class ConfigSettings {
   // M21: Combat tab: creatures' Multiattack run (midi's provider), and its run sheet
   multiattack = true;
   multiattackRunSheet = true;
+  // M21 stage 2: legendary and lair actions offered to the GM; Legendary Resistance as a roll bonus (ask, auto, off)
+  legendaryActions = true;
+  lairActions = true;
+  legendaryResistance = "ask";
   /** M8: who makes grapples: auto (CAT's when CAT is active), midi-qol, cat */
   grappleProvider = "auto";
   /** M7b: the table's HUD per role (a player's "Table default"): a registered HUD's id, foundry (combat: the hotbar), none */
@@ -672,6 +676,9 @@ export let fetchParams = () => {
   if (configSettings.objectInteractions === undefined) configSettings.objectInteractions = false;
   if (configSettings.multiattack === undefined) configSettings.multiattack = true;
   if (configSettings.multiattackRunSheet === undefined) configSettings.multiattackRunSheet = true;
+  if (configSettings.legendaryActions === undefined) configSettings.legendaryActions = true;
+  if (configSettings.lairActions === undefined) configSettings.lairActions = true;
+  if (typeof configSettings.legendaryResistance !== "string") configSettings.legendaryResistance = "ask";
   if (!configSettings.grappleProvider) configSettings.grappleProvider = "auto";
   if (configSettings.clickToAttack === undefined) configSettings.clickToAttack = false;
   if (!configSettings.hudDefaultCombat) configSettings.hudDefaultCombat = "foundry";
@@ -1579,6 +1586,8 @@ export const invisAdvantageOptions = keysToExtendedOptionsObj("InvisAdvantageOpt
   "RAW2024",
   "vision"
 ]);
+
+export const legendaryResistanceOptions = keysToExtendedOptionsObj("LegendaryResistanceOptions", ["ask", "auto", "off"]);
 
 export const confirmAttackDamageOptions = keysToExtendedOptionsObj("ConfirmAttackDamageOptions", [
   "none",

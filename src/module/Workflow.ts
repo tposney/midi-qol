@@ -6635,7 +6635,13 @@ export class Workflow {
     let resultDC = rollDC ?? 0;
     // @ts-expect-error no dnd5e-types
     if (Number.isNumeric(result[0]?.options.target)) resultDC = result[0]!.options.target;
-    let saved = saveRollTotal >= resultDC;
+    // A roll whose result was decided outright (options.success: a bonus's "succeed instead" such as Legendary
+    // Resistance, the critical saves rule) keeps that result; otherwise its total against the DC
+    const judged = (rolls: Roll[], total: number) => {
+      const decided = (rolls[0]?.options as { success?: unknown } | undefined)?.success;
+      return typeof decided === "boolean" ? decided : total >= resultDC;
+    };
+    let saved = judged(saveRolls, saveRollTotal);
 
     if (checkRule("criticalSaves")) {
       saved = (isCritical || saveRollTotal >= resultDC) && !isFumble;
@@ -6667,7 +6673,7 @@ export class Workflow {
       saveRolls = [Roll.fromJSON(answer.saveRoll) as Roll, ...saveRolls.slice(1)];
       result[0] = saveRolls[0];
       saveRollTotal = saveRolls.reduce((acc, r) => acc + (r?.total ?? 0), 0);
-      saved = saveRollTotal >= resultDC;
+      saved = judged(saveRolls, saveRollTotal);
       ({ isFumble, isCritical } = this.determineCriticalOrFumble(saveRolls[0], saveRollTotal));
       this.updateSaveFailSets(target, saved);
     }
@@ -6680,7 +6686,7 @@ export class Workflow {
       if (newRolls?.[0] instanceof Roll) {
         saveRolls = newRolls;
         saveRollTotal = newRolls.reduce((acc, r) => acc + (r?.total ?? 0), 0);
-        saved = saveRollTotal >= resultDC;
+        saved = judged(saveRolls, saveRollTotal);
         ({ isFumble, isCritical } = this.determineCriticalOrFumble(saveRolls[0], saveRollTotal));
       }
     }
@@ -6696,7 +6702,7 @@ export class Workflow {
       if (failBonusResult) {
         saveRolls = failBonusResult.saveRolls;
         saveRollTotal = failBonusResult.saveRollTotal;
-        saved = saveRollTotal >= resultDC;
+        saved = judged(saveRolls, saveRollTotal);
         ({ isFumble, isCritical } = this.determineCriticalOrFumble(saveRolls[0], saveRollTotal));
       }
     }

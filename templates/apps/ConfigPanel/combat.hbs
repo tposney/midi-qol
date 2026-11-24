@@ -13,4 +13,25 @@
             <div class="notes midi-qol-faint">{{localize "midi-qol.Multiattack.RunSheetSetting.Hint"}}</div>
         </div>
     </div>
+
+    <div class="midi-qol-box">
+        {{localize "midi-qol.Config.Box.legendary"}}
+        <div class="form-group">
+            <label>{{localize "midi-qol.Legendary.Setting.Name"}}</label>
+            <input type="checkbox" name="legendaryActions" data-dtype="Boolean" {{checked configSettings.legendaryActions}} />
+            <div class="notes midi-qol-faint">{{localize "midi-qol.Legendary.Setting.Hint"}}</div>
+        </div>
+        <div class="form-group">
+            <label>{{localize "midi-qol.Lair.Setting.Name"}}</label>
+            <input type="checkbox" name="lairActions" data-dtype="Boolean" {{checked configSettings.lairActions}} />
+            <div class="notes midi-qol-faint">{{localize "midi-qol.Lair.Setting.Hint"}}</div>
+        </div>
+        <div class="form-group">
+            <label>{{localize "midi-qol.Legendary.ResistanceSetting.Name"}}</label>
+            <select name="legendaryResistance" data-dtype="String">
+                {{selectOptions LegendaryResistanceOptions selected=configSettings.legendaryResistance localize=true}}
+            </select>
+            <div class="notes midi-qol-faint">{{localize "midi-qol.Legendary.ResistanceSetting.Hint"}}</div>
+        </div>
+    </div>
 </section>
