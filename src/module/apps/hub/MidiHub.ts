@@ -5,6 +5,8 @@ import { preview } from "../../lib/preview.js";
 import type { Activity } from "../../../globals.js";
 import { hudApi } from "../../services/turnModel/hud.js";
 import { useOrPrime } from "../../services/clickToAttack/service.js";
+import { averageBonus, clearHighlights, coordinationLines, hitChance, showHighlights, validTargets } from "./targetHighlight.js";
+import { reveals } from "../../services/revealPolicy/service.js";
 
 /*
  * M27: midi's hub (plan ~/Documents/midi-next-M27-plan-2026-11-24.md): the one place a creature's turn is run from,
@@ -132,6 +134,9 @@ export class MidiHub extends ApplicationV2 {
   /** A window takes the interface's colour scheme, as core's pop-outs do */
   async _onRender(context: object, options: object) {
     await super._onRender?.(context as never, options as never);
+    // A redraw replaces the hovered button without a mouseout
+    this.#previewing = "";
+    clearHighlights();
     this.element.classList.toggle("midi-hub-is-docked", !MidiHub.windowed);
     if (!MidiHub.windowed) return;
     this.element.classList.remove("theme-light", "theme-dark");
@@ -155,6 +160,7 @@ export class MidiHub extends ApplicationV2 {
     element.addEventListener("click", this.#onClick);
     element.addEventListener("contextmenu", this.#onContext);
     element.addEventListener("mouseover", this.#onHover);
+    element.addEventListener("mouseout", this.#onHoverOut);
     element.addEventListener("dragstart", this.#onDragStart);
     element.addEventListener("dragover", this.#onDragOver);
     element.addEventListener("drop", this.#onDrop);
@@ -176,6 +182,7 @@ export class MidiHub extends ApplicationV2 {
   };
 
   async _onClose(options: object) {
+    clearHighlights();
     window.clearInterval(this.#tick);
     document.removeEventListener("pointerdown", this.#onOutside, true);
     document.removeEventListener("keydown", this.#onEscape);
@@ -229,23 +236,41 @@ export class MidiHub extends ApplicationV2 {
     if (own) await own(this.#context(this.#model), target, event);
   };
 
-  /** Hovering a usable button with a target: the preview (range, cover, advantage and why, the save DC) */
+  /** Hovering a button: its valid targets ringed on the canvas; with a target, the preview (range, cover, advantage and
+   * why, the chance to hit where the AC may be shown, what allies make possible, the save DC) */
   #previewing = "";
+  #onHoverOut = (event: MouseEvent) => {
+    const from = (event.target as HTMLElement).closest<HTMLElement>("[data-preview]");
+    const to = (event.relatedTarget as HTMLElement | null)?.closest?.<HTMLElement>("[data-preview]");
+    if (!from || from === to) return;
+    this.#previewing = "";
+    clearHighlights();
+  };
   #onHover = async (event: MouseEvent) => {
     const target = (event.target as HTMLElement).closest<HTMLElement>("[data-preview]");
     if (!target || target.dataset.preview === this.#previewing) return;
-    const targets = [...(game.user?.targets ?? [])];
-    if (!targets.length) return;
     this.#previewing = target.dataset.preview ?? "";
     const activity = fromUuidSync(this.#previewing) as Activity | null;
     if (!activity) return;
+    const attacker = this.token?.object as Token.Implementation | undefined;
+    if (attacker) showHighlights(validTargets(activity, attacker));
+    const targets = [...(game.user?.targets ?? [])];
+    if (!targets.length) return;
     try {
       const result = await preview(activity, targets, { token: this.token });
       if (this.#previewing !== target.dataset.preview) return;
+      const bonus = result.attack ? averageBonus(result.attack.formula) : undefined;
+      const extras = new Map<string, string[]>();
+      if (attacker) for (const t of targets) extras.set(t.document.uuid ?? "", await coordinationLines(attacker, t));
       const lines = result.targets.map(t => {
         const parts: string[] = [];
+        const targetActor = (fromUuidSync(t.uuid) as TokenDocument.Implementation | null)?.actor ?? undefined;
+        const showAC = !!t.ac && reveals({ subject: "ac", caster: activity.actor ?? undefined, target: targetActor });
         if (t.range) parts.push(i18n(`midi-qol.Hub.Range.${t.range.result}`));
-        if (t.ac) parts.push(`${i18n("midi-qol.Hub.AC")} ${t.ac.effective}${t.ac.cover ? ` (${i18n("midi-qol.Hub.Cover")} +${t.ac.cover})` : ""}`);
+        if (showAC) parts.push(`${i18n("midi-qol.Hub.AC")} ${t.ac!.effective}${t.ac!.cover ? ` (${i18n("midi-qol.Hub.Cover")} +${t.ac!.cover})` : ""}`);
+        if (showAC && bonus !== undefined && typeof t.ac!.effective === "number")
+          parts.push(i18n("midi-qol.Hub.HitChance").replace("{n}", String(Math.round(hitChance(bonus, t.ac!.effective, t.advantage?.mode ?? 0) * 100))));
+        parts.push(...(extras.get(t.uuid) ?? []));
         if (t.advantage?.mode) parts.push(i18n(t.advantage.mode > 0 ? "midi-qol.Hub.Advantage" : "midi-qol.Hub.Disadvantage")
           + (t.advantage.attribution?.length ? `: ${t.advantage.attribution.filter(a => a.type === (t.advantage!.mode > 0 ? "ADV" : "DIS")).map(a => escape(a.displayName ?? "")).filter(Boolean).join(", ")}` : ""));
         return `<div><strong>${escape(t.name)}</strong>: ${parts.join("; ")}</div>`;

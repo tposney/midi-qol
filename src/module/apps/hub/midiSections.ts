@@ -1,4 +1,5 @@
 import { applySpellGroup, currentLoadout, currentSpellGroup, loadoutsOf, removeLoadout, removeSpellGroup, saveLoadout, saveSpellGroup, spellGroupBlocked, spellGroupsOf, swapLoadout } from "../../services/loadouts.js";
+import { aroundMeHtml } from "./aroundMe.js";
 import { configSettings } from "../../settings.js";
 import { unTimedExecuteAsGM } from "../../GMAction.js";
 import { listToggles, setToggle } from "../../lib/entries/offers.js";
@@ -135,7 +136,7 @@ async function saveBar(ctx: HubContext, entries: string[] | undefined) {
   await game.user?.setFlag("midi-qol", "hubBars", entries ? [...bars, { actor: ctx.actor.uuid ?? "", entries }] : bars);
 }
 
-const TABS = ["bar", "weapons", "spells", "features", "items", "actions", "loadouts", "resources", "choices"] as const;
+const TABS = ["bar", "weapons", "spells", "features", "items", "actions", "loadouts", "resources", "around", "choices"] as const;
 
 type Recovery = { period?: string };
 type UsesData = { value?: number, max?: number | string, recovery?: Recovery[] };
@@ -390,6 +391,9 @@ function drawerHtml(ctx: HubContext): string {
       `<button type="button" class="midi-hub-action" data-hub-action="dash">${mark("action")} ${escape(i18n("midi-qol.Hub.Dash"))}</button>`,
       `<button type="button" class="midi-hub-action" data-hub-action="disengage">${mark("action")} ${escape(i18n("midi-qol.Hub.Disengage"))}</button>`] : [];
     body = `<div class="midi-hub-actions">${[...own, ...offers].join("")}</div>`;
+  } else if (ctx.tab === "around") {
+    title = i18n("midi-qol.Hub.Tab.around");
+    body = aroundMeHtml(ctx.token, ctx.actor);
   } else if (ctx.tab === "loadouts") {
     title = i18n("midi-qol.Hub.Tab.loadouts");
     body = loadoutsHtml(ctx.actor);

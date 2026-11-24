@@ -3,6 +3,7 @@ import { setOfferCloser, setOfferPresenter } from "../../services/multiattack/le
 import { MidiHub, setupHubRefresh } from "./MidiHub.js";
 import { hubOffers, inlineAsks, registerMidiHubSections } from "./midiSections.js";
 import { incomingRequests, registerRequestPresenter } from "../../lib/requests.js";
+import { validTargets } from "./targetHighlight.js";
 import { hubSections, registerHubSection } from "./sections.js";
 
 /*
@@ -79,5 +80,7 @@ export const hubApi = {
   sections: { register: registerHubSection, list: () => hubSections().map(s => s.id) },
   show: (token?: TokenDocument.Implementation) => MidiHub.instance.show(token),
   running: hubRunning,
-  switchMode: () => MidiHub.switchMode()
+  switchMode: () => MidiHub.switchMode(),
+  /** The tokens an activity could be used on from a token (in range, of the kind it affects, seen): what the hub rings */
+  validTargets
 };
