@@ -1,4 +1,5 @@
 import { tokenFor, tokenOf } from "./lib/tokenResolver.js";
+import { largestReductionOnly } from "../rules/maxDRValue.js";
 import { chackFlanking as checkFlanking, updateFlankingHighlight } from "../rules/flanking/marking.js";
 import { saveOutcomeOverride } from "./services/outcomeRules/service.js";
 import { registerDamageCalculationStep, runDamageCalculation } from "./steps/damageCalculation.js";
@@ -152,23 +153,7 @@ export let readyHooks = async () => {
     }
   })
 
-  // Challenge mode armor: show EC and AR in dnd5e's armor class dialog.
-  //@ts-expect-error not in fvtt-types
-  Hooks.on("renderArmorClassConfig", (app: { document?: Actor.Implementation }, html: HTMLElement) => {
-    if (["none", undefined, false].includes(checkRule("challengeModeArmor") as string | boolean | undefined)) return;
-    // @ts-expect-error no dnd5e-types
-    const ac = app.document?.system?.attributes?.ac;
-    const card = html.querySelector("fieldset.card");
-    if (!ac || !card) return;
-    card.querySelectorAll("[data-midi-challenge-armor]").forEach(el => el.remove());
-    for (const [label, value] of [["EC", ac.EC], ["AR", ac.AR]]) {
-      const row = document.createElement("div");
-      row.classList.add("form-group");
-      row.dataset.midiChallengeArmor = label;
-      row.innerHTML = `<label>${label}</label><div class="form-fields">${value ?? ""}</div>`;
-      card.append(row);
-    }
-  });
+  // The armour config sheet's EC and AR: the challengeModeArmor rule (src/rules/challengeModeArmor.ts)
 
   Hooks.on("preDeleteActiveEffect", deleteStatusWithCarriers);
 
@@ -1103,10 +1088,10 @@ function applyDamageReduction({ actor, damages, options }: DamageCalcParams): bo
         appliedDm = -selectedDamage;
       }
 
-      if (checkRule("maxDRValue") && (appliedDm < dmAll || dmAll === 0)) {
+      if (largestReductionOnly() && (appliedDm < dmAll || dmAll === 0)) {
         dmAll = appliedDm;
         drAllActives = [dmActive];
-      } else if (!checkRule("maxDRValue")) {
+      } else if (!largestReductionOnly()) {
         drAllActives.push(dmActive);
         dmAll += appliedDm;
       }
@@ -1159,7 +1144,7 @@ function applyDamageReductionInline(
   specials: string[],
   actorTraits: any
 ): boolean {
-  const useMaxDR = checkRule("maxDRValue");
+  const useMaxDR = largestReductionOnly();
   let totalDRApplied = 0;
   const drAllActives: string[] = [];
 

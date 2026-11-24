@@ -1,4 +1,5 @@
 import { tokenFor } from "./lib/tokenResolver.js";
+import { glancingDamage } from "../rules/challengeModeArmor.js";
 import { saveOutcomeOverride } from "./services/outcomeRules/service.js";
 import { reveals } from "./services/revealPolicy/service.js";
 import type { ReactionTicket } from "./lib/reactionBatch.js";
@@ -633,16 +634,8 @@ export function targetDamageRecord(workflow: Workflow, tokenDocument: TokenDocum
   hitTargets: TokenDocumentSet, defaultSaveMultiplier: number): TargetDamageRecord | undefined {
   const actor = tokenDocument.actor;
   if (!actor?.uuid) return undefined;
-  let challengeModeScale = 1;
-  let challengeModeAR = 0;
-  if (["scale", "scaleNoAR"].includes(checkRule("challengeModeArmor") as string) && workflow.attackRoll && workflow.hitTargetsEC?.has(tokenDocument)) {
-    //scale the damage detail for a glancing blow - only for the first damage list? or all?
-    const scale = workflow.challengeModeScale?.[tokenDocument?.uuid ?? "dummy"] ?? 1;
-    challengeModeScale = scale;
-  } else if (checkRule("challengeModeArmor") === "challenge" && workflow.hitTargetsEC?.has(tokenDocument)) {
-    //@ts-expect-error no dnd5e-types
-    challengeModeAR = actor.system.attributes.ac.AR ?? 0;
-  }
+  // A glancing hit (the challengeModeArmor rule): its damage scaled, or reduced by the armour
+  const { scale: challengeModeScale, ar: challengeModeAR } = glancingDamage(workflow, tokenDocument, actor);
 
   const semiSuperSaver = workflow.semiSuperSavers.has(tokenDocument);
   const superSaver = workflow.superSavers.has(tokenDocument);

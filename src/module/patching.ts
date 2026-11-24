@@ -1,4 +1,5 @@
 import { clickToAttackTakes } from "./services/clickToAttack/service.js";
+import { prepareChallengeArmor } from "../rules/challengeModeArmor.js";
 import { saveCriticalsCount } from "./services/outcomeRules/service.js";
 import { tokenFor, tokenOf } from "./lib/tokenResolver.js";
 import type { PromptResponses } from "./lib/promptCosts.js";
@@ -2372,53 +2373,8 @@ export function _prepareDerivedData(this: Actor.Implementation, wrapped, ...args
   try {
     // @ts-expect-error no dnd5e-types
     if (!this.system.abilities?.dex) return;
-    if (![false, undefined, "none"].includes(checkRule("challengeModeArmor") as boolean | undefined | string)) {
-      // @ts-expect-error no dnd5e-types
-      const armorDetails = this.system.attributes.ac ?? {};
-      const ac = armorDetails?.value ?? 10;
-      const equippedArmor = armorDetails.equippedArmor;
-      // dnd5e's values for AC, magical bonus included unless antimagic: the item's own armor.value gets it only later
-      // in preparation (dnd5e 6.1)
-      const equippedArmorAC = equippedArmor ? (armorDetails.armor ?? equippedArmor.system.armor.value) : 10;
-      let armorAC = equippedArmorAC;
-      const equippedShield = armorDetails.equippedShield;
-      const shieldAC = equippedShield ? (armorDetails.shield ?? equippedShield.system.armor.value) : 0;
-
-      if (checkRule("challengeModeArmor") !== "challenge") {
-        switch (armorDetails.calc) {
-          // @ts-expect-error no dnd5e-types
-          case 'flat': armorAC = (ac.flat ?? 10) - this.system.abilities.dex.mod; break;
-          case 'draconic': armorAC = 13; break;
-          // @ts-expect-error no dnd5e-types
-          case 'natural': armorAC = (armorDetails.value ?? 10) - this.system.abilities.dex.mod; break;
-          case 'custom': armorAC = equippedArmorAC; break;
-          case 'mage': armorAC = 13; break; // perhaps this should be 10 if mage armor is magic bonus
-          case 'unarmoredMonk': armorAC = 10; break;
-          case 'unarmoredBarb': armorAC = 10; break;
-          default: armorAC = equippedArmorAC; break;
-        };
-        const armorReduction = armorAC - 10 + shieldAC;
-        const ec = ac - armorReduction;
-        // @ts-expect-error no dnd5e-types
-        this.system.attributes.ac.EC = ec;
-        // @ts-expect-error no dnd5e-types
-        this.system.attributes.ac.AR = armorReduction;
-      } else {
-        // @ts-expect-error no dnd5e-types
-        if (!this.system.abilities) {
-          error("challenge mode armor failed to find abilities");
-          error(this);
-          return;
-        }
-        // dnd5e's Dex modifier as the armor allows it (none for heavy, capped for medium)
-        // @ts-expect-error no dnd5e-types
-        const dexMod = armorDetails.dex ?? this.system.abilities.dex.mod;
-        // @ts-expect-error no dnd5e-types
-        this.system.attributes.ac.EC = 10 + dexMod + shieldAC;
-        // @ts-expect-error no dnd5e-types
-        this.system.attributes.ac.AR = ac - 10 - dexMod;
-      }
-    }
+    // The optional rule challengeModeArmor: the actor's evasion (EC) and armor (AR) classes (src/rules/challengeModeArmor.ts)
+    prepareChallengeArmor(this);
   } catch (err) {
     const message = "midi-qol failed to prepare derived data";
     error(message, err);

@@ -313,7 +313,8 @@ export function registerMetamagic() {
       for (const id of ORDER) {
         const feature = itemFor(actor, id);
         const option = OPTIONS[id];
-        if (!feature || ownEntries(feature) || !option.eligible(item, activity as ActivityData)) continue;
+        // A feature automated elsewhere (CAT's roll macros, its own entries) offers itself: not offered twice
+        if (!feature || automatedElsewhere(feature) || !option.eligible(item, activity as ActivityData)) continue;
         options.push({ id, label: feature.name ?? id, img: feature.img ?? undefined, cost: option.cost,
           ...(option.cost > left ? { disabled: i18n("midi-qol.Metamagic.NotEnough") } : {}) });
       }

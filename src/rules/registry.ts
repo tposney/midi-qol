@@ -40,6 +40,8 @@ export interface RuleInfo {
   id: string;
   /** midi's: its key in the Optional rules settings; a module's: any name */
   setting: RuleSetting | string;
+  /** The service its provider is registered with; "policy": a setting of one of midi's own mechanics (it asks the rule,
+   * so it can be switched off, not replaced) */
   service: string;
   label: string;
   /** The rule's settings, the switch first */
@@ -70,11 +72,13 @@ export function declareRule(info: RuleInfo): RuleInfo {
 /** A rule's provider is registered and available (a module may have replaced or removed it) */
 export function ruleActive(id: string): boolean {
   const info = rules.get(id);
-  return !!info && providers(info.service).some(p => p.id === id && p.available);
+  if (!info) return false;
+  if (info.service === "policy") return isMidiSetting(info.setting) && ruleOn(info.setting);
+  return providers(info.service).some(p => p.id === id && p.available);
 }
 
 type OptionalRulesStore = Record<string, unknown>;
-const isMidiSetting = (setting: string): setting is RuleSetting => setting in configSettings.optionalRules;
+function isMidiSetting(setting: string): setting is RuleSetting { return setting in configSettings.optionalRules; }
 
 /** A rule setting's value: its own getter, else midi's stored optional rules */
 export function ruleSettingValue(spec: RuleSettingSpec): unknown {
@@ -94,7 +98,7 @@ export async function setRuleSetting(ruleIdOrSetting: string, key: string, value
 export const optionalRulesApi = {
   /** The rules with their state and their settings' current values (for a configuration panel) */
   list: () => [...rules.values()].map(info => ({ ...info, on: isMidiSetting(info.setting) ? ruleOn(info.setting) : ruleActive(info.id),
-    registered: providers(info.service).some(p => p.id === info.id), available: ruleActive(info.id),
+    registered: info.service === "policy" || providers(info.service).some(p => p.id === info.id), available: ruleActive(info.id),
     settings: (info.settings ?? []).map(spec => ({ ...spec, value: ruleSettingValue(spec) })) })),
   /** A module's rule: its provider registered by the module; declared here for the list and the panel */
   declare: (info: RuleInfo) => declareRule(info),

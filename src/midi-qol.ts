@@ -1,4 +1,6 @@
 import { registerLoadouts } from "./module/services/loadouts.js";
+import { registerChallengeModeArmorRule } from "./rules/challengeModeArmor.js";
+import { registerMaxDRValueRule } from "./rules/maxDRValue.js";
 import { registerCheckFlankingRule } from "./rules/flanking/index.js";
 import { defineOutcomeServices } from "./module/services/outcomeRules/service.js";
 import { registerNearbyAllyRangedRule } from "./rules/nearbyAllyRanged.js";
@@ -606,6 +608,8 @@ Hooks.once('init', async function () {
   registerNearbyAllyRangedRule();
   registerCriticalSavesRule();
   registerOptionalCritRule();
+  registerMaxDRValueRule();
+  registerChallengeModeArmorRule();
   defineDamageModifiersService();
   defineDamageContributionsService();
   defineResponsesService();

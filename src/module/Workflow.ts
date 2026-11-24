@@ -1,4 +1,5 @@
 import { tokenFor } from "./lib/tokenResolver.js";
+import { challengeArmorOn, glancingHitsScale, glancingScale } from "../rules/challengeModeArmor.js";
 import { attackCritical, saveOutcomeOverride, saveSucceeded } from "./services/outcomeRules/service.js";
 import type { RangeCheckResult } from "./services/range/service.js";
 import { ReactionBatch } from "./lib/reactionBatch.js";
@@ -8063,7 +8064,8 @@ export class Workflow {
     } else this.hitTargets = new Set();
 
     this.hitDisplayData = {};
-    const challengeModeArmorSet = !([undefined, false, "none"].includes((checkRule("challengeModeArmor") as string | boolean | undefined)));
+    // The challengeModeArmor rule: hits checked against EC and AC (src/rules/challengeModeArmor.ts)
+    const challengeModeArmorSet = challengeArmorOn();
     // A queue: a target an entry redirects the attack to (M29) is checked next, with the same roll
     const queue = [...this.targets.documents];
     while (queue.length) {
@@ -8303,7 +8305,7 @@ export class Workflow {
 
       let hitScale = 1;
       // @ts-expect-error no dnd5e-types
-      if (["scale", "scaleNoAR"].includes(checkRule("challengeModeArmor")) && !this.isCritical) hitScale = Math.floor((this.attackTotal - targetEC + 1) / ((targetActor?.system.attributes.ac.AR ?? 0) + 1) * 10) / 10;
+      if (glancingHitsScale() && !this.isCritical) hitScale = glancingScale(this.attackTotal, targetEC, targetActor?.system.attributes.ac.AR ?? 0);
       if (!this.challengeModeScale) this.challengeModeScale = {};
       this.challengeModeScale[targetToken.actor?.uuid ?? "dummy"] = hitScale;
       if (this.isCritical && isFinite(targetAC)) isHit = true;
@@ -8340,7 +8342,6 @@ export class Workflow {
       let attackType = ""; //item?.name ? i18n(item.name) : "Attack";
 
       let hitSymbol = "fa-blank"
-      // if (["scale", "scaleNoAR"].includes(checkRule("challengeModeArmor")) && !this.isCritical) hitScale = Math.floor(this.challengeModeScale[targetActor.uuid]);
       let isHitResult = "miss";
       if (game.user?.isGM && ["hitMiss", "hidden"].includes(configSettings.gmAttackDisplay ?? "full") && (this.isCritical || isHit || isHitEC)) {
         isHitResult = "hit";
@@ -8357,7 +8358,7 @@ export class Workflow {
       } else if (isHit) {
         isHitResult = "hit";
         hitSymbol = "fa-check";
-      } else if (isHitEC && ["scale", "scaleNoAR"].includes(checkRule("challengeModeArmor") as string)) {
+      } else if (isHitEC && glancingHitsScale()) {
         isHitResult = "hitEC";
         hitSymbol = "fa-check";
       } else if (isHitEC) {
@@ -8749,8 +8750,7 @@ export class ActiveDefenceWorkflow extends Workflow {
           let attackType = ""; //item?.name ? i18n(item.name) : "Attack";
           const isHit = this.hitTargets.has(targetToken);
           let hitSymbol = "fa-blank"
-          // if (["scale", "scaleNoAR"].includes(checkRule("challengeModeArmor")) && !this.isCritical) hitScale = Math.floor(this.challengeModeScale[targetActor.uuid]);
-          let isHitResult = "miss";
+              let isHitResult = "miss";
           // Inverse hit/miss icons from normal attacks so the result looks the same as with saving throws
           if (game.user?.isGM && ["hitMiss", "hidden"].includes(configSettings.gmAttackDisplay ?? "full") && (this.isCritical || isHit || isHitEC)) {
             // Failed defence roll
@@ -8772,7 +8772,7 @@ export class ActiveDefenceWorkflow extends Workflow {
             // Failed defence roll
             isHitResult = "miss";
             hitSymbol = "fa-xmark";
-          } else if (isHitEC && ["scale", "scaleNoAR"].includes(checkRule("challengeModeArmor") as string)) {
+          } else if (isHitEC && glancingHitsScale()) {
             // Failed defence roll
             isHitResult = "miss";
             hitSymbol = "fa-xmark";
