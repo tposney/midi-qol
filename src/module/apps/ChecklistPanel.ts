@@ -4,7 +4,8 @@ import { checklistFor, type ChecklistItem } from "../lib/checklist.js";
 /*
  * M22b: the turn checklist panel. Opens for a creature's owners (players; per-player setting, on by default) when its
  * turn starts: what happens now, and what it hasn't used before ending, with End Turn. Follows the creature while open;
- * closes when the turn moves on. MidiQOL.checklist.open(actor) opens it for anyone (the GM included).
+ * closes when the turn moves on. MidiQOL.checklist.open(actor) opens it for anyone (the GM included). Its setting is
+ * the user's (it follows them to any browser).
  */
 
 const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
@@ -60,7 +61,7 @@ export class ChecklistPanel extends HandlebarsApplicationMixin(ApplicationV2) {
 export function registerChecklistSetting() {
   game.settings?.register("midi-qol", SETTING, {
     name: "midi-qol.Checklist.Setting.Name", hint: "midi-qol.Checklist.Setting.Hint",
-    scope: "client", config: true, type: Boolean, default: true
+    scope: "user", config: true, type: Boolean, default: true
   });
 }
 
