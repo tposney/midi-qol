@@ -2208,6 +2208,8 @@ export class Workflow {
   itemUsesReaction: boolean | undefined;
   itemUsesBonusAction: boolean | undefined;
   /** The bonus action and reaction checks, deferred until after dnd5e's usage dialog (useChecks.economyChecks) */
+  /** The use options offered and paid (services/useOptions) */
+  useOptions: import("./services/useOptions/registry.js").UseOptionsState | undefined;
   deferredEconomy: { options: import("./activities/useChecks.js").EconomyCheckOptions, usage: import("../globals.js").ActivityUseConfiguration } | undefined;
   /** The range check's answer (its attacking token a TokenDocument, as the range contract carries) */
   rangeDetails: RangeCheckResult | undefined;

@@ -1,3 +1,4 @@
+import { METAMAGIC_OPTIONS, quickenHint } from "../../services/useOptions/metamagic.js";
 import { i18n } from "../../../midi-qol.js";
 import type { ActivityCell, TurnModel } from "../../services/turnModel/model.js";
 import { escape, registerHubSection, type HubContext } from "./sections.js";
@@ -41,7 +42,8 @@ function useButton(cell: ActivityCell, options: { barIndex?: number, removable?:
   const title = several ? `${cell.itemName}: ${cell.name}` : cell.itemName;
   const tip = [`<strong>${escape(title)}</strong>`, escape(i18n(`midi-qol.Hub.Cost.${kind}`)),
     ...(cell.uses ? [`${cell.uses.value}/${cell.uses.max}`] : []), ...(cell.spellLevel ? [i18n("midi-qol.Hub.SlotsLeft").replace("{n}", String(cell.slotsLeft ?? 0))] : []),
-    ...(cell.reason ? [`<em>${escape(cell.reason)}</em>`] : []), ...(options.removable ? [`<span class="hint">${escape(i18n("midi-qol.Hub.RightClickRemove"))}</span>`] : [])].join("<br>");
+    ...(cell.reason ? [`<em>${escape(cell.reason)}</em>`] : []), ...quicken(cell),
+    ...(options.removable ? [`<span class="hint">${escape(i18n("midi-qol.Hub.RightClickRemove"))}</span>`] : [])].join("<br>");
   // Blocked: greyed; an issue the policy only shows (action used, with enforcement off): marked, still usable
   const state = !cell.usable ? " midi-hub-unusable" : cell.issues.length ? " midi-hub-marked" : "";
   return `<button type="button" class="midi-hub-use${state}${cell.multiattack ? " midi-hub-allowed" : ""}" draggable="true"
@@ -51,6 +53,8 @@ function useButton(cell: ActivityCell, options: { barIndex?: number, removable?:
 }
 
 const itemOf = (cell: ActivityCell) => fromUuidSync(cell.itemUuid) as Item.Implementation | null;
+/** A spell cast with an action the caster can Quicken: said in its tooltip */
+const quicken = (cell: ActivityCell) => { const hint = quickenHint(itemOf(cell), cell.activation); return hint ? [`<span class="hint">${escape(hint)}</span>`] : []; };
 const isAttack = (cell: ActivityCell) => cell.type === "attack";
 
 /** A bar or tab entry: an item (one button; its choices) or one activity */
@@ -58,7 +62,9 @@ interface Entry { uuid: string, item: boolean, cells: ActivityCell[] }
 
 /** What the hub offers: what midi's chooser lists (no module-hidden activity), no unprepared spell, no after-cast
  * activity (those are in the Active group while their spell runs) */
-const offered = (model: TurnModel) => model.activities.filter(c => !c.hidden && !c.unprepared && !c.afterCast && !isMultiattackItem(itemOf(c) as Item.Implementation));
+/** A metamagic option's feature: chosen when a spell is cast (use options), not a use of its own */
+const isMetamagic = (cell: ActivityCell) => METAMAGIC_OPTIONS.includes((itemOf(cell) as { identifier?: string } | null)?.identifier ?? "");
+const offered = (model: TurnModel) => model.activities.filter(c => !c.hidden && !c.unprepared && !c.afterCast && !isMetamagic(c) && !isMultiattackItem(itemOf(c) as Item.Implementation));
 
 /** A running spell's after-cast activity (Spiritual Weapon's attack, Flaming Sphere's Ram) */
 const runningAfterCast = (c: ActivityCell) => c.afterCast && c.running && !c.unprepared && !c.hidden;

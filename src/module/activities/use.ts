@@ -1,3 +1,4 @@
+import { collectUseOptions, refundUseOptions } from "../services/useOptions/registry.js";
 import { MidiActivity } from "./midiActivity.js";
 import { chargeUse } from "../services/economy/cost.js";
 import { multiattackAfterCharge } from "../services/multiattack/service.js";
@@ -177,6 +178,8 @@ export async function prepareUse(used: MidiActivity, usage: ActivityUseConfigura
     return abandon();
   }
   if (!await preChatChecks(activity, usage, dialog, message, { deferEconomy: true })) return abandon();
+  // M27: the use options to offer in dnd5e's usage dialog (applied after it, afterUseDialog.ts)
+  await collectUseOptions(usage.workflow!, activity);
   // If midiOptions.spellLevel is provided, set the spell slot key so that
   // dnd5e's _prepareUsageScaling derives the correct scaling from it.
   if (usage.midiOptions?.spellLevel && activity.item?.type === "spell") {
@@ -235,6 +238,7 @@ export async function finishUse(used: MidiActivity, state: UseState, useResults:
   if (used.actor) skipConcentrationActorUuids.delete(used.actor.uuid);
   if (!usage.workflow) return false;
   if (!useResults) { // activity use was aborted
+    await refundUseOptions(usage.workflow);
     Workflow.removeWorkflow(usage.workflow?.id);
     clearAbandonedUse(usage, state.dnd5eUsageConfig);
     return false;

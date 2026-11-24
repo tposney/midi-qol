@@ -2726,3 +2726,12 @@ li.midi-qol-after-cast-idle button { opacity: 0.5; }
 .midi-qol-hub .midi-hub-tab.active { font-weight: bold; text-decoration: underline; }
 .midi-qol-hub .midi-hub-tabs { flex-wrap: wrap; row-gap: 0.2rem; }
 .midi-qol-hub .midi-hub-drop-hint { white-space: nowrap; }
+
+/* M27 use options: sections in dnd5e's usage dialog and the no-dialog prompt */
+fieldset.midi-qol-use-options { display: flex; flex-direction: column; gap: 0.25rem; }
+fieldset.midi-qol-use-options legend { display: flex; gap: 0.5rem; align-items: baseline; }
+fieldset.midi-qol-use-options .midi-qol-use-options-budget { font-weight: normal; opacity: 0.8; font-size: 0.9em; }
+fieldset.midi-qol-use-options label.checkbox { display: flex; gap: 0.4rem; align-items: center; }
+fieldset.midi-qol-use-options label.checkbox img { width: 20px; height: 20px; border: none; }
+fieldset.midi-qol-use-options label.checkbox.disabled { opacity: 0.5; }
+fieldset.midi-qol-use-options .midi-qol-use-options-cost { opacity: 0.8; }

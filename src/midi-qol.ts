@@ -1,3 +1,5 @@
+import { useOptionsApi } from "./module/services/useOptions/registry.js";
+import { registerMetamagic } from "./module/services/useOptions/metamagic.js";
 import { installAfterUseDialog } from "./module/activities/afterUseDialog.js";
 import { isEphemeralToken, tokenFor, tokenOf } from "./module/lib/tokenResolver.js";
 import { interactionsApi } from "./module/services/interactions/registry.js";
@@ -455,6 +457,7 @@ Object.assign(globalThis.MidiQOL, {
   hud: hudApi,
   // M7: click to attack (prime an attack, then click a token; Alt+click; the midi-qol.claimClick hook)
   attack: clickToAttackApi,
+  useOptions: useOptionsApi,
   // M21: a creature's Multiattack plan (the GM's, registered ones, midi's table from the books, the text parsed, a guess)
   multiattack: multiattackApi,
   holds: { ...holdsApi, open: () => HoldPanel.open() },
@@ -755,6 +758,7 @@ Hooks.once('init', async function () {
   // Register custom sheets (if any)
   initPatching();
   setupClickToAttack();
+  registerMetamagic();
   setupMultiattackPlans();
   registerDamageApplication();
   registerDamageMessageSummary();

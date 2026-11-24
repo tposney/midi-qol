@@ -142,6 +142,11 @@ interface UseContributions {
 
 const contributions = new WeakMap<Workflow, UseContributions>();
 
+/** A modifier this use gives an actor's rolls (a use option's: Careful Spell's success on a target's save) */
+export function addUseRollModifier(workflow: Workflow, actorUuid: string, modifier: RollModifier, rolls?: readonly RollKind[]): void {
+  contributionsOf(workflow).modifiers.push({ actorUuid, rolls, modifier });
+}
+
 function contributionsOf(workflow: Workflow): UseContributions {
   let found = contributions.get(workflow);
   if (!found) contributions.set(workflow, found = { modifiers: [], damage: [], damageChanges: [] });

@@ -221,6 +221,7 @@
     "unseenTargets",
     "updateEffects",
     "useAs",
+    "useOptions",
     "UserWorkflow",
     "useTrace",
     "validRollAbility",
