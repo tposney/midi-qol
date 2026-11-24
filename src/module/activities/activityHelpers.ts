@@ -1,4 +1,5 @@
 import { tokenFor, tokenOf } from "../lib/tokenResolver.js";
+import { stoppedAfterDialog } from "./afterUseDialog.js";
 import { confirmTargets } from "../services/targetConfirmation/service.js";
 import { isMidiActivityType } from "./midiActivity.js";
 import { setupCanSeeSense } from "./useChecks.js";
@@ -100,7 +101,8 @@ export async function doActivityReactions(activity: Activity, workflow: Workflow
 }
 
 export function preActivityConsumptionHook(activity: Activity, usageConfig: ActivityUseConfiguration, messageConfig: RollMessageConfig): boolean {
-  // console.error("preActivityConsumptionHook", activity, usageConfig, messageConfig);
+  // The checks after dnd5e's usage dialog refused the use (afterUseDialog.ts)
+  if (stoppedAfterDialog(usageConfig)) return false;
   return true;
 }
 

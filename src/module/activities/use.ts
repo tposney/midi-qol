@@ -176,7 +176,7 @@ export async function prepareUse(used: MidiActivity, usage: ActivityUseConfigura
     ui.notifications?.warn(i18n("midi-qol.noTargets"));
     return abandon();
   }
-  if (!await preChatChecks(activity, usage, dialog, message)) return abandon();
+  if (!await preChatChecks(activity, usage, dialog, message, { deferEconomy: true })) return abandon();
   // If midiOptions.spellLevel is provided, set the spell slot key so that
   // dnd5e's _prepareUsageScaling derives the correct scaling from it.
   if (usage.midiOptions?.spellLevel && activity.item?.type === "spell") {

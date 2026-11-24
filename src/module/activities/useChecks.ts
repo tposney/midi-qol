@@ -146,6 +146,28 @@ export async function preChatChecks(activity: MidiActivity, usage: ActivityUseCo
     ui.notifications?.warn(refused.label);
     return removeWorkflow(usage.workflow);
   }
+  // The bonus action and reaction checks: here, or after dnd5e's usage dialog (use.ts), so a use option chosen there
+  // (Quickened Spell) is checked at the cost it ends with
+  const economyOptions: EconomyCheckOptions = { checkReaction: options.checkReaction, checkAoO: options.checkAoO, checkBonusAction: options.checkBonusAction };
+  if (optionsConfig.deferEconomy) {
+    workflow.deferredEconomy = { options: economyOptions, usage };
+    return true;
+  }
+  return economyChecks(activity, usage, economyOptions);
+}
+
+
+export interface EconomyCheckOptions { checkReaction?: boolean, checkAoO?: boolean, checkBonusAction?: boolean }
+
+/**
+ * The use's reaction (an attack outside its turn is an opportunity attack) and bonus action against the economy's
+ * policy: enforce refuses, warn asks. Classifies the use (workflow.AoO, itemUsesReaction, itemUsesBonusAction) for the
+ * charge after the card. False: the use stops.
+ */
+export async function economyChecks(activity: MidiActivity, usage: ActivityUseConfiguration, options: EconomyCheckOptions): Promise<boolean> {
+  const workflow = usage.workflow;
+  if (!workflow) return false;
+  const removeWorkflow = (_workflow?: Workflow) => false;
   workflow.AoO = false;
   workflow.itemUsesReaction = false;
   const reactingActor = activity.actor;

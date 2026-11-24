@@ -1,3 +1,4 @@
+import { installAfterUseDialog } from "./module/activities/afterUseDialog.js";
 import { isEphemeralToken, tokenFor, tokenOf } from "./module/lib/tokenResolver.js";
 import { interactionsApi } from "./module/services/interactions/registry.js";
 import { setupTurnModel, turnModelApi } from "./module/services/turnModel/model.js";
@@ -540,6 +541,7 @@ function setupActivities() {
   setupTeleportActivity();
   installDamageRolls();
   installUse();
+  installAfterUseDialog();
   installActivitySheets();
   installActivityCreation(adoptedActivityTypes);
   // dnd5e's classes, as midi uses them (were midi's classes until M14)
