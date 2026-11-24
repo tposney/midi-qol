@@ -1,7 +1,6 @@
-import { i18n, MODULE_ID } from "../../midi-qol.js";
-import { ruleActive } from "../../rules/registry.js";
-import { INVIS_RULE } from "../../rules/invisAdvantage.js";
-import { checkRule } from "../settings.js";
+import { i18n, MODULE_ID } from "../midi-qol.js";
+import { declareRule, ruleActive, ruleId, ruleOn } from "./registry.js";
+import { INVIS_RULE } from "./invisAdvantage.js";
 
 // Apply condition rules (optional rule conditionRules): the parts of each condition dnd5e doesn't apply itself.
 // dnd5e applies speed, petrified's resistances, restrained's Dexterity saves, poisoned's checks, exhaustion and the
@@ -46,7 +45,7 @@ function conditionChanges(status: string): ConditionChange[] {
 }
 
 function addConditionChanges(effect: ActiveEffect.Implementation, data: ActiveEffect.CreateData, options: object, userId: string) {
-  if (userId !== game.user?.id || !checkRule("conditionRules")) return;
+  if (userId !== game.user?.id || !ruleOn("conditionRules")) return;
   // @ts-expect-error fvtt-types v14 ActiveEffect
   if (effect.type !== "condition" || !(effect.parent instanceof Actor) || effect.flags?.["midi-qol"]?.conditionRules) return;
   const changes = [...effect.statuses].flatMap(conditionChanges);
@@ -59,7 +58,7 @@ function addConditionChanges(effect: ActiveEffect.Implementation, data: ActiveEf
 // only sets the check and save modes from them. Done after its ability preparation, as it does for those.
 function prepareAbilities(this: { parent: unknown, abilities?: Record<string, unknown> }, wrapped: (...args: unknown[]) => unknown, ...args: unknown[]) {
   const result = wrapped(...args);
-  if (!checkRule("conditionRules")) return result;
+  if (!ruleOn("conditionRules")) return result;
   const actor = this.parent;
   if (!(actor instanceof Actor)) return result;
   // @ts-expect-error no dnd5e-types
@@ -105,7 +104,7 @@ export function conditionModeSources(actor: Actor.Implementation, field: string)
   const match = field.match(/^abilities\.(\w+)\.(attack|check|save)\.roll\.mode$/);
   if (!match) return [];
   const [, id, rollType] = match;
-  if (rollType === "attack" && !checkRule("conditionRules")) return [];
+  if (rollType === "attack" && !ruleOn("conditionRules")) return [];
   // @ts-expect-error no dnd5e-types
   const conditions: Record<string, number> = actor.system.conditions ?? {};
   // @ts-expect-error no dnd5e-types
@@ -126,7 +125,12 @@ export function conditionModeSources(actor: Actor.Implementation, field: string)
   return sources;
 }
 
+export const CONDITION_RULES = ruleId("conditionRules");
+
 export function initConditionRules() {
+  // Optional rule conditionRules (a policy of midi's conditions: the 2024 conditions' roll effects as effect changes)
+  declareRule({ id: CONDITION_RULES, setting: "conditionRules", service: "policy", label: "Conditions apply their rules (2024)",
+    settings: [{ key: "conditionRules", type: "boolean", label: "midi-qol.ConditionRules.Name", hint: "midi-qol.ConditionRules.Hint", default: false }] });
   Hooks.on("preCreateActiveEffect", addConditionChanges);
   globalThis.libWrapper.register(MODULE_ID, "dnd5e.dataModels.actor.CommonTemplate.prototype.prepareAbilities", prepareAbilities, "WRAPPER");
 }

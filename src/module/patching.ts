@@ -20,7 +20,7 @@ import { computeActivityTemplateTargets } from "./activities/activityHelpers.js"
 import { installedModules } from "./setupModules.js";
 import { OnUseMacro, OnUseMacros } from "./apps/Item.js";
 import { initHiddenGroundCue } from "./lib/hiddenGroundCue.js";
-import { initConditionRules } from "./lib/conditionRules.js";
+import { initConditionRules } from "../rules/conditionRules.js";
 import { TroubleShooter } from "./apps/TroubleShooter.js";
 import { MidiActivityChoiceDialog } from "./apps/MidiActivityChoiceDialog.js";
 import { MidiRollChoiceDialog, PreComputedAdvantage } from "./apps/MidiRollChoiceDialog.js";

@@ -6,7 +6,7 @@ import { tokenFor, tokenOf } from "./tokenResolver.js";
 import { RollDialogConfig, RollProcessConfig } from "../../globals.js";
 import { GameSystemConfig, i18n, i18nFormat } from "../../midi-qol.js";
 import { rollFieldName } from "../rollFields.js";
-import { conditionModeSources } from "./conditionRules.js";
+import { conditionModeSources } from "../../rules/conditionRules.js";
 import { createConditionData, evalAllConditions, evalAllConditionsAsync, tokenForActor, MidiOptions } from "../utils.js";
 import { ADVANTAGE, DISADVANTAGE, NORMAL } from "./rollKeys.js";
 

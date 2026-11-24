@@ -1,4 +1,5 @@
 import { tokenFor, tokenOf } from "./lib/tokenResolver.js";
+import { vitalityItemName } from "../rules/vitalityItem.js";
 import { bindRollClaim, registerBonusDecisions } from "./lib/bonusDecisions.js";
 import { afterDamageApplied, applyCalculatedDamage, applyDamageWithOptions } from "./damage/application.js";
 import { type MidiQueryHandler, queryUser, registerMidiQuery } from "./lib/midiQueries.js";
@@ -1750,7 +1751,7 @@ async function prepareDamageListItems(
     const playerViewTotalDamage = damageItem.hpDamage + tempDamageApplied;
     const isHealing = (damageItem.rawTotalDamage ?? 0) < 0 || playerViewTotalDamage < 0;
     // Extract direct vitality damage/healing from damage detail (not overflow) - only if vitality system is enabled
-    const vitalityEnabled = !!checkRule("vitalityItem");
+    const vitalityEnabled = !!vitalityItemName();
     const directVitalityDamage = vitalityEnabled ? calculateDamageAmounts(damageItem.damages ?? damageItem.calculatedDamages ?? []).vitality : 0;
     let listItem: DamageListContextEntry = {
       isCharacter: actor.hasPlayerOwner,

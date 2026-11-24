@@ -1,4 +1,5 @@
 import { collectUseOptions, refundUseOptions } from "../services/useOptions/registry.js";
+import { useWorkflowClass } from "../services/useFlow/service.js";
 import { MidiActivity } from "./midiActivity.js";
 import { chargeUse } from "../services/economy/cost.js";
 import { multiattackAfterCharge } from "../services/multiattack/service.js";
@@ -88,21 +89,16 @@ export async function prepareUse(used: MidiActivity, usage: ActivityUseConfigura
   // @ts-expect-error no dnd5e-types
   let activity = item.system.activities.get(used.id);
   let workflowClass = usage?.midi?.workflowClass ?? globalThis.MidiQOL.workflowClass;
-  if (game.user?.isGM && checkRule("activeDefence")) {
-    workflowClass = ActiveDefenceWorkflow;
-  }
-  if (!(workflowClass.prototype instanceof Workflow)) workflowClass = Workflow;
+  if (!(workflowClass.prototype instanceof Workflow) && workflowClass !== Workflow) workflowClass = Workflow;
+  // Which flow the use runs: a claim (active defence, saves before damage, a module's), else the caller's class
+  workflowClass = useWorkflowClass({ activity, actor: activity.actor, requested: workflowClass });
   const workflowOptions = { ...usage.midiOptions, ...(usage.midiOptions?.workflowOptions ?? {}), event: usage.event as AugmentedEvent | undefined };
   delete workflowOptions.workflowOptions;
   if (usage.workflow)
     usage.midiOptions.workflowOptions.autoRollAttack = true;
   if (!(usage.workflow instanceof TrapWorkflow)) {
     //TODO stupidly the constructor for TrapWorkflow is not compatible with the workflow constructor - will need to clean that up
-    // Active Defence wins over saves before damage for an attack (user, 2026-11-19): the defence roll is the attack
-    const activeDefence = workflowClass === ActiveDefenceWorkflow && !!activity.attack;
-    if (configSettings.savesBeforeDamage && !activeDefence)
-      usage.workflow = new SavesFirstWorkflow(activity.actor ?? null, activity, speakerFor({ actor: activity.item.actor }), null, { workflowOptions });
-    else usage.workflow = new workflowClass(activity.actor ?? null, activity, speakerFor({ actor: activity.item.actor }), null, { workflowOptions });
+    usage.workflow = new workflowClass(activity.actor ?? null, activity, speakerFor({ actor: activity.item.actor }), null, { workflowOptions });
   }
   Workflow.setUse(activity, usage.workflow!);
   usage.workflow!.sequenceId = usage.sequenceId;

@@ -7,7 +7,8 @@ import { TokenDocumentSet } from "../lib/tokenDocumentSet.js";
 import { configSettings, safeGetGameSetting } from "../settings.js";
 import { saveUndoData } from "../undo.js";
 import { activityHasAreaTarget, activityHasEmanationNoTemplate, expireMyEffects, getActivityAutoTargetAction, getAutoRollDamage, processDamageRoll, validTargetTokens } from "../utils.js";
-import { Workflow, type ActiveDefenceWorkflow, type DamageOnlyWorkflow, type SavesFirstWorkflow, type TrapWorkflow } from "../Workflow.js";
+import { Workflow, SavesFirstWorkflow, type DamageOnlyWorkflow, type TrapWorkflow } from "../Workflow.js";
+import { useFlowService } from "../services/useFlow/service.js";
 import { registerFlowVariant } from "../steps/flows.js";
 
 /*
@@ -16,6 +17,10 @@ import { registerFlowVariant } from "../steps/flows.js";
  * their hooks, passes and module changes. `base()` runs the step's own implementation (the old `super` call).
  */
 export function registerFlowVariants(): void {
+  // Saves before damage: midi's own claim on a use's flow (below active defence's, which wins for an attack)
+  useFlowService.register("midi-qol.savesFirst", { for: () => ({ workflowClass: SavesFirstWorkflow }) },
+    { label: "Saves before damage", priority: 10, available: () => !!configSettings.savesBeforeDamage });
+
   registerFlowVariant("midi-qol.savesFirst", "midi-qol.WaitForSaves", async ({ workflow, base }: { workflow: SavesFirstWorkflow, base: () => Promise<unknown> }) => {
     await base();
     return "midi-qol.SavesComplete";
@@ -58,16 +63,7 @@ export function registerFlowVariants(): void {
     return "midi-qol.AllRollsComplete";
   });
 
-  registerFlowVariant("midi-qol.activeDefence", "midi-qol.WaitForAttackRoll", async ({ workflow, base }: { workflow: ActiveDefenceWorkflow, base: () => Promise<unknown> }) => {
-    workflow.workflowOptions.attackRollDSN = false;
-    return base();
-  });
-
-  registerFlowVariant("midi-qol.activeDefence", "midi-qol.AttackRollComplete", async ({ workflow, base }: { workflow: ActiveDefenceWorkflow, base: () => Promise<unknown> }) => {
-    const attackBonus = (workflow.attackRoll?.total ?? 0) - (workflow.attackRoll?.dice[0]?.total ?? 0); // TODO see if there is a better way to work out roll plusses
-    workflow.activeDefenceDC = configSettings.optionalRules.activeDefenceModifier + attackBonus;
-    return base();
-  });
+  // midi-qol.activeDefence: the optional rule's own (src/rules/activeDefence)
 
   registerFlowVariant("midi-qol.damageOnly", "midi-qol.Start", async ({ workflow, base }: { workflow: DamageOnlyWorkflow, base: () => Promise<unknown> }) => {
     workflow.effectsAlreadyExpired = [];

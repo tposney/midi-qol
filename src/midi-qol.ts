@@ -1,4 +1,7 @@
 import { registerLoadouts } from "./module/services/loadouts.js";
+import { registerVitalityItemRule } from "./rules/vitalityItem.js";
+import { defineUseFlowService } from "./module/services/useFlow/service.js";
+import { registerActiveDefenceRule } from "./rules/activeDefence/index.js";
 import { registerChallengeModeArmorRule } from "./rules/challengeModeArmor.js";
 import { registerMaxDRValueRule } from "./rules/maxDRValue.js";
 import { registerCheckFlankingRule } from "./rules/flanking/index.js";
@@ -556,6 +559,8 @@ function setupActivities() {
   installActivityPrototype();
   setupUsageCard();
   initUseRelaunch();
+  // Before the steps: the flows register their claims on a use (useFlow)
+  defineUseFlowService();
   registerMidiSteps();
   // Registrations first (each type's card buttons, sheet extras), then the installers, which act on each adopted type
   setupActivityTypes();
@@ -610,6 +615,8 @@ Hooks.once('init', async function () {
   registerOptionalCritRule();
   registerMaxDRValueRule();
   registerChallengeModeArmorRule();
+  registerActiveDefenceRule();
+  registerVitalityItemRule();
   defineDamageModifiersService();
   defineDamageContributionsService();
   defineResponsesService();

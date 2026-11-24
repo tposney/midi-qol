@@ -613,7 +613,8 @@
     "targetConfirmation",
     "targetPresets",
     "tokenNames",
-    "tokenVisuals"
+    "tokenVisuals",
+    "useFlow"
   ],
   "steps": [
     "midi-qol.Abort",

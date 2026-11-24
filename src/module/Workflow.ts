@@ -1,4 +1,5 @@
 import { tokenFor } from "./lib/tokenResolver.js";
+import { defenceMessageMode } from "../rules/activeDefence/index.js";
 import { challengeArmorOn, glancingHitsScale, glancingScale } from "../rules/challengeModeArmor.js";
 import { attackCritical, saveOutcomeOverride, saveSucceeded } from "./services/outcomeRules/service.js";
 import type { RangeCheckResult } from "./services/range/service.js";
@@ -8930,7 +8931,7 @@ export class ActiveDefenceWorkflow extends Workflow {
         const rollForThem = async () => {
           const result = await (new D20Roll(formula, {}, options)).evaluate();
           result.toMessage({ flavor: `${this.item.name} ${i18n("midi-qol.ActiveDefenceString")}`, speaker: speakerFor({ actor: target.actor }),
-            flags: { [MODULE_ID]: { rollFor: player.id } } }, { messageMode: toMessageMode((checkRule("activeDefenceShow") as string) || "self") });
+            flags: { [MODULE_ID]: { rollFor: player.id } } }, { messageMode: defenceMessageMode() });
           return result;
         };
         // Asked through the request core (M5b): its deadline, the GM's "roll for them" from the player list, and on

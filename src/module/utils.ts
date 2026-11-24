@@ -1,4 +1,6 @@
 import { tokenFor } from "./lib/tokenResolver.js";
+import { defenceMessageMode } from "../rules/activeDefence/index.js";
+import { vitalityItemName } from "../rules/vitalityItem.js";
 import { glancingDamage } from "../rules/challengeModeArmor.js";
 import { saveOutcomeOverride } from "./services/outcomeRules/service.js";
 import { reveals } from "./services/revealPolicy/service.js";
@@ -1146,7 +1148,7 @@ export function requestPCSave(ability: string, rollType: string | undefined, pla
  */
 export function requestPCActiveDefence(player: User.Implementation, actor: Actor.Implementation, saveItemName: string, tokenUuid: string | undefined,
   options: { formula: string, bonus: number, coverBonus: number, rollOptions: any, rollForThem: () => Promise<Roll>, owner?: object }): Promise<Roll | {}> {
-  const rollMode = toMessageMode((checkRule("activeDefenceShow") as string) || "self");
+  const rollMode = defenceMessageMode();
   const flavor = `${saveItemName} ${configSettings.optionalRules.activeDefence ? "DC " + options.rollOptions.target : ""} ${i18n("midi-qol.ActiveDefenceString")}`;
   const data = { targetUuid: actor.uuid, formula: options.formula, bonus: options.bonus, coverBonus: options.coverBonus, rollOptions: options.rollOptions,
     rollMode, midiType: "defenceRoll", flavor, messageData: { speaker: getSpeaker(actor) } };
@@ -2614,8 +2616,8 @@ export function untargetAllTokens(combat: Combat.Implementation) {
  */
 export function getVitalityItem(actor: Actor.Implementation | null | undefined): Item.Implementation | undefined {
   if (!actor) return undefined;
-  const itemName = checkRule("vitalityItem");
-  if (typeof itemName !== "string" || !itemName) return undefined;
+  const itemName = vitalityItemName();
+  if (!itemName) return undefined;
   return actor.items.getName(itemName) ?? undefined;
 }
 
