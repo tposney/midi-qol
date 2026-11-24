@@ -2701,3 +2701,4 @@ li.midi-qol-after-cast-idle button { opacity: 0.5; }
 .midi-qol-hub .midi-hub-filters { display: inline-flex; gap: 0.5rem; margin-left: auto; align-items: center; font-size: 0.8rem; }
 .midi-qol-hub .midi-hub-filter { display: inline-flex; gap: 0.2rem; align-items: center; padding: 0 0.35rem; border: 1px solid transparent; border-radius: 4px; opacity: 0.75; }
 .midi-qol-hub .midi-hub-filter.active { border-color: currentColor; opacity: 1; font-weight: bold; }
+.midi-qol-hub .midi-hub-tabs { padding-right: 3.5rem; }

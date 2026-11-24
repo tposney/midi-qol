@@ -106,9 +106,8 @@ export class MidiHub extends ApplicationV2 {
     </div>`;
     return `<div class="midi-hub-body${windowed ? " midi-hub-windowed" : " midi-hub-docked"}">
       ${controls}
-      <div class="midi-hub-area midi-hub-left">${areas.left.join("")}</div>
-      <div class="midi-hub-area midi-hub-center">${areas.center.join("")}</div>
-      <div class="midi-hub-area midi-hub-right">${areas.right.join("")}</div>
+      ${(["left", "center", "right"] as const).filter(area => areas[area].length)
+        .map(area => `<div class="midi-hub-area midi-hub-${area}">${areas[area].join("")}</div>`).join("")}
     </div>`;
   }
 
