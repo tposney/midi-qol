@@ -2631,7 +2631,8 @@ body.midi-qol-attack-primed #board { cursor: crosshair; }
 #midi-qol-settings nav.sheet-tabs > a { flex: 0 0 auto; white-space: nowrap; }
 #midi-qol-settings .form-group > label { min-width: 12rem; }
 /* M27: midi's hub */
-#midi-qol-hub.midi-hub-is-docked { position: fixed; bottom: 8px; left: 50%; transform: translateX(-50%); z-index: 70; pointer-events: auto; max-width: calc(100vw - 340px); }
+/* Docked: a steady width (the tabs change only its height) */
+#midi-qol-hub.midi-hub-is-docked { position: fixed; bottom: 8px; left: 50%; transform: translateX(-50%); z-index: 70; pointer-events: auto; width: min(72rem, calc(100vw - 340px)); }
 .midi-qol-hub .midi-hub-body { display: flex; gap: 0.6rem; align-items: stretch; padding: 0.4rem 0.6rem; position: relative; }
 .midi-qol-hub .midi-hub-docked { background: rgba(15, 15, 20, 0.88); border: 1px solid var(--color-border-dark-5, #444); border-radius: 8px; color: var(--color-light-1, #eee); box-shadow: 0 0 12px rgba(0, 0, 0, 0.6); }
 .midi-qol-hub .midi-hub-area { display: flex; flex-direction: column; gap: 0.3rem; min-width: 0; }
