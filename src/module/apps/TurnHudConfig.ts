@@ -114,10 +114,11 @@ export class TurnHudConfig extends HandlebarsApplicationMixin(ApplicationV2) {
     this.#tools = [];
     this.#own = [];
     const huds = inUse(userId);
-    // midi's own per-player settings that apply whatever HUD is in use: click to attack, while the table allows it
-    const midiTab = clickToAttackAllowed() ? [{ owner: "midi-qol", roles: [...HUD_ROLES],
-      tab: { id: "midi", label: "midi-qol.Hud.MidiTab", icon: "fa-solid fa-hand-pointer", keys: [`midi-qol.${CLICK_TO_ATTACK_SETTING}`] } as HudSettings["tabs"][number] }] : [];
-    const tabs = [...midiTab, ...huds.flatMap(({ provider, roles }) => (provider.settings?.tabs ?? []).map(tab => ({ owner: provider.label, roles, tab })))]
+    // The player's click to attack, whatever HUD is in use: greyed while the table doesn't allow it
+    const clickSetting = settingConfig(`midi-qol.${CLICK_TO_ATTACK_SETTING}`);
+    const click = clickSetting ? { field: fieldFor(clickSetting), value: settingValue(clickSetting, userId), disabled: !clickToAttackAllowed(),
+      note: clickToAttackAllowed() ? "" : i18n("midi-qol.ClickToAttack.NotAllowed") } : undefined;
+    const tabs = huds.flatMap(({ provider, roles }) => (provider.settings?.tabs ?? []).map(tab => ({ owner: provider.label, roles, tab })))
       .filter(({ tab, roles: used }) => !tab.roles || tab.roles.some(r => used.includes(r)))
       .map(({ owner, tab }) => {
         const entries = tab.keys.map(settingConfig).filter(setting => editable(setting, userId)).map(setting => ({
@@ -138,7 +139,7 @@ export class TurnHudConfig extends HandlebarsApplicationMixin(ApplicationV2) {
       this.#own.push(() => h.provider.openSettings?.());
       return { index: this.#own.length - 1, label: h.provider.label };
     });
-    return { ...context, userField, userId, roles, hudTabs: tabs.map(t => ({ ...t, active: t.id === active })), credits, ownSettings };
+    return { ...context, userField, userId, roles, click, hudTabs: tabs.map(t => ({ ...t, active: t.id === active })), credits, ownSettings };
   }
 
   static async #onChange(this: TurnHudConfig, event: Event, _form: HTMLFormElement, formData: { object: Record<string, unknown> }) {

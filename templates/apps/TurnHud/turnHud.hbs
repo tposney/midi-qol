@@ -14,6 +14,10 @@
         {{/if}}
         {{#if missing}}<p class="hint midi-qol-turn-hud-missing">{{localize "midi-qol.Hud.Missing"}}</p>{{/if}}
         {{/each}}
+        {{#if click}}
+        {{formGroup click.field value=click.value disabled=click.disabled localize=true}}
+        {{#if click.note}}<p class="hint">{{click.note}}</p>{{/if}}
+        {{/if}}
     </fieldset>
     {{#each credits}}<p class="hint midi-qol-turn-hud-credit">{{{this}}}</p>{{/each}}
     {{#each ownSettings}}

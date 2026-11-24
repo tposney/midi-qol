@@ -6,7 +6,8 @@ import { registerInteraction } from "../interactions/registry.js";
 
 /*
  * M7: click to attack (proposal section 5: an optional feature on the public services). With the Click to attack setting:
- * - a HUD primes an attack (MidiQOL.attack.prime(activity): DAS HUD does on a weapon or attack cell clicked with no target),
+ * - a HUD primes a use on a creature (MidiQOL.attack.prime(activity): an attack, save, damage or healing with no area, not
+ *   on the user; midi's hub does for any such use chosen with no target, DAS HUD on a weapon or attack cell),
  *   and the next left click on a token makes it against that token (midi's use, the token its target); Esc or a right
  *   click cancels;
  * - Alt+click on a token, with one of your tokens controlled, attacks it with your last attack (else your first equipped
@@ -47,6 +48,20 @@ export function registerClickToAttackSetting() {
 /** An attack made against one clicked token: an attack activity with no area (a cone or line is placed, not clicked) */
 const isAttack = (activity: Activity | null | undefined): activity is Activity => (activity as { type?: string } | null)?.type === "attack"
   && !(activity as { target?: { template?: { type?: string } } }).target?.template?.type;
+
+type Targeting = { type?: string, target?: { template?: { type?: string }, affects?: { type?: string } }, range?: { units?: string } };
+/** Activity types used on a creature: what a click on a token picks */
+const CLICKED_TYPES = new Set(["attack", "save", "damage", "heal"]);
+/** Target types a click on a token can't give */
+const NOT_CLICKED = new Set(["self", "space"]);
+
+/** A use a click on a token targets: an attack, save, damage or healing whose prepared target (dnd5e's: the item's
+ * unless the activity overrides it) has no area and isn't the user or a space, and whose prepared range isn't Self */
+export function clicksTarget(activity: Activity | null | undefined): activity is Activity {
+  const a = activity as Targeting | null | undefined;
+  if (!a?.type || !CLICKED_TYPES.has(a.type) || a.target?.template?.type) return false;
+  return !NOT_CLICKED.has(a.target?.affects?.type ?? "") && a.range?.units !== "self";
+}
 const activitiesOf = (item: Item.Implementation) => ((item.system as { activities?: { contents?: Activity[] } }).activities?.contents ?? []) as Activity[];
 
 /** The actor's default attack: its last, else its first equipped weapon's */
@@ -67,16 +82,17 @@ export function defaultAttack(actor: Actor.Implementation | null | undefined): A
 /** Waits for a click on a token to attack it with this activity (`attackMode`: dnd5e's, e.g. offhand) */
 export function primeAttack(activity: Activity, { attackMode }: { attackMode?: string } = {}) {
   const actorUuid = activity.actor?.uuid;
-  if (!actorUuid || !isAttack(activity)) return false;
+  if (!actorUuid || !clicksTarget(activity)) return false;
   primed = { activity, actorUuid, ...(attackMode ? { attackMode } : {}) };
   document.body.classList.add("midi-qol-attack-primed");
   ui.notifications?.info(i18n("midi-qol.ClickToAttack.Primed").replace("{name}", activity.item?.name ?? activity.name ?? ""));
   return true;
 }
 
-/** A HUD's use of an activity: with Click to attack on, an attack used with no target waits for a click on one */
+/** A HUD's use of an activity: with Click to attack on, a use on a creature (an attack, a save...) with no target
+ * waits for a click on one */
 export async function useOrPrime(activity: Activity & { use?(usage?: object): Promise<unknown> }, usage: object = {}) {
-  if (clickToAttackEnabled() && isAttack(activity) && !game.user?.targets.size && primeAttack(activity)) return;
+  if (clickToAttackEnabled() && clicksTarget(activity) && !game.user?.targets.size && primeAttack(activity)) return;
   await activity.use?.(usage);
 }
 
