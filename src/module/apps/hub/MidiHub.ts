@@ -247,7 +247,7 @@ export class MidiHub extends ApplicationV2 {
         if (t.range) parts.push(i18n(`midi-qol.Hub.Range.${t.range.result}`));
         if (t.ac) parts.push(`${i18n("midi-qol.Hub.AC")} ${t.ac.effective}${t.ac.cover ? ` (${i18n("midi-qol.Hub.Cover")} +${t.ac.cover})` : ""}`);
         if (t.advantage?.mode) parts.push(i18n(t.advantage.mode > 0 ? "midi-qol.Hub.Advantage" : "midi-qol.Hub.Disadvantage")
-          + (t.advantage.attribution?.length ? `: ${t.advantage.attribution.map(a => escape((a as { label?: string, name?: string }).label ?? (a as { name?: string }).name ?? "")).filter(Boolean).join(", ")}` : ""));
+          + (t.advantage.attribution?.length ? `: ${t.advantage.attribution.filter(a => a.type === (t.advantage!.mode > 0 ? "ADV" : "DIS")).map(a => escape(a.displayName ?? "")).filter(Boolean).join(", ")}` : ""));
         return `<div><strong>${escape(t.name)}</strong>: ${parts.join("; ")}</div>`;
       });
       if (result.save?.dc !== undefined) lines.push(`<div>${i18n("midi-qol.Hub.SaveDC")} ${result.save.dc}</div>`);

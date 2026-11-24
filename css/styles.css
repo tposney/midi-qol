@@ -2765,3 +2765,9 @@ fieldset.midi-qol-use-options .midi-qol-use-options-cost { opacity: 0.8; }
 .midi-qol-hub .midi-hub-resource { display: flex; gap: 0.5rem; align-items: baseline; }
 .midi-qol-hub .midi-hub-resource .midi-hub-label { min-width: 10rem; }
 .midi-qol-hub .midi-hub-resource-count { font-variant-numeric: tabular-nums; font-weight: bold; min-width: 3rem; }
+.midi-qol-roll-why {
+  margin: 0 0 6px;
+  padding: 4px 6px;
+  border-left: 3px solid var(--color-warm-2, #ee9b3a);
+  font-size: var(--font-size-12);
+}

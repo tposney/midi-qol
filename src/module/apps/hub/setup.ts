@@ -2,7 +2,7 @@ import { activeHud, registerHud } from "../../services/turnModel/hud.js";
 import { setOfferCloser, setOfferPresenter } from "../../services/multiattack/legendary.js";
 import { MidiHub, setupHubRefresh } from "./MidiHub.js";
 import { hubOffers, inlineAsks, registerMidiHubSections } from "./midiSections.js";
-import { registerRequestPresenter } from "../../lib/requests.js";
+import { incomingRequests, registerRequestPresenter } from "../../lib/requests.js";
 import { hubSections, registerHubSection } from "./sections.js";
 
 /*
@@ -30,10 +30,15 @@ export function setupHub() {
     if (!game.user?.isGM) return;
     setOfferPresenter(hubRunning() ? offer => new Promise(resolve => { hubOffers.push({ ...offer, resolve }); void MidiHub.shown?.render(); }) : undefined);
   }) as never);
-  Hooks.on("closeMidiHub" as never, (() => setOfferPresenter(undefined)) as never);
+  Hooks.on("closeMidiHub" as never, (() => {
+    setOfferPresenter(undefined);
+    // Requests waiting in the inbox go to their own dialogs
+    for (const ask of inlineAsks.splice(0)) ask.resolve(undefined);
+  }) as never);
   // The inbox: a request that takes a simple choice is answered in the hub while it runs (else its own dialog)
+  // CONFIG.debug.midiInbox = false: requests keep their own dialogs (tests that drive the dialogs)
   registerRequestPresenter((request, choice) => {
-    if (!hubRunning()) return undefined;
+    if (!hubRunning() || (CONFIG.debug as { midiInbox?: boolean }).midiInbox === false) return undefined;
     return new Promise(resolve => {
       const ask = { request, choice, resolve };
       inlineAsks.push(ask);
@@ -44,6 +49,29 @@ export function setupHub() {
       void MidiHub.shown?.render();
     });
   });
+  // What this user is asked, in one place: a request's window (a dialog it opened, or one picked from the inbox) and the
+  // bonus prompt open just above the hub while it runs
+  // Placed on each render (a dialog grows as it fills in) until the user moves it: then left where they put it
+  const placed = new WeakMap<HTMLElement, { left: number, top: number }>();
+  const dock = (app: { element?: HTMLElement, setPosition?(position: object): unknown } | undefined) => {
+    const hub = document.getElementById("midi-qol-hub");
+    const element = app?.element;
+    if (!hubRunning() || !hub || !element) return;
+    const last = placed.get(element);
+    if (last && (Math.abs(element.offsetLeft - last.left) > 2 || Math.abs(element.offsetTop - last.top) > 2)) return;
+    requestAnimationFrame(() => {
+      const r = hub.getBoundingClientRect();
+      const position = { left: Math.max(0, Math.round(r.right - element.offsetWidth)), top: Math.max(0, Math.round(r.top - element.offsetHeight - 8)) };
+      app!.setPosition?.(position);
+      placed.set(element, { left: element.offsetLeft, top: element.offsetTop });
+    });
+  };
+  Hooks.on("renderRollModifyDialog" as never, ((app: { element?: HTMLElement, setPosition?(position: object): unknown }) => dock(app)) as never);
+  // Stage 3: dnd5e's roll dialogs (attack, damage, saves) with midi's sections in them, docked there too
+  Hooks.on("renderRollConfigurationDialog" as never, ((app: { element?: HTMLElement, setPosition?(position: object): unknown }) => dock(app)) as never);
+  Hooks.on("midi-qol.incomingRequestsChanged" as never, (() => {
+    for (const request of incomingRequests()) if (request.window) dock(foundry.applications.instances.get(request.window.id) as never);
+  }) as never);
   setOfferCloser(() => { for (const offer of hubOffers.splice(0)) offer.resolve(undefined); void MidiHub.shown?.render(); });
 }
 

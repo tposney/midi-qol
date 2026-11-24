@@ -281,9 +281,11 @@ function inboxHtml(): string {
     const choices = ask.choice.choices.map(c => ask.choice.multiple
       ? `<label class="checkbox"${c.hint ? ` data-tooltip="${escape(c.hint)}"` : ""}><input type="checkbox" data-inbox-value="${escape(c.value)}">${c.img ? `<img src="${escape(c.img)}" alt="">` : ""} ${escape(c.label)}</label>`
       : `<button type="button" data-hub-action="inboxAnswer" data-ask="${index}" data-value="${escape(c.value)}"${c.hint ? ` data-tooltip="${escape(c.hint)}"` : ""}>${escape(c.label)}</button>`).join("");
-    parts.push(`<div class="midi-hub-offer midi-hub-inbox" data-ask="${index}"><div class="midi-hub-label">${escape(ask.choice.title)}${ends(ask.request.remaining)}</div>${choices}
+    parts.push(`<div class="midi-hub-offer midi-hub-inbox" data-ask="${index}"><div class="midi-hub-label">${escape(ask.choice.title)}${ends(ask.request.remaining)}</div>
+      ${ask.choice.hint ? `<div class="hint">${escape(ask.choice.hint)}</div>` : ""}${choices}
       ${ask.choice.multiple ? `<button type="button" data-hub-action="inboxAnswer" data-ask="${index}">${escape(i18n("midi-qol.Use"))}</button>` : ""}
-      <button type="button" data-hub-action="inboxAnswer" data-ask="${index}" data-none="1">${escape(i18n("midi-qol.UseOptions.None"))}</button></div>`);
+      ${ask.choice.none !== false ? `<button type="button" data-hub-action="inboxAnswer" data-ask="${index}" data-none="1">${escape(i18n("midi-qol.UseOptions.None"))}</button>` : ""}
+      ${ask.choice.dialog !== false ? `<a data-hub-action="inboxAnswer" data-ask="${index}" data-dialog="1" data-tooltip="${escape(i18n("midi-qol.Inbox.DialogHint"))}"><i class="fa-solid fa-window-restore"></i> ${escape(i18n("midi-qol.Inbox.Dialog"))}</a>` : ""}</div>`);
   });
   const inline = new Set(inlineAsks.map(a => a.request));
   for (const request of incomingRequests().filter(r => !inline.has(r))) {
@@ -559,6 +561,8 @@ export function registerMidiHubSections() {
       // Undo of this user's last use (the GM's: the most recent), where the table allows it
       if (configSettings.undoWorkflow && (gm || configSettings.playerUndo))
         parts.push(`<a class="midi-hub-undo" data-hub-action="undo" data-tooltip="${escape(i18n(gm ? "midi-qol.Hub.UndoGM" : "midi-qol.Hub.UndoMine"))}"><i class="fa-solid fa-rotate-left"></i> ${escape(i18n("midi-qol.Hub.Undo"))}</a>`);
+      // Where the inbox is, when nothing is waiting
+      if (!parts.some(Boolean)) parts.push(`<div class="midi-hub-note midi-hub-inbox-empty hint"><i class="fa-solid fa-inbox"></i> ${escape(i18n("midi-qol.Inbox.Nothing"))}</div>`);
       return parts.join("");
     },
     actions: {
@@ -573,7 +577,8 @@ export function registerMidiHubSections() {
         const ask = inlineAsks[Number(target.dataset.ask)];
         if (!ask) return;
         const box = target.closest<HTMLElement>(".midi-hub-inbox");
-        const values = target.dataset.none ? [] : target.dataset.value !== undefined ? [target.dataset.value]
+        // The handler's own dialog: undefined
+        const values = target.dataset.dialog ? undefined : target.dataset.none ? [] : target.dataset.value !== undefined ? [target.dataset.value]
           : Array.from(box?.querySelectorAll<HTMLInputElement>("input[data-inbox-value]:checked") ?? []).map(i => i.dataset.inboxValue ?? "");
         inlineAsks.splice(inlineAsks.indexOf(ask), 1);
         ask.resolve(values);

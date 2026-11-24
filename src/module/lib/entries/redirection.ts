@@ -57,6 +57,15 @@ interface ChooseData { title: string, prompt: string, candidates: { uuid: string
 
 /** On the asked client: a new target's uuid, "lose", or undefined (closed) */
 async function chooseTargetHere(data: ChooseData, request?: IncomingRequest): Promise<string | undefined> {
+  // The inbox (the hub, while it runs): the target picked there, else this dialog
+  const inline = await request?.present({ title: data.title, hint: data.prompt, choices: [
+    ...data.candidates.map(c => ({ value: c.uuid, label: c.name })),
+    ...(data.canLose ? [{ value: "lose", label: game.i18n?.localize("midi-qol.Redirect.Lose") ?? "Lose it" }] : [])
+  ] });
+  if (inline !== undefined) {
+    if (!inline.length || request!.settledHow || !await request!.claim()) return undefined;
+    return inline[0];
+  }
   const options = data.candidates.map((c, i) => `<label class="checkbox"><input type="radio" name="target" value="${c.uuid}" ${i === 0 ? "checked" : ""}> ${foundry.utils.escapeHTML(c.name)}</label>`);
   if (data.canLose) options.push(`<label class="checkbox"><input type="radio" name="target" value="lose" ${options.length ? "" : "checked"}> ${foundry.utils.escapeHTML(game.i18n?.localize("midi-qol.Redirect.Lose") ?? "Lose it")}</label>`);
   const picked = await foundry.applications.api.DialogV2.input({

@@ -1,4 +1,9 @@
-import { decodeWorkflowOptions, encodeWorkflowOptions, mapPayload as mapOptions } from "./workflowOptionsCodec.js";
+import { decodeWorkflowOptions, encodeWorkflowOptions, mapPayload } from "./workflowOptionsCodec.js";
+import { decodeRolls, encodeRolls } from "./rollCodec.js";
+
+/** The codec at both ends: workflow options through their schemas, rolls as roll data revived as Rolls */
+const mapOptions = (value: unknown, fn: typeof encodeWorkflowOptions) => fn === encodeWorkflowOptions
+  ? encodeRolls(mapPayload(value, fn)) : decodeRolls(mapPayload(value, fn));
 
 /*
  * midi's GM actions and commands to a user over Foundry's user queries (M5, plan

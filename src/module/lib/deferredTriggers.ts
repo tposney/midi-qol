@@ -187,6 +187,13 @@ function midiMovementWatches(mover: TokenDocument.Implementation): MovementWatch
 
 /** midi's own prompt: Release / Hold, with the request's countdown; closed when answered for the player */
 async function defaultPrompt(data: DeferredPromptData, request: IncomingRequest): Promise<DeferredAnswer | undefined> {
+  // The inbox (the hub, while it runs): release or hold there, else this dialog
+  const inline = await request.present({ title: i18n("midi-qol.Deferred.PromptQuestion").replace("{name}", data.label), hint: data.reason, none: false,
+    choices: [{ value: "release", label: i18n("midi-qol.Deferred.Release") }, { value: "hold", label: i18n("midi-qol.Deferred.Hold") }] });
+  if (inline !== undefined) {
+    if (!inline.length || request.settledHow || !await request.claim()) return undefined;
+    return inline[0] === "release" ? { release: true, ...(data.subject ? { targets: [data.subject] } : {}) } : { release: false };
+  }
   const countdown = request.countdown();
   let dialog: foundry.applications.api.DialogV2 | undefined;
   request.onSettled(() => { void dialog?.close(); });

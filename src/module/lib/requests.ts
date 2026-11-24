@@ -1,4 +1,5 @@
 import { configSettings } from "../settings.js";
+import { decodeRolls, encodeRolls } from "./rollCodec.js";
 import { DialogCountdown } from "./dialogCountdown.js";
 import { beginPlayerWait, type PlayerWait, type WaitChoice, type WaitChoiceSpec } from "./playerWaits.js";
 import { MidiRequest, RequestRegistry, type SettledHow } from "./requests/core.js";
@@ -104,9 +105,9 @@ export function askUser<T>(user: User.Implementation, spec: AskSpec<T>): MidiReq
     if (!keepForGM()) request.settleWith(spec.fallback, "disconnect");
     return request;
   }
-  void user.query(REQUEST_QUERY, { type: spec.type, id: request.id, holderId: game.user!.id, remaining: request.deadline.remaining, data: spec.data ?? {},
+  void user.query(REQUEST_QUERY, { type: spec.type, id: request.id, holderId: game.user!.id, remaining: request.deadline.remaining, data: encodeRolls(spec.data ?? {}) as object,
     label: spec.label, kind: spec.kind, actorUuid: spec.actorUuid })
-    .then(value => { request.settle(value as T, "player"); })
+    .then(value => { request.settle(decodeRolls(value) as T, "player"); })
     .catch(err => {
       if (!request.pending) return;
       if (!user.active) { if (!keepForGM()) request.settleWith(spec.fallback, "disconnect"); return; }
@@ -139,6 +140,33 @@ export interface InlineChoice {
   /** Each a choice; several may be picked when `multiple` */
   choices: { value: string, label: string, img?: string, hint?: string }[];
   multiple?: boolean;
+  /** A None answer (default: shown); off for a roll that must be made */
+  none?: boolean;
+  /** A way to the handler's own dialog instead (default: shown): the presenter answers undefined */
+  dialog?: boolean;
+  /** A line under the title */
+  hint?: string;
+}
+
+export type RollModeChoice = "normal" | "advantage" | "disadvantage";
+
+/**
+ * A d20 roll request (a save, a concentration check, a defence roll) asked inline where the client's UI can (the hub):
+ * the mode picked (roll without the dialog), "dialog" (no inline UI, or the player asked for the dialog: the handler's
+ * own), "settled" (answered for the player meanwhile), or "none" when `decline` is offered and taken.
+ */
+export async function askRollInline(request: IncomingRequest | undefined, title: string, { hint, decline }: { hint?: string, decline?: boolean } = {}): Promise<RollModeChoice | "dialog" | "settled" | "none"> {
+  if (!request) return "dialog";
+  const say = (key: string) => game.i18n?.localize(key) ?? key;
+  const answer = await request.present({ title, hint, none: !!decline, choices: [
+    { value: "normal", label: say("midi-qol.Inbox.Roll") },
+    { value: "advantage", label: say("DND5E.Advantage") },
+    { value: "disadvantage", label: say("DND5E.Disadvantage") }
+  ] });
+  if (answer === undefined) return "dialog";
+  if (request.settledHow) return "settled";
+  if (!answer.length) return decline ? "none" : "settled";
+  return answer[0] as RollModeChoice;
 }
 type Presenter = (request: IncomingRequest, choice: InlineChoice) => Promise<string[] | undefined> | undefined;
 let presenter: Presenter | undefined;
@@ -257,7 +285,8 @@ async function onRequest({ type, id, holderId, remaining, data, label, kind, act
   const request = new IncomingRequest(id, holderId, remaining, { type, label, kind, actorUuid });
   incoming.set(id, request);
   Hooks.callAll("midi-qol.incomingRequestsChanged");
-  try { return await handler(data, request); }
+  // An answer's rolls travel as roll data, revived as Rolls by the requester
+  try { return encodeRolls(await handler(decodeRolls(data), request)); }
   finally {
     incoming.delete(id);
     request._end();

@@ -5874,6 +5874,30 @@ export async function reactionDialog(
         void callback({ close() { } }, chosen);
         return;
       }
+      // The inbox (the hub, while it runs): one reaction or offer picked there, else this dialog
+      const incoming = options.incoming as IncomingRequest | undefined;
+      const offers = (options.reactionOffers ?? []) as ResponseOfferChoice[];
+      const inline = incoming?.present({
+        title: `${actor.name}: ${i18n("midi-qol.ReactionDialog.Title")}`,
+        hint: rollFlavor ? new DOMParser().parseFromString(rollFlavor, "text/html").body.textContent?.trim() || undefined : undefined,
+        choices: [
+          ...reactionActivities.map(a => ({ value: `a:${a.uuid}`, label: a.item && a.item.name !== a.name && a.name ? `${a.item.name}: ${a.name}` : (a.item?.name ?? a.name ?? ""), img: a.item?.img ?? undefined })),
+          ...offers.map(o => ({ value: `o:${o.key}`, label: o.label }))
+        ]
+      });
+      if (inline) {
+        void inline.then(picked => {
+          if (picked === undefined) return showDialog();
+          const value = picked[0];
+          if (!value) return noReaction();
+          const activity = value.startsWith("a:") ? reactionActivities.find(a => a.uuid === value.slice(2)) : undefined;
+          const offer = value.startsWith("o:") ? offers.find(o => o.key === value.slice(2)) : undefined;
+          void callback({ close() { } }, [activity ? { key: activity.uuid, name: activity.name } : { offerKey: offer?.key, name: offer?.label }]);
+        });
+        return;
+      }
+      showDialog();
+      function showDialog() {
       const dialog = new ReactionDialog({
         actor,
         tokenUuid: options.tokenUuid,
@@ -5894,6 +5918,7 @@ export async function reactionDialog(
         void dialog.close();
       });
       dialog.render({ force: true });
+      }
     });
   } catch (err) {
     const message = `reaactionDialog error ${actor?.name} ${actor?.uuid} ${triggerTokenUuid}`;

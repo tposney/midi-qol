@@ -8,7 +8,7 @@ import { DialogCountdown, dialogCountdownOptions } from "./lib/dialogCountdown.j
 import { withWorkflowOptionsCodec } from "./lib/workflowOptionsCodec.js";
 import { i18n, log, warn, gameStats, getCanvas, error, debugEnabled, debug, GameSystemConfig, MODULE_ID } from "../midi-qol.js";
 import { BONUS_REQUEST, REACTIONS_GROUP_REQUEST, CONCENTRATION_REQUEST, damageActiveHas, damageChangeHas, DEFENCE_REQUEST, REACTIONS_REQUEST, calculateDamageAmounts, hpChangeFromDetail, getToken, getTokenDocument, gmOverTimeEffect, fromActorUuid, promptReactions, hasUsedAction, hasUsedBonusAction, removeActionUsed, removeBonusActionUsed, removeReactionUsed, ReactionItemReference, isEffectExpired, expireEffects, deleteAppliedEffects, getAppliedEffects, CERemoveEffect, CEAddEffectWith, getActor, completeItemUse, completeActivityUse, localActivityOverTimeEffect, validTargetTokens, hasUsedAnyReaction, getVitalityItem, MidiOptions, tokenSourceCenter, toggleStatus, withDeprecatedDamageFields, speakerFor } from "./utils.js";
-import { registerRequestHandler, type IncomingRequest } from "./lib/requests.js";
+import { askRollInline, registerRequestHandler, type IncomingRequest } from "./lib/requests.js";
 import { promptFailedSave } from "./lib/failedSaveResponse.js";
 import { promptReactionGroup } from "./lib/reactionGroup.js";
 import { messagesFrom } from "./lib/cardState.js";
@@ -740,6 +740,14 @@ async function _D20Roll(params: { request?: string, targetUuid: string, formula:
       speaker: speakerFor({ actor }),
       rollMode: params.rollMode,
     }
+    // The inbox (the hub, while it runs): the mode picked there, rolled without the dialog
+    const mode = await askRollInline(request, `${actor.name}: ${params.flavor}`);
+    if (mode === "settled" || mode === "none") { if (timeoutId) clearTimeout(timeoutId); return resolve({}); }
+    if (mode !== "dialog") {
+      if (mode !== "normal") { config.advantage = mode === "advantage"; config.disadvantage = mode === "disadvantage"; }
+      config.dialog = false;
+      (dialog as { configure?: boolean }).configure = false;
+    }
     const rolls = await D20Roll.build(config, dialog, message)
     // ({ title: data.request, defaultRollMode: data.rollMode, defaultAction: data.options?.advantage });
     // result = await roll.roll();
@@ -773,8 +781,12 @@ async function rollConcentration(data: { actorUuid: string, target: number, whis
   request.onSettled(() => { for (const app of rollDialogsFor(actor.uuid, claim)) void app.close(); });
   const unbind = bindRollClaim(claim, request);
   try {
+    // The inbox (the hub, while it runs): the mode picked there, rolled without the dialog
+    const mode = await askRollInline(request, rollRequestTitle(actor, "concentration", { dc: data.target }));
+    if (mode === "settled" || mode === "none") return {};
+    const picked = mode === "dialog" ? {} : { advantage: mode === "advantage", disadvantage: mode === "disadvantage" };
     //@ts-expect-error no dnd5e types
-    return await actor.rollConcentration({ target: data.target, legacy: false, midiOptions: { requestClaim: claim } }, dialog, messageConfig);
+    return await actor.rollConcentration({ target: data.target, legacy: false, midiOptions: { requestClaim: claim }, ...picked }, mode === "dialog" ? dialog : { configure: false }, messageConfig);
   } finally {
     Hooks.off("dnd5e.postRollConfiguration", hookId);
     unbind();
@@ -789,6 +801,19 @@ export function whisperRollToPlayer(message: ChatMessage.Implementation) {
   const userId = foundry.utils.getProperty(message, `flags.${MODULE_ID}.rollFor`);
   if (typeof userId !== "string" || !message.whisper.length || message.blind || message.whisper.includes(userId)) return;
   message.updateSource({ whisper: [...message.whisper, userId] });
+}
+
+/** The inbox's title for a roll request: "Krîspy: Dexterity saving throw (DC 14)" */
+function rollRequestTitle(actor: Actor.Implementation, kind: string, { ability, skill, tool, dc }: { ability?: string, skill?: string, tool?: string, dc?: number } = {}): string {
+  const say = (key: string | undefined) => key ? i18n(key) : "";
+  const config = CONFIG.DND5E as unknown as Record<string, Record<string, { label?: string }> | undefined>;
+  let what: string;
+  if (kind === "concentration") what = say("DND5E.Concentration");
+  else if (kind === "deathSave") what = say("midi-qol.Inbox.DeathSave");
+  else if (kind === "skill") what = say(config.skills?.[skill ?? ""]?.label ?? skill);
+  else if (kind === "tool") what = say(config.tools?.[tool ?? ""]?.label ?? tool);
+  else what = `${say(config.abilities?.[ability ?? ""]?.label ?? ability)} ${say(kind === "save" ? "midi-qol.Inbox.Save" : "midi-qol.Inbox.Check")}`;
+  return `${actor.name}: ${what}${dc ? ` (${i18n("DND5E.AbbreviationDC")} ${dc})` : ""}`;
 }
 
 /** The request type a player's client answers with its roll dialog (rollAbility with the request) */
@@ -1042,7 +1067,18 @@ export async function rollAbility(data: {
         for (const app of rollDialogsFor(actor.uuid, claim)) void app.close();
         done();
       });
-      performRoll().then(done).catch(err => { Hooks.off("dnd5e.postRollConfiguration", hookId); unbind(); fail(err); });
+      const roll = () => performRoll().then(done).catch(err => { Hooks.off("dnd5e.postRollConfiguration", hookId); unbind(); fail(err); });
+      // The inbox (the hub, while it runs): the roll's mode picked there, rolled without the dialog
+      if (dialog.configure === false) { void roll(); return; }
+      void askRollInline(request, rollRequestTitle(actor, normalizedRequest, { ability, skill, tool, dc: disp?.showTargetDC ? rollDC : undefined })).then(mode => {
+        if (mode === "settled" || mode === "none") return done();
+        if (mode !== "dialog") {
+          dialog.configure = false;
+          config.advantage = mode === "advantage" || (mode === "normal" && advantage);
+          config.disadvantage = mode === "disadvantage" || (mode === "normal" && disadvantage);
+        }
+        void roll();
+      });
       return;
     }
     if (configSettings.playerSaveTimeout > 0) {
@@ -2569,6 +2605,14 @@ async function _teleportToken(data: { tokenUuid: string, destination: TeleportTo
 export async function rollActionSave(data: { actorUuid: string; effectName: string; saveDetails: SaveDetails; displayOptions: object }, request?: IncomingRequest) {
   const { DialogV2 } = foundry.applications.api;
   const actor = fromActorUuid(data.actorUuid);
+  // The inbox (the hub, while it runs): roll (a mode) or decline there
+  const mode = await askRollInline(request, `${actor?.name ?? ""}: ${data.effectName}`, { hint: i18n("midi-qol.Inbox.ActionSave"), decline: true });
+  if (mode === "settled" || mode === "none") return undefined;
+  if (mode !== "dialog") {
+    if (request && (request.settledHow || !await request.claim())) return undefined;
+    const saveDetails = { ...data.saveDetails, ...(mode === "advantage" ? { advantage: true } : mode === "disadvantage" ? { disadvantage: true } : {}) };
+    return rollAbility({ saveDetails, displayOptions: { ...data.displayOptions, fastForward: true } });
+  }
   const confirmed = await DialogV2.confirm({
     window: { title: `${actor?.name ?? ""}: ${data.effectName}` },
     content: `<p>${actor?.name} &mdash; use your action to roll against ${data.effectName}?</p>`,
