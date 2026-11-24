@@ -1039,7 +1039,7 @@
     "legendary": "Legendary action",
     "lair": "Lair action",
     "free": "Free (no action)",
-    "other": "Other"
+    "other": "Special"
   },
   "midi-qol.Hub.SlotsLeft": "{n} slot(s) left",
   "midi-qol.Hub.RightClickRemove": "Right-click to remove from the bar",

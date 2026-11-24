@@ -105,7 +105,9 @@ async function cellsOf(actor: Actor.Implementation): Promise<ActivityCell[]> {
     }
     for (const activity of activities) {
       const activation = String((activity as { activation?: { type?: string } }).activation?.type ?? "");
-      if (!activation || activation === "none") continue;
+      // No activation type (dnd5e's None): kept when the chooser offers it (Quickened Spell, Regain Sorcery Points, Reckless
+      // Attack), not when nothing but an automation uses it
+      if ((!activation || activation === "none") && !listed?.has((activity as { id: string }).id)) continue;
       if ((activity as { midiProperties?: { automationOnly?: boolean } }).midiProperties?.automationOnly) continue;
       let found: UseIssue[] = [];
       try { found = await issues(activity); } catch (err) { console.warn(`midi-qol | turn model: issues of ${item.name}`, err); }

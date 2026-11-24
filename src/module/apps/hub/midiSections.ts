@@ -137,8 +137,9 @@ function tabEntries(model: TurnModel, tab: string, filter = ""): Entry[] {
   }));
 }
 
-/** The filters offered, in order: what something in use gives, then the costs */
-const FILTERS = ["active", "action", "bonus", "reaction", "legendary"] as const;
+/** The filters offered, in order: what something in use gives, then the costs; "other" is Special (no activation,
+ * dnd5e's special, minutes and longer) */
+const FILTERS = ["active", "action", "bonus", "reaction", "other", "legendary"] as const;
 const LISTS = ["weapons", "spells", "features", "items"] as const;
 
 /** The filter chips: All, then each filter the creature has a use for (in the open tab, else in all of them), with its
