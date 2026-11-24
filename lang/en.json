@@ -1056,6 +1056,8 @@
   "midi-qol.Around.HealReach": "In reach of my healing ({n})",
   "midi-qol.Around.Help": "Within reach to Help",
   "midi-qol.Hub.Flanking": "Flanking",
+  "midi-qol.Hub.AlliesInArea": "Allies in the area: {names}",
+  "midi-qol.Hub.NextUp": "Next: {name}",
   "midi-qol.Hub.SneakOpening": "Sneak Attack: {ally} beside it",
   "midi-qol.Inbox.Roll": "Roll",
   "midi-qol.Inbox.Dialog": "Dialog…",

@@ -1,4 +1,5 @@
 import { activeHud, registerHud } from "../../services/turnModel/hud.js";
+import { i18n } from "../../../midi-qol.js";
 import { setOfferCloser, setOfferPresenter } from "../../services/multiattack/legendary.js";
 import { MidiHub, setupHubRefresh } from "./MidiHub.js";
 import { hubOffers, inlineAsks, registerMidiHubSections } from "./midiSections.js";
@@ -73,6 +74,25 @@ export function setupHub() {
   Hooks.on("midi-qol.incomingRequestsChanged" as never, (() => {
     for (const request of incomingRequests()) if (request.window) dock(foundry.applications.instances.get(request.window.id) as never);
   }) as never);
+  // Coordination: while an area is being placed, the allies of the hub's creature inside it (core's placement preview)
+  window.setInterval(() => {
+    const element = MidiHub.shown?.element;
+    if (!element) return;
+    const context = (canvas?.regions as unknown as { _placementContext?: { preview?: { document?: { testPoint?(point: { x: number, y: number, elevation: number }): boolean } } } } | undefined)?._placementContext;
+    const own = MidiHub.shown?.token?.object as Token.Implementation | undefined;
+    const testPoint = context?.preview?.document?.testPoint?.bind(context.preview.document);
+    const allies = testPoint && own ? (canvas?.tokens?.placeables ?? []).filter(t => t.actor && t.visible && t.document.disposition === own.document.disposition
+      && testPoint({ ...t.center, elevation: t.document.elevation ?? 0 })).map(t => t.name ?? "") : [];
+    let note = element.querySelector<HTMLElement>(".midi-hub-placing");
+    if (!allies.length) { note?.remove(); return; }
+    if (!note) {
+      note = document.createElement("div");
+      note.className = "midi-hub-note midi-hub-placing";
+      (element.querySelector(".midi-hub-right") ?? element).prepend(note);
+    }
+    const text = i18n("midi-qol.Hub.AlliesInArea").replace("{names}", allies.join(", "));
+    if (note.textContent !== text) note.textContent = text;
+  }, 250);
   setOfferCloser(() => { for (const offer of hubOffers.splice(0)) offer.resolve(undefined); void MidiHub.shown?.render(); });
 }
 
