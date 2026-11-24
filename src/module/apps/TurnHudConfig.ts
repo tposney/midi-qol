@@ -1,4 +1,5 @@
 import { i18n } from "../../midi-qol.js";
+import { setUserSetting, userSettingValue } from "../lib/userSettings.js";
 import {
   HUD_ROLES, PLAYER_ROLES, cycleHud, hudApi, hudChoice, hudChoices, hudProvider, playerChoice, setHudChoice, tableChoice,
   type HudProvider, type HudRole, type HudSettings, type HudTool
@@ -16,6 +17,9 @@ import {
 const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
 export type SettingConfig = { namespace: string, key: string, scope: string, name?: string, hint?: string, type?: unknown, choices?: Record<string, string>,
   range?: { min?: number, max?: number, step?: number }, default?: unknown, input?: unknown };
+
+/** The GM's user picker's field name */
+const USER_FIELD = "midi-qol-hud.user";
 
 /** A role's choice field's name */
 const choiceName = (role: HudRole) => `midi-qol-hud.${role}`;
@@ -37,16 +41,24 @@ function settingConfig(key: string): SettingConfig | undefined {
   return game.settings?.settings.get(key as never) as SettingConfig | undefined;
 }
 
-/** A setting the user may change here: registered, and world settings only for the GM */
-function editable(setting: SettingConfig | undefined): setting is SettingConfig {
-  return !!setting && (setting.scope !== "world" || !!game.user?.isGM);
+/** A setting the user may change here: registered, and world settings only for the GM; for another user (the GM), not
+ * a client setting (kept in that user's browser) */
+function editable(setting: SettingConfig | undefined, userId: string = game.userId ?? ""): setting is SettingConfig {
+  if (!setting || (setting.scope === "world" && !game.user?.isGM)) return false;
+  return userId === game.userId || setting.scope !== "client";
+}
+
+/** A setting's value for the user being edited */
+function settingValue(setting: SettingConfig, userId: string): unknown {
+  const id = `${setting.namespace}.${setting.key}`;
+  return setting.scope === "user" ? userSettingValue(id, userId) : game.settings?.get(setting.namespace as never, setting.key as never);
 }
 
 /** The HUDs in use, one per module (providers sharing a settings object): the roles each fills */
-function inUse(): { provider: HudProvider, roles: HudRole[] }[] {
+function inUse(userId: string): { provider: HudProvider, roles: HudRole[] }[] {
   const found: { provider: HudProvider, settings?: HudSettings, roles: HudRole[] }[] = [];
   for (const role of HUD_ROLES) {
-    const provider = hudProvider(hudChoice(role));
+    const provider = hudProvider(hudChoice(role, userId));
     if (!provider) continue;
     const same = found.find(f => (f.settings && f.settings === provider.settings) || f.provider === provider);
     if (same) same.roles.push(role);
@@ -71,30 +83,41 @@ export class TurnHudConfig extends HandlebarsApplicationMixin(ApplicationV2) {
   /** The tools and own-settings openers drawn, by index (their buttons carry the index) */
   #tools: HudTool[] = [];
   #own: (() => void)[] = [];
+  /** The user whose choices and settings are shown (a GM may pick another) */
+  #userId: string = game.userId ?? "";
 
   async _prepareContext(options) {
     const context = await super._prepareContext(options);
     const isGM = !!game.user?.isGM;
+    const userId = isGM && game.users?.get(this.#userId) ? this.#userId : game.userId ?? "";
+    this.#userId = userId;
+    const self = userId === game.userId;
+    // The GM: whose settings these are (user settings are per user)
+    const userField = isGM ? Object.assign(new foundry.data.fields.StringField({ required: true,
+      choices: Object.fromEntries((game.users?.contents ?? []).map(u => [u.id, u.isSelf ? i18n("midi-qol.Hud.You").replace("{name}", u.name ?? "") : u.name ?? ""])) }),
+    { name: USER_FIELD, label: i18n("midi-qol.Hud.ForUser"), hint: i18n(self ? "midi-qol.Hud.ForUserHint" : "midi-qol.Hud.ForOtherHint") }) : undefined;
     const roles = HUD_ROLES.map(role => {
       const mine = PLAYER_ROLES.includes(role);
-      const id = hudChoice(role);
+      const id = hudChoice(role, userId);
       const missing = id !== "foundry" && id !== "none" && !hudProvider(id);
       const label = i18n(`midi-qol.Hud.Role.${role}`);
       // The table's roles: a select for the GM, the choice shown to a player
       if ( !mine && !isGM ) return { readOnly: true, label, shown: hudChoices(role)[id] ?? id, hint: i18n("midi-qol.Hud.SetByGM"), missing };
+      // The table's roles are the same for everyone: shown, not changed, while editing another user
+      if (!mine && !self) return { readOnly: true, label, shown: hudChoices(role)[id] ?? id, hint: i18n("midi-qol.Hud.TableRoleHint"), missing };
       const field = new foundry.data.fields.StringField({ required: true, choices: hudChoices(role, { withDefault: mine }) });
       Object.assign(field, { name: choiceName(role), label,
         hint: i18n(mine ? `midi-qol.Hud.RoleHint.${role}` : "midi-qol.Hud.TableRoleHint") });
-      return { field, value: mine ? playerChoice(role) : tableChoice(role), missing };
+      return { field, value: mine ? playerChoice(role, userId) : tableChoice(role), missing };
     });
     this.#tools = [];
     this.#own = [];
-    const huds = inUse();
+    const huds = inUse(userId);
     const tabs = huds.flatMap(({ provider, roles: used }) => (provider.settings?.tabs ?? [])
       .filter(tab => !tab.roles || tab.roles.some(r => used.includes(r)))
       .map(tab => {
-        const entries = tab.keys.map(settingConfig).filter(editable).map(setting => ({
-          field: fieldFor(setting), value: game.settings?.get(setting.namespace as never, setting.key as never), input: setting.input
+        const entries = tab.keys.map(settingConfig).filter(setting => editable(setting, userId)).map(setting => ({
+          field: fieldFor(setting), value: settingValue(setting, userId), input: setting.input
         }));
         const tools = (tab.tools ?? []).filter(tool => !tool.gmOnly || isGM).map(tool => {
           this.#tools.push(tool);
@@ -106,25 +129,31 @@ export class TurnHudConfig extends HandlebarsApplicationMixin(ApplicationV2) {
     const active = tabs.some(t => t.id === this.tabGroups.hud) ? this.tabGroups.hud : tabs[0]?.id;
     if (active) this.tabGroups.hud = active;
     const credits = huds.filter(h => h.provider.credit).map(h => h.provider.credit);
-    const ownSettings = huds.filter(h => h.provider.openSettings).map(h => {
+    // A HUD's own settings window edits the current user's
+    const ownSettings = huds.filter(h => self && h.provider.openSettings).map(h => {
       this.#own.push(() => h.provider.openSettings?.());
       return { index: this.#own.length - 1, label: h.provider.label };
     });
-    return { ...context, roles, hudTabs: tabs.map(t => ({ ...t, active: t.id === active })), credits, ownSettings };
+    return { ...context, userField, userId, roles, hudTabs: tabs.map(t => ({ ...t, active: t.id === active })), credits, ownSettings };
   }
 
   static async #onChange(this: TurnHudConfig, event: Event, _form: HTMLFormElement, formData: { object: Record<string, unknown> }) {
     const name = (event.target as HTMLInputElement | null)?.name;
     if (!name || !(name in formData.object)) return;
     const value = formData.object[name];
+    if (name === USER_FIELD) {
+      this.#userId = String(value);
+      return void this.render();
+    }
     const role = HUD_ROLES.find(r => choiceName(r) === name);
     if (role) {
-      await setHudChoice(String(value), role);
+      await setHudChoice(String(value), role, this.#userId);
       return void this.render();
     }
     const setting = settingConfig(name);
-    if (!editable(setting)) return;
-    await game.settings?.set(setting.namespace as never, setting.key as never, value as never);
+    if (!editable(setting, this.#userId)) return;
+    if (setting.scope === "user") await setUserSetting(name, value, this.#userId);
+    else await game.settings?.set(setting.namespace as never, setting.key as never, value as never);
   }
 
   static #onTool(this: TurnHudConfig, _event: PointerEvent, target: HTMLElement) {

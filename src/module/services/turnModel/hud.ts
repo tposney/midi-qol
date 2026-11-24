@@ -1,4 +1,5 @@
 import { i18n } from "../../../midi-qol.js";
+import { setUserSetting, userSettingValue } from "../../lib/userSettings.js";
 import { Registry } from "../../api/registry.js";
 import { tokenFor } from "../../lib/tokenResolver.js";
 import { configSettings } from "../../settings.js";
@@ -107,20 +108,20 @@ export function tableChoice(role: HudRole): string {
 }
 
 /** The player's own setting for a role: a HUD's id, foundry, none, or default (the table's); the table's roles: default */
-export function playerChoice(role: HudRole = "combat"): string {
+export function playerChoice(role: HudRole = "combat", userId: string = game.userId ?? ""): string {
   if (!PLAYER_ROLES.includes(role)) return DEFAULT_HUD;
-  return String(game.settings?.get("midi-qol", PLAYER_SETTING as never) ?? DEFAULT_HUD);
+  return String(userSettingValue(`midi-qol.${PLAYER_SETTING}`, userId) ?? DEFAULT_HUD);
 }
 
 /** The choice in effect for a role: the player's, else the table's */
-export function hudChoice(role: HudRole = "combat"): string {
-  const own = playerChoice(role);
+export function hudChoice(role: HudRole = "combat", userId: string = game.userId ?? ""): string {
+  const own = playerChoice(role, userId);
   return own === DEFAULT_HUD ? tableChoice(role) : own;
 }
 
 /** Sets the player's choice (combat), or the table's (party, turn order: the GM only) */
-export async function setHudChoice(id: string, role: HudRole = "combat") {
-  if (PLAYER_ROLES.includes(role)) return void await game.settings?.set("midi-qol", PLAYER_SETTING as never, id as never);
+export async function setHudChoice(id: string, role: HudRole = "combat", userId: string = game.userId ?? "") {
+  if (PLAYER_ROLES.includes(role)) return void await setUserSetting(`midi-qol.${PLAYER_SETTING}`, id, userId);
   await setTableChoice(id, role);
 }
 

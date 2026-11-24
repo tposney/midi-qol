@@ -1,4 +1,5 @@
 <div class="midi-qol-turn-hud-body">
+    {{#if userField}}{{formGroup userField value=userId localize=true}}{{/if}}
     <fieldset>
         <legend>{{localize "midi-qol.Hud.Roles"}}</legend>
         {{#each roles}}

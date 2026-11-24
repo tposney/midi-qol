@@ -16,6 +16,7 @@ import { defineDeferredTriggersService, offerRelease, readierOf, registerDeferre
 import { checklistApi, setupChecklist } from "./module/lib/checklist.js";
 import { ChecklistPanel, registerChecklistSetting, setupChecklistPanel } from "./module/apps/ChecklistPanel.js";
 import { hubApi, setupHub } from "./module/apps/hub/setup.js";
+import { setupUserSettings } from "./module/lib/userSettings.js";
 import { setupInteractionsHUD } from "./module/services/interactions/hud.js";
 import { registerDefaultInteractions } from "./module/services/interactions/defaults.js";
 import { registerGrappleInteractions } from "./module/services/interactions/grapple.js";
@@ -729,6 +730,7 @@ Hooks.once('init', async function () {
   // Register custom module settings
   registerSettings();
   registerHudSetting();
+  setupUserSettings();
   registerChecklistSetting();
   registerTurnHudConfig();
   setupCompatibilityLine();
