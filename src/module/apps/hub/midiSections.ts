@@ -38,8 +38,10 @@ function useButton(cell: ActivityCell, options: { barIndex?: number, removable?:
   const title = several ? `${cell.itemName}: ${cell.name}` : cell.itemName;
   const tip = [`<strong>${escape(title)}</strong>`, escape(i18n(`midi-qol.Hub.Cost.${kind}`)),
     ...(cell.uses ? [`${cell.uses.value}/${cell.uses.max}`] : []), ...(cell.spellLevel ? [i18n("midi-qol.Hub.SlotsLeft").replace("{n}", String(cell.slotsLeft ?? 0))] : []),
-    ...(!cell.usable && cell.reason ? [`<em>${escape(cell.reason)}</em>`] : []), ...(options.removable ? [`<span class="hint">${escape(i18n("midi-qol.Hub.RightClickRemove"))}</span>`] : [])].join("<br>");
-  return `<button type="button" class="midi-hub-use${cell.usable ? "" : " midi-hub-unusable"}${cell.multiattack ? " midi-hub-allowed" : ""}" draggable="true"
+    ...(cell.reason ? [`<em>${escape(cell.reason)}</em>`] : []), ...(options.removable ? [`<span class="hint">${escape(i18n("midi-qol.Hub.RightClickRemove"))}</span>`] : [])].join("<br>");
+  // Blocked: greyed; an issue the policy only shows (action used, with enforcement off): marked, still usable
+  const state = !cell.usable ? " midi-hub-unusable" : cell.issues.length ? " midi-hub-marked" : "";
+  return `<button type="button" class="midi-hub-use${state}${cell.multiattack ? " midi-hub-allowed" : ""}" draggable="true"
     data-hub-action="use" data-uuid="${escape(cell.uuid)}"${options.barIndex !== undefined ? ` data-bar-index="${options.barIndex}" data-hub-context="remove"` : ""}
     data-tooltip-html="${escape(tip)}" data-tooltip-direction="UP">
     <img src="${escape(cell.img)}" alt="">${mark(kind)}${cell.uses ? `<span class="midi-hub-count">${cell.uses.value}</span>` : ""}</button>`;

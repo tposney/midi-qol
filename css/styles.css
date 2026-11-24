@@ -2677,6 +2677,7 @@ body.midi-qol-attack-primed #board { cursor: crosshair; }
 .midi-qol-hub .midi-hub-use .midi-hub-mark { position: absolute; left: 2px; top: 2px; }
 .midi-qol-hub .midi-hub-use .midi-hub-count { position: absolute; right: 2px; bottom: 0; font-size: 0.7rem; text-shadow: 0 0 3px #000; }
 .midi-qol-hub .midi-hub-use.midi-hub-unusable { filter: grayscale(1) brightness(0.5); }
+.midi-qol-hub .midi-hub-use.midi-hub-marked { filter: brightness(0.7); outline: 2px solid #c9a227; outline-offset: -2px; }
 .midi-qol-hub .midi-hub-use.midi-hub-allowed { box-shadow: 0 0 6px 2px #d4af37; }
 .midi-qol-hub .midi-hub-action, .midi-qol-hub .midi-hub-multi { width: auto; flex: none; display: inline-flex; gap: 0.3rem; align-items: center; }
 .midi-qol-hub .midi-hub-action.midi-hub-unusable, .midi-qol-hub .midi-hub-multi.midi-hub-unusable { opacity: 0.45; }
