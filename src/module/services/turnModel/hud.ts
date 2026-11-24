@@ -73,7 +73,7 @@ export function hudChoices(role: HudRole, { withDefault = false }: { withDefault
     choices[DEFAULT_HUD] = `${i18n("midi-qol.Hud.TableDefault")} (${hudChoices(role)[table] ?? table})`;
   }
   if (role === "combat") choices[FOUNDRY_HUD] = i18n("midi-qol.Hud.foundry");
-  for (const entry of huds.list()) if (roleOf(entry.value) === role) choices[entry.id] = entry.value.label;
+  for (const entry of huds.list()) if (roleOf(entry.value) === role) choices[entry.id] = i18n(entry.value.label);
   choices[NO_HUD] = i18n(role === "combat" ? "midi-qol.Hud.none" : role === "party" ? "midi-qol.Hud.noParty" : "midi-qol.Hud.noTurnOrder");
   return choices;
 }
@@ -98,7 +98,7 @@ export function hudProvider(id: string): HudProvider | undefined {
 /** The HUDs registered (all roles, or one) */
 export function listHuds(role?: HudRole): { id: string, label: string, role: HudRole, available: boolean }[] {
   return huds.list().filter(e => !role || roleOf(e.value) === role)
-    .map(e => ({ id: e.id, label: e.value.label, role: roleOf(e.value), available: e.value.available?.() !== false }));
+    .map(e => ({ id: e.id, label: i18n(e.value.label), role: roleOf(e.value), available: e.value.available?.() !== false }));
 }
 
 /** The table's choice for a role (midi's config) */
