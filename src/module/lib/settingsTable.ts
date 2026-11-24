@@ -71,6 +71,7 @@ export const MIDI_SETTINGS: Record<string, MidiSettingEntry> = {
   "templateSnapping": { group: "mechanics", hint: "midi-qol.TemplateSnapping.Hint", choices: "templateSnappingOptions" },
   "undoChatColor": { group: "mechanics", label: "midi-qol.UndoChatColor.Name", hint: "midi-qol.UndoChatColor.Hint", choices: "ColorOptions" },
   "undoWorkflow": { group: "mechanics", label: "midi-qol.UndoWorkflow.Name", hint: "midi-qol.UndoWorkflow.Hint" },
+  "playerUndo": { group: "mechanics", label: "midi-qol.PlayerUndo.Name", hint: "midi-qol.PlayerUndo.Hint" },
   "waitForDamageApplication": { group: "mechanics", label: "midi-qol.WaitForDamageApplication.Name", hint: "midi-qol.WaitForDamageApplication.Hint" },
   "addSheetButtons": { group: "misc", label: "midi-qol.AddSheetButtons.Name", hint: "midi-qol.AddSheetButtons.Hint" },
   "allowActorUseMacro": { group: "misc", label: "midi-qol.AllowActorUseMacro.Name" },

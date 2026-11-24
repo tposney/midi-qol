@@ -19,7 +19,7 @@ import { RollModifierTracker } from "./lib/RollModifierTracker.js";
 import { TokenDocumentSet } from "./lib/tokenDocumentSet.js";
 import { copyDamageOptions } from "./lib/damageRules.js";
 import { actorEmbeddedByPath, repointCopiedDependentsSource } from "./lib/MidiDependentsRegistry.js";
-import { queueUndoData, startUndoWorkflow, _removeMostRecentWorkflow, _undoMostRecentWorkflow, undoTillWorkflow, _queueUndoDataDirect, addUndoChatCards } from "./undo.js";
+import { queueUndoData, startUndoWorkflow, _removeMostRecentWorkflow, _undoMostRecentWorkflow, _undoLastUseOf, undoTillWorkflow, _queueUndoDataDirect, addUndoChatCards } from "./undo.js";
 import { TroubleShooter } from "./apps/TroubleShooter.js";
 import { StatUpdateMessage } from "./RollStats.js";
 import { DamageApplicationOptions, DamageDescription, DamageListEntry, DamageModDisplay, MonksTokenBarRequest, MoveTokenOptions, RollDialogConfig, RollMessageConfig, RollProcessConfig, SaveDetails, TeleportTokenDestination } from "../globals.js";
@@ -93,6 +93,7 @@ export let setupSocket = () => {
   registerSocketAndQuery("removeEffects", removeEffects);
   registerSocketAndQuery("removeEffectUuids", removeEffectUuids);
   registerSocketAndQuery("removeMostRecentWorkflow", _removeMostRecentWorkflow);
+  registerSocketAndQuery("undoLastUseOf", _undoLastUseOf as MidiQueryHandler);
   registerSocketAndQuery("removeStatsForActorId", removeActorStats);
   registerSocketAndQuery("removeWorkflow", _removeWorkflow);
   registerSocketAndQuery("rollAbility", rollAbility);

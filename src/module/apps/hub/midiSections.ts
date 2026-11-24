@@ -1,3 +1,6 @@
+import { currentLoadout, loadoutsOf, removeLoadout, saveLoadout, swapLoadout } from "../../services/loadouts.js";
+import { configSettings } from "../../settings.js";
+import { unTimedExecuteAsGM } from "../../GMAction.js";
 import { hasUsedReaction } from "../../utils.js";
 import { getDistance } from "../../services/distance/service.js";
 import { listToggles, setToggle } from "../../lib/entries/offers.js";
@@ -360,7 +363,14 @@ function drawerHtml(ctx: HubContext): string {
     const own = ctx.model.economy.movement ? [
       `<button type="button" class="midi-hub-action" data-hub-action="dash">${mark("action")} ${escape(i18n("midi-qol.Hub.Dash"))}</button>`,
       `<button type="button" class="midi-hub-action" data-hub-action="disengage">${mark("action")} ${escape(i18n("midi-qol.Hub.Disengage"))}</button>`] : [];
-    body = `<div class="midi-hub-actions">${[...own, ...offers].join("")}</div>`;
+    // Weapon sets: swap (the free object interaction in combat), save what is equipped, right-click to remove
+    const sets = loadoutsOf(ctx.actor);
+    const current = currentLoadout(ctx.actor);
+    const loadouts = `<div class="midi-hub-row midi-hub-loadouts"><span class="midi-hub-label">${escape(i18n("midi-qol.Loadout.Title"))}</span>${sets.map((set, index) =>
+      `<button type="button" class="midi-hub-action${index === current ? " active" : ""}" data-hub-action="loadout" data-index="${index}" data-hub-context="removeLoadout"
+        data-tooltip="${escape(i18n(index === current ? "midi-qol.Loadout.Current" : "midi-qol.Loadout.SwapHint"))}"><i class="fa-solid fa-shuffle"></i> ${escape(set.name)}</button>`).join("")}
+      <button type="button" class="midi-hub-action" data-hub-action="saveLoadout" data-tooltip="${escape(i18n("midi-qol.Loadout.SaveHint"))}"><i class="fa-solid fa-floppy-disk"></i> ${escape(i18n("midi-qol.Loadout.Save"))}</button></div>`;
+    body = `${loadouts}<div class="midi-hub-actions">${[...own, ...offers].join("")}</div>`;
   } else if (ctx.tab === "spells") {
     title = i18n("midi-qol.Hub.Tab.spells") + (filterName ? ` · ${filterName}` : "");
     body = spellsHtml(ctx);
@@ -468,6 +478,13 @@ export function registerMidiHubSections() {
       dash: async ({ actor }) => { await takeDash(actor); },
       disengage: async ({ actor }) => { await takeDisengage(actor); },
       choose: async (ctx, target) => { await openChoices(ctx, target); },
+      loadout: async ({ token }, target) => {
+        if (!token) return;
+        const result = await swapLoadout(token, Number(target.dataset.index));
+        if (!result.done && result.reason) ui.notifications?.warn(result.reason);
+      },
+      saveLoadout: async ({ actor }) => { await saveLoadout(actor); },
+      removeLoadout: async ({ actor }, target) => { await removeLoadout(actor, Number(target.dataset.index)); },
       choiceToggle: async ({ actor }, target) => { await setToggle(actor, target.dataset.key ?? "", (target as HTMLInputElement).checked); },
       standing: async ({ actor }, target) => {
         await setStandingChoice(actor, target.dataset.key ?? "", target.dataset.choice as StandingChoice, target.dataset.label ?? "");
@@ -511,9 +528,16 @@ export function registerMidiHubSections() {
           ${offer.choices.map(c => `<button type="button" data-hub-action="offer" data-offer="${index}" data-uuid="${escape(c.uuid)}">${escape(c.label)}</button>`).join("")}
           <button type="button" data-hub-action="offer" data-offer="${index}">${escape(i18n("midi-qol.Legendary.Skip"))}</button></div>`));
       }
+      // Undo of this user's last use (the GM's: the most recent), where the table allows it
+      if (configSettings.undoWorkflow && (gm || configSettings.playerUndo))
+        parts.push(`<a class="midi-hub-undo" data-hub-action="undo" data-tooltip="${escape(i18n(gm ? "midi-qol.Hub.UndoGM" : "midi-qol.Hub.UndoMine"))}"><i class="fa-solid fa-rotate-left"></i> ${escape(i18n("midi-qol.Hub.Undo"))}</a>`);
       return parts.join("");
     },
     actions: {
+      undo: async () => {
+        const result = await unTimedExecuteAsGM("undoLastUseOf") as true | string | undefined;
+        if (result !== true) ui.notifications?.warn(i18n(result ?? "midi-qol.Hub.UndoNothing"));
+      },
       release: async (_ctx, target) => { if (target.dataset.id) await releaseDeferred(target.dataset.id, { targets: [...(game.user?.targets ?? [])].map(t => t.document.uuid ?? "") }); },
       drop: async (_ctx, target) => { if (target.dataset.id) await dropDeferred(target.dataset.id); },
       holds: () => { HoldPanel.open(); },

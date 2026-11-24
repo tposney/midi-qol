@@ -1,3 +1,4 @@
+import { registerLoadouts } from "./module/services/loadouts.js";
 import { useOptionsApi } from "./module/services/useOptions/registry.js";
 import { registerMetamagic } from "./module/services/useOptions/metamagic.js";
 import { installAfterUseDialog } from "./module/activities/afterUseDialog.js";
@@ -759,6 +760,7 @@ Hooks.once('init', async function () {
   initPatching();
   setupClickToAttack();
   registerMetamagic();
+  registerLoadouts();
   setupMultiattackPlans();
   registerDamageApplication();
   registerDamageMessageSummary();

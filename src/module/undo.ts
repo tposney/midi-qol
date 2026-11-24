@@ -312,6 +312,23 @@ export async function _undoMostRecentWorkflow() {
   return;
 }
 
+/**
+ * The hub's Undo (on the GM's client, where the queue is): the caller's most recent use, only when it is the most recent
+ * use of all (undo is a stack: an older use would undo everyone's newer ones first). A player needs Players may undo
+ * their last use. Returns a reason when refused.
+ */
+export async function _undoLastUseOf(this: { socketdata?: { userId?: string } } | void): Promise<true | string> {
+  const userId = (this as { socketdata?: { userId?: string } } | undefined)?.socketdata?.userId ?? game.userId ?? "";
+  const user = game.users?.get(userId);
+  if (!configSettings.undoWorkflow) return "midi-qol.Hub.UndoOff";
+  if (!user?.isGM && !configSettings.playerUndo) return "midi-qol.Hub.UndoNotAllowed";
+  const latest = undoDataQueue.find(entry => !entry.isReaction);
+  if (!latest) return "midi-qol.Hub.UndoNothing";
+  if (!user?.isGM && latest.userId !== userId) return "midi-qol.Hub.UndoNotLatest";
+  await _undoMostRecentWorkflow();
+  return true;
+}
+
 export async function _removeMostRecentWorkflow() {
   if (undoDataQueue.length === 0) return false;
   let undoData: UndoData | undefined;

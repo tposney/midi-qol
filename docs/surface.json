@@ -533,6 +533,7 @@
     "playerRollSaves",
     "playerSaveTimeout",
     "playerStatsOnly",
+    "playerUndo",
     "playerWaitGambit",
     "playerWaitGM",
     "playerWaitShowPlayers",

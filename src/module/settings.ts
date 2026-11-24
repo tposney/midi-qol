@@ -227,6 +227,8 @@ export class ConfigSettings {
   hideNPCNames: string = "";
   undoChatColor: string = "Delete";
   undoWorkflow: boolean = false;
+  /** Players may undo their own last use from the hub (when it is the most recent) */
+  playerUndo: boolean = false;
   waitForDamageApplication: boolean = true;
   enforceDeathSaves: boolean = false;
   rollAlternate: string = "off";
@@ -797,6 +799,7 @@ export let fetchParams = () => {
   if (configSettings.removeConcentrationEffects === undefined) configSettings.removeConcentrationEffects = "effects";
   if (configSettings.doConcentrationCheck === undefined) configSettings.doConcentrationCheck = configSettings.removeConcentration ? "chat" : "none";
   if (configSettings.undoWorkflow === undefined) configSettings.undoWorkflow = false;
+  if (configSettings.playerUndo === undefined) configSettings.playerUndo = false;
   if (configSettings.undoChatColor === undefined) configSettings.undoChatColor = "Delete";
   // Undone cards are coloured by CSS from this, so a change recolours them all.
   document.documentElement.style.setProperty("--midi-qol-undone-color", configSettings.undoChatColor === "Delete" ? "transparent" : configSettings.undoChatColor);
