@@ -9,6 +9,8 @@ import { HoldPanel } from "../HoldPanel.js";
 import { combatOfToken } from "../../lib/tokenResolver.js";
 import { isMultiattackItem } from "../../services/multiattack/plans.js";
 import { MidiActivityChoiceDialog } from "../MidiActivityChoiceDialog.js";
+import { useOrPrime } from "../../services/clickToAttack/service.js";
+import type { Activity } from "../../../globals.js";
 
 /*
  * M27: midi's own hub sections. Left: the creature's state and its economy. Centre: its bar (the user's own, else the
@@ -58,6 +60,27 @@ interface Entry { uuid: string, item: boolean, cells: ActivityCell[] }
  * activity (those are in the Active group while their spell runs) */
 const offered = (model: TurnModel) => model.activities.filter(c => !c.hidden && !c.unprepared && !c.afterCast && !isMultiattackItem(itemOf(c) as Item.Implementation));
 
+/** A running spell's after-cast activity (Spiritual Weapon's attack, Flaming Sphere's Ram) */
+const runningAfterCast = (c: ActivityCell) => c.afterCast && c.running && !c.unprepared && !c.hidden;
+
+/** An item something in effect gave the creature: created by an effect (DAE), dependent on another document (dnd5e
+ * riders, summons' items), or carrying an applied enchantment (Shillelagh's club, Magic Weapon) */
+function isGranted(item: Item.Implementation | null): boolean {
+  if (!item) return false;
+  const flags = item.flags as { dae?: { DAECreated?: boolean }, dnd5e?: { dependentOn?: string } };
+  if (flags.dae?.DAECreated || flags.dnd5e?.dependentOn) return true;
+  return item.effects.some(e => (e as { isAppliedEnchantment?: boolean }).isAppliedEnchantment === true);
+}
+
+/** Uses that something in use gives: running spells' after-cast activities and granted items' activities */
+const isActiveCell = (c: ActivityCell) => runningAfterCast(c) || (!c.hidden && !c.unprepared && isGranted(itemOf(c)));
+
+/** Everything the hub offers in its lists: what's offered, and a running spell's after-cast activities with its casting */
+const available = (model: TurnModel) => [...offered(model), ...model.activities.filter(runningAfterCast)];
+
+/** A filter: a cost, or "active" (what something in use gives); "" matches all */
+const matches = (c: ActivityCell, filter: string) => !filter || (filter === "active" ? isActiveCell(c) : costKind(c) === filter);
+
 /** One entry per item, in the cells' order */
 function itemEntries(cells: ActivityCell[]): Entry[] {
   const byItem = new Map<string, Entry>();
@@ -71,7 +94,7 @@ function itemEntries(cells: ActivityCell[]): Entry[] {
 
 /** A stored or favourite uuid as an entry: an item's (its offered activities) or one activity's */
 function entryFor(model: TurnModel, uuid: string): Entry | undefined {
-  const cells = offered(model);
+  const cells = available(model);
   const one = cells.find(c => c.uuid === uuid);
   if (one) return { uuid, item: false, cells: [one] };
   const ofItem = cells.filter(c => c.itemUuid === uuid);
@@ -100,8 +123,9 @@ async function saveBar(ctx: HubContext, entries: string[] | undefined) {
 }
 
 const TABS = ["bar", "weapons", "spells", "features", "items", "actions"] as const;
-function tabEntries(model: TurnModel, tab: string): Entry[] {
-  return itemEntries(offered(model).filter(cell => {
+/** A tab's entries, narrowed by a filter to the choices that match it (an entry with none dropped) */
+function tabEntries(model: TurnModel, tab: string, filter = ""): Entry[] {
+  return itemEntries(available(model).filter(cell => matches(cell, filter)).filter(cell => {
     const type = itemOf(cell)?.type as string | undefined;
     switch (tab) {
       case "weapons": return type === "weapon";
@@ -113,22 +137,22 @@ function tabEntries(model: TurnModel, tab: string): Entry[] {
   }));
 }
 
-/** The cost filters offered, in order */
-const FILTERS = ["action", "bonus", "reaction", "legendary"] as const;
+/** The filters offered, in order: what something in use gives, then the costs */
+const FILTERS = ["active", "action", "bonus", "reaction", "legendary"] as const;
+const LISTS = ["weapons", "spells", "features", "items"] as const;
 
-/** Entries narrowed to the choices with that cost (an entry with none dropped); "" keeps all */
-function byCost(entries: Entry[], filter: string): Entry[] {
-  if (!filter) return entries;
-  return entries.map(e => ({ ...e, cells: e.cells.filter(c => costKind(c) === filter) })).filter(e => e.cells.length);
-}
-
-/** The filter chips: All, then each cost the creature has a use for, with its count of usable ones */
-function filterChips(ctx: HubContext, pool: Entry[]): string {
-  const counts = FILTERS.map(kind => ({ kind, n: byCost(pool, kind).filter(e => e.cells.some(c => c.usable)).length,
-    any: byCost(pool, kind).length > 0 })).filter(f => f.any || f.kind === ctx.filter);
+/** The filter chips: All, then each filter the creature has a use for (in the open tab, else in all of them), with its
+ * count of usable ones. With a tab open a chip narrows the tab; with none it lists that filter's uses across them */
+function filterChips(ctx: HubContext): string {
+  const tabs = ctx.tab !== "bar" && ctx.tab !== "actions" ? [ctx.tab] : [...LISTS];
+  const counts = FILTERS.map(kind => {
+    const entries = tabs.flatMap(tab => tabEntries(ctx.model, tab, kind));
+    return { kind, n: entries.filter(e => e.cells.some(c => c.usable)).length, any: entries.length > 0 };
+  }).filter(f => f.any || f.kind === ctx.filter);
   if (!counts.length) return "";
+  const icon = (kind: string) => kind === "active" ? `<i class="fa-solid fa-wand-sparkles"></i>` : mark(kind as Kind);
   return `<div class="midi-hub-filters"><a class="midi-hub-filter" data-hub-action="filter" data-filter="">${escape(i18n("midi-qol.Hub.All"))}</a>${counts.map(f =>
-    `<a class="midi-hub-filter${ctx.filter === f.kind ? " active" : ""}" data-hub-action="filter" data-filter="${f.kind}" data-tooltip="${escape(i18n(`midi-qol.Hub.Cost.${f.kind}`))}">${mark(f.kind)} ${f.n}</a>`).join("")}</div>`;
+    `<a class="midi-hub-filter midi-hub-filter-${f.kind}${ctx.filter === f.kind ? " active" : ""}" data-hub-action="filter" data-filter="${f.kind}" data-tooltip="${escape(i18n(f.kind === "active" ? "midi-qol.Hub.ActiveHint" : `midi-qol.Hub.Cost.${f.kind}`))}">${icon(f.kind)} ${f.n}</a>`).join("")}</div>`;
 }
 
 /** An entry's button: one activity's, or an item's (its choices in a menu on click; one choice used directly) */
@@ -156,10 +180,10 @@ async function openChoices(ctx: HubContext, button: HTMLElement) {
   const item = entry ? itemOf(entry.cells[0]) : null;
   if (!entry || !item) return;
   const listed = (await MidiActivityChoiceDialog.getActivities(item)).map((a: { id: string }) => a.id);
-  const cells = entry.cells.filter(c => listed.includes(c.uuid.split(".").pop() ?? "") && (!ctx.filter || costKind(c) === ctx.filter));
+  const cells = entry.cells.filter(c => listed.includes(c.uuid.split(".").pop() ?? "") && matches(c, ctx.filter));
   if (cells.length === 1) {
-    const activity = fromUuidSync(cells[0].uuid) as { use?(usage?: object): Promise<unknown> } | null;
-    if (cells[0].usable) { ctx.afterUse(); await activity?.use?.({}); }
+    const activity = fromUuidSync(cells[0].uuid) as Activity | null;
+    if (cells[0].usable && activity) { ctx.afterUse(); await useOrPrime(activity); }
     return;
   }
   if (!cells.length) return;
@@ -201,7 +225,7 @@ function slotInfo(actor: Actor.Implementation, level: number): { pips: string, n
 /** Spells a level, each with its slots; a level with no slot left at or above it greyed (cantrips and slotless casting aside) */
 function spellsHtml(ctx: HubContext): string {
   const byLevel = new Map<number, Entry[]>();
-  for (const entry of tabEntries(ctx.model, "spells")) {
+  for (const entry of tabEntries(ctx.model, "spells", ctx.filter)) {
     const level = (itemOf(entry.cells[0])?.system as { level?: number } | undefined)?.level ?? 0;
     byLevel.set(level, [...(byLevel.get(level) ?? []), entry]);
   }
@@ -220,13 +244,15 @@ function spellsHtml(ctx: HubContext): string {
 function drawerHtml(ctx: HubContext): string {
   let title = "";
   let body = "";
-  if (ctx.filter) {
-    title = i18n(`midi-qol.Hub.Cost.${ctx.filter}`);
-    const active = ctx.model.activities.filter(c => c.afterCast && c.running && !c.unprepared && !c.hidden && costKind(c) === ctx.filter);
+  const filterName = ctx.filter === "active" ? i18n("midi-qol.Hub.Active") : ctx.filter ? i18n(`midi-qol.Hub.Cost.${ctx.filter}`) : "";
+  if (ctx.filter && (ctx.tab === "bar" || ctx.tab === "actions")) {
+    // A filter on its own: its uses in every list, what something in use gives first
+    title = filterName;
+    const active = ctx.filter === "active" ? [] : itemEntries(ctx.model.activities.filter(c => isActiveCell(c) && matches(c, ctx.filter)));
     body = [
-      ...(active.length ? [`<div class="midi-hub-row midi-hub-active-row"><span class="midi-hub-label">${escape(i18n("midi-qol.Hub.Active"))}</span>${active.map(c => useButton(c)).join("")}</div>`] : []),
-      ...(["weapons", "spells", "features", "items"] as const).map(tab => {
-        const entries = byCost(tabEntries(ctx.model, tab), ctx.filter);
+      ...(active.length ? [`<div class="midi-hub-row midi-hub-active-row"><span class="midi-hub-label">${escape(i18n("midi-qol.Hub.Active"))}</span>${active.map(e => entryButton(e)).join("")}</div>`] : []),
+      ...LISTS.map(tab => {
+        const entries = tabEntries(ctx.model, tab, ctx.filter);
         return entries.length ? `<div class="midi-hub-row midi-hub-filtered"><span class="midi-hub-label">${escape(i18n(`midi-qol.Hub.Tab.${tab}`))}</span>${entries.map(e => entryButton(e)).join("")}</div>` : "";
       })
     ].join("");
@@ -239,11 +265,12 @@ function drawerHtml(ctx: HubContext): string {
       `<button type="button" class="midi-hub-action" data-hub-action="disengage">${mark("action")} ${escape(i18n("midi-qol.Hub.Disengage"))}</button>`] : [];
     body = `<div class="midi-hub-actions">${[...own, ...offers].join("")}</div>`;
   } else if (ctx.tab === "spells") {
-    title = i18n("midi-qol.Hub.Tab.spells");
+    title = i18n("midi-qol.Hub.Tab.spells") + (filterName ? ` · ${filterName}` : "");
     body = spellsHtml(ctx);
   } else {
-    title = i18n(`midi-qol.Hub.Tab.${ctx.tab}`);
-    body = `<div class="midi-hub-row">${tabEntries(ctx.model, ctx.tab).map(e => entryButton(e)).join("")}</div>`;
+    title = i18n(`midi-qol.Hub.Tab.${ctx.tab}`) + (filterName ? ` · ${filterName}` : "");
+    const entries = tabEntries(ctx.model, ctx.tab, ctx.filter);
+    body = entries.length ? `<div class="midi-hub-row">${entries.map(e => entryButton(e)).join("")}</div>` : "";
   }
   return `<div class="midi-hub-drawer">
     <header class="midi-hub-drawer-header"><span>${escape(title)}</span>
@@ -319,12 +346,15 @@ export function registerMidiHubSections() {
   registerHubSection({
     id: "midi-qol.use", area: "center", order: 10,
     render: (ctx) => {
-      const tabs = TABS.filter(tab => tab !== "bar").map(tab => `<a class="midi-hub-tab${ctx.tab === tab && !ctx.filter ? " active" : ""}" data-hub-action="tab" data-tab="${tab}">${escape(i18n(`midi-qol.Hub.Tab.${tab}`))}</a>`).join("");
-      const chips = filterChips(ctx, itemEntries(offered(ctx.model)));
-      // The bar: always shown, always the same height. A running spell's after-cast activities first
+      const tabs = TABS.filter(tab => tab !== "bar").map(tab => `<a class="midi-hub-tab${ctx.tab === tab ? " active" : ""}" data-hub-action="tab" data-tab="${tab}">${escape(i18n(`midi-qol.Hub.Tab.${tab}`))}</a>`).join("");
+      const chips = filterChips(ctx);
+      // The bar: always shown, always the same height. First what something in use gives: a running spell's after-cast
+      // activities, and granted items not already on the bar
       const { entries, own } = barEntries(ctx);
-      const active = ctx.model.activities.filter(c => c.afterCast && c.running && !c.unprepared && !c.hidden);
-      const bar = `<div class="midi-hub-bar" data-hub-drop="bar">${active.length ? `<span class="midi-hub-active">${active.map(c => useButton(c)).join("")}</span>` : ""}${entries.map((e, i) => entryButton(e, { barIndex: i, removable: true })).join("")}
+      const onBar = new Set(entries.flatMap(e => e.cells.map(c => c.itemUuid)));
+      const granted = itemEntries(offered(ctx.model).filter(c => isGranted(itemOf(c)) && !onBar.has(c.itemUuid)));
+      const active = [...ctx.model.activities.filter(runningAfterCast).map(c => useButton(c)), ...granted.map(e => entryButton(e))];
+      const bar = `<div class="midi-hub-bar" data-hub-drop="bar">${active.length ? `<span class="midi-hub-active">${active.join("")}</span>` : ""}${entries.map((e, i) => entryButton(e, { barIndex: i, removable: true })).join("")}
           <span class="midi-hub-drop-hint">${escape(i18n(own ? "midi-qol.Hub.DropHere" : "midi-qol.Hub.DropToArrange"))}</span>
           ${own ? `<a class="midi-hub-reset" data-hub-action="resetBar" data-tooltip="${escape(i18n("midi-qol.Hub.ResetBar"))}"><i class="fa-solid fa-rotate-left"></i></a>` : ""}</div>`;
       const drawer = ctx.filter || ctx.tab !== "bar" ? drawerHtml(ctx) : "";

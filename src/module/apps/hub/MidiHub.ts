@@ -4,6 +4,7 @@ import { escape, hubSections, onSectionsChanged, type HubContext, type HubSectio
 import { preview } from "../../lib/preview.js";
 import type { Activity } from "../../../globals.js";
 import { hudApi } from "../../services/turnModel/hud.js";
+import { useOrPrime } from "../../services/clickToAttack/service.js";
 
 /*
  * M27: midi's hub (plan ~/Documents/midi-next-M27-plan-2026-11-24.md): the one place a creature's turn is run from,
@@ -189,19 +190,20 @@ export class MidiHub extends ApplicationV2 {
         const activity = fromUuidSync(target.dataset.uuid ?? "") as ActivityLike | null;
         if (activity?.use && !target.classList.contains("midi-hub-unusable")) {
           if (!this.#pinned) this.closeDrawer();
-          await activity.use({ event });
+          await useOrPrime(activity as never, { event });
         }
         break;
       }
-      // A tab or a filter opens the drawer; the open one again closes it
+      // A tab or a filter opens the drawer. A filter narrows the open tab and stays as tabs change; the open tab again
+      // closes the drawer
       case "tab": {
         const tab = target.dataset.tab ?? "bar";
-        this.#tab = tab === this.#tab && !this.#filter ? "bar" : tab;
-        this.#filter = "";
+        if (tab === this.#tab) { this.closeDrawer(); break; }
+        this.#tab = tab;
         void this.render();
         break;
       }
-      case "filter": this.#filter = target.dataset.filter === this.#filter ? "" : target.dataset.filter ?? ""; this.#tab = "bar"; void this.render(); break;
+      case "filter": this.#filter = target.dataset.filter === this.#filter ? "" : target.dataset.filter ?? ""; void this.render(); break;
       case "drawerPin": this.#pinned = !this.#pinned; void this.render(); break;
       case "drawerClose": this.closeDrawer(); break;
       case "toggleWindow": await MidiHub.switchMode(); break;

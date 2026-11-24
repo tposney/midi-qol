@@ -55,6 +55,12 @@ export function primeAttack(activity: Activity, { attackMode }: { attackMode?: s
   return true;
 }
 
+/** A HUD's use of an activity: with Click to attack on, an attack used with no target waits for a click on one */
+export async function useOrPrime(activity: Activity & { use?(usage?: object): Promise<unknown> }, usage: object = {}) {
+  if (clickToAttackEnabled() && isAttack(activity) && !game.user?.targets.size && primeAttack(activity)) return;
+  await activity.use?.(usage);
+}
+
 export function cancelPrimed() {
   if (!primed) return;
   primed = undefined;

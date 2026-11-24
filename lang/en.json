@@ -1015,6 +1015,7 @@
   "midi-qol.Hub.Unpin": "Close after a use",
   "midi-qol.Hub.All": "All",
   "midi-qol.Hub.Active": "Active",
+  "midi-qol.Hub.ActiveHint": "In use: what running spells and items in effect give (a summoned weapon's attack, an enchanted weapon)",
   "midi-qol.Hub.Title": "midi's hub",
   "midi-qol.Hub.Dock": "Dock at the bottom",
   "midi-qol.Hub.PopOut": "Pop out as a window",

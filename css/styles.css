@@ -2701,6 +2701,7 @@ li.midi-qol-after-cast-idle button { opacity: 0.5; }
 .midi-qol-hub .midi-hub-filters { display: inline-flex; gap: 0.5rem; margin-left: auto; align-items: center; font-size: 0.8rem; }
 .midi-qol-hub .midi-hub-filter { display: inline-flex; gap: 0.2rem; align-items: center; padding: 0 0.35rem; border: 1px solid transparent; border-radius: 4px; opacity: 0.75; }
 .midi-qol-hub .midi-hub-filter.active { border-color: currentColor; opacity: 1; font-weight: bold; }
+.midi-qol-hub .midi-hub-filter-active i { color: #d4af37; }
 .midi-qol-hub .midi-hub-tabs { padding-right: 3.5rem; }
 /* The drawer: a tab or a cost filter, above the bar (docked: over the canvas, the bar never moves; a window: inside it) */
 .midi-qol-hub .midi-hub-drawer { display: flex; flex-direction: column; background: rgba(15, 15, 20, 0.96); border: 1px solid var(--color-border-dark-5, #555); border-radius: 8px; color: var(--color-light-1, #eee); }
