@@ -1,4 +1,5 @@
 import { applySpellGroup, currentLoadout, currentSpellGroup, loadoutsOf, removeLoadout, removeSpellGroup, saveLoadout, saveSpellGroup, spellGroupBlocked, spellGroupsOf, swapLoadout } from "../../services/loadouts.js";
+import { reminders, remindersOn } from "./reminders.js";
 import { aroundMeHtml } from "./aroundMe.js";
 import { configSettings } from "../../settings.js";
 import { unTimedExecuteAsGM } from "../../GMAction.js";
@@ -608,14 +609,16 @@ export function registerMidiHubSections() {
   registerHubSection({
     id: "midi-qol.turn", area: "right", order: 20,
     when: ({ model }) => model.inCombat,
-    render: ({ token, model, owner, gm }) => {
+    render: ({ token, actor, model, owner, gm }) => {
       const combat = combatOfToken(token);
       if (!model.isTurn) {
         const next = combat?.turns[((combat.turn ?? 0) + 1) % (combat.turns.length || 1)];
         return next?.tokenId === token?.id ? `<div class="midi-hub-ondeck">${escape(i18n("midi-qol.Hub.OnDeck"))}</div>` : "";
       }
       const unused = model.checklist.filter(i => i.phase === "end").map(i => `<div class="midi-hub-note midi-hub-note-unused">${escape(i.label)}</div>`).join("");
-      return `<div class="midi-hub-turn"><div class="midi-hub-yourturn">${escape(i18n("midi-qol.Hub.YourTurn"))}</div>${unused}
+      // Reminders, when the player has them on (off by default)
+      const reminded = remindersOn() ? reminders(actor, token, model).map(r => `<div class="midi-hub-note midi-hub-reminder"><i class="fa-solid fa-lightbulb"></i> ${escape(r)}</div>`).join("") : "";
+      return `<div class="midi-hub-turn"><div class="midi-hub-yourturn">${escape(i18n("midi-qol.Hub.YourTurn"))}</div>${unused}${reminded}
         ${owner || gm ? `<button type="button" class="midi-hub-endturn" data-hub-action="endTurn"><i class="fa-solid fa-forward"></i> ${escape(i18n("midi-qol.Checklist.EndTurn"))}</button>` : ""}</div>`;
     },
     actions: { endTurn: async ({ token }) => { await combatOfToken(token)?.nextTurn(); } }

@@ -1,4 +1,5 @@
 import { registerLoadouts } from "./module/services/loadouts.js";
+import { registerRemindersSetting } from "./module/apps/hub/reminders.js";
 import { useOptionsApi } from "./module/services/useOptions/registry.js";
 import { diceApi } from "./module/lib/dicePicker.js";
 import { registerMetamagic } from "./module/services/useOptions/metamagic.js";
@@ -739,6 +740,7 @@ Hooks.once('init', async function () {
   registerSettings();
   registerHudSetting();
   registerClickToAttackSetting();
+  registerRemindersSetting();
   setupUserSettings();
   registerChecklistSetting();
   registerTurnHudConfig();

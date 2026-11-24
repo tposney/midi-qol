@@ -1,6 +1,7 @@
 import { i18n } from "../../midi-qol.js";
 import { setUserSetting, userSettingValue } from "../lib/userSettings.js";
 import { CLICK_TO_ATTACK_SETTING, clickToAttackAllowed } from "../services/clickToAttack/service.js";
+import { REMINDERS_SETTING } from "./hub/reminders.js";
 import {
   HUD_ROLES, PLAYER_ROLES, cycleHud, hudApi, hudChoice, hudChoices, hudProvider, playerChoice, setHudChoice, tableChoice,
   type HudProvider, type HudRole, type HudSettings, type HudTool
@@ -139,7 +140,10 @@ export class TurnHudConfig extends HandlebarsApplicationMixin(ApplicationV2) {
       this.#own.push(() => h.provider.openSettings?.());
       return { index: this.#own.length - 1, label: h.provider.label };
     });
-    return { ...context, userField, userId, roles, click, hudTabs: tabs.map(t => ({ ...t, active: t.id === active })), credits, ownSettings };
+    // The player's reminders in the hub (off by default)
+    const remindersSetting = settingConfig(`midi-qol.${REMINDERS_SETTING}`);
+    const reminders = remindersSetting ? { field: fieldFor(remindersSetting), value: settingValue(remindersSetting, userId) } : undefined;
+    return { ...context, userField, userId, roles, click, reminders, hudTabs: tabs.map(t => ({ ...t, active: t.id === active })), credits, ownSettings };
   }
 
   static async #onChange(this: TurnHudConfig, event: Event, _form: HTMLFormElement, formData: { object: Record<string, unknown> }) {
