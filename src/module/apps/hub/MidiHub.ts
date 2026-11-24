@@ -29,6 +29,7 @@ export class MidiHub extends ApplicationV2 {
   static #instance: MidiHub | undefined;
   token: TokenDocument.Implementation | undefined;
   #tab = "bar";
+  #filter = "";
   #model: TurnModel | undefined;
 
   /** Popped out as a window (the user's choice) */
@@ -66,6 +67,7 @@ export class MidiHub extends ApplicationV2 {
   }
 
   async show(token: TokenDocument.Implementation | undefined) {
+    if (token !== this.token) this.#filter = "";
     this.token = token;
     if (!token?.actor) { if (this.rendered) await this.close(); return; }
     await this.render({ force: true });
@@ -74,7 +76,7 @@ export class MidiHub extends ApplicationV2 {
   #context(model: TurnModel): HubContext {
     const actor = this.actor!;
     return {
-      actor, token: this.token, model, gm: !!game.user?.isGM, owner: !!actor.isOwner, tab: this.#tab,
+      actor, token: this.token, model, gm: !!game.user?.isGM, owner: !!actor.isOwner, tab: this.#tab, filter: this.#filter,
       refresh: () => { void this.render(); }
     };
   }
@@ -157,7 +159,8 @@ export class MidiHub extends ApplicationV2 {
         if (activity?.use && !target.classList.contains("midi-hub-unusable")) await activity.use({ event });
         break;
       }
-      case "tab": this.#tab = target.dataset.tab ?? "bar"; void this.render(); break;
+      case "tab": this.#tab = target.dataset.tab ?? "bar"; this.#filter = ""; void this.render(); break;
+      case "filter": this.#filter = target.dataset.filter === this.#filter ? "" : target.dataset.filter ?? ""; void this.render(); break;
       case "toggleWindow": await MidiHub.switchMode(); break;
       case "settings": hudApi.openSettings(); break;
     }

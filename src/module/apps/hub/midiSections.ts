@@ -113,6 +113,24 @@ function tabEntries(model: TurnModel, tab: string): Entry[] {
   }));
 }
 
+/** The cost filters offered, in order */
+const FILTERS = ["action", "bonus", "reaction", "legendary"] as const;
+
+/** Entries narrowed to the choices with that cost (an entry with none dropped); "" keeps all */
+function byCost(entries: Entry[], filter: string): Entry[] {
+  if (!filter) return entries;
+  return entries.map(e => ({ ...e, cells: e.cells.filter(c => costKind(c) === filter) })).filter(e => e.cells.length);
+}
+
+/** The filter chips: All, then each cost the creature has a use for, with its count of usable ones */
+function filterChips(ctx: HubContext, pool: Entry[]): string {
+  const counts = FILTERS.map(kind => ({ kind, n: byCost(pool, kind).filter(e => e.cells.some(c => c.usable)).length,
+    any: byCost(pool, kind).length > 0 })).filter(f => f.any || f.kind === ctx.filter);
+  if (!counts.length) return "";
+  return `<div class="midi-hub-filters"><a class="midi-hub-filter${ctx.filter ? "" : " active"}" data-hub-action="filter" data-filter="">${escape(i18n("midi-qol.Hub.All"))}</a>${counts.map(f =>
+    `<a class="midi-hub-filter${ctx.filter === f.kind ? " active" : ""}" data-hub-action="filter" data-filter="${f.kind}" data-tooltip="${escape(i18n(`midi-qol.Hub.Cost.${f.kind}`))}">${mark(f.kind)} ${f.n}</a>`).join("")}</div>`;
+}
+
 /** An entry's button: one activity's, or an item's (its choices in a menu on click; one choice used directly) */
 function entryButton(entry: Entry, options: { barIndex?: number, removable?: boolean } = {}): string {
   if (entry.cells.length === 1) return useButton(entry.cells[0], { ...options, uuid: entry.uuid });
@@ -138,7 +156,7 @@ async function openChoices(ctx: HubContext, button: HTMLElement) {
   const item = entry ? itemOf(entry.cells[0]) : null;
   if (!entry || !item) return;
   const listed = (await MidiActivityChoiceDialog.getActivities(item)).map((a: { id: string }) => a.id);
-  const cells = entry.cells.filter(c => listed.includes(c.uuid.split(".").pop() ?? ""));
+  const cells = entry.cells.filter(c => listed.includes(c.uuid.split(".").pop() ?? "") && (!ctx.filter || costKind(c) === ctx.filter));
   if (cells.length === 1) {
     const activity = fromUuidSync(cells[0].uuid) as { use?(usage?: object): Promise<unknown> } | null;
     if (cells[0].usable) await activity?.use?.({});
@@ -232,17 +250,32 @@ export function registerMidiHubSections() {
   registerHubSection({
     id: "midi-qol.use", area: "center", order: 10,
     render: (ctx) => {
-      const tabs = TABS.map(tab => `<a class="midi-hub-tab${ctx.tab === tab ? " active" : ""}" data-hub-action="tab" data-tab="${tab}">${escape(i18n(`midi-qol.Hub.Tab.${tab}`))}</a>`).join("");
+      const tabs = TABS.map(tab => `<a class="midi-hub-tab${ctx.tab === tab && !ctx.filter ? " active" : ""}" data-hub-action="tab" data-tab="${tab}">${escape(i18n(`midi-qol.Hub.Tab.${tab}`))}</a>`).join("");
       let body = "";
-      if (ctx.tab === "bar") {
+      let chips = "";
+      if (ctx.filter) {
+        // A cost filter: everything with that cost, a row per category (the tabs' categories), whatever the tab
+        chips = filterChips(ctx, itemEntries(offered(ctx.model)));
+        const active = ctx.model.activities.filter(c => c.afterCast && c.running && !c.unprepared && !c.hidden && costKind(c) === ctx.filter);
+        const rows = [
+          ...(active.length ? [`<div class="midi-hub-row midi-hub-active"><span class="midi-hub-label">${escape(i18n("midi-qol.Hub.Active"))}</span>${active.map(c => useButton(c)).join("")}</div>`] : []),
+          ...(["weapons", "spells", "features", "items"] as const).map(tab => {
+            const entries = byCost(tabEntries(ctx.model, tab), ctx.filter);
+            return entries.length ? `<div class="midi-hub-row midi-hub-filtered"><span class="midi-hub-label">${escape(i18n(`midi-qol.Hub.Tab.${tab}`))}</span>${entries.map(e => entryButton(e)).join("")}</div>` : "";
+          })
+        ];
+        body = rows.join("");
+      } else if (ctx.tab === "bar") {
         const { entries, own } = barEntries(ctx);
+        chips = filterChips(ctx, itemEntries(offered(ctx.model)));
         // A running spell's after-cast activities (Flaming Sphere's Move), first
         const active = ctx.model.activities.filter(c => c.afterCast && c.running && !c.unprepared && !c.hidden);
-        body = `${active.length ? `<div class="midi-hub-row midi-hub-active"><span class="midi-hub-label">${escape(i18n("midi-qol.Hub.Active"))}</span>${active.map(c => useButton(c)).join("")}</div>` : ""}
-          <div class="midi-hub-bar" data-hub-drop="bar">${entries.map((e, i) => entryButton(e, { barIndex: i, removable: true })).join("")}
+        const activeRow = active.length ? `<div class="midi-hub-row midi-hub-active"><span class="midi-hub-label">${escape(i18n("midi-qol.Hub.Active"))}</span>${active.map(c => useButton(c)).join("")}</div>` : "";
+        body = `${activeRow}<div class="midi-hub-bar" data-hub-drop="bar">${entries.map((e, i) => entryButton(e, { barIndex: i, removable: true })).join("")}
           <span class="midi-hub-drop-hint">${escape(i18n(own ? "midi-qol.Hub.DropHere" : "midi-qol.Hub.DropToArrange"))}</span>
           ${own ? `<a class="midi-hub-reset" data-hub-action="resetBar" data-tooltip="${escape(i18n("midi-qol.Hub.ResetBar"))}"><i class="fa-solid fa-rotate-left"></i></a>` : ""}</div>`;
       } else if (ctx.tab === "actions") {
+        chips = filterChips(ctx, itemEntries(offered(ctx.model)));
         const offers = [...ctx.model.interactions.self, ...ctx.model.interactions.target].map(o =>
           `<button type="button" class="midi-hub-action${o.reason ? " midi-hub-unusable" : ""}" data-hub-action="interaction" data-id="${escape(o.id)}" data-tooltip="${escape(o.reason ?? o.hint ?? "")}">${o.icon ? `<i class="${escape(o.icon)}"></i> ` : ""}${escape(i18n(o.label))}</button>`);
         const own = ctx.model.economy.movement ? [
@@ -251,6 +284,7 @@ export function registerMidiHubSections() {
         body = `<div class="midi-hub-actions">${[...own, ...offers].join("")}</div>`;
       } else if (ctx.tab === "spells") {
         const byLevel = new Map<number, Entry[]>();
+        chips = filterChips(ctx, itemEntries(offered(ctx.model)));
         for (const entry of tabEntries(ctx.model, "spells")) {
           const level = (itemOf(entry.cells[0])?.system as { level?: number } | undefined)?.level ?? 0;
           byLevel.set(level, [...(byLevel.get(level) ?? []), entry]);
@@ -258,9 +292,10 @@ export function registerMidiHubSections() {
         body = [...byLevel.entries()].sort((a, b) => a[0] - b[0]).map(([level, entries]) =>
           `<div class="midi-hub-row"><span class="midi-hub-label">${escape(level ? i18n("midi-qol.Hub.Level").replace("{n}", String(level)) : i18n("midi-qol.Hub.Cantrips"))}</span>${entries.map(e => entryButton(e)).join("")}</div>`).join("");
       } else {
+        chips = filterChips(ctx, itemEntries(offered(ctx.model)));
         body = `<div class="midi-hub-row">${tabEntries(ctx.model, ctx.tab).map(e => entryButton(e)).join("")}</div>`;
       }
-      return `<nav class="midi-hub-tabs">${tabs}</nav><div class="midi-hub-tab-body">${body || `<span class="hint">${escape(i18n("midi-qol.Hub.Nothing"))}</span>`}</div>`;
+      return `<nav class="midi-hub-tabs">${tabs}${chips}</nav><div class="midi-hub-tab-body">${body || `<span class="hint">${escape(i18n("midi-qol.Hub.Nothing"))}</span>`}</div>`;
     },
     actions: {
       interaction: async ({ token }, target) => { if (token && target.dataset.id) await runInteraction(target.dataset.id, token, [...(game.user?.targets ?? [])][0]?.document); },

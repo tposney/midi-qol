@@ -2669,7 +2669,7 @@ body.midi-qol-attack-primed #board { cursor: crosshair; }
 .midi-qol-hub .midi-hub-tabs { display: flex; gap: 0.6rem; font-size: 0.8rem; }
 .midi-qol-hub .midi-hub-tab.active { font-weight: bold; text-decoration: underline; }
 .midi-qol-hub .midi-hub-tab-body, .midi-qol-hub .midi-hub-bar, .midi-qol-hub .midi-hub-row, .midi-qol-hub .midi-hub-actions { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; }
-.midi-qol-hub .midi-hub-tab-body { flex-direction: column; align-items: stretch; max-height: 9rem; overflow-y: auto; }
+.midi-qol-hub .midi-hub-tab-body { flex-direction: column; align-items: stretch; max-height: 40vh; overflow-y: auto; }
 .midi-qol-hub .midi-hub-bar { min-height: 48px; border: 1px dashed transparent; border-radius: 4px; }
 .midi-qol-hub .midi-hub-bar:hover { border-color: var(--color-border-light-2, #777); }
 .midi-qol-hub .midi-hub-drop-hint { font-size: 0.7rem; opacity: 0.5; }
@@ -2698,3 +2698,6 @@ li.midi-qol-after-cast-idle button { opacity: 0.5; }
 .midi-qol-hub .midi-hub-menu-choice { display: flex; gap: 0.4rem; align-items: center; justify-content: flex-start; width: 100%; }
 .midi-qol-hub .midi-hub-menu-choice.midi-hub-unusable { opacity: 0.45; }
 .midi-qol-hub .midi-hub-active { border-bottom: 1px dashed #d4af37; padding-bottom: 2px; }
+.midi-qol-hub .midi-hub-filters { display: inline-flex; gap: 0.5rem; margin-left: auto; align-items: center; font-size: 0.8rem; }
+.midi-qol-hub .midi-hub-filter { display: inline-flex; gap: 0.2rem; align-items: center; padding: 0 0.35rem; border: 1px solid transparent; border-radius: 4px; opacity: 0.75; }
+.midi-qol-hub .midi-hub-filter.active { border-color: currentColor; opacity: 1; font-weight: bold; }

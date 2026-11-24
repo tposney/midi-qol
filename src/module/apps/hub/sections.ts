@@ -22,6 +22,8 @@ export interface HubContext {
   owner: boolean;
   /** The open tab of the things-to-use section */
   tab: string;
+  /** The cost filter (action, bonus, reaction...; "" for all) */
+  filter: string;
   /** Re-render the hub */
   refresh(): void;
 }
