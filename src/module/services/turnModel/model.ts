@@ -1,4 +1,6 @@
 import type { Activity } from "../../../globals.js";
+import { MidiActivityChoiceDialog } from "../../apps/MidiActivityChoiceDialog.js";
+import { isAfterCast, isSpellRunning, isUnprepared } from "../../lib/afterCast.js";
 import { requestsFor } from "../../lib/requests.js";
 import { combatOfToken, tokenFor, type TokenRef } from "../../lib/tokenResolver.js";
 import { configSettings } from "../../settings.js";
@@ -52,6 +54,13 @@ export interface ActivityCell {
   slotsLeft?: number;
   concentration?: boolean;
   ritual?: boolean;
+  /** Used after its spell is cast (inferred: lib/afterCast); `running`: that spell is running */
+  afterCast?: boolean;
+  running?: boolean;
+  /** A spell its caster hasn't prepared */
+  unprepared?: boolean;
+  /** Not in midi's chooser list for its item (left out by midi's filter or a module's prune: CAT's hidden activities) */
+  hidden?: boolean;
 }
 
 export interface TurnModel {
@@ -88,6 +97,12 @@ async function cellsOf(actor: Actor.Implementation): Promise<ActivityCell[]> {
   const cells: ActivityCell[] = [];
   for (const item of actor.items) {
     const activities = ((item.system as { activities?: { contents?: Activity[] } }).activities?.contents ?? []) as Activity[];
+    // What midi's chooser would list for the item (the modules' prune hook included)
+    let listed: Set<string> | undefined;
+    if (activities.length) {
+      try { listed = new Set((await MidiActivityChoiceDialog.getActivities(item)).map((a: { id: string }) => a.id)); }
+      catch (err) { console.warn(`midi-qol | turn model: choices of ${item.name}`, err); }
+    }
     for (const activity of activities) {
       const activation = String((activity as { activation?: { type?: string } }).activation?.type ?? "");
       if (!activation || activation === "none") continue;
@@ -105,6 +120,9 @@ async function cellsOf(actor: Actor.Implementation): Promise<ActivityCell[]> {
       cells.push({
         uuid: activity.uuid ?? "", itemUuid: item.uuid ?? "", itemName: item.name, name: activity.name || item.name,
         img: ownImg(activity) || item.img || "", activation, type: activity.type,
+        ...(isAfterCast(activity as never) ? { afterCast: true, running: isSpellRunning(item) } : {}),
+        ...(isUnprepared(item) ? { unprepared: true } : {}),
+        ...(listed && !listed.has((activity as { id: string }).id) ? { hidden: true } : {}),
         cost: cost(activity), issues: found, usable: stopping.length === 0, ...(found[0] ? { reason: found[0].label } : {}),
         ...(counted ? { uses: { value: Number(counted.value ?? 0), max: Number(counted.max ?? 0) } } : {}),
         ...(level !== undefined ? { spellLevel: level, slotsLeft: slots } : {}),

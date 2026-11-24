@@ -8,6 +8,7 @@ import { heldUses } from "../../lib/holds.js";
 import { HoldPanel } from "../HoldPanel.js";
 import { combatOfToken } from "../../lib/tokenResolver.js";
 import { isMultiattackItem } from "../../services/multiattack/plans.js";
+import { MidiActivityChoiceDialog } from "../MidiActivityChoiceDialog.js";
 
 /*
  * M27: midi's own hub sections. Left: the creature's state and its economy. Centre: its bar (the user's own, else the
@@ -32,7 +33,7 @@ function costKind(cell: ActivityCell): Kind {
 const mark = (kind: Kind | "movement", spent = false) => `<span class="midi-hub-mark midi-hub-mark-${kind}${spent ? " midi-hub-spent" : ""}"></span>`;
 
 /** A button that uses the activity (greyed with its reason when it can't) */
-function useButton(cell: ActivityCell, options: { barIndex?: number, removable?: boolean } = {}): string {
+function useButton(cell: ActivityCell, options: { barIndex?: number, removable?: boolean, uuid?: string } = {}): string {
   const kind = costKind(cell);
   const several = cell.name && cell.name !== cell.itemName;
   const title = several ? `${cell.itemName}: ${cell.name}` : cell.itemName;
@@ -42,7 +43,7 @@ function useButton(cell: ActivityCell, options: { barIndex?: number, removable?:
   // Blocked: greyed; an issue the policy only shows (action used, with enforcement off): marked, still usable
   const state = !cell.usable ? " midi-hub-unusable" : cell.issues.length ? " midi-hub-marked" : "";
   return `<button type="button" class="midi-hub-use${state}${cell.multiattack ? " midi-hub-allowed" : ""}" draggable="true"
-    data-hub-action="use" data-uuid="${escape(cell.uuid)}"${options.barIndex !== undefined ? ` data-bar-index="${options.barIndex}" data-hub-context="remove"` : ""}
+    data-hub-action="use" data-uuid="${escape(cell.uuid)}" data-entry="${escape(options.uuid ?? cell.uuid)}" data-preview="${escape(cell.uuid)}"${options.barIndex !== undefined ? ` data-bar-index="${options.barIndex}" data-hub-context="remove"` : ""}
     data-tooltip-html="${escape(tip)}" data-tooltip-direction="UP">
     <img src="${escape(cell.img)}" alt="">${mark(kind)}${cell.uses ? `<span class="midi-hub-count">${cell.uses.value}</span>` : ""}</button>`;
 }
@@ -50,19 +51,47 @@ function useButton(cell: ActivityCell, options: { barIndex?: number, removable?:
 const itemOf = (cell: ActivityCell) => fromUuidSync(cell.itemUuid) as Item.Implementation | null;
 const isAttack = (cell: ActivityCell) => cell.type === "attack";
 
-/** The user's own bar for this creature, else the sheet's favourites then its attacks */
-function barCells(ctx: HubContext): { cells: ActivityCell[], own: boolean } {
-  const byUuid = new Map(ctx.model.activities.map(c => [c.uuid, c]));
+/** A bar or tab entry: an item (one button; its choices) or one activity */
+interface Entry { uuid: string, item: boolean, cells: ActivityCell[] }
+
+/** What the hub offers: what midi's chooser lists (no module-hidden activity), no unprepared spell, no after-cast
+ * activity (those are in the Active group while their spell runs) */
+const offered = (model: TurnModel) => model.activities.filter(c => !c.hidden && !c.unprepared && !c.afterCast && !isMultiattackItem(itemOf(c) as Item.Implementation));
+
+/** One entry per item, in the cells' order */
+function itemEntries(cells: ActivityCell[]): Entry[] {
+  const byItem = new Map<string, Entry>();
+  for (const cell of cells) {
+    const entry = byItem.get(cell.itemUuid) ?? { uuid: cell.itemUuid, item: true, cells: [] };
+    entry.cells.push(cell);
+    byItem.set(cell.itemUuid, entry);
+  }
+  return [...byItem.values()];
+}
+
+/** A stored or favourite uuid as an entry: an item's (its offered activities) or one activity's */
+function entryFor(model: TurnModel, uuid: string): Entry | undefined {
+  const cells = offered(model);
+  const one = cells.find(c => c.uuid === uuid);
+  if (one) return { uuid, item: false, cells: [one] };
+  const ofItem = cells.filter(c => c.itemUuid === uuid);
+  return ofItem.length ? { uuid, item: true, cells: ofItem } : undefined;
+}
+
+/** The user's own bar for this creature (item or activity uuids), else the sheet's favourites then its attack items */
+function barEntries(ctx: HubContext): { entries: Entry[], own: boolean } {
   const own = game.user?.flags?.["midi-qol"]?.hubBars?.find(b => b.actor === ctx.actor.uuid);
-  if (own) return { cells: own.entries.map(uuid => byUuid.get(uuid)).filter((c): c is ActivityCell => !!c), own: true };
+  if (own) return { entries: own.entries.map(uuid => entryFor(ctx.model, uuid)).filter((e): e is Entry => !!e), own: true };
   const favourites = ((ctx.actor.system as { favorites?: { type?: string, id?: string }[] }).favorites ?? []).flatMap(f => {
     if (!f.id || (f.type !== "item" && f.type !== "activity")) return [];
-    const found = fromUuidSync(f.id, { relative: ctx.actor as never }) as { uuid?: string, system?: { activities?: { contents?: { uuid: string }[] } } } | null;
-    const uuid = f.type === "activity" ? found?.uuid : found?.system?.activities?.contents?.[0]?.uuid;
-    return uuid && byUuid.has(uuid) ? [byUuid.get(uuid)!] : [];
+    const uuid = (fromUuidSync(f.id, { relative: ctx.actor as never }) as { uuid?: string } | null)?.uuid;
+    const entry = uuid ? entryFor(ctx.model, uuid) : undefined;
+    return entry ? [entry] : [];
   });
-  const attacks = ctx.model.activities.filter(c => isAttack(c) && !favourites.includes(c));
-  return { cells: [...favourites, ...attacks], own: false };
+  const listed = new Set(favourites.flatMap(e => e.cells.map(c => c.itemUuid)));
+  const attacks = itemEntries(offered(ctx.model).filter(isAttack)).filter(e => !listed.has(e.uuid))
+    .map(e => entryFor(ctx.model, e.uuid)!);
+  return { entries: [...favourites, ...attacks], own: false };
 }
 
 async function saveBar(ctx: HubContext, entries: string[] | undefined) {
@@ -71,10 +100,9 @@ async function saveBar(ctx: HubContext, entries: string[] | undefined) {
 }
 
 const TABS = ["bar", "weapons", "spells", "features", "items", "actions"] as const;
-function tabCells(model: TurnModel, tab: string): ActivityCell[] {
-  return model.activities.filter(cell => {
+function tabEntries(model: TurnModel, tab: string): Entry[] {
+  return itemEntries(offered(model).filter(cell => {
     const type = itemOf(cell)?.type as string | undefined;
-    if (isMultiattackItem(itemOf(cell) as Item.Implementation)) return false;
     switch (tab) {
       case "weapons": return type === "weapon";
       case "spells": return type === "spell";
@@ -82,7 +110,57 @@ function tabCells(model: TurnModel, tab: string): ActivityCell[] {
       case "items": return !!type && !["weapon", "spell", "feat"].includes(type);
       default: return false;
     }
-  });
+  }));
+}
+
+/** An entry's button: one activity's, or an item's (its choices in a menu on click; one choice used directly) */
+function entryButton(entry: Entry, options: { barIndex?: number, removable?: boolean } = {}): string {
+  if (entry.cells.length === 1) return useButton(entry.cells[0], { ...options, uuid: entry.uuid });
+  const item = itemOf(entry.cells[0]);
+  const kinds = [...new Set(entry.cells.map(costKind))];
+  const usable = entry.cells.some(c => c.usable);
+  const marked = usable && entry.cells.every(c => c.issues.length);
+  const first = entry.cells.find(c => c.usable) ?? entry.cells[0];
+  const tip = [`<strong>${escape(item?.name ?? first.itemName)}</strong>`,
+    ...entry.cells.map(c => `${mark(costKind(c))} ${escape(c.name)}${c.reason ? ` <em>${escape(c.reason)}</em>` : ""}`),
+    ...(first.spellLevel ? [i18n("midi-qol.Hub.SlotsLeft").replace("{n}", String(first.slotsLeft ?? 0))] : []),
+    ...(options.removable ? [`<span class="hint">${escape(i18n("midi-qol.Hub.RightClickRemove"))}</span>`] : [])].join("<br>");
+  return `<button type="button" class="midi-hub-use midi-hub-choices${usable ? (marked ? " midi-hub-marked" : "") : " midi-hub-unusable"}" draggable="true"
+    data-hub-action="choose" data-uuid="${escape(entry.uuid)}" data-preview="${escape(first.uuid)}"${options.barIndex !== undefined ? ` data-bar-index="${options.barIndex}" data-hub-context="remove"` : ""}
+    data-tooltip-html="${escape(tip)}" data-tooltip-direction="UP">
+    <img src="${escape(item?.img ?? first.img)}" alt="">${mark(kinds.length === 1 ? kinds[0] : costKind(first))}<span class="midi-hub-count">${entry.cells.length}</span></button>`;
+}
+
+/** The menu of an item's choices: midi's chooser's list (its filter and the modules' prune hook) that the hub offers */
+async function openChoices(ctx: HubContext, button: HTMLElement) {
+  document.querySelectorAll(".midi-hub-menu").forEach(m => m.remove());
+  const entry = entryFor(ctx.model, button.dataset.uuid ?? "");
+  const item = entry ? itemOf(entry.cells[0]) : null;
+  if (!entry || !item) return;
+  const listed = (await MidiActivityChoiceDialog.getActivities(item)).map((a: { id: string }) => a.id);
+  const cells = entry.cells.filter(c => listed.includes(c.uuid.split(".").pop() ?? ""));
+  if (cells.length === 1) {
+    const activity = fromUuidSync(cells[0].uuid) as { use?(usage?: object): Promise<unknown> } | null;
+    if (cells[0].usable) await activity?.use?.({});
+    return;
+  }
+  if (!cells.length) return;
+  const menu = document.createElement("div");
+  menu.className = "midi-hub-menu";
+  menu.innerHTML = `<div class="midi-hub-label">${escape(item.name)}</div>` + cells.map(c => `<button type="button" class="midi-hub-menu-choice${c.usable ? "" : " midi-hub-unusable"}"
+    data-hub-action="use" data-uuid="${escape(c.uuid)}" data-preview="${escape(c.uuid)}"${c.reason ? ` data-tooltip="${escape(c.reason)}"` : ""}>${mark(costKind(c))} ${escape(c.name)}${c.uses ? ` <span class="midi-hub-label">${c.uses.value}/${c.uses.max}</span>` : ""}</button>`).join("");
+  button.closest("[data-section]")?.append(menu);
+  const rect = button.getBoundingClientRect();
+  const host = (button.closest("[data-section]") as HTMLElement).getBoundingClientRect();
+  menu.style.left = `${rect.left - host.left}px`;
+  menu.style.bottom = `${host.bottom - rect.top + 4}px`;
+  const close = (event: Event) => {
+    if ((event as KeyboardEvent).key && (event as KeyboardEvent).key !== "Escape") return;
+    setTimeout(() => menu.remove(), 0);
+    document.removeEventListener("click", close, true);
+    document.removeEventListener("keydown", close, true);
+  };
+  setTimeout(() => { document.addEventListener("click", close, true); document.addEventListener("keydown", close, true); }, 0);
 }
 
 /** Offers the GM is to answer in the hub (legendary and lair): set by the hub's presenter */
@@ -157,8 +235,11 @@ export function registerMidiHubSections() {
       const tabs = TABS.map(tab => `<a class="midi-hub-tab${ctx.tab === tab ? " active" : ""}" data-hub-action="tab" data-tab="${tab}">${escape(i18n(`midi-qol.Hub.Tab.${tab}`))}</a>`).join("");
       let body = "";
       if (ctx.tab === "bar") {
-        const { cells, own } = barCells(ctx);
-        body = `<div class="midi-hub-bar" data-hub-drop="bar">${cells.map((c, i) => useButton(c, { barIndex: i, removable: true })).join("")}
+        const { entries, own } = barEntries(ctx);
+        // A running spell's after-cast activities (Flaming Sphere's Move), first
+        const active = ctx.model.activities.filter(c => c.afterCast && c.running && !c.unprepared && !c.hidden);
+        body = `${active.length ? `<div class="midi-hub-row midi-hub-active"><span class="midi-hub-label">${escape(i18n("midi-qol.Hub.Active"))}</span>${active.map(c => useButton(c)).join("")}</div>` : ""}
+          <div class="midi-hub-bar" data-hub-drop="bar">${entries.map((e, i) => entryButton(e, { barIndex: i, removable: true })).join("")}
           <span class="midi-hub-drop-hint">${escape(i18n(own ? "midi-qol.Hub.DropHere" : "midi-qol.Hub.DropToArrange"))}</span>
           ${own ? `<a class="midi-hub-reset" data-hub-action="resetBar" data-tooltip="${escape(i18n("midi-qol.Hub.ResetBar"))}"><i class="fa-solid fa-rotate-left"></i></a>` : ""}</div>`;
       } else if (ctx.tab === "actions") {
@@ -169,15 +250,15 @@ export function registerMidiHubSections() {
           `<button type="button" class="midi-hub-action" data-hub-action="disengage">${mark("action")} ${escape(i18n("midi-qol.Hub.Disengage"))}</button>`] : [];
         body = `<div class="midi-hub-actions">${[...own, ...offers].join("")}</div>`;
       } else if (ctx.tab === "spells") {
-        const byLevel = new Map<number, ActivityCell[]>();
-        for (const cell of tabCells(ctx.model, "spells")) {
-          const level = (itemOf(cell)?.system as { level?: number } | undefined)?.level ?? 0;
-          byLevel.set(level, [...(byLevel.get(level) ?? []), cell]);
+        const byLevel = new Map<number, Entry[]>();
+        for (const entry of tabEntries(ctx.model, "spells")) {
+          const level = (itemOf(entry.cells[0])?.system as { level?: number } | undefined)?.level ?? 0;
+          byLevel.set(level, [...(byLevel.get(level) ?? []), entry]);
         }
-        body = [...byLevel.entries()].sort((a, b) => a[0] - b[0]).map(([level, cells]) =>
-          `<div class="midi-hub-row"><span class="midi-hub-label">${escape(level ? i18n("midi-qol.Hub.Level").replace("{n}", String(level)) : i18n("midi-qol.Hub.Cantrips"))}</span>${cells.map(c => useButton(c)).join("")}</div>`).join("");
+        body = [...byLevel.entries()].sort((a, b) => a[0] - b[0]).map(([level, entries]) =>
+          `<div class="midi-hub-row"><span class="midi-hub-label">${escape(level ? i18n("midi-qol.Hub.Level").replace("{n}", String(level)) : i18n("midi-qol.Hub.Cantrips"))}</span>${entries.map(e => entryButton(e)).join("")}</div>`).join("");
       } else {
-        body = `<div class="midi-hub-row">${tabCells(ctx.model, ctx.tab).map(c => useButton(c)).join("")}</div>`;
+        body = `<div class="midi-hub-row">${tabEntries(ctx.model, ctx.tab).map(e => entryButton(e)).join("")}</div>`;
       }
       return `<nav class="midi-hub-tabs">${tabs}</nav><div class="midi-hub-tab-body">${body || `<span class="hint">${escape(i18n("midi-qol.Hub.Nothing"))}</span>`}</div>`;
     },
@@ -185,16 +266,17 @@ export function registerMidiHubSections() {
       interaction: async ({ token }, target) => { if (token && target.dataset.id) await runInteraction(target.dataset.id, token, [...(game.user?.targets ?? [])][0]?.document); },
       dash: async ({ actor }) => { await takeDash(actor); },
       disengage: async ({ actor }) => { await takeDisengage(actor); },
+      choose: async (ctx, target) => { await openChoices(ctx, target); },
       resetBar: async (ctx) => { await saveBar(ctx, undefined); },
       remove: async (ctx, target) => {
-        const { cells } = barCells(ctx);
+        const { entries } = barEntries(ctx);
         const index = Number(target.dataset.barIndex);
-        await saveBar(ctx, cells.map(c => c.uuid).filter((_, i) => i !== index));
+        await saveBar(ctx, entries.map(e => e.uuid).filter((_, i) => i !== index));
       },
       drop: async (ctx, _zone, event) => {
         const drop = (event as Event & { midiHub?: { uuid: string, from: string | null, before: string | null } }).midiHub;
         if (!drop) return;
-        const entries = barCells(ctx).cells.map(c => c.uuid);
+        const entries = barEntries(ctx).entries.map(e => e.uuid);
         if (drop.from !== null) entries.splice(Number(drop.from), 1);
         else if (entries.includes(drop.uuid)) entries.splice(entries.indexOf(drop.uuid), 1);
         const at = drop.before !== null ? Math.min(Number(drop.before) - (drop.from !== null && Number(drop.from) < Number(drop.before) ? 1 : 0), entries.length) : entries.length;

@@ -2687,3 +2687,13 @@ body.midi-qol-attack-primed #board { cursor: crosshair; }
 .midi-qol-hub .midi-hub-offer button, .midi-qol-hub .midi-hub-endturn { width: 100%; }
 .midi-qol-hub .midi-hub-yourturn { font-weight: bold; color: #3fae4a; }
 .midi-qol-hub .midi-hub-ondeck { font-style: italic; opacity: 0.8; }
+/* Activity chooser: after-cast activities */
+.activity-choice .midi-qol-after-cast-divider, li.midi-qol-after-cast-divider { font-size: var(--font-size-11, 11px); text-transform: uppercase; opacity: 0.7; border-bottom: 1px solid currentColor; margin: 0.4rem 0 0.2rem; list-style: none; }
+li.midi-qol-after-cast-idle button { opacity: 0.5; }
+.midi-qol-hub .midi-hub-section { position: relative; }
+.midi-qol-hub .midi-hub-use.midi-hub-choices .midi-hub-count { opacity: 0.85; }
+.midi-qol-hub .midi-hub-menu { position: absolute; z-index: 10; display: flex; flex-direction: column; gap: 2px; min-width: 12rem; padding: 0.3rem;
+  background: rgba(15, 15, 20, 0.96); border: 1px solid var(--color-border-dark-5, #555); border-radius: 6px; box-shadow: 0 0 10px rgba(0, 0, 0, 0.7); color: var(--color-light-1, #eee); }
+.midi-qol-hub .midi-hub-menu-choice { display: flex; gap: 0.4rem; align-items: center; justify-content: flex-start; width: 100%; }
+.midi-qol-hub .midi-hub-menu-choice.midi-hub-unusable { opacity: 0.45; }
+.midi-qol-hub .midi-hub-active { border-bottom: 1px dashed #d4af37; padding-bottom: 2px; }

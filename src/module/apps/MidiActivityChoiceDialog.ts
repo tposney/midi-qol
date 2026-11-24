@@ -2,6 +2,7 @@ import { i18n } from "../../midi-qol.js";
 import { safeGetGameSetting } from "../settings.js";
 import { asyncHooksCallAll } from "../utils.js";
 import { Activity } from "../../globals.js";
+import { isAfterCast, isSpellRunning } from "../lib/afterCast.js";
 
 //@ts-expect-error
 const ActivityChoiceDialog = dnd5e.applications?.activity?.ActivityChoiceDialog;
@@ -12,10 +13,13 @@ const ActivityChoiceDialog = dnd5e.applications?.activity?.ActivityChoiceDialog;
 const pendingChoices = new WeakMap();
 
 /** dnd5e's context for one choice; `uses` from dnd5e 6.1 */
-type ActivityChoiceContext = { id: string, name: string, img: string, sort: number, uses?: { value: number, max: number } | null };
+type ActivityChoiceContext = { id: string, name: string, img: string, sort: number, uses?: { value: number, max: number } | null,
+  /** Used after its spell is cast (lib/afterCast); `running`: the spell is running */
+  afterCast?: boolean, running?: boolean };
 
 export class MidiActivityChoiceDialog extends ActivityChoiceDialog {
   declare _prepareActivityContext: (activity: Activity) => ActivityChoiceContext;
+  declare element: HTMLElement;
 
   /** The item's offerable activities after midi's usability filter and the module prune hook.
    *  Returns the surviving choice contexts as dnd5e prepares them ({id, name, img, sort, uses}), sorted. Single source of truth
@@ -27,8 +31,12 @@ export class MidiActivityChoiceDialog extends ActivityChoiceDialog {
     const activities = all
       .filter(a => a.canUse !== false && !a.isRider && !a.midiProperties?.automationOnly && !a.inProgress)
       // dnd5e's own context (6.1 adds the activity's uses); it reads nothing from the dialog
-      .map(a => this.prototype._prepareActivityContext(a))
-      .sort((a, b) => a.sort - b.sort);
+      .map(a => {
+        const context = this.prototype._prepareActivityContext(a);
+        return isAfterCast(a) ? { ...context, afterCast: true, running: isSpellRunning(item) } : context;
+      })
+      // After-cast activities last (their spell not running: greyed below "After casting")
+      .sort((a, b) => Number(!!a.afterCast) - Number(!!b.afterCast) || a.sort - b.sort);
     // Modules may remove entries from `activities` to make them unavailable for this use.
     await asyncHooksCallAll("midi-qol.itemUseActivitySelect", { activities, item });
     return activities;
@@ -67,5 +75,19 @@ export class MidiActivityChoiceDialog extends ActivityChoiceDialog {
       controlHint,
       activities
     };
+  }
+
+  /** After-cast activities: a divider before them, greyed while their spell isn't running (still usable) */
+  async _onRender(context: { activities?: ActivityChoiceContext[] }, options: object) {
+    await super._onRender(context, options);
+    const after = (context.activities ?? []).filter(a => a.afterCast);
+    if (!after.length) return;
+    const element = this.element;
+    after.forEach((a, index) => {
+      const li = element.querySelector(`[data-activity-id="${a.id}"]`)?.closest("li");
+      if (!li) return;
+      if (!a.running) li.classList.add("midi-qol-after-cast-idle");
+      if (index === 0) li.insertAdjacentHTML("beforebegin", `<li class="midi-qol-after-cast-divider">${i18n("midi-qol.AfterCast.Divider")}</li>`);
+    });
   }
 }

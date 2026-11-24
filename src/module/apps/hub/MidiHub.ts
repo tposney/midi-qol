@@ -174,16 +174,16 @@ export class MidiHub extends ApplicationV2 {
   /** Hovering a usable button with a target: the preview (range, cover, advantage and why, the save DC) */
   #previewing = "";
   #onHover = async (event: MouseEvent) => {
-    const target = (event.target as HTMLElement).closest<HTMLElement>("[data-hub-action=use][data-uuid]");
-    if (!target || target.dataset.uuid === this.#previewing) return;
+    const target = (event.target as HTMLElement).closest<HTMLElement>("[data-preview]");
+    if (!target || target.dataset.preview === this.#previewing) return;
     const targets = [...(game.user?.targets ?? [])];
     if (!targets.length) return;
-    this.#previewing = target.dataset.uuid ?? "";
+    this.#previewing = target.dataset.preview ?? "";
     const activity = fromUuidSync(this.#previewing) as Activity | null;
     if (!activity) return;
     try {
       const result = await preview(activity, targets, { token: this.token });
-      if (this.#previewing !== target.dataset.uuid) return;
+      if (this.#previewing !== target.dataset.preview) return;
       const lines = result.targets.map(t => {
         const parts: string[] = [];
         if (t.range) parts.push(i18n(`midi-qol.Hub.Range.${t.range.result}`));
@@ -199,9 +199,10 @@ export class MidiHub extends ApplicationV2 {
   };
 
   #onDragStart = (event: DragEvent) => {
-    const target = (event.target as HTMLElement).closest<HTMLElement>("[data-hub-action=use][data-uuid]");
+    const target = (event.target as HTMLElement).closest<HTMLElement>("[draggable][data-uuid]");
     if (!target) return;
-    event.dataTransfer?.setData("text/plain", JSON.stringify({ midiHub: target.dataset.uuid, from: target.dataset.barIndex ?? null }));
+    // The entry as the bar stores it: an item (its choices) or one activity
+    event.dataTransfer?.setData("text/plain", JSON.stringify({ midiHub: target.dataset.entry ?? target.dataset.uuid, from: target.dataset.barIndex ?? null }));
   };
 
   #onDragOver = (event: DragEvent) => {
@@ -214,12 +215,9 @@ export class MidiHub extends ApplicationV2 {
     event.preventDefault();
     let data: { midiHub?: string, from?: string | null, uuid?: string, type?: string } = {};
     try { data = JSON.parse(event.dataTransfer?.getData("text/plain") ?? "{}"); } catch { return; }
-    // From the hub, or an item dragged from a sheet (its first activity)
+    // From the hub, or an item (its choices) or activity dragged from a sheet
     let uuid = data.midiHub;
-    if (!uuid && data.type === "Item" && data.uuid) {
-      const item = fromUuidSync(data.uuid) as { system?: { activities?: { contents?: { uuid: string }[] } } } | null;
-      uuid = item?.system?.activities?.contents?.[0]?.uuid;
-    }
+    if (!uuid && (data.type === "Item" || data.type === "Activity") && data.uuid) uuid = data.uuid;
     if (!uuid) return;
     const before = (event.target as HTMLElement).closest<HTMLElement>("[data-bar-index]")?.dataset.barIndex;
     const own = this.#section(zone)?.actions?.["drop"];
