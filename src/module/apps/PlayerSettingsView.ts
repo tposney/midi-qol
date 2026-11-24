@@ -1,4 +1,5 @@
 import { i18n, MODULE_ID } from "../../midi-qol.js";
+import { setUserSetting, userSettingValue } from "../lib/userSettings.js";
 
 /*
  * M32e (plan ~/Documents/midi-next-M32-plan-2026-11-22.md): the GM's view of the players' midi user settings (Bonus
@@ -26,22 +27,12 @@ function midiUserSettings(): SettingConfig[] {
 
 /** A player's value of a user setting (its default when they have none stored) */
 export function playerSetting(setting: SettingConfig, userId: string): unknown {
-  const storage = game.settings?.storage.get("world") as { getSetting(key: string, user: string | null): { value: unknown } | undefined } | undefined;
-  const doc = storage?.getSetting(`${setting.namespace}.${setting.key}`, userId);
-  return doc ? doc.value : setting.default;
+  return userSettingValue(`${setting.namespace}.${setting.key}`, userId);
 }
 
 /** Sets a player's value, as their own client would (the Setting document for that user) */
 export async function setPlayerSetting(setting: SettingConfig, userId: string, value: unknown): Promise<void> {
-  const storage = game.settings?.storage.get("world") as { getSetting(key: string, user: string | null): { update(data: object): Promise<unknown> } | undefined } | undefined;
-  const key: `${string}.${string}` = `${setting.namespace}.${setting.key}`;
-  const json = JSON.stringify(value);
-  const doc = storage?.getSetting(key, userId);
-  if (doc) await doc.update({ value: json });
-  else {
-    const user = game.users?.get(userId);
-    if (user) await Setting.implementation.create({ key, user, value: json });
-  }
+  await setUserSetting(`${setting.namespace}.${setting.key}`, value, userId);
 }
 
 export class PlayerSettingsView extends HandlebarsApplicationMixin(ApplicationV2) {
