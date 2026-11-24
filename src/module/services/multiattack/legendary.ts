@@ -39,11 +39,28 @@ const able = (actor: Actor.Implementation) => {
 
 /** The offers open now (closed when the next comes) */
 const open = new Set<foundry.applications.api.DialogV2>();
-async function closeOpen() { for (const dialog of [...open]) { open.delete(dialog); await dialog.close(); } }
+async function closeOpen() {
+  for (const dialog of [...open]) { open.delete(dialog); await dialog.close(); }
+  closeHubOffers?.();
+}
+let closeHubOffers: (() => void) | undefined;
+/** The presenter's own clean-up when a newer offer comes (stale ones dropped) */
+export function setOfferCloser(close: (() => void) | undefined) { closeHubOffers = close; }
+
+/** An offer for the GM: a creature's legendary or lair choices; the answer the activity chosen, or none */
+export interface LegendaryOffer { actor: Actor.Implementation, title: string, reason: string, choices: { uuid: string, label: string, cost?: number }[] }
+type OfferPresenter = (offer: LegendaryOffer) => Promise<string | undefined>;
+let presenter: OfferPresenter | undefined;
+/** Where the offers are shown instead of a dialog (midi's hub while it runs for the GM); none: the dialog */
+export function setOfferPresenter(next: OfferPresenter | undefined) { presenter = next; }
 
 /** Ask the GM which of these to use now (or none); the chosen one is used as an ordinary use */
 async function offer(actor: Actor.Implementation, title: string, reason: string, choices: ActivityLike[]): Promise<ActivityLike | undefined> {
   if (!choices.length) return undefined;
+  if (presenter) {
+    const uuid = await presenter({ actor, title, reason, choices: choices.map(a => ({ uuid: a.uuid, label: `${a.item.name ?? ""}${a.activation?.type === "lair" ? "" : ` (${cost(a)})`}`, ...(a.activation?.type === "lair" ? {} : { cost: cost(a) }) })) });
+    return choices.find(a => a.uuid === uuid);
+  }
   const escape = foundry.utils.escapeHTML;
   let dialog: foundry.applications.api.DialogV2 | undefined;
   const label = (a: ActivityLike) => {

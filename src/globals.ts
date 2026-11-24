@@ -780,6 +780,14 @@ declare module "fvtt-types/configuration" {
         dependentOn?: string; // UUID of parent document (Actor/Item) for midi-qol dependent tracking
       };
     }
+    User: {
+      "midi-qol"?: {
+        /** M27: the user's own hub bar per creature: activity uuids in order (a list: uuids have dots) */
+        hubBars?: { actor: string, entries: string[] }[];
+        /** M27: the hub popped out as a window (else docked at the bottom) */
+        hubWindow?: boolean;
+      };
+    }
   }
 };
 

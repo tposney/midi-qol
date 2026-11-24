@@ -15,6 +15,7 @@ import { deferredApi, registerDeferredUses } from "./module/lib/deferred.js";
 import { defineDeferredTriggersService, offerRelease, readierOf, registerDeferredTriggers, watchesTriggers, whoMatches } from "./module/lib/deferredTriggers.js";
 import { checklistApi, setupChecklist } from "./module/lib/checklist.js";
 import { ChecklistPanel, registerChecklistSetting, setupChecklistPanel } from "./module/apps/ChecklistPanel.js";
+import { hubApi, setupHub } from "./module/apps/hub/setup.js";
 import { setupInteractionsHUD } from "./module/services/interactions/hud.js";
 import { registerDefaultInteractions } from "./module/services/interactions/defaults.js";
 import { registerGrappleInteractions } from "./module/services/interactions/grapple.js";
@@ -455,6 +456,7 @@ Object.assign(globalThis.MidiQOL, {
   // M21: a creature's Multiattack plan (the GM's, registered ones, midi's table from the books, the text parsed, a guess)
   multiattack: multiattackApi,
   holds: { ...holdsApi, open: () => HoldPanel.open() },
+  hub: hubApi,
   deferred: {
     ...deferredApi,
     /** A provider watches readied uses' triggers (the deferredTriggers service: midi's by default) */
@@ -638,6 +640,8 @@ Hooks.once('init', async function () {
   // M22b: the turn checklist (contributors, panel)
   setupChecklist();
   setupChecklistPanel();
+  // M27: midi's hub (a HUD provider; its sections)
+  setupHub();
   registerTokenVisualProviders();
   setupTokenVisuals();
   setupSequencerLevelsFix();

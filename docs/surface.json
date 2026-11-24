@@ -107,6 +107,7 @@
     "hasVitalitySystem",
     "highlightTokens",
     "holds",
+    "hub",
     "hud",
     "humanoid",
     "importSettingsFromJSON",

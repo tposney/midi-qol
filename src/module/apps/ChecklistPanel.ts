@@ -1,5 +1,6 @@
 import { i18n } from "../../midi-qol.js";
 import { checklistFor, type ChecklistItem } from "../lib/checklist.js";
+import { activeHud } from "../services/turnModel/hud.js";
 
 /*
  * M22b: the turn checklist panel. Opens for a creature's owners (players; per-player setting, on by default) when its
@@ -72,6 +73,8 @@ export function setupChecklistPanel() {
     const actor = combat.combatant?.actor;
     if (open && open.actor !== actor) void open.close();
     if (!actor || game.user?.isGM || !actor.isOwner) return;
+    // midi's hub shows the turn itself
+    if (activeHud("combat")?.id === "midi-qol.hub") return;
     if (game.settings?.get("midi-qol", SETTING) === false) return;
     ChecklistPanel.open(actor);
   });
