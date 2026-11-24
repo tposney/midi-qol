@@ -2702,3 +2702,24 @@ li.midi-qol-after-cast-idle button { opacity: 0.5; }
 .midi-qol-hub .midi-hub-filter { display: inline-flex; gap: 0.2rem; align-items: center; padding: 0 0.35rem; border: 1px solid transparent; border-radius: 4px; opacity: 0.75; }
 .midi-qol-hub .midi-hub-filter.active { border-color: currentColor; opacity: 1; font-weight: bold; }
 .midi-qol-hub .midi-hub-tabs { padding-right: 3.5rem; }
+/* The drawer: a tab or a cost filter, above the bar (docked: over the canvas, the bar never moves; a window: inside it) */
+.midi-qol-hub .midi-hub-drawer { display: flex; flex-direction: column; background: rgba(15, 15, 20, 0.96); border: 1px solid var(--color-border-dark-5, #555); border-radius: 8px; color: var(--color-light-1, #eee); }
+.midi-qol-hub.midi-hub-is-docked .midi-hub-drawer { position: absolute; left: 0; right: 0; bottom: calc(100% + 1rem); max-height: 50vh; box-shadow: 0 0 12px rgba(0, 0, 0, 0.6); z-index: 5; }
+.midi-qol-hub:not(.midi-hub-is-docked) .midi-hub-drawer { max-height: 50vh; margin-bottom: 0.3rem; }
+.midi-qol-hub .midi-hub-drawer-header { display: flex; gap: 0.6rem; align-items: center; padding: 0.25rem 0.5rem; border-bottom: 1px solid var(--color-border-dark-5, #555); font-weight: bold; }
+.midi-qol-hub .midi-hub-drawer-header span { flex: 1; }
+.midi-qol-hub .midi-hub-drawer-header a { opacity: 0.6; }
+.midi-qol-hub .midi-hub-drawer-header a.active, .midi-qol-hub .midi-hub-drawer-header a:hover { opacity: 1; }
+.midi-qol-hub .midi-hub-drawer-body { flex: 1; min-height: 0; overflow-y: auto; padding: 0.3rem 0.5rem; display: flex; flex-direction: column; gap: 4px; }
+.midi-qol-hub .midi-hub-levels { display: flex; gap: 0.3rem; position: sticky; top: 0; background: inherit; z-index: 1; }
+.midi-qol-hub .midi-hub-levels a { padding: 0 0.4rem; border: 1px solid currentColor; border-radius: 3px; font-size: 0.75rem; opacity: 0.8; }
+.midi-qol-hub .midi-hub-level .midi-hub-label { display: inline-flex; flex-direction: column; min-width: 4.5rem; }
+.midi-qol-hub .midi-hub-slots { display: inline-flex; gap: 2px; }
+.midi-qol-hub .midi-hub-slot { width: 7px; height: 7px; border-radius: 50%; background: #4a90e2; }
+.midi-qol-hub .midi-hub-slot.midi-hub-spent { background: transparent; border: 1px solid #4a90e2; box-sizing: border-box; }
+.midi-qol-hub .midi-hub-no-slots { opacity: 0.45; }
+.midi-qol-hub .midi-hub-bar { flex-wrap: nowrap; overflow: hidden; }
+.midi-qol-hub .midi-hub-bar .midi-hub-active { display: inline-flex; gap: 4px; padding-right: 6px; margin-right: 2px; border-right: 2px solid #d4af37; }
+.midi-qol-hub .midi-hub-tab.active { font-weight: bold; text-decoration: underline; }
+.midi-qol-hub .midi-hub-tabs { flex-wrap: wrap; row-gap: 0.2rem; }
+.midi-qol-hub .midi-hub-drop-hint { white-space: nowrap; }

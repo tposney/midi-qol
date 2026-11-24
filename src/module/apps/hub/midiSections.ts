@@ -127,7 +127,7 @@ function filterChips(ctx: HubContext, pool: Entry[]): string {
   const counts = FILTERS.map(kind => ({ kind, n: byCost(pool, kind).filter(e => e.cells.some(c => c.usable)).length,
     any: byCost(pool, kind).length > 0 })).filter(f => f.any || f.kind === ctx.filter);
   if (!counts.length) return "";
-  return `<div class="midi-hub-filters"><a class="midi-hub-filter${ctx.filter ? "" : " active"}" data-hub-action="filter" data-filter="">${escape(i18n("midi-qol.Hub.All"))}</a>${counts.map(f =>
+  return `<div class="midi-hub-filters"><a class="midi-hub-filter" data-hub-action="filter" data-filter="">${escape(i18n("midi-qol.Hub.All"))}</a>${counts.map(f =>
     `<a class="midi-hub-filter${ctx.filter === f.kind ? " active" : ""}" data-hub-action="filter" data-filter="${f.kind}" data-tooltip="${escape(i18n(`midi-qol.Hub.Cost.${f.kind}`))}">${mark(f.kind)} ${f.n}</a>`).join("")}</div>`;
 }
 
@@ -159,7 +159,7 @@ async function openChoices(ctx: HubContext, button: HTMLElement) {
   const cells = entry.cells.filter(c => listed.includes(c.uuid.split(".").pop() ?? "") && (!ctx.filter || costKind(c) === ctx.filter));
   if (cells.length === 1) {
     const activity = fromUuidSync(cells[0].uuid) as { use?(usage?: object): Promise<unknown> } | null;
-    if (cells[0].usable) await activity?.use?.({});
+    if (cells[0].usable) { ctx.afterUse(); await activity?.use?.({}); }
     return;
   }
   if (!cells.length) return;
@@ -183,6 +183,75 @@ async function openChoices(ctx: HubContext, button: HTMLElement) {
 
 /** Offers the GM is to answer in the hub (legendary and lair): set by the hub's presenter */
 export const hubOffers: { actor: Actor.Implementation, title: string, reason: string, choices: { uuid: string, label: string }[], resolve(uuid: string | undefined): void }[] = [];
+
+type SpellSlots = Record<string, { value?: number, max?: number, level?: number }>;
+
+/** A spell level's slots (pact slots of that level or higher counted with them): pips, and whether any is left at or above it */
+function slotInfo(actor: Actor.Implementation, level: number): { pips: string, none: boolean } {
+  const spells = (actor.system as { spells?: SpellSlots }).spells ?? {};
+  const own = spells[`spell${level}`] ?? {};
+  const max = Number(own.max ?? 0), value = Number(own.value ?? 0);
+  const pips = Array.from({ length: max }, (_, i) => `<span class="midi-hub-slot${i >= value ? " midi-hub-spent" : ""}"></span>`).join("");
+  let left = 0;
+  for (let l = level; l <= 9; l++) left += Number(spells[`spell${l}`]?.value ?? 0);
+  if (Number(spells.pact?.level ?? 0) >= level) left += Number(spells.pact?.value ?? 0);
+  return { pips, none: left === 0 };
+}
+
+/** Spells a level, each with its slots; a level with no slot left at or above it greyed (cantrips and slotless casting aside) */
+function spellsHtml(ctx: HubContext): string {
+  const byLevel = new Map<number, Entry[]>();
+  for (const entry of tabEntries(ctx.model, "spells")) {
+    const level = (itemOf(entry.cells[0])?.system as { level?: number } | undefined)?.level ?? 0;
+    byLevel.set(level, [...(byLevel.get(level) ?? []), entry]);
+  }
+  const levels = [...byLevel.keys()].sort((a, b) => a - b);
+  const name = (level: number) => level ? i18n("midi-qol.Hub.Level").replace("{n}", String(level)) : i18n("midi-qol.Hub.Cantrips");
+  const jump = levels.length > 3 ? `<div class="midi-hub-levels">${levels.map(level => `<a data-hub-action="jump" data-level="${level}">${level || "C"}</a>`).join("")}</div>` : "";
+  return jump + levels.map(level => {
+    const slots = level ? slotInfo(ctx.actor, level) : { pips: "", none: false };
+    const slotless = byLevel.get(level)!.every(e => !(itemOf(e.cells[0])?.system as { canScale?: boolean } | undefined)?.canScale);
+    return `<div class="midi-hub-row midi-hub-level${slots.none && !slotless ? " midi-hub-no-slots" : ""}" data-level="${level}">
+      <span class="midi-hub-label">${escape(name(level))}<span class="midi-hub-slots">${slots.pips}</span></span>${byLevel.get(level)!.map(e => entryButton(e)).join("")}</div>`;
+  }).join("");
+}
+
+/** The drawer: a tab's contents or a cost filter's (everything with that cost, a row per category), above the bar */
+function drawerHtml(ctx: HubContext): string {
+  let title = "";
+  let body = "";
+  if (ctx.filter) {
+    title = i18n(`midi-qol.Hub.Cost.${ctx.filter}`);
+    const active = ctx.model.activities.filter(c => c.afterCast && c.running && !c.unprepared && !c.hidden && costKind(c) === ctx.filter);
+    body = [
+      ...(active.length ? [`<div class="midi-hub-row midi-hub-active-row"><span class="midi-hub-label">${escape(i18n("midi-qol.Hub.Active"))}</span>${active.map(c => useButton(c)).join("")}</div>`] : []),
+      ...(["weapons", "spells", "features", "items"] as const).map(tab => {
+        const entries = byCost(tabEntries(ctx.model, tab), ctx.filter);
+        return entries.length ? `<div class="midi-hub-row midi-hub-filtered"><span class="midi-hub-label">${escape(i18n(`midi-qol.Hub.Tab.${tab}`))}</span>${entries.map(e => entryButton(e)).join("")}</div>` : "";
+      })
+    ].join("");
+  } else if (ctx.tab === "actions") {
+    title = i18n("midi-qol.Hub.Tab.actions");
+    const offers = [...ctx.model.interactions.self, ...ctx.model.interactions.target].map(o =>
+      `<button type="button" class="midi-hub-action${o.reason ? " midi-hub-unusable" : ""}" data-hub-action="interaction" data-id="${escape(o.id)}" data-tooltip="${escape(o.reason ?? o.hint ?? "")}">${o.icon ? `<i class="${escape(o.icon)}"></i> ` : ""}${escape(i18n(o.label))}</button>`);
+    const own = ctx.model.economy.movement ? [
+      `<button type="button" class="midi-hub-action" data-hub-action="dash">${mark("action")} ${escape(i18n("midi-qol.Hub.Dash"))}</button>`,
+      `<button type="button" class="midi-hub-action" data-hub-action="disengage">${mark("action")} ${escape(i18n("midi-qol.Hub.Disengage"))}</button>`] : [];
+    body = `<div class="midi-hub-actions">${[...own, ...offers].join("")}</div>`;
+  } else if (ctx.tab === "spells") {
+    title = i18n("midi-qol.Hub.Tab.spells");
+    body = spellsHtml(ctx);
+  } else {
+    title = i18n(`midi-qol.Hub.Tab.${ctx.tab}`);
+    body = `<div class="midi-hub-row">${tabEntries(ctx.model, ctx.tab).map(e => entryButton(e)).join("")}</div>`;
+  }
+  return `<div class="midi-hub-drawer">
+    <header class="midi-hub-drawer-header"><span>${escape(title)}</span>
+      <a data-hub-action="drawerPin" class="${ctx.pinned ? "active" : ""}" data-tooltip="${escape(i18n(ctx.pinned ? "midi-qol.Hub.Unpin" : "midi-qol.Hub.Pin"))}"><i class="fa-solid fa-thumbtack"></i></a>
+      <a data-hub-action="drawerClose" data-tooltip="${escape(i18n("Close"))}"><i class="fa-solid fa-xmark"></i></a></header>
+    <div class="midi-hub-drawer-body">${body || `<span class="hint">${escape(i18n("midi-qol.Hub.Nothing"))}</span>`}</div>
+  </div>`;
+}
 
 export function registerMidiHubSections() {
   // State: portrait, HP, AC, speed, concentration, conditions, what ends soon
@@ -250,58 +319,25 @@ export function registerMidiHubSections() {
   registerHubSection({
     id: "midi-qol.use", area: "center", order: 10,
     render: (ctx) => {
-      const tabs = TABS.map(tab => `<a class="midi-hub-tab${ctx.tab === tab && !ctx.filter ? " active" : ""}" data-hub-action="tab" data-tab="${tab}">${escape(i18n(`midi-qol.Hub.Tab.${tab}`))}</a>`).join("");
-      let body = "";
-      let chips = "";
-      if (ctx.filter) {
-        // A cost filter: everything with that cost, a row per category (the tabs' categories), whatever the tab
-        chips = filterChips(ctx, itemEntries(offered(ctx.model)));
-        const active = ctx.model.activities.filter(c => c.afterCast && c.running && !c.unprepared && !c.hidden && costKind(c) === ctx.filter);
-        const rows = [
-          ...(active.length ? [`<div class="midi-hub-row midi-hub-active"><span class="midi-hub-label">${escape(i18n("midi-qol.Hub.Active"))}</span>${active.map(c => useButton(c)).join("")}</div>`] : []),
-          ...(["weapons", "spells", "features", "items"] as const).map(tab => {
-            const entries = byCost(tabEntries(ctx.model, tab), ctx.filter);
-            return entries.length ? `<div class="midi-hub-row midi-hub-filtered"><span class="midi-hub-label">${escape(i18n(`midi-qol.Hub.Tab.${tab}`))}</span>${entries.map(e => entryButton(e)).join("")}</div>` : "";
-          })
-        ];
-        body = rows.join("");
-      } else if (ctx.tab === "bar") {
-        const { entries, own } = barEntries(ctx);
-        chips = filterChips(ctx, itemEntries(offered(ctx.model)));
-        // A running spell's after-cast activities (Flaming Sphere's Move), first
-        const active = ctx.model.activities.filter(c => c.afterCast && c.running && !c.unprepared && !c.hidden);
-        const activeRow = active.length ? `<div class="midi-hub-row midi-hub-active"><span class="midi-hub-label">${escape(i18n("midi-qol.Hub.Active"))}</span>${active.map(c => useButton(c)).join("")}</div>` : "";
-        body = `${activeRow}<div class="midi-hub-bar" data-hub-drop="bar">${entries.map((e, i) => entryButton(e, { barIndex: i, removable: true })).join("")}
+      const tabs = TABS.filter(tab => tab !== "bar").map(tab => `<a class="midi-hub-tab${ctx.tab === tab && !ctx.filter ? " active" : ""}" data-hub-action="tab" data-tab="${tab}">${escape(i18n(`midi-qol.Hub.Tab.${tab}`))}</a>`).join("");
+      const chips = filterChips(ctx, itemEntries(offered(ctx.model)));
+      // The bar: always shown, always the same height. A running spell's after-cast activities first
+      const { entries, own } = barEntries(ctx);
+      const active = ctx.model.activities.filter(c => c.afterCast && c.running && !c.unprepared && !c.hidden);
+      const bar = `<div class="midi-hub-bar" data-hub-drop="bar">${active.length ? `<span class="midi-hub-active">${active.map(c => useButton(c)).join("")}</span>` : ""}${entries.map((e, i) => entryButton(e, { barIndex: i, removable: true })).join("")}
           <span class="midi-hub-drop-hint">${escape(i18n(own ? "midi-qol.Hub.DropHere" : "midi-qol.Hub.DropToArrange"))}</span>
           ${own ? `<a class="midi-hub-reset" data-hub-action="resetBar" data-tooltip="${escape(i18n("midi-qol.Hub.ResetBar"))}"><i class="fa-solid fa-rotate-left"></i></a>` : ""}</div>`;
-      } else if (ctx.tab === "actions") {
-        chips = filterChips(ctx, itemEntries(offered(ctx.model)));
-        const offers = [...ctx.model.interactions.self, ...ctx.model.interactions.target].map(o =>
-          `<button type="button" class="midi-hub-action${o.reason ? " midi-hub-unusable" : ""}" data-hub-action="interaction" data-id="${escape(o.id)}" data-tooltip="${escape(o.reason ?? o.hint ?? "")}">${o.icon ? `<i class="${escape(o.icon)}"></i> ` : ""}${escape(i18n(o.label))}</button>`);
-        const own = ctx.model.economy.movement ? [
-          `<button type="button" class="midi-hub-action" data-hub-action="dash">${mark("action")} ${escape(i18n("midi-qol.Hub.Dash"))}</button>`,
-          `<button type="button" class="midi-hub-action" data-hub-action="disengage">${mark("action")} ${escape(i18n("midi-qol.Hub.Disengage"))}</button>`] : [];
-        body = `<div class="midi-hub-actions">${[...own, ...offers].join("")}</div>`;
-      } else if (ctx.tab === "spells") {
-        const byLevel = new Map<number, Entry[]>();
-        chips = filterChips(ctx, itemEntries(offered(ctx.model)));
-        for (const entry of tabEntries(ctx.model, "spells")) {
-          const level = (itemOf(entry.cells[0])?.system as { level?: number } | undefined)?.level ?? 0;
-          byLevel.set(level, [...(byLevel.get(level) ?? []), entry]);
-        }
-        body = [...byLevel.entries()].sort((a, b) => a[0] - b[0]).map(([level, entries]) =>
-          `<div class="midi-hub-row"><span class="midi-hub-label">${escape(level ? i18n("midi-qol.Hub.Level").replace("{n}", String(level)) : i18n("midi-qol.Hub.Cantrips"))}</span>${entries.map(e => entryButton(e)).join("")}</div>`).join("");
-      } else {
-        chips = filterChips(ctx, itemEntries(offered(ctx.model)));
-        body = `<div class="midi-hub-row">${tabEntries(ctx.model, ctx.tab).map(e => entryButton(e)).join("")}</div>`;
-      }
-      return `<nav class="midi-hub-tabs">${tabs}${chips}</nav><div class="midi-hub-tab-body">${body || `<span class="hint">${escape(i18n("midi-qol.Hub.Nothing"))}</span>`}</div>`;
+      const drawer = ctx.filter || ctx.tab !== "bar" ? drawerHtml(ctx) : "";
+      return `<nav class="midi-hub-tabs">${tabs}${chips}</nav>${drawer}${bar}`;
     },
     actions: {
       interaction: async ({ token }, target) => { if (token && target.dataset.id) await runInteraction(target.dataset.id, token, [...(game.user?.targets ?? [])][0]?.document); },
       dash: async ({ actor }) => { await takeDash(actor); },
       disengage: async ({ actor }) => { await takeDisengage(actor); },
       choose: async (ctx, target) => { await openChoices(ctx, target); },
+      jump: (_ctx, target) => {
+        target.closest(".midi-hub-drawer")?.querySelector(`.midi-hub-level[data-level="${target.dataset.level}"]`)?.scrollIntoView({ block: "nearest" });
+      },
       resetBar: async (ctx) => { await saveBar(ctx, undefined); },
       remove: async (ctx, target) => {
         const { entries } = barEntries(ctx);

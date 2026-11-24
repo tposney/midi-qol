@@ -30,6 +30,17 @@ export class MidiHub extends ApplicationV2 {
   token: TokenDocument.Implementation | undefined;
   #tab = "bar";
   #filter = "";
+  #pinned = false;
+
+  /** The drawer is open: a tab other than the bar, or a cost filter */
+  get drawerOpen(): boolean { return this.#tab !== "bar" || !!this.#filter; }
+
+  closeDrawer() {
+    if (!this.drawerOpen) return;
+    this.#tab = "bar";
+    this.#filter = "";
+    void this.render();
+  }
   #model: TurnModel | undefined;
 
   /** Popped out as a window (the user's choice) */
@@ -77,7 +88,9 @@ export class MidiHub extends ApplicationV2 {
     const actor = this.actor!;
     return {
       actor, token: this.token, model, gm: !!game.user?.isGM, owner: !!actor.isOwner, tab: this.#tab, filter: this.#filter,
-      refresh: () => { void this.render(); }
+      refresh: () => { void this.render(); },
+      pinned: this.#pinned,
+      afterUse: () => { if (!this.#pinned) this.closeDrawer(); }
     };
   }
 
@@ -135,8 +148,27 @@ export class MidiHub extends ApplicationV2 {
     element.addEventListener("dragstart", this.#onDragStart);
     element.addEventListener("dragover", this.#onDragOver);
     element.addEventListener("drop", this.#onDrop);
+    // The drawer closes on Escape or a click outside the hub
+    document.addEventListener("pointerdown", this.#onOutside, true);
+    document.addEventListener("keydown", this.#onEscape);
     // Docked: in Foundry's interface layer, at the bottom (where the hotbar was)
     if (!MidiHub.windowed) document.getElementById("interface")?.append(element);
+  }
+
+  #onOutside = (event: PointerEvent) => {
+    if (!this.rendered || this.#pinned || !this.drawerOpen) return;
+    if (!this.element.contains(event.target as Node)) this.closeDrawer();
+  };
+
+  #onEscape = (event: KeyboardEvent) => {
+    if (event.key !== "Escape" || !this.rendered || !this.drawerOpen || this.element.querySelector(".midi-hub-menu")) return;
+    this.closeDrawer();
+  };
+
+  async _onClose(options: object) {
+    document.removeEventListener("pointerdown", this.#onOutside, true);
+    document.removeEventListener("keydown", this.#onEscape);
+    await super._onClose?.(options as never);
   }
 
   /** The section that owns an element */
@@ -155,11 +187,23 @@ export class MidiHub extends ApplicationV2 {
     switch (action) {
       case "use": {
         const activity = fromUuidSync(target.dataset.uuid ?? "") as ActivityLike | null;
-        if (activity?.use && !target.classList.contains("midi-hub-unusable")) await activity.use({ event });
+        if (activity?.use && !target.classList.contains("midi-hub-unusable")) {
+          if (!this.#pinned) this.closeDrawer();
+          await activity.use({ event });
+        }
         break;
       }
-      case "tab": this.#tab = target.dataset.tab ?? "bar"; this.#filter = ""; void this.render(); break;
-      case "filter": this.#filter = target.dataset.filter === this.#filter ? "" : target.dataset.filter ?? ""; void this.render(); break;
+      // A tab or a filter opens the drawer; the open one again closes it
+      case "tab": {
+        const tab = target.dataset.tab ?? "bar";
+        this.#tab = tab === this.#tab && !this.#filter ? "bar" : tab;
+        this.#filter = "";
+        void this.render();
+        break;
+      }
+      case "filter": this.#filter = target.dataset.filter === this.#filter ? "" : target.dataset.filter ?? ""; this.#tab = "bar"; void this.render(); break;
+      case "drawerPin": this.#pinned = !this.#pinned; void this.render(); break;
+      case "drawerClose": this.closeDrawer(); break;
       case "toggleWindow": await MidiHub.switchMode(); break;
       case "settings": hudApi.openSettings(); break;
     }

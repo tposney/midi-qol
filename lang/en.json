@@ -1011,6 +1011,8 @@
   "midi-qol.Deferred.Release": "Release",
   "midi-qol.AfterCast.Divider": "After casting",
   "midi-qol.AfterCast.Idle": "Used after casting; the spell isn't running",
+  "midi-qol.Hub.Pin": "Keep open after a use",
+  "midi-qol.Hub.Unpin": "Close after a use",
   "midi-qol.Hub.All": "All",
   "midi-qol.Hub.Active": "Active",
   "midi-qol.Hub.Title": "midi's hub",

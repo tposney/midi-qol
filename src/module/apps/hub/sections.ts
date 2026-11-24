@@ -26,6 +26,10 @@ export interface HubContext {
   filter: string;
   /** Re-render the hub */
   refresh(): void;
+  /** The drawer (a tab or a filter, above the bar) is pinned open */
+  pinned: boolean;
+  /** After a use from the hub: the drawer closes unless pinned */
+  afterUse(): void;
 }
 
 export interface HubSection {
