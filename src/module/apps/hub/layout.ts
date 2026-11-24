@@ -9,6 +9,7 @@ import { hudChanged } from "../../services/turnModel/hud.js";
 
 export const LAYOUT_SETTING = "hubLayout";
 export const KEYS_SETTING = "hubKeys";
+export const AROUND_SETTING = "hubAroundMe";
 const LAYOUTS = ["normal", "compact", "tablet"] as const;
 
 export function registerLayoutSettings() {
@@ -20,6 +21,16 @@ export function registerLayoutSettings() {
     type: String,
     choices: Object.fromEntries(LAYOUTS.map(l => [l, `midi-qol.HubLayout.${l}`])),
     default: "normal",
+    onChange: () => void hudChanged()
+  } as never);
+  // The table's choice (the GM's), not each player's
+  game.settings?.register("midi-qol", AROUND_SETTING as never, {
+    name: "midi-qol.HubAround.Name",
+    hint: "midi-qol.HubAround.Hint",
+    scope: "world",
+    config: false,
+    type: Boolean,
+    default: false,
     onChange: () => void hudChanged()
   } as never);
   game.settings?.register("midi-qol", KEYS_SETTING as never, {
@@ -66,3 +77,6 @@ export function hubKey(element: HTMLElement, event: KeyboardEvent): boolean {
   target.click();
   return true;
 }
+
+/** The Around me tab is shown (a user setting, off by default) */
+export const aroundMeOn = () => game.settings?.get("midi-qol", AROUND_SETTING as never) === true;

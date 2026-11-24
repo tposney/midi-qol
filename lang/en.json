@@ -1039,6 +1039,8 @@
   "midi-qol.HubLayout.normal": "Normal",
   "midi-qol.HubLayout.compact": "Compact",
   "midi-qol.HubLayout.tablet": "Tablet",
+  "midi-qol.HubAround.Name": "Around me tab",
+  "midi-qol.HubAround.Hint": "For everyone at the table: a hub tab with threats, where you stand (light, cover, hidden creatures you notice), helping allies, and what you know about your target",
   "midi-qol.HubKeys.Name": "Hub keys",
   "midi-qol.HubKeys.Hint": "While the hub runs, 1–9 and 0 use the bar's buttons and Shift+1–9 open its tabs (in place of the hotbar's number keys)",
   "midi-qol.Reminders.Name": "Reminders in the hub",

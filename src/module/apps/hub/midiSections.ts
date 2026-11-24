@@ -1,4 +1,5 @@
 import { applySpellGroup, currentLoadout, currentSpellGroup, loadoutsOf, removeLoadout, removeSpellGroup, saveLoadout, saveSpellGroup, spellGroupBlocked, spellGroupsOf, swapLoadout } from "../../services/loadouts.js";
+import { aroundMeOn } from "./layout.js";
 import { knowledgeHtml, sinceLastTurnHtml } from "./recordViews.js";
 import { explorationHtml, outOfCombatActions, outOfCombatHtml } from "./outOfCombat.js";
 import { reminders, remindersOn } from "./reminders.js";
@@ -491,7 +492,7 @@ export function registerMidiHubSections() {
   registerHubSection({
     id: "midi-qol.use", area: "center", order: 10,
     render: (ctx) => {
-      const tabs = TABS.filter(tab => tab !== "bar" && (tab !== "choices" || hasChoices(ctx.actor))).map(tab => `<a class="midi-hub-tab${ctx.tab === tab ? " active" : ""}" data-hub-action="tab" data-tab="${tab}">${escape(i18n(`midi-qol.Hub.Tab.${tab}`))}</a>`).join("");
+      const tabs = TABS.filter(tab => tab !== "bar" && (tab !== "choices" || hasChoices(ctx.actor)) && (tab !== "around" || aroundMeOn())).map(tab => `<a class="midi-hub-tab${ctx.tab === tab ? " active" : ""}" data-hub-action="tab" data-tab="${tab}">${escape(i18n(`midi-qol.Hub.Tab.${tab}`))}</a>`).join("");
       const chips = filterChips(ctx);
       // The bar: always shown, always the same height. First what something in use gives: a running spell's after-cast
       // activities, and granted items not already on the bar

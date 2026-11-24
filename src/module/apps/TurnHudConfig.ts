@@ -2,7 +2,7 @@ import { i18n } from "../../midi-qol.js";
 import { setUserSetting, userSettingValue } from "../lib/userSettings.js";
 import { CLICK_TO_ATTACK_SETTING, clickToAttackAllowed } from "../services/clickToAttack/service.js";
 import { REMINDERS_SETTING } from "./hub/reminders.js";
-import { KEYS_SETTING, LAYOUT_SETTING } from "./hub/layout.js";
+import { AROUND_SETTING, KEYS_SETTING, LAYOUT_SETTING } from "./hub/layout.js";
 import {
   HUD_ROLES, PLAYER_ROLES, cycleHud, hudApi, hudChoice, hudChoices, hudProvider, playerChoice, setHudChoice, tableChoice,
   type HudProvider, type HudRole, type HudSettings, type HudTool
@@ -145,8 +145,9 @@ export class TurnHudConfig extends HandlebarsApplicationMixin(ApplicationV2) {
     const remindersSetting = settingConfig(`midi-qol.${REMINDERS_SETTING}`);
     const reminders = remindersSetting ? { field: fieldFor(remindersSetting), value: settingValue(remindersSetting, userId) } : undefined;
     // The hub's layout and keys
-    const hubSettings = [LAYOUT_SETTING, KEYS_SETTING].map(key => settingConfig(`midi-qol.${key}`)).filter(Boolean)
-      .map(setting => ({ field: fieldFor(setting!), value: settingValue(setting!, userId) }));
+    // TODO (M17): the hub's settings move to a combat settings tab (or wherever that is decided)
+    const hubSettings = [LAYOUT_SETTING, KEYS_SETTING, AROUND_SETTING].map(key => settingConfig(`midi-qol.${key}`)).filter(Boolean)
+      .map(setting => ({ field: fieldFor(setting!), value: settingValue(setting!, userId), disabled: !editable(setting, userId) }));
     return { ...context, userField, userId, roles, click, reminders, hubSettings, hudTabs: tabs.map(t => ({ ...t, active: t.id === active })), credits, ownSettings };
   }
 
