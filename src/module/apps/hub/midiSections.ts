@@ -286,9 +286,15 @@ export function registerMidiHubSections() {
   registerHubSection({
     id: "midi-qol.state", area: "left", order: 10,
     render: ({ actor, token, model }) => {
-      const sys = actor.system as { attributes?: { hp?: { value?: number, max?: number, temp?: number }, ac?: { value?: number } } };
+      const sys = actor.system as { attributes?: { hp?: { value?: number, max?: number, temp?: number, pct?: number, bloodied?: number }, ac?: { value?: number } } };
       const hp = sys.attributes?.hp ?? {};
-      const pct = hp.max ? Math.max(0, Math.min(100, Math.round(100 * (hp.value ?? 0) / hp.max))) : 0;
+      // The damage card's heart; cracked when bloodied (dnd5e's test: pct at or below the actor's threshold, a percent,
+      // and not full), a skull at 0
+      const value = hp.value ?? 0;
+      const bloodied = hp.pct !== undefined && hp.bloodied !== undefined && hp.pct < 100 && hp.pct <= hp.bloodied;
+      const hpState = value <= 0 ? "down" : bloodied ? "bloodied" : "healthy";
+      const hpIcon = { down: "fa-skull", bloodied: "fa-heart-crack", healthy: "fa-heart" }[hpState];
+      const hpTip = [i18n("midi-qol.Hub.HP"), ...(hpState === "bloodied" ? [i18n("midi-qol.Hub.Bloodied")] : [])].join(": ");
       const conditions = [...actor.statuses].map(id => CONFIG.statusEffects.find(s => s.id === id)).filter(Boolean)
         .map(s => `<img class="midi-hub-condition" src="${escape(s!.img)}" data-tooltip="${escape(s!.name ? i18n(s!.name) : s!.id)}">`).join("");
       const held = model.checklist.filter(i => i.phase === "start" && (i.kind === "held" || i.kind === "ending"))
@@ -297,8 +303,8 @@ export function registerMidiHubSections() {
         <img class="midi-hub-portrait" src="${escape(token?.texture?.src ?? actor.img)}" alt="">
         <div class="midi-hub-vitals">
           <div class="midi-hub-name">${escape(token?.name ?? actor.name)}</div>
-          <div class="midi-hub-hp" data-tooltip="${escape(i18n("midi-qol.Hub.HP"))}"><div class="midi-hub-hp-fill" style="width:${pct}%"></div>
-            <span>${hp.value ?? 0}/${hp.max ?? 0}${hp.temp ? ` +${hp.temp}` : ""}</span></div>
+          <div class="midi-hub-hp midi-hub-hp-${hpState}"><span data-tooltip="${escape(hpTip)}"><i class="fa-solid ${hpIcon}"></i> ${value}/${hp.max ?? 0}</span>
+            ${hp.temp ? `<span class="midi-hub-hp-temp" data-tooltip="${escape(i18n("midi-qol.Hub.TempHP"))}"><i class="fa-solid fa-shield-alt"></i> ${hp.temp}</span>` : ""}</div>
           <div class="midi-hub-stats"><span data-tooltip="${escape(i18n("midi-qol.Hub.AC"))}"><i class="fa-solid fa-shield-halved"></i> ${sys.attributes?.ac?.value ?? "-"}</span>
             ${model.economy.movement ? `<span data-tooltip="${escape(i18n("midi-qol.Hub.Movement"))}">${mark("movement")} ${model.economy.movement.remaining}/${model.economy.movement.allowed} ${escape(model.economy.movement.units)}</span>` : ""}</div>
           <div class="midi-hub-conditions">${conditions}</div>

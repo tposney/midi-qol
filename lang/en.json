@@ -1044,6 +1044,8 @@
   "midi-qol.Hub.SlotsLeft": "{n} slot(s) left",
   "midi-qol.Hub.RightClickRemove": "Right-click to remove from the bar",
   "midi-qol.Hub.HP": "Hit points",
+  "midi-qol.Hub.Bloodied": "Bloodied",
+  "midi-qol.Hub.TempHP": "Temporary hit points",
   "midi-qol.Hub.Movement": "Movement left",
   "midi-qol.Hub.AttacksLeft": "{n} attack(s) left",
   "midi-qol.Hub.AllowedNow": "Allowed now",

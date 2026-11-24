@@ -2644,9 +2644,11 @@ body.midi-qol-attack-primed #board { cursor: crosshair; }
 .midi-qol-hub .midi-hub-portrait { width: 56px; height: 56px; border: none; border-radius: 6px; object-fit: cover; }
 .midi-qol-hub .midi-hub-vitals { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 0.15rem; }
 .midi-qol-hub .midi-hub-name { font-weight: bold; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.midi-qol-hub .midi-hub-hp { position: relative; height: 14px; background: #3a1010; border-radius: 3px; overflow: hidden; font-size: 0.7rem; }
-.midi-qol-hub .midi-hub-hp-fill { position: absolute; inset: 0 auto 0 0; background: #a12a2a; }
-.midi-qol-hub .midi-hub-hp span { position: relative; padding-left: 4px; }
+.midi-qol-hub .midi-hub-hp { display: flex; gap: 0.6rem; align-items: center; font-weight: bold; }
+.midi-qol-hub .midi-hub-hp .fa-heart { color: #cc4444; }
+.midi-qol-hub .midi-hub-hp-bloodied .fa-heart-crack { color: #e08a1e; }
+.midi-qol-hub .midi-hub-hp-down { opacity: 0.8; }
+.midi-qol-hub .midi-hub-hp-temp .fa-shield-alt { color: #4488cc; }
 .midi-qol-hub .midi-hub-stats { display: flex; gap: 0.6rem; font-size: 0.8rem; align-items: center; }
 .midi-qol-hub .midi-hub-conditions { display: flex; flex-wrap: wrap; gap: 2px; }
 .midi-qol-hub .midi-hub-condition { width: 18px; height: 18px; border: none; }
