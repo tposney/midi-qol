@@ -222,6 +222,8 @@ declare module "fvtt-types/configuration" {
     "midi-qol.gmHoldPoints": import("./module/lib/holds.js").HoldPoint[];
     /** M22b: the player's turn checklist window */
     "midi-qol.turnChecklist": boolean;
+    /** M21c: the GM was offered removing the old Multiattack Automation sample's copies */
+    "midi-qol.multiattackSampleOffered": boolean;
     "midi-qol.ConfigSettings": typeof configSettings;
     "midi-qol.CriticalDamage": string;
     "midi-qol.CriticalDamageGM": string;

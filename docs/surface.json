@@ -478,6 +478,8 @@
     "midiPropertiesTabRole",
     "midiUnconsciousCondition",
     "midiWoundedCondition",
+    "multiattack",
+    "multiattackRunSheet",
     "objectInteractions",
     "opportunityAttacks",
     "optionalRules.actionSpecialDurationImmediate",

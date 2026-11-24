@@ -1,6 +1,7 @@
 import { defineService, entries, reportServiceProblem } from "../../api/services.js";
 import { openMultiattack, openRun, replanRun } from "./run.js";
 import { multiattackState } from "./service.js";
+import { removeSampleCopies, sampleCopies, setupSampleRetirement } from "./retireSample.js";
 import { MultiattackRunSheet, setupMultiattackSheet } from "../../apps/multiattack/MultiattackRunSheet.js";
 import { MultiattackPlanEditor, registerMultiattackSection } from "../../apps/multiattack/MultiattackPlanEditor.js";
 import { activityRef, bindPlan, parseMultiattack, planRefs, resolvePlan, slug, tokenize, type MultiattackPlan, type PlanItem } from "../../lib/multiattack.js";
@@ -258,6 +259,8 @@ export async function multiattackPlan(actor: Actor.Implementation | null | undef
 
 export function setupMultiattackPlans() {
   setupMultiattackSheet();
+  // M21c: the old Multiattack Automation sample's copies, offered for removal once
+  setupSampleRetirement();
   registerMultiattackSection();
   game.settings?.register("midi-qol", SETTING, { scope: "world", config: false, type: Object, default: {} });
 }
@@ -277,5 +280,8 @@ export const multiattackApi = {
   state: multiattackState,
   start: openMultiattack,
   sheet: (actor: Actor.Implementation) => MultiattackRunSheet.show(actor),
-  edit: (actor: Actor.Implementation) => MultiattackPlanEditor.open(actor)
+  edit: (actor: Actor.Implementation) => MultiattackPlanEditor.open(actor),
+  // M21c: copies of the retired Multiattack Automation sample, and removing them
+  sampleCopies: () => sampleCopies().map(h => h.actor),
+  removeSampleCopies: () => removeSampleCopies()
 };

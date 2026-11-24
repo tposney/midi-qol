@@ -1,4 +1,5 @@
 import { i18n } from "../../../midi-qol.js";
+import { configSettings } from "../../settings.js";
 import { isMultiattackItem } from "../../services/multiattack/plans.js";
 import { nextActivities, openRun, runFit } from "../../services/multiattack/run.js";
 import { MultiattackPlanEditor } from "./MultiattackPlanEditor.js";
@@ -112,7 +113,7 @@ export class MultiattackRunSheet extends HandlebarsApplicationMixin(ApplicationV
 }
 
 export function setupMultiattackSheet() {
-  Hooks.on("midi-qol.multiattackOpened", actor => { MultiattackRunSheet.show(actor); });
+  Hooks.on("midi-qol.multiattackOpened", actor => { if (configSettings.multiattackRunSheet !== false) MultiattackRunSheet.show(actor); });
   Hooks.on("updateItem", (item: Item.Implementation) => {
     if (isMultiattackItem(item)) MultiattackRunSheet.refresh(item.parent as Actor.Implementation | null);
   });

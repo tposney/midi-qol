@@ -2624,3 +2624,9 @@ body.midi-qol-attack-primed #board { cursor: crosshair; }
 .midi-qol-checklist .midi-qol-checklist-list i { width: 1.2rem; text-align: center; }
 .midi-qol-checklist .midi-qol-checklist-limit { color: var(--color-level-warning, #c9a227); }
 .midi-qol-checklist .midi-qol-checklist-ending { font-style: italic; }
+/* midi's settings panel: resizable, its tabs wrap onto more rows, the open tab takes the height left */
+#midi-qol-settings .window-content { display: flex; flex-direction: column; }
+#midi-qol-settings .window-content > section.tab.active { flex: 1; min-height: 0; max-height: none; }
+#midi-qol-settings nav.sheet-tabs { flex-wrap: wrap; justify-content: center; row-gap: 0.25rem; column-gap: 0.9rem; flex: none; }
+#midi-qol-settings nav.sheet-tabs > a { flex: 0 0 auto; white-space: nowrap; }
+#midi-qol-settings .form-group > label { min-width: 12rem; }

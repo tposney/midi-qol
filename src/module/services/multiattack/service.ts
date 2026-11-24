@@ -2,6 +2,7 @@ import type { Activity } from "../../../globals.js";
 import type { Workflow } from "../../Workflow.js";
 import { defineService } from "../../api/services.js";
 import { registerCostContributor } from "../economy/cost.js";
+import { configSettings } from "../../settings.js";
 
 /*
  * multiattack (single): what using a creature's Multiattack does. midi asks the active provider after each use is
@@ -49,7 +50,8 @@ export function defineMultiattackService(midi: MultiattackProvider) {
     kind: "single",
     description: "What using a creature's Multiattack does: which uses cost no action, what they record, what the HUDs show"
   });
-  multiattackService.register("midi-qol", midi, { label: "Midi-QOL Multiattack" });
+  // The Combat tab's "Run creatures' Multiattack" off: midi's provider is unavailable (a module's still answers)
+  multiattackService.register("midi-qol", midi, { label: "Midi-QOL Multiattack", available: () => configSettings.multiattack !== false });
   registerCostContributor("midi-qol.multiattack", ({ activity, actor, cost }) => {
     if (!cost.action || !actor) return undefined;
     return multiattackService.get()?.free?.({ activity, actor }) ? { ...cost, action: 0 } : undefined;

@@ -32,11 +32,12 @@ export class ConfigPanel extends HandlebarsApplicationMixin(ApplicationV2) {
     tag: "form",
     window: {
       title: "midi-qol.ConfigTitle",
-      contentClasses: ["standard-form"]
+      contentClasses: ["standard-form"],
+      resizable: true
     },
     position: {
-      width: 800,
-      height: "auto" as "auto"
+      width: 860,
+      height: 900
     },
     form: {
       closeOnSubmit: true,
@@ -52,6 +53,7 @@ export class ConfigPanel extends HandlebarsApplicationMixin(ApplicationV2) {
     concentration: { template: "modules/midi-qol/templates/apps/ConfigPanel/concentration.hbs" },
     reactions: { template: "modules/midi-qol/templates/apps/ConfigPanel/reactions.hbs" },
     interactions: { template: "modules/midi-qol/templates/apps/ConfigPanel/interactions.hbs" },
+    combat: { template: "modules/midi-qol/templates/apps/ConfigPanel/combat.hbs" },
     misc: { template: "modules/midi-qol/templates/apps/ConfigPanel/misc.hbs" },
     mechanics: { template: "modules/midi-qol/templates/apps/ConfigPanel/mechanics.hbs" },
     rules: { template: "modules/midi-qol/templates/apps/ConfigPanel/rules.hbs" },
@@ -70,6 +72,7 @@ export class ConfigPanel extends HandlebarsApplicationMixin(ApplicationV2) {
         {id: "concentration"},
         {id: "reactions"},
         {id: "interactions"},
+        {id: "combat"},
         {id: "misc"},
         {id: "mechanics"},
         {id: "rules"},

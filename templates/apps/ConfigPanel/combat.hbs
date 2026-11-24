@@ -1,0 +1,16 @@
+<section id="midi-config-combat" class="tab midi-scrollable-list{{#if tab.active}} active{{/if}}" data-group="{{tab.group}}" data-tab="{{tab.id}}">
+
+    <div class="midi-qol-box">
+        {{localize "midi-qol.Config.Box.multiattack"}}
+        <div class="form-group">
+            <label>{{localize "midi-qol.Multiattack.Setting.Name"}}</label>
+            <input type="checkbox" name="multiattack" data-dtype="Boolean" {{checked configSettings.multiattack}} />
+            <div class="notes midi-qol-faint">{{localize "midi-qol.Multiattack.Setting.Hint"}}</div>
+        </div>
+        <div class="form-group" data-midi-reveal="multiattack">
+            <label>{{localize "midi-qol.Multiattack.RunSheetSetting.Name"}}</label>
+            <input type="checkbox" name="multiattackRunSheet" data-dtype="Boolean" {{checked configSettings.multiattackRunSheet}} />
+            <div class="notes midi-qol-faint">{{localize "midi-qol.Multiattack.RunSheetSetting.Hint"}}</div>
+        </div>
+    </div>
+</section>

@@ -3,7 +3,7 @@
  * shows in, its label and hint (lang keys) and the name of its choices (the settings panel's context). Type and default
  * come from ConfigSettings itself (settingsRegistry.ts). Generated from the panel's templates on 2026-11-20; kept by
  * hand since: test/settingsRegistry.test.ts fails for a config field with no entry here.
- * Groups: the panel's tabs (gm, player, workflow, concentration, reactions, misc, mechanics, rules); "rollStats" (the
+ * Groups: the panel's tabs (gm, player, workflow, concentration, reactions, interactions, combat, misc, mechanics, rules); "rollStats" (the
  * roll statistics window); "internal" (no UI); "retired" (still stored, no longer read).
  */
 export interface MidiSettingEntry {
@@ -103,6 +103,8 @@ export const MIDI_SETTINGS: Record<string, MidiSettingEntry> = {
   "playerRequireAmmunition": { group: "player", label: "midi-qol.RequireAmmunition.Name" },
   "removeButtons": { group: "player", label: "midi-qol.RemoveButtons.Name", choices: "removeButtonsOptions" },
   "doReactions": { group: "reactions", label: "midi-qol.DoReactions.Name", choices: "doReactionsOptions" },
+  "multiattack": { group: "combat", label: "midi-qol.Multiattack.Setting.Name", hint: "midi-qol.Multiattack.Setting.Hint" },
+  "multiattackRunSheet": { group: "combat", label: "midi-qol.Multiattack.RunSheetSetting.Name", hint: "midi-qol.Multiattack.RunSheetSetting.Hint" },
   "interactions": { group: "interactions", label: "midi-qol.InteractionsSetting.Name", hint: "midi-qol.InteractionsSetting.Hint" },
   "grappleProvider": { group: "interactions", label: "midi-qol.GrappleProvider.Name", hint: "midi-qol.GrappleProvider.Hint", choices: "ForcedMovementProviderOptions" },
   "clickToAttack": { group: "interactions", label: "midi-qol.ClickToAttack.Name", hint: "midi-qol.ClickToAttack.Hint" },
