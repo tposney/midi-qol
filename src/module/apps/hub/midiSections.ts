@@ -1,4 +1,5 @@
 import { applySpellGroup, currentLoadout, currentSpellGroup, loadoutsOf, removeLoadout, removeSpellGroup, saveLoadout, saveSpellGroup, spellGroupBlocked, spellGroupsOf, swapLoadout } from "../../services/loadouts.js";
+import { explorationHtml, outOfCombatActions, outOfCombatHtml } from "./outOfCombat.js";
 import { reminders, remindersOn } from "./reminders.js";
 import { aroundMeHtml } from "./aroundMe.js";
 import { configSettings } from "../../settings.js";
@@ -391,7 +392,8 @@ function drawerHtml(ctx: HubContext): string {
     const own = ctx.model.economy.movement ? [
       `<button type="button" class="midi-hub-action" data-hub-action="dash">${mark("action")} ${escape(i18n("midi-qol.Hub.Dash"))}</button>`,
       `<button type="button" class="midi-hub-action" data-hub-action="disengage">${mark("action")} ${escape(i18n("midi-qol.Hub.Disengage"))}</button>`] : [];
-    body = `<div class="midi-hub-actions">${[...own, ...offers].join("")}</div>`;
+    // Out of combat: the exploration actions, each its skills
+    body = `<div class="midi-hub-actions">${[...own, ...offers].join("")}</div>${ctx.model.inCombat ? "" : explorationHtml()}`;
   } else if (ctx.tab === "around") {
     title = i18n("midi-qol.Hub.Tab.around");
     body = aroundMeHtml(ctx.token, ctx.actor);
@@ -519,6 +521,7 @@ export function registerMidiHubSections() {
         if (reason) ui.notifications?.warn(reason);
       },
       saveSpellGroup: async ({ actor }) => { await saveSpellGroup(actor); },
+      exploreSkill: outOfCombatActions.exploreSkill,
       removeSpellGroup: async ({ actor }, target) => { await removeSpellGroup(actor, Number(target.dataset.index)); },
       choiceToggle: async ({ actor }, target) => { await setToggle(actor, target.dataset.key ?? "", (target as HTMLInputElement).checked); },
       standing: async ({ actor }, target) => {
@@ -603,6 +606,14 @@ export function registerMidiHubSections() {
         ctx.refresh();
       }
     }
+  });
+
+  // Out of combat: light sources with their time left, and rests
+  registerHubSection({
+    id: "midi-qol.outOfCombat", area: "right", order: 20,
+    when: ({ model }) => !model.inCombat,
+    render: ({ actor, owner, gm }) => outOfCombatHtml(actor, owner || gm),
+    actions: outOfCombatActions
   });
 
   // The turn: whose it is; End turn with what's unused
