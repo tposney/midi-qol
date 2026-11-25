@@ -1852,7 +1852,8 @@ export const registerSettings = function () {
     scope: "user",
     default: false,
     config: true,
-    type: Boolean
+    type: Boolean,
+    onChange: () => syncVisualsFlag()
   });
 
   game.settings.register("midi-qol", "EnableWorkflow", {
@@ -2137,12 +2138,15 @@ export async function migrateClientToUserSettings(): Promise<void> {
   }
 }
 
-/** Show animations off, mirrored on the user (the client running a use leaves them out of its broadcast animations) */
+/** Show animations off and Reduced motion, mirrored on the user (the client running a use leaves them out of the
+ * broadcast animations they shouldn't get) */
 export function syncVisualsFlag(): void {
   const user = game.user;
   if (!user) return;
   const off = game.settings?.get("midi-qol", "PresentationVisuals") === false;
-  if (!!user.getFlag("midi-qol", "visualsOff") !== off) void user.setFlag("midi-qol", "visualsOff", off);
+  const reduced = game.settings?.get("midi-qol", "PresentationReducedMotion") === true;
+  if (!!user.getFlag("midi-qol", "visualsOff") !== off || !!user.getFlag("midi-qol", "reducedMotion") !== reduced)
+    void user.update({ flags: { "midi-qol": { visualsOff: off, reducedMotion: reduced } } });
 }
 
 export function safeGetGameSetting(moduleName: string, settingName: string): any | undefined {

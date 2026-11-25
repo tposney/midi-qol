@@ -854,6 +854,7 @@
     "overtimeChatCardUuids",
     "playerDamageCard",
     "presentation",
+    "reducedMotion",
     "rememberedChoices",
     "requestId",
     "rollModifiers.attack",

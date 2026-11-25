@@ -804,6 +804,8 @@ declare module "fvtt-types/configuration" {
         hubWindow?: boolean;
         /** M18 stage 2: the player's Show animations off, mirrored where the client running a use can read it */
         visualsOff?: boolean;
+        /** The player's Reduced motion, mirrored the same way (animations that can't be reduced leave them out) */
+        reducedMotion?: boolean;
       };
     }
   }

@@ -192,7 +192,14 @@ export function cueForViewer(cue: Cue, user: User.Implementation): Cue | undefin
       ...(hpState ? { hp, temp, healed, droppedToZero } : {})
     } };
   });
-  return { ...cue, source: hiddenSource ? undefined : cue.source, targets: cue.targets.filter(shownTarget), outcomes };
+  const targets = cue.targets.filter(shownTarget);
+  if (!hiddenSource) return { ...cue, targets, outcomes };
+  // A hidden attacker: nothing that names what it used (the item, its sounds' keys, its kind), and no sound but a
+  // plain hit, miss or damage on a target this user sees
+  const impact = /^(attack\.(hit|miss|critical|fumble)|damage\.)/.test(cue.cue) && targets.length > 0;
+  return { ...cue, source: undefined, targets, outcomes, item: undefined, itemName: undefined, activity: undefined, ammunition: undefined,
+    sound: {}, tags: { damageTypes: cue.tags.damageTypes, defaultDamageType: cue.tags.defaultDamageType },
+    presentation: { ...cue.presentation, sound: impact ? (cue.presentation?.sound === "none" ? "none" : "default") : "none" } };
 }
 
 /** The users who may see a cue's visuals (its source and all its targets shown to them, Show animations on); undefined: everyone */

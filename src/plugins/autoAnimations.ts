@@ -225,8 +225,11 @@ export function registerAutoAnimationsPresenter(api: AutoAnimationsPluginApi): b
       const item = activity?.item ?? (cue.item ? fromUuidSync(cue.item) : undefined);
       if (!activity || !item) return;
       const ended = animationsEnded(cue.useId);
-      // Shown only to the users who may see it (a hidden attacker or target, a private use): Sequencer plays for them
-      const audience = cue.visualAudience;
+      // Shown only to the users who may see it (a hidden attacker or target, a private use): Sequencer plays for them.
+      // AA's animations can't be reduced: a player with Reduced motion doesn't get them
+      const reduced = (game.users?.contents ?? []).filter(user => user.getFlag("midi-qol", "reducedMotion")).map(user => user.id);
+      const audience = reduced.length ? (cue.visualAudience ?? (game.users?.contents ?? []).map(user => user.id)).filter(id => !!id && !reduced.includes(id)) as string[]
+        : cue.visualAudience;
       const limit = audience ? Hooks.on("createSequencerSequence", sequence => {
         if (sequence.moduleName !== "Automated Animations") return;
         for (const section of sequence.sections ?? []) section.forUsers?.(audience);
