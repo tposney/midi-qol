@@ -2191,6 +2191,7 @@ body.midi-qol-hide-gambit-mirrors .gps-dialog-mirror:not(.midi-qol-gambit-shown)
 /* A die as Foundry's roll tooltip draws it: its icon with the result; the checkbox kept for the keyboard, hidden */
 .midi-qol-die:has(.midi-qol-die-face) {
   position: relative;
+  gap: 1px;
   padding: 2px;
   cursor: pointer;
 }

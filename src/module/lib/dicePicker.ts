@@ -9,14 +9,18 @@
 
 export interface DieControl { key: string, label: string, group?: string, faces?: number, result?: number }
 
-/** Dice Foundry has an icon for (its roll tooltip's): shown as that die with its result, others as their label */
+/** Dice Foundry has an icon for (its roll tooltip's): shown as that die with its result, a d100 as two d10s, others as their label */
 const ICON_FACES = new Set([4, 6, 8, 10, 12, 20]);
 
 /** The dice as checkboxes, `chosen` ticked; `max` is kept by wireDicePickers */
 export function diceControlHTML(dice: DieControl[], { max = 1, chosen = [] as string[] }: { max?: number, chosen?: string[] } = {}): string {
   const groups = [...new Set(dice.map(d => d.group ?? ""))];
-  const face = (d: DieControl) => d.faces && ICON_FACES.has(d.faces) && d.result !== undefined
-    ? `<span class="midi-qol-die-face d${d.faces}">${d.result}</span>` : foundry.utils.escapeHTML(d.label);
+  const icon = (faces: number, shown: string | number) => `<span class="midi-qol-die-face d${faces}">${shown}</span>`;
+  // A d100 as it is rolled: a tens d10 (00-90) and a units d10, picked together
+  const face = (d: DieControl) => d.result === undefined || !d.faces ? foundry.utils.escapeHTML(d.label)
+    : ICON_FACES.has(d.faces) ? icon(d.faces, d.result)
+    : d.faces === 100 ? icon(10, d.result === 100 ? "00" : String(Math.floor(d.result / 10) * 10).padStart(2, "0")) + icon(10, d.result % 10)
+    : foundry.utils.escapeHTML(d.label);
   const box = (d: DieControl) =>
     `<label class="midi-qol-die" data-tooltip="${foundry.utils.escapeHTML(d.label)}"><input type="checkbox" name="dice" value="${d.key}"${chosen.includes(d.key) ? " checked" : ""}> ${face(d)}</label>`;
   const body = groups.map(group => (groups.length > 1 ? `<div class="midi-qol-dice-group">${foundry.utils.escapeHTML(group)}</div>` : "")
