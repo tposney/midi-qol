@@ -108,11 +108,20 @@ export async function offerRelease(use: DeferredUse, subject: TokenDocument.Impl
       ...(on ? { on } : {}), ...(within !== undefined ? { within } : {}), ...(item ? { item } : {}) };
     const hold = (): DeferredAnswer => ({ release: false });
     const release = (): DeferredAnswer => ({ release: true, ...(subject?.uuid ? { targets: [subject.uuid] } : {}) });
-    const { value } = await askUser<DeferredAnswer>(user, {
+    const request = askUser<DeferredAnswer>(user, {
       type: use.options.prompt ?? DEFAULT_PROMPT, data, kind: "deferred", actorUuid: use.actor?.uuid ?? undefined, tokenUuid: readier?.uuid ?? undefined,
       label: i18n("midi-qol.Deferred.PromptLabel").replace("{name}", label), timeoutMs: use.options.timeoutMs ?? TIMEOUT_MS, fallback: hold,
       gmChoices: { release: { label: "midi-qol.Deferred.Release", value: release }, hold: { label: "midi-qol.Deferred.Hold", value: hold } }
-    }).settled;
+    });
+    // Dropped (or released) on any client while the question waits: its card no longer holds it, the question is abandoned
+    const gone = (message: ChatMessage.Implementation) => {
+      if (message.uuid === use.id && !deferredUses().some(u => u.id === use.id)) request.settle(hold(), "abandoned");
+    };
+    const onUpdate = Hooks.on("updateChatMessage", gone);
+    const onDelete = Hooks.on("deleteChatMessage", (message: ChatMessage.Implementation) => { if (message.uuid === use.id) request.settle(hold(), "abandoned"); });
+    let value: DeferredAnswer | undefined;
+    try { ({ value } = await request.settled); }
+    finally { Hooks.off("updateChatMessage", onUpdate); Hooks.off("deleteChatMessage", onDelete); }
     // Still readied (concentration may have broken, another client may have released it meanwhile)
     if (!value?.release || !deferredUses().some(u => u.id === use.id)) return false;
     const problem = await releaseDeferred(use.id, { targets: value.targets ?? (subject?.uuid ? [subject.uuid] : []) });

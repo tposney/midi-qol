@@ -31,6 +31,9 @@ export interface UseIssue {
   kind?: BudgetKindId;
   /** What it does; absent: the economy policy of its kind (or show) */
   policy?: EconomyPolicy;
+  /** Where a use acts on it: "use" (absent; before the use, useChecks), "validate" (the ValidateRoll step), "roll" (its
+   * roll); a budget issue (kind) is the economy checks', after dnd5e's usage dialog */
+  actedOn?: "use" | "validate" | "roll";
 }
 
 export interface IssueQuery {
@@ -139,7 +142,7 @@ function incapacitatedIssue({ actor, workflow }: IssueQuery): UseIssue | undefin
   if (mechanic === "nothing" || workflow?.workflowOptions?.allowIncapacitated) return undefined;
   const condition = checkIncapacitated(actor, false, false);
   if (!condition) return undefined;
-  return { id: "incapacitated", label: String(condition), source: "midi-qol.incapacitated", policy: mechanic === "enforce" ? "enforce" : "show" };
+  return { id: "incapacitated", label: String(condition), source: "midi-qol.incapacitated", policy: mechanic === "enforce" ? "enforce" : "show", actedOn: "validate" };
 }
 
 /** midi's Check two-handed: a two-handed weapon's attack is refused with a shield (the roll's check, asked up front) */
@@ -149,7 +152,7 @@ function handsIssue({ activity, actor }: IssueQuery): UseIssue | undefined {
   if (!activity.item?.system.properties?.has("two")) return undefined;
   // @ts-expect-error no dnd5e-types
   if (!(actor.system.attributes?.ac?.shield > 0)) return undefined;
-  return { id: "twoHandedShield", label: i18n("midi-qol.TwoHandedShieldWarning"), source: "midi-qol.hands", policy: "enforce" };
+  return { id: "twoHandedShield", label: i18n("midi-qol.TwoHandedShieldWarning"), source: "midi-qol.hands", policy: "enforce", actedOn: "roll" };
 }
 
 export function registerMidiIssueContributors() {

@@ -1,4 +1,5 @@
 import { registerLoadouts } from "./module/services/loadouts.js";
+import { registerRagingRule } from "./rules/raging.js";
 import { registerVitalityItemRule } from "./rules/vitalityItem.js";
 import { defineUseFlowService } from "./module/services/useFlow/service.js";
 import { registerActiveDefenceRule } from "./rules/activeDefence/index.js";
@@ -617,6 +618,7 @@ Hooks.once('init', async function () {
   registerChallengeModeArmorRule();
   registerActiveDefenceRule();
   registerVitalityItemRule();
+  registerRagingRule();
   defineDamageModifiersService();
   defineDamageContributionsService();
   defineResponsesService();

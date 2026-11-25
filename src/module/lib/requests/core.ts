@@ -83,7 +83,8 @@ export class Deadline {
 }
 
 /** How a request was settled. "error": asking failed (not a disconnect), and the fallback was used. */
-export type SettledHow = "player" | "gm" | "timeout" | "disconnect" | "cancelled" | "error";
+/** "abandoned": what the request was for went away while it waited (a readied use dropped) */
+export type SettledHow = "player" | "gm" | "timeout" | "disconnect" | "cancelled" | "abandoned" | "error";
 
 export interface Settled<T> { value: T, how: SettledHow }
 

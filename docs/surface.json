@@ -518,6 +518,7 @@
     "optionalRules.nearbyAllyRanged",
     "optionalRules.nearbyFoe",
     "optionalRules.optionalCritRule",
+    "optionalRules.raging",
     "optionalRules.showFlankingHighlight",
     "optionalRules.surfaceOcclusion",
     "optionalRules.targetMustBeSeen",

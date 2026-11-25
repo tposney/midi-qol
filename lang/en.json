@@ -763,6 +763,8 @@
   },
   "midi-qol.NearbyAllyRanged.Hint": "Ranged Attacks with allies nearby (5 feet) to the target have disadvantage for targets smaller than this (w*h). 0 disables",
   "midi-qol.Incapacitated.Name": "When an Incapacitated actor takes an action, MidiQOL should",
+  "midi-qol.Raging.Name": "When a raging creature casts a spell, MidiQOL should",
+  "midi-qol.Raging.Hint": "Raging (2024 Rage: an effect from a feature with the identifier rage) means no spells. Warn tells the player and lets the spell go ahead; Enforce stops it.",
   "midi-qol.IncapacitatedOptions": {
     "nothing": "Allow it",
     "enforce": "Enforce no actions",
@@ -1223,6 +1225,7 @@
   "midi-qol.Multiattack.Notes": "Notes for the GM (one per line)",
   "midi-qol.Multiattack.Preview": "Preview",
   "midi-qol.Economy.LeveledSpellThisTurn": "A spell with a spell slot has already been cast this turn",
+  "midi-qol.Economy.Raging": "You can't cast spells while raging",
   "midi-qol._comment for translators_DeferText": "The text below is searched for by midi in the onUseMacro field in item data. If you change it every item with an onUseMacro will need to be changed to match",
   "midi-qol._comment for translators_ItemMacroText": "The text below is searched for by midi in the onUseMacro field in item data. If you change it every item with an onUseMacro will need to be changed to match",
   "midi-qol.ItemMacroText": "ItemMacro",

@@ -146,6 +146,7 @@ export const MIDI_SETTINGS: Record<string, MidiSettingEntry> = {
   "optionalRules.flankingRequiresVisibility": { group: "rules", label: "midi-qol.FlankingRequiresVisibility.Name", hint: "midi-qol.FlankingRequiresVisibility.Hint" },
   "optionalRules.hiddenAdvantage": { group: "rules", label: "midi-qol.HiddenAdvantage.Name", hint: "midi-qol.HiddenAdvantage.Hint", choices: "HiddenAdvantageOptions" },
   "optionalRules.incapacitated": { group: "rules", label: "midi-qol.Incapacitated.Name", choices: "IncapacitatedOptions" },
+  "optionalRules.raging": { group: "rules", label: "midi-qol.Raging.Name", hint: "midi-qol.Raging.Hint", choices: "IncapacitatedOptions" },
   "optionalRules.invisAdvantage": { group: "rules", label: "midi-qol.InvisAdvantage.Name", hint: "midi-qol.RAW2014Invisible.Hint", choices: "InvisAdvantageOptions" },
   "optionalRules.invisVision": { group: "rules", label: "midi-qol.InvisVision.Name", hint: "midi-qol.InvisVision.Hint" },
   "optionalRules.maxDRValue": { group: "rules", label: "midi-qol.MaxDRValue.Name" },

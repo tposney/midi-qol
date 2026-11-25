@@ -1,4 +1,5 @@
 import { tokenFor, tokenOf } from "../lib/tokenResolver.js";
+import { issuePolicy, issues } from "../services/economy/issues.js";
 import { debug, debugEnabled, error, i18nFormat, warn } from "../../midi-qol.js";
 import { choiceDeclarations, resolveChoices } from "../lib/choices.js";
 import { isTransformActivity, transformActor } from "../activities/transform.js";
@@ -9,7 +10,7 @@ import { activityHasScaledTargetCount, postTemplateConfirmTargets } from "../act
 import { TroubleShooter } from "../apps/TroubleShooter.js";
 import { checkMechanic, configSettings, safeGetGameSetting } from "../settings.js";
 import { saveTargetsUndoData } from "../undo.js";
-import { activityHasAreaTarget, activityHasAutoPlaceTemplate, activityHasEmanationNoTemplate, checkActivityRange, checkIncapacitated, getActivityAutoTargetAction, getAutoRollAttack, getToken, isActivityType, isRangeCheckable, setRangedTargets, validTargetTokens } from "../utils.js";
+import { activityHasAreaTarget, activityHasAutoPlaceTemplate, activityHasEmanationNoTemplate, checkActivityRange, getActivityAutoTargetAction, logIncapacitatedCheckResult, getAutoRollAttack, getToken, isActivityType, isRangeCheckable, setRangedTargets, validTargetTokens } from "../utils.js";
 import { setStepRun } from "../steps/steps.js";
 import type { Activity, ActivityUseConfiguration } from "../../globals.js";
 import { Workflow, workflowStepHost, type WorkflowState } from "../Workflow.js";
@@ -170,8 +171,11 @@ export function registerPreambleSteps(): void {
         if (isMidiActivityType(workflow.activity)) await setupCanSeeSense(workflow.activity, { workflow });
       }
     }
-    if (!workflow.workflowOptions.allowIncapacitated && checkMechanic("incapacitated") !== "nothing" && checkIncapacitated(workflow.actor, debugEnabled > 0, true)) {
-      if (checkMechanic("incapacitated") === "enforce") { workflow.outcome = "invalid"; return "midi-qol.RollFinished"; }
+    // Incapacitated: the issue contributor's (economy/issues.ts) decision, warned or refused by its policy
+    const [incapacitated] = workflow.actor ? await issues(workflow.activity, { workflow, only: ["incapacitated"] }) : [];
+    if (incapacitated) {
+      logIncapacitatedCheckResult(workflow.actor.name ?? "", incapacitated.label, debugEnabled > 0, true);
+      if (issuePolicy(incapacitated, workflow.actor) === "enforce") { workflow.outcome = "invalid"; return "midi-qol.RollFinished"; }
     }
     return "midi-qol.PreambleComplete";
   });

@@ -256,6 +256,7 @@ export class ConfigSettings {
     mountedUseMountSpace: true,
     hiddenAdvantage: "perObserver",
     incapacitated: "nothing",
+    raging: "warn",
     invisAdvantage: "RAW2024",
     invisVision: false,
     maxDRValue: false,
@@ -725,6 +726,7 @@ export let fetchParams = () => {
   // Legacy boolean: true checked actions without stopping them
   if (String(configSettings.optionalRules.incapacitated) === "true") configSettings.optionalRules.incapacitated = "warn";
   if (!configSettings.optionalRules.incapacitated) configSettings.optionalRules.incapacitated = "nothing";
+  if (!configSettings.optionalRules.raging) configSettings.optionalRules.raging = "warn";
   if (!configSettings.optionalRules.wallsBlockRange) configSettings.optionalRules.wallsBlockRange = "center";
   // v14 Levels has no CONFIG.Levels.API/TemplateHandler; its sight wrapper is one "center" already uses.
   if (configSettings.optionalRules.wallsBlockRange === "centerLevels") configSettings.optionalRules.wallsBlockRange = "center";

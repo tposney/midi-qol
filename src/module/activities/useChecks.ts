@@ -139,12 +139,18 @@ export async function preChatChecks(activity: MidiActivity, usage: ActivityUseCo
     }
   }
 
-  // A spell's components and spells the caster can't cast: the economy's issue contributors (M4)
-  const componentIds = options.checkComponents ? ["noSpell", "noVerbal", "noSomatic", "noMaterial"] : ["noSpell"];
-  const [refused] = await issues(activity, { workflow, only: componentIds });
-  if (refused) {
-    ui.notifications?.warn(refused.label);
-    return removeWorkflow(usage.workflow);
+  // Issues acted on as the use starts (a spell's components, raging, a module's): each by its policy, enforce refuses,
+  // warn tells; budget issues are the economy checks' (below), incapacitated ValidateRoll's, two-handed the roll's
+  const skipped = options.checkComponents ? [] : ["noVerbal", "noSomatic", "noMaterial"];
+  const atUse = (await issues(activity, { workflow })).filter(issue => !issue.kind && (issue.actedOn ?? "use") === "use" && !skipped.includes(issue.id));
+  if (activity.actor) {
+    const policies = atUse.map(issue => ({ issue, policy: issuePolicy(issue, activity.actor!) }));
+    const refused = policies.find(p => p.policy === "enforce");
+    if (refused) {
+      ui.notifications?.warn(refused.issue.label);
+      return removeWorkflow(usage.workflow);
+    }
+    for (const { issue } of policies.filter(p => p.policy === "warn")) ui.notifications?.warn(issue.label);
   }
   // The bonus action and reaction checks: here, or after dnd5e's usage dialog (use.ts), so a use option chosen there
   // (Quickened Spell) is checked at the cost it ends with

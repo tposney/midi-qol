@@ -46,6 +46,8 @@ export interface RuleInfo {
   label: string;
   /** The rule's settings, the switch first */
   settings?: RuleSettingSpec[];
+  /** A mechanic (incapacitated, raging): on by its value, not behind the Optional rules switch */
+  mechanic?: boolean;
 }
 
 const rules = new Map<string, RuleInfo>();
@@ -61,6 +63,12 @@ export function ruleOn(setting: RuleSetting): boolean {
   return !!value && value !== "none" && value !== "off";
 }
 
+/** A mechanic's value is set (not behind the Optional rules switch) */
+export function mechanicOn(setting: RuleSetting): boolean {
+  const value = configSettings.optionalRules[setting] as unknown;
+  return !!value && value !== "none" && value !== "off" && value !== "nothing";
+}
+
 export const ruleId = (setting: RuleSetting, part?: string) => `midi-qol.rule.${setting}${part ? `.${part}` : ""}`;
 
 /** Recorded as midi's (for rules.list); the rule file registers its provider itself */
@@ -73,7 +81,7 @@ export function declareRule(info: RuleInfo): RuleInfo {
 export function ruleActive(id: string): boolean {
   const info = rules.get(id);
   if (!info) return false;
-  if (info.service === "policy") return isMidiSetting(info.setting) && ruleOn(info.setting);
+  if (info.service === "policy") return isMidiSetting(info.setting) && (info.mechanic ? mechanicOn(info.setting) : ruleOn(info.setting));
   return providers(info.service).some(p => p.id === id && p.available);
 }
 
@@ -97,7 +105,7 @@ export async function setRuleSetting(ruleIdOrSetting: string, key: string, value
 
 export const optionalRulesApi = {
   /** The rules with their state and their settings' current values (for a configuration panel) */
-  list: () => [...rules.values()].map(info => ({ ...info, on: isMidiSetting(info.setting) ? ruleOn(info.setting) : ruleActive(info.id),
+  list: () => [...rules.values()].map(info => ({ ...info, on: isMidiSetting(info.setting) ? (info.mechanic ? mechanicOn(info.setting) : ruleOn(info.setting)) : ruleActive(info.id),
     registered: info.service === "policy" || providers(info.service).some(p => p.id === info.id), available: ruleActive(info.id),
     settings: (info.settings ?? []).map(spec => ({ ...spec, value: ruleSettingValue(spec) })) })),
   /** A module's rule: its provider registered by the module; declared here for the list and the panel */
