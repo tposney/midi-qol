@@ -1,5 +1,5 @@
 import type { Activity } from "../../../globals.js";
-import { suggestLowDice } from "../../lib/dicePicker.js";
+import { diceChoices, rerollChosen, suggestLowChoices } from "../diceReroll/service.js";
 import { defineService, entries, reportServiceProblem } from "../../api/services.js";
 import type { Workflow } from "../../Workflow.js";
 import { addRollToAsync, setBonusActionUsed, setReactionUsed, setActionUsed, refreshRollTotal } from "../../utils.js";
@@ -314,29 +314,17 @@ export async function applyRollMode(roll: Roll, mode: "advantage" | "disadvantag
 }
 
 /** The roll after one bonus's effect, from the roll data of the use. */
-/** Reroll up to `max` dice that rolled below their average, lowest first; a copy, the old results kept as rerolled */
-async function rerollLowDice(roll: Roll, max: number | string | undefined, rollData: object, picked?: string[]): Promise<Roll> {
-  let count = typeof max === "number" ? max : 1;
-  if (typeof max === "string" && max.trim()) {
-    const evaluated = await new Roll(max, { ...roll.data, ...rollData }).evaluate();
-    count = evaluated.total ?? 1;
-  }
-  const changed = (roll.constructor as typeof Roll).fromData(JSON.parse(JSON.stringify(roll))) as Roll;
-  const keys = (picked ?? suggestLowDice(changed, count)).slice(0, Math.max(0, count));
-  const chosen = keys.flatMap(key => {
-    const [die, index] = key.split("-").map(Number);
-    const term = changed.dice[die];
-    const result = term?.results[index];
-    return term && result?.active && !result.discarded ? [{ term, index }] : [];
-  });
-  for (const { term, index } of chosen) {
-    const old = term.results[index];
-    old.rerolled = true;
-    old.active = false;
-    const fresh = await new Roll(`1d${term.faces}`).evaluate();
-    term.results.push({ result: fresh.total ?? 1, active: true });
-  }
-  return refreshRollTotal(changed);
+/**
+ * A "choose" reroll: the dice picked (the bonus prompt's), else up to `max` below their average, lowest first, rerolled
+ * through the diceReroll service, keeping the new, higher or lower result; a copy, the old results kept as rerolled
+ */
+async function rerollPickedDice(roll: Roll, effect: Extract<BonusEffect, { kind: "reroll" }>, rollData: object): Promise<Roll> {
+  let count = typeof effect.max === "number" ? effect.max : 1;
+  if (typeof effect.max === "string" && effect.max.trim()) count = (await new Roll(effect.max, { ...roll.data, ...rollData }).evaluate()).total ?? 1;
+  count = Math.max(0, Math.floor(count));
+  const keys = (effect.picked ?? suggestLowChoices(diceChoices([roll]), count)).slice(0, count);
+  const [rerolled] = await rerollChosen([roll], keys, effect.keep === "ask" ? "new" : effect.keep);
+  return rerolled;
 }
 
 export async function applyBonusEffect(roll: Roll, effect: BonusEffect, rollData: object, label: string): Promise<Roll> {
@@ -350,7 +338,7 @@ export async function applyBonusEffect(roll: Roll, effect: BonusEffect, rollData
       return addRollToAsync(roll, bonus);
     }
     case "reroll": {
-      if (effect.dice === "choose") return rerollLowDice(roll, effect.max, rollData, effect.picked);
+      if (effect.dice === "choose") return rerollPickedDice(roll, effect, rollData);
       const options = effect.dice === "max" ? { maximize: true } : effect.dice === "min" ? { minimize: true } : {};
       const RollClass = roll.constructor as typeof Roll;
       const rerolled: Roll = effect.addFormula

@@ -1,6 +1,6 @@
 import { i18n } from "../../../midi-qol.js";
 import { defineService } from "../../api/services.js";
-import { wireDicePickers, pickedIn } from "../../lib/dicePicker.js";
+import { diceControlHTML, wireDicePickers, pickedIn } from "../../lib/dicePicker.js";
 import { askUser, registerRequestHandler, type IncomingRequest } from "../../lib/requests.js";
 import { configSettings } from "../../settings.js";
 import { playerForActor, refreshRollTotal } from "../../utils.js";
@@ -13,6 +13,7 @@ import { playerForActor, refreshRollTotal } from "../../utils.js";
  *
  *   const rolls = await MidiQOL.dice.reroll(workflow.damageRolls, { max: 3, actor: workflow.actor, title: "Empowered Spell" });
  *   const rolls = await MidiQOL.dice.reroll([roll], { max: 1, keep: "higher", allow: die => die.result <= 2 });
+ *   const keys = await MidiQOL.dice.pick(rolls, { max: 2 });   // only asked; MidiQOL.dice.rerollChosen(rolls, keys) rerolls
  *
  * A die is keyed "roll-die-result": the roll's index in the list, the term's index in roll.dice and the result's index
  * in that term, which stay valid on a copy.
@@ -35,7 +36,7 @@ export interface DicePick {
   title: string;
   prompt: string;
   max: number;
-  dice: { key: string, label: string, group: string }[];
+  dice: { key: string, label: string, group: string, faces?: number, result?: number }[];
   /** Ticked to start with, and the answer when nobody answers in time */
   suggested: string[];
 }
@@ -45,15 +46,18 @@ export interface DiceRerollProvider {
   pick(pick: DicePick, roller?: Actor.Implementation | null): Promise<string[] | undefined>;
 }
 
-export interface RerollOptions {
+export interface PickOptions {
   max: number;
-  keep?: "new" | "higher" | "lower";
   title?: string;
   prompt?: string;
   /** Whose roll: their user picks */
   actor?: Actor.Implementation | null;
   /** Which dice may be picked (default: all that count) */
   allow?: (die: DieChoice) => boolean;
+}
+
+export interface RerollOptions extends PickOptions {
+  keep?: "new" | "higher" | "lower";
   /** Already picked (no one is asked) */
   picked?: string[];
 }
@@ -87,12 +91,7 @@ export function suggestLowChoices(choices: DieChoice[], count: number): string[]
 
 /** The picker's checkboxes, grouped (a heading per damage type when there are several) */
 function pickerHTML(pick: DicePick): string {
-  const groups = [...new Set(pick.dice.map(d => d.group))];
-  const box = (d: DicePick["dice"][number]) =>
-    `<label class="midi-qol-die"><input type="checkbox" name="dice" value="${d.key}"${pick.suggested.includes(d.key) ? " checked" : ""}> ${foundry.utils.escapeHTML(d.label)}</label>`;
-  const body = groups.map(group => `${groups.length > 1 ? `<div class="midi-qol-dice-group">${foundry.utils.escapeHTML(group)}</div>` : ""}`
-    + pick.dice.filter(d => d.group === group).map(box).join("")).join("");
-  return `<p>${foundry.utils.escapeHTML(pick.prompt)}</p><span class="midi-qol-dice-picker" data-max="${pick.max}">${body}</span>`;
+  return `<p>${foundry.utils.escapeHTML(pick.prompt)}</p>${diceControlHTML(pick.dice, { max: pick.max, chosen: pick.suggested })}`;
 }
 
 /** The picker on this client (a request's, when another client asked): the keys, or undefined when declined */
@@ -157,24 +156,33 @@ export async function rerollChosen(rolls: Roll[], keys: string[], keep: RerollOp
   return rolls.map((roll, r) => copies.has(r) ? refreshRollTotal(copies.get(r)!) : roll);
 }
 
+/** Ask the roller which dice (up to `max`) of the rolls to reroll: the keys (none when declined) */
+export async function pickDice(rolls: Roll | Roll[], options: PickOptions): Promise<string[]> {
+  const list = Array.isArray(rolls) ? rolls : [rolls];
+  const choices = diceChoices(list).filter(d => options.allow?.(d) ?? true);
+  const max = Math.max(0, Math.floor(options.max));
+  if (!choices.length || !max) return [];
+  const pick: DicePick = {
+    title: options.title ?? i18n("midi-qol.DiceReroll.Title"),
+    prompt: options.prompt ?? i18n("midi-qol.DiceReroll.Prompt").replace("{max}", String(max)),
+    max,
+    dice: choices.map(d => ({ key: d.key, label: d.label, group: d.group, faces: d.faces, result: d.result })),
+    suggested: suggestLowChoices(choices, max)
+  };
+  const keys = await (diceRerollService.get() ?? midiPicker).pick(pick, options.actor);
+  return allowedKeys(choices, keys, max);
+}
+
+const allowedKeys = (choices: DieChoice[], keys: string[] | undefined, max: number) => {
+  const allowed = new Set(choices.map(d => d.key));
+  return (keys ?? []).filter(key => allowed.has(key)).slice(0, max);
+};
+
 /** Ask the roller which dice (up to `max`) to reroll, then reroll them: the rolls, changed or as they were */
 export async function rerollDice(rolls: Roll[], options: RerollOptions): Promise<Roll[]> {
-  const choices = diceChoices(rolls).filter(d => options.allow?.(d) ?? true);
-  const max = Math.max(0, Math.floor(options.max));
-  if (!choices.length || !max) return rolls;
-  let keys = options.picked;
-  if (!keys) {
-    const pick: DicePick = {
-      title: options.title ?? i18n("midi-qol.DiceReroll.Title"),
-      prompt: options.prompt ?? i18n("midi-qol.DiceReroll.Prompt").replace("{max}", String(max)),
-      max,
-      dice: choices.map(d => ({ key: d.key, label: d.label, group: d.group })),
-      suggested: suggestLowChoices(choices, max)
-    };
-    keys = await (diceRerollService.get() ?? midiPicker).pick(pick, options.actor);
-  }
-  const allowed = new Set(choices.map(d => d.key));
-  const chosen = (keys ?? []).filter(key => allowed.has(key)).slice(0, max);
+  const chosen = options.picked
+    ? allowedKeys(diceChoices(rolls).filter(d => options.allow?.(d) ?? true), options.picked, Math.max(0, Math.floor(options.max)))
+    : await pickDice(rolls, options);
   return chosen.length ? rerollChosen(rolls, chosen, options.keep) : rolls;
 }
 

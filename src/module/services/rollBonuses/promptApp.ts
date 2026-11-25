@@ -7,7 +7,8 @@ import { bonusCostBadges, wirePickOne, type PromptResponses } from "../../lib/pr
 import { bonusDamageTypeKey, rememberedChoice } from "../../lib/rememberedChoices.js";
 import { getDistance } from "../distance/service.js";
 import type { BonusConfigured, BonusSelection } from "./service.js";
-import { diceOptions, pickedIn, suggestLowDice, wireDicePickers } from "../../lib/dicePicker.js";
+import { diceControlHTML, pickedIn, wireDicePickers } from "../../lib/dicePicker.js";
+import { diceChoices, suggestLowChoices } from "../diceReroll/service.js";
 import { standingChoice, standingKey, STANDING_CHOICES, wireStandingSelects } from "./standing.js";
 
 /*
@@ -140,9 +141,10 @@ export class BonusPromptApp extends RollModifyDialog {
     const roll: Roll | undefined = this.data.currentRoll;
     if (effect.kind === "reroll" && effect.dice === "choose" && roll) {
       const max = this.#diceMax(effect.max, roll);
-      if (first) selection.dice = suggestLowDice(roll, max);
-      const options = diceOptions(roll).map(d => ({ value: d.key, label: d.label, selected: !!selection!.dice?.includes(d.key) }));
-      controls.push({ kind: "dice", name: "dice", label: game.i18n?.format("midi-qol.BonusPrompt.Dice", { max: String(max) }) ?? "Dice", max, options });
+      const choices = diceChoices([roll]);
+      if (first) selection.dice = suggestLowChoices(choices, max);
+      controls.push({ kind: "dice", name: "dice", label: game.i18n?.format("midi-qol.BonusPrompt.Dice", { max: String(max) }) ?? "Dice", max,
+        html: diceControlHTML(choices, { max, chosen: selection.dice ?? [] }) });
     }
     if (!controls.length) return undefined;
     if (first) {
@@ -221,6 +223,8 @@ interface PromptControl {
   max?: number;
   value?: string | number | boolean;
   options?: { value: string, label: string, selected?: boolean }[];
+  /** A dice picker's control (lib/dicePicker) */
+  html?: string;
 }
 
 /** The creatures a bonus may pick: within its range of the roller, by disposition to it, the roller only when `self` */

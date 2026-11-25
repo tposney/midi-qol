@@ -2186,7 +2186,36 @@ body.midi-qol-hide-gambit-mirrors .gps-dialog-mirror:not(.midi-qol-gambit-shown)
 }
 .midi-qol-die:has(input:checked) {
   border-color: var(--color-warm-2, #ee9b3a);
+  background: color-mix(in srgb, var(--color-warm-2, #ee9b3a) 20%, transparent);
 }
+/* A die as Foundry's roll tooltip draws it: its icon with the result; the checkbox kept for the keyboard, hidden */
+.midi-qol-die:has(.midi-qol-die-face) {
+  position: relative;
+  padding: 2px;
+  cursor: pointer;
+}
+.midi-qol-die:has(.midi-qol-die-face) input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+.midi-qol-die:has(input:focus-visible) {
+  outline: 2px solid var(--color-warm-2, #ee9b3a);
+}
+.midi-qol-die-face {
+  min-width: 28px;
+  line-height: 28px;
+  background: url("../../../icons/svg/d6-grey.svg") no-repeat center / 28px 28px;
+  color: #000;
+  font-size: var(--font-size-16);
+  font-weight: bold;
+  text-align: center;
+}
+.midi-qol-die-face.d4 { background-image: url("../../../icons/svg/d4-grey.svg"); }
+.midi-qol-die-face.d8 { background-image: url("../../../icons/svg/d8-grey.svg"); }
+.midi-qol-die-face.d10 { background-image: url("../../../icons/svg/d10-grey.svg"); }
+.midi-qol-die-face.d12 { background-image: url("../../../icons/svg/d12-grey.svg"); }
+.midi-qol-die-face.d20 { background-image: url("../../../icons/svg/d20-grey.svg"); }
 /* The dice reroll picker: a heading per damage type when the dice come from several rolls */
 .midi-qol-dice-group {
   flex-basis: 100%;

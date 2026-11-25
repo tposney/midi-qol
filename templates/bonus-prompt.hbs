@@ -18,7 +18,7 @@
                 {{#if (eq kind "select")}}<select name="{{name}}">{{#each options}}<option value="{{value}}" {{#if selected}}selected{{/if}}>{{label}}</option>{{/each}}</select>{{/if}}
                 {{#if (eq kind "multi")}}<select name="{{name}}" multiple>{{#each options}}<option value="{{value}}" {{#if selected}}selected{{/if}}>{{label}}</option>{{/each}}</select>{{/if}}
                 {{#if (eq kind "targets")}}{{#each options}}<label><input type="checkbox" name="targets" value="{{value}}" {{#if selected}}checked{{/if}}> {{label}}</label>{{/each}}{{/if}}
-                {{#if (eq kind "dice")}}<span class="midi-qol-dice-picker" data-max="{{max}}">{{#each options}}<label class="midi-qol-die"><input type="checkbox" name="dice" value="{{value}}" {{#if selected}}checked{{/if}}> {{label}}</label>{{/each}}</span>{{/if}}
+                {{#if (eq kind "dice")}}{{{html}}}{{/if}}
             </span>{{/each}}
         </li>{{/if}}
         {{/if}}

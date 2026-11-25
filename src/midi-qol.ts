@@ -20,8 +20,8 @@ import { registerAutoAnimationsPresenter } from "./plugins/autoAnimations.js";
 import { registerLayoutSettings } from "./module/apps/hub/layout.js";
 import { registerRemindersSetting } from "./module/apps/hub/reminders.js";
 import { useOptionsApi } from "./module/services/useOptions/registry.js";
-import { diceApi } from "./module/lib/dicePicker.js";
-import { defineDiceRerollService, diceChoices, rerollChosen, rerollDice } from "./module/services/diceReroll/service.js";
+import { diceControlHTML, wireDicePickers } from "./module/lib/dicePicker.js";
+import { defineDiceRerollService, diceChoices, pickDice, rerollChosen, rerollDice, suggestLowChoices } from "./module/services/diceReroll/service.js";
 import { installAfterUseDialog } from "./module/activities/afterUseDialog.js";
 import { isEphemeralToken, tokenFor, tokenOf } from "./module/lib/tokenResolver.js";
 import { interactionsApi } from "./module/services/interactions/registry.js";
@@ -491,7 +491,7 @@ Object.assign(globalThis.MidiQOL, {
   useOptions: useOptionsApi,
   optionalRules: optionalRulesApi,
   // Picking and rerolling dice: the picker helpers, and reroll(rolls, { max, keep, actor }) asking the roller (diceReroll service)
-  dice: { ...diceApi, choices: diceChoices, reroll: rerollDice, rerollChosen },
+  dice: { choices: diceChoices, suggestLow: suggestLowChoices, pick: pickDice, reroll: rerollDice, rerollChosen, controlHTML: diceControlHTML, wire: wireDicePickers },
   // M21: a creature's Multiattack plan (the GM's, registered ones, midi's table from the books, the text parsed, a guess)
   multiattack: multiattackApi,
   holds: { ...holdsApi, open: () => HoldPanel.open() },
