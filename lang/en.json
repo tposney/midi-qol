@@ -101,6 +101,7 @@
   "midi-qol.PlayerWaits.Choice.disadvantage": "Disadvantage",
   "midi-qol.PlayerWaits.Choice.critical": "Critical",
   "midi-qol.PlayerWaits.Choice.dismiss": "Not rolling",
+  "midi-qol.PlayerWaits.Choice.cancel": "Cancel the use",
   "midi-qol.PlayerWaits.Focus": "Show prompt",
   "midi-qol.ReactionDialog.Title": "Reaction",
   "midi-qol.UseOffScene.Title": "Token on another scene",

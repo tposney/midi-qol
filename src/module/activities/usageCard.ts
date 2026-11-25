@@ -4,7 +4,7 @@ import { registerCardAction, registerCardActions } from "./cardActions.js";
 import { cardOtherConsumption } from "../lib/cardState.js";
 import { Activity, ActivityEffectData, MidiUsageChatContext } from "../../globals.js";
 import { MODULE_ID, debugEnabled, error, i18n, i18nFormat, warn } from "../../midi-qol.js";
-import { Workflow } from "../Workflow.js";
+import { Workflow, authorRolls } from "../Workflow.js";
 import { TroubleShooter } from "../apps/TroubleShooter.js";
 import { runFollowUp } from "../followUps.js";
 import { configSettings } from "../settings.js";
@@ -21,9 +21,9 @@ export function setupUsageCard() {
   registerUsageMessageHooks();
   registerCardActions(undefined, {
     placeTemplate: cardPlaceTemplate,
-    rollDamage: cardRollDamage,
-    rollDamageNoCritical: cardRollDamageNoCritical,
-    rollDamageCritical: cardRollDamageCritical,
+    rollDamage: authorRolls("damage", "normal", cardRollDamage),
+    rollDamageNoCritical: authorRolls("damage", "normal", cardRollDamageNoCritical),
+    rollDamageCritical: authorRolls("damage", "critical", cardRollDamageCritical),
     confirmDamageRollCancel: cardConfirmDamageRollCancel,
     confirmDamageRollComplete: cardConfirmDamageRollComplete,
     confirmDamageRollCompleteHit: cardConfirmDamageRollCompleteHit,

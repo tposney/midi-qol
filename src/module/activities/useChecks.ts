@@ -1,4 +1,5 @@
 import { tokenFor, tokenOf } from "../lib/tokenResolver.js";
+import { actorCombatants } from "../patching.js";
 import { MidiActivity } from "./midiActivity.js";
 import { issuePolicy, issues } from "../services/economy/issues.js";
 import { getDistance } from "../services/distance/service.js";
@@ -181,7 +182,7 @@ export async function economyChecks(activity: MidiActivity, usage: ActivityUseCo
   // Classified unless the caller says otherwise; follows checkReaction when not given. An attack per target's
   // per-target uses check no reactions (the first use did) but classify every target.
   if (inReactionContext && reactingActor && (options.checkAoO ?? options.checkReaction)) {
-    const isTurn = game.combat?.combatant === (reactingActor.id ? game.combat?.getCombatantsByActor(reactingActor.id) : undefined)?.[0];
+    const isTurn = game.combat?.combatant === actorCombatants(reactingActor)[0];
     if (!isTurn && needsAOOCheck(reactingActor) && activity.attack && activity.effectiveActivationType !== "special")
       workflow.AoO = true;
   }

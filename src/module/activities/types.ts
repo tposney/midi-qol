@@ -5,7 +5,7 @@ import type { AnyMutableObject } from "fvtt-types/utils";
 import { onActivityTypeAdopted } from "./activityPrototype.js";
 import { registerCardActions } from "./cardActions.js";
 import { warn, error, GameSystemConfig, i18n, MODULE_ID } from "../../midi-qol.js";
-import { Workflow } from "../Workflow.js";
+import { Workflow, authorRolls } from "../Workflow.js";
 import { confirmTargetOptions, ammunitionPerTargetOptions, autoCheckSavesOptions } from "../settings.js";
 import { validTargetTokens, speakerFor, getTokenDocument } from "../utils.js";
 import { Activity, ActivityUseConfiguration, RollDialogConfig, RollMessageConfig } from "../../globals.js";
@@ -29,8 +29,9 @@ interface TypeSetup {
 
 const TYPES: Record<string, TypeSetup> = {
   attack: {
-    actions: { rollAttack: cardRollAttack, rollAttackAdvantage: cardRollAttackAdvantage, rollAttackDisadvantage: cardRollAttackDisadvantage,
-      rollDamage: cardRollDamage, rollDamageNoCritical: cardRollDamageNoCritical, rollDamageCritical: cardRollDamageCritical },
+    actions: { rollAttack: authorRolls("attack", "normal", cardRollAttack), rollAttackAdvantage: authorRolls("attack", "advantage", cardRollAttackAdvantage), rollAttackDisadvantage: authorRolls("attack", "disadvantage", cardRollAttackDisadvantage),
+      rollDamage: authorRolls("damage", "normal", cardRollDamage), rollDamageNoCritical: authorRolls("damage", "normal", cardRollDamageNoCritical),
+      rollDamageCritical: authorRolls("damage", "critical", cardRollDamageCritical) },
     sheet: {
       effect: { template: "modules/midi-qol/templates/activity/attack-effect.hbs", templates: ["modules/midi-qol/templates/activity/parts/attack-extras.hbs"] },
       context: attackSheetContext
@@ -40,7 +41,7 @@ const TYPES: Record<string, TypeSetup> = {
   },
   cast: { setup: () => setCastChecks(async (activity, usage, dialog, message) => !isMidiActivityType(activity) || castPreChecks(activity, usage, dialog, message)) },
   check: {
-    actions: { rollDamage: cardRollActivityDamage },
+    actions: { rollDamage: authorRolls("damage", "normal", cardRollActivityDamage) },
     sheet: {
       effect: { template: "modules/midi-qol/templates/activity/check-effect.hbs", templates: [
         "modules/midi-qol/templates/activity/parts/save-extras.hbs", "modules/midi-qol/templates/activity/parts/save-damage.hbs",
@@ -57,14 +58,14 @@ const TYPES: Record<string, TypeSetup> = {
       }
     }
   },
-  damage: { actions: { rollDamage: cardRollActivityDamage } },
+  damage: { actions: { rollDamage: authorRolls("damage", "normal", cardRollActivityDamage) } },
   // The effect part is dnd5e's own: midi's copy of the template included a partial dnd5e 6 removed
   enchant: {},
   // Forward has no time or targeting: dnd5e's narrower activation part, which registers only the partials it uses
   forward: { sheet: { keepActivation: true } },
-  heal: { actions: { rollHealing: cardRollActivityDamage } },
+  heal: { actions: { rollHealing: authorRolls("damage", "normal", cardRollActivityDamage) } },
   save: {
-    actions: { rollDamage: cardRollActivityDamage },
+    actions: { rollDamage: authorRolls("damage", "normal", cardRollActivityDamage) },
     sheet: {
       effect: { template: "modules/midi-qol/templates/activity/save-effect.hbs",
         templates: ["modules/midi-qol/templates/activity/parts/save-extras.hbs", "modules/midi-qol/templates/activity/parts/save-damage.hbs"] },
@@ -83,7 +84,7 @@ const TYPES: Record<string, TypeSetup> = {
       });
     }
   },
-  utility: { actions: { rollFormula: cardRollFormula } }
+  utility: { actions: { rollFormula: authorRolls("utility", "normal", cardRollFormula) } }
 };
 
 /**

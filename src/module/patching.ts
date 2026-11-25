@@ -2576,9 +2576,21 @@ async function setDeadStatus(actor: Actor.Implementation, options: { effect: CON
 
   // Only update defeated status if the toggle actually changed something
   if (useDefeated && result !== undefined) {
-    const combatants = (actor.id ? game.combat?.getCombatantsByActor(actor.id) : undefined) ?? [];
+    const combatants = actorCombatants(actor);
     for (let combatant of combatants) await combatant.update({ defeated: makeDead }, {});
   }
+}
+
+function isStoredActor(actor: Actor.Implementation): actor is Actor.Stored {
+  return !!actor.id;
+}
+
+/**
+ * The actor's combatants in the viewed combat. Looked up by the actor, never by its id: unlinked copies of one NPC
+ * share an id, and Foundry looks an unlinked actor up by its token (PR #48).
+ */
+export function actorCombatants(actor: Actor.Implementation): Combatant.Implementation[] {
+  return isStoredActor(actor) ? game.combat?.getCombatantsByActor(actor) ?? [] : [];
 }
 
 export async function challengeConcentration(this: Actor.Implementation, wrapped, { dc = 10, ability = null } = {}) {

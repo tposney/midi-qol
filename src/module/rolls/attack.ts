@@ -325,7 +325,11 @@ async function midiRollAttack(activity: AttackActivityLike, wrapped: RollAttack,
         if (extraParts.length) roll.parts = [...(roll.parts ?? []), ...extraParts];
         if (modifiers.length) foundry.utils.setProperty(roll, `options.${MODULE_ID}.attackModifiers`, modifiers);
       }
-      if (dialogConfig.configure) showAttackTargets(workflow);
+      if (dialogConfig.configure) {
+        showAttackTargets(workflow);
+        // After the last line that can open the dialog: the player's roll is waited for while it is open
+        workflow.ensureRollWait("attack");
+      }
       return true;
     });
     // dnd5e adds its own parts when it builds each roll (with or without the dialog, and again when the dialog

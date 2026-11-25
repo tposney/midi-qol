@@ -67,6 +67,8 @@ export let setupSocket = () => {
   registerSocketAndQuery("confirmDamageRollCompleteHit", confirmDamageRollCompleteHit);
   registerSocketAndQuery("confirmDamageRollCompleteMiss", confirmDamageRollCompleteMiss);
   registerSocketAndQuery("cancelWorkflow", cancelWorkflow);
+  registerSocketAndQuery("rollWaitingUse", Workflow.rollWaitingUse);
+  registerSocketAndQuery("stopUndoneWorkflow", Workflow.stopUndone);
   registerSocketAndQuery("createActor", createActor);
   registerSocketAndQuery("createChatMessage", _createChatMessage);
   registerSocketAndQuery("createEffects", createEffects);

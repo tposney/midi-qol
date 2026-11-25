@@ -39,6 +39,7 @@ async function rollFormulaWrapper(this: Activity, wrapped: RollFormula, config: 
   const rollToggle = areMidiKeysPressed(config.event, "RollToggle");
   workflow.rollOptions.rollToggle = rollToggle;
   if (rollToggle) dialog.configure = !dialog.configure;
+  if (dialog.configure) workflow.ensureRollWait("utility");
   message.create ??= false;
   message = setMessageTargets(message, workflow);
   const result = await wrapped(config, dialog, message);

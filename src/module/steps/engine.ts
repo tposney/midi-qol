@@ -18,6 +18,9 @@ export interface EngineHost {
   /** The step the use is in (set by the engine when it moves). */
   currentStep: string | undefined;
   readonly aborted: boolean;
+  /** Stopped from outside while a step ran (the use undone): true once, and the run goes on to Abort. The abort flag
+   * alone can't say this: set during a step it reads as an abort the step is already making. */
+  takeStop?(): boolean;
   /** A post/pre hook cancelled the use. */
   cancelled(): void;
   pass(prePost: "pre" | "post", step: string | undefined): Promise<unknown>;
@@ -147,6 +150,12 @@ export async function runSteps(host: EngineHost, start: string | undefined): Pro
       }
     }
     await host.stepEnded(host.currentStep, after);
+    if (host.currentStep !== ABORT && after !== ABORT && host.takeStop?.()) {
+      host.note(`${host.name(host.currentStep)} -> ${host.name(ABORT)}: stopped`);
+      host.move = undefined;
+      next = ABORT;
+      continue;
+    }
     if (after === SUSPEND) {
       host.suspended = true;
       const pending = host.pendingNext(host.currentStep);

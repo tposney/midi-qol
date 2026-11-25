@@ -145,6 +145,8 @@ async function midiRollDamage(activity: Activity, wrapped: RollDamage, config: R
         else if ((rollConfig.ammunition?.system.damage.base?.types.size ?? 0) > 1) dialogConfig.configure = true;
         else if ((activity.healing?.types?.size ?? 0) > 1) dialogConfig.configure = true;
         if (dialogConfig.configure) {
+          // After the damage-type checks, the last that can open the dialog
+          workflow.ensureRollWait("damage");
           dialogConfig.options ??= {};
           dialogConfig.options.defaultButton = rollConfig.isCritical || rollConfig.midiOptions?.isCritical ? "critical" : "normal";
         }

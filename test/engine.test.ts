@@ -41,6 +41,16 @@ describe("runSteps", () => {
     expect(h.suspended).toBe(true);
   });
 
+  it("a stop from outside during a step goes on to Abort once, not to the step it returned", async () => {
+    let stopped = false;
+    const h = host({ A: () => { stopped = true; return "B"; }, B: SUSPEND, [ABORT]: COMPLETED, [COMPLETED]: undefined });
+    h.takeStop = () => { const was = stopped; stopped = false; return was; };
+    h.aborted = false;
+    await runSteps(h, "A");
+    expect(runs(h).slice(0, 2)).toEqual(["A", ABORT]);
+    expect(runs(h)).not.toContain("B");
+  });
+
   it("re-running the current step fires no passes or hooks", async () => {
     const h = host({ A: SUSPEND });
     h.currentStep = "A";
