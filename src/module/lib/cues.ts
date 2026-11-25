@@ -4,7 +4,7 @@ import type { Workflow } from "../Workflow.js";
 import { outcomes, type TargetOutcome } from "./outcomes.js";
 import { presentCue, presentationLanded, presentationWaitMs, trackPresentation } from "../services/presenters/service.js";
 import { tagValue } from "./tags.js";
-import { getTokenDocument } from "../utils.js";
+import { getTokenDocument, isAutoFastForward } from "../utils.js";
 
 /*
  * M18 stage 1 (plan ~/Documents/midi-next-M18-plan-2026-11-22.md): a use's cues, plain data at its meaningful points,
@@ -140,11 +140,14 @@ export function raiseCue(cue: Cue): void {
 const WAIT_BEFORE = new Set(["midi-qol.AllRollsComplete", "midi-qol.ApplyDynamicEffects"]);
 
 /**
- * The step pass hook: before damage and effects, the wait (capped) for what the use's visual presenters have played;
+ * The step pass hook: before damage and effects, the wait (capped; the GM's Wait for animations, off at 0) for what the
+ * use's visual presenters have played, unless its rolls are auto fast-forwarded;
  * undefined when there is nothing to wait for (the pass then adds no await)
  */
 export function stepPresentationWait(workflow: Workflow, prePost: "pre" | "post", step: string | undefined): Promise<void> | undefined {
   if (prePost !== "pre" || !step || !WAIT_BEFORE.has(step) || workflow.readOnly || !canvas?.ready) return undefined;
+  // For now: a use whose rolls are auto fast-forwarded (its attack's, else its damage's) never waits
+  if (isAutoFastForward(workflow.activity?.attack ? "attack" : "damage", { workflow })) return undefined;
   const cap = presentationWaitMs();
   return cap ? presentationLanded(workflow.id, cap) : undefined;
 }
