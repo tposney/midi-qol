@@ -13,6 +13,7 @@ import type { Presenter } from "../module/services/presenters/service.js";
  * when a probe (playAnimation stopped at that hook) finds one. Template and summon animations, and the critical/fumble
  * animation, stay on Automated Animations' own hooks.
  *
+ * Undoing a use ends the effects its plays started that are still running (persistent ones included).
  * Its play resolves when the Sequencer effects it started have ended (a use waits for that with "Wait for animations").
  *
  * A cue's visualAudience (a hidden attacker or target, a private use) limits its Sequencer sequences to those users.
@@ -101,13 +102,40 @@ function animationOptions(cue: Cue, activity: AnimationActivity): Record<string,
   };
 }
 
-interface SequencerEffectLike { data?: { moduleName?: string, persist?: boolean } }
+interface SequencerEffectLike { id?: string, data?: { moduleName?: string, persist?: boolean } }
+
+interface SequencerEffectManager { endEffects(filter: { effects: SequencerEffectLike[] }): Promise<unknown> }
+
+function effectManager(): SequencerEffectManager | undefined {
+  return (globalThis as { Sequencer?: { EffectManager?: SequencerEffectManager } }).Sequencer?.EffectManager;
+}
+
+/** Per use: the Automated Animations effects its plays started (persistent ones too), still running */
+const effectsOfUse = new Map<string, Set<SequencerEffectLike>>();
+const KEEP_EFFECTS_MS = 30 * 60_000;
+
+function recordEffect(useId: string | undefined, effect: SequencerEffectLike): void {
+  if (!useId) return;
+  let set = effectsOfUse.get(useId);
+  if (!set) {
+    effectsOfUse.set(useId, set = new Set());
+    setTimeout(() => effectsOfUse.delete(useId), KEEP_EFFECTS_MS);
+  }
+  set.add(effect);
+}
+
+/** Undo: end the effects still running that its plays started (Sequencer ends them on every client) */
+async function stopUse(useId: string): Promise<void> {
+  const effects = [...(effectsOfUse.get(useId) ?? [])];
+  effectsOfUse.delete(useId);
+  if (effects.length) await effectManager()?.endEffects({ effects });
+}
 
 /**
  * Resolves when the (non-persistent) Sequencer effects Automated Animations starts from now have ended, or at once if
  * none starts within its global delay and a second: its sequences don't all report their end (melee doesn't).
  */
-function animationsEnded(): Promise<void> {
+function animationsEnded(useId?: string): Promise<void> {
   return new Promise(resolve => {
     const running = new Set<SequencerEffectLike>();
     let started = false;
@@ -121,13 +149,16 @@ function animationsEnded(): Promise<void> {
       resolve();
     };
     const created = (effect: SequencerEffectLike) => {
-      if (effect?.data?.moduleName !== "Automated Animations" || effect.data.persist) return;
+      if (effect?.data?.moduleName !== "Automated Animations") return;
+      recordEffect(useId, effect);
+      if (effect.data.persist) return;
       started = true;
       running.add(effect);
       clearTimeout(settle);
     };
     // A sequence's next effect may start just after the last ended
     const ended = (effect: SequencerEffectLike) => {
+      if (useId) effectsOfUse.get(useId)?.delete(effect);
       if (running.delete(effect) && !running.size) settle = setTimeout(finish, 150);
     };
     Hooks.on("createSequencerEffect", created);
@@ -193,7 +224,7 @@ export function registerAutoAnimationsPresenter(api: AutoAnimationsPluginApi): b
       const activity = activityOf(cue);
       const item = activity?.item ?? (cue.item ? fromUuidSync(cue.item) : undefined);
       if (!activity || !item) return;
-      const ended = animationsEnded();
+      const ended = animationsEnded(cue.useId);
       // Shown only to the users who may see it (a hidden attacker or target, a private use): Sequencer plays for them
       const audience = cue.visualAudience;
       const limit = audience ? Hooks.on("createSequencerSequence", sequence => {
@@ -203,7 +234,8 @@ export function registerAutoAnimationsPresenter(api: AutoAnimationsPluginApi): b
       if (limit !== undefined) void ended.then(() => Hooks.off("createSequencerSequence", limit));
       await automatedAnimations()?.playAnimation(placeable(cue.source), item, { ...animationOptions(cue, activity), midiPresented: true });
       return ended;
-    }
+    },
+    stop: stopUse
   };
   api.services.register("presenters", PROVIDER_ID, presenter, { label: "Automated Animations" });
   return true;

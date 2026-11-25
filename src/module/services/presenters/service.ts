@@ -32,6 +32,8 @@ export interface Presenter {
    * sounds or text.
    */
   play(cue: Cue): unknown;
+  /** Undo of a use (on the client that ran it, where its cues were raised): end what it is still showing for the use */
+  stop?(useId: string): unknown;
 }
 
 declare module "../../api/services.js" {
@@ -99,6 +101,20 @@ export function releaseTemplateHolds(useId: string | undefined): Promise<void> {
   if (!holds.length) return Promise.resolve();
   let timer: ReturnType<typeof setTimeout> | undefined;
   return Promise.race([Promise.allSettled(holds), new Promise(resolve => { timer = setTimeout(resolve, HOLD_CAP_MS); })]).then(() => clearTimeout(timer));
+}
+
+/** An undone use: every presenter that can stops what it shows for it; its waits and holds are dropped */
+export async function stopPresentations(useId: string): Promise<void> {
+  pending.delete(useId);
+  templateHolds.delete(useId);
+  for (const { id, provider } of entries<Presenter>("presenters")) {
+    if (!provider.stop) continue;
+    try {
+      await provider.stop(useId);
+    } catch (err) {
+      reportServiceProblem("presenters", id, "stop failed", err);
+    }
+  }
 }
 
 /** This client's player's presentation preferences (user settings) */

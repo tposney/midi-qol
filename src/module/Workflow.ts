@@ -50,6 +50,7 @@ import { raiseDamaged, raiseUseEvents } from "./lib/entries/useEvents.js";
 import { entryCoverFor } from "./lib/entries/serviceEvents.js";
 import { applyRetarget, takeRetarget } from "./lib/entries/redirection.js";
 import { raiseStepCues, stepPresentationWait } from "./lib/cues.js";
+import { stopPresentations } from "./services/presenters/service.js";
 import { coverAnswer, coverLevelFor } from "./services/cover/service.js";
 import { targetEvent } from "./lib/entries/responseEvents.js";
 import { chooseDamageType, collectBonusCandidates, spendBonusCost, type OfferedBonus, type RollBonusQuery } from "./services/rollBonuses/service.js";
@@ -3172,6 +3173,8 @@ export class Workflow {
    * False when the use isn't in memory here or has already finished.
    */
   static async stopUndone(id: string): Promise<boolean> {
+    // Its presentations (here, where its cues were raised) end, finished or not
+    await stopPresentations(id);
     const entry = Workflow.#workflows.get(id);
     const workflow = entry instanceof WeakRef ? entry.deref() : entry;
     if (!workflow || workflow.readOnly) return false;

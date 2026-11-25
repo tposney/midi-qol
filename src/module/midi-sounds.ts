@@ -126,15 +126,6 @@ export class MidiSounds {
       return this.playRandomSound(spec.playlistName, broadcast, volumeScale)
   }
 
-  static processHook(workflow: Workflow, selector: string) {
-    const subtype = this.getSubtype(workflow.item);
-    // @ts-expect-error no dnd5e-types
-    const baseType = workflow.item.system.type?.baseItem as string ?? "";
-    let spec = this.getSpecFor(workflow.item.parent?.type ?? "all", workflow.item.type ?? "any", subtype, baseType, selector);
-    if (!spec) return false;
-    return this.playSpec(spec);
-  }
-
   /** The sound settings' spec for a cue's item keys and a selector (itemRoll, attack, hit, a damage type...) */
   static specForCue(cue: Cue, selector: string): SoundSpec | undefined {
     const keys = cue.sound;
