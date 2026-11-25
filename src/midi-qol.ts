@@ -92,6 +92,7 @@ import { registerResponseEvents } from "./module/lib/entries/responseEvents.js";
 import { outcomes } from "./module/lib/outcomes.js";
 import { registerTag, registerMidiTags, tagValue, tagNames, tagDefinition, replacedTags, tagsView } from "./module/lib/tags.js";
 import { installFixedDice, withFixedDice } from "./module/lib/fixedDice.js";
+import { run as runTestUse } from "./module/lib/testKit.js";
 import { installUse } from "./module/activities/useRelaunch.js";
 import { useAs } from "./module/activities/use.js";
 import { confirmTargets, setupTargets } from "./module/activities/useTargets.js";
@@ -363,8 +364,9 @@ Object.assign(globalThis.MidiQOL, {
   useAs, confirmTargets, setupTargets,
   // An activity's region behaviours on a region (the use's template does this); a teleport's plan, as its card button
   attachRegionActivityBehavior, planTeleport,
-  // The test harness (M25): fixed dice for code outside a use (a use takes workflowOptions.fixedDice)
-  testing: { fixedDice: withFixedDice },
+  // The test harness (M25): fixed dice for code outside a use (a use takes workflowOptions.fixedDice); the author test
+  // kit (M23): run(activity, { targets, dice }) is a use with those dice and its outcome per target
+  testing: { fixedDice: withFixedDice, run: runTestUse },
   // A use's trace (M25): its inputs, steps with who changed them, and outcome; saved as a JSON file
   useTrace, saveUseTrace, outcomes, why, preview,
   // The turn-event dispatcher (M4): turn and round starts and ends, combat start and end, raised once
@@ -601,7 +603,7 @@ let activityTypesInstalled = false;
 
 Hooks.once('init', async function () {
   GameSystemConfig = CONFIG.DND5E;
-  installFixedDice();
+  installFixedDice(MODULE_ID);
   initCoverConstants();
   setupMidiFlagTypes();
   log('Initializing midi-qol');
