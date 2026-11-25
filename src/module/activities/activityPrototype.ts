@@ -94,6 +94,9 @@ interface MidiActivityLike extends Activity {
   update(data: object): unknown;
 }
 
+/** Activation types taken at their own time, never as part of an attack (auto-pairing skips them) */
+const OWN_TIME = new Set(["bonus", "reaction", "minute", "hour", "day", "longRest", "shortRest", "encounter", "turnStart", "turnEnd", "legendary", "mythic", "lair"]);
+
 const getters: Record<string, (this: MidiActivityLike) => unknown> = {
   isMidiActivity() { return activityPolicy(this).automated; },
   possibleOtherActivity() { return activityPolicy(this).possibleOtherActivity; },
@@ -165,10 +168,13 @@ const getters: Record<string, (this: MidiActivityLike) => unknown> = {
       this._otherActivity = null;
       return this._otherActivity;
     }
-    // Prefer a sole automationOnly candidate, else a sole compatible one; ambiguity means no pairing
+    // Prefer a sole automationOnly candidate, else a sole compatible one; ambiguity means no pairing. Never a check (in
+    // dnd5e's books every check beside an attack is the target's escape) or an activity with its own time (a Stirge's
+    // turn-start damage, a bonus-action Cast)
     const soleCandidate = (filter: (a: MidiActivityLike) => boolean) => {
       // @ts-expect-error no dnd5e-types
-      const options = this.item.system.activities.filter((a: MidiActivityLike) => filter(a) && a.isOtherActivityCompatible && a.uuid !== this.uuid);
+      const options = this.item.system.activities.filter((a: MidiActivityLike) => filter(a) && a.isOtherActivityCompatible && a.uuid !== this.uuid
+        && a.type !== "check" && !OWN_TIME.has(a.activation?.type ?? ""));
       return options.length === 1 ? options[0] : undefined;
     };
     this._otherActivity = soleCandidate(a => !!a.midiProperties?.automationOnly) ?? soleCandidate(() => true);
