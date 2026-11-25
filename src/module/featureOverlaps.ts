@@ -111,15 +111,6 @@ const FEATURE_OVERLAPS: FeatureOverlap[] = [
     if (configSettings.optionalRules?.coverCalculation === "levelsautocover") await safeSetGameSetting("simplecover5e", "libraryMode", true);
     else await safeSetGameSetting("levelsautocover", "automation", "never");
   } },
-  // Monk's TokenBar's movement modes (no movement, combat turn) block a player's move of a token that isn't the current
-  // combatant: midi's grapple drag, made on the player's client when they own both creatures, then moves the grappler alone
-  // (and the grapple ends out of reach). Noted only: both work together otherwise (midi limits how far, Monk's when).
-  { id: "movementModes", sides: [
-    { source: MIDI, setting: "midi-qol.Overlaps.Settings.midiGrappleDrag", keys: ["midi-qol.ConfigSettings"], active: () => configSettings.interactions === true },
-    { source: "monks-tokenbar", setting: "midi-qol.Overlaps.Settings.monksMovement", keys: ["monks-tokenbar.movement", "monks-tokenbar.change-to-combat"],
-      active: () => !!game.modules.get("monks-tokenbar")?.active
-        && (safeGetGameSetting("monks-tokenbar", "movement") !== "free" || safeGetGameSetting("monks-tokenbar", "change-to-combat") === true) },
-  ] },
   // These replace the whole use, with no midi equivalent: the fix turns them off.
   { id: "damageReplaced", sides: [
     { source: MIDI, setting: "midi-qol.Overlaps.Settings.midiDamage", keys: [], active: () => true },

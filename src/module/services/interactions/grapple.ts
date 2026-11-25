@@ -9,6 +9,7 @@ import { isForcedAction } from "../economy/movement.js";
 import { footprintDistance } from "../economy/opportunity.js";
 import { meleeReach } from "../economy/reach.js";
 import { forcedMovement } from "../forcedMovement/service.js";
+import { withMonksMovementAllowed } from "../../../workarounds/monksTokenBar.js";
 import { registerInteraction, type InteractionContext } from "./registry.js";
 
 /*
@@ -164,7 +165,8 @@ function onPreMove(token: TokenDocument.Implementation, move: PlannedMove, optio
   const moveOptions = { midiDrag: true, ...(options.midiOpportunity ? { midiOpportunity: options.midiOpportunity } : {}) };
   const scene = token.parent;
   void (async () => {
-    if ([token, ...dragged].every(t => t.isOwner)) await (scene as unknown as { moveTokens(i: object, o?: object): Promise<unknown> }).moveTokens(instructions, moveOptions);
+    if ([token, ...dragged].every(t => t.isOwner)) await withMonksMovementAllowed([token, ...dragged].map(t => t.id),
+      () => (scene as unknown as { moveTokens(i: object, o?: object): Promise<unknown> }).moveTokens(instructions, moveOptions));
     else await unTimedExecuteAsGM("moveTokensTogether", { sceneUuid: scene.uuid, instructions, options: moveOptions });
   })().catch(err => console.error("midi-qol | dragging a grappled creature", err));
   return false;

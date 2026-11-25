@@ -1,0 +1,9 @@
+/* Workarounds for other modules' stylesheet problems (their code workarounds are in src/workarounds/). Each rule says
+   which version it is for and when it can be removed. */
+
+/* Monk's TokenBar 14.01: a two-digit total wraps in its roll card's result box, hiding the second digit and the
+   pass/fail icons. Remove when Monk's TokenBar fixes it. */
+.monks-tokenbar li.item .dice-roll .dice-total .dice-result {
+  flex: 1 0 auto;
+  white-space: nowrap;
+}

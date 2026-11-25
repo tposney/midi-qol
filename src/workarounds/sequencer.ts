@@ -55,7 +55,7 @@ function onTokenDrawn() {
   }
 }
 
-export function setupSequencerLevelsFix() {
+export function installSequencer(): void {
   Hooks.once("sequencerReady", () => {
     const version = game.modules?.get("sequencer")?.version ?? "";
     // Only the Sequencer this was written against (its fix will make this unnecessary)

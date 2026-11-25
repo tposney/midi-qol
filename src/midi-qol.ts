@@ -47,7 +47,6 @@ import { registerDefaultInteractions } from "./module/services/interactions/defa
 import { registerGrappleInteractions } from "./module/services/interactions/grapple.js";
 import { registerDoorInteractions } from "./module/services/interactions/doors.js";
 import { setupMovementActions, setupMovementEnforcement } from "./module/services/economy/movement.js";
-import { setupSequencerLevelsFix } from "./module/lib/sequencerLevels.js";
 import { PlayerSettingsView } from "./module/apps/PlayerSettingsView.js";
 import { registerCardWaits } from "./module/lib/cardWaits.js";
 import { registerMidiActionSchemas } from "./module/lib/entries/actionSchemas.js";
@@ -92,6 +91,7 @@ import { registerResponseEvents } from "./module/lib/entries/responseEvents.js";
 import { outcomes } from "./module/lib/outcomes.js";
 import { registerTag, registerMidiTags, tagValue, tagNames, tagDefinition, replacedTags, tagsView } from "./module/lib/tags.js";
 import { installFixedDice, withFixedDice } from "./module/lib/fixedDice.js";
+import { installWorkarounds } from "./workarounds/index.js";
 import { run as runTestUse } from "./module/lib/testKit.js";
 import { installUse } from "./module/activities/useRelaunch.js";
 import { useAs } from "./module/activities/use.js";
@@ -604,6 +604,8 @@ let activityTypesInstalled = false;
 Hooks.once('init', async function () {
   GameSystemConfig = CONFIG.DND5E;
   installFixedDice(MODULE_ID);
+  // Workarounds for other modules' bugs and limitations (src/workarounds/, one file per module)
+  installWorkarounds();
   initCoverConstants();
   setupMidiFlagTypes();
   log('Initializing midi-qol');
@@ -703,7 +705,6 @@ Hooks.once('init', async function () {
   setupHub();
   registerTokenVisualProviders();
   setupTokenVisuals();
-  setupSequencerLevelsFix();
   setupMovementActions();
   setupMovementEnforcement();
   setupOpportunityAttacks();
@@ -1049,8 +1050,6 @@ Hooks.once('setup', function () {
   setupFeatureOverlaps();
   setupMarkerChecks();
   setupCheckVision();
-  // Custom D&D 5e's Conditions config replaces CONFIG.statusEffects with this list, which would drop midi's statuses.
-  Hooks.on("customDnd5e.setStatusEffectsConfig", statusEffects => addMidiStatusEffects(statusEffects));
   setupSocket();
   fetchParams();
   fetchSoundSettings();

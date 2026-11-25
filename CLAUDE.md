@@ -149,6 +149,7 @@ Note: This approach doesn't handle embedded document hierarchy (effects stored a
 - **Dialogs**: Never use `Dialog` (v1) — always use `foundry.applications.api.DialogV2`. This applies to all code: midi-qol, sample items, macros, templates, etc.
 - **Applications**: Never use `Application` (v1) — always use `foundry.applications.api.ApplicationV2`. All new application classes should extend `ApplicationV2`.
 - **Token status effects**: `token.toggleStatusEffect()` is deprecated — use `token.actor.toggleStatusEffect()` instead.
+- **Workarounds for other modules** (code that exists only because another module has a bug or limitation, not an integration through its API) go in `src/workarounds/`, one file per module, installed by `installWorkarounds()` at init; stylesheet fixes in `css/workarounds.css`. Each says which version it is for and when it can be removed.
 
 ### Documentation & Changelog
 - **Datestamp filenames**: `DocumentName-YYYY-MM-DD.md` for all docs

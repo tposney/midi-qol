@@ -33,7 +33,8 @@
   "scripts": [],
   "esmodules": "{{sources}}",
   "styles": [
-    "css/styles.css"
+    "css/styles.css",
+    "css/workarounds.css"
   ],
   "relationships": {
     "systems": [
