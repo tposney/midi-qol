@@ -12,7 +12,7 @@ import { playerForActor, refreshRollTotal } from "../../utils.js";
  * damage rolls, a module's "reroll up to N dice"). Who rolled picks the dice: midi's provider asks the roller's user,
  * here or on their client through the request core (the lowest dice suggested, and taken when nobody answers in
  * time); a module can provide its own picker. The reroll keeps the new result, the higher or the lower. A player
- * choosing has the player timeout's countdown, and the GM sees the wait in the player list (reroll the suggested
+ * choosing has a countdown (the player timeout unless `timeout` says otherwise; `false`: none), and the GM sees the wait in the player list (reroll the suggested
  * dice or keep the roll for them).
  *
  *   const rolls = await MidiQOL.dice.reroll(workflow.damageRolls, { max: 3, actor: workflow.actor, title: "Empowered Spell" });
@@ -49,6 +49,8 @@ export interface DicePick {
 export interface PickContext {
   tokenUuid?: string;
   owner?: object;
+  /** Seconds a player has to pick (the suggested dice taken after); undefined: the player timeout; false or 0: no countdown */
+  timeout?: number | false;
 }
 
 export interface DiceRerollProvider {
@@ -68,6 +70,8 @@ export interface PickOptions {
   tokenUuid?: string;
   /** What waits for the pick (a workflow): the GM's wait chip ends with it */
   owner?: object;
+  /** Seconds a player has to pick (the suggested dice taken after); undefined: the player timeout; false or 0: no countdown */
+  timeout?: number | false;
 }
 
 export interface RerollOptions extends PickOptions {
@@ -166,7 +170,8 @@ const midiPicker: DiceRerollProvider = {
   async pick(pick, roller, context) {
     const user = (roller ? playerForActor(roller) as User.Implementation | undefined : undefined) ?? game.users?.activeGM ?? undefined;
     // A player's pick holds the use up: the player timeout's countdown (a GM's has none)
-    const timeoutMs = user && !user.isGM ? (configSettings.playerSaveTimeout ?? 0) * 1000 : 0;
+    const seconds = context?.timeout === false ? 0 : context?.timeout ?? configSettings.playerSaveTimeout ?? 0;
+    const timeoutMs = user && !user.isGM ? Math.max(0, seconds) * 1000 : 0;
     const spec = { kind: "dice", actorUuid: roller?.uuid ?? undefined, tokenUuid: context?.tokenUuid, label: pick.title, owner: context?.owner };
     if (!user || user.isSelf || !user.active) {
       const wait = user?.isSelf && !user.isGM ? beginPlayerWait<string[]>({ ...spec, userId: user.id!, choices: gmChoices(pick) }) : undefined;
@@ -216,7 +221,7 @@ export async function pickDice(rolls: Roll | Roll[], options: PickOptions): Prom
     dice: choices.map(d => ({ key: d.key, label: d.label, group: d.group, faces: d.faces, result: d.result })),
     suggested: suggestLowChoices(choices, max)
   };
-  const keys = await (diceRerollService.get() ?? midiPicker).pick(pick, options.actor, { tokenUuid: options.tokenUuid, owner: options.owner });
+  const keys = await (diceRerollService.get() ?? midiPicker).pick(pick, options.actor, { tokenUuid: options.tokenUuid, owner: options.owner, timeout: options.timeout });
   return allowedKeys(choices, keys, max);
 }
 
