@@ -1,3 +1,13 @@
+### 15.0.0
+In development, not released. Listed here: barriers, creatures inside others, ending conditions (2026-11-25).
+* Barrier areas: an activity's area can stop creatures, sight (and light) or sound with real walls (region behaviour *Barrier*, the activity's region settings); made again when the area changes, removed with it.
+* A creature inside another (swallowed, engulfed): an effect flagged `flags.midi-qol.inside` puts its bearer in the space of the creature its origin names, carried by that creature's moves and teleports, put beside it when the effect ends.
+* Entries: `move` with `place: "inside" | "beside"`; action `tally` (a running total for the turn or round, read as `tallies.<name>`); condition helper `inside(a, b)`.
+* Entries: removing a condition ends it wherever it comes from (`whole: true` ends the effect instead); choice kind `conditions` (among those the target has).
+* Overlays: Wall of Force, Forcecage, Wall of Stone, Wall of Ice, Wall of Fire, Wall of Thorns (barriers); Heal, Mass Heal, Power Word Heal, Lesser Restoration, Lay on Hands, Restoring Touch (conditions ended).
+* Fixed: a spell placing several areas (Wall of Force's panels) hung after placement and lost its area.
+* Fixed: a Large or Gargantuan token moved or teleported by midi landed half a square off the grid.
+
 ### 14.7.0
 midi 14.7.0 requires dnd5e 6.1 and DAE 14.6.10. Worlds on dnd5e 6.0 stay on midi 14.6.x: Foundry warns before updating them to 14.7.0, and the last 14.6 release installs from https://github.com/tposney/midi-qol/releases/download/v14.6.13/module.json. midi's CAT integration requires Coven's Automation Toolkit 0.1.8.
 

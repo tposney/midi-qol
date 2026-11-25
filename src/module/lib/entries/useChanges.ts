@@ -9,6 +9,7 @@ import type { FoundEntry } from "./types.js";
 import type { EntryAction } from "./types.js";
 import { actorsFor, useContext } from "./useEvents.js";
 import { itemOfEffect } from "./rules.js";
+import { planConditionRemoval, type EffectFacts } from "./conditionRemoval.js";
 
 /*
  * M15 stage 4b: the actions that change a use or act for it.
@@ -208,19 +209,66 @@ function sceneActors(run: ActionRun): Actor.Implementation[] {
  * for remove `{ origin: "this item" }` (the effects the entry's item applied). `to` as `for` (default "self"), or
  * "anyone" (every creature on the scene).
  */
+type StatusConfig = { id: string, _id?: string, riders?: string[] };
+/** A status by id (CONFIG.statusEffects is a list, with lookup by id in Foundry 14) */
+function statusConfig(id: string): StatusConfig | undefined {
+  const all = CONFIG.statusEffects as unknown as StatusConfig[] & Record<string, StatusConfig | undefined>;
+  return all[id] ?? (Array.isArray(all) ? all.find(status => status.id === id) : undefined);
+}
+
+/**
+ * The condition ends on the actor (lib/entries/conditionRemoval.ts): every effect of its own that carries the status,
+ * not only dnd5e's bare status effect. An item's transfer effect is the item's and is left. `whole`: an effect that
+ * carries more ends too, in place of losing just the status.
+ */
+export async function endCondition(actor: Actor.Implementation, statusId: string, { whole = false, reason }: { whole?: boolean, reason?: string } = {}): Promise<boolean> {
+  if (!actor.uuid) return false;
+  const facts: EffectFacts[] = actor.effects.map(effect => ({
+    id: effect.id ?? "", uuid: effect.uuid ?? undefined, statuses: [...effect.statuses],
+    hasChanges: ((effect.system as { changes?: unknown[] } | undefined)?.changes ?? []).length > 0,
+    dependsOn: (effect.flags as Record<string, { dependentOn?: string } | undefined>).dnd5e?.dependentOn
+  }));
+  const plan = planConditionRemoval(facts, statusId, status => statusConfig(status)?.riders ?? [], whole);
+  if (!plan.delete.length && !plan.strip.length) return false;
+  // dnd5e's own status effect has a fixed id: removed through the actor's effect queue (midi's toggle)
+  const bare = statusConfig(statusId)?._id;
+  const ids = plan.delete.filter(id => id !== bare);
+  if (bare && plan.delete.includes(bare)) await unTimedExecuteAsGM("toggleStatusEffect", { actorUuid: actor.uuid, statusId, options: { active: false } });
+  if (ids.length) await unTimedExecuteAsGM("removeEffects", { actorUuid: actor.uuid, effects: ids, options: reason ? { "expiry-reason": reason } : {} });
+  if (plan.strip.length) await unTimedExecuteAsGM("updateEffects", { actorUuid: actor.uuid, updates: plan.strip.map(({ id, statuses }) => ({ _id: id, statuses })) });
+  return true;
+}
+
+/** `what` as a list: one value, several, or an entry's choice ("@choices.<id>": the conditions chosen) */
+function whatList(run: ActionRun): unknown[] {
+  const what = run.action.what;
+  if (typeof what === "string" && what.startsWith("@choices.")) {
+    const chosen = (run.conditionData.choices as Record<string, unknown> | undefined)?.[what.slice("@choices.".length)];
+    return chosen === undefined || chosen === "" ? [] : [chosen].flat();
+  }
+  return Array.isArray(what) ? what : [what];
+}
+
 async function effectAction(run: ActionRun) {
   const mode = run.action.effect;
-  const what = run.action.what;
   if (mode !== "apply" && mode !== "remove") return;
+  // Several things to apply or remove (a list, or the conditions an entry's choice picked): each in turn
+  const list = whatList(run);
+  if (list.length !== 1 || list[0] !== run.action.what) {
+    for (const what of list) await effectAction({ ...run, action: { ...run.action, what } });
+    return;
+  }
+  const what = run.action.what;
   // "anyone": every creature on the scene (removing what this item applied wherever it is: Emboldening Bond)
   const actors = run.action.to === "anyone" ? sceneActors(run) : actorsFor(run.action.to, run, "self");
   const item = entryItem(run);
-  const status = typeof what === "string" ? CONFIG.statusEffects.find(s => s.id === what) : undefined;
+  const status = typeof what === "string" ? statusConfig(what) : undefined;
   for (const actor of actors) {
     if (!actor.uuid) continue;
     if (status) {
-      const has = actor.statuses.has(status.id);
-      if ((mode === "apply") !== has) await unTimedExecuteAsGM("toggleStatusEffect", { actorUuid: actor.uuid, statusId: status.id, options: { active: mode === "apply" } });
+      // Removing a condition ends it wherever it comes from, not only dnd5e's bare status
+      if (mode === "remove") await endCondition(actor, status.id, { whole: run.action.whole === true, reason: `midi-qol:entry:${run.found.entry.id}` });
+      else if (!actor.statuses.has(status.id)) await unTimedExecuteAsGM("toggleStatusEffect", { actorUuid: actor.uuid, statusId: status.id, options: { active: true } });
       continue;
     }
     if (mode === "remove") {

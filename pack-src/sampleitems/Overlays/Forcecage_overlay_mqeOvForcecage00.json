@@ -1,0 +1,71 @@
+{
+  "name": "Forcecage (overlay)",
+  "type": "spell",
+  "img": "icons/magic/control/silhouette-hold-beam-blue.webp",
+  "_id": "mqeOvForcecage00",
+  "_key": "!items!mqeOvForcecage00",
+  "folder": "mqsOverlayFolder",
+  "ownership": {
+    "default": 0
+  },
+  "system": {
+    "description": {
+      "value": "<p><em>Overlay (midi-qol):</em> the area placed is a barrier: the cage or box stops creatures and can be seen through. The cage's bars are treated as the box is: nothing passes. Walls are made for it by the GM's client, and removed when the spell ends. It changes no item: midi applies it to any item with the identifier <code>forcecage</code> (2024 rules) that nothing else automates.</p>",
+      "chatFlavor": ""
+    },
+    "identifier": "forcecage-overlay",
+    "source": {
+      "rules": "2024"
+    },
+    "activities": {}
+  },
+  "effects": [],
+  "flags": {
+    "midi-qol": {
+      "overlay": {
+        "identifier": "forcecage",
+        "rules": "2024",
+        "version": "1",
+        "changes": [
+          {
+            "key": "system.activities.gacP7LGiwvQBdnfU.regionBarrier.enabled",
+            "value": "true",
+            "type": "override"
+          },
+          {
+            "key": "system.activities.gacP7LGiwvQBdnfU.regionBarrier.move",
+            "value": "true",
+            "type": "override"
+          },
+          {
+            "key": "system.activities.gacP7LGiwvQBdnfU.regionBarrier.sight",
+            "value": "none",
+            "type": "override"
+          },
+          {
+            "key": "system.activities.xhJw5fRtiWP5p0DO.regionBarrier.enabled",
+            "value": "true",
+            "type": "override"
+          },
+          {
+            "key": "system.activities.xhJw5fRtiWP5p0DO.regionBarrier.move",
+            "value": "true",
+            "type": "override"
+          },
+          {
+            "key": "system.activities.xhJw5fRtiWP5p0DO.regionBarrier.sight",
+            "value": "none",
+            "type": "override"
+          }
+        ]
+      }
+    }
+  },
+  "_stats": {
+    "compendiumSource": null,
+    "duplicateSource": null,
+    "coreVersion": "14.360",
+    "systemId": "dnd5e",
+    "systemVersion": "6.1.0"
+  }
+}

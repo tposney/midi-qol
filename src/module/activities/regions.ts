@@ -294,6 +294,16 @@ export async function attachRegionActivityBehavior(activity: MidiActivity, regio
     });
   }
 
+  // The area as a barrier: its walls are the behaviour's (made by the active GM as it becomes active)
+  const barrier = activity.regionBarrier;
+  if (barrier?.enabled && (barrier.move || barrier.sight !== "none" || barrier.sound !== "none")) {
+    behaviors.push({
+      type: `${MODULE_ID}.regionBarrier` as const,
+      name: `${activity.item?.name ?? "Activity"} Barrier`,
+      system: { move: barrier.move, sight: barrier.sight ?? "none", sound: barrier.sound ?? "none", direction: barrier.direction ?? "both", trace: barrier.trace ?? "auto" },
+    });
+  }
+
   // Merge in any update deferred from placeEmanationTemplate (attachment / visibility)
   const pendingUpdate = activity._pendingRegionUpdate;
   if (pendingUpdate) {

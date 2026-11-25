@@ -1,4 +1,5 @@
 import { tokenFor } from "../tokenResolver.js";
+import { insideWhom } from "../../services/interactions/carried.js";
 import { movementState } from "../../services/economy/movement.js";
 import { MODULE_ID } from "../../../midi-qol.js";
 import type { Workflow } from "../../Workflow.js";
@@ -109,6 +110,13 @@ function canSeeHelper(a: TokenLike, b: TokenLike): boolean {
   }
 }
 
+function insideHelper(a: TokenLike, b?: TokenLike): boolean {
+  const inner = tokenDocumentOf(a);
+  const carrier = inner ? insideWhom(inner) : undefined;
+  if (!carrier) return false;
+  return b === undefined || tokenDocumentOf(b) === carrier;
+}
+
 /** Whether two dice of `faces` faces in the roll show the same number (Chromatic Orb's leap) */
 export function duplicates(roll: Roll | undefined | null, faces?: number): boolean {
   if (!roll) return false;
@@ -148,6 +156,8 @@ export function entryConditionExtras(f: FoundEntry, context: EventContext, apply
   const extra: Record<string, unknown> = {
     nearby: nearbyFor(f.near?.token ?? f.actor ?? context.actor),
     canSee: canSeeHelper,
+    // inside(a): a is inside some creature; inside(a, b): a is inside b (swallowed, engulfed: interactions/carried.ts)
+    inside: insideHelper,
     dice: { duplicates }
   };
   if (workflow) {

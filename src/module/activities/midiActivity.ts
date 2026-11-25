@@ -24,10 +24,16 @@ export interface ActivityRegionLight {
   animationType: string | null; animationSpeed: number; animationIntensity: number;
 }
 
+/** midi's region barrier on an activity (activitySchema.ts `regionBarrier`) */
+export interface ActivityRegionBarrier {
+  enabled: boolean; move: boolean; sight: string; sound: string; direction: string; trace: string;
+}
+
 /** An activity midi uses: dnd5e's, with midi's fields (activitySchema.ts) and getters (activityPrototype.ts) */
 export type MidiActivity = Activity & {
   regionBehavior?: ActivityRegionBehavior;
   regionLight?: ActivityRegionLight;
+  regionBarrier?: ActivityRegionBarrier;
   effectiveActivationType?: string;
   isSelfTriggerableOnly?: boolean;
   use?(usage?: ActivityUseConfiguration, dialog?: RollDialogConfig, message?: RollMessageConfig): Promise<unknown>;

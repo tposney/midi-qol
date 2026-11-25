@@ -2,6 +2,7 @@ import { tokenFor } from "../tokenResolver.js";
 import { doReactions } from "../../utils.js";
 import { forcedMovement, type Point } from "../../services/forcedMovement/service.js";
 import { isForcedAction } from "../../services/economy/movement.js";
+import { placeBeside, placeInside } from "../../services/interactions/carried.js";
 import { collectEntries, registerAction, registerEvent, runEvent, type ActionRun, type EventContext } from "./engine.js";
 
 /*
@@ -13,6 +14,8 @@ import { collectEntries, registerAction, registerEvent, runEvent, type ActionRun
  * - moved: raised about a creature after any move of it (event.forced for forced movement and teleports; near entries
  *   hear it): event.distance, event.cost, event.action, event.from, event.to. In a running combat its reaction items
  *   with `reaction === "isMoved"` are then offered (the reactionmoved trigger, the same event as `event`).
+ * - `{ move: { place: "inside" | "beside", from? }, to? }`: the subjects put centred in `from`'s space, or on the nearest
+ *   free space next to it (services/interactions/carried.ts), at once and through anything.
  * - `{ opportunityAttack: true }`: the bearer is offered its melee attacks against event.creature as its reaction.
  * - `{ move: { push | pull | slide: feet, angle?, from? }, to? }`: the subjects pushed away from, or pulled towards,
  *   `from` (user: the use's token, default; bearer; area: the centre of the use's area), or slid at `angle` degrees,
@@ -90,7 +93,7 @@ async function amount(value: unknown, run: ActionRun): Promise<number> {
 
 /** `{ move: { push | pull | slide, angle?, from? }, to? }` */
 async function moveAction(run: ActionRun) {
-  const spec = (run.action.move ?? {}) as { push?: unknown, pull?: unknown, slide?: unknown, angle?: unknown, from?: unknown };
+  const spec = (run.action.move ?? {}) as { push?: unknown, pull?: unknown, slide?: unknown, angle?: unknown, from?: unknown, place?: unknown };
   const subjects = moveSubjects(run);
   if (!subjects.length) return { success: false };
   let moved = false;
@@ -102,6 +105,11 @@ async function moveAction(run: ActionRun) {
     }
     const source = moveSource(run, spec.from);
     if (!source || source === token) continue;
+    if (spec.place === "inside" || spec.place === "beside") {
+      if (!(source instanceof TokenDocument)) continue;
+      moved = (await (spec.place === "inside" ? placeInside(token, source) : placeBeside(token, source))) || moved;
+      continue;
+    }
     if (spec.pull !== undefined) moved = (await forcedMovement.pull(token, { towards: source, distance: await amount(spec.pull, run) })).moved > 0 || moved;
     else moved = (await forcedMovement.push(token, { from: source, distance: await amount(spec.push, run) })).moved > 0 || moved;
   }

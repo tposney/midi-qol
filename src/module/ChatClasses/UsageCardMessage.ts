@@ -10,7 +10,7 @@ import { midiButtonHidden } from "../activities/usageButtons.js";
 import { error } from "../../midi-qol.js";
 import { Activity, ChatMessageRenderOptions, DamageApplicationOptions, Dnd5eChatMessage } from "../../globals.js";
 import { checkRule, configSettings, safeGetGameSetting } from "../settings.js";
-import { getRemoveAllButtons, getRemoveAttackButtons, getRemoveDamageButtons, midiRenderAttackRoll, midiRenderDamageRolls, midiRenderOtherDamageRolls, midiRenderBonusDamageRolls, midiRenderFormulaRoll, renderRollAttributionIcon, renderSaveRollHTML, getAdvantageModeTitle, getTokenName, renderAttributionTooltip, rollTermChips, tokenPortrait, activityHasAreaTarget, isActivityType } from "../utils.js";
+import { getRemoveAllButtons, getRemoveAttackButtons, getRemoveDamageButtons, midiRenderAttackRoll, midiRenderDamageRolls, midiRenderOtherDamageRolls, midiRenderBonusDamageRolls, midiRenderFormulaRoll, renderRollAttributionIcon, renderSaveRollHTML, getAdvantageModeTitle, getTokenName, renderAttributionTooltip, rollTermChips, tokenPortrait, activityHasAreaTarget, isActivityType, placedTemplateCount } from "../utils.js";
 import { cardActor, saveDisplayMode } from "../lib/saveVisibility.js";
 import { MODULE_ID, MQDamageRollTypes } from "../../midi-qol.js";
 import { Workflow } from "../Workflow.js";
@@ -81,7 +81,7 @@ export function midiButtonVisibility(message: Dnd5eChatMessage | undefined, acti
     readied: !done && midi.state?.hold?.kind === "deferred",
     // Every template the use places is on the card (cards before 14.6.9 recorded it in progress)
     templatesPlaced: !!progress.templatesPlaced || (activityHasAreaTarget(activity)
-      && (midi.state?.templateUuids?.length ?? 0) >= (Number(activity?.target?.template?.count) || 1))
+      && placedTemplateCount(midi.state?.templateUuids) >= (Number(activity?.target?.template?.count) || 1))
   };
 }
 

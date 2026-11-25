@@ -3,6 +3,7 @@ import { MODULE_ID } from "../../midi-qol.js";
 import type { Activity } from "../../globals.js";
 import type { TableResultChoice } from "./tables.js";
 import { activityChoiceKey, rememberChoice, rememberCheckbox, rememberedChoice } from "./rememberedChoices.js";
+import { conditionsPresent } from "./entries/conditionRemoval.js";
 
 /*
  * Choices (M28 data half; shapes ~/Documents/midi-next-waveB-shapes-2026-11-20.md): named choices an activity declares
@@ -12,7 +13,7 @@ import { activityChoiceKey, rememberChoice, rememberCheckbox, rememberedChoice }
  * dnd5e's own damage type pick (a part with several types) is read from the rolls as `choices.damageType`, not stored.
  */
 
-export type ChoiceKind = "damageType" | "option" | "ability" | "skill" | "creatureType" | "number" | "allocate" | "targets";
+export type ChoiceKind = "damageType" | "option" | "ability" | "skill" | "creatureType" | "number" | "allocate" | "targets" | "conditions";
 export type ChoiceValue = string | number | string[] | Record<string, number> | TableResultChoice;
 
 export interface ChoiceDeclaration {
@@ -25,6 +26,8 @@ export interface ChoiceDeclaration {
   default?: ChoiceValue;
   min?: number;
   max?: number | string;
+  /** conditions: the conditions that may be chosen (all of dnd5e's when absent); offered are those the creatures have */
+  from?: string[];
   /** allocate: a formula over the activity's roll data ("2 + @item.level") */
   total?: string;
   /** M15: kept per actor (declared, not read: every list-like choice can be remembered by the player, 5e) */
@@ -34,7 +37,22 @@ export interface ChoiceDeclaration {
 /** One stored answer (a list: ids may have dots, which an update reads as a path) */
 export interface StoredChoice { id: string, value: ChoiceValue }
 
-const KINDS: readonly ChoiceKind[] = ["damageType", "option", "ability", "skill", "creatureType", "number", "allocate", "targets"];
+const KINDS: readonly ChoiceKind[] = ["damageType", "option", "ability", "skill", "creatureType", "number", "allocate", "targets", "conditions"];
+
+/** The creatures a choice is about, when not the use's targets (an entry at one target's event) */
+export type ChoiceSubjects = readonly (Actor.Implementation | null | undefined)[] | undefined;
+
+/**
+ * A `conditions` choice's options: of `from` (dnd5e's conditions when it gives none), those a creature it is about
+ * has now. The answer is a list of status ids, at most `max` (any number when absent).
+ */
+export function conditionChoices(declaration: Pick<ChoiceDeclaration, "from">, workflow: Workflow, subjects?: ChoiceSubjects): { value: string, label: string }[] {
+  const config = (CONFIG as unknown as { DND5E?: { conditionTypes?: Record<string, { label?: string, name?: string }> } }).DND5E?.conditionTypes ?? {};
+  const from = declaration.from?.length ? declaration.from : Object.keys(config);
+  const actors = subjects?.length ? subjects : workflow.targets.documents.map(token => token.actor);
+  return conditionsPresent(from, actors.flatMap(actor => actor ? [actor.statuses as Iterable<string>] : []))
+    .map(value => ({ value, label: game.i18n?.localize(config[value]?.label ?? config[value]?.name ?? value) ?? value }));
+}
 
 /** The activity's declarations that are well formed */
 export function choiceDeclarations(activity: Activity | undefined | null): ChoiceDeclaration[] {
@@ -50,7 +68,8 @@ function configOptions(record: Record<string, { label?: string } | string> | und
 }
 
 /** The options of a list-like choice */
-export function choiceOptions(declaration: ChoiceDeclaration, workflow: Workflow): Option[] {
+export function choiceOptions(declaration: ChoiceDeclaration, workflow: Workflow, subjects?: ChoiceSubjects): Option[] {
+  if (declaration.kind === "conditions") return conditionChoices(declaration, workflow, subjects);
   if (declaration.options?.length) return declaration.options.map(option => typeof option === "string"
     ? { value: option, label: option } : { value: option.value, label: option.label ?? option.value });
   const dnd5e = CONFIG.DND5E;
@@ -82,8 +101,14 @@ function evaluateNumber(formula: string | number | undefined, workflow: Workflow
 }
 
 /** A value is one this declaration can take (supplied values are checked, not trusted) */
-export function validChoice(declaration: ChoiceDeclaration, value: unknown, workflow: Workflow): value is ChoiceValue {
+export function validChoice(declaration: ChoiceDeclaration, value: unknown, workflow: Workflow, subjects?: ChoiceSubjects): value is ChoiceValue {
   switch (declaration.kind) {
+    case "conditions": {
+      if (!Array.isArray(value) || !value.every(status => typeof status === "string")) return false;
+      const offered = new Set(conditionChoices(declaration, workflow, subjects).map(option => option.value));
+      const max = evaluateNumber(declaration.max, workflow);
+      return value.every(status => offered.has(status)) && (max === undefined || value.length <= max);
+    }
     case "number": {
       if (typeof value !== "number" || !Number.isFinite(value)) return false;
       return (declaration.min === undefined || value >= declaration.min) && (typeof declaration.max !== "number" || value <= declaration.max);
@@ -111,7 +136,7 @@ export function validChoice(declaration: ChoiceDeclaration, value: unknown, work
 function escape(text: string) { return foundry.utils.escapeHTML(text); }
 
 /** The form for the choices still to answer */
-function choicesForm(declarations: ChoiceDeclaration[], workflow: Workflow): string {
+function choicesForm(declarations: ChoiceDeclaration[], workflow: Workflow, subjects?: ChoiceSubjects): string {
   const targets = workflow.targets.documents;
   const rows = declarations.map((declaration, index) => {
     const label = escape(declaration.label ?? declaration.id);
@@ -131,8 +156,15 @@ function choicesForm(declarations: ChoiceDeclaration[], workflow: Workflow): str
         const max = evaluateNumber(declaration.max, workflow);
         return `<fieldset><legend>${label}${max !== undefined ? ` (${max})` : ""}</legend>${each}</fieldset>`;
       }
+      case "conditions": {
+        // Those the creature has: one ticked when there is only one to end
+        const options = conditionChoices(declaration, workflow, subjects);
+        const max = evaluateNumber(declaration.max, workflow);
+        const each = options.map((option, c) => `<label class="checkbox"><input type="checkbox" name="${name}-${c}" value="${escape(option.value)}" ${options.length === 1 ? "checked" : ""}> ${escape(option.label)}</label>`).join("");
+        return `<fieldset class="midi-qol-choice-conditions"><legend>${label}${max !== undefined ? ` (${max})` : ""}</legend>${each}</fieldset>`;
+      }
       default: {
-        const options = choiceOptions(declaration, workflow).map(option =>
+        const options = choiceOptions(declaration, workflow, subjects).map(option =>
           `<option value="${escape(option.value)}" ${option.value === declaration.default ? "selected" : ""}>${escape(option.label)}</option>`).join("");
         // A list-like choice can be remembered for the actor (M15 5e)
         return `<div class="form-group"><label>${label}</label><select name="${name}">${options}</select></div>${rememberCheckbox(`${name}-remember`)}`;
@@ -142,7 +174,7 @@ function choicesForm(declarations: ChoiceDeclaration[], workflow: Workflow): str
   return rows.join("");
 }
 
-function readForm(declarations: ChoiceDeclaration[], data: Record<string, unknown>, workflow: Workflow): Record<string, ChoiceValue> {
+function readForm(declarations: ChoiceDeclaration[], data: Record<string, unknown>, workflow: Workflow, subjects?: ChoiceSubjects): Record<string, ChoiceValue> {
   const targets = workflow.targets.documents;
   const answers: Record<string, ChoiceValue> = {};
   declarations.forEach((declaration, index) => {
@@ -152,6 +184,8 @@ function readForm(declarations: ChoiceDeclaration[], data: Record<string, unknow
       answers[declaration.id] = Object.fromEntries(targets.map((token, t) => [token.uuid ?? "", Number(data[`${name}-${t}`] ?? 0)]));
     } else if (declaration.kind === "targets") {
       answers[declaration.id] = targets.filter((_, t) => !!data[`${name}-${t}`]).map(token => token.uuid ?? "");
+    } else if (declaration.kind === "conditions") {
+      answers[declaration.id] = conditionChoices(declaration, workflow, subjects).filter((_, c) => !!data[`${name}-${c}`]).map(option => option.value);
     } else answers[declaration.id] = String(data[name] ?? "");
   });
   return answers;
@@ -161,17 +195,17 @@ function readForm(declarations: ChoiceDeclaration[], data: Record<string, unknow
 const REMEMBERABLE: readonly ChoiceKind[] = ["damageType", "option", "ability", "skill", "creatureType"];
 
 /** Ask the choices; undefined when the dialog was closed. Answers ticked "Remember this choice" are kept for the actor */
-async function askChoices(declarations: ChoiceDeclaration[], workflow: Workflow): Promise<Record<string, ChoiceValue> | undefined> {
+async function askChoices(declarations: ChoiceDeclaration[], workflow: Workflow, subjects?: ChoiceSubjects): Promise<Record<string, ChoiceValue> | undefined> {
   for (;;) {
     const data = await foundry.applications.api.DialogV2.input({
       window: { title: `${workflow.activity?.name ?? workflow.item?.name ?? ""}: ${game.i18n?.localize(`${MODULE_ID}.Choices.Title`)}` },
-      content: choicesForm(declarations, workflow),
+      content: choicesForm(declarations, workflow, subjects),
       ok: { label: game.i18n?.localize(`${MODULE_ID}.Choices.Confirm`) ?? "OK" },
       rejectClose: false
     });
     if (!data) return undefined;
-    const answers = readForm(declarations, data as Record<string, unknown>, workflow);
-    const invalid = declarations.filter(declaration => !validChoice(declaration, answers[declaration.id], workflow));
+    const answers = readForm(declarations, data as Record<string, unknown>, workflow, subjects);
+    const invalid = declarations.filter(declaration => !validChoice(declaration, answers[declaration.id], workflow, subjects));
     if (!invalid.length) {
       const actor = workflow.actor;
       for (const [index, declaration] of declarations.entries()) {
@@ -191,10 +225,10 @@ async function askChoices(declarations: ChoiceDeclaration[], workflow: Workflow)
  * M15 stage 6: an entry's own choice (`choose`), asked when the entry is taken: its value, or undefined when the
  * dialog was closed. `choose.if` (an expression, checked by the caller) says when it is asked at all.
  */
-export async function askEntryChoice(declaration: ChoiceDeclaration, workflow: Workflow): Promise<ChoiceValue | undefined> {
+export async function askEntryChoice(declaration: ChoiceDeclaration, workflow: Workflow, subjects?: ChoiceSubjects): Promise<ChoiceValue | undefined> {
   const remembered = REMEMBERABLE.includes(declaration.kind) ? rememberedChoice(workflow.actor, activityChoiceKey(workflow.activity, declaration.id)) : undefined;
   if (remembered && validChoice(declaration, remembered.value, workflow)) return remembered.value;
-  const answers = await askChoices([declaration], workflow);
+  const answers = await askChoices([declaration], workflow, subjects);
   return answers?.[declaration.id];
 }
 

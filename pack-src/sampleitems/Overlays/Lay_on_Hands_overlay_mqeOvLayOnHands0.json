@@ -1,0 +1,54 @@
+{
+  "name": "Lay on Hands (overlay)",
+  "type": "feat",
+  "img": "icons/magic/light/orbs-firefly-hand-yellow.webp",
+  "_id": "mqeOvLayOnHands0",
+  "_key": "!items!mqeOvLayOnHands0",
+  "folder": "mqsOverlayFolder",
+  "ownership": {
+    "default": 0
+  },
+  "system": {
+    "description": {
+      "value": "<p><em>Overlay (midi-qol):</em> the Remove Poison use (the item's own activity, which spends 5 points of the pool) ends the target's Poisoned condition; the healing use is dnd5e's own. It changes no item: midi applies it to any item with the identifier <code>lay-on-hands</code> (2024 rules) that nothing else automates.</p>",
+      "chatFlavor": ""
+    },
+    "identifier": "lay-on-hands-overlay",
+    "source": {
+      "rules": "2024"
+    },
+    "activities": {}
+  },
+  "effects": [],
+  "flags": {
+    "midi-qol": {
+      "overlay": {
+        "identifier": "lay-on-hands",
+        "rules": "2024",
+        "version": "1"
+      },
+      "entries": [
+        {
+          "id": "removePoison",
+          "on": "use.end",
+          "label": "Lay on Hands: Poisoned ended",
+          "if": "use.activity.type === 'utility'",
+          "do": [
+            {
+              "effect": "remove",
+              "what": "poisoned",
+              "to": "target"
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "_stats": {
+    "compendiumSource": null,
+    "duplicateSource": null,
+    "coreVersion": "14.360",
+    "systemId": "dnd5e",
+    "systemVersion": "6.1.0"
+  }
+}

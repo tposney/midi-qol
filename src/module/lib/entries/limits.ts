@@ -91,3 +91,22 @@ export function currentKept(records: readonly KeptRecord[], key: string, item: s
 export function keepRecord(records: readonly KeptRecord[], record: KeptRecord, current: readonly string[]): KeptRecord[] {
   return [...records.filter(r => r.key !== record.key && current.includes(r.stamp)), record];
 }
+
+/*
+ * A tally (`{ tally: name, add }`): a running total kept on a creature for the turn or round it was added in, read in
+ * conditions as `tallies.<name>` (0 once that turn or round has passed). "30 damage or more in a single turn from a
+ * creature inside it".
+ */
+export interface TallyRecord { key: string, stamp: string, value: number }
+
+/** The records after adding to a tally: stale ones dropped, a total under another stamp started again */
+export function addTally(records: readonly TallyRecord[], key: string, stamp: string, amount: number, current: readonly string[]): TallyRecord[] {
+  const kept = records.filter(r => current.includes(r.stamp));
+  const had = kept.find(r => r.key === key && r.stamp === stamp)?.value ?? 0;
+  return [...kept.filter(r => r.key !== key), { key, stamp, value: had + amount }];
+}
+
+/** Every current tally by name */
+export function tallyValues(records: readonly TallyRecord[], current: readonly string[]): Record<string, number> {
+  return Object.fromEntries(records.filter(r => current.includes(r.stamp)).map(r => [r.key, r.value]));
+}

@@ -1,0 +1,134 @@
+import { MODULE_ID, moveToken } from "../../../midi-qol.js";
+import { tokenFor } from "../../lib/tokenResolver.js";
+import { besideSpots, freeSpot, insideSpot, type Rect, type Spot } from "../../lib/carryGeometry.js";
+
+/*
+ * A creature inside another (swallowed, engulfed). Plan: ~/Documents/midi-next-region-barriers-plan-2026-11-25.md,
+ * part 2, stage 1.
+ *
+ * Being inside is an effect: one flagged `flags.midi-qol.inside` on the victim, whose origin is the swallower's item.
+ * While it lasts the victim's token sits centred in the swallower's space and goes where it goes; when the last such
+ * effect from that swallower ends, the victim is put on the nearest free space beside it. Nothing else is recorded,
+ * so it survives a reload, and identical unlinked monsters are told apart by the token in the origin.
+ *  - placed inside when the effect is created, and beside when it goes: the active GM (createActiveEffect /
+ *    deleteActiveEffect);
+ *  - the swallower's own move takes those inside along in the same move as a grappler's drag (grapple.ts, at no cost);
+ *  - any other move of it (forced, a teleport) is followed afterwards (moveToken, on the mover's client).
+ * `{ move: { place: "inside" | "beside", from? } }` (movementEvents.ts) places a token the same way without the flag.
+ */
+
+export const INSIDE_FLAG = "inside";
+
+type Effect = ActiveEffect.Implementation;
+const isInsideEffect = (effect: Effect) => !!effect.getFlag(MODULE_ID, INSIDE_FLAG) && !effect.disabled;
+
+const rectOf = (token: TokenDocument.Implementation): Rect => {
+  const size = canvas!.grid!.size;
+  return { x: token._source.x, y: token._source.y, width: token.width * size, height: token.height * size };
+};
+
+/** The token an inside effect's victim is in: the one its origin names, on the victim's scene */
+function carrierOf(effect: Effect, victim: TokenDocument.Implementation): TokenDocument.Implementation | undefined {
+  if (!effect.origin) return undefined;
+  const carrier = tokenFor(effect.origin, { scene: victim.parent ?? null, near: victim });
+  return carrier && carrier !== victim && carrier.parent === victim.parent ? carrier : undefined;
+}
+
+/** The tokens inside this one */
+export function insideOf(token: TokenDocument.Implementation): TokenDocument.Implementation[] {
+  const scene = token.parent;
+  if (!scene) return [];
+  return scene.tokens.filter(other => other !== token && !!other.actor
+    && other.actor.effects.some(effect => isInsideEffect(effect) && carrierOf(effect, other) === token));
+}
+
+/** The token this one is inside, if any */
+export function insideWhom(token: TokenDocument.Implementation): TokenDocument.Implementation | undefined {
+  for (const effect of token.actor?.effects ?? []) {
+    const carrier = isInsideEffect(effect) ? carrierOf(effect, token) : undefined;
+    if (carrier) return carrier;
+  }
+  return undefined;
+}
+
+/** Put there at once, whatever is in the way: a teleport (no cost, no opportunity attack). False when already there */
+async function put(token: TokenDocument.Implementation, spot: Spot, elevation = token._source.elevation): Promise<boolean> {
+  if (Math.abs(token._source.x - spot.x) <= 1 && Math.abs(token._source.y - spot.y) <= 1 && elevation === token._source.elevation) return false;
+  const size = canvas!.grid!.size;
+  await moveToken(token, { x: spot.x + (token.width * size) / 2, y: spot.y + (token.height * size) / 2, elevation }, { teleport: true });
+  return true;
+}
+
+/** Where the token sits inside the carrier: centred, on the grid (a Medium creature in a Large one takes one of its spaces) */
+function seat(token: TokenDocument.Implementation, carrier: TokenDocument.Implementation): Spot {
+  const size = canvas!.grid!.size;
+  return token.getSnappedPosition(insideSpot(rectOf(carrier), { width: token.width * size, height: token.height * size })) as Spot;
+}
+const seated = (token: TokenDocument.Implementation, carrier: TokenDocument.Implementation) => {
+  const spot = seat(token, carrier);
+  return Math.abs(token._source.x - spot.x) <= 1 && Math.abs(token._source.y - spot.y) <= 1;
+};
+
+/** The token centred in the carrier's space, at its elevation */
+export async function placeInside(token: TokenDocument.Implementation, carrier: TokenDocument.Implementation): Promise<boolean> {
+  if (!canvas?.grid || token.parent !== carrier.parent) return false;
+  return put(token, seat(token, carrier), carrier._source.elevation);
+}
+
+/** No wall the creature couldn't cross between the carrier's centre and the spot's */
+function reachable(carrier: TokenDocument.Implementation, spot: Spot, inner: { width: number, height: number }): boolean {
+  const from = rectOf(carrier);
+  const origin = { x: from.x + from.width / 2, y: from.y + from.height / 2 };
+  const dest = { x: spot.x + inner.width / 2, y: spot.y + inner.height / 2 };
+  try { return !CONFIG.Canvas.polygonBackends.move.testCollision(origin, dest, { mode: "any", type: "move" }); }
+  catch { return true; }
+}
+
+/** The token on the nearest free space next to the carrier (nearest to where it is, else the carrier's sides first) */
+export async function placeBeside(token: TokenDocument.Implementation, carrier: TokenDocument.Implementation): Promise<boolean> {
+  if (!canvas?.grid || token.parent !== carrier.parent) return false;
+  const size = canvas.grid.size;
+  const inner = { width: token.width * size, height: token.height * size };
+  const outer = rectOf(carrier);
+  const here = rectOf(token);
+  const within = seated(token, carrier);
+  const spots = besideSpots(outer, inner, size, within ? undefined : { x: here.x + here.width / 2, y: here.y + here.height / 2 })
+    .map(spot => token.getSnappedPosition(spot) as Spot);
+  const taken = (carrier.parent?.tokens.filter(other => other !== token && !other.hidden) ?? []).map(rectOf);
+  const spot = freeSpot(spots, inner, taken, s => reachable(carrier, s, inner)) ?? freeSpot(spots, inner, taken);
+  if (!spot) return false;
+  return put(token, spot);
+}
+
+const victimToken = (effect: Effect): TokenDocument.Implementation | undefined => {
+  const actor = effect.parent;
+  return actor instanceof Actor ? tokenFor(actor) : undefined;
+};
+
+async function onEffectCreated(effect: Effect) {
+  if (!game.user?.isActiveGM || !isInsideEffect(effect)) return;
+  const victim = victimToken(effect);
+  const carrier = victim && carrierOf(effect, victim);
+  if (victim && carrier) await placeInside(victim, carrier);
+}
+
+async function onEffectDeleted(effect: Effect) {
+  if (!game.user?.isActiveGM || !effect.getFlag(MODULE_ID, INSIDE_FLAG)) return;
+  const victim = victimToken(effect);
+  const carrier = victim && carrierOf(effect, victim);
+  // Still inside by another effect of the same creature (its bite and its swallow)
+  if (!victim || !carrier || insideWhom(victim) === carrier) return;
+  if (seated(victim, carrier)) await placeBeside(victim, carrier);
+}
+
+/** After a move the drag didn't make (forced, a teleport): those inside are put back inside */
+async function onMoved(token: TokenDocument.Implementation, user: User.Implementation | undefined) {
+  if (!user?.isSelf) return;
+  for (const inner of insideOf(token)) await placeInside(inner, token);
+}
+
+export function registerCarried() {
+  Hooks.on("createActiveEffect", effect => { void onEffectCreated(effect as Effect).catch(err => console.error("midi-qol | placing a creature inside", err)); });
+  Hooks.on("deleteActiveEffect", effect => { void onEffectDeleted(effect as Effect).catch(err => console.error("midi-qol | releasing a creature", err)); });
+  Hooks.on("moveToken", (token, _movement, _operation, user) => { void onMoved(token, user as User.Implementation | undefined).catch(err => console.error("midi-qol | carrying a creature", err)); });
+}

@@ -70,7 +70,8 @@
   "documentTypes": {
     "RegionBehavior": {
       "regionActivity": {},
-      "regionLight": {}
+      "regionLight": {},
+      "regionBarrier": {}
     },
     "ChatMessage": {
       "damage": {},

@@ -1225,7 +1225,7 @@ export class EntryEditor extends HandlebarsApplicationMixin(DocumentSheetV2)<
       return { i, id: c.id ?? "", label: c.label ?? "", min: c.min ?? "", max: c.max ?? "", options, isOption: kind === "option",
         // A list from a source (the damage parts' types, the activity's effects) has no options of its own
         source: typeof c.source === "string" ? c.source : "",
-        kinds: ["targets", "option", "damageType", "ability", "skill", "creatureType", "number", "allocate"].map(k => option(k, i18n(`midi-qol.EntryEditor.ChoiceKind.${k}`), k === kind)) };
+        kinds: ["targets", "option", "conditions", "damageType", "ability", "skill", "creatureType", "number", "allocate"].map(k => option(k, i18n(`midi-qol.EntryEditor.ChoiceKind.${k}`), k === kind)) };
     });
   }
 
@@ -1705,7 +1705,9 @@ export class EntryEditor extends HandlebarsApplicationMixin(DocumentSheetV2)<
     const option = (value: string, label: string, selected: boolean) => ({ value, label, selected });
     return {
       has: !!kind,
-      kinds: ["", "targets", "option", "damageType", "ability", "skill", "creatureType", "number", "allocate"].map(k => option(k, i18n(`midi-qol.EntryEditor.ChoiceKind.${k || "none"}`), k === kind)),
+      kinds: ["", "targets", "option", "conditions", "damageType", "ability", "skill", "creatureType", "number", "allocate"].map(k => option(k, i18n(`midi-qol.EntryEditor.ChoiceKind.${k || "none"}`), k === kind)),
+      isConditions: kind === "conditions",
+      from: Array.isArray(choice.from) ? choice.from.join(", ") : "",
       label: typeof choice.label === "string" ? choice.label : "",
       min: choice.min ?? "", max: choice.max ?? "",
       keeps: ["", "turn", "round"].map(k => option(k, i18n(`midi-qol.EntryEditor.ChoiceKeep.${k || "use"}`), k === keep))
@@ -2028,6 +2030,10 @@ export class EntryEditor extends HandlebarsApplicationMixin(DocumentSheetV2)<
         const keep = text("chooseKeep");
         const next: Record<string, unknown> = { ...choice, kind, label: text("chooseLabel") || undefined, min: text("chooseMin") || undefined, max: text("chooseMax") || undefined,
           keep: keep ? { per: keep } : undefined };
+        // The conditions that may be chosen (ids, in the order offered)
+        if (kind === "conditions") next.from = text("chooseFrom").split(",").map(id => id.trim().toLowerCase()).filter(Boolean);
+        else delete next.from;
+        if (Array.isArray(next.from) && !next.from.length) delete next.from;
         for (const key of Object.keys(next)) if (next[key] === undefined) delete next[key];
         // A number field's value stays a number
         for (const key of ["min", "max"]) if (typeof next[key] === "string" && Number.isNumeric(next[key])) next[key] = Number(next[key]);

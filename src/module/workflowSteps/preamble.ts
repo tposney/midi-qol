@@ -10,7 +10,7 @@ import { activityHasScaledTargetCount, postTemplateConfirmTargets } from "../act
 import { TroubleShooter } from "../apps/TroubleShooter.js";
 import { checkMechanic, configSettings, safeGetGameSetting } from "../settings.js";
 import { saveTargetsUndoData } from "../undo.js";
-import { activityHasAreaTarget, activityHasAutoPlaceTemplate, activityHasEmanationNoTemplate, checkActivityRange, getActivityAutoTargetAction, logIncapacitatedCheckResult, getAutoRollAttack, getToken, isActivityType, isRangeCheckable, setRangedTargets, validTargetTokens } from "../utils.js";
+import { activityHasAreaTarget, activityHasAutoPlaceTemplate, activityHasEmanationNoTemplate, checkActivityRange, getActivityAutoTargetAction, logIncapacitatedCheckResult, placedTemplateCount, getAutoRollAttack, getToken, isActivityType, isRangeCheckable, setRangedTargets, validTargetTokens } from "../utils.js";
 import { setStepRun } from "../steps/steps.js";
 import type { Activity, ActivityUseConfiguration } from "../../globals.js";
 import { Workflow, workflowStepHost, type WorkflowState } from "../Workflow.js";
@@ -94,7 +94,7 @@ export function registerPreambleSteps(): void {
 
   setStepRun("midi-qol.AwaitTemplate", async ({ workflow }: { workflow: Workflow }): Promise<WorkflowState> => {
     if (debugEnabled > 0) warn("WorkflowState_AwaitTemplate started");
-    if (workflow.templateUuids.length >= workflow.expectedTemplateCount) {
+    if (placedTemplateCount(workflow.templateUuids) >= workflow.expectedTemplateCount) {
       if (debugEnabled > 0) warn("WorkflowState_AwaitTemplate context - template placed", "needTemplate", workflow.needTemplate, "needItemCard", workflow.needItemCard, "itemUseComplete", workflow.itemUseComplete);
       return "midi-qol.TemplatePlaced";
     }

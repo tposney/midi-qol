@@ -257,11 +257,14 @@ export function actionText(action: EntryAction, context: SentenceContext): strin
     case "use": return say("Action.use", { activity: activityName(a.use, context) });
     case "move": {
       const m = part(a.move);
+      if (m.place === "inside" || m.place === "beside")
+        return say(`Action.move.${m.place}`, { who: target(a.to, "target"), from: say(`Action.move.from.${has(`Action.move.from.${m.from}`) ? m.from : "user"}`) });
       const kind = m.pull !== undefined ? "pull" : m.slide !== undefined ? "slide" : "push";
       const from = say(`Action.move.from.${has(`Action.move.from.${m.from}`) ? m.from : "user"}`);
       return say(`Action.move.${kind}`, { who: target(a.to, "target"), n: friendlyFormula(m[kind] ?? "?"), from });
     }
     case "opportunityAttack": return say("Action.opportunityAttack");
+    case "tally": return say("Action.tally", { n: friendlyFormula(a.add ?? 1), name: String(a.tally), per: say(`Action.tallyPer.${a.per === "round" ? "round" : "turn"}`) });
     case "grantAttacks": {
       const g = part(a.grantAttacks);
       const filter = has(`Action.grantAttacks.filter.${g.filter}`) ? say(`Action.grantAttacks.filter.${g.filter}`) : String(g.filter ?? say("Action.grantAttacks.filter.weapon"));

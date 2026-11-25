@@ -2485,8 +2485,9 @@ async function _moveToken(data: { tokenUuid: string, newCenter: { x: number, y: 
   }
   const targetToken = tokenDocument.object;
   const { animate = true, teleport = false, ignoreWalls = false, ignoreTokens = false, autoRotate = true } = data.options ?? {};
-  const snappedCenter = canvas.grid.getSnappedPoint(data.newCenter, { mode: CONST.GRID_SNAPPING_MODES.CENTER });
-  const newPosition: Record<string, any> = { x: snappedCenter.x - targetToken.w / 2, y: snappedCenter.y - targetToken.h / 2 };
+  // Snapped as the token snaps: an even-sized token's centre is a grid corner, not a square's centre
+  const snapped = tokenDocument.getSnappedPosition({ x: data.newCenter.x - targetToken.w / 2, y: data.newCenter.y - targetToken.h / 2 });
+  const newPosition: Record<string, any> = { x: snapped.x, y: snapped.y };
   if (data.newCenter.elevation !== undefined) newPosition.elevation = data.newCenter.elevation;
   if (data.newCenter.level) newPosition.level = data.newCenter.level;
   // teleport uses dnd5e's "blink" action (as its Teleport activity does); walls and tokens are ignored below. Otherwise

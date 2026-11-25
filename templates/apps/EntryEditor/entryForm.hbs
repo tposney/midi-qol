@@ -78,6 +78,9 @@
             <div class="form-group"><label>{{localize "midi-qol.EntryEditor.Choice.kind"}}</label><div class="form-fields"><select name="chooseKind">{{#each choice.kinds}}<option value="{{value}}" {{#if selected}}selected{{/if}}>{{label}}</option>{{/each}}</select></div></div>
             {{#if choice.has}}
             <div class="form-group"><label>{{localize "midi-qol.EntryEditor.Choice.label"}}</label><div class="form-fields"><input type="text" name="chooseLabel" value="{{choice.label}}"></div></div>
+            {{#if choice.isConditions}}
+            <div class="form-group"><label>{{localize "midi-qol.EntryEditor.Choice.from"}}</label><div class="form-fields"><input type="text" name="chooseFrom" value="{{choice.from}}" placeholder="blinded, deafened, paralyzed, poisoned" data-tooltip="{{localize "midi-qol.EntryEditor.Choice.fromHint"}}"></div></div>
+            {{/if}}
             <div class="form-group"><label>{{localize "midi-qol.EntryEditor.Choice.howMany"}}</label><div class="form-fields">
                 <input type="text" name="chooseMin" value="{{choice.min}}" placeholder="{{localize "midi-qol.EntryEditor.Choice.min"}}">
                 <input type="text" name="chooseMax" value="{{choice.max}}" placeholder="{{localize "midi-qol.EntryEditor.Choice.max"}}"></div></div>

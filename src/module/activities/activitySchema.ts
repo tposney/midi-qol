@@ -118,6 +118,15 @@ function sharedFields(): Fields {
         targetId: new StringField({ required: true, blank: false, initial: "" }),
       }), { initial: [] }),
     }),
+    // The area is a barrier: walls made for its region (regionBehaviors/MidiRegionBarrierBehaviorType.ts)
+    regionBarrier: new SchemaField({
+      enabled: new BooleanField({ initial: false }),
+      move: new BooleanField({ initial: true }),
+      sight: new StringField({ initial: "none", choices: ["none", "limited", "normal"] }),
+      sound: new StringField({ initial: "none", choices: ["none", "limited", "normal"] }),
+      direction: new StringField({ initial: "both", choices: ["both", "left", "right"] }),
+      trace: new StringField({ initial: "auto", choices: ["auto", "axis", "outline", "middle"] }),
+    }),
     regionLight: new SchemaField({
       enabled: new BooleanField({ initial: false }),
       dim: new NumberField({ initial: 0, min: 0 }),

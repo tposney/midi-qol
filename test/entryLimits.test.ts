@@ -66,3 +66,25 @@ describe("entry limits", () => {
     expect(currentKept(records, "careful", "spell", "c1:2:2")).toBeUndefined();
   });
 });
+
+import { addTally, tallyValues } from "../src/module/lib/entries/limits.js";
+
+describe("tallies", () => {
+  const current = ["c:1:0", "c:1"];
+  it("adds within a stamp and starts again under another", () => {
+    let records = addTally([], "inside", "c:1:0", 12, current);
+    records = addTally(records, "inside", "c:1:0", 20, current);
+    expect(tallyValues(records, current)).toEqual({ inside: 32 });
+    const next = ["c:1:1", "c:1"];
+    expect(tallyValues(records, next)).toEqual({});
+    records = addTally(records, "inside", "c:1:1", 5, next);
+    expect(tallyValues(records, next)).toEqual({ inside: 5 });
+  });
+  it("a round's total outlasts the turn; other totals are kept", () => {
+    let records = addTally([], "hits", "c:1", 1, current);
+    records = addTally(records, "inside", "c:1:0", 7, current);
+    const next = ["c:1:1", "c:1"];
+    records = addTally(records, "hits", "c:1", 1, next);
+    expect(tallyValues(records, next)).toEqual({ hits: 2 });
+  });
+});

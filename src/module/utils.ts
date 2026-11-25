@@ -8760,6 +8760,17 @@ export function activityHasAreaTarget(activity?: Activity): boolean {
   return (activity?.target?.template.type ?? "") in GameSystemConfig.areaTargetTypes
 }
 
+/**
+ * The areas placed, of what expectedTemplateCount counts: dnd5e places a spell's several areas (a wall's panels) as one
+ * region with a shape each.
+ */
+export function placedTemplateCount(uuids: readonly string[] = []): number {
+  return uuids.reduce((n, uuid) => {
+    const doc = fromUuidSync(uuid);
+    return n + (doc instanceof RegionDocument ? Math.max(doc.shapes.length, 1) : 1);
+  }, 0);
+}
+
 /** The templates a use of the activity places by hand: none when it has no area or places its own */
 export function expectedTemplateCount(activity?: Activity): number {
   return activity && activityHasAreaTarget(activity) && !activityHasAutoPlaceTemplate(activity) ? Number(activity.target?.template?.count) || 1 : 0;

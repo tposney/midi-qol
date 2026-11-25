@@ -92,6 +92,31 @@
   </fieldset>
 
   <fieldset>
+    <legend>{{ localize "midi-qol.REGION_BEHAVIOR.barrier.legend" }}</legend>
+    <div class="form-group">
+      <label>{{ localize "midi-qol.REGION_BEHAVIOR.barrier.enabled" }}</label>
+      <div class="form-fields"><input type="checkbox" name="barrierEnabled" {{#if barrier.enabled}}checked{{/if}} /></div>
+      <p class="hint">{{ localize "midi-qol.REGION_BEHAVIOR.barrier.hint" }}</p>
+    </div>
+    <div class="form-group">
+      <label>{{ localize "BEHAVIOR.TYPES.midi-qol.regionBarrier.FIELDS.move.label" }}</label>
+      <div class="form-fields"><input type="checkbox" name="barrierMove" {{#if barrier.move}}checked{{/if}} /></div>
+    </div>
+    <div class="form-group">
+      <label>{{ localize "BEHAVIOR.TYPES.midi-qol.regionBarrier.FIELDS.sight.label" }}</label>
+      <div class="form-fields"><select name="barrierSight">{{#each barrier.sightOptions}}<option value="{{this.value}}" {{#if this.selected}}selected{{/if}}>{{this.label}}</option>{{/each}}</select></div>
+    </div>
+    <div class="form-group">
+      <label>{{ localize "BEHAVIOR.TYPES.midi-qol.regionBarrier.FIELDS.sound.label" }}</label>
+      <div class="form-fields"><select name="barrierSound">{{#each barrier.soundOptions}}<option value="{{this.value}}" {{#if this.selected}}selected{{/if}}>{{this.label}}</option>{{/each}}</select></div>
+    </div>
+    <div class="form-group">
+      <label>{{ localize "BEHAVIOR.TYPES.midi-qol.regionBarrier.FIELDS.trace.label" }}</label>
+      <div class="form-fields"><select name="barrierTrace">{{#each barrier.traceOptions}}<option value="{{this.value}}" {{#if this.selected}}selected{{/if}}>{{this.label}}</option>{{/each}}</select></div>
+    </div>
+  </fieldset>
+
+  <fieldset>
     <legend>{{ localize "midi-qol.REGION_BEHAVIOR.editor.rules" }}</legend>
     <div class="rules-header">
       <span>{{ localize "midi-qol.REGION_BEHAVIOR.editor.trigger" }}</span>

@@ -7,11 +7,12 @@ import { createConditionData, evalCondition, expireEffects, hasUsedReaction, set
 import { getDistance } from "../../services/distance/service.js";
 import { meleeReach } from "../../services/economy/reach.js";
 import { unTimedExecuteAsGM } from "../../GMAction.js";
+import { addTally, tallyValues, type TallyRecord } from "./limits.js";
 import { currentKept, keepRecord, keepStamp, limitKey, limitStamp, selectGroups, spendStoredLimit, withinLimit, type CombatPosition, type KeptRecord, type StoredLimit } from "./limits.js";
 import type { Entry, EntryAction, EntryHome, EntryWho, FoundEntry } from "./types.js";
 import { addEconomy, entryConditionExtras } from "./conditionData.js";
 import { hasRules, itemOfEffect, matchesRole, ruleFor } from "./rules.js";
-import { askEntryChoice, type ChoiceDeclaration, type ChoiceValue } from "../choices.js";
+import { askEntryChoice, conditionChoices, type ChoiceDeclaration, type ChoiceSubjects, type ChoiceValue } from "../choices.js";
 import { askOffers, costAllows, editToggles, listToggles, offerOption, payEntryConsumption, payEntryPools, refundEntryPools, setToggle, spendEntryCost, toggleOn, type PoolReceipt } from "./offers.js";
 
 /*
@@ -460,6 +461,17 @@ function countGroup(workflow: object, group: string) {
   groupsUsed.set(workflow, used);
 }
 
+/** The creatures an entry's choice is about: the event's own target when it has one, else the use's targets */
+function choiceSubjects(context: EventContext): ChoiceSubjects {
+  return context.target?.actor ? [context.target.actor] : undefined;
+}
+
+/** A choice among the conditions a creature has, with none of them present: nothing for the entry to do */
+function nothingToChoose(f: FoundEntry, context: EventContext): boolean {
+  const choose = f.entry.choose as { kind?: string, from?: string[] } | undefined;
+  return choose?.kind === "conditions" && !!context.workflow && !conditionChoices(choose, context.workflow, choiceSubjects(context)).length;
+}
+
 /** How many of a group a use may take: the largest `groupLimit` among the entries on offer (1 when none says) */
 async function groupLimits(list: readonly { entry: Entry, conditionData: Record<string, unknown> }[]): Promise<Map<string, number>> {
   const limits = new Map<string, number>();
@@ -580,6 +592,34 @@ function targetsData(workflow: Workflow): Record<string, unknown>[] {
   });
 }
 
+const currentStamps = (context: EventContext) => {
+  const combat = combatPosition(context), time = game.time.worldTime;
+  return { turn: keepStamp("turn", combat, time), round: keepStamp("round", combat, time) };
+};
+
+function storedTallies(actor: Actor.Implementation | undefined): TallyRecord[] {
+  const stored = actor?.getFlag(MODULE_ID, "tallies");
+  return Array.isArray(stored) ? stored : [];
+}
+
+/** `{ tally: name, add: formula, per?: "turn" | "round" }`: added to the bearer's running total for this turn (or round) */
+async function tallyAction(run: ActionRun): Promise<ActionResult> {
+  const actor = run.found.actor ?? run.context.actor;
+  const key = typeof run.action.tally === "string" ? run.action.tally.trim() : "";
+  if (!actor || !key) return { success: false };
+  let amount = 0;
+  const add = run.action.add ?? 1;
+  if (typeof add === "number") amount = add;
+  else try { amount = (await new Roll(String(add), run.conditionData).evaluate()).total ?? 0; } catch { amount = 0; }
+  if (!amount) return { success: false };
+  const stamps = currentStamps(run.context);
+  const records = addTally(storedTallies(actor), key, run.action.per === "round" ? stamps.round : stamps.turn, amount, [stamps.turn, stamps.round]);
+  await updateDocument(actor, { [`flags.${MODULE_ID}.tallies`]: records });
+  // This run's later conditions (`then`) see the new total
+  (run.conditionData.tallies as Record<string, number> | undefined ?? (run.conditionData.tallies = {}) as Record<string, number>)[key] = records.find(r => r.key === key)?.value ?? amount;
+  return { success: true };
+}
+
 export function conditionDataFor(f: FoundEntry, context: EventContext): Record<string, unknown> {
   const effect = f.document instanceof ActiveEffect ? f.document : undefined;
   const { extra, entry } = entryConditionExtras(f, context, effect ? applyingActivity(effect) : undefined, effect ? originActor(effect) : undefined);
@@ -588,6 +628,7 @@ export function conditionDataFor(f: FoundEntry, context: EventContext): Record<s
     ...(context.target ? { target: context.target } : {}),
     extraData: {
       ...extra,
+      tallies: tallyValues(storedTallies(f.actor ?? context.actor), Object.values(currentStamps(context))),
       event: f.near ? { ...context.event, creature: f.near.creature, creatureToken: f.near.token, distance: f.near.distance } : context.event ?? {},
       bearer: f.actor,
       // The use's targets (a condition about any of them: "a target is missing hit points")
@@ -723,7 +764,7 @@ export async function runEvent(eventId: string, context: EventContext): Promise<
     // A reaction offer is asked as `ask` and costs the reaction: not offered once it is used
     if (offer === "reaction" && (!f.actor || hasUsedReaction(f.actor))) continue;
     const conditionData = conditionDataFor(f, context);
-    if (!await entryHolds(f, conditionData)) { noteCheck(eventId, f, "condition"); continue; }
+    if (!await entryHolds(f, conditionData) || nothingToChoose(f, context)) { noteCheck(eventId, f, "condition"); continue; }
     if (!kept && !prepaid && !limitAllows(f, context)) { noteCheck(eventId, f, "limit"); continue; }
     if (!kept && !prepaid && !costAllows(f)) { noteCheck(eventId, f, "cost"); continue; }
     candidates.push({ found: f, conditionData, entry: f.entry, ask, ...(kept ? { kept } : {}), ...(prepaid ? { prepaid } : {}) });
@@ -765,8 +806,9 @@ export async function takeEntry(eventId: string, f: FoundEntry, context: EventCo
   if (pools === false) return { entry: f.entry.id, document: documentUuid(f.document), actions: ran };
   // Its own choice, asked as it is taken (or kept from earlier) and kept on the use as choices[<entry id>]; closed, it is not taken
   if (f.entry.choose && context.workflow && await holds(f.entry.choose.if as string | undefined, conditionData)) {
-    const value = kept ? kept.value as ChoiceValue : await askEntryChoice({ label: f.entry.label ?? f.entry.id, kind: "option", ...f.entry.choose, id: f.entry.id } as ChoiceDeclaration, context.workflow);
-    if (value === undefined) {
+    const value = kept ? kept.value as ChoiceValue : await askEntryChoice({ label: f.entry.label ?? f.entry.id, kind: "option", ...f.entry.choose, id: f.entry.id } as ChoiceDeclaration, context.workflow, choiceSubjects(context));
+    // Closed, or nothing picked of a list: the entry is not taken
+    if (value === undefined || (Array.isArray(value) && !value.length && f.entry.choose.kind === "conditions")) {
       await refundEntryPools(pools);
       return { entry: f.entry.id, document: documentUuid(f.document), actions: ran };
     }
@@ -801,7 +843,7 @@ export async function offerableEntries(eventId: string, context: EventContext, r
     if (f.actor && f.actor !== context.actor) continue;
     const conditionData = conditionDataFor(f, context);
     if (f.entry.group && !f.entry.stacks && groupRoom(await groupLimits([{ entry: f.entry, conditionData }]), context)(f.entry.group) <= 0) continue;
-    if (!await entryHolds(f, conditionData)) continue;
+    if (!await entryHolds(f, conditionData) || nothingToChoose(f, context)) continue;
     if (!limitAllows(f, context) || !costAllows(f)) continue;
     list.push({ found: f, conditionData });
   }
@@ -909,6 +951,7 @@ async function chooseAsked<T extends { found: FoundEntry }>(eventId: string, lis
 /* midi's built-in actions (stage 1); the rest come with stage 2 */
 
 export function registerMidiEntryActions() {
+  registerAction("tally", tallyAction);
   registerEvent("turnStart", { label: "The bearer's turn starts" });
   registerEvent("turnEnd", { label: "The bearer's turn ends" });
   registerEvent("roundStart", { label: "A round starts (for each creature in the combat)" });

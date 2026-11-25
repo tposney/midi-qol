@@ -737,6 +737,7 @@
     "save",
     "state",
     "table",
+    "tally",
     "transfer",
     "use"
   ],
@@ -865,6 +866,7 @@
     "sharpShooter",
     "startingExhaustion",
     "syntheticItem",
+    "tallies",
     "targetUuid",
     "toggles",
     "transformedActorUuids",

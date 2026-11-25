@@ -349,6 +349,8 @@ declare module "fvtt-types/configuration" {
         visuals?: import("./module/services/tokenVisuals/service.js").VisualSpec[];
         /** M11c-2: added by an overlay (true), or the marker enchantment recording which overlay and version */
         overlayPart?: true | { overlay: string, version: string };
+        /** The bearer is inside the creature the effect's origin names (services/interactions/carried.ts) */
+        inside?: boolean;
         /** M28: the applying use's choices, copied to the effect */
         choices?: Record<string, unknown>;
         actionSaveSuccess?: boolean;
@@ -397,6 +399,7 @@ declare module "fvtt-types/configuration" {
         entryLimits?: import("./module/lib/entries/limits.js").StoredLimit[];
         /** Entries' choices kept beyond their use (choose.keep), by entry id */
         keptChoices?: import("./module/lib/entries/limits.js").KeptRecord[];
+        tallies?: import("./module/lib/entries/limits.js").TallyRecord[];
         /** M15 stage 4d: entries offered as toggles, by toggle key (lib/entries/offers.ts): on or off */
         toggles?: Record<string, boolean>;
         /** M15 stage 5a: standing choices per bonus (services/rollBonuses/standing.ts) */

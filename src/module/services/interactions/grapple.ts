@@ -1,4 +1,5 @@
 import { MODULE_ID } from "../../../midi-qol.js";
+import { insideOf, registerCarried } from "./carried.js";
 import { unTimedExecuteAsGM } from "../../GMAction.js";
 import { rollBy } from "../../lib/entries/activityActions.js";
 import { tokenFor } from "../../lib/tokenResolver.js";
@@ -150,7 +151,9 @@ function onPreMove(token: TokenDocument.Implementation, move: PlannedMove, optio
   if (options.midiDrag || ["undo", "paste", "config"].includes(move.method ?? "")) return;
   const waypoints = [...(move.passed?.waypoints ?? []), ...(move.pending?.waypoints ?? [])];
   if (!waypoints.length || waypoints.some(w => isForcedAction(w.action, token))) return;
-  const dragged = grappledBy(token).filter(t => t.parent === token.parent);
+  // Those inside it (swallowed, engulfed) go with it too, through whatever it passes
+  const inside = insideOf(token);
+  const dragged = [...new Set([...grappledBy(token).filter(t => t.parent === token.parent), ...inside])];
   if (!dragged.length || !token.parent) return;
   const origin = move.origin ?? { x: token._source.x, y: token._source.y };
   const fields = ["x", "y", "elevation", "level", "action", "snapped", "explicit", "checkpoint"];
@@ -160,7 +163,8 @@ function onPreMove(token: TokenDocument.Implementation, move: PlannedMove, optio
   };
   for (const target of dragged) {
     const dx = target._source.x - origin.x, dy = target._source.y - origin.y;
-    instructions[target.id ?? ""] = { waypoints: own.map(w => ({ ...w, x: Number(w.x ?? origin.x) + dx, y: Number(w.y ?? origin.y) + dy, action: "forced" })), autoRotate: false, showRuler: false };
+    instructions[target.id ?? ""] = { waypoints: own.map(w => ({ ...w, x: Number(w.x ?? origin.x) + dx, y: Number(w.y ?? origin.y) + dy, action: "forced" })), autoRotate: false, showRuler: false,
+      ...(inside.includes(target) ? { constrainOptions: { ignoreWalls: true, ignoreTokens: true } } : {}) };
   }
   const moveOptions = { midiDrag: true, ...(options.midiOpportunity ? { midiOpportunity: options.midiOpportunity } : {}) };
   const scene = token.parent;
@@ -238,4 +242,5 @@ export function registerGrappleInteractions() {
   Hooks.on("moveToken", (token, movement, _operation, user) => { void onMoved(token, movement as never, user as User.Implementation | undefined); });
   Hooks.on("preUpdateToken", (token, changed, options) => onPreUpdate(token, changed as never, options as never));
   Hooks.on("createActiveEffect", effect => { void onEffectCreated(effect as ActiveEffect.Implementation); });
+  registerCarried();
 }

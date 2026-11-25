@@ -71,6 +71,17 @@ export class RegionBehaviorEditor extends HandlebarsApplicationMixin(Application
     context.moveTimingOptions = ["start", "end"].map(value => ({ value,
       label: i18n(`midi-qol.REGION_BEHAVIOR.moveTiming.${value}`), selected: (rb.moveTiming ?? "start") === value }));
 
+    // The area as a barrier (the activity's own `regionBarrier`; it needs none of the rules below)
+    const barrier = this.activity.regionBarrier;
+    const barrierOptions = (key: string, values: string[], current: string) => values.map(value => ({ value,
+      label: i18n(`BEHAVIOR.TYPES.midi-qol.regionBarrier.FIELDS.${key}.choices.${value}`), selected: value === current }));
+    context.barrier = {
+      enabled: barrier?.enabled ?? false, move: barrier?.move ?? true,
+      sightOptions: barrierOptions("sense", ["none", "limited", "normal"], barrier?.sight ?? "none"),
+      soundOptions: barrierOptions("sense", ["none", "limited", "normal"], barrier?.sound ?? "none"),
+      traceOptions: barrierOptions("trace", ["auto", "axis", "outline", "middle"], barrier?.trace ?? "auto"),
+    };
+
     // Wall restriction dropdown — uses Foundry's EDGE_RESTRICTION_TYPES plus "none"
     // @ts-expect-error fvtt-types missing EDGE_RESTRICTION_TYPES
     const edgeTypes: string[] = CONST.EDGE_RESTRICTION_TYPES as string[];
@@ -204,6 +215,11 @@ export class RegionBehaviorEditor extends HandlebarsApplicationMixin(Application
       "regionBehavior.moveDirection": data.moveDirection ?? "away",
       "regionBehavior.moveTiming": data.moveTiming ?? "start",
       "regionBehavior.rules": this._workingRules,
+      "regionBarrier.enabled": !!data.barrierEnabled,
+      "regionBarrier.move": !!data.barrierMove,
+      "regionBarrier.sight": data.barrierSight ?? "none",
+      "regionBarrier.sound": data.barrierSound ?? "none",
+      "regionBarrier.trace": data.barrierTrace ?? "auto",
     };
 
     await this.activity.update(update);

@@ -155,6 +155,7 @@ import { SoundConfigPanel } from './module/apps/SoundConfigPanel.js';
 import { registerHandlebarsHelpers } from './module/lib/HandlebarsHelpers.js';
 import { MidiRegionActivityBehaviorType } from './module/regionBehaviors/MidiRegionActivityBehaviorType.js';
 import { MidiRegionLightBehaviorType } from './module/regionBehaviors/MidiRegionLightBehaviorType.js';
+import { MidiRegionBarrierBehaviorType } from './module/regionBehaviors/MidiRegionBarrierBehaviorType.js';
 import { MidiRegionBehaviorConfig } from './module/apps/MidiRegionBehaviorConfig.js';
 
 // Register macro-autocomplete hook handler at module load time so it's
@@ -753,6 +754,12 @@ Hooks.once('init', async function () {
   CONFIG.RegionBehavior.typeLabels![`${MODULE_ID}.regionLight`] = `BEHAVIOR.TYPES.${MODULE_ID}.regionLight.label`;
   CONFIG.RegionBehavior.typeIcons[`${MODULE_ID}.regionLight`] = "fa-solid fa-lightbulb";
   MidiRegionLightBehaviorType.registerHooks();
+
+  // A region whose area is a barrier: walls made for it (plan: region barriers, part 1)
+  CONFIG.RegionBehavior.dataModels[`${MODULE_ID}.regionBarrier`] = MidiRegionBarrierBehaviorType as any;
+  CONFIG.RegionBehavior.typeLabels![`${MODULE_ID}.regionBarrier`] = `BEHAVIOR.TYPES.${MODULE_ID}.regionBarrier.label`;
+  CONFIG.RegionBehavior.typeIcons[`${MODULE_ID}.regionBarrier`] = "fa-solid fa-road-barrier";
+  MidiRegionBarrierBehaviorType.registerHooks();
 
   // @ts-expect-error no dnd5e-types
   systemConcentrationId = CONFIG.specialStatusEffects.CONCENTRATING;

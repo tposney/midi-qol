@@ -18,9 +18,14 @@ export function registerMidiActionSchemas() {
     { path: "move.pull", label: "midi-qol.Entries.Field.pull", type: "formula", numeric: true },
     { path: "move.slide", label: "midi-qol.Entries.Field.slide", type: "formula", numeric: true },
     { path: "move.angle", label: "midi-qol.Entries.Field.angle", type: "number" },
+    { path: "move.place", label: "midi-qol.Entries.Field.place", type: "select", options: ["", "inside", "beside"] },
     { path: "move.from", label: "midi-qol.Entries.Field.from", type: "select", options: ["", "user", "bearer", "area"] },
     TO(["target", "self", "event.creature"])], initial: { push: 10 } });
   setActionSchema("opportunityAttack", { fields: [], initial: true });
+  setActionSchema("tally", { fields: [
+    { path: "tally", label: "midi-qol.Entries.Field.tally", type: "string" },
+    { path: "add", label: "midi-qol.Entries.Field.tallyAdd", type: "formula", numeric: true },
+    { path: "per", label: "midi-qol.Entries.Field.tallyPer", type: "select", options: ["", "turn", "round"] }], initial: "total" });
   setActionSchema("grantAttacks", { fields: [
     { path: "grantAttacks.count", label: "midi-qol.Entries.Field.count", type: "formula" },
     { path: "grantAttacks.filter", label: "midi-qol.Entries.Field.attackFilter", type: "select", options: ["weapon", "unarmed", "light"] },
