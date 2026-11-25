@@ -2562,6 +2562,8 @@ fieldset.midi-qol-use-options .midi-qol-use-options-cost { opacity: 0.8; }
 .midi-qol-hub .midi-hub-around { flex-wrap: wrap; gap: 0.3rem 0.6rem; align-items: center; }
 .midi-qol-hub .midi-hub-chip { display: inline-flex; gap: 0.25rem; align-items: center; padding: 0 0.4rem; border: 1px solid var(--color-border-dark-5, #555); border-radius: 4px; font-size: 0.8rem; }
 .midi-qol-hub .midi-hub-rests { display: flex; gap: 4px; margin-top: 4px; }
+/* The two rests share the turn area's width (it is narrower than both at their natural size) */
+.midi-qol-hub .midi-hub-rests .midi-hub-action { flex: 1 1 0; min-width: 0; justify-content: center; padding: 0 0.4rem; font-size: 0.8rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .midi-qol-hub .midi-hub-placing { color: #e0a030; font-weight: bold; }
 /* Hub layouts */
 .midi-qol-hub.midi-hub-layout-compact .midi-hub-use { width: 34px; height: 34px; }
