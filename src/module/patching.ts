@@ -145,8 +145,8 @@ export function initPatching() {
   libWrapper.register(MODULE_ID, "CONFIG.Actor.documentClass.prototype.toggleStatusEffect", toggleImpliedStatus, "MIXED");
   libWrapper.register(MODULE_ID, "CONFIG.Combat.documentClass.prototype._preUpdate", combatPreUpdate, "WRAPPER");
   Hooks.on("updateCombat", recoverRerolledInitiativeUses);
-  // The turn-event dispatcher (M4) wraps the combat lifecycle; over-time effects tick on its events, waited for as
-  // core waited for them (their saves) before its own expiry
+  // The turn-event dispatcher (M4) wraps the combat lifecycle; the bearer's entries at its turn (M15: over-time effects
+  // are read as entries) run on its events, uncapped: their saves may wait for a player and settle before core's expiry
   setupTurnEvents();
   onTurnEvent("turnStart", "midi-qol.overTime", ({ combat, combatant }) => combatant ? processTurnOverTime(combat, combatant, true) : undefined, { priority: 100, uncapped: true });
   onTurnEvent("turnEnd", "midi-qol.overTime", ({ combat, combatant }) => combatant ? processTurnOverTime(combat, combatant, false) : undefined, { priority: 100, uncapped: true });

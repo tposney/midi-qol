@@ -42,8 +42,8 @@ export class EventDispatcher<P extends { eventId: string }> {
    * Add (or replace, by id) a handler; returns the function that removes it.
    * - `detached`: started in its turn and not waited for (no ordering after it starts, no cap; a failure is still
    *   reported): for a handler that asks a player or runs long.
-   * - `uncapped`: waited for however long it takes (midi's over-time effects until M15: core waits for their saves before
-   *   its own expiry, as before the dispatcher).
+   * - `uncapped`: waited for however long it takes: midi's turn entries (over-time effects among them), whose saves may
+   *   wait for a player and must settle before core's expiry at the same boundary.
    */
   on(eventId: string, id: string, handler: EventHandler<P>, options: HandlerOptions = {}): () => void {
     this.#registry(eventId).set(id, handler, { priority: options.priority }, { uncapped: options.uncapped, detached: options.detached });

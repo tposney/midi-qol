@@ -127,43 +127,6 @@
       "idv": false,
       "ida": false
     },
-    "itemacro": {
-      "macro": {
-        "data": {
-          "_id": null,
-          "name": "Blessed Healer",
-          "type": "script",
-          "author": "devnIbfBHb74U9Zv",
-          "img": "icons/svg/dice-target.svg",
-          "scope": "global",
-          "command": "const version = \"0.9.53\";\ntry {\n    if (args[0].itemData.type !== \"spell\") return;\n    // no healing done?\n    if (!(args[0].damageList.some(li => li.oldHP < li.newHP))) return;\n    // only targets self?\n    if (!(args[0].hitTargetUuids.some(uuid => uuid !== args[0].tokenUuid))) return;\n    // await (new Promise(resolve => setTimeout(resolve, 100)))\n    \n    \n    const tactor = await fromUuid(args[0].actorUuid);\n    const spellLevel = args[0].spellLevel;\n    const currentHP = tactor.data.data.attributes.hp.value;\n    const newHP = Math.min(tactor.data.data.attributes.hp.max, tactor.data.data.attributes.hp.value + 2 + spellLevel);\n    ChatMessage.create({content: `${tactor.name} cures ${newHP - currentHP} HP of bonus healing`})\n    return tactor.update({\"data.attributes.hp.value\": newHP});\n} catch (err) {\n    console.error(`${args[0].itemData.name} - Blessed Healer ${version}`, err);\n}",
-          "folder": null,
-          "sort": 0,
-          "permission": {
-            "default": 0
-          },
-          "flags": {}
-        },
-        "name": "Blessed Healer",
-        "type": "script",
-        "img": "icons/svg/dice-target.svg",
-        "scope": "global",
-        "command": "const version = \"10.0.10\";\ntry {\n    if (args[0].itemData.type !== \"spell\") return;\n    // no healing done?\n    if (!(args[0].damageList?.some(li => li.oldHP < li.newHP))) return;\n    // only targets self?\n    \n    if (!(args[0].hitTargetUuids.some(uuid => uuid !== args[0].tokenUuid))) return;\n    // await (new Promise(resolve => setTimeout(resolve, 100)))\n    \n    \n    const tactor = await fromUuid(args[0].actorUuid);\n    const spellLevel = args[0].spellLevel;\n    const currentHP = tactor.system.attributes.hp.value;\n    const newHP = Math.min(tactor.system.attributes.hp.max, tactor.system.attributes.hp.value + 2 + spellLevel);\n    ChatMessage.create({content: `${tactor.name} cures ${newHP - currentHP} HP of bonus healing`})\n    return tactor.update({\"system.attributes.hp.value\": newHP});\n} catch (err) {\n    console.error(`${args[0].itemData.name} - Blessed Healer ${version}`, err);\n}",
-        "sort": 0,
-        "ownership": {
-          "default": 0
-        },
-        "flags": {},
-        "_stats": {
-          "systemId": null,
-          "systemVersion": null,
-          "coreVersion": null,
-          "createdTime": null,
-          "modifiedTime": null,
-          "lastModifiedBy": null
-        }
-      }
-    },
     "scene-packer": {
       "hash": "5166b7c1df557e2d41229ea3114e02fd1e80e1ca",
       "sourceId": "Actor.DNO1UrgtFOtnRg52.Item.6qiulg4CEAChPEtI"
@@ -188,7 +151,7 @@
         "img": "icons/magic/light/orbs-hand-gray.webp",
         "type": "script",
         "scope": "global",
-        "command": "const version = \"12.4.7\";\ntry {\n    if (rolledItem.type !== \"spell\" || rolledActivity.actionType !== \"heal\") return;\n    // no healing done?\n    if (workflow.v3Damages) {\n        if (!Object.entries(workflow.v3Damages).some(entry => {\n            const [uuid, damages] = entry;\n            return damages.appliedDamage < 0;\n        })) return;\n    } else if (!(workflow.damageList?.some(li => li.oldHP < li.newHP))) return;\n    // only targets self?\n    \n    if (!(workflow.hitTargets.uuids.some(uuid => uuid !== workflow.tokenUuid))) return;\n    // await (new Promise(resolve => setTimeout(resolve, 100)))\n    \n    \n    const tactor = workflow.actor;\n    const spellLevel = args[0].spellLevel;\n    const currentHP = tactor.system.attributes.hp.value;\n    const newHP = Math.min(tactor.system.attributes.hp.max, tactor.system.attributes.hp.value + 2 + spellLevel);\n    ChatMessage.create({content: `${tactor.name} cures ${newHP - currentHP} HP of bonus healing`})\n    return tactor.update({\"system.attributes.hp.value\": newHP});\n} catch (err) {\n    console.error(`${macroItem.name} - Blessed Healer ${version}`, err);\n}",
+        "command": "const version = \"15.0.0\";\ntry {\n    // 2024: a spell cast with a spell slot that restores hit points to a creature other than you heals you 2 + the slot's level\n    const slot = MidiQOL.tags.get(workflow, \"use.spellSlot\");\n    if (!slot) return;\n    const healedOther = [...MidiQOL.outcomes(workflow).values()].some(outcome => outcome.target !== workflow.tokenUuid && (outcome.damage?.healed ?? 0) > 0);\n    if (!healedOther) return;\n    const actor = workflow.actor;\n    const hp = actor.system.attributes.hp;\n    const newHP = Math.min(hp.effectiveMax ?? hp.max, hp.value + 2 + slot);\n    if (newHP <= hp.value) return;\n    await actor.update({ \"system.attributes.hp.value\": newHP });\n    await ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor }), content: `${actor.name} regains ${newHP - hp.value} hit points (${macroItem.name})` });\n} catch (err) {\n    console.error(`${macroItem.name} - Blessed Healer ${version}`, err);\n}",
         "author": "Zl1BOUaPLwDEujaL",
         "ownership": {
           "default": 3
