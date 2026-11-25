@@ -1,7 +1,7 @@
 import { MODULE_ID } from "../../midi-qol.js";
-import { barrierSegments, type BarrierTrace, type ShapeFacts } from "../lib/barrierGeometry.js";
+import { barrierSegments, sideBand, type BarrierSide, type BarrierTrace, type ShapeFacts } from "../lib/barrierGeometry.js";
 
-const { StringField, BooleanField } = foundry.data.fields;
+const { StringField, BooleanField, NumberField } = foundry.data.fields;
 
 /*
  * A barrier: the area stops creatures, sight, light or sound crossing it (Wall of Force, Wall of Stone, a dome).
@@ -12,6 +12,10 @@ const { StringField, BooleanField } = foundry.data.fields;
  * (`flags.midi-qol.barrier`) and its levels. They are made again when the region's boundary changes and removed when
  * the behaviour goes (disabled, deleted, or its region deleted). Being documents, every client, the lighting and any
  * module that reads walls see the same barrier; a movement wall is total cover under midi's "walls block" rule.
+ *
+ * One side may affect those near it (Wall of Fire's hot side, `side`, `sideDepth`, `sideActivityUuid`): the GM keeps a
+ * second region beside the walls, shown to everyone, whose rule uses the activity on a creature ending its turn there.
+ * It is made, made again and removed with the walls.
  *
  * Not here: a barrier for some creatures only (terrain, stage 2), one that moves with its caster (stage 3: a wall
  * redrawn at every step is the wrong tool), uses stopped but not creatures (stage 4).
@@ -29,6 +33,13 @@ export function barrierWalls(region: Region): WallDocument.Implementation[] {
   const scene = region.parent;
   if (!scene || !region.uuid) return [];
   return scene.walls.filter(wall => (wall.flags as Flags)[MODULE_ID]?.barrier === region.uuid);
+}
+
+/** The area beside a region's barrier that one of its sides affects */
+export function barrierSideRegions(region: Region): RegionDocument.Implementation[] {
+  const scene = region.parent;
+  if (!scene || !region.uuid) return [];
+  return scene.regions.filter(other => (other.flags as Flags)[MODULE_ID]?.barrier === region.uuid);
 }
 
 /** One region's wall work at a time: a create and a redraw must not cross (walls made twice, or left behind) */
@@ -54,7 +65,13 @@ export class MidiRegionBarrierBehaviorType extends foundry.data.regionBehaviors.
       sight: new StringField({ required: true, blank: false, initial: "none", choices: choices("sense", SENSES), label: `${lp}.sight.label`, hint: `${lp}.sight.hint` }),
       sound: new StringField({ required: true, blank: false, initial: "none", choices: choices("sense", SENSES), label: `${lp}.sound.label` }),
       direction: new StringField({ required: true, blank: false, initial: "both", choices: choices("direction", Object.keys(DIRECTIONS)), label: `${lp}.direction.label`, hint: `${lp}.direction.hint` }),
-      trace: new StringField({ required: true, blank: false, initial: "auto", choices: choices("trace", ["auto", "axis", "outline", "middle"]), label: `${lp}.trace.label`, hint: `${lp}.trace.hint` })
+      trace: new StringField({ required: true, blank: false, initial: "auto", choices: choices("trace", ["auto", "axis", "outline", "middle"]), label: `${lp}.trace.label`, hint: `${lp}.trace.hint` }),
+      side: new StringField({ required: true, blank: false, initial: "none", choices: choices("side", ["none", "left", "right", "inside", "outside"]), label: `${lp}.side.label`, hint: `${lp}.side.hint` }),
+      sideDepth: new NumberField({ initial: 0, min: 0, label: `${lp}.sideDepth.label` }),
+      sideActivityUuid: new StringField({ initial: "", blank: true, label: `${lp}.sideActivityUuid.label` }),
+      sourceItemUuid: new StringField({ initial: "", blank: true }),
+      sourceActorUuid: new StringField({ initial: "", blank: true }),
+      castLevel: new NumberField({ initial: 0, integer: true, min: 0 })
     };
   }
 
@@ -63,6 +80,12 @@ export class MidiRegionBarrierBehaviorType extends foundry.data.regionBehaviors.
   declare sound: string;
   declare direction: string;
   declare trace: BarrierTrace;
+  declare side: BarrierSide;
+  declare sideDepth: number;
+  declare sideActivityUuid: string;
+  declare sourceItemUuid: string;
+  declare sourceActorUuid: string;
+  declare castLevel: number;
 
   /** The wall data for the region as it is now */
   _wallData(): WallDocument.CreateData[] {
@@ -84,6 +107,35 @@ export class MidiRegionBarrierBehaviorType extends foundry.data.regionBehaviors.
     })) as unknown as WallDocument.CreateData[];
   }
 
+  /** The region beside the walls that the chosen side affects, as the barrier's region is now (none without a side) */
+  _sideData(): RegionDocument.CreateData | undefined {
+    if (this.side === "none" || !(this.sideDepth > 0) || !this.sideActivityUuid) return undefined;
+    const region = (this as unknown as { region: Region }).region;
+    const px = this.sideDepth * (region.parent?.dimensions?.distancePixels ?? 1);
+    const side = this.side;
+    const shapes = (region.shapes as unknown as (ShapeFacts & { width?: number })[]).flatMap((shape): object[] => {
+      if (shape.type === "line" && (side === "left" || side === "right")) return [{ type: "polygon", points: sideBand(shape, px, side, shape.width ?? 0) }];
+      if (shape.radius === undefined) return [];
+      if (side === "inside") return [{ type: "circle", x: shape.x ?? 0, y: shape.y ?? 0, radius: shape.radius }];
+      if (side === "outside") return [{ type: "ring", x: shape.x ?? 0, y: shape.y ?? 0, radius: shape.radius, innerWidth: 0, outerWidth: px }];
+      return [];
+    });
+    if (!shapes.length) return undefined;
+    const source = region._source as unknown as { color?: string, elevation?: object, levels?: string[] };
+    return {
+      name: `${region.name}: ${game.i18n?.localize(`BEHAVIOR.TYPES.${MODULE_ID}.regionBarrier.sideName`) ?? "side"}`,
+      color: source.color, shapes, elevation: source.elevation, levels: source.levels ?? [],
+      visibility: CONST.REGION_VISIBILITY.ALWAYS, highlightMode: "coverage",
+      flags: { [MODULE_ID]: { barrier: region.uuid } },
+      behaviors: [{
+        type: `${MODULE_ID}.regionActivity`, name: region.name,
+        system: { sourceItemUuid: this.sourceItemUuid, sourceActorUuid: this.sourceActorUuid, castLevel: this.castLevel,
+          rules: [{ trigger: "turnEnd", action: "useActivity", targetUuid: this.sideActivityUuid }],
+          dispositionFilter: 0, excludeSource: false, oncePerTurn: true, activationEntry: false }
+      }]
+    } as unknown as RegionDocument.CreateData;
+  }
+
   /** The region's walls made again from its shapes (none left when the behaviour is no longer active) */
   _redraw(active: boolean): Promise<unknown> {
     const region = (this as unknown as { region: Region }).region;
@@ -92,10 +144,14 @@ export class MidiRegionBarrierBehaviorType extends foundry.data.regionBehaviors.
       if (!scene) return;
       const old = barrierWalls(region).map(wall => wall.id!);
       if (old.length) await scene.deleteEmbeddedDocuments("Wall", old);
+      const oldSides = barrierSideRegions(region).map(side => side.id!);
+      if (oldSides.length) await scene.deleteEmbeddedDocuments("Region", oldSides);
       // Gone meanwhile (the spell ended as it was being drawn): nothing to make
       if (!active || !scene.regions.has(region.id!)) return;
       const data = this._wallData();
       if (data.length) await scene.createEmbeddedDocuments("Wall", data);
+      const side = this._sideData();
+      if (side) await scene.createEmbeddedDocuments("Region", [side]);
     });
   }
 
@@ -129,6 +185,8 @@ export class MidiRegionBarrierBehaviorType extends foundry.data.regionBehaviors.
       void queued(region, async () => {
         const ids = barrierWalls(region).map(wall => wall.id!);
         if (ids.length) await region.parent?.deleteEmbeddedDocuments("Wall", ids);
+        const sides = barrierSideRegions(region).map(side => side.id!);
+        if (sides.length) await region.parent?.deleteEmbeddedDocuments("Region", sides);
       });
     });
     Hooks.once("ready", () => {
@@ -139,6 +197,11 @@ export class MidiRegionBarrierBehaviorType extends foundry.data.regionBehaviors.
           return !!uuid && !scene.regions.some(region => region.uuid === uuid);
         }).map(wall => wall.id!);
         if (orphans.length) void scene.deleteEmbeddedDocuments("Wall", orphans).catch(err => console.warn("midi-qol | barrier walls", err));
+        const sides = scene.regions.filter(region => {
+          const uuid = (region.flags as Flags)[MODULE_ID]?.barrier;
+          return !!uuid && !scene.regions.some(other => other.uuid === uuid);
+        }).map(region => region.id!);
+        if (sides.length) void scene.deleteEmbeddedDocuments("Region", sides).catch(err => console.warn("midi-qol | barrier sides", err));
       }
     });
   }

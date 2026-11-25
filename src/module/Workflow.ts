@@ -3130,6 +3130,7 @@ export class Workflow {
     if (this.#rollDialogHook !== undefined) Hooks.off("renderRollConfigurationDialog" as never, this.#rollDialogHook);
     this.#rollDialogHook = undefined;
   }
+
   /**
    * The workflow waits for its player to roll (a card button, or the roll dialog auto-roll opened): let the GM roll for
    * them, with the choices the roll dialog offers. Not for a GM's own use.
@@ -9368,7 +9369,7 @@ export type WorkflowOptions = InexactPartial<{
   choices: Record<string, ChoiceValue>;
   /** The damage type a part with several types is rolled as, decided earlier (a region's cast): not asked */
   damageTypeChoice: string;
-  /** The targets were chosen by an area (a region's rule): the activity's own target count doesn't apply */
+  /** The targets were chosen by an area (a region's rule): the activity's own target count and range don't apply */
   areaTargets: boolean;
   /** M18: the use's presentation override ("none": no cues presented) */
   presentation: "none" | import("./lib/cues.js").Cue["presentation"];

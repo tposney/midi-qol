@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { barrierSegments, circleSegments, lineAxis, polygonSegments } from "../src/module/lib/barrierGeometry.js";
+import { barrierSegments, circleSegments, lineAxis, polygonSegments, segmentCrossesRect, sideBand } from "../src/module/lib/barrierGeometry.js";
 
 describe("barrier geometry", () => {
   it("a line's axis runs from its origin along its rotation", () => {
@@ -43,5 +43,26 @@ describe("barrier geometry", () => {
     const square = [[0, 0, 100, 0, 100, 100, 0, 100]];
     expect(barrierSegments([{ type: "line", x: 0, y: 0, length: 200, rotation: 0 }], square, "outline")).toHaveLength(4);
     expect(barrierSegments([{ type: "rectangle" }], square, "axis")).toHaveLength(4);
+  });
+
+  it("a segment crosses a space it passes through, not one it runs along the edge of or stops short of", () => {
+    const space = { x: 100, y: 100, width: 100, height: 100 };
+    expect(segmentCrossesRect([0, 150, 300, 150], space)).toBe(true);
+    expect(segmentCrossesRect([0, 125, 300, 125], space)).toBe(true);
+    expect(segmentCrossesRect([0, 100, 300, 100], space)).toBe(false);
+    expect(segmentCrossesRect([0, 150, 90, 150], space)).toBe(false);
+    expect(segmentCrossesRect([0, 150, 120, 150], space)).toBe(true);
+    expect(segmentCrossesRect([0, 0, 300, 300], space)).toBe(true);
+    expect(segmentCrossesRect([150, 0, 150, 300], space)).toBe(true);
+    expect(segmentCrossesRect([0, 190, 190, 0], space)).toBe(false);
+  });
+
+  it("a line's side band: the depth out on the chosen side, the line's half thickness on the other", () => {
+    const east = { type: "line", x: 100, y: 500, length: 400, rotation: 0 };
+    // Heading east on a canvas (y down), left is up
+    expect(sideBand(east, 200, "left")).toEqual([100, 500, 500, 500, 500, 300, 100, 300]);
+    expect(sideBand(east, 200, "right")).toEqual([100, 500, 500, 500, 500, 700, 100, 700]);
+    expect(sideBand(east, 200, "left", 20)).toEqual([100, 510, 500, 510, 500, 300, 100, 300]);
+    expect(sideBand({ type: "line", x: 100, y: 500, length: 400, rotation: 90 }, 200, "left")).toEqual([100, 500, 100, 900, 300, 900, 300, 500]);
   });
 });

@@ -329,8 +329,10 @@ export async function postChatCardChecks(activity: MidiActivity, usage: Activity
     let tokenToUse: foundry.canvas.placeables.Token.Implementation | undefined;
     if (speaker.token) tokenToUse = canvas.tokens?.get(speaker.token);
     // Range, cover and sight are measured to the targets with a canvas token
-    const rangeDetails = checkActivityRange(activity, tokenToUse, new Set(workflow.targets.tokens), checkMechanic("checkRange") !== "none" && !isAoETargeting && !workflow.AoO)
-    if (checkMechanic("checkRange") !== "none" && !isAoETargeting && !isEmanationTargeting && !workflow.AoO && speaker.token) {
+    // An area's rule chose the targets (a region's use): the area reaches them, whatever the user's own range
+    const areaTargets = !!workflow.workflowOptions?.areaTargets;
+    const rangeDetails = checkActivityRange(activity, tokenToUse, new Set(workflow.targets.tokens), checkMechanic("checkRange") !== "none" && !isAoETargeting && !workflow.AoO && !areaTargets)
+    if (checkMechanic("checkRange") !== "none" && !isAoETargeting && !isEmanationTargeting && !workflow.AoO && !areaTargets && speaker.token) {
       if (tokenToUse && workflow.targets.tokens.length > 0) {
         if (rangeDetails.result === "fail")
           return removeWorkflow(workflow);

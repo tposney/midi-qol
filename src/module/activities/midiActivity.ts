@@ -26,7 +26,7 @@ export interface ActivityRegionLight {
 
 /** midi's region barrier on an activity (activitySchema.ts `regionBarrier`) */
 export interface ActivityRegionBarrier {
-  enabled: boolean; move: boolean; sight: string; sound: string; direction: string; trace: string;
+  enabled: boolean; move: boolean; sight: string; sound: string; direction: string; trace: string; sideDepth?: number; sideActivity?: string;
 }
 
 /** An activity midi uses: dnd5e's, with midi's fields (activitySchema.ts) and getters (activityPrototype.ts) */

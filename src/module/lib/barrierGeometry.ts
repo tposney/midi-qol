@@ -21,6 +21,40 @@ export function lineAxis({ x = 0, y = 0, length = 0, rotation = 0 }: ShapeFacts)
   return round([x, y, x + Math.cos(r) * length, y + Math.sin(r) * length]);
 }
 
+/**
+ * Whether a segment passes through a rectangle's inside (Liang-Barsky). `inset` shrinks the rectangle, so a segment
+ * along its edge (a wall on the grid line between two spaces) is in neither.
+ */
+export function segmentCrossesRect([x0, y0, x1, y1]: Segment, rect: { x: number, y: number, width: number, height: number }, inset = 1): boolean {
+  const left = rect.x + inset, right = rect.x + rect.width - inset, top = rect.y + inset, bottom = rect.y + rect.height - inset;
+  if (left >= right || top >= bottom) return false;
+  const dx = x1 - x0, dy = y1 - y0;
+  let t0 = 0, t1 = 1;
+  for (const [p, q] of [[-dx, x0 - left], [dx, right - x0], [-dy, y0 - top], [dy, bottom - y0]]) {
+    if (p === 0) { if (q < 0) return false; continue; }
+    const t = q / p;
+    if (p < 0) t0 = Math.max(t0, t); else t1 = Math.min(t1, t);
+    if (t0 > t1) return false;
+  }
+  return true;
+}
+
+export type BarrierSide = "none" | "left" | "right" | "inside" | "outside";
+
+/**
+ * The band beside a line that one of its sides affects, as a polygon's points: `depth` out from the axis on that side
+ * (left and right as seen along the line), and the line's own half thickness on the other, so the wall itself is in it.
+ */
+export function sideBand({ x = 0, y = 0, length = 0, rotation = 0 }: ShapeFacts, depth: number, side: "left" | "right", thickness = 0): number[] {
+  const r = rotation * Math.PI / 180;
+  const along = [Math.cos(r) * length, Math.sin(r) * length];
+  // The canvas's y runs down: left of the direction of travel is (sin, -cos)
+  const sign = side === "left" ? 1 : -1;
+  const out = [Math.sin(r) * sign, -Math.cos(r) * sign];
+  const corner = (t: number, d: number) => [Math.round(x + along[0] * t + out[0] * d), Math.round(y + along[1] * t + out[1] * d)];
+  return [...corner(0, -thickness / 2), ...corner(1, -thickness / 2), ...corner(1, depth), ...corner(0, depth)];
+}
+
 /** A circle as `count` segments */
 export function circleSegments({ x = 0, y = 0, radius = 0 }: ShapeFacts, count = 24): Segment[] {
   const points = Array.from({ length: count }, (_, i) => [x + radius * Math.cos(2 * Math.PI * i / count), y + radius * Math.sin(2 * Math.PI * i / count)]);

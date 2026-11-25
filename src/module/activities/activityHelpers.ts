@@ -1,4 +1,5 @@
 import { tokenFor, tokenOf } from "../lib/tokenResolver.js";
+import { lineAxis, segmentCrossesRect, type ShapeFacts } from "../lib/barrierGeometry.js";
 import { stoppedAfterDialog } from "./afterUseDialog.js";
 import { confirmTargets } from "../services/targetConfirmation/service.js";
 import { isMidiActivityType } from "./midiActivity.js";
@@ -1164,7 +1165,17 @@ function isTokenInsideRegion(
       if (contains) return true;
     }
   }
-  return false;
+  // An area thinner than a space (a wall): a creature is in it when it passes through the creature's space
+  const space = { x: pos.x, y: pos.y, width: pos.width * grid.size!, height: pos.height * grid.size! };
+  const thin = (regionDoc.shapes as unknown as (ShapeFacts & { width?: number })[]).some(shape =>
+    shape.type === "line" && (shape.width ?? 0) < grid.size! && segmentCrossesRect(lineAxis(shape), space));
+  if (!thin) return false;
+  return !wallsBlockTargeting || !CONFIG.Canvas.polygonBackends.sight.testCollision(
+    wallOrigin,
+    { x: space.x + space.width / 2, y: space.y + space.height / 2 },
+    // @ts-expect-error v14 collision level not in fvtt-types
+    { mode: "any", type: "move", level: collisionLevel(token) }
+  );
 }
 
 export function computeTargetsFromTemplates(

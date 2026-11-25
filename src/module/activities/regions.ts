@@ -7,6 +7,7 @@ import { timedAwaitExecuteAsGM } from "../GMAction.js";
 import { Workflow } from "../Workflow.js";
 import { getToken, activityHasAutoPlaceTemplate, getActivityAutoTargetAction, isActivityType } from "../utils.js";
 import { createActivityTemplateRegions, selectTargetsFromTemplates } from "./activityHelpers.js";
+import { sideBand, type BarrierSide, type ShapeFacts } from "../lib/barrierGeometry.js";
 
 /*
  * An activity's regions: the emanation it places around its user, and the behaviours (rules, light, attachment) it gives a region.
@@ -161,6 +162,46 @@ async function regionDamageType(activity: MidiActivity, rules: { action: string,
   return typeof chosen === "string" && types.has(chosen) ? chosen : first;
 }
 
+const SIDE_COLORS: Record<string, number> = { left: 0x3b82f6, right: 0xf97316, inside: 0x3b82f6, outside: 0xf97316 };
+
+/**
+ * Which side of a barrier affects those near it (Wall of Fire's hot side): the cast's own choice (`choices.barrierSide`),
+ * else the caster's answer, with both sides drawn in the buttons' colours while they are asked. A line has a left and a
+ * right (as seen along it), a round area an inside and an outside.
+ */
+async function chooseBarrierSide(activity: MidiActivity, regionDoc: RegionDocument.Implementation, depth: number, workflow: Workflow | undefined): Promise<BarrierSide> {
+  const shapes = regionDoc.shapes as unknown as (ShapeFacts & { width?: number })[];
+  const sides: BarrierSide[] = shapes.some(shape => shape.type === "line") ? ["left", "right"] : ["inside", "outside"];
+  const given = workflow?.workflowOptions?.choices?.barrierSide ?? workflow?.choices?.barrierSide;
+  if (typeof given === "string" && (sides as string[]).includes(given)) return given as BarrierSide;
+
+  const drawing = canvas?.interface ? new PIXI.Graphics() : undefined;
+  if (drawing) {
+    const px = depth * (canvas!.dimensions?.distancePixels ?? 1);
+    for (const side of sides) for (const shape of shapes) {
+      drawing.beginFill(SIDE_COLORS[side], 0.35).lineStyle(2, SIDE_COLORS[side], 0.9);
+      if (shape.type === "line" && (side === "left" || side === "right")) drawing.drawPolygon(sideBand(shape, px, side));
+      else if (side === "inside") drawing.drawCircle(shape.x ?? 0, shape.y ?? 0, shape.radius ?? 0);
+      else if (side === "outside") drawing.drawCircle(shape.x ?? 0, shape.y ?? 0, (shape.radius ?? 0) + px).beginHole().drawCircle(shape.x ?? 0, shape.y ?? 0, shape.radius ?? 0).endHole();
+      drawing.endFill();
+    }
+    canvas!.interface!.addChild(drawing);
+  }
+  try {
+    const chosen = await foundry.applications.api.DialogV2.wait({
+      window: { title: game.i18n?.format("midi-qol.REGION_BEHAVIOR.barrier.side.title", { name: activity.item?.name ?? "" }) ?? "" },
+      classes: ["midi-qol-barrier-side"],
+      content: `<p>${foundry.utils.escapeHTML(i18n("midi-qol.REGION_BEHAVIOR.barrier.side.content"))}</p>`,
+      buttons: sides.map((side, i) => ({ action: side, default: i === 0, label: i18n(`midi-qol.REGION_BEHAVIOR.barrier.side.${side}`) })),
+      position: { top: 80 },
+      rejectClose: false
+    }).catch(() => undefined);
+    return typeof chosen === "string" && (sides as string[]).includes(chosen) ? chosen as BarrierSide : sides[0];
+  } finally {
+    drawing?.destroy();
+  }
+}
+
 export async function attachRegionActivityBehavior(activity: MidiActivity, regionDoc: RegionDocument.Implementation, workflow: Workflow, overTimeActivity: any, castLevel?: number) {
   const rbConfig = activity.regionBehavior;
   // Collect behaviors to attach and any region update; writeRegion() batches them
@@ -297,11 +338,33 @@ export async function attachRegionActivityBehavior(activity: MidiActivity, regio
   // The area as a barrier: its walls are the behaviour's (made by the active GM as it becomes active)
   const barrier = activity.regionBarrier;
   if (barrier?.enabled && (barrier.move || barrier.sight !== "none" || barrier.sound !== "none")) {
+    // One side affects those near it: the caster says which, and the behaviour keeps an area beside the wall for it
+    // @ts-expect-error no dnd5e types for activities
+    const sideActivity = barrier.sideActivity ? activity.item?.system.activities?.get(barrier.sideActivity) : undefined;
+    const sided = (barrier.sideDepth ?? 0) > 0 && !!sideActivity;
+    const side = sided ? await chooseBarrierSide(activity, regionDoc, barrier.sideDepth!, workflow) : "none";
+    const sideSystem = sided ? { side, sideDepth: barrier.sideDepth, sideActivityUuid: sideActivity.uuid, sourceItemUuid: activity.item?.uuid ?? "",
+      sourceActorUuid: activity.actor?.uuid ?? "", castLevel: castLevel ?? workflow?.spellLevel ?? 0 } : {};
     behaviors.push({
       type: `${MODULE_ID}.regionBarrier` as const,
       name: `${activity.item?.name ?? "Activity"} Barrier`,
-      system: { move: barrier.move, sight: barrier.sight ?? "none", sound: barrier.sound ?? "none", direction: barrier.direction ?? "both", trace: barrier.trace ?? "auto" },
+      system: { move: barrier.move, sight: barrier.sight ?? "none", sound: barrier.sound ?? "none", direction: barrier.direction ?? "both", trace: barrier.trace ?? "auto", ...sideSystem },
     });
+    // Entering the wall itself (a round area: crossing its edge either way), the first time on a turn
+    if (sided) {
+      const crossings = (regionDoc.shapes as unknown as ShapeFacts[]).some(shape => shape.type === "line") ? ["entry"] : ["entry", "exit"];
+      behaviors.push({
+        type: `${MODULE_ID}.regionActivity` as const,
+        name: `${activity.item?.name ?? "Activity"} Barrier Activity`,
+        system: { sourceItemUuid: activity.item?.uuid ?? "", sourceActorUuid: activity.actor?.uuid ?? "",
+          rules: crossings.map(trigger => ({ trigger, action: "useActivity", targetUuid: sideActivity.uuid })),
+          dispositionFilter: 0, castLevel: castLevel ?? workflow?.spellLevel ?? 0, excludeSource: false, oncePerTurn: true, activationEntry: false },
+      });
+    }
+    // Players are not shown walls: the area is how they see the barrier, whatever hides placed areas (CAT's Placed Area
+    // Visibility). The activity's own region visibility, if it sets one, stands.
+    const visibility = rbConfig?.enabled && rbConfig.regionVisibility !== undefined ? rbConfig.regionVisibility : CONST.REGION_VISIBILITY.ALWAYS;
+    regionUpdate = { ...(regionUpdate ?? {}), visibility };
   }
 
   // Merge in any update deferred from placeEmanationTemplate (attachment / visibility)

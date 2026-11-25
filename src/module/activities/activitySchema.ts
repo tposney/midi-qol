@@ -126,6 +126,10 @@ function sharedFields(): Fields {
       sound: new StringField({ initial: "none", choices: ["none", "limited", "normal"] }),
       direction: new StringField({ initial: "both", choices: ["both", "left", "right"] }),
       trace: new StringField({ initial: "auto", choices: ["auto", "axis", "outline", "middle"] }),
+      // One side, chosen at the cast, affects creatures within this distance of it (Wall of Fire): the activity (its id)
+      // used on a creature that ends its turn there, or enters the wall
+      sideDepth: new NumberField({ initial: 0, min: 0 }),
+      sideActivity: new StringField({ initial: "" }),
     }),
     regionLight: new SchemaField({
       enabled: new BooleanField({ initial: false }),

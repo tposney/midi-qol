@@ -158,7 +158,7 @@ export function registerPreambleSteps(): void {
     }
 
     // Range: melee weapons too (a thrown weapon is mwak; checkActivityRange keeps the long range only for those)
-    if (checkMechanic("checkRange") !== "none" && !workflow.AoO && isRangeCheckable(workflow.activity) && workflow.tokenUuid) {
+    if (checkMechanic("checkRange") !== "none" && !workflow.AoO && !workflow.workflowOptions?.areaTargets && isRangeCheckable(workflow.activity) && workflow.tokenUuid) {
       const { result, attackingToken } = checkActivityRange(workflow.activity, tokenOf(tokenFor(workflow.token)) ?? "invalid", new Set(workflow.targets.tokens));
       switch (result) {
         case "fail": workflow.outcome = "invalid"; return "midi-qol.RollFinished";
