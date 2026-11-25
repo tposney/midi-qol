@@ -376,7 +376,8 @@ async function bonusAction(run: ActionRun) {
 async function rerollChosenDice(run: ActionRun, rolls: Roll[], effect: Extract<BonusEffect, { kind: "reroll" }>): Promise<Roll[]> {
   const max = await rolled(String(effect.max ?? 1), { ...(rolls[0]?.data as Record<string, unknown> ?? {}), ...run.conditionData });
   const keep = effect.keep === "higher" || effect.keep === "lower" ? effect.keep : "new";
-  return rerollDice(rolls, { max, keep, title: labelOf(run), actor: run.context.workflow?.actor });
+  const workflow = run.context.workflow;
+  return rerollDice(rolls, { max, keep, title: labelOf(run), actor: workflow?.actor, tokenUuid: workflow?.token?.document?.uuid ?? undefined, owner: workflow });
 }
 
 /** `{ abort: reason }`: the use stops (at use.configure, before anything is spent) */

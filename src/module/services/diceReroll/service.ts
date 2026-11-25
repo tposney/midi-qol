@@ -1,6 +1,8 @@
 import { i18n } from "../../../midi-qol.js";
 import { defineService } from "../../api/services.js";
 import { diceControlHTML, wireDicePickers, pickedIn } from "../../lib/dicePicker.js";
+import { DialogCountdown } from "../../lib/dialogCountdown.js";
+import { beginPlayerWait, type PlayerWait, type WaitChoice, type WaitChoiceSpec } from "../../lib/playerWaits.js";
 import { askUser, registerRequestHandler, type IncomingRequest } from "../../lib/requests.js";
 import { configSettings } from "../../settings.js";
 import { playerForActor, refreshRollTotal } from "../../utils.js";
@@ -9,7 +11,9 @@ import { playerForActor, refreshRollTotal } from "../../utils.js";
  * diceReroll (single): rerolling chosen dice of one roll or several (Empowered Spell's damage dice across a spell's
  * damage rolls, a module's "reroll up to N dice"). Who rolled picks the dice: midi's provider asks the roller's user,
  * here or on their client through the request core (the lowest dice suggested, and taken when nobody answers in
- * time); a module can provide its own picker. The reroll keeps the new result, the higher or the lower.
+ * time); a module can provide its own picker. The reroll keeps the new result, the higher or the lower. A player
+ * choosing has the player timeout's countdown, and the GM sees the wait in the player list (reroll the suggested
+ * dice or keep the roll for them).
  *
  *   const rolls = await MidiQOL.dice.reroll(workflow.damageRolls, { max: 3, actor: workflow.actor, title: "Empowered Spell" });
  *   const rolls = await MidiQOL.dice.reroll([roll], { max: 1, keep: "higher", allow: die => die.result <= 2 });
@@ -41,9 +45,15 @@ export interface DicePick {
   suggested: string[];
 }
 
+/** What the pick is for: the GM's wait chip is the roller's token and ends with its owner (a workflow) */
+export interface PickContext {
+  tokenUuid?: string;
+  owner?: object;
+}
+
 export interface DiceRerollProvider {
   /** The keys of the dice to reroll (no more than `max`), or undefined when the roller declines */
-  pick(pick: DicePick, roller?: Actor.Implementation | null): Promise<string[] | undefined>;
+  pick(pick: DicePick, roller?: Actor.Implementation | null, context?: PickContext): Promise<string[] | undefined>;
 }
 
 export interface PickOptions {
@@ -54,6 +64,10 @@ export interface PickOptions {
   actor?: Actor.Implementation | null;
   /** Which dice may be picked (default: all that count) */
   allow?: (die: DieChoice) => boolean;
+  /** The roller's token (the GM's wait chip) */
+  tokenUuid?: string;
+  /** What waits for the pick (a workflow): the GM's wait chip ends with it */
+  owner?: object;
 }
 
 export interface RerollOptions extends PickOptions {
@@ -94,9 +108,23 @@ function pickerHTML(pick: DicePick): string {
   return `<p>${foundry.utils.escapeHTML(pick.prompt)}</p>${diceControlHTML(pick.dice, { max: pick.max, chosen: pick.suggested })}`;
 }
 
-/** The picker on this client (a request's, when another client asked): the keys, or undefined when declined */
-async function pickHere(pick: DicePick, request?: IncomingRequest): Promise<string[] | undefined> {
+interface PickHere {
+  /** Another client asked (its countdown, its settling) */
+  request?: IncomingRequest;
+  /** Asked here: the countdown's seconds, the suggested dice taken when it runs out */
+  seconds?: number;
+  /** Asked here of a player: the GM's wait chip, whose answer closes the picker */
+  wait?: PlayerWait<string[]>;
+}
+
+/** The picker on this client: the keys, or undefined when declined */
+async function pickHere(pick: DicePick, { request, seconds = 0, wait }: PickHere = {}): Promise<string[] | undefined> {
   let picked: string[] | undefined;
+  let dialog: foundry.applications.api.DialogV2 | undefined;
+  let expired = false;
+  const countdown = request ? request.countdown()
+    : seconds > 0 ? new DialogCountdown({ seconds, onExpire: () => { expired = true; void dialog?.close(); } }) : undefined;
+  void wait?.settled.then(() => { void dialog?.close(); });
   await foundry.applications.api.DialogV2.wait({
     window: { title: pick.title },
     content: pickerHTML(pick),
@@ -109,24 +137,43 @@ async function pickHere(pick: DicePick, request?: IncomingRequest): Promise<stri
     ],
     rejectClose: false,
     render: (_event: Event, app: foundry.applications.api.DialogV2) => {
+      dialog = app;
       wireDicePickers(app.element);
+      countdown?.attach(app.element);
       request?.onSettled(() => { void app.close(); });
-    }
+    },
+    close: () => { countdown?.stop(); }
   });
+  countdown?.stop();
+  // The GM answered for the player: theirs wins
+  if (wait?.answeredForPlayer) return (await wait.settled).value;
+  wait?.end();
+  if (expired) return pick.suggested;
   if (request && (request.settledHow || !await request.claim())) return undefined;
   return picked;
 }
 
 export const DICE_REQUEST = "midi-qol.chooseDice";
 
+/** What the GM can answer for a player from the player list: the suggested dice (the default), or none */
+const gmChoices = (pick: DicePick): Partial<Record<WaitChoice, WaitChoiceSpec<string[]>>> => ({
+  suggested: { label: "midi-qol.DiceReroll.Suggested", value: () => pick.suggested },
+  skip: () => []
+});
+
 /** midi's picker: asked of the roller's user (a player owning the creature, else the GM), here or on their client */
 const midiPicker: DiceRerollProvider = {
-  async pick(pick, roller) {
+  async pick(pick, roller, context) {
     const user = (roller ? playerForActor(roller) as User.Implementation | undefined : undefined) ?? game.users?.activeGM ?? undefined;
-    if (!user || user.isSelf || !user.active) return pickHere(pick);
+    // A player's pick holds the use up: the player timeout's countdown (a GM's has none)
+    const timeoutMs = user && !user.isGM ? (configSettings.playerSaveTimeout ?? 0) * 1000 : 0;
+    const spec = { kind: "dice", actorUuid: roller?.uuid ?? undefined, tokenUuid: context?.tokenUuid, label: pick.title, owner: context?.owner };
+    if (!user || user.isSelf || !user.active) {
+      const wait = user?.isSelf && !user.isGM ? beginPlayerWait<string[]>({ ...spec, userId: user.id!, choices: gmChoices(pick) }) : undefined;
+      return pickHere(pick, { seconds: timeoutMs / 1000, wait });
+    }
     return askUser<string[] | undefined>(user, {
-      type: DICE_REQUEST, data: pick, kind: "dice", actorUuid: roller?.uuid ?? undefined, label: pick.title,
-      timeoutMs: (configSettings.playerSaveTimeout ?? 0) * 1000, fallback: () => pick.suggested
+      ...spec, type: DICE_REQUEST, data: pick, timeoutMs, fallback: () => pick.suggested, gmChoices: gmChoices(pick)
     }).settled.then(settled => settled.value, () => pick.suggested);
   }
 };
@@ -169,7 +216,7 @@ export async function pickDice(rolls: Roll | Roll[], options: PickOptions): Prom
     dice: choices.map(d => ({ key: d.key, label: d.label, group: d.group, faces: d.faces, result: d.result })),
     suggested: suggestLowChoices(choices, max)
   };
-  const keys = await (diceRerollService.get() ?? midiPicker).pick(pick, options.actor);
+  const keys = await (diceRerollService.get() ?? midiPicker).pick(pick, options.actor, { tokenUuid: options.tokenUuid, owner: options.owner });
   return allowedKeys(choices, keys, max);
 }
 
@@ -192,5 +239,5 @@ export function defineDiceRerollService() {
     description: "Picks which dice of a roll (or a use's damage rolls) to reroll: the roller's user, here or on their client"
   });
   diceRerollService.register("midi-qol", midiPicker, { label: "Midi-QOL", priority: 0 });
-  registerRequestHandler(DICE_REQUEST, (data: DicePick, request: IncomingRequest) => pickHere(data, request));
+  registerRequestHandler(DICE_REQUEST, (data: DicePick, request: IncomingRequest) => pickHere(data, { request }));
 }

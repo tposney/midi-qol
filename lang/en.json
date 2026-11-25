@@ -77,6 +77,7 @@
   "midi-qol.PlayerWaits.Kind.damage": "Damage roll",
   "midi-qol.PlayerWaits.Kind.utility": "Roll",
   "midi-qol.PlayerWaits.Kind.other": "Prompt",
+  "midi-qol.PlayerWaits.Kind.dice": "Dice to reroll",
   "midi-qol.PlayerWaits.Heading": "Waiting on players",
   "midi-qol.PlayerWaits.Gambit.Name": "List Gambit's Premades prompts in the player list",
   "midi-qol.PlayerWaits.Gambit.Hint": "Gambit's reaction prompts mirrored to the GM (Gambit's \"Mirror 3rd Party Dialog for GMs\" setting) show on their player's row instead of on the GM's screen; Show prompt in the player's popover brings the prompt up to answer it. Needs GM can answer for players.",
@@ -3981,6 +3982,7 @@
   "midi-qol.DiceReroll.Prompt": "Choose up to {max} dice to reroll",
   "midi-qol.DiceReroll.Reroll": "Reroll",
   "midi-qol.DiceReroll.Keep": "Keep the roll",
+  "midi-qol.DiceReroll.Suggested": "Reroll the suggested dice",
   "midi-qol.BonusApproval.Title": "Use your bonus?",
   "midi-qol.BonusApproval.Content": "{requester} asks to use {label} ({actor})."
 }
