@@ -1803,6 +1803,17 @@ export const registerSettings = function () {
     type: Object
   });
 
+  // M18 stage 2: a use waits (at most this many seconds) for its animations before damage and effects; 0: never
+  game.settings.register("midi-qol", "PresentationWait", {
+    name: "midi-qol.PresentationWait.Name",
+    hint: "midi-qol.PresentationWait.Hint",
+    scope: "world",
+    default: 0,
+    config: true,
+    type: Number,
+    range: { min: 0, max: 10, step: 0.5 }
+  });
+
   game.settings.register("midi-qol", "EnableWorkflow", {
     name: "midi-qol.EnableWorkflow.Name",
     hint: "midi-qol.EnableWorkflow.Hint",

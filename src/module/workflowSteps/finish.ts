@@ -7,6 +7,7 @@ import { configSettings } from "../settings.js";
 import { getOrCreateTokenForActor, isActivityType } from "../utils.js";
 import { setStepRun } from "../steps/steps.js";
 import { Workflow, workflowStepHost, type WorkflowState } from "../Workflow.js";
+import { releaseTemplateHolds } from "../services/presenters/service.js";
 
 /** midi's steps (M5): the use's end: roll finished, clean-up, completed. Moved from Workflow's WorkflowState_<name> methods; `this` is `workflow`. */
 export function registerFinishSteps(): void {
@@ -54,6 +55,8 @@ export function registerFinishSteps(): void {
       game.modules.get("boss-loot-assets-free")?.active;
     const AAActive = game.modules.get("autoanimations")?.active;
     const elapsedTimeRequired = 5000;
+    // M18 stage 2: a visual presenter may hold the use's template until its animation has landed (capped)
+    const held = releaseTemplateHolds(workflow.id);
     if (configSettings.autoRemoveInstantaneousTemplate && workflow.templateUuids.length > 0 && workflow.activity.duration?.units === "inst") {
       for (const tUuid of workflow.templateUuids) {
         if (!blfxActive) {
@@ -61,9 +64,9 @@ export function registerFinishSteps(): void {
           // if auto animations is active we need to allow enough time for it to have grabbed the template data before deleting it.
           let timeout = AAActive ? Math.max(elapsedTimeRequired - elapsed, 1) : 1;
           timeout = Math.max(elapsedTimeRequired, timeout);
-          setTimeout(() => {
+          void held.then(() => setTimeout(() => {
             (fromUuidSync(tUuid) as MeasuredTemplateDocument | null)?.delete()
-          }, timeout);
+          }, timeout));
         } else {
           setTimeout(() => {
             (fromUuidSync(tUuid) as MeasuredTemplateDocument | null)?.delete()

@@ -1495,6 +1495,8 @@
   "midi-qol.Redirect.Prompt": "{target} is protected: choose a new target for {what}",
   "midi-qol.PresenterOrder.Name": "Presenter order",
   "midi-qol.PresenterOrder.Hint": "For each channel (animation, sound, text), the presenters to try first; the first that plays a cue plays it alone.",
+  "midi-qol.PresentationWait.Name": "Wait for animations",
+  "midi-qol.PresentationWait.Hint": "Before damage and effects are applied, a use waits up to this many seconds for its animations to land. 0: never waits.",
   "midi-qol.Overlay.Save": "Save as overlay",
   "midi-qol.Overlay.NoBase": "This item has no base item (compendium source) to compare with.",
   "midi-qol.Overlay.NoIdentifier": "This item has no identifier for an overlay to match.",

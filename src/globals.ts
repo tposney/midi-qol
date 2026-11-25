@@ -183,6 +183,9 @@ declare module "fvtt-types/configuration" {
       "midi-qol.cueReceived": (cue: import("./module/lib/cues.js").Cue) => void;
       /** Automated Animations: a listener may set stopWorkflow (plugins/autoAnimations.ts) */
       "AutomatedAnimations-WorkflowStart": (data: Record<string, unknown>, animationData: unknown) => void;
+      /** Sequencer: an effect starts / ends (plugins/autoAnimations.ts) */
+      "createSequencerEffect": (effect: { data?: { moduleName?: string, persist?: boolean } }) => void;
+      "endedSequencerEffect": (effect: { data?: { moduleName?: string, persist?: boolean } }) => void;
       "midi-qol.preSetReactionUsed": (actor: Actor.Implementation, effect: ActiveEffect.Implementation) => boolean | void;
       "midi-qol.setReactionUsed": (actor: Actor.Implementation, effect: ActiveEffect.Implementation) => void;
       "midi-qol.preSetBonusActionUsed": (actor: Actor.Implementation, effect: ActiveEffect.Implementation) => boolean | void;
@@ -244,6 +247,7 @@ declare module "fvtt-types/configuration" {
     "midi-qol.ShowAllBonusOffers": boolean;
     /** M18: per player, each channel's presenters in the order to try them */
     "midi-qol.PresenterOrder": Partial<Record<"visual" | "sound" | "text", string[]>>;
+    "midi-qol.PresentationWait": number;
     "midi-qol.hiddenGroundCue": boolean;
     "midi-qol.ownChatCardSummary": string;
     "midi-qol.hiddenGroundCueStyle": string;

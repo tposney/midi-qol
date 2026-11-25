@@ -13,6 +13,8 @@ import type { Presenter } from "../module/services/presenters/service.js";
  * when a probe (playAnimation stopped at that hook) finds one. Template and summon animations, and the critical/fumble
  * animation, stay on Automated Animations' own hooks.
  *
+ * Its play resolves when the Sequencer effects it started have ended (a use waits for that with "Wait for animations").
+ *
  * Every client is asked (so the user's presenter order gives the same answer everywhere); only the client that raised
  * the cue plays: Sequencer shows the effects to the others.
  */
@@ -97,6 +99,41 @@ function animationOptions(cue: Cue, activity: AnimationActivity): Record<string,
   };
 }
 
+interface SequencerEffectLike { data?: { moduleName?: string, persist?: boolean } }
+
+/**
+ * Resolves when the (non-persistent) Sequencer effects Automated Animations starts from now have ended, or at once if
+ * none starts within its global delay and a second: its sequences don't all report their end (melee doesn't).
+ */
+function animationsEnded(): Promise<void> {
+  return new Promise(resolve => {
+    const running = new Set<SequencerEffectLike>();
+    let started = false;
+    let settle: ReturnType<typeof setTimeout> | undefined;
+    const startWindow = Number(aaSetting("globaldelay") ?? 0) + 1000;
+    const finish = () => {
+      Hooks.off("createSequencerEffect", created);
+      Hooks.off("endedSequencerEffect", ended);
+      clearTimeout(quiet);
+      clearTimeout(settle);
+      resolve();
+    };
+    const created = (effect: SequencerEffectLike) => {
+      if (effect?.data?.moduleName !== "Automated Animations" || effect.data.persist) return;
+      started = true;
+      running.add(effect);
+      clearTimeout(settle);
+    };
+    // A sequence's next effect may start just after the last ended
+    const ended = (effect: SequencerEffectLike) => {
+      if (running.delete(effect) && !running.size) settle = setTimeout(finish, 150);
+    };
+    Hooks.on("createSequencerEffect", created);
+    Hooks.on("endedSequencerEffect", ended);
+    const quiet = setTimeout(() => { if (!started) finish(); }, startWindow);
+  });
+}
+
 export function registerAutoAnimationsPresenter(api: AutoAnimationsPluginApi): boolean {
   if (!game.modules?.get(MODULE)?.active || !automatedAnimations()) return false;
 
@@ -154,7 +191,9 @@ export function registerAutoAnimationsPresenter(api: AutoAnimationsPluginApi): b
       const activity = activityOf(cue);
       const item = activity?.item ?? (cue.item ? fromUuidSync(cue.item) : undefined);
       if (!activity || !item) return;
+      const ended = animationsEnded();
       await automatedAnimations()?.playAnimation(placeable(cue.source), item, { ...animationOptions(cue, activity), midiPresented: true });
+      return ended;
     }
   };
   api.services.register("presenters", PROVIDER_ID, presenter, { label: "Automated Animations" });

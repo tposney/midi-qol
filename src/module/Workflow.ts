@@ -49,7 +49,7 @@ import { reveals } from "./services/revealPolicy/service.js";
 import { raiseDamaged, raiseUseEvents } from "./lib/entries/useEvents.js";
 import { entryCoverFor } from "./lib/entries/serviceEvents.js";
 import { applyRetarget, takeRetarget } from "./lib/entries/redirection.js";
-import { raiseStepCues } from "./lib/cues.js";
+import { raiseStepCues, stepPresentationWait } from "./lib/cues.js";
 import { coverAnswer, coverLevelFor } from "./services/cover/service.js";
 import { targetEvent } from "./lib/entries/responseEvents.js";
 import { chooseDamageType, collectBonusCandidates, spendBonusCost, type OfferedBonus, type RollBonusQuery } from "./services/rollBonuses/service.js";
@@ -2880,6 +2880,8 @@ export class Workflow {
           await raiseUseEvents(this, prePost, step);
           // M18: its presentation cues
           raiseStepCues(this, prePost, step);
+          const presenting = stepPresentationWait(this, prePost, step);
+          if (presenting) await presenting;
           return result;
         },
         hook: (prePost, step) => this.callHooksForAction(prePost, step as string),

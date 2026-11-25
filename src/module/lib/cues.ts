@@ -2,7 +2,7 @@ import { tokenFor } from "./tokenResolver.js";
 import { MODULE_ID } from "../../midi-qol.js";
 import type { Workflow } from "../Workflow.js";
 import { outcomes, type TargetOutcome } from "./outcomes.js";
-import { presentCue } from "../services/presenters/service.js";
+import { presentCue, presentationLanded, presentationWaitMs, trackPresentation } from "../services/presenters/service.js";
 import { tagValue } from "./tags.js";
 import { getTokenDocument } from "../utils.js";
 
@@ -128,11 +128,25 @@ export function cueFor(workflow: Workflow, cue: string): Cue {
 export function raiseCue(cue: Cue): void {
   cue.raisedBy ??= game.user?.id;
   Hooks.callAll("midi-qol.cue", cue);
-  void presentCue(cue);
+  // Claiming is async: a wait for animations waits for it too
+  trackPresentation(cue.useId, presentCue(cue));
   for (const user of game.users ?? []) {
     if (user.isSelf || !user.active) continue;
     void user.query(CUE_QUERY, cue as unknown as Record<string, unknown>).catch(() => undefined);
   }
+}
+
+/** Where a use waits for its animations ("Wait for animations"): before damage is applied, before effects */
+const WAIT_BEFORE = new Set(["midi-qol.AllRollsComplete", "midi-qol.ApplyDynamicEffects"]);
+
+/**
+ * The step pass hook: before damage and effects, the wait (capped) for what the use's visual presenters have played;
+ * undefined when there is nothing to wait for (the pass then adds no await)
+ */
+export function stepPresentationWait(workflow: Workflow, prePost: "pre" | "post", step: string | undefined): Promise<void> | undefined {
+  if (prePost !== "pre" || !step || !WAIT_BEFORE.has(step) || workflow.readOnly || !canvas?.ready) return undefined;
+  const cap = presentationWaitMs();
+  return cap ? presentationLanded(workflow.id, cap) : undefined;
 }
 
 /** The step pass hook (Workflow's engine host): the cues of this pass */
