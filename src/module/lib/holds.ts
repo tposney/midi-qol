@@ -69,8 +69,8 @@ export function heldUses(): { card: ChatMessage.Implementation, hold: UseHold }[
   for (const card of game.messages?.contents ?? []) {
     const midi = cardMidi(card);
     const hold = midi.state?.hold as UseHold | undefined;
-    // A use removed or finished meanwhile isn't waiting any more
-    if (hold?.point && !midi.progress?.allRemoved && !midi.progress?.finished) held.push({ card, hold });
+    // A use removed or finished meanwhile isn't waiting any more (removed this session: its card may stay)
+    if (hold?.point && !midi.progress?.allRemoved && !midi.progress?.finished && !Workflow.wasRemoved(card.uuid)) held.push({ card, hold });
   }
   return held.sort((a, b) => b.hold.since - a.hold.since);
 }

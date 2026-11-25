@@ -668,6 +668,8 @@ export class Workflow {
   }
   // Workflows ended this session (removeWorkflow): never rebuilt from their cards
   static #ended = new Set<string>();
+  /** Removed this session (removeWorkflow): its card may stay, but the use is not rebuilt or waited on */
+  static wasRemoved(id: string | null | undefined): boolean { return !!id && Workflow.#ended.has(id); }
 
   /**
    * File a finished workflow weakly: an unfinished one is held, so what macros keep on it between passes survives; a
