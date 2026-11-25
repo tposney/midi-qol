@@ -59,6 +59,8 @@ export interface WaitInfo {
   source?: string;
   /** M32e: the use's card it waits for (its "waiting for" line) */
   cardUuid?: string;
+  /** The choice the player's own prompt defaults to (a roll dialog's default button), shown first to the GM */
+  defaultChoice?: WaitChoice;
 }
 
 /** A wait begun with beginPlayerWait. */
@@ -73,6 +75,8 @@ export interface PlayerWait<T> {
   readonly active: boolean;
   /** The GM (or a disconnect) is answering: what the player's request returns now is to be ignored. */
   readonly answeredForPlayer: boolean;
+  /** The choice the player's prompt defaults to now (it can change as they change the roll's options), for the GM */
+  setDefault: (choice: WaitChoice | undefined) => void;
 }
 
 interface LocalWait {
@@ -188,7 +192,13 @@ export function beginPlayerWait<T>(spec: WaitSpec<T>): PlayerWait<T> | undefined
   return {
     id: info.id, ref: { id: info.id, holderId: info.holderId }, settled, end: () => end(),
     get active() { return !wait.done; },
-    get answeredForPlayer() { return !!wait.byChoice; }
+    get answeredForPlayer() { return !!wait.byChoice; },
+    setDefault: (choice) => {
+      const known = choice && choice in spec.choices ? choice : undefined;
+      if (wait.done || info.defaultChoice === known) return;
+      info.defaultChoice = known;
+      announce("update", info);
+    }
   };
 }
 
@@ -235,9 +245,12 @@ export function rollDialogsFor(actorUuid: string | null, requestClaim?: string):
   if (!RollConfigurationDialog) return [];
   return [...foundry.applications.instances.values()].filter(app => {
     if (!(app instanceof RollConfigurationDialog)) return false;
-    const config = (app as unknown as { config?: { subject?: { uuid?: string, parent?: { uuid?: string } }, midiOptions?: { requestClaim?: string } } }).config;
+    const config = (app as unknown as { config?: { subject?: unknown, midiOptions?: { requestClaim?: string } } }).config;
     if (requestClaim !== undefined && config?.midiOptions?.requestClaim !== requestClaim) return false;
-    return (config?.subject?.uuid ?? config?.subject?.parent?.uuid) === actorUuid;
+    // An actor's own roll (a save, a check) has the actor as subject; an activity's (attack, damage) the activity,
+    // whose actor it is
+    const subject = config?.subject as { uuid?: string, parent?: { uuid?: string }, actor?: { uuid?: string } } | undefined;
+    return (subject?.actor?.uuid ?? subject?.uuid ?? subject?.parent?.uuid) === actorUuid;
   });
 }
 
