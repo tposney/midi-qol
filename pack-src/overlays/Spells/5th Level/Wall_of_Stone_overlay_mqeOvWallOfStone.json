@@ -1,0 +1,71 @@
+{
+  "name": "Wall of Stone (overlay)",
+  "type": "spell",
+  "img": "icons/environment/settlement/city-wall.webp",
+  "_id": "mqeOvWallOfStone",
+  "_key": "!items!mqeOvWallOfStone",
+  "folder": "SpellFldr5thLevl",
+  "ownership": {
+    "default": 0
+  },
+  "system": {
+    "description": {
+      "value": "<p><em>Overlay (midi-qol):</em> the area placed is a barrier: the panels stop creatures, sight and light. Walls are made for it by the GM's client, and removed when the spell ends. It changes no item: midi applies it to any item with the identifier <code>wall-of-stone</code> (2024 rules) that nothing else automates.</p>",
+      "chatFlavor": ""
+    },
+    "identifier": "wall-of-stone-overlay",
+    "source": {
+      "rules": "2024"
+    },
+    "activities": {}
+  },
+  "effects": [],
+  "flags": {
+    "midi-qol": {
+      "overlay": {
+        "identifier": "wall-of-stone",
+        "rules": "2024",
+        "version": "1",
+        "changes": [
+          {
+            "key": "system.activities.8GZK7DivdBjael8n.regionBarrier.enabled",
+            "value": "true",
+            "type": "override"
+          },
+          {
+            "key": "system.activities.8GZK7DivdBjael8n.regionBarrier.move",
+            "value": "true",
+            "type": "override"
+          },
+          {
+            "key": "system.activities.8GZK7DivdBjael8n.regionBarrier.sight",
+            "value": "normal",
+            "type": "override"
+          },
+          {
+            "key": "system.activities.44JI57djAchqMJrU.regionBarrier.enabled",
+            "value": "true",
+            "type": "override"
+          },
+          {
+            "key": "system.activities.44JI57djAchqMJrU.regionBarrier.move",
+            "value": "true",
+            "type": "override"
+          },
+          {
+            "key": "system.activities.44JI57djAchqMJrU.regionBarrier.sight",
+            "value": "normal",
+            "type": "override"
+          }
+        ]
+      }
+    }
+  },
+  "_stats": {
+    "compendiumSource": null,
+    "duplicateSource": null,
+    "coreVersion": "14.360",
+    "systemId": "dnd5e",
+    "systemVersion": "6.1.0"
+  }
+}

@@ -1,3 +1,4 @@
+import { overlaySettingChanged } from "./lib/entries/overlays.js";
 import { PlayerSettingsView } from "./apps/PlayerSettingsView.js";
 import { registerHiddenGroundCueSetting } from "./lib/hiddenGroundCue.js";
 import { applyChatCardSummaries, registerChatCardSummariesSetting } from "./lib/chatCardSummaries.js";
@@ -1783,6 +1784,16 @@ export const registerSettings = function () {
   registerHiddenGroundCueSetting();
   registerChatCardSummariesSetting();
   registerRulesTextSettings();
+
+  game.settings.register("midi-qol", "OverlayItems", {
+    name: "midi-qol.OverlayItems.Name",
+    hint: "midi-qol.OverlayItems.Hint",
+    scope: "world",
+    default: true,
+    config: true,
+    type: Boolean,
+    onChange: () => { void overlaySettingChanged(); }
+  });
 
   game.settings.register("midi-qol", "BonusPrompt", {
     name: "midi-qol.BonusPrompt.Name",

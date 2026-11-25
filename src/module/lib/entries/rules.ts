@@ -19,17 +19,22 @@ export interface Rule {
   effects?: { match: RoleMatch, entries: Entry[] }[];
 }
 
-interface Registered { source: string, rule: Rule }
+interface Registered {
+  source: string;
+  rule: Rule;
+  /** Whether it applies to an item at all (an overlay's: overlays on for the item) */
+  appliesTo?: (item: ItemLike) => boolean;
+}
 
 const byIdentifier = new Map<string, Registered[]>();
 
 /** Identifiers that are copy leftovers, never matched */
 const LEFTOVERS = new Set(["", "feature", "new-item", "item", "weapon", "spell", "feat"]);
 
-export function registerRule(source: string, rule: Rule): () => void {
+export function registerRule(source: string, rule: Rule, { appliesTo }: { appliesTo?: (item: ItemLike) => boolean } = {}): () => void {
   if (!rule?.identifier || typeof rule.identifier !== "string") throw new Error(`midi-qol | rules.register(${source}): a rule needs an identifier`);
   const list = byIdentifier.get(rule.identifier) ?? [];
-  const registered: Registered = { source, rule };
+  const registered: Registered = { source, rule, ...(appliesTo ? { appliesTo } : {}) };
   byIdentifier.set(rule.identifier, [...list.filter(r => !(r.source === source && sameScope(r.rule, rule))), registered]);
   invalidateEntryHomes();
   return () => {
@@ -77,7 +82,7 @@ export function ruleFor(item: ItemLike | undefined | null): Registered | undefin
   const candidates = byIdentifier.get(identifier);
   if (!candidates?.length || automatedBy(item)) return undefined;
   const ruleset = source?.rules;
-  const matching = candidates.filter(r => (!r.rule.rules || r.rule.rules === ruleset) && (!r.rule.type || r.rule.type === item.type));
+  const matching = candidates.filter(r => (!r.rule.rules || r.rule.rules === ruleset) && (!r.rule.type || r.rule.type === item.type) && (r.appliesTo?.(item) ?? true));
   return matching.at(-1);
 }
 

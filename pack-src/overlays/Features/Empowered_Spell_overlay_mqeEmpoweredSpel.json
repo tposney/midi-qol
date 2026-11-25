@@ -1,0 +1,96 @@
+{
+  "_id": "mqeEmpoweredSpel",
+  "name": "Empowered Spell (overlay)",
+  "type": "feat",
+  "img": "icons/magic/air/wind-tornado-wall-blue.webp",
+  "system": {
+    "description": {
+      "value": "<blockquote><p>Cost: 1 Sorcery Point</p></blockquote><p>When you roll damage for a spell, you can spend 1 Sorcery Point to reroll a number of the damage dice up to your Charisma modifier (minimum of one, currently [[lookup @abilities.cha.mod]]), and you must use the new rolls.</p><p>You can use Empowered Spell even if you've already used a different Metamagic option during the casting of the spell.</p><p><em>Automation (midi-qol entries):</em> offered as you cast a spell (one Metamagic option per spell, Empowered and Seeking combine); its Sorcery Points come from Font of Magic. Careful Spell: the chosen creatures succeed on the save and take no damage from a spell doing half on a success.</p>",
+      "chat": ""
+    },
+    "source": {
+      "custom": "",
+      "rules": "2024",
+      "revision": 1,
+      "license": "CC-BY-4.0",
+      "book": ""
+    },
+    "uses": {
+      "max": "",
+      "spent": 0,
+      "recovery": []
+    },
+    "type": {
+      "value": "class",
+      "subtype": "metamagic"
+    },
+    "prerequisites": {
+      "level": null,
+      "repeatable": false
+    },
+    "properties": [],
+    "requirements": "",
+    "activities": {},
+    "enchant": {},
+    "identifier": "empowered-spell"
+  },
+  "effects": [],
+  "folder": "fZIl4G4qj3C894LI",
+  "flags": {
+    "dnd5e": {
+      "riders": {
+        "activity": [],
+        "effect": []
+      }
+    },
+    "midi-qol": {
+      "entries": [
+        {
+          "id": "empowered",
+          "label": "Empowered Spell",
+          "who": "owner",
+          "offer": "ask",
+          "group": "metamagic",
+          "cost": {
+            "amount": 1,
+            "from": [
+              "metamagic-adept",
+              "font-of-magic"
+            ],
+            "label": "midi-qol.Metamagic.SorceryPoints"
+          },
+          "on": "use.damageRolled",
+          "stacks": true,
+          "if": "tags.use.kind === 'spell'",
+          "do": [
+            {
+              "bonus": {
+                "kind": "reroll",
+                "dice": "choose",
+                "max": "max(1, @abilities.cha.mod)",
+                "keep": "new"
+              }
+            }
+          ],
+          "description": "midi-qol.Entries.Offer.Empowered"
+        }
+      ],
+      "overlay": {
+        "identifier": "empowered-spell",
+        "rules": "2024",
+        "version": "2"
+      }
+    }
+  },
+  "_stats": {
+    "compendiumSource": null,
+    "duplicateSource": null,
+    "coreVersion": "14.360",
+    "systemId": "dnd5e",
+    "systemVersion": "6.1.0"
+  },
+  "ownership": {
+    "default": 0
+  },
+  "_key": "!items!mqeEmpoweredSpel"
+}

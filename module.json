@@ -89,6 +89,15 @@
       "lang": []
     },
     {
+      "name": "midiqol-overlays",
+      "label": "MidiQOL Overlays",
+      "path": "./packs/overlays",
+      "module": "world",
+      "type": "Item",
+      "system": "dnd5e",
+      "lang": []
+    },
+    {
       "name": "midiqol-active-effects",
       "label": "Midi Active Effects",
       "path": "./packs/activeeffects",
@@ -103,6 +112,7 @@
       "name": "Midi Samples",
       "packs": [
         "midiqol-sample-items",
+        "midiqol-overlays",
         "midiqol-active-effects"
       ]
     }

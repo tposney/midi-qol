@@ -291,12 +291,17 @@ function cleanPackFolderNames(packSrcDir) {
  * Extract packs: packs/ -> pack-src/ (LevelDB to JSON)
  */
 exports.extractPacks = gulp.series(
-  pdel(["pack-src/sampleitems", "pack-src/activeeffects"]),
+  pdel(["pack-src/sampleitems", "pack-src/overlays", "pack-src/activeeffects"]),
   async () => {
     if (!foundryvttCli) foundryvttCli = await import("@foundryvtt/foundryvtt-cli");
     await foundryvttCli.extractPack("packs/sampleitems", "pack-src/sampleitems", { folders: true });
     cleanPackFolderNames("pack-src/sampleitems");
     plog("Extracted packs/sampleitems to pack-src/sampleitems");
+    if (fs.existsSync("packs/overlays")) {
+      await foundryvttCli.extractPack("packs/overlays", "pack-src/overlays", { folders: true });
+      cleanPackFolderNames("pack-src/overlays");
+      plog("Extracted packs/overlays to pack-src/overlays");
+    }
     if (fs.existsSync("packs/activeeffects")) {
       await foundryvttCli.extractPack("packs/activeeffects", "pack-src/activeeffects", { folders: true });
       cleanPackFolderNames("pack-src/activeeffects");
@@ -567,7 +572,7 @@ function addCatAutomationData(doc) {
  * Compile packs: pack-src/ -> packs/ (JSON to LevelDB)
  */
 exports.compilePacks = gulp.series(
-  pdel(["packs/sampleitems", "packs/activeeffects", "packs/summons"]),
+  pdel(["packs/sampleitems", "packs/overlays", "packs/activeeffects", "packs/summons"]),
   async () => {
     if (!foundryvttCli) foundryvttCli = await import("@foundryvtt/foundryvtt-cli");
 
@@ -576,6 +581,11 @@ exports.compilePacks = gulp.series(
     countAutomations("pack-src/sampleitems");
     await foundryvttCli.compilePack("pack-src/sampleitems", "packs/sampleitems", { recursive: true, transformEntry: addCatAutomationData });
     plog("Compiled pack-src/sampleitems to packs/sampleitems");
+
+    // Overlays: items holding only the difference from the item they overlay (registered as rules, never CAT automations)
+    await ensurePackIds("pack-src/overlays");
+    await foundryvttCli.compilePack("pack-src/overlays", "packs/overlays", { recursive: true });
+    plog("Compiled pack-src/overlays to packs/overlays");
 
     await ensurePackIds("pack-src/activeeffects", { documentType: "ActiveEffect" });
     await foundryvttCli.compilePack("pack-src/activeeffects", "packs/activeeffects", { recursive: true });

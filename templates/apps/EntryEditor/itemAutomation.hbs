@@ -1,6 +1,10 @@
 <section class="midi-qol-item-automation">
     <div class="midi-qol-item-automation-title"><i class="fa-solid fa-diagram-project"></i> <strong>{{localize "midi-qol.ItemAutomation.Title"}}</strong>
         {{#if canEdit}}<button type="button" class="midi-qol-item-automation-edit" data-midi-open-entries><i class="fa-solid fa-pen"></i> {{localize "midi-qol.ItemAutomation.Edit"}}</button>{{/if}}</div>
+    {{#with overlay}}
+    <div class="midi-qol-item-automation-line midi-qol-item-overlay"><i class="fa-solid fa-layer-group"></i> {{name}}
+        <select data-midi-overlay-mode aria-label="{{localize "midi-qol.OverlayItems.Item"}}" data-tooltip="{{localize "midi-qol.OverlayItems.Item"}}" {{#unless @root.canEdit}}disabled{{/unless}}>{{selectOptions modes selected=mode}}</select></div>
+    {{/with}}
     {{#each homes}}
     <div class="midi-qol-item-automation-home">
         {{#unless single}}<div class="midi-qol-item-automation-label">{{label}}</div>{{/unless}}

@@ -1,0 +1,59 @@
+{
+  "name": "Power Word Heal (overlay)",
+  "type": "spell",
+  "img": "icons/magic/life/heart-red-blue.webp",
+  "_id": "mqeOvPowerWordHe",
+  "_key": "!items!mqeOvPowerWordHe",
+  "folder": "SpellFldr9thLevl",
+  "ownership": {
+    "default": 0
+  },
+  "system": {
+    "description": {
+      "value": "<p><em>Overlay (midi-qol):</em> the target's Charmed, Frightened, Paralyzed, Poisoned and Stunned conditions end. It changes no item: midi applies it to any item with the identifier <code>power-word-heal</code> (2024 rules) that nothing else automates.</p>",
+      "chatFlavor": ""
+    },
+    "identifier": "power-word-heal-overlay",
+    "source": {
+      "rules": "2024"
+    },
+    "activities": {}
+  },
+  "effects": [],
+  "flags": {
+    "midi-qol": {
+      "overlay": {
+        "identifier": "power-word-heal",
+        "rules": "2024",
+        "version": "1"
+      },
+      "entries": [
+        {
+          "id": "endConditions",
+          "on": "use.end",
+          "label": "Power Word Heal: conditions ended",
+          "do": [
+            {
+              "effect": "remove",
+              "what": [
+                "charmed",
+                "frightened",
+                "paralyzed",
+                "poisoned",
+                "stunned"
+              ],
+              "to": "target"
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "_stats": {
+    "compendiumSource": null,
+    "duplicateSource": null,
+    "coreVersion": "14.360",
+    "systemId": "dnd5e",
+    "systemVersion": "6.1.0"
+  }
+}

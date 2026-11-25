@@ -1,0 +1,92 @@
+{
+  "_id": "mqeTwinnedSpell0",
+  "name": "Twinned Spell (overlay)",
+  "type": "feat",
+  "img": "icons/magic/lightning/bolts-forked-large-orange.webp",
+  "system": {
+    "description": {
+      "value": "<blockquote><p>Cost: 1 Sorcery Point</p></blockquote><p>When you cast a spell, such as <em>Charm Person</em>, that can be cast with a higher-level spell slot to target an additional creature, you can spend 1 Sorcery Point to increase the spell's effective level by 1.</p><p><em>Automation (midi-qol entries):</em> offered as you cast a spell (one Metamagic option per spell, Empowered and Seeking combine); its Sorcery Points come from Font of Magic. Careful Spell: the chosen creatures succeed on the save and take no damage from a spell doing half on a success.</p>",
+      "chat": ""
+    },
+    "source": {
+      "custom": "",
+      "rules": "2024",
+      "revision": 1,
+      "license": "CC-BY-4.0",
+      "book": ""
+    },
+    "uses": {
+      "max": "",
+      "spent": 0,
+      "recovery": []
+    },
+    "type": {
+      "value": "class",
+      "subtype": "metamagic"
+    },
+    "prerequisites": {
+      "level": null,
+      "repeatable": false
+    },
+    "properties": [],
+    "requirements": "",
+    "activities": {},
+    "enchant": {},
+    "identifier": "twinned-spell"
+  },
+  "effects": [],
+  "folder": "fZIl4G4qj3C894LI",
+  "flags": {
+    "dnd5e": {
+      "riders": {
+        "activity": [],
+        "effect": []
+      }
+    },
+    "midi-qol": {
+      "entries": [
+        {
+          "id": "twinned",
+          "label": "Twinned Spell",
+          "who": "owner",
+          "offer": "casting",
+          "group": "metamagic",
+          "cost": {
+            "amount": 1,
+            "from": [
+              "metamagic-adept",
+              "font-of-magic"
+            ],
+            "label": "midi-qol.Metamagic.SorceryPoints"
+          },
+          "groupLimit": "bearer.items.some(i => i.identifier === 'sorcery-incarnate') && bearer.appliedEffects.some(e => e.name === bearer.items.find(i => i.identifier === 'innate-sorcery')?.name) ? 2 : 1",
+          "on": "use.configure",
+          "if": "tags.use.kind === 'spell' && tags.use.targetsScale",
+          "do": [
+            {
+              "change": {
+                "spellLevel": "+1"
+              }
+            }
+          ]
+        }
+      ],
+      "overlay": {
+        "identifier": "twinned-spell",
+        "rules": "2024",
+        "version": "1"
+      }
+    }
+  },
+  "_stats": {
+    "compendiumSource": null,
+    "duplicateSource": null,
+    "coreVersion": "14.360",
+    "systemId": "dnd5e",
+    "systemVersion": "6.1.0"
+  },
+  "ownership": {
+    "default": 0
+  },
+  "_key": "!items!mqeTwinnedSpell0"
+}

@@ -1239,7 +1239,7 @@ Hooks.once('ready', function () {
   // M11: midi's overlays (sample items flagged midi-qol.overlay) as rules, on every client
   // and the world's own (world items flagged midi-qol.overlay); then their data parts on the world's actors (active GM)
   watchOverlayData();
-  void registerOverlayPack("midi-qol.midiqol-sample-items", "midi-qol")
+  void registerOverlayPack("midi-qol.midiqol-overlays", "midi-qol")
     .then(() => { registerWorldOverlays(); return applyOverlayDataToWorld(); })
     .catch(err => console.warn("midi-qol | overlays", err));
 

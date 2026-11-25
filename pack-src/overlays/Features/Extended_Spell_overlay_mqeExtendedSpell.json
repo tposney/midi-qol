@@ -1,0 +1,143 @@
+{
+  "_id": "mqeExtendedSpell",
+  "name": "Extended Spell (overlay)",
+  "type": "feat",
+  "img": "icons/magic/time/hourglass-brown-orange.webp",
+  "system": {
+    "description": {
+      "value": "<blockquote><p>Cost: 1 Sorcery Point</p></blockquote><p>When you cast a spell that has a duration of 1 minute or longer, you can spend 1 Sorcery Point to double its duration to a maximum duration of 24 hours.</p><p>If the affected spell requires Concentration, you have Advantage on any saving throw you make to maintain that Concentration.</p><p><em>Automation (midi-qol entries):</em> offered as you cast a spell (one Metamagic option per spell, Empowered and Seeking combine); its Sorcery Points come from Font of Magic. Careful Spell: the chosen creatures succeed on the save and take no damage from a spell doing half on a success.</p>",
+      "chat": ""
+    },
+    "source": {
+      "custom": "",
+      "rules": "2024",
+      "revision": 1,
+      "license": "CC-BY-4.0",
+      "book": ""
+    },
+    "uses": {
+      "max": "",
+      "spent": 0,
+      "recovery": []
+    },
+    "type": {
+      "value": "class",
+      "subtype": "metamagic"
+    },
+    "prerequisites": {
+      "level": null,
+      "repeatable": false
+    },
+    "properties": [],
+    "requirements": "",
+    "activities": {},
+    "enchant": {},
+    "identifier": "extended-spell"
+  },
+  "effects": [
+    {
+      "_id": "mqeExtConcentr00",
+      "name": "Extended Spell: Concentration",
+      "img": "icons/magic/time/hourglass-brown-orange.webp",
+      "type": "base",
+      "transfer": false,
+      "disabled": false,
+      "statuses": [],
+      "system": {
+        "changes": [
+          {
+            "key": "system.attributes.concentration.roll.mode",
+            "type": "add",
+            "value": "1",
+            "phase": "initial"
+          }
+        ]
+      },
+      "duration": {},
+      "flags": {},
+      "description": "<p>Advantage on saving throws to maintain Concentration on the extended spell.</p>",
+      "_key": "!items.effects!mqeExtendedSpell.mqeExtConcentr00"
+    }
+  ],
+  "folder": "fZIl4G4qj3C894LI",
+  "flags": {
+    "dnd5e": {
+      "riders": {
+        "activity": [],
+        "effect": []
+      }
+    },
+    "midi-qol": {
+      "entries": [
+        {
+          "id": "extended",
+          "label": "Extended Spell",
+          "who": "owner",
+          "offer": "casting",
+          "group": "metamagic",
+          "cost": {
+            "amount": 1,
+            "from": [
+              "metamagic-adept",
+              "font-of-magic"
+            ],
+            "label": "midi-qol.Metamagic.SorceryPoints"
+          },
+          "groupLimit": "bearer.items.some(i => i.identifier === 'sorcery-incarnate') && bearer.appliedEffects.some(e => e.name === bearer.items.find(i => i.identifier === 'innate-sorcery')?.name) ? 2 : 1",
+          "on": [
+            "use.configure",
+            "use.end"
+          ],
+          "if": "tags.use.kind === 'spell' && (['minute', 'hour', 'day'].includes(use.activity.duration.units) || (use.activity.duration.units === 'round' && use.activity.duration.value >= 10))",
+          "do": [
+            {
+              "on": "use.configure",
+              "if": "use.activity.duration.units === 'round'",
+              "change": {
+                "duration": "min(@value * 2, 14400)"
+              }
+            },
+            {
+              "on": "use.configure",
+              "if": "use.activity.duration.units === 'minute'",
+              "change": {
+                "duration": "min(@value * 2, 1440)"
+              }
+            },
+            {
+              "on": "use.configure",
+              "if": "use.activity.duration.units === 'hour'",
+              "change": {
+                "duration": "min(@value * 2, 24)"
+              }
+            },
+            {
+              "on": "use.end",
+              "if": "use.item.system.properties.has('concentration')",
+              "effect": "apply",
+              "what": "Extended Spell: Concentration",
+              "to": "self",
+              "dependsOn": "concentration"
+            }
+          ]
+        }
+      ],
+      "overlay": {
+        "identifier": "extended-spell",
+        "rules": "2024",
+        "version": "1"
+      }
+    }
+  },
+  "_stats": {
+    "compendiumSource": null,
+    "duplicateSource": null,
+    "coreVersion": "14.360",
+    "systemId": "dnd5e",
+    "systemVersion": "6.1.0"
+  },
+  "ownership": {
+    "default": 0
+  },
+  "_key": "!items!mqeExtendedSpell"
+}

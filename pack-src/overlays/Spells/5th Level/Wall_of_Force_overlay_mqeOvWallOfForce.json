@@ -1,0 +1,71 @@
+{
+  "name": "Wall of Force (overlay)",
+  "type": "spell",
+  "img": "icons/magic/defensive/barrier-shield-dome-deflect-blue.webp",
+  "_id": "mqeOvWallOfForce",
+  "_key": "!items!mqeOvWallOfForce",
+  "folder": "SpellFldr5thLevl",
+  "ownership": {
+    "default": 0
+  },
+  "system": {
+    "description": {
+      "value": "<p><em>Overlay (midi-qol):</em> the area placed is a barrier: the sphere or panels stop creatures and are total cover, and can be seen through. Walls are made for it by the GM's client, and removed when the spell ends. It changes no item: midi applies it to any item with the identifier <code>wall-of-force</code> (2024 rules) that nothing else automates.</p>",
+      "chatFlavor": ""
+    },
+    "identifier": "wall-of-force-overlay",
+    "source": {
+      "rules": "2024"
+    },
+    "activities": {}
+  },
+  "effects": [],
+  "flags": {
+    "midi-qol": {
+      "overlay": {
+        "identifier": "wall-of-force",
+        "rules": "2024",
+        "version": "1",
+        "changes": [
+          {
+            "key": "system.activities.obcyQX0IlwinXINV.regionBarrier.enabled",
+            "value": "true",
+            "type": "override"
+          },
+          {
+            "key": "system.activities.obcyQX0IlwinXINV.regionBarrier.move",
+            "value": "true",
+            "type": "override"
+          },
+          {
+            "key": "system.activities.obcyQX0IlwinXINV.regionBarrier.sight",
+            "value": "none",
+            "type": "override"
+          },
+          {
+            "key": "system.activities.O3uhE0OLzsAhHoAg.regionBarrier.enabled",
+            "value": "true",
+            "type": "override"
+          },
+          {
+            "key": "system.activities.O3uhE0OLzsAhHoAg.regionBarrier.move",
+            "value": "true",
+            "type": "override"
+          },
+          {
+            "key": "system.activities.O3uhE0OLzsAhHoAg.regionBarrier.sight",
+            "value": "none",
+            "type": "override"
+          }
+        ]
+      }
+    }
+  },
+  "_stats": {
+    "compendiumSource": null,
+    "duplicateSource": null,
+    "coreVersion": "14.360",
+    "systemId": "dnd5e",
+    "systemVersion": "6.1.0"
+  }
+}

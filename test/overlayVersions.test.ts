@@ -17,7 +17,7 @@ describe("shipped overlays", () => {
   it("each has a version", () => {
     const missing: string[] = [];
     let overlays = 0;
-    for (const file of jsonFiles("pack-src/sampleitems")) {
+    for (const file of jsonFiles("pack-src/overlays")) {
       const overlay = JSON.parse(readFileSync(file, "utf8"))?.flags?.["midi-qol"]?.overlay;
       if (!overlay?.identifier) continue;
       overlays++;
@@ -25,5 +25,19 @@ describe("shipped overlays", () => {
     }
     expect(overlays).toBeGreaterThan(0);
     expect(missing).toEqual([]);
+  });
+
+  it("are in the overlays pack, never the sample items, and say so in their name", () => {
+    const misplaced: string[] = [];
+    const unnamed: string[] = [];
+    for (const file of jsonFiles("pack-src/sampleitems")) {
+      if (JSON.parse(readFileSync(file, "utf8"))?.flags?.["midi-qol"]?.overlay?.identifier) misplaced.push(file);
+    }
+    for (const file of jsonFiles("pack-src/overlays")) {
+      const item = JSON.parse(readFileSync(file, "utf8"));
+      if (item?.flags?.["midi-qol"]?.overlay?.identifier && !/\(overlay\)$/.test(item.name ?? "")) unnamed.push(file);
+    }
+    expect(misplaced).toEqual([]);
+    expect(unnamed).toEqual([]);
   });
 });

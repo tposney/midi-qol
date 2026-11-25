@@ -1,0 +1,65 @@
+{
+  "name": "Restoring Touch (overlay)",
+  "type": "feat",
+  "img": "icons/magic/light/hand-sparks-glow-yellow.webp",
+  "_id": "mqeOvRestoringTo",
+  "_key": "!items!mqeOvRestoringTo",
+  "folder": "fZIl4G4qj3C894LI",
+  "ownership": {
+    "default": 0
+  },
+  "system": {
+    "description": {
+      "value": "<p><em>Overlay (midi-qol):</em> when the feature is used (its own activity spends 5 points of Lay on Hands for each condition), the paladin picks which of Blinded, Charmed, Deafened, Frightened, Paralyzed and Stunned that the target has end. The number picked is not yet held to the points spent. It changes no item: midi applies it to any item with the identifier <code>restoring-touch</code> (2024 rules) that nothing else automates.</p>",
+      "chatFlavor": ""
+    },
+    "identifier": "restoring-touch-overlay",
+    "source": {
+      "rules": "2024"
+    },
+    "activities": {}
+  },
+  "effects": [],
+  "flags": {
+    "midi-qol": {
+      "overlay": {
+        "identifier": "restoring-touch",
+        "rules": "2024",
+        "version": "1"
+      },
+      "entries": [
+        {
+          "id": "restore",
+          "on": "use.end",
+          "label": "Restoring Touch",
+          "choose": {
+            "kind": "conditions",
+            "from": [
+              "blinded",
+              "charmed",
+              "deafened",
+              "frightened",
+              "paralyzed",
+              "stunned"
+            ],
+            "label": "Conditions to end (5 points each)"
+          },
+          "do": [
+            {
+              "effect": "remove",
+              "what": "@choices.restore",
+              "to": "target"
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "_stats": {
+    "compendiumSource": null,
+    "duplicateSource": null,
+    "coreVersion": "14.360",
+    "systemId": "dnd5e",
+    "systemVersion": "6.1.0"
+  }
+}

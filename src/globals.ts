@@ -246,6 +246,8 @@ declare module "fvtt-types/configuration" {
     "midi-qol.ForceHideRoll": boolean;
     "midi-qol.EnableWorkflow": boolean;
     "midi-qol.BonusPrompt": string;
+    /** Overlay items apply (world); an item's overlayMode overrides it */
+    "midi-qol.OverlayItems": boolean;
     "midi-qol.ShowAllBonusOffers": boolean;
     /** M18: per player, each channel's presenters in the order to try them */
     "midi-qol.PresenterOrder": Partial<Record<"visual" | "sound" | "text", string[]>>;
@@ -738,6 +740,8 @@ declare module "fvtt-types/configuration" {
         overlay?: import("./module/lib/entries/rules.js").OverlayFlag;
         /** M11c-2: added by an overlay (true), or the marker enchantment recording which overlay and version */
         overlayPart?: true | { overlay: string, version: string };
+        /** Whether overlays apply to this item: the world setting (default), or always / never */
+        overlayMode?: "default" | "enable" | "disable";
         /** M18: the item's presentation override (and per activity), "none" for every channel */
         presentation?: "none" | (import("./module/lib/cues.js").Cue["presentation"] & { activities?: Record<string, import("./module/lib/cues.js").Cue["presentation"] | "none"> });
         dependentOn?: string; // UUID of parent document for midi-qol dependent tracking

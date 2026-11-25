@@ -1,0 +1,97 @@
+{
+  "_id": "mqeHeightenedSpe",
+  "name": "Heightened Spell (overlay)",
+  "type": "feat",
+  "img": "icons/magic/fire/explosion-mushroom-nuke-orange.webp",
+  "system": {
+    "description": {
+      "value": "<blockquote><p>Cost: 2 Sorcery Points</p></blockquote><p>When you cast a spell that forces a creature to make a saving throw, you can spend 2 Sorcery Points to give one target of the spell Disadvantage on saves against the spell.</p><p><em>Automation (midi-qol entries):</em> offered as you cast a spell (one Metamagic option per spell, Empowered and Seeking combine); its Sorcery Points come from Font of Magic. Careful Spell: the chosen creatures succeed on the save and take no damage from a spell doing half on a success.</p>",
+      "chat": ""
+    },
+    "source": {
+      "custom": "",
+      "rules": "2024",
+      "revision": 1,
+      "license": "CC-BY-4.0",
+      "book": ""
+    },
+    "uses": {
+      "max": "",
+      "spent": 0,
+      "recovery": []
+    },
+    "type": {
+      "value": "class",
+      "subtype": "metamagic"
+    },
+    "prerequisites": {
+      "level": null,
+      "repeatable": false
+    },
+    "properties": [],
+    "requirements": "",
+    "activities": {},
+    "enchant": {},
+    "identifier": "heightened-spell"
+  },
+  "effects": [],
+  "folder": "fZIl4G4qj3C894LI",
+  "flags": {
+    "dnd5e": {
+      "riders": {
+        "activity": [],
+        "effect": []
+      }
+    },
+    "midi-qol": {
+      "entries": [
+        {
+          "id": "heightened",
+          "label": "Heightened Spell",
+          "who": "owner",
+          "offer": "casting",
+          "group": "metamagic",
+          "cost": {
+            "amount": 2,
+            "from": [
+              "metamagic-adept",
+              "font-of-magic"
+            ],
+            "label": "midi-qol.Metamagic.SorceryPoints"
+          },
+          "groupLimit": "bearer.items.some(i => i.identifier === 'sorcery-incarnate') && bearer.appliedEffects.some(e => e.name === bearer.items.find(i => i.identifier === 'innate-sorcery')?.name) ? 2 : 1",
+          "on": "use.saves",
+          "if": "tags.use.kind === 'spell' && (use.activity.type === 'save' || !!use.activity.save?.ability?.size)",
+          "choose": {
+            "kind": "targets",
+            "max": 1,
+            "label": "Heightened Spell: target"
+          },
+          "do": [
+            {
+              "modifier": "disadvantage",
+              "rolls": "save",
+              "for": "heightened"
+            }
+          ]
+        }
+      ],
+      "overlay": {
+        "identifier": "heightened-spell",
+        "rules": "2024",
+        "version": "1"
+      }
+    }
+  },
+  "_stats": {
+    "compendiumSource": null,
+    "duplicateSource": null,
+    "coreVersion": "14.360",
+    "systemId": "dnd5e",
+    "systemVersion": "6.1.0"
+  },
+  "ownership": {
+    "default": 0
+  },
+  "_key": "!items!mqeHeightenedSpe"
+}

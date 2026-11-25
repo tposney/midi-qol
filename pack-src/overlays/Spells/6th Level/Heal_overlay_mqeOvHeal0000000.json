@@ -1,0 +1,57 @@
+{
+  "name": "Heal (overlay)",
+  "type": "spell",
+  "img": "icons/magic/life/heart-glowing-red.webp",
+  "_id": "mqeOvHeal0000000",
+  "_key": "!items!mqeOvHeal0000000",
+  "folder": "SpellFldr6thLevl",
+  "ownership": {
+    "default": 0
+  },
+  "system": {
+    "description": {
+      "value": "<p><em>Overlay (midi-qol):</em> the healed creature's Blinded, Deafened and Poisoned conditions end, wherever they come from (a bare condition, or the effect of a spell or creature that carries it). It changes no item: midi applies it to any item with the identifier <code>heal</code> (2024 rules) that nothing else automates.</p>",
+      "chatFlavor": ""
+    },
+    "identifier": "heal-overlay",
+    "source": {
+      "rules": "2024"
+    },
+    "activities": {}
+  },
+  "effects": [],
+  "flags": {
+    "midi-qol": {
+      "overlay": {
+        "identifier": "heal",
+        "rules": "2024",
+        "version": "1"
+      },
+      "entries": [
+        {
+          "id": "endConditions",
+          "on": "use.end",
+          "label": "Heal: conditions ended",
+          "do": [
+            {
+              "effect": "remove",
+              "what": [
+                "blinded",
+                "deafened",
+                "poisoned"
+              ],
+              "to": "target"
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "_stats": {
+    "compendiumSource": null,
+    "duplicateSource": null,
+    "coreVersion": "14.360",
+    "systemId": "dnd5e",
+    "systemVersion": "6.1.0"
+  }
+}

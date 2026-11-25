@@ -1,5 +1,6 @@
 import { MODULE_ID } from "../../../midi-qol.js";
 import { automatedBy, registerRule, ruleFor, ruleFromOverlay, type OverlayChange } from "./rules.js";
+import { invalidateEntryHomes } from "./engine.js";
 
 /*
  * M11c-2 (plan ~/Documents/midi-next-M11-plan-2026-11-22.md): an overlay's data part, stored (user, 2026-11-22). An
@@ -12,7 +13,30 @@ import { automatedBy, registerRule, ruleFor, ruleFromOverlay, type OverlayChange
  * Changed fields (2026-11-25): the overlay's `changes` (fields of the item or of an activity the base has) are the
  * marker's own changes. The marker is an applied enchantment (transfer, on the item), so dnd5e applies them as it
  * prepares the item; nothing of the item's own data is written, and disabling or deleting the marker undoes them.
+ *
+ * On or off: the world setting Overlay items, which an item's overlayMode (Default / Enable / Disable, on its sheet)
+ * overrides. An item overlays don't apply to has no overlay rule, and its marker is disabled (dnd5e suppresses what the
+ * marker added); turned back on, the marker is enabled again.
  */
+
+export type OverlayMode = "default" | "enable" | "disable";
+
+export function overlayModeOf(item: Item.Implementation): OverlayMode {
+  const mode = item.getFlag(MODULE_ID, "overlayMode");
+  return mode === "enable" || mode === "disable" ? mode : "default";
+}
+
+/** The world setting (on unless turned off) */
+export function overlaysOn(): boolean {
+  try { return game.settings?.get(MODULE_ID, "OverlayItems") !== false; }
+  catch { return true; }
+}
+
+/** Whether overlays apply to the item: its own mode, else the world setting */
+export function overlaysApply(item: Item.Implementation): boolean {
+  const mode = overlayModeOf(item);
+  return mode === "enable" || (mode === "default" && overlaysOn());
+}
 
 interface OverlaySource { source: string, item: Item.Implementation }
 
@@ -31,7 +55,7 @@ function syncRules(identifier: string) {
   const offs: (() => void)[] = [];
   for (const { source, item } of overlaysByIdentifier.get(identifier) ?? []) {
     const rule = ruleFromOverlay(item);
-    if (rule) offs.push(registerRule(source, rule));
+    if (rule) offs.push(registerRule(source, rule, { appliesTo: overlaysApply }));
   }
   if (offs.length) ruleOffs.set(identifier, offs);
   else ruleOffs.delete(identifier);
@@ -68,6 +92,11 @@ function versionOf(overlay: Item.Implementation): string {
   return String(overlay.getFlag(MODULE_ID, "overlay")?.version ?? overlay._stats?.modifiedTime ?? "1");
 }
 
+/** The overlay item that matches the item (whether or not overlays apply to it) */
+export function overlayItemFor(item: Item.Implementation): Item.Implementation | undefined {
+  return overlayFor(item)?.item;
+}
+
 function overlayFor(item: Item.Implementation): OverlaySource | undefined {
   const system = item.system as { identifier?: string, source?: { rules?: string } };
   const list = system.identifier ? overlaysByIdentifier.get(system.identifier) : undefined;
@@ -88,12 +117,25 @@ function missingParts(overlay: Item.Implementation, item: Item.Implementation) {
 
 /** Add (or replace, for a new version) the data part of the overlay matching the item, if it lacks anything */
 export async function applyOverlayData(item: Item.Implementation): Promise<boolean> {
-  if (!(item.parent instanceof Actor) || automatedBy(item)) return false;
+  if (!(item.parent instanceof Actor)) return false;
+  const markers = item.effects.contents.filter(e => typeof e.getFlag(MODULE_ID, "overlayPart") === "object");
+  // Overlays off for the item: its marker disabled (what it added is suppressed), enabled again when they're back on
+  const allowed = overlaysApply(item);
+  const toggle = markers.filter(e => e.disabled === allowed).map(e => ({ _id: e.id!, disabled: !allowed }));
+  if (toggle.length) await item.updateEmbeddedDocuments("ActiveEffect", toggle);
+  if (!allowed || automatedBy(item)) return false;
   const found = overlayFor(item);
-  const markers = item.effects.contents.filter(e => !!e.getFlag(MODULE_ID, "overlayPart"));
   if (!found) return false;
   const version = versionOf(found.item);
-  const current = markers.find(e => (e.getFlag(MODULE_ID, "overlayPart") as OverlayMarker | undefined)?.overlay === found.item.uuid);
+  const isFound = (e: ActiveEffect.Implementation) => (e.getFlag(MODULE_ID, "overlayPart") as OverlayMarker | undefined)?.overlay === found.item.uuid;
+  // Another overlay's marker (an overlay since replaced or moved, e.g. from the sample pack to the overlays pack): gone, with what it added
+  const stale = markers.filter(e => !isFound(e)).map(e => e.id!);
+  if (stale.length) {
+    await item.deleteEmbeddedDocuments("ActiveEffect", stale);
+    for (let i = 0; i < 40 && item.effects.some(e => (e.getFlag(MODULE_ID, "overlayPart") as unknown) === true && stale.includes(String(e.getFlag("dnd5e", "dependentOn")))); i++)
+      await new Promise(resolve => setTimeout(resolve, 50));
+  }
+  const current = markers.find(isFound);
   if (current && (current.getFlag(MODULE_ID, "overlayPart") as OverlayMarker).version === version) return false;
   if (current) {
     // dnd5e deletes the marker's dependents after the delete resolves: what the old version added must be gone before
@@ -138,7 +180,20 @@ export function watchOverlayData(): void {
     if (worldOverlayChanged(item as Item.Implementation)) return;
     if (game.user?.isActiveGM && overlaysByIdentifier.size) void applyOverlayData(item as Item.Implementation).catch(err => console.warn("midi-qol | overlay data", err));
   });
-  Hooks.on("updateItem", item => { worldOverlayChanged(item as Item.Implementation); });
+  Hooks.on("updateItem", (item, change) => {
+    if (worldOverlayChanged(item as Item.Implementation)) return;
+    // The item's overlay mode changed: its rule comes or goes, its marker is enabled or disabled
+    if (foundry.utils.hasProperty(change, `flags.${MODULE_ID}.overlayMode`) || foundry.utils.hasProperty(change, `flags.${MODULE_ID}.-=overlayMode`)) {
+      invalidateEntryHomes();
+      if (game.user?.isActiveGM) void applyOverlayData(item as Item.Implementation).catch(err => console.warn("midi-qol | overlay data", err));
+    }
+  });
+}
+
+/** The world setting changed: rules looked up again; the active GM enables or disables the world's markers */
+export async function overlaySettingChanged(): Promise<void> {
+  invalidateEntryHomes();
+  if (game.user?.isActiveGM) await applyOverlayDataToWorld().catch(err => console.warn("midi-qol | overlay data", err));
 }
 
 /**
@@ -164,7 +219,7 @@ function worldOverlayChanged(item: Item.Implementation): boolean {
 const applyToWorldSoon = foundry.utils.debounce(() => { void applyOverlayDataToWorld().catch(err => console.warn("midi-qol | overlay data", err)); }, 500);
 
 export async function applyOverlayDataToWorld(): Promise<void> {
-  if (!game.user?.isActiveGM || !overlaysByIdentifier.size) return;
+  if (!game.user?.isActiveGM) return;
   for (const actor of game.actors ?? []) for (const item of actor.items) await applyOverlayData(item).catch(err => console.warn("midi-qol | overlay data", err));
 }
 
