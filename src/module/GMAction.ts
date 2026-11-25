@@ -22,7 +22,6 @@ import { copyDamageOptions } from "./lib/damageRules.js";
 import { actorEmbeddedByPath, repointCopiedDependentsSource } from "./lib/MidiDependentsRegistry.js";
 import { queueUndoData, startUndoWorkflow, _removeMostRecentWorkflow, _undoMostRecentWorkflow, _undoLastUseOf, undoTillWorkflow, _queueUndoDataDirect, addUndoChatCards } from "./undo.js";
 import { TroubleShooter } from "./apps/TroubleShooter.js";
-import { StatUpdateMessage } from "./RollStats.js";
 import { DamageApplicationOptions, DamageDescription, DamageListEntry, DamageModDisplay, MonksTokenBarRequest, MoveTokenOptions, RollDialogConfig, RollMessageConfig, RollProcessConfig, SaveDetails, TeleportTokenDestination } from "../globals.js";
 
 export let socketlibSocket: any = undefined;
@@ -108,7 +107,6 @@ export let setupSocket = () => {
   registerSocketAndQuery("updateActor", updateActor);
   registerSocketAndQuery("updateEffects", updateEffects);
   registerSocketAndQuery("updateItems", updateItems);
-  registerSocketAndQuery("recordStats", GMrecordStats)
   registerSocketAndQuery("saveAllStats", GMsaveAllStats)
   registerSocketAndQuery("addUndoChatCards", addUndoChatCards);
   registerSocketAndQuery("removeActionBonusReaction", removeActionBonusReaction);
@@ -348,10 +346,6 @@ async function _toggleStatusEffect(data: { actorUuid: string, statusId: string, 
 
 function removeActorStats(data: { actorId: string }) {
   return gameStats.GMremoveActorStats(data.actorId)
-}
-
-function GMrecordStats(data: StatUpdateMessage) {
-  return gameStats.GMrecordStats(data);
 }
 
 function GMsaveAllStats() {

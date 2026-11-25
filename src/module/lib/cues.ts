@@ -38,6 +38,10 @@ export interface Cue {
   itemName?: string;
   /** The ammunition item's uuid */
   ammunition?: string;
+  /** The use's attack roll: its kept die, total and advantage mode (dnd5e's: 1 advantage, -1 disadvantage) */
+  attackRoll?: { natural?: number, total?: number, advantageMode?: number };
+  /** A cue outside a use: the creature's actor uuid (it may have no token) */
+  actor?: string;
   tags: { kind?: string, attack?: string, school?: string, damageTypes: string[], spellLevel?: number, actionType?: string, defaultDamageType?: string };
   /** What midi's sound lookup keys on */
   sound: { actorType?: string, itemType?: string, subtype?: string, baseItem?: string };
@@ -125,6 +129,7 @@ export function cueFor(workflow: Workflow, cue: string): Cue {
     item: item?.uuid ?? undefined,
     itemName: item?.name ?? undefined,
     ammunition: workflow.ammunition?.uuid ?? undefined,
+    attackRoll: workflow.attackRoll ? { natural: workflow.diceRoll, total: workflow.attackTotal, advantageMode: advantageModeOf(workflow.attackRoll) } : undefined,
     tags: {
       kind: tag("use.kind") as string | undefined, attack: tag("use.attack") as string | undefined, school: tag("use.school") as string | undefined,
       damageTypes: damageTypes instanceof Set ? [...damageTypes] as string[] : [], spellLevel: tag("use.spellLevel") as number | undefined,
@@ -138,6 +143,11 @@ export function cueFor(workflow: Workflow, cue: string): Cue {
     presentation: overrideOf(workflow),
     audience: audienceOf(workflow.chatCard)
   };
+}
+
+function advantageModeOf(roll: Roll): number | undefined {
+  const mode: unknown = (roll.options as { advantageMode?: unknown }).advantageMode;
+  return typeof mode === "number" ? mode : undefined;
 }
 
 /** A whispered card's recipients (with its author and the GMs); a blind card's author and GMs */
@@ -241,9 +251,12 @@ export function raiseStepCues(workflow: Workflow, prePost: "pre" | "post", step:
   }
 }
 
-/** A cue outside a use: a creature dropped to 0 hit points */
-export function raiseCreatureCue(cue: string, token: TokenDocument.Implementation | undefined): void {
-  raiseCue({ cue, targets: token?.uuid ? [token.uuid] : [], outcomes: [], tags: { damageTypes: [] }, sound: {}, templates: [] });
+/** A cue outside a use (a creature dropped to 0 hit points, a death save, a concentration save), with its outcome */
+export function raiseCreatureCue(cue: string, token: TokenDocument.Implementation | undefined, extra: { actor?: Actor.Implementation, outcome?: Omit<TargetOutcome, "target" | "effects"> } = {}): void {
+  const target = token?.uuid ?? extra.actor?.uuid ?? undefined;
+  raiseCue({ cue, targets: token?.uuid ? [token.uuid] : [], actor: (extra.actor ?? token?.actor)?.uuid ?? undefined,
+    outcomes: extra.outcome && target ? [{ target, effects: [], ...extra.outcome }] : [],
+    tags: { damageTypes: [] }, sound: {}, templates: [] });
 }
 
 export function registerCues() {

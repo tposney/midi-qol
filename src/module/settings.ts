@@ -2,11 +2,12 @@ import { PlayerSettingsView } from "./apps/PlayerSettingsView.js";
 import { registerHiddenGroundCueSetting } from "./lib/hiddenGroundCue.js";
 import { applyChatCardSummaries, registerChatCardSummariesSetting } from "./lib/chatCardSummaries.js";
 import { registerRulesTextSettings } from "./lib/rulesText.js";
-import { debug, setDebugLevel, i18n, debugEnabled, gameStats, updateFlankingStatusEffects } from "../midi-qol.js";
+import { debug, setDebugLevel, i18n, debugEnabled, updateFlankingStatusEffects } from "../midi-qol.js";
+import { statisticsProvider } from "./services/statistics/service.js";
 import { ConfigPanel } from "./apps/ConfigPanel.js"
 import { DependentsExplorer } from "./apps/DependentsExplorer.js";
 import { ModuleReviewDialog } from "./apps/ModuleReviewDialog.js";
-import { RollStatsDisplay } from "./apps/RollStatsDisplay.js";
+import { RollStatsDisplay } from "../plugins/statistics/display.js";
 import { SoundConfigPanel } from "./apps/SoundConfigPanel.js";
 import { TroubleShooter } from "./apps/TroubleShooter.js";
 import { TargetConfirmationConfig } from "./apps/TargetConfirmationConfig.js";
@@ -1735,7 +1736,7 @@ export const registerSettings = function () {
       // The GM's in-memory currentStats is the authoritative copy;
       // reloading here would overwrite unsaved increments (race condition).
       if (!game.user?.isGM) {
-        gameStats.fetchStats();
+        void statisticsProvider()?.reload?.();
       }
       Hooks.callAll("midi-qol.StatsUpdated");
     }

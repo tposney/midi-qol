@@ -75,7 +75,6 @@ export function registerAttackSteps(): void {
     }
 
     await workflow.processAttackRoll();
-    workflow.recordAttackStats();
 
     if (configSettings.autoCheckHit !== "none") {
       await workflow.displayAttackRoll({ GMOnlyAttackRoll: true });

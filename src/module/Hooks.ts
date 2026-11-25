@@ -1,4 +1,5 @@
 import { tokenFor, tokenOf } from "./lib/tokenResolver.js";
+import { raiseCreatureCue } from "./lib/cues.js";
 import { largestReductionOnly } from "../rules/maxDRValue.js";
 import { chackFlanking as checkFlanking, updateFlankingHighlight } from "../rules/flanking/marking.js";
 import { saveOutcomeOverride } from "./services/outcomeRules/service.js";
@@ -6,7 +7,7 @@ import { registerDamageCalculationStep, runDamageCalculation } from "./steps/dam
 import { deprecation } from "./lib/compatLine.js";
 import { afterDamageApplied, consumeDamageApplication, runAfterDamageApplied, stampDamageApplication } from "./damage/application.js";
 import { applyDamageModifierStage } from "./services/damageModifiers/service.js";
-import { warn, error, debug, i18n, debugEnabled, log, gameStats, GameSystemConfig, MODULE_ID, getStaticID, MIDI_IMPLYING_STATUSES } from "../midi-qol.js";
+import { warn, error, debug, i18n, debugEnabled, log, GameSystemConfig, MODULE_ID, getStaticID, MIDI_IMPLYING_STATUSES } from "../midi-qol.js";
 import { excludeRegionSourceEffect, moveRegionsOnTurnChange } from "./regionBehaviors/MidiRegionActivityBehaviorType.js";
 import { colorChatMessageHandler, nsaMessageHandler, hideStuffHandler, hideRollUpdate, hideRollRender, checkOverTimeSaves } from "./chatMessageHandling.js";
 import { preferredActiveGM, processUndoDamageCard, whisperRollToPlayer } from "./GMAction.js";
@@ -1593,9 +1594,8 @@ Hooks.on("dnd5e.rollConcentration", (rolls, { subject }) => {
     // @ts-expect-error no dnd5e-types
     if (roll.isFailure) failed = true;
   }
-  if (configSettings.keepRollStats) {
-    gameStats.addConcentrationResult(subject, !failed);
-  }
+  // M23: a cue per concentration save (statistics count it from the cue)
+  raiseCreatureCue("concentration.rolled", tokenFor(subject), { actor: subject, outcome: { save: { ability: "con", success: !failed, critical: false, fumble: false } } });
   // The "item" path handles criticalSaves and endConcentration via its own workflow/macros
   if (configSettings.doConcentrationCheck === "item") return;
   for (let roll of rolls) {

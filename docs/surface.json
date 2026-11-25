@@ -616,6 +616,7 @@
     "saveOutcome",
     "saveRequests",
     "settingNeeds",
+    "statistics",
     "targetConfirmation",
     "targetPresets",
     "tokenNames",

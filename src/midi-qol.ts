@@ -117,14 +117,17 @@ import { initHooks, readyHooks, setupHooks } from './module/Hooks.js';
 import { setupCATIntegration } from './module/catIntegration.js';
 import { setupRegionMagic } from './module/regionMagic.js';
 import { setupMagicSight, drawnMagicSight } from './module/magicSight.js';
-import { SaferSocket, initGMActionSetup, registerInboxRollMode, setupSocket, socketlibSocket, unTimedExecuteAsGM } from './module/GMAction.js';
+import { SaferSocket, initGMActionSetup, registerInboxRollMode, setupSocket, socketlibSocket, unTimedExecuteAsGM, timedExecuteAsGM } from './module/GMAction.js';
 import { setupSheetQol } from './module/sheetQOL.js';
 import { TrapWorkflow, DamageOnlyWorkflow, Workflow, DummyWorkflow, UserWorkflow, targetedDamageBonusContributor } from './module/Workflow.js';
 import { addConcentrationDependent, addRollTo, addRollToAsync, applyTokenDamage, applyTokenDamageMany, canSee, canSense, canSenseModes, checkDistance, checkIncapacitated, checkNearby, chooseEffect, completeItemUse, computeCoverBonus, getCoverBonus, tokenAtPosition, createConditionData, throttledUpdate, displayDSNForRoll, doConcentrationCheck, doOverTimeEffect, evalAllConditions, evalCondition, findNearby, findNearbyCount, getCachedDocument, getChanges, getConcentrationEffect, getTokenDocument, getOrCreateTokenForActor, getOrCreateTokenForActorAsSet, getTokenPlayerName, getTokenPlayerNameForUser, getTraitMult, hasCondition, hasUsedBonusAction, hasUsedReaction, isValidTarget, midiRenderAttackRoll, midiRenderBonusDamageRoll, midiRenderDamageRoll, midiRenderOtherDamageRoll, midiRenderRoll, fromActorUuid, playerFor, playerForActor, raceOrType, reactionDialog, removeHiddenCondition, removeInvisibleCondition, removeReactionUsed, setActionUsed, setBonusActionUsed, setReactionUsed, hasUsedAction, tokenForActor, typeOrRace, validRollAbility, actorFromUuid, removeActionUsed, removeBonusActionUsed, getCheckRollModeFor, getSaveRollModeFor, completeActivityUse, checkActivityRange, unseenTargets, totalCoverTargets, modifyDamageBy, convertDuration, splitOvertimeSpec, isRangeCheckable, activityRanges, getItemFromEffectOrigin, addDependent, updatesCache, createDamageDetail, activityHasEmanationNoTemplate, getVitalityItem, getVitalityValue, getVitalityMax, hasVitalitySystem, resolveItemMacro, resolveActivityMacro, setupMidiFlagTypes, initCoverConstants, ReactionDialog, RollModifyDialog, sizeNumeric, restoreWorkflowTokenSets, setupMarkerChecks, setupCheckVision, toggleStatus, queueActorEffects } from "./module/utils.js";
 import { addFollowUp } from './module/followUps.js';
 import { highlightTokens } from './module/lib/tokenHighlight.js';
 import { ConfigPanel } from './module/apps/ConfigPanel.js';
-import { RollStats } from './module/RollStats.js';
+import type { RollStats } from './plugins/statistics/rollStats.js';
+import { registerStatisticsPlugin } from './plugins/statistics/index.js';
+import { defineStatisticsService } from './module/services/statistics/service.js';
+import { registerStatisticsFeed } from './module/lib/statisticsFeed.js';
 import { OnUseMacroOptions } from './module/apps/Item.js';
 import { MidiKeyManager } from './module/MidiKeyManager.js';
 import { MidiSounds } from './module/midi-sounds.js';
@@ -146,7 +149,7 @@ import { DependentsExplorer } from './module/apps/DependentsExplorer.js';
 import { MidiActivityChoiceDialog } from './module/apps/MidiActivityChoiceDialog.js';
 import { MidiRollChoiceDialog } from './module/apps/MidiRollChoiceDialog.js';
 import { ModuleReviewDialog } from './module/apps/ModuleReviewDialog.js';
-import { RollStatsDisplay } from './module/apps/RollStatsDisplay.js';
+import { RollStatsDisplay } from './plugins/statistics/display.js';
 import { SoundConfigPanel } from './module/apps/SoundConfigPanel.js';
 import { registerHandlebarsHelpers } from './module/lib/HandlebarsHelpers.js';
 import { MidiRegionActivityBehaviorType } from './module/regionBehaviors/MidiRegionActivityBehaviorType.js';
@@ -658,6 +661,8 @@ Hooks.once('init', async function () {
   registerRedirection();
   watchOverlayAuthoring();
   definePresentersService();
+  defineStatisticsService();
+  registerStatisticsFeed();
   registerCues();
   registerRollDialogBonuses();
   registerEntryEditorControls();
@@ -818,7 +823,9 @@ Hooks.once('init', async function () {
     let [message, err] = args;
     TroubleShooter.recordError(err, message);
   });
-  gameStats = new RollStats();
+  // M23: roll statistics, a plugin given midi's public API, fed from the cues
+  gameStats = registerStatisticsPlugin({ services: servicesApi, config: () => configSettings,
+    saveConfig: () => game.settings!.set("midi-qol", "ConfigSettings", configSettings), executeAsGM: (action, data) => timedExecuteAsGM(action, data) });
 });
 //@ts-expect-error
 Hooks.on("dae.modifySpecials", (specKey, specials, _characterSpec) => {

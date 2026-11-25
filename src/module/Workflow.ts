@@ -25,7 +25,7 @@ import { PORT_NAMES, type PortName, type WorkflowPorts } from "./steps/ports.js"
 import { getDistance } from "./services/distance/service.js";
 import { computeFlankedStatus, computeFlankingStatus } from "./services/flanking/service.js";
 import { speakerFor } from "./utils.js";
-import { warn, debug, log, i18n, i18nFormat, busyWait, error, debugEnabled, MQItemMacroLabel, GameSystemConfig, MODULE_ID, MQActivityMacroLabel, gameStats, MQDamageRollTypes } from "../midi-qol.js";
+import { warn, debug, log, i18n, i18nFormat, busyWait, error, debugEnabled, MQItemMacroLabel, GameSystemConfig, MODULE_ID, MQActivityMacroLabel, MQDamageRollTypes } from "../midi-qol.js";
 import { TeleportOption } from "./activities/teleport.js";
 import { cardWorkflowOptions, decodeWorkflowOptions, inheritableWorkflowOptions } from "./lib/workflowOptionsCodec.js";
 import { eventModifiers } from "./lib/rollKeys.js";
@@ -7538,84 +7538,6 @@ export class Workflow {
 
     // The roll's attribution when a crit/fumble occurred
     if (this.isCritical || this.isFumble) addAttribution(this.attackRoll, this.attackAttribution);
-  }
-
-  recordAttackStats() {
-    if (!configSettings.keepRollStats || !this.item || !this.attackRoll) return;
-    // @ts-expect-error CONFIG.Dice.D20Roll.ADV_MODE not typed
-    const ADV_MODE = CONFIG.Dice.D20Roll.ADV_MODE;
-    gameStats.addAttackRoll({
-      rawRoll: this.diceRoll,
-      fumble: this.isFumble,
-      critical: this.isCritical,
-      total: this.attackTotal,
-      advantageMode: this.attackRoll.options?.advantageMode ?? ADV_MODE.NORMAL
-    }, this.item);
-  }
-
-  recordDamageStats() {
-    if (!configSettings.keepRollStats || !this.item || !this.damageList?.length) return;
-    // Only count actual damage (positive hpDamage), not healing
-    const totalHpDamage = this.damageList.reduce((sum, dl) => sum + Math.max(0, dl.hpDamage ?? 0), 0);
-    // Sum raw damage from non-healing types only
-    let totalDamage = 0;
-    for (const dl of this.damageList) {
-      if (dl.damages) {
-        for (const dd of dl.damages) {
-          if (dd.value > 0 && dd.type && !GameSystemConfig.healingTypes[dd.type]) {
-            totalDamage += dd.value;
-          }
-        }
-      }
-    }
-
-    let maxDamage = 0;
-    let healingDone = 0;
-    let kills = 0;
-    for (const dl of this.damageList) {
-      const hp = dl.hpDamage ?? 0;
-      if (hp > 0) maxDamage = Math.max(maxDamage, hp);
-      if (hp < 0) healingDone += Math.abs(hp);
-      if ((dl.oldHP ?? 0) > 0 && (dl.newHP ?? 0) <= 0) kills += 1;
-
-      // Record damage taken or healing received on the target actor
-      if (hp !== 0 && dl.actorId) {
-        const damageByType: Record<string, number> = {};
-        if (hp > 0 && dl.calculatedDamages) {
-          for (const dd of dl.calculatedDamages) {
-            if (dd.value > 0 && dd.type) {
-              damageByType[dd.type] = (damageByType[dd.type] ?? 0) + dd.value;
-            }
-          }
-        }
-        gameStats.addDamageTaken(dl.actorId, hp, damageByType);
-      }
-    }
-
-    gameStats.addDamage(totalHpDamage, totalDamage, this.item, maxDamage, healingDone, kills, this.isCritical);
-
-    // Aggregate damage dealt by type across all targets (attacker-side stats), excluding healing types
-    const dealtByType: Record<string, number> = {};
-    const appliedByType: Record<string, number> = {};
-    for (const dl of this.damageList) {
-      if (dl.damages) {
-        for (const dd of dl.damages) {
-          if (dd.value > 0 && dd.type && !GameSystemConfig.healingTypes[dd.type]) {
-            dealtByType[dd.type] = (dealtByType[dd.type] ?? 0) + dd.value;
-          }
-        }
-      }
-      if (dl.calculatedDamages) {
-        for (const dd of dl.calculatedDamages) {
-          if (dd.value > 0 && dd.type && !GameSystemConfig.healingTypes[dd.type]) {
-            appliedByType[dd.type] = (appliedByType[dd.type] ?? 0) + dd.value;
-          }
-        }
-      }
-    }
-    if (Object.keys(dealtByType).length > 0 || Object.keys(appliedByType).length > 0) {
-      gameStats.addDamageDealtByType(this.item, dealtByType, appliedByType);
-    }
   }
 
   // Builds a [optionalKeys, flagOwners] tuple for the rolling actor + item enchantments.

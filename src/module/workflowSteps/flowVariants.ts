@@ -191,7 +191,6 @@ export function registerFlowVariants(): void {
 
   registerFlowVariant("midi-qol.trap", "midi-qol.AttackRollComplete", async ({ workflow, base }: { workflow: TrapWorkflow, base: () => Promise<unknown> }) => {
     await workflow.processAttackRoll();
-    workflow.recordAttackStats();
     await workflow.displayAttackRoll();
     workflow.recordTargetACModifiers();
     await workflow.checkHits(workflow.workflowOptions);
@@ -263,7 +262,6 @@ export function registerFlowVariants(): void {
   registerFlowVariant("midi-qol.trap", "midi-qol.AllRollsComplete", async ({ workflow, base }: { workflow: TrapWorkflow, base: () => Promise<unknown> }) => {
     if (debugEnabled > 1) debug("all rolls complete ", foundry.utils.duplicate(workflow.rawDamageDetail))
     if (workflow.rawDamageDetail?.length) await processDamageRoll(workflow, workflow.rawDamageDetail[0].type)
-    workflow.recordDamageStats();
     return "midi-qol.ApplyDynamicEffects";
   });
 

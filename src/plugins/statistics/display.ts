@@ -1,6 +1,8 @@
-import { i18n, gameStats } from "../../midi-qol.js";
-import { configSettings } from "../settings.js";
-import { RollStats } from "../RollStats.js";
+import type { RollStats } from "./rollStats.js";
+import { api } from "./api.js";
+import { midiStats } from "./index.js";
+
+const i18n = (key: string) => game.i18n?.localize(key) ?? key;
 const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
 
 export class RollStatsDisplay extends HandlebarsApplicationMixin(ApplicationV2) {
@@ -15,8 +17,8 @@ export class RollStatsDisplay extends HandlebarsApplicationMixin(ApplicationV2) 
 
   constructor(options: any = {}) {
     super(options);
-    this.stats = options.stats ?? gameStats;
-    this.playersOnly = options.playersOnly ?? configSettings.playerStatsOnly ?? !game.user?.isGM;
+    this.stats = options.stats ?? midiStats()!;
+    this.playersOnly = options.playersOnly ?? api().config().playerStatsOnly ?? !game.user?.isGM;
     this.expanded = {};
     this.expandedItems = {};
     this.showLifetime = {};
@@ -116,7 +118,7 @@ export class RollStatsDisplay extends HandlebarsApplicationMixin(ApplicationV2) 
     });
     context.hasStats = Object.keys(context.stats).length > 0;
     context.isGm = game.user?.isGM;
-    context.configSettings = configSettings;
+    context.configSettings = api().config();
     context.tabs = this.#getTabs();
     return context;
   }
@@ -144,15 +146,15 @@ export class RollStatsDisplay extends HandlebarsApplicationMixin(ApplicationV2) 
   async _onRender(context, options) {
     super._onRender(context, options);
     // Settings change listeners
-    for (const name of ["keepRollStats", "playerStatsOnly"]) {
+    for (const name of ["keepRollStats", "playerStatsOnly"] as const) {
       this.element.querySelector(`input[name="${name}"]`)?.addEventListener("change", (e) => {
-        configSettings[name] = (e.target as HTMLInputElement).checked;
-        game.settings.set("midi-qol", "ConfigSettings", configSettings);
+        api().config()[name] = (e.target as HTMLInputElement).checked;
+        void api().saveConfig();
       });
     }
     this.element.querySelector('input[name="saveStatsEvery"]')?.addEventListener("change", (e) => {
-      configSettings.saveStatsEvery = Number((e.target as HTMLInputElement).value);
-      game.settings.set("midi-qol", "ConfigSettings", configSettings);
+      api().config().saveStatsEvery = Number((e.target as HTMLInputElement).value);
+      void api().saveConfig();
     });
     // Apply expand/collapse and session/lifetime state via CSS classes
     Object.keys(this.stats.currentStats).forEach(id => {

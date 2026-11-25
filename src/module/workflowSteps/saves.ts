@@ -1,4 +1,4 @@
-import { debug, debugEnabled, error, gameStats } from "../../midi-qol.js";
+import { debug, debugEnabled, error } from "../../midi-qol.js";
 import { TroubleShooter } from "../apps/TroubleShooter.js";
 import { saveDisplayMode } from "../lib/saveVisibility.js";
 import { TokenDocumentSet } from "../lib/tokenDocumentSet.js";
@@ -82,14 +82,6 @@ export function registerSavesSteps(): void {
     if (configSettings.allowUseMacro && workflow.workflowOptions.noOnUseMacro !== true) {
       await workflow.callMacros(workflow.item, workflow.onUseMacros?.getMacros("postSave"), "OnUse", "postSave");
       if (workflow.ammunition) await workflow.callMacros(workflow.ammunition, workflow.ammunitionOnUseMacros?.getMacros("postSave"), "OnUse", "postSave");
-    }
-    if (configSettings.keepRollStats && workflow.item && workflow.hasSave) {
-      gameStats.addSaveResult(
-        workflow.saves.count + workflow.failedSaves.count,
-        workflow.saves.count,
-        workflow.failedSaves.count,
-        workflow.item
-      );
     }
     return "midi-qol.AllRollsComplete";
   });

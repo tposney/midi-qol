@@ -29,7 +29,6 @@ export function registerDamageSteps(): void {
     if (workflow.ownsCard && workflow.chatCard && workflow.midiTargetDetail) {
       await workflow.performThrottledUpdate(workflow.chatCard, host.targetsUpdate() as ChatMessage.UpdateData);
     }
-    workflow.recordDamageStats();
     // If a damage card is going to be created don't call the isDamaged macro - wait for the damage card calculations to do a better job
     if (configSettings.allowUseMacro && workflow.workflowOptions.noTargetOnUseMacro !== true && !configSettings.autoApplyDamage.includes("Card"))
       await workflow.triggerTargetMacros(["isDamaged"], workflow.hitTargets);

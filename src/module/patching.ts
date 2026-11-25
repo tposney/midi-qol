@@ -2,6 +2,7 @@ import { clickToAttackTakes } from "./services/clickToAttack/service.js";
 import { prepareChallengeArmor } from "../rules/challengeModeArmor.js";
 import { saveCriticalsCount } from "./services/outcomeRules/service.js";
 import { tokenFor, tokenOf } from "./lib/tokenResolver.js";
+import { raiseCreatureCue } from "./lib/cues.js";
 import type { PromptResponses } from "./lib/promptCosts.js";
 import { requestForRollClaim } from "./lib/bonusDecisions.js";
 import { toggleBudgetStatus } from "./services/economy/ledger.js";
@@ -12,7 +13,7 @@ import type { IncomingRequest } from "./lib/requests.js";
 import { collectRollModifiers } from "./services/rollModifiers/service.js";
 import { collectBonusCandidates, type BonusRollKind, type RollBonusQuery } from "./services/rollBonuses/service.js";
 import { initHiding } from "./lib/hiding.js";
-import { log, i18n, error, i18nFormat, warn, debugEnabled, GameSystemConfig, MODULE_ID, gameStats, getStaticID, MIDI_IMPLYING_STATUSES } from "../midi-qol.js";
+import { log, i18n, error, i18nFormat, warn, debugEnabled, GameSystemConfig, MODULE_ID, getStaticID, MIDI_IMPLYING_STATUSES } from "../midi-qol.js";
 import { saveDisplayMode } from "./lib/saveVisibility.js";
 import { configSettings, checkRule, checkMechanic, safeGetGameSetting, safeSetGameSetting, playerControlsInvisibleTokens } from "./settings.js";
 import { bonusDialog, createConditionData, displayDSNForRoll, expireRollEffect, getCriticalDamage, getDeadStatus, getOptionalCountRemainingShortFlag, getUnconsciousStatus, getVitalityDeadStatus, getWoundedStatus, hasUsedAction, hasUsedBonusAction, hasUsedReaction, midiRenderRoll, notificationNotify, removeActionUsed, removeBonusActionUsed, removeReactionUsed, tokenForActor, expireEffects, DSNMarkDiceDisplayed, evalAllConditionsAsync, hasCondition, MidiOptions, getVitalityItem, checkMagicResistanceAndVulnerability, isAutoFastForward, FastForwardRollType, buildRollChoices, selectBestRollChoice, getTokenPerimeterPolygon, closestPointOnPerimeter, measurePointDistance, setUserInitiatedTarget, dnd5eRollType, updateUserTargets, isEffectExpired, processTurnOverTime, toggleStatus, isActivityType, getTokenDocument, speakerFor, isMessageMode, queueActorEffects } from "./utils.js";
@@ -1729,20 +1730,14 @@ async function rollDeathSave(this: Actor.Implementation, wrapped, config: RollPr
 }
 
 export function deathSaveHook(rolls: Roll[], { chatString, subject: actor }: { chatString: string; updates: Actor.UpdateData; subject: Actor.Implementation }) {
-  if (configSettings.keepRollStats && actor) {
+  // M23: a cue per death save (statistics count it from the cue)
+  if (actor) {
     if (rolls instanceof Roll) rolls = [rolls];
-    let successes = 0;
-    let failures = 0;
     for (const roll of rolls) {
       // @ts-expect-error no dnd5e-types
-      if (roll.isCritical) successes += 2;
-      // @ts-expect-error no dnd5e-types
-      else if (roll.isFumble) failures += 2;
-      // @ts-expect-error no dnd5e-types
-      else if (roll.isFailure) failures += 1;
-      else successes += 1;
+      const critical = !!roll.isCritical, fumble = !critical && !!roll.isFumble, failure = !!roll.isFailure;
+      raiseCreatureCue("deathSave.rolled", tokenFor(actor), { actor, outcome: { save: { success: critical || (!fumble && !failure), critical, fumble, total: roll.total ?? undefined } } });
     }
-    gameStats.addDeathSaveResult(actor, successes, failures);
   }
   if (chatString === "DND5E.DeathSaveFailure") applyFailedDeathSaves(actor);
 }

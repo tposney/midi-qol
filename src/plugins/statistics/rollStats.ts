@@ -1,6 +1,6 @@
-import { RollStatsDisplay } from "./apps/RollStatsDisplay.js";
-import { timedExecuteAsGM } from "./GMAction.js";
-import { configSettings } from "./settings.js";
+import { RollStatsDisplay } from "./display.js";
+import { api } from "./api.js";
+import type { StatEvent, StatisticsProvider } from "../../module/services/statistics/service.js";
 
 const blankStat = {
   numAttacks: 0,
@@ -44,25 +44,18 @@ let blankStats = {
   lifetimeDamageAppliedByType: {} as Record<string, number>
 }
 
-/**
- * Discriminated union of stat update messages sent from clients to GM.
- * Each client sends only the raw roll data; the GM applies it as
- * increments to its authoritative copy.
- */
-export type StatUpdateMessage =
-  | { type: "attackRoll"; actorId: string; userId: string | undefined; itemName: string; rawRoll: number; fumble: boolean; critical: boolean; total: number; advantageMode: number }
-  | { type: "damage"; actorId: string; userId: string | undefined; itemName: string; hpDamage: number; totalDamage: number; maxDamage: number; healingDone: number; kills: number; hasAttackActivity: boolean; critical: boolean }
-  | { type: "saveResult"; actorId: string; userId: string | undefined; itemName: string; numSaves: number; numSuccess: number; numFail: number }
-  | { type: "damageTaken"; actorId: string; hpDamage: number; damageByType: Record<string, number> }
-  | { type: "damageDealtByType"; actorId: string; userId: string | undefined; dealtByType: Record<string, number>; appliedByType: Record<string, number> }
-  | { type: "concentrationResult"; actorId: string; success: boolean }
-  | { type: "deathSaveResult"; actorId: string; successes: number; failures: number };
+/** The events counted (the statistics service's) */
+export type StatUpdateMessage = StatEvent;
 
-export class RollStats {
+/**
+ * midi's roll statistics: the statistics service's default provider. Counts on the active GM (where the service is fed)
+ * into the world setting RollStats; the Show Statistics window shows them.
+ */
+export class RollStats implements StatisticsProvider {
   currentStats: Record<string, Stats>;
 
   public showStats() {
-    new RollStatsDisplay({ stats: this, playersOnly: configSettings.playerStatsOnly }).render({force: true});
+    new RollStatsDisplay({ stats: this, playersOnly: api().config().playerStatsOnly }).render({force: true});
   }
 
   getEntityStats(id?: string | null, collection?: ValidCollection) {
@@ -70,8 +63,8 @@ export class RollStats {
     if (!this.currentStats[id]) {
       const entity = collection?.get(id) as Actor.Implementation | User.Implementation | undefined;
       if (!entity) return;
-      if (entity instanceof Actor && configSettings.playerStatsOnly && !entity.hasPlayerOwner) return;
-      if (entity instanceof User && configSettings.playerStatsOnly && entity.isGM) return;
+      if (entity instanceof Actor && api().config().playerStatsOnly && !entity.hasPlayerOwner) return;
+      if (entity instanceof User && api().config().playerStatsOnly && entity.isGM) return;
       this.currentStats[id] = foundry.utils.duplicate({...blankStats, name: collection?.get(id)?.name ?? ""});
     } else {
       this.currentStats[id] = foundry.utils.mergeObject(this.currentStats[id], blankStats,
@@ -166,9 +159,7 @@ export class RollStats {
     await game.settings.set("midi-qol", "RollStats", {});
   }
   async clearActorStats(actorId: string) {
-    timedExecuteAsGM("removeStatsForActorId", {
-      actorId: actorId
-    });
+    await api().executeAsGM("removeStatsForActorId", { actorId });
   }
 
   GMremoveActorStats(actorId: string) {
@@ -191,79 +182,14 @@ export class RollStats {
     this.currentStats = game.settings.get("midi-qol", "RollStats");
   }
 
-  // ==================== Client-side methods ====================
-  // These send raw roll data to the GM via socket. The GM applies
-  // the increments to its authoritative copy (see GMrecordStats).
-
-  public addDamage(hpDamage: number, totalDamage: number, item: Item.Implementation | undefined, maxDamage: number = 0, healingDone: number = 0, kills: number = 0, critical: boolean = false) {
-    const actorId = item?.actor?.id;
-    if (!actorId) return;
-    // @ts-expect-error no dnd5e-types for activities
-    const hasAttackActivity = !!(item && item.system.activities?.some(a => a.hasAttack));
-    const userId = (game.user && item!.actor!.testUserPermission(game.user, "OWNER")) ? game.user.id : undefined;
-    timedExecuteAsGM("recordStats", {
-      type: "damage", actorId, userId, itemName: item?.name ?? "",
-      hpDamage, totalDamage, maxDamage, healingDone, kills, hasAttackActivity, critical
-    } satisfies StatUpdateMessage);
-    Hooks.callAll("midi-qol.StatsUpdated");
+  /** The statistics service: an event to count (fed on the active GM) */
+  public record(event: StatEvent) {
+    return this.GMrecordStats(event).then(() => Hooks.callAll("midi-qol.StatsUpdated"));
   }
 
-  public addSaveResult(numSaves: number, numSuccess: number, numFail: number, item: Item.Implementation) {
-    const actorId = item?.actor?.id;
-    if (!actorId) return;
-    const userId = (game.user && item.actor!.testUserPermission(game.user, "OWNER")) ? game.user.id : undefined;
-    timedExecuteAsGM("recordStats", {
-      type: "saveResult", actorId, userId, itemName: item.name,
-      numSaves, numSuccess, numFail
-    } satisfies StatUpdateMessage);
-    Hooks.callAll("midi-qol.StatsUpdated");
-  }
+  public show() { this.showStats(); }
 
-  public addAttackRoll({ rawRoll, fumble, critical, total, advantageMode }: { rawRoll: number; fumble: boolean; critical: boolean; total: number; advantageMode: number }, item: Item.Implementation) {
-    const actorId = item.actor?.id;
-    if (!actorId) return;
-    const userId = (game.user && item.actor?.testUserPermission(game.user, "OWNER")) ? game.user.id : undefined;
-    timedExecuteAsGM("recordStats", {
-      type: "attackRoll", actorId, userId, itemName: item.name,
-      rawRoll, fumble, critical, total, advantageMode
-    } satisfies StatUpdateMessage);
-    Hooks.callAll("midi-qol.StatsUpdated");
-  }
-
-  public addDamageTaken(actorId: string, hpDamage: number, damageByType: Record<string, number>) {
-    if (!actorId || hpDamage === 0) return;
-    timedExecuteAsGM("recordStats", {
-      type: "damageTaken", actorId, hpDamage, damageByType
-    } satisfies StatUpdateMessage);
-    Hooks.callAll("midi-qol.StatsUpdated");
-  }
-
-  public addDamageDealtByType(item: Item.Implementation, dealtByType: Record<string, number>, appliedByType: Record<string, number>) {
-    const actorId = item?.actor?.id;
-    if (!actorId) return;
-    const userId = (game.user && item.actor!.testUserPermission(game.user, "OWNER")) ? game.user.id : undefined;
-    timedExecuteAsGM("recordStats", {
-      type: "damageDealtByType", actorId, userId, dealtByType, appliedByType
-    } satisfies StatUpdateMessage);
-  }
-
-  public addConcentrationResult(actor: Actor.Implementation, success: boolean) {
-    const actorId = actor?.id;
-    if (!actorId) return;
-    timedExecuteAsGM("recordStats", {
-      type: "concentrationResult", actorId, success
-    } satisfies StatUpdateMessage);
-    Hooks.callAll("midi-qol.StatsUpdated");
-  }
-
-  public addDeathSaveResult(actor: Actor.Implementation, successes: number, failures: number) {
-    const actorId = actor?.id;
-    if (!actorId) return;
-    timedExecuteAsGM("recordStats", {
-      type: "deathSaveResult", actorId, successes, failures
-    } satisfies StatUpdateMessage);
-    Hooks.callAll("midi-qol.StatsUpdated");
-  }
+  public reload() { this.fetchStats(); }
 
   // ==================== GM-side recording ====================
   // Only runs on the GM. Applies raw roll data as increments to
@@ -301,7 +227,7 @@ export class RollStats {
     }
 
     // Periodic save
-    this.rollCount = (this.rollCount + 1) % Math.max(1, configSettings.saveStatsEvery);
+    this.rollCount = (this.rollCount + 1) % Math.max(1, api().config().saveStatsEvery);
     if (this.rollCount === 0) {
       await game.settings.set("midi-qol", "RollStats", this.currentStats);
     }
@@ -481,7 +407,7 @@ export class RollStats {
     if (game.user?.isGM) {
       await game.settings.set("midi-qol", "RollStats", this.currentStats);
     } else {
-      await timedExecuteAsGM("saveAllStats", {});
+      await api().executeAsGM("saveAllStats", {});
     }
   }
 
