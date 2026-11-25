@@ -769,6 +769,7 @@
     "use.attack",
     "use.cantrip",
     "use.class",
+    "use.costlyMaterial",
     "use.damageTypes",
     "use.flanking",
     "use.kind",
@@ -778,7 +779,8 @@
     "use.school",
     "use.spellLevel",
     "use.spellSlot",
-    "use.statuses"
+    "use.statuses",
+    "use.targetsScale"
   ],
   "flags": [
     "actions",

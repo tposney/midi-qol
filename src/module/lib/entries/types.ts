@@ -34,14 +34,28 @@ export interface Entry {
   who?: EntryWho | EntryWho[];
   /** What a card or prompt calls it (an action's button) */
   label?: string;
+  /** What it does, in a line for the prompt that offers it (text or a lang key) */
+  description?: string;
   if?: string;
-  offer?: "always" | "ask" | "reaction" | "toggle";
+  /** "casting": chosen as the use starts (dnd5e's usage dialog, lib/entries/castingOffers.ts), run at its own event */
+  offer?: "always" | "ask" | "reaction" | "toggle" | "casting";
   activity?: string;
+  cost?: EntryCost;
   choose?: Record<string, unknown>;
   limit?: EntryLimit;
   group?: string;
+  /** How many of the group a use may take (default 1): a number or a midi expression; the largest on offer counts */
+  groupLimit?: number | string;
   stacks?: boolean;
   do: EntryAction[];
+}
+
+/** Uses spent from the actor's items, by identifier and in order (Sorcery Points: Metamagic Adept's, then Font of Magic's) */
+export interface EntryCost {
+  amount: number | string;
+  from: string[];
+  /** What the uses are called ("Sorcery Points"); else the first item's name */
+  label?: string;
 }
 
 /** Where an entry was found */

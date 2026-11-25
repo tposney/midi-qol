@@ -12,7 +12,7 @@ import type { Entry, EntryAction, EntryHome, EntryWho, FoundEntry } from "./type
 import { addEconomy, entryConditionExtras } from "./conditionData.js";
 import { hasRules, itemOfEffect, matchesRole, ruleFor } from "./rules.js";
 import { askEntryChoice, type ChoiceDeclaration, type ChoiceValue } from "../choices.js";
-import { askOffers, costAllows, editToggles, listToggles, offerOption, payEntryConsumption, setToggle, spendEntryCost, toggleOn } from "./offers.js";
+import { askOffers, costAllows, editToggles, listToggles, offerOption, payEntryConsumption, payEntryPools, refundEntryPools, setToggle, spendEntryCost, toggleOn, type PoolReceipt } from "./offers.js";
 
 /*
  * M15 stage 1: the entry engine (plan ~/Documents/midi-next-M15-plan-2026-11-20.md). A event is raised with the actor
@@ -41,9 +41,10 @@ export interface EventContext {
   /**
    * Which offers run (a reaction event, lib/entries/responseEvents.ts): "automatic" the always and toggle entries
    * (the asks go in the reaction prompt), "asks" the plain asks (no reaction prompt was shown) and the near holders'
-   * asks and reactions, "near" only those (the creature's own were in its reaction prompt). All when absent.
+   * asks and reactions, "near" only those (the creature's own were in its reaction prompt). "casting": only the
+   * entries chosen as the use started (use.configure after dnd5e's usage dialog). All when absent.
    */
-  offers?: "automatic" | "asks" | "near";
+  offers?: "automatic" | "asks" | "near" | "casting";
 }
 
 export interface ActionRun {
@@ -182,9 +183,35 @@ function itemInUse(item: Item.Implementation): boolean {
   return true;
 }
 
+/** An enchantment dnd5e applies to its item (on the item, transferring), not switched off or suppressed */
+type Enchantment = ActiveEffect.Implementation & { isAppliedEnchantment?: boolean, active?: boolean };
+export const activeEnchantment = (effect: ActiveEffect.Implementation) => !!(effect as Enchantment).isAppliedEnchantment && (effect as Enchantment).active !== false;
+
+/**
+ * An enchantment's entries are its item's while it is on it (a spell that enchants a weapon, an infusion): about the
+ * uses of the enchanted item, or its owner at other events, as the item's own are. Its own (`flags.midi-qol.entries`),
+ * else a registered rule's for the item whose activity applied it, by the enchantment's role. Their counts and limits
+ * are kept on the enchantment and go with it.
+ */
+function enchantmentEntries(item: Item.Implementation, actor: Actor.Implementation | undefined): FoundEntry[] {
+  const list: FoundEntry[] = [];
+  for (const effect of item.effects) {
+    if (!activeEnchantment(effect)) continue;
+    const own = entriesOf(effect.getFlag(MODULE_ID, "entries"));
+    if (!own.length && hasRules()) {
+      const applying = (applyingActivity(effect) as { item?: Item.Implementation } | undefined)?.item;
+      const rule = applying && applying !== item ? ruleFor(applying)?.rule : undefined;
+      for (const role of rule?.effects ?? []) if (matchesRole(effect, role.match)) own.push(...entriesOf(role.entries));
+    }
+    list.push(...own.map(entry => found(entry, "item", effect, actor)));
+  }
+  return list;
+}
+
 /** An item's own entries and its activities', or (M11) a registered rule's for its identifier when it has none */
 function itemEntries(item: Item.Implementation, actor: Actor.Implementation | undefined): FoundEntry[] {
   const list = entriesOf(item.getFlag(MODULE_ID, "entries")).map(entry => found(entry, "item", item, actor));
+  list.push(...enchantmentEntries(item, actor));
   // @ts-expect-error no dnd5e-types
   for (const activity of item.system.activities ?? []) list.push(...entriesOf(activity.midiEntries).map(entry => found(entry, "activity", activity, actor)));
   const rule = hasRules() ? ruleFor(item)?.rule : undefined;
@@ -333,6 +360,11 @@ export function collectEntries(eventId: string, context: EventContext): FoundEnt
   return context.only ? list.filter(f => documentUuid(f.document) === context.only) : list;
 }
 
+/** An item's entries offered as a use starts (its own, its activities', or its rule's) */
+export function itemCastingEntries(item: Item.Implementation, actor: Actor.Implementation | undefined): FoundEntry[] {
+  return itemEntries(item, actor).filter(f => f.entry.offer === "casting");
+}
+
 /** The actor's entries offered as toggles (its items in use and applied effects), for the sheet's Toggles control */
 export function actorToggleEntries(actor: Actor.Implementation): FoundEntry[] {
   const list: FoundEntry[] = [];
@@ -417,7 +449,35 @@ export async function setEntryState(effect: ActiveEffect.Implementation, entryId
 
 const useLimits = new WeakMap<object, Map<string, number>>();
 /** The groups a use has taken an entry of */
-const groupsUsed = new WeakMap<object, Set<string>>();
+const groupsUsed = new WeakMap<object, Map<string, number>>();
+/** offer "casting": the entries chosen as the use started (their limit keys), paid then */
+const castingChosen = new WeakMap<object, Set<string>>();
+const castingKey = (f: FoundEntry) => limitKey(documentUuid(f.document), f.entry.id);
+
+function countGroup(workflow: object, group: string) {
+  const used = groupsUsed.get(workflow) ?? new Map<string, number>();
+  used.set(group, (used.get(group) ?? 0) + 1);
+  groupsUsed.set(workflow, used);
+}
+
+/** How many of a group a use may take: the largest `groupLimit` among the entries on offer (1 when none says) */
+async function groupLimits(list: readonly { entry: Entry, conditionData: Record<string, unknown> }[]): Promise<Map<string, number>> {
+  const limits = new Map<string, number>();
+  for (const { entry, conditionData } of list) {
+    if (!entry.group) continue;
+    let limit = 1;
+    if (typeof entry.groupLimit === "number") limit = entry.groupLimit;
+    else if (typeof entry.groupLimit === "string") limit = Number(await evalCondition(entry.groupLimit, conditionData, { errorReturn: 1, async: true })) || 1;
+    limits.set(entry.group, Math.max(limits.get(entry.group) ?? 1, limit));
+  }
+  return limits;
+}
+
+/** The room left in a group this use */
+function groupRoom(limits: Map<string, number>, context: EventContext): (group: string) => number {
+  const used = context.workflow ? groupsUsed.get(context.workflow) : undefined;
+  return group => (limits.get(group) ?? 1) - (used?.get(group) ?? 0);
+}
 
 function storedLimits(actor: Actor.Implementation | undefined): StoredLimit[] {
   const stored = actor?.getFlag(MODULE_ID, "entryLimits");
@@ -583,6 +643,8 @@ export function entryChecks(): readonly EntryCheck[] { return checks; }
 /** Run a list of actions for an entry (a table row's, an action's then/else): the keys that ran are added to `ran` */
 export async function runActions(list: readonly EntryAction[], run: Omit<ActionRun, "action">, ran: string[]): Promise<void> {
   for (const action of list) {
+    // An entry at several events: an action with `on` runs at that one only
+    if (typeof action.on === "string" && action.on !== run.eventId) continue;
     // At a use's event (no one target), an action for the targets with a condition is run for each target its
     // condition holds for, its condition and values read with that target (Ensnaring Strike: Large or larger)
     const targets = perTargetRun(action, run);
@@ -627,13 +689,16 @@ async function runAction(action: EntryAction, run: Omit<ActionRun, "action">, ra
 
 /** Run a event's entries for this context (MidiQOL.entries.run): what ran, in order */
 export async function runEvent(eventId: string, context: EventContext): Promise<EntryRunResult[]> {
-  type Candidate = { found: FoundEntry, conditionData: Record<string, unknown>, entry: Entry, ask: boolean, kept?: { value: unknown } };
+  type Candidate = { found: FoundEntry, conditionData: Record<string, unknown>, entry: Entry, ask: boolean, kept?: { value: unknown }, prepaid?: boolean };
   const candidates: Candidate[] = [];
   // Keep choices being asked: this use's own asks, released once taken or declined
   const asking: (() => void)[] = [];
   try {
   for (const f of collectEntries(eventId, context)) {
     const offer = f.entry.offer ?? "always";
+    // Chosen as the use started: its limit, cost and group were taken then
+    const prepaid = offer === "casting" && !!context.workflow && !!castingChosen.get(context.workflow)?.has(castingKey(f));
+    if (context.offers === "casting" && !prepaid) continue;
     // Another use of this item is asking for this choice (an area's saves for several creatures at once): its answer first
     const keepKey = f.entry.choose ? keepKeyOf(f, context) : undefined;
     const pending = keepKey ? pendingKeeps.get(keepKey) : undefined;
@@ -645,6 +710,8 @@ export async function runEvent(eventId: string, context: EventContext): Promise<
       pendingKeeps.set(keepKey, { promise: new Promise<void>(resolve => { release = resolve; }), use: context.workflow });
       asking.push(() => { pendingKeeps.delete(keepKey); release(); });
     }
+    // Not chosen at casting: only a choice kept from a use that was runs
+    if (offer === "casting" && !prepaid && !kept) continue;
     if (kept && context.offers && context.offers !== "automatic") continue;
     const ask = (offer === "ask" || offer === "reaction") && !kept;
     if (context.offers === "automatic" && ask) continue;
@@ -657,20 +724,25 @@ export async function runEvent(eventId: string, context: EventContext): Promise<
     if (offer === "reaction" && (!f.actor || hasUsedReaction(f.actor))) continue;
     const conditionData = conditionDataFor(f, context);
     if (!await entryHolds(f, conditionData)) { noteCheck(eventId, f, "condition"); continue; }
-    if (!kept && !limitAllows(f, context)) { noteCheck(eventId, f, "limit"); continue; }
-    if (!kept && !costAllows(f)) { noteCheck(eventId, f, "cost"); continue; }
-    candidates.push({ found: f, conditionData, entry: f.entry, ask, ...(kept ? { kept } : {}) });
+    if (!kept && !prepaid && !limitAllows(f, context)) { noteCheck(eventId, f, "limit"); continue; }
+    if (!kept && !prepaid && !costAllows(f)) { noteCheck(eventId, f, "cost"); continue; }
+    candidates.push({ found: f, conditionData, entry: f.entry, ask, ...(kept ? { kept } : {}), ...(prepaid ? { prepaid } : {}) });
   }
   const results: EntryRunResult[] = [];
   // A group is one entry per use, across the use's events (Metamagic: one option per spell), unless it stacks
-  const open = candidates.filter(c => groupOpen(c.entry, context));
-  const automatic = selectGroups(open.filter(c => !c.ask));
-  const taken = new Set(automatic.flatMap(c => c.entry.group && !c.entry.stacks ? [c.entry.group] : []));
-  const asked = await chooseAsked(eventId, open.filter(c => c.ask && (!c.entry.group || c.entry.stacks || !taken.has(c.entry.group))));
-  const chosen = [...automatic, ...selectGroups(asked)];
+  const room = groupRoom(await groupLimits(candidates), context);
+  const grouped = (c: Candidate) => !!c.entry.group && !c.entry.stacks && !c.prepaid;
+  const open = candidates.filter(c => !grouped(c) || room(c.entry.group!) > 0);
+  const paidFor = open.filter(c => c.prepaid);
+  const automatic = selectGroups(open.filter(c => !c.ask && !c.prepaid), room);
+  const taken = new Map<string, number>();
+  for (const c of automatic) if (grouped(c)) taken.set(c.entry.group!, (taken.get(c.entry.group!) ?? 0) + 1);
+  const left = (group: string) => room(group) - (taken.get(group) ?? 0);
+  const asked = await chooseAsked(eventId, open.filter(c => c.ask && (!grouped(c) || left(c.entry.group!) > 0)), context);
+  const chosen = [...paidFor, ...automatic, ...selectGroups(asked, left)];
   for (const candidate of open) if (candidate.ask && !chosen.includes(candidate)) noteCheck(eventId, candidate.found, "declined");
-  for (const { found: f, conditionData, kept } of chosen) {
-    const result = await takeEntry(eventId, f, context, conditionData, kept);
+  for (const { found: f, conditionData, kept, prepaid } of chosen) {
+    const result = await takeEntry(eventId, f, context, conditionData, kept, prepaid);
     noteCheck(eventId, f, "ran", result.actions);
     results.push(result);
   }
@@ -678,25 +750,26 @@ export async function runEvent(eventId: string, context: EventContext): Promise<
   } finally { for (const release of asking) release(); }
 }
 
-/** The entry's group (if any) has no entry taken yet this use, or it stacks */
-function groupOpen(entry: Entry, context: EventContext): boolean {
-  if (!entry.group || entry.stacks || !context.workflow) return true;
-  return !groupsUsed.get(context.workflow)?.has(entry.group);
-}
 
 /**
  * Run an entry that was chosen (or runs by itself): its actions, then what taking it spends: its limit, its cost, the
  * reaction for a reaction offer, its group for the use. A reaction prompt's offer (lib/entries/responseEvents.ts) is
  * taken this way.
  */
-export async function takeEntry(eventId: string, f: FoundEntry, context: EventContext, conditionData: Record<string, unknown>, kept?: { value: unknown }): Promise<EntryRunResult> {
+export async function takeEntry(eventId: string, f: FoundEntry, context: EventContext, conditionData: Record<string, unknown>, kept?: { value: unknown }, prepaid?: boolean): Promise<EntryRunResult> {
   const ran: string[] = [];
-  // A kept choice (choose.keep) was paid for when it was made
-  if (!kept && !await payEntryConsumption(f)) return { entry: f.entry.id, document: documentUuid(f.document), actions: ran };
+  const free = !!kept || !!prepaid;
+  // A kept choice (choose.keep) was paid for when it was made; one chosen at casting, then
+  if (!free && !await payEntryConsumption(f)) return { entry: f.entry.id, document: documentUuid(f.document), actions: ran };
+  const pools = free ? [] : await payEntryPools(f);
+  if (pools === false) return { entry: f.entry.id, document: documentUuid(f.document), actions: ran };
   // Its own choice, asked as it is taken (or kept from earlier) and kept on the use as choices[<entry id>]; closed, it is not taken
   if (f.entry.choose && context.workflow && await holds(f.entry.choose.if as string | undefined, conditionData)) {
     const value = kept ? kept.value as ChoiceValue : await askEntryChoice({ label: f.entry.label ?? f.entry.id, kind: "option", ...f.entry.choose, id: f.entry.id } as ChoiceDeclaration, context.workflow);
-    if (value === undefined) return { entry: f.entry.id, document: documentUuid(f.document), actions: ran };
+    if (value === undefined) {
+      await refundEntryPools(pools);
+      return { entry: f.entry.id, document: documentUuid(f.document), actions: ran };
+    }
     if (!kept) await keepChoice(f, context, value);
     context.workflow.setChoice(f.entry.id, value);
     const choices = (conditionData.choices ?? {}) as Record<string, unknown>;
@@ -704,17 +777,13 @@ export async function takeEntry(eventId: string, f: FoundEntry, context: EventCo
   }
   await runActions(f.entry.do, { eventId: eventId, found: f, context, conditionData }, ran);
   if (ran.length) {
-    if (!kept) {
+    if (!free) {
       await spendEntryLimit(f, context);
       await spendEntryCost(f);
       if (f.entry.offer === "reaction" && f.actor) await setReactionUsed(f.actor);
     }
-    if (f.entry.group && context.workflow) {
-      const used = groupsUsed.get(context.workflow) ?? new Set<string>();
-      used.add(f.entry.group);
-      groupsUsed.set(context.workflow, used);
-    }
-  }
+    if (f.entry.group && !f.entry.stacks && context.workflow && !prepaid) countGroup(context.workflow, f.entry.group);
+  } else await refundEntryPools(pools);
   return { entry: f.entry.id, document: documentUuid(f.document), actions: ran };
 }
 
@@ -730,8 +799,8 @@ export async function offerableEntries(eventId: string, context: EventContext, r
     if (offer === "reaction" && !reactionLeft) continue;
     // Someone else's (near) entry is asked of its holder, not in this creature's prompt
     if (f.actor && f.actor !== context.actor) continue;
-    if (!groupOpen(f.entry, context)) continue;
     const conditionData = conditionDataFor(f, context);
+    if (f.entry.group && !f.entry.stacks && groupRoom(await groupLimits([{ entry: f.entry, conditionData }]), context)(f.entry.group) <= 0) continue;
     if (!await entryHolds(f, conditionData)) continue;
     if (!limitAllows(f, context) || !costAllows(f)) continue;
     list.push({ found: f, conditionData });
@@ -739,8 +808,87 @@ export async function offerableEntries(eventId: string, context: EventContext, r
   return list;
 }
 
+/*
+ * offer "casting" (lib/entries/castingOffers.ts): entries chosen as a use starts, in dnd5e's usage dialog, and run at
+ * their own events as taken. Choosing pays: the limit, the cost, the group's room.
+ */
+
+export interface CastingOffer { key: string, found: FoundEntry, conditionData: Record<string, unknown>, groupLimit: number, allowed: boolean }
+
+/** The casting offers this use has: the actor's entries with offer "casting" whose condition holds as the use starts */
+export async function castingOffers(context: EventContext): Promise<CastingOffer[]> {
+  const { actor } = context;
+  const own = context.activity?.item ?? context.item;
+  const all: FoundEntry[] = [];
+  if (own) all.push(...itemEntries(own, actor));
+  for (const item of actor.items) if (item !== own && itemInUse(item)) all.push(...itemEntries(item, actor));
+  for (const effect of actor.appliedEffects) all.push(...effectEntries(effect, actor));
+  const events = new Set(all.filter(f => f.entry.offer === "casting").flatMap(f => [f.entry.on].flat()));
+  const seen = new Set<string>();
+  const list: (Omit<CastingOffer, "groupLimit"> )[] = [];
+  for (const eventId of events) {
+    for (const f of collectEntries(eventId, context)) {
+      if (f.entry.offer !== "casting" || seen.has(castingKey(f)) || (f.actor && f.actor !== actor)) continue;
+      seen.add(castingKey(f));
+      const conditionData = conditionDataFor(f, context);
+      if (!await entryHolds(f, conditionData)) continue;
+      if (!limitAllows(f, context)) continue;
+      // A choice kept from earlier this turn runs by itself
+      if (f.entry.choose && keptChoice(f, context)) continue;
+      list.push({ key: castingKey(f), found: f, conditionData, allowed: costAllows(f) });
+    }
+  }
+  const limits = await groupLimits(list.map(o => ({ entry: o.found.entry, conditionData: o.conditionData })));
+  return list.map(o => ({ ...o, groupLimit: o.found.entry.group ? limits.get(o.found.entry.group) ?? 1 : Infinity }));
+}
+
+/**
+ * The casting offers a use chose: paid (pools given back by the returned refund, a consuming activity's not), their
+ * limits spent, their groups counted; from then on they run at their events. Undefined when one can't be paid.
+ */
+export async function acceptCasting(offers: readonly CastingOffer[], context: EventContext): Promise<{ refund(): Promise<void> } | undefined> {
+  const workflow = context.workflow;
+  if (!workflow) return undefined;
+  const receipts: PoolReceipt[] = [];
+  const refund = async () => { for (const receipt of receipts.splice(0)) await refundEntryPools(receipt); };
+  const chosen = castingChosen.get(workflow) ?? new Set<string>();
+  for (const { found: f, key } of offers) {
+    const pools = costAllows(f) && await payEntryConsumption(f) ? await payEntryPools(f) : false;
+    if (pools === false) {
+      await refund();
+      for (const o of offers) chosen.delete(o.key);
+      return undefined;
+    }
+    receipts.push(pools);
+    await spendEntryLimit(f, context);
+    await spendEntryCost(f);
+    if (f.entry.group && !f.entry.stacks) countGroup(workflow, f.entry.group);
+    chosen.add(key);
+  }
+  castingChosen.set(workflow, chosen);
+  return { refund };
+}
+
+/** What an offer at a use's event is about, in words for its prompt: the roll just made (its total and dice) */
+function offerDetail(eventId: string, context: EventContext): string | undefined {
+  const workflow = context.workflow;
+  if (!workflow) return undefined;
+  const say = (key: string, data: Record<string, string>) => game.i18n?.format(`midi-qol.Entries.Offer.${key}`, data) ?? "";
+  const dice = (roll: Roll) => roll.dice.map(die => `${die.number}d${die.faces}: ${die.results.filter(r => r.active).map(r => r.result).join(", ")}`).join("; ");
+  if (eventId === "use.damageRolled" || eventId === "use.damageRoll") {
+    const rolls = (workflow.damageRolls ?? []) as Roll[];
+    if (!rolls.length) return undefined;
+    return say("Damage", { item: workflow.item?.name ?? "", total: String(rolls.reduce((sum, roll) => sum + (roll.total ?? 0), 0)), dice: rolls.map(dice).filter(Boolean).join("; ") });
+  }
+  if (["use.missed", "use.hit", "use.attack"].includes(eventId) && workflow.attackRoll) {
+    const roll = workflow.attackRoll as Roll;
+    return say(eventId === "use.missed" ? "Missed" : "Attack", { item: workflow.item?.name ?? "", total: String(roll.total ?? ""), dice: dice(roll) });
+  }
+  return undefined;
+}
+
 /** The ask offers taken: each actor's owner asked once for the event */
-async function chooseAsked<T extends { found: FoundEntry }>(eventId: string, list: T[]): Promise<T[]> {
+async function chooseAsked<T extends { found: FoundEntry }>(eventId: string, list: T[], context?: EventContext): Promise<T[]> {
   if (!list.length) return [];
   const byActor = new Map<Actor.Implementation, { candidate: T, key: string }[]>();
   list.forEach((candidate, index) => {
@@ -753,7 +901,7 @@ async function chooseAsked<T extends { found: FoundEntry }>(eventId: string, lis
   const taken: T[] = [];
   for (const [actor, entries] of byActor) {
     const title = `${actor.name}: ${events.get(eventId)?.value.label ?? eventId}`;
-    const keys = new Set(await askOffers(actor, title, entries.map(({ candidate, key }) => offerOption(candidate.found, key))));
+    const keys = new Set(await askOffers(actor, title, entries.map(({ candidate, key }) => offerOption(candidate.found, key)), context ? offerDetail(eventId, context) : undefined));
     taken.push(...entries.filter(e => keys.has(e.key)).map(e => e.candidate));
   }
   return taken;

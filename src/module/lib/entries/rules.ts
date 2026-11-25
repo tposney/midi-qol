@@ -63,7 +63,9 @@ export function automatedBy(item: ItemLike): string | undefined {
   // What an overlay added (M11c-2) is the overlay's, not the item's own
   const own = (flags: unknown) => !(flags as Record<string, { overlayPart?: unknown } | undefined> | undefined)?.["midi-qol"]?.overlayPart;
   for (const activity of activities ?? []) if (activity.midiEntries?.length && own((activity as { flags?: unknown }).flags)) return "entries";
-  for (const effect of item.effects) if ((effect.flags as Record<string, { entries?: unknown[] } | undefined>)["midi-qol"]?.entries?.length && own(effect.flags)) return "entries";
+  // An enchantment on the item is something done to it, not its own automation: enchanting a weapon leaves its rule on
+  const applied = (effect: ActiveEffect.Implementation) => !!(effect as { isAppliedEnchantment?: boolean }).isAppliedEnchantment;
+  for (const effect of item.effects) if ((effect.flags as Record<string, { entries?: unknown[] } | undefined>)["midi-qol"]?.entries?.length && own(effect.flags) && !applied(effect)) return "entries";
   return undefined;
 }
 
@@ -77,6 +79,17 @@ export function ruleFor(item: ItemLike | undefined | null): Registered | undefin
   const ruleset = source?.rules;
   const matching = candidates.filter(r => (!r.rule.rules || r.rule.rules === ruleset) && (!r.rule.type || r.rule.type === item.type));
   return matching.at(-1);
+}
+
+/** A registered rule the item's other automation keeps from applying: the rule's source, and what automates the item */
+export function unusedRuleFor(item: ItemLike | undefined | null): { source: string, by: string } | undefined {
+  if (!item || !byIdentifier.size) return undefined;
+  const by = automatedBy(item);
+  const { identifier, source } = systemOf(item);
+  if (!by || !identifier || LEFTOVERS.has(identifier)) return undefined;
+  const matching = (byIdentifier.get(identifier) ?? []).filter(r => (!r.rule.rules || r.rule.rules === source?.rules) && (!r.rule.type || r.rule.type === item.type));
+  const found = matching.at(-1);
+  return found ? { source: found.source, by } : undefined;
 }
 
 /** Whether a document (an activity or effect) fills a role */
@@ -113,8 +126,14 @@ export function describeRuleFor(item: ItemLike): { source: string, identifier: s
 export interface OverlayFlag {
   identifier: string, rules?: "2014" | "2024", type?: string, version?: string,
   /** The base it was saved against (save as overlay): a base changed since is reported */
-  base?: { uuid: string, modifiedTime?: number }
+  base?: { uuid: string, modifiedTime?: number },
+  /**
+   * Fields of the item, or of an activity the base has, that the overlay changes: applied to the item as the changes
+   * of the overlay's marker enchantment (dnd5e's own: `system.<path>`, `system.activities.<id>.<path>`, `name`)
+   */
+  changes?: OverlayChange[]
 }
+export interface OverlayChange { key: string, value: string, type?: string }
 
 /** An overlay item as a rule: its entries, its activities' (by type and name), its effects' (by name) */
 export function ruleFromOverlay(item: ItemLike): Rule | undefined {

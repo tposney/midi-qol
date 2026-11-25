@@ -30,73 +30,7 @@
     },
     "properties": [],
     "requirements": "",
-    "activities": {
-      "9jWUnfRzs0TqKWC2": {
-        "type": "utility",
-        "name": "Subtle Spell",
-        "_id": "9jWUnfRzs0TqKWC2",
-        "activation": {
-          "type": "",
-          "value": null,
-          "override": false,
-          "condition": "When you cast a spell"
-        },
-        "consumption": {
-          "scaling": {
-            "allowed": false
-          },
-          "spellSlot": true,
-          "targets": [
-            {
-              "type": "itemUses",
-              "value": "1",
-              "target": "font-of-magic",
-              "scaling": {}
-            }
-          ]
-        },
-        "description": {
-          "chatFlavor": ""
-        },
-        "duration": {
-          "units": "inst",
-          "concentration": false,
-          "override": false
-        },
-        "effects": [],
-        "range": {
-          "override": false,
-          "units": "self",
-          "special": ""
-        },
-        "target": {
-          "template": {
-            "contiguous": false,
-            "units": "ft",
-            "type": ""
-          },
-          "affects": {
-            "choice": false,
-            "count": "",
-            "type": ""
-          },
-          "override": false,
-          "prompt": false
-        },
-        "uses": {
-          "spent": 0,
-          "recovery": [],
-          "max": ""
-        },
-        "sort": 0,
-        "roll": {
-          "prompt": false,
-          "visible": false,
-          "name": "",
-          "formula": ""
-        }
-      }
-    },
+    "activities": {},
     "enchant": {},
     "identifier": "subtle-spell"
   },
@@ -112,8 +46,22 @@
     "midi-qol": {
       "entries": [
         {
+          "id": "subtle",
+          "label": "Subtle Spell",
+          "who": "owner",
+          "offer": "casting",
+          "group": "metamagic",
+          "cost": {
+            "amount": 1,
+            "from": [
+              "metamagic-adept",
+              "font-of-magic"
+            ],
+            "label": "midi-qol.Metamagic.SorceryPoints"
+          },
+          "groupLimit": "bearer.items.some(i => i.identifier === 'sorcery-incarnate') && bearer.appliedEffects.some(e => e.name === bearer.items.find(i => i.identifier === 'innate-sorcery')?.name) ? 2 : 1",
           "on": "use.configure",
-          "if": "tags.use.kind === 'spell'",
+          "if": "tags.use.kind === 'spell' && (['vocal', 'somatic'].some(c => tags.use.properties.has(c)) || (tags.use.properties.has('material') && !tags.use.costlyMaterial))",
           "do": [
             {
               "change": {
@@ -122,16 +70,23 @@
                   "somatic"
                 ]
               }
+            },
+            {
+              "if": "!tags.use.costlyMaterial",
+              "change": {
+                "components": [
+                  "material"
+                ]
+              }
             }
-          ],
-          "id": "subtle",
-          "who": "owner",
-          "offer": "ask",
-          "group": "metamagic",
-          "activity": "9jWUnfRzs0TqKWC2",
-          "label": "Subtle Spell"
+          ]
         }
-      ]
+      ],
+      "overlay": {
+        "identifier": "subtle-spell",
+        "rules": "2024",
+        "version": "1"
+      }
     }
   },
   "_stats": {

@@ -47,7 +47,10 @@ const CONDITIONS: Record<string, string> = {
   "!!tags.use.area": "Area",
   "!!tags.use.spellSlot": "SpellSlot",
   "use.activity.range.units === 'touch'": "Touch",
-  "targets.some(t => t.attributes.hp.value < t.attributes.hp.max)": "TargetHurt"
+  "targets.some(t => t.attributes.hp.value < t.attributes.hp.max)": "TargetHurt",
+  "tags.use.targetsScale": "TargetsScale",
+  "tags.use.costlyMaterial": "CostlyMaterial",
+  "!tags.use.costlyMaterial": "NoCostlyMaterial"
 };
 
 /** The conditions offered as ready-made (the form's "add a common condition") */
@@ -341,8 +344,9 @@ export function entrySentence(entry: Entry, context: SentenceContext): EntrySent
   const options: string[] = [];
   if (entry.offer && has(`Offer.${entry.offer}`)) options.push(say(`Offer.${entry.offer}`));
   if (entry.activity) options.push(say("Cost", { activity: activityName(entry.activity, context) }));
+  if (entry.cost) options.push(say("PoolCost", { n: String(entry.cost.amount), label: entry.cost.label ? (game.i18n?.localize(entry.cost.label) ?? entry.cost.label) : (entry.cost.from ?? []).join(", ") }));
   if (entry.limit?.per) options.push(say((entry.limit.max ?? 1) > 1 ? "LimitMany" : "LimitOnce", { n: entry.limit.max ?? 1, per: say(`Per.${entry.limit.per}`) }));
-  if (entry.group) options.push(say("OneOf", { group: entry.group }));
+  if (entry.group) options.push(say(typeof entry.groupLimit === "number" ? "SomeOf" : entry.groupLimit ? "GroupByRule" : "OneOf", { group: entry.group, n: String(entry.groupLimit ?? 1) }));
   if (entry.stacks) options.push(say("Stacks"));
   return { lines, options: options.join(" · ") };
 }

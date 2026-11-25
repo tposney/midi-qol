@@ -290,6 +290,7 @@ async function midiRollAttack(activity: AttackActivityLike, wrapped: RollAttack,
 
     dialog.options ??= {};
 
+    let raisedWait = false;
     hookIds["dnd5e.preRollAttack"] = Hooks.on("dnd5e.preRollAttack", (rollConfig, dialogConfig) => {
       if (!isRollOf(rollConfig?.subject, activity)) return true;
       if (workflow.aborted) return false;
@@ -328,7 +329,7 @@ async function midiRollAttack(activity: AttackActivityLike, wrapped: RollAttack,
       if (dialogConfig.configure) {
         showAttackTargets(workflow);
         // After the last line that can open the dialog: the player's roll is waited for while it is open
-        workflow.ensureRollWait("attack");
+        raisedWait = workflow.ensureRollWait("attack") || raisedWait;
       }
       return true;
     });
@@ -432,6 +433,8 @@ async function midiRollAttack(activity: AttackActivityLike, wrapped: RollAttack,
       if (keepLastMode !== undefined) Hooks.off("preUpdateItem", keepLastMode);
       workflow.takeDialogBonuses("attack");
     }
+    // The roll is made: the wait raised for its dialog ends (backed out of, the use still waits for it)
+    if (rolls?.length && raisedWait) workflow.endRollWait();
 
     if (!rolls || rolls.length === 0) return null;
     // @ts-expect-error no dnd5e-types

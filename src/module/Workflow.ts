@@ -3141,10 +3141,14 @@ export class Workflow {
   /**
    * A roll dialog is opening for the player although the step expected the roll fast-forwarded (a thrown weapon's
    * attack mode, ammunition, a roll key, an activity forcing it, a choice of damage types): the GM sees the wait as
-   * for any player roll. Called where each roll's dialog decision is final (rolls/attack, damage, formula).
+   * for any player roll. Called where each roll's dialog decision is final (rolls/attack, damage, formula). True when
+   * it raised the wait: the roll then ends it once made (the step is not one that suspends for the roll, so the
+   * use's next move doesn't).
    */
-  ensureRollWait(kind: "attack" | "damage" | "utility") {
-    if (!this.#rollWait) this.waitOnPlayerRoll(kind);
+  ensureRollWait(kind: "attack" | "damage" | "utility"): boolean {
+    if (this.#rollWait) return false;
+    this.waitOnPlayerRoll(kind);
+    return !!this.#rollWait;
   }
 
   /** This client's uses waiting on their player's roll. */

@@ -21,7 +21,6 @@ import { registerLayoutSettings } from "./module/apps/hub/layout.js";
 import { registerRemindersSetting } from "./module/apps/hub/reminders.js";
 import { useOptionsApi } from "./module/services/useOptions/registry.js";
 import { diceApi } from "./module/lib/dicePicker.js";
-import { registerMetamagic } from "./module/services/useOptions/metamagic.js";
 import { installAfterUseDialog } from "./module/activities/afterUseDialog.js";
 import { isEphemeralToken, tokenFor, tokenOf } from "./module/lib/tokenResolver.js";
 import { interactionsApi } from "./module/services/interactions/registry.js";
@@ -87,6 +86,7 @@ import { registerActivityActions, takeAction } from "./module/lib/entries/activi
 import { registerMacroAction } from "./module/lib/entries/macroAction.js";
 import { registerUseChanges } from "./module/lib/entries/useChanges.js";
 import { registerEntryOffers } from "./module/lib/entries/offers.js";
+import { registerCastingOffers } from "./module/lib/entries/castingOffers.js";
 import { registerResponseEvents } from "./module/lib/entries/responseEvents.js";
 import { outcomes } from "./module/lib/outcomes.js";
 import { registerTag, registerMidiTags, tagValue, tagNames, tagDefinition, replacedTags, tagsView } from "./module/lib/tags.js";
@@ -677,6 +677,7 @@ Hooks.once('init', async function () {
   registerUseChanges();
   registerMacroAction();
   registerEntryOffers();
+  registerCastingOffers();
   registerResponseEvents();
   defineEntryEditorServices();
   registerMidiEditorContributors();
@@ -814,7 +815,6 @@ Hooks.once('init', async function () {
   // Register custom sheets (if any)
   initPatching();
   setupClickToAttack();
-  registerMetamagic();
   registerLoadouts();
   setupMultiattackPlans();
   registerDamageApplication();

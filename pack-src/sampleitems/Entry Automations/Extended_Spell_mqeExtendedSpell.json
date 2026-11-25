@@ -30,77 +30,35 @@
     },
     "properties": [],
     "requirements": "",
-    "activities": {
-      "WGQHGHweOlSpZDHp": {
-        "type": "utility",
-        "name": "Extended Spell",
-        "_id": "WGQHGHweOlSpZDHp",
-        "activation": {
-          "type": "",
-          "value": null,
-          "override": false,
-          "condition": "When you cast a spell that has a duration of 1 minute or longer"
-        },
-        "consumption": {
-          "scaling": {
-            "allowed": false
-          },
-          "spellSlot": true,
-          "targets": [
-            {
-              "type": "itemUses",
-              "value": "1",
-              "target": "font-of-magic",
-              "scaling": {}
-            }
-          ]
-        },
-        "description": {
-          "chatFlavor": ""
-        },
-        "duration": {
-          "units": "inst",
-          "concentration": false,
-          "override": false
-        },
-        "effects": [],
-        "range": {
-          "override": false,
-          "units": "self",
-          "special": ""
-        },
-        "target": {
-          "template": {
-            "contiguous": false,
-            "units": "ft",
-            "type": ""
-          },
-          "affects": {
-            "choice": false,
-            "count": "",
-            "type": ""
-          },
-          "override": false,
-          "prompt": false
-        },
-        "uses": {
-          "spent": 0,
-          "recovery": [],
-          "max": ""
-        },
-        "sort": 0,
-        "roll": {
-          "prompt": false,
-          "visible": false,
-          "name": "",
-          "formula": ""
-        }
-      }
-    },
+    "activities": {},
     "enchant": {},
     "identifier": "extended-spell"
   },
-  "effects": [],
+  "effects": [
+    {
+      "_id": "mqeExtConcentr00",
+      "name": "Extended Spell: Concentration",
+      "img": "icons/magic/time/hourglass-brown-orange.webp",
+      "type": "base",
+      "transfer": false,
+      "disabled": false,
+      "statuses": [],
+      "system": {
+        "changes": [
+          {
+            "key": "system.attributes.concentration.roll.mode",
+            "type": "add",
+            "value": "1",
+            "phase": "initial"
+          }
+        ]
+      },
+      "duration": {},
+      "flags": {},
+      "description": "<p>Advantage on saving throws to maintain Concentration on the extended spell.</p>",
+      "_key": "!items.effects!mqeExtendedSpell.mqeExtConcentr00"
+    }
+  ],
   "folder": "mqsEntryFolder00",
   "flags": {
     "dnd5e": {
@@ -112,23 +70,63 @@
     "midi-qol": {
       "entries": [
         {
-          "on": "use.configure",
-          "if": "tags.use.kind === 'spell' && ['minute', 'hour'].includes(use.activity.duration.units)",
+          "id": "extended",
+          "label": "Extended Spell",
+          "who": "owner",
+          "offer": "casting",
+          "group": "metamagic",
+          "cost": {
+            "amount": 1,
+            "from": [
+              "metamagic-adept",
+              "font-of-magic"
+            ],
+            "label": "midi-qol.Metamagic.SorceryPoints"
+          },
+          "groupLimit": "bearer.items.some(i => i.identifier === 'sorcery-incarnate') && bearer.appliedEffects.some(e => e.name === bearer.items.find(i => i.identifier === 'innate-sorcery')?.name) ? 2 : 1",
+          "on": [
+            "use.configure",
+            "use.end"
+          ],
+          "if": "tags.use.kind === 'spell' && (['minute', 'hour', 'day'].includes(use.activity.duration.units) || (use.activity.duration.units === 'round' && use.activity.duration.value >= 10))",
           "do": [
             {
+              "on": "use.configure",
+              "if": "use.activity.duration.units === 'round'",
               "change": {
-                "duration": "@value * 2"
+                "duration": "min(@value * 2, 14400)"
               }
+            },
+            {
+              "on": "use.configure",
+              "if": "use.activity.duration.units === 'minute'",
+              "change": {
+                "duration": "min(@value * 2, 1440)"
+              }
+            },
+            {
+              "on": "use.configure",
+              "if": "use.activity.duration.units === 'hour'",
+              "change": {
+                "duration": "min(@value * 2, 24)"
+              }
+            },
+            {
+              "on": "use.end",
+              "if": "use.item.system.properties.has('concentration')",
+              "effect": "apply",
+              "what": "Extended Spell: Concentration",
+              "to": "self",
+              "dependsOn": "concentration"
             }
-          ],
-          "id": "extended",
-          "who": "owner",
-          "offer": "ask",
-          "group": "metamagic",
-          "activity": "WGQHGHweOlSpZDHp",
-          "label": "Extended Spell"
+          ]
         }
-      ]
+      ],
+      "overlay": {
+        "identifier": "extended-spell",
+        "rules": "2024",
+        "version": "1"
+      }
     }
   },
   "_stats": {

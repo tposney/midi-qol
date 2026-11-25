@@ -1,5 +1,6 @@
 import { i18n, MODULE_ID } from "../../midi-qol.js";
 import { actionKeyOf, actionProblems, actionSchema, entryChecks, registeredActionKeys, registeredEvents, type ActionField } from "../lib/entries/engine.js";
+import { describeRuleFor, itemOfEffect, matchesRole, ruleFor, unusedRuleFor } from "../lib/entries/rules.js";
 import type { Entry, EntryAction, EntryHome, EntryWho } from "../lib/entries/types.js";
 import { choiceName, conditionPresets, entrySentence, triggerGroups } from "../lib/entries/sentences.js";
 import { recipe, recipesFor } from "../lib/entries/recipes.js";
@@ -245,7 +246,7 @@ export function canEditEntries(document: { isOwner?: boolean } | null | undefine
   if (!document) return false;
   return !!game.user?.isGM || (!!document.isOwner && !!game.settings.get(MODULE_ID, "EntryEditorPlayers"));
 }
-const OFFERS = ["", "always", "ask", "reaction", "toggle"];
+const OFFERS = ["", "always", "ask", "reaction", "toggle", "casting"];
 const LIMITS = ["", "turn", "round", "use", "effect"];
 
 /** Whether a document keeps its entries in `midiEntries` (an activity), else in its midi flags */
@@ -395,6 +396,40 @@ export class EntryEditor extends HandlebarsApplicationMixin(DocumentSheetV2)<
 
   #home(): EntryHome {
     return this.#homes[this.#at].kind;
+  }
+
+  /** What a home's entries are about by default: an enchantment's are its enchanted item's (its uses), not a bearer's */
+  #subject(h: Home = this.#homes[this.#at]): EntryHome {
+    return h.kind === "effect" && (h.document as { type?: string }).type === "enchantment" ? "item" : h.kind;
+  }
+
+  /**
+   * The registered rule's entries that act for a home (the item's, an activity's or an effect's by role), as sentences
+   * to read: they are not stored on the item, so they aren't edited here.
+   */
+  #ruleSentences(h: Home, activities: Parameters<typeof entrySentence>[1]["activities"]): { lines: { indent: number, text: string }[], options: string }[] {
+    const item = h.document instanceof Item ? h.document as Item.Implementation
+      : h.document instanceof ActiveEffect ? itemOfEffect(h.document) : (h.document as { item?: Item.Implementation }).item;
+    const rule = ruleFor(item)?.rule;
+    if (!rule) return [];
+    const role = h.document as Parameters<typeof matchesRole>[0];
+    const entries = h.kind === "item" ? rule.entries ?? []
+      : (h.kind === "activity" ? rule.activities : rule.effects)?.filter(r => matchesRole(role, r.match)).flatMap(r => r.entries) ?? [];
+    return entries.map(entry => {
+      const sentence = entrySentence(entry, { home: this.#subject(h), activities });
+      return { lines: sentence.lines.map(line => ({ indent: line.indent, text: line.parts.map(part => part.text).join(" ") })), options: sentence.options };
+    });
+  }
+
+  /** Where an item's automation comes from when not from the item: a registered rule in use, or one its own automation keeps out */
+  #ruleNotice(h: Home): string | undefined {
+    if (h.kind !== "item" || !(h.document instanceof Item)) return undefined;
+    const item = h.document as Item.Implementation;
+    // The item is itself what is registered (a sample item that is also its feature's overlay): nothing is kept out
+    const unused = item.getFlag(MODULE_ID, "overlay") ? undefined : unusedRuleFor(item);
+    if (unused) return game.i18n?.format("midi-qol.Overlay.SwitchedOff", { source: unused.source, by: i18n(`midi-qol.Overlay.By.${unused.by}`) });
+    const used = describeRuleFor(item);
+    return used && "source" in used ? game.i18n?.format("midi-qol.Overlay.InUse", { source: used.source, identifier: used.identifier }) : undefined;
   }
 
   /** A button's home (`data-home`) becomes the home being edited */
@@ -566,6 +601,7 @@ export class EntryEditor extends HandlebarsApplicationMixin(DocumentSheetV2)<
       whoJson: whoCustom ? JSON.stringify(who) : undefined,
       near: near ? { within: near.within, of: near.of, filter: near.filter ?? "" } : undefined,
       offers: OFFERS.map(value => option(value, "Offer", entry?.offer)),
+      costFrom: (entry?.cost?.from ?? []).join(", "),
       limits: LIMITS.map(value => option(value, "Limit", entry?.limit?.per)),
       activities: [{ value: "", label: i18n("midi-qol.EntryEditor.Default"), selected: !entry?.activity },
         ...activities.map(a => ({ value: a.id, label: a.name ?? a.id, selected: a.id === entry?.activity }))],
@@ -611,7 +647,7 @@ export class EntryEditor extends HandlebarsApplicationMixin(DocumentSheetV2)<
       let choices: { id?: string, label?: string, kind?: string }[] = [];
       try { choices = h.choices ? JSON.parse(h.choices) : []; } catch { /* shown as a problem in the form */ }
       return {
-        home: at, label: h.label, single: this.#homes.length === 1, effect: kind === "effect",
+        home: at, label: h.label, single: this.#homes.length === 1, effect: kind === "effect", notice: this.#ruleNotice(h), ruleSentences: this.#ruleSentences(h, activities),
         choices: (Array.isArray(choices) ? choices : []).map(c => game.i18n?.format("midi-qol.EntryEditor.ChoiceLine", { label: c.label ?? c.id ?? "?", kind: c.kind ?? "?" }) ?? ""),
         recipes: this.#recipes === at ? recipesFor(kind).map(r => ({ id: r.id, home: at, label: i18n(`midi-qol.Recipe.${r.id}.Label`), hint: i18n(`midi-qol.Recipe.${r.id}.Hint`) })) : undefined,
         card: h.card ? this.#cardContext(h, at) : undefined,
@@ -620,7 +656,7 @@ export class EntryEditor extends HandlebarsApplicationMixin(DocumentSheetV2)<
         automations: this.#automations(h),
         sentences: h.drafts.map((draft, index) => {
           const entry = this.#entryForSave(draft);
-          const sentence = entrySentence(entry, { home: kind, activities });
+          const sentence = entrySentence(entry, { home: this.#subject(h), activities });
           const on = [entry.on ?? []].flat();
           const who = typeof entry.who === "string" ? entry.who : undefined;
           return {
@@ -628,10 +664,10 @@ export class EntryEditor extends HandlebarsApplicationMixin(DocumentSheetV2)<
             expanded: this.#expanded && this.#at === at && this.#selected === index,
             run: lastRun(h, entry.id),
             lines: sentence.lines.map(line => ({ indent: line.indent * 22, parts: line.parts.map(part => ({ ...part, index, home: at })) })),
-            picker: this.#at === at && this.#picker === index ? triggerGroups(kind, registered).map(group => ({
+            picker: this.#at === at && this.#picker === index ? triggerGroups(this.#subject(h), registered).map(group => ({
               label: group.label,
               choices: group.choices.map(choice => ({ ...choice, index, home: at, setsWho: choice.who !== undefined,
-                selected: on.includes(choice.event) && (choice.who === undefined || (who ?? (kind === "effect" ? "bearer" : "this")) === choice.who) }))
+                selected: on.includes(choice.event) && (choice.who === undefined || (who ?? (this.#subject(h) === "effect" ? "bearer" : "this")) === choice.who) }))
             })) : undefined
           };
         }).filter((_sentence, index) => !(h.card && isBranchEntry(this.#entryForSave(h.drafts[index]))))
@@ -1596,6 +1632,16 @@ export class EntryEditor extends HandlebarsApplicationMixin(DocumentSheetV2)<
     activity?.sheet?.render({ force: true });
   }
 
+  /**
+   * A document that can't be edited (a locked compendium's): Foundry disables every control of the form, buttons
+   * included. The ones that only change what is shown stay usable, so it can still be read in any view.
+   */
+  _toggleDisabled(disabled: boolean) {
+    super._toggleDisabled(disabled);
+    if (!disabled) return;
+    this.element.querySelectorAll<HTMLButtonElement>('button[data-action="setView"], button[data-action="showRuns"]').forEach(button => { button.disabled = false; });
+  }
+
   async _onRender(context: object, options: object) {
     await super._onRender(context, options);
     const name = this.#focus;
@@ -1959,6 +2005,14 @@ export class EntryEditor extends HandlebarsApplicationMixin(DocumentSheetV2)<
     entry.limit = per ? { per: per as NonNullable<Entry["limit"]>["per"], ...(data.limitMax ? { max: Number(data.limitMax) } : {}) } : undefined;
     entry.group = String(data.group ?? "");
     entry.stacks = !!data.stacks;
+    const groupLimit = String(data.groupLimit ?? "").trim();
+    if (groupLimit && entry.group) entry.groupLimit = /^\d+$/.test(groupLimit) ? Number(groupLimit) : groupLimit;
+    else delete entry.groupLimit;
+    // A cost of uses from the owner's items, by identifier and in order
+    const costFrom = String(data.costFrom ?? "").split(",").map(id => id.trim()).filter(Boolean);
+    const costAmount = String(data.costAmount ?? "").trim();
+    if (costFrom.length && costAmount) entry.cost = { ...(entry.cost?.label ? { label: entry.cost.label } : {}), amount: /^\d+$/.test(costAmount) ? Number(costAmount) : costAmount, from: costFrom };
+    else delete entry.cost;
     // The action cards when the list parses, else its raw JSON
     if (typeof data.do === "string") draft.raw.do = data.do;
     else this.#readActionCards(draft, data);
@@ -1996,7 +2050,7 @@ export class EntryEditor extends HandlebarsApplicationMixin(DocumentSheetV2)<
     this.#recipes = undefined;
     let n = this.#drafts.length + 1;
     while (this.#drafts.some(d => d.entry.id === `entry${n}`)) n++;
-    this.#drafts.push(this.#draftOf({ id: `entry${n}`, on: this.#home() === "effect" ? "hit" : "use.hit", do: [] }));
+    this.#drafts.push(this.#draftOf({ id: `entry${n}`, on: this.#subject() === "effect" ? "hit" : "use.hit", do: [] }));
     this.#selected = this.#drafts.length - 1;
     // In sentences: straight to what it reacts to
     if (this.#view === "sentence") this.#picker = this.#selected;
@@ -2239,7 +2293,7 @@ export class EntryEditor extends HandlebarsApplicationMixin(DocumentSheetV2)<
     else if (on.length > 1) on = on.filter(e => e !== id);
     draft.entry.on = on.length === 1 ? on[0] : on;
     const who = target.dataset.who;
-    if (who !== undefined) draft.entry.who = who && who !== (this.#home() === "effect" ? "bearer" : "this") ? who as EntryWho : undefined;
+    if (who !== undefined) draft.entry.who = who && who !== (this.#subject() === "effect" ? "bearer" : "this") ? who as EntryWho : undefined;
     // A button needs a name
     if (id === "action" && !draft.entry.label) draft.entry.label = draft.entry.id;
     for (const d of this.#drafts) d.problems = this.#problemsOf(d);

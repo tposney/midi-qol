@@ -1,32 +1,55 @@
 import { MODULE_ID } from "../../../midi-qol.js";
-import { automatedBy, registerRule, ruleFor, ruleFromOverlay } from "./rules.js";
+import { automatedBy, registerRule, ruleFor, ruleFromOverlay, type OverlayChange } from "./rules.js";
 
 /*
  * M11c-2 (plan ~/Documents/midi-next-M11-plan-2026-11-22.md): an overlay's data part, stored (user, 2026-11-22). An
  * overlay's effect or activity that the base item has (by name; an activity by type and name) only adds entries (the
  * rule); one the base lacks is added to the item once, depending on a marker enchantment on the item that records
  * the overlay and its version: visible among the item's enchantments, and deleting it removes what it added (dnd5e's
- * dependents). A new overlay version replaces the added part. The active GM adds it, when the item is created and at
- * ready for the world's actors.
+ * dependents). A new overlay version replaces the added part. The active GM adds it, when the item is created, when a
+ * world overlay is made or changed, and at ready for the world's actors.
+ *
+ * Changed fields (2026-11-25): the overlay's `changes` (fields of the item or of an activity the base has) are the
+ * marker's own changes. The marker is an applied enchantment (transfer, on the item), so dnd5e applies them as it
+ * prepares the item; nothing of the item's own data is written, and disabling or deleting the marker undoes them.
  */
 
 interface OverlaySource { source: string, item: Item.Implementation }
 
 const overlaysByIdentifier = new Map<string, OverlaySource[]>();
 
+/** The rules registered for an identifier's overlays, in the overlays' order */
+const ruleOffs = new Map<string, (() => void)[]>();
+
+/**
+ * An identifier's overlays as rules, registered again in their order whenever the list changes: a source's later
+ * overlay of the same scope stands in for its earlier one (the registry keeps one rule per source and scope), and the
+ * earlier one is back when the later goes.
+ */
+function syncRules(identifier: string) {
+  for (const off of ruleOffs.get(identifier) ?? []) off();
+  const offs: (() => void)[] = [];
+  for (const { source, item } of overlaysByIdentifier.get(identifier) ?? []) {
+    const rule = ruleFromOverlay(item);
+    if (rule) offs.push(registerRule(source, rule));
+  }
+  if (offs.length) ruleOffs.set(identifier, offs);
+  else ruleOffs.delete(identifier);
+}
+
 /** An overlay item as a rule, and its data part kept for the items it overlays */
 export function registerOverlay(item: Item.Implementation, source: string): (() => void) | undefined {
   const rule = ruleFromOverlay(item);
   if (!rule) return undefined;
-  const off = registerRule(source, rule);
   const list = overlaysByIdentifier.get(rule.identifier) ?? [];
   const entry = { source, item };
   overlaysByIdentifier.set(rule.identifier, [...list.filter(o => o.item.uuid !== item.uuid), entry]);
+  syncRules(rule.identifier);
   const unregister = () => {
-    off();
     const rest = (overlaysByIdentifier.get(rule.identifier) ?? []).filter(o => o !== entry);
     if (rest.length) overlaysByIdentifier.set(rule.identifier, rest);
     else overlaysByIdentifier.delete(rule.identifier);
+    syncRules(rule.identifier);
     if (item.uuid && registeredByUuid.get(item.uuid) === unregister) registeredByUuid.delete(item.uuid);
   };
   if (item.uuid) {
@@ -72,15 +95,31 @@ export async function applyOverlayData(item: Item.Implementation): Promise<boole
   const version = versionOf(found.item);
   const current = markers.find(e => (e.getFlag(MODULE_ID, "overlayPart") as OverlayMarker | undefined)?.overlay === found.item.uuid);
   if (current && (current.getFlag(MODULE_ID, "overlayPart") as OverlayMarker).version === version) return false;
-  if (current) await current.delete();
+  if (current) {
+    // dnd5e deletes the marker's dependents after the delete resolves: what the old version added must be gone before
+    // the new version's parts are worked out (they would be found present, then go)
+    type Part = { flags?: unknown };
+    const partsLeft = () => item.effects.some(e => (e.getFlag(MODULE_ID, "overlayPart") as unknown) === true)
+      || [...((item.system as { activities?: Iterable<Part> }).activities ?? [])].some(a => isOverlayPart(a.flags) && (a.flags as Record<string, { overlayPart?: unknown }>)[MODULE_ID]?.overlayPart === true);
+    await current.delete();
+    for (let i = 0; i < 40 && partsLeft(); i++) await new Promise(resolve => setTimeout(resolve, 50));
+    if (partsLeft()) {
+      const ids = item.effects.filter(e => (e.getFlag(MODULE_ID, "overlayPart") as unknown) === true).map(e => e.id!);
+      if (ids.length) await item.deleteEmbeddedDocuments("ActiveEffect", ids);
+    }
+  }
   const { effects, activities } = missingParts(found.item, item);
-  if (!effects.length && !activities.length) return false;
+  const changes = (found.item.getFlag(MODULE_ID, "overlay")?.changes ?? []).filter(c => typeof c?.key === "string");
+  if (!effects.length && !activities.length && !changes.length) return false;
   const [marker] = await item.createEmbeddedDocuments("ActiveEffect", [{
     name: found.item.name ?? "midi overlay", img: found.item.img ?? "icons/svg/aura.svg", type: "enchantment", transfer: true,
+    system: { changes: changes.map(c => ({ key: c.key, value: String(c.value), type: c.type ?? "override", priority: 50 })) },
     flags: { [MODULE_ID]: { overlayPart: { overlay: found.item.uuid, version } } }
   } as unknown as ActiveEffect.CreateData]);
-  if (!marker?.uuid) return false;
-  const part = { [`flags.${MODULE_ID}.overlayPart`]: true, "flags.dnd5e.dependentOn": marker.uuid };
+  if (!marker?.id) return false;
+  // By id, as dnd5e's riders name their enchantment: dnd5e's dependentOrigin looks it up among the item's effects, so
+  // a disabled marker suppresses what it added; deleting it deletes them (the dependents registry resolves the id)
+  const part = { [`flags.${MODULE_ID}.overlayPart`]: true, "flags.dnd5e.dependentOn": marker.id };
   if (effects.length) {
     await item.createEmbeddedDocuments("ActiveEffect", effects.map(e => foundry.utils.mergeObject(e.toObject(), foundry.utils.expandObject(part))) as ActiveEffect.CreateData[], { keepId: true });
   }
@@ -96,9 +135,33 @@ export async function applyOverlayData(item: Item.Implementation): Promise<boole
 export function watchOverlayData(): void {
   Hooks.on("deleteItem", item => { const uuid = (item as Item.Implementation).uuid; if (uuid) registeredByUuid.get(uuid)?.(); });
   Hooks.on("createItem", item => {
+    if (worldOverlayChanged(item as Item.Implementation)) return;
     if (game.user?.isActiveGM && overlaysByIdentifier.size) void applyOverlayData(item as Item.Implementation).catch(err => console.warn("midi-qol | overlay data", err));
   });
+  Hooks.on("updateItem", item => { worldOverlayChanged(item as Item.Implementation); });
 }
+
+/**
+ * A world item that is an untouched import of an overlay already registered (a sample dragged into the Items
+ * directory) is a copy of that overlay, not another one: the overlay it came from stays in charge and stays current
+ * when midi's samples change. Once it is edited it is the world's own overlay.
+ */
+function untouchedImport(item: Item.Implementation): boolean {
+  const stats = item._stats as { compendiumSource?: string | null, createdTime?: number | null, modifiedTime?: number | null } | undefined;
+  // An import is stamped modified a few milliseconds after it is created
+  return !!stats?.compendiumSource && registeredByUuid.has(stats.compendiumSource) && Math.abs((stats.modifiedTime ?? 0) - (stats.createdTime ?? 0)) < 1000;
+}
+
+/** A world overlay made or changed: registered as it now is (every client), its data part brought to the world's items (the active GM) */
+function worldOverlayChanged(item: Item.Implementation): boolean {
+  if (item.parent || item.pack || !item.getFlag(MODULE_ID, "overlay")) return false;
+  if (untouchedImport(item)) return true;
+  registerOverlay(item, "world");
+  applyToWorldSoon();
+  return true;
+}
+/** Once the edits settle (a sheet saves field by field) */
+const applyToWorldSoon = foundry.utils.debounce(() => { void applyOverlayDataToWorld().catch(err => console.warn("midi-qol | overlay data", err)); }, 500);
 
 export async function applyOverlayDataToWorld(): Promise<void> {
   if (!game.user?.isActiveGM || !overlaysByIdentifier.size) return;
@@ -122,11 +185,36 @@ export async function registerOverlayPack(packId: string, source: string): Promi
 
 export function registerWorldOverlays(): number {
   let count = 0;
-  for (const item of game.items ?? []) if (item.getFlag(MODULE_ID, "overlay") && registerOverlay(item, "world")) count++;
+  for (const item of game.items ?? []) if (item.getFlag(MODULE_ID, "overlay") && !untouchedImport(item) && registerOverlay(item, "world")) count++;
   return count;
 }
 
 /* Authoring (11c-2): save an edited copy of a base item as an overlay */
+
+/** Play state and what an overlay carries by other means: not compared */
+const ITEM_SKIP = ["identifier", "source", "activities", "description", "container", "quantity", "equipped", "attuned", "prepared", "identified", "uses.spent", "sourceItem", "sourceClass", "advancement"];
+const ACTIVITY_SKIP = ["_id", "sort", "uses.spent", "midiEntries", "effects", "flags"];
+const skipped = (path: string, list: readonly string[]) => list.some(s => path === s || path.startsWith(`${s}.`));
+
+/**
+ * The fields that differ between two sources, as override changes under `prefix`: values that are text, numbers or
+ * yes/no. A difference in a list or a set of fields can't be said as one change: its path goes in `unsaid`.
+ */
+function fieldChanges(now: unknown, base: unknown, prefix: string, skip: readonly string[], unsaid: string[]): OverlayChange[] {
+  const a = foundry.utils.flattenObject((now ?? {}) as object) as Record<string, unknown>;
+  const b = foundry.utils.flattenObject((base ?? {}) as object) as Record<string, unknown>;
+  const changes: OverlayChange[] = [];
+  for (const path of new Set([...Object.keys(a), ...Object.keys(b)])) {
+    if (skipped(path, skip)) continue;
+    const value = a[path], was = b[path];
+    if (JSON.stringify(value ?? null) === JSON.stringify(was ?? null)) continue;
+    // "" and null are the same empty field to dnd5e's forms
+    if ((value ?? "") === "" && (was ?? "") === "") continue;
+    if (["string", "number", "boolean"].includes(typeof value)) changes.push({ key: `${prefix}${path}`, value: String(value), type: "override" });
+    else unsaid.push(`${prefix}${path}`);
+  }
+  return changes;
+}
 
 const isOverlayPart = (flags: unknown) => !!(flags as Record<string, { overlayPart?: unknown } | undefined> | undefined)?.[MODULE_ID]?.overlayPart;
 const sameEntries = (a: unknown, b: unknown) => JSON.stringify(a ?? []) === JSON.stringify(b ?? []);
@@ -153,17 +241,25 @@ export async function saveAsOverlay(item: Item.Implementation): Promise<Item.Imp
   const activitiesOf = (doc: Item.Implementation) => [...((doc.system as { activities?: Iterable<ActivityLike> }).activities ?? [])];
   const baseActivities = activitiesOf(base);
   const activities: Record<string, unknown> = {};
+  // The item's own source: an overlay's earlier changes (its marker's) are not in it
+  const unsaid: string[] = [];
+  const sourceOf = (doc: Item.Implementation) => (doc as unknown as { _source: { name?: string, system?: Record<string, unknown> & { activities?: Record<string, unknown> } } })._source;
+  const changes = fieldChanges(sourceOf(item).system, sourceOf(base).system, "system.", ITEM_SKIP, unsaid);
+  if (sourceOf(item).name !== sourceOf(base).name && sourceOf(item).name) changes.push({ key: "name", value: String(sourceOf(item).name), type: "override" });
   for (const activity of activitiesOf(item)) {
     if (isOverlayPart(activity.flags)) continue;
-    const match = baseActivities.find(a => a.type === activity.type && a.name === activity.name);
+    const match = baseActivities.find(a => a.type === activity.type && a.name === activity.name) ?? baseActivities.find(a => a.id === activity.id);
     if (!match) activities[activity.id] = activity.toObject();
-    else if (activity.midiEntries?.length && !sameEntries(activity.midiEntries, match.midiEntries))
-      activities[activity.id] = { _id: activity.id, type: activity.type, name: activity.name, midiEntries: activity.midiEntries };
+    else {
+      if (activity.midiEntries?.length && !sameEntries(activity.midiEntries, match.midiEntries))
+        activities[activity.id] = { _id: activity.id, type: activity.type, name: activity.name, midiEntries: activity.midiEntries };
+      changes.push(...fieldChanges(sourceOf(item).system?.activities?.[activity.id], sourceOf(base).system?.activities?.[match.id], `system.activities.${activity.id}.`, ACTIVITY_SKIP, unsaid));
+    }
   }
   const effects: ActiveEffect.CreateData[] = [];
   for (const effect of item.effects) {
-    // What an overlay added, and its marker, are the overlay's already
-    if (isOverlayPart(effect.flags)) continue;
+    // What an overlay added, and its marker, are the overlay's already; an enchantment on the item is not the item's
+    if (isOverlayPart(effect.flags) || (effect as { isAppliedEnchantment?: boolean }).isAppliedEnchantment) continue;
     const match = base.effects.find(e => e.name === effect.name);
     const entries = effect.getFlag(MODULE_ID, "entries");
     if (!match) effects.push(effect.toObject());
@@ -172,7 +268,8 @@ export async function saveAsOverlay(item: Item.Implementation): Promise<Item.Imp
   }
   const itemEntries = item.getFlag(MODULE_ID, "entries");
   const ownEntries = itemEntries?.length && !sameEntries(itemEntries, base.getFlag(MODULE_ID, "entries")) ? itemEntries : undefined;
-  if (!ownEntries && !effects.length && !Object.keys(activities).length) {
+  if (!ownEntries && !effects.length && !Object.keys(activities).length && !changes.length) {
+    if (unsaid.length) ui.notifications?.warn(`${game.i18n?.localize("midi-qol.Overlay.Unsaid") ?? "An overlay can't carry these changes"}: ${unsaid.join(", ")}`);
     ui.notifications?.info(game.i18n?.localize("midi-qol.Overlay.NoDifference") ?? "No difference from the base item");
     return undefined;
   }
@@ -186,11 +283,13 @@ export async function saveAsOverlay(item: Item.Implementation): Promise<Item.Imp
     name: `${item.name} (overlay)`, type: item.type, img: item.img,
     system: { identifier: `${identifier}-overlay`, source: { rules }, activities, description: { value: "" } },
     effects,
-    flags: { [MODULE_ID]: { overlay: { identifier, ...(rules ? { rules } : {}), version, base: { uuid: base.uuid ?? String(sourceUuid), modifiedTime: base._stats?.modifiedTime ?? undefined } },
+    flags: { [MODULE_ID]: { overlay: { identifier, ...(rules ? { rules } : {}), version, ...(changes.length ? { changes } : {}), base: { uuid: base.uuid ?? String(sourceUuid), modifiedTime: base._stats?.modifiedTime ?? undefined } },
       ...(ownEntries ? { entries: ownEntries } : {}) } }
   }], { keepId: true });
   const overlay = created[0] as Item.Implementation | undefined;
   if (overlay) registerOverlay(overlay, "world");
+  // Said, not dropped: what differs but can't be one change (a list: damage parts, properties)
+  if (overlay && unsaid.length) ui.notifications?.warn(`${game.i18n?.localize("midi-qol.Overlay.Unsaid") ?? "An overlay can't carry these changes"}: ${unsaid.join(", ")}`);
   return overlay;
 }
 
@@ -224,7 +323,7 @@ export function actorAutomation(actor: Actor.Implementation): AutomationRow[] {
     const rule = ruleFor(item);
     const marker = item.effects.find(e => typeof e.getFlag(MODULE_ID, "overlayPart") === "object");
     const markerFlag = marker?.getFlag(MODULE_ID, "overlayPart") as OverlayMarker | undefined;
-    const dataPart = markerFlag ? `data part v${markerFlag.version}${overlay && versionOf(overlay.item) !== markerFlag.version ? ` (overlay now v${versionOf(overlay.item)}: replaced at the next change)` : ""}` : undefined;
+    const dataPart = markerFlag ? `data part v${markerFlag.version}${overlay && versionOf(overlay.item) !== markerFlag.version ? ` (overlay now v${versionOf(overlay.item)}: replaced when a GM is connected)` : ""}` : undefined;
     if (rule) rows.push({ item: item.name ?? "", identifier, status: `rule: ${rule.source}`, detail: dataPart });
     else if (other && (overlay || overlaysByIdentifier.has(identifier ?? ""))) rows.push({ item: item.name ?? "", identifier, status: AUTOMATED_BY[other] ?? other, detail: "an overlay matches its identifier but doesn't apply: something else automates it" });
     else if (other) rows.push({ item: item.name ?? "", identifier, status: AUTOMATED_BY[other] ?? other });

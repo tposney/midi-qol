@@ -1,4 +1,5 @@
 import { tokenFor } from "../tokenResolver.js";
+import { i18n } from "../../../midi-qol.js";
 import type { Activity } from "../../../globals.js";
 import { unTimedExecuteAsGM } from "../../GMAction.js";
 import { rollTable, type TableDeclaration } from "../tables.js";
@@ -47,9 +48,30 @@ const COMPONENTS = ["vocal", "somatic", "material"];
 
 async function useConfigureChange(run: ActionRun, spec: Record<string, unknown>) {
   const workflow = run.context.workflow!;
+  const item = (workflow.activity as Activity)?.item as Item.Implementation | undefined;
+  const usage = run.context.event?.usage as { spell?: { slot?: string }, midiOptions?: { spellLevel?: number }, scaling?: number | false } | undefined;
+  // After dnd5e's usage dialog (an entry chosen at casting) the level is the one cast: raised first, as that rebuilds
+  // the copy's activities and the other changes are made on the rebuilt one
+  if (run.context.event?.afterDialog && item && usage && spec.spellLevel !== undefined) {
+    // @ts-expect-error no dnd5e-types
+    const base = Number(item.system.level) || 0;
+    const cast = base + (Number(usage.scaling) || 0);
+    const level = typeof spec.spellLevel === "number" ? spec.spellLevel : await changed(String(spec.spellLevel).replace(/^\+/, "@value + "), cast, run.conditionData);
+    if (level > 9) {
+      ui.notifications?.warn(i18n("midi-qol.Entries.Casting.LevelMax").replace("{name}", run.found.entry.label ?? run.found.entry.id));
+      workflow.aborted = true;
+      return;
+    }
+    if (level > cast) {
+      usage.scaling = level - base;
+      item.updateSource({ "flags.dnd5e.scaling": level - base } as never);
+      (item as unknown as { prepareFinalAttributes?(): void }).prepareFinalAttributes?.();
+      // @ts-expect-error no dnd5e-types
+      const rebuilt = item.system.activities?.get(workflow.activity?.id) as Activity | undefined;
+      if (rebuilt) workflow.activity = rebuilt;
+    }
+  }
   const activity = workflow.activity as Activity;
-  const item = activity?.item as Item.Implementation | undefined;
-  const usage = run.context.event?.usage as { spell?: { slot?: string }, midiOptions?: { spellLevel?: number } } | undefined;
   const rollData = run.conditionData;
   const updates: Record<string, unknown> = {};
   // A spell's activity takes these from the spell unless it overrides them
@@ -57,8 +79,10 @@ async function useConfigureChange(run: ActionRun, spec: Record<string, unknown>)
   for (const field of ["range", "duration"] as const) {
     const value = spec[field];
     if (value === undefined) continue;
-    const current = (activity as unknown as Record<string, { value?: number | string, units?: string }>)[field] ?? {};
+    const current = (activity as unknown as Record<string, { value?: number | string, units?: string, concentration?: boolean }>)[field] ?? {};
     updates[`${field}.override`] = true;
+    // An overridden duration is the activity's own: it keeps the spell's concentration
+    if (field === "duration" && current.concentration !== undefined) updates["duration.concentration"] = current.concentration;
     if (current.units && !(typeof value === "object" && value && "units" in value)) updates[`${field}.units`] = current.units;
     if (typeof value === "object" && value) {
       const { value: v, units } = value as { value?: NumericChange, units?: string };
@@ -75,7 +99,7 @@ async function useConfigureChange(run: ActionRun, spec: Record<string, unknown>)
     changeItemField(item, "system.properties", kept, new Set(kept));
   }
   if (item && typeof spec.school === "string") changeItemField(item, "system.school", spec.school, spec.school);
-  if (item && usage && spec.spellLevel !== undefined) {
+  if (item && usage && spec.spellLevel !== undefined && !run.context.event?.afterDialog) {
     // @ts-expect-error no dnd5e-types
     const base = Number(item.system.level) || 0;
     const level = typeof spec.spellLevel === "number" ? spec.spellLevel : await changed(String(spec.spellLevel).replace(/^\+/, "@value + "), base, rollData);
@@ -215,6 +239,14 @@ async function effectAction(run: ActionRun) {
     const data = source.toObject() as ActiveEffect.CreateData & Record<string, unknown>;
     delete data._id;
     Object.assign(data, { origin: item?.uuid, transfer: false, disabled: false });
+    // dependsOn "concentration": lasts while the actor concentrates on the use's item; not applied without it
+    if (run.action.dependsOn === "concentration") {
+      const used = run.context.workflow?.item?.uuid;
+      const effects = [...((actor as Actor.Implementation & { concentration?: { effects?: Set<ActiveEffect.Implementation> } }).concentration?.effects ?? [])];
+      const concentration = effects.find(e => typeof e.origin === "string" && !!used && e.origin.startsWith(used));
+      if (!concentration?.uuid) continue;
+      foundry.utils.setProperty(data, "flags.dnd5e.dependentOn", concentration.uuid);
+    }
     await unTimedExecuteAsGM("createEffects", { actorUuid: actor.uuid, effects: [data] });
   }
 }

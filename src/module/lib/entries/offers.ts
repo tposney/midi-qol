@@ -4,6 +4,7 @@ import { playerForActor } from "../../utils.js";
 import { askUser, registerRequestHandler, type IncomingRequest } from "../requests.js";
 import type { FoundEntry } from "./types.js";
 import { actorToggleEntries } from "./engine.js";
+import { ruleFor } from "./rules.js";
 import { rememberedChoices } from "../rememberedChoices.js";
 import { STANDING_CHOICES, storedStandings, type StandingChoice } from "../../services/rollBonuses/standing.js";
 
@@ -15,11 +16,12 @@ import { STANDING_CHOICES, storedStandings, type StandingChoice } from "../../se
  *   with the reaction time-out and the GM able to answer "none" from the player list. One dialog per actor and event:
  *   each entry a choice, a group's entries one choice among them (several only where they stack).
  * An entry's `activity` is its cost: one use of the activity (else of its item), offered only while one is left.
+ * An entry's `cost` is uses spent from the actor's items by identifier, in order (`{ amount, from, label }`).
  */
 
 export const ENTRY_OFFER_REQUEST = "midi-qol.entryOffer";
 
-export interface OfferOption { key: string, label: string, img?: string, description?: string, group?: string, stacks?: boolean }
+export interface OfferOption { key: string, label: string, img?: string, description?: string, cost?: string, group?: string, stacks?: boolean }
 
 const docOf = (f: FoundEntry) => f.document as { id?: string | null, uuid?: string, name?: string, img?: string | null, item?: Item.Implementation, parent?: unknown };
 
@@ -48,6 +50,21 @@ export function entryLabel(f: FoundEntry): string {
   const label = (f.entry as { label?: unknown }).label;
   if (typeof label === "string") return label;
   return entryActivity(f)?.name ?? docOf(f).name ?? f.entry.id;
+}
+
+/**
+ * What a prompt calls an offered entry. An entry a registered rule gives someone's item (their own copy of a feature,
+ * whatever it is called) goes by the item's name, with the entry's label after it when the rule has several entries
+ * for the item; an item's own entry goes by its label.
+ */
+export function offerName(f: FoundEntry): string {
+  const document = f.document;
+  if (f.home !== "item" || !(document instanceof Item) || !document.name) return entryLabel(f);
+  const own = document.getFlag(MODULE_ID, "entries") as { id?: string }[] | undefined;
+  if (Array.isArray(own) && own.some(entry => entry?.id === f.entry.id)) return entryLabel(f);
+  const rule = ruleFor(document as Item.Implementation)?.rule;
+  if (!rule) return entryLabel(f);
+  return (rule.entries?.length ?? 0) > 1 ? `${document.name}: ${entryLabel(f)}` : document.name;
 }
 
 type Usable = { id?: string, uuid?: string, name?: string, img?: string, item?: Item.Implementation, uses?: { max?: number | string | null, value?: number, spent?: number }, update?(data: object): Promise<unknown> };
@@ -90,8 +107,50 @@ function costHolder(f: FoundEntry): { kind: "activity" | "item", holder: Usable 
   return undefined;
 }
 
+type PoolItem = Item.Implementation & { identifier?: string, system: { uses?: { value?: number, max?: number | string | null, spent?: number } } };
+export type PoolReceipt = { item: PoolItem, taken: number }[];
+
+/** The entry's `cost`: how much, the actor's items it is paid from (those with uses), what is left in them, its name */
+export function poolCost(f: FoundEntry): { amount: number, pools: PoolItem[], left: number, label: string, from: string[] } | undefined {
+  const cost = f.entry.cost;
+  if (!cost || !Array.isArray(cost.from)) return undefined;
+  const actor = f.actor;
+  const pools = cost.from.map(id => actor?.items.find(i => (i as PoolItem).identifier === id) as PoolItem | undefined)
+    .filter((i): i is PoolItem => !!i && !!Number(i.system.uses?.max));
+  let amount = Number(cost.amount);
+  if (!Number.isFinite(amount)) {
+    try { amount = Number(Roll.safeEval(Roll.replaceFormulaData(String(cost.amount), actor?.getRollData() ?? {}))); } catch { amount = NaN; }
+  }
+  const left = pools.reduce((total, i) => total + Number(i.system.uses?.value ?? 0), 0);
+  return { amount, pools, left, label: cost.label ? i18n(cost.label) : pools[0]?.name ?? cost.from[0] ?? "", from: cost.from };
+}
+
+/** Pay the entry's `cost` from its pools in order: what was taken (to give back), false when there isn't enough */
+export async function payEntryPools(f: FoundEntry): Promise<PoolReceipt | false> {
+  const cost = poolCost(f);
+  if (!cost) return [];
+  if (!(cost.amount <= cost.left)) return false;
+  const receipt: PoolReceipt = [];
+  let owed = cost.amount;
+  for (const item of cost.pools) {
+    const taken = Math.min(owed, Number(item.system.uses?.value ?? 0));
+    if (taken <= 0) continue;
+    await item.update({ "system.uses.spent": Number(item.system.uses?.spent ?? 0) + taken } as never);
+    receipt.push({ item, taken });
+    owed -= taken;
+    if (owed <= 0) break;
+  }
+  return receipt;
+}
+
+export async function refundEntryPools(receipt: PoolReceipt): Promise<void> {
+  for (const { item, taken } of receipt) await item.update({ "system.uses.spent": Math.max(0, Number(item.system.uses?.spent ?? 0) - taken) } as never);
+}
+
 /** The entry can be paid for */
 export function costAllows(f: FoundEntry): boolean {
+  const pool = poolCost(f);
+  if (pool && !(pool.amount <= pool.left)) return false;
   const cost = costHolder(f);
   return !cost || (cost.holder.uses?.value ?? 0) > 0;
 }
@@ -108,21 +167,23 @@ export async function spendEntryCost(f: FoundEntry): Promise<void> {
 export function offerOption(f: FoundEntry, key: string): OfferOption {
   const activity = entryActivity(f);
   const description = (f.entry as { description?: unknown }).description;
+  const pool = poolCost(f);
   return {
-    key, label: entryLabel(f), img: activity?.img ?? docOf(f).img ?? undefined,
-    ...(typeof description === "string" ? { description } : {}),
+    key, label: offerName(f), img: activity?.img ?? docOf(f).img ?? undefined,
+    ...(typeof description === "string" ? { description: i18n(description) } : {}),
+    ...(pool ? { cost: (game.i18n?.format("midi-qol.Entries.Offer.Cost", { n: String(pool.amount), left: String(pool.left), label: pool.label }) ?? "") } : {}),
     ...(f.entry.group ? { group: f.entry.group, stacks: !!f.entry.stacks } : {})
   };
 }
 
 /** Ask the actor's owner which of `options` to take (keys); none on a time-out, a GM's "none" or a disconnect */
-export async function askOffers(actor: Actor.Implementation, title: string, options: OfferOption[]): Promise<string[]> {
+export async function askOffers(actor: Actor.Implementation, title: string, options: OfferOption[], detail?: string): Promise<string[]> {
   if (!options.length) return [];
   const player = playerForActor(actor) as User.Implementation | undefined;
   const user = player?.active ? player : game.users?.activeGM ?? undefined;
   if (!user) return [];
   const request = askUser<string[]>(user, {
-    type: ENTRY_OFFER_REQUEST, data: { title, options }, kind: "offer", actorUuid: actor.uuid ?? undefined, label: title,
+    type: ENTRY_OFFER_REQUEST, data: { title, options, ...(detail ? { detail } : {}) }, kind: "offer", actorUuid: actor.uuid ?? undefined, label: title,
     timeoutMs: (configSettings.reactionTimeout ?? 0) * 1000,
     fallback: () => [],
     gmChoices: { none: () => [] }
@@ -140,13 +201,15 @@ const escape = (text: string) => foundry.utils.escapeHTML(text);
 
 function optionHTML(option: OfferOption, input: string): string {
   const img = option.img ? `<img src="${escape(option.img)}" width="24" height="24" style="border: none; vertical-align: middle">` : "";
-  const tip = option.description ? ` data-tooltip="${escape(option.description)}"` : "";
-  return `<label class="checkbox"${tip}>${input} ${img} ${escape(option.label)}</label>`;
+  const cost = option.cost ? ` <span class="midi-qol-entry-offer-cost">${escape(option.cost)}</span>` : "";
+  const description = option.description ? `<div class="midi-qol-entry-offer-description hint">${escape(option.description)}</div>` : "";
+  return `<label class="checkbox">${input} ${img} <strong>${escape(option.label)}</strong>${cost}</label>${description}`;
 }
 
 /** The dialog: each option a checkbox; a group's non-stacking options radios with "None" */
-function offerContent(options: OfferOption[]): string {
-  const rows: string[] = [];
+function offerContent(options: OfferOption[], detail?: string): string {
+  // What the offer is about (the roll just made), then the options
+  const rows: string[] = detail ? [`<p class="midi-qol-entry-offer-detail">${escape(detail)}</p>`] : [];
   const groups = new Map<string, OfferOption[]>();
   for (const option of options) {
     if (option.group && !option.stacks) {
@@ -164,22 +227,15 @@ function offerContent(options: OfferOption[]): string {
 }
 
 /** On the asked client: the dialog, with the requester's countdown; closed when answered for the player */
-async function answerOffer(data: { title: string, options: OfferOption[] }, request: IncomingRequest): Promise<string[]> {
-  // In the hub's inbox while it runs, when every option can be ticked on its own (no group to choose one of)
-  const inline = data.options.every(o => !o.group || o.stacks)
-    ? request.present({ title: data.title, multiple: true, choices: data.options.map(o => ({ value: o.key, label: o.label, img: o.img, hint: o.description })) })
-    : undefined;
-  if (inline) {
-    const picked = await inline;
-    if (request.settledHow || !picked?.length || !await request.claim()) return [];
-    return picked;
-  }
+async function answerOffer(data: { title: string, options: OfferOption[], detail?: string }, request: IncomingRequest): Promise<string[]> {
+  // Always its own dialog (user, 2026-11-25): an offer needs what it is about, its cost and what it does, which the
+  // hub's inbox line can't hold. The inbox lists it (its countdown, Show) as any request with a window.
   const countdown = request.countdown();
   let dialog: foundry.applications.api.DialogV2 | undefined;
   request.onSettled(() => { void dialog?.close(); });
-  const picked = await foundry.applications.api.DialogV2.wait({
+  const chosen = await foundry.applications.api.DialogV2.wait({
     window: { title: data.title },
-    content: offerContent(data.options),
+    content: offerContent(data.options, data.detail),
     buttons: [
       {
         action: "use", label: i18n("midi-qol.Use"), default: true,
@@ -199,7 +255,7 @@ async function answerOffer(data: { title: string, options: OfferOption[] }, requ
   }) as string[] | null | undefined;
   if (request.settledHow) return [];
   if (!await request.claim()) return [];
-  return Array.isArray(picked) ? picked : [];
+  return Array.isArray(chosen) ? chosen : [];
 }
 
 /** The actor's toggles: key, label, on (MidiQOL.entries.toggles) */

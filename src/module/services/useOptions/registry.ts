@@ -36,10 +36,15 @@ export interface UseOptionContext {
 
 export interface UseOptionRefund { refund(): Promise<void> }
 
+/** One of a provider's sections, when it has several (entries: a section per group) */
+export interface UseOptionSection { id: string, label: string, options: UseOption[], limit?: number, budget?: { amount: number, label: string } }
+
 export interface UseOptionProvider {
   /** The section's heading (a lang key or text) */
   label: string;
   offer(ctx: UseOptionContext): UseOption[] | Promise<UseOption[]>;
+  /** Several sections in place of `offer`'s one; option ids are unique across them */
+  sections?(ctx: UseOptionContext): UseOptionSection[] | Promise<UseOptionSection[]>;
   /** How many may be chosen together (default: any) */
   limit?(ctx: UseOptionContext): number;
   /** What the costs are paid from: the amount left and its name ("Sorcery Points") */
@@ -51,6 +56,8 @@ export interface UseOptionProvider {
 /** What a use was offered, per provider, as plain data (the dialog and the prompt draw it) */
 export interface OfferedSection {
   provider: string;
+  /** A provider's own section id (sections()) */
+  section?: string;
   label: string;
   options: UseOption[];
   limit?: number;
@@ -78,6 +85,11 @@ export async function collectUseOptions(workflow: Workflow, activity: Activity):
   const offered: OfferedSection[] = [];
   for (const [id, provider] of providers) {
     try {
+      if (provider.sections) {
+        for (const section of await provider.sections(ctx))
+          if (section.options.length) offered.push({ provider: id, section: section.id, label: section.label, options: section.options, limit: section.limit, budget: section.budget });
+        continue;
+      }
       const options = await provider.offer(ctx);
       if (!options.length) continue;
       offered.push({ provider: id, label: i18n(provider.label), options, limit: provider.limit?.(ctx), budget: provider.budget?.(ctx) });
@@ -178,10 +190,11 @@ export async function applyUseOptions(ctx: UseOptionContext & { usageConfig: Dia
   if (!state?.offered.length) return true;
   const chosen = ctx.usageConfig.midiUseOptionsShown ? ctx.usageConfig.midiUseOptionsChosen ?? []
     : hasUseOptions(ctx.workflow) ? await promptUseOptions(state, ctx.item.name ?? "") : [];
+  // A provider is applied once, with what was chosen in all of its sections
+  const byProvider = new Map<string, UseOption[]>();
   for (const section of state.offered) {
-    const provider = providers.get(section.provider);
     const options = section.options.filter(option => !option.disabled && chosen.includes(key(section, option)));
-    if (!provider || !options.length) continue;
+    if (!providers.has(section.provider) || !options.length) continue;
     // The dialog greyed what went over; a resubmitted or scripted choice is checked again
     const cost = options.reduce((total, o) => total + (o.cost ?? 0), 0);
     if (options.length > (section.limit ?? Infinity) || cost > (section.budget?.amount ?? Infinity)) {
@@ -189,7 +202,10 @@ export async function applyUseOptions(ctx: UseOptionContext & { usageConfig: Dia
       await refundUseOptions(ctx.workflow);
       return false;
     }
-    const result = await provider.apply(options, ctx);
+    byProvider.set(section.provider, [...(byProvider.get(section.provider) ?? []), ...options]);
+  }
+  for (const [id, options] of byProvider) {
+    const result = await providers.get(id)!.apply(options, ctx);
     if (result === false) { await refundUseOptions(ctx.workflow); return false; }
     if (result) state.refunds.push(result);
   }

@@ -42,6 +42,18 @@ describe("entry limits", () => {
     expect(selectGroups(list).map(x => x.id)).toEqual([1, 3, 4]);
   });
 
+  it("a group with room for more keeps that many; a stacking entry takes no room", () => {
+    const list = [
+      { id: 1, entry: { group: "metamagic", stacks: true } },
+      { id: 2, entry: { group: "metamagic" } },
+      { id: 3, entry: { group: "metamagic" } },
+      { id: 4, entry: { group: "metamagic" } },
+      { id: 5, entry: { group: "other" } }
+    ];
+    expect(selectGroups(list, group => group === "metamagic" ? 2 : 1).map(x => x.id)).toEqual([1, 2, 3, 5]);
+    expect(selectGroups(list, () => 0).map(x => x.id)).toEqual([1]);
+  });
+
   it("a kept choice: stamped like a limit (world time outside combat), found for its item while current, stale records dropped", () => {
     const combat = { id: "c1", round: 2, turn: 1 };
     expect(keepStamp("turn", combat, 100)).toBe("c1:2:1");

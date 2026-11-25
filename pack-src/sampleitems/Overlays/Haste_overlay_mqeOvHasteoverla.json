@@ -57,7 +57,8 @@
     "midi-qol": {
       "overlay": {
         "identifier": "haste",
-        "rules": "2024"
+        "rules": "2024",
+        "version": "1"
       }
     }
   },

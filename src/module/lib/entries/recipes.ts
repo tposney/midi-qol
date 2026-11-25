@@ -47,7 +47,7 @@ const recipes: Recipe[] = [
   },
   {
     id: "changeSpell", homes: ["item"],
-    entry: () => ({ on: "use.configure", who: "owner", if: SPELL, offer: "ask", group: "metamagic", do: [{ change: { range: "@value * 2" } }] })
+    entry: () => ({ on: "use.configure", who: "owner", if: SPELL, offer: "casting", group: "metamagic", cost: { amount: 1, from: ["metamagic-adept", "font-of-magic"], label: "midi-qol.Metamagic.SorceryPoints" }, do: [{ change: { range: "@value * 2" } }] })
   },
   {
     id: "breakFree", homes: ["effect"],

@@ -55,15 +55,18 @@ export function limitKey(documentUuid: string, entryId: string): string {
 }
 
 /**
- * One entry of a group per event, unless it stacks: the first of a group in order is kept, and later entries of that
- * group only if they say `stacks` (Empowered Spell combines with another Metamagic). Entries with no group all run.
+ * A group's entries per event, unless they stack: the first `room(group)` of a group in order are kept (one by default),
+ * and later entries of that group only if they say `stacks` (Empowered Spell combines with another Metamagic). Entries
+ * with no group all run.
  */
-export function selectGroups<T extends { entry: { group?: string, stacks?: boolean } }>(found: readonly T[]): T[] {
-  const taken = new Set<string>();
+export function selectGroups<T extends { entry: { group?: string, stacks?: boolean } }>(found: readonly T[], room: (group: string) => number = () => 1): T[] {
+  const taken = new Map<string, number>();
   return found.filter(({ entry }) => {
-    if (!entry.group) return true;
-    if (!taken.has(entry.group)) { taken.add(entry.group); return true; }
-    return !!entry.stacks;
+    if (!entry.group || entry.stacks) return true;
+    const count = taken.get(entry.group) ?? 0;
+    if (count >= room(entry.group)) return false;
+    taken.set(entry.group, count + 1);
+    return true;
   });
 }
 

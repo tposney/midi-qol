@@ -38,8 +38,12 @@ function onUpdateActor(actor: Actor.Implementation, changes: object, options: Ac
 
 /** M11b: the effect ends (deleted, or disabled: DAE's Mark Expired): its own `ended` entries, on the active GM */
 function onEffectEnded(effect: ActiveEffect.Implementation) {
-  if (!game.user?.isActiveGM || !(effect.parent instanceof Actor)) return;
-  void runEffectEvent("ended", effect, effect.parent as Actor.Implementation).catch(err => console.warn(`midi-qol | ended entries of ${effect.name}`, err));
+  if (!game.user?.isActiveGM) return;
+  // An enchantment on an owned item ends for the item's owner
+  const enchanted = effect.parent instanceof Item && (effect as { isAppliedEnchantment?: boolean }).isAppliedEnchantment ? effect.parent.actor : undefined;
+  const bearer = effect.parent instanceof Actor ? effect.parent : enchanted;
+  if (!bearer) return;
+  void runEffectEvent("ended", effect, bearer as Actor.Implementation).catch(err => console.warn(`midi-qol | ended entries of ${effect.name}`, err));
 }
 
 function onCreateEffect(effect: ActiveEffect.Implementation) {

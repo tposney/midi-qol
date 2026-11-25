@@ -30,73 +30,7 @@
     },
     "properties": [],
     "requirements": "",
-    "activities": {
-      "leFbHb9SZwDix2TU": {
-        "type": "utility",
-        "name": "Quickened Spell",
-        "_id": "leFbHb9SZwDix2TU",
-        "activation": {
-          "type": "",
-          "value": null,
-          "override": false,
-          "condition": "When you cast a spell that has a casting time of an action"
-        },
-        "consumption": {
-          "scaling": {
-            "allowed": false
-          },
-          "spellSlot": true,
-          "targets": [
-            {
-              "type": "itemUses",
-              "value": "2",
-              "target": "font-of-magic",
-              "scaling": {}
-            }
-          ]
-        },
-        "description": {
-          "chatFlavor": ""
-        },
-        "duration": {
-          "units": "inst",
-          "concentration": false,
-          "override": false
-        },
-        "effects": [],
-        "range": {
-          "override": false,
-          "units": "self",
-          "special": ""
-        },
-        "target": {
-          "template": {
-            "contiguous": false,
-            "units": "ft",
-            "type": ""
-          },
-          "affects": {
-            "choice": false,
-            "count": "",
-            "type": ""
-          },
-          "override": false,
-          "prompt": false
-        },
-        "uses": {
-          "spent": 0,
-          "recovery": [],
-          "max": ""
-        },
-        "sort": 0,
-        "roll": {
-          "prompt": false,
-          "visible": false,
-          "name": "",
-          "formula": ""
-        }
-      }
-    },
+    "activities": {},
     "enchant": {},
     "identifier": "quickened-spell"
   },
@@ -112,6 +46,20 @@
     "midi-qol": {
       "entries": [
         {
+          "id": "quickened",
+          "label": "Quickened Spell",
+          "who": "owner",
+          "offer": "casting",
+          "group": "metamagic",
+          "cost": {
+            "amount": 2,
+            "from": [
+              "metamagic-adept",
+              "font-of-magic"
+            ],
+            "label": "midi-qol.Metamagic.SorceryPoints"
+          },
+          "groupLimit": "bearer.items.some(i => i.identifier === 'sorcery-incarnate') && bearer.appliedEffects.some(e => e.name === bearer.items.find(i => i.identifier === 'innate-sorcery')?.name) ? 2 : 1",
           "on": "use.configure",
           "if": "tags.use.kind === 'spell' && tags.use.activation === 'action'",
           "do": [
@@ -120,15 +68,14 @@
                 "activation": "bonus"
               }
             }
-          ],
-          "id": "quickened",
-          "who": "owner",
-          "offer": "ask",
-          "group": "metamagic",
-          "activity": "leFbHb9SZwDix2TU",
-          "label": "Quickened Spell"
+          ]
         }
-      ]
+      ],
+      "overlay": {
+        "identifier": "quickened-spell",
+        "rules": "2024",
+        "version": "1"
+      }
     }
   },
   "_stats": {

@@ -30,73 +30,7 @@
     },
     "properties": [],
     "requirements": "",
-    "activities": {
-      "WMoNZCe0IyHlRLM4": {
-        "type": "utility",
-        "name": "Distant Spell",
-        "_id": "WMoNZCe0IyHlRLM4",
-        "activation": {
-          "type": "",
-          "value": null,
-          "override": false,
-          "condition": "When you cast a spell that has a range of at least 5 feet or when you cast a spell that has a range of Touch"
-        },
-        "consumption": {
-          "scaling": {
-            "allowed": false
-          },
-          "spellSlot": true,
-          "targets": [
-            {
-              "type": "itemUses",
-              "value": "1",
-              "target": "font-of-magic",
-              "scaling": {}
-            }
-          ]
-        },
-        "description": {
-          "chatFlavor": ""
-        },
-        "duration": {
-          "units": "inst",
-          "concentration": false,
-          "override": false
-        },
-        "effects": [],
-        "range": {
-          "override": false,
-          "units": "self",
-          "special": ""
-        },
-        "target": {
-          "template": {
-            "contiguous": false,
-            "units": "ft",
-            "type": ""
-          },
-          "affects": {
-            "choice": false,
-            "count": "",
-            "type": ""
-          },
-          "override": false,
-          "prompt": false
-        },
-        "uses": {
-          "spent": 0,
-          "recovery": [],
-          "max": ""
-        },
-        "sort": 0,
-        "roll": {
-          "prompt": false,
-          "visible": false,
-          "name": "",
-          "formula": ""
-        }
-      }
-    },
+    "activities": {},
     "enchant": {},
     "identifier": "distant-spell"
   },
@@ -112,8 +46,22 @@
     "midi-qol": {
       "entries": [
         {
+          "id": "distant",
+          "label": "Distant Spell",
+          "who": "owner",
+          "offer": "casting",
+          "group": "metamagic",
+          "cost": {
+            "amount": 1,
+            "from": [
+              "metamagic-adept",
+              "font-of-magic"
+            ],
+            "label": "midi-qol.Metamagic.SorceryPoints"
+          },
+          "groupLimit": "bearer.items.some(i => i.identifier === 'sorcery-incarnate') && bearer.appliedEffects.some(e => e.name === bearer.items.find(i => i.identifier === 'innate-sorcery')?.name) ? 2 : 1",
           "on": "use.configure",
-          "if": "tags.use.kind === 'spell' && ['touch', 'ft'].includes(use.activity.range.units)",
+          "if": "tags.use.kind === 'spell' && (use.activity.range.units === 'touch' || (use.activity.range.units === 'ft' && use.activity.range.value >= 5))",
           "do": [
             {
               "if": "use.activity.range.units === 'touch'",
@@ -130,15 +78,14 @@
                 "range": "@value * 2"
               }
             }
-          ],
-          "id": "distant",
-          "who": "owner",
-          "offer": "ask",
-          "group": "metamagic",
-          "activity": "WMoNZCe0IyHlRLM4",
-          "label": "Distant Spell"
+          ]
         }
-      ]
+      ],
+      "overlay": {
+        "identifier": "distant-spell",
+        "rules": "2024",
+        "version": "1"
+      }
     }
   },
   "_stats": {

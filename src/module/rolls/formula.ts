@@ -39,10 +39,11 @@ async function rollFormulaWrapper(this: Activity, wrapped: RollFormula, config: 
   const rollToggle = areMidiKeysPressed(config.event, "RollToggle");
   workflow.rollOptions.rollToggle = rollToggle;
   if (rollToggle) dialog.configure = !dialog.configure;
-  if (dialog.configure) workflow.ensureRollWait("utility");
+  const raisedWait = dialog.configure ? workflow.ensureRollWait("utility") : false;
   message.create ??= false;
   message = setMessageTargets(message, workflow);
   const result = await wrapped(config, dialog, message);
+  if (result && raisedWait) workflow.endRollWait();
   if (result && workflow.workflowOptions?.formulaDSN !== false) await displayDSNForRoll(result[0], "formulaD20", undefined, undefined, workflow.actor);
   if (config.midiOptions.updateWorkflow !== false) {
     if (result) await workflow.setUtilityRolls(result);

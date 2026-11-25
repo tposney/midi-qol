@@ -10,7 +10,7 @@ import { listToggles, setToggle } from "../../lib/entries/offers.js";
 import { setStandingChoice, STANDING_CHOICES, storedStandings, type StandingChoice } from "../../services/rollBonuses/standing.js";
 import { forgetChoice, rememberedChoices } from "../../lib/rememberedChoices.js";
 import { heldRequests, incomingRequests, type IncomingRequest, type InlineChoice } from "../../lib/requests.js";
-import { METAMAGIC_OPTIONS, quickenHint } from "../../services/useOptions/metamagic.js";
+import { bonusActionHint, isCastingOption } from "../../lib/entries/castingOffers.js";
 import { i18n } from "../../../midi-qol.js";
 import type { ActivityCell, TurnModel } from "../../services/turnModel/model.js";
 import { escape, registerHubSection, type HubContext } from "./sections.js";
@@ -66,7 +66,7 @@ function useButton(cell: ActivityCell, options: { barIndex?: number, removable?:
 
 const itemOf = (cell: ActivityCell) => fromUuidSync(cell.itemUuid) as Item.Implementation | null;
 /** A spell cast with an action the caster can Quicken: said in its tooltip */
-const quicken = (cell: ActivityCell) => { const hint = quickenHint(itemOf(cell), cell.activation); return hint ? [`<span class="hint">${escape(hint)}</span>`] : []; };
+const quicken = (cell: ActivityCell) => { const hint = bonusActionHint(itemOf(cell), cell.activation); return hint ? [`<span class="hint">${escape(hint)}</span>`] : []; };
 const isAttack = (cell: ActivityCell) => cell.type === "attack";
 
 /** A bar or tab entry: an item (one button; its choices) or one activity */
@@ -74,8 +74,8 @@ interface Entry { uuid: string, item: boolean, cells: ActivityCell[] }
 
 /** What the hub offers: what midi's chooser lists (no module-hidden activity), no unprepared spell, no after-cast
  * activity (those are in the Active group while their spell runs) */
-/** A metamagic option's feature: chosen when a spell is cast (use options), not a use of its own */
-const isMetamagic = (cell: ActivityCell) => METAMAGIC_OPTIONS.includes((itemOf(cell) as { identifier?: string } | null)?.identifier ?? "");
+/** A metamagic option's feature: chosen when a spell is cast (an entry offered at casting), not a use of its own */
+const isMetamagic = (cell: ActivityCell) => isCastingOption(itemOf(cell));
 const offered = (model: TurnModel) => model.activities.filter(c => !c.hidden && !c.unprepared && !c.afterCast && !isMetamagic(c) && !isMultiattackItem(itemOf(c) as Item.Implementation));
 
 /** A running spell's after-cast activity (Spiritual Weapon's attack, Flaming Sphere's Ram) */

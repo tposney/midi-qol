@@ -105,6 +105,26 @@ function itemOf(context: TagContext) { return context.workflow.item ?? undefined
 /** The used item's type (dnd5e's subtypes aren't in the types) */
 function itemType(context: TagContext): string | undefined { return itemOf(context)?.type; }
 
+const SCALING_EXCLUDED = ["magic-missile", "scorching-ray", "chromatic-orb"];
+type TargetSource = { override?: boolean, affects?: { count?: unknown }, template?: { type?: string } };
+
+/**
+ * A spell that gains a target when cast at a higher level: its target count is written in terms of the cast level (read
+ * from the source: the prepared count is evaluated), it has no area, and it isn't a spell of several projectiles.
+ * `flags.midi-qol.twinnable` on a spell overrides either way.
+ */
+function targetsScale(item: Item.Implementation | undefined): boolean {
+  if (!item || (item.type as string) !== "spell") return false;
+  const ruling = (item.flags as Record<string, { twinnable?: unknown } | undefined>)["midi-qol"]?.twinnable;
+  if (typeof ruling === "boolean") return ruling;
+  const system = item.system as { level?: number, identifier?: string };
+  if (!system.level || SCALING_EXCLUDED.includes(system.identifier ?? "")) return false;
+  const source = (item as unknown as { _source: { system: { target?: TargetSource, activities?: Record<string, { target?: TargetSource }> } } })._source.system;
+  const targets = [source.target, ...Object.values(source.activities ?? {}).map(a => a.target?.override ? a.target : undefined)].filter((t): t is TargetSource => !!t);
+  if (targets.some(t => t.template?.type)) return false;
+  return targets.some(t => /@item\.level|@scaling/.test(String(t.affects?.count ?? "")));
+}
+
 function rolledDamageTypes(workflow: Workflow): Set<string> {
   const types = new Set<string>();
   for (const roll of [...(workflow.damageRolls ?? []), ...(workflow.otherDamageRolls ?? []), ...(workflow.bonusDamageRolls ?? [])]) {
@@ -206,6 +226,11 @@ export function registerMidiTags(): void {
     return level > 0 && spendsSlot ? context.workflow.spellLevel : 0;
   }));
   registerTag("use.area", use("Has an area", ({ workflow }) => !!workflow.activity?.target?.template?.type));
+  registerTag("use.targetsScale", use("A spell whose number of targets rises with the level cast", context => targetsScale(itemOf(context))));
+  registerTag("use.costlyMaterial", use("A spell with a material component that has a cost or is consumed", context => {
+    const materials = (itemOf(context)?.system as { materials?: { consumed?: boolean, cost?: number | string } } | undefined)?.materials ?? {};
+    return itemType(context) === "spell" && (!!materials.consumed || Number(materials.cost) > 0);
+  }));
   // M11 (the viability items' tags)
   registerTag("use.flanking", use("The attack is flanking (the flanking rule)", ({ workflow }) => attackFlanked(workflow)));
   registerTag("use.ammunition", use("The ammunition's identifier", ({ workflow }) => {

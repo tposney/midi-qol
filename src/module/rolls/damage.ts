@@ -117,6 +117,7 @@ async function midiRollDamage(activity: Activity, wrapped: RollDamage, config: R
         workflow.attackMode = "twoHanded";
       }
       if (workflow.rollOptions?.rollToggle) dialog.configure = !dialog.configure;
+      let raisedWait = false;
       // This roll's own (another roll may come in between: the hook is guarded by its subject)
       preRollDamageHookId = Hooks.on("dnd5e.preRollDamage", (rollConfig: RollProcessConfig, dialogConfig: RollDialogConfig, messageConfig: RollMessageConfig) => {
         if (!isRollOf(rollConfig.subject, activity)) return;
@@ -146,7 +147,7 @@ async function midiRollDamage(activity: Activity, wrapped: RollDamage, config: R
         else if ((activity.healing?.types?.size ?? 0) > 1) dialogConfig.configure = true;
         if (dialogConfig.configure) {
           // After the damage-type checks, the last that can open the dialog
-          workflow.ensureRollWait("damage");
+          raisedWait = workflow.ensureRollWait("damage") || raisedWait;
           dialogConfig.options ??= {};
           dialogConfig.options.defaultButton = rollConfig.isCritical || rollConfig.midiOptions?.isCritical ? "critical" : "normal";
         }
@@ -171,6 +172,8 @@ async function midiRollDamage(activity: Activity, wrapped: RollDamage, config: R
       } finally {
         workflow.takeDialogBonuses("damage");
       }
+      // The roll is made: the wait raised for its dialog ends (backed out of, the use still waits for it)
+      if (result && raisedWait) workflow.endRollWait();
       if (!result) { // user backed out of roll
         workflow.beforeDamageBonuses = [];
         workflow.currentAction = "midi-qol.WaitForDamageRoll";

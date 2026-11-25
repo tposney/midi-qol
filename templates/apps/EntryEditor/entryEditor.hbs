@@ -17,8 +17,20 @@
 {{#if sentenceView}}
 <section class="midi-qol-entry-sentences scrollable">
     {{#each sentences}}
-    <div class="midi-qol-entry-home {{#unless (or sentences.length card automations.length settings effectSummary)}}empty{{/unless}}" data-home="{{home}}">
+    <div class="midi-qol-entry-home {{#unless (or sentences.length card automations.length settings effectSummary notice ruleSentences.length)}}empty{{/unless}}" data-home="{{home}}">
         {{#unless single}}<h4 class="midi-qol-entry-home-label">{{label}}{{#if effect}} <span class="hint">{{localize "midi-qol.EntryEditor.Home.effectHint"}}</span>{{/if}}</h4>{{/unless}}
+        {{#if notice}}<div class="midi-qol-entry-choice-line midi-qol-entry-rule-notice"><i class="fa-solid fa-layer-group"></i> {{notice}}</div>{{/if}}
+        {{#each ruleSentences}}
+        <div class="midi-qol-entry-sentence midi-qol-entry-rule-sentence">
+            <div class="midi-qol-entry-sentence-row">
+                <span class="midi-qol-entry-number"><i class="fa-solid fa-layer-group"></i></span>
+                <div class="midi-qol-entry-lines">
+                    {{#each lines}}<div class="midi-qol-entry-line" style="padding-left: {{indent}}px"><span>{{text}}</span></div>{{/each}}
+                    {{#if options}}<div class="midi-qol-entry-options">{{options}}</div>{{/if}}
+                </div>
+            </div>
+        </div>
+        {{/each}}
         {{#each choices}}<div class="midi-qol-entry-choice-line">{{this}}</div>{{/each}}
         {{> "modules/midi-qol/templates/apps/EntryEditor/settings.hbs"}}
         {{#with effectSummary}}<div class="midi-qol-entry-effect-summary"><button type="button" class="midi-qol-entry-edit" data-action="editEffect" data-home="{{../home}}" data-tooltip="{{localize "midi-qol.EntryEditor.Effect.Edit"}}" aria-label="{{localize "midi-qol.EntryEditor.Effect.Edit"}}"><i class="fa-solid fa-pen"></i></button>{{#if statuses}}<div>{{localize "midi-qol.EntryEditor.Effect.Statuses"}} {{statuses}}</div>{{/if}}{{#each changes}}<div><code>{{this}}</code></div>{{/each}}{{#if duration}}<div class="hint">{{localize "midi-qol.EntryEditor.Effect.Lasts"}} {{duration}}</div>{{/if}}</div>{{/with}}
