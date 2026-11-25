@@ -17,6 +17,8 @@ export interface Cue {
   cue: string;
   /** The use's id (the workflow), none for a cue outside a use */
   useId?: string;
+  /** The user whose client raised it (a presenter that broadcasts, Sequencer's, plays only there) */
+  raisedBy?: string;
   /** Token document uuids */
   source?: string;
   targets: string[];
@@ -25,6 +27,8 @@ export interface Cue {
   item?: string;
   /** The item's name at the use (the item may be gone when the cue is read: a consumed potion) */
   itemName?: string;
+  /** The ammunition item's uuid */
+  ammunition?: string;
   tags: { kind?: string, attack?: string, school?: string, damageTypes: string[], spellLevel?: number, actionType?: string, defaultDamageType?: string };
   /** What midi's sound lookup keys on */
   sound: { actorType?: string, itemType?: string, subtype?: string, baseItem?: string };
@@ -105,6 +109,7 @@ export function cueFor(workflow: Workflow, cue: string): Cue {
     activity: workflow.activity?.uuid,
     item: item?.uuid ?? undefined,
     itemName: item?.name ?? undefined,
+    ammunition: workflow.ammunition?.uuid ?? undefined,
     tags: {
       kind: tag("use.kind") as string | undefined, attack: tag("use.attack") as string | undefined, school: tag("use.school") as string | undefined,
       damageTypes: damageTypes instanceof Set ? [...damageTypes] as string[] : [], spellLevel: tag("use.spellLevel") as number | undefined,
@@ -121,6 +126,7 @@ export function cueFor(workflow: Workflow, cue: string): Cue {
 
 /** Present on this client and send to the other active clients */
 export function raiseCue(cue: Cue): void {
+  cue.raisedBy ??= game.user?.id;
   Hooks.callAll("midi-qol.cue", cue);
   void presentCue(cue);
   for (const user of game.users ?? []) {

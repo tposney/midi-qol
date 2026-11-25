@@ -16,6 +16,7 @@ import { registerInvisAdvantageRule } from "./rules/invisAdvantage.js";
 import { registerHiddenAdvantageRule } from "./rules/hiddenAdvantage.js";
 import { defineCombatRecordService } from "./module/services/combatRecord/service.js";
 import { registerCombatRecorder } from "./plugins/combatRecorder.js";
+import { registerAutoAnimationsPresenter } from "./plugins/autoAnimations.js";
 import { registerLayoutSettings } from "./module/apps/hub/layout.js";
 import { registerRemindersSetting } from "./module/apps/hub/reminders.js";
 import { useOptionsApi } from "./module/services/useOptions/registry.js";
@@ -1208,6 +1209,11 @@ Hooks.once('ready', function () {
   globalThis.MidiQOL.MQOnUseOptions = MQOnUseOptions;
 
   MidiSounds.midiSoundsReadyHooks();
+  registerAutoAnimationsPresenter({ services: servicesApi, inMidiUse: activityUuid => {
+    for (const workflow of Workflow.workflows.values())
+      if (!workflow.readOnly && !workflow.aborted && workflow.currentStep !== "midi-qol.Completed" && workflow.activity?.uuid === activityUuid) return true;
+    return false;
+  } });
   // M11: midi's overlays (sample items flagged midi-qol.overlay) as rules, on every client
   // and the world's own (world items flagged midi-qol.overlay); then their data parts on the world's actors (active GM)
   watchOverlayData();
