@@ -195,7 +195,7 @@
   },
   "system": {
     "description": {
-      "value": "<p>Beginning at 6th level, the healing spells you cast on others heal you as well.</p><p>When you cast a spell of 1st level or higher that restores hit points to a creature other than you, you regain hit points equal to 2 + the spell's level. </p><div class=\"cat-description\"><p><em>Midi-qol: Add the feature to a character and healing spells will restore 2 + spell level points to the caster.</em></p></div>",
+      "value": "<p>The healing spells you cast on others heal you as well. Immediately after you cast a spell with a spell slot that restores Hit Points to one or more creatures other than yourself, you regain Hit Points equal to 2 plus the spell slot's level.</p><div class=\"cat-description\"><p><em>Midi-qol: Add the feature to a character: a spell cast with a spell slot that heals another creature restores 2 + the slot's level to the caster.</em></p></div>",
       "chat": "<p>Beginning at 6th level, the healing spells you cast on others heal you as well.</p><p>When you cast a spell of 1st level or higher that restores hit points to a creature other than you, you regain hit points equal to 2 + the spell's level. </p><p><em>**Foundry note: The healing formula is set to 2. Please add the additional from the spell level manually.</em></p>"
     },
     "source": {

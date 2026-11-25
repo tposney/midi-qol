@@ -1219,9 +1219,11 @@ Hooks.once('ready', function () {
 
   MidiSounds.midiSoundsReadyHooks();
   syncVisualsFlag();
+  // A use counts while it is executing (its steps or a card button's roll), not while its card waits for a button: a
+  // card left waiting for its damage roll must not stop the weapon's animations outside midi
   registerAutoAnimationsPresenter({ services: servicesApi, inMidiUse: activityUuid => {
     for (const workflow of Workflow.workflows.values())
-      if (!workflow.readOnly && !workflow.aborted && workflow.currentStep !== "midi-qol.Completed" && workflow.activity?.uuid === activityUuid) return true;
+      if (!workflow.readOnly && !workflow.aborted && workflow.executingStates > 0 && workflow.activity?.uuid === activityUuid) return true;
     return false;
   } });
   // M11: midi's overlays (sample items flagged midi-qol.overlay) as rules, on every client
