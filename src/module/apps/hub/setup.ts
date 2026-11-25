@@ -54,24 +54,48 @@ export function setupHub() {
   });
   // What this user is asked, in one place: a request's window (a dialog it opened, or one picked from the inbox) and the
   // bonus prompt open just above the hub while it runs
-  // Placed on each render (a dialog grows as it fills in) until the user moves it: then left where they put it
+  // Placed on each render, and whenever the hub (its rows come and go) or the window changes size, until the window
+  // closes or the user moves it: then left where they put it
+  type Dockable = { element?: HTMLElement, setPosition?(position: object): unknown };
   const placed = new WeakMap<HTMLElement, { left: number, top: number }>();
-  const dock = (app: { element?: HTMLElement, setPosition?(position: object): unknown } | undefined) => {
+  const docked = new Map<HTMLElement, Dockable>();
+  let observedHub: HTMLElement | undefined;
+  const resized = new ResizeObserver(() => {
+    for (const app of [...docked.values()]) dock(app);
+  });
+  const undock = (element: HTMLElement) => {
+    docked.delete(element);
+    resized.unobserve(element);
+  };
+  const dock = (app: Dockable | undefined) => {
     const hub = document.getElementById("midi-qol-hub");
     const element = app?.element;
-    if (!hubRunning() || !hub || !element) return;
+    if (!element) return;
+    if (!element.isConnected || !hubRunning() || !hub) return undock(element);
     const last = placed.get(element);
-    if (last && (Math.abs(element.offsetLeft - last.left) > 2 || Math.abs(element.offsetTop - last.top) > 2)) return;
+    if (last && (Math.abs(element.offsetLeft - last.left) > 2 || Math.abs(element.offsetTop - last.top) > 2)) return undock(element);
+    if (hub !== observedHub) {
+      if (observedHub) resized.unobserve(observedHub);
+      resized.observe(observedHub = hub);
+    }
+    if (!docked.has(element)) {
+      docked.set(element, app);
+      resized.observe(element);
+    }
     requestAnimationFrame(() => {
-      const r = hub.getBoundingClientRect();
+      const current = document.getElementById("midi-qol-hub");
+      if (!element.isConnected || !current) return undock(element);
+      const r = current.getBoundingClientRect();
+      // A hub being redrawn has no height for a moment: placed when it has one again
+      if (!r.height) return;
       const position = { left: Math.max(0, Math.round(r.right - element.offsetWidth)), top: Math.max(0, Math.round(r.top - element.offsetHeight - 8)) };
       app!.setPosition?.(position);
       placed.set(element, { left: element.offsetLeft, top: element.offsetTop });
     });
   };
-  Hooks.on("renderRollModifyDialog" as never, ((app: { element?: HTMLElement, setPosition?(position: object): unknown }) => dock(app)) as never);
+  Hooks.on("renderRollModifyDialog" as never, ((app: Dockable) => dock(app)) as never);
   // Stage 3: dnd5e's roll dialogs (attack, damage, saves) with midi's sections in them, docked there too
-  Hooks.on("renderRollConfigurationDialog" as never, ((app: { element?: HTMLElement, setPosition?(position: object): unknown }) => dock(app)) as never);
+  Hooks.on("renderRollConfigurationDialog" as never, ((app: Dockable) => dock(app)) as never);
   Hooks.on("midi-qol.incomingRequestsChanged" as never, (() => {
     for (const request of incomingRequests()) if (request.window) dock(foundry.applications.instances.get(request.window.id) as never);
   }) as never);
