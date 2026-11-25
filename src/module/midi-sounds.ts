@@ -18,10 +18,10 @@ export class MidiSounds {
     return { playlist, sound: playlist?.sounds.getName(soundName) };
   }
 
-  static async playSound(playListName: string, soundName: string, broadcast = true) {
+  static async playSound(playListName: string, soundName: string, broadcast = true, volumeScale = 1) {
     const { playlist, sound } = this.getSound(playListName, soundName);
     if (playlist && sound?.path) {
-        return foundry.audio.AudioHelper.play({ src: sound.path, volume: sound.volume, loop: false }, broadcast);
+        return foundry.audio.AudioHelper.play({ src: sound.path, volume: (sound.volume ?? 1) * volumeScale, loop: false }, broadcast);
     }
     return null;
   }
@@ -43,13 +43,13 @@ export class MidiSounds {
       ...damageEntries,
     };
   }
-  static async playRandomSound(playListName: string, broadcast = true) {
+  static async playRandomSound(playListName: string, broadcast = true, volumeScale = 1) {
     const playlist: Playlist | undefined = game.playlists?.getName(playListName);
     if (playlist) {
       const sounds = playlist.sounds;
       const soundIndex = Math.floor(Math.random() * sounds.contents.length);
       const sound = sounds.contents[soundIndex];
-      return this.playSound(playlist.name, sound.name, broadcast);
+      return this.playSound(playlist.name, sound.name, broadcast, volumeScale);
     }
     return null;
   }
@@ -119,11 +119,11 @@ export class MidiSounds {
     return undefined;
   }
 
-  static playSpec(spec: SoundSpec, broadcast = true) {
+  static playSpec(spec: SoundSpec, broadcast = true, volumeScale = 1) {
     if (spec.soundName !== "random")
-      return this.playSound(spec.playlistName, spec.soundName, broadcast);
+      return this.playSound(spec.playlistName, spec.soundName, broadcast, volumeScale);
     else
-      return this.playRandomSound(spec.playlistName, broadcast)
+      return this.playRandomSound(spec.playlistName, broadcast, volumeScale)
   }
 
   static processHook(workflow: Workflow, selector: string) {
@@ -168,10 +168,13 @@ export class MidiSounds {
     },
     play: async cue => {
       const override = cue.presentation?.sound;
-      if (override && typeof override === "object") return MidiSounds.playSpec({ playlistName: override.playlist, soundName: override.sound }, false);
+      // The player's volume (Presentation volume)
+      const volume = cue.viewer?.volume ?? 1;
+      if (volume <= 0) return;
+      if (override && typeof override === "object") return MidiSounds.playSpec({ playlistName: override.playlist, soundName: override.sound }, false, volume);
       for (const alternatives of MidiSounds.selectorsFor(cue)) {
         const spec = alternatives.map(selector => MidiSounds.specForCue(cue, selector)).find(Boolean);
-        if (spec) await MidiSounds.playSpec(spec, false);
+        if (spec) await MidiSounds.playSpec(spec, false, volume);
       }
     }
   };

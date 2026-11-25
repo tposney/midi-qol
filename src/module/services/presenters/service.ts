@@ -1,5 +1,5 @@
 import { defineService, entries, reportServiceProblem } from "../../api/services.js";
-import type { Cue } from "../../lib/cues.js";
+import type { Cue, ViewerPreferences } from "../../lib/cues.js";
 
 /*
  * M18 stage 1 (plan ~/Documents/midi-next-M18-plan-2026-11-22.md): presenters show a use's cues: animations (visual),
@@ -101,11 +101,27 @@ export function releaseTemplateHolds(useId: string | undefined): Promise<void> {
   return Promise.race([Promise.allSettled(holds), new Promise(resolve => { timer = setTimeout(resolve, HOLD_CAP_MS); })]).then(() => clearTimeout(timer));
 }
 
-/** Present a cue on this client: per channel, the first presenter that claims it */
+/** This client's player's presentation preferences (user settings) */
+export function viewerPreferences(): ViewerPreferences {
+  const volume = Number(game.settings?.get("midi-qol", "PresentationVolume") ?? 100);
+  return {
+    volume: Number.isFinite(volume) ? Math.min(Math.max(volume, 0), 100) / 100 : 1,
+    visuals: game.settings?.get("midi-qol", "PresentationVisuals") !== false,
+    reducedMotion: game.settings?.get("midi-qol", "PresentationReducedMotion") === true
+  };
+}
+
+/**
+ * Present a cue on this client: per channel, the first presenter that claims it. The cue carries this player's
+ * preferences (cue.viewer); with Show animations off the visual channel is skipped, except where the use runs (a
+ * presenter that broadcasts plays for the others there and leaves this user out: cue.visualAudience).
+ */
 export async function presentCue(cue: Cue): Promise<void> {
   if (!presentersService) return;
+  cue = { ...cue, viewer: viewerPreferences() };
   for (const channel of PRESENTER_CHANNELS) {
     if (cue.presentation?.[channel] === "none") continue;
+    if (channel === "visual" && !cue.viewer!.visuals && cue.raisedBy !== game.user?.id) continue;
     for (const { id, provider } of ordered(channel)) {
       let claimed = false;
       try {

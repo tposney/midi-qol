@@ -107,7 +107,7 @@ import { compatibilityLine, deprecation, isRemoved, removedError, setupCompatibi
 import { UNMEASURABLE_DISTANCE, getDistance, measureTokens } from "./module/services/distance/service.js";
 import { rollFieldLocalizations, rollFieldMappings } from "./module/rollFields.js";
 import "./module/damageAbsorption.js";
-import { registerSettings, fetchParams, configSettings, checkRule, enableWorkflow, fetchSoundSettings, midiSoundSettingsBackup, readySettingsSetup, collectSettingData, exportSettingsToJSON, importSettingsFromJSON, safeGetGameSetting, shouldDisplaySaveDC, triggeredActivityTargetOptions, triggeredActivityRollAsOptions, resetConfigSettingsToDefaults, setTokenDocumentSets, migrateClientToUserSettings } from './module/settings.js';
+import { registerSettings, fetchParams, configSettings, checkRule, enableWorkflow, fetchSoundSettings, midiSoundSettingsBackup, readySettingsSetup, collectSettingData, exportSettingsToJSON, importSettingsFromJSON, safeGetGameSetting, shouldDisplaySaveDC, triggeredActivityTargetOptions, triggeredActivityRollAsOptions, resetConfigSettingsToDefaults, setTokenDocumentSets, migrateClientToUserSettings, syncVisualsFlag } from './module/settings.js';
 import { decodeWorkflowOptions, encodeWorkflowOptions, registerWorkflowOptionsSchema } from "./module/lib/workflowOptionsCodec.js";
 import { preloadTemplates } from './module/preloadTemplates.js';
 import { checkModules, setupModules } from './module/setupModules.js';
@@ -1211,6 +1211,7 @@ Hooks.once('ready', function () {
   globalThis.MidiQOL.MQOnUseOptions = MQOnUseOptions;
 
   MidiSounds.midiSoundsReadyHooks();
+  syncVisualsFlag();
   registerAutoAnimationsPresenter({ services: servicesApi, inMidiUse: activityUuid => {
     for (const workflow of Workflow.workflows.values())
       if (!workflow.readOnly && !workflow.aborted && workflow.currentStep !== "midi-qol.Completed" && workflow.activity?.uuid === activityUuid) return true;

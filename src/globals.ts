@@ -249,6 +249,9 @@ declare module "fvtt-types/configuration" {
     /** M18: per player, each channel's presenters in the order to try them */
     "midi-qol.PresenterOrder": Partial<Record<"visual" | "sound" | "text", string[]>>;
     "midi-qol.PresentationWait": number;
+    "midi-qol.PresentationVolume": number;
+    "midi-qol.PresentationVisuals": boolean;
+    "midi-qol.PresentationReducedMotion": boolean;
     "midi-qol.hiddenGroundCue": boolean;
     "midi-qol.ownChatCardSummary": string;
     "midi-qol.hiddenGroundCueStyle": string;
@@ -798,6 +801,8 @@ declare module "fvtt-types/configuration" {
         hubBars?: { actor: string, entries: string[] }[];
         /** M27: the hub popped out as a window (else docked at the bottom) */
         hubWindow?: boolean;
+        /** M18 stage 2: the player's Show animations off, mirrored where the client running a use can read it */
+        visualsOff?: boolean;
       };
     }
   }

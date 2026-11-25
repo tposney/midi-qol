@@ -385,6 +385,9 @@
     "ownChatCardSummary",
     "playerControlsInvisibleTokens",
     "PreferredGM",
+    "PresentationReducedMotion",
+    "PresentationVisuals",
+    "PresentationVolume",
     "PresentationWait",
     "PresenterOrder",
     "ReplaceDefaultActivities",
@@ -861,6 +864,7 @@
     "transformedActorUuids",
     "undoDamage",
     "undone",
-    "visuals"
+    "visuals",
+    "visualsOff"
   ]
 }

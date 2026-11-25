@@ -12,6 +12,14 @@ import { reveals } from "../services/revealPolicy/service.js";
  * raised from the step passes, presented here and on every other active client (query midi-qol.cue).
  */
 
+export interface ViewerPreferences {
+  /** Sounds' volume, 0-1 */
+  volume: number;
+  /** Show animations: false, no visual presenter plays here (where the use runs, a broadcasting one leaves this user out) */
+  visuals: boolean;
+  reducedMotion: boolean;
+}
+
 export type ChannelOverride = "default" | "none" | { playlist: string, sound: string } | string;
 
 export interface Cue {
@@ -40,6 +48,8 @@ export interface Cue {
   audience?: string[];
   /** The users who may see its visual presentation (a presenter that broadcasts limits itself to them); undefined: everyone */
   visualAudience?: string[];
+  /** This client's player's preferences, set where the cue is presented */
+  viewer?: ViewerPreferences;
   /** The use's override per channel ("none": nothing on that channel) */
   presentation?: Partial<Record<"visual" | "sound" | "text", ChannelOverride>>;
 }
@@ -175,10 +185,11 @@ export function cueForViewer(cue: Cue, user: User.Implementation): Cue | undefin
   return { ...cue, source: hiddenSource ? undefined : cue.source, targets: cue.targets.filter(shownTarget), outcomes };
 }
 
-/** The users who may see a cue's visuals (its source and all its targets shown to them); undefined: everyone */
+/** The users who may see a cue's visuals (its source and all its targets shown to them, Show animations on); undefined: everyone */
 function visualAudienceOf(cue: Cue): string[] | undefined {
   const users = game.users?.contents ?? [];
   const allowed = users.filter(user => {
+    if (user.getFlag("midi-qol", "visualsOff")) return false;
     const seen = cueForViewer(cue, user);
     return !!seen && seen.source === cue.source && seen.targets.length === cue.targets.length;
   });

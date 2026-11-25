@@ -1814,6 +1814,34 @@ export const registerSettings = function () {
     range: { min: 0, max: 10, step: 0.5 }
   });
 
+  // M18 stage 2: each player's presentation preferences (presenters read them as cue.viewer)
+  game.settings.register("midi-qol", "PresentationVolume", {
+    name: "midi-qol.PresentationVolume.Name",
+    hint: "midi-qol.PresentationVolume.Hint",
+    scope: "user",
+    default: 100,
+    config: true,
+    type: Number,
+    range: { min: 0, max: 100, step: 5 }
+  });
+  game.settings.register("midi-qol", "PresentationVisuals", {
+    name: "midi-qol.PresentationVisuals.Name",
+    hint: "midi-qol.PresentationVisuals.Hint",
+    scope: "user",
+    default: true,
+    config: true,
+    type: Boolean,
+    onChange: () => syncVisualsFlag()
+  });
+  game.settings.register("midi-qol", "PresentationReducedMotion", {
+    name: "midi-qol.PresentationReducedMotion.Name",
+    hint: "midi-qol.PresentationReducedMotion.Hint",
+    scope: "user",
+    default: false,
+    config: true,
+    type: Boolean
+  });
+
   game.settings.register("midi-qol", "EnableWorkflow", {
     name: "midi-qol.EnableWorkflow.Name",
     hint: "midi-qol.EnableWorkflow.Hint",
@@ -2094,6 +2122,14 @@ export async function migrateClientToUserSettings(): Promise<void> {
       console.warn(`midi-qol | could not copy this device's ${key} to your settings`, err);
     }
   }
+}
+
+/** Show animations off, mirrored on the user (the client running a use leaves them out of its broadcast animations) */
+export function syncVisualsFlag(): void {
+  const user = game.user;
+  if (!user) return;
+  const off = game.settings?.get("midi-qol", "PresentationVisuals") === false;
+  if (!!user.getFlag("midi-qol", "visualsOff") !== off) void user.setFlag("midi-qol", "visualsOff", off);
 }
 
 export function safeGetGameSetting(moduleName: string, settingName: string): any | undefined {
