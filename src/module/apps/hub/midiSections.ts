@@ -1,4 +1,4 @@
-import { applySpellGroup, currentLoadout, currentSpellGroup, loadoutsOf, removeLoadout, removeSpellGroup, saveLoadout, saveSpellGroup, spellGroupBlocked, spellGroupsOf, swapLoadout } from "../../services/loadouts.js";
+import { currentLoadout, loadoutsOf, removeLoadout, saveLoadout, swapLoadout } from "../../services/loadouts.js";
 import { aroundMeOn } from "./layout.js";
 import { knowledgeHtml, sinceLastTurnHtml } from "./recordViews.js";
 import { explorationHtml, outOfCombatActions, outOfCombatHtml } from "./outOfCombat.js";
@@ -342,8 +342,8 @@ function spellsHtml(ctx: HubContext): string {
 }
 
 /** The drawer: a tab's contents or a cost filter's (everything with that cost, a row per category), above the bar */
-/** The Loadouts tab: weapon sets (swap: the free object interaction in combat) and spell groups (out of combat); save
- * what is equipped or prepared now, right-click to remove */
+/** The Loadouts tab: weapon sets (swap: the free object interaction in combat); save what is equipped now, right-click
+ * to remove (to be replaced by the hands: ~/Documents/midi-next-M27-hands-plan-2026-11-26.md) */
 function loadoutsHtml(actor: Actor.Implementation): string {
   const sets = loadoutsOf(actor);
   const current = currentLoadout(actor);
@@ -351,19 +351,7 @@ function loadoutsHtml(actor: Actor.Implementation): string {
     `<button type="button" class="midi-hub-action${index === current ? " active" : ""}" data-hub-action="loadout" data-index="${index}" data-hub-context="removeLoadout"
       data-tooltip="${escape(i18n(index === current ? "midi-qol.Loadout.Current" : "midi-qol.Loadout.SwapHint"))}"><i class="fa-solid fa-shuffle"></i> ${escape(set.name)}</button>`).join("")}
     <button type="button" class="midi-hub-action" data-hub-action="saveLoadout" data-tooltip="${escape(i18n("midi-qol.Loadout.SaveHint"))}"><i class="fa-solid fa-floppy-disk"></i> ${escape(i18n("midi-qol.Loadout.Save"))}</button></div>`;
-  const hasSpells = actor.items.some(i => (i.type as string) === "spell");
-  if (!hasSpells) return weapons;
-  const groups = spellGroupsOf(actor);
-  const prepared = currentSpellGroup(actor);
-  const blocked = spellGroupBlocked(actor);
-  const spells = `<div class="midi-hub-row midi-hub-spell-groups"><span class="midi-hub-label">${escape(i18n("midi-qol.SpellGroup.Title"))}</span>${groups.map((group, index) => {
-    const names = group.spells.map(id => actor.items.get(id)?.name).filter(Boolean).join(", ");
-    const tip = [index === prepared ? i18n("midi-qol.SpellGroup.Current") : blocked ?? i18n("midi-qol.SpellGroup.ApplyHint"), names].filter(Boolean).join("<br>");
-    return `<button type="button" class="midi-hub-action${index === prepared ? " active" : ""}${blocked && index !== prepared ? " midi-hub-unusable" : ""}" data-hub-action="spellGroup" data-index="${index}" data-hub-context="removeSpellGroup"
-      data-tooltip="${escape(tip)}"><i class="fa-solid fa-book"></i> ${escape(group.name)}</button>`;
-  }).join("")}
-    <button type="button" class="midi-hub-action" data-hub-action="saveSpellGroup" data-tooltip="${escape(i18n("midi-qol.SpellGroup.SaveHint"))}"><i class="fa-solid fa-floppy-disk"></i> ${escape(i18n("midi-qol.Loadout.Save"))}</button></div>`;
-  return weapons + spells;
+  return weapons;
 }
 
 function drawerHtml(ctx: HubContext): string {
@@ -518,13 +506,7 @@ export function registerMidiHubSections() {
       },
       saveLoadout: async ({ actor }) => { await saveLoadout(actor); },
       removeLoadout: async ({ actor }, target) => { await removeLoadout(actor, Number(target.dataset.index)); },
-      spellGroup: async ({ actor }, target) => {
-        const reason = await applySpellGroup(actor, Number(target.dataset.index));
-        if (reason) ui.notifications?.warn(reason);
-      },
-      saveSpellGroup: async ({ actor }) => { await saveSpellGroup(actor); },
       exploreSkill: outOfCombatActions.exploreSkill,
-      removeSpellGroup: async ({ actor }, target) => { await removeSpellGroup(actor, Number(target.dataset.index)); },
       choiceToggle: async ({ actor }, target) => { await setToggle(actor, target.dataset.key ?? "", (target as HTMLInputElement).checked); },
       standing: async ({ actor }, target) => {
         await setStandingChoice(actor, target.dataset.key ?? "", target.dataset.choice as StandingChoice, target.dataset.label ?? "");
