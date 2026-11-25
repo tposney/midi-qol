@@ -5,6 +5,7 @@ import { outcomes, type TargetOutcome } from "./outcomes.js";
 import { presentCue, presentationLanded, presentationWaitMs, trackPresentation } from "../services/presenters/service.js";
 import { tagValue } from "./tags.js";
 import { getTokenDocument, isAutoFastForward } from "../utils.js";
+import { reveals } from "../services/revealPolicy/service.js";
 
 /*
  * M18 stage 1 (plan ~/Documents/midi-next-M18-plan-2026-11-22.md): a use's cues, plain data at its meaningful points,
@@ -35,6 +36,10 @@ export interface Cue {
   templates: string[];
   critical?: boolean;
   fumble?: boolean;
+  /** A private use's (whispered or blind card): the only users who get its cues; undefined: everyone */
+  audience?: string[];
+  /** The users who may see its visual presentation (a presenter that broadcasts limits itself to them); undefined: everyone */
+  visualAudience?: string[];
   /** The use's override per channel ("none": nothing on that channel) */
   presentation?: Partial<Record<"visual" | "sound" | "text", ChannelOverride>>;
 }
@@ -120,19 +125,81 @@ export function cueFor(workflow: Workflow, cue: string): Cue {
     templates: [...(workflow.templateUuids ?? [])],
     critical: !!workflow.isCritical,
     fumble: !!workflow.isFumble,
-    presentation: overrideOf(workflow)
+    presentation: overrideOf(workflow),
+    audience: audienceOf(workflow.chatCard)
   };
+}
+
+/** A whispered card's recipients (with its author and the GMs); a blind card's author and GMs */
+function audienceOf(card: ChatMessage.Implementation | undefined | null): string[] | undefined {
+  if (!card || (!card.blind && !card.whisper?.length)) return undefined;
+  const ids = new Set<string>(card.blind ? [] : card.whisper.filter((id): id is string => typeof id === "string"));
+  if (card.author?.id) ids.add(card.author.id);
+  for (const user of game.users ?? []) if (user.isGM && user.id) ids.add(user.id);
+  return [...ids];
+}
+
+function tokenOf(uuid: string | undefined): TokenDocument.Implementation | undefined {
+  const doc = uuid ? fromUuidSync(uuid) : undefined;
+  return doc instanceof TokenDocument ? doc : undefined;
+}
+
+function ownsToken(user: User.Implementation, token: TokenDocument.Implementation | undefined): boolean {
+  return !!token?.actor?.testUserPermission(user, "OWNER");
+}
+
+/**
+ * A cue as `user` may know it, undefined if they get none (a private use's). A hidden source is left out unless they
+ * may learn a hidden attacker; a hidden target is left out unless they own it; a target's damage by type (its
+ * resistances) and its hit points lost or gained only where the reveal policy lets them learn those.
+ */
+export function cueForViewer(cue: Cue, user: User.Implementation): Cue | undefined {
+  if (cue.audience && !cue.audience.includes(user.id ?? "")) return undefined;
+  if (user.isGM) return cue;
+  const source = tokenOf(cue.source);
+  const caster = source?.actor ?? undefined;
+  const hiddenSource = !!source?.hidden && !reveals({ subject: "hiddenAttacker", user, caster });
+  const shownTarget = (uuid: string) => { const token = tokenOf(uuid); return !token?.hidden || ownsToken(user, token); };
+  const outcomes = cue.outcomes.filter(o => shownTarget(o.target)).map(outcome => {
+    if (!outcome.damage) return outcome;
+    const target = tokenOf(outcome.target)?.actor ?? undefined;
+    const resistances = reveals({ subject: "resistances", user, caster, target });
+    const hpState = reveals({ subject: "hpState", user, caster, target });
+    if (resistances && hpState) return outcome;
+    const { rolled, applied, prevented, hp, temp, healed, droppedToZero } = outcome.damage;
+    return { ...outcome, damage: {
+      ...(resistances ? { rolled, applied, prevented } : { rolled: {}, applied: {}, prevented: {} }),
+      ...(hpState ? { hp, temp, healed, droppedToZero } : {})
+    } };
+  });
+  return { ...cue, source: hiddenSource ? undefined : cue.source, targets: cue.targets.filter(shownTarget), outcomes };
+}
+
+/** The users who may see a cue's visuals (its source and all its targets shown to them); undefined: everyone */
+function visualAudienceOf(cue: Cue): string[] | undefined {
+  const users = game.users?.contents ?? [];
+  const allowed = users.filter(user => {
+    const seen = cueForViewer(cue, user);
+    return !!seen && seen.source === cue.source && seen.targets.length === cue.targets.length;
+  });
+  return allowed.length === users.length ? undefined : allowed.map(u => u.id).filter((id): id is string => !!id);
 }
 
 /** Present on this client and send to the other active clients */
 export function raiseCue(cue: Cue): void {
   cue.raisedBy ??= game.user?.id;
-  Hooks.callAll("midi-qol.cue", cue);
-  // Claiming is async: a wait for animations waits for it too
-  trackPresentation(cue.useId, presentCue(cue));
+  cue.visualAudience ??= visualAudienceOf(cue);
+  // Each user gets the cue as they may know it (M18 stage 2), this one too
+  const own = game.user ? cueForViewer(cue, game.user) : undefined;
+  if (own) {
+    Hooks.callAll("midi-qol.cue", own);
+    // Claiming is async: a wait for animations waits for it too
+    trackPresentation(own.useId, presentCue(own));
+  }
   for (const user of game.users ?? []) {
     if (user.isSelf || !user.active) continue;
-    void user.query(CUE_QUERY, cue as unknown as Record<string, unknown>).catch(() => undefined);
+    const theirs = cueForViewer(cue, user);
+    if (theirs) void user.query(CUE_QUERY, theirs as unknown as Record<string, unknown>).catch(() => undefined);
   }
 }
 

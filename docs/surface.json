@@ -56,6 +56,7 @@
     "createConditionData",
     "createDamageDetail",
     "createEffects",
+    "cueForViewer",
     "damageCalculation",
     "DamageOnlyWorkflow",
     "debouncedUpdate",

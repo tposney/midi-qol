@@ -83,7 +83,7 @@ import { registerRedirection } from "./module/lib/entries/redirection.js";
 import { rulesApi } from "./module/lib/entries/rules.js";
 import { applyOverlayData, applyOverlayDataToWorld, registerOverlay, registerOverlayPack, registerWorldOverlays, saveAsOverlay, watchOverlayAuthoring, watchOverlayData, automationReport } from "./module/lib/entries/overlays.js";
 import { definePresentersService } from "./module/services/presenters/service.js";
-import { registerCues } from "./module/lib/cues.js";
+import { cueForViewer, registerCues } from "./module/lib/cues.js";
 import { registerActivityActions, takeAction } from "./module/lib/entries/activityActions.js";
 import { registerMacroAction } from "./module/lib/entries/macroAction.js";
 import { registerUseChanges } from "./module/lib/entries/useChanges.js";
@@ -371,6 +371,8 @@ Object.assign(globalThis.MidiQOL, {
   // Tags (M26): named facts about a use and its targets that conditions read; modules add or replace them
   // The reveal policy (M19): may this user learn this (DCs, save and hit results, AC, names, table results)
   reveals,
+  // M18 stage 2: a cue as a user may know it (hidden tokens, a private use, resistances and hit points per the reveal policy)
+  cueForViewer,
   tags: { register: registerTag, get: tagValue, names: tagNames, definition: tagDefinition, replaced: replacedTags, view: tagsView },
   // The settings registry (M4a): every setting declared once; modules register their own (shown in the panel's Modules tab)
   settings: { ...settingsApi, migrateClientToUser: migrateClientToUserSettings },

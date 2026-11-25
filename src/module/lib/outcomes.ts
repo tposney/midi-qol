@@ -16,11 +16,12 @@ export interface DamageOutcome {
   applied: Record<string, number>;
   /** rolled - applied, where positive */
   prevented: Record<string, number>;
-  hp: number;
-  temp: number;
-  healed: number;
+  /** The hit points lost, temporary hit points lost, hit points healed: left out of a cue for a viewer who may not learn them (hpState) */
+  hp?: number;
+  temp?: number;
+  healed?: number;
   /** Above 0 hit points before, 0 after */
-  droppedToZero: boolean;
+  droppedToZero?: boolean;
 }
 export interface TargetOutcome {
   /** TokenDocument uuid */

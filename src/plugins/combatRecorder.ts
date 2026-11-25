@@ -125,10 +125,11 @@ export function registerCombatRecorder(api: RecorderApi) {
       }
       if (damage && outcome.damage) {
         const d = outcome.damage;
-        const amount = d.hp + d.temp;
+        // Hit points this viewer may not learn are left out of their cue (hpState): no event for them
+        const amount = d.hp === undefined ? 0 : d.hp + (d.temp ?? 0);
         const top = Object.entries(d.applied).sort((x, y) => y[1] - x[1])[0]?.[0];
         if (combat && amount > 0) push(outcome.target, { kind: "damaged", source, item, amount, damageType: top }, combat);
-        if (combat && d.healed > 0) push(outcome.target, { kind: "healed", source, item, amount: d.healed }, combat);
+        if (combat && (d.healed ?? 0) > 0) push(outcome.target, { kind: "healed", source, item, amount: d.healed }, combat);
         // What the damage shows of the creature, when no save changed it
         if (kind && !outcome.save?.success) for (const [type, rolled] of Object.entries(d.rolled)) {
           if (rolled <= 0 || HEALING.has(type)) continue;
@@ -183,7 +184,10 @@ export function registerCombatRecorder(api: RecorderApi) {
         name: kind.name,
         ...(ac ? { ac } : {}),
         saves: Object.entries(kind.saves).map(([ability, s]) => ({ ability, ...s })),
-        resists: [...kind.resists], immune: [...kind.immune], vulnerable: [...kind.vulnerable], uses: [...kind.uses]
+        ...(viewer.isGM || api.reveals({ subject: "resistances", user: viewer, target: actor })
+          ? { resists: [...kind.resists], immune: [...kind.immune], vulnerable: [...kind.vulnerable] }
+          : { resists: [], immune: [], vulnerable: [] }),
+        uses: [...kind.uses]
       };
     }
   };

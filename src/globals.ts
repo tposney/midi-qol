@@ -186,6 +186,7 @@ declare module "fvtt-types/configuration" {
       /** Sequencer: an effect starts / ends (plugins/autoAnimations.ts) */
       "createSequencerEffect": (effect: { data?: { moduleName?: string, persist?: boolean } }) => void;
       "endedSequencerEffect": (effect: { data?: { moduleName?: string, persist?: boolean } }) => void;
+      "createSequencerSequence": (sequence: { moduleName?: string, sections?: { forUsers?(users: string[]): unknown }[] }) => void;
       "midi-qol.preSetReactionUsed": (actor: Actor.Implementation, effect: ActiveEffect.Implementation) => boolean | void;
       "midi-qol.setReactionUsed": (actor: Actor.Implementation, effect: ActiveEffect.Implementation) => void;
       "midi-qol.preSetBonusActionUsed": (actor: Actor.Implementation, effect: ActiveEffect.Implementation) => boolean | void;

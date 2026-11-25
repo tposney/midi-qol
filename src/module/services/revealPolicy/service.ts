@@ -13,11 +13,14 @@ import { configSettings, safeGetGameSetting } from "../../settings.js";
  *
  * Subjects: "challenge" (a card's DC and its NPC targets' results, the caster's challenge), "saveResult" (a target's
  * save outcome), "hitResult" (hit or miss), "ac" (a target's AC at the attack), "tableResult" (an activity's table
- * result), "attacker" (what acts on a creature, for its reaction prompt: by default, unless the creature can't see it).
+ * result), "attacker" (what acts on a creature, for its reaction prompt: by default, unless the creature can't see it),
+ * "resistances" (a target's resistances, immunities and vulnerabilities as its damage shows them) and "hpState" (the
+ * hit points a target lost or gained: by default its owners, and others as Player Damage Card shows them), and
+ * "hiddenAttacker" (a hidden token acting: by default only its owners; M18 stage 2, asked per viewer by the cues).
  * Names are the tokenNames service's. `saveDetail` says how much of a visible save is shown.
  */
 
-export type RevealSubject = "challenge" | "saveResult" | "hitResult" | "ac" | "tableResult" | "attacker";
+export type RevealSubject = "challenge" | "saveResult" | "hitResult" | "ac" | "tableResult" | "attacker" | "resistances" | "hpState" | "hiddenAttacker";
 export type SaveDetail = "outcome" | "total" | "dice";
 
 export interface RevealQuery {
@@ -62,6 +65,13 @@ function challengeToPlayers(caster: Actor.Implementation | undefined): boolean {
   }
 }
 
+/** Player Damage Card: a player character's damage is shown to players with any card, an NPC's with the NPC options */
+function damageCardShows(target: Actor.Implementation | undefined): boolean {
+  const card = configSettings.playerDamageCard ?? "none";
+  if (card === "none") return false;
+  return target?.hasPlayerOwner ? true : card.startsWith("npc");
+}
+
 function owns(user: User.Implementation, actor: Actor.Implementation | undefined): boolean {
   return !!actor && actor.testUserPermission(user, "OWNER");
 }
@@ -80,6 +90,8 @@ export function midiReveals(query: RevealQuery): boolean {
     case "ac": return true;
     case "tableResult": return true;
     case "attacker": return query.seen !== false;
+    case "resistances": case "hpState": return owns(user, target) || damageCardShows(target);
+    case "hiddenAttacker": return owns(user, caster);
     default: return true;
   }
 }

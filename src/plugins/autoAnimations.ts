@@ -15,6 +15,8 @@ import type { Presenter } from "../module/services/presenters/service.js";
  *
  * Its play resolves when the Sequencer effects it started have ended (a use waits for that with "Wait for animations").
  *
+ * A cue's visualAudience (a hidden attacker or target, a private use) limits its Sequencer sequences to those users.
+ *
  * Every client is asked (so the user's presenter order gives the same answer everywhere); only the client that raised
  * the cue plays: Sequencer shows the effects to the others.
  */
@@ -192,6 +194,13 @@ export function registerAutoAnimationsPresenter(api: AutoAnimationsPluginApi): b
       const item = activity?.item ?? (cue.item ? fromUuidSync(cue.item) : undefined);
       if (!activity || !item) return;
       const ended = animationsEnded();
+      // Shown only to the users who may see it (a hidden attacker or target, a private use): Sequencer plays for them
+      const audience = cue.visualAudience;
+      const limit = audience ? Hooks.on("createSequencerSequence", sequence => {
+        if (sequence.moduleName !== "Automated Animations") return;
+        for (const section of sequence.sections ?? []) section.forUsers?.(audience);
+      }) : undefined;
+      if (limit !== undefined) void ended.then(() => Hooks.off("createSequencerSequence", limit));
       await automatedAnimations()?.playAnimation(placeable(cue.source), item, { ...animationOptions(cue, activity), midiPresented: true });
       return ended;
     }
