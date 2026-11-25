@@ -2559,6 +2559,27 @@ li.midi-qol-after-cast-idle button { opacity: 0.5; }
 .midi-qol-hub .midi-hub-no-slots { opacity: 0.45; }
 .midi-qol-hub .midi-hub-bar { flex-wrap: nowrap; overflow: hidden; }
 .midi-qol-hub .midi-hub-bar .midi-hub-active { display: inline-flex; gap: 4px; padding-right: 6px; margin-right: 2px; border-right: 2px solid #d4af37; }
+/* M27 hands: the active set's main and off hand first on the bar, the other sets small beside them */
+.midi-qol-hub .midi-hub-hands { display: inline-flex; align-items: center; gap: 3px; padding: 2px 6px 2px 2px; margin-right: 2px; border-right: 2px solid var(--color-border-light-2, #777); flex: none; }
+.midi-qol-hub .midi-hub-hand { position: relative; display: inline-flex; width: 48px; height: 48px; border: 1px solid var(--color-border-light-2, #777); border-radius: 7px; align-items: center; justify-content: center; background: rgba(0, 0, 0, 0.25); }
+.midi-qol-hub .midi-hub-hand .midi-hub-use { width: 44px; height: 44px; }
+.midi-qol-hub .midi-hub-hand-off { width: 40px; height: 40px; }
+.midi-qol-hub .midi-hub-hand-off .midi-hub-use { width: 36px; height: 36px; }
+.midi-qol-hub .midi-hub-hand-item img { width: 100%; height: 100%; border: none; border-radius: 6px; }
+.midi-qol-hub .midi-hub-hand-item { display: block; width: calc(100% - 4px); height: calc(100% - 4px); }
+.midi-qol-hub .midi-hub-hand-blocked { filter: grayscale(1) brightness(0.5); }
+.midi-qol-hub .midi-hub-hand-empty { opacity: 0.4; font-size: 1.1rem; }
+.midi-qol-hub .midi-hub-hand-clear { position: absolute; top: -5px; right: -5px; display: none; width: 14px; height: 14px; line-height: 14px; text-align: center; font-size: 0.6rem; border-radius: 50%; background: var(--color-bg-option, #333); }
+.midi-qol-hub .midi-hub-hand:hover .midi-hub-hand-clear { display: block; }
+.midi-qol-hub .midi-hub-hand-sets { display: inline-flex; flex-direction: column; gap: 2px; margin-left: 2px; }
+.midi-qol-hub .midi-hub-hand-set { position: relative; display: inline-flex; gap: 1px; padding: 1px 12px 1px 1px; height: 20px; min-height: 0; width: auto; line-height: 1; opacity: 0.75; }
+.midi-qol-hub .midi-hub-hand-set:hover { opacity: 1; }
+.midi-qol-hub .midi-hub-hand-set img, .midi-qol-hub .midi-hub-hand-none { width: 16px; height: 16px; border: none; border-radius: 3px; }
+.midi-qol-hub .midi-hub-hand-none { display: inline-block; background: rgba(255, 255, 255, 0.08); }
+.midi-qol-hub .midi-hub-hand-n { font-size: 0.65rem; opacity: 0.8; }
+.midi-qol-hub .midi-hub-hand-set .midi-hub-hand-n { position: absolute; right: 2px; top: 3px; }
+.midi-qol-hub .midi-hub-hand-active-n { align-self: flex-start; }
+.midi-qol-hub .midi-hub-hand-add { font-size: 0.65rem; opacity: 0.6; text-align: center; }
 .midi-qol-hub .midi-hub-tab.active { font-weight: bold; text-decoration: underline; }
 .midi-qol-hub .midi-hub-tabs { flex-wrap: wrap; row-gap: 0.2rem; }
 .midi-qol-hub .midi-hub-drop-hint { white-space: nowrap; }

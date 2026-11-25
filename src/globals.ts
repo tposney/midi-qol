@@ -66,6 +66,7 @@ declare module "fvtt-types/configuration" {
     /** M8: an interaction was done (Hide, Grapple, a door...) */
     /** M7: a creature's turn model changed (its actor's uuid): read it again with MidiQOL.turnModel.get */
     "midi-qol.turnModelChanged": (actorUuid: string) => void;
+    "midi-qol.handsChanged": (actor: Actor.Implementation, hands: import("./module/services/hands.js").Hands) => void;
     "midi-qol.interaction": (data: { id: string, subject: TokenDocument.Implementation, target?: TokenDocument.Implementation | WallDocument.Implementation, result: unknown }) => void;
     "midi-qol.preForcedMovement": (request: import("./module/services/forcedMovement/service.js").ForcedMoveRequest) => boolean | void;
     "midi-qol.forcedMovement": (request: import("./module/services/forcedMovement/service.js").ForcedMoveRequest, result: import("./module/services/forcedMovement/service.js").ForcedMoveResult) => void;
@@ -410,6 +411,8 @@ declare module "fvtt-types/configuration" {
         rememberedChoices?: import("./module/lib/rememberedChoices.js").RememberedChoice[];
         /** M20: the points the GM holds this creature's uses at (lib/holds.ts) */
         gmHold?: import("./module/lib/holds.js").HoldPoint[];
+        /** M27: the creature's weapon sets and the one in hand (services/hands.ts) */
+        hands?: import("./module/services/hands.js").Hands;
         dependentOn?: string; // UUID of parent document for midi-qol dependent tracking
         actions?: {
           // This really should be structured but actions.reaction is used in other modules and macros

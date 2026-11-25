@@ -1,4 +1,4 @@
-import { currentLoadout, loadoutsOf, removeLoadout, saveLoadout, swapLoadout } from "../../services/loadouts.js";
+import { addSet, clearHand, handsOf, heldIn, isShield, MAIN, MAX_SETS, MIN_SETS, OFF, placeInHand, removeSet, saveHands, switchHands } from "../../services/hands.js";
 import { aroundMeOn } from "./layout.js";
 import { knowledgeHtml, sinceLastTurnHtml } from "./recordViews.js";
 import { explorationHtml, outOfCombatActions, outOfCombatHtml } from "./outOfCombat.js";
@@ -129,7 +129,9 @@ function barEntries(ctx: HubContext): { entries: Entry[], own: boolean } {
     const entry = uuid ? entryFor(ctx.model, uuid) : undefined;
     return entry ? [entry] : [];
   });
-  const listed = new Set(favourites.flatMap(e => e.cells.map(c => c.itemUuid)));
+  // What the hands hold is on the bar already (the hands come first)
+  const { main, off } = heldIn(ctx.actor);
+  const listed = new Set([...favourites.flatMap(e => e.cells.map(c => c.itemUuid)), ...[main, off].flatMap(i => i?.uuid ? [i.uuid] : [])]);
   const attacks = itemEntries(offered(ctx.model).filter(isAttack)).filter(e => !listed.has(e.uuid))
     .map(e => entryFor(ctx.model, e.uuid)!);
   return { entries: [...favourites, ...attacks], own: false };
@@ -140,7 +142,7 @@ async function saveBar(ctx: HubContext, entries: string[] | undefined) {
   await game.user?.setFlag("midi-qol", "hubBars", entries ? [...bars, { actor: ctx.actor.uuid ?? "", entries }] : bars);
 }
 
-const TABS = ["bar", "weapons", "spells", "features", "items", "actions", "loadouts", "resources", "around", "choices"] as const;
+const TABS = ["bar", "weapons", "spells", "features", "items", "actions", "resources", "around", "choices"] as const;
 
 type Recovery = { period?: string };
 type UsesData = { value?: number, max?: number | string, recovery?: Recovery[] };
@@ -342,16 +344,52 @@ function spellsHtml(ctx: HubContext): string {
 }
 
 /** The drawer: a tab's contents or a cost filter's (everything with that cost, a row per category), above the bar */
-/** The Loadouts tab: weapon sets (swap: the free object interaction in combat); save what is equipped now, right-click
- * to remove (to be replaced by the hands: ~/Documents/midi-next-M27-hands-plan-2026-11-26.md) */
-function loadoutsHtml(actor: Actor.Implementation): string {
-  const sets = loadoutsOf(actor);
-  const current = currentLoadout(actor);
-  const weapons = `<div class="midi-hub-row midi-hub-loadouts"><span class="midi-hub-label">${escape(i18n("midi-qol.Loadout.Title"))}</span>${sets.map((set, index) =>
-    `<button type="button" class="midi-hub-action${index === current ? " active" : ""}" data-hub-action="loadout" data-index="${index}" data-hub-context="removeLoadout"
-      data-tooltip="${escape(i18n(index === current ? "midi-qol.Loadout.Current" : "midi-qol.Loadout.SwapHint"))}"><i class="fa-solid fa-shuffle"></i> ${escape(set.name)}</button>`).join("")}
-    <button type="button" class="midi-hub-action" data-hub-action="saveLoadout" data-tooltip="${escape(i18n("midi-qol.Loadout.SaveHint"))}"><i class="fa-solid fa-floppy-disk"></i> ${escape(i18n("midi-qol.Loadout.Save"))}</button></div>`;
-  return weapons;
+/** The hands (M27): the active set's main hand (its attack; empty, the unarmed strike) and off hand (its attack, a
+ * shield, or taken by a two-handed weapon), each a drop target with a clear button; the other sets small, a click
+ * switches (the object interaction in combat), right-click removes one; + adds a set */
+function handsHtml(ctx: HubContext): string {
+  const actor = ctx.actor;
+  const hands = handsOf(actor);
+  const { main, off, blocked } = heldIn(actor, hands);
+  const entryOf = (item: Item.Implementation | undefined) => item?.uuid ? entryFor(ctx.model, item.uuid) : undefined;
+  const clear = (hand: number) => `<a class="midi-hub-hand-clear" data-hub-action="handClear" data-hand="${hand}" data-tooltip="${escape(i18n("midi-qol.Hands.Clear"))}"><i class="fa-solid fa-xmark"></i></a>`;
+  const inert = (item: Item.Implementation, tip: string, extra = "") =>
+    `<span class="midi-hub-hand-item${extra}" data-tooltip-html="${escape(tip)}" data-tooltip-direction="UP"><img src="${escape(item.img ?? "")}" alt=""></span>`;
+  const empty = (tip: string) => `<span class="midi-hub-hand-empty" data-tooltip="${escape(tip)}"><i class="fa-solid fa-hand"></i></span>`;
+  const slot = (hand: number, body: string, filled: boolean) =>
+    `<span class="midi-hub-hand midi-hub-hand-${hand === MAIN ? "main" : "off"}" data-hub-drop="hand" data-set="${hands.active}" data-hand="${hand}">${body}${filled ? clear(hand) : ""}</span>`;
+
+  let mainBody: string;
+  if (main) {
+    const entry = entryOf(main);
+    mainBody = entry ? entryButton(entry) : inert(main, `<strong>${escape(main.name ?? "")}</strong>`);
+  } else {
+    const unarmed = actor.items.find(i => (i.system as { identifier?: string }).identifier === "unarmed-strike");
+    const entry = entryOf(unarmed);
+    mainBody = entry ? entryButton(entry) : empty(i18n("midi-qol.Hands.DropMain"));
+  }
+  let offBody: string;
+  if (blocked && main) offBody = inert(main, `${escape(main.name ?? "")}<br><em>${escape(i18n("midi-qol.Hands.TwoHanded"))}</em>`, " midi-hub-hand-blocked");
+  else if (off && isShield(off)) {
+    const ac = (off.system as { armor?: { value?: number } }).armor?.value;
+    offBody = inert(off, `<strong>${escape(off.name ?? "")}</strong>${ac ? `<br>${escape(i18n("midi-qol.Hub.AC"))} +${ac}` : ""}`, " midi-hub-hand-shield");
+  } else if (off) {
+    const entry = entryOf(off);
+    offBody = entry ? entryButton(entry) : inert(off, `<strong>${escape(off.name ?? "")}</strong>`);
+  } else offBody = empty(i18n("midi-qol.Hands.DropOff"));
+
+  const others = hands.sets.map((set, index) => {
+    if (index === hands.active) return "";
+    const items = set.map(id => id ? actor.items.get(id) : undefined);
+    const names = items.filter(Boolean).map(i => escape(i!.name ?? "")).join(", ") || escape(i18n("midi-qol.Hands.EmptySet"));
+    const tip = `<strong>${escape(i18n("midi-qol.Hands.Set").replace("{n}", String(index + 1)))}</strong><br>${names}<br><span class="hint">${escape(i18n("midi-qol.Hands.SwitchHint"))}${hands.sets.length > MIN_SETS ? `<br>${escape(i18n("midi-qol.Hands.RemoveHint"))}` : ""}</span>`;
+    const imgs = items.map(i => i ? `<img src="${escape(i.img ?? "")}" alt="">` : `<span class="midi-hub-hand-none"></span>`).join("");
+    return `<button type="button" class="midi-hub-hand-set" data-hub-action="handsSwitch" data-index="${index}"${hands.sets.length > MIN_SETS ? ` data-hub-context="handsRemoveSet"` : ""}
+      data-hub-drop="hand" data-set="${index}" data-hand="${MAIN}" data-tooltip-html="${escape(tip)}" data-tooltip-direction="UP">${imgs}<span class="midi-hub-hand-n">${index + 1}</span></button>`;
+  }).join("");
+  const add = hands.sets.length < MAX_SETS ? `<a class="midi-hub-hand-add" data-hub-action="handsAddSet" data-tooltip="${escape(i18n("midi-qol.Hands.AddSet"))}"><i class="fa-solid fa-plus"></i></a>` : "";
+  return `<span class="midi-hub-hands" data-tooltip-direction="UP"><span class="midi-hub-hand-n midi-hub-hand-active-n" data-tooltip="${escape(i18n("midi-qol.Hands.Set").replace("{n}", String(hands.active + 1)))}">${hands.active + 1}</span>
+    ${slot(MAIN, mainBody, !!main)}${slot(OFF, offBody, !!off && !blocked)}<span class="midi-hub-hand-sets">${others}${add}</span></span>`;
 }
 
 function drawerHtml(ctx: HubContext): string {
@@ -387,9 +425,6 @@ function drawerHtml(ctx: HubContext): string {
   } else if (ctx.tab === "around") {
     title = i18n("midi-qol.Hub.Tab.around");
     body = aroundMeHtml(ctx.token, ctx.actor);
-  } else if (ctx.tab === "loadouts") {
-    title = i18n("midi-qol.Hub.Tab.loadouts");
-    body = loadoutsHtml(ctx.actor);
   } else if (ctx.tab === "spells") {
     title = i18n("midi-qol.Hub.Tab.spells") + (filterName ? ` · ${filterName}` : "");
     body = spellsHtml(ctx);
@@ -488,7 +523,7 @@ export function registerMidiHubSections() {
       const onBar = new Set(entries.flatMap(e => e.cells.map(c => c.itemUuid)));
       const granted = itemEntries(offered(ctx.model).filter(c => isGranted(itemOf(c)) && !onBar.has(c.itemUuid)));
       const active = [...ctx.model.activities.filter(runningAfterCast).map(c => useButton(c)), ...granted.map(e => entryButton(e))];
-      const bar = `<div class="midi-hub-bar" data-hub-drop="bar">${active.length ? `<span class="midi-hub-active">${active.join("")}</span>` : ""}${entries.map((e, i) => entryButton(e, { barIndex: i, removable: true })).join("")}
+      const bar = `<div class="midi-hub-bar" data-hub-drop="bar">${handsHtml(ctx)}${active.length ? `<span class="midi-hub-active">${active.join("")}</span>` : ""}${entries.map((e, i) => entryButton(e, { barIndex: i, removable: true })).join("")}
           <span class="midi-hub-drop-hint">${escape(i18n(own ? "midi-qol.Hub.DropHere" : "midi-qol.Hub.DropToArrange"))}</span>
           ${own ? `<a class="midi-hub-reset" data-hub-action="resetBar" data-tooltip="${escape(i18n("midi-qol.Hub.ResetBar"))}"><i class="fa-solid fa-rotate-left"></i></a>` : ""}</div>`;
       const drawer = ctx.filter || ctx.tab !== "bar" ? drawerHtml(ctx) : "";
@@ -499,13 +534,17 @@ export function registerMidiHubSections() {
       dash: async ({ actor }) => { await takeDash(actor); },
       disengage: async ({ actor }) => { await takeDisengage(actor); },
       choose: async (ctx, target) => { await openChoices(ctx, target); },
-      loadout: async ({ token }, target) => {
+      handsSwitch: async ({ token }, target) => {
         if (!token) return;
-        const result = await swapLoadout(token, Number(target.dataset.index));
+        const result = await switchHands(token, Number(target.dataset.index));
         if (!result.done && result.reason) ui.notifications?.warn(result.reason);
       },
-      saveLoadout: async ({ actor }) => { await saveLoadout(actor); },
-      removeLoadout: async ({ actor }, target) => { await removeLoadout(actor, Number(target.dataset.index)); },
+      handClear: async ({ actor }, target) => {
+        const hands = handsOf(actor);
+        await saveHands(actor, clearHand(actor, hands, hands.active, Number(target.dataset.hand)));
+      },
+      handsAddSet: async ({ actor }) => { await saveHands(actor, addSet(handsOf(actor))); },
+      handsRemoveSet: async ({ actor }, target) => { await saveHands(actor, removeSet(handsOf(actor), Number(target.dataset.index))); },
       exploreSkill: outOfCombatActions.exploreSkill,
       choiceToggle: async ({ actor }, target) => { await setToggle(actor, target.dataset.key ?? "", (target as HTMLInputElement).checked); },
       standing: async ({ actor }, target) => {
@@ -521,9 +560,19 @@ export function registerMidiHubSections() {
         const index = Number(target.dataset.barIndex);
         await saveBar(ctx, entries.map(e => e.uuid).filter((_, i) => i !== index));
       },
-      drop: async (ctx, _zone, event) => {
+      drop: async (ctx, zone, event) => {
         const drop = (event as Event & { midiHub?: { uuid: string, from: string | null, before: string | null } }).midiHub;
         if (!drop) return;
+        if (zone.dataset.hubDrop === "hand") {
+          // An item (or one of its activities) of this creature, put in that hand of that set
+          const dropped = fromUuidSync(drop.uuid) as { documentName?: string, item?: Item.Implementation } | Item.Implementation | null;
+          const item = dropped instanceof Item ? dropped as Item.Implementation : (dropped as { item?: Item.Implementation } | null)?.item;
+          if (!item?.id || item.parent !== ctx.actor) return;
+          const placed = placeInHand(ctx.actor, handsOf(ctx.actor), Number(zone.dataset.set), Number(zone.dataset.hand), item.id);
+          if (placed) await saveHands(ctx.actor, placed);
+          else ui.notifications?.warn(i18n("midi-qol.Hands.CantHold").replace("{name}", item.name ?? ""));
+          return;
+        }
         const entries = barEntries(ctx).entries.map(e => e.uuid);
         if (drop.from !== null) entries.splice(Number(drop.from), 1);
         else if (entries.includes(drop.uuid)) entries.splice(entries.indexOf(drop.uuid), 1);

@@ -1,4 +1,4 @@
-import { registerLoadouts } from "./module/services/loadouts.js";
+import { handsApi, registerHands, registerHandsKeys } from "./module/services/hands.js";
 import { registerRagingRule } from "./rules/raging.js";
 import { registerVitalityItemRule } from "./rules/vitalityItem.js";
 import { defineUseFlowService } from "./module/services/useFlow/service.js";
@@ -483,6 +483,7 @@ Object.assign(globalThis.MidiQOL, {
   tokenForActor,
   // M8: interactions (Hide, Search, Help, Grapple, doors...): register, available, run
   interactions: interactionsApi,
+  hands: handsApi,
   // M7: the turn model a HUD reads (economy, movement, things to use with reasons, interactions, pending)
   turnModel: turnModelApi,
   hud: hudApi,
@@ -825,13 +826,14 @@ Hooks.once('init', async function () {
   // Register custom sheets (if any)
   initPatching();
   setupClickToAttack();
-  registerLoadouts();
+  registerHands();
   setupMultiattackPlans();
   registerDamageApplication();
   registerDamageMessageSummary();
   addDiceTermModifiers();
   globalThis.MidiKeyManager = new MidiKeyManager();
   globalThis.MidiKeyManager.initKeyMappings();
+  registerHandsKeys();
   Hooks.on("error", (...args) => {
     let [message, err] = args;
     TroubleShooter.recordError(err, message);
