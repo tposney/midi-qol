@@ -610,11 +610,11 @@ export function registerMidiHubSections() {
     }
   });
 
-  // Out of combat: light sources with their time left, and rests
+  // Out of combat: light sources with their time left
   registerHubSection({
     id: "midi-qol.outOfCombat", area: "right", order: 20,
     when: ({ model }) => !model.inCombat,
-    render: ({ actor, owner, gm }) => outOfCombatHtml(actor, owner || gm),
+    render: ({ actor }) => outOfCombatHtml(actor),
     actions: outOfCombatActions
   });
 

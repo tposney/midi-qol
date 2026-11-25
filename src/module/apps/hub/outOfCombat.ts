@@ -3,8 +3,8 @@ import { escape } from "./sections.js";
 
 /*
  * M27 further features: the hub out of combat. The 2024 exploration actions (Search, Study, Influence, Hide) in the
- * Actions tab, each its skills as buttons (no cost outside combat); in the turn area, short and long rest (dnd5e's own
- * rest dialogs) and light sources with the time left on them (effects that change the token's light).
+ * Actions tab, each its skills as buttons (no cost outside combat); in the turn area, light sources with the time left
+ * on them (effects that change the token's light). Rests are the character sheet's, not the hub's.
  */
 
 const EXPLORATION: Record<string, string[]> = {
@@ -35,21 +35,14 @@ function lightsHtml(actor: Actor.Implementation): string {
   }).join("");
 }
 
-/** The turn area out of combat: rests and light sources */
-export function outOfCombatHtml(actor: Actor.Implementation, canAct: boolean): string {
-  const rests = canAct ? `<div class="midi-hub-rests">
-    <button type="button" class="midi-hub-action" data-hub-action="rest" data-rest="short"><i class="fa-solid fa-mug-hot"></i> ${escape(i18n("DND5E.REST.Short.Label"))}</button>
-    <button type="button" class="midi-hub-action" data-hub-action="rest" data-rest="long"><i class="fa-solid fa-campground"></i> ${escape(i18n("DND5E.REST.Long.Label"))}</button></div>` : "";
-  return `${lightsHtml(actor)}${rests}`;
+/** The turn area out of combat: light sources */
+export function outOfCombatHtml(actor: Actor.Implementation): string {
+  return lightsHtml(actor);
 }
 
 export const outOfCombatActions = {
   exploreSkill: async ({ actor }: { actor: Actor.Implementation }, target: HTMLElement) => {
     // @ts-expect-error no dnd5e-types
     await actor.rollSkill({ skill: target.dataset.skill });
-  },
-  rest: async ({ actor }: { actor: Actor.Implementation }, target: HTMLElement) => {
-    // @ts-expect-error no dnd5e-types
-    if (target.dataset.rest === "long") await actor.longRest(); else await actor.shortRest();
   }
 };
