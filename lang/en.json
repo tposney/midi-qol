@@ -3977,6 +3977,10 @@
   "midi-qol.Entries.Field.damageDie": "Damage dice become d (before the damage roll)",
   "midi-qol.BonusPrompt.Targets": "Targets (up to {max})",
   "midi-qol.BonusPrompt.Dice": "Dice to reroll (up to {max})",
+  "midi-qol.DiceReroll.Title": "Reroll dice",
+  "midi-qol.DiceReroll.Prompt": "Choose up to {max} dice to reroll",
+  "midi-qol.DiceReroll.Reroll": "Reroll",
+  "midi-qol.DiceReroll.Keep": "Keep the roll",
   "midi-qol.BonusApproval.Title": "Use your bonus?",
   "midi-qol.BonusApproval.Content": "{requester} asks to use {label} ({actor})."
 }

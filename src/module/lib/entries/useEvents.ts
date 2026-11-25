@@ -7,6 +7,7 @@ import type { DamageContribution } from "../../services/damageContributions/serv
 import type { DamageChange, DamageStage } from "../../services/damageModifiers/rules.js";
 import { DAMAGE_STAGES } from "../../services/damageModifiers/rules.js";
 import { applyBonusEffect, type BonusEffect } from "../../services/rollBonuses/service.js";
+import { rerollDice } from "../../services/diceReroll/service.js";
 import { raiseDealsDamage } from "./bearerEvents.js";
 import { entryActivity } from "./activityActions.js";
 import { collectEntries, conditionDataFor, entryHolds, holds, limitAllows, registerAction, registerEvent, runEvent, spendEntryLimit, type ActionRun, type EventContext } from "./engine.js";
@@ -348,8 +349,14 @@ async function bonusAction(run: ActionRun) {
   if (run.eventId === "use.damageRolled" || ([run.action.rolls].flat().includes("damage") && !rolls?.includes("attack"))) {
     const damageRolls = workflow.damageRolls ?? [];
     if (!damageRolls.length) return;
-    // "One damage roll" (Empowered Evocation's add, Empowered Spell's dice): the first
-    const onlyFirst = effect.kind === "add" || (effect.kind === "reroll" && effect.dice === "choose");
+    // Chosen dice (Empowered Spell): picked by the roller from all the use's damage rolls
+    if (effect.kind === "reroll" && effect.dice === "choose") {
+      const changed = await rerollChosenDice(run, damageRolls, effect);
+      if (changed.some((roll, index) => roll !== damageRolls[index])) await workflow.setDamageRolls(changed);
+      return;
+    }
+    // "One damage roll" (Empowered Evocation's add): the first
+    const onlyFirst = effect.kind === "add";
     const changed: Roll[] = [];
     for (const [index, roll] of damageRolls.entries()) changed.push(onlyFirst && index > 0 ? roll : await applyBonusEffect(roll, effect, run.conditionData, labelOf(run)));
     if (changed.some((roll, index) => roll !== damageRolls[index])) await workflow.setDamageRolls(changed);
@@ -360,8 +367,16 @@ async function bonusAction(run: ActionRun) {
     console.warn(`midi-qol | entry ${run.found.entry.id}: no attack roll at ${run.eventId} for its bonus`);
     return;
   }
-  const changed = await applyBonusEffect(workflow.attackRoll, effect, run.conditionData, labelOf(run));
+  const changed = effect.kind === "reroll" && effect.dice === "choose" ? (await rerollChosenDice(run, [workflow.attackRoll], effect))[0]
+    : await applyBonusEffect(workflow.attackRoll, effect, run.conditionData, labelOf(run));
   if (changed !== workflow.attackRoll) await workflow.setAttackRoll(changed);
+}
+
+/** A "choose" reroll (Empowered Spell): the roller picks up to `max` of the rolls' dice (the diceReroll service) */
+async function rerollChosenDice(run: ActionRun, rolls: Roll[], effect: Extract<BonusEffect, { kind: "reroll" }>): Promise<Roll[]> {
+  const max = await rolled(String(effect.max ?? 1), { ...(rolls[0]?.data as Record<string, unknown> ?? {}), ...run.conditionData });
+  const keep = effect.keep === "higher" || effect.keep === "lower" ? effect.keep : "new";
+  return rerollDice(rolls, { max, keep, title: labelOf(run), actor: run.context.workflow?.actor });
 }
 
 /** `{ abort: reason }`: the use stops (at use.configure, before anything is spent) */

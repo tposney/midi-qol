@@ -598,6 +598,7 @@
     "damageContributions",
     "damageModifiers",
     "deferredTriggers",
+    "diceReroll",
     "distance",
     "effectPresets",
     "entryAutomations",

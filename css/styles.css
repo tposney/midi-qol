@@ -2187,6 +2187,12 @@ body.midi-qol-hide-gambit-mirrors .gps-dialog-mirror:not(.midi-qol-gambit-shown)
 .midi-qol-die:has(input:checked) {
   border-color: var(--color-warm-2, #ee9b3a);
 }
+/* The dice reroll picker: a heading per damage type when the dice come from several rolls */
+.midi-qol-dice-group {
+  flex-basis: 100%;
+  font-weight: bold;
+  font-size: var(--font-size-12);
+}
 .midi-qol-bonus-prompt .midi-qol-prompt-disabled {
   font-size: var(--font-size-11);
   font-style: italic;
