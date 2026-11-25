@@ -25,7 +25,7 @@ import * as contestedRollModule from "./module/lib/contestedRoll";
 import * as tokenHighlight from "./module/lib/tokenHighlight";
 import * as workflowOptionsCodec from "./module/lib/workflowOptionsCodec";
 import * as settings from "./module/settings";
-import { RollStats, Stats } from "./plugins/statistics/rollStats";
+import { RollStats } from "./plugins/statistics/rollStats";
 import { checkRule, configSettings, targetConfirmation } from "./module/settings";
 import { SaferSocket, StoredUndoEntry } from "./module/GMAction";
 import * as undo from "./module/undo";
@@ -225,7 +225,8 @@ declare module "fvtt-types/configuration" {
     "dnd5e.chatCardSummary": boolean;
     "midi-qol.MidiSoundSettings": Record<string, any>;
     "midi-qol.playerControlsInvisibleTokens": boolean;
-    "midi-qol.RollStats": Record<string, Stats>;
+    "midi-qol.RollStats": Record<string, unknown>;
+    "midi-qol.RollStatistics": import("./plugins/statistics/rollStats").StatsStore | Record<string, never>;
     "midi-qol.acknowledgedOverlaps": string[];
     /** M21: the GM's Multiattack plans, by creature key (compendium source, else actor:<uuid>) */
     "midi-qol.multiattackPlans": Record<string, import("./module/lib/multiattack.js").MultiattackPlan>;

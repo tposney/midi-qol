@@ -43,7 +43,6 @@ export async function preloadTemplates() {
     "modules/midi-qol/templates/apps/Multiattack/editor-footer.hbs",
     "modules/midi-qol/templates/apps/ItemOnUseMacrosConfig/itemOnUseMacrosConfig.hbs",
     "modules/midi-qol/templates/apps/OverTimeEditor/overTimeEditor.hbs",
-    "modules/midi-qol/templates/apps/RollStatsDisplay/config.hbs",
     "modules/midi-qol/templates/apps/RollStatsDisplay/stats.hbs",
     "modules/midi-qol/templates/apps/SoundConfigPanel/quick.hbs",
     "modules/midi-qol/templates/apps/SoundConfigPanel/sounds.hbs",

@@ -824,8 +824,7 @@ Hooks.once('init', async function () {
     TroubleShooter.recordError(err, message);
   });
   // M23: roll statistics, a plugin given midi's public API, fed from the cues
-  gameStats = registerStatisticsPlugin({ services: servicesApi, config: () => configSettings,
-    saveConfig: () => game.settings!.set("midi-qol", "ConfigSettings", configSettings), executeAsGM: (action, data) => timedExecuteAsGM(action, data) });
+  gameStats = registerStatisticsPlugin({ services: servicesApi, config: () => configSettings, executeAsGM: (action, data) => timedExecuteAsGM(action, data) });
 });
 //@ts-expect-error
 Hooks.on("dae.modifySpecials", (specKey, specials, _characterSpec) => {

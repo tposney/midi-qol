@@ -101,6 +101,13 @@
           configSettings.collapsibleTargets}} />
           <div class="notes midi-qol-faint">{{{localize "midi-qol.CollapsibleTargets.Hint"}}}</div>
       </div>
+      <div class="form-group">
+          <label>{{localize "midi-qol.RollStatistics.Name"}}</label>
+          <select name="rollStatistics" data-dtype="String">
+              {{selectOptions RollStatisticsOptions selected=configSettings.rollStatistics localize=true}}
+          </select>
+          <div class="notes midi-qol-faint">{{{localize "midi-qol.RollStatistics.Hint"}}}</div>
+      </div>
       <div class="midi-qol-box">
           <div class="form-group">
               <label>{{localize "midi-qol.ConfirmAttackDamage.Name"}}</label>

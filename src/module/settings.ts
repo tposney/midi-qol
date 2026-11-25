@@ -179,7 +179,10 @@ export class ConfigSettings {
   preferredGM: string = "";
   ignoreSpellReactionRestriction: boolean = false;
   itemTypeList: string[] | undefined = undefined;
+  /** Retired (M23): read once by the rollStatistics migration */
   keepRollStats: boolean = false;
+  /** Roll statistics (M23): off, player characters (and the players), or all creatures */
+  rollStatistics: "off" | "players" | "all" = "off";
   mergeCardCondensed: boolean = false;
   addSheetButtons: boolean = true;
   mergeCardMulti: boolean = false;
@@ -195,6 +198,7 @@ export class ConfigSettings {
   paranoidGM: boolean = false;
   playerRollSaves: string = "none";
   playerSaveTimeout: number = 0;
+  /** Retired (M23): read once by the rollStatistics migration */
   playerStatsOnly: boolean = false;
   rangeTarget: string = "none";
   reactionTimeout: number = 10;
@@ -213,6 +217,7 @@ export class ConfigSettings {
   rollSkillsBlind: string[] = [];
   blindRollDisplay: string = "hidden";
   savesBeforeDamage: boolean = false;
+  /** Retired (M23): statistics are saved a few seconds after the last event */
   saveStatsEvery: number = 20;
   showFastForward: boolean = false;
   showItemDetails: string = "all";
@@ -691,6 +696,8 @@ export let fetchParams = () => {
   //@ts-expect-error legacy boolean value
   if (configSettings.autoItemEffects === false) configSettings.autoItemEffects = "off";
   if (configSettings.playerDamageCard === undefined) configSettings.playerDamageCard = "none";
+  // M23: Keep Roll Statistics + Player statistics only become one setting
+  if (!configSettings.rollStatistics) configSettings.rollStatistics = !configSettings.keepRollStats ? "off" : configSettings.playerStatsOnly ? "players" : "all";
   if (configSettings.playerCardDamageDifferent === undefined) configSettings.playerCardDamageDifferent = true;
   if (configSettings.rollAlternate === undefined) configSettings.rollAlternate = "off";
   //@ts-expect-error legacy boolean value
@@ -1549,6 +1556,8 @@ export const consumeResourceOptions = keysToExtendedOptionsObj("ConsumeResourceO
   "both"
 ]);
 
+export const rollStatisticsOptions = keysToOptionsObj("RollStatisticsOptions", ["off", "players", "all"]);
+
 export const averageDamageOptions = keysToExtendedOptionsObj("AverageDamageOptions", [
   "none",
   "npc",
@@ -1726,20 +1735,23 @@ export const registerSettings = function () {
     type: Array,
     config: false
   });
-  game.settings.register("midi-qol", "RollStats", {
+  // M23: the roll statistics (src/plugins/statistics), saved by the active GM
+  game.settings.register("midi-qol", "RollStatistics", {
     scope: "world",
     default: {},
     type: Object,
     config: false,
     onChange: () => {
-      // Only non-GM clients should reload stats from the database.
-      // The GM's in-memory currentStats is the authoritative copy;
-      // reloading here would overwrite unsaved increments (race condition).
-      if (!game.user?.isGM) {
-        void statisticsProvider()?.reload?.();
-      }
+      void statisticsProvider()?.reload?.();
       Hooks.callAll("midi-qol.StatsUpdated");
     }
+  });
+  // 14.x's statistics: kept as they were (their numbers count differently), no longer read
+  game.settings.register("midi-qol", "RollStats", {
+    scope: "world",
+    default: {},
+    type: Object,
+    config: false,
   });
 
   game.settings.register("midi-qol", "TargetConfirmation", {

@@ -21,4 +21,4 @@ export function registerStatisticsPlugin(api: StatisticsPluginApi): RollStats {
 }
 
 export { RollStatsDisplay } from "./display.js";
-export type { Stats } from "./rollStats.js";
+export type { StatsStore } from "./rollStats.js";

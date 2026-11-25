@@ -1489,258 +1489,46 @@ section.midi-qol.tab > .sheet-tabs [data-tab] label {
   height: 100%;
 }
 
-/* ── Roll Statistics ── */
-
-
-/* Session/Lifetime toggle visibility (per card) — works for both block and table-row elements */
-.midi-stats-card tr.midi-stats-lifetime { display: none; }
-.midi-stats-card.show-lifetime tr.midi-stats-session { display: none; }
-.midi-stats-card.show-lifetime tr.midi-stats-lifetime { display: table-row; }
-
-.midi-stats-period-label-lifetime { display: none; }
-.midi-stats-card.show-lifetime .midi-stats-period-label-session { display: none; }
-.midi-stats-card.show-lifetime .midi-stats-period-label-lifetime { display: inline; }
-
-/* Period toggle button — inline in card header */
-.midi-stats-period-toggle {
-  margin-left: auto;
-  cursor: pointer;
-  font-size: 0.7rem;
-  font-weight: normal;
-  padding: 0.15rem 0.5rem;
-  border: 1px solid var(--color-border-light-tertiary, #aaa);
-  border-radius: 3px;
-  background: var(--color-bg-option, rgba(0, 0, 0, 0.05));
-  display: inline-flex;
-  align-items: center;
-  gap: 0.25rem;
-  white-space: nowrap;
-}
-
-.midi-stats-period-toggle:hover {
-  background: var(--color-hover-bg, rgba(0, 0, 0, 0.1));
-}
-
-/* Stats/Config tabs fill available space in the flex column */
-#midi-stats-stats-tab,
-#midi-stats-config-tab {
-  flex: 1;
-  min-height: 0;
-}
-
-/* ── Roll Statistics Card Layout ── */
-
-.midi-stats-card {
-  border: 1px solid var(--color-border-light-tertiary, #888);
-  border-radius: 6px;
-  margin-bottom: 0.5rem;
-  background: var(--color-bg-option, rgba(0, 0, 0, 0.05));
-  overflow: clip;
-}
-
-.midi-stats-card-header {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0.5rem 0.75rem;
-  cursor: pointer;
-  user-select: none;
-  font-weight: bold;
-  font-size: 1rem;
-}
-
-.midi-stats-card-header:hover {
-  background: var(--color-hover-bg, rgba(0, 0, 0, 0.08));
-}
-
-.midi-stats-chevron {
-  transition: transform 0.2s ease;
-  font-size: 0.75rem;
-  width: 0.75rem;
-  text-align: center;
-}
-
-.midi-stats-card.expanded > .midi-stats-card-header .midi-stats-chevron {
-  transform: rotate(90deg);
-}
-
-.midi-stats-card-body {
-  display: none;
-  padding: 0;
-}
-
-.midi-stats-card.expanded > .midi-stats-card-body {
-  display: flex;
-  flex-direction: column;
-  max-height: 400px;
-}
-
-/* Panel tables — tabular stat display */
-
-.midi-stats-panel-table {
-  width: 100%;
-  border-collapse: collapse;
-  margin-bottom: 0;
-  font-size: 0.8rem;
-}
-
-.midi-stats-panel-table thead th {
-  padding: 0.25rem 0.4rem;
-  text-align: center;
-  font-size: 0.7rem;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.03em;
-  background: var(--color-bg-option, rgba(0, 0, 0, 0.06));
-  border-bottom: 1px solid var(--color-border-light-tertiary, #aaa);
-  color: var(--color-text-dark-secondary, #666);
-  white-space: nowrap;
-}
-
-.midi-stats-panel-name {
-  text-align: left !important;
-  font-size: 0.8rem !important;
-  text-transform: none !important;
-  letter-spacing: normal !important;
-  color: inherit !important;
-  width: 1%;
-  white-space: nowrap;
-}
-
-.midi-stats-panel-name i {
-  margin-right: 0.2rem;
-}
-
-.midi-stats-panel-table tbody td {
-  padding: 0.2rem 0.4rem;
-  text-align: center;
-  white-space: nowrap;
-}
-
-.midi-stats-panel-table tbody td:first-child {
-  padding: 0;
-  width: 1%;
-}
-
-/* Item Breakdown sub-section */
-
-.midi-stats-items-section {
-  margin-top: 0.5rem;
-}
-
-.midi-stats-items-header {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0.35rem 0.5rem;
-  cursor: pointer;
-  user-select: none;
-  font-size: 0.85rem;
-  font-weight: bold;
-  border: 1px solid var(--color-border-light-tertiary, #aaa);
-  border-radius: 4px;
-}
-
-.midi-stats-items-header:hover {
-  background: var(--color-hover-bg, rgba(0, 0, 0, 0.08));
-}
-
-.midi-stats-items-section.expanded > .midi-stats-items-header .midi-stats-chevron {
-  transform: rotate(90deg);
-}
-
-.midi-stats-items-body {
-  display: none;
-  margin-top: 0.25rem;
-}
-
-.midi-stats-items-section.expanded > .midi-stats-items-body {
-  display: block;
-}
-
-.midi-stats-items-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 0.8rem;
-}
-
-.midi-stats-items-table thead th {
-  text-transform: uppercase;
-  font-size: 0.65rem;
-  letter-spacing: 0.03em;
-  padding: 0.25rem 0.35rem;
-  text-align: center;
-  border-bottom: 1px solid var(--color-border-light-tertiary, #aaa);
-  color: var(--color-text-dark-secondary, #666);
-}
-
-.midi-stats-items-table tbody td {
-  padding: 0.2rem 0.35rem;
-  text-align: center;
-  border-bottom: 1px solid var(--color-border-light-tertiary, #ddd);
-}
-
-.midi-stats-item-col {
-  text-align: left !important;
-}
-
-/* Empty state */
-
-.midi-stats-empty {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 2rem 1rem;
-  gap: 0.75rem;
-  color: var(--color-text-dark-secondary, #888);
-}
-
-.midi-stats-empty i {
-  font-size: 2rem;
-  opacity: 0.5;
-}
-
-.midi-stats-empty span {
-  font-style: italic;
-  font-size: 0.9rem;
-}
-
-/* Config tab fieldsets */
-
-.midi-stats-config-group {
-  border: 1px solid var(--color-border-light-tertiary, #aaa);
-  border-radius: 4px;
-  padding: 0.5rem;
-  margin-bottom: 0.5rem;
-}
-
-.midi-stats-config-group legend {
-  font-weight: bold;
-  font-size: 0.85rem;
-  padding: 0 0.35rem;
-}
-
-.midi-stats-config-group button {
-  margin-bottom: 0.25rem;
-}
-
-.midi-stats-config-danger {
-  border-color: #cc4444;
-}
-
-.midi-stats-config-danger legend {
-  color: #cc4444;
-}
-
-.midi-stats-danger-btn {
-  color: #cc4444;
-}
-
-.midi-stats-remove-btn {
-  display: block;
-  width: 100%;
-}
+/* ── Roll Statistics (M23: one table, a detail per row) ── */
+.midi-stats .window-content { padding: 0.5rem 0.75rem; }
+.midi-stats-view { display: flex; flex-direction: column; gap: 0.5rem; height: 100%; }
+.midi-stats-toolbar { display: flex; align-items: center; gap: 0.5rem; flex: 0 0 auto; }
+.midi-stats-toolbar select { flex: 0 0 12rem; }
+.midi-stats-period { display: flex; }
+.midi-stats-period button { flex: 0 0 auto; padding: 0 0.75rem; border-radius: 0; }
+.midi-stats-period button:first-child { border-radius: 4px 0 0 4px; }
+.midi-stats-period button:last-child { border-radius: 0 4px 4px 0; }
+.midi-stats-period button.active { background: var(--color-warm-2, #c9593f); color: var(--color-light-1, #fff); }
+.midi-stats-since { margin-left: auto; }
+.midi-stats-off { margin: 0; }
+.midi-stats-table { display: flex; flex-direction: column; flex: 1; min-height: 0; }
+.midi-stats-head, .midi-stats-line { display: grid; grid-template-columns: minmax(8rem, 1fr) repeat(9, minmax(3rem, 4rem)); align-items: center; gap: 0.25rem; }
+.midi-stats-head { padding: 0.25rem 0.5rem; border-bottom: 1px solid var(--color-border, #7a7971); font-size: var(--font-size-12, 12px); text-transform: uppercase; opacity: 0.8; }
+.midi-stats-head a { cursor: pointer; white-space: nowrap; }
+.midi-stats-head a.sorted { font-weight: bold; opacity: 1; }
+.midi-stats-rows { flex: 1; min-height: 0; overflow-y: auto; overflow-x: hidden; }
+.midi-stats-row { border-bottom: 1px solid rgba(128, 128, 128, 0.25); }
+.midi-stats-line { padding: 0.3rem 0.5rem; cursor: pointer; }
+.midi-stats-line:hover { background: rgba(128, 128, 128, 0.12); }
+.midi-stats-num { text-align: right; font-variant-numeric: tabular-nums; }
+.midi-stats-name { display: flex; align-items: center; gap: 0.35rem; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.midi-stats-name img { width: 24px; height: 24px; border: none; object-fit: cover; border-radius: 3px; }
+.midi-stats-chevron { font-size: 0.75em; width: 0.75em; transition: transform 0.15s; }
+.midi-stats-row.expanded .midi-stats-chevron { transform: rotate(90deg); }
+.midi-stats-detail { padding: 0.25rem 0.75rem 0.6rem 2rem; display: flex; flex-direction: column; gap: 0.35rem; }
+.midi-stats-detail p { margin: 0; }
+.midi-stats-detail p i { width: 1.1em; opacity: 0.8; }
+.midi-stats-bytype { display: grid; grid-template-columns: 7rem 1fr 6.5rem; gap: 0.15rem 0.5rem; align-items: center; max-width: 36rem; }
+.midi-stats-bar { position: relative; height: 0.6rem; background: rgba(128, 128, 128, 0.15); border-radius: 3px; }
+.midi-stats-bar span { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 3px; }
+.midi-stats-bar .rolled { background: rgba(201, 89, 63, 0.35); }
+.midi-stats-bar .applied { background: rgba(201, 89, 63, 0.9); }
+.midi-stats-items { width: 100%; max-width: 40rem; margin: 0.2rem 0 0; font-size: var(--font-size-13, 13px); }
+.midi-stats-items th, .midi-stats-items td { text-align: right; padding: 0.1rem 0.4rem; }
+.midi-stats-items th:first-child, .midi-stats-items td:first-child { text-align: left; }
+.midi-stats-remove { align-self: flex-start; width: auto; padding: 0 0.75rem; }
+.midi-stats-empty { display: flex; flex-direction: column; align-items: center; gap: 0.5rem; padding: 3rem 0; opacity: 0.7; }
+.midi-stats-empty i { font-size: 2rem; }
 
 /* -------------------------------------------- */
 /*  Condition Field Editor Button               */
