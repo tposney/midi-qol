@@ -26,6 +26,9 @@ describe("damageOutcome (M26)", () => {
     const outcome = damageOutcome([{ damages: [d("healing", 8)], calculatedDamages: [d("healing", -8)], hpDamage: -8, tempDamage: 0, oldHP: 2, newHP: 10 }]);
     expect(outcome).toMatchObject({ hp: 0, healed: 8, prevented: {}, droppedToZero: false });
   });
+  it("a missed target's entry (the damage card's figure) is no damage done", () => {
+    expect(damageOutcome([{ damages: [d("slashing", 9)], calculatedDamages: [d("slashing", 9)], hpDamage: 9, tempDamage: 0, oldHP: 20, newHP: 11, isHit: false }])).toBeUndefined();
+  });
 });
 
 import { rowFor } from "../src/module/lib/tableRows.js";

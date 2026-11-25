@@ -42,6 +42,8 @@ interface DamageEntryLike {
   tempDamage: number;
   oldHP: number;
   newHP: number;
+  /** false: worked out for the damage card only (an attack that missed it); nothing applied */
+  isHit?: boolean;
 }
 
 const HEALING = new Set(["healing", "temphp"]);
@@ -54,7 +56,9 @@ function byType(damages: readonly DamageDescription[], into: Record<string, numb
 }
 
 /** A target's damage from its damage entries (one per damage list: other damage may have its own). Pure. */
-export function damageOutcome(entries: readonly DamageEntryLike[]): DamageOutcome | undefined {
+export function damageOutcome(all: readonly DamageEntryLike[]): DamageOutcome | undefined {
+  // A missed target's entry is the damage card's figure, not damage done
+  const entries = all.filter(entry => entry.isHit !== false);
   if (!entries.length) return undefined;
   const rolled: Record<string, number> = {};
   const applied: Record<string, number> = {};
@@ -107,7 +111,8 @@ export function outcomes(workflow: Workflow): Map<string, TargetOutcome> {
       };
     }
     const saveRoll = workflow.saveRoll(uuid);
-    if (saveRoll || workflow.saves.has(token) || workflow.failedSaves.has(token)) {
+    // Without a save midi's failedSaves holds the targets hit (for applying effects): no save outcome
+    if (saveRoll || (workflow.hasSave && (workflow.saves.has(token) || workflow.failedSaves.has(token)))) {
       // @ts-expect-error no dnd5e-types
       const target: unknown = saveRoll?.options.target;
       outcome.save = {
