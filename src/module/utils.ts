@@ -6925,6 +6925,7 @@ async function removeLingeringMarkers(actor: Actor.Implementation, shouldHaveEnd
 
 /** On the turn events (M4, core's active GM): after DAE and core have had their go at expiring the markers */
 export function setupMarkerChecks() {
+  trackPendingDeletes();
   // A combatant leaving (each one as its combat ends): raised after the system's own exit (dnd5e 6 deletes the
   // combat's markers there), so midi never deletes one alongside it. Only markers made before it left: a window opened
   // since (a reaction just after) is not this combat's
@@ -9240,9 +9241,25 @@ export async function queueActorEffects<T>(actor: Actor.Implementation, fn: () =
 }
 
 /** Deletes the actor's effect `id` if present; another caller deleting it first counts as done. */
+/** Effects this client is deleting (asked, not yet confirmed): another delete of one fails on the server and toasts
+ * "does not exist" (DAE expiring a marker and midi's lingering-marker check, both on the active GM) */
+const deleting = new Set<string>();
+export function trackPendingDeletes() {
+  Hooks.on("preDeleteActiveEffect", (effect: ActiveEffect.Implementation, _options: unknown, userId: string) => {
+    const uuid = effect.uuid;
+    if (userId !== game.user?.id || !uuid) return;
+    deleting.add(uuid);
+    // A delete that fails never reaches deleteActiveEffect
+    setTimeout(() => deleting.delete(uuid), 5000);
+  });
+  Hooks.on("deleteActiveEffect", (effect: ActiveEffect.Implementation) => { if (effect.uuid) deleting.delete(effect.uuid); });
+}
+
 export async function deleteEffectIfPresent(actor: Actor.Implementation, id: string | null) {
+  const effect = id ? actor.effects.get(id) : undefined;
+  if (!effect || (effect.uuid && deleting.has(effect.uuid))) return;
   try {
-    await (id ? actor.effects.get(id) : undefined)?.delete();
+    await effect.delete();
   } catch (err) {
     if (!/does not exist/.test(String((err as Error)?.message ?? err))) throw err;
   }
