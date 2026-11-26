@@ -204,8 +204,12 @@ export async function overlaySettingChanged(): Promise<void> {
 function untouchedImport(item: Item.Implementation): boolean {
   const stats = item._stats as { compendiumSource?: string | null, createdTime?: number | null, modifiedTime?: number | null } | undefined;
   // An import is stamped modified a few milliseconds after it is created
-  return !!stats?.compendiumSource && registeredByUuid.has(stats.compendiumSource) && Math.abs((stats.modifiedTime ?? 0) - (stats.createdTime ?? 0)) < 1000;
+  return !!stats?.compendiumSource && registeredByUuid.has(currentSource(stats.compendiumSource)) && Math.abs((stats.modifiedTime ?? 0) - (stats.createdTime ?? 0)) < 1000;
 }
+
+/** midi's overlays were in its sample items until they got their own pack (same ids): an import's old source, as it is now */
+const OLD_OVERLAY_PACK = "Compendium.midi-qol.midiqol-sample-items.Item.";
+const currentSource = (uuid: string) => uuid.startsWith(OLD_OVERLAY_PACK) ? `Compendium.midi-qol.midiqol-overlays.Item.${uuid.slice(OLD_OVERLAY_PACK.length)}` : uuid;
 
 /** A world overlay made or changed: registered as it now is (every client), its data part brought to the world's items (the active GM) */
 function worldOverlayChanged(item: Item.Implementation): boolean {
