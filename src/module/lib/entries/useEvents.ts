@@ -226,8 +226,7 @@ async function rolled(formula: string, rollData: Record<string, unknown>): Promi
 /** Target events after the use's damage is rolled: healing there heals the bearer at once (Black Absorbing Tattoo) */
 const AFTER_DAMAGE = new Set(["damaging", "damaged", "healing"]);
 
-async function healNow(run: ActionRun, formula: string) {
-  const actor = run.context.target?.actor;
+async function healNow(run: ActionRun, formula: string, actor = run.context.target?.actor) {
   if (!actor?.uuid) return;
   const amount = Math.max(0, Math.floor(await rolled(formula, run.conditionData)));
   if (!amount) return;
@@ -245,6 +244,8 @@ export async function useDamageAction(run: ActionRun, healing: boolean) {
   const formula = healing ? run.action.heal : run.action.damage;
   if (typeof formula !== "string") return;
   if (healing && run.context.target && AFTER_DAMAGE.has(run.eventId)) return healNow(run, formula);
+  // Healing the entry's bearer itself (Blessed Healer): at once, not part of the use's damage
+  if (healing && run.action.to === "self") return healNow(run, formula, (run.found.actor ?? workflow.actor) as Actor.Implementation | undefined);
   const targets = targetDocumentsFor(run.action.to, run);
   if (targets && !targets.length) {
     console.warn(`midi-qol | entry ${run.found.entry.id}: damage at ${run.eventId} goes to the use's targets ("to": "target")`);

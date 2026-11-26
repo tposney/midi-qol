@@ -225,6 +225,10 @@ export function registerMidiTags(): void {
     const spendsSlot = context.workflow.activity?.consumption?.spellSlot !== false && ["spell", "pact"].includes(method);
     return level > 0 && spendsSlot ? context.workflow.spellLevel : 0;
   }));
+  registerTag("use.healedOthers", use("Creatures other than the user the use restored hit points to", ({ workflow }) => {
+    const own = workflow.tokenUuid;
+    return [...outcomes(workflow).values()].filter(outcome => outcome.target !== own && (outcome.damage?.healed ?? 0) > 0).length;
+  }));
   registerTag("use.area", use("Has an area", ({ workflow }) => !!workflow.activity?.target?.template?.type));
   registerTag("use.targetsScale", use("A spell whose number of targets rises with the level cast", context => targetsScale(itemOf(context))));
   registerTag("use.costlyMaterial", use("A spell with a material component that has a cost or is consumed", context => {

@@ -46,6 +46,7 @@ const CONDITIONS: Record<string, string> = {
   "!tags.use.area": "NotArea",
   "!!tags.use.area": "Area",
   "!!tags.use.spellSlot": "SpellSlot",
+  "tags.use.healedOthers > 0": "HealedOther",
   "use.activity.range.units === 'touch'": "Touch",
   "targets.some(t => t.attributes.hp.value < t.attributes.hp.max)": "TargetHurt",
   "tags.use.targetsScale": "TargetsScale",
