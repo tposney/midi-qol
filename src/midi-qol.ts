@@ -77,6 +77,7 @@ import { registerUseEvents } from "./module/lib/entries/useEvents.js";
 import { registerBearerEvents } from "./module/lib/entries/bearerEvents.js";
 import { registerMovementEvents } from "./module/lib/entries/movementEvents.js";
 import { registerEconomyActions } from "./module/lib/entries/economyActions.js";
+import { registerSlotActions } from "./module/lib/entries/slotActions.js";
 import { registerServiceEvents } from "./module/lib/entries/serviceEvents.js";
 import { registerRedirection } from "./module/lib/entries/redirection.js";
 import { rulesApi } from "./module/lib/entries/rules.js";
@@ -665,6 +666,7 @@ Hooks.once('init', async function () {
   registerBearerEvents();
   registerMovementEvents();
   registerEconomyActions();
+  registerSlotActions();
   registerActivityActions();
   registerServiceEvents();
   registerRedirection();

@@ -22,6 +22,13 @@ export function registerMidiActionSchemas() {
     { path: "move.from", label: "midi-qol.Entries.Field.from", type: "select", options: ["", "user", "bearer", "area"] },
     TO(["target", "self", "event.creature"])], initial: { push: 10 } });
   setActionSchema("opportunityAttack", { fields: [], initial: true });
+  setActionSchema("restoreSlots", { fields: [
+    { path: "restoreSlots.total", label: "midi-qol.Entries.Field.slotTotal", type: "formula" },
+    { path: "restoreSlots.maxLevel", label: "midi-qol.Entries.Field.slotMaxLevel", type: "number" },
+    { path: "restoreSlots.level", label: "midi-qol.Entries.Field.slotLevel", type: "formula" }, LABEL], initial: { total: "1" } });
+  setActionSchema("roll", { fields: [
+    { path: "roll", label: "midi-qol.Entries.Field.formula", type: "formula" },
+    { path: "as", label: "midi-qol.Entries.Field.rollAs", type: "string" }, LABEL], initial: "1d4" });
   setActionSchema("tally", { fields: [
     { path: "tally", label: "midi-qol.Entries.Field.tally", type: "string" },
     { path: "add", label: "midi-qol.Entries.Field.tallyAdd", type: "formula", numeric: true },

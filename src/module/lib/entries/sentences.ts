@@ -268,6 +268,12 @@ export function actionText(action: EntryAction, context: SentenceContext): strin
       return say(`Action.move.${kind}`, { who: target(a.to, "target"), n: friendlyFormula(m[kind] ?? "?"), from });
     }
     case "opportunityAttack": return say("Action.opportunityAttack");
+    case "restoreSlots": {
+      const r = part(a.restoreSlots);
+      if (r.level !== undefined) return say("Action.restoreSlots.level", { level: friendlyFormula(r.level) });
+      return say(r.maxLevel ? "Action.restoreSlots.totalMax" : "Action.restoreSlots.total", { total: friendlyFormula(r.total ?? 1), max: String(r.maxLevel ?? "") });
+    }
+    case "roll": return say("Action.roll", { formula: friendlyFormula(a.roll), name: String(a.as ?? "roll") });
     case "tally": return say("Action.tally", { n: friendlyFormula(a.add ?? 1), name: String(a.tally), per: say(`Action.tallyPer.${a.per === "round" ? "round" : "turn"}`) });
     case "grantAttacks": {
       const g = part(a.grantAttacks);

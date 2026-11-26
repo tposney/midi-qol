@@ -79,6 +79,9 @@ async function entryCandidates(query: RollBonusQuery): Promise<BonusCandidate[]>
       candidates.push({
         id: `${key}#${index}`, label, phases, effect: bonus, cost,
         optional: asks && !holder,
+        // Offered only when the roll failed (or succeeded); the cost spent only if it then succeeds (Tactical Mind)
+        ...(action.when === "failure" || action.when === "success" ? { when: action.when } : {}),
+        ...(action.spendIf === "success" || action.spendIf === "failure" ? { spendIf: action.spendIf } : {}),
         ...(holder ? { spender: holder.uuid ?? undefined } : {}),
         ...(holder && asks ? { approve: async () => (await askOffers(holder, `${holder.name}: ${label} (${query.actor.name})`, [offerOption(f, "take")])).length > 0 } : {}),
         onChosen: () => spendEntryLimit(f, context)

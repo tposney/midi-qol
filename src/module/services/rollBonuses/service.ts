@@ -99,6 +99,8 @@ export interface BonusCandidate {
   /** Declared costs; a candidate whose cost does not fit what is available is not offered. midi spends them when chosen. */
   cost?: BonusCost;
   /** Its onChosen spends the cost itself (as CAT's bonuses do): midi only checks it. */
+  /** Its cost is spent only if the roll then succeeds (or fails): Tactical Mind, Peerless Skill, Soul Blades */
+  spendIf?: "success" | "failure";
   spendsOwnCost?: boolean;
   /**
    * Damage only: the bonus is for these targets (token document uuids), not the whole roll. Its formula is rolled when
@@ -421,6 +423,15 @@ export async function spendBonusCost(actor: Actor.Implementation, cost: BonusCos
   if (Object.keys(cost.material ?? {}).length) report("material costs are not spent by midi");
 }
 
+/** Whether a `spendIf` bonus's cost is spent now: the roll's result against its target (DC or AC); spent when unknown */
+export function spendsNow(spendIf: "success" | "failure" | undefined, roll: Roll): boolean {
+  if (!spendIf) return true;
+  const target = Number((roll.options as { target?: number }).target);
+  if (!Number.isFinite(target) || typeof roll.total !== "number") return true;
+  const success = roll.total >= target;
+  return spendIf === "success" ? success : !success;
+}
+
 /** Applies a bonus and runs its onChosen; a failure is reported and leaves the roll unchanged. */
 export async function applyOfferedBonus(bonus: OfferedBonus, ctx: BonusContext, rollData: object): Promise<Roll> {
   let roll = ctx.roll;
@@ -471,9 +482,10 @@ export async function applyOfferedBonus(bonus: OfferedBonus, ctx: BonusContext, 
       used.push(bonus.id);
       foundry.utils.setProperty(roll, "flags.midi-qol.optionalsUsed", used);
     }
-    // Paid by its spender when it has one (someone else's resources), else the roller
+    // Paid by its spender when it has one (someone else's resources), else the roller; a cost kept unless the roll
+    // then succeeds (or fails), judged against the roll's DC or AC when it has one
     const spender = bonus.spender ? fromUuidSync(bonus.spender) : undefined;
-    if (!bonus.spendsOwnCost) await spendBonusCost(spender instanceof Actor ? spender : ctx.query.actor, bonus.cost, bonus.label);
+    if (!bonus.spendsOwnCost && spendsNow(bonus.spendIf, roll)) await spendBonusCost(spender instanceof Actor ? spender : ctx.query.actor, bonus.cost, bonus.label);
     await bonus.onChosen?.({ ...ctx, roll });
   } catch (err) {
     reportServiceProblem("rollBonuses", bonus.contributor, `${bonus.label}: applying it failed`, err);
