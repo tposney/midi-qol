@@ -117,6 +117,18 @@ function overlayFor(item: Item.Implementation): OverlaySource | undefined {
   }).at(-1);
 }
 
+/** Whether an overlay may act on the item: overlays on for it, and nothing else automating it */
+function overlayStands(item: Item.Implementation): boolean {
+  return overlaysApply(item) && !automatedBy(item);
+}
+
+/** An item update that may give or take the item's other automation (CPR's, CAT's, a macro, its own entries) */
+function touchesAutomation(change: unknown): boolean {
+  const flags = (change as { flags?: Record<string, Record<string, unknown> | null | undefined> } | undefined)?.flags ?? {};
+  if (Object.keys(flags).some(key => ["chris-premades", "cat", "dae"].includes(key.replace(/^-=/, "")))) return true;
+  return Object.keys(flags[MODULE_ID] ?? {}).some(key => ["entries", "onUseMacroName"].includes(key.replace(/^-=/, "")));
+}
+
 /** What the overlay has that the item lacks: effects (by name) and activities (by type and name) */
 function missingParts(overlay: Item.Implementation, item: Item.Implementation) {
   const itemActivities = [...((item.system as { activities?: Iterable<{ type?: string, name?: string }> }).activities ?? [])];
@@ -131,11 +143,12 @@ function missingParts(overlay: Item.Implementation, item: Item.Implementation) {
 export async function applyOverlayData(item: Item.Implementation): Promise<boolean> {
   if (!(item.parent instanceof Actor)) return false;
   const markers = item.effects.contents.filter(e => typeof e.getFlag(MODULE_ID, "overlayPart") === "object");
-  // Overlays off for the item: its marker disabled (what it added is suppressed), enabled again when they're back on
-  const allowed = overlaysApply(item);
+  // Overlays off for the item, or it has since got other automation: its marker disabled (what it added is
+  // suppressed), enabled again when the overlay is back
+  const allowed = overlayStands(item);
   const toggle = markers.filter(e => e.disabled === allowed).map(e => ({ _id: e.id!, disabled: !allowed }));
   if (toggle.length) await item.updateEmbeddedDocuments("ActiveEffect", toggle);
-  if (!allowed || automatedBy(item)) return false;
+  if (!allowed) return false;
   const found = overlayFor(item);
   if (!found) return false;
   const version = versionOf(found.item);
@@ -203,6 +216,9 @@ export function watchOverlayData(): void {
     if (foundry.utils.hasProperty(change, `flags.${MODULE_ID}.overlayMode`) || foundry.utils.hasProperty(change, `flags.${MODULE_ID}.-=overlayMode`)) {
       invalidateEntryHomes();
       if (game.user?.isActiveGM) void applyOverlayData(item as Item.Implementation).catch(err => console.warn("midi-qol | overlay data", err));
+    } else if (touchesAutomation(change) && game.user?.isActiveGM && overlaysByIdentifier.size) {
+      // Other automation came or went (CPR's medkit, a macro added): the overlay stands down, or is back
+      void applyOverlayData(item as Item.Implementation).catch(err => console.warn("midi-qol | overlay data", err));
     }
   });
 }
