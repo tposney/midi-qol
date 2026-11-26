@@ -22,6 +22,7 @@ import { installedModules } from "./setupModules.js";
 import { OnUseMacro, OnUseMacros } from "./apps/Item.js";
 import { initHiddenGroundCue } from "./lib/hiddenGroundCue.js";
 import { INSIDE_LOOK_WRAPPERS } from "./lib/insideLook.js";
+import { stackPickerAfterClick, tokenLayerClickWrapper } from "./lib/stackPicker.js";
 import { initConditionRules } from "../rules/conditionRules.js";
 import { TroubleShooter } from "./apps/TroubleShooter.js";
 import { MidiActivityChoiceDialog } from "./apps/MidiActivityChoiceDialog.js";
@@ -346,7 +347,17 @@ function userInitiatedTargetWrapper(this: any, wrapped: Function, ...args: any[]
 /** Token._onClickLeft: click to attack takes the click when it attacks (services/clickToAttack), else the targeting flag as above */
 function tokenClickLeftWrapper(this: Token.Implementation, wrapped: Function, ...args: [object, ...unknown[]]) {
   if (clickToAttackTakes(this, args[0])) return;
-  return userInitiatedTargetWrapper.call(this, wrapped, ...args);
+  const result = userInitiatedTargetWrapper.call(this, wrapped, ...args);
+  // A stack of tokens: which one to select (or with the target tool, to target: lib/stackPicker.ts)
+  stackPickerAfterClick(args[0]);
+  return result;
+}
+
+/** Token._onClickRight2 (targets the token): on a stack, which one (lib/stackPicker.ts) */
+function tokenClickRight2Wrapper(this: Token.Implementation, wrapped: Function, ...args: [object, ...unknown[]]) {
+  const result = userInitiatedTargetWrapper.call(this, wrapped, ...args);
+  stackPickerAfterClick(args[0], "target");
+  return result;
 }
 
 export function readyPatching() {
@@ -372,8 +383,9 @@ export function readyPatching() {
   // User-initiated targeting detection — set flag so targetToken hook can distinguish user clicks from programmatic targeting.
   // A token's left click is offered to click to attack first (one wrapper per method for midi)
   libWrapper.register(MODULE_ID, "foundry.canvas.placeables.Token.prototype._onClickLeft", tokenClickLeftWrapper, "MIXED");
-  libWrapper.register(MODULE_ID, "foundry.canvas.placeables.Token.prototype._onClickRight2", userInitiatedTargetWrapper, "WRAPPER");
+  libWrapper.register(MODULE_ID, "foundry.canvas.placeables.Token.prototype._onClickRight2", tokenClickRight2Wrapper, "WRAPPER");
   libWrapper.register(MODULE_ID, "foundry.canvas.layers.TokenLayer.prototype.selectObjects", userInitiatedTargetWrapper, "WRAPPER");
+  libWrapper.register(MODULE_ID, "foundry.canvas.layers.TokenLayer.prototype._onClickLeft", tokenLayerClickWrapper, "WRAPPER");
 
 }
 

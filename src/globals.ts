@@ -258,6 +258,7 @@ declare module "fvtt-types/configuration" {
     "midi-qol.PresentationReducedMotion": boolean;
     "midi-qol.hiddenGroundCue": boolean;
     "midi-qol.insideGhost": boolean;
+    "midi-qol.stackPicker": boolean;
     "midi-qol.ownChatCardSummary": string;
     "midi-qol.hiddenGroundCueStyle": string;
     "midi-qol.hiddenGroundCueColor": foundry.data.fields.ColorField<{ nullable: boolean; initial: string }>;

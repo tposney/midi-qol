@@ -310,7 +310,24 @@
       "overlay": {
         "identifier": "engulf",
         "rules": "2024",
-        "version": "2"
+        "version": "3",
+        "changes": [
+          {
+            "key": "system.activities.Exfa4q7O4SvXjGt7.midiProperties.automationOnly",
+            "value": "true",
+            "type": "override"
+          },
+          {
+            "key": "system.activities.0sTemtp4b2QnaOMR.midiProperties.automationOnly",
+            "value": "true",
+            "type": "override"
+          },
+          {
+            "key": "system.activities.Ps27Q3biyThByJeQ.midiProperties.automationOnly",
+            "value": "true",
+            "type": "override"
+          }
+        ]
       },
       "configSpec": [
         {

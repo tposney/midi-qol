@@ -152,7 +152,29 @@
       "overlay": {
         "identifier": "swallow",
         "rules": "2024",
-        "version": "1"
+        "version": "3",
+        "changes": [
+          {
+            "key": "system.activities.zrWNjO9mkbN28spL.midiProperties.automationOnly",
+            "value": "true",
+            "type": "override"
+          },
+          {
+            "key": "system.activities.rGeGukkm2t2fXsoy.midiProperties.automationOnly",
+            "value": "true",
+            "type": "override"
+          },
+          {
+            "key": "system.activities.zSgQfHj7hyFnvfCK.midiProperties.automationOnly",
+            "value": "true",
+            "type": "override"
+          },
+          {
+            "key": "system.activities.Ucb9p9Fw3W9EoSbr.midiProperties.automationOnly",
+            "value": "true",
+            "type": "override"
+          }
+        ]
       },
       "configSpec": [
         {
