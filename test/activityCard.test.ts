@@ -223,7 +223,7 @@ describe("activity cards", () => {
       .toBe('Activity.Then.use{"activity":"Wild Shape","targets":"Activity.Then.to.hitTargets"}');
     expect(triggerText({ triggeredActivityId: "a1", triggeredActivityTargets: "near", triggeredActivityNearMax: "2", triggeredActivityNearDisposition: "enemy",
       triggeredActivityNearWithin: 30, triggeredActivityRollAs: "firstTarget", triggeredActivityConditionText: "workflow.isCritical", triggeredActivityChainLimit: "@item.level", triggeredActivityConsume: false }, t))
-      .toBe('Activity.Then.use{"activity":"Wild Shape","targets":"Activity.Then.near{\\"max\\":\\"2\\",\\"who\\":\\"Activity.Then.who.enemy\\",\\"within\\":\\"30\\"}"}, Activity.Then.rollAs.firstTarget, Activity.Then.if{"condition":"workflow.isCritical"}, Activity.Then.chain{"n":"@item.level"}, Activity.Then.free');
+      .toBe('Activity.Then.use{"activity":"Wild Shape","targets":"Activity.Then.near{\\"max\\":\\"2\\",\\"who\\":\\"Activity.Target.who.enemys\\",\\"within\\":\\"30\\"}"}, Activity.Then.rollAs.firstTarget, Activity.Then.if{"condition":"workflow.isCritical"}, Activity.Then.chain{"n":"@item.level"}, Activity.Then.free');
   });
 
   it("the Then line's edits: only what changed, near fields only for near, none removes the trigger", () => {

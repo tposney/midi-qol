@@ -20,7 +20,6 @@
   "midi-qol.DamageImmunities.Hint": "Ao usar os botões de dano do Midi-QOL ou aplicar dano automaticamente, aplica as imunidades, vulnerabilidades e resistências do alvo. Todos os tipos de dano são verificados.",
   "midi-qol.ShowItemDetails.Name": "Mostrar Detalhes no Chat",
   "midi-qol.ShowItemDetails.Hint": "Se ativado, os detalhes do item serão exibidos no cartão do chat ao serem rolados. Você pode usar a configuração do D&D5e para esconder automaticamente a descrição.",
-  "midi-qol.AutoRollAttack.Name": "Rolar Ataque ao Rolar Item",
   "midi-qol.AutoFastForward.Name": "Rolagens Automáticas de Avanço Rápido",
   "midi-qol.AutoCheckHit.Name": "Verificação de Acerto",
   "midi-qol.AutoCheckHit.Hint": "Verifica se uma jogada de ataque acerta os alvos marcados. O dano é rolado se pelo menos um alvo for atingido e a rolagem automática de dano estiver habilitada. Se esta opção estiver desabilitada, o Midi-QOL presume que o ataque acertou e continua a rolagem.",
@@ -36,8 +35,6 @@
   "midi-qol.PlayerDamageCard.Name": "Exibir Cartão de Dano de Jogador",
   "midi-qol.PlayerDamageCard.Hint": "Uma versão mais simples do cartão de dano. Exibido somente se o cartão do Mestre é exibido. O cartão não é exibido ao Mestre.",
   "midi-qol.PlayerCardDamageDifferent.Name": "Exibir cartão de dano do jogador se o dano rolado não corresponder ao dano aplicado a algum alvo",
-  "midi-qol.AddChatDamageButtons.Name": "Adicionar Botões de Dano no Chat",
-  "midi-qol.AutoRollDamage.Name": "Rolar Dano Automaticamente",
   "midi-qol.AutoCheckSaves.Name": "Auto-Verificar Salvaguardas",
   "midi-qol.AutoCheckSaves.Hint": "Verifica automaticamente resultado de salvaguardas, quando uma salvaguarda é requisitada. Se desabilitado, Midi QOL assumirá que todos os alvos falharam em suas salvaguardas.",
   "midi-qol.AutoRemoveTargets.Name": "Limpar Alvos no Fim do Turno",
@@ -378,8 +375,6 @@
       "hidden": "Os jogadores não veem nenhuma informação sobre a rolagem de dano."
     }
   },
-  "midi-qol.GMAttackDsn.Name": "Rolagem de Ataque DSN",
-  "midi-qol.GMDamageDsn.Name": "Rolagem de Dano DSN",
   "midi-qol.gmDsnDisplayOptions": {
     "show": "Mostrar Dados",
     "ghost": "Dados Fantasmas",
@@ -462,8 +457,6 @@
   "midi-qol.FollowUp.Targets.default": "Alvos atingidos em caso de ataque. Do contrário, todos os alvos",
   "midi-qol.spell-damage": "Dano de Magia",
   "midi-qol.RemoveButtons.Name": "Remover Botões do Chat Após Rolagem",
-  "midi-qol.ConcentrationAutomation.Name": "Habilitar Automação de Concentração do Midi-QOL",
-  "midi-qol.ConcentrationAutomation.Hint": "Se habilitada, a automação do Midi-QOL gerencia a concentração, e você deve desabilitar o monitoramento de concentração do <strong>D&D5e</strong>.<br>Se o monitoramento do <strong>D&D5e</strong> permanecer habilitado, esta opção será desmarcada automaticamente.<br> Recomenda-se usar a concentração do <strong>D&D5e</strong>, já que as demais configurações também funcionam com ela.",
   "midi-qol.SingleConcentrationRoll.Name": "Verificação Única de Concentração",
   "midi-qol.SingleConcentrationRoll.Hint": "Se ativado e o ataque rolar o dano normal + uma salvaguarda + dano outro/versátil, role apenas uma salvaguarda de concentração para o dano combinado.",
   "midi-qol.TempHPDamageConcentrationCheck.Name": "Verificação de Concentração com PV Temporário",
@@ -627,16 +620,11 @@
   "midi-qol.DamageCardAll": "Todos",
   "midi-qol.StatsTitle": "Estatísticas de Rolagem",
   "midi-qol.RollStats": "Estatísticas",
-  "midi-qol.RollStatsConfig": "Configuração de Estatísticas",
   "midi-qol.RemoveStats": "Remover Todas as Estatísticas de",
   "midi-qol.ClearStats": "Limpar Todas as Estatísticas",
   "midi-qol.EndSession": "Limpar Estatísticas de Sessão",
   "midi-qol.KeepRollStats.Name": "Manter Estatísticas de Rolagem",
   "midi-qol.KeepRollStats.Hint": "Grava informações de ataque e dano dos atores",
-  "midi-qol.SaveStatsEvery.Name": "Salvar Estatísticas a Cada",
-  "midi-qol.SaveStatsEvery.Hint": "Salva estatísticas a cada N rolagens. Cada ataque e dano conta como uma rolagem. É sugerido 10-20 ou maior.",
-  "midi-qol.PlayerStatsOnly.Name": "Apenas Estatísticas de Jogadores",
-  "midi-qol.PlayerStatsOnly.Hint": "Mantém apenas estatísticas de atores controlados por jogadores.",
   "midi-qol.ShowStats": "Mostrar Estatísticas de Rolagens",
   "midi-qol.stats.Attacks": "Ataques",
   "midi-qol.stats.Damage": "Dano",
@@ -646,32 +634,21 @@
   "midi-qol.stats.fumbles": "falhas críticas",
   "midi-qol.stats.nat20s": "20s naturais",
   "midi-qol.stats.Avg": "Média",
-  "midi-qol.stats.ItemBreakdown": "Análise de Item",
   "midi-qol.stats.Item": "Item",
-  "midi-qol.stats.Rolls": "Rolagens",
-  "midi-qol.stats.Hits": "Acertos",
   "midi-qol.stats.Crits": "Críticos",
   "midi-qol.stats.Adv": "Vantagem",
   "midi-qol.stats.Dis": "Desvantagem",
   "midi-qol.stats.avgCrit": "Média Crítico",
   "midi-qol.stats.AvgDmg": "Dano Médio",
-  "midi-qol.stats.AppliedShort": "Aplicado",
-  "midi-qol.stats.SavesCol": "Salvaguardas",
   "midi-qol.stats.hitRate": "taxa de acerto",
   "midi-qol.stats.avgRoll": "Rolagem média",
   "midi-qol.stats.maxHit": "Acerto máx",
   "midi-qol.stats.healed": "Curado",
   "midi-qol.stats.kills": "abates",
-  "midi-qol.stats.Defence": "Defesa",
   "midi-qol.stats.Taken": "Sofrido",
   "midi-qol.stats.conc": "Conc",
   "midi-qol.stats.death": "Morte",
   "midi-qol.stats.NoStats": "Nenhuma estatística registrada ainda.",
-  "midi-qol.stats.SettingsSection": "Configurações",
-  "midi-qol.stats.ExportSection": "Exportar",
-  "midi-qol.stats.SessionSection": "Sessão",
-  "midi-qol.stats.DangerSection": "Zona de Perigo",
-  "midi-qol.stats.RemoveActorSection": "Remover Estatísticas do Ator",
   "midi-qol.DefaultSaveMult.Name": "Multiplicador Padrão de Salvaguarda",
   "midi-qol.DefaultSaveMult.Hint": "Se não houver outros modificadores, a salvaguarda causará esta fração do dano do ataque original. Padrão: 0.5 (metade do dano em sucesso). Você só deve mudar isso se souber como funcionam os multiplicadores.",
   "midi-qol.RequireMagical.Name": "Requer Propriedade 'Mágico'",
@@ -1137,8 +1114,6 @@
   "midi-qol.AutoRemoveInstantaneousTemplate.Name": "Remover Modelos Instantâneos",
   "midi-qol.AutoRemoveInstantaneousTemplate.Hint": "Modelos colocados por um item com duração 'Instantânea' são removidos no final da rolagem do item.",
   "midi-qol.ConfirmAmmunition.Name": "Confirmar Munição ao Rolar Ataque",
-  "midi-qol.ActivityNamePrefix.Name": "Prefixo de Atividade",
-  "midi-qol.ActivityNamePrefix.Hint": "Coloca o nome 'Midi' como prefixo das atividades do Midi QOL. Necessário recarregar o mundo.",
   "midi-qol.ConditionEditorEnabled.Name": "Editor de Condições",
   "midi-qol.ConditionEditorEnabled.Hint": "Mostra o botão do editor de condições nos campos de condição das fichas de atividades.",
   "midi-qol.AoETargetTypeOptions": {
@@ -1910,8 +1885,7 @@
       "description": "Ao invés de usar este, use os campos de system.traits.dm com valores negativos." 
     },
     "flags.midi-qol.OverTime": {
-      "name": "Efeitos Over Time",
-      "description": "" 
+      "name": "Efeitos Over Time"
     },
     "flags.midi-qol.advantage.concentration": {
       "name": "Vantagem (Concentração)",
@@ -1926,16 +1900,13 @@
       "description": "Alvos previamente selecionados da salvaguarda de magia são automaticamente bem-sucedidos." 
     },
     "flags.midi-qol.damage.reroll-kh": {
-      "name": "Rerolar Dano (Manter Maior)",
-      "description": "" 
+      "name": "Rerolar Dano (Manter Maior)"
     },
     "flags.midi-qol.damage.reroll-kl": {
-      "name": "Rerolar Dano (Manter Menor)",
-      "description": "" 
+      "name": "Rerolar Dano (Manter Menor)"
     },
     "flags.midi-qol.disadvantage.ability.all": {
-      "name": "Desvantagem Atributo (Todos)",
-      "description": "" 
+      "name": "Desvantagem Atributo (Todos)"
     },
     "flags.midi-qol.disadvantage.all": {
       "name": "Desvantagem Todos Dados",
@@ -1982,32 +1953,26 @@
       "description": "Desvantagem em Salvaguardas Contra Morte." 
     },
     "flags.midi-qol.fail.ability.all": {
-      "name": "Falha Atributo (Todos)",
-      "description": "" 
+      "name": "Falha Atributo (Todos)"
     },
     "flags.midi-qol.fail.all": {
-      "name": "Falha (Todas Ações)",
-      "description": "" 
+      "name": "Falha (Todas Ações)"
     },
     "flags.midi-qol.fail.spell.material": {
-      "name": "Falha (Componente Material)",
-      "description": "" 
+      "name": "Falha (Componente Material)"
     },
     "flags.midi-qol.fail.spell.somatic": {
-      "name": "Falha (Componente Somático)",
-      "description": "" 
+      "name": "Falha (Componente Somático)"
     },
     "flags.midi-qol.fail.spell.vocal": {
-      "name": "Falha (Componente Verbal)",
-      "description": "" 
+      "name": "Falha (Componente Verbal)"
     },
     "flags.midi-qol.grants.critical.range": {
       "name": "Conceder Acerto Crítico (Alcance)",
       "description": "Concede Acerto Crítico para ataques realizados dentro deste alcance." 
     },
     "flags.midi-qol.grants.criticalThreshold": {
-      "name": "Conceder Margem Acerto Crítico",
-      "description": "" 
+      "name": "Conceder Margem Acerto Crítico"
     },
     "flags.midi-qol.bloodsense": {
       "name": "Percepção de Sangue (Alcance)",
@@ -2018,20 +1983,10 @@
       "description": "Ignora Desvantagem em jogadas de Ataque à Distância por conta de inimigos adjacentes." 
     },
     "flags.midi-qol.inMotion": {
-      "name": "Em Movimento",
-      "description": "" 
+      "name": "Em Movimento"
     },
     "flags.midi-qol.neverTarget": {
-      "name": "Inalvejável",
-      "description": "" 
-    },
-    "flags.midi-qol.onUseMacroName": {
-      "name": "",
-      "description": "" 
-    },
-    "flags.midi-qol.optional.NAME.macroToCall": {
-      "name": "",
-      "description": "" 
+      "name": "Inalvejável"
     },
     "flags.midi-qol.optional.NAME.acOnAttack": {
       "name": "Bônus Opcional (CA)",
@@ -2050,8 +2005,7 @@
       "description": "Definição do uso alternativo para o Bônus Opcional. Consultar Midi Wiki." 
     },
     "flags.midi-qol.optional.NAME.criticalDamage": {
-      "name": "Bônus Opcional (Dano Crítico)",
-      "description": "" 
+      "name": "Bônus Opcional (Dano Crítico)"
     },
     "flags.midi-qol.optional.NAME.force": {
       "name": "Bônus Opcional (Forçar)",
@@ -2066,16 +2020,14 @@
       "description": "Solicita o uso do bônus opcional apenas após uma falha em um teste de Perícia." 
     },
     "flags.midi-qol.potentCantrip": {
-      "name": "Truque Potente",
-      "description": "" 
+      "name": "Truque Potente"
     },
     "flags.midi-qol.sculptSpells": {
       "name": "Esculpir Magias",
       "description": "Alvos previamente selecionados da salvaguarda de magia são automaticamente bem-sucedidos e recebem o status \"super-saver\"." 
     },
     "flags.midi-qol.sharpShooter": {
-      "name": "Sharp Shooter",
-      "description": "" 
+      "name": "Sharp Shooter"
     },
     "flags.midi-qol.success.all": {
       "name": "Sucesso (Todos)",
@@ -2086,8 +2038,7 @@
       "description": "Todos os testes de atributo e todas as salvaguardas realizados por este ator são automaticamente bem-sucedidos."
     },
     "flags.midi-qol.uncanny-dodge": {
-      "name": "Esquiva Sobrenatural",
-      "description": "" 
+      "name": "Esquiva Sobrenatural"
     },
     "token.flags.midi-qol.visionSourceHeight": {
       "name": "% da Altura da Visão da Origem",

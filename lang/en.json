@@ -20,7 +20,6 @@
   "midi-qol.DamageImmunities.Hint": "When using midi-qol damage buttons or auto applying damage apply target's damage immunity/vulnerabilities/resistances. All damage types are checked.",
   "midi-qol.ShowItemDetails.Name": "Show Item details in chat card",
   "midi-qol.ShowItemDetails.Hint": "If set the item details will be displayed in the chat card. You can use the DND5E system setting to auto hide the description",
-  "midi-qol.AutoRollAttack.Name": "When item is rolled, automatically roll the attack if there is one",
   "midi-qol.AutoFastForward.Name": "Auto fast forward rolls",
   "midi-qol.AutoCheckHit.Name": "Auto check if attack hits target",
   "midi-qol.AutoCheckHit.Hint": "Check if an attack roll hits selected targets - damage is rolled if one or more targets is hit and auto roll damage is enabled. If disabled midi-qol will assume the attack hits and continue rolling.",
@@ -36,8 +35,6 @@
   "midi-qol.PlayerDamageCard.Name": "Show a player's damage card",
   "midi-qol.PlayerDamageCard.Hint": "A simpler version of the damage card. Only displayed if the GM card is displayed. Card is not shown to the GM",
   "midi-qol.PlayerCardDamageDifferent.Name": "Display the player damage card if the rolled damage does not match the applied damage for some target",
-  "midi-qol.AddChatDamageButtons.Name": "Add damage buttons to chat message",
-  "midi-qol.AutoRollDamage.Name": "Auto roll Damage",
   "midi-qol.AutoCheckSaves.Name": "Auto check Saves",
   "midi-qol.AutoCheckSaves.Hint": "Automatically check saving throws when a saving throw is required. If disabled midi will assume that all targets failed their save.",
   "midi-qol.AutoRemoveTargets.Name": "Un-target at end of turn",
@@ -464,8 +461,6 @@
       "hidden": "Players see no damage roll information."
     }
   },
-  "midi-qol.GMAttackDsn.Name": "Attack Roll DSN",
-  "midi-qol.GMDamageDsn.Name": "Damage Roll DSN",
   "midi-qol.gmDsnDisplayOptions": {
     "show": "Show Dice",
     "ghost": "Ghost Dice",
@@ -552,8 +547,6 @@
   "midi-qol.FollowUp.Targets.default": "Hit targets for an attack, else all targets",
   "midi-qol.spell-damage": "Spell Damage",
   "midi-qol.RemoveButtons.Name": "Remove chat card buttons after roll",
-  "midi-qol.ConcentrationAutomation.Name": "Enable Midi-qol Concentration Automation",
-  "midi-qol.ConcentrationAutomation.Hint": "If enabled midi will handle concentration management and you must disable <strong>DnD5e</strong> concentration.<br>If <strong>DnD5e</strong> concentration is not disabled this setting will be force set to unchecked.<br> Using <strong>DnD5e</strong> concentration is recommended and the rest of the settings will work with <strong>Dnd5e</strong> concentration",
   "midi-qol.SingleConcentrationRoll.Name": "Single Concentration Check",
   "midi-qol.SingleConcentrationRoll.Hint": "If enabled and the attack is rolling normal damage + a save + other/versatile damage only roll a single concentration check for the combined damage",
   "midi-qol.TempHPDamageConcentrationCheck.Name": "Temporary HP Concentration Check",
@@ -612,7 +605,6 @@
   "midi-qol.Hud.Configure": "Configure",
   "midi-qol.Hud.Settings": "HUD settings…",
   "midi-qol.Hud.Switch": "Choose your HUD",
-  "midi-qol.Hud.OwnSettings": "The HUD's own settings",
   "midi-qol.Hud.ForUser": "Settings for",
   "midi-qol.Hud.ForUserHint": "HUD choices and settings are kept per user. Pick a player to change theirs.",
   "midi-qol.Hud.ForOtherHint": "Changing this player's HUD choices and settings: they apply on the player's own client. Settings kept per browser aren't shown.",
@@ -787,16 +779,11 @@
   "midi-qol.DamageCardAll": "All",
   "midi-qol.StatsTitle": "Roll Statistics",
   "midi-qol.RollStats": "Statistics",
-  "midi-qol.RollStatsConfig": "Statistics Config",
   "midi-qol.RemoveStats": "Remove these statistics",
   "midi-qol.ClearStats": "Clear All Statistics",
   "midi-qol.EndSession": "Start a new session",
   "midi-qol.KeepRollStats.Name": "Keep Roll Statistics",
   "midi-qol.KeepRollStats.Hint": "Record attack and damage roll data for actors",
-  "midi-qol.SaveStatsEvery.Name": "Save statistics Every",
-  "midi-qol.SaveStatsEvery.Hint": "Save statistics every N rolls. Each attack and damage counts as a roll. Suggest 10-20 or greater",
-  "midi-qol.PlayerStatsOnly.Name": "Player statistics only",
-  "midi-qol.PlayerStatsOnly.Hint": "Only keep statistics for player owned actors",
   "midi-qol.ShowStats": "Show Roll Statistics",
   "midi-qol.stats.Attacks": "Attacks",
   "midi-qol.stats.Damage": "Damage",
@@ -806,32 +793,21 @@
   "midi-qol.stats.fumbles": "Fumbles",
   "midi-qol.stats.nat20s": "Nat 20s",
   "midi-qol.stats.Avg": "Avg",
-  "midi-qol.stats.ItemBreakdown": "Item Breakdown",
   "midi-qol.stats.Item": "Item",
-  "midi-qol.stats.Rolls": "Rolls",
-  "midi-qol.stats.Hits": "Hits",
   "midi-qol.stats.Crits": "Crits",
   "midi-qol.stats.Adv": "Adv",
   "midi-qol.stats.Dis": "Dis",
   "midi-qol.stats.avgCrit": "Avg Crit",
   "midi-qol.stats.AvgDmg": "Avg Dmg",
-  "midi-qol.stats.AppliedShort": "Applied",
-  "midi-qol.stats.SavesCol": "Saves",
   "midi-qol.stats.hitRate": "Hit %",
   "midi-qol.stats.avgRoll": "Avg roll",
   "midi-qol.stats.maxHit": "Max hit",
   "midi-qol.stats.healed": "Healed",
   "midi-qol.stats.kills": "Kills",
-  "midi-qol.stats.Defence": "Defence",
   "midi-qol.stats.Taken": "Taken",
   "midi-qol.stats.conc": "Conc",
   "midi-qol.stats.death": "Death",
   "midi-qol.stats.NoStats": "No statistics recorded yet.",
-  "midi-qol.stats.SettingsSection": "Settings",
-  "midi-qol.stats.ExportSection": "Export",
-  "midi-qol.stats.SessionSection": "Session",
-  "midi-qol.stats.DangerSection": "Danger Zone",
-  "midi-qol.stats.RemoveActorSection": "Remove Actor Statistics",
   "midi-qol.stats.Creature": "Name",
   "midi-qol.stats.Player": "A player",
   "midi-qol.stats.CritRate": "Crit %",
@@ -1038,7 +1014,6 @@
   "midi-qol.Deferred.Readied": "Readied",
   "midi-qol.Deferred.Release": "Release",
   "midi-qol.AfterCast.Divider": "After casting",
-  "midi-qol.AfterCast.Idle": "Used after casting; the spell isn't running",
   "midi-qol.Hub.Pin": "Keep open after a use",
   "midi-qol.Hub.Unpin": "Close after a use",
   "midi-qol.Hub.All": "All",
@@ -1837,8 +1812,6 @@
   "midi-qol.AutoRemoveInstantaneousTemplate.Hint": "Templates placed by an item with duration instantaneous are removed at the end of the item roll",
   "midi-qol.ReplaceDefaultActivities.Name": "Replace dnd5e activities with midi-qol equivalents",
   "midi-qol.ConfirmAmmunition.Name": "Confirm Ammunition choice when rolling attack - shows attack roll configuration",
-  "midi-qol.ActivityNamePrefix.Name": "Activity Prefix",
-  "midi-qol.ActivityNamePrefix.Hint": "Prefix midi-qol activities name with Midi. Change requires reload",
   "midi-qol.ConditionEditorEnabled.Name": "Condition Editor",
   "midi-qol.ConditionEditorEnabled.Hint": "Show condition editor button on condition fields in activity sheets",
   "midi-qol.AoETargetTypeOptions": {
@@ -2638,8 +2611,7 @@
       "description": "A check ends this effect: dc=15, skill=med, range=5, healing=none|spell|magical|any. Rolled by the creature, or by one within range that targets it."
     },
     "flags.midi-qol.OverTime": {
-      "name": "Over Time Effects",
-      "description": ""
+      "name": "Over Time Effects"
     },
     "flags.midi-qol.advantage.concentration": {
       "name": "Advantage (Concentration)",
@@ -2654,16 +2626,13 @@
       "description": "Pre-selected targets of save spells automatically succeed."
     },
     "flags.midi-qol.damage.reroll-kh": {
-      "name": "Damage Reroll (Keep Highest)",
-      "description": ""
+      "name": "Damage Reroll (Keep Highest)"
     },
     "flags.midi-qol.damage.reroll-kl": {
-      "name": "Damage Reroll (Keep Lowest)",
-      "description": ""
+      "name": "Damage Reroll (Keep Lowest)"
     },
     "flags.midi-qol.disadvantage.ability.all": {
-      "name": "Disadvantage (All Abilities)",
-      "description": ""
+      "name": "Disadvantage (All Abilities)"
     },
     "flags.midi-qol.disadvantage.all": {
       "name": "Disadvantage All",
@@ -2702,40 +2671,32 @@
       "description": "Prevents disadvantage on initiative rolls."
     },
     "flags.midi-qol.disadvantage.concentration": {
-      "name": "Disadvantage (Concentration)",
-      "description": ""
+      "name": "Disadvantage (Concentration)"
     },
     "flags.midi-qol.disadvantage.deathSave": {
-      "name": "Disadvantage (Death Save)",
-      "description": ""
+      "name": "Disadvantage (Death Save)"
     },
     "flags.midi-qol.fail.ability.all": {
-      "name": "Fail (All Abilities)",
-      "description": ""
+      "name": "Fail (All Abilities)"
     },
     "flags.midi-qol.fail.all": {
-      "name": "Fail (All Actions)",
-      "description": ""
+      "name": "Fail (All Actions)"
     },
     "flags.midi-qol.fail.spell.material": {
-      "name": "Fail (Material Component)",
-      "description": ""
+      "name": "Fail (Material Component)"
     },
     "flags.midi-qol.fail.spell.somatic": {
-      "name": "Fail (Somatic Component)",
-      "description": ""
+      "name": "Fail (Somatic Component)"
     },
     "flags.midi-qol.fail.spell.vocal": {
-      "name": "Fail (Vocal Component)",
-      "description": ""
+      "name": "Fail (Vocal Component)"
     },
     "flags.midi-qol.grants.critical.range": {
       "name": "Grants Critical Hit (Range)",
       "description": "Grants Critical Hit for attacks made within this range"
     },
     "flags.midi-qol.grants.criticalThreshold": {
-      "name": "Critical Hit Threshold",
-      "description": ""
+      "name": "Critical Hit Threshold"
     },
     "flags.midi-qol.bloodsense": {
       "name": "Blood Sense (Range)",
@@ -2746,20 +2707,10 @@
       "description": "Ignore disadvantage imposed on ranged attacks by nearby enemies."
     },
     "flags.midi-qol.inMotion": {
-      "name": "In Motion",
-      "description": ""
+      "name": "In Motion"
     },
     "flags.midi-qol.neverTarget": {
-      "name": "Never Target",
-      "description": ""
-    },
-    "flags.midi-qol.onUseMacroName": {
-      "name": "",
-      "description": ""
-    },
-    "flags.midi-qol.optional.NAME.macroToCall": {
-      "name": "",
-      "description": ""
+      "name": "Never Target"
     },
     "flags.midi-qol.optional.NAME.acOnAttack": {
       "name": "Optional AC On Attack",
@@ -2774,40 +2725,34 @@
       "description": "Activation condition for optional bonus."
     },
     "flags.midi-qol.optional.NAME.count": {
-      "name": "Optional Count",
-      "description": ""
+      "name": "Optional Count"
     },
     "flags.midi-qol.optional.NAME.countAlt": {
-      "name": "Optional Count Alternative",
-      "description": ""
+      "name": "Optional Count Alternative"
     },
     "flags.midi-qol.optional.NAME.criticalDamage": {
-      "name": "Optional Critical Damage",
-      "description": ""
+      "name": "Optional Critical Damage"
     },
     "flags.midi-qol.optional.NAME.force": {
       "name": "Optional Force",
       "description": "Condition to force activation of bonus."
     },
     "flags.midi-qol.optional.NAME.label": {
-      "name": "Optional Label",
-      "description": ""
+      "name": "Optional Label"
     },
     "flags.midi-qol.optional.NAME.skill.fail.all": {
       "name": "Optional Skill Fail (All)",
       "description": "Only prompts on fail."
     },
     "flags.midi-qol.potentCantrip": {
-      "name": "Potent Cantrip",
-      "description": ""
+      "name": "Potent Cantrip"
     },
     "flags.midi-qol.sculptSpells": {
       "name": "Sculpt Spells",
       "description": "Pre-selected targets of save spells automatically succeed and receive \"super-saver\" status."
     },
     "flags.midi-qol.sharpShooter": {
-      "name": "Sharp Shooter",
-      "description": ""
+      "name": "Sharp Shooter"
     },
     "flags.midi-qol.success.all": {
       "name": "Success (All Rolls)",
@@ -2818,8 +2763,7 @@
       "description": "All ability checks and saving throws made by this actor automatically succeed."
     },
     "flags.midi-qol.uncanny-dodge": {
-      "name": "Uncanny Dodge",
-      "description": ""
+      "name": "Uncanny Dodge"
     },
     "token.flags.midi-qol.visionSourceHeight": {
       "name": "Vision Source Height %",
@@ -3507,18 +3451,6 @@
   "midi-qol.Sentence.Action.use": "use {activity}",
   "midi-qol.Sentence.Action.useOn": "use {activity} on {targets} when the use is complete",
   "midi-qol.Sentence.Action.useTo.target": "that target",
-  "midi-qol.Sentence.Action.useTo.targets": "the same targets",
-  "midi-qol.Sentence.Action.useTo.hitTargets": "the targets hit",
-  "midi-qol.Sentence.Action.useTo.missedTargets": "the targets missed",
-  "midi-qol.Sentence.Action.useTo.failedSaves": "the targets that failed their save",
-  "midi-qol.Sentence.Action.useTo.saveTargets": "the targets that saved",
-  "midi-qol.Sentence.Action.useTo.self": "the user",
-  "midi-qol.Sentence.Action.useTo.retarget": "new targets",
-  "midi-qol.Sentence.Action.useNear": "up to {max} {who} within {within} ft of the target",
-  "midi-qol.Sentence.Action.useWho.any": "creatures",
-  "midi-qol.Sentence.Action.useWho.enemy": "enemies",
-  "midi-qol.Sentence.Action.useWho.ally": "allies",
-  "midi-qol.Sentence.Action.useChain": "(again from each creature it reaches, up to {n} times)",
   "midi-qol.Sentence.Action.move.push": "push {who} {n} ft away from {from}",
   "midi-qol.Sentence.Action.move.pull": "pull {who} up to {n} ft towards {from}",
   "midi-qol.Sentence.Action.move.slide": "move {who} {n} ft",
@@ -3792,9 +3724,6 @@
   "midi-qol.EntryEditor.Activity.Then.to.self": "the user",
   "midi-qol.EntryEditor.Activity.Then.to.retarget": "new targets",
   "midi-qol.EntryEditor.Activity.Then.near": "up to {max} {who} within {within} ft of the target",
-  "midi-qol.EntryEditor.Activity.Then.who.any": "creatures",
-  "midi-qol.EntryEditor.Activity.Then.who.enemy": "enemies",
-  "midi-qol.EntryEditor.Activity.Then.who.ally": "allies",
   "midi-qol.EntryEditor.Activity.Then.rollAs.firstTarget": "as the first target",
   "midi-qol.EntryEditor.Activity.Then.rollAs.firstHitTarget": "as the first target hit",
   "midi-qol.EntryEditor.Activity.Then.rollAs.firstMissedTarget": "as the first target missed",
@@ -3843,9 +3772,7 @@
   "midi-qol.EntryEditor.Activity.Area.attach.caster": "you (moves with you)",
   "midi-qol.EntryEditor.Activity.Area.attach.target": "a target (moves with it)",
   "midi-qol.EntryEditor.Activity.Area.whoLabel": "Acts on",
-  "midi-qol.EntryEditor.Activity.Area.who.enemies": "enemies",
   "midi-qol.EntryEditor.Activity.Area.who.anyone": "anyone",
-  "midi-qol.EntryEditor.Activity.Area.who.allies": "allies",
   "midi-qol.EntryEditor.Activity.Area.once": "a creature is affected at most once per turn",
   "midi-qol.EntryEditor.Activity.Area.kindLabel": "Does",
   "midi-qol.EntryEditor.Activity.Area.kind.use": "makes a creature roll / uses an activity",

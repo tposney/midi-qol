@@ -1,4 +1,5 @@
 import { ACTIVITY_REF } from "./activityActions.js";
+import { nearWhoKey } from "./activityCard.js";
 import { actionKeyOf, actionSchema } from "./engine.js";
 import type { Entry, EntryAction, EntryHome, EntryWho } from "./types.js";
 import { contributedActionText, contributedEventText, contributedTriggerGroups } from "./editorServices.js";
@@ -260,12 +261,15 @@ export function actionText(action: EntryAction, context: SentenceContext): strin
     case "check": return (a.by ? `${target(a.by, "self")}: ` : "") + rollSpec(a.check, true, context);
     case "use": {
       if (!a.to && !a.near) return say("Action.use", { activity: activityName(a.use, context) });
+      // The card's Then line's words (one set for both)
+      const card = (key: string, data: Record<string, string> = {}) => game.i18n?.format(`midi-qol.EntryEditor.${key}`, data) ?? key;
       const near = part(a.near);
       const to = String(a.to ?? "targets");
       const targets = to === "near"
-        ? say("Action.useNear", { max: friendlyFormula(near.max ?? 1), who: say(`Action.useWho.${["enemy", "ally"].includes(String(near.disposition)) ? near.disposition : "any"}`), within: String(near.within ?? 30) })
-        : say(has(`Action.useTo.${to}`) ? `Action.useTo.${to}` : "Action.useTo.targets");
-      const chain = a.chain ? ` ${say("Action.useChain", { n: friendlyFormula(a.chain) })}` : "";
+        ? card("Activity.Then.near", { max: friendlyFormula(near.max ?? 1), who: card(nearWhoKey(near.disposition)), within: String(near.within ?? 30) })
+        : to === "target" ? say("Action.useTo.target")
+        : card(`Activity.Then.to.${["targets", "hitTargets", "missedTargets", "failedSaves", "saveTargets", "self", "retarget"].includes(to) ? to : "targets"}`);
+      const chain = a.chain ? `, ${card("Activity.Then.chain", { n: friendlyFormula(a.chain) })}` : "";
       return say("Action.useOn", { activity: activityName(a.use, context), targets }) + chain;
     }
     case "move": {

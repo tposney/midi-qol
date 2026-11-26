@@ -1235,7 +1235,7 @@ export class EntryEditor extends HandlebarsApplicationMixin(DocumentSheetV2)<
       area: {
         lingers: !!rb?.enabled,
         attach: ["default", "caster", "target"].map(v => option(v, i18n(`midi-qol.EntryEditor.Activity.Area.attach.${v}`), (rb?.attachToken ?? "default") === v)),
-        who: [["-1", "enemies"], ["0", "anyone"], ["1", "allies"]].map(([v, l]) => option(v, i18n(`midi-qol.EntryEditor.Activity.Area.who.${l}`), String(rb?.dispositionFilter ?? -1) === v)),
+        who: [["-1", "Target.who.enemys"], ["0", "Area.who.anyone"], ["1", "Target.who.allys"]].map(([v, l]) => option(v, i18n(`midi-qol.EntryEditor.Activity.${l}`), String(rb?.dispositionFilter ?? -1) === v)),
         once: rb?.oncePerTurn ?? true
       },
       areaGroup: group ? {

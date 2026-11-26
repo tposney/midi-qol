@@ -3,7 +3,6 @@
 "midi-qol.DamageImmunities.Hint": "Quando si utilizzano i pulsanti del danno di midi-qol o si applica automaticamente il danno, si applicano le immunità, vulnerabilità e resistenze al danno del bersaglio. Vengono controllati tutti i tipi di danno.",
 "midi-qol.ShowItemDetails.Name": "Mostra Dettagli Oggetto nella Scheda Chat",
 "midi-qol.ShowItemDetails.Hint": "Se impostato, i dettagli dell'oggetto saranno visualizzati nella scheda chat. È possibile utilizzare l'impostazione del sistema DND5E per nascondere automaticamente la descrizione.",
-"midi-qol.AutoRollAttack.Name": "Quando l'oggetto viene lanciato, esegui automaticamente l'attacco se presente",
 "midi-qol.AutoFastForward.Name": "Avanzamento Rapido Automatico",
 "midi-qol.AutoCheckHit.Name": "Verifica automatica se l'attacco colpisce il bersaglio",
 "midi-qol.AutoCheckHit.Hint": "Verifica se un tiro di attacco colpisce i bersagli selezionati: il danno viene to se uno o più bersagli vengono colpiti e il tiro del danno automatico è abilitato. Se disabilitato, midi-qol supporrà che l'attacco colpisca e continuerà il tiro.",
@@ -19,8 +18,6 @@
 "midi-qol.PlayerDamageCard.Name": "Mostra la scheda del danno del giocatore",
 "midi-qol.PlayerDamageCard.Hint": "Una versione semplificata della scheda del danno. Viene visualizzata solo se è attiva la scheda del DM. La scheda non è visibile al DM",
 "midi-qol.PlayerCardDamageDifferent.Name": "Mostra la scheda del danno del giocatore se il danno tirato non corrisponde al danno applicato per alcuni bersagli",
-"midi-qol.AddChatDamageButtons.Name": "Aggiungi pulsanti di danno al messaggio chat",
-"midi-qol.AutoRollDamage.Name": "Tira automaticamente il Danno",
 "midi-qol.AutoCheckSaves.Name": "Controllo Automatico dei Tiri Salvezza",
 "midi-qol.AutoCheckSaves.Hint": "Controlla automaticamente i Tiri Salvezza quando è richiesto un Tiro Salvezza. Se disabilitato, si supporrà che tutti i bersagli abbiano fallito il Tiro Salvezza.",
 "midi-qol.AutoRemoveTargets.Name": "Deseleziona alla fine del turno",
@@ -284,8 +281,6 @@
 "midi-qol.ApplyEffects": "Applica Effetti Attivi",
 "midi-qol.spell-damage": "Danno da Incantesimo",
 "midi-qol.RemoveButtons.Name": "Rimuovi i pulsanti della scheda chat dopo il tiro",
-"midi-qol.ConcentrationAutomation.Name": "Abilita Automazione della Concentrazione",
-"midi-qol.ConcentrationAutomation.Hint": "Se abilitato, gestisce la gestione della concentrazione tramite midi-qol, richiede l'abilitazione del controllo dei Tiri Salvezza automatici. Disabilita la gestione della concentrazione di CUB",
 "midi-qol.SingleConcentrationRoll.Name": "Controllo di Concentrazione Singolo",
 "midi-qol.SingleConcentrationRoll.Hint": "Se abilitato e l'attacco sta tirando il danno normale + un Tiro Salvezza + danno alternativo/versatile, tira un unico controllo di concentrazione per il danno combinato",
 "midi-qol.TempHPDamageConcentrationCheck.Name": "Controllo di Concentrazione per la Perdita di HP Temporanei",
@@ -380,16 +375,11 @@
 "midi-qol.DamageCardAll": "Tutto",
 "midi-qol.StatsTitle": "Statistiche dei Tiri",
 "midi-qol.RollStats": "Statistiche",
-"midi-qol.RollStatsConfig": "Configurazione Statistiche",
 "midi-qol.RemoveStats": "Rimuovi Tutte le Statistiche Per",
 "midi-qol.ClearStats": "Cancella Tutte le Statistiche",
 "midi-qol.EndSession": "Cancella le Statistiche della Sessione",
 "midi-qol.KeepRollStats.Name": "Tieni Statistiche dei Tiri",
 "midi-qol.KeepRollStats.Hint": "Registra i dati dei tiri di attacco e danno per i personaggi",
-"midi-qol.SaveStatsEvery.Name": "Salva le statistiche Ogni",
-"midi-qol.SaveStatsEvery.Hint": "Salva le statistiche ogni N tiri. Ogni attacco e danno contano come un tiro. Si consiglia 10-20 o più",
-"midi-qol.PlayerStatsOnly.Name": "Solo statistiche dei giocatori",
-"midi-qol.PlayerStatsOnly.Hint": "Mantieni solo le statistiche per i personaggi di proprietà dei giocatori",
 "midi-qol.ShowStats": "Mostra la Finestra delle Statistiche",
 "midi-qol.DefaultSaveMult.Name": "Moltiplicatore di tiro salvezza predefinito",
 "midi-qol.DefaultSaveMult.Hint": "Se non ci sono altri modificatori, un tiro salvezza farà questa frazione del danno dell'attacco originale. Predefinito 0.5, metà del danno al tiro salvezza. Dovresti cambiarlo solo se conosci il funzionamento dei moltiplicatori",
@@ -731,8 +721,6 @@
 "midi-qol.AutoRemoveInstantaneousTemplate.Name": "Rimozione automatica dei modelli istantanei",
 "midi-qol.AutoRemoveInstantaneousTemplate.Hint": "I modelli posizionati da un oggetto con durata istantanea vengono rimossi alla fine del tiro dell'oggetto",
 "midi-qol.ConfirmAmmunition.Name": "Conferma la scelta delle munizioni quando esegui un attacco con il tiro - mostra la configurazione del tiro di attacco",
-"midi-qol.ActivityNamePrefix.Name": "Prefisso attività",
-"midi-qol.ActivityNamePrefix.Hint": "Aggiungi il prefisso Midi al nome delle attività midi-qol. La modifica richiede il ricaricamento",
 "midi-qol.AoETargetTypeOptions": {
   "any": "Chiunque",
   "ally": "Alleato",
@@ -1385,8 +1373,7 @@
       "description": "Use the system.traits.dm fields (with a negative value) instead."
     },
     "flags.midi-qol.OverTime": {
-      "name": "Over Time Effects",
-      "description": ""
+      "name": "Over Time Effects"
     },
     "flags.midi-qol.advantage.concentration": {
       "name": "Advantage (Concentration)",
@@ -1513,16 +1500,13 @@
       "description": ""
     },
     "flags.midi-qol.damage.reroll-kh": {
-      "name": "Damage Reroll (Keep Highest)",
-      "description": ""
+      "name": "Damage Reroll (Keep Highest)"
     },
     "flags.midi-qol.damage.reroll-kl": {
-      "name": "Damage Reroll (Keep Lowest)",
-      "description": ""
+      "name": "Damage Reroll (Keep Lowest)"
     },
     "flags.midi-qol.disadvantage.ability.all": {
-      "name": "Disadvantage (All Abilities)",
-      "description": ""
+      "name": "Disadvantage (All Abilities)"
     },
     "flags.midi-qol.disadvantage.ability.check.all": {
       "name": "Disadvantage (All Ability Checks)",
@@ -1641,12 +1625,10 @@
       "description": ""
     },
     "flags.midi-qol.disadvantage.concentration": {
-      "name": "Disadvantage (Concentration)",
-      "description": ""
+      "name": "Disadvantage (Concentration)"
     },
     "flags.midi-qol.disadvantage.deathSave": {
-      "name": "Disadvantage (Death Save)",
-      "description": ""
+      "name": "Disadvantage (Death Save)"
     },
     "flags.midi-qol.disadvantage.skill.acr": {
       "name": "Disadvantage (Acrobatics)",
@@ -1725,8 +1707,7 @@
       "description": ""
     },
     "flags.midi-qol.fail.ability.all": {
-      "name": "Fail (All Abilities)",
-      "description": ""
+      "name": "Fail (All Abilities)"
     },
     "flags.midi-qol.fail.ability.check.all": {
       "name": "Fail (All Ability Checks)",
@@ -1785,8 +1766,7 @@
       "description": ""
     },
     "flags.midi-qol.fail.all": {
-      "name": "Fail (All Actions)",
-      "description": ""
+      "name": "Fail (All Actions)"
     },
     "flags.midi-qol.fail.attack.all": {
       "name": "Fail (All Attacks)",
@@ -1937,16 +1917,13 @@
       "description": ""
     },
     "flags.midi-qol.fail.spell.material": {
-      "name": "Fail (Material Component)",
-      "description": ""
+      "name": "Fail (Material Component)"
     },
     "flags.midi-qol.fail.spell.somatic": {
-      "name": "Fail (Somatic Component)",
-      "description": ""
+      "name": "Fail (Somatic Component)"
     },
     "flags.midi-qol.fail.spell.vocal": {
-      "name": "Fail (Vocal Component)",
-      "description": ""
+      "name": "Fail (Vocal Component)"
     },
     "flags.midi-qol.grants.advantage.attack.all": {
       "name": "Grants Advantage (All Attacks)",
@@ -2185,8 +2162,7 @@
       "description": ""
     },
     "flags.midi-qol.grants.criticalThreshold": {
-      "name": "Critical Hit Threshold",
-      "description": ""
+      "name": "Critical Hit Threshold"
     },
     "flags.midi-qol.grants.disadvantage.attack.all": {
       "name": "Grants Disadvantage (All Attacks)",
@@ -2545,8 +2521,7 @@
       "description": "Ignore disadvantage imposed on ranged attacks by nearby enemies."
     },
     "flags.midi-qol.inMotion": {
-      "name": "In Motion",
-      "description": ""
+      "name": "In Motion"
     },
     "flags.midi-qol.long.all": {
       "name": "Long Range (All)",
@@ -2825,8 +2800,7 @@
       "description": ""
     },
     "flags.midi-qol.neverTarget": {
-      "name": "Never Target",
-      "description": ""
+      "name": "Never Target"
     },
     "flags.midi-qol.noCritical.all": {
       "name": "No Critical Hit (All)",
@@ -2862,14 +2836,6 @@
     },
     "flags.midi-qol.noCritical.util": {
       "name": "No Critical Hit (Utility)",
-      "description": ""
-    },
-    "flags.midi-qol.onUseMacroName": {
-      "name": "",
-      "description": ""
-    },
-    "flags.midi-qol.optional.NAME.macroToCall": {
-      "name": "",
       "description": ""
     },
     "flags.midi-qol.optional.NAME.acOnAttack": {
@@ -3009,16 +2975,13 @@
       "description": ""
     },
     "flags.midi-qol.optional.NAME.count": {
-      "name": "Optional Count",
-      "description": ""
+      "name": "Optional Count"
     },
     "flags.midi-qol.optional.NAME.countAlt": {
-      "name": "Optional Count Alternative",
-      "description": ""
+      "name": "Optional Count Alternative"
     },
     "flags.midi-qol.optional.NAME.criticalDamage": {
-      "name": "Optional Critical Damage",
-      "description": ""
+      "name": "Optional Critical Damage"
     },
     "flags.midi-qol.optional.NAME.damage.all": {
       "name": "Optional Damage (All)",
@@ -3061,8 +3024,7 @@
       "description": "Condition to force activation of bonus."
     },
     "flags.midi-qol.optional.NAME.label": {
-      "name": "Optional Label",
-      "description": ""
+      "name": "Optional Label"
     },
     "flags.midi-qol.optional.NAME.save.all": {
       "name": "Optional Save Bonus (All)",
@@ -3197,8 +3159,7 @@
       "description": ""
     },
     "flags.midi-qol.potentCantrip": {
-      "name": "Potent Cantrip",
-      "description": ""
+      "name": "Potent Cantrip"
     },
     "flags.midi-qol.range.all": {
       "name": "Range (All)",
@@ -3305,8 +3266,7 @@
       "description": "No damage on save."
     },
     "flags.midi-qol.sharpShooter": {
-      "name": "Sharp Shooter",
-      "description": ""
+      "name": "Sharp Shooter"
     },
     "flags.midi-qol.success.attack.all": {
       "name": "Success (All Attacks)",
@@ -3373,8 +3333,7 @@
       "description": "No damage on save, half damage on fail."
     },
     "flags.midi-qol.uncanny-dodge": {
-      "name": "Schivata Prodigiosa",
-      "description": ""
+      "name": "Schivata Prodigiosa"
     }
   }
 }

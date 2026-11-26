@@ -92,6 +92,9 @@ export const TRIGGER_TARGETS = ["targets", "hitTargets", "missedTargets", "faile
 export const TRIGGER_ROLL_AS = ["self", "firstTarget", "firstHitTarget", "firstMissedTarget", "firstSaveTarget", "firstFailedSaveTarget"] as const;
 export const TRIGGER_DISPOSITIONS = ["any", "enemy", "ally"] as const;
 
+/** The words for which creatures (the Targets line's, plural): enemies, allies, else creatures */
+export const nearWhoKey = (disposition: unknown) => `Activity.Target.who.${disposition === "enemy" ? "enemys" : disposition === "ally" ? "allys" : "creatures"}`;
+
 /** Whether the activity triggers another */
 export const hasTrigger = (props: TriggerProps | undefined) => !!props?.triggeredActivityId && props.triggeredActivityId !== "none";
 
@@ -101,7 +104,7 @@ export function triggerText(props: TriggerProps | undefined, t: CardText): strin
   const p = props!;
   const to = p.triggeredActivityTargets ?? "targets";
   const targets = to === "near"
-    ? t.say("Activity.Then.near", { max: String(p.triggeredActivityNearMax || "1"), who: t.say(`Activity.Then.who.${p.triggeredActivityNearDisposition ?? "any"}`), within: String(p.triggeredActivityNearWithin ?? 30) })
+    ? t.say("Activity.Then.near", { max: String(p.triggeredActivityNearMax || "1"), who: t.say(nearWhoKey(p.triggeredActivityNearDisposition)), within: String(p.triggeredActivityNearWithin ?? 30) })
     : t.say(`Activity.Then.to.${(TRIGGER_TARGETS as readonly string[]).includes(to) ? to : "targets"}`);
   const parts = [t.say("Activity.Then.use", { activity: t.activityName(p.triggeredActivityId!) ?? p.triggeredActivityId!, targets })];
   if (p.triggeredActivityRollAs && p.triggeredActivityRollAs !== "self") parts.push(t.say(`Activity.Then.rollAs.${p.triggeredActivityRollAs}`));

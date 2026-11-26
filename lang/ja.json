@@ -3,7 +3,6 @@
   "midi-qol.DamageImmunities.Hint": "上記のダメージボタンを使用したときや、ダメージの自動処理が行われるとき、対象の耐性・脆弱性・抵抗を確認し、適切なダメージを適用します。すべてのダメージ種別が対象となります。",
   "midi-qol.ShowItemDetails.Name": "チャットカードのアイテム詳細表示",
   "midi-qol.ShowItemDetails.Hint": "チャットにアイテムカードと、その説明を表示するかを設定します。説明をたたむか否かは、DnD5eのシステム設定に従います。",
-  "midi-qol.AutoRollAttack.Name": "アイテムをクリックしたとき、攻撃があれば自動的にロールする",
   "midi-qol.AutoFastForward.Name": "確認の自動スキップ",
   "midi-qol.AutoCheckHit.Name": "ヒット確認を自動で行う",
   "midi-qol.AutoCheckHit.Hint": "攻撃がヒットしたかどうかを判定し、設定した相手に結果を表示します。1つ以上の対象にヒットし、かつ自動ダメージロールが有効になっている場合は、ダメージがロールされます。オフにするとMidi-QOLは攻撃がヒットしたものとして処理を続けます。",
@@ -19,8 +18,6 @@
   "midi-qol.PlayerDamageCard.Name": "プレイヤーに専用のダメージカードを表示する",
   "midi-qol.PlayerDamageCard.Hint": "GMカードが表示される場合のみ表示が行われます。このカードはGMには表示されません。",
   "midi-qol.PlayerCardDamageDifferent.Name": "ロールしたダメージと適用されるダメージが一致しない場合にのみ、プレイヤー用のダメージカードを表示する",
-  "midi-qol.AddChatDamageButtons.Name": "チャットメッセージにダメージボタンを追加する",
-  "midi-qol.AutoRollDamage.Name": "自動ダメージロール",
   "midi-qol.AutoCheckSaves.Name": "自動セーヴロール",
   "midi-qol.AutoCheckSaves.Hint": "セーヴが求められたとき、自動的にこれを行います。オフにした場合、すべての対象がセーヴに失敗したとみします。",
   "midi-qol.AutoRemoveTargets.Name": "ターン終了時にターゲットを外す",
@@ -287,8 +284,6 @@
   "midi-qol.ApplyEffects": "アクティブ効果を適用",
   "midi-qol.spell-damage": "呪文ダメージ",
   "midi-qol.RemoveButtons.Name": "ロール後はボタンを隠す",
-  "midi-qol.ConcentrationAutomation.Name": "精神集中の自動化を有効にする",
-  "midi-qol.ConcentrationAutomation.Hint": "Midi-QOLを介して集中状態を管理します。自動セーヴを有効にする必要があります。有効化すると、CUBによる集中管理が無効化されます",
   "midi-qol.SingleConcentrationRoll.Name": "集中判定は一度だけ",
   "midi-qol.SingleConcentrationRoll.Hint": "有効にすると、攻撃が「通常ダメージ＋セーヴ＋その他の式 / 代替ダメージ」などの複合ダメージを与える場合、精神集中判定を一度だけ行うようになります。",
   "midi-qol.TempHPDamageConcentrationCheck.Name": "一時的hp減少時の集中判定",
@@ -383,16 +378,11 @@
   "midi-qol.DamageCardAll": "すべて",
   "midi-qol.StatsTitle": "ロールの統計",
   "midi-qol.RollStats": "統計",
-  "midi-qol.RollStatsConfig": "統計設定",
   "midi-qol.RemoveStats": "すべての統計を削除：",
   "midi-qol.ClearStats": "すべての統計情報をクリア",
   "midi-qol.EndSession": "セッション統計をクリア",
   "midi-qol.KeepRollStats.Name": "ロールの統計を記録",
   "midi-qol.KeepRollStats.Hint": "アクターの攻撃とダメージのロールデータを記録します。",
-  "midi-qol.SaveStatsEvery.Name": "統計の保存頻度",
-  "midi-qol.SaveStatsEvery.Hint": "n回のロールごとに統計の保存を行います。各攻撃とダメージがロールにカウントされます。推奨は10～20、もしくはそれ以上です。",
-  "midi-qol.PlayerStatsOnly.Name": "プレイヤー統計のみ",
-  "midi-qol.PlayerStatsOnly.Hint": "保存される統計はプレイヤーが所有するアクターのみになります。",
   "midi-qol.ShowStats": "統計ウィンドウの表示",
   "midi-qol.DefaultSaveMult.Name": "標準のセーヴィング・スロー倍率",
   "midi-qol.DefaultSaveMult.Hint": "セーヴを伴う攻撃おいて、その成功時に元のダメージにかかる基本の減少倍率を指定します。デフォルトは0.5で、つまりセーヴ成功時は半減ダメージとなります。変更はこれら倍率の仕組みについて理解のうえで行ってください。",
@@ -738,8 +728,6 @@
   "midi-qol.AutoRemoveInstantaneousTemplate.Name": "瞬間テンプレートを自動削除",
   "midi-qol.AutoRemoveInstantaneousTemplate.Hint": "持続時間：瞬間のアイテムによって配置されたテンプレートはアイテムロール終了後に削除されます",
   "midi-qol.ConfirmAmmunition.Name": "攻撃ロール時に矢弾の選択を確認",
-  "midi-qol.ActivityNamePrefix.Name": "用途接頭辞",
-  "midi-qol.ActivityNamePrefix.Hint": "midi-qolの用途名に「Midi」という接頭辞を付けます。変更には再読み込みが必要です",
   "midi-qol.AoETargetTypeOptions": {
     "any": "すべて",
     "ally": "味方",
@@ -1403,8 +1391,7 @@
       "description": "system.traits.dm フィールド（負の値で）を使用してください。"
     },
     "flags.midi-qol.OverTime": {
-      "name": "Over Time Effects",
-      "description": ""
+      "name": "Over Time Effects"
     },
     "flags.midi-qol.advantage.concentration": {
       "name": "有利：集中セーヴ",
@@ -1531,16 +1518,13 @@
       "description": ""
     },
     "flags.midi-qol.damage.reroll-kh": {
-      "name": "ダメージ再ロール（高い方を採用）",
-      "description": ""
+      "name": "ダメージ再ロール（高い方を採用）"
     },
     "flags.midi-qol.damage.reroll-kl": {
-      "name": "ダメージ再ロール（低い方を採用）",
-      "description": ""
+      "name": "ダメージ再ロール（低い方を採用）"
     },
     "flags.midi-qol.disadvantage.ability.all": {
-      "name": "不利：すべての能力",
-      "description": ""
+      "name": "不利：すべての能力"
     },
     "flags.midi-qol.disadvantage.ability.check.all": {
       "name": "不利：すべての能力値判定",
@@ -1659,12 +1643,10 @@
       "description": ""
     },
     "flags.midi-qol.disadvantage.concentration": {
-      "name": "不利：集中セーヴ",
-      "description": ""
+      "name": "不利：集中セーヴ"
     },
     "flags.midi-qol.disadvantage.deathSave": {
-      "name": "不利：死亡セーヴ",
-      "description": ""
+      "name": "不利：死亡セーヴ"
     },
     "flags.midi-qol.disadvantage.skill.acr": {
       "name": "不利：〈軽業〉",
@@ -1743,8 +1725,7 @@
       "description": ""
     },
     "flags.midi-qol.fail.ability.all": {
-      "name": "失敗：すべての能力",
-      "description": ""
+      "name": "失敗：すべての能力"
     },
     "flags.midi-qol.fail.ability.check.all": {
       "name": "失敗：すべての能力値判定",
@@ -1803,8 +1784,7 @@
       "description": ""
     },
     "flags.midi-qol.fail.all": {
-      "name": "失敗：すべてのアクション",
-      "description": ""
+      "name": "失敗：すべてのアクション"
     },
     "flags.midi-qol.fail.attack.all": {
       "name": "失敗：すべての攻撃",
@@ -1955,16 +1935,13 @@
       "description": ""
     },
     "flags.midi-qol.fail.spell.material": {
-      "name": "失敗：物質要素",
-      "description": ""
+      "name": "失敗：物質要素"
     },
     "flags.midi-qol.fail.spell.somatic": {
-      "name": "失敗：動作要素",
-      "description": ""
+      "name": "失敗：動作要素"
     },
     "flags.midi-qol.fail.spell.vocal": {
-      "name": "失敗：音声要素",
-      "description": ""
+      "name": "失敗：音声要素"
     },
     "flags.midi-qol.grants.advantage.attack.all": {
       "name": "付与　有利：全ての攻撃",
@@ -2203,8 +2180,7 @@
       "description": ""
     },
     "flags.midi-qol.grants.criticalThreshold": {
-      "name": "クリティカル・ヒット閾値",
-      "description": ""
+      "name": "クリティカル・ヒット閾値"
     },
     "flags.midi-qol.grants.disadvantage.attack.all": {
       "name": "付与　不利：全ての攻撃",
@@ -2563,8 +2539,7 @@
       "description": "敵に隣接していることで起きる遠隔攻撃の不利を無視"
     },
     "flags.midi-qol.inMotion": {
-      "name": "In Motion",
-      "description": ""
+      "name": "In Motion"
     },
     "flags.midi-qol.long.all": {
       "name": "長距離射程：すべて",
@@ -2843,8 +2818,7 @@
       "description": ""
     },
     "flags.midi-qol.neverTarget": {
-      "name": "目標にしない",
-      "description": ""
+      "name": "目標にしない"
     },
     "flags.midi-qol.noCritical.all": {
       "name": "クリティカル・ヒット無効：すべて",
@@ -2880,14 +2854,6 @@
     },
     "flags.midi-qol.noCritical.util": {
       "name": "クリティカル・ヒット無効：その他",
-      "description": ""
-    },
-    "flags.midi-qol.onUseMacroName": {
-      "name": "",
-      "description": ""
-    },
-    "flags.midi-qol.optional.NAME.macroToCall": {
-      "name": "",
       "description": ""
     },
     "flags.midi-qol.optional.NAME.acOnAttack": {
@@ -3027,16 +2993,13 @@
       "description": ""
     },
     "flags.midi-qol.optional.NAME.count": {
-      "name": "オプションカウント",
-      "description": ""
+      "name": "オプションカウント"
     },
     "flags.midi-qol.optional.NAME.countAlt": {
-      "name": "オプションカウント　オルタナティブ",
-      "description": ""
+      "name": "オプションカウント　オルタナティブ"
     },
     "flags.midi-qol.optional.NAME.criticalDamage": {
-      "name": "オプションクリティカルダメージ",
-      "description": ""
+      "name": "オプションクリティカルダメージ"
     },
     "flags.midi-qol.optional.NAME.damage.all": {
       "name": "オプションダメージ：すべて",
@@ -3079,8 +3042,7 @@
       "description": "ボーナスを強制起動させる条件の指定"
     },
     "flags.midi-qol.optional.NAME.label": {
-      "name": "オプションラベル",
-      "description": ""
+      "name": "オプションラベル"
     },
     "flags.midi-qol.optional.NAME.save.all": {
       "name": "オプションセーヴボーナス：すべて",
@@ -3215,8 +3177,7 @@
       "description": ""
     },
     "flags.midi-qol.potentCantrip": {
-      "name": "初級呪文強化",
-      "description": ""
+      "name": "初級呪文強化"
     },
     "flags.midi-qol.range.all": {
       "name": "射程：すべて",
@@ -3323,8 +3284,7 @@
       "description": "セーヴ成功でダメージ無し。"
     },
     "flags.midi-qol.sharpShooter": {
-      "name": "射撃の名手",
-      "description": ""
+      "name": "射撃の名手"
     },
     "flags.midi-qol.success.attack.all": {
       "name": "成功：すべての攻撃",
