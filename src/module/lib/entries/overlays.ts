@@ -61,13 +61,24 @@ function syncRules(identifier: string) {
   else ruleOffs.delete(identifier);
 }
 
+/**
+ * Which overlay stands when several have an item's identifier: the world's own overlay items, then compendiums the GM
+ * marked as overlays (`world:<pack>`), then modules', then midi's; the same rank in the order registered
+ */
+function overlayRank(source: string): number {
+  if (source === "world") return 4;
+  if (source.startsWith("world:")) return 3;
+  return source === MODULE_ID ? 1 : 2;
+}
+
 /** An overlay item as a rule, and its data part kept for the items it overlays */
 export function registerOverlay(item: Item.Implementation, source: string): (() => void) | undefined {
   const rule = ruleFromOverlay(item);
   if (!rule) return undefined;
   const list = overlaysByIdentifier.get(rule.identifier) ?? [];
   const entry = { source, item };
-  overlaysByIdentifier.set(rule.identifier, [...list.filter(o => o.item.uuid !== item.uuid), entry]);
+  // Kept in rank order (stable): the last is the one that stands (overlayFor, and the rules registry's last)
+  overlaysByIdentifier.set(rule.identifier, [...list.filter(o => o.item.uuid !== item.uuid), entry].sort((a, b) => overlayRank(a.source) - overlayRank(b.source)));
   syncRules(rule.identifier);
   const unregister = () => {
     const rest = (overlaysByIdentifier.get(rule.identifier) ?? []).filter(o => o !== entry);
@@ -227,11 +238,13 @@ export async function applyOverlayDataToWorld(): Promise<void> {
   for (const actor of game.actors ?? []) for (const item of actor.items) await applyOverlayData(item).catch(err => console.warn("midi-qol | overlay data", err));
 }
 
-/** The world's own overlays (world items flagged midi-qol.overlay), as source "world" */
-/** The overlays in a compendium, registered as rules of `source` (midi's sample pack at ready) */
+/**
+ * The overlays in a compendium, registered as rules of `source` (a module's id; midi's own pack at ready), and their
+ * data parts brought to the world's items (the active GM, once registrations settle)
+ */
 export async function registerOverlayPack(packId: string, source: string): Promise<number> {
   const pack = game.packs?.get(packId);
-  if (!pack) return 0;
+  if (!pack || pack.documentName !== "Item") return 0;
   const index = await pack.getIndex({ fields: ["flags.midi-qol.overlay"] });
   let count = 0;
   for (const entry of index) {
@@ -239,7 +252,88 @@ export async function registerOverlayPack(packId: string, source: string): Promi
     const item = await pack.getDocument(entry._id) as Item.Implementation | null;
     if (item && registerOverlay(item, source)) count++;
   }
+  if (count) applyToWorldSoon();
   return count;
+}
+
+/** A compendium's overlays no longer registered (the GM unmarked it) */
+export function unregisterOverlayPack(packId: string): number {
+  const prefix = `Compendium.${packId}.`;
+  const offs = [...registeredByUuid.entries()].filter(([uuid]) => uuid.startsWith(prefix)).map(([, off]) => off);
+  for (const off of offs) off();
+  return offs.length;
+}
+
+/* Overlay compendiums: a module's, marked in its manifest (the pack's `flags.midi-qol.overlays: true`, midi's own
+   included), and those the GM marks (the compendium's right-click menu: world setting OverlayPacks) */
+
+export const OVERLAY_PACKS_SETTING = "OverlayPacks";
+/** The compendiums registered because the GM marked them (the setting changes only these, never a module's) */
+const gmPacks = new Set<string>();
+
+const markedPacks = (): string[] => {
+  try {
+    const value = game.settings?.get(MODULE_ID, OVERLAY_PACKS_SETTING as never) as unknown;
+    return Array.isArray(value) ? value.filter((id): id is string => typeof id === "string") : [];
+  } catch { return []; }
+};
+const manifestMarked = (pack: CompendiumCollection.Any) => (pack.metadata as { flags?: Record<string, { overlays?: unknown }> }).flags?.[MODULE_ID]?.overlays === true;
+/** Who an overlay compendium's overlays are from: its module (by manifest), else the GM's (`world:<pack>`) */
+const packSource = (pack: CompendiumCollection.Any) => manifestMarked(pack) ? String((pack.metadata as { packageName?: string }).packageName ?? MODULE_ID) : `world:${pack.collection}`;
+
+/** Every overlay compendium registered: those marked in a manifest, then the GM's */
+export async function registerOverlayPacks(): Promise<number> {
+  let count = 0;
+  const marked = new Set(markedPacks());
+  for (const pack of game.packs ?? []) {
+    if (pack.documentName !== "Item" || !(manifestMarked(pack) || marked.has(pack.collection))) continue;
+    if (!manifestMarked(pack)) gmPacks.add(pack.collection);
+    count += await registerOverlayPack(pack.collection, packSource(pack)).catch(err => { console.warn(`midi-qol | overlays in ${pack.collection}`, err); return 0; });
+  }
+  return count;
+}
+
+export function registerOverlayPackSetting(): void {
+  game.settings?.register(MODULE_ID, OVERLAY_PACKS_SETTING as never, {
+    scope: "world", config: false, type: Array, default: [],
+    // Every client: the compendiums marked or unmarked since, registered or not
+    onChange: (value: unknown) => {
+      const now = new Set(Array.isArray(value) ? value as string[] : []);
+      for (const pack of game.packs ?? []) {
+        if (pack.documentName !== "Item" || manifestMarked(pack)) continue;
+        if (now.has(pack.collection) && !gmPacks.has(pack.collection)) {
+          gmPacks.add(pack.collection);
+          void registerOverlayPack(pack.collection, packSource(pack));
+        } else if (!now.has(pack.collection) && gmPacks.has(pack.collection)) {
+          gmPacks.delete(pack.collection);
+          unregisterOverlayPack(pack.collection);
+        }
+      }
+    }
+  } as never);
+}
+
+/** The GM marks an Item compendium as holding overlays, or not (a manifest's mark can't be changed) */
+export function watchOverlayPackMenu(): void {
+  Hooks.on("getCompendiumContextOptions" as never, ((_app: unknown, options: { label: string, icon: string, visible?: (li: HTMLElement) => boolean, onClick: (event: Event, li: HTMLElement) => unknown }[]) => {
+    const packOf = (li: HTMLElement) => game.packs?.get(li.dataset.pack ?? "");
+    const markable = (li: HTMLElement) => { const pack = packOf(li); return !!game.user?.isGM && pack?.documentName === "Item" && !manifestMarked(pack); };
+    const set = (li: HTMLElement, on: boolean) => {
+      const id = packOf(li)?.collection;
+      if (!id) return;
+      const list = markedPacks().filter(p => p !== id);
+      return game.settings?.set(MODULE_ID, OVERLAY_PACKS_SETTING as never, (on ? [...list, id] : list) as never);
+    };
+    options.push({
+      label: "midi-qol.Overlay.MarkPack", icon: "fa-solid fa-layer-group",
+      visible: li => markable(li) && !markedPacks().includes(packOf(li)!.collection),
+      onClick: (_event, li) => set(li, true)
+    }, {
+      label: "midi-qol.Overlay.UnmarkPack", icon: "fa-solid fa-layer-group",
+      visible: li => markable(li) && markedPacks().includes(packOf(li)!.collection),
+      onClick: (_event, li) => set(li, false)
+    });
+  }) as never);
 }
 
 export function registerWorldOverlays(): number {

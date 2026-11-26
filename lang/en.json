@@ -1528,6 +1528,8 @@
   "midi-qol.PresentationReducedMotion.Name": "Reduced motion",
   "midi-qol.PresentationReducedMotion.Hint": "Asks animation presenters for calmer animations (no screen shake or flashing), where they support it.",
   "midi-qol.Overlay.Save": "Save as overlay",
+  "midi-qol.Overlay.MarkPack": "Holds midi overlays",
+  "midi-qol.Overlay.UnmarkPack": "Doesn't hold midi overlays",
   "midi-qol.Overlay.NoBase": "This item has no base item (compendium source) to compare with.",
   "midi-qol.Overlay.NoIdentifier": "This item has no identifier for an overlay to match.",
   "midi-qol.Overlay.NoDifference": "No difference from the base item to save.",

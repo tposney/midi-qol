@@ -80,7 +80,7 @@ import { registerEconomyActions } from "./module/lib/entries/economyActions.js";
 import { registerServiceEvents } from "./module/lib/entries/serviceEvents.js";
 import { registerRedirection } from "./module/lib/entries/redirection.js";
 import { rulesApi } from "./module/lib/entries/rules.js";
-import { applyOverlayData, applyOverlayDataToWorld, registerOverlay, registerOverlayPack, registerWorldOverlays, saveAsOverlay, watchOverlayAuthoring, watchOverlayData, automationReport } from "./module/lib/entries/overlays.js";
+import { applyOverlayData, applyOverlayDataToWorld, registerOverlay, registerOverlayPack, registerOverlayPacks, registerOverlayPackSetting, registerWorldOverlays, saveAsOverlay, unregisterOverlayPack, watchOverlayAuthoring, watchOverlayData, watchOverlayPackMenu, automationReport } from "./module/lib/entries/overlays.js";
 import { definePresentersService } from "./module/services/presenters/service.js";
 import { cueForViewer, registerCues } from "./module/lib/cues.js";
 import { registerActivityActions, takeAction } from "./module/lib/entries/activityActions.js";
@@ -413,7 +413,7 @@ Object.assign(globalThis.MidiQOL, {
   },
   steps: stepsApi,
   entries: { ...entriesApi, takeAction },
-  rules: { ...rulesApi, registerOverlays: registerOverlayPack, registerOverlay, applyOverlayData, saveAsOverlay, automation: automationReport },
+  rules: { ...rulesApi, registerOverlays: registerOverlayPack, unregisterOverlays: unregisterOverlayPack, registerOverlay, applyOverlayData, saveAsOverlay, automation: automationReport },
   requests: requestsApi,
   damageCalculation: { get: getDamageCalculationStep, register: registerDamageCalculationStep, remove: removeDamageCalculationStep, order: damageCalculationOrder },
   UNMEASURABLE_DISTANCE,
@@ -804,6 +804,7 @@ Hooks.once('init', async function () {
   registerClickToAttackSetting();
   registerRemindersSetting();
   registerLayoutSettings();
+  registerOverlayPackSetting();
   setupUserSettings();
   registerChecklistSetting();
   registerTurnHudConfig();
@@ -1238,10 +1239,11 @@ Hooks.once('ready', function () {
       if (!workflow.readOnly && !workflow.aborted && workflow.executingStates > 0 && workflow.activity?.uuid === activityUuid) return true;
     return false;
   } });
-  // M11: midi's overlays (sample items flagged midi-qol.overlay) as rules, on every client
-  // and the world's own (world items flagged midi-qol.overlay); then their data parts on the world's actors (active GM)
+  // M11: the overlay compendiums (midi's and modules' by their manifest, the GM's marked ones) as rules, on every
+  // client, and the world's own (world items flagged midi-qol.overlay); then their data parts on the world's actors
   watchOverlayData();
-  void registerOverlayPack("midi-qol.midiqol-overlays", "midi-qol")
+  watchOverlayPackMenu();
+  void registerOverlayPacks()
     .then(() => { registerWorldOverlays(); return applyOverlayDataToWorld(); })
     .catch(err => console.warn("midi-qol | overlays", err));
 

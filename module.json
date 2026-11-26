@@ -95,7 +95,8 @@
       "module": "world",
       "type": "Item",
       "system": "dnd5e",
-      "lang": []
+      "lang": [],
+      "flags": { "midi-qol": { "overlays": true } }
     },
     {
       "name": "midiqol-active-effects",
