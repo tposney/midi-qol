@@ -13,6 +13,7 @@ In development, not released. Listed here: barriers, creatures inside others, en
 * Hands: a hand shows its weapon's ammunition left (none: marked); a held weapon thrown leaves the hand until picked up (click its slot; in combat the object interaction); a combat's end gives thrown weapons back.
 * Hands and Argon: Argon's weapon sets are midi's hands (its first three sets); a set chosen in Argon is midi's switch (with its cost), a slot filled in Argon is in the hands.
 * Blessed Healer (sample item) is an entry, no macro. Entries: a heal `to: "self"` at a use's events heals the bearer at once (it did nothing); tag `use.healedOthers` and the ready-made condition *it restores hit points to a creature other than you*.
+* Entries: damage `to: "self"` at a use's events damages the bearer at once, through midi's damage (it did nothing).
 * A creature inside another (swallowed, engulfed): an effect flagged `flags.midi-qol.inside` puts its bearer in the space of the creature its origin names, carried by that creature's moves and teleports, put beside it when the effect ends.
 * Entries: `move` with `place: "inside" | "beside"`; action `tally` (a running total for the turn or round, read as `tallies.<name>`); condition helper `inside(a, b)`.
 * Entries: removing a condition ends it wherever it comes from (`whole: true` ends the effect instead); choice kind `conditions` (among those the target has).

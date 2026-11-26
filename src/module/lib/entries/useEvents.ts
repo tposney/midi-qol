@@ -1,5 +1,6 @@
 import { register } from "../../api/services.js";
 import { unTimedExecuteAsGM } from "../../GMAction.js";
+import { applyTokenDamage } from "../../utils.js";
 import { Workflow } from "../../Workflow.js";
 import type { Activity } from "../../../globals.js";
 import type { RollKind, RollModifier, RollModifierEffect, RollQuery } from "../../services/rollModifiers/service.js";
@@ -238,6 +239,18 @@ async function healNow(run: ActionRun, formula: string, actor = run.context.targ
   else await unTimedExecuteAsGM("updateActor", { actorUuid: actor.uuid, updates });
 }
 
+/** Damage to the entry's bearer itself (a feature that costs its user hit points): applied at once, through midi's damage */
+async function damageSelfNow(run: ActionRun, formula: string, actor: Actor.Implementation | undefined, scene: Scene.Implementation | null | undefined) {
+  const token = (actor?.getActiveTokens(false, true) as TokenDocument.Implementation[] | undefined)?.find(t => !scene || t.parent === scene)
+    ?? actor?.getActiveTokens(false, true)[0] as TokenDocument.Implementation | undefined;
+  if (!token) return;
+  const amount = Math.max(0, Math.floor(await rolled(formula, run.conditionData)));
+  if (!amount) return;
+  const type = typeof run.action.type === "string" ? run.action.type : "none";
+  await applyTokenDamage([{ type, value: amount, properties: new Set<string>() }], amount, new Set([token]), undefined, new Set(),
+    { forceApply: true, label: "defaultDamage", existingDamage: [], superSavers: new Set(), semiSuperSavers: new Set() });
+}
+
 export async function useDamageAction(run: ActionRun, healing: boolean) {
   const workflow = run.context.workflow;
   if (!workflow) return;
@@ -246,6 +259,8 @@ export async function useDamageAction(run: ActionRun, healing: boolean) {
   if (healing && run.context.target && AFTER_DAMAGE.has(run.eventId)) return healNow(run, formula);
   // Healing the entry's bearer itself (Blessed Healer): at once, not part of the use's damage
   if (healing && run.action.to === "self") return healNow(run, formula, (run.found.actor ?? workflow.actor) as Actor.Implementation | undefined);
+  if (!healing && run.action.to === "self" && formula !== "activity")
+    return damageSelfNow(run, formula, (run.found.actor ?? workflow.actor) as Actor.Implementation | undefined, workflow.token?.document?.parent as Scene.Implementation | null | undefined);
   const targets = targetDocumentsFor(run.action.to, run);
   if (targets && !targets.length) {
     console.warn(`midi-qol | entry ${run.found.entry.id}: damage at ${run.eventId} goes to the use's targets ("to": "target")`);
