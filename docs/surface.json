@@ -683,6 +683,7 @@
     "droppedToZero",
     "ended",
     "entersReach",
+    "entersSpace",
     "healing",
     "hit",
     "leavesReach",

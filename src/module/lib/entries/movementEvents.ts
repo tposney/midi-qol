@@ -2,7 +2,8 @@ import { tokenFor } from "../tokenResolver.js";
 import { doReactions } from "../../utils.js";
 import { forcedMovement, type Point } from "../../services/forcedMovement/service.js";
 import { isForcedAction } from "../../services/economy/movement.js";
-import { placeBeside, placeInside } from "../../services/interactions/carried.js";
+import { insideOf, placeBeside, placeInside } from "../../services/interactions/carried.js";
+import { spacesEntered, type Rect } from "../spaceEntry.js";
 import { collectEntries, registerAction, registerEvent, runEvent, type ActionRun, type EventContext } from "./engine.js";
 
 /*
@@ -11,6 +12,9 @@ import { collectEntries, registerAction, registerEvent, runEvent, type ActionRun
  *   a running combat (not forced movement, not a teleport), with the mover as event.creature (its token
  *   event.creatureToken, also the event's target). The move is split at that space (services/economy/opportunity.ts),
  *   so the entry's actions happen with the mover there (Polearm Master's Reactive Strike, Sentinel).
+ * - entersSpace: raised for a creature after its own move (not forced, not a teleport) for each creature whose space
+ *   the move entered for the first time (lib/spaceEntry.ts), in the order it reached them, the entered creature as
+ *   event.creature (event.creatureToken, the event's target); before `moved` (the Gelatinous Cube's Engulf).
  * - moved: raised about a creature after any move of it (event.forced for forced movement and teleports; near entries
  *   hear it): event.distance, event.cost, event.action, event.from, event.to. In a running combat its reaction items
  *   with `reaction === "isMoved"` are then offered (the reactionmoved trigger, the same event as `event`).
@@ -26,6 +30,7 @@ import { collectEntries, registerAction, registerEvent, runEvent, type ActionRun
 export const ENTERS_REACH = "entersReach";
 export const LEAVES_REACH = "leavesReach";
 export const MOVED = "moved";
+export const ENTERS_SPACE = "entersSpace";
 
 /** Whether the actor has its own entries for the event (not near ones: the reach events are about a particular bearer) */
 export function hasOwnEntries(eventId: string, actor: Actor.Implementation): boolean {
@@ -126,8 +131,24 @@ async function opportunityAttackAction(run: ActionRun) {
   return { success: !!result?.name };
 }
 
-/** After any move: `moved` about the creature, then its isMoved reactions, on the moving user's client */
-function onMoveToken(token: TokenDocument.Implementation, movement: { method?: string, passed?: { distance?: number, cost?: number, waypoints?: readonly { action?: string }[] }, origin?: Point, destination?: Point }, user: User.Implementation | undefined) {
+type MoveWaypoint = { x?: number, y?: number, action?: string };
+
+/** The tokens whose spaces the move entered, in order (not those inside the mover: they go with it) */
+function enteredTokens(token: TokenDocument.Implementation, origin: { x?: number, y?: number, width?: number, height?: number } | undefined, path: readonly MoveWaypoint[]): TokenDocument.Implementation[] {
+  const scene = token.parent;
+  const size = canvas?.grid?.size ?? scene?.grid.size ?? 100;
+  if (!scene || typeof origin?.x !== "number" || typeof origin.y !== "number") return [];
+  const rectOf = (t: { x: number, y: number, width: number, height: number }): Rect => ({ x: t.x, y: t.y, width: t.width * size, height: t.height * size });
+  const start = rectOf({ x: origin.x, y: origin.y, width: origin.width ?? token.width, height: origin.height ?? token.height });
+  const carried = new Set(insideOf(token));
+  const others = scene.tokens.filter(t => t !== token && !t.hidden && !!t.actor && !carried.has(t))
+    .map(t => ({ key: t, rect: rectOf({ x: t._source.x, y: t._source.y, width: t.width, height: t.height }) }));
+  const points = path.filter((w): w is MoveWaypoint & { x: number, y: number } => typeof w.x === "number" && typeof w.y === "number");
+  return spacesEntered(start, points, others, size);
+}
+
+/** After any move: `entersSpace` for each creature its own move entered, `moved` about it, then its isMoved reactions, on the moving user's client */
+function onMoveToken(token: TokenDocument.Implementation, movement: { method?: string, passed?: { distance?: number, cost?: number, waypoints?: readonly MoveWaypoint[] }, origin?: Point & { width?: number, height?: number }, destination?: Point }, user: User.Implementation | undefined) {
   if (!user?.isSelf || !token.actor || movement.method === "undo") return;
   const action = movement.passed?.waypoints?.at(-1)?.action ?? "walk";
   const event = {
@@ -136,6 +157,12 @@ function onMoveToken(token: TokenDocument.Implementation, movement: { method?: s
   };
   const context: EventContext = { actor: token.actor, target: token, event };
   void (async () => {
+    if (!event.forced && token.actor && collectEntries(ENTERS_SPACE, { actor: token.actor } as EventContext).length) {
+      for (const entered of enteredTokens(token, movement.origin, movement.passed?.waypoints ?? [])) {
+        if (!entered.actor) continue;
+        await runEvent(ENTERS_SPACE, { actor: token.actor, target: entered, event: { creature: entered.actor, creatureToken: entered, bearerToken: token, action } });
+      }
+    }
     if (collectEntries(MOVED, context).length) await runEvent(MOVED, context);
     // Reactions are turn-timed: in a running combat only
     if ((token.combatant as { combat?: { started?: boolean } } | null)?.combat?.started && token.uuid)
@@ -147,6 +174,7 @@ export function registerMovementEvents() {
   registerEvent(ENTERS_REACH, { label: "A creature enters the bearer's reach (its own movement, in combat)" });
   registerEvent(LEAVES_REACH, { label: "A creature leaves the bearer's reach (its own movement, in combat)" });
   registerEvent(MOVED, { label: "The creature has moved (event.forced for forced movement)" });
+  registerEvent(ENTERS_SPACE, { label: "The creature's own move entered another creature's space (once each per move)" });
   registerAction("move", moveAction);
   registerAction("opportunityAttack", opportunityAttackAction);
   Hooks.on("moveToken", (token, movement, _operation, user) => onMoveToken(token, movement as never, user as User.Implementation | undefined));

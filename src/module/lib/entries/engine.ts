@@ -936,8 +936,10 @@ export async function acceptCasting(offers: readonly CastingOffer[], context: Ev
 /** What an offer at a use's event is about, in words for its prompt: the roll just made (its total and dice) */
 function offerDetail(eventId: string, context: EventContext): string | undefined {
   const workflow = context.workflow;
-  if (!workflow) return undefined;
   const say = (key: string, data: Record<string, string>) => game.i18n?.format(`midi-qol.Entries.Offer.${key}`, data) ?? "";
+  // An event about another creature (a movement event's): which one
+  const creature = (context.event as { creatureToken?: { name?: string | null } } | undefined)?.creatureToken;
+  if (!workflow) return creature?.name ? say("Creature", { name: creature.name }) : undefined;
   const dice = (roll: Roll) => roll.dice.map(die => `${die.number}d${die.faces}: ${die.results.filter(r => r.active).map(r => r.result).join(", ")}`).join("; ");
   if (eventId === "use.damageRolled" || eventId === "use.damageRoll") {
     const rolls = (workflow.damageRolls ?? []) as Roll[];

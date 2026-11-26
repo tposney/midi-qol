@@ -1,0 +1,57 @@
+{
+  "name": "Ooze Cube (overlay)",
+  "type": "feat",
+  "img": "icons/creatures/slimes/slime-movement-pseudopods-green.webp",
+  "_id": "mqeOvOozeCube000",
+  "_key": "!items!mqeOvOozeCube000",
+  "folder": "mqeFolderMonster",
+  "ownership": {
+    "default": 0
+  },
+  "system": {
+    "description": {
+      "value": "<p><em>Overlay (midi-qol):</em> the Monster Manual's Ooze Cube (Gelatinous Cube): it fills its space, and creatures move through each other's spaces (the Passable status, one of dnd5e's statuses that never block movement); its Engulf overlay asks, for each creature whose space its move enters, whether it engulfs it. Not covered yet: its room (one Large or four Medium creatures), a creature entering its space (subjected to Engulf, with Disadvantage), pulling a creature out.</p>",
+      "chatFlavor": ""
+    },
+    "identifier": "ooze-cube-overlay",
+    "source": {
+      "rules": "2024"
+    },
+    "activities": {}
+  },
+  "effects": [
+    {
+      "_id": "mqeOozeMoveThru0",
+      "_key": "!items.effects!mqeOvOozeCube000.mqeOozeMoveThru0",
+      "name": "Passable",
+      "img": "icons/creatures/slimes/slime-movement-pseudopods-green.webp",
+      "type": "base",
+      "system": {
+        "changes": []
+      },
+      "disabled": false,
+      "transfer": true,
+      "statuses": [
+        "passable"
+      ],
+      "description": "<p>Other creatures' spaces don't stop this creature's movement, and its space doesn't stop theirs.</p>",
+      "flags": {}
+    }
+  ],
+  "flags": {
+    "midi-qol": {
+      "overlay": {
+        "identifier": "ooze-cube",
+        "rules": "2024",
+        "version": "2"
+      }
+    }
+  },
+  "_stats": {
+    "compendiumSource": null,
+    "duplicateSource": null,
+    "coreVersion": "14.360",
+    "systemId": "dnd5e",
+    "systemVersion": "6.1.0"
+  }
+}

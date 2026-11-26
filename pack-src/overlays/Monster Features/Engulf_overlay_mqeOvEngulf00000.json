@@ -10,7 +10,7 @@
   },
   "system": {
     "description": {
-      "value": "<p><em>Overlay (midi-qol):</em> the Monster Manual's Engulf (Gelatinous Cube, Shambling Mound). A creature that fails the save is inside the engulfer: its token sits in the engulfer's space and moves with it, and it takes the engulfing damage each turn (the Gelatinous Cube's at the start of its turns, 3d6 acid; the Shambling Mound's at the start of the engulfed creature's turns). The engulfed creature can take an action to escape (its card at the start of its turn): the Gelatinous Cube's Strength (Athletics) check against its DC, the Shambling Mound's grapple (Athletics or Acrobatics against its passive Athletics); on a success it comes out on the nearest free space. Not covered yet: the Gelatinous Cube engulfing as it moves through creatures (use the Save on them), and pulling a creature out of it from outside.</p>",
+      "value": "<p><em>Overlay (midi-qol):</em> the Monster Manual's Engulf (Gelatinous Cube, Shambling Mound). A creature that fails the save is inside the engulfer: its token sits in the engulfer's space and moves with it, and it takes the engulfing damage each turn (the Gelatinous Cube's at the start of its turns, 3d6 acid; the Shambling Mound's at the start of the engulfed creature's turns). The engulfed creature can take an action to escape (its card at the start of its turn): the Gelatinous Cube's Strength (Athletics) check against its DC, the Shambling Mound's grapple (Athletics or Acrobatics against its passive Athletics); on a success it comes out on the nearest free space. The Gelatinous Cube engulfs as it moves: when its move enters a creature's space, its owner is asked whether it engulfs that creature, which then makes the save (once per move); on a success it moves to a free space beside the cube. Not covered yet: its room for creatures (one Large or four Medium), a creature entering its space (Ooze Cube), pulling a creature out of it.</p>",
       "chatFlavor": ""
     },
     "identifier": "engulf-overlay",
@@ -310,7 +310,7 @@
       "overlay": {
         "identifier": "engulf",
         "rules": "2024",
-        "version": "3",
+        "version": "5",
         "changes": [
           {
             "key": "system.activities.Exfa4q7O4SvXjGt7.midiProperties.automationOnly",
@@ -371,6 +371,38 @@
           "byCreature": {
             "shambling-mound": "grapple"
           }
+        },
+        {
+          "key": "engulfByMoving",
+          "label": "Engulfs the creatures it moves through (asked as its move enters each one's space)",
+          "type": "checkbox",
+          "default": false,
+          "byCreature": {
+            "gelatinous-cube": true
+          }
+        }
+      ],
+      "entries": [
+        {
+          "id": "engulf-enter",
+          "on": "entersSpace",
+          "offer": "ask",
+          "label": "Engulf",
+          "description": "midi-qol.Overlay.Engulf.Offer",
+          "if": "config.engulfByMoving && !inside(event.creatureToken)",
+          "do": [
+            {
+              "save": "activity:5o0Bh8PQaojx5XMx",
+              "then": [
+                {
+                  "move": {
+                    "place": "beside",
+                    "from": "bearer"
+                  }
+                }
+              ]
+            }
+          ]
         }
       ]
     }

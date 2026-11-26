@@ -2332,8 +2332,12 @@ export function addMidiStatusEffects(statusEffects: typeof CONFIG.statusEffects 
       flags: { dae: { specialDuration: ["1Attack", "1Spell", "DamageDealt"] } }
     });
   }
-  // Inside another creature (services/interactions/carried.ts): its token's icon
-  for (const [id, img] of [["swallowed", "icons/svg/whale.svg"], ["engulfed", "icons/svg/acid.svg"]] as const) {
+  // Inside another creature (services/interactions/carried.ts): its token's icon. Passable: other creatures' spaces
+  // don't stop it and it doesn't stop them (the Gelatinous Cube's Ooze Cube). None of these block movement (dnd5e's
+  // never-block statuses: a creature inside doesn't block the one carrying it)
+  for (const [id, img] of [["swallowed", "icons/svg/whale.svg"], ["engulfed", "icons/svg/acid.svg"], ["passable", "icons/svg/door-exit.svg"]] as const) {
+    // @ts-expect-error no dnd5e-types
+    (CONFIG.DND5E.neverBlockStatuses as Set<string> | undefined)?.add(id);
     if (statusEffects.find(e => e._id === getStaticID(id))) continue;
     statusEffects.push({ id, _id: getStaticID(id), name: i18n(`midi-qol.Status.${id}`), img });
   }
