@@ -71,8 +71,16 @@ export function registerMidiActionSchemas() {
   setActionSchema("effect", { fields: [
     { path: "effect", label: "midi-qol.Entries.Field.effectMode", type: "select", options: ["apply", "remove"] },
     { path: "what", label: "midi-qol.Entries.Field.what", type: "effectRef" },
+    // Removing by what they are (lib/entries/effectFilter.ts): Dispel Magic, Remove Curse, Dispel Evil and Good
+    { path: "what.spell", label: "midi-qol.Entries.Field.filterSpell", type: "boolean" },
+    { path: "what.maxLevel", label: "midi-qol.Entries.Field.filterMaxLevel", type: "formula" },
+    { path: "what.check", label: "midi-qol.Entries.Field.filterCheck", type: "boolean" },
+    { path: "what.statuses", label: "midi-qol.Entries.Field.filterStatuses", type: "multiselect", options: { list: "statuses" } },
+    { path: "what.fromTypes", label: "midi-qol.Entries.Field.filterFromTypes", type: "multiselect", options: { list: "creatureTypes" } },
+    { path: "what.changes", label: "midi-qol.Entries.Field.filterChanges", type: "list" },
     TO(["self", "target", "event.creature", "origin", "anyone", "inside"])], initial: "apply" });
   setActionSchema("end", { fields: [{ path: "end", label: "midi-qol.Entries.Field.end", type: "boolean" }], initial: true });
+  setActionSchema("fails", { fields: [{ path: "fails", label: "midi-qol.Entries.Field.fails", type: "select", options: ["triggering", "use"] }], initial: "triggering" });
   setActionSchema("abort", { fields: [{ path: "abort", label: "midi-qol.Entries.Field.reason", type: "string" }] });
   setActionSchema("retarget", { fields: [
     { path: "retarget.to", label: "midi-qol.Entries.Field.to", type: "select", options: ["self", "bearer", "choose", "none"] },
@@ -85,11 +93,17 @@ export function registerMidiActionSchemas() {
   const BY: ActionField = { path: "by", label: "midi-qol.Entries.Field.by", type: "select", options: ["", "attacker", "bearer"] };
   setActionSchema("save", { fields: [
     { path: "save", label: "midi-qol.Entries.Field.save", type: "rollSpec" }, BY,
+    { path: "item", label: "midi-qol.Entries.Field.activityItem", type: "string" },
+    { path: "rollModifier", label: "midi-qol.Entries.Field.rollModifier", type: "select", options: ["", "advantage", "disadvantage"] },
+    TO(["self", "target", "taker", "inside", "event.creature"]),
     { path: "damage", label: "midi-qol.Entries.Field.damageOnFail", type: "formula" },
     { path: "type", label: "DND5E.DamageType", type: "select", options: { list: "damageTypes" } },
     { path: "onSave", label: "midi-qol.Entries.Field.onSave", type: "select", options: ["", "half", "none", "full"] },
     LABEL, { path: "flavor", label: "midi-qol.Entries.Field.flavor", type: "string" }], initial: "applying" });
-  setActionSchema("check", { fields: [{ path: "check", label: "midi-qol.Entries.Field.check", type: "rollSpec" }, BY, LABEL], initial: { ability: "str", dc: 10 } });
+  setActionSchema("check", { fields: [{ path: "check", label: "midi-qol.Entries.Field.check", type: "rollSpec" }, BY,
+    { path: "item", label: "midi-qol.Entries.Field.activityItem", type: "string" },
+    { path: "rollModifier", label: "midi-qol.Entries.Field.rollModifier", type: "select", options: ["", "advantage", "disadvantage"] },
+    TO(["self", "target", "taker", "inside", "event.creature"]), LABEL], initial: { ability: "str", dc: 10 } });
   // At a use's events, one of the item's activities used after the use (Trigger Activity's fields); on an effect's turn, an ActivityOverTime name
   setActionSchema("use", { fields: [{ path: "use", label: "midi-qol.Entries.Field.use", type: "activity" },
     { path: "to", label: "midi-qol.Entries.Field.useTo", type: "select", options: () => [{ value: "", label: say("midi-qol.EntryEditor.Default") },
@@ -104,7 +118,9 @@ export function registerMidiActionSchemas() {
     { path: "condition", label: "midi-qol.Entries.Field.useCondition", type: "condition" },
     { path: "chain", label: "midi-qol.Entries.Field.chain", type: "formula" },
     { path: "consume", label: "midi-qol.Entries.Field.useConsume", type: "tristate" },
-    { path: "configure", label: "midi-qol.Entries.Field.useConfigure", type: "tristate" }, LABEL] });
+    { path: "configure", label: "midi-qol.Entries.Field.useConfigure", type: "tristate" },
+    { path: "item", label: "midi-qol.Entries.Field.activityItem", type: "string" },
+    { path: "rollModifier", label: "midi-qol.Entries.Field.rollModifier", type: "select", options: ["", "advantage", "disadvantage"] }, LABEL] });
   // A level (the target's cover from the use) or `{ ignore }` (cover the use ignores): one or the other
   setActionSchema("cover", { fields: [
     { path: "cover", label: "midi-qol.Entries.Field.cover", type: "select", options: ["none", "half", "threeQuarters", "total"] },

@@ -3,6 +3,7 @@ import { unTimedExecuteAsGM } from "../../GMAction.js";
 import { applyTokenDamage } from "../../utils.js";
 import { tokenFor } from "../tokenResolver.js";
 import { insideOf } from "../../services/interactions/carried.js";
+import { offerCastReactions } from "./castReactions.js";
 import { Workflow } from "../../Workflow.js";
 import type { Activity } from "../../../globals.js";
 import type { RollKind, RollModifier, RollModifierEffect, RollQuery } from "../../services/rollModifiers/service.js";
@@ -108,6 +109,12 @@ function anyEntries(eventId: string, context: EventContext): boolean {
 export async function raiseUseEvents(workflow: Workflow, prePost: "pre" | "post", step: string | undefined): Promise<void> {
   const list = step ? USE_EVENTS[`${prePost} ${step}`] : undefined;
   if (!list || workflow.readOnly) return;
+  await raiseListed(workflow, list);
+  // A spell being cast: reactions to it (Counterspell), its slot spent and nothing rolled yet (lib/entries/castReactions.ts)
+  if (prePost === "post" && step === "midi-qol.PreambleComplete" && casts(workflow) && !workflow.aborted) await offerCastReactions(workflow);
+}
+
+async function raiseListed(workflow: Workflow, list: EventAt[]): Promise<void> {
   for (const at of list) {
     if (workflow.aborted) return;
     if (at.when && !at.when(workflow)) continue;

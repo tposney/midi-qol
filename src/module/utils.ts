@@ -5263,7 +5263,9 @@ export const reactionTypes = {
   "reactionsavefail": { prompt: "midi-qol.reactionFlavorSaveFail", triggerLabel: "isSaveFail" },
   "reactionsavesuccess": { prompt: "midi-qol.reactionFlavorSaveSuccess", triggerLabel: "isSaveSuccess" },
   "reactionmoved": { prompt: "midi-qol.reactionFlavorMoved", triggerLabel: "isMoved" },
-  "reactionopportunity": { prompt: "midi-qol.reactionFlavorOpportunity", triggerLabel: "isOpportunity" }
+  "reactionopportunity": { prompt: "midi-qol.reactionFlavorOpportunity", triggerLabel: "isOpportunity" },
+  // A spell being cast near the reactor (lib/entries/castReactions.ts: Counterspell)
+  "reactioncast": { prompt: "midi-qol.reactionFlavorCast", triggerLabel: "isCast" }
 };
 
 export function reactionPromptFor(triggerType: string): string {

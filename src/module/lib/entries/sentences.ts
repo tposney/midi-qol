@@ -58,6 +58,20 @@ const CONDITIONS: Record<string, string> = {
   "!target.chosen": "NotChosen"
 };
 
+/** `{ effect: "remove", what: <filter> }` in words (lib/entries/effectFilter.ts): Dispel Magic, Remove Curse... */
+function effectFilterWords(f: Record<string, unknown>, to: string): string {
+  const names = (key: string, table: string) => (Array.isArray(f[key]) ? f[key] as string[] : []).map(id => labelOf(table, id));
+  if (f.spell) {
+    const level = f.maxLevel === undefined ? "" : friendlyFormula(f.maxLevel);
+    return say(level ? "Action.effectFilter.spells" : "Action.effectFilter.allSpells", { level, to }) + (f.check ? ` ${say("Action.effectFilter.check")}` : "");
+  }
+  const statuses = names("statuses", "conditionTypes");
+  const from = names("fromTypes", "creatureTypes");
+  if (statuses.length) return say(from.length ? "Action.effectFilter.statusesFrom" : "Action.effectFilter.statuses", { to, statuses: or(statuses), from: or(from) });
+  const changes = Array.isArray(f.changes) ? (f.changes as string[]).join(", ") : "";
+  return say("Action.effectFilter.changes", { to, changes });
+}
+
 /** The conditions offered as ready-made (the form's "add a common condition") */
 export function conditionPresets(): { value: string, label: string }[] {
   return Object.entries(CONDITIONS).map(([value, key]) => ({ value, label: say(`Condition.${key}`) }));
@@ -257,10 +271,12 @@ export function actionText(action: EntryAction, context: SentenceContext): strin
       return say(`Action.retarget.${has(`Action.retarget.${r.to}`) ? r.to : "choose"}`) + (r.orLose ? ` ${say("Action.retarget.orLose")}` : "");
     }
     case "effect": {
+      if (a.effect === "remove" && a.what && typeof a.what === "object" && !("origin" in a.what)) return effectFilterWords(part(a.what), target(a.to, "self"));
       const what = a.what && typeof a.what === "object" ? say("Action.effect.applied") : String(a.what ?? "?");
       return say(a.effect === "remove" ? "Action.effect.remove" : "Action.effect.apply", { what, to: target(a.to, "self") });
     }
     case "end": return say("Action.end");
+    case "fails": return say(a.fails === "triggering" ? "Action.fails.triggering" : "Action.fails.use");
     case "abort": return say("Action.abort", { reason: a.abort ? `: ${a.abort}` : "" });
     case "save": {
       const by = a.by ? `${target(a.by, "self")}: ` : "";

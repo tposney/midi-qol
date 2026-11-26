@@ -209,7 +209,43 @@ export function contributedRecipes(home: EntryHome): Recipe[] {
 /** dnd5e's config lists, by name */
 const CONFIG_LISTS: Record<string, string> = {
   damageTypes: "damageTypes", healingTypes: "healingTypes", activationTypes: "activityActivationTypes", spellSchools: "spellSchools",
-  abilities: "abilities", skills: "skills", conditions: "conditionTypes"
+  abilities: "abilities", skills: "skills", conditions: "conditionTypes", creatureTypes: "creatureTypes"
+};
+
+/** midi's reaction triggers (utils reactionTypes' labels), as an activity's reaction condition names them */
+const REACTION_TRIGGERS = ["isHit", "isMissed", "isCrit", "isFumble", "isAttacked", "preAttack", "isTargeted", "isDamaged", "isHealed",
+  "isSave", "isSaveFail", "isSaveSuccess", "isMoved", "isOpportunity", "isCast"];
+/** A condition starting with its trigger: `reaction === "isCast"`, maybe `&& <the rest>` (kept as it is) */
+const LEADING_TRIGGER = /^\s*reaction\s*===?\s*["']([A-Za-z]+)["']\s*(&&[\s\S]*)?$/;
+
+/**
+ * The basics chip's reaction trigger (a reaction's activity): the trigger its reaction condition starts with
+ * (`reaction === "isCast" && ...`, the rest kept as it is); "custom" for any other condition (the midi tab edits it)
+ */
+const reactionTriggerField: BasicsFieldsContributor = {
+  fields: activity => {
+    const a = activity as { activation?: { type?: string }, useConditionText?: string };
+    if (a.activation?.type !== "reaction") return [];
+    const say = (key: string) => game.i18n?.localize(`midi-qol.EntryEditor.Activity.Basics.Trigger.${key}`) ?? key;
+    const condition = (act: object) => ((act as typeof a).useConditionText ?? "").trim();
+    const read = (act: object) => {
+      if (!condition(act)) return "";
+      return LEADING_TRIGGER.exec(condition(act))?.[1] ?? "custom";
+    };
+    return [{
+      id: "midi-qol.reactionTrigger", label: game.i18n?.localize("midi-qol.EntryEditor.Activity.Basics.Trigger.Label") ?? "Reaction trigger", type: "select",
+      options: [{ value: "", label: say("isHit") }, ...REACTION_TRIGGERS.filter(t => t !== "isHit").map(value => ({ value, label: say(value) })),
+        ...(read(activity) === "custom" ? [{ value: "custom", label: say("custom") }] : [])],
+      read,
+      text: value => value === "custom" ? say("customText") : game.i18n?.format("midi-qol.EntryEditor.Activity.Basics.Trigger.Text", { when: say(String(value || "isHit")) }),
+      // The trigger changed, the rest of the condition kept (Counterspell's components)
+      update: (value, act) => {
+        if (value === "custom") return {};
+        const rest = LEADING_TRIGGER.exec(condition(act))?.[2]?.trim() ?? "";
+        return { activity: { "useConditionText": value ? `reaction === "${String(value)}"${rest ? ` ${rest}` : ""}` : "" } };
+      }
+    }];
+  }
 };
 
 /** midi's own contributors: dnd5e's lists and statuses, and the activity card for any type */
@@ -230,4 +266,5 @@ export function registerMidiEditorContributors() {
     }
   }, { label: "Midi-QOL: dnd5e's lists" });
   register("activityCards", "midi-qol.activities", { types: ["*"], card: activityCard }, { label: "Midi-QOL: activities" });
+  register("basicsFields", "midi-qol.reactionTrigger", reactionTriggerField, { label: "Midi-QOL: reaction triggers" });
 }

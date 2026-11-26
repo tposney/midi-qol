@@ -149,11 +149,15 @@ export const REACTION_STEPS: Readonly<Record<string, string>> = {
   reactionheal: "midi-qol.reaction.healed",
   reactionsave: "midi-qol.reaction.save",
   reactionsavesuccess: "midi-qol.reaction.saveSuccess",
-  reactionsavefail: "midi-qol.reaction.saveFail"
+  reactionsavefail: "midi-qol.reaction.saveFail",
+  // A spell being cast (Counterspell): any spell, after its preamble (lib/entries/castReactions.ts)
+  reactioncast: "midi-qol.reaction.cast"
 };
 const REACTION_ACTS_ON: Readonly<Record<string, readonly ActivityCapability[]>> = {
   preAttack: ["attack"], attacked: ["attack"], hit: ["attack"], missed: ["attack"], damaged: ["damage"], healed: ["healing"],
-  save: ["save", "check"], saveSuccess: ["save", "check"], saveFail: ["save", "check"]
+  save: ["save", "check"], saveSuccess: ["save", "check"], saveFail: ["save", "check"],
+  // Any spell, whatever it does
+  cast: ["attack", "damage", "healing", "save", "check", "utilityRoll", "area", "transform"]
 };
 for (const id of Object.values(REACTION_STEPS)) {
   const name = id.replace("midi-qol.reaction.", "");

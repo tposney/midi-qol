@@ -1,0 +1,58 @@
+{
+  "name": "Counterspell (overlay)",
+  "type": "spell",
+  "img": "icons/magic/defensive/shield-barrier-flaming-diamond-blue.webp",
+  "_id": "mqeOvCounterspel",
+  "_key": "!items!mqeOvCounterspel",
+  "folder": "SpellFldr3rdLevl",
+  "ownership": {
+    "default": 0
+  },
+  "system": {
+    "description": {
+      "value": "<p><em>Overlay (midi-qol):</em> offered as your reaction when a creature within 60 feet casts a spell (midi's reaction trigger <em>a creature within its range casts a spell</em>, after the spell's slot is spent and before anything is rolled). The caster makes the Constitution save; on a failure its spell fails: no attack, save, damage or effects, and the spell slot it used isn't expended. Only a spell with Verbal, Somatic or Material components (its reaction condition reads the spell being cast). Not checked: that you can see the caster.</p>",
+      "chatFlavor": ""
+    },
+    "identifier": "counterspell-overlay",
+    "source": {
+      "rules": "2024"
+    },
+    "activities": {}
+  },
+  "effects": [],
+  "flags": {
+    "midi-qol": {
+      "overlay": {
+        "identifier": "counterspell",
+        "rules": "2024",
+        "version": "2",
+        "changes": [
+          {
+            "key": "system.activities.dnd5eactivity000.useConditionText",
+            "value": "reaction === \"isCast\" && [...(item.properties ?? [])].some(p => [\"vocal\", \"somatic\", \"material\"].includes(p))",
+            "type": "override"
+          }
+        ]
+      },
+      "entries": [
+        {
+          "id": "counter",
+          "on": "use.target.saveFailed",
+          "label": "Counterspell",
+          "do": [
+            {
+              "fails": "triggering"
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "_stats": {
+    "compendiumSource": null,
+    "duplicateSource": null,
+    "coreVersion": "14.360",
+    "systemId": "dnd5e",
+    "systemVersion": "6.1.0"
+  }
+}

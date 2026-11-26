@@ -72,7 +72,7 @@ export const MIDI_OPTION_KEYS = new Set([
   "requestClaim", "rollAs", "rollAttackPerTarget", "rollOptions", "rollToggle", "rollType", "saveActivityUuid", "saveDC",
   "saveItem", "saveItemUuid", "simulate", "sourceActorUuid", "spellLevel", "steps", "target", "targetConfirmation",
   "targets", "targetsToUse", "targetUuids", "teleport", "templateUuid", "triggeredActivity", "triggeringActivityUuid",
-  "triggeringWorkflowId", "unattended", "updateWorkflow", "versatile", "workflowName", "workflowOptions"
+  "triggeringWorkflowId", "triggeringUserId", "unattended", "updateWorkflow", "versatile", "workflowName", "workflowOptions"
 ]);
 
 /**
