@@ -61,7 +61,7 @@ function useButton(cell: ActivityCell, options: { barIndex?: number, removable?:
   // Blocked: greyed; an issue the policy only shows (action used, with enforcement off): marked, still usable
   const state = !cell.usable ? " midi-hub-unusable" : cell.issues.length ? " midi-hub-marked" : "";
   return `<button type="button" class="midi-hub-use${state}${cell.multiattack ? " midi-hub-allowed" : ""}" draggable="true"
-    data-hub-action="use" data-uuid="${escape(cell.uuid)}" data-entry="${escape(options.uuid ?? cell.uuid)}" data-preview="${escape(cell.uuid)}"${options.barIndex !== undefined ? ` data-bar-index="${options.barIndex}" data-hub-context="remove"` : ""}
+    data-hub-action="use" data-cost="${kind}" data-uuid="${escape(cell.uuid)}" data-entry="${escape(options.uuid ?? cell.uuid)}" data-preview="${escape(cell.uuid)}"${options.barIndex !== undefined ? ` data-bar-index="${options.barIndex}" data-hub-context="remove"` : ""}
     data-tooltip-html="${escape(tip)}" data-tooltip-direction="UP">
     <img src="${escape(cell.img)}" alt="">${iconMark(kind)}${cell.uses ? `<span class="midi-hub-count">${cell.uses.value}</span>` : ""}</button>`;
 }
@@ -241,7 +241,7 @@ function entryButton(entry: Entry, options: { barIndex?: number, removable?: boo
     ...(first.spellLevel ? [i18n("midi-qol.Hub.SlotsLeft").replace("{n}", String(first.slotsLeft ?? 0))] : []),
     ...(options.removable ? [`<span class="hint">${escape(i18n("midi-qol.Hub.RightClickRemove"))}</span>`] : [])].join("<br>");
   return `<button type="button" class="midi-hub-use midi-hub-choices${usable ? (marked ? " midi-hub-marked" : "") : " midi-hub-unusable"}" draggable="true"
-    data-hub-action="choose" data-uuid="${escape(entry.uuid)}" data-preview="${escape(first.uuid)}"${options.barIndex !== undefined ? ` data-bar-index="${options.barIndex}" data-hub-context="remove"` : ""}
+    data-hub-action="choose" data-cost="${kinds.length === 1 ? kinds[0] : costKind(first)}" data-uuid="${escape(entry.uuid)}" data-preview="${escape(first.uuid)}"${options.barIndex !== undefined ? ` data-bar-index="${options.barIndex}" data-hub-context="remove"` : ""}
     data-tooltip-html="${escape(tip)}" data-tooltip-direction="UP">
     <img src="${escape(item?.img ?? first.img)}" alt="">${iconMark(kinds.length === 1 ? kinds[0] : costKind(first))}<span class="midi-hub-count">${entry.cells.length}</span></button>`;
 }

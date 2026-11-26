@@ -1,6 +1,6 @@
 /*
  * M27 further features: the hub's layouts, per user (the Turn HUD window): normal, compact (smaller buttons and
- * portrait) or tablet (large touch targets); and keys (off by default): while the hub runs, 1-9 and 0 use the bar's
+ * portrait) or tablet (large touch targets); its size (a percentage scaling all of it: text, icons, spacing); and keys (off by default): while the hub runs, 1-9 and 0 use the bar's
  * buttons and Shift+1-9 open its tabs, in place of the hotbar's number keys the hub replaces. Each keyed button shows its
  * number.
  */
@@ -10,6 +10,7 @@ import { hudChanged } from "../../services/turnModel/hud.js";
 export const LAYOUT_SETTING = "hubLayout";
 export const KEYS_SETTING = "hubKeys";
 export const AROUND_SETTING = "hubAroundMe";
+export const SCALE_SETTING = "hubScale";
 const LAYOUTS = ["normal", "compact", "tablet"] as const;
 
 export function registerLayoutSettings() {
@@ -21,6 +22,16 @@ export function registerLayoutSettings() {
     type: String,
     choices: Object.fromEntries(LAYOUTS.map(l => [l, `midi-qol.HubLayout.${l}`])),
     default: "normal",
+    onChange: () => void hudChanged()
+  } as never);
+  game.settings?.register("midi-qol", SCALE_SETTING as never, {
+    name: "midi-qol.HubScale.Name",
+    hint: "midi-qol.HubScale.Hint",
+    scope: "user",
+    config: false,
+    type: Number,
+    range: { min: 80, max: 150, step: 5 },
+    default: 110,
     onChange: () => void hudChanged()
   } as never);
   // The table's choice (the GM's), not each player's
@@ -46,6 +57,11 @@ export function registerLayoutSettings() {
 
 const layout = () => String(game.settings?.get("midi-qol", LAYOUT_SETTING as never) ?? "normal");
 const keysOn = () => game.settings?.get("midi-qol", KEYS_SETTING as never) === true;
+/** The hub's size as a factor (the setting is a percentage) */
+const scale = () => {
+  const percent = Number(game.settings?.get("midi-qol", SCALE_SETTING as never));
+  return Number.isFinite(percent) && percent >= 50 && percent <= 200 ? percent / 100 : 1.1;
+};
 
 const barButtons = (element: HTMLElement) => Array.from(element.querySelectorAll<HTMLElement>(".midi-hub-bar .midi-hub-use"));
 const tabs = (element: HTMLElement) => Array.from(element.querySelectorAll<HTMLElement>(".midi-hub-tabs .midi-hub-tab"));
@@ -53,6 +69,8 @@ const tabs = (element: HTMLElement) => Array.from(element.querySelectorAll<HTMLE
 /** The layout's class, and the keyed buttons numbered */
 export function applyLayout(element: HTMLElement) {
   for (const l of LAYOUTS) element.classList.toggle(`midi-hub-layout-${l}`, layout() === l);
+  // Its size: the CSS zooms the docked hub (or the hub window's content) by it
+  element.style.setProperty("--midi-hub-zoom", String(scale()));
   const keys = keysOn();
   element.classList.toggle("midi-hub-keys", keys);
   barButtons(element).forEach((button, index) => {

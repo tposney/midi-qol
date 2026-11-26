@@ -1072,6 +1072,8 @@
   "midi-qol.HubLayout.normal": "Normal",
   "midi-qol.HubLayout.compact": "Compact",
   "midi-qol.HubLayout.tablet": "Tablet",
+  "midi-qol.HubScale.Name": "Hub size (%)",
+  "midi-qol.HubScale.Hint": "The size of everything in the hub: text, icons and spacing",
   "midi-qol.HubAround.Name": "Around me tab",
   "midi-qol.HubAround.Hint": "For everyone at the table: a hub tab with threats, where you stand (light, cover, hidden creatures you notice), helping allies, and what you know about your target",
   "midi-qol.HubKeys.Name": "Hub keys",
