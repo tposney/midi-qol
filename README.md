@@ -3,7 +3,7 @@
 ![](https://img.shields.io/badge/Foundry-v14.369+-informational)
 ![](https://img.shields.io/badge/Dnd5e-v6.1.x-informational)
 ![](https://img.shields.io/badge/DAE-v14.6.10+-informational)
-![Latest release](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fgithub.com%2Ftposney%2Fmidi-qol%2Freleases%2Fdownload%2Flatest-dnd6%2Fmodule.json&query=%24.version&label=Latest%20release&prefix=v&color=blue)
+![Latest release](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fgithub.com%2Ftposney%2Fmidi-qol%2Freleases%2Fdownload%2Flatest-15-beta%2Fmodule.json&query=%24.version&label=Latest%20beta&prefix=v&color=blue)
 ![Forge Installs](https://img.shields.io/badge/dynamic/json?label=Forge%20Installs&query=package.installs&suffix=%25&url=https%3A%2F%2Fforge-vtt.com%2Fapi%2Fbazaar%2Fpackage%2Fmidi-qol&colorB=4aa94a)
 
 [![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/tposney)
@@ -141,6 +141,7 @@ If you prefer to configure settings manually, here's the recommended full automa
 | v14.0.x | v14 (14.368+) | v5.3 | [manifest](https://github.com/tposney/midi-qol/releases/download/latest-v14/module.json) |
 | v14.6.x | v14 (14.369+) | v6.0.x | [manifest](https://github.com/tposney/midi-qol/releases/download/v14.6.13/module.json) (14.6.13 is the last 14.6 release) |
 | v14.7.x | v14 (14.369+) | v6.1.x | [manifest](https://github.com/tposney/midi-qol/releases/download/latest-dnd6/module.json) |
+| v15.0 beta | v14 (14.369+) | v6.1.x | [manifest](https://github.com/tposney/midi-qol/releases/download/latest-15-beta/module.json) (betas only; 15.0.0 will have its own) |
 
 ## Required Modules
 

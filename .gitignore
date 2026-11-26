@@ -5,6 +5,8 @@ dist
 *.code-workspace
 SRD
 stage/
+# compilePacks/devbuild output (devDir); test servers load stage/ (tools/stage.sh)
+dev-deploy/
 packages/*/dist
 # The books' text (npm run corpus:books): local only, never committed or packaged
 local/

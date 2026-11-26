@@ -1,7 +1,9 @@
 # On a release tag (v<version>): a release for that version with the committed package/module.json and zip, and the
 # line's fixed release (latest-<line>, which the manifest URL names) given that module.json. Then, after approval in the
 # "foundry" environment, the version is published to foundryvtt.com (never for the dnd6 line: foundryvtt.com offers one
-# version per core range, with no system check, so dnd5e 5.x worlds would be offered it).
+# version per core range, with no system check, so dnd5e 5.x worlds would be offered it; never for a beta line,
+# latest-<n>-beta, which only those who installed from its manifest are offered).
+# midi-next: betas name latest-15-beta in module.json's manifest; 15.0.0 names latest-15.
 name: Release
 
 on:
@@ -66,7 +68,7 @@ jobs:
 
   foundry:
     needs: release
-    if: needs.release.outputs.line != 'dnd6'
+    if: needs.release.outputs.line != 'dnd6' && !endsWith(needs.release.outputs.line, '-beta')
     runs-on: ubuntu-latest
     environment: foundry
     steps:

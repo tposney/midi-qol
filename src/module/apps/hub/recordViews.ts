@@ -9,12 +9,15 @@ import { recordEvents, recordKnowledge, type RecordEvent } from "../../services/
 
 const MAX_LINES = 6;
 
+/** A damage type's label (the record keeps dnd5e's id) */
+const damageTypeLabel = (t: string) => i18n((CONFIG.DND5E.damageTypes as Record<string, { label?: string } | undefined>)[t]?.label ?? t);
+
 function line(event: RecordEvent): string {
   const say = (key: string) => i18n(`midi-qol.Record.${key}`);
   const from = event.source?.name ? ` ${say("From").replace("{name}", event.source.name)}` : "";
   const what = event.item ? ` (${event.item})` : "";
   switch (event.kind) {
-    case "damaged": return `${say("Damaged").replace("{n}", String(event.amount ?? 0)).replace("{type}", event.damageType ?? "")}${from}${what}`;
+    case "damaged": return `${say("Damaged").replace("{n}", String(event.amount ?? 0)).replace("{type}", event.damageType ? damageTypeLabel(event.damageType) : "")}${from}${what}`;
     case "healed": return `${say("Healed").replace("{n}", String(event.amount ?? 0))}${from}${what}`;
     case "attacked": return `${say("Attacked").replace("{result}", say(`Result.${event.outcome ?? "miss"}`))}${from}${what}`;
     case "saved": return `${say("Saved").replace("{result}", say(`Result.${event.outcome ?? "failure"}`))}${what}${from}`;
@@ -40,7 +43,7 @@ export function knowledgeHtml(): string {
     const known = target.document.uuid ? recordKnowledge({ subject: target.document.uuid }) : undefined;
     if (!known) continue;
     const say = (key: string) => i18n(`midi-qol.Record.${key}`);
-    const type = (t: string) => i18n((CONFIG.DND5E.damageTypes as Record<string, { label?: string } | undefined>)[t]?.label ?? t);
+    const type = damageTypeLabel;
     const ability = (a: string) => i18n((CONFIG.DND5E.abilities as Record<string, { abbreviation?: string, label?: string } | undefined>)[a]?.abbreviation ?? a);
     const parts: string[] = [];
     if (known.ac) {

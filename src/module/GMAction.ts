@@ -822,7 +822,7 @@ function rollRequestTitle(actor: Actor.Implementation, kind: string, { ability, 
   else if (kind === "deathSave") what = say("midi-qol.Inbox.DeathSave");
   else if (kind === "skill") what = say(config.skills?.[skill ?? ""]?.label ?? skill);
   else if (kind === "tool") what = say(config.tools?.[tool ?? ""]?.label ?? tool);
-  else what = `${say(config.abilities?.[ability ?? ""]?.label ?? ability)} ${say(kind === "save" ? "midi-qol.Inbox.Save" : "midi-qol.Inbox.Check")}`;
+  else what = game.i18n?.format(kind === "save" ? "midi-qol.Inbox.SaveOf" : "midi-qol.Inbox.CheckOf", { ability: say(config.abilities?.[ability ?? ""]?.label ?? ability) }) ?? "";
   return `${actor.name}: ${what}${dc ? ` (${i18n("DND5E.AbbreviationDC")} ${dc})` : ""}`;
 }
 
