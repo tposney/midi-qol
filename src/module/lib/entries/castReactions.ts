@@ -8,8 +8,8 @@ import { registerAction, type ActionRun } from "./engine.js";
  * - after a spell's preamble (its slot spent, nothing rolled), each creature with a reaction whose condition reads
  *   `reaction === "isCast"` within that activity's range of the caster is offered it (the reaction step
  *   "reactioncast", Workflow#askReactionsStep, as the other triggers),
- *   the caster as its target; the reaction's use knows the use it answers (workflowOptions.triggeringWorkflowId and
- *   triggeringUserId);
+ *   the caster as its target; the reaction's use knows the use it answers (as every reaction's: doReactions sets
+ *   workflowOptions.reactionTrigger, triggeringWorkflowId and triggeringUserId);
  * - `{ fails: "triggering" | "use" }`: that use (or, with "use", the event's own use) fails: it goes no further (no
  *   attack, save, damage or effects), its card kept and marked with why, and what dnd5e consumed for it handed back
  *   (Workflow#fail; the rules: "the slot isn't expended"; the action used to cast it stays spent). Run where that use runs: asked of its user's client when it isn't here.
@@ -46,10 +46,7 @@ export async function offerCastReactions(workflow: Workflow): Promise<void> {
     if (reach === undefined || !token.object || !caster.object) continue;
     const distance = getDistance(caster.object, token.object, { wallsBlock: false });
     if (distance < 0 || distance > reach) continue;
-    await workflow.askReactionsStep(token, caster.uuid, null, REACTION_CAST, {
-      workflow, item: workflow.item, activity: workflow.activity,
-      workflowOptions: { triggeringWorkflowId: workflow.id, triggeringUserId: game.user?.id }
-    });
+    await workflow.askReactionsStep(token, caster.uuid, null, REACTION_CAST, { workflow, item: workflow.item, activity: workflow.activity });
   }
 }
 

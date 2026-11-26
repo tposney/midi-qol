@@ -251,6 +251,8 @@ export function registerMidiTags(): void {
     return [...outcomes(workflow).values()].filter(outcome => outcome.target !== own && (outcome.damage?.healed ?? 0) > 0).length;
   }));
   registerTag("use.area", use("Has an area", ({ workflow }) => !!workflow.activity?.target?.template?.type));
+  // A reaction's use: the trigger it answers (isOpportunity, isCast, isHit...: doReactions sets it), else ""
+  registerTag("use.reaction", use("The reaction trigger it answers (isOpportunity, isCast, isHit...)", ({ workflow }) => (workflow.workflowOptions as { reactionTrigger?: string } | undefined)?.reactionTrigger ?? ""));
   registerTag("use.targetsScale", use("A spell whose number of targets rises with the level cast", context => targetsScale(itemOf(context))));
   registerTag("use.costlyMaterial", use("A spell with a material component that has a cost or is consumed", context => {
     const materials = (itemOf(context)?.system as { materials?: { consumed?: boolean, cost?: number | string } } | undefined)?.materials ?? {};

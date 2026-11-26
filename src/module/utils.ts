@@ -5541,6 +5541,8 @@ function reactionRequestData(target: Token.Implementation, triggerTokenUuid: str
   if (workflow) {
     sent.workflowId = workflow.id;
     sent.itemCardUuid ??= workflow.itemCardUuid;
+    // Where that use runs: the reaction's use asks there (Counterspell's fails)
+    sent.triggeringUserId = game.user?.id;
   }
   return { tokenUuid: target.document.uuid, reactionFlavor, triggerTokenUuid, triggerType, reactionActivityList, options: sent };
 }
@@ -5843,6 +5845,11 @@ export async function reactionDialog(
             workflowOptions: { targetConfirmation: "none" },
             ignoreUserTargets: true
           }, (({ incoming: _incoming, ...rest }) => rest)(options));
+          // Every reaction's use knows what it answers: the trigger (tags.use.reaction: Sentinel's Halt, "isOpportunity")
+          // and the use that triggered it, where it runs (Counterspell's fails)
+          const triggeringWorkflowId = options.workflow?.id ?? options.workflowId;
+          foundry.utils.mergeObject(itemRollOptions, { workflowOptions: { reactionTrigger: reactionTriggerLabelFor(triggerType),
+            ...(triggeringWorkflowId ? { triggeringWorkflowId, triggeringUserId: options.triggeringUserId ?? game.user?.id } : {}) } });
           let result: any = noResult;
           if (activity.item instanceof CONFIG.Item.documentClass) { // a nomral item}
             const config = { midiOptions: itemRollOptions };

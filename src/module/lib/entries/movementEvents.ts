@@ -127,7 +127,8 @@ async function moveAction(run: ActionRun) {
 /** `{ opportunityAttack: true }`: the bearer's melee attacks offered against event.creature, as its reaction */
 async function opportunityAttackAction(run: ActionRun) {
   const event = run.context.event as { creatureToken?: TokenDocument.Implementation, bearerToken?: TokenDocument.Implementation } | undefined;
-  const creature = event?.creatureToken ?? run.context.target;
+  // A near entry's creature (Sentinel: the one that hit someone else, or disengaged)
+  const creature = event?.creatureToken ?? run.found.near?.token ?? run.context.target;
   const bearer = event?.bearerToken ?? tokenFor(run.found.actor ?? run.context.actor, { scene: creature?.parent ?? null, near: creature ?? null });
   if (!creature?.uuid || !bearer) return { success: false };
   const result = await doReactions(bearer, creature.uuid, null, "reactionopportunity", { opportunity: true });

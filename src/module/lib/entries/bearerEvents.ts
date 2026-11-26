@@ -7,7 +7,8 @@ import { raiseCreatureCue } from "../cues.js";
  * M15 stage 6: the bearer's events (the spike's "The bearer" row). Raised for the creature itself, its items and
  * applied effects (`who: "bearer"` / `"owner"`), and for near entries about it.
  * - droppedToZero, bloodied: its hit points crossed 0 or half (any change, midi's or not: updateActor with dnd5e's
- *   previous hp); dies: it gained the dead status. Raised on the active GM, once.
+ *   previous hp); dies: it gained the dead status; gainsCondition: it gained a status (event.status, once per status an
+ *   effect brings: Disengaged for Sentinel). Raised on the active GM, once.
  * - attacks, casts: it makes an attack, casts a spell (raised by its use's steps: useEvents); dealsDamage: its use
  *   damaged someone.
  */
@@ -47,8 +48,14 @@ function onEffectEnded(effect: ActiveEffect.Implementation) {
 }
 
 function onCreateEffect(effect: ActiveEffect.Implementation) {
-  if (!game.user?.isActiveGM || !(effect.parent instanceof Actor) || !effect.statuses.has("dead")) return;
-  void raise("dies", effect.parent, { effect });
+  if (!game.user?.isActiveGM || !(effect.parent instanceof Actor)) return;
+  const actor = effect.parent;
+  if (effect.statuses.has("dead")) void raise("dies", actor, { effect });
+  // Each status it brings that no other effect of the creature gave it already
+  for (const status of effect.statuses) {
+    const before = actor.effects.some(other => other !== effect && !other.disabled && other.statuses.has(status));
+    if (!before) void raise("gainsCondition", actor, { effect, status });
+  }
 }
 
 const dealt = new WeakSet<Workflow>();
@@ -64,6 +71,7 @@ export function registerBearerEvents() {
   registerEvent("droppedToZero", { label: "The bearer drops to 0 hit points" });
   registerEvent("bloodied", { label: "The bearer drops to half its hit points or fewer" });
   registerEvent("dies", { label: "The bearer dies (the dead status)" });
+  registerEvent("gainsCondition", { label: "The bearer gains a condition or status (event.status)" });
   registerEvent("attacks", { label: "The bearer makes an attack" });
   registerEvent("casts", { label: "The bearer casts a spell" });
   registerEvent("dealsDamage", { label: "The bearer's use deals damage" });

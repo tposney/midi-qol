@@ -1,11 +1,11 @@
 {
-  "_id": "mqeSubtleSpell00",
-  "name": "Subtle Spell (overlay)",
+  "_id": "mqeQuickenedSpel",
+  "name": "Quickened Spell (overlay)",
   "type": "feat",
-  "img": "icons/creatures/slimes/slime-movement-swirling-blue.webp",
+  "img": "icons/magic/time/clock-stopwatch-white-blue.webp",
   "system": {
     "description": {
-      "value": "<blockquote><p>Cost: 1 Sorcery Point</p></blockquote><p>When you cast a spell, you can spend 1 Sorcery Point to cast it without any Verbal, Somatic, or Material components, except Material components that are consumed by the spell or that have a cost specified in the spell.</p><p><em>Automation (midi-qol entries):</em> offered as you cast a spell (one Metamagic option per spell, Empowered and Seeking combine); its Sorcery Points come from Font of Magic. Careful Spell: the chosen creatures succeed on the save and take no damage from a spell doing half on a success.</p>",
+      "value": "<blockquote><p>Cost: 2 Sorcery Points</p></blockquote><p>When you cast a spell that has a casting time of an action, you can spend 2 Sorcery Points to change the casting time to a Bonus Action for this casting. You can't modify a spell in this way if you've already cast a level 1+ spell on the current turn, nor can you cast a level 1+ spell on this turn after modifying a spell in this way.</p><p><em>Automation (midi-qol entries):</em> offered as you cast a spell (one Metamagic option per spell, Empowered and Seeking combine); its Sorcery Points come from Font of Magic. Careful Spell: the chosen creatures succeed on the save and take no damage from a spell doing half on a success.</p>",
       "chat": ""
     },
     "source": {
@@ -32,10 +32,10 @@
     "requirements": "",
     "activities": {},
     "enchant": {},
-    "identifier": "subtle-spell"
+    "identifier": "quickened-spell"
   },
   "effects": [],
-  "folder": "fZIl4G4qj3C894LI",
+  "folder": "fOd5ZZFFtez7M0Y8",
   "flags": {
     "dnd5e": {
       "riders": {
@@ -46,13 +46,13 @@
     "midi-qol": {
       "entries": [
         {
-          "id": "subtle",
-          "label": "Subtle Spell",
+          "id": "quickened",
+          "label": "Quickened Spell",
           "who": "owner",
           "offer": "casting",
           "group": "metamagic",
           "cost": {
-            "amount": 1,
+            "amount": 2,
             "from": [
               "metamagic-adept",
               "font-of-magic"
@@ -61,29 +61,18 @@
           },
           "groupLimit": "bearer.items.some(i => i.identifier === 'sorcery-incarnate') && bearer.appliedEffects.some(e => e.name === bearer.items.find(i => i.identifier === 'innate-sorcery')?.name) ? 2 : 1",
           "on": "use.configure",
-          "if": "tags.use.kind === 'spell' && (['vocal', 'somatic'].some(c => tags.use.properties.has(c)) || (tags.use.properties.has('material') && !tags.use.costlyMaterial))",
+          "if": "tags.use.kind === 'spell' && tags.use.activation === 'action'",
           "do": [
             {
               "change": {
-                "components": [
-                  "vocal",
-                  "somatic"
-                ]
-              }
-            },
-            {
-              "if": "!tags.use.costlyMaterial",
-              "change": {
-                "components": [
-                  "material"
-                ]
+                "activation": "bonus"
               }
             }
           ]
         }
       ],
       "overlay": {
-        "identifier": "subtle-spell",
+        "identifier": "quickened-spell",
         "rules": "2024",
         "version": "1"
       }
@@ -99,5 +88,5 @@
   "ownership": {
     "default": 0
   },
-  "_key": "!items!mqeSubtleSpell00"
+  "_key": "!items!mqeQuickenedSpel"
 }

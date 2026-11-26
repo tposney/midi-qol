@@ -1,0 +1,87 @@
+{
+  "name": "Sentinel (overlay)",
+  "type": "feat",
+  "img": "icons/skills/social/wave-halt-stop.webp",
+  "_id": "mqeOvSentinel000",
+  "_key": "!items!mqeOvSentinel000",
+  "folder": "aZEBUVjV9e0LhWKG",
+  "ownership": {
+    "default": 0
+  },
+  "system": {
+    "description": {
+      "value": "<p><em>Overlay (midi-qol):</em> Guardian: when a creature within 5 feet of you hits a target other than you with an attack, or takes the Disengage action (it gains the Disengaged status), you are offered an Opportunity Attack against it as your reaction. Halt: a creature you hit with an Opportunity Attack is Halted (the feat's own effect: its walking Speed 0 until its next turn starts). It changes no item: midi applies it to any item with the identifier <code>sentinel</code> (2024 rules) that nothing else automates.</p>",
+      "chatFlavor": ""
+    },
+    "identifier": "sentinel-overlay",
+    "source": {
+      "rules": "2024"
+    },
+    "activities": {}
+  },
+  "effects": [],
+  "flags": {
+    "midi-qol": {
+      "overlay": {
+        "identifier": "sentinel",
+        "rules": "2024",
+        "version": "1"
+      },
+      "entries": [
+        {
+          "id": "guardian-hit",
+          "on": "use.hit",
+          "who": {
+            "within": 5,
+            "of": "bearer",
+            "filter": "event.creature?.uuid !== bearer?.uuid"
+          },
+          "label": "Sentinel: Opportunity Attack",
+          "if": "(use.workflow?.hitTargets?.documents ?? []).some(t => t.actor?.uuid !== bearer?.uuid)",
+          "do": [
+            {
+              "opportunityAttack": true
+            }
+          ]
+        },
+        {
+          "id": "guardian-disengage",
+          "on": "gainsCondition",
+          "who": {
+            "within": 5,
+            "of": "bearer",
+            "filter": "event.creature?.uuid !== bearer?.uuid"
+          },
+          "label": "Sentinel: Opportunity Attack",
+          "if": "event.status === 'disengaged'",
+          "do": [
+            {
+              "opportunityAttack": true
+            }
+          ]
+        },
+        {
+          "id": "halt",
+          "on": "use.target.hit",
+          "who": "owner",
+          "label": "Sentinel: Halt",
+          "if": "tags.use.reaction === 'isOpportunity'",
+          "do": [
+            {
+              "effect": "apply",
+              "what": "Halted",
+              "to": "target"
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "_stats": {
+    "compendiumSource": null,
+    "duplicateSource": null,
+    "coreVersion": "14.360",
+    "systemId": "dnd5e",
+    "systemVersion": "6.1.0"
+  }
+}
