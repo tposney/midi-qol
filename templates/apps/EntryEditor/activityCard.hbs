@@ -109,6 +109,19 @@
         {{/if}}
     </div>
     {{/if}}
+    {{#if then}}
+    <div class="midi-qol-activity-macro"><i class="fa-solid fa-link"></i> <button type="button" class="midi-qol-entry-chip builtin" data-action="editActivity" data-home="{{then.home}}" data-field="trigger" data-place="then">{{then.text}}</button></div>
+    {{else if canTrigger}}
+    <button type="button" class="midi-qol-onuse-add" data-action="addTrigger" data-home="{{home}}"><i class="fa-solid fa-link"></i> {{localize "midi-qol.EntryEditor.Activity.Then.add"}}</button>
+    {{/if}}
+    {{#if (eq popover.place "then")}}
+    <div class="midi-qol-card-popover">
+        {{#with popover.fields}}{{> "modules/midi-qol/templates/apps/EntryEditor/cardFields.hbs"}}{{/with}}
+        <div class="midi-qol-card-popover-buttons">
+            <button type="button" data-action="closeActivityField" data-home="{{home}}"><i class="fa-solid fa-check"></i> {{localize "midi-qol.EntryEditor.Activity.Done"}}</button>
+        </div>
+    </div>
+    {{/if}}
     {{#each macros}}
     <div class="midi-qol-activity-macro">
         <div><i class="fa-solid fa-code"></i> {{sentence}}{{#if version}} <span class="hint">({{version}})</span>{{/if}}</div>

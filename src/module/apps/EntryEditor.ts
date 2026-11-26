@@ -16,6 +16,7 @@ import { onUseString, parseOnUse, type OnUseRow } from "../lib/entries/activityC
 import { basicsUpdate, NEW_KINDS, newActivityData, type Basics, type BasicsWhere, type NewKind } from "../lib/entries/activityCard.js";
 import { AREA_TRIGGERS, areaGroups, areaSaveActivity, areaView, editedRegion, type AreaGroup } from "../lib/entries/activityCard.js";
 import { editedWeapon, SEEN_PRESETS, weaponUpdate, type DamagePart } from "../lib/entries/activityCard.js";
+import { hasTrigger, TRIGGER_DISPOSITIONS, TRIGGER_ROLL_AS, TRIGGER_TARGETS, type TriggerEdits } from "../lib/entries/activityCard.js";
 import { convertActivity, editedTargeting, FROM_YOU_SHAPES, moveBranchEntry, POINT_SHAPES, ROLL_KINDS, TARGET_PRESETS, targetingUpdate, targetPreset, type RollKind, type TargetPreset, type Targeting } from "../lib/entries/activityCard.js";
 import { activityCard, activityUpdate, BRANCH_EVENT, branchEntryId, isBranchEntry, partFormula, type ActivityBranch, type ActivityData, type BuiltInPart, type CardEdits, type CardText } from "../lib/entries/activityCard.js";
 
@@ -214,6 +215,7 @@ function chipFields(fields: Record<string, unknown>, field: string): Record<stri
   if (field === "area") return { area: fields.area };
   if (field === "basics") return { basics: fields.basics };
   if (field === "weapon") return { weapon: fields.weapon };
+  if (field === "trigger") return { trigger: fields.trigger };
   if (field.startsWith("onuse.")) return { onUse: fields.onUse };
   if (field.startsWith("area.")) return { areaGroup: fields.areaGroup };
   if (field === "save") return { save: fields.save };
@@ -237,7 +239,7 @@ function chipFields(fields: Record<string, unknown>, field: string): Record<stri
 function cardFieldName(part: string): string {
   if (part.startsWith("part.")) return `card.${part}.formula`;
   if (part.startsWith("effect.")) return `card.${part}`;
-  const named: Record<string, string> = { target: "target.preset", roll: "rollKind", save: "saveAbility", check: "checkAbility", dc: "dcCalculation", healing: "healing.formula" };
+  const named: Record<string, string> = { trigger: "trigger.activity", target: "target.preset", roll: "rollKind", save: "saveAbility", check: "checkAbility", dc: "dcCalculation", healing: "healing.formula" };
   return `card.${named[part] ?? part}`;
 }
 
@@ -484,6 +486,7 @@ export class EntryEditor extends HandlebarsApplicationMixin(DocumentSheetV2)<
       addHomeChoice: EntryEditor.#onAddHomeChoice,
       removeHomeChoice: EntryEditor.#onRemoveHomeChoice,
       addOnUse: EntryEditor.#onAddOnUse,
+      addTrigger: EntryEditor.#onAddTrigger,
       removeOnUse: EntryEditor.#onRemoveOnUse,
       removeAreaGroup: EntryEditor.#onRemoveAreaGroup,
       confirmEffect: EntryEditor.#onConfirmEffect,
@@ -973,7 +976,8 @@ export class EntryEditor extends HandlebarsApplicationMixin(DocumentSheetV2)<
     const region = area ? { text: area.text, groups: area.groups.map((g, index) => ({ text: g, index, home: at })), other: area.other, dnd5e: area.dnd5e, home: at } : undefined;
     // An activity an area runs: its targets and timing are the area's
     const runByArea = !!h.runByArea;
-    return { home: at, runByArea, onUse: this.#onUseRows(at), when: model.when.map(chip), branches, basics: runByArea ? undefined : basics, targeting: model.targeting && !runByArea ? chip(model.targeting) : undefined, midi: this.#midiProperties(h), region, macros: this.#cardMacros(h),
+    return { home: at, runByArea, onUse: this.#onUseRows(at), when: model.when.map(chip), branches, basics: runByArea ? undefined : basics, targeting: model.targeting && !runByArea ? chip(model.targeting) : undefined,
+      then: model.then ? chip(model.then) : undefined, canTrigger: !model.then && activities.length > 1, midi: this.#midiProperties(h), region, macros: this.#cardMacros(h),
       open: opened && all ? { ...opened, newEffect: undefined } : undefined,
       popover: opened && !all ? { place: this.#cardPlace, fields: { ...chipFields(opened, this.#cardField!), home: at, noAdd: true } } : undefined };
   }
@@ -1010,6 +1014,21 @@ export class EntryEditor extends HandlebarsApplicationMixin(DocumentSheetV2)<
     this.render();
   }
 
+  /** A Then line added: the item's next activity at the same targets, its fields open */
+  static #onAddTrigger(this: EntryEditor, _event: Event, target: HTMLElement) {
+    const at = Number(target.dataset.home ?? this.#at);
+    const h = this.#homes[at];
+    if (!h?.card) return;
+    const own = (h.document as { id?: string }).id;
+    const other = [...((this.#item()?.system as { activities?: Iterable<{ id: string }> } | undefined)?.activities ?? [])].find(a => a.id !== own);
+    if (!other) return;
+    h.card.trigger = { activity: other.id, to: "targets", rollAs: "self", consume: true, configure: true, condition: "", chain: "" };
+    this.#cardOpen = at;
+    this.#cardField = "trigger";
+    this.#cardPlace = "then";
+    this.render();
+  }
+
   static #onRemoveOnUse(this: EntryEditor, _event: Event, target: HTMLElement) {
     this.#onUse?.rows.splice(Number(target.dataset.index), 1);
     this.#cardOpen = this.#cardField = this.#cardPlace = undefined;
@@ -1025,6 +1044,8 @@ export class EntryEditor extends HandlebarsApplicationMixin(DocumentSheetV2)<
     const empty = (v: unknown) => v === undefined || v === null || v === "" || (Array.isArray(v) && !v.length) || (typeof v === "object" && !Array.isArray(v) && !Object.keys(v as object).length);
     const parts: string[] = [];
     for (const [key, field] of Object.entries(fields)) {
+      // Trigger Activity is the card's Then line
+      if (key.startsWith("triggeredActivity")) continue;
       const value = plain(activity.midiProperties?.[key]);
       const initial = plain(typeof field.initial === "function" ? (field.initial as () => unknown)() : field.initial);
       if (!field.label || (empty(value) && empty(initial)) || JSON.stringify(value) === JSON.stringify(initial)) continue;
@@ -1136,7 +1157,29 @@ export class EntryEditor extends HandlebarsApplicationMixin(DocumentSheetV2)<
       basics: this.#basicsContext(h),
       onUse: this.#onUseFields(),
       weapon,
+      trigger: this.#triggerContext(h, data),
       ...this.#areaContext(data)
+    };
+  }
+
+  /** The Then line's fields (Trigger Activity), as edited */
+  #triggerContext(h: Home, data: ActivityData) {
+    const props = data.midiProperties ?? {};
+    if (!hasTrigger(props) && !h.card?.trigger) return undefined;
+    const option = (value: string, label: string, selected: boolean) => ({ value, label, selected });
+    const own = (h.document as { id?: string }).id;
+    const activities = [...((this.#item()?.system as { activities?: Iterable<{ id: string, name?: string }> } | undefined)?.activities ?? [])].filter(a => a.id !== own || !!props.triggeredActivityChainLimit);
+    const id = props.triggeredActivityId ?? "none";
+    const to = props.triggeredActivityTargets ?? "targets";
+    return {
+      activities: [option("none", i18n("midi-qol.EntryEditor.Activity.Then.none"), id === "none"), ...activities.map(a => option(a.id, a.name ?? a.id, a.id === id))],
+      to: TRIGGER_TARGETS.map(v => option(v, i18n(`midi-qol.TriggeredActivityTargetOptions.${v}`), v === to)),
+      rollAs: TRIGGER_ROLL_AS.map(v => option(v, i18n(`midi-qol.TriggeredActivityRollAsOptions.${v}`), v === (props.triggeredActivityRollAs ?? "self"))),
+      near: to === "near",
+      within: props.triggeredActivityNearWithin ?? 30, max: props.triggeredActivityNearMax || "1",
+      dispositions: TRIGGER_DISPOSITIONS.map(v => option(v, i18n(`midi-qol.Chain.Disposition.${v}`), v === (props.triggeredActivityNearDisposition ?? "any"))),
+      condition: props.triggeredActivityConditionText ?? "", chain: props.triggeredActivityChainLimit ?? "",
+      consume: props.triggeredActivityConsume ?? true, configure: props.triggeredActivityConfigure ?? true
     };
   }
 
@@ -1475,6 +1518,14 @@ export class EntryEditor extends HandlebarsApplicationMixin(DocumentSheetV2)<
       h.card.includeBase = !!data["card.weapon.includeBase"];
       h.card.weapon = { formula: String(data["card.weapon.formula"] ?? ""), types: list("card.weapon.types"), versatile: !!data["card.weapon.versatile"],
         ...("card.weapon.versatileFormula" in data ? { versatileFormula: String(data["card.weapon.versatileFormula"] ?? ""), versatileTypes: list("card.weapon.versatileTypes") } : {}) };
+    }
+    if ("card.trigger.activity" in data) {
+      const near = "card.trigger.within" in data;
+      const trigger: TriggerEdits = { activity: String(data["card.trigger.activity"] ?? "none"), to: String(data["card.trigger.to"] ?? "targets"),
+        rollAs: String(data["card.trigger.rollAs"] ?? "self"), condition: String(data["card.trigger.condition"] ?? ""), chain: String(data["card.trigger.chain"] ?? "").trim(),
+        consume: !!data["card.trigger.consume"], configure: !!data["card.trigger.configure"],
+        ...(near ? { within: Number(data["card.trigger.within"]) || 0, max: String(data["card.trigger.max"] ?? "1").trim() || "1", disposition: String(data["card.trigger.disposition"] ?? "any") } : {}) };
+      h.card.trigger = trigger;
     }
     if ("card.onuse.name" in data && this.#onUse) {
       const index = this.#cardField?.startsWith("onuse.") ? Number(this.#cardField.slice(6)) : -1;

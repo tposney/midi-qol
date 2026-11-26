@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { areaGroups, areaRules, areaSaveActivity, basicsUpdate, NEW_KINDS, newActivityData, onUseString, parseOnUse } from "../src/module/lib/entries/activityCard.js";
-import { weaponUpdate } from "../src/module/lib/entries/activityCard.js";
+import { triggerText, triggerUpdate, weaponUpdate } from "../src/module/lib/entries/activityCard.js";
 import { MIDI_EFFECT_PRESETS, signed } from "../src/module/lib/entries/effectPresets.js";
 import { activityEffects, editedTargeting, mainBranch, newEffectData, targetingText, targetingUpdate, targetPreset } from "../src/module/lib/entries/activityCard.js";
 import { activityCard, activityUpdate, branchFor, convertActivity, isBranchEntry, partFormula, partWithFormula, type ActivityData, type CardText } from "../src/module/lib/entries/activityCard.js";
@@ -215,5 +215,25 @@ describe("activity cards", () => {
       "system.properties": ["fin", "ver"], "system.damage.versatile": { number: 1, denomination: 12, bonus: "", types: [], custom: { enabled: false, formula: "" } } });
     expect(weaponUpdate({ ...weapon, versatile: weapon.versatileSource }, { versatile: false }, ["ver"])).toEqual({ "system.properties": [] });
     expect(weaponUpdate(weapon, { formula: "2d6" }, [])).toEqual({ "system.damage.base": { number: 2, denomination: 6, bonus: "", types: ["slashing"], custom: { enabled: false, formula: "" } } });
+  });
+
+  it("the Then line: Trigger Activity in words; near with its count, who and distance; condition, roll-as, chain, free", () => {
+    expect(triggerText({ triggeredActivityId: "none" }, t)).toBeUndefined();
+    expect(triggerText({ triggeredActivityId: "a1", triggeredActivityTargets: "hitTargets" }, t))
+      .toBe('Activity.Then.use{"activity":"Wild Shape","targets":"Activity.Then.to.hitTargets"}');
+    expect(triggerText({ triggeredActivityId: "a1", triggeredActivityTargets: "near", triggeredActivityNearMax: "2", triggeredActivityNearDisposition: "enemy",
+      triggeredActivityNearWithin: 30, triggeredActivityRollAs: "firstTarget", triggeredActivityConditionText: "workflow.isCritical", triggeredActivityChainLimit: "@item.level", triggeredActivityConsume: false }, t))
+      .toBe('Activity.Then.use{"activity":"Wild Shape","targets":"Activity.Then.near{\\"max\\":\\"2\\",\\"who\\":\\"Activity.Then.who.enemy\\",\\"within\\":\\"30\\"}"}, Activity.Then.rollAs.firstTarget, Activity.Then.if{"condition":"workflow.isCritical"}, Activity.Then.chain{"n":"@item.level"}, Activity.Then.free');
+  });
+
+  it("the Then line's edits: only what changed, near fields only for near, none removes the trigger", () => {
+    const props = { triggeredActivityId: "a1", triggeredActivityTargets: "targets", triggeredActivityRollAs: "self", triggeredActivityConsume: true };
+    expect(triggerUpdate(props, { activity: "a1", to: "targets", rollAs: "self", consume: true, condition: "", chain: "" })).toEqual({});
+    expect(triggerUpdate(props, { activity: "a2", to: "near", within: 5, max: "1", disposition: "enemy", consume: false })).toEqual({
+      "midiProperties.triggeredActivityId": "a2", "midiProperties.triggeredActivityTargets": "near", "midiProperties.triggeredActivityConsume": false,
+      "midiProperties.triggeredActivityNearWithin": 5, "midiProperties.triggeredActivityNearDisposition": "enemy" });
+    expect(triggerUpdate(props, { activity: "a1", to: "hitTargets", within: 5 })).toEqual({ "midiProperties.triggeredActivityTargets": "hitTargets" });
+    expect(triggerUpdate(props, { activity: "none" })).toEqual({ "midiProperties.triggeredActivityId": "none" });
+    expect(triggerUpdate({}, { activity: "none" })).toEqual({});
   });
 });

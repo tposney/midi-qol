@@ -13,6 +13,20 @@
         {{#if target.canLinger}}<div class="form-group"><label></label><div class="form-fields"><label class="checkbox"><input type="checkbox" name="card.area.lingers" {{#if target.lingers}}checked{{/if}}> {{localize "midi-qol.EntryEditor.Activity.Area.lingers"}}</label></div></div>{{/if}}
         {{#if target.who}}<div class="form-group"><label>{{localize "midi-qol.EntryEditor.Activity.TargetWho"}}</label><div class="form-fields"><select name="card.target.who">{{#each target.who}}<option value="{{value}}" {{#if selected}}selected{{/if}}>{{label}}</option>{{/each}}</select></div></div>{{/if}}
         {{/if}}
+        {{#if trigger}}
+        <div class="form-group"><label>{{localize "midi-qol.EntryEditor.Activity.Then.activity"}}</label><div class="form-fields"><select name="card.trigger.activity">{{#each trigger.activities}}<option value="{{value}}" {{#if selected}}selected{{/if}}>{{label}}</option>{{/each}}</select></div></div>
+        <div class="form-group"><label>{{localize "midi-qol.EntryEditor.Activity.Then.targets"}}</label><div class="form-fields"><select name="card.trigger.to">{{#each trigger.to}}<option value="{{value}}" {{#if selected}}selected{{/if}}>{{label}}</option>{{/each}}</select></div></div>
+        {{#if trigger.near}}
+        <div class="form-group"><label>{{localize "midi-qol.EntryEditor.Activity.Then.within"}}</label><div class="form-fields"><input type="number" name="card.trigger.within" value="{{trigger.within}}" min="0" step="5"></div></div>
+        <div class="form-group"><label>{{localize "midi-qol.EntryEditor.Activity.Then.max"}}</label><div class="form-fields"><input type="text" name="card.trigger.max" value="{{trigger.max}}"></div></div>
+        <div class="form-group"><label>{{localize "midi-qol.EntryEditor.Activity.Then.which"}}</label><div class="form-fields"><select name="card.trigger.disposition">{{#each trigger.dispositions}}<option value="{{value}}" {{#if selected}}selected{{/if}}>{{label}}</option>{{/each}}</select></div></div>
+        {{/if}}
+        <div class="form-group"><label>{{localize "midi-qol.EntryEditor.Activity.Then.rollAsLabel"}}</label><div class="form-fields"><select name="card.trigger.rollAs">{{#each trigger.rollAs}}<option value="{{value}}" {{#if selected}}selected{{/if}}>{{label}}</option>{{/each}}</select></div></div>
+        <div class="form-group"><label>{{localize "midi-qol.EntryEditor.Activity.Then.condition"}}</label><div class="form-fields"><input type="text" name="card.trigger.condition" value="{{trigger.condition}}"></div></div>
+        <div class="form-group"><label>{{localize "midi-qol.EntryEditor.Activity.Then.chainLabel"}}</label><div class="form-fields"><input type="text" name="card.trigger.chain" value="{{trigger.chain}}"></div><p class="hint">{{localize "midi-qol.EntryEditor.Activity.Then.chainHint"}}</p></div>
+        <div class="form-group"><label></label><div class="form-fields"><label class="checkbox"><input type="checkbox" name="card.trigger.consume" {{#if trigger.consume}}checked{{/if}}> {{localize "midi-qol.EntryEditor.Activity.Then.consume"}}</label>
+            <label class="checkbox"><input type="checkbox" name="card.trigger.configure" {{#if trigger.configure}}checked{{/if}}> {{localize "midi-qol.EntryEditor.Activity.Then.configure"}}</label></div></div>
+        {{/if}}
         {{#if onUse}}
         <div class="form-group"><label>{{localize "midi-qol.EntryEditor.OnUse.macro"}}</label><div class="form-fields">
             <input type="text" name="card.onuse.name" value="{{onUse.name}}" list="midi-qol-onuse-macros">

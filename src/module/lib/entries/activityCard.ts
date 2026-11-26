@@ -56,6 +56,86 @@ export interface ActivityData {
   weapon?: { base: DamagePart, versatile?: DamagePart, versatileSource?: DamagePart };
   /** Registered targeting presets to read it with */
   targetPresets?: readonly TargetPresetDef[];
+  /** midi's properties (as stored): the card reads and writes its Trigger Activity */
+  midiProperties?: TriggerProps;
+}
+
+/** Trigger Activity's stored fields (the activity's midiProperties) */
+export interface TriggerProps {
+  triggeredActivityId?: string;
+  triggeredActivityTargets?: string;
+  triggeredActivityRollAs?: string;
+  triggeredActivityConditionText?: string;
+  triggeredActivityConsume?: boolean;
+  triggeredActivityConfigure?: boolean;
+  triggeredActivityNearWithin?: number;
+  triggeredActivityNearMax?: string;
+  triggeredActivityNearDisposition?: string;
+  triggeredActivityChainLimit?: string;
+}
+
+/** The Then line's edits (Trigger Activity): "none" for activity removes the trigger */
+export interface TriggerEdits {
+  activity: string;
+  to?: string;
+  rollAs?: string;
+  condition?: string;
+  within?: number;
+  max?: string;
+  disposition?: string;
+  chain?: string;
+  consume?: boolean;
+  configure?: boolean;
+}
+
+export const TRIGGER_TARGETS = ["targets", "hitTargets", "missedTargets", "failedSaves", "saveTargets", "self", "near", "retarget"] as const;
+export const TRIGGER_ROLL_AS = ["self", "firstTarget", "firstHitTarget", "firstMissedTarget", "firstSaveTarget", "firstFailedSaveTarget"] as const;
+export const TRIGGER_DISPOSITIONS = ["any", "enemy", "ally"] as const;
+
+/** Whether the activity triggers another */
+export const hasTrigger = (props: TriggerProps | undefined) => !!props?.triggeredActivityId && props.triggeredActivityId !== "none";
+
+/** The Then line: "Then use Leap on up to 2 enemies within 30 ft of the target, if …"; undefined without a trigger */
+export function triggerText(props: TriggerProps | undefined, t: CardText): string | undefined {
+  if (!hasTrigger(props)) return undefined;
+  const p = props!;
+  const to = p.triggeredActivityTargets ?? "targets";
+  const targets = to === "near"
+    ? t.say("Activity.Then.near", { max: String(p.triggeredActivityNearMax || "1"), who: t.say(`Activity.Then.who.${p.triggeredActivityNearDisposition ?? "any"}`), within: String(p.triggeredActivityNearWithin ?? 30) })
+    : t.say(`Activity.Then.to.${(TRIGGER_TARGETS as readonly string[]).includes(to) ? to : "targets"}`);
+  const parts = [t.say("Activity.Then.use", { activity: t.activityName(p.triggeredActivityId!) ?? p.triggeredActivityId!, targets })];
+  if (p.triggeredActivityRollAs && p.triggeredActivityRollAs !== "self") parts.push(t.say(`Activity.Then.rollAs.${p.triggeredActivityRollAs}`));
+  if (p.triggeredActivityConditionText?.trim()) parts.push(t.say("Activity.Then.if", { condition: p.triggeredActivityConditionText.trim() }));
+  if (p.triggeredActivityChainLimit?.trim()) parts.push(t.say("Activity.Then.chain", { n: p.triggeredActivityChainLimit.trim() }));
+  if (p.triggeredActivityConsume === false) parts.push(t.say("Activity.Then.free"));
+  return parts.join(", ");
+}
+
+/** The midiProperties paths the Then line's edits change (only what changed) */
+export function triggerUpdate(props: TriggerProps | undefined, edits: TriggerEdits): Record<string, unknown> {
+  const now = props ?? {};
+  const update: Record<string, unknown> = {};
+  const set = (key: keyof TriggerProps, value: unknown, initial: unknown) => {
+    if (value === undefined) return;
+    if (value !== (now[key] ?? initial)) update[`midiProperties.${key}`] = value;
+  };
+  if (!edits.activity || edits.activity === "none") {
+    if (hasTrigger(now)) update["midiProperties.triggeredActivityId"] = "none";
+    return update;
+  }
+  set("triggeredActivityId", edits.activity, "none");
+  set("triggeredActivityTargets", edits.to, "targets");
+  set("triggeredActivityRollAs", edits.rollAs, "self");
+  set("triggeredActivityConditionText", edits.condition, "");
+  set("triggeredActivityConsume", edits.consume, true);
+  set("triggeredActivityConfigure", edits.configure, true);
+  set("triggeredActivityChainLimit", edits.chain, "");
+  if ((edits.to ?? now.triggeredActivityTargets) === "near") {
+    set("triggeredActivityNearWithin", edits.within, 30);
+    set("triggeredActivityNearMax", edits.max, "1");
+    set("triggeredActivityNearDisposition", edits.disposition, "any");
+  }
+  return update;
 }
 
 /** What the area an activity makes does: midi's rules, dnd5e's effects while inside */
@@ -83,7 +163,7 @@ export type BuiltInKind = "save" | "attack" | "check" | "damage" | "healing" | "
 /** One thing the activity does by itself; `field`: the card field that edits it */
 export interface BuiltInPart { kind: BuiltInKind, text: string, field?: string }
 export interface CardBranch { branch: ActivityBranch, builtIn: BuiltInPart[] }
-export interface ActivityCardModel { when: BuiltInPart[], branches: CardBranch[], region?: CardRegion, targeting?: BuiltInPart }
+export interface ActivityCardModel { when: BuiltInPart[], branches: CardBranch[], region?: CardRegion, targeting?: BuiltInPart, then?: BuiltInPart }
 
 export interface CardText {
   ability(id: string): string;
@@ -205,7 +285,9 @@ export function activityCard(data: ActivityData, t: CardText): ActivityCardModel
   const card = activityCardOf(data, t);
   const region = cardRegion(data, t);
   const targeting = data.targeting ? { kind: "none" as const, text: targetingText(data.targeting, t, data.targetPresets), field: "target" } : undefined;
-  return { ...card, ...(region ? { region } : {}), ...(targeting ? { targeting } : {}) };
+  const thenText = triggerText(data.midiProperties, t);
+  const then = thenText ? { kind: "none" as const, text: thenText, field: "trigger" } : undefined;
+  return { ...card, ...(region ? { region } : {}), ...(targeting ? { targeting } : {}), ...(then ? { then } : {}) };
 }
 
 function activityCardOf(data: ActivityData, t: CardText): ActivityCardModel {
@@ -301,6 +383,8 @@ export interface CardEdits {
   weapon?: WeaponEdits;
   /** Whether the attack adds the weapon's damage */
   includeBase?: boolean;
+  /** The Then line (Trigger Activity) */
+  trigger?: TriggerEdits;
   /** Registered basics fields' values (basicsFields service), by field id */
   basicsExtra?: Record<string, unknown>;
   attackType?: string;
@@ -352,6 +436,7 @@ export function activityUpdate(data: ActivityData, edits: CardEdits): Record<str
   }
   const list = activityEffects(data, edits);
   if (!same(list, data.effects ?? [])) update.effects = list;
+  if (edits.trigger) Object.assign(update, triggerUpdate(data.midiProperties, edits.trigger));
   return update;
 }
 
