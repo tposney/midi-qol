@@ -3358,6 +3358,8 @@
   "midi-qol.Sentence.Condition.Area": "the use is an area",
   "midi-qol.Sentence.Condition.SpellSlot": "it spends a spell slot",
   "midi-qol.Sentence.Condition.HealedOther": "it restores hit points to a creature other than you",
+  "midi-qol.Sentence.Condition.Charge": "you moved at least {distance} ft straight toward it just before",
+  "midi-qol.Sentence.Condition.Charge20": "you moved at least 20 ft straight toward it just before",
   "midi-qol.Sentence.Condition.Touch": "its range is touch",
   "midi-qol.Sentence.Condition.RollKinds": "the roll is {kinds}",
   "midi-qol.Sentence.Condition.Class": "cast as a {name}",

@@ -47,6 +47,7 @@ const CONDITIONS: Record<string, string> = {
   "!!tags.use.area": "Area",
   "!!tags.use.spellSlot": "SpellSlot",
   "tags.use.healedOthers > 0": "HealedOther",
+  "tags.target.charge >= 20": "Charge20",
   "use.activity.range.units === 'touch'": "Touch",
   "targets.some(t => t.attributes.hp.value < t.attributes.hp.max)": "TargetHurt",
   "tags.use.targetsScale": "TargetsScale",
@@ -98,6 +99,8 @@ function conditionWords(piece: string): string | undefined {
   if (cls) return say("Condition.Class", { name: cls[1] });
   const types = /^\[([^\]]+)\]\.some\(\w+ => tags\.use\.damageTypes\.has\(\w+\)\)$/.exec(piece);
   if (types) return say("Condition.DealsTypes", { types: or(quoted(types[1]).map(t => labelOf("damageTypes", t))) });
+  const charge = /^tags\.target\.charge >= (\d+)$/.exec(piece);
+  if (charge) return say("Condition.Charge", { distance: charge[1] });
   const taken = /^\(event\.damage\?\.applied\?\.(\w+) \?\? 0\) > 0$/.exec(piece);
   if (taken) return say("Condition.TakesType", { type: labelOf("damageTypes", taken[1]) });
   if (piece === "!!event.use?.activity?.hasDamage") return say("Condition.DealsDamage");

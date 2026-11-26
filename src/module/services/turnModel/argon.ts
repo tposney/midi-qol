@@ -1,6 +1,7 @@
 import { i18n } from "../../../midi-qol.js";
 import { FOUNDRY_HUD, hudChoice, registerHud } from "./hud.js";
 import { getTurnModel, peekTurnModel } from "./model.js";
+import { tokenFor } from "../../lib/tokenResolver.js";
 import { handsOf, isTwoHanded, MAIN, OFF, saveHands, switchHands, wieldable, type Hands } from "../hands.js";
 
 /*
@@ -144,7 +145,7 @@ async function pullFromArgon(actor: Actor.Implementation, change: { flags?: { en
   }
   const index = changed.activeWeaponSet !== undefined ? Number(changed.activeWeaponSet) - 1 : NaN;
   if (Number.isInteger(index) && index >= 0 && index !== handsOf(actor).active) {
-    const token = actor.getActiveTokens(true, true)[0] as TokenDocument.Implementation | undefined;
+    const token = tokenFor(actor);
     const result = token ? await switchHands(token, index) : { done: false };
     if (!result.done) {
       if ((result as { reason?: string }).reason) ui.notifications?.warn((result as { reason?: string }).reason!);

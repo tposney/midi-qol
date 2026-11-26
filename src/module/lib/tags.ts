@@ -3,6 +3,7 @@ import { attackFlanked } from "../../rules/flanking/index.js";
 import { getDistance } from "../services/distance/service.js";
 import { findNearby } from "../utils.js";
 import { outcomes } from "./outcomes.js";
+import { chargeToward } from "./charge.js";
 import { coverFor } from "../services/cover/service.js";
 
 /*
@@ -156,6 +157,9 @@ export function registerMidiTags(): void {
     const rank = SIZE_ORDER.indexOf(actorOf(context)?.system.traits?.size ?? "");
     return rank < 0 ? undefined : rank;
   }));
+  // Ram, Trampling Charge: the attacker's last straight run toward the target this turn (combat records the moves)
+  registerTag("target.charge", target("Feet the user moved straight toward it just before", context =>
+    chargeToward(context.workflow.token?.document as TokenDocument.Implementation | undefined, context.target)));
   registerTag("target.conditions", target("Conditions", context => new Set(actorOf(context)?.statuses ?? [])));
   registerTag("target.bloodied", target("Bloodied", context => {
     const points = hp(context);
