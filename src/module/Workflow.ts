@@ -134,7 +134,7 @@ export type WorkflowState = undefined | string | StateMethod;
 export type StateMethod = () => Promise<WorkflowState>;
 /** What a suspended workflow is woken by (Workflow#resume) */
 export type WorkflowEvent = "attackRolled" | "damageRolled" | "noDamage" | "utilityRolled";
-export type WorkflowOutcome = "ok" | "allMissed" | "invalid" | "split" | "manualSaves" | "cancelled" | "aborted";
+export type WorkflowOutcome = "ok" | "allMissed" | "invalid" | "split" | "manualSaves" | "cancelled" | "aborted" | "failed";
 
 // The states whose end is a chat card milestone (Workflow#performState). Cleanup's end is the use's completion
 // (postCleanup, which completeActivityUse waits for): callers then read a written card.
@@ -2126,6 +2126,8 @@ export class Workflow {
   ammunitionActivity: any | undefined;
   systemCard: boolean | undefined;
   aborted: boolean = false;
+  /** Why the use failed (Workflow#fail): it stopped as an abort does, its card kept and marked with this */
+  failure: { reason: string } | undefined;
   workflowName: string | undefined;
   forceApplyEffects: boolean;
   /** How the use ended up, for the stages after it: "ok" unless one of the genuine early exits or every target missed */
@@ -4057,6 +4059,18 @@ export class Workflow {
       if (damageType) foundry.utils.setProperty(usage, "midiOptions.workflowOptions.damageTypeChoice", damageType);
     }
     await completeActivityUse(triggeredActivity, usage, { configure: spec.configure ?? true }, {});
+  }
+
+  /**
+   * The use fails (a Counterspell): it goes no further, as an abort, but its card stays, marked with `reason`, and what
+   * dnd5e consumed for it is handed back (a countered spell's slot isn't expended). Takes effect at the end of the step
+   * it is called in.
+   */
+  async fail(reason: string): Promise<void> {
+    if (this.aborted) return;
+    this.failure = { reason };
+    await this.refundConsumption();
+    this.aborted = true;
   }
 
   /**

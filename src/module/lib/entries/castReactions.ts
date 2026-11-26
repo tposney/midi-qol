@@ -1,5 +1,3 @@
-import { i18nFormat } from "../../../midi-qol.js";
-import { getConsumptionData } from "../../utils.js";
 import { Workflow } from "../../Workflow.js";
 import { getDistance } from "../../services/distance/service.js";
 import { registerMidiQuery, queryUser } from "../midiQueries.js";
@@ -13,8 +11,8 @@ import { registerAction, type ActionRun } from "./engine.js";
  *   the caster as its target; the reaction's use knows the use it answers (workflowOptions.triggeringWorkflowId and
  *   triggeringUserId);
  * - `{ fails: "triggering" | "use" }`: that use (or, with "use", the event's own use) fails: it goes no further (no
- *   attack, save, damage or effects) and, as any aborted use, what dnd5e consumed for it is handed back (the rules:
- *   "the slot isn't expended"; the action used to cast it stays spent). Run where that use runs: asked of its user's client when it isn't here.
+ *   attack, save, damage or effects), its card kept and marked with why, and what dnd5e consumed for it handed back
+ *   (Workflow#fail; the rules: "the slot isn't expended"; the action used to cast it stays spent). Run where that use runs: asked of its user's client when it isn't here.
  */
 
 export const REACTION_CAST = "reactioncast";
@@ -55,24 +53,12 @@ export async function offerCastReactions(workflow: Workflow): Promise<void> {
   }
 }
 
-/** The spell slot part of what a use consumed (dnd5e's deltas) */
-function slotDeltas(workflow: Workflow): object | undefined {
-  const deltas = getConsumptionData(workflow.chatCard) as { actor?: { keyPath?: string }[] } | undefined;
-  const actor = (deltas?.actor ?? []).filter(d => d.keyPath?.startsWith("system.spells."));
-  return actor.length ? { actor, item: {} } : undefined;
-}
-
-/** Here: the use fails (aborted: its consumption handed back); false if it isn't running here (or is already over) */
+/** Here: the use fails (Workflow#fail: its card kept and marked, its consumption handed back); false if it isn't running here */
 async function failUseHere(workflowId: string, label: string): Promise<boolean> {
-  const workflow = Workflow.getWorkflow(workflowId, false);
+  // Only a use running in this client's memory: getWorkflow(id, false) would rebuild a live copy of another client's
+  const workflow = Workflow.findWorkflow(workflowId);
   if (!workflow || workflow.aborted) return false;
-  // Aborted, the use hands back what dnd5e consumed (Workflow#refundConsumption, once): its slot among it
-  const slots = slotDeltas(workflow);
-  await ChatMessage.create({
-    speaker: ChatMessage.getSpeaker({ actor: workflow.actor as never }),
-    content: `<p>${foundry.utils.escapeHTML(i18nFormat("midi-qol.Fails.Message", { item: workflow.item?.name ?? "", by: label }))}${slots ? ` ${foundry.utils.escapeHTML(game.i18n?.localize("midi-qol.Fails.SlotKept") ?? "")}` : ""}</p>`
-  });
-  workflow.aborted = true;
+  await workflow.fail(label);
   return true;
 }
 

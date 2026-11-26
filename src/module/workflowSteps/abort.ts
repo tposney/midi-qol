@@ -1,6 +1,8 @@
 import { unTimedExecuteAsGM } from "../GMAction.js";
 import { configSettings } from "../settings.js";
 import { clearUpdatesCache } from "../utils.js";
+import { addCardNote } from "../lib/cardNotes.js";
+import { i18nFormat } from "../../midi-qol.js";
 import { setStepRun } from "../steps/steps.js";
 import { Workflow, workflowStepHost, type WorkflowState } from "../Workflow.js";
 
@@ -8,10 +10,14 @@ import { Workflow, workflowStepHost, type WorkflowState } from "../Workflow.js";
 export function registerAbortSteps(): void {
   setStepRun("midi-qol.Abort", async ({ workflow }: { workflow: Workflow }): Promise<WorkflowState> => {
     workflow.aborted = true;
-    workflow.outcome = "aborted";
+    workflow.outcome = workflow.failure ? "failed" : "aborted";
     if (workflow.postSummonHookId) Hooks.off("dnd5e.postSummon", workflow.postSummonHookId);
     if (workflow.itemCardUuid && fromUuidSync(workflow.itemCardUuid)) {
-      await Workflow.deleteAbortedCard(workflow.chatCard);
+      // A failed use (Workflow#fail: countered) keeps its card, marked with why; an aborted one is as if never used
+      if (workflow.failure) {
+        const text = foundry.utils.escapeHTML(i18nFormat("midi-qol.UseFailedBy", { reason: workflow.failure.reason }));
+        await addCardNote(workflow.chatCard, `<p>${text}</p>`, { anchor: "top", key: "midi-qol.failed", cssClass: "midi-qol-use-failed" });
+      } else await Workflow.deleteAbortedCard(workflow.chatCard);
       clearUpdatesCache(workflow.itemCardUuid);
     }
 
