@@ -258,7 +258,16 @@ export function actionText(action: EntryAction, context: SentenceContext): strin
       return by + rollSpec(a.save, false, context) + damage;
     }
     case "check": return (a.by ? `${target(a.by, "self")}: ` : "") + rollSpec(a.check, true, context);
-    case "use": return say("Action.use", { activity: activityName(a.use, context) });
+    case "use": {
+      if (!a.to && !a.near) return say("Action.use", { activity: activityName(a.use, context) });
+      const near = part(a.near);
+      const to = String(a.to ?? "targets");
+      const targets = to === "near"
+        ? say("Action.useNear", { max: friendlyFormula(near.max ?? 1), who: say(`Action.useWho.${["enemy", "ally"].includes(String(near.disposition)) ? near.disposition : "any"}`), within: String(near.within ?? 30) })
+        : say(has(`Action.useTo.${to}`) ? `Action.useTo.${to}` : "Action.useTo.targets");
+      const chain = a.chain ? ` ${say("Action.useChain", { n: friendlyFormula(a.chain) })}` : "";
+      return say("Action.useOn", { activity: activityName(a.use, context), targets }) + chain;
+    }
     case "move": {
       const m = part(a.move);
       if (m.place === "inside" || m.place === "beside")

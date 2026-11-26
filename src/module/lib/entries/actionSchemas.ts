@@ -86,7 +86,17 @@ export function registerMidiActionSchemas() {
     { path: "onSave", label: "midi-qol.Entries.Field.onSave", type: "select", options: ["", "half", "none", "full"] },
     LABEL, { path: "flavor", label: "midi-qol.Entries.Field.flavor", type: "string" }], initial: "applying" });
   setActionSchema("check", { fields: [{ path: "check", label: "midi-qol.Entries.Field.check", type: "rollSpec" }, BY, LABEL], initial: { ability: "str", dc: 10 } });
-  setActionSchema("use", { fields: [{ path: "use", label: "midi-qol.Entries.Field.use", type: "string" }, LABEL] });
+  // At a use's events, one of the item's activities used after the use (Trigger Activity's fields); on an effect's turn, an ActivityOverTime name
+  setActionSchema("use", { fields: [{ path: "use", label: "midi-qol.Entries.Field.use", type: "activity" },
+    { path: "to", label: "midi-qol.Entries.Field.useTo", type: "select", options: ["", "target", "targets", "hitTargets", "missedTargets", "failedSaves", "saveTargets", "self", "near", "retarget"] },
+    { path: "near.within", label: "midi-qol.Entries.Field.nearWithin", type: "number" },
+    { path: "near.max", label: "midi-qol.Entries.Field.nearMax", type: "formula" },
+    { path: "near.disposition", label: "midi-qol.Entries.Field.nearDisposition", type: "select", options: ["", "any", "enemy", "ally"] },
+    { path: "rollAs", label: "midi-qol.Entries.Field.rollAs", type: "select", options: ["", "self", "firstTarget", "firstHitTarget", "firstMissedTarget", "firstSaveTarget", "firstFailedSaveTarget"] },
+    { path: "condition", label: "midi-qol.Entries.Field.useCondition", type: "condition" },
+    { path: "chain", label: "midi-qol.Entries.Field.chain", type: "formula" },
+    { path: "consume", label: "midi-qol.Entries.Field.useConsume", type: "tristate" },
+    { path: "configure", label: "midi-qol.Entries.Field.useConfigure", type: "tristate" }, LABEL] });
   // A level (the target's cover from the use) or `{ ignore }` (cover the use ignores): one or the other
   setActionSchema("cover", { fields: [
     { path: "cover", label: "midi-qol.Entries.Field.cover", type: "select", options: ["none", "half", "threeQuarters", "total"] },
