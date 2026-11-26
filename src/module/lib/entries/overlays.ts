@@ -178,7 +178,12 @@ export async function applyOverlayData(item: Item.Implementation): Promise<boole
   }
   if (activities.length) {
     const update: Record<string, unknown> = {};
-    for (const activity of activities) update[`system.activities.${(activity as unknown as { id: string }).id}`] = foundry.utils.mergeObject(activity.toObject(), foundry.utils.expandObject(part));
+    // Without its entries: the overlay's rule gives them to the activity (by type and name), or they would run twice
+    for (const activity of activities) {
+      const data = foundry.utils.mergeObject(activity.toObject(), foundry.utils.expandObject(part));
+      delete (data as { midiEntries?: unknown }).midiEntries;
+      update[`system.activities.${(activity as unknown as { id: string }).id}`] = data;
+    }
     await item.update(update);
   }
   return true;

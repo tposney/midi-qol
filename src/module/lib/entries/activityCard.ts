@@ -180,6 +180,8 @@ export interface CardText {
   typeLabel(kind: "item" | "creature", id: string): string;
   /** A wording (`Activity.Type.<type>` falls back to `Activity.Used` when there is none) */
   say(key: string, data?: Record<string, string>): string;
+  /** A condition in words where midi knows it, else as written (absent: as written) */
+  condition?(expression: string): string;
 }
 
 const DC_FIELD = "dc";
@@ -526,6 +528,8 @@ export interface Targeting {
   rangeValue?: string | number | null;
   /** Only creatures the user can see (midi's targetMustBeSeen; checked for single targets, not areas) */
   mustSee?: boolean;
+  /** midi's target condition (midiProperties.targetCondition): which creatures it may target */
+  condition?: string;
 }
 
 /** The presets "a creature you can see" applies to (midi checks sight for chosen targets, not for areas) */
@@ -566,11 +570,13 @@ export function targetingText(tg: Targeting, t: CardText, extra: readonly Target
   const plainWho = t.say(`Activity.Target.who.${["enemy", "ally"].includes(tg.affectsType ?? "") ? tg.affectsType : "creature"}${Number(tg.count || 1) > 1 ? "s" : ""}`);
   const who = tg.mustSee && SEEN_PRESETS.includes(preset) ? t.say("Activity.Target.youCanSee", { who: plainWho }) : plainWho;
   const range = `${tg.rangeValue ?? "?"} ${tg.rangeUnits ?? ""}`.trim();
-  return t.say(`Activity.Target.${preset}`, { who, count: String(tg.count ?? ""), range, shape: t.say(`Activity.Shape.${tg.templateType || "sphere"}`), size: String(tg.size ?? "?"), width: String(tg.width ?? "") });
+  const text = t.say(`Activity.Target.${preset}`, { who, count: String(tg.count ?? ""), range, shape: t.say(`Activity.Shape.${tg.templateType || "sphere"}`), size: String(tg.size ?? "?"), width: String(tg.width ?? "") });
+  const condition = tg.condition?.trim();
+  return condition ? t.say("Activity.Target.if", { targets: text, condition: t.condition?.(condition) ?? condition }) : text;
 }
 
 /** The edits the targeting chip makes */
-export interface TargetEdits { preset?: TargetPreset, count?: number, range?: number, shape?: string, size?: number, width?: number, who?: string, see?: boolean }
+export interface TargetEdits { preset?: TargetPreset, count?: number, range?: number, shape?: string, size?: number, width?: number, who?: string, see?: boolean, condition?: string }
 
 /** The targeting after the chip's edits (a preset changed: its own defaults, kept from before where they fit) */
 export function editedTargeting(current: Targeting, edits: TargetEdits | undefined, extra: readonly TargetPresetDef[] = []): Targeting {
@@ -578,7 +584,8 @@ export function editedTargeting(current: Targeting, edits: TargetEdits | undefin
   // Whether targets must be seen goes with the targeting whatever the preset (kept unless changed)
   const edited = presetTargeting(current, edits, extra);
   const mustSee = edits.see ?? current.mustSee;
-  return mustSee === undefined ? edited : { ...edited, mustSee };
+  const condition = edits.condition ?? current.condition;
+  return { ...edited, ...(mustSee === undefined ? {} : { mustSee }), ...(condition === undefined ? {} : { condition }) };
 }
 
 function presetTargeting(current: Targeting, edits: TargetEdits, extra: readonly TargetPresetDef[]): Targeting {

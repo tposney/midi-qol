@@ -1,4 +1,5 @@
 import { tokenFor } from "./lib/tokenResolver.js";
+import { activityTargetFilter } from "./lib/targetFilter.js";
 import { nearCandidates, pickNearTargets, resolveTriggerActivity, type ChainState, type NearDisposition, type TriggerSpec } from "./lib/chain.js";
 import { queryUser } from "./lib/midiQueries.js";
 import type { CardActionHandler } from "./activities/cardActions.js";
@@ -4038,7 +4039,7 @@ export class Workflow {
       const max = Math.max(0, Math.floor(evaluateChainLimit(spec.near?.max || "1", this.activity)));
       const candidates = nearCandidates({ anchor, within: Number(spec.near?.within ?? 30),
         disposition: spec.near?.disposition ?? "any", source: this.token?.document,
-        exclude: [...(chain?.taken ?? []), ...this.targets.uuids] });
+        exclude: [...(chain?.taken ?? []), ...this.targets.uuids], filter: activityTargetFilter(triggeredActivity) });
       const picked = await pickNearTargets(candidates, max, { actor: this.actor, label: triggeredActivity.name ?? this.activity.name });
       targetUuids = (picked ?? []).flatMap(token => token.uuid ? [token.uuid] : []);
       usage.midiOptions.targetUuids = targetUuids;

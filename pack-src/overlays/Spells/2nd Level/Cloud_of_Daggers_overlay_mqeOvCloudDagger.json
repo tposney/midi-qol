@@ -1,0 +1,319 @@
+{
+  "name": "Cloud of Daggers (overlay)",
+  "type": "spell",
+  "img": "icons/magic/movement/pinwheel-turning-blue.webp",
+  "_id": "mqeOvCloudDagger",
+  "_key": "!items!mqeOvCloudDagger",
+  "folder": "SpellFldr2ndLevl",
+  "ownership": {
+    "default": 0
+  },
+  "system": {
+    "description": {
+      "value": "<p><em>Overlay (midi-qol):</em> the Cube lingers: a creature it moves into, or that enters it or ends its turn there, takes the damage (once a turn). <strong>Teleport the Cube</strong> (a Magic action) moves it up to 30 feet to a point you place, without passing over anyone. It changes no item: midi applies it to any item with the identifier <code>cloud-of-daggers</code> (2024 rules) that nothing else automates.</p>",
+      "chatFlavor": ""
+    },
+    "identifier": "cloud-of-daggers-overlay",
+    "source": {
+      "rules": "2024"
+    },
+    "activities": {
+      "mqeDaggersHurt00": {
+        "_id": "mqeDaggersHurt00",
+        "type": "damage",
+        "activation": {
+          "type": "special",
+          "value": null,
+          "override": true,
+          "condition": ""
+        },
+        "consumption": {
+          "spellSlot": false,
+          "targets": [],
+          "scaling": {
+            "allowed": false,
+            "max": ""
+          }
+        },
+        "description": {
+          "chatFlavor": "",
+          "value": ""
+        },
+        "duration": {
+          "units": "inst",
+          "override": true,
+          "concentration": false,
+          "value": "",
+          "special": ""
+        },
+        "effects": [],
+        "range": {
+          "units": "any",
+          "override": true,
+          "special": "",
+          "value": null
+        },
+        "target": {
+          "prompt": true,
+          "template": {
+            "count": "",
+            "contiguous": false,
+            "type": "",
+            "size": "",
+            "width": "",
+            "height": "",
+            "units": "ft"
+          },
+          "affects": {
+            "count": "",
+            "type": "creature",
+            "choice": false,
+            "special": ""
+          },
+          "override": true
+        },
+        "damage": {
+          "critical": {
+            "allow": false,
+            "bonus": ""
+          },
+          "parts": [
+            {
+              "number": 4,
+              "denomination": 4,
+              "bonus": "",
+              "types": [
+                "slashing"
+              ],
+              "custom": {
+                "enabled": false,
+                "formula": ""
+              },
+              "scaling": {
+                "mode": "whole",
+                "number": 2,
+                "formula": ""
+              },
+              "modifiers": []
+            }
+          ]
+        },
+        "uses": {
+          "spent": 0,
+          "recovery": []
+        },
+        "sort": 0,
+        "img": null,
+        "behaviors": [],
+        "flags": {},
+        "visibility": {
+          "level": {},
+          "requireAttunement": false,
+          "requireIdentification": false,
+          "requireMagic": false
+        },
+        "useConditionText": "",
+        "useConditionReason": "",
+        "effectConditionText": "",
+        "otherActivityId": null,
+        "macroData": {
+          "name": "",
+          "command": ""
+        },
+        "ignoreTraits": {
+          "idi": false,
+          "idr": false,
+          "idv": false,
+          "ida": false,
+          "idm": false
+        },
+        "midiProperties": {
+          "ignoreTraits": [],
+          "triggeredActivityId": "none",
+          "triggeredActivityConditionText": "",
+          "triggeredActivityTargets": "targets",
+          "triggeredActivityRollAs": "self",
+          "triggeredActivityConsume": true,
+          "triggeredActivityConfigure": true,
+          "triggeredActivityNearWithin": 30,
+          "triggeredActivityNearMax": "1",
+          "triggeredActivityNearDisposition": "any",
+          "triggeredActivityChainLimit": "",
+          "followUp": false,
+          "followUpTargets": "default",
+          "followUpCondition": "",
+          "autoConsume": false,
+          "forceConsumeDialog": "default",
+          "forceRollDialog": "default",
+          "forceDamageDialog": "default",
+          "confirmTargets": "default",
+          "autoTargetType": "any",
+          "autoTargetAction": "default",
+          "automationOnly": true,
+          "otherActivityCompatible": true,
+          "otherActivityAsParentType": true,
+          "identifier": "cloud-of-daggers-damage",
+          "displayActivityName": false,
+          "rollMode": "default",
+          "chooseEffects": false,
+          "toggleEffect": false,
+          "ignoreFullCover": false,
+          "targetMustBeSeen": false,
+          "removeChatButtons": "default",
+          "magicEffect": false,
+          "magicDamage": false,
+          "noConcentrationCheck": false,
+          "skipConcentrationCheck": false,
+          "autoCEEffects": "default",
+          "statuses": []
+        },
+        "isOverTimeFlag": false,
+        "overTimeProperties": {
+          "saveRemoves": true,
+          "rollAs": "target",
+          "preRemoveConditionText": "",
+          "postRemoveConditionText": ""
+        },
+        "regionBarrier": {
+          "enabled": false,
+          "move": true,
+          "sight": "none",
+          "sound": "none",
+          "direction": "both",
+          "trace": "auto",
+          "sideDepth": 0,
+          "sideActivity": ""
+        },
+        "regionLight": {
+          "enabled": false,
+          "dim": 0,
+          "bright": 0,
+          "color": null,
+          "alpha": 0.5,
+          "luminosity": 0.5,
+          "animationType": "",
+          "animationSpeed": 5,
+          "animationIntensity": 5
+        },
+        "name": "Spinning Daggers"
+      },
+      "mqeDaggersMove00": {
+        "_id": "mqeDaggersMove00",
+        "type": "utility",
+        "name": "Teleport the Cube",
+        "img": "icons/magic/movement/pinwheel-turning-blue.webp",
+        "sort": 0,
+        "activation": {
+          "type": "action",
+          "value": null,
+          "override": true,
+          "condition": ""
+        },
+        "consumption": {
+          "spellSlot": false,
+          "targets": [],
+          "scaling": {
+            "allowed": false,
+            "max": ""
+          }
+        },
+        "duration": {
+          "units": "inst",
+          "override": true,
+          "concentration": false,
+          "value": "",
+          "special": ""
+        },
+        "range": {
+          "units": "self",
+          "override": true,
+          "special": "",
+          "value": null
+        },
+        "target": {
+          "override": true,
+          "prompt": false,
+          "template": {
+            "count": "",
+            "contiguous": false,
+            "type": "",
+            "size": "",
+            "width": "",
+            "height": "",
+            "units": "ft"
+          },
+          "affects": {
+            "count": "",
+            "type": "",
+            "choice": false,
+            "special": ""
+          }
+        },
+        "roll": {
+          "prompt": false,
+          "visible": false,
+          "formula": "",
+          "name": ""
+        },
+        "midiProperties": {
+          "forceConsumeDialog": "never",
+          "confirmTargets": "never"
+        },
+        "midiEntries": [
+          {
+            "id": "move",
+            "on": "use.completed",
+            "label": "Cloud of Daggers: teleport the cube",
+            "do": [
+              {
+                "moveArea": {
+                  "within": 30,
+                  "teleport": true
+                }
+              }
+            ]
+          }
+        ]
+      }
+    }
+  },
+  "effects": [],
+  "flags": {
+    "midi-qol": {
+      "overlay": {
+        "identifier": "cloud-of-daggers",
+        "rules": "2024",
+        "version": "1",
+        "changes": [
+          {
+            "key": "system.activities.dnd5eactivity000.regionBehavior.enabled",
+            "value": "true",
+            "type": "override"
+          },
+          {
+            "key": "system.activities.dnd5eactivity000.regionBehavior.dispositionFilter",
+            "value": "0",
+            "type": "override"
+          },
+          {
+            "key": "system.activities.dnd5eactivity000.regionBehavior.excludeSource",
+            "value": "false",
+            "type": "override"
+          },
+          {
+            "key": "system.activities.dnd5eactivity000.regionBehavior.rules",
+            "value": "[{\"trigger\": \"entry\", \"action\": \"useActivity\", \"targetId\": \"mqeDaggersHurt00\"}, {\"trigger\": \"turnEnd\", \"action\": \"useActivity\", \"targetId\": \"mqeDaggersHurt00\"}]",
+            "type": "override"
+          }
+        ]
+      }
+    }
+  },
+  "_stats": {
+    "compendiumSource": null,
+    "duplicateSource": null,
+    "coreVersion": "14.360",
+    "systemId": "dnd5e",
+    "systemVersion": "6.1.0"
+  }
+}

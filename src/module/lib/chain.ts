@@ -61,6 +61,8 @@ export interface NearQuery {
   source?: TokenDocument.Implementation | null;
   /** Token UUIDs never offered (the anchor, the source and what the chain took are always left out) */
   exclude?: Iterable<string>;
+  /** Only these (the triggered activity's target condition) */
+  filter?: (token: TokenDocument.Implementation) => boolean;
 }
 
 /** The tokens within `within` of the anchor that may be chosen, nearest first */
@@ -78,6 +80,7 @@ export function nearCandidates(query: NearQuery): TokenDocument.Implementation[]
     if (query.disposition === "enemy" && (token.disposition === sourceDisposition || token.disposition === CONST.TOKEN_DISPOSITIONS.NEUTRAL)) continue;
     const distance = getDistance(query.anchor, token, { wallsBlock: true });
     if (distance < 0 || !Number.isFinite(distance) || distance > query.within) continue;
+    if (query.filter && !query.filter(token)) continue;
     out.push({ token, distance });
   }
   return out.sort((a, b) => a.distance - b.distance).map(o => o.token);

@@ -59,6 +59,8 @@ function sharedFields(): Fields {
       forceDamageDialog: new StringField({ name: "forceDamageDialog", initial: "default" }),
       confirmTargets: new StringField({ name: "confirmTargets", initial: "default", required: true, blank: false }),
       autoTargetType: new StringField({ name: "autoTargetType", initial: "any", required: true, blank: false }),
+      // Which of the creatures an area (placed, or of its range) takes may be affected, and its region's rules: a condition about `target`
+      targetCondition: new StringField({ name: "targetCondition", initial: "" }),
       autoTargetAction: new StringField({ name: "autoTargetAction", initial: "default" }),
       automationOnly: new BooleanField({ name: "automationOnly", initial: false }),
       otherActivityCompatible: new BooleanField({ name: "otherActivityCompatible", initial: true }),
@@ -119,11 +121,11 @@ function sharedFields(): Fields {
       moveTiming: new StringField({ initial: "start", choices: ["start", "end"] }),
       // The caster's height a template is measured from; "default" follows the Template Origin Height setting.
       templateOrigin: new StringField({ initial: "default", required: true, blank: false, choices: ["default", "floor", "base", "top", "eye"] }),
-      rules: new ArrayField(new SchemaField({
+      rules: new ChangeableListField(new SchemaField({
         trigger: new StringField({ required: true, blank: false, initial: "entry" }),
         action: new StringField({ required: true, blank: false, initial: "useActivity" }),
         targetId: new StringField({ required: true, blank: false, initial: "" }),
-      }), { initial: [] }),
+      })),
     }),
     // The area is a barrier: walls made for its region (regionBehaviors/MidiRegionBarrierBehaviorType.ts)
     regionBarrier: new SchemaField({
@@ -243,6 +245,19 @@ export function installActivitySchema() {
         const schema = wrapped(...args);
         return { ...schema, ...extra(schema) };
       }, "WRAPPER");
+  }
+}
+
+/**
+ * A list a change can set: a JSON list as its value (an overlay's changes giving an area its rules); core casts a text
+ * value to one element (an empty one for a schema).
+ */
+export class ChangeableListField extends foundry.data.fields.ArrayField<foundry.data.fields.SchemaField.Any> {
+  protected override _castChangeDelta(raw: unknown, replacementData?: Record<string, unknown>) {
+    if (typeof raw === "string" && raw.trim().startsWith("[")) {
+      try { raw = JSON.parse(raw); } catch { /* left as it is */ }
+    }
+    return super._castChangeDelta(raw as never, replacementData as never);
   }
 }
 

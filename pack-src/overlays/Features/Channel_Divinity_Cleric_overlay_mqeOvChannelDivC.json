@@ -1,0 +1,81 @@
+{
+  "name": "Channel Divinity (Cleric) (overlay)",
+  "type": "feat",
+  "img": "icons/magic/symbols/star-rising-purple.webp",
+  "_id": "mqeOvChannelDivC",
+  "_key": "!items!mqeOvChannelDivC",
+  "folder": "fZIl4G4qj3C894LI",
+  "ownership": {
+    "default": 0
+  },
+  "system": {
+    "description": {
+      "value": "<p><em>Overlay (midi-qol):</em> Turn Undead and Sear Undead take every Undead within 30 feet of you (the activities' target condition <code>target.raceOrType.includes('undead')</code>); other creatures there are left out, and you can't target them. It changes no item: midi applies it to any item with the identifier <code>channel-divinity-cleric</code> (2024 rules) that nothing else automates.</p>",
+      "chatFlavor": ""
+    },
+    "identifier": "channel-divinity-cleric-overlay",
+    "source": {
+      "rules": "2024"
+    },
+    "activities": {}
+  },
+  "effects": [],
+  "flags": {
+    "midi-qol": {
+      "overlay": {
+        "identifier": "channel-divinity-cleric",
+        "rules": "2024",
+        "version": "1",
+        "changes": [
+          {
+            "key": "system.activities.aOptL5pMaj3WtR8S.target.template.type",
+            "value": "emanationNoTemplate",
+            "type": "override"
+          },
+          {
+            "key": "system.activities.aOptL5pMaj3WtR8S.target.template.size",
+            "value": "30",
+            "type": "override"
+          },
+          {
+            "key": "system.activities.aOptL5pMaj3WtR8S.target.template.units",
+            "value": "ft",
+            "type": "override"
+          },
+          {
+            "key": "system.activities.aOptL5pMaj3WtR8S.midiProperties.targetCondition",
+            "value": "target.raceOrType.includes('undead')",
+            "type": "override"
+          },
+          {
+            "key": "system.activities.rprxorXdFoHbRERZ.target.template.type",
+            "value": "emanationNoTemplate",
+            "type": "override"
+          },
+          {
+            "key": "system.activities.rprxorXdFoHbRERZ.target.template.size",
+            "value": "30",
+            "type": "override"
+          },
+          {
+            "key": "system.activities.rprxorXdFoHbRERZ.target.template.units",
+            "value": "ft",
+            "type": "override"
+          },
+          {
+            "key": "system.activities.rprxorXdFoHbRERZ.midiProperties.targetCondition",
+            "value": "target.raceOrType.includes('undead')",
+            "type": "override"
+          }
+        ]
+      }
+    }
+  },
+  "_stats": {
+    "compendiumSource": null,
+    "duplicateSource": null,
+    "coreVersion": "14.360",
+    "systemId": "dnd5e",
+    "systemVersion": "6.1.0"
+  }
+}

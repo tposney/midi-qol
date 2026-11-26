@@ -1739,6 +1739,7 @@ export interface Activity extends AnyMutableObject {
     forceDamageDialog?: string;
     confirmTargets: string;
     autoTargetType: string;
+    targetCondition?: string;
     autoTargetAction?: string;
     automationOnly?: boolean;
     otherActivityCompatible?: boolean;

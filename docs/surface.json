@@ -735,6 +735,7 @@
     "macro",
     "modifier",
     "move",
+    "moveArea",
     "opportunityAttack",
     "perception",
     "restoreSlots",

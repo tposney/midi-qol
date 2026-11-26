@@ -27,6 +27,9 @@ export function registerMidiActionSchemas() {
     { path: "restoreSlots.total", label: "midi-qol.Entries.Field.slotTotal", type: "formula" },
     { path: "restoreSlots.maxLevel", label: "midi-qol.Entries.Field.slotMaxLevel", type: "number" },
     { path: "restoreSlots.level", label: "midi-qol.Entries.Field.slotLevel", type: "formula" }, LABEL], initial: { total: "1" } });
+  setActionSchema("moveArea", { fields: [
+    { path: "moveArea.within", label: "midi-qol.Entries.Field.areaWithin", type: "formula", numeric: true },
+    { path: "moveArea.teleport", label: "midi-qol.Entries.Field.teleport", type: "boolean" }], initial: { within: 30 } });
   setActionSchema("roll", { fields: [
     { path: "roll", label: "midi-qol.Entries.Field.formula", type: "formula" },
     { path: "as", label: "midi-qol.Entries.Field.rollAs", type: "string" }, LABEL], initial: "1d4" });

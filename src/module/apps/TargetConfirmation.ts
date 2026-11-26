@@ -1,4 +1,5 @@
 import { tokenFor, tokenOf } from "../lib/tokenResolver.js";
+import { activityTargetFilter, type TokenFilter } from "../lib/targetFilter.js";
 import { isFlankedMode } from "../../rules/flanking/index.js";
 import { markFlanking } from "../../rules/flanking/marking.js";
 import { computeFlankingStatus } from "../services/flanking/service.js";
@@ -211,8 +212,12 @@ export class TargetConfirmationDialog extends HandlebarsApplicationMixin(Applica
           break;
         default: break;
       }
+      // The activity's target condition
+      this.#targetFilter ??= activityTargetFilter(this.data.activity) ?? null;
+      if (this.#targetFilter && !this.#targetFilter(token)) return false;
       return true;
   }
+  #targetFilter: TokenFilter | null | undefined;
 
   async _prepareContext(options: ApplicationV2.RenderOptions) {
     let context: Omit<typeof this.data, 'targets'> & ApplicationV2.RenderContext & {

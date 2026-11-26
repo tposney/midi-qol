@@ -205,6 +205,15 @@ describe("activity cards", () => {
     expect(targetingText({ ...one, templateType: "sphere", size: 20 }, t)).not.toContain("youCanSee");
   });
 
+  it("a target condition: worded after the targets (in words where given), kept through a preset change, edited", () => {
+    const one = { affectsType: "creature", count: 1, rangeUnits: "ft", rangeValue: 30, condition: "!target.chosen" };
+    expect(targetingText(one, t)).toMatch(/^Activity\.Target\.if.*"condition":"!target\.chosen"/);
+    expect(targetingText(one, { ...t, condition: () => "not chosen" })).toContain('"condition":"not chosen"');
+    expect(targetingText({ ...one, condition: " " }, t)).not.toContain("Activity.Target.if");
+    expect(editedTargeting(one, { preset: "emanation" })).toMatchObject({ condition: "!target.chosen" });
+    expect(editedTargeting(one, { condition: "" })).toMatchObject({ condition: "" });
+  });
+
   it("a weapon's damage: worded with its two-handed damage; edits update the weapon and its versatile property", () => {
     const weapon = { base: { number: 1, denomination: 8, bonus: "", types: ["slashing"] }, versatileSource: { number: 1, denomination: 10, bonus: "", types: [] } };
     const data = { type: "attack", damage: { includeBase: true, parts: [] }, weapon: { ...weapon, versatile: weapon.versatileSource } } as any;

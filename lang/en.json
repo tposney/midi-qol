@@ -1937,6 +1937,10 @@
           "label": "AoE Target Type",
           "hint": "Midi will only target tokens of the specified type when using AoE templates"
         },
+        "targetCondition": {
+          "label": "Target Condition",
+          "hint": "Only creatures meeting this condition can be its targets (about target, e.g. target.raceOrType.includes(\"undead\"); target.chosen: one you targeted before the use): your targets, those its area or range takes, and those its area's rules affect later"
+        },
         "autoTargetAction": {
           "label": "Target on template draw",
           "hint": "When placing a template (e.g. spell) target tokens inside the template. If Levels Volumetric Templates is installed, it does the targeting."
@@ -4092,5 +4096,21 @@
   "midi-qol.DiceReroll.Keep": "Keep the roll",
   "midi-qol.DiceReroll.Suggested": "Reroll the suggested dice",
   "midi-qol.BonusApproval.Title": "Use your bonus?",
-  "midi-qol.BonusApproval.Content": "{requester} asks to use {label} ({actor})."
+  "midi-qol.BonusApproval.Content": "{requester} asks to use {label} ({actor}).",
+  "midi-qol.TargetCondition.Refused": "{names}: not a target {activity} can have (its target condition)",
+  "midi-qol.EntryEditor.Activity.Target.if": "{targets}, if {condition}",
+  "midi-qol.EntryEditor.Activity.TargetCondition": "Only if",
+  "midi-qol.EntryEditor.Activity.TargetConditionHint": "A condition about target: only creatures meeting it can be targets (yours, the area's, the range's, and those its area affects later). target.chosen: one you targeted before the use.",
+  "midi-qol.Sentence.Condition.Chosen": "it is one you chose before the use",
+  "midi-qol.Sentence.Condition.NotChosen": "it isn't one you chose before the use",
+  "midi-qol.Sentence.Condition.TargetType": "it is {type}",
+  "midi-qol.Sentence.Condition.TargetNotType": "it isn't {type}",
+  "midi-qol.Entries.Action.moveArea": "Move its area",
+  "midi-qol.Entries.Field.areaWithin": "Up to (distance)",
+  "midi-qol.Entries.Field.teleport": "Teleport (creatures on the way aren't entered)",
+  "midi-qol.Sentence.Action.moveArea.move": "move its area up to {n} ft",
+  "midi-qol.Sentence.Action.moveArea.teleport": "teleport its area up to {n} ft",
+  "midi-qol.MoveArea.Preview": "{name} (moving)",
+  "midi-qol.MoveArea.Pick": "Place {name} up to {within} {units} from where it is (right-click to leave it)",
+  "midi-qol.MoveArea.None": "{name} has no area on this scene to move"
 }

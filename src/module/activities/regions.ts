@@ -8,6 +8,7 @@ import { Workflow } from "../Workflow.js";
 import { getToken, activityHasAutoPlaceTemplate, getActivityAutoTargetAction, isActivityType } from "../utils.js";
 import { createActivityTemplateRegions, selectTargetsFromTemplates } from "./activityHelpers.js";
 import { sideBand, type BarrierSide, type ShapeFacts } from "../lib/barrierGeometry.js";
+import { activityTargetCondition } from "../lib/targetFilter.js";
 
 /*
  * An activity's regions: the emanation it places around its user, and the behaviours (rules, light, attachment) it gives a region.
@@ -228,6 +229,10 @@ export async function attachRegionActivityBehavior(activity: MidiActivity, regio
 
   // If explicitly configured on activity activity, use stored config
   // Convert portable IDs/identifiers from the activity schema to full UUIDs for the behavior type
+  // The cast's target condition holds for the creatures its rules affect later; target.chosen: those it was given
+  const targetCondition = activityTargetCondition(activity);
+  const chosenUuids = targetCondition ? (workflow?.preSelectedTargets?.documents ?? []).map(document => document.uuid).filter((uuid): uuid is string => !!uuid) : [];
+  const conditionSystem = targetCondition ? { targetCondition, chosenUuids } : {};
   if (rbConfig?.enabled) {
     const resolvedRules: Array<{trigger: string, action: string, targetUuid: string}> = [];
     const effectUuids: string[] = [];
@@ -244,9 +249,15 @@ export async function attachRegionActivityBehavior(activity: MidiActivity, regio
       } else if (rule.action === "applyEffect" || rule.action === "removeEffect") {
         const effect = activity.item?.effects.get(rule.targetId);
         if (!effect) continue;
-        // Applied on entry (and removed on exit, implied) is dnd5e's behaviour; at any other event the rule is midi's own
-        if (rule.action === "applyEffect" && rule.trigger === "entry") effectUuids.push(effect.uuid);
-        else if (!(rule.action === "removeEffect" && rule.trigger === "exit" && entryEffectIds.has(rule.targetId)))
+        // Applied on entry (and removed on exit, implied) is dnd5e's behaviour, unless a target condition limits who; at any
+        // other event the rule is midi's own
+        if (rule.action === "applyEffect" && rule.trigger === "entry" && !targetCondition) effectUuids.push(effect.uuid);
+        else if (rule.action === "applyEffect" && rule.trigger === "entry") {
+          resolvedRules.push({ trigger: "entry", action: "applyEffect", targetUuid: effect.uuid });
+          if (!(rbConfig.rules ?? []).some(other => other.action === "removeEffect" && other.trigger === "exit" && other.targetId === rule.targetId))
+            resolvedRules.push({ trigger: "exit", action: "removeEffect", targetUuid: effect.uuid });
+        }
+        else if (!(rule.action === "removeEffect" && rule.trigger === "exit" && entryEffectIds.has(rule.targetId) && !targetCondition))
           resolvedRules.push({ trigger: rule.trigger, action: rule.action, targetUuid: effect.uuid });
       }
     }
@@ -271,6 +282,7 @@ export async function attachRegionActivityBehavior(activity: MidiActivity, regio
         moveDistance: rbConfig.moveDistance ?? 0,
         moveDirection: rbConfig.moveDirection ?? "away",
         moveTiming: rbConfig.moveTiming ?? "start",
+        ...conditionSystem,
       },
     });
 
@@ -312,6 +324,7 @@ export async function attachRegionActivityBehavior(activity: MidiActivity, regio
         excludeSource: true,
         oncePerTurn: true,
         activationEntry: !castAffectsTargets,
+        ...conditionSystem,
       },
     });
   }

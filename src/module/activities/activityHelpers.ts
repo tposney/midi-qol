@@ -8,6 +8,7 @@ import { TokenDocumentSet, memberCount } from "../lib/tokenDocumentSet.js";
 import { Activity, ActivityUseConfiguration, RollMessageConfig, TokenOrDocument } from "../../globals.js";
 import { MODULE_ID, debugEnabled, warn, i18n, GameSystemConfig } from "../../midi-qol.js";
 import { Workflow } from "../Workflow.js";
+import { activityTargetFilter } from "../lib/targetFilter.js";
 import { TargetConfirmationDialog, TargetConfirmationOptions } from "../apps/TargetConfirmation.js";
 import { configSettings, targetConfirmation } from "../settings.js";
 import { installedModules } from "../setupModules.js";
@@ -672,7 +673,8 @@ export function computeOffLevelTemplateTargets(activity: Activity | undefined, t
       if (isTokenInsideRegion(region, document, wallsBlockTargeting)) reached.set(document.id!, document);
     }
   }
-  return [...reached.values()];
+  const filter = activityTargetFilter(activity);
+  return filter ? [...reached.values()].filter(filter) : [...reached.values()];
 }
 
 const gap = (a0: number, a1: number, b0: number, b1: number) => Math.max(0, Math.max(a0, b0) - Math.min(a1, b1));
@@ -826,8 +828,10 @@ export function computeActivityTemplateTargets(
   const autoTarget = getActivityAutoTargetAction(activity);
   if (autoTarget === "none") return undefined;
   const ignoreSelf = (activity?.target?.affects.special ?? "").split(";").includes("-self");
-  const tokens = computeTargetsFromTemplates(templates, tokenOf(tokenFor(activity?.actor)), ignoreSelf,
+  const filter = activityTargetFilter(activity);
+  const inside = computeTargetsFromTemplates(templates, tokenOf(tokenFor(activity?.actor)), ignoreSelf,
     activity ? getAoETargetType(activity) : "any", autoTarget);
+  const tokens = filter ? inside.filter(filter) : inside;
   const maxTargets = Number(activity?.target?.affects.count) || 0;
   return maxTargets > 0 ? tokens.slice(0, maxTargets) : tokens;
 }

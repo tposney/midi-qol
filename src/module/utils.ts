@@ -8902,7 +8902,8 @@ export function areMidiKeysPressed(event: AugmentedEvent | undefined, action: st
   });
 }
 
-export function setRangedTargets(tokenToUse: Token.Implementation, targetDetails: Activity["target"]) {
+/** `filter`: which of the creatures in range it may take (the activity's target condition) */
+export function setRangedTargets(tokenToUse: Token.Implementation, targetDetails: Activity["target"], filter?: (token: TokenOrDocument) => boolean) {
   if (!canvas || !canvas.scene) return true;
   if (!tokenToUse) {
     ui.notifications?.warn(`${i18n("midi-qol.noSelection")}`)
@@ -8947,6 +8948,7 @@ export function setRangedTargets(tokenToUse: Token.Implementation, targetDetails
         const distance = getDistance(target, tokenToUse, { wallsBlock });
         inRange = inRange && distance >= 0 && distance <= Number(minDist);
       }
+      if (inRange && filter && !filter(target)) inRange = false;
       if (inRange) {
         target.setTarget(true, { releaseOthers: false });
         if (target.document.id) targetIds.push(target.document.id);

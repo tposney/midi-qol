@@ -28,6 +28,10 @@ In development, not released. Listed here: barriers, creatures inside others, en
 * Entries: `move` with `place: "inside" | "beside"`; action `tally` (a running total for the turn or round, read as `tallies.<name>`); condition helper `inside(a, b)`.
 * Entries: removing a condition ends it wherever it comes from (`whole: true` ends the effect instead); choice kind `conditions` (among those the target has).
 * Overlays: Wall of Force, Forcecage, Wall of Stone, Wall of Ice, Wall of Fire, Wall of Thorns (barriers); Heal, Mass Heal, Power Word Heal, Lesser Restoration, Lay on Hands, Restoring Touch (conditions ended).
+* Target condition: an activity's *Target Condition* (about `target`; `target.chosen`: one targeted before the use) limits who it targets: the user's targets (dropped, or not selectable in target confirmation), an area's and a range's, the creatures its area's rules affect later, Trigger Activity's near creatures, the hub's target rings. Edited on the activity's midi tab and on the card's Targets line ("…, if it is undead").
+* Entries: `moveArea` (`within`, `teleport`): the area the item placed moves to a point the user places, held to the distance; in grid steps (creatures passed over enter it), or at once.
+* Overlays: Moonbeam and Cloud of Daggers (the area lingers; Move the Beam, Teleport the Cube), Spirit Guardians (creatures targeted before the cast are spared), Channel Divinity (Turn Undead and Sear Undead take the Undead within 30 ft).
+* Overlays: changes can set an area's region rules (a JSON list); an activity an overlay adds no longer runs its entries twice.
 * Fixed: a spell placing several areas (Wall of Force's panels) hung after placement and lost its area.
 * Fixed: a Large or Gargantuan token moved or teleported by midi landed half a square off the grid.
 

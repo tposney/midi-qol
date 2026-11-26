@@ -2,7 +2,7 @@ import { i18n, MODULE_ID } from "../../midi-qol.js";
 import { actionKeyOf, actionProblems, actionSchema, entryChecks, registeredActionKeys, registeredEvents, type ActionField } from "../lib/entries/engine.js";
 import { describeRuleFor, itemOfEffect, matchesRole, ruleFor, unusedRuleFor } from "../lib/entries/rules.js";
 import type { Entry, EntryAction, EntryHome, EntryWho } from "../lib/entries/types.js";
-import { choiceName, conditionPresets, entrySentence, triggerGroups } from "../lib/entries/sentences.js";
+import { choiceName, conditionInWords, conditionPresets, entrySentence, triggerGroups } from "../lib/entries/sentences.js";
 import { recipe, recipesFor } from "../lib/entries/recipes.js";
 import { activityOvertimeEntries, overtimeEntries } from "../lib/entries/overtime.js";
 import { ACTIVITY_REF } from "../lib/entries/activityActions.js";
@@ -826,7 +826,7 @@ export class EntryEditor extends HandlebarsApplicationMixin(DocumentSheetV2)<
         ...(system.properties?.has("ver") && damage.versatile ? { versatile: damage.versatile } : {}) };
     }
     // The area it makes, as dnd5e words it (its own template, else the item's)
-    const prepared = h.document as { target?: { template?: { type?: string, size?: unknown, width?: unknown }, affects?: { type?: string, count?: unknown } }, range?: { units?: string, value?: unknown }, labels?: { target?: string }, midiProperties?: { targetMustBeSeen?: boolean } };
+    const prepared = h.document as { target?: { template?: { type?: string, size?: unknown, width?: unknown }, affects?: { type?: string, count?: unknown } }, range?: { units?: string, value?: unknown }, labels?: { target?: string }, midiProperties?: { targetMustBeSeen?: boolean, targetCondition?: string } };
     if (prepared.target?.template?.type) data.areaLabel = prepared.labels?.target;
     // Its targeting as dnd5e resolves it
     data.targetPresets = targetPresetDefs();
@@ -834,7 +834,8 @@ export class EntryEditor extends HandlebarsApplicationMixin(DocumentSheetV2)<
       affectsType: prepared.target?.affects?.type ?? "", count: prepared.target?.affects?.count as Targeting["count"],
       templateType: prepared.target?.template?.type ?? "", size: prepared.target?.template?.size as Targeting["size"], width: prepared.target?.template?.width as Targeting["width"],
       rangeUnits: prepared.range?.units ?? "", rangeValue: prepared.range?.value as Targeting["rangeValue"],
-      mustSee: !!prepared.midiProperties?.targetMustBeSeen
+      mustSee: !!prepared.midiProperties?.targetMustBeSeen,
+      condition: prepared.midiProperties?.targetCondition ?? ""
     };
     return data;
   }
@@ -888,10 +889,13 @@ export class EntryEditor extends HandlebarsApplicationMixin(DocumentSheetV2)<
   #targetingUpdates(h: Home): { activity: Record<string, unknown>, item: Record<string, unknown> } {
     const source = this.#activitySource(h);
     if (!h.card?.target || !source.targeting) return { activity: {}, item: {} };
-    const { mustSee, ...targeting } = editedTargeting(source.targeting, h.card.target, source.targetPresets);
-    const { mustSee: mustSeeBefore, ...before } = source.targeting;
-    // Seeing targets is midi's, on the activity (a spell's too); the rest where dnd5e reads it
-    const seen = !!mustSee !== !!mustSeeBefore ? { "midiProperties.targetMustBeSeen": !!mustSee } : {};
+    const { mustSee, condition, ...targeting } = editedTargeting(source.targeting, h.card.target, source.targetPresets);
+    const { mustSee: mustSeeBefore, condition: conditionBefore, ...before } = source.targeting;
+    // Seeing targets and the target condition are midi's, on the activity (a spell's too); the rest where dnd5e reads it
+    const seen = {
+      ...(!!mustSee !== !!mustSeeBefore ? { "midiProperties.targetMustBeSeen": !!mustSee } : {}),
+      ...((condition ?? "").trim() !== (conditionBefore ?? "").trim() ? { "midiProperties.targetCondition": (condition ?? "").trim() } : {})
+    };
     if (JSON.stringify(targeting) === JSON.stringify(before)) return { activity: seen, item: {} };
     const onItem = this.#targetingOnItem(h);
     const update = targetingUpdate(targeting, onItem);
@@ -943,7 +947,8 @@ export class EntryEditor extends HandlebarsApplicationMixin(DocumentSheetV2)<
         const full = `midi-qol.EntryEditor.${key}`;
         const known = game.i18n?.has(full) ? full : key.startsWith("Activity.Type.") ? "midi-qol.EntryEditor.Activity.Used" : full;
         return data ? game.i18n?.format(known, data) ?? known : i18n(known);
-      }
+      },
+      condition: conditionInWords
     };
   }
 
@@ -1127,6 +1132,8 @@ export class EntryEditor extends HandlebarsApplicationMixin(DocumentSheetV2)<
         canLinger: area, lingers: !!data.regionBehavior?.enabled,
         // "a creature you can see": midi's check, as the world's Targets you can see rule says
         canSee: has("who", SEEN_PRESETS.includes(preset)), mustSee: !!tg.mustSee,
+        // Which creatures it may target (any preset but self)
+        canCondition: preset !== "self", condition: tg.condition ?? "",
         seeHint: i18n(`midi-qol.EntryEditor.Activity.SeeRule.${configSettings.optionalRules?.targetMustBeSeen || "nothing"}`),
         who: !has("who", !["self", "custom"].includes(preset)) ? undefined : ["creature", "enemy", "ally"].map(w => option(w, i18n(`midi-qol.EntryEditor.Activity.Target.who.${w}s`), (tg.affectsType || "creature") === w)),
         onItem: undefined
@@ -1597,6 +1604,7 @@ export class EntryEditor extends HandlebarsApplicationMixin(DocumentSheetV2)<
         if (typeof data["card.target.shape"] === "string") target.shape = data["card.target.shape"] as string;
         if (typeof data["card.target.who"] === "string") target.who = data["card.target.who"] as string;
         if ("card.target.see" in data) target.see = !!data["card.target.see"];
+        if (typeof data["card.target.condition"] === "string") target.condition = data["card.target.condition"] as string;
         h.card.target = target;
       }
     }

@@ -100,6 +100,8 @@
           {{ formField fields.confirmTargets value=../source.midiProperties.confirmTargets options=../ConfirmTargetOptions localize=true}}
         {{/if}}
 
+        {{ formField fields.targetCondition value=../source.midiProperties.targetCondition }}
+
         {{#if ../hasAreaTarget}}
           {{ formField fields.autoTargetType value=../source.midiProperties.autoTargetType options=../AutoTargetTypeOptions localize=true}}
           {{ formField fields.autoTargetAction value=../source.midiProperties.autoTargetAction localize=true

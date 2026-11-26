@@ -1,4 +1,5 @@
 import { tokenFor, tokenOf } from "../lib/tokenResolver.js";
+import { activityTargetFilter } from "../lib/targetFilter.js";
 import { issuePolicy, issues } from "../services/economy/issues.js";
 import { debug, debugEnabled, error, i18nFormat, warn } from "../../midi-qol.js";
 import { choiceDeclarations, resolveChoices } from "../lib/choices.js";
@@ -37,7 +38,7 @@ async function placeEmanation(workflow: Workflow): Promise<void> {
     if (templates?.length) await workflow.processPlacedTemplates(templates, activity);
   }
   if (activityHasEmanationNoTemplate(activity)) {
-    setRangedTargets(token, activity.target);
+    setRangedTargets(token, activity.target, activityTargetFilter(activity, workflow));
     workflow.setTargets(validTargetTokens(new Set(game.user?.targets)));
     // dnd5e's targets on the card (its effects tray), as the card would have had them
     const card = workflow.chatCard;

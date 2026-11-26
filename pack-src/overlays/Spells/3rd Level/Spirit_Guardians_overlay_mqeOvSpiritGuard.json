@@ -1,0 +1,66 @@
+{
+  "name": "Spirit Guardians (overlay)",
+  "type": "spell",
+  "img": "icons/magic/light/orb-hands-humanoid-yellow.webp",
+  "_id": "mqeOvSpiritGuard",
+  "_key": "!items!mqeOvSpiritGuard",
+  "folder": "SpellFldr3rdLevl",
+  "ownership": {
+    "default": 0
+  },
+  "system": {
+    "description": {
+      "value": "<p><em>Overlay (midi-qol):</em> the Emanation follows you; any creature it moves into, or that enters it or ends its turn there, makes the save (once a turn). <strong>The creatures you target before casting are the ones you designate</strong>: they are never affected (the cast's target condition <code>!target.chosen</code>). The halved Speed is not automated. It changes no item: midi applies it to any item with the identifier <code>spirit-guardians</code> (2024 rules) that nothing else automates.</p>",
+      "chatFlavor": ""
+    },
+    "identifier": "spirit-guardians-overlay",
+    "source": {
+      "rules": "2024"
+    },
+    "activities": {}
+  },
+  "effects": [],
+  "flags": {
+    "midi-qol": {
+      "overlay": {
+        "identifier": "spirit-guardians",
+        "rules": "2024",
+        "version": "1",
+        "changes": [
+          {
+            "key": "system.activities.tevaatMC9LZxVPLS.regionBehavior.enabled",
+            "value": "true",
+            "type": "override"
+          },
+          {
+            "key": "system.activities.tevaatMC9LZxVPLS.regionBehavior.attachToken",
+            "value": "caster",
+            "type": "override"
+          },
+          {
+            "key": "system.activities.tevaatMC9LZxVPLS.regionBehavior.dispositionFilter",
+            "value": "0",
+            "type": "override"
+          },
+          {
+            "key": "system.activities.tevaatMC9LZxVPLS.regionBehavior.rules",
+            "value": "[{\"trigger\": \"entry\", \"action\": \"useActivity\", \"targetId\": \"dnd5eactivity000\"}, {\"trigger\": \"turnEnd\", \"action\": \"useActivity\", \"targetId\": \"dnd5eactivity000\"}]",
+            "type": "override"
+          },
+          {
+            "key": "system.activities.tevaatMC9LZxVPLS.midiProperties.targetCondition",
+            "value": "!target.chosen",
+            "type": "override"
+          }
+        ]
+      }
+    }
+  },
+  "_stats": {
+    "compendiumSource": null,
+    "duplicateSource": null,
+    "coreVersion": "14.360",
+    "systemId": "dnd5e",
+    "systemVersion": "6.1.0"
+  }
+}

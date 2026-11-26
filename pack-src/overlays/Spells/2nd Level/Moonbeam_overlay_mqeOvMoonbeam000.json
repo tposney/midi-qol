@@ -1,0 +1,330 @@
+{
+  "name": "Moonbeam (overlay)",
+  "type": "spell",
+  "img": "icons/magic/light/beam-rays-yellow-blue-large.webp",
+  "_id": "mqeOvMoonbeam000",
+  "_key": "!items!mqeOvMoonbeam000",
+  "folder": "SpellFldr2ndLevl",
+  "ownership": {
+    "default": 0
+  },
+  "system": {
+    "description": {
+      "value": "<p><em>Overlay (midi-qol):</em> the Cylinder lingers: a creature it moves into, or that enters it or ends its turn there, makes the save (once a turn). <strong>Move the Beam</strong> (a Magic action) moves it up to 60 feet to a point you place; creatures it passes over are moved into. It changes no item: midi applies it to any item with the identifier <code>moonbeam</code> (2024 rules) that nothing else automates.</p>",
+      "chatFlavor": ""
+    },
+    "identifier": "moonbeam-overlay",
+    "source": {
+      "rules": "2024"
+    },
+    "activities": {
+      "mqeMoonbeamBurn0": {
+        "_id": "mqeMoonbeamBurn0",
+        "type": "save",
+        "activation": {
+          "type": "special",
+          "value": null,
+          "override": true,
+          "condition": ""
+        },
+        "consumption": {
+          "spellSlot": false,
+          "targets": [],
+          "scaling": {
+            "allowed": false,
+            "max": ""
+          }
+        },
+        "description": {
+          "chatFlavor": "",
+          "value": ""
+        },
+        "duration": {
+          "units": "inst",
+          "override": true,
+          "concentration": false,
+          "value": "",
+          "special": ""
+        },
+        "effects": [],
+        "range": {
+          "units": "any",
+          "override": true,
+          "special": "",
+          "value": null
+        },
+        "target": {
+          "prompt": true,
+          "template": {
+            "count": "",
+            "contiguous": false,
+            "type": "",
+            "size": "",
+            "width": "",
+            "height": "",
+            "units": "ft"
+          },
+          "affects": {
+            "count": "",
+            "type": "creature",
+            "choice": false,
+            "special": ""
+          },
+          "override": true
+        },
+        "damage": {
+          "onSave": "half",
+          "parts": [
+            {
+              "number": 2,
+              "denomination": 10,
+              "bonus": "",
+              "types": [
+                "radiant"
+              ],
+              "custom": {
+                "enabled": false,
+                "formula": ""
+              },
+              "scaling": {
+                "mode": "whole",
+                "number": 1,
+                "formula": ""
+              },
+              "modifiers": []
+            }
+          ],
+          "critical": {
+            "allow": false
+          }
+        },
+        "save": {
+          "ability": [
+            "con"
+          ],
+          "dc": {
+            "calculation": "spellcasting",
+            "formula": ""
+          },
+          "visible": true
+        },
+        "uses": {
+          "spent": 0,
+          "recovery": []
+        },
+        "sort": 0,
+        "img": null,
+        "behaviors": [],
+        "flags": {},
+        "visibility": {
+          "level": {},
+          "requireAttunement": false,
+          "requireIdentification": false,
+          "requireMagic": false
+        },
+        "useConditionText": "",
+        "useConditionReason": "",
+        "effectConditionText": "",
+        "otherActivityId": null,
+        "macroData": {
+          "name": "",
+          "command": ""
+        },
+        "ignoreTraits": {
+          "idi": false,
+          "idr": false,
+          "idv": false,
+          "ida": false,
+          "idm": false
+        },
+        "midiProperties": {
+          "ignoreTraits": [],
+          "triggeredActivityId": "none",
+          "triggeredActivityConditionText": "",
+          "triggeredActivityTargets": "targets",
+          "triggeredActivityRollAs": "self",
+          "triggeredActivityConsume": true,
+          "triggeredActivityConfigure": true,
+          "triggeredActivityNearWithin": 30,
+          "triggeredActivityNearMax": "1",
+          "triggeredActivityNearDisposition": "any",
+          "triggeredActivityChainLimit": "",
+          "followUp": false,
+          "followUpTargets": "default",
+          "followUpCondition": "",
+          "autoConsume": false,
+          "forceConsumeDialog": "default",
+          "forceRollDialog": "default",
+          "forceDamageDialog": "default",
+          "confirmTargets": "default",
+          "autoTargetType": "any",
+          "autoTargetAction": "default",
+          "automationOnly": true,
+          "otherActivityCompatible": true,
+          "otherActivityAsParentType": true,
+          "identifier": "moonbeam-burn",
+          "displayActivityName": false,
+          "rollMode": "default",
+          "chooseEffects": false,
+          "toggleEffect": false,
+          "ignoreFullCover": false,
+          "targetMustBeSeen": false,
+          "removeChatButtons": "default",
+          "magicEffect": false,
+          "magicDamage": false,
+          "noConcentrationCheck": false,
+          "skipConcentrationCheck": false,
+          "autoCEEffects": "default",
+          "statuses": []
+        },
+        "isOverTimeFlag": false,
+        "overTimeProperties": {
+          "saveRemoves": true,
+          "rollAs": "target",
+          "preRemoveConditionText": "",
+          "postRemoveConditionText": ""
+        },
+        "regionBarrier": {
+          "enabled": false,
+          "move": true,
+          "sight": "none",
+          "sound": "none",
+          "direction": "both",
+          "trace": "auto",
+          "sideDepth": 0,
+          "sideActivity": ""
+        },
+        "regionLight": {
+          "enabled": false,
+          "dim": 0,
+          "bright": 0,
+          "color": null,
+          "alpha": 0.5,
+          "luminosity": 0.5,
+          "animationType": "",
+          "animationSpeed": 5,
+          "animationIntensity": 5
+        },
+        "otherActivityAsParentType": true,
+        "friendlySave": "default",
+        "name": "Moonbeam Burn"
+      },
+      "mqeMoonbeamMove0": {
+        "_id": "mqeMoonbeamMove0",
+        "type": "utility",
+        "name": "Move the Beam",
+        "img": "icons/magic/light/beam-rays-yellow-blue-large.webp",
+        "sort": 0,
+        "activation": {
+          "type": "action",
+          "value": null,
+          "override": true,
+          "condition": ""
+        },
+        "consumption": {
+          "spellSlot": false,
+          "targets": [],
+          "scaling": {
+            "allowed": false,
+            "max": ""
+          }
+        },
+        "duration": {
+          "units": "inst",
+          "override": true,
+          "concentration": false,
+          "value": "",
+          "special": ""
+        },
+        "range": {
+          "units": "self",
+          "override": true,
+          "special": "",
+          "value": null
+        },
+        "target": {
+          "override": true,
+          "prompt": false,
+          "template": {
+            "count": "",
+            "contiguous": false,
+            "type": "",
+            "size": "",
+            "width": "",
+            "height": "",
+            "units": "ft"
+          },
+          "affects": {
+            "count": "",
+            "type": "",
+            "choice": false,
+            "special": ""
+          }
+        },
+        "roll": {
+          "prompt": false,
+          "visible": false,
+          "formula": "",
+          "name": ""
+        },
+        "midiProperties": {
+          "forceConsumeDialog": "never",
+          "confirmTargets": "never"
+        },
+        "midiEntries": [
+          {
+            "id": "move",
+            "on": "use.completed",
+            "label": "Moonbeam: move the beam",
+            "do": [
+              {
+                "moveArea": {
+                  "within": 60
+                }
+              }
+            ]
+          }
+        ]
+      }
+    }
+  },
+  "effects": [],
+  "flags": {
+    "midi-qol": {
+      "overlay": {
+        "identifier": "moonbeam",
+        "rules": "2024",
+        "version": "1",
+        "changes": [
+          {
+            "key": "system.activities.dnd5eactivity000.regionBehavior.enabled",
+            "value": "true",
+            "type": "override"
+          },
+          {
+            "key": "system.activities.dnd5eactivity000.regionBehavior.dispositionFilter",
+            "value": "0",
+            "type": "override"
+          },
+          {
+            "key": "system.activities.dnd5eactivity000.regionBehavior.excludeSource",
+            "value": "false",
+            "type": "override"
+          },
+          {
+            "key": "system.activities.dnd5eactivity000.regionBehavior.rules",
+            "value": "[{\"trigger\": \"entry\", \"action\": \"useActivity\", \"targetId\": \"mqeMoonbeamBurn0\"}, {\"trigger\": \"turnEnd\", \"action\": \"useActivity\", \"targetId\": \"mqeMoonbeamBurn0\"}]",
+            "type": "override"
+          }
+        ]
+      }
+    }
+  },
+  "_stats": {
+    "compendiumSource": null,
+    "duplicateSource": null,
+    "coreVersion": "14.360",
+    "systemId": "dnd5e",
+    "systemVersion": "6.1.0"
+  }
+}

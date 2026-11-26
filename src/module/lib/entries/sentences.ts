@@ -53,7 +53,9 @@ const CONDITIONS: Record<string, string> = {
   "targets.some(t => t.attributes.hp.value < t.attributes.hp.max)": "TargetHurt",
   "tags.use.targetsScale": "TargetsScale",
   "tags.use.costlyMaterial": "CostlyMaterial",
-  "!tags.use.costlyMaterial": "NoCostlyMaterial"
+  "!tags.use.costlyMaterial": "NoCostlyMaterial",
+  "target.chosen": "Chosen",
+  "!target.chosen": "NotChosen"
 };
 
 /** The conditions offered as ready-made (the form's "add a common condition") */
@@ -105,6 +107,8 @@ function conditionWords(piece: string): string | undefined {
   const taken = /^\(event\.damage\?\.applied\?\.(\w+) \?\? 0\) > 0$/.exec(piece);
   if (taken) return say("Condition.TakesType", { type: labelOf("damageTypes", taken[1]) });
   if (piece === "!!event.use?.activity?.hasDamage") return say("Condition.DealsDamage");
+  const creatureType = /^(!?)target\.raceOrType\.includes\(['"](\w+)['"]\)$/.exec(piece);
+  if (creatureType) return say(creatureType[1] ? "Condition.TargetNotType" : "Condition.TargetType", { type: labelOf("creatureTypes", creatureType[2]) });
   return undefined;
 }
 
@@ -124,6 +128,11 @@ function conditionText(expression: string, nested = false): { text: string, know
   }
   const words = conditionWords(e);
   return { text: words ?? e, known: !!words };
+}
+
+/** A condition in words where midi knows any of it, else as written */
+export function conditionInWords(expression: string): string {
+  return conditionText(expression).text;
 }
 
 /** A condition as a part: in words where midi knows any of it, else as written */
@@ -271,6 +280,10 @@ export function actionText(action: EntryAction, context: SentenceContext): strin
         : card(`Activity.Then.to.${["targets", "hitTargets", "missedTargets", "failedSaves", "saveTargets", "self", "retarget"].includes(to) ? to : "targets"}`);
       const chain = a.chain ? `, ${card("Activity.Then.chain", { n: friendlyFormula(a.chain) })}` : "";
       return say("Action.useOn", { activity: activityName(a.use, context), targets }) + chain;
+    }
+    case "moveArea": {
+      const m = part(a.moveArea);
+      return say(m.teleport ? "Action.moveArea.teleport" : "Action.moveArea.move", { n: friendlyFormula(m.within ?? 30) });
     }
     case "move": {
       const m = part(a.move);

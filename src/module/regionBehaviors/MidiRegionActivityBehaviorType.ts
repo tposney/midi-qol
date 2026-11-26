@@ -5,6 +5,7 @@ import { completeActivityUse, fromActorUuid, getToken, isValidTarget, itemIsMagi
 import { preferredActiveGM, unTimedExecuteAsGM } from "../GMAction.js";
 import { V14RegionDocument, Activity } from "../../globals.js";
 import { lineOfEffectClear, withinAreaReach } from "../activities/activityHelpers.js";
+import { meetsTargetCondition } from "../lib/targetFilter.js";
 
 const { ArrayField, BooleanField, NumberField, SchemaField, StringField } = foundry.data.fields;
 
@@ -53,6 +54,10 @@ export class MidiRegionActivityBehaviorType extends foundry.data.regionBehaviors
         label: `BEHAVIOR.TYPES.${MODULE_ID}.regionActivity.FIELDS.dispositionFilter.label`,
         hint: `BEHAVIOR.TYPES.${MODULE_ID}.regionActivity.FIELDS.dispositionFilter.hint`,
       }),
+      // Which creatures its rules affect, beyond the disposition (the area activity's target condition), and those the
+      // caster chose before the cast (`target.chosen`)
+      targetCondition: new StringField({ initial: "", blank: true }),
+      chosenUuids: new ArrayField(new StringField(), { initial: [] }),
       // The damage type its uses roll a part with several types as: the cast chose it once
       damageType: new StringField({ initial: "", blank: true }),
       castLevel: new NumberField({
@@ -109,6 +114,21 @@ export class MidiRegionActivityBehaviorType extends foundry.data.regionBehaviors
     if (filter === 1) return tokenDisposition === sourceDisposition;
     if (filter === -1) return tokenDisposition !== sourceDisposition;
     return true;
+  }
+
+  declare sourceItemUuid: string;
+  declare targetCondition: string;
+  declare chosenUuids: string[];
+
+  _passesTargetCondition(token: TokenDocument.Implementation): boolean {
+    if (!this.targetCondition) return true;
+    const region = (this as unknown as { region?: RegionDocument.Implementation }).region;
+    // @ts-expect-error no dnd5e types
+    const activityUuid: string | undefined = region?.flags.dnd5e?.activity;
+    const activity = activityUuid ? fromUuidSync(activityUuid, { strict: false }) as Activity | null : null;
+    const item = this.sourceItemUuid ? fromUuidSync(this.sourceItemUuid, { strict: false }) as Item.Implementation | null : null;
+    return meetsTargetCondition(this.targetCondition, token, { activity: activity ?? undefined, item: item ?? undefined,
+      actor: fromActorUuid(this.sourceActorUuid), chosen: this.chosenUuids });
   }
 
   _isSourceToken(token: TokenDocument.Implementation): boolean {
@@ -238,6 +258,7 @@ export class MidiRegionActivityBehaviorType extends foundry.data.regionBehaviors
 
     if (this._isSourceToken(token)) return;
     if (!this._passesDispositionFilter(token)) return;
+    if (!this._passesTargetCondition(token)) return;
     if (!isValidTarget(token)) return;
     if (!this._inReach(token)) return;
 
@@ -269,6 +290,7 @@ export class MidiRegionActivityBehaviorType extends foundry.data.regionBehaviors
 
     if (this._isSourceToken(token)) return;
     if (!this._passesDispositionFilter(token)) return;
+    if (!this._passesTargetCondition(token)) return;
     if (!isValidTarget(token)) return;
     if (!this._inReach(token)) return;
 
@@ -283,6 +305,7 @@ export class MidiRegionActivityBehaviorType extends foundry.data.regionBehaviors
 
     if (this._isSourceToken(token)) return;
     if (!this._passesDispositionFilter(token)) return;
+    if (!this._passesTargetCondition(token)) return;
     if (!isValidTarget(token)) return;
     if (!this._inReach(token)) return;
 
@@ -550,15 +573,26 @@ export async function moveRegionsOnTurnChange(combat: Combat.Implementation, pre
 /** Moves in grid-sized steps, so tokens the region passes over enter it as well as those it ends on. */
 async function moveRegion(region: V14RegionDocument, unit: { x: number, y: number }, distance: number) {
   const scene = region.parent!;
-  const stepDistance = scene.grid.distance || distance;
-  const steps = Math.max(1, Math.ceil(distance / stepDistance));
   const pixels = distance * scene.dimensions.distancePixels;
+  await shiftRegion(region, { x: unit.x * pixels, y: unit.y * pixels });
+}
+
+/**
+ * Moves a region's shapes by `offset` (pixels): in grid-sized steps, so tokens the region passes over enter it as well as
+ * those it ends on, or at once (`teleport`: only those where it arrives). Through the GM for a player.
+ */
+export async function shiftRegion(region: V14RegionDocument, offset: { x: number, y: number }, { teleport = false }: { teleport?: boolean } = {}) {
+  const scene = region.parent!;
+  const length = Math.hypot(offset.x, offset.y);
+  if (length < 1) return;
+  const stepPixels = scene.grid.size || length;
+  const steps = teleport ? 1 : Math.max(1, Math.ceil(length / stepPixels - 1e-6));
   const start = region.shapes.map(s => s.origin);
   for (let i = 1; i <= steps; i++) {
-    const offset = { x: unit.x * pixels * i / steps, y: unit.y * pixels * i / steps };
+    const step = { x: offset.x * i / steps, y: offset.y * i / steps };
     const shapes = region.shapes.map((shape, j) => {
       const moved = shape.clone({}, { parent: scene });
-      moved.move({ x: start[j].x + offset.x, y: start[j].y + offset.y });
+      moved.move({ x: start[j].x + step.x, y: start[j].y + step.y });
       return moved._source;
     });
     if (game.user?.isGM) await region.update({ shapes });

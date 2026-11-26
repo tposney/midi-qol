@@ -2,7 +2,8 @@ import { tokenFor, tokenOf } from "../lib/tokenResolver.js";
 import { MidiActivity } from "./midiActivity.js";
 import { TokenDocumentSet, memberCount } from "../lib/tokenDocumentSet.js";
 import { ActivityUseConfiguration, RollDialogConfig, RollMessageConfig } from "../../globals.js";
-import { error } from "../../midi-qol.js";
+import { error, i18nFormat } from "../../midi-qol.js";
+import { activityTargetFilter } from "../lib/targetFilter.js";
 import { TroubleShooter } from "../apps/TroubleShooter.js";
 import { configSettings } from "../settings.js";
 import { activityHasAreaTarget, activityTargetsSelf, getOrCreateTokenForActor, validTargetTokens, userTargetsKeepingUndrawn, updateUserTargets, isValidTarget } from "../utils.js";
@@ -66,6 +67,16 @@ export async function setupTargets(activity: MidiActivity, config: ActivityUseCo
       let potentialTarget = tokenOf(tokenFor(activity.actor, { create: true }));
       workflow.setTargets(new Set());
       if (potentialTarget) workflow.setTargets(workflow.targets.add(potentialTarget));
+    }
+  }
+  // The activity's target condition: those that don't meet it are not its targets (the confirmation dialog, when shown,
+  // already refused them). An area's are filtered as its template's are worked out
+  const filter = isSelfTargetActivity || activityHasAreaTarget(activity) ? undefined : activityTargetFilter(activity, workflow);
+  if (filter) {
+    const refused = workflow.targets.documents.filter(document => !filter(document));
+    if (refused.length) {
+      workflow.setTargets(new Set(workflow.targets.documents.filter(document => filter(document))));
+      ui.notifications?.warn(i18nFormat("midi-qol.TargetCondition.Refused", { names: refused.map(document => document.name).join(", "), activity: activity.name ?? activity.item?.name ?? "" }));
     }
   }
   // remove selection of un-targetable targets TODO

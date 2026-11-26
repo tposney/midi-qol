@@ -3,6 +3,7 @@ import { checkActivityRange, checkIncapacitated } from "../../utils.js";
 import { getDistance } from "../../services/distance/service.js";
 import { isFlanking } from "../../services/flanking/service.js";
 import { i18n } from "../../../midi-qol.js";
+import { activityTargetFilter } from "../../lib/targetFilter.js";
 
 /*
  * M27 further features: hovering a use in the hub rings its valid targets on the canvas (in range, of the kind it
@@ -20,11 +21,13 @@ export function validTargets(activity: Activity, attacker: Token.Implementation)
   if (affects === "self") return [attacker];
   if (["space", "object"].includes(affects)) return [];
   const mine = attacker.document.disposition;
+  const meets = activityTargetFilter(activity);
   return (canvas?.tokens?.placeables ?? []).filter(token => {
     if (token === attacker || !token.actor || !token.visible) return false;
     if (affects === "ally" && token.document.disposition !== mine) return false;
     if (affects === "enemy" && token.document.disposition * mine !== -1) return false;
-    return checkActivityRange(activity, attacker, new Set([token]), false).result !== "fail";
+    if (checkActivityRange(activity, attacker, new Set([token]), false).result === "fail") return false;
+    return !meets || meets(token);
   });
 }
 
