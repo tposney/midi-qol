@@ -8,6 +8,7 @@ import { approveBonus } from "./approval.js";
 import { reveals } from "../revealPolicy/service.js";
 import { bonusDamageTypeKey, rememberChoice, rememberCheckbox, rememberedChoice } from "../../lib/rememberedChoices.js";
 import { standingKey } from "./standing.js";
+import type { PromptControl, PromptControlType } from "../promptControls/service.js";
 import { addCanMatter, canAfford, type BonusCost, type BonusEffect, type BonusPhase, type BonusRollKind, type Outcome } from "./rules.js";
 
 /*
@@ -51,26 +52,18 @@ export interface BonusContext {
   selection?: BonusSelection;
 }
 
-/** Contract 4: an input shown with a bonus in the prompt */
-export interface BonusInput {
-  name: string;
-  label: string;
-  /** multi: several of its options (CAT's comboboxMulti), its value a list */
-  type: "number" | "select" | "multi" | "checkbox" | "text";
-  options?: readonly { value: string, label: string }[];
-  default?: string | number | boolean | readonly string[];
-  min?: number;
-  max?: number;
-}
+/** Contract 4: an input shown with a bonus in the prompt (a standard prompt control: services/promptControls) */
+export type BonusInput = PromptControl & { label: string, type: PromptControlType };
 
 /** Contract 4: what the player chose for a bonus in the prompt */
 export interface BonusSelection {
   scaling?: number;
-  inputs: Record<string, string | number | boolean | readonly string[]>;
+  /** Its inputs' and other prompt controls' values (promptControls), by name */
+  inputs: Record<string, unknown>;
   damageType?: string;
   /** Token document uuids picked (targeting) */
   targets: string[];
-  /** The roll's dice picked for a "choose" reroll ("die-result" indices into roll.dice) */
+  /** The roll's dice picked for a "choose" reroll ("die-result" indices into roll.dice; midi's prompt: inputs.dice) */
   dice?: string[];
 }
 
@@ -455,7 +448,8 @@ export async function applyOfferedBonus(bonus: OfferedBonus, ctx: BonusContext, 
     }
     let effect = bonus.effect;
     if (effect.kind === "add" && !effect.damageType && selection?.damageType) effect = { ...effect, damageType: selection.damageType };
-    if (effect.kind === "reroll" && effect.dice === "choose" && selection?.dice) effect = { ...effect, picked: selection.dice };
+    const pickedDice = selection?.dice ?? (Array.isArray(selection?.inputs.dice) ? selection.inputs.dice.filter((key): key is string => typeof key === "string") : undefined);
+    if (effect.kind === "reroll" && effect.dice === "choose" && pickedDice) effect = { ...effect, picked: pickedDice };
     if (effect.kind === "add" && !effect.damageType && bonus.damageTypes?.length)
       effect = { ...effect, damageType: await chooseDamageType(bonus.damageTypes, bonus.label, ctx.query.actor, bonusDamageTypeKey(standingKey(bonus))) };
     const targets = selection?.targets.length ? selection.targets : bonus.targets;

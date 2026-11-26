@@ -3,7 +3,7 @@ import { configSettings } from "../../settings.js";
 import { playerForActor } from "../../utils.js";
 import { askUser, registerRequestHandler, type IncomingRequest } from "../requests.js";
 import type { FoundEntry } from "./types.js";
-import { readOfferControls, wireOfferControls, type OfferControlData } from "../../services/offerControls/service.js";
+import { promptControlHTML, readPromptControls, wirePromptControls, type PromptControlData } from "../../services/promptControls/service.js";
 import { actorToggleEntries } from "./engine.js";
 import { ruleFor } from "./rules.js";
 import { rememberedChoices } from "../rememberedChoices.js";
@@ -22,7 +22,7 @@ import { STANDING_CHOICES, storedStandings, type StandingChoice } from "../../se
 
 export const ENTRY_OFFER_REQUEST = "midi-qol.entryOffer";
 
-export interface OfferOption { key: string, label: string, img?: string, description?: string, cost?: string, group?: string, stacks?: boolean, /** Shown once it is ticked (the offerControls service) */ controls?: OfferControlData[] }
+export interface OfferOption { key: string, label: string, img?: string, description?: string, cost?: string, group?: string, stacks?: boolean, /** Shown once it is ticked (the promptControls service) */ controls?: PromptControlData[] }
 
 const docOf = (f: FoundEntry) => f.document as { id?: string | null, uuid?: string, name?: string, img?: string | null, item?: Item.Implementation, parent?: unknown };
 
@@ -182,7 +182,7 @@ export async function askOffers(actor: Actor.Implementation, title: string, opti
   return (await askOfferChoices(actor, title, options, detail)).keys;
 }
 
-/** What was taken: its keys, and each taken option's control values (offerControls) */
+/** What was taken: its keys, and each taken option's control values (promptControls) */
 export interface OfferAnswer { keys: string[], values: Record<string, Record<string, unknown>> }
 
 /** The options taken, with the values of their controls */
@@ -216,8 +216,7 @@ function optionHTML(option: OfferOption, input: string): string {
   const img = option.img ? `<img src="${escape(option.img)}" width="24" height="24" style="border: none; vertical-align: middle">` : "";
   const cost = option.cost ? ` <span class="midi-qol-entry-offer-cost">${escape(option.cost)}</span>` : "";
   const description = option.description ? `<div class="midi-qol-entry-offer-description hint">${escape(option.description)}</div>` : "";
-  const controls = option.controls?.length ? `<div class="midi-qol-entry-offer-controls" data-offer="${escape(option.key)}" hidden>${option.controls.map(control =>
-    `<div class="midi-qol-offer-control" data-contributor="${escape(control.contributor)}" data-name="${escape(control.name)}">${control.label ? `<label>${escape(control.label)}</label>` : ""}${control.html}</div>`).join("")}</div>` : "";
+  const controls = option.controls?.length ? `<div class="midi-qol-entry-offer-controls" data-offer="${escape(option.key)}" hidden>${option.controls.map(control => promptControlHTML(control)).join("")}</div>` : "";
   return `<label class="checkbox">${input} ${img} <strong>${escape(option.label)}</strong>${cost}</label>${description}${controls}`;
 }
 
@@ -269,7 +268,7 @@ async function answerOffer(data: { title: string, options: OfferOption[], detail
           const values: OfferAnswer["values"] = {};
           for (const key of keys) {
             const controls = Array.from(form.querySelectorAll<HTMLElement>(".midi-qol-entry-offer-controls[data-offer]")).find(e => e.dataset.offer === key);
-            if (controls) values[key] = readOfferControls(controls);
+            if (controls) values[key] = readPromptControls(controls);
           }
           return { keys, values };
         }
@@ -280,7 +279,7 @@ async function answerOffer(data: { title: string, options: OfferOption[], detail
     render: (_event: Event, app: foundry.applications.api.DialogV2) => {
       dialog = app;
       countdown?.attach(app.element);
-      wireOfferControls(app.element);
+      wirePromptControls(app.element);
       showTickedControls(app.element);
       app.element.querySelector(".midi-qol-entry-offers")?.addEventListener("change", event => {
         if ((event.target as HTMLElement).closest(".midi-qol-entry-offer-controls")) return;

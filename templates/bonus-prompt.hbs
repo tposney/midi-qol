@@ -11,15 +11,7 @@
                 {{#each (ifThen choices choices ../standingChoices)}}<option value="{{this.value}}" {{#if (eq this.value ../choice)}}selected{{/if}}>{{this.label}}</option>{{/each}}
             </select>{{/if}}</li>
         {{#if controls}}<li class="midi-qol-prompt-inputs" data-row="{{id}}">
-            {{#each controls}}<span class="midi-qol-prompt-input">{{label}}
-                {{#if (eq kind "number")}}<input type="number" name="{{name}}" value="{{value}}" {{#if (ne min undefined)}}min="{{min}}"{{/if}} {{#if (ne max undefined)}}max="{{max}}"{{/if}} step="1">{{/if}}
-                {{#if (eq kind "text")}}<input type="text" name="{{name}}" value="{{value}}">{{/if}}
-                {{#if (eq kind "checkbox")}}<input type="checkbox" name="{{name}}" {{#if value}}checked{{/if}}>{{/if}}
-                {{#if (eq kind "select")}}<select name="{{name}}">{{#each options}}<option value="{{value}}" {{#if selected}}selected{{/if}}>{{label}}</option>{{/each}}</select>{{/if}}
-                {{#if (eq kind "multi")}}<select name="{{name}}" multiple>{{#each options}}<option value="{{value}}" {{#if selected}}selected{{/if}}>{{label}}</option>{{/each}}</select>{{/if}}
-                {{#if (eq kind "targets")}}{{#each options}}<label><input type="checkbox" name="targets" value="{{value}}" {{#if selected}}checked{{/if}}> {{label}}</label>{{/each}}{{/if}}
-                {{#if (eq kind "dice")}}{{{html}}}{{/if}}
-            </span>{{/each}}
+            {{#each controls}}{{{this}}}{{/each}}
         </li>{{/if}}
         {{/if}}
         {{/each}}

@@ -7,8 +7,7 @@ import { bonusCostBadges, wirePickOne, type PromptResponses } from "../../lib/pr
 import { bonusDamageTypeKey, rememberedChoice } from "../../lib/rememberedChoices.js";
 import { getDistance } from "../distance/service.js";
 import type { BonusConfigured, BonusSelection } from "./service.js";
-import { diceControlHTML, pickedIn, wireDicePickers } from "../../lib/dicePicker.js";
-import { diceChoices, suggestLowChoices } from "../diceReroll/service.js";
+import { bonusControlsFor, promptControlHTML, readPromptControl, wirePromptControls, type PromptControlData } from "../promptControls/service.js";
 import { standingChoice, standingKey, STANDING_CHOICES, wireStandingSelects } from "./standing.js";
 
 /*
@@ -33,14 +32,14 @@ export class BonusPromptApp extends RollModifyDialog {
     // The row's standing choice (M15 stage 5a): the roller's own bonuses only (someone else's is its holder's)
     const standingOf = (candidate: OfferedBonus | undefined) => candidate && actor && (!candidate.spender || candidate.spender === actor.uuid)
       ? { standingKey: standingKey(candidate), standingLabel: candidate.flagLabel ?? candidate.label, choice: standingChoice(actor, standingKey(candidate)) } : {};
-    const entries = Object.entries(buttons).filter(([id]) => id !== "no").map(([id, button]) => {
-      const controls = button.candidate ? this.#controlsFor(button.candidate) : undefined;
+    const entries = await Promise.all(Object.entries(buttons).filter(([id]) => id !== "no").map(async ([id, button]) => {
+      const controls = button.candidate ? await this.#controlsFor(button.candidate) : undefined;
       const configured = button.candidate ? this.#configured.get(button.candidate.id) : undefined;
       const cost = bonusCostBadges(configured?.cost ?? button.candidate?.cost);
       // An image in place of the default dice icon (a contributor's own icon HTML is kept)
       const img = button.candidate?.img && !button.candidate.iconHTML ? button.candidate.img : undefined;
       return { id, label: configured?.label ?? button.label, controls, disabled: configured?.disabled, icon: img ? undefined : button.icon, img, tooltip: button.tooltip, badges: cost.badges, exclusive: cost.reaction ? "reaction" : undefined, ...standingOf(button.candidate) };
-    });
+    }));
     const standingChoices = STANDING_CHOICES.map(value => ({ value, label: game.i18n?.localize(`midi-qol.Standing.${value}`) ?? value }));
     // M32a step 3: another part's rows (a failed save's reactions), after the bonuses; kept ticked across re-renders
     const responses: PromptResponses | undefined = this.data.responses;
@@ -52,9 +51,12 @@ export class BonusPromptApp extends RollModifyDialog {
   async _onRender(context, options) {
     await super._onRender(context, options);
     wirePickOne(this.element);
-    wireDicePickers(this.element);
-    for (const row of Array.from(this.element.querySelectorAll<HTMLElement>("li.midi-qol-prompt-inputs")))
+    wirePromptControls(this.element);
+    for (const row of Array.from(this.element.querySelectorAll<HTMLElement>("li.midi-qol-prompt-inputs"))) {
+      // What the controls show is the selection (a contributor's suggested dice)
+      this.#readRow(row);
       row.addEventListener("change", event => void this.#onControl(row, event.target as HTMLInputElement));
+    }
     this.element.querySelector("[data-bonus-action='apply']")?.addEventListener("click", () => this.applyTicked());
     this.element.querySelector("[data-bonus-action='skip']")?.addEventListener("click", () => this.data.buttons?.no?.callback?.());
     wireStandingSelects(this.element, this.data.actor);
@@ -105,47 +107,44 @@ export class BonusPromptApp extends RollModifyDialog {
   #selections = new Map<string, BonusSelection>();
   #configured = new Map<string, BonusConfigured>();
 
-  /** The controls of a row whose bonus has a selection; its first selection kept */
-  #controlsFor(candidate: OfferedBonus): PromptControl[] | undefined {
+  /**
+   * The controls of a row whose bonus has a selection (its scaling, inputs, damage type, targets, and the
+   * promptControls contributors' controls: a reroll's dice), as HTML showing the selection; its first selection kept
+   */
+  async #controlsFor(candidate: OfferedBonus): Promise<string[] | undefined> {
     const id = candidate.id;
-    const controls: PromptControl[] = [];
+    const controls: string[] = [];
     let selection = this.#selections.get(id);
     const first = !selection;
     selection ??= { inputs: {}, targets: [] };
+    const own = (control: Omit<PromptControlData, "contributor">, value: unknown) => controls.push(promptControlHTML({ ...control, contributor: "" }, value));
     if (candidate.scaling) {
       const min = candidate.scaling.min ?? 1;
       if (first) selection.scaling = min;
-      controls.push({ kind: "number", name: "scaling", label: candidate.scaling.label ?? game.i18n?.localize("midi-qol.BonusPrompt.Scaling") ?? "Level", min, max: candidate.scaling.max, value: selection.scaling ?? min });
+      own({ type: "number", name: "scaling", label: candidate.scaling.label ?? game.i18n?.localize("midi-qol.BonusPrompt.Scaling") ?? "Level", min, max: candidate.scaling.max }, selection.scaling ?? min);
     }
-    for (const input of candidate.inputs ?? []) {
-      if (first && input.default !== undefined) selection.inputs[input.name] = input.default;
-      const value = selection.inputs[input.name];
-      const chosen = (option: string) => Array.isArray(value) ? value.includes(option) : String(value) === option;
-      controls.push({ kind: input.type, name: `in.${input.name}`, label: input.label, min: input.min, max: input.max, value: Array.isArray(value) ? undefined : value as string | number | boolean | undefined,
-        options: input.options?.map(o => ({ value: o.value, label: o.label, selected: chosen(o.value) })) });
-    }
+    const shown = (control: PromptControlData) => {
+      if (first && control.default !== undefined) selection!.inputs[control.name] = control.default;
+      controls.push(promptControlHTML(control, selection!.inputs[control.name] ?? control.default));
+    };
+    for (const input of candidate.inputs ?? []) shown({ ...input, contributor: "" });
     const types = candidate.effect.kind === "add" && !candidate.effect.damageType ? candidate.damageTypes ?? [] : [];
     if (types.length > 1) {
       if (first) selection.damageType = (rememberedChoice(this.data.actor, bonusDamageTypeKey(standingKey(candidate)))?.value as string | undefined) ?? types[0];
       const typeLabel = (type: string) => CONFIG.DND5E.damageTypes[type]?.label ?? type;
-      controls.push({ kind: "select", name: "damageType", label: game.i18n?.localize("DND5E.DamageType") ?? "Damage type",
-        options: types.map(type => ({ value: type, label: typeLabel(type), selected: type === selection!.damageType })) });
+      own({ type: "select", name: "damageType", label: game.i18n?.localize("DND5E.DamageType") ?? "Damage type",
+        options: types.map(type => ({ value: type, label: typeLabel(type) })) }, selection.damageType);
     }
     if (candidate.targeting) {
-      const options = eligibleTargets(this.data.actor, candidate.targeting).flatMap(token => token.uuid ? [{ value: token.uuid, label: token.name ?? "", selected: selection!.targets.includes(token.uuid) }] : []);
+      const escape = foundry.utils.escapeHTML;
+      const boxes = eligibleTargets(this.data.actor, candidate.targeting).flatMap(token => token.uuid
+        ? [`<label><input type="checkbox" name="targets" value="${escape(token.uuid)}"${selection!.targets.includes(token.uuid) ? " checked" : ""}> ${escape(token.name ?? "")}</label>`] : []);
       const max = this.#configured.get(id)?.maxTargets ?? candidate.targeting.max;
-      controls.push({ kind: "targets", name: "targets", label: game.i18n?.format("midi-qol.BonusPrompt.Targets", { max: String(max) }) ?? "Targets", options });
+      own({ name: "targets", label: game.i18n?.format("midi-qol.BonusPrompt.Targets", { max: String(max) }) ?? "Targets", html: boxes.join("") }, undefined);
     }
-    // A reroll of chosen dice: the roll's dice to pick, up to its max (the lowest suggested)
-    const effect = candidate.effect;
     const roll: Roll | undefined = this.data.currentRoll;
-    if (effect.kind === "reroll" && effect.dice === "choose" && roll) {
-      const max = this.#diceMax(effect.max, roll);
-      const choices = diceChoices([roll]);
-      if (first) selection.dice = suggestLowChoices(choices, max);
-      controls.push({ kind: "dice", name: "dice", label: game.i18n?.format("midi-qol.BonusPrompt.Dice", { max: String(max) }) ?? "Dice", max,
-        html: diceControlHTML(choices, { max, chosen: selection.dice ?? [] }) });
-    }
+    const query = this.data.bonusQuery ?? (this.data.actor ? { kind: "check" as const, actor: this.data.actor } : undefined);
+    if (roll && query) for (const control of await bonusControlsFor({ candidate, query, phase: this.data.bonusPhase ?? "preResult", roll, values: selection.inputs })) shown(control);
     if (!controls.length) return undefined;
     if (first) {
       this.#selections.set(id, selection);
@@ -154,18 +153,22 @@ export class BonusPromptApp extends RollModifyDialog {
     return controls;
   }
 
-  /** How many dice a "choose" reroll may take (a formula on the roller's data; 1 when it can't be read) */
-  #diceMax(max: number | string | undefined, roll: Roll): number {
-    if (typeof max === "number") return max;
-    if (!max?.trim()) return 1;
-    try {
-      return new Roll(max, { ...roll.data, ...(this.data.actor?.getRollData() ?? {}) }).evaluateSync({ strict: false }).total || 1;
-    } catch {
-      return 1;
+  /** The row's selection, as its controls now are */
+  #readRow(row: HTMLElement) {
+    const candidate: OfferedBonus | undefined = this.data.buttons?.[row.dataset.row ?? ""]?.candidate;
+    const selection = candidate ? this.#selections.get(candidate.id) : undefined;
+    if (!selection) return;
+    for (const control of Array.from(row.querySelectorAll<HTMLElement>(".midi-qol-offer-control[data-name]"))) {
+      const name = control.dataset.name!;
+      if (!control.dataset.contributor && name === "targets")
+        selection.targets = Array.from(control.querySelectorAll<HTMLInputElement>("input[name='targets']:checked")).map(t => t.value);
+      else if (!control.dataset.contributor && name === "scaling") selection.scaling = Number(readPromptControl(control));
+      else if (!control.dataset.contributor && name === "damageType") selection.damageType = String(readPromptControl(control) ?? "");
+      else selection.inputs[name] = readPromptControl(control);
     }
   }
 
-  /** A control changed: the selection, its targets limit, the bonus configured for it */
+  /** A control changed: its targets limit, the selection, the bonus configured for it */
   async #onControl(row: HTMLElement, input: HTMLInputElement) {
     const id = row.dataset.row ?? "";
     const candidate: OfferedBonus | undefined = this.data.buttons?.[id]?.candidate;
@@ -176,19 +179,9 @@ export class BonusPromptApp extends RollModifyDialog {
       // Over its limit: the one just ticked stays, the earliest goes
       const max = this.#configured.get(candidate.id)?.maxTargets ?? candidate.targeting?.max ?? 1;
       if (ticked.length > max) for (const other of ticked.filter(t => t !== input).slice(0, ticked.length - max)) other.checked = false;
-      selection.targets = Array.from(row.querySelectorAll<HTMLInputElement>("input[name='targets']:checked")).map(t => t.value);
-    } else if (input.name === "dice") {
-      // The picker keeps its max (wireDicePickers, wired first)
-      const picker = row.querySelector<HTMLElement>(".midi-qol-dice-picker");
-      selection.dice = picker ? pickedIn(picker) : [];
-    } else if (input.name === "scaling") selection.scaling = Number(input.value);
-    else if (input.name === "damageType") selection.damageType = input.value;
-    else if (input.name.startsWith("in.")) {
-      const name = input.name.slice(3);
-      const kind = candidate.inputs?.find(i => i.name === name)?.type;
-      selection.inputs[name] = kind === "checkbox" ? input.checked : kind === "number" ? Number(input.value)
-        : kind === "multi" ? Array.from((input as unknown as HTMLSelectElement).selectedOptions).map(o => o.value) : input.value;
     }
+    // A picker keeps its max itself (wired first)
+    this.#readRow(row);
     // Changing a row's selection ticks it
     const tick = this.element.querySelector<HTMLInputElement>(`input[name='bonus'][value='${id}']`);
     if (tick && !tick.checked) { tick.checked = true; tick.dispatchEvent(new Event("change")); }
@@ -213,18 +206,6 @@ export class BonusPromptApp extends RollModifyDialog {
       if (input) input.checked = true;
     }
   }
-}
-
-interface PromptControl {
-  kind: "number" | "select" | "multi" | "checkbox" | "text" | "targets" | "dice";
-  name: string;
-  label: string;
-  min?: number;
-  max?: number;
-  value?: string | number | boolean;
-  options?: { value: string, label: string, selected?: boolean }[];
-  /** A dice picker's control (lib/dicePicker) */
-  html?: string;
 }
 
 /** The creatures a bonus may pick: within its range of the roller, by disposition to it, the roller only when `self` */

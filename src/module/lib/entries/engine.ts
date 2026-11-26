@@ -1,5 +1,5 @@
 import { tokenFor } from "../tokenResolver.js";
-import { offerControlsFor } from "../../services/offerControls/service.js";
+import { entryControlsFor } from "../../services/promptControls/service.js";
 import { MODULE_ID } from "../../../midi-qol.js";
 import { Registry } from "../../api/registry.js";
 import type { Workflow } from "../../Workflow.js";
@@ -951,7 +951,7 @@ function offerDetail(eventId: string, context: EventContext): string | undefined
   return undefined;
 }
 
-/** The ask offers taken: each actor's owner asked once for the event; an option's controls' values (offerControls) as `offer` */
+/** The ask offers taken: each actor's owner asked once for the event; an option's controls' values (promptControls) as `offer` */
 async function chooseAsked<T extends { found: FoundEntry, conditionData?: Record<string, unknown> }>(eventId: string, list: T[], context?: EventContext): Promise<T[]> {
   if (!list.length) return [];
   const byActor = new Map<Actor.Implementation, { candidate: T, key: string }[]>();
@@ -967,7 +967,7 @@ async function chooseAsked<T extends { found: FoundEntry, conditionData?: Record
     const title = `${actor.name}: ${events.get(eventId)?.value.label ?? eventId}`;
     const options = await Promise.all(entries.map(async ({ candidate, key }) => {
       const controls = context && candidate.conditionData
-        ? await offerControlsFor({ eventId, entry: candidate.found.entry, found: candidate.found, context, conditionData: candidate.conditionData }) : [];
+        ? await entryControlsFor({ eventId, entry: candidate.found.entry, found: candidate.found, context, conditionData: candidate.conditionData }) : [];
       return { ...offerOption(candidate.found, key), ...(controls.length ? { controls } : {}) };
     }));
     const answer = await askOfferChoices(actor, title, options, context ? offerDetail(eventId, context) : undefined);

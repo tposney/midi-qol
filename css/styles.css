@@ -2169,12 +2169,12 @@ body.midi-qol-hide-gambit-mirrors .gps-dialog-mirror:not(.midi-qol-gambit-shown)
   margin: 0 0 4px 28px;
   font-size: var(--font-size-12);
 }
-.midi-qol-bonus-prompt .midi-qol-prompt-input {
+.midi-qol-bonus-prompt .midi-qol-offer-control {
   display: flex;
   align-items: center;
   gap: 4px;
 }
-.midi-qol-bonus-prompt .midi-qol-prompt-input input[type="number"] {
+.midi-qol-bonus-prompt .midi-qol-offer-control input[type="number"] {
   width: 4em;
 }
 .midi-qol-dice-picker {

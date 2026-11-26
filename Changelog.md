@@ -32,7 +32,7 @@ In development, not released. Listed here: barriers, creatures inside others, en
 * Entries: `moveArea` (`within`, `teleport`): the area the item placed moves to a point the user places, held to the distance; in grid steps (creatures passed over enter it), or at once.
 * Overlays: Moonbeam and Cloud of Daggers (the area lingers; Move the Beam, Teleport the Cube), Spirit Guardians (creatures targeted before the cast are spared), Channel Divinity (Turn Undead and Sear Undead take the Undead within 30 ft).
 * Overlays: changes can set an area's region rules (a JSON list); an activity an overlay adds no longer runs its entries twice.
-* Offer controls (service `offerControls`): an offered entry's row shows its controls once ticked, in the same dialog, read by its actions as `offer.<name>`; a module registers its own. midi's: a "choose" reroll's dice (Empowered Spell: tick it and pick its dice in one dialog).
+* Prompt controls (service `promptControls`): controls in a prompt's row, for an offered entry (shown once ticked, read by its actions as `offer.<name>`) or an optional roll bonus (read by its formula as `@bonus.inputs.<name>`; a bonus's own inputs are these controls); a module registers its own. midi's: a "choose" reroll's dice in either (Empowered Spell: tick it and pick its dice in one dialog).
 * Fixed: a spell placing several areas (Wall of Force's panels) hung after placement and lost its area.
 * Fixed: a Large or Gargantuan token moved or teleported by midi landed half a square off the grid.
 

@@ -11,7 +11,7 @@ import { DAMAGE_STAGES } from "../../services/damageModifiers/rules.js";
 import { applyBonusEffect, type BonusEffect } from "../../services/rollBonuses/service.js";
 import { diceChoices, rerollDice, suggestLowChoices } from "../../services/diceReroll/service.js";
 import { diceControlHTML, pickedIn, wireDicePickers } from "../dicePicker.js";
-import type { OfferControlContributor } from "../../services/offerControls/service.js";
+import type { PromptControlContributor } from "../../services/promptControls/service.js";
 import type { EntryAction } from "./types.js";
 import { raiseDealsDamage } from "./bearerEvents.js";
 import { entryActivity } from "./activityActions.js";
@@ -422,18 +422,36 @@ async function rerollChosenDice(run: ActionRun, rolls: Roll[], effect: Extract<B
   return rerollDice(rolls, { max, keep, title: labelOf(run), actor: workflow?.actor, tokenUuid: workflow?.token?.document?.uuid ?? undefined, owner: workflow, ...(picked ? { picked } : {}) });
 }
 
-/** midi's offer control: a "choose" reroll's dice in its offer's row (ticked: the lowest suggested), read as offer.dice */
-const chosenDiceControl: OfferControlContributor = {
-  async controls({ eventId, action, context, conditionData }) {
-    const effect = chooseEffect(action);
-    if (!effect || !isUseEvent(eventId)) return [];
-    const rolls = chooseRolls(eventId, action, context.workflow);
+/**
+ * midi's prompt control: a "choose" reroll's dice in its row (the lowest suggested), for an offered entry (read as
+ * offer.dice) and for an optional bonus (its selection's dice)
+ */
+const chosenDiceControl: PromptControlContributor = {
+  async controls(query) {
+    let effect: Extract<BonusEffect, { kind: "reroll" }> | undefined;
+    let rolls: Roll[];
+    let data: Record<string, unknown>;
+    let chosen: unknown;
+    if (query.source === "entry") {
+      effect = chooseEffect(query.action);
+      if (!effect || !isUseEvent(query.eventId)) return [];
+      rolls = chooseRolls(query.eventId, query.action, query.context.workflow);
+      data = query.conditionData;
+    } else {
+      const candidate = query.candidate.effect;
+      effect = candidate.kind === "reroll" && candidate.dice === "choose" ? candidate : undefined;
+      if (!effect) return [];
+      rolls = [query.roll];
+      data = query.query.actor.getRollData() as Record<string, unknown>;
+      chosen = query.values.dice;
+    }
     const choices = diceChoices(rolls);
     if (!choices.length) return [];
-    const max = Math.max(0, Math.floor(await rolled(String(effect.max ?? 1), { ...(rolls[0]?.data as Record<string, unknown> ?? {}), ...conditionData })));
+    const max = Math.max(0, Math.floor(await rolled(String(effect.max ?? 1), { ...(rolls[0]?.data as Record<string, unknown> ?? {}), ...data })));
     if (!max) return [];
+    const picked = Array.isArray(chosen) ? chosen.filter((key): key is string => typeof key === "string") : suggestLowChoices(choices, max);
     return [{ name: "dice", label: game.i18n?.format("midi-qol.BonusPrompt.Dice", { max: String(max) }) ?? "",
-      html: diceControlHTML(choices, { max, chosen: suggestLowChoices(choices, max) }) }];
+      html: diceControlHTML(choices, { max, chosen: picked }) }];
   },
   read: (_name, element) => {
     const picker = element.querySelector<HTMLElement>(".midi-qol-dice-picker");
@@ -541,7 +559,7 @@ export function registerUseEvents() {
   registerAction("damageChange", damageChangeAction);
   registerAction("abort", abortAction);
   registerAction("bonus", bonusAction);
-  register("offerControls", "midi-qol.chosenDice", chosenDiceControl, { label: "Midi-QOL: dice of a reroll" });
+  register("promptControls", "midi-qol.chosenDice", chosenDiceControl, { label: "Midi-QOL: dice of a reroll" });
   registerAction("heal", run => useDamageAction(run, true));
   register("rollModifiers", "midi-qol.entries", { for: entryRollModifiers }, { label: "Midi-QOL: entries" });
   register("damageContributions", "midi-qol.entries", {

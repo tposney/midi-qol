@@ -21,7 +21,7 @@ import { registerLayoutSettings } from "./module/apps/hub/layout.js";
 import { registerRemindersSetting } from "./module/apps/hub/reminders.js";
 import { useOptionsApi } from "./module/services/useOptions/registry.js";
 import { diceControlHTML, wireDicePickers } from "./module/lib/dicePicker.js";
-import { defineOfferControlsService } from "./module/services/offerControls/service.js";
+import { definePromptControlsService } from "./module/services/promptControls/service.js";
 import { defineDiceRerollService, diceChoices, pickDice, rerollChosen, rerollDice, suggestLowChoices } from "./module/services/diceReroll/service.js";
 import { installAfterUseDialog } from "./module/activities/afterUseDialog.js";
 import { isEphemeralToken, tokenFor, tokenOf } from "./module/lib/tokenResolver.js";
@@ -622,7 +622,7 @@ Hooks.once('init', async function () {
   defineCoverService();
   defineForcedMovementService();
   defineDiceRerollService();
-  defineOfferControlsService();
+  definePromptControlsService();
   definePerceptionService();
   defineRollModifiersService();
   defineOutcomeServices();
