@@ -1866,8 +1866,14 @@
     "missedTargets": "Missed targets",
     "failedSaves": "Target failed saves",
     "saveTargets": "Target successful saves",
+    "near": "Creatures near the target",
     "retarget": "Generate new targets"
   },
+  "midi-qol.Chain.Pick": "Choose up to {max} creatures",
+  "midi-qol.Chain.TooMany": "Choose at most {max}",
+  "midi-qol.Chain.Disposition.any": "Any creature",
+  "midi-qol.Chain.Disposition.enemy": "Enemies",
+  "midi-qol.Chain.Disposition.ally": "Allies",
   "midi-qol.TriggeredActivityRollAsOptions": {
     "self": "Item Owner",
     "firstTarget": "First target",
@@ -1997,6 +2003,22 @@
         "triggeredActivityConfigure": {
           "label": "Show Configure Dialog",
           "hint": "Show the configuration/consume dialog when the triggered activity runs"
+        },
+        "triggeredActivityNearWithin": {
+          "label": "Near: Within (ft)",
+          "hint": "Creatures within this distance of the first target hit (the first target, without an attack)"
+        },
+        "triggeredActivityNearMax": {
+          "label": "Near: How Many",
+          "hint": "The most creatures chosen (a formula: @item.level). A creature the chain already took is never offered"
+        },
+        "triggeredActivityNearDisposition": {
+          "label": "Near: Which Creatures",
+          "hint": "Any creature, or only the user's enemies or allies"
+        },
+        "triggeredActivityChainLimit": {
+          "label": "Chain Limit",
+          "hint": "Blank: the trigger runs once. A number or formula (@item.level): the triggered activity may trigger again, itself included, up to this many times in all, never at a creature the chain already took (Chromatic Orb's leaps)"
         },
         "followUp": {
           "label": "Follow-up Button",

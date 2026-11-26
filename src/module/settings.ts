@@ -1310,6 +1310,7 @@ export const triggeredActivityTargetOptions = keysToOptionsObj("TriggeredActivit
   "missedTargets",
   "failedSaves",
   "saveTargets",
+  "near",
   "retarget"
 ]);
 

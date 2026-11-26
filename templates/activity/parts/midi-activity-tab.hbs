@@ -143,6 +143,12 @@
           {{ formField fields.triggeredActivityConditionText value=../source.midiProperties.triggeredActivityConditionText }}
           {{ formField fields.triggeredActivityTargets value=../source.midiProperties.triggeredActivityTargets localize=true
             options=../triggeredActivityTargetOptions}}
+          {{#if (eq ../source.midiProperties.triggeredActivityTargets "near")}}
+            {{ formField fields.triggeredActivityNearWithin value=../source.midiProperties.triggeredActivityNearWithin }}
+            {{ formField fields.triggeredActivityNearMax value=../source.midiProperties.triggeredActivityNearMax }}
+            {{ formField fields.triggeredActivityNearDisposition value=../source.midiProperties.triggeredActivityNearDisposition localize=true }}
+          {{/if}}
+          {{ formField fields.triggeredActivityChainLimit value=../source.midiProperties.triggeredActivityChainLimit }}
           {{ formField fields.triggeredActivityRollAs value=../source.midiProperties.triggeredActivityRollAs localize=true
             options=../triggeredActivityRollAsOptions}}
           {{ formField fields.triggeredActivityConsume value=../source.midiProperties.triggeredActivityConsume }}

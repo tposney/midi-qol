@@ -1,4 +1,5 @@
 import { tokenFor } from "./lib/tokenResolver.js";
+import { nearCandidates, pickNearTargets, type ChainState, type NearDisposition } from "./lib/chain.js";
 import { queryUser } from "./lib/midiQueries.js";
 import type { CardActionHandler } from "./activities/cardActions.js";
 import { defenceMessageMode } from "../rules/activeDefence/index.js";
@@ -3931,7 +3932,10 @@ export class Workflow {
     if (this.activity.midiProperties?.triggeredActivityId && !this.aborted) {
       let activity = this.activity
       shouldTrigger = true;
-      let possibleTriggerActivity = await this.activity.getTriggeredActivity();
+      // A chain (Chromatic Orb's leaps) may trigger itself again: its limit ends it
+      const chainLimitFormula = this.activity.midiProperties?.triggeredActivityChainLimit?.trim();
+      const chained = this.workflowOptions?.chain;
+      let possibleTriggerActivity = chainLimitFormula || chained ? undefined : await this.activity.getTriggeredActivity();
       const visitedActivities = new Set([activity.uuid]);
       while (possibleTriggerActivity) {
         if (visitedActivities.has(possibleTriggerActivity.uuid)) {
@@ -3958,6 +3962,14 @@ export class Workflow {
           } = this.workflowOptions ?? {};
           // Only what transmission would carry: other modules' per-use state stays with this workflow.
           usage.midiOptions.workflowOptions = inheritableWorkflowOptions(inheritedWorkflowOptions);
+          // The chain so far: this use's targets taken, one more leap; the first use sets the limit
+          let chain: ChainState | undefined;
+          if (chained || chainLimitFormula) {
+            const limit = chained?.limit ?? Math.max(0, Math.floor(evaluateChainLimit(chainLimitFormula, this.activity)));
+            chain = { taken: [...new Set([...(chained?.taken ?? []), ...this.targets.uuids])], leaps: (chained?.leaps ?? 0) + 1, limit };
+            if (chain.leaps > chain.limit) shouldTrigger = false;
+            usage.midiOptions.workflowOptions.chain = chain;
+          }
           usage.midiOptions.rollOptions = this.rollOptions;
           usage.midiOptions.isTriggered = true;
           let targetUuids: string[] = [];
@@ -3985,6 +3997,7 @@ export class Workflow {
               case "failedSaves": targetUuids = toUuids(this.failedSaves); break;
               case "saveTargets": targetUuids = toUuids(this.saves); break;
               case "targets": targetUuids = toUuids(this.targets); break;
+              case "near": break;
               case "retarget":
               default:
                 // targetUuids = [];
@@ -3992,13 +4005,28 @@ export class Workflow {
             }
           usage.midiOptions.targetUuids = targetUuids;
           usage.midiOptions.triggeredActivity = true;
-          if (this.activity.midiProperties.triggeredActivityTargets !== "retarget" && targetUuids?.length === 0)
+          const near = this.activity.midiProperties.triggeredActivityTargets === "near";
+          // Near: around the creature the use reached (its first hit, else its first target)
+          const anchor = near ? (this.attackRoll ? this.hitTargets.documents[0] : this.targets.documents[0]) : undefined;
+          if (near && !anchor) shouldTrigger = false;
+          if (!near && this.activity.midiProperties.triggeredActivityTargets !== "retarget" && targetUuids?.length === 0)
             shouldTrigger = false;
           if (this.activity.midiProperties?.triggeredActivityConditionText && shouldTrigger) {
-            const target = await fromUuid(targetUuids[0]) as TokenDocument.Implementation | undefined;;
+            const target = anchor ?? await fromUuid(targetUuids[0]) as TokenDocument.Implementation | undefined;
             const condition = this.activity.midiProperties?.triggeredActivityConditionText;
             const conditionData = createConditionData({ workflow: this, activity: this.activity, item: this.item, target });
             shouldTrigger = await evalCondition(condition, conditionData, { async: true, errorReturn: false });
+          }
+          if (shouldTrigger && near && anchor) {
+            const props = this.activity.midiProperties;
+            const max = Math.max(0, Math.floor(evaluateChainLimit(props.triggeredActivityNearMax || "1", this.activity)));
+            const candidates = nearCandidates({ anchor, within: Number(props.triggeredActivityNearWithin ?? 30),
+              disposition: (props.triggeredActivityNearDisposition ?? "any") as NearDisposition, source: this.token?.document,
+              exclude: [...(chain?.taken ?? []), ...this.targets.uuids] });
+            const picked = await pickNearTargets(candidates, max, { actor: this.actor, label: triggeredActivity.name ?? this.activity.name });
+            targetUuids = (picked ?? []).flatMap(token => token.uuid ? [token.uuid] : []);
+            usage.midiOptions.targetUuids = targetUuids;
+            if (!targetUuids.length) shouldTrigger = false;
           }
           if (shouldTrigger) {
             foundry.utils.setProperty(usage, "midiOptions.isCritical", this.isCritical);
@@ -9381,6 +9409,8 @@ export type WorkflowOptions = InexactPartial<{
   fixedDice: FixedDice;
   /** The activity's choices (M28), by id: not asked */
   choices: Record<string, ChoiceValue>;
+  /** A chain of triggered uses so far (Trigger Activity with a chain limit: Chromatic Orb's leaps) */
+  chain: import("./lib/chain.js").ChainState;
   /** The damage type a part with several types is rolled as, decided earlier (a region's cast): not asked */
   damageTypeChoice: string;
   /** The targets were chosen by an area (a region's rule): the activity's own target count and range don't apply */
@@ -9622,3 +9652,12 @@ export const targetedDamageBonusContributor = {
       .map(bonus => ({ types: [bonus.type], amount: bonus.amount, label: bonus.label }));
   }
 };
+
+/** A chain's limit or a near count: a formula over the activity's roll data; 0 when it can't be read */
+function evaluateChainLimit(formula: string | undefined, activity: Activity): number {
+  if (!formula) return 0;
+  try {
+    const value = new Roll(formula, activity.getRollData?.() ?? {}).evaluateSync({ strict: false }).total;
+    return Number.isFinite(value) ? Number(value) : 0;
+  } catch { return 0; }
+}

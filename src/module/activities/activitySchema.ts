@@ -40,6 +40,13 @@ function sharedFields(): Fields {
       triggeredActivityRollAs: new StringField({ name: "triggeredActivityRollAs", initial: "self" }),
       triggeredActivityConsume: new BooleanField({ name: "triggeredActivityConsume", initial: true }),
       triggeredActivityConfigure: new BooleanField({ name: "triggeredActivityConfigure", initial: true }),
+      // Near: creatures within this of the first hit (else first) target, at most Max, never one the chain took
+      triggeredActivityNearWithin: new NumberField({ name: "triggeredActivityNearWithin", initial: 30, min: 0 }),
+      triggeredActivityNearMax: new StringField({ name: "triggeredActivityNearMax", initial: "1" }),
+      triggeredActivityNearDisposition: new StringField({ name: "triggeredActivityNearDisposition", initial: "any", required: true, blank: false,
+        choices: { any: "midi-qol.Chain.Disposition.any", enemy: "midi-qol.Chain.Disposition.enemy", ally: "midi-qol.Chain.Disposition.ally" } }),
+      // The most times the trigger runs along a chain (it may trigger itself): blank, once
+      triggeredActivityChainLimit: new StringField({ name: "triggeredActivityChainLimit", initial: "" }),
       // Offered as a button on the card when another of the item's activities hits (followUps.ts).
       followUp: new BooleanField({ name: "followUp", initial: false }),
       followUpTargets: new StringField({ name: "followUpTargets", initial: "default", required: true, blank: false,

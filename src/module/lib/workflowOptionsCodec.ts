@@ -61,7 +61,7 @@ export const inheritableWorkflowOptions = <T>(options: T): T => decodeWorkflowOp
 export const MIDI_OPTION_KEYS = new Set([
   "activityId", "activityIdentifier", "addOptionalBonuses", "advantage", "allowIncapacitated", "asUser", "attackMode",
   "attackPerTarget", "attackRollDSN", "attackSplit", "autoConsumeResource", "autoFastAttack", "autoRollAttack",
-  "autoRollDamage", "cardNote", "castUsesBonusAction", "castUsesReaction", "chatMessage", "checkGMStatus", "checkGMstatus", "choices", "damageTypeChoice",
+  "autoRollDamage", "cardNote", "castUsesBonusAction", "castUsesReaction", "chain", "chatMessage", "checkGMStatus", "checkGMstatus", "choices", "damageTypeChoice",
   "configureDialog", "coverOrigin", "createWorkflow", "critical", "damageRollDSN", "disadvantage", "event", "excludeTargets",
   "fastForward", "fastForwardAbility", "fastForwardAttack", "fastForwardDamage", "fastForwardSet", "fixedDice",
   "forceCompletion", "forceTemplateTargeting", "formulaDSN", "fumble", "grantsActor", "grantsToken", "ignoreUserTargets",

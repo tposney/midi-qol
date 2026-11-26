@@ -1729,6 +1729,10 @@ export interface Activity extends AnyMutableObject {
     triggeredActivityRollAs?: string;
     triggeredActivityConsume?: boolean;
     triggeredActivityConfigure?: boolean;
+    triggeredActivityNearWithin?: number;
+    triggeredActivityNearMax?: string;
+    triggeredActivityNearDisposition?: string;
+    triggeredActivityChainLimit?: string;
     autoConsume: boolean;
     forceConsumeDialog?: string;
     forceRollDialog?: string;
