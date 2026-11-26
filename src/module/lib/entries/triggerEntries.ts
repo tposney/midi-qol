@@ -56,6 +56,16 @@ export async function useActivityAction(run: ActionRun): Promise<void> {
   const workflow = run.context.workflow;
   if (!workflow || !isActivityRef(run.action.use)) return;
   const spec = specOf(run);
+  // An activity of the entry's own item (an owner entry on a feature: Superior Hunter's Prey), not the used item's
+  const document = run.found.document as { item?: Item.Implementation, parent?: unknown };
+  const home = run.found.document instanceof Item ? run.found.document : document.item ?? (document.parent instanceof Item ? document.parent : undefined);
+  const ref = String(run.action.use).slice("activity:".length);
+  if (ref !== "this" && home && home.id !== workflow.item?.id) {
+    // @ts-expect-error no dnd5e-types
+    const activities = home.system.activities as { find(fn: (a: { id: string, identifier?: string, uuid: string }) => boolean): { uuid: string } | undefined } | undefined;
+    const own = activities?.find(a => a.id === ref) ?? activities?.find(a => a.identifier === ref);
+    if (own) spec.activity = own.uuid;
+  }
   if (run.eventId === "use.completed") { await workflow.triggerActivity(spec); return; }
   const list = queued.get(workflow) ?? [];
   list.push(spec);

@@ -1,0 +1,59 @@
+{
+  "name": "Chain Lightning (overlay)",
+  "type": "spell",
+  "img": "icons/magic/lightning/bolt-strike-forked-blue.webp",
+  "_id": "mqeOvChainLight0",
+  "_key": "!items!mqeOvChainLight0",
+  "folder": "SpellFldr6thLevl",
+  "ownership": {
+    "default": 0
+  },
+  "system": {
+    "description": {
+      "value": "<p><em>Overlay (midi-qol):</em> after the first target's save, three bolts (one more for each slot level above 6) leap to as many other creatures of the caster's choice within 30 feet of it, each making the same save at the level cast, without using another slot. It changes no item: midi applies it to any item with the identifier <code>chain-lightning</code> (2024 rules) that nothing else automates.</p>"
+    },
+    "identifier": "chain-lightning-overlay",
+    "source": {
+      "rules": "2024"
+    },
+    "activities": {}
+  },
+  "effects": [],
+  "flags": {
+    "midi-qol": {
+      "overlay": {
+        "identifier": "chain-lightning",
+        "rules": "2024",
+        "version": "1"
+      },
+      "entries": [
+        {
+          "id": "bolts",
+          "on": "use.completed",
+          "label": "Chain Lightning: bolts",
+          "do": [
+            {
+              "use": "activity:this",
+              "to": "near",
+              "near": {
+                "within": 30,
+                "max": "3 + max(0, @item.level - 6)",
+                "disposition": "any"
+              },
+              "chain": "1",
+              "consume": false,
+              "configure": false
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "_stats": {
+    "compendiumSource": null,
+    "duplicateSource": null,
+    "coreVersion": "14.360",
+    "systemId": "dnd5e",
+    "systemVersion": "6.1.0"
+  }
+}

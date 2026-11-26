@@ -1,0 +1,64 @@
+{
+  "name": "Superior Hunter's Prey (overlay)",
+  "type": "feat",
+  "img": "icons/skills/ranged/target-bullseye-arrow-glowing.webp",
+  "_id": "mqeOvHuntersPrey",
+  "_key": "!items!mqeOvHuntersPrey",
+  "folder": "fZIl4G4qj3C894LI",
+  "ownership": {
+    "default": 0
+  },
+  "system": {
+    "description": {
+      "value": "<p><em>Overlay (midi-qol):</em> once a turn, when the ranger's use damages a creature marked by their Hunter's Mark, they are offered the mark's extra damage against a different creature within 30 feet of it (the feature's Hunter's Mark Damage activity). It changes no item: midi applies it to any item with the identifier <code>superior-hunters-prey</code> (2024 rules) that nothing else automates.</p>"
+    },
+    "identifier": "superior-hunters-prey-overlay",
+    "source": {
+      "rules": "2024"
+    },
+    "activities": {}
+  },
+  "effects": [],
+  "flags": {
+    "midi-qol": {
+      "overlay": {
+        "identifier": "superior-hunters-prey",
+        "rules": "2024",
+        "version": "1"
+      },
+      "entries": [
+        {
+          "id": "prey",
+          "on": "use.target.each",
+          "who": "owner",
+          "offer": "ask",
+          "limit": {
+            "per": "turn"
+          },
+          "label": "Superior Hunter's Prey",
+          "if": "(outcome?.damage?.hp ?? 0) + (outcome?.damage?.temp ?? 0) > 0 && tags.target.fromUser.has('hunters-mark')",
+          "do": [
+            {
+              "use": "activity:yqOAxbsX16RkOx06",
+              "to": "near",
+              "near": {
+                "within": 30,
+                "max": "1",
+                "disposition": "any"
+              },
+              "consume": false,
+              "configure": false
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "_stats": {
+    "compendiumSource": null,
+    "duplicateSource": null,
+    "coreVersion": "14.360",
+    "systemId": "dnd5e",
+    "systemVersion": "6.1.0"
+  }
+}

@@ -102,6 +102,21 @@ const SIZE_ORDER = ["tiny", "sm", "med", "lg", "huge", "grg"];
 const ATTACK_TYPES = new Set(["mwak", "rwak", "msak", "rsak"]);
 
 function actorOf(context: TagContext) { return context.target?.actor ?? undefined; }
+
+/** The identifiers of the user's items whose effects the target has (an effect's origin: the item, or one of its activities) */
+function effectsFromUser(context: TagContext): Set<string> {
+  const user = context.workflow.actor;
+  const out = new Set<string>();
+  for (const effect of actorOf(context)?.appliedEffects ?? []) {
+    if (!effect.origin) continue;
+    const origin = fromUuidSync(effect.origin, { strict: false }) as { item?: Item.Implementation, actor?: Actor.Implementation | null, system?: { identifier?: string } } | null;
+    const item = origin instanceof Item ? origin : origin?.item;
+    if (!item || item.actor !== user) continue;
+    const identifier = (item.system as { identifier?: string }).identifier;
+    if (identifier) out.add(identifier);
+  }
+  return out;
+}
 function itemOf(context: TagContext) { return context.workflow.item ?? undefined; }
 /** The used item's type (dnd5e's subtypes aren't in the types) */
 function itemType(context: TagContext): string | undefined { return itemOf(context)?.type; }
@@ -161,6 +176,8 @@ export function registerMidiTags(): void {
   registerTag("target.charge", target("Feet the user moved straight toward it just before", context =>
     chargeToward(context.workflow.token?.document as TokenDocument.Implementation | undefined, context.target)));
   registerTag("target.conditions", target("Conditions", context => new Set(actorOf(context)?.statuses ?? [])));
+  // Superior Hunter's Prey: the target is marked by the user's Hunter's Mark (by the applying item's identifier)
+  registerTag("target.fromUser", target("Identifiers of the user's items whose effects are on it", context => effectsFromUser(context)));
   registerTag("target.bloodied", target("Bloodied", context => {
     const points = hp(context);
     return points ? points.value <= points.max / 2 : undefined;

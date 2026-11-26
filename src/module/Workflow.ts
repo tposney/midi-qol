@@ -4049,6 +4049,12 @@ export class Workflow {
     foundry.utils.setProperty(usage, "midiOptions.workflowOptions.triggeringWorkflowId", this.id);
     foundry.utils.setProperty(usage, "midiOptions.workflowOptions.triggeringActivityUuid", this.activity.uuid);
     if (spec.consume === false) foundry.utils.setProperty(usage, "consume", { resources: false, spellSlot: false, action: false });
+    // The same spell's activity at the level it was cast at; the same activity with the damage type chosen (Chromatic Orb's leaps)
+    if (triggeredActivity.item?.id === this.item?.id && String(this.item?.type) === "spell" && this.spellLevel) usage.midiOptions.spellLevel = this.spellLevel;
+    if (triggeredActivity.uuid === this.activity.uuid) {
+      const damageType = rolledDamageTypeChoice(this) ?? this.workflowOptions?.damageTypeChoice;
+      if (damageType) foundry.utils.setProperty(usage, "midiOptions.workflowOptions.damageTypeChoice", damageType);
+    }
     await completeActivityUse(triggeredActivity, usage, { configure: spec.configure ?? true }, {});
   }
 

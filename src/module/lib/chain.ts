@@ -21,7 +21,7 @@ export type NearDisposition = "any" | "enemy" | "ally";
 
 /** What a trigger does (Trigger Activity's fields; an entry's `use: "activity:<id>"` action) */
 export interface TriggerSpec {
-  /** The activity: an id or identifier on the triggering activity's item, else a UUID */
+  /** The activity: "this" (the use's own), an id or identifier on the triggering activity's item, else a UUID */
   activity: string;
   /** self, targets, hitTargets, missedTargets, failedSaves, saveTargets, near, retarget */
   to?: string;
@@ -40,9 +40,10 @@ export interface TriggerSpec {
   anchor?: string;
 }
 
-/** The activity a trigger names: on the triggering activity's item by id, then identifier, else by UUID */
-export async function resolveTriggerActivity(from: { item?: Item.Implementation | null } | undefined, ref: string): Promise<Activity | undefined> {
+/** The activity a trigger names: "this" (the triggering activity), on its item by id, then identifier, else by UUID */
+export async function resolveTriggerActivity(from: Activity | undefined, ref: string): Promise<Activity | undefined> {
   const id = ref.startsWith("activity:") ? ref.slice("activity:".length) : ref;
+  if (id === "this") return from;
   // @ts-expect-error no dnd5e-types
   const activities = from?.item?.system.activities as { find(fn: (a: Activity) => boolean): Activity | undefined } | undefined;
   const found = activities?.find(a => a.id === id) ?? activities?.find(a => (a as { identifier?: string }).identifier === id);

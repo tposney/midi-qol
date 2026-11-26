@@ -766,6 +766,7 @@
     "target.conditions",
     "target.cover",
     "target.flying",
+    "target.fromUser",
     "target.hpPercent",
     "target.shield",
     "target.size",

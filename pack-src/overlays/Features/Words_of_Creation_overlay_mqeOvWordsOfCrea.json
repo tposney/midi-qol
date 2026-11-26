@@ -1,0 +1,61 @@
+{
+  "name": "Words of Creation (overlay)",
+  "type": "feat",
+  "img": "icons/magic/symbols/runes-star-pentagon-blue.webp",
+  "_id": "mqeOvWordsOfCrea",
+  "_key": "!items!mqeOvWordsOfCrea",
+  "folder": "fZIl4G4qj3C894LI",
+  "ownership": {
+    "default": 0
+  },
+  "system": {
+    "description": {
+      "value": "<p><em>Overlay (midi-qol):</em> when the bard casts Power Word Heal or Power Word Kill, they may choose a second creature within 10 feet of the first target, which the spell affects too (no second slot). It changes no item: midi applies it to any item with the identifier <code>words-of-creation</code> (2024 rules) that nothing else automates.</p>"
+    },
+    "identifier": "words-of-creation-overlay",
+    "source": {
+      "rules": "2024"
+    },
+    "activities": {}
+  },
+  "effects": [],
+  "flags": {
+    "midi-qol": {
+      "overlay": {
+        "identifier": "words-of-creation",
+        "rules": "2024",
+        "version": "1"
+      },
+      "entries": [
+        {
+          "id": "second",
+          "on": "use.completed",
+          "who": "owner",
+          "label": "Words of Creation",
+          "if": "['power-word-heal', 'power-word-kill'].includes(use.item?.system?.identifier)",
+          "do": [
+            {
+              "use": "activity:this",
+              "to": "near",
+              "near": {
+                "within": 10,
+                "max": "1",
+                "disposition": "any"
+              },
+              "chain": "1",
+              "consume": false,
+              "configure": false
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "_stats": {
+    "compendiumSource": null,
+    "duplicateSource": null,
+    "coreVersion": "14.360",
+    "systemId": "dnd5e",
+    "systemVersion": "6.1.0"
+  }
+}

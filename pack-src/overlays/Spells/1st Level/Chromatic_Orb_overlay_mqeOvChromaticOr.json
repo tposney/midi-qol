@@ -1,0 +1,60 @@
+{
+  "name": "Chromatic Orb (overlay)",
+  "type": "spell",
+  "img": "icons/magic/lightning/orb-ball-purple.webp",
+  "_id": "mqeOvChromaticOr",
+  "_key": "!items!mqeOvChromaticOr",
+  "folder": "SpellFldr1stLevl",
+  "ownership": {
+    "default": 0
+  },
+  "system": {
+    "description": {
+      "value": "<p><em>Overlay (midi-qol):</em> when two or more of the damage d8s show the same number, the orb leaps to a different creature of the caster's choice within 30 feet of the target: a new attack and damage roll of the same type, at the level cast, without using another slot. It leaps at most as many times as the spell's level, never to a creature it already reached. It changes no item: midi applies it to any item with the identifier <code>chromatic-orb</code> (2024 rules) that nothing else automates.</p>"
+    },
+    "identifier": "chromatic-orb-overlay",
+    "source": {
+      "rules": "2024"
+    },
+    "activities": {}
+  },
+  "effects": [],
+  "flags": {
+    "midi-qol": {
+      "overlay": {
+        "identifier": "chromatic-orb",
+        "rules": "2024",
+        "version": "1"
+      },
+      "entries": [
+        {
+          "id": "leap",
+          "on": "use.completed",
+          "label": "Chromatic Orb: leap",
+          "if": "dice.duplicates(use.workflow.damageRolls?.[0], 8)",
+          "do": [
+            {
+              "use": "activity:this",
+              "to": "near",
+              "near": {
+                "within": 30,
+                "max": "1",
+                "disposition": "any"
+              },
+              "chain": "@item.level",
+              "consume": false,
+              "configure": false
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "_stats": {
+    "compendiumSource": null,
+    "duplicateSource": null,
+    "coreVersion": "14.360",
+    "systemId": "dnd5e",
+    "systemVersion": "6.1.0"
+  }
+}
