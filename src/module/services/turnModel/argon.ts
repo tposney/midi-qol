@@ -1,6 +1,7 @@
 import { i18n } from "../../../midi-qol.js";
 import { FOUNDRY_HUD, hudChoice, registerHud } from "./hud.js";
 import { getTurnModel, peekTurnModel } from "./model.js";
+import { handsOf, isTwoHanded, MAIN, OFF, saveHands, switchHands, wieldable, type Hands } from "../hands.js";
 
 /*
  * M7d: Argon (Combat HUD: enhancedcombathud with enhancedcombathud-dnd5e) as a combat HUD in midi's registry, registered by
@@ -11,6 +12,10 @@ import { getTurnModel, peekTurnModel } from "./model.js";
  * - Its item buttons are greyed, with midi's reasons on a badge, when midi's turn model says they can't be used now; its own
  *   buttons (Dash, Dodge..., the spell and feature drawers) when their panel's action is spent. Its action pips read midi's
  *   action flags; a turn model change redraws the pips and the marks.
+ * - M27 hands stage 4: Argon's weapon sets are midi's hands. midi writes its first three sets and the one in hand to
+ *   Argon's flags (enhancedcombathud.weaponSets / activeWeaponSet) whenever they change; a set Argon switches to is
+ *   midi's switch (its cost in combat: refused, Argon is put back); a slot Argon fills or empties is saved to the hands
+ *   (midi's hand rules: a two-handed weapon takes both).
  */
 
 const ARGON_ID = "midi-qol.argon";
@@ -88,7 +93,82 @@ function markAll() {
   for (const button of argonHud()?._itemButtons ?? []) markButton(button);
 }
 
+/* Hands (stage 4) */
+
+const ARGON_SETS = 3;
+type ArgonSlots = Record<string, { primary?: string | null, secondary?: string | null }>;
+/** Actors whose Argon flags midi is writing (their update isn't Argon's own change) */
+const writingArgon = new Set<string>();
+
+function argonSlots(actor: Actor.Implementation, hands: Hands): ArgonSlots {
+  const uuid = (id: string | null) => (id ? actor.items.get(id)?.uuid : undefined) ?? null;
+  return Object.fromEntries(Array.from({ length: ARGON_SETS }, (_, i) => [String(i + 1), { primary: uuid(hands.sets[i]?.[MAIN] ?? null), secondary: uuid(hands.sets[i]?.[OFF] ?? null) }]));
+}
+
+const argonFlags = (actor: Actor.Implementation) => (actor.flags as { enhancedcombathud?: { weaponSets?: ArgonSlots, activeWeaponSet?: string } }).enhancedcombathud ?? {};
+
+/** The hands written to Argon's flags (when they differ) */
+async function pushToArgon(actor: Actor.Implementation, hands: Hands = handsOf(actor)) {
+  if (!argonActive() || !actor.isOwner || !actor.uuid) return;
+  const sets = argonSlots(actor, hands);
+  const active = hands.active < ARGON_SETS ? String(hands.active + 1) : undefined;
+  const now = argonFlags(actor);
+  const same = JSON.stringify(sets) === JSON.stringify(Object.fromEntries(Object.keys(sets).map(k => [k, { primary: now.weaponSets?.[k]?.primary ?? null, secondary: now.weaponSets?.[k]?.secondary ?? null }])))
+    && (!active || now.activeWeaponSet === active);
+  if (same) return;
+  writingArgon.add(actor.uuid);
+  try {
+    await actor.update({ "flags.enhancedcombathud.weaponSets": sets, ...(active ? { "flags.enhancedcombathud.activeWeaponSet": active } : {}) } as never);
+  } finally { writingArgon.delete(actor.uuid); }
+}
+
+/** Argon changed its sets (a slot filled or emptied, a set switched to): taken into the hands */
+async function pullFromArgon(actor: Actor.Implementation, change: { flags?: { enhancedcombathud?: { weaponSets?: ArgonSlots, activeWeaponSet?: string } } }) {
+  const changed = change.flags?.enhancedcombathud;
+  if (!changed) return;
+  const hands = handsOf(actor);
+  if (changed.weaponSets) {
+    const slots = argonFlags(actor).weaponSets ?? {};
+    const idOf = (uuid: string | null | undefined) => {
+      const item = uuid ? fromUuidSync(uuid, { strict: false }) as Item.Implementation | null : null;
+      return item?.parent === actor && wieldable(item) ? item.id : null;
+    };
+    const next: Hands = { ...hands, sets: hands.sets.map(set => [set[MAIN], set[OFF]]) };
+    for (let i = 0; i < ARGON_SETS; i++) {
+      const main = idOf(slots[String(i + 1)]?.primary);
+      const off = idOf(slots[String(i + 1)]?.secondary);
+      while (next.sets.length <= i) next.sets.push([null, null]);
+      next.sets[i] = main && isTwoHanded(actor.items.get(main)) ? [main, null] : main ? [main, off] : [off, null];
+    }
+    if (JSON.stringify(next.sets) !== JSON.stringify(hands.sets)) await saveHands(actor, next);
+  }
+  const index = changed.activeWeaponSet !== undefined ? Number(changed.activeWeaponSet) - 1 : NaN;
+  if (Number.isInteger(index) && index >= 0 && index !== handsOf(actor).active) {
+    const token = actor.getActiveTokens(true, true)[0] as TokenDocument.Implementation | undefined;
+    const result = token ? await switchHands(token, index) : { done: false };
+    if (!result.done) {
+      if ((result as { reason?: string }).reason) ui.notifications?.warn((result as { reason?: string }).reason!);
+      await pushToArgon(actor);
+    }
+  }
+}
+
+function watchArgonHands() {
+  Hooks.on("midi-qol.handsChanged" as never, ((actor: Actor.Implementation, hands: Hands) => { void pushToArgon(actor, hands).catch(err => console.warn("midi-qol | Argon hands", err)); }) as never);
+  // Argon's own change (by this user, not midi's write): into the hands
+  Hooks.on("updateActor", (actor: Actor.Implementation, change: object, _options: object, userId: string) => {
+    if (userId !== game.userId || !argonActive() || (actor.uuid && writingArgon.has(actor.uuid))) return;
+    void pullFromArgon(actor, change as Parameters<typeof pullFromArgon>[1]).catch(err => console.warn("midi-qol | Argon hands", err));
+  });
+  // Argon shows a controlled token's sets: midi's first
+  Hooks.on("controlToken", (token: Token.Implementation, controlled: boolean) => {
+    const actor = token.actor as Actor.Implementation | null;
+    if (controlled && actor && argonActive()) void pushToArgon(actor).catch(err => console.warn("midi-qol | Argon hands", err));
+  });
+}
+
 export function setupArgon() {
+  watchArgonHands();
   Hooks.once("argonInit" as never, ((CoreHUD: ArgonCore) => {
     const { ItemButton, ActionButton, ButtonPanelButton } = CoreHUD.ARGON.MAIN.BUTTONS;
     for (const cls of [ItemButton, ActionButton, ButtonPanelButton]) {
