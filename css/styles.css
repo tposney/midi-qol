@@ -2643,26 +2643,30 @@ fieldset.midi-qol-use-options .midi-qol-use-options-cost { opacity: 0.8; }
 .midi-qol-hub.midi-hub-keys .midi-hub-use[data-key]::after { content: attr(data-key); position: absolute; right: 2px; top: 0; font-size: 0.65rem; text-shadow: 0 0 3px #000; color: #fff; }
 .midi-qol-hub .midi-hub-since { font-size: 0.8rem; margin: 2px 0; }
 .midi-qol-hub .midi-hub-since ul { margin: 0; padding-left: 1rem; }
-/* lib/stackPicker.ts: the tokens of a stack to pick from */
+/* lib/stackPicker.ts: the tokens of a stack to pick from, one row each */
 .midi-qol-stack-picker {
   position: fixed;
   z-index: 1000;
   display: flex;
-  gap: 6px;
+  flex-direction: column;
+  gap: 4px;
   padding: 6px;
+  min-width: 200px;
   background: var(--color-cool-5, #1e1e2a);
   border: 1px solid var(--color-border-dark, #000);
   border-radius: 6px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
 }
 .midi-qol-stack-picker .midi-qol-stack-token {
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-columns: 56px 1fr;
+  grid-template-rows: auto auto;
   align-items: center;
-  width: 96px;
-  padding: 4px;
+  column-gap: 8px;
+  padding: 4px 8px 4px 4px;
+  text-align: left;
   line-height: 1.2;
-  font-size: var(--font-size-13, 13px);
+  font-size: var(--font-size-14, 14px);
   color: var(--color-text-light-highlight, #eee);
   background: none;
   border: 1px solid transparent;
@@ -2670,6 +2674,6 @@ fieldset.midi-qol-use-options .midi-qol-use-options-cost { opacity: 0.8; }
 }
 .midi-qol-stack-picker .midi-qol-stack-token:hover { border-color: var(--color-border-highlight, #ff6400); }
 .midi-qol-stack-picker .midi-qol-stack-token.chosen { border-color: var(--color-border-light-1, #aaa); }
-.midi-qol-stack-picker .midi-qol-stack-token img { width: 80px; height: 80px; object-fit: contain; border: none; }
-.midi-qol-stack-picker .midi-qol-stack-token span { max-width: 90px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.midi-qol-stack-picker .midi-qol-stack-token img { grid-row: 1 / span 2; width: 56px; height: 56px; object-fit: contain; border: none; }
+.midi-qol-stack-picker .midi-qol-stack-token span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .midi-qol-stack-picker .midi-qol-stack-inside { font-size: var(--font-size-12, 12px); opacity: 0.85; }
