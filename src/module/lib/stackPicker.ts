@@ -48,6 +48,9 @@ function portrait(token: TokenObject, mode: Mode): HTMLElement {
   const name = document.createElement("span");
   name.textContent = token.name ?? "";
   button.append(img, name);
+  // Hovering: the actor's name (the token's may differ: "Orc 3"), and the token's if it does
+  const actorName = token.actor?.name ?? token.name ?? "";
+  button.dataset.tooltip = token.name && token.name !== actorName ? `${actorName} (${token.name})` : actorName;
   const status = token.document && insideWhom(token.document) ? (token.actor?.statuses.has("engulfed") ? "engulfed" : "swallowed") : undefined;
   if (status) {
     const badge = document.createElement("span");

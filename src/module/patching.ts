@@ -133,6 +133,14 @@ function onceForSubject<K extends Hooks.HookName>(name: K, subject: Actor.Implem
 
 export function initPatching() {
   libWrapper = globalThis.libWrapper;
+  // At init: core's interaction manager keeps the click handlers a token or layer had when drawn, and the first scene is
+  // drawn before ready (wrapped later, tokens on it never call the wrapper until redrawn).
+  // User-initiated targeting detection — set flag so targetToken hook can distinguish user clicks from programmatic targeting.
+  // A token's left click is offered to click to attack first (one wrapper per method for midi)
+  libWrapper.register(MODULE_ID, "foundry.canvas.placeables.Token.prototype._onClickLeft", tokenClickLeftWrapper, "MIXED");
+  libWrapper.register(MODULE_ID, "foundry.canvas.placeables.Token.prototype._onClickRight2", tokenClickRight2Wrapper, "WRAPPER");
+  libWrapper.register(MODULE_ID, "foundry.canvas.layers.TokenLayer.prototype.selectObjects", userInitiatedTargetWrapper, "WRAPPER");
+  libWrapper.register(MODULE_ID, "foundry.canvas.layers.TokenLayer.prototype._onClickLeft", tokenLayerClickWrapper, "WRAPPER");
   registerRollPartLabels();
   Hooks.on("dnd5e.postBuildSkillRollConfig", applyChosenAbilityModifiers("skill"));
   Hooks.on("dnd5e.postBuildToolRollConfig", applyChosenAbilityModifiers("tool"));
@@ -380,12 +388,6 @@ export function readyPatching() {
 
   libWrapper.register(MODULE_ID, "foundry.applications.ui.Notifications.prototype.notify", notificationNotify, "MIXED");
 
-  // User-initiated targeting detection — set flag so targetToken hook can distinguish user clicks from programmatic targeting.
-  // A token's left click is offered to click to attack first (one wrapper per method for midi)
-  libWrapper.register(MODULE_ID, "foundry.canvas.placeables.Token.prototype._onClickLeft", tokenClickLeftWrapper, "MIXED");
-  libWrapper.register(MODULE_ID, "foundry.canvas.placeables.Token.prototype._onClickRight2", tokenClickRight2Wrapper, "WRAPPER");
-  libWrapper.register(MODULE_ID, "foundry.canvas.layers.TokenLayer.prototype.selectObjects", userInitiatedTargetWrapper, "WRAPPER");
-  libWrapper.register(MODULE_ID, "foundry.canvas.layers.TokenLayer.prototype._onClickLeft", tokenLayerClickWrapper, "WRAPPER");
 
 }
 
