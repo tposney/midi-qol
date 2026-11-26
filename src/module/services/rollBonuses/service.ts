@@ -427,7 +427,7 @@ export async function applyOfferedBonus(bonus: OfferedBonus, ctx: BonusContext, 
   if (!(await approveBonus(bonus, ctx))) return roll;
   try {
     // Contract 4: the prompt's selection, read by the formula as @bonus.scaling / @bonus.inputs.<name>
-    // Without a prompt's selection (the classic dialog, a standing choice): its lowest level and its inputs' defaults
+    // Without a prompt's selection (a standing choice, a macro's use): its lowest level and its inputs' defaults
     const selection: BonusSelection | undefined = bonus.selection ?? (bonus.scaling || bonus.inputs?.length
       ? { scaling: bonus.scaling ? bonus.scaling.min ?? 1 : undefined, targets: [],
         inputs: Object.fromEntries((bonus.inputs ?? []).filter(i => i.default !== undefined).map(i => [i.name, i.default!])) }

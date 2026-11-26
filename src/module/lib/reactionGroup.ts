@@ -139,13 +139,6 @@ export class ReactionGroupDialog extends HandlebarsApplicationMixin(ApplicationV
 /** The group request's handler: one prompt, then each creature's chosen reactions taken; answers in section order */
 export async function promptReactionGroup(sections: ReactionSection[], incoming: IncomingRequest | undefined): Promise<(ReactionResult | undefined)[]> {
   const none = (): ReactionResult => ({ name: "None" });
-  // The classic style has no sections: each creature its own prompt, in turn
-  if ((safeGetGameSetting("midi-qol", "BonusPrompt") ?? "phased") === "classic") {
-    const results: (ReactionResult | undefined)[] = [];
-    for (const section of sections)
-      results.push(await promptReactions(section.tokenUuid, section.reactionActivityList, section.triggerTokenUuid, section.reactionFlavor, section.triggerType, { ...section.options, incoming }) as ReactionResult | undefined);
-    return results;
-  }
   const prepared = await Promise.all(sections.map(prepare));
   const all = prepared.flatMap((p, index) => p ? [...p.activities.map(a => `${index}|${a.uuid}`), ...p.offers.map(o => `${index}|${o.key}`)] : []);
   if (!all.length) return sections.map(none);

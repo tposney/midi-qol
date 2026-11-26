@@ -69,7 +69,7 @@ export function cost(activity: Activity, workflow?: Workflow): UseCost {
   return current;
 }
 
-function attacksMax(actor: Actor.Implementation): number {
+export function attacksMax(actor: Actor.Implementation): number {
   const value = Number(actionFlag(actor, "attacksMax"));
   return Number.isFinite(value) && value >= 1 ? Math.floor(value) : 1;
 }

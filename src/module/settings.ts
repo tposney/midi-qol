@@ -1795,15 +1795,6 @@ export const registerSettings = function () {
     onChange: () => { void overlaySettingChanged(); }
   });
 
-  game.settings.register("midi-qol", "BonusPrompt", {
-    name: "midi-qol.BonusPrompt.Name",
-    hint: "midi-qol.BonusPrompt.Hint",
-    scope: "user",
-    default: "phased",
-    config: true,
-    type: String,
-    choices: { phased: "midi-qol.BonusPrompt.Phased", classic: "midi-qol.BonusPrompt.Classic" }
-  });
 
   // Player preferences are "user" settings: they follow the player to any device (user, 2026-11-21). Those that were
   // "client" before are copied from this device once (migrateClientToUserSettings)
@@ -2128,7 +2119,7 @@ export const registerSettings = function () {
 }
 
 /** Settings that were per device ("client") and are now the player's ("user") */
-const MOVED_TO_USER = ["TargetConfirmation", "BonusPrompt", "AutoRemoveTargets", "ForceHideRoll"];
+const MOVED_TO_USER = ["TargetConfirmation", "AutoRemoveTargets", "ForceHideRoll"];
 
 /**
  * A player's value of a setting that moved from this device to the player: copied once, when the player has no value

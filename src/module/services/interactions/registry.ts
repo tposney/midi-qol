@@ -56,8 +56,8 @@ export interface InteractionDefinition {
   targets: InteractionTargetKind | readonly InteractionTargetKind[];
   /** Feet from the subject to a creature or a door; "reach": the subject's melee reach. None: any distance */
   range?: number | "reach";
-  /** What doing it costs this turn (in a running combat) */
-  cost?: InteractionCost;
+  /** What doing it costs this turn (in a running combat); a function when it depends on what is done (decided before it runs) */
+  cost?: InteractionCost | ((context: InteractionContext) => InteractionCost);
   /** The reason it can't be done now (a string), or nothing when it can */
   available?(context: InteractionContext): string | undefined | null | false | void;
   /** Whether it is offered at all here (Escape only to a grappled creature); default: always */
@@ -118,6 +118,9 @@ const inCombat = (token: TokenDocument.Implementation) => !!(token.combatant as 
 
 const label = (key: string, data?: Record<string, string>) => (data ? game.i18n?.format(key, data) : game.i18n?.localize(key)) ?? key;
 
+const costOf = (definition: InteractionDefinition, context: InteractionContext): InteractionCost =>
+  (typeof definition.cost === "function" ? definition.cost(context) : definition.cost) ?? {};
+
 /** The common reasons, then the interaction's own */
 function reasonFor(definition: InteractionDefinition, context: InteractionContext): string | undefined {
   const kinds = [definition.targets].flat();
@@ -128,7 +131,7 @@ function reasonFor(definition: InteractionDefinition, context: InteractionContex
     const distance = distanceTo(subject, target);
     if (distance < 0 || distance > range + 1e-6) return label("midi-qol.Interactions.Reason.range", { range: String(range) });
   }
-  for (const [key, count] of Object.entries(definition.cost ?? {}) as [BudgetKindId | "object", number][]) {
+  for (const [key, count] of Object.entries(costOf(definition, context)) as [BudgetKindId | "object", number][]) {
     if (!count || !subject.actor || !inCombat(subject)) continue;
     // The free object interaction, else the action
     if (key === "object") {
@@ -188,9 +191,11 @@ export async function runInteraction(id: string, subjectRef: TargetRef, targetRe
     return { done: !!workflow && !(workflow as { aborted?: boolean }).aborted, result: workflow };
   }
   if (!definition.run) return { done: false, reason: label("midi-qol.Interactions.Reason.unknown") };
+  // As it is before it runs (what it changes may decide it)
+  const cost = costOf(definition, context);
   const result = await definition.run(context);
   if (result === false) return { done: false };
-  for (const [key, count] of Object.entries(definition.cost ?? {}) as [BudgetKindId | "object", number][]) {
+  for (const [key, count] of Object.entries(cost) as [BudgetKindId | "object", number][]) {
     if (!count || !subject.actor || !inCombat(subject)) continue;
     if (key === "object") {
       if (!trackObjects()) continue;

@@ -1,6 +1,8 @@
 import { MODULE_ID, i18n } from "../../midi-qol.js";
 import { registerInteraction, runInteraction } from "./interactions/registry.js";
 import { configSettings } from "../settings.js";
+import { budget, spend } from "./economy/ledger.js";
+import { attacksMax } from "./economy/cost.js";
 
 /*
  * M27 hands (plan ~/Documents/midi-next-M27-hands-plan-2026-11-26.md): the weapon sets a creature switches between, as
@@ -14,6 +16,12 @@ import { configSettings } from "../settings.js";
  * other sets' items, nothing else; an NPC's only changes which set is shown.
  *
  * Hand rules: a two-handed weapon takes both hands; a shield is held in the off hand; the main hand is filled first.
+ *
+ * Stage 2 rules: an attack with a held weapon is made as it is held (handsAttackMode: the off hand's weapon off-hand,
+ * a versatile main-hand weapon two-handed while the off hand is free, one-handed otherwise). A switch's cost: one that
+ * dons or doffs a shield is the Utilize action; one that changes a single weapon during the Attack action, while an
+ * attack made in it has no draw or stow of its own yet, is free (2024: equip or unequip one weapon with each attack);
+ * otherwise the free object interaction (the action once that is used).
  */
 
 /** A set: its main hand and off hand (item ids) */
@@ -35,6 +43,7 @@ const isWeapon = (item: Item.Implementation | null | undefined) => !!item && (it
 export const wieldable = (item: Item.Implementation | null | undefined) => isWeapon(item) || isShield(item);
 export const isTwoHanded = (item: Item.Implementation | null | undefined) => isWeapon(item) && !!sys(item!).properties?.has("two");
 const isLight = (item: Item.Implementation | null | undefined) => isWeapon(item) && !!sys(item!).properties?.has("lgt");
+const isVersatile = (item: Item.Implementation | null | undefined) => isWeapon(item) && !!sys(item!).properties?.has("ver");
 const isRanged = (item: Item.Implementation) => ["simpleR", "martialR"].includes(sys(item).type?.value ?? "");
 /** An NPC (or a transformed creature): sets from its attacks, nothing equipped or unequipped */
 const npcLike = (actor: Actor.Implementation) => (actor.type as string) === "npc" || !!(actor.flags as { dnd5e?: { isPolymorphed?: boolean } }).dnd5e?.isPolymorphed;
@@ -135,6 +144,44 @@ export function removeSet(hands: Hands, index: number): Hands {
   return next;
 }
 
+/**
+ * The mode an attack with this weapon is made in, as it is held: the off hand's weapon off-hand (thrown off-hand when
+ * thrown), a versatile main-hand weapon two-handed with the off hand free, one-handed otherwise; undefined when it isn't
+ * held (or the mode isn't one the attack offers). `current`: the mode the attack would otherwise use.
+ */
+export function handsAttackMode(actor: Actor.Implementation | null | undefined, item: Item.Implementation | null | undefined, offered: string[], current?: string): string | undefined {
+  if (!actor || !item?.id || !isWeapon(item)) return undefined;
+  const { main, off } = heldIn(actor);
+  const thrown = !!current?.startsWith("thrown");
+  let mode: string | undefined;
+  if (off?.id === item.id && main?.id !== item.id) mode = thrown ? "thrown-offhand" : "offhand";
+  else if (main?.id === item.id && !thrown && isVersatile(item)) mode = off ? "oneHanded" : "twoHanded";
+  return mode && offered.includes(mode) ? mode : undefined;
+}
+
+/** The items a switch to set `index` equips or unequips (those in one set and not the other) */
+function changedBy(hands: Hands, index: number): string[] {
+  const from = new Set(hands.sets[hands.active]?.filter((id): id is string => !!id));
+  const to = new Set(hands.sets[index]?.filter((id): id is string => !!id));
+  return [...from, ...to].filter(id => from.has(id) !== to.has(id));
+}
+
+/** 2024: the Attack action's attacks each let the creature draw or stow one weapon; those made, less those used */
+function attackDrawsLeft(actor: Actor.Implementation): number {
+  const counters = budget(actor, "action").counters;
+  if (counters.attacksLeft === undefined) return 0;
+  const made = attacksMax(actor) - Number(counters.attacksLeft ?? 0);
+  return Math.max(0, made - Number(counters.attackDraws ?? 0));
+}
+
+/** What a switch to set `index` costs (a shield's don/doff the action, a single weapon during the Attack action free) */
+function switchCost(actor: Actor.Implementation, index: number): { action?: number, object?: number, free?: boolean } {
+  const changed = changedBy(handsOf(actor), index);
+  if (changed.some(id => isShield(actor.items.get(id)))) return { action: 1 };
+  if (changed.length <= 1 && attackDrawsLeft(actor) > 0) return { free: true };
+  return { object: 1 };
+}
+
 /** Switch to a set: the interaction (its cost in combat); with midi's interactions off, at once and free */
 export async function switchHands(token: TokenDocument.Implementation, index: number): Promise<{ done: boolean, reason?: string }> {
   if (configSettings.interactions !== false) return runInteraction(HANDS_INTERACTION, token, undefined, { index });
@@ -177,7 +224,12 @@ export function registerHands() {
     label: "midi-qol.Hands.Switch",
     icon: "fa-solid fa-shuffle",
     targets: "self",
-    cost: { object: 1 },
+    cost: ({ subject, options }) => {
+      const actor = subject.actor as Actor.Implementation | null;
+      if (!actor || typeof options.index !== "number") return { object: 1 };
+      const { free: _free, ...cost } = switchCost(actor, options.index);
+      return cost;
+    },
     // Only when a set is named (the hub, the keys): not in the Token HUD's list
     relevant: ({ options }) => typeof options.index === "number",
     available: ({ subject, options }) => {
@@ -192,6 +244,10 @@ export function registerHands() {
       if (!actor) return false;
       const hands = handsOf(actor);
       if (!hands.sets[options.index as number]) return false;
+      // A draw or stow the Attack action allows: one of its attacks' allowance used
+      const combatant = (subject as { combatant?: { combat?: { started?: boolean } } | null }).combatant;
+      if (combatant?.combat?.started && switchCost(actor, options.index as number).free)
+        await spend(actor, "action", { count: 0, counters: { attackDraws: Number(budget(actor, "action").counters.attackDraws ?? 0) + 1 } });
       await activate(actor, hands, options.index as number);
     }
   });
@@ -209,4 +265,4 @@ export function registerHandsKeys() {
   game.keybindings?.register(MODULE_ID, "HandsPrevious", { name: "midi-qol.Hands.PreviousKey", hint: "midi-qol.Hands.KeyHint", editable: [], onDown: cycle(-1) });
 }
 
-export const handsApi = { get: handsOf, held: heldIn, switch: switchHands, cycle: cycleHands, place: placeInHand, clear: clearHand, save: saveHands };
+export const handsApi = { get: handsOf, held: heldIn, attackMode: handsAttackMode, switch: switchHands, cycle: cycleHands, place: placeInHand, clear: clearHand, save: saveHands };

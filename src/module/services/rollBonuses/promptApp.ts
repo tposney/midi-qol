@@ -12,8 +12,8 @@ import { diceChoices, suggestLowChoices } from "../diceReroll/service.js";
 import { standingChoice, standingKey, STANDING_CHOICES, wireStandingSelects } from "./standing.js";
 
 /*
- * midi's phased bonus prompt: the same bonuses as the classic dialog (flags.midi-qol.optional and rollBonuses
- * contributors), ticked together and applied with one Apply, through the classic dialog's own handlers (so a bonus
+ * midi's bonus prompt: a roll's optional bonuses (flags.midi-qol.optional and rollBonuses contributors), ticked
+ * together and applied with one Apply, through RollModifyDialog's handlers (so a bonus
  * does the same whichever window offers it). After a reroll or replace it stays open while bonuses remain, with the
  * new roll; otherwise Apply closes it. Skip closes it without applying.
  */

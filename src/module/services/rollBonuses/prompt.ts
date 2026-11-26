@@ -3,8 +3,8 @@ import type { BonusSelection } from "./service.js";
 import type { BonusPromptData } from "../../utils.js";
 
 /*
- * bonusPrompt (single): the window a roll's optional bonuses are offered in. The client setting "Bonus prompt" picks
- * midi's phased prompt (default) or the classic one-button-per-bonus dialog; another module can register its own.
+ * bonusPrompt (single): the window a roll's optional bonuses are offered in: midi's prompt (rows to tick, applied
+ * together); another module can register its own.
  * A provider opens a window over the dialog data midi's bonus code drives (RollModifyDialog's data and handlers).
  */
 

@@ -3137,6 +3137,7 @@ export class Workflow {
    */
   waitOnPlayerRoll(kind: "attack" | "damage" | "utility") {
     this.endRollWait();
+    this.#closeEarlierRollDialogs();
     if (!game.user || game.user.isGM || !this.actor) return;
     // midi isn't checking hits, so it can't know a damage roll is due
     if (kind === "damage" && this.activity.attack && configSettings.autoCheckHit === "none") return;
@@ -3159,6 +3160,19 @@ export class Workflow {
     if (this.#rollWait) {
       Workflow.#rollWaiters.add(this);
       this.#watchRollDialog();
+    }
+  }
+
+  /**
+   * The creature's earlier uses still waiting for a roll were left unrolled (this use replaces them): their roll dialogs
+   * close, rather than staying open on the roller's screen for a use nothing waits on. Only the creature's own uses'
+   * dialogs: a save another use asked it for belongs to that use.
+   */
+  #closeEarlierRollDialogs() {
+    if (!this.actor?.uuid) return;
+    for (const app of rollDialogsFor(this.actor.uuid)) {
+      const owner = (app as unknown as { config?: { workflow?: { actor?: { uuid?: string } } } }).config?.workflow;
+      if (owner && owner !== (this as unknown) && owner.actor?.uuid === this.actor.uuid) void app.close();
     }
   }
 

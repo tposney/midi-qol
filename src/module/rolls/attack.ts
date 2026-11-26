@@ -1,3 +1,4 @@
+import { handsAttackMode } from "../services/hands.js";
 import { tokenFor, tokenOf } from "../lib/tokenResolver.js";
 import { AdvantageFlags, RollModifierTracker, computeAdvantageFlags } from "../lib/RollModifierTracker.js";
 import { attackBonusSources, labelD20Parts, setBonusSources } from "../lib/rollParts.js";
@@ -404,7 +405,10 @@ async function midiRollAttack(activity: AttackActivityLike, wrapped: RollAttack,
     // dnd5e's last used mode for this activity, else the activity's own; an off-hand activity stays off-hand (14.6.15)
     const lastAttackMode: string | undefined = (activity.item.flags as { dnd5e?: { last?: Record<string, { attackMode?: string }> } }).dnd5e?.last?.[activity.id ?? ""]?.attackMode;
     const keepsLastMode = !activity.attackMode?.endsWith("offhand") || !!lastAttackMode?.endsWith("offhand");
-    config.attackMode ??= (keepsLastMode ? lastAttackMode : undefined) ?? activity.attackMode ?? "oneHanded";
+    const usualMode = (keepsLastMode ? lastAttackMode : undefined) ?? activity.attackMode ?? "oneHanded";
+    // As the weapon is held (the hands): off-hand, or a versatile weapon two- or one-handed; a caller's mode stands
+    const offered = ((activity.item.system as { attackModes?: { value: string }[] }).attackModes ?? []).map(m => m.value);
+    config.attackMode ??= handsAttackMode(activity.actor as Actor.Implementation, activity.item as Item.Implementation, offered, usualMode) ?? usualMode;
     // Without the dialog dnd5e spends its last-used or first ammunition, not midi's choice
     // @ts-expect-error no dnd5e-types
     if (activity.item.system.properties?.has("amm")) config.ammunition ??= split?.ammunition || activity.ammunition || undefined;

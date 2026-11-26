@@ -692,7 +692,7 @@ Hooks.once('init', async function () {
   registerMidiActionSchemas();
   setupLedgerEvents();
   defineRangeService();
-  defineBonusPromptService(() => `midi-qol.${safeGetGameSetting("midi-qol", "BonusPrompt") ?? "phased"}`);
+  defineBonusPromptService(() => "midi-qol.phased");
   defineSettingNeedsService();
   defineTokenVisualsService();
   defineMultiattackPlansService();
@@ -725,7 +725,6 @@ Hooks.once('init', async function () {
   // Registered here, not in services/rollBonuses/prompt.ts: BonusPromptApp extends utils' RollModifyDialog and utils
   // imports prompt.ts, so prompt.ts importing the app would evaluate the class before its base exists
   bonusPromptService.register("midi-qol.phased", { open: data => new BonusPromptApp(data) }, { label: "Phased (tick and apply)" });
-  bonusPromptService.register("midi-qol.classic", { open: data => new RollModifyDialog(data) }, { label: "Classic (one button per bonus)" });
   setServiceProblemReporter((serviceId, providerId, message, err) => {
     const text = `midi-qol | ${serviceId} | ${providerId}: ${message}`;
     console.warn(text, err ?? "");

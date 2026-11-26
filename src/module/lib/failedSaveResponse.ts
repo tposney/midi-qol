@@ -75,7 +75,7 @@ export async function promptFailedSave(tokenUuid: string, refs: ReactionItemRefe
     for (const [key, row] of standing.rows) if (row.choice === "next" && taken.has(key)) await setStandingChoice(actor, row.standingKey, "ask", row.label);
     return { ...result, ...savePart };
   }
-  // The rows weren't shown (the classic style, a provider that answers itself, no bonus left to offer): the reactions
+  // The rows weren't shown (a provider that answers itself, no bonus left to offer): the reactions
   // in their own prompt, after the bonuses
   const result = shownActivities.length || shownOffers.length
     ? await promptReactions(tokenUuid, refs, triggerTokenUuid, flavor, triggerType, rest) as ReactionResult | undefined : { name: "None" };

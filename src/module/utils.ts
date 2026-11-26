@@ -4532,7 +4532,7 @@ async function displayBeforeAfterRolls(data: {
 
 /** The optional AC bonus keys: added to the target's AC, `acOnAttack` when attacked, `acOnHit` once the attack hits */
 const OPTIONAL_AC_KEYS = ["acOnAttack", "acOnHit"];
-/** The window the bonus prompt service picks (the classic dialog when none is registered). */
+/** The window the bonus prompt service picks (midi's own dialog when no provider is registered). */
 function openBonusPrompt(data: BonusPromptData): { render(options?: object): unknown } {
   return bonusPromptService?.get()?.open?.(data) ?? new RollModifyDialog(data);
 }
@@ -5778,7 +5778,7 @@ export async function reactionDialog(
   try {
     let timeout = (options.timeout ?? configSettings.reactionTimeout ?? defaultTimeout);
     return new Promise((resolve, reject) => {
-      // One button (classic), or the ticked rows (M32a): offers go back to the asking client, an activity is used here
+      // The ticked rows (M32a): offers go back to the asking client, an activity is used here
       const callback = async function (dialog, chosen) {
         const buttons: any[] = (Array.isArray(chosen) ? chosen : [chosen]).filter(Boolean);
         const offerButtons = buttons.filter(b => b.offerKey);
@@ -5972,14 +5972,10 @@ export class ReactionDialog extends HandlebarsApplicationMixin(ApplicationV2) {
     }
   };
 
-  /** M32a: the bonus prompt's look (rows, ticked and applied) unless the user's Bonus prompt style is classic */
-  get phased(): boolean {
-    return (safeGetGameSetting("midi-qol", "BonusPrompt") ?? "phased") !== "classic";
-  }
-
   _configureRenderParts(options) {
     const parts = super._configureRenderParts(options);
-    if (this.phased && parts.dialog) {
+    // M32a: the bonus prompt's look (rows, ticked and applied)
+    if (parts.dialog) {
       parts.dialog.template = "modules/midi-qol/templates/bonus-prompt.hbs";
       parts.dialog.classes = [...(parts.dialog.classes ?? []), "midi-qol-bonus-prompt"];
     }
@@ -6004,17 +6000,15 @@ export class ReactionDialog extends HandlebarsApplicationMixin(ApplicationV2) {
     for (const button of Array.from(this.element.querySelectorAll(".dialog-button"))) {
       button.addEventListener("click", this._onClickButton.bind(this));
     }
-    if (this.phased) {
-      wirePickOne(this.element);
-      wireStandingSelects(this.element, this.data.actor);
-      this.element.querySelector("[data-bonus-action='apply']")?.addEventListener("click", () => {
-        const ticked = Array.from(this.element.querySelectorAll<HTMLInputElement>("input[name='bonus']:checked")).map(input => this.data.buttons[input.value]).filter(Boolean);
-        // Nothing ticked: as declining
-        if (!ticked.length) return void this.close();
-        void this.submit(ticked);
-      });
-      this.element.querySelector("[data-bonus-action='skip']")?.addEventListener("click", () => void this.close());
-    }
+    wirePickOne(this.element);
+    wireStandingSelects(this.element, this.data.actor);
+    this.element.querySelector("[data-bonus-action='apply']")?.addEventListener("click", () => {
+      const ticked = Array.from(this.element.querySelectorAll<HTMLInputElement>("input[name='bonus']:checked")).map(input => this.data.buttons[input.value]).filter(Boolean);
+      // Nothing ticked: as declining
+      if (!ticked.length) return void this.close();
+      void this.submit(ticked);
+    });
+    this.element.querySelector("[data-bonus-action='skip']")?.addEventListener("click", () => void this.close());
     this.countdown?.attach(this.element);
   }
 
@@ -6042,7 +6036,7 @@ export class ReactionDialog extends HandlebarsApplicationMixin(ApplicationV2) {
       this.data.buttons[foundry.utils.randomID()] = { img: offer.img, name: offer.label, tooltip: offer.description, offerKey: offer.key, callback: this.data.callback,
         cost: { badges: offer.badges ?? [], reaction: offer.reaction ?? false } };
     }
-    if (this.phased) {
+    {
       let reactionTicked = false;
       const entries = Object.entries(this.data.buttons).map(([id, button]: [string, any]) => {
         const row = this.data.standing?.rows.get(button.key ?? button.offerKey);
@@ -6056,14 +6050,6 @@ export class ReactionDialog extends HandlebarsApplicationMixin(ApplicationV2) {
         };
       });
       return { ...context, content: this.data.content, entries, skipLabel: "midi-qol.PlayerWaits.Choice.none", timeRemaining: this.timeRemaining };
-    }
-    // Declining is the default, so Enter (or a stray click) never spends a reaction
-    this.data.buttons.none = { name: i18n("midi-qol.PlayerWaits.Choice.none"), decline: true, default: true, cssClass: "decline" };
-    return {
-      ...context,
-      content: this.data.content,
-      buttons: this.data.buttons,
-      timeRemaining: this.timeRemaining
     }
   }
 
