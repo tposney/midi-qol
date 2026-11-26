@@ -46,6 +46,8 @@ function costKind(cell: ActivityCell): Kind {
   return "other";
 }
 const mark = (kind: Kind | "movement", spent = false) => `<span class="midi-hub-mark midi-hub-mark-${kind}${spent ? " midi-hub-spent" : ""}"></span>`;
+/** On an item's icon: the cost when it isn't the usual action (most buttons are: marking them all is noise) */
+const iconMark = (kind: Kind) => kind === "action" ? "" : mark(kind);
 
 /** A button that uses the activity (greyed with its reason when it can't) */
 function useButton(cell: ActivityCell, options: { barIndex?: number, removable?: boolean, uuid?: string } = {}): string {
@@ -61,7 +63,7 @@ function useButton(cell: ActivityCell, options: { barIndex?: number, removable?:
   return `<button type="button" class="midi-hub-use${state}${cell.multiattack ? " midi-hub-allowed" : ""}" draggable="true"
     data-hub-action="use" data-uuid="${escape(cell.uuid)}" data-entry="${escape(options.uuid ?? cell.uuid)}" data-preview="${escape(cell.uuid)}"${options.barIndex !== undefined ? ` data-bar-index="${options.barIndex}" data-hub-context="remove"` : ""}
     data-tooltip-html="${escape(tip)}" data-tooltip-direction="UP">
-    <img src="${escape(cell.img)}" alt="">${mark(kind)}${cell.uses ? `<span class="midi-hub-count">${cell.uses.value}</span>` : ""}</button>`;
+    <img src="${escape(cell.img)}" alt="">${iconMark(kind)}${cell.uses ? `<span class="midi-hub-count">${cell.uses.value}</span>` : ""}</button>`;
 }
 
 const itemOf = (cell: ActivityCell) => fromUuidSync(cell.itemUuid) as Item.Implementation | null;
@@ -241,7 +243,7 @@ function entryButton(entry: Entry, options: { barIndex?: number, removable?: boo
   return `<button type="button" class="midi-hub-use midi-hub-choices${usable ? (marked ? " midi-hub-marked" : "") : " midi-hub-unusable"}" draggable="true"
     data-hub-action="choose" data-uuid="${escape(entry.uuid)}" data-preview="${escape(first.uuid)}"${options.barIndex !== undefined ? ` data-bar-index="${options.barIndex}" data-hub-context="remove"` : ""}
     data-tooltip-html="${escape(tip)}" data-tooltip-direction="UP">
-    <img src="${escape(item?.img ?? first.img)}" alt="">${mark(kinds.length === 1 ? kinds[0] : costKind(first))}<span class="midi-hub-count">${entry.cells.length}</span></button>`;
+    <img src="${escape(item?.img ?? first.img)}" alt="">${iconMark(kinds.length === 1 ? kinds[0] : costKind(first))}<span class="midi-hub-count">${entry.cells.length}</span></button>`;
 }
 
 /** The menu of an item's choices: midi's chooser's list (its filter and the modules' prune hook) that the hub offers */

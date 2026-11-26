@@ -2501,7 +2501,8 @@ body.midi-qol-attack-primed #board { cursor: crosshair; }
 /* Cost marks: one shape and colour per cost; spent ones hollow */
 .midi-qol .midi-hub-mark { display: inline-block; width: 12px; height: 12px; flex: none; }
 .midi-qol .midi-hub-mark-action { background: #3fae4a; border-radius: 50%; }
-.midi-qol .midi-hub-mark-bonus { background: #e08a1e; clip-path: polygon(50% 0, 100% 100%, 0 100%); }
+/* The bonus action: the bonus action status icon (its marker effect's), in the bonus colour */
+.midi-qol .midi-hub-mark-bonus { background: #e08a1e; -webkit-mask: url("../icons/bonus-action.svg") center / contain no-repeat; mask: url("../icons/bonus-action.svg") center / contain no-repeat; }
 .midi-qol .midi-hub-mark-reaction { background: #9b59d0; clip-path: polygon(50% 0, 100% 50%, 50% 100%, 0 50%); }
 .midi-qol .midi-hub-mark-legendary { background: #d4af37; clip-path: polygon(50% 0, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%); }
 .midi-qol .midi-hub-mark-lair { background: #2a9d8f; border-radius: 2px; }
