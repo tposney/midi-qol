@@ -198,6 +198,12 @@ export function effectSummary(document: unknown): { statuses: string, changes: s
   return statuses || changes.length || duration ? { statuses, changes, duration } : undefined;
 }
 
+/** A listed value's words: the field's own (Entries.Option.<path>.<value>), else shared (Entries.Option.<value>), else the value */
+function optionLabel(path: string, value: string): string {
+  for (const key of [`midi-qol.Entries.Option.${path}.${value}`, `midi-qol.Entries.Option.${value}`]) if (game.i18n?.has(key)) return i18n(key);
+  return value;
+}
+
 /** The part of an entry a sentence chip edits: who, its condition, its choice, or one action (by its card's path) */
 function onlyPart(focus: string): string | undefined {
   if (["who", "if", "choose"].includes(focus)) return focus;
@@ -1816,10 +1822,11 @@ export class EntryEditor extends HandlebarsApplicationMixin(DocumentSheetV2)<
   /** The choices of a field shown as a select; undefined for the others */
   #fieldOptions(field: ActionField): FieldOption[] | undefined {
     // Who an action is for / goes to: the use's target, yourself, the attacker, or the entry's choice of targets
-    if (field.path === "for" || field.path === "to") {
+    // A field's own labelled list (the use action's targets) before the shared who words
+    if ((field.path === "for" || field.path === "to") && typeof field.options !== "function") {
       const listed = field.type === "select" && Array.isArray(field.options) ? field.options as string[] : ["", "target", "self", "attacker"];
       const own = this.#cardsChoice;
-      return [...listed.map(v => ({ value: v, label: i18n(`midi-qol.EntryEditor.Who.${v || "default"}`) })),
+      return [...listed.map(v => ({ value: v, label: game.i18n?.has(`midi-qol.EntryEditor.Who.${v || "default"}`) ? i18n(`midi-qol.EntryEditor.Who.${v || "default"}`) : optionLabel(field.path, v) })),
         ...(own ? [{ value: own.id, label: game.i18n?.format("midi-qol.EntryEditor.Who.choice", { name: own.name }) ?? own.name }] : [])];
     }
     switch (field.type) {
@@ -1828,7 +1835,7 @@ export class EntryEditor extends HandlebarsApplicationMixin(DocumentSheetV2)<
         const options = field.options;
         if (typeof options === "function") return [...options()];
         if (options && "list" in options) return [...(options.include ?? []).map(value => ({ value, label: i18n(`midi-qol.Entries.Option.${value}`) })), ...optionList(options.list)];
-        return (options ?? []).map(v => ({ value: v, label: v || i18n("midi-qol.EntryEditor.Default") }));
+        return (options ?? []).map(v => ({ value: v, label: v ? optionLabel(field.path, v) : i18n("midi-qol.EntryEditor.Default") }));
       }
       case "activity": return this.#activityOptions();
       case "tristate": return [{ value: "true", label: i18n("Yes") }, { value: "false", label: i18n("No") }];

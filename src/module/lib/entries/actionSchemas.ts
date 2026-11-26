@@ -6,6 +6,7 @@ import { setActionSchema, type ActionField } from "./engine.js";
  * can't show is kept, and shown as JSON in that field.
  */
 
+const say = (key: string) => game.i18n?.localize(key) ?? key;
 const dnd5e = () => (CONFIG as unknown as { DND5E?: Record<string, Record<string, { label?: string }>> }).DND5E ?? {};
 
 const ROLL_KINDS = { path: "rolls", label: "midi-qol.Entries.Field.rolls", type: "list" as const };
@@ -88,11 +89,15 @@ export function registerMidiActionSchemas() {
   setActionSchema("check", { fields: [{ path: "check", label: "midi-qol.Entries.Field.check", type: "rollSpec" }, BY, LABEL], initial: { ability: "str", dc: 10 } });
   // At a use's events, one of the item's activities used after the use (Trigger Activity's fields); on an effect's turn, an ActivityOverTime name
   setActionSchema("use", { fields: [{ path: "use", label: "midi-qol.Entries.Field.use", type: "activity" },
-    { path: "to", label: "midi-qol.Entries.Field.useTo", type: "select", options: ["", "target", "targets", "hitTargets", "missedTargets", "failedSaves", "saveTargets", "self", "near", "retarget"] },
+    { path: "to", label: "midi-qol.Entries.Field.useTo", type: "select", options: () => [{ value: "", label: say("midi-qol.EntryEditor.Default") },
+      { value: "target", label: say("midi-qol.Entries.Option.use.target") },
+      ...["targets", "hitTargets", "missedTargets", "failedSaves", "saveTargets", "self", "near", "retarget"].map(value => ({ value, label: say(`midi-qol.TriggeredActivityTargetOptions.${value}`) }))] },
     { path: "near.within", label: "midi-qol.Entries.Field.nearWithin", type: "number" },
     { path: "near.max", label: "midi-qol.Entries.Field.nearMax", type: "formula" },
-    { path: "near.disposition", label: "midi-qol.Entries.Field.nearDisposition", type: "select", options: ["", "any", "enemy", "ally"] },
-    { path: "rollAs", label: "midi-qol.Entries.Field.rollAs", type: "select", options: ["", "self", "firstTarget", "firstHitTarget", "firstMissedTarget", "firstSaveTarget", "firstFailedSaveTarget"] },
+    { path: "near.disposition", label: "midi-qol.Entries.Field.nearDisposition", type: "select", options: () => [{ value: "", label: say("midi-qol.EntryEditor.Default") },
+      ...["any", "enemy", "ally"].map(value => ({ value, label: say(`midi-qol.Chain.Disposition.${value}`) }))] },
+    { path: "rollAs", label: "midi-qol.Entries.Field.rollAs", type: "select", options: () => [{ value: "", label: say("midi-qol.EntryEditor.Default") },
+      ...["self", "firstTarget", "firstHitTarget", "firstMissedTarget", "firstSaveTarget", "firstFailedSaveTarget"].map(value => ({ value, label: say(`midi-qol.TriggeredActivityRollAsOptions.${value}`) }))] },
     { path: "condition", label: "midi-qol.Entries.Field.useCondition", type: "condition" },
     { path: "chain", label: "midi-qol.Entries.Field.chain", type: "formula" },
     { path: "consume", label: "midi-qol.Entries.Field.useConsume", type: "tristate" },
