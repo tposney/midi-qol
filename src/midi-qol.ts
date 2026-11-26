@@ -1,4 +1,4 @@
-import { handsApi, registerHands, registerHandsKeys } from "./module/services/hands.js";
+import { handsApi, registerHands, registerHandsKeys, watchThrownWeapons } from "./module/services/hands.js";
 import { registerRagingRule } from "./rules/raging.js";
 import { registerVitalityItemRule } from "./rules/vitalityItem.js";
 import { defineUseFlowService } from "./module/services/useFlow/service.js";
@@ -827,6 +827,7 @@ Hooks.once('init', async function () {
   initPatching();
   setupClickToAttack();
   registerHands();
+  watchThrownWeapons();
   setupMultiattackPlans();
   registerDamageApplication();
   registerDamageMessageSummary();

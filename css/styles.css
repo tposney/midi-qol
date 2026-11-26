@@ -2590,6 +2590,12 @@ li.midi-qol-after-cast-idle button { opacity: 0.5; }
 .midi-qol-hub .midi-hub-hand-set .midi-hub-hand-n { position: absolute; right: 2px; top: 3px; }
 .midi-qol-hub .midi-hub-hand-active-n { align-self: flex-start; }
 .midi-qol-hub .midi-hub-hand-add { font-size: 0.65rem; opacity: 0.6; text-align: center; }
+/* Stage 3: the ammunition left (out: red); a thrown weapon waiting to be picked up */
+.midi-qol-hub .midi-hub-hand-ammo { position: absolute; right: 1px; bottom: 0; font-size: 0.65rem; padding: 0 2px; border-radius: 3px; background: rgba(0, 0, 0, 0.65); }
+.midi-qol-hub .midi-hub-hand-ammo-out { color: #e05050; }
+.midi-qol-hub .midi-hub-hand-thrown { position: relative; cursor: pointer; }
+.midi-qol-hub .midi-hub-hand-thrown img { filter: grayscale(1) brightness(0.55); }
+.midi-qol-hub .midi-hub-hand-pickup { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); font-size: 1rem; text-shadow: 0 0 3px #000; }
 .midi-qol-hub .midi-hub-tab.active { font-weight: bold; text-decoration: underline; }
 .midi-qol-hub .midi-hub-tabs { flex-wrap: wrap; row-gap: 0.2rem; }
 .midi-qol-hub .midi-hub-drop-hint { white-space: nowrap; }

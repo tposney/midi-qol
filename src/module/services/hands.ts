@@ -22,11 +22,20 @@ import { attacksMax } from "./economy/cost.js";
  * dons or doffs a shield is the Utilize action; one that changes a single weapon during the Attack action, while an
  * attack made in it has no draw or stow of its own yet, is free (2024: equip or unequip one weapon with each attack);
  * otherwise the free object interaction (the action once that is used).
+ *
+ * Stage 3: a hand shows the ammunition its weapon uses (dnd5e's last for the attack, else the first that fits) and how
+ * much is left. A held weapon thrown (attack mode thrown / thrown-offhand) leaves the hand until picked up (the hub's
+ * slot; in combat the object interaction); the end of a combat gives them back. A stack (quantity over 1) stays in hand.
  */
 
 /** A set: its main hand and off hand (item ids) */
 export type HandSet = [string | null, string | null];
-export interface Hands { sets: HandSet[]; active: number }
+export interface Hands {
+  sets: HandSet[];
+  active: number;
+  /** Weapons thrown and not yet picked up (item ids): out of hand, their slot waits for them */
+  thrown?: string[];
+}
 export const MIN_SETS = 2;
 export const MAX_SETS = 4;
 export const MAIN = 0;
@@ -75,23 +84,39 @@ export function handsOf(actor: Actor.Implementation): Hands {
   const sets = stored.sets.slice(0, MAX_SETS).map((set): HandSet => [valid(set?.[MAIN]), valid(set?.[OFF])]);
   while (sets.length < MIN_SETS) sets.push([null, null]);
   const active = Number.isInteger(stored.active) && stored.active >= 0 && stored.active < sets.length ? stored.active : 0;
-  return { sets, active };
+  const thrown = Array.isArray(stored.thrown) ? stored.thrown.filter((id: unknown): id is string => typeof id === "string" && !!actor.items.get(id)) : [];
+  return { sets, active, ...(thrown.length ? { thrown } : {}) };
 }
 
 /** What a set holds: its items, and whether the off hand is taken by a two-handed main weapon */
 export function heldIn(actor: Actor.Implementation, hands: Hands = handsOf(actor), index = hands.active) {
   const [mainId, offId] = hands.sets[index] ?? [null, null];
-  const main = mainId ? actor.items.get(mainId) : undefined;
-  const off = offId ? actor.items.get(offId) : undefined;
-  return { main, off, blocked: isTwoHanded(main) };
+  const away = new Set(hands.thrown ?? []);
+  const main = mainId && !away.has(mainId) ? actor.items.get(mainId) : undefined;
+  const off = offId && !away.has(offId) ? actor.items.get(offId) : undefined;
+  // A thrown weapon's slot: out of hand, waiting to be picked up
+  const thrownMain = mainId && away.has(mainId) ? actor.items.get(mainId) : undefined;
+  const thrownOff = offId && away.has(offId) ? actor.items.get(offId) : undefined;
+  return { main, off, blocked: isTwoHanded(main), thrownMain, thrownOff };
+}
+
+/** The ammunition a held weapon uses (dnd5e's last for its attack, else the first that fits) and how much is left */
+export function ammunitionOf(item: Item.Implementation | null | undefined): { name: string, quantity: number } | undefined {
+  if (!item || !isWeapon(item) || !sys(item).properties?.has("amm")) return undefined;
+  const options = ((item.system as { ammunitionOptions?: { item: Item.Implementation, value: string }[] }).ammunitionOptions ?? []);
+  const attack = [...(sys(item).activities ?? [])].find(a => a.type === "attack") as { id?: string } | undefined;
+  const last = attack?.id ? item.getFlag("dnd5e" as never, `last.${attack.id}.ammunition` as never) as string | undefined : undefined;
+  const chosen = options.find(o => o.value === last)?.item ?? options[0]?.item;
+  if (!chosen) return { name: "", quantity: 0 };
+  return { name: chosen.name ?? "", quantity: Number((chosen.system as { quantity?: number }).quantity ?? 0) };
 }
 
 export async function saveHands(actor: Actor.Implementation, hands: Hands): Promise<void> {
-  await actor.setFlag(MODULE_ID, "hands", { sets: hands.sets.map(set => [set[MAIN], set[OFF]] as HandSet), active: hands.active });
+  await actor.setFlag(MODULE_ID, "hands", { sets: hands.sets.map(set => [set[MAIN], set[OFF]] as HandSet), active: hands.active, thrown: hands.thrown ?? [] });
   Hooks.callAll("midi-qol.handsChanged", actor, hands);
 }
 
-const copyOf = (hands: Hands): Hands => ({ sets: hands.sets.map(set => [set[MAIN], set[OFF]] as HandSet), active: hands.active });
+const copyOf = (hands: Hands): Hands => ({ sets: hands.sets.map(set => [set[MAIN], set[OFF]] as HandSet), active: hands.active, ...(hands.thrown?.length ? { thrown: [...hands.thrown] } : {}) });
 
 /**
  * An item put in a hand of a set: a two-handed weapon takes both hands, a shield goes to the off hand, the main hand is
@@ -253,6 +278,63 @@ export function registerHands() {
   });
 }
 
+const PICK_UP_INTERACTION = "midi-qol.handsPickUp";
+
+/** A thrown weapon picked up: back in its hand (in combat, the object interaction) */
+export function pickUpThrown(token: TokenDocument.Implementation, itemId: string) {
+  if (configSettings.interactions === false) {
+    const actor = token.actor as Actor.Implementation | null;
+    return actor ? returnThrown(actor, itemId).then(() => ({ done: true })) : Promise.resolve({ done: false });
+  }
+  return runInteraction(PICK_UP_INTERACTION, token, undefined, { itemId });
+}
+
+async function returnThrown(actor: Actor.Implementation, itemId?: string) {
+  const hands = handsOf(actor);
+  if (!hands.thrown?.length) return;
+  const next = copyOf(hands);
+  next.thrown = itemId ? hands.thrown.filter(id => id !== itemId) : [];
+  await saveHands(actor, next);
+}
+
+/** A held weapon thrown: out of hand until picked up (a stack keeps one in hand) */
+async function onAttackRolled(workflow: { actor?: Actor.Implementation | null, item?: Item.Implementation | null, attackMode?: string }) {
+  const { actor, item } = workflow;
+  if (!actor?.isOwner || !item?.id || !workflow.attackMode?.startsWith("thrown")) return;
+  if (Number((item.system as { quantity?: number }).quantity ?? 1) > 1) return;
+  const hands = handsOf(actor);
+  if (!hands.sets[hands.active]?.includes(item.id) || hands.thrown?.includes(item.id)) return;
+  await saveHands(actor, { ...copyOf(hands), thrown: [...(hands.thrown ?? []), item.id] });
+}
+
+/** Stage 3's watches: thrown weapons leave the hand; a combat's end gives them back (the active GM) */
+export function watchThrownWeapons() {
+  Hooks.on("midi-qol.AttackRollComplete" as never, ((workflow: Parameters<typeof onAttackRolled>[0]) => { void onAttackRolled(workflow).catch(err => console.warn("midi-qol | hands", err)); }) as never);
+  Hooks.on("deleteCombat", (combat: Combat.Implementation) => {
+    if (!game.user?.isActiveGM) return;
+    for (const combatant of combat.combatants) {
+      const actor = combatant.actor as Actor.Implementation | null;
+      if (actor && handsOf(actor).thrown?.length) void returnThrown(actor).catch(err => console.warn("midi-qol | hands", err));
+    }
+  });
+  registerInteraction(PICK_UP_INTERACTION, {
+    label: "midi-qol.Hands.PickUp",
+    icon: "fa-solid fa-hand",
+    targets: "self",
+    cost: { object: 1 },
+    relevant: ({ options }) => typeof options.itemId === "string",
+    available: ({ subject, options }) => {
+      const actor = subject.actor as Actor.Implementation | null;
+      return actor && handsOf(actor).thrown?.includes(options.itemId as string) ? undefined : i18n("midi-qol.Hands.NotThrown");
+    },
+    run: async ({ subject, options }) => {
+      const actor = subject.actor as Actor.Implementation | null;
+      if (!actor) return false;
+      await returnThrown(actor, options.itemId as string);
+    }
+  });
+}
+
 /** The next / previous set keys: the controlled token's (unbound by default) */
 export function registerHandsKeys() {
   const cycle = (direction: 1 | -1) => () => {
@@ -265,4 +347,4 @@ export function registerHandsKeys() {
   game.keybindings?.register(MODULE_ID, "HandsPrevious", { name: "midi-qol.Hands.PreviousKey", hint: "midi-qol.Hands.KeyHint", editable: [], onDown: cycle(-1) });
 }
 
-export const handsApi = { get: handsOf, held: heldIn, attackMode: handsAttackMode, switch: switchHands, cycle: cycleHands, place: placeInHand, clear: clearHand, save: saveHands };
+export const handsApi = { get: handsOf, held: heldIn, ammunition: ammunitionOf, pickUp: pickUpThrown, attackMode: handsAttackMode, switch: switchHands, cycle: cycleHands, place: placeInHand, clear: clearHand, save: saveHands };

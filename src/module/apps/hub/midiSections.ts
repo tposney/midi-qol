@@ -1,4 +1,4 @@
-import { addSet, clearHand, handsOf, heldIn, isShield, MAIN, MAX_SETS, MIN_SETS, OFF, placeInHand, removeSet, saveHands, switchHands } from "../../services/hands.js";
+import { addSet, ammunitionOf, clearHand, handsOf, heldIn, isShield, MAIN, MAX_SETS, MIN_SETS, OFF, pickUpThrown, placeInHand, removeSet, saveHands, switchHands } from "../../services/hands.js";
 import { aroundMeOn } from "./layout.js";
 import { knowledgeHtml, sinceLastTurnHtml } from "./recordViews.js";
 import { explorationHtml, outOfCombatActions, outOfCombatHtml } from "./outOfCombat.js";
@@ -352,17 +352,26 @@ function spellsHtml(ctx: HubContext): string {
 function handsHtml(ctx: HubContext): string {
   const actor = ctx.actor;
   const hands = handsOf(actor);
-  const { main, off, blocked } = heldIn(actor, hands);
+  const { main, off, blocked, thrownMain, thrownOff } = heldIn(actor, hands);
   const entryOf = (item: Item.Implementation | undefined) => item?.uuid ? entryFor(ctx.model, item.uuid) : undefined;
   const clear = (hand: number) => `<a class="midi-hub-hand-clear" data-hub-action="handClear" data-hand="${hand}" data-tooltip="${escape(i18n("midi-qol.Hands.Clear"))}"><i class="fa-solid fa-xmark"></i></a>`;
   const inert = (item: Item.Implementation, tip: string, extra = "") =>
     `<span class="midi-hub-hand-item${extra}" data-tooltip-html="${escape(tip)}" data-tooltip-direction="UP"><img src="${escape(item.img ?? "")}" alt=""></span>`;
   const empty = (tip: string) => `<span class="midi-hub-hand-empty" data-tooltip="${escape(tip)}"><i class="fa-solid fa-hand"></i></span>`;
-  const slot = (hand: number, body: string, filled: boolean) =>
-    `<span class="midi-hub-hand midi-hub-hand-${hand === MAIN ? "main" : "off"}" data-hub-drop="hand" data-set="${hands.active}" data-hand="${hand}">${body}${filled ? clear(hand) : ""}</span>`;
+  // A weapon's ammunition and how much is left (none left: marked)
+  const ammo = (item: Item.Implementation | undefined) => {
+    const left = ammunitionOf(item);
+    return left ? `<span class="midi-hub-hand-ammo${left.quantity ? "" : " midi-hub-hand-ammo-out"}" data-tooltip="${escape(left.name || i18n("midi-qol.Hands.NoAmmo"))}">${left.quantity}</span>` : "";
+  };
+  // A thrown weapon's slot: greyed, a click picks it up
+  const thrown = (item: Item.Implementation) => `<span class="midi-hub-hand-item midi-hub-hand-thrown" data-hub-action="handPickUp" data-id="${escape(item.id ?? "")}"
+    data-tooltip-html="${escape(`<strong>${escape(item.name ?? "")}</strong><br>${escape(i18n("midi-qol.Hands.PickUpHint"))}`)}" data-tooltip-direction="UP"><img src="${escape(item.img ?? "")}" alt=""><i class="fa-solid fa-hand midi-hub-hand-pickup"></i></span>`;
+  const slot = (hand: number, body: string, filled: boolean, item?: Item.Implementation) =>
+    `<span class="midi-hub-hand midi-hub-hand-${hand === MAIN ? "main" : "off"}" data-hub-drop="hand" data-set="${hands.active}" data-hand="${hand}">${body}${ammo(item)}${filled ? clear(hand) : ""}</span>`;
 
   let mainBody: string;
-  if (main) {
+  if (thrownMain) mainBody = thrown(thrownMain);
+  else if (main) {
     const entry = entryOf(main);
     mainBody = entry ? entryButton(entry) : inert(main, `<strong>${escape(main.name ?? "")}</strong>`);
   } else {
@@ -371,7 +380,8 @@ function handsHtml(ctx: HubContext): string {
     mainBody = entry ? entryButton(entry) : empty(i18n("midi-qol.Hands.DropMain"));
   }
   let offBody: string;
-  if (blocked && main) offBody = inert(main, `${escape(main.name ?? "")}<br><em>${escape(i18n("midi-qol.Hands.TwoHanded"))}</em>`, " midi-hub-hand-blocked");
+  if (thrownOff) offBody = thrown(thrownOff);
+  else if (blocked && main) offBody = inert(main, `${escape(main.name ?? "")}<br><em>${escape(i18n("midi-qol.Hands.TwoHanded"))}</em>`, " midi-hub-hand-blocked");
   else if (off && isShield(off)) {
     const ac = (off.system as { armor?: { value?: number } }).armor?.value;
     offBody = inert(off, `<strong>${escape(off.name ?? "")}</strong>${ac ? `<br>${escape(i18n("midi-qol.Hub.AC"))} +${ac}` : ""}`, " midi-hub-hand-shield");
@@ -391,7 +401,7 @@ function handsHtml(ctx: HubContext): string {
   }).join("");
   const add = hands.sets.length < MAX_SETS ? `<a class="midi-hub-hand-add" data-hub-action="handsAddSet" data-tooltip="${escape(i18n("midi-qol.Hands.AddSet"))}"><i class="fa-solid fa-plus"></i></a>` : "";
   return `<span class="midi-hub-hands" data-tooltip-direction="UP"><span class="midi-hub-hand-n midi-hub-hand-active-n" data-tooltip="${escape(i18n("midi-qol.Hands.Set").replace("{n}", String(hands.active + 1)))}">${hands.active + 1}</span>
-    ${slot(MAIN, mainBody, !!main)}${slot(OFF, offBody, !!off && !blocked)}<span class="midi-hub-hand-sets">${others}${add}</span></span>`;
+    ${slot(MAIN, mainBody, !!main, main)}${slot(OFF, offBody, !!off && !blocked, off)}<span class="midi-hub-hand-sets">${others}${add}</span></span>`;
 }
 
 function drawerHtml(ctx: HubContext): string {
@@ -546,6 +556,11 @@ export function registerMidiHubSections() {
         await saveHands(actor, clearHand(actor, hands, hands.active, Number(target.dataset.hand)));
       },
       handsAddSet: async ({ actor }) => { await saveHands(actor, addSet(handsOf(actor))); },
+      handPickUp: async ({ token }, target) => {
+        if (!token || !target.dataset.id) return;
+        const result = await pickUpThrown(token, target.dataset.id);
+        if (!result.done && (result as { reason?: string }).reason) ui.notifications?.warn((result as { reason?: string }).reason!);
+      },
       handsRemoveSet: async ({ actor }, target) => { await saveHands(actor, removeSet(handsOf(actor), Number(target.dataset.index))); },
       exploreSkill: outOfCombatActions.exploreSkill,
       choiceToggle: async ({ actor }, target) => { await setToggle(actor, target.dataset.key ?? "", (target as HTMLInputElement).checked); },
