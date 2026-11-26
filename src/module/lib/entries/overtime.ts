@@ -373,10 +373,12 @@ async function actionSave({ action, found, context, eventId }: ActionRun): Promi
 }
 
 /** ActivityOverTime: a use of the named activity (the applying item's, or by uuid), as it always ran */
-async function activityUse(run: ActionRun): Promise<void> {
+async function activityUse(run: ActionRun): Promise<{ success?: boolean } | void> {
   const { action, found, context, eventId } = run;
   // At a use's event, an activity ref is a trigger (Trigger Activity, lib/entries/triggerEntries.ts)
   if (context.workflow && isActivityRef(action.use) && (isUseEvent(eventId) || eventId === "use.completed")) return useActivityAction(run);
+  // Elsewhere an activity ref is that activity used against the subjects (the effect's bearer)
+  if (isActivityRef(action.use) && !isUseEvent(eventId) && eventId !== "use.completed") return activityRollAction(run, "use");
   const effect = found.document;
   if (!(effect instanceof ActiveEffect) || (eventId !== "turnStart" && eventId !== "turnEnd")) return;
   await doActivityOverTimeEffect(found.actor ?? context.actor, effect, eventId === "turnStart", { onlyChange: String(action.use ?? "") });

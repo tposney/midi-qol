@@ -1,4 +1,5 @@
 import { tokenFor } from "./lib/tokenResolver.js";
+import { sharesInside } from "./services/interactions/carried.js";
 import { defenceMessageMode } from "../rules/activeDefence/index.js";
 import { vitalityItemName } from "../rules/vitalityItem.js";
 import { glancingDamage } from "../rules/challengeModeArmor.js";
@@ -3352,7 +3353,7 @@ export function totalCoverTargets(activity: Activity, token: TokenOrDocument | u
   if (!coverCalculation || coverCalculation === "none" || !token || activity.midiProperties?.ignoreFullCover) return [];
   const tokenDocument = tokenFor(token);
   return [...targets].filter(target => tokenFor(target) !== tokenDocument
-    && (hasCoverTotal(tokenFor(target)?.actor)
+    && (hasCoverTotal(tokenFor(target)?.actor, token)
       || (coverCalculation !== "dnd5eStatus" && computeCoverBonus(token, target, activity) === TOTAL_COVER)));
 }
 
@@ -3366,9 +3367,16 @@ export function checkTotalCover(activity: Activity, token: TokenOrDocument | und
   return false;
 }
 
-/** Check if an actor has the coverTotal status (impossible to hit). */
-export function hasCoverTotal(actor: Actor | null | undefined): boolean {
-  return !!actor?.statuses?.has("coverTotal");
+/**
+ * Check if an actor has the coverTotal status (impossible to hit). From `from`: not when one is inside the other, or
+ * both inside the same creature (a swallowed creature's total cover is against those outside)
+ */
+export function hasCoverTotal(actor: Actor | null | undefined, from?: TokenOrDocument): boolean {
+  if (!actor?.statuses?.has("coverTotal")) return false;
+  if (!from) return true;
+  const target = tokenFor(actor as Actor.Implementation);
+  const attacker = tokenFor(from);
+  return !(target && attacker && sharesInside(target, attacker));
 }
 
 /**
@@ -3544,7 +3552,7 @@ export function computeTargetAC(
   const baseAC = acValue - statusCoverBonus;
 
   // TOTAL_COVER not set by dnd5e for tokens with total cover
-  if (hasCoverTotal(targetActor)) statusCoverBonus = TOTAL_COVER;
+  if (hasCoverTotal(targetActor, attacker)) statusCoverBonus = TOTAL_COVER;
 
   // Get raw module cover; an entry's cover for the target counts as at least that much
   let moduleCoverBonus = computeCoverBonus(attacker, target, activity);

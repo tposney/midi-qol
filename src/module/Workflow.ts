@@ -5667,7 +5667,7 @@ export class Workflow {
         actor: t.actor?.uuid ?? "",
         token: t.uuid,
         //@ts-expect-error no dnd5e-types
-        ac: recorded ? recorded.ac : (hasCoverTotal(t.actor) ? null : t?.actor?.system.attributes.ac.value as number),
+        ac: recorded ? recorded.ac : (hasCoverTotal(t.actor, this.token) ? null : t?.actor?.system.attributes.ac.value as number),
         saved: !!t.uuid && saves.has(t.uuid),
         semiSuperSaver: !!t.uuid && semiSuperSavers.has(t.uuid),
         superSaver: !!t.uuid && superSavers.has(t.uuid),
@@ -6022,7 +6022,7 @@ export class Workflow {
     const targetActor = target.actor;
     //@ts-expect-error no dnd5e-types
     let statusCoverBonus: number = targetActor?.system?.attributes?.ac?.cover ?? 0;
-    if (hasCoverTotal(targetActor)) statusCoverBonus = TOTAL_COVER;
+    if (hasCoverTotal(targetActor, this.token)) statusCoverBonus = TOTAL_COVER;
 
     // Get the raw module-computed cover bonus
     let moduleCoverBonus = 0;

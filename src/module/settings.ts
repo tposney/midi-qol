@@ -1,6 +1,7 @@
 import { overlaySettingChanged } from "./lib/entries/overlays.js";
 import { PlayerSettingsView } from "./apps/PlayerSettingsView.js";
 import { registerHiddenGroundCueSetting } from "./lib/hiddenGroundCue.js";
+import { registerInsideLookSetting } from "./lib/insideLook.js";
 import { applyChatCardSummaries, registerChatCardSummariesSetting } from "./lib/chatCardSummaries.js";
 import { registerRulesTextSettings } from "./lib/rulesText.js";
 import { debug, setDebugLevel, i18n, debugEnabled, updateFlankingStatusEffects } from "../midi-qol.js";
@@ -1783,6 +1784,7 @@ export const registerSettings = function () {
   // ========================================
 
   registerHiddenGroundCueSetting();
+  registerInsideLookSetting();
   registerChatCardSummariesSetting();
   registerRulesTextSettings();
 

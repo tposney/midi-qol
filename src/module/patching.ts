@@ -21,6 +21,7 @@ import { computeActivityTemplateTargets } from "./activities/activityHelpers.js"
 import { installedModules } from "./setupModules.js";
 import { OnUseMacro, OnUseMacros } from "./apps/Item.js";
 import { initHiddenGroundCue } from "./lib/hiddenGroundCue.js";
+import { INSIDE_LOOK_WRAPPERS } from "./lib/insideLook.js";
 import { initConditionRules } from "../rules/conditionRules.js";
 import { TroubleShooter } from "./apps/TroubleShooter.js";
 import { MidiActivityChoiceDialog } from "./apps/MidiActivityChoiceDialog.js";
@@ -270,6 +271,7 @@ export function initPatching() {
     _updateOccludedSurfacesWrapper, "WRAPPER");
 
   initHiddenGroundCue();
+  for (const [target, wrapper] of INSIDE_LOOK_WRAPPERS) libWrapper.register(MODULE_ID, target, wrapper, "WRAPPER");
 
   class MidiAmbientLightDocument extends MidiDependentDocumentMixin(
     globalThis.dnd5e.documents.mixins.DependentDocumentMixin(CONFIG.AmbientLight.documentClass)

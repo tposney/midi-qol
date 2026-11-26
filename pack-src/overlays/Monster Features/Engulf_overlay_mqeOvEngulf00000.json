@@ -1,0 +1,368 @@
+{
+  "name": "Engulf (overlay)",
+  "type": "feat",
+  "img": "icons/creatures/slimes/slime-movement-pseudopods-green.webp",
+  "_id": "mqeOvEngulf00000",
+  "_key": "!items!mqeOvEngulf00000",
+  "folder": "mqeFolderMonster",
+  "ownership": {
+    "default": 0
+  },
+  "system": {
+    "description": {
+      "value": "<p><em>Overlay (midi-qol):</em> the Monster Manual's Engulf (Gelatinous Cube, Shambling Mound). A creature that fails the save is inside the engulfer: its token sits in the engulfer's space and moves with it, and it takes the engulfing damage each turn (the Gelatinous Cube's at the start of its turns, 3d6 acid; the Shambling Mound's at the start of the engulfed creature's turns). The engulfed creature can take an action to escape (its card at the start of its turn): the Gelatinous Cube's Strength (Athletics) check against its DC, the Shambling Mound's grapple (Athletics or Acrobatics against its passive Athletics); on a success it comes out on the nearest free space. Not covered yet: the Gelatinous Cube engulfing as it moves through creatures (use the Save on them), and pulling a creature out of it from outside.</p>",
+      "chatFlavor": ""
+    },
+    "identifier": "engulf-overlay",
+    "source": {
+      "rules": "2024"
+    },
+    "activities": {
+      "mqeEngulfDamage0": {
+        "_id": "mqeEngulfDamage0",
+        "type": "damage",
+        "name": "Engulfed: Damage",
+        "sort": 0,
+        "activation": {
+          "type": "",
+          "value": null,
+          "override": false,
+          "condition": ""
+        },
+        "consumption": {
+          "scaling": {
+            "allowed": false
+          },
+          "spellSlot": true,
+          "targets": []
+        },
+        "description": {
+          "chatFlavor": ""
+        },
+        "duration": {
+          "units": "inst",
+          "concentration": false,
+          "override": false
+        },
+        "effects": [],
+        "range": {
+          "override": false,
+          "units": "self",
+          "special": ""
+        },
+        "target": {
+          "template": {
+            "contiguous": false,
+            "units": "ft",
+            "type": ""
+          },
+          "affects": {
+            "choice": false,
+            "type": "creature",
+            "count": "",
+            "special": "Engulfed"
+          },
+          "override": false,
+          "prompt": false
+        },
+        "uses": {
+          "spent": 0,
+          "recovery": [],
+          "max": ""
+        },
+        "damage": {
+          "critical": {
+            "allow": false
+          },
+          "parts": [
+            {
+              "custom": {
+                "enabled": false,
+                "formula": ""
+              },
+              "number": 3,
+              "denomination": 6,
+              "bonus": "",
+              "types": [
+                "acid"
+              ],
+              "scaling": {
+                "number": 1
+              }
+            }
+          ]
+        },
+        "midiProperties": {
+          "forceConsumeDialog": "never",
+          "automationOnly": true
+        }
+      }
+    }
+  },
+  "effects": [
+    {
+      "_id": "mqeEngulfedEff01",
+      "_key": "!items.effects!mqeOvEngulf00000.mqeEngulfedEff01",
+      "name": "Total Cover, Suffocating & Restrained",
+      "img": "icons/creatures/slimes/slime-movement-pseudopods-green.webp",
+      "type": "base",
+      "system": {
+        "changes": []
+      },
+      "disabled": false,
+      "transfer": false,
+      "statuses": [],
+      "description": "",
+      "flags": {
+        "midi-qol": {
+          "inside": true,
+          "entries": [
+            {
+              "id": "digest-originTurnStart",
+              "on": "originTurnStart",
+              "if": "config.damageWhen === 'originTurnStart'",
+              "label": "Swallowed: damage",
+              "do": [
+                {
+                  "use": "activity:Engulfed: Damage"
+                }
+              ]
+            },
+            {
+              "id": "digest-originTurnEnd",
+              "on": "originTurnEnd",
+              "if": "config.damageWhen === 'originTurnEnd'",
+              "label": "Swallowed: damage",
+              "do": [
+                {
+                  "use": "activity:Engulfed: Damage"
+                }
+              ]
+            },
+            {
+              "id": "digest-turnStart",
+              "on": "turnStart",
+              "if": "config.damageWhen === 'turnStart'",
+              "label": "Swallowed: damage",
+              "do": [
+                {
+                  "use": "activity:Engulfed: Damage"
+                }
+              ]
+            },
+            {
+              "id": "escape",
+              "label": "Escape (Athletics)",
+              "on": "action",
+              "who": "bearer",
+              "if": "config.escape === 'check'",
+              "do": [
+                {
+                  "check": {
+                    "ability": "str",
+                    "skill": [
+                      "ath"
+                    ],
+                    "dc": "@entry.origin.dc"
+                  },
+                  "then": [
+                    {
+                      "end": true
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "escape-grapple",
+              "label": "Escape the grapple (Athletics or Acrobatics)",
+              "on": "action",
+              "who": "bearer",
+              "if": "config.escape === 'grapple'",
+              "do": [
+                {
+                  "check": {
+                    "ability": "str",
+                    "skill": [
+                      "ath",
+                      "acr"
+                    ],
+                    "dc": "@entry.origin.actor.system.skills.ath.passive"
+                  },
+                  "then": [
+                    {
+                      "end": true
+                    }
+                  ]
+                }
+              ]
+            }
+          ],
+          "overlayRole": true
+        }
+      }
+    },
+    {
+      "_id": "mqeEngulfedEff02",
+      "_key": "!items.effects!mqeOvEngulf00000.mqeEngulfedEff02",
+      "name": "Grappled, Blinded & Restrained",
+      "img": "icons/creatures/slimes/slime-movement-pseudopods-green.webp",
+      "type": "base",
+      "system": {
+        "changes": []
+      },
+      "disabled": false,
+      "transfer": false,
+      "statuses": [],
+      "description": "",
+      "flags": {
+        "midi-qol": {
+          "inside": true,
+          "entries": [
+            {
+              "id": "digest-originTurnStart",
+              "on": "originTurnStart",
+              "if": "config.damageWhen === 'originTurnStart'",
+              "label": "Swallowed: damage",
+              "do": [
+                {
+                  "use": "activity:Engulfed: Damage"
+                }
+              ]
+            },
+            {
+              "id": "digest-originTurnEnd",
+              "on": "originTurnEnd",
+              "if": "config.damageWhen === 'originTurnEnd'",
+              "label": "Swallowed: damage",
+              "do": [
+                {
+                  "use": "activity:Engulfed: Damage"
+                }
+              ]
+            },
+            {
+              "id": "digest-turnStart",
+              "on": "turnStart",
+              "if": "config.damageWhen === 'turnStart'",
+              "label": "Swallowed: damage",
+              "do": [
+                {
+                  "use": "activity:Engulfed: Damage"
+                }
+              ]
+            },
+            {
+              "id": "escape",
+              "label": "Escape (Athletics)",
+              "on": "action",
+              "who": "bearer",
+              "if": "config.escape === 'check'",
+              "do": [
+                {
+                  "check": {
+                    "ability": "str",
+                    "skill": [
+                      "ath"
+                    ],
+                    "dc": "@entry.origin.dc"
+                  },
+                  "then": [
+                    {
+                      "end": true
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "escape-grapple",
+              "label": "Escape the grapple (Athletics or Acrobatics)",
+              "on": "action",
+              "who": "bearer",
+              "if": "config.escape === 'grapple'",
+              "do": [
+                {
+                  "check": {
+                    "ability": "str",
+                    "skill": [
+                      "ath",
+                      "acr"
+                    ],
+                    "dc": "@entry.origin.actor.system.skills.ath.passive"
+                  },
+                  "then": [
+                    {
+                      "end": true
+                    }
+                  ]
+                }
+              ]
+            }
+          ],
+          "overlayRole": true
+        }
+      }
+    }
+  ],
+  "flags": {
+    "midi-qol": {
+      "overlay": {
+        "identifier": "engulf",
+        "rules": "2024",
+        "version": "2"
+      },
+      "configSpec": [
+        {
+          "key": "damageWhen",
+          "label": "Engulfed creatures take damage at",
+          "type": "select",
+          "options": [
+            {
+              "value": "originTurnStart",
+              "label": "the start of the swallower's turn"
+            },
+            {
+              "value": "originTurnEnd",
+              "label": "the end of the swallower's turn"
+            },
+            {
+              "value": "turnStart",
+              "label": "the start of the swallowed creature's turn"
+            }
+          ],
+          "default": "originTurnStart",
+          "byCreature": {
+            "shambling-mound": "turnStart"
+          }
+        },
+        {
+          "key": "escape",
+          "label": "How an engulfed creature escapes (its action)",
+          "type": "select",
+          "options": [
+            {
+              "value": "check",
+              "label": "an Athletics check against the engulfer's DC"
+            },
+            {
+              "value": "grapple",
+              "label": "escaping the grapple (Athletics or Acrobatics against its passive Athletics)"
+            }
+          ],
+          "default": "check",
+          "byCreature": {
+            "shambling-mound": "grapple"
+          }
+        }
+      ]
+    }
+  },
+  "_stats": {
+    "compendiumSource": null,
+    "duplicateSource": null,
+    "coreVersion": "14.360",
+    "systemId": "dnd5e",
+    "systemVersion": "6.1.0"
+  }
+}

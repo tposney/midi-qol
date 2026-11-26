@@ -1,12 +1,16 @@
 import { MODULE_ID, moveToken } from "../../../midi-qol.js";
 import { tokenFor } from "../../lib/tokenResolver.js";
+import { effectFlag, itemOfEffect } from "../../lib/entries/rules.js";
+import { toggleStatus } from "../../utils.js";
+import { redrawInside } from "../../lib/insideLook.js";
 import { besideSpots, freeSpot, insideSpot, type Rect, type Spot } from "../../lib/carryGeometry.js";
 
 /*
  * A creature inside another (swallowed, engulfed). Plan: ~/Documents/midi-next-region-barriers-plan-2026-11-25.md,
  * part 2, stage 1.
  *
- * Being inside is an effect: one flagged `flags.midi-qol.inside` on the victim, whose origin is the swallower's item.
+ * Being inside is an effect: one flagged `flags.midi-qol.inside` on the victim (or whose item's rule says so: an
+ * overlay's effect of that name, the book's Swallow), whose origin is the swallower's item.
  * While it lasts the victim's token sits centred in the swallower's space and goes where it goes; when the last such
  * effect from that swallower ends, the victim is put on the nearest free space beside it. Nothing else is recorded,
  * so it survives a reload, and identical unlinked monsters are told apart by the token in the origin.
@@ -14,13 +18,15 @@ import { besideSpots, freeSpot, insideSpot, type Rect, type Spot } from "../../l
  *    deleteActiveEffect);
  *  - the swallower's own move takes those inside along in the same move as a grappler's drag (grapple.ts, at no cost);
  *  - any other move of it (forced, a teleport) is followed afterwards (moveToken, on the mover's client).
+ *  - while inside it has the Swallowed status (Engulfed, from an engulf item), the GM's; lib/insideLook.ts draws it.
  * `{ move: { place: "inside" | "beside", from? } }` (movementEvents.ts) places a token the same way without the flag.
  */
 
 export const INSIDE_FLAG = "inside";
 
 type Effect = ActiveEffect.Implementation;
-const isInsideEffect = (effect: Effect) => !!effect.getFlag(MODULE_ID, INSIDE_FLAG) && !effect.disabled;
+const marksInside = (effect: Effect) => !!effectFlag(effect, INSIDE_FLAG);
+const isInsideEffect = (effect: Effect) => !effect.disabled && marksInside(effect);
 
 const rectOf = (token: TokenDocument.Implementation): Rect => {
   const size = canvas!.grid!.size;
@@ -30,7 +36,9 @@ const rectOf = (token: TokenDocument.Implementation): Rect => {
 /** The token an inside effect's victim is in: the one its origin names, on the victim's scene */
 function carrierOf(effect: Effect, victim: TokenDocument.Implementation): TokenDocument.Implementation | undefined {
   if (!effect.origin) return undefined;
-  const carrier = tokenFor(effect.origin, { scene: victim.parent ?? null, near: victim });
+  // An activity's origin (dnd5e's applied effects): its item's
+  const origin = effect.origin.replace(/\.Activity\.[^.]+$/, "");
+  const carrier = tokenFor(origin, { scene: victim.parent ?? null, near: victim });
   return carrier && carrier !== victim && carrier.parent === victim.parent ? carrier : undefined;
 }
 
@@ -49,6 +57,12 @@ export function insideWhom(token: TokenDocument.Implementation): TokenDocument.I
     if (carrier) return carrier;
   }
   return undefined;
+}
+
+/** One is inside the other, or both inside the same creature (a swallowed creature's total cover is against those outside) */
+export function sharesInside(a: TokenDocument.Implementation, b: TokenDocument.Implementation): boolean {
+  const inA = insideWhom(a), inB = insideWhom(b);
+  return inA === b || inB === a || (!!inA && inA === inB);
 }
 
 /** Put there at once, whatever is in the way: a teleport (no cost, no opportunity attack). False when already there */
@@ -105,20 +119,34 @@ const victimToken = (effect: Effect): TokenDocument.Implementation | undefined =
   return actor instanceof Actor ? tokenFor(actor) : undefined;
 };
 
+/** The status a creature inside has: Engulfed (an engulf item's), else Swallowed */
+export function insideStatus(effect: Effect): "swallowed" | "engulfed" {
+  const identifier = (itemOfEffect(effect)?.system as { identifier?: string } | undefined)?.identifier ?? "";
+  return identifier.includes("engulf") ? "engulfed" : "swallowed";
+}
+
 async function onEffectCreated(effect: Effect) {
-  if (!game.user?.isActiveGM || !isInsideEffect(effect)) return;
+  if (!isInsideEffect(effect)) return;
   const victim = victimToken(effect);
+  redrawInside(victim);
+  if (!game.user?.isActiveGM) return;
   const carrier = victim && carrierOf(effect, victim);
-  if (victim && carrier) await placeInside(victim, carrier);
+  if (!victim || !carrier) return;
+  await placeInside(victim, carrier);
+  if (victim.actor && !victim.actor.statuses.has(insideStatus(effect))) await toggleStatus(victim.actor, insideStatus(effect), { active: true });
 }
 
 async function onEffectDeleted(effect: Effect) {
-  if (!game.user?.isActiveGM || !effect.getFlag(MODULE_ID, INSIDE_FLAG)) return;
+  if (!marksInside(effect)) return;
   const victim = victimToken(effect);
-  const carrier = victim && carrierOf(effect, victim);
+  redrawInside(victim);
+  if (!game.user?.isActiveGM || !victim) return;
+  const carrier = carrierOf(effect, victim);
   // Still inside by another effect of the same creature (its bite and its swallow)
-  if (!victim || !carrier || insideWhom(victim) === carrier) return;
-  if (seated(victim, carrier)) await placeBeside(victim, carrier);
+  if (carrier && insideWhom(victim) === carrier) return;
+  if (carrier && seated(victim, carrier)) await placeBeside(victim, carrier);
+  // Inside no one now: the status goes
+  if (!insideWhom(victim) && victim.actor?.statuses.has(insideStatus(effect))) await toggleStatus(victim.actor, insideStatus(effect), { active: false });
 }
 
 /** After a move the drag didn't make (forced, a teleport): those inside are put back inside */

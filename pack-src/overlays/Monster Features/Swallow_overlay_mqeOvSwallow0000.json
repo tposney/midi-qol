@@ -1,0 +1,311 @@
+{
+  "name": "Swallow (overlay)",
+  "type": "feat",
+  "img": "icons/creatures/abilities/mouth-teeth-long-red.webp",
+  "_id": "mqeOvSwallow0000",
+  "_key": "!items!mqeOvSwallow0000",
+  "folder": "mqeFolderMonster",
+  "ownership": {
+    "default": 0
+  },
+  "system": {
+    "description": {
+      "value": "<p><em>Overlay (midi-qol):</em> the Monster Manual's Swallow (Behir, Kraken, Purple Worm, Remorhaz, Tarrasque, Giant Frog). A creature that fails the save (the Giant Frog's: its Swallowed activity) is inside the swallower: its token sits in the swallower's space and moves with it, its Grappled condition ends, and it takes the swallower's Swallowed damage each turn (when: the item's automation setting, each creature's own by default). Enough damage from inside it in one turn (30; the Kraken 50, the Tarrasque 60) and the swallower makes the Constitution save at once (not at the turn's end) or regurgitates them all, Prone beside it. When the swallower dies they are released at once, Prone. Not covered: the Giant Toad (its item has no activity that swallows), \"can't use Bite while it has a swallowed target\", the Kraken's Large-or-smaller limit and its damage at the swallowed creature's turn when it isn't in combat, the movement it costs to leave a corpse.</p>",
+      "chatFlavor": ""
+    },
+    "identifier": "swallow-overlay",
+    "source": {
+      "rules": "2024"
+    },
+    "activities": {}
+  },
+  "effects": [
+    {
+      "_id": "mqeSwallowedEf01",
+      "_key": "!items.effects!mqeOvSwallow0000.mqeSwallowedEf01",
+      "name": "Blinded, Restrained, and Total Cover",
+      "img": "icons/creatures/abilities/mouth-teeth-long-red.webp",
+      "type": "base",
+      "system": {
+        "changes": []
+      },
+      "disabled": false,
+      "transfer": false,
+      "statuses": [],
+      "description": "",
+      "flags": {
+        "midi-qol": {
+          "inside": true,
+          "entries": [
+            {
+              "id": "digest-originTurnStart",
+              "on": "originTurnStart",
+              "if": "config.damageWhen === 'originTurnStart'",
+              "label": "Swallowed: damage",
+              "do": [
+                {
+                  "use": "activity:zrWNjO9mkbN28spL"
+                }
+              ]
+            },
+            {
+              "id": "digest-originTurnEnd",
+              "on": "originTurnEnd",
+              "if": "config.damageWhen === 'originTurnEnd'",
+              "label": "Swallowed: damage",
+              "do": [
+                {
+                  "use": "activity:zrWNjO9mkbN28spL"
+                }
+              ]
+            },
+            {
+              "id": "digest-turnStart",
+              "on": "turnStart",
+              "if": "config.damageWhen === 'turnStart'",
+              "label": "Swallowed: damage",
+              "do": [
+                {
+                  "use": "activity:zrWNjO9mkbN28spL"
+                }
+              ]
+            },
+            {
+              "id": "disgorge",
+              "on": "originTurnEnd",
+              "if": "config.disgorge && config.damageWhen === 'originTurnEnd' && actor.attributes.hp.value > 0",
+              "label": "Disgorged",
+              "do": [
+                {
+                  "effect": "apply",
+                  "what": "prone",
+                  "to": "self"
+                },
+                {
+                  "end": true
+                }
+              ]
+            }
+          ],
+          "overlayRole": true
+        }
+      }
+    },
+    {
+      "_id": "mqeSwallowedEf02",
+      "_key": "!items.effects!mqeOvSwallow0000.mqeSwallowedEf02",
+      "name": "Restrained & Total Cover",
+      "img": "icons/creatures/abilities/mouth-teeth-long-red.webp",
+      "type": "base",
+      "system": {
+        "changes": []
+      },
+      "disabled": false,
+      "transfer": false,
+      "statuses": [],
+      "description": "",
+      "flags": {
+        "midi-qol": {
+          "inside": true,
+          "entries": [
+            {
+              "id": "digest-originTurnStart",
+              "on": "originTurnStart",
+              "if": "config.damageWhen === 'originTurnStart'",
+              "label": "Swallowed: damage",
+              "do": [
+                {
+                  "use": "activity:zrWNjO9mkbN28spL"
+                }
+              ]
+            },
+            {
+              "id": "digest-originTurnEnd",
+              "on": "originTurnEnd",
+              "if": "config.damageWhen === 'originTurnEnd'",
+              "label": "Swallowed: damage",
+              "do": [
+                {
+                  "use": "activity:zrWNjO9mkbN28spL"
+                }
+              ]
+            },
+            {
+              "id": "digest-turnStart",
+              "on": "turnStart",
+              "if": "config.damageWhen === 'turnStart'",
+              "label": "Swallowed: damage",
+              "do": [
+                {
+                  "use": "activity:zrWNjO9mkbN28spL"
+                }
+              ]
+            }
+          ],
+          "overlayRole": true
+        }
+      }
+    }
+  ],
+  "flags": {
+    "midi-qol": {
+      "overlay": {
+        "identifier": "swallow",
+        "rules": "2024",
+        "version": "1"
+      },
+      "configSpec": [
+        {
+          "key": "damageWhen",
+          "label": "Swallowed creatures take damage at",
+          "type": "select",
+          "options": [
+            {
+              "value": "originTurnStart",
+              "label": "the start of the swallower's turn"
+            },
+            {
+              "value": "originTurnEnd",
+              "label": "the end of the swallower's turn"
+            },
+            {
+              "value": "turnStart",
+              "label": "the start of the swallowed creature's turn"
+            }
+          ],
+          "default": "originTurnStart",
+          "byCreature": {
+            "giant-frog": "originTurnEnd",
+            "giant-toad": "originTurnEnd",
+            "kraken": "turnStart"
+          }
+        },
+        {
+          "key": "regurgitate",
+          "label": "Damage from inside in one turn that forces the regurgitation save (0: none)",
+          "type": "number",
+          "default": 30,
+          "byCreature": {
+            "kraken": 50,
+            "tarrasque": 60,
+            "giant-frog": 0,
+            "giant-toad": 0
+          }
+        },
+        {
+          "key": "regurgitateDC",
+          "label": "Regurgitation save DC",
+          "type": "number",
+          "default": 20,
+          "byCreature": {
+            "behir": 14,
+            "kraken": 25,
+            "purple-worm": 22,
+            "remorhaz": 15,
+            "tarrasque": 20
+          }
+        },
+        {
+          "key": "disgorge",
+          "label": "Disgorges the creature after its first damage (Giant Frog)",
+          "type": "checkbox",
+          "default": false,
+          "byCreature": {
+            "giant-frog": true
+          }
+        }
+      ],
+      "entries": [
+        {
+          "id": "ungrapple",
+          "on": "use.target.saveFailed",
+          "if": "use.activity?.id === 'YorssyWMumAsvzx3'",
+          "label": "No longer Grappled",
+          "do": [
+            {
+              "effect": "remove",
+              "what": "grappled",
+              "to": "target",
+              "whole": true
+            }
+          ]
+        },
+        {
+          "id": "ungrapple-frog",
+          "on": "use.target.each",
+          "if": "use.activity?.id === 'IPD9mDjKJEXc2uMQ'",
+          "label": "No longer Grappled",
+          "do": [
+            {
+              "effect": "remove",
+              "what": "grappled",
+              "to": "target",
+              "whole": true
+            }
+          ]
+        },
+        {
+          "id": "released",
+          "on": "dies",
+          "label": "Swallowed creatures released",
+          "do": [
+            {
+              "effect": "apply",
+              "what": "prone",
+              "to": "inside"
+            },
+            {
+              "effect": "remove",
+              "what": {
+                "origin": "this item"
+              },
+              "to": "anyone"
+            }
+          ]
+        },
+        {
+          "id": "regurgitate",
+          "on": "damaged",
+          "if": "config.regurgitate > 0 && inside(use.token, bearer)",
+          "label": "Regurgitation",
+          "do": [
+            {
+              "tally": "swallowedDamage",
+              "add": "@event.damage.totalDamage"
+            },
+            {
+              "if": "(tallies.swallowedDamage ?? 0) >= config.regurgitate",
+              "save": {
+                "ability": "con",
+                "dc": "@config.regurgitateDC"
+              },
+              "by": "bearer",
+              "label": "Regurgitation",
+              "else": [
+                {
+                  "effect": "apply",
+                  "what": "prone",
+                  "to": "inside"
+                },
+                {
+                  "effect": "remove",
+                  "what": {
+                    "origin": "this item"
+                  },
+                  "to": "anyone"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "_stats": {
+    "compendiumSource": null,
+    "duplicateSource": null,
+    "coreVersion": "14.360",
+    "systemId": "dnd5e",
+    "systemVersion": "6.1.0"
+  }
+}

@@ -2332,6 +2332,11 @@ export function addMidiStatusEffects(statusEffects: typeof CONFIG.statusEffects 
       flags: { dae: { specialDuration: ["1Attack", "1Spell", "DamageDealt"] } }
     });
   }
+  // Inside another creature (services/interactions/carried.ts): its token's icon
+  for (const [id, img] of [["swallowed", "icons/svg/whale.svg"], ["engulfed", "icons/svg/acid.svg"]] as const) {
+    if (statusEffects.find(e => e._id === getStaticID(id))) continue;
+    statusEffects.push({ id, _id: getStaticID(id), name: i18n(`midi-qol.Status.${id}`), img });
+  }
   // M6: Dashing (one more speed this turn; the movement budget reads it) and Disengaged (no opportunity attacks), until the turn's end
   for (const [id, img] of [["dashing", "icons/svg/wingfoot.svg"], ["disengaged", "icons/svg/door-exit.svg"]] as const) {
     if (statusEffects.find(e => e._id === getStaticID(id))) continue;

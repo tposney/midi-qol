@@ -15,7 +15,7 @@ import type { FoundEntry } from "./types.js";
 
 /*
  * M15 stage 6: actions that run an activity, and the `action` event.
- * - `save: "activity:<id>"` / `check: "activity:<id>"`: the activity (of the entry's item; an effect's: the item that
+ * - `save: "activity:<id>"` / `check: "activity:<id>"` (and `use` outside a use's events): the activity (of the entry's item; an effect's: the item that
  *   applied it) used against the subject: the event's target, else the use's hit targets (else its targets), else
  *   the effect's bearer. Nothing is consumed. `then` if every subject saved, `else` if any failed (Petrifying Bite's
  *   second save, Menacing Attack's frightened save).
@@ -75,8 +75,11 @@ function subjectsOf(run: ActionRun): TokenDocument.Implementation[] {
   return token ? [token] : [];
 }
 
-/** `{ save | check: "activity:<id>" }`: the activity used against the subjects, nothing consumed */
-export async function activityRollAction(run: ActionRun, kind: "save" | "check"): Promise<{ success?: boolean } | void> {
+/**
+ * `{ save | check | use: "activity:<id>" }`: the activity used against the subjects, nothing consumed (`use` at an
+ * event that isn't the use's: a swallowed creature's damage at its swallower's turn)
+ */
+export async function activityRollAction(run: ActionRun, kind: "save" | "check" | "use"): Promise<{ success?: boolean } | void> {
   const ref = run.action[kind] as string;
   const activity = entryActivity(run.found, ref);
   if (!activity) {

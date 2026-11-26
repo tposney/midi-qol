@@ -71,7 +71,7 @@ export function registerMidiActionSchemas() {
   setActionSchema("effect", { fields: [
     { path: "effect", label: "midi-qol.Entries.Field.effectMode", type: "select", options: ["apply", "remove"] },
     { path: "what", label: "midi-qol.Entries.Field.what", type: "effectRef" },
-    TO(["self", "target", "event.creature", "origin", "anyone"])], initial: "apply" });
+    TO(["self", "target", "event.creature", "origin", "anyone", "inside"])], initial: "apply" });
   setActionSchema("end", { fields: [{ path: "end", label: "midi-qol.Entries.Field.end", type: "boolean" }], initial: true });
   setActionSchema("abort", { fields: [{ path: "abort", label: "midi-qol.Entries.Field.reason", type: "string" }] });
   setActionSchema("retarget", { fields: [

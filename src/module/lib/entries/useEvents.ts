@@ -2,6 +2,7 @@ import { register } from "../../api/services.js";
 import { unTimedExecuteAsGM } from "../../GMAction.js";
 import { applyTokenDamage } from "../../utils.js";
 import { tokenFor } from "../tokenResolver.js";
+import { insideOf } from "../../services/interactions/carried.js";
 import { Workflow } from "../../Workflow.js";
 import type { Activity } from "../../../globals.js";
 import type { RollKind, RollModifier, RollModifierEffect, RollQuery } from "../../services/rollModifiers/service.js";
@@ -176,6 +177,11 @@ export function actorsFor(spec: unknown, run: ActionRun, fallback: "self" | "tar
     case "self": return [found.actor ?? context.actor];
     case "attacker":
     case "event.actor": return context.workflow?.actor ? [context.workflow.actor] : [];
+    // The creatures inside the entry's creature (swallowed, engulfed: interactions/carried.ts)
+    case "inside": {
+      const token = tokenFor(found.actor ?? context.actor);
+      return token ? insideOf(token).map(t => t.actor).filter((a): a is Actor.Implementation => !!a) : [];
+    }
     case "target": {
       if (context.target?.actor) return [context.target.actor];
       return documents(context.workflow?.targets).map(t => t.actor).filter((a): a is Actor.Implementation => !!a);

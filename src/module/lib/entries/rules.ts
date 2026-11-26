@@ -1,4 +1,5 @@
 import type { Entry } from "./types.js";
+import type { ConfigField } from "./config.js";
 import { applyingActivity, invalidateEntryHomes } from "./engine.js";
 
 /*
@@ -16,7 +17,10 @@ export interface Rule {
   type?: string;
   entries?: Entry[];
   activities?: { match: RoleMatch, entries: Entry[] }[];
-  effects?: { match: RoleMatch, entries: Entry[] }[];
+  /** An effect's role: its entries, and midi flags the effect is read as having (`inside`: carried.ts) */
+  effects?: { match: RoleMatch, entries: Entry[], flags?: Record<string, unknown> }[];
+  /** The automation's settings (lib/entries/config.ts), when the item has none of its own */
+  config?: ConfigField[];
 }
 
 interface Registered {
@@ -118,6 +122,15 @@ export function itemOfEffect(effect: ActiveEffect.Implementation): ItemLike | un
   return origin instanceof Item ? origin as ItemLike : undefined;
 }
 
+/** A midi flag of an effect: its own, else what its item's rule says of its role (an overlay's effect of that name) */
+export function effectFlag(effect: ActiveEffect.Implementation, key: string): unknown {
+  const own = effect.getFlag("midi-qol", key as never) as unknown;
+  if (own !== undefined || !hasRules()) return own;
+  const rule = ruleFor(itemOfEffect(effect))?.rule;
+  for (const role of rule?.effects ?? []) if (role.flags && key in role.flags && matchesRole(effect, role.match)) return role.flags[key];
+  return undefined;
+}
+
 /** For MidiQOL.rules.for(item): the rule automating it and its source, or what automates it instead */
 export function describeRuleFor(item: ItemLike): { source: string, identifier: string } | { automatedBy: string } | undefined {
   const other = automatedBy(item);
@@ -151,11 +164,14 @@ export function ruleFromOverlay(item: ItemLike): Rule | undefined {
   }
   const effects: Rule["effects"] = [];
   for (const effect of item.effects) {
-    const entries = (effect.flags as Record<string, { entries?: unknown[] } | undefined>)["midi-qol"]?.entries;
-    if (entries?.length) effects.push({ match: { name: effect.name }, entries: entriesOf(entries) });
+    const { entries, overlayPart: _part, overlayRole: _role, ...flags } = ((effect.flags as Record<string, Record<string, unknown> | undefined>)["midi-qol"] ?? {}) as Record<string, unknown>;
+    const list = entriesOf(entries);
+    if (list.length || Object.keys(flags).length) effects.push({ match: { name: effect.name }, entries: list, ...(Object.keys(flags).length ? { flags } : {}) });
   }
+  const config = item.getFlag("midi-qol", "configSpec");
   return { identifier: overlay.identifier, rules: overlay.rules, type: overlay.type ?? item.type,
-    entries: entriesOf((item.flags as Record<string, { entries?: unknown[] } | undefined>)["midi-qol"]?.entries), activities, effects };
+    entries: entriesOf((item.flags as Record<string, { entries?: unknown[] } | undefined>)["midi-qol"]?.entries), activities, effects,
+    ...(Array.isArray(config) && config.length ? { config: config as ConfigField[] } : {}) };
 }
 
 /** For the TroubleShooter: what automates each of the actor's items (a rule's source, or another automation) */

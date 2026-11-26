@@ -34,6 +34,11 @@ In development, not released. Listed here: barriers, creatures inside others, en
 * Overlays: changes can set an area's region rules (a JSON list); an activity an overlay adds no longer runs its entries twice.
 * Prompt controls (service `promptControls`): controls in a prompt's row, for an offered entry (shown once ticked, read by its actions as `offer.<name>`) or an optional roll bonus (read by its formula as `@bonus.inputs.<name>`; a bonus's own inputs are these controls); a module registers its own. midi's: a "choose" reroll's dice in either (Empowered Spell: tick it and pick its dice in one dialog).
 * Fixed: a spell placing several areas (Wall of Force's panels) hung after placement and lost its area.
+* Overlays: Swallow (Behir, Kraken, Purple Worm, Remorhaz, Tarrasque, Giant Frog) and Engulf (Gelatinous Cube, Shambling Mound): the creature is inside, carried, damaged each turn, regurgitated after enough damage from inside, released at the swallower's death, escapes by its action.
+* A swallowed or engulfed creature has the Swallowed / Engulfed status, is hidden from users who don't own it, and is drawn small and faded over the creature it is in (client setting).
+* Total cover from being inside a creature doesn't apply to that creature or to others inside it.
+* Overlays: an overlay effect can mark the book's effect of its name (`overlayRole`: only that, never added) and give it midi flags (`inside`); an overlay's automation settings (`configSpec`, a default per creature with `byCreature`) are the item's.
+* Entries: `use: "activity:<id>"` at any event (a creature's turn, its death) uses the activity against the subjects; `to: "inside"` is the creatures inside the entry's creature.
 * Fixed: a Large or Gargantuan token moved or teleported by midi landed half a square off the grid.
 
 ### 14.7.0

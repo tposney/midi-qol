@@ -121,7 +121,8 @@ function overlayFor(item: Item.Implementation): OverlaySource | undefined {
 function missingParts(overlay: Item.Implementation, item: Item.Implementation) {
   const itemActivities = [...((item.system as { activities?: Iterable<{ type?: string, name?: string }> }).activities ?? [])];
   const overlayActivities = [...((overlay.system as { activities?: Iterable<{ type?: string, name?: string, toObject(): Record<string, unknown> }> }).activities ?? [])];
-  const effects = overlay.effects.contents.filter(e => !item.effects.some(own => own.name === e.name));
+  // An effect flagged overlayRole only says what the base's effect of its name does: never added (Swallow's, named per creature)
+  const effects = overlay.effects.contents.filter(e => !e.getFlag(MODULE_ID, "overlayRole") && !item.effects.some(own => own.name === e.name));
   const activities = overlayActivities.filter(a => !itemActivities.some(own => own.type === a.type && own.name === a.name));
   return { effects, activities };
 }

@@ -1,6 +1,6 @@
 import { MODULE_ID } from "../../../midi-qol.js";
 import { optionList, type FieldOption } from "./editorServices.js";
-import { itemOfEffect } from "./rules.js";
+import { itemOfEffect, ruleFor } from "./rules.js";
 import type { FoundEntry } from "./types.js";
 
 /*
@@ -17,21 +17,42 @@ export interface ConfigField {
   /** select: its values, or a named list (entryOptions) with values of the field's own first */
   options?: readonly FieldOption[] | { list: string, extra?: readonly FieldOption[] };
   default?: unknown;
+  /**
+   * The default for a creature's item, by the creature (`flags.cat.identifier`, else its name slugified): one
+   * automation for an item many creatures share (Swallow: the Giant Toad's damage at the end of its turn)
+   */
+  byCreature?: Record<string, unknown>;
   hint?: string;
 }
 
 type ConfigItem = { getFlag?(scope: string, key: string): unknown } | undefined;
 
+/** The item's settings: its own, else its rule's (an overlay's) */
 export function configSpec(item: ConfigItem): ConfigField[] {
-  const spec = item?.getFlag?.(MODULE_ID, "configSpec");
+  let spec = item?.getFlag?.(MODULE_ID, "configSpec");
+  if ((!Array.isArray(spec) || !spec.length) && item instanceof Item) spec = ruleFor(item)?.rule.config;
   return Array.isArray(spec) ? (spec as ConfigField[]).filter(f => f && typeof f.key === "string" && f.key) : [];
+}
+
+/** The creature an item belongs to, as a field's byCreature names it */
+function creatureKey(item: ConfigItem): string | undefined {
+  const actor = item instanceof Item ? item.actor : undefined;
+  if (!actor) return undefined;
+  const cat = actor.getFlag("cat" as never, "identifier" as never) as unknown;
+  return typeof cat === "string" && cat ? cat : actor.name?.slugify({ strict: true });
+}
+
+/** A field's default for the item: its creature's, else the field's */
+export function fieldDefault(field: ConfigField, item: ConfigItem): unknown {
+  const key = field.byCreature ? creatureKey(item) : undefined;
+  return key && field.byCreature && key in field.byCreature ? field.byCreature[key] : field.default;
 }
 
 /** The item's settings: each field's value, else its default */
 export function configValues(item: ConfigItem): Record<string, unknown> {
   const stored = (item?.getFlag?.(MODULE_ID, "config") ?? {}) as Record<string, unknown>;
   const values: Record<string, unknown> = {};
-  for (const field of configSpec(item)) values[field.key] = stored[field.key] ?? field.default;
+  for (const field of configSpec(item)) values[field.key] = stored[field.key] ?? fieldDefault(field, item);
   // Values the spec no longer names are kept for entries that still read them
   for (const [key, value] of Object.entries(stored)) if (!(key in values)) values[key] = value;
   return values;
