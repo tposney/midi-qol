@@ -1,3 +1,4 @@
+import { raiseUseCompleted } from "../lib/entries/triggerEntries.js";
 import { tokenFor, tokenOf } from "../lib/tokenResolver.js";
 import { debugEnabled, error, log, warn } from "../../midi-qol.js";
 import { autoTeleport, isTeleportActivity } from "../activities/teleport.js";
@@ -91,7 +92,8 @@ export function registerFinishSteps(): void {
 
     if (!workflow.damageOnly) {
       await offerFollowUps(workflow);
-      await workflow.runTriggeredActivity();
+      // Trigger Activity, read as an entry on use.completed (lib/entries/triggerEntries.ts)
+      await raiseUseCompleted(workflow);
     }
     workflowStepHost(workflow).fileFinished();
     return "midi-qol.Suspend";

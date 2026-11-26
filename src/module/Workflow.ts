@@ -1,5 +1,5 @@
 import { tokenFor } from "./lib/tokenResolver.js";
-import { nearCandidates, pickNearTargets, type ChainState, type NearDisposition } from "./lib/chain.js";
+import { nearCandidates, pickNearTargets, resolveTriggerActivity, type ChainState, type NearDisposition, type TriggerSpec } from "./lib/chain.js";
 import { queryUser } from "./lib/midiQueries.js";
 import type { CardActionHandler } from "./activities/cardActions.js";
 import { defenceMessageMode } from "../rules/activeDefence/index.js";
@@ -3927,119 +3927,129 @@ export class Workflow {
   }
 
   /** The activity's triggered activity, unless it loops, its targets are missing or its condition fails */
+  /** The activity's own Trigger Activity (midiProperties) as a trigger spec, or undefined when it has none */
+  triggerSpecOf(activity: Activity = this.activity): TriggerSpec | undefined {
+    const props = activity?.midiProperties;
+    if (!props?.triggeredActivityId || props.triggeredActivityId === "none") return undefined;
+    return {
+      activity: props.triggeredActivityId, to: props.triggeredActivityTargets ?? "targets", rollAs: props.triggeredActivityRollAs ?? "self",
+      condition: props.triggeredActivityConditionText || undefined, consume: props.triggeredActivityConsume ?? true,
+      configure: props.triggeredActivityConfigure ?? true, chain: props.triggeredActivityChainLimit?.trim() || undefined,
+      near: { within: Number(props.triggeredActivityNearWithin ?? 30), max: props.triggeredActivityNearMax || "1",
+        disposition: (props.triggeredActivityNearDisposition ?? "any") as NearDisposition }
+    };
+  }
+
+  /** The activity's own Trigger Activity, run now (entries run it at use.completed; for macros) */
   async runTriggeredActivity() {
-    let shouldTrigger = false;
-    if (this.activity.midiProperties?.triggeredActivityId && !this.aborted) {
-      let activity = this.activity
-      shouldTrigger = true;
-      // A chain (Chromatic Orb's leaps) may trigger itself again: its limit ends it
-      const chainLimitFormula = this.activity.midiProperties?.triggeredActivityChainLimit?.trim();
-      const chained = this.workflowOptions?.chain;
-      let possibleTriggerActivity = chainLimitFormula || chained ? undefined : await this.activity.getTriggeredActivity();
-      const visitedActivities = new Set([activity.uuid]);
-      while (possibleTriggerActivity) {
-        if (visitedActivities.has(possibleTriggerActivity.uuid)) {
-          ui.notifications?.error((`midi-qol | loop detected in triggered activities for ${this.actor.name} ${this.item.name} ${this.activity.name} - execution aborted`))
-          shouldTrigger = false;
-          break;
-        }
-        visitedActivities.add(possibleTriggerActivity.uuid);
-        possibleTriggerActivity = await possibleTriggerActivity.getTriggeredActivity?.();
-      }
+    const spec = this.triggerSpecOf();
+    if (spec) await this.triggerActivity(spec);
+  }
 
-      let triggeredActivity = await this.activity.getTriggeredActivity();
-      if (shouldTrigger && triggeredActivity) {
-        if (shouldTrigger) {
-          let usage: { midiOptions: MidiOptions } = { midiOptions: {} };
-          usage.midiOptions.event = this.rollOptions.event;
-          // The triggering workflow's options, but not how that one invocation was made (the attack-per-target loop's
-          // targetConfirmation "never" and rollAttackPerTarget): the triggered activity keeps its own confirmation
-          const {
-            targetConfirmation: _triggeringTargetConfirmation,
-            rollAttackPerTarget: _triggeringRollAttackPerTarget,
-            attackSplit: _triggeringAttackSplit,
-            ...inheritedWorkflowOptions
-          } = this.workflowOptions ?? {};
-          // Only what transmission would carry: other modules' per-use state stays with this workflow.
-          usage.midiOptions.workflowOptions = inheritableWorkflowOptions(inheritedWorkflowOptions);
-          // The chain so far: this use's targets taken, one more leap; the first use sets the limit
-          let chain: ChainState | undefined;
-          if (chained || chainLimitFormula) {
-            const limit = chained?.limit ?? Math.max(0, Math.floor(evaluateChainLimit(chainLimitFormula, this.activity)));
-            chain = { taken: [...new Set([...(chained?.taken ?? []), ...this.targets.uuids])], leaps: (chained?.leaps ?? 0) + 1, limit };
-            if (chain.leaps > chain.limit) shouldTrigger = false;
-            usage.midiOptions.workflowOptions.chain = chain;
-          }
-          usage.midiOptions.rollOptions = this.rollOptions;
-          usage.midiOptions.isTriggered = true;
-          let targetUuids: string[] = [];
-          const toUuids = (targets: TokenDocumentSet): string[] => targets.uuids;
-
-          if (this.activity.midiProperties?.triggeredActivityRollAs) {
-            switch (this.activity.midiProperties.triggeredActivityRollAs) {
-              case "firstTarget": usage.midiOptions.rollAs = getActor(this.targets.documents[0]); break;
-              case "firstHitTarget": usage.midiOptions.rollAs = getActor(this.hitTargets.documents[0]); break;
-              case "firstMissedTarget": usage.midiOptions.rollAs = getActor(this.targets.difference(this.hitTargets).documents[0]); break;
-              case "firstSaveTarget": usage.midiOptions.rollAs = getActor(this.saves.documents[0]); break;
-              case "firstFailedSaveTarget": usage.midiOptions.rollAs = getActor(this.failedSaves.documents[0]); break;
-              case "self":
-              default:
-                usage.midiOptions.rollAs = this.actor;
-                break;
-            }
-          }
-          if (!usage.midiOptions.rollAs?.isOwner) usage.midiOptions.checkGMstatus = true;
-          if (this.activity.midiProperties?.triggeredActivityTargets)
-            switch (this.activity.midiProperties.triggeredActivityTargets) {
-              case "self": targetUuids = [this.tokenUuid ?? ""]; break;
-              case "hitTargets": targetUuids = toUuids(this.hitTargets); break;
-              case "missedTargets": targetUuids = toUuids(this.targets.difference(this.hitTargets)); break;
-              case "failedSaves": targetUuids = toUuids(this.failedSaves); break;
-              case "saveTargets": targetUuids = toUuids(this.saves); break;
-              case "targets": targetUuids = toUuids(this.targets); break;
-              case "near": break;
-              case "retarget":
-              default:
-                // targetUuids = [];
-                break;
-            }
-          usage.midiOptions.targetUuids = targetUuids;
-          usage.midiOptions.triggeredActivity = true;
-          const near = this.activity.midiProperties.triggeredActivityTargets === "near";
-          // Near: around the creature the use reached (its first hit, else its first target)
-          const anchor = near ? (this.attackRoll ? this.hitTargets.documents[0] : this.targets.documents[0]) : undefined;
-          if (near && !anchor) shouldTrigger = false;
-          if (!near && this.activity.midiProperties.triggeredActivityTargets !== "retarget" && targetUuids?.length === 0)
-            shouldTrigger = false;
-          if (this.activity.midiProperties?.triggeredActivityConditionText && shouldTrigger) {
-            const target = anchor ?? await fromUuid(targetUuids[0]) as TokenDocument.Implementation | undefined;
-            const condition = this.activity.midiProperties?.triggeredActivityConditionText;
-            const conditionData = createConditionData({ workflow: this, activity: this.activity, item: this.item, target });
-            shouldTrigger = await evalCondition(condition, conditionData, { async: true, errorReturn: false });
-          }
-          if (shouldTrigger && near && anchor) {
-            const props = this.activity.midiProperties;
-            const max = Math.max(0, Math.floor(evaluateChainLimit(props.triggeredActivityNearMax || "1", this.activity)));
-            const candidates = nearCandidates({ anchor, within: Number(props.triggeredActivityNearWithin ?? 30),
-              disposition: (props.triggeredActivityNearDisposition ?? "any") as NearDisposition, source: this.token?.document,
-              exclude: [...(chain?.taken ?? []), ...this.targets.uuids] });
-            const picked = await pickNearTargets(candidates, max, { actor: this.actor, label: triggeredActivity.name ?? this.activity.name });
-            targetUuids = (picked ?? []).flatMap(token => token.uuid ? [token.uuid] : []);
-            usage.midiOptions.targetUuids = targetUuids;
-            if (!targetUuids.length) shouldTrigger = false;
-          }
-          if (shouldTrigger) {
-            foundry.utils.setProperty(usage, "midiOptions.isCritical", this.isCritical);
-            foundry.utils.setProperty(usage, "midiOptions.workflowOptions.triggeringWorkflowId", this.id);
-            foundry.utils.setProperty(usage, "midiOptions.workflowOptions.triggeringActivityUuid", this.activity.uuid);
-            const triggerConsume = this.activity.midiProperties?.triggeredActivityConsume ?? true;
-            const triggerConfigure = this.activity.midiProperties?.triggeredActivityConfigure ?? true;
-            if (!triggerConsume) foundry.utils.setProperty(usage, "consume", { resources: false, spellSlot: false, action: false });
-            await completeActivityUse(triggeredActivity, usage, { configure: triggerConfigure }, {});
-          }
+  /**
+   * Use another activity after this use (Trigger Activity, an entry's `use: "activity:<id>"`): at the targets `to`
+   * names (or creatures near the one this use reached), rolled as `rollAs`, if `condition` holds (with the first
+   * target as target). A chain limit lets it trigger again, itself included, never at a creature the chain took.
+   */
+  async triggerActivity(spec: TriggerSpec): Promise<void> {
+    if (this.aborted || !spec.activity || spec.activity === "none") return;
+    const triggeredActivity = await resolveTriggerActivity(this.activity, spec.activity);
+    if (!triggeredActivity) return;
+    const chained = this.workflowOptions?.chain;
+    let shouldTrigger = true;
+    // A chain (Chromatic Orb's leaps) may trigger itself again: its limit ends it. Otherwise the activities' own
+    // triggers, followed from this one, must not come back to it
+    if (!spec.chain && !chained) {
+      const visited = new Set([this.activity.uuid]);
+      let next: Activity | undefined = triggeredActivity;
+      while (next) {
+        if (visited.has(next.uuid)) {
+          ui.notifications?.error((`midi-qol | loop detected in triggered activities for ${this.actor.name} ${this.item.name} ${this.activity.name} - execution aborted`));
+          return;
         }
+        visited.add(next.uuid);
+        next = await next.getTriggeredActivity?.();
       }
     }
+    let usage: { midiOptions: MidiOptions } = { midiOptions: {} };
+    usage.midiOptions.event = this.rollOptions.event;
+    // The triggering workflow's options, but not how that one invocation was made (the attack-per-target loop's
+    // targetConfirmation "never" and rollAttackPerTarget): the triggered activity keeps its own confirmation
+    const {
+      targetConfirmation: _triggeringTargetConfirmation,
+      rollAttackPerTarget: _triggeringRollAttackPerTarget,
+      attackSplit: _triggeringAttackSplit,
+      ...inheritedWorkflowOptions
+    } = this.workflowOptions ?? {};
+    // Only what transmission would carry: other modules' per-use state stays with this workflow.
+    usage.midiOptions.workflowOptions = inheritableWorkflowOptions(inheritedWorkflowOptions);
+    // The chain so far: this use's targets taken, one more leap; the first use sets the limit
+    let chain: ChainState | undefined;
+    if (chained || spec.chain) {
+      const limit = chained?.limit ?? Math.max(0, Math.floor(evaluateChainLimit(spec.chain, this.activity)));
+      chain = { taken: [...new Set([...(chained?.taken ?? []), ...this.targets.uuids])], leaps: (chained?.leaps ?? 0) + 1, limit };
+      if (chain.leaps > chain.limit) return;
+      usage.midiOptions.workflowOptions.chain = chain;
+    }
+    usage.midiOptions.rollOptions = this.rollOptions;
+    usage.midiOptions.isTriggered = true;
+    let targetUuids: string[] = [];
+    const toUuids = (targets: TokenDocumentSet): string[] => targets.uuids;
+
+    switch (spec.rollAs) {
+      case "firstTarget": usage.midiOptions.rollAs = getActor(this.targets.documents[0]); break;
+      case "firstHitTarget": usage.midiOptions.rollAs = getActor(this.hitTargets.documents[0]); break;
+      case "firstMissedTarget": usage.midiOptions.rollAs = getActor(this.targets.difference(this.hitTargets).documents[0]); break;
+      case "firstSaveTarget": usage.midiOptions.rollAs = getActor(this.saves.documents[0]); break;
+      case "firstFailedSaveTarget": usage.midiOptions.rollAs = getActor(this.failedSaves.documents[0]); break;
+      case "self":
+      default:
+        usage.midiOptions.rollAs = this.actor;
+        break;
+    }
+    if (!usage.midiOptions.rollAs?.isOwner) usage.midiOptions.checkGMstatus = true;
+    switch (spec.to) {
+      case "self": targetUuids = [this.tokenUuid ?? ""]; break;
+      case "hitTargets": targetUuids = toUuids(this.hitTargets); break;
+      case "missedTargets": targetUuids = toUuids(this.targets.difference(this.hitTargets)); break;
+      case "failedSaves": targetUuids = toUuids(this.failedSaves); break;
+      case "saveTargets": targetUuids = toUuids(this.saves); break;
+      case "targets": targetUuids = toUuids(this.targets); break;
+      case "near": break;
+      case "retarget":
+      default:
+        break;
+    }
+    if (spec.targetUuids) targetUuids = [...spec.targetUuids];
+    usage.midiOptions.targetUuids = targetUuids;
+    usage.midiOptions.triggeredActivity = true;
+    const near = spec.to === "near";
+    // Near: around the creature the use reached (its first hit, else its first target)
+    const anchor = !near ? undefined : spec.anchor ? fromUuidSync(spec.anchor) as TokenDocument.Implementation | undefined
+      : (this.attackRoll ? this.hitTargets.documents[0] : this.targets.documents[0]);
+    if (near && !anchor) shouldTrigger = false;
+    if (!near && spec.to !== "retarget" && targetUuids?.length === 0) shouldTrigger = false;
+    if (spec.condition && shouldTrigger) {
+      const target = anchor ?? await fromUuid(targetUuids[0]) as TokenDocument.Implementation | undefined;
+      const conditionData = createConditionData({ workflow: this, activity: this.activity, item: this.item, target });
+      shouldTrigger = await evalCondition(spec.condition, conditionData, { async: true, errorReturn: false });
+    }
+    if (shouldTrigger && near && anchor) {
+      const max = Math.max(0, Math.floor(evaluateChainLimit(spec.near?.max || "1", this.activity)));
+      const candidates = nearCandidates({ anchor, within: Number(spec.near?.within ?? 30),
+        disposition: spec.near?.disposition ?? "any", source: this.token?.document,
+        exclude: [...(chain?.taken ?? []), ...this.targets.uuids] });
+      const picked = await pickNearTargets(candidates, max, { actor: this.actor, label: triggeredActivity.name ?? this.activity.name });
+      targetUuids = (picked ?? []).flatMap(token => token.uuid ? [token.uuid] : []);
+      usage.midiOptions.targetUuids = targetUuids;
+      if (!targetUuids.length) shouldTrigger = false;
+    }
+    if (!shouldTrigger) return;
+    foundry.utils.setProperty(usage, "midiOptions.isCritical", this.isCritical);
+    foundry.utils.setProperty(usage, "midiOptions.workflowOptions.triggeringWorkflowId", this.id);
+    foundry.utils.setProperty(usage, "midiOptions.workflowOptions.triggeringActivityUuid", this.activity.uuid);
+    if (spec.consume === false) foundry.utils.setProperty(usage, "consume", { resources: false, spellSlot: false, action: false });
+    await completeActivityUse(triggeredActivity, usage, { configure: spec.configure ?? true }, {});
   }
 
   /**

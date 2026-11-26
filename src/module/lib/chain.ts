@@ -1,4 +1,5 @@
 import { getDistance } from "../services/distance/service.js";
+import type { Activity } from "../../globals.js";
 
 /*
  * Chaining (the survey's "chaining or adding a newly chosen creature after the result": Chain Lightning, Chromatic Orb,
@@ -17,6 +18,38 @@ export interface ChainState {
 }
 
 export type NearDisposition = "any" | "enemy" | "ally";
+
+/** What a trigger does (Trigger Activity's fields; an entry's `use: "activity:<id>"` action) */
+export interface TriggerSpec {
+  /** The activity: an id or identifier on the triggering activity's item, else a UUID */
+  activity: string;
+  /** self, targets, hitTargets, missedTargets, failedSaves, saveTargets, near, retarget */
+  to?: string;
+  /** self, firstTarget, firstHitTarget, firstMissedTarget, firstSaveTarget, firstFailedSaveTarget */
+  rollAs?: string;
+  /** A condition (the first target as target) */
+  condition?: string;
+  consume?: boolean;
+  configure?: boolean;
+  /** The most triggered uses along a chain (a formula); absent: once */
+  chain?: string;
+  near?: { within?: number, max?: string, disposition?: NearDisposition };
+  /** Explicit targets (an entry's `to: "target"`: its event's target) */
+  targetUuids?: string[];
+  /** Near: around this token instead of the use's first hit or target */
+  anchor?: string;
+}
+
+/** The activity a trigger names: on the triggering activity's item by id, then identifier, else by UUID */
+export async function resolveTriggerActivity(from: { item?: Item.Implementation | null } | undefined, ref: string): Promise<Activity | undefined> {
+  const id = ref.startsWith("activity:") ? ref.slice("activity:".length) : ref;
+  // @ts-expect-error no dnd5e-types
+  const activities = from?.item?.system.activities as { find(fn: (a: Activity) => boolean): Activity | undefined } | undefined;
+  const found = activities?.find(a => a.id === id) ?? activities?.find(a => (a as { identifier?: string }).identifier === id);
+  if (found) return found;
+  const byUuid = id.includes(".") ? await fromUuid(id) : undefined;
+  return byUuid ? byUuid as unknown as Activity : undefined;
+}
 
 export interface NearQuery {
   anchor: TokenDocument.Implementation;

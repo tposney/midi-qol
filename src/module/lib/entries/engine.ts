@@ -214,13 +214,34 @@ function itemEntries(item: Item.Implementation, actor: Actor.Implementation | un
   const list = entriesOf(item.getFlag(MODULE_ID, "entries")).map(entry => found(entry, "item", item, actor));
   list.push(...enchantmentEntries(item, actor));
   // @ts-expect-error no dnd5e-types
-  for (const activity of item.system.activities ?? []) list.push(...entriesOf(activity.midiEntries).map(entry => found(entry, "activity", activity, actor)));
+  for (const activity of item.system.activities ?? []) list.push(...activityEntryList(activity).map(entry => found(entry, "activity", activity, actor)));
   const rule = hasRules() ? ruleFor(item)?.rule : undefined;
   if (rule) {
     list.push(...entriesOf(rule.entries).map(entry => found(entry, "item", item, actor)));
     // @ts-expect-error no dnd5e-types
     for (const activity of item.system.activities ?? []) {
       for (const role of rule.activities ?? []) if (matchesRole(activity, role.match)) list.push(...entriesOf(role.entries).map(entry => found(entry, "activity", activity, actor)));
+    }
+  }
+  return list;
+}
+
+/** Other forms read as entries on an activity (Trigger Activity): id → reader */
+const activityReaders = new Registry<(activity: Activity) => Entry[]>();
+
+export function registerActivityEntryReader(id: string, reader: (activity: Activity) => Entry[]): () => void {
+  activityReaders.set(id, reader);
+  return () => { activityReaders.delete(id); };
+}
+
+/** An activity's own entries and those its other forms are read as */
+function activityEntryList(activity: Activity): Entry[] {
+  const list = entriesOf(activity.midiEntries);
+  for (const reader of activityReaders.entries()) {
+    try {
+      list.push(...reader.value(activity));
+    } catch (err) {
+      console.warn(`midi-qol | entry reader ${reader.id} failed for ${activity.name}`, err);
     }
   }
   return list;

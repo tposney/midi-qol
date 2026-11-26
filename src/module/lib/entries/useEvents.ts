@@ -73,7 +73,7 @@ const USE_EVENTS: Record<string, EventAt[]> = {
 };
 
 const SITE_EVENTS = ["attacked", "hit", "missed", "saveRequested", "saveFailed", "saveSucceeded", "damaging", "healing", "damaged"];
-const USE_EVENT_IDS = new Set(["use.configure", ...Object.values(USE_EVENTS).flat().map(m => m.eventId), ...SITE_EVENTS]);
+const USE_EVENT_IDS = new Set(["use.configure", "use.completed", ...Object.values(USE_EVENTS).flat().map(m => m.eventId), ...SITE_EVENTS]);
 
 /** A event raised by a use (its contributions go to the use) */
 export function isUseEvent(eventId: string): boolean { return USE_EVENT_IDS.has(eventId); }
@@ -472,6 +472,7 @@ export function registerUseEvents() {
   registerEvent("use.saves", { label: "Before the use's targets are asked to save" });
   registerEvent("use.effects", { label: "Before the use's effects are applied" });
   registerEvent("use.end", { label: "The use finished" });
+  registerEvent("use.completed", { label: "The use's card is complete (when Trigger Activity runs; a use: activity action queued earlier runs then)" });
   registerEvent("use.target.hit", { label: "Each target the use's attack hit (the use's own entries; the target as target)" });
   registerEvent("use.target.missed", { label: "Each target the use's attack missed" });
   registerEvent("use.target.saveFailed", { label: "Each target that failed its save against the use" });

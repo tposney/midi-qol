@@ -12,6 +12,7 @@ import {
 } from "../../utils.js";
 import type { Workflow } from "../../Workflow.js";
 import { isUseEvent, useDamageAction } from "./useEvents.js";
+import { useActivityAction } from "./triggerEntries.js";
 import { actionRollAction, activityRollAction, byRollAction, isActivityRef } from "./activityActions.js";
 import { originView } from "./conditionData.js";
 import { applyingActivity, originActor, registerAction, registerEffectEntryReader, registerEvent, type ActionRun } from "./engine.js";
@@ -372,7 +373,10 @@ async function actionSave({ action, found, context, eventId }: ActionRun): Promi
 }
 
 /** ActivityOverTime: a use of the named activity (the applying item's, or by uuid), as it always ran */
-async function activityUse({ action, found, context, eventId }: ActionRun): Promise<void> {
+async function activityUse(run: ActionRun): Promise<void> {
+  const { action, found, context, eventId } = run;
+  // At a use's event, an activity ref is a trigger (Trigger Activity, lib/entries/triggerEntries.ts)
+  if (context.workflow && isActivityRef(action.use) && (isUseEvent(eventId) || eventId === "use.completed")) return useActivityAction(run);
   const effect = found.document;
   if (!(effect instanceof ActiveEffect) || (eventId !== "turnStart" && eventId !== "turnEnd")) return;
   await doActivityOverTimeEffect(found.actor ?? context.actor, effect, eventId === "turnStart", { onlyChange: String(action.use ?? "") });
