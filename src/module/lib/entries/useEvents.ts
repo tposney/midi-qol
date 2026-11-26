@@ -9,7 +9,10 @@ import type { DamageContribution } from "../../services/damageContributions/serv
 import type { DamageChange, DamageStage } from "../../services/damageModifiers/rules.js";
 import { DAMAGE_STAGES } from "../../services/damageModifiers/rules.js";
 import { applyBonusEffect, type BonusEffect } from "../../services/rollBonuses/service.js";
-import { rerollDice } from "../../services/diceReroll/service.js";
+import { diceChoices, rerollDice, suggestLowChoices } from "../../services/diceReroll/service.js";
+import { diceControlHTML, pickedIn, wireDicePickers } from "../dicePicker.js";
+import type { OfferControlContributor } from "../../services/offerControls/service.js";
+import type { EntryAction } from "./types.js";
 import { raiseDealsDamage } from "./bearerEvents.js";
 import { entryActivity } from "./activityActions.js";
 import { collectEntries, conditionDataFor, entryHolds, holds, limitAllows, registerAction, registerEvent, runEvent, spendEntryLimit, type ActionRun, type EventContext } from "./engine.js";
@@ -362,7 +365,7 @@ async function bonusAction(run: ActionRun) {
   }
   // On the use's damage once rolled (Empowered Spell, Empowered Evocation): an add or a reroll of chosen dice goes to
   // the first damage roll, any other bonus to each
-  if (run.eventId === "use.damageRolled" || ([run.action.rolls].flat().includes("damage") && !rolls?.includes("attack"))) {
+  if (onDamage(run.eventId, run.action)) {
     const damageRolls = workflow.damageRolls ?? [];
     if (!damageRolls.length) return;
     // Chosen dice (Empowered Spell): picked by the roller from all the use's damage rolls
@@ -388,13 +391,56 @@ async function bonusAction(run: ActionRun) {
   if (changed !== workflow.attackRoll) await workflow.setAttackRoll(changed);
 }
 
-/** A "choose" reroll (Empowered Spell): the roller picks up to `max` of the rolls' dice (the diceReroll service) */
+/** Whether a use event's bonus works on the use's damage rolls (else its attack roll) */
+function onDamage(eventId: string, action: EntryAction): boolean {
+  const rolls = rollKinds(action.rolls);
+  return eventId === "use.damageRolled" || ([action.rolls].flat().includes("damage") && !rolls?.includes("attack"));
+}
+
+/** The rolls a "choose" reroll at a use event picks from: all the use's damage rolls, or its attack roll */
+function chooseRolls(eventId: string, action: EntryAction, workflow: Workflow | undefined): Roll[] {
+  if (!workflow) return [];
+  if (onDamage(eventId, action)) return (workflow.damageRolls ?? []) as Roll[];
+  return workflow.attackRoll ? [workflow.attackRoll as Roll] : [];
+}
+
+const chooseEffect = (action: EntryAction): Extract<BonusEffect, { kind: "reroll" }> | undefined => {
+  const effect = action.bonus as BonusEffect | undefined;
+  return effect && typeof effect === "object" && effect.kind === "reroll" && effect.dice === "choose" ? effect : undefined;
+};
+
+/**
+ * A "choose" reroll (Empowered Spell): the dice picked in its offer's row (offer.dice), else the roller picks up to
+ * `max` of the rolls' dice (the diceReroll service)
+ */
 async function rerollChosenDice(run: ActionRun, rolls: Roll[], effect: Extract<BonusEffect, { kind: "reroll" }>): Promise<Roll[]> {
   const max = await rolled(String(effect.max ?? 1), { ...(rolls[0]?.data as Record<string, unknown> ?? {}), ...run.conditionData });
   const keep = effect.keep === "higher" || effect.keep === "lower" ? effect.keep : "new";
   const workflow = run.context.workflow;
-  return rerollDice(rolls, { max, keep, title: labelOf(run), actor: workflow?.actor, tokenUuid: workflow?.token?.document?.uuid ?? undefined, owner: workflow });
+  const offered = (run.conditionData.offer as { dice?: unknown } | undefined)?.dice;
+  const picked = Array.isArray(offered) ? offered.filter((key): key is string => typeof key === "string") : undefined;
+  return rerollDice(rolls, { max, keep, title: labelOf(run), actor: workflow?.actor, tokenUuid: workflow?.token?.document?.uuid ?? undefined, owner: workflow, ...(picked ? { picked } : {}) });
 }
+
+/** midi's offer control: a "choose" reroll's dice in its offer's row (ticked: the lowest suggested), read as offer.dice */
+const chosenDiceControl: OfferControlContributor = {
+  async controls({ eventId, action, context, conditionData }) {
+    const effect = chooseEffect(action);
+    if (!effect || !isUseEvent(eventId)) return [];
+    const rolls = chooseRolls(eventId, action, context.workflow);
+    const choices = diceChoices(rolls);
+    if (!choices.length) return [];
+    const max = Math.max(0, Math.floor(await rolled(String(effect.max ?? 1), { ...(rolls[0]?.data as Record<string, unknown> ?? {}), ...conditionData })));
+    if (!max) return [];
+    return [{ name: "dice", label: game.i18n?.format("midi-qol.BonusPrompt.Dice", { max: String(max) }) ?? "",
+      html: diceControlHTML(choices, { max, chosen: suggestLowChoices(choices, max) }) }];
+  },
+  read: (_name, element) => {
+    const picker = element.querySelector<HTMLElement>(".midi-qol-dice-picker");
+    return picker ? pickedIn(picker) : [];
+  },
+  wire: element => wireDicePickers(element)
+};
 
 /** `{ abort: reason }`: the use stops (at use.configure, before anything is spent) */
 async function abortAction(run: ActionRun) {
@@ -495,6 +541,7 @@ export function registerUseEvents() {
   registerAction("damageChange", damageChangeAction);
   registerAction("abort", abortAction);
   registerAction("bonus", bonusAction);
+  register("offerControls", "midi-qol.chosenDice", chosenDiceControl, { label: "Midi-QOL: dice of a reroll" });
   registerAction("heal", run => useDamageAction(run, true));
   register("rollModifiers", "midi-qol.entries", { for: entryRollModifiers }, { label: "Midi-QOL: entries" });
   register("damageContributions", "midi-qol.entries", {

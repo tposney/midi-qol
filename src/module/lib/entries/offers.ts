@@ -3,6 +3,7 @@ import { configSettings } from "../../settings.js";
 import { playerForActor } from "../../utils.js";
 import { askUser, registerRequestHandler, type IncomingRequest } from "../requests.js";
 import type { FoundEntry } from "./types.js";
+import { readOfferControls, wireOfferControls, type OfferControlData } from "../../services/offerControls/service.js";
 import { actorToggleEntries } from "./engine.js";
 import { ruleFor } from "./rules.js";
 import { rememberedChoices } from "../rememberedChoices.js";
@@ -21,7 +22,7 @@ import { STANDING_CHOICES, storedStandings, type StandingChoice } from "../../se
 
 export const ENTRY_OFFER_REQUEST = "midi-qol.entryOffer";
 
-export interface OfferOption { key: string, label: string, img?: string, description?: string, cost?: string, group?: string, stacks?: boolean }
+export interface OfferOption { key: string, label: string, img?: string, description?: string, cost?: string, group?: string, stacks?: boolean, /** Shown once it is ticked (the offerControls service) */ controls?: OfferControlData[] }
 
 const docOf = (f: FoundEntry) => f.document as { id?: string | null, uuid?: string, name?: string, img?: string | null, item?: Item.Implementation, parent?: unknown };
 
@@ -178,11 +179,20 @@ export function offerOption(f: FoundEntry, key: string): OfferOption {
 
 /** Ask the actor's owner which of `options` to take (keys); none on a time-out, a GM's "none" or a disconnect */
 export async function askOffers(actor: Actor.Implementation, title: string, options: OfferOption[], detail?: string): Promise<string[]> {
-  if (!options.length) return [];
+  return (await askOfferChoices(actor, title, options, detail)).keys;
+}
+
+/** What was taken: its keys, and each taken option's control values (offerControls) */
+export interface OfferAnswer { keys: string[], values: Record<string, Record<string, unknown>> }
+
+/** The options taken, with the values of their controls */
+export async function askOfferChoices(actor: Actor.Implementation, title: string, options: OfferOption[], detail?: string): Promise<OfferAnswer> {
+  const none: OfferAnswer = { keys: [], values: {} };
+  if (!options.length) return none;
   const player = playerForActor(actor) as User.Implementation | undefined;
   const user = player?.active ? player : game.users?.activeGM ?? undefined;
-  if (!user) return [];
-  const request = askUser<string[]>(user, {
+  if (!user) return none;
+  const request = askUser<string[] | OfferAnswer>(user, {
     type: ENTRY_OFFER_REQUEST, data: { title, options, ...(detail ? { detail } : {}) }, kind: "offer", actorUuid: actor.uuid ?? undefined, label: title,
     timeoutMs: (configSettings.reactionTimeout ?? 0) * 1000,
     fallback: () => [],
@@ -191,9 +201,12 @@ export async function askOffers(actor: Actor.Implementation, title: string, opti
   try {
     const { value } = await request.settled;
     const known = new Set(options.map(o => o.key));
-    return Array.isArray(value) ? value.filter(key => known.has(key)) : [];
+    // The GM answering for the player gives a list of keys; the dialog gives keys and values
+    const answer: OfferAnswer = Array.isArray(value) ? { keys: value, values: {} } : value && typeof value === "object" ? value : none;
+    const keys = (answer.keys ?? []).filter(key => known.has(key));
+    return { keys, values: Object.fromEntries(Object.entries(answer.values ?? {}).filter(([key]) => keys.includes(key))) };
   } catch {
-    return [];
+    return none;
   }
 }
 
@@ -203,7 +216,16 @@ function optionHTML(option: OfferOption, input: string): string {
   const img = option.img ? `<img src="${escape(option.img)}" width="24" height="24" style="border: none; vertical-align: middle">` : "";
   const cost = option.cost ? ` <span class="midi-qol-entry-offer-cost">${escape(option.cost)}</span>` : "";
   const description = option.description ? `<div class="midi-qol-entry-offer-description hint">${escape(option.description)}</div>` : "";
-  return `<label class="checkbox">${input} ${img} <strong>${escape(option.label)}</strong>${cost}</label>${description}`;
+  const controls = option.controls?.length ? `<div class="midi-qol-entry-offer-controls" data-offer="${escape(option.key)}" hidden>${option.controls.map(control =>
+    `<div class="midi-qol-offer-control" data-contributor="${escape(control.contributor)}" data-name="${escape(control.name)}">${control.label ? `<label>${escape(control.label)}</label>` : ""}${control.html}</div>`).join("")}</div>` : "";
+  return `<label class="checkbox">${input} ${img} <strong>${escape(option.label)}</strong>${cost}</label>${description}${controls}`;
+}
+
+/** A ticked option's controls shown, the others hidden */
+function showTickedControls(root: HTMLElement): void {
+  const ticked = new Set(Array.from(root.querySelectorAll<HTMLInputElement>(".midi-qol-entry-offers input:checked")).map(input => input.value));
+  for (const controls of Array.from(root.querySelectorAll<HTMLElement>(".midi-qol-entry-offer-controls[data-offer]")))
+    controls.hidden = !ticked.has(controls.dataset.offer ?? "");
 }
 
 /** The dialog: each option a checkbox; a group's non-stacking options radios with "None" */
@@ -227,7 +249,8 @@ function offerContent(options: OfferOption[], detail?: string): string {
 }
 
 /** On the asked client: the dialog, with the requester's countdown; closed when answered for the player */
-async function answerOffer(data: { title: string, options: OfferOption[], detail?: string }, request: IncomingRequest): Promise<string[]> {
+async function answerOffer(data: { title: string, options: OfferOption[], detail?: string }, request: IncomingRequest): Promise<OfferAnswer> {
+  const none: OfferAnswer = { keys: [], values: {} };
   // Always its own dialog (user, 2026-11-25): an offer needs what it is about, its cost and what it does, which the
   // hub's inbox line can't hold. The inbox lists it (its countdown, Show) as any request with a window.
   const countdown = request.countdown();
@@ -239,23 +262,35 @@ async function answerOffer(data: { title: string, options: OfferOption[], detail
     buttons: [
       {
         action: "use", label: i18n("midi-qol.Use"), default: true,
-        callback: (_event: Event, button: HTMLButtonElement) => {
+        callback: (_event: Event, button: HTMLButtonElement): OfferAnswer => {
           const form = button.form;
-          if (!form) return [];
-          return Array.from(form.querySelectorAll<HTMLInputElement>("input:checked")).map(input => input.value).filter(Boolean);
+          if (!form) return none;
+          const keys = Array.from(form.querySelectorAll<HTMLInputElement>(".midi-qol-entry-offers > label input:checked, .midi-qol-entry-offers fieldset > label input:checked")).map(input => input.value).filter(Boolean);
+          const values: OfferAnswer["values"] = {};
+          for (const key of keys) {
+            const controls = Array.from(form.querySelectorAll<HTMLElement>(".midi-qol-entry-offer-controls[data-offer]")).find(e => e.dataset.offer === key);
+            if (controls) values[key] = readOfferControls(controls);
+          }
+          return { keys, values };
         }
       },
-      { action: "none", label: game.i18n?.localize("None") ?? "None", callback: () => [] }
+      { action: "none", label: game.i18n?.localize("None") ?? "None", callback: () => none }
     ],
     rejectClose: false,
     render: (_event: Event, app: foundry.applications.api.DialogV2) => {
       dialog = app;
       countdown?.attach(app.element);
+      wireOfferControls(app.element);
+      showTickedControls(app.element);
+      app.element.querySelector(".midi-qol-entry-offers")?.addEventListener("change", event => {
+        if ((event.target as HTMLElement).closest(".midi-qol-entry-offer-controls")) return;
+        showTickedControls(app.element);
+      });
     }
-  }) as string[] | null | undefined;
-  if (request.settledHow) return [];
-  if (!await request.claim()) return [];
-  return Array.isArray(chosen) ? chosen : [];
+  }) as OfferAnswer | null | undefined;
+  if (request.settledHow) return none;
+  if (!await request.claim()) return none;
+  return chosen && typeof chosen === "object" ? chosen : none;
 }
 
 /** The actor's toggles: key, label, on (MidiQOL.entries.toggles) */

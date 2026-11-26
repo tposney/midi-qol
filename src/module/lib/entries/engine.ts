@@ -1,4 +1,5 @@
 import { tokenFor } from "../tokenResolver.js";
+import { offerControlsFor } from "../../services/offerControls/service.js";
 import { MODULE_ID } from "../../../midi-qol.js";
 import { Registry } from "../../api/registry.js";
 import type { Workflow } from "../../Workflow.js";
@@ -13,7 +14,7 @@ import type { Entry, EntryAction, EntryHome, EntryWho, FoundEntry } from "./type
 import { addEconomy, entryConditionExtras } from "./conditionData.js";
 import { hasRules, itemOfEffect, matchesRole, ruleFor } from "./rules.js";
 import { askEntryChoice, conditionChoices, type ChoiceDeclaration, type ChoiceSubjects, type ChoiceValue } from "../choices.js";
-import { askOffers, costAllows, editToggles, listToggles, offerOption, payEntryConsumption, payEntryPools, refundEntryPools, setToggle, spendEntryCost, toggleOn, type PoolReceipt } from "./offers.js";
+import { askOfferChoices, costAllows, editToggles, listToggles, offerOption, payEntryConsumption, payEntryPools, refundEntryPools, setToggle, spendEntryCost, toggleOn, type PoolReceipt } from "./offers.js";
 
 /*
  * M15 stage 1: the entry engine (plan ~/Documents/midi-next-M15-plan-2026-11-20.md). A event is raised with the actor
@@ -950,8 +951,8 @@ function offerDetail(eventId: string, context: EventContext): string | undefined
   return undefined;
 }
 
-/** The ask offers taken: each actor's owner asked once for the event */
-async function chooseAsked<T extends { found: FoundEntry }>(eventId: string, list: T[], context?: EventContext): Promise<T[]> {
+/** The ask offers taken: each actor's owner asked once for the event; an option's controls' values (offerControls) as `offer` */
+async function chooseAsked<T extends { found: FoundEntry, conditionData?: Record<string, unknown> }>(eventId: string, list: T[], context?: EventContext): Promise<T[]> {
   if (!list.length) return [];
   const byActor = new Map<Actor.Implementation, { candidate: T, key: string }[]>();
   list.forEach((candidate, index) => {
@@ -964,7 +965,14 @@ async function chooseAsked<T extends { found: FoundEntry }>(eventId: string, lis
   const taken: T[] = [];
   for (const [actor, entries] of byActor) {
     const title = `${actor.name}: ${events.get(eventId)?.value.label ?? eventId}`;
-    const keys = new Set(await askOffers(actor, title, entries.map(({ candidate, key }) => offerOption(candidate.found, key)), context ? offerDetail(eventId, context) : undefined));
+    const options = await Promise.all(entries.map(async ({ candidate, key }) => {
+      const controls = context && candidate.conditionData
+        ? await offerControlsFor({ eventId, entry: candidate.found.entry, found: candidate.found, context, conditionData: candidate.conditionData }) : [];
+      return { ...offerOption(candidate.found, key), ...(controls.length ? { controls } : {}) };
+    }));
+    const answer = await askOfferChoices(actor, title, options, context ? offerDetail(eventId, context) : undefined);
+    const keys = new Set(answer.keys);
+    for (const e of entries) if (keys.has(e.key) && answer.values[e.key] && e.candidate.conditionData) e.candidate.conditionData.offer = answer.values[e.key];
     taken.push(...entries.filter(e => keys.has(e.key)).map(e => e.candidate));
   }
   return taken;

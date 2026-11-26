@@ -611,6 +611,7 @@
     "flanking",
     "forcedMovement",
     "multiattack",
+    "offerControls",
     "perception",
     "presenters",
     "range",
