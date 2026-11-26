@@ -203,6 +203,12 @@ function choiceButton(wait: WaitInfo, choice: WaitInfo["choices"][number]): HTML
   const button = document.createElement("button");
   button.type = "button";
   button.textContent = choice.label ? game.i18n!.localize(choice.label) : i18n(`midi-qol.PlayerWaits.Choice.${choice.id}`);
+  // What the player's own prompt would do if they pressed Enter (their roll dialog's default button); what a choice
+  // does when its name alone doesn't say
+  const hint = `midi-qol.PlayerWaits.ChoiceHint.${choice.id}`;
+  const tips = [...(choice.id === wait.defaultChoice ? [i18n("midi-qol.PlayerWaits.DialogDefault")] : []), ...(game.i18n?.has(hint) ? [i18n(hint)] : [])];
+  if (choice.id === wait.defaultChoice) button.classList.add("default");
+  if (tips.length) button.dataset.tooltip = tips.join(". ");
   button.addEventListener("click", async () => {
     button.disabled = true;
     await settlePlayerWait(wait.id, choice.id);
@@ -219,7 +225,7 @@ function renderPopover() {
   const user = game.users?.get(userId);
   // Rebuilt only when what it lists changes, so a button isn't replaced between pressing and releasing it (the click
   // would be lost); otherwise the times and Gambit's titles (which carry its countdown) are updated in place.
-  const shown = [user?.active, ...waits.map(wait => `${wait.id}:${wait.choices.map(choice => choice.id).join(",")}:${ownDismissable(wait.id)}`),
+  const shown = [user?.active, ...waits.map(wait => `${wait.id}:${wait.choices.map(choice => choice.id).join(",")}:${wait.defaultChoice ?? ""}:${ownDismissable(wait.id)}`),
     ...gambit.map(prompt => prompt.app.id)].join("|");
   if (shown === popover.shown) {
     for (const wait of waits) {
@@ -296,7 +302,7 @@ function addContextOption(_app: unknown, options: foundry.applications.ux.Contex
     icon: '<i class="fa-solid fa-forward"></i>',
     visible: (li: HTMLElement) => !!game.user?.isGM && !!configSettings.playerWaitGM && waitsFor(li.dataset.userId ?? "").length > 0,
     onClick: async (_event: PointerEvent, li: HTMLElement) => {
-      for (const wait of waitsFor(li.dataset.userId ?? "")) await settlePlayerWait(wait.id, wait.choices[0].id);
+      for (const wait of waitsFor(li.dataset.userId ?? "")) await settlePlayerWait(wait.id, wait.defaultChoice ?? wait.choices[0].id);
     }
   });
 }

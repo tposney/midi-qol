@@ -4,6 +4,8 @@
 * Fixed: when the GM pressed Attack or Damage on a player's chat card while the player's roll was still awaited, the player's use was left waiting for ever and its waiting badge never went away. Attack ran a second, separate use as the GM and Damage made a roll that was never applied. The GM's press now makes the roll for the player's own use, as rolling from the badge does.
 * Fixed: a use undone while it was still in progress carried on. Undoing a spell while a player's save was still awaited removed its card, but when the save's time ran out the save was counted as failed and the damage applied anyway, and the player's save prompt stayed open. An undone use now stops: its prompts close, nobody is waited for, and nothing more is rolled or applied.
 * Waiting on players: the GM's list for a roll a player hasn't made has *Cancel the use*. It calls the use off: what it did so far is undone and its card removed.
+* Fixed: answering a player's waiting attack or damage roll from the GM's list (Normal, Advantage, Disadvantage, Critical) did nothing useful: the player's open roll dialog wasn't found, so a second dialog opened for the player instead. It now rolls in the player's own dialog with the GM's choice.
+* Waiting on players: the GM's list marks the choice the player's roll dialog defaults to (Answer all uses it). *Not rolling* is now *Stop showing*: it only clears the entry; the use still waits for the player's roll.
 
 ### 14.7.1
 * Fixed: during a combat, an effect or item with a condition sometimes did nothing and logged an error (advantage, bonuses or effects that depend on a condition were skipped the second time the condition was checked).

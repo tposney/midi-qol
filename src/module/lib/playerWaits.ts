@@ -55,6 +55,8 @@ export interface WaitInfo {
   /** The player disconnected while it was pending: it waits for the GM. */
   offline: boolean;
   source?: string;
+  /** The choice the player's own prompt defaults to (a roll dialog's default button), shown first to the GM */
+  defaultChoice?: WaitChoice;
 }
 
 /** A wait begun with beginPlayerWait. */
@@ -69,6 +71,8 @@ export interface PlayerWait<T> {
   readonly active: boolean;
   /** The GM (or a disconnect) is answering: what the player's request returns now is to be ignored. */
   readonly answeredForPlayer: boolean;
+  /** The choice the player's prompt defaults to now (it can change as they change the roll's options), for the GM */
+  setDefault: (choice: WaitChoice | undefined) => void;
 }
 
 interface LocalWait {
@@ -183,7 +187,13 @@ export function beginPlayerWait<T>(spec: WaitSpec<T>): PlayerWait<T> | undefined
   return {
     id: info.id, ref: { id: info.id, holderId: info.holderId }, settled, end: () => end(),
     get active() { return !wait.done; },
-    get answeredForPlayer() { return !!wait.byChoice; }
+    get answeredForPlayer() { return !!wait.byChoice; },
+    setDefault: (choice) => {
+      const known = choice && choice in spec.choices ? choice : undefined;
+      if (wait.done || info.defaultChoice === known) return;
+      info.defaultChoice = known;
+      announce("update", info);
+    }
   };
 }
 
@@ -230,8 +240,10 @@ export function rollDialogsFor(actorUuid: string | null): foundry.applications.a
   if (!RollConfigurationDialog) return [];
   return [...foundry.applications.instances.values()].filter(app => {
     if (!(app instanceof RollConfigurationDialog)) return false;
-    const subject = (app as unknown as { config?: { subject?: { uuid?: string, parent?: { uuid?: string } } } }).config?.subject;
-    return (subject?.uuid ?? subject?.parent?.uuid) === actorUuid;
+    // An actor's own roll (a save, a check) has the actor as subject; an activity's (attack, damage) the activity,
+    // whose actor it is
+    const subject = (app as unknown as { config?: { subject?: { uuid?: string, parent?: { uuid?: string }, actor?: { uuid?: string } } } }).config?.subject;
+    return (subject?.actor?.uuid ?? subject?.uuid ?? subject?.parent?.uuid) === actorUuid;
   });
 }
 

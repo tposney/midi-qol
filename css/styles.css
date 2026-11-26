@@ -2273,6 +2273,12 @@ body.midi-qol-hide-gambit-mirrors .gps-dialog-mirror:not(.midi-qol-gambit-shown)
   width: auto;
   font-size: var(--font-size-12);
 }
+/* The player's roll dialog's default button */
+.midi-qol-player-wait-popover .midi-qol-player-wait-choices button.default {
+  border-color: var(--color-warm-2, #ee9b3a);
+  box-shadow: 0 0 4px var(--color-warm-2, #ee9b3a);
+  font-weight: bold;
+}
 
 /* Countdown on a dialog that answers itself (reactions, optional bonuses, effect choice): a bar that drains from green
    to red, the seconds left, and a pause button */

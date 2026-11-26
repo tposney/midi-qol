@@ -6,7 +6,7 @@ import { eventModifiers } from "./lib/rollKeys.js";
 import { TokenDocumentSet, hookTarget, tokenOf } from "./lib/tokenDocumentSet.js";
 import { CardRecords, RECORD_SETS, RecordSet, RecordFacts, STATE_KEYS, StateKey, attributionMap, attributionTriples, cardMidi, rollTypeOf, cardOtherConsumption, cardPreSelected, messagesFrom, recordList, recordPath, recordPathOfUuid, storedMidiFlag } from "./lib/cardState.js";
 import { preferredActiveGM, socketlibSocket, timedAwaitExecuteAsGM, timedExecuteAsGM, unTimedExecuteAsGM } from "./GMAction.js";
-import { beginPlayerWait, endPlayerWaitsOwnedBy, rollDialogsFor, trackPlayerWait, withdrawPlayerWaitsOwnedBy } from "./lib/playerWaits.js";
+import { beginPlayerWait, endPlayerWaitsOwnedBy, rollDialogsFor, trackPlayerWait, withdrawPlayerWaitsOwnedBy, type PlayerWait } from "./lib/playerWaits.js";
 import { installedModules } from "./setupModules.js";
 import { offerFollowUps } from "./followUps.js";
 import { configSettings, autoRemoveTargets, checkRule, checkMechanic, safeGetGameSetting, useWeakReferences, onUseMacroOptions, chatCardUpdates } from "./settings.js";
@@ -2702,7 +2702,27 @@ export class Workflow {
   }
 
   /** A roll this player's workflow waits for them to make, shown to the GM (the player list) to roll for them. */
-  #rollWait: { end: () => void } | undefined;
+  #rollWait: PlayerWait<unknown> | undefined;
+  /** While the roll is waited for: the hook that tells the GM the player's roll dialog's default button */
+  #rollDialogHook: number | undefined;
+
+  /** The GM's chip shows which of its choices the player's roll dialog defaults to (it changes with the roll's options) */
+  #watchRollDialog() {
+    this.#unwatchRollDialog();
+    const update = (app: foundry.applications.api.ApplicationV2) => {
+      const subject = (app as unknown as { config?: { subject?: { uuid?: string } } }).config?.subject;
+      if (!this.#rollWait || subject?.uuid !== this.activity?.uuid) return;
+      const button = app.element?.querySelector<HTMLButtonElement>("button.default[data-action], button[autofocus][data-action]");
+      this.#rollWait.setDefault(button?.dataset.action);
+    };
+    this.#rollDialogHook = Hooks.on("renderRollConfigurationDialog" as never, update as never);
+    if (this.actor?.uuid) for (const app of rollDialogsFor(this.actor.uuid)) update(app);
+  }
+
+  #unwatchRollDialog() {
+    if (this.#rollDialogHook !== undefined) Hooks.off("renderRollConfigurationDialog" as never, this.#rollDialogHook);
+    this.#rollDialogHook = undefined;
+  }
 
   /**
    * The workflow waits for its player to roll (a card button, or the roll dialog auto-roll opened): let the GM roll for
@@ -2726,9 +2746,12 @@ export class Workflow {
       kind, userId: game.user.id!, actorUuid: this.actor.uuid ?? undefined, tokenUuid: this.tokenDocument?.uuid ?? undefined, keepDialogs: true,
       label: i18nFormat(`midi-qol.PlayerWaits.${kind}Label`, { item: this.item?.name ?? "" }),
       choices,
-      onSettled: () => { this.#rollWait = undefined; Workflow.#rollWaiters.delete(this); }
+      onSettled: () => { this.#rollWait = undefined; this.#unwatchRollDialog(); Workflow.#rollWaiters.delete(this); }
     });
-    if (this.#rollWait) Workflow.#rollWaiters.add(this);
+    if (this.#rollWait) {
+      Workflow.#rollWaiters.add(this);
+      this.#watchRollDialog();
+    }
   }
 
   /** This client's uses waiting on their player's roll. */
@@ -2747,6 +2770,7 @@ export class Workflow {
   endRollWait() {
     this.#rollWait?.end();
     this.#rollWait = undefined;
+    this.#unwatchRollDialog();
     Workflow.#rollWaiters.delete(this);
   }
 
@@ -2828,7 +2852,9 @@ export class Workflow {
   }
 
   async rollForPlayer(kind: "attack" | "damage" | "utility", mode: string) {
-    const dialog = this.actor.uuid ? rollDialogsFor(this.actor.uuid)[0] : undefined;
+    // This use's roll dialog (the newest for its activity: an earlier use's may still be open), else the actor's newest
+    const dialogs = this.actor.uuid ? rollDialogsFor(this.actor.uuid) : [];
+    const dialog = dialogs.filter(d => (d as unknown as { config?: { subject?: { uuid?: string } } }).config?.subject?.uuid === this.activity?.uuid).at(-1) ?? dialogs.at(-1);
     const button = dialog?.element?.querySelector<HTMLButtonElement>(`button[data-action="${mode}"]`)
       ?? dialog?.element?.querySelector<HTMLButtonElement>(`button[data-action="normal"]`);
     if (button) return button.click();
