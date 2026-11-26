@@ -1,0 +1,57 @@
+{
+  "name": "Dispel Magic (overlay)",
+  "type": "spell",
+  "img": "icons/magic/symbols/question-stone-yellow.webp",
+  "_id": "mqeOvDispelMagic",
+  "_key": "!items!mqeOvDispelMagic",
+  "folder": "SpellFldr3rdLevl",
+  "ownership": {
+    "default": 0
+  },
+  "system": {
+    "description": {
+      "value": "<p><em>Overlay (midi-qol):</em> each target's ongoing spells of the slot's level or lower end; for each higher one you make a check with your spellcasting ability (DC 10 plus its level), ending it on a success. A spell ends on that creature only (Sage Advice SA183; the world setting <em>Ending a spell on one creature ends the whole spell</em> ends it everywhere). An effect whose spell level isn't known is the GM's call. Not covered: magical effects that aren't on a creature (an area).</p>",
+      "chatFlavor": ""
+    },
+    "identifier": "dispel-magic-overlay",
+    "source": {
+      "rules": "2024"
+    },
+    "activities": {}
+  },
+  "effects": [],
+  "flags": {
+    "midi-qol": {
+      "overlay": {
+        "identifier": "dispel-magic",
+        "rules": "2024",
+        "version": "1"
+      },
+      "entries": [
+        {
+          "id": "dispel",
+          "on": "use.target.each",
+          "label": "Dispel Magic",
+          "do": [
+            {
+              "effect": "remove",
+              "what": {
+                "spell": true,
+                "maxLevel": "@use.spellLevel",
+                "check": true
+              },
+              "to": "target"
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "_stats": {
+    "compendiumSource": null,
+    "duplicateSource": null,
+    "coreVersion": "14.360",
+    "systemId": "dnd5e",
+    "systemVersion": "6.1.0"
+  }
+}

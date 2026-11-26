@@ -1799,6 +1799,15 @@ export const registerSettings = function () {
     type: Boolean,
     onChange: () => { void overlaySettingChanged(); }
   });
+  // Ending a spell on one creature (Dispel Magic): the spell ends there only (Sage Advice SA183), or the whole spell
+  game.settings.register("midi-qol", "DispelEndsWholeSpell", {
+    name: "midi-qol.DispelEndsWholeSpell.Name",
+    hint: "midi-qol.DispelEndsWholeSpell.Hint",
+    scope: "world",
+    default: false,
+    config: true,
+    type: Boolean
+  });
 
 
   // Player preferences are "user" settings: they follow the player to any device (user, 2026-11-21). Those that were

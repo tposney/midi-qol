@@ -1,0 +1,57 @@
+{
+  "name": "Remove Curse (overlay)",
+  "type": "spell",
+  "img": "icons/magic/light/explosion-star-glow-silhouette.webp",
+  "_id": "mqeOvRemoveCurse",
+  "_key": "!items!mqeOvRemoveCurse",
+  "folder": "SpellFldr3rdLevl",
+  "ownership": {
+    "default": 0
+  },
+  "system": {
+    "description": {
+      "value": "<p><em>Overlay (midi-qol):</em> every curse on the target ends: an effect with dnd5e's Cursed status (Bestow Curse, Hex). Not covered: breaking Attunement to a cursed item.</p>",
+      "chatFlavor": ""
+    },
+    "identifier": "remove-curse-overlay",
+    "source": {
+      "rules": "2024"
+    },
+    "activities": {}
+  },
+  "effects": [],
+  "flags": {
+    "midi-qol": {
+      "overlay": {
+        "identifier": "remove-curse",
+        "rules": "2024",
+        "version": "1"
+      },
+      "entries": [
+        {
+          "id": "uncurse",
+          "on": "use.target.each",
+          "label": "Remove Curse",
+          "do": [
+            {
+              "effect": "remove",
+              "what": {
+                "statuses": [
+                  "cursed"
+                ]
+              },
+              "to": "target"
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "_stats": {
+    "compendiumSource": null,
+    "duplicateSource": null,
+    "coreVersion": "14.360",
+    "systemId": "dnd5e",
+    "systemVersion": "6.1.0"
+  }
+}

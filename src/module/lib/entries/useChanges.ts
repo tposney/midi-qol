@@ -10,6 +10,10 @@ import type { EntryAction } from "./types.js";
 import { actorsFor, useContext } from "./useEvents.js";
 import { itemOfEffect } from "./rules.js";
 import { planConditionRemoval, type EffectFacts } from "./conditionRemoval.js";
+import { isEffectFilter, judgeEffect, type EffectFilter, type EffectFacts as FilterFacts } from "./effectFilter.js";
+import { directRoll } from "./activityActions.js";
+import { askUser, registerRequestHandler, type IncomingRequest } from "../requests.js";
+import { MODULE_ID } from "../../../midi-qol.js";
 
 /*
  * M15 stage 4b: the actions that change a use or act for it.
@@ -249,6 +253,91 @@ function whatList(run: ActionRun): unknown[] {
   return Array.isArray(what) ? what : [what];
 }
 
+/* Ending effects by what they are (lib/entries/effectFilter.ts) */
+
+const END_EFFECT_REQUEST = "midi-qol.endEffect";
+
+type SpellFlags = { castData?: { castLevel?: number, baseLevel?: number } };
+
+/** What an effect on `actor` is, for a filter */
+function filterFacts(effect: ActiveEffect.Implementation, actor: Actor.Implementation): FilterFacts {
+  const midi = (effect.flags as Record<string, SpellFlags | undefined>)[MODULE_ID];
+  const dnd5e = (effect.flags as Record<string, { spellLevel?: number | { value?: number }, item?: { type?: string } } | undefined>).dnd5e;
+  const item = itemOfEffect(effect) as (Item.Implementation & { system: { level?: number, duration?: { units?: string } } }) | undefined;
+  // dnd5e's item types (spell) aren't in the core types
+  const itemType: string | undefined = item?.type;
+  const fromSpell = itemType === "spell" || dnd5e?.item?.type === "spell";
+  const flagged = typeof dnd5e?.spellLevel === "number" ? dnd5e.spellLevel : dnd5e?.spellLevel?.value;
+  const level = midi?.castData?.castLevel ?? midi?.castData?.baseLevel ?? flagged ?? (itemType === "spell" ? item?.system.level : undefined);
+  const isSpell = fromSpell || !!midi?.castData || flagged !== undefined;
+  const creator = item?.actor;
+  return {
+    statuses: [...effect.statuses],
+    changeKeys: ((effect.system as { changes?: { key?: string }[] } | undefined)?.changes ?? []).map(c => c.key ?? ""),
+    ...(isSpell ? { spell: { ...(typeof level === "number" ? { level } : {}), instantaneous: itemType === "spell" && item?.system.duration?.units === "inst" } } : {}),
+    originType: (creator?.system as { details?: { type?: { value?: string } } } | undefined)?.details?.type?.value,
+    concentration: effect.statuses.has("concentrating"),
+    fromOwnItem: !!effect.transfer && !!creator && creator === actor
+  };
+}
+
+/** The GM decides an effect whose spell level isn't known */
+async function gmEnds(effect: ActiveEffect.Implementation, actor: Actor.Implementation, label: string): Promise<boolean> {
+  const gm = game.users?.activeGM;
+  if (!gm) return false;
+  const request = askUser<boolean>(gm, {
+    type: END_EFFECT_REQUEST, data: { effect: effect.name, actor: actor.name, label }, kind: "endEffect", actorUuid: actor.uuid ?? undefined,
+    label: `${label}: ${effect.name}`, timeoutMs: 0, fallback: () => false
+  });
+  try { return !!(await request.settled).value; } catch { return false; }
+}
+
+async function answerEndEffect(data: { effect: string, actor: string, label: string }, request: IncomingRequest): Promise<boolean> {
+  const content = `<p>${foundry.utils.escapeHTML(game.i18n?.format("midi-qol.EndEffect.Ask", { effect: data.effect, actor: data.actor }) ?? "")}</p>`;
+  const yes = await foundry.applications.api.DialogV2.confirm({ window: { title: data.label }, content, rejectClose: false });
+  if (request.settledHow || !await request.claim()) return false;
+  return !!yes;
+}
+
+/** A number, or a formula over the condition data (`@use.spellLevel`) */
+async function filterNumber(value: unknown, run: ActionRun): Promise<number | undefined> {
+  if (typeof value === "number") return value;
+  if (typeof value !== "string" || !value.trim()) return undefined;
+  try { return (await new Roll(value, run.conditionData).evaluate()).total ?? undefined; } catch { return undefined; }
+}
+
+/**
+ * The effects on `actor` the filter ends: at or below its level, by the user's spellcasting check above it (`check`),
+ * the GM's call where the level isn't known. A spell's effect on this creature only (Sage Advice SA183), unless the
+ * world's DispelEndsWholeSpell: then the caster's concentration on it ends, and with it the spell everywhere.
+ */
+async function removeByFilter(run: ActionRun, actor: Actor.Implementation, spec: EffectFilter & { maxLevel?: unknown }) {
+  const filter: EffectFilter = { ...spec, maxLevel: await filterNumber(spec.maxLevel, run) };
+  const user = run.found.actor ?? run.context.actor;
+  const label = typeof run.action.label === "string" ? run.action.label : (run.found.document as { name?: string }).name ?? run.found.entry.id;
+  const ended: ActiveEffect.Implementation[] = [];
+  for (const effect of actor.effects.contents) {
+    const verdict = judgeEffect(filterFacts(effect, actor), filter);
+    if (verdict.verdict === "end") ended.push(effect);
+    else if (verdict.verdict === "ask" && await gmEnds(effect, actor, label)) ended.push(effect);
+    else if (verdict.verdict === "check" && user) {
+      const ability = (user.system as { attributes?: { spellcasting?: string } }).attributes?.spellcasting || "int";
+      if (await directRoll(user, "check", { ability, dc: 10 + verdict.level }, run.conditionData)) ended.push(effect);
+    }
+  }
+  if (!ended.length || !actor.uuid) return;
+  const reason = { "expiry-reason": `midi-qol:entry:${run.found.entry.id}` };
+  await unTimedExecuteAsGM("removeEffects", { actorUuid: actor.uuid, effects: ended.map(e => e.id!), options: reason });
+  if (!game.settings?.get(MODULE_ID, "DispelEndsWholeSpell")) return;
+  // The whole spell: the concentration it depends on
+  for (const effect of ended) {
+    const on = (effect.flags as Record<string, { dependentOn?: string } | undefined>).dnd5e?.dependentOn;
+    const concentration = on ? fromUuidSync(on, { strict: false }) : undefined;
+    if (concentration instanceof ActiveEffect && concentration.parent instanceof Actor && concentration.parent.uuid)
+      await unTimedExecuteAsGM("removeEffects", { actorUuid: concentration.parent.uuid, effects: [concentration.id!], options: reason });
+  }
+}
+
 async function effectAction(run: ActionRun) {
   const mode = run.action.effect;
   if (mode !== "apply" && mode !== "remove") return;
@@ -269,6 +358,10 @@ async function effectAction(run: ActionRun) {
       // Removing a condition ends it wherever it comes from, not only dnd5e's bare status
       if (mode === "remove") await endCondition(actor, status.id, { whole: run.action.whole === true, reason: `midi-qol:entry:${run.found.entry.id}` });
       else if (!actor.statuses.has(status.id)) await unTimedExecuteAsGM("toggleStatusEffect", { actorUuid: actor.uuid, statusId: status.id, options: { active: true } });
+      continue;
+    }
+    if (mode === "remove" && isEffectFilter(what)) {
+      await removeByFilter(run, actor, what as EffectFilter);
       continue;
     }
     if (mode === "remove") {
@@ -324,5 +417,6 @@ export async function runActivityActions(workflow: Workflow, id: string, list: r
 export function registerUseChanges() {
   registerAction("change", changeAction);
   registerAction("effect", effectAction);
+  registerRequestHandler(END_EFFECT_REQUEST, answerEndEffect);
   registerAction("table", tableAction);
 }

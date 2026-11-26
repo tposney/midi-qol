@@ -1,0 +1,79 @@
+{
+  "name": "Dispel Evil and Good (overlay)",
+  "type": "spell",
+  "img": "icons/magic/holy/barrier-shield-winged-blue.webp",
+  "_id": "mqeOvDispelEvilG",
+  "_key": "!items!mqeOvDispelEvilG",
+  "folder": "SpellFldr5thLevl",
+  "ownership": {
+    "default": 0
+  },
+  "system": {
+    "description": {
+      "value": "<p><em>Overlay (midi-qol):</em> Break Enchantment ends the target's Charmed and Frightened conditions from Celestials, Elementals, Fey, Fiends and Undead (an effect whose creator is one of them), and the spell ends. Not covered: possession, Dismissal's return to a home plane.</p>",
+      "chatFlavor": ""
+    },
+    "identifier": "dispel-evil-and-good-overlay",
+    "source": {
+      "rules": "2024"
+    },
+    "activities": {}
+  },
+  "effects": [],
+  "flags": {
+    "midi-qol": {
+      "overlay": {
+        "identifier": "dispel-evil-and-good",
+        "rules": "2024",
+        "version": "1"
+      },
+      "entries": [
+        {
+          "id": "break",
+          "on": "use.target.each",
+          "if": "use.activity?.id === 'eBbyE0du7mEJWDbZ'",
+          "label": "Break Enchantment",
+          "do": [
+            {
+              "effect": "remove",
+              "what": {
+                "statuses": [
+                  "charmed",
+                  "frightened"
+                ],
+                "fromTypes": [
+                  "celestial",
+                  "elemental",
+                  "fey",
+                  "fiend",
+                  "undead"
+                ]
+              },
+              "to": "target"
+            }
+          ]
+        },
+        {
+          "id": "break-ends",
+          "on": "use.end",
+          "if": "use.activity?.id === 'eBbyE0du7mEJWDbZ'",
+          "label": "The spell ends",
+          "do": [
+            {
+              "effect": "remove",
+              "what": "concentrating",
+              "to": "self"
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "_stats": {
+    "compendiumSource": null,
+    "duplicateSource": null,
+    "coreVersion": "14.360",
+    "systemId": "dnd5e",
+    "systemVersion": "6.1.0"
+  }
+}

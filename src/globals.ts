@@ -249,6 +249,7 @@ declare module "fvtt-types/configuration" {
     "midi-qol.BonusPrompt": string;
     /** Overlay items apply (world); an item's overlayMode overrides it */
     "midi-qol.OverlayItems": boolean;
+    "midi-qol.DispelEndsWholeSpell": boolean;
     "midi-qol.ShowAllBonusOffers": boolean;
     /** M18: per player, each channel's presenters in the order to try them */
     "midi-qol.PresenterOrder": Partial<Record<"visual" | "sound" | "text", string[]>>;
