@@ -37,6 +37,7 @@ In development, not released. Listed here: barriers, creatures inside others, en
 * Overlays: Swallow (Behir, Kraken, Purple Worm, Remorhaz, Tarrasque, Giant Frog) and Engulf (Gelatinous Cube, Shambling Mound): the creature is inside, carried, damaged each turn, regurgitated after enough damage from inside, released at the swallower's death, escapes by its action.
 * A swallowed or engulfed creature has the Swallowed / Engulfed status, is hidden from users who don't own it, and is drawn small and faded over the creature it is in (client setting).
 * Total cover from being inside a creature doesn't apply to that creature or to others inside it.
+* Animations left by deleted items or effects end, also one a module starts after its item is gone (a use finishing late) and, when a scene is drawn, persistent ones whose document no longer exists; never one queued by hand.
 * Overlays: an overlay effect can mark the book's effect of its name (`overlayRole`: only that, never added) and give it midi flags (`inside`); an overlay's automation settings (`configSpec`, a default per creature with `byCreature`) are the item's.
 * Entries: `use: "activity:<id>"` at any event (a creature's turn, its death) uses the activity against the subjects; `to: "inside"` is the creatures inside the entry's creature.
 * Fixed: a Large or Gargantuan token moved or teleported by midi landed half a square off the grid.

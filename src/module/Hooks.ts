@@ -11,6 +11,7 @@ import { warn, error, debug, i18n, debugEnabled, log, GameSystemConfig, MODULE_I
 import { excludeRegionSourceEffect, moveRegionsOnTurnChange } from "./regionBehaviors/MidiRegionActivityBehaviorType.js";
 import { colorChatMessageHandler, nsaMessageHandler, hideStuffHandler, hideRollUpdate, hideRollRender, checkOverTimeSaves } from "./chatMessageHandling.js";
 import { preferredActiveGM, processUndoDamageCard, whisperRollToPlayer } from "./GMAction.js";
+import { registerOrphanAnimations } from "./lib/orphanAnimations.js";
 import { addViewAsPlayerOption } from "./ChatClasses/DamageCardMessage.js";
 import { damageActiveHas, untargetDeadTokens, untargetAllTokens, midiCustomEffect, removeReactionUsed, removeBonusActionUsed, expireRollEffect, removeActionUsed, setupOptionalBonusResets, clearUpdatesCache, expireEffects, processConcentrationRequestMessage, doConcentrationCheck, completeActivityUse, isAutoFastForward, areMidiKeysPressed, throttledScrollBottom, getVitalityItem, tokenForActor, resolveItemMacro, resolveActivityMacro, doSyncRoll, getTokenPerimeterPolygon, closestPointOnPerimeter, measurePointDistance, onUserManualTarget, toggleStatus, videoThumbnail } from "./utils.js";
 import { releaseForcedNormalKeys } from "./lib/rollKeys.js";
@@ -250,26 +251,14 @@ export let readyHooks = async () => {
     if (deletedActor.uuid) MidiDependentsRegistry.deleteDependents(deletedActor.uuid);
   });
 
-  /**
-   * Animations left by a deleted item: Sequencer effects whose origin is the item or one of its effects. Deleting an
-   * item fires no deleteActiveEffect for its effects, so a module that animates an effect added to an actor's item
-   * (Automated Animations) never ends it.
-   */
-  async function endItemAnimations(itemUuid: string) {
-    const manager = (globalThis as { Sequencer?: { EffectManager?: { getEffects(): { data?: { origin?: string, name?: string, source?: unknown } }[], endEffects(filter: object): Promise<unknown> } } }).Sequencer?.EffectManager;
-    if (!manager) return;
-    const left = manager.getEffects().filter(e => e.data?.origin === itemUuid || !!e.data?.origin?.startsWith(`${itemUuid}.ActiveEffect.`));
-    try {
-      for (const origin of new Set(left.map(e => e.data!.origin!))) await manager.endEffects({ origin });
-    } catch (err) { console.warn("midi-qol | ending a deleted item's animations failed", err); }
-  }
+  // Animations left by deleted documents (lib/orphanAnimations.ts)
+  registerOrphanAnimations();
 
   // Handle deletion of Items - cascade delete dependents via MidiDependentsRegistry
   Hooks.on("deleteItem", (deletedItem: Item.Implementation, options: any, user) => {
     if (!preferredActiveGM()?.isSelf) return;
     if (options.undo) return;
     if (deletedItem.uuid) MidiDependentsRegistry.deleteDependents(deletedItem.uuid);
-    if (deletedItem.uuid) void endItemAnimations(deletedItem.uuid);
   });
 
   // Handle deletion of AmbientLights - cascade delete dependents via MidiDependentsRegistry
