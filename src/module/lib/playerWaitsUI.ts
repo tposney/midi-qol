@@ -203,11 +203,12 @@ function choiceButton(wait: WaitInfo, choice: WaitInfo["choices"][number]): HTML
   const button = document.createElement("button");
   button.type = "button";
   button.textContent = choice.label ? game.i18n!.localize(choice.label) : i18n(`midi-qol.PlayerWaits.Choice.${choice.id}`);
-  // What the player's own prompt would do if they pressed Enter (their roll dialog's default button)
-  if (choice.id === wait.defaultChoice) {
-    button.classList.add("default");
-    button.dataset.tooltip = i18n("midi-qol.PlayerWaits.DialogDefault");
-  }
+  // What the player's own prompt would do if they pressed Enter (their roll dialog's default button); what a choice
+  // does when its name alone doesn't say
+  const hint = `midi-qol.PlayerWaits.ChoiceHint.${choice.id}`;
+  const tips = [...(choice.id === wait.defaultChoice ? [i18n("midi-qol.PlayerWaits.DialogDefault")] : []), ...(game.i18n?.has(hint) ? [i18n(hint)] : [])];
+  if (choice.id === wait.defaultChoice) button.classList.add("default");
+  if (tips.length) button.dataset.tooltip = tips.join(". ");
   button.addEventListener("click", async () => {
     button.disabled = true;
     await settlePlayerWait(wait.id, choice.id);

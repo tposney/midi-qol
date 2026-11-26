@@ -5,6 +5,7 @@ In development, not released. Listed here: barriers, creatures inside others, en
 * A barrier with one side that affects those near it (Wall of Fire): the caster is asked which side, both drawn on the scene; an area that deep on that side, shown to all, uses the activity on a creature ending its turn there; entering the wall uses it too (`regionBarrier.sideDepth`, `sideActivity`). The Wall of Fire overlay sets it (version 2).
 * An area thinner than a creature's space (a wall) catches the creatures whose space it passes through; it caught only those whose space's centre it crossed.
 * A use an area's rule makes is not held to the caster's range.
+* Waiting on players: answering an attack or damage roll from the GM's list rolls in the player's open dialog (it opened a second one); the list marks the dialog's default choice (Answer all uses it); *Not rolling* is *Stop showing* (the use still waits for the roll).
 * A creature inside another (swallowed, engulfed): an effect flagged `flags.midi-qol.inside` puts its bearer in the space of the creature its origin names, carried by that creature's moves and teleports, put beside it when the effect ends.
 * Entries: `move` with `place: "inside" | "beside"`; action `tally` (a running total for the turn or round, read as `tallies.<name>`); condition helper `inside(a, b)`.
 * Entries: removing a condition ends it wherever it comes from (`whole: true` ends the effect instead); choice kind `conditions` (among those the target has).
