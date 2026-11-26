@@ -1,21 +1,19 @@
-import { readdirSync, readFileSync } from "node:fs";
+import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 
-// Foundry expands "a.b" keys into objects: a string at "a" beside "a.b" stops the module's whole file loading
-// (2026-11-21: "midi-qol.RememberChoice" next to "midi-qol.RememberChoice.Hint" left every midi string as its key)
-describe("lang files", () => {
-  for (const file of readdirSync("lang").filter(name => name.endsWith(".json"))) {
-    it(`${file}: no string key is the prefix of another key`, () => {
-      const data = JSON.parse(readFileSync(`lang/${file}`, "utf8")) as Record<string, unknown>;
-      const clashes: string[] = [];
-      for (const key of Object.keys(data)) {
-        const parts = key.split(".");
-        for (let i = 1; i < parts.length; i++) {
-          const prefix = parts.slice(0, i).join(".");
-          if (typeof data[prefix] === "string") clashes.push(`${prefix} <- ${key}`);
-        }
-      }
-      expect(clashes).toEqual([]);
-    });
-  }
+// A key written twice in en.json keeps only its last text: a second meaning silently replaces the first (2026-11-26:
+// Entries.Field.rollAs, the roll action's name and the use action's roll-as)
+describe("en.json keys", () => {
+  it("no key has two different texts", () => {
+    const seen = new Map<string, string>();
+    const clashes: string[] = [];
+    for (const line of readFileSync("lang/en.json", "utf8").split("\n")) {
+      const m = /^\s*"((?:[^"\\]|\\.)+)":\s*("(?:[^"\\]|\\.)*")/.exec(line);
+      if (!m) continue;
+      const [, key, value] = m;
+      if (seen.has(key) && seen.get(key) !== value) clashes.push(key);
+      seen.set(key, value);
+    }
+    expect(clashes).toEqual([]);
+  });
 });

@@ -96,7 +96,7 @@ export function registerMidiActionSchemas() {
     { path: "near.max", label: "midi-qol.Entries.Field.nearMax", type: "formula" },
     { path: "near.disposition", label: "midi-qol.Entries.Field.nearDisposition", type: "select", options: () => [{ value: "", label: say("midi-qol.EntryEditor.Default") },
       ...["any", "enemy", "ally"].map(value => ({ value, label: say(`midi-qol.Chain.Disposition.${value}`) }))] },
-    { path: "rollAs", label: "midi-qol.Entries.Field.rollAs", type: "select", options: () => [{ value: "", label: say("midi-qol.EntryEditor.Default") },
+    { path: "rollAs", label: "midi-qol.Entries.Field.useRollAs", type: "select", options: () => [{ value: "", label: say("midi-qol.EntryEditor.Default") },
       ...["self", "firstTarget", "firstHitTarget", "firstMissedTarget", "firstSaveTarget", "firstFailedSaveTarget"].map(value => ({ value, label: say(`midi-qol.TriggeredActivityRollAsOptions.${value}`) }))] },
     { path: "condition", label: "midi-qol.Entries.Field.useCondition", type: "condition" },
     { path: "chain", label: "midi-qol.Entries.Field.chain", type: "formula" },

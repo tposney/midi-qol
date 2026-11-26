@@ -3131,7 +3131,7 @@
   "midi-qol.Entries.Field.nearWithin": "Near: within (ft)",
   "midi-qol.Entries.Field.nearMax": "Near: how many",
   "midi-qol.Entries.Field.nearDisposition": "Near: which creatures",
-  "midi-qol.Entries.Field.rollAs": "Rolled as",
+  "midi-qol.Entries.Field.useRollAs": "Rolled as",
   "midi-qol.Entries.Field.useCondition": "Only if (the first target as target)",
   "midi-qol.Entries.Field.chain": "Chain limit",
   "midi-qol.Entries.Field.useConsume": "Uses resources",
