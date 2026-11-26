@@ -177,6 +177,11 @@ export function actorsFor(spec: unknown, run: ActionRun, fallback: "self" | "tar
     case "self": return [found.actor ?? context.actor];
     case "attacker":
     case "event.actor": return context.workflow?.actor ? [context.workflow.actor] : [];
+    // Who takes an action entry (MidiQOL.entries.takeAction: pulling a creature out)
+    case "taker": {
+      const taker = (context.event as { taker?: Actor.Implementation } | undefined)?.taker;
+      return taker ? [taker] : [];
+    }
     // The creatures inside the entry's creature (swallowed, engulfed: interactions/carried.ts)
     case "inside": {
       const token = tokenFor(found.actor ?? context.actor);
@@ -216,6 +221,17 @@ function modifierOf(run: ActionRun): RollModifier | undefined {
   }
   const value = typeof run.action.value === "number" ? run.action.value : undefined;
   return { effect, value, label: labelOf(run), source: `${(run.found.document as { uuid?: string }).uuid ?? ""}#${run.found.entry.id}` };
+}
+
+/** Roll modifiers on the subjects of an activity an action uses (activityRollAction's `rollModifier`), by activity uuid, while that use runs */
+const activityModifiers = new Map<string, { actorUuid: string, rolls?: readonly RollKind[], modifier: RollModifier }[]>();
+
+export async function withActivityModifiers<T>(run: ActionRun, activityUuid: string, actorUuids: string[], use: () => Promise<T>): Promise<T> {
+  const modifier = run.action.rollModifier ? modifierOf({ ...run, action: { ...run.action, modifier: run.action.rollModifier } }) : undefined;
+  if (!modifier || !activityUuid) return use();
+  const rolls = rollKinds(run.action.rolls);
+  activityModifiers.set(activityUuid, actorUuids.map(actorUuid => ({ actorUuid, rolls, modifier })));
+  try { return await use(); } finally { activityModifiers.delete(activityUuid); }
 }
 
 /** `{ modifier, rolls?, for? }` at a use or target event: on the rolls of the use it names (default: the entry's actor) */
@@ -496,6 +512,11 @@ export function takeACChange(workflow: Workflow, target: TokenDocument.Implement
 /** rollModifiers: the use's modifiers for this roller, and the roller's `roll.preRoll` entries with a modifier action */
 async function entryRollModifiers(query: RollQuery): Promise<RollModifier[]> {
   const found: RollModifier[] = [];
+  // A save or check names its use, not the activity
+  const activityUuid = query.activity?.uuid ?? (query.workflow?.activity as { uuid?: string } | undefined)?.uuid;
+  for (const m of (activityUuid ? activityModifiers.get(activityUuid) : undefined) ?? []) {
+    if (m.actorUuid === query.actor.uuid && (!m.rolls || m.rolls.includes(query.kind))) found.push(m.modifier);
+  }
   if (query.workflow) {
     for (const m of contributions.get(query.workflow)?.modifiers ?? []) {
       if (m.actorUuid === query.actor.uuid && (!m.rolls || m.rolls.includes(query.kind))) found.push(m.modifier);

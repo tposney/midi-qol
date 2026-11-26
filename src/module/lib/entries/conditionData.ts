@@ -1,5 +1,5 @@
 import { tokenFor } from "../tokenResolver.js";
-import { insideWhom } from "../../services/interactions/carried.js";
+import { insideWhom, fitsInside } from "../../services/interactions/carried.js";
 import { movementState } from "../../services/economy/movement.js";
 import { MODULE_ID } from "../../../midi-qol.js";
 import type { Workflow } from "../../Workflow.js";
@@ -158,6 +158,8 @@ export function entryConditionExtras(f: FoundEntry, context: EventContext, apply
     canSee: canSeeHelper,
     // inside(a): a is inside some creature; inside(a, b): a is inside b (swallowed, engulfed: interactions/carried.ts)
     inside: insideHelper,
+    // fitsInside(a, b): a fits in the room left inside b
+    fitsInside: (a: TokenLike, b: TokenLike) => { const inner = tokenDocumentOf(a), outer = tokenDocumentOf(b); return !!inner && !!outer && fitsInside(inner, outer); },
     dice: { duplicates }
   };
   if (workflow) {

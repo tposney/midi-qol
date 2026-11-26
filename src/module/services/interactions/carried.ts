@@ -59,6 +59,18 @@ export function insideWhom(token: TokenDocument.Implementation): TokenDocument.I
   return undefined;
 }
 
+/** A token's space in grid spaces (a Large creature's 4) */
+const spaces = (token: TokenDocument.Implementation) => token.width * token.height;
+
+/**
+ * Whether `token` fits in the room left inside `carrier`: the carrier's space less those inside it (a Gelatinous Cube's
+ * "one Large creature or up to four Medium or Small creatures")
+ */
+export function fitsInside(token: TokenDocument.Implementation, carrier: TokenDocument.Implementation): boolean {
+  const used = insideOf(carrier).filter(t => t !== token).reduce((sum, t) => sum + spaces(t), 0);
+  return spaces(token) <= spaces(carrier) - used;
+}
+
 /** One is inside the other, or both inside the same creature (a swallowed creature's total cover is against those outside) */
 export function sharesInside(a: TokenDocument.Implementation, b: TokenDocument.Implementation): boolean {
   const inA = insideWhom(a), inB = insideWhom(b);

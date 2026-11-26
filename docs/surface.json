@@ -700,6 +700,7 @@
     "saveFailed",
     "saveRequested",
     "saveSucceeded",
+    "spaceEntered",
     "targeted",
     "turnEnd",
     "turnStart",

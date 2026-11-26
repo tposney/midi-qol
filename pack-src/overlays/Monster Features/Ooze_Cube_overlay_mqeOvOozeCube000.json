@@ -10,7 +10,7 @@
   },
   "system": {
     "description": {
-      "value": "<p><em>Overlay (midi-qol):</em> the Monster Manual's Ooze Cube (Gelatinous Cube): it fills its space, and creatures move through each other's spaces (the Passable status, one of dnd5e's statuses that never block movement); its Engulf overlay asks, for each creature whose space its move enters, whether it engulfs it. Not covered yet: its room (one Large or four Medium creatures), a creature entering its space (subjected to Engulf, with Disadvantage), pulling a creature out.</p>",
+      "value": "<p><em>Overlay (midi-qol):</em> the Monster Manual's Ooze Cube (Gelatinous Cube): creatures move through each other's spaces (the Passable status, one of dnd5e's statuses that never block movement); a creature that enters its space by its own move is subjected to its Engulf, with Disadvantage on the save (if it fits the room left inside); its Engulf overlay asks, for each creature whose space the cube's move enters, whether it engulfs it, and lets a creature within 5 feet pull an engulfed creature out. Its Pull Check and Puller Damage are used by that, not on their own.</p>",
       "chatFlavor": ""
     },
     "identifier": "ooze-cube-overlay",
@@ -43,8 +43,44 @@
       "overlay": {
         "identifier": "ooze-cube",
         "rules": "2024",
-        "version": "2"
-      }
+        "version": "3",
+        "changes": [
+          {
+            "key": "system.activities.PMCvyqxfUYiPzNK8.midiProperties.automationOnly",
+            "value": "true",
+            "type": "override"
+          },
+          {
+            "key": "system.activities.EcTOfXWsDJRHLydy.midiProperties.automationOnly",
+            "value": "true",
+            "type": "override"
+          }
+        ]
+      },
+      "entries": [
+        {
+          "id": "walked-in",
+          "on": "spaceEntered",
+          "label": "Engulfed on entering",
+          "if": "!inside(event.creatureToken) && fitsInside(event.creatureToken, bearer)",
+          "do": [
+            {
+              "save": "activity:5o0Bh8PQaojx5XMx",
+              "item": "engulf",
+              "rollModifier": "disadvantage",
+              "rolls": "save",
+              "then": [
+                {
+                  "move": {
+                    "place": "beside",
+                    "from": "bearer"
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ]
     }
   },
   "_stats": {

@@ -1,5 +1,5 @@
-2026/11/27-00:50:43.647592 712e3effd6c0 Delete type=3 #1
-2026/11/27-00:50:43.648534 712e3dffb6c0 Level-0 table #5: started
-2026/11/27-00:50:43.649391 712e3dffb6c0 Level-0 table #5: 35130 bytes OK
-2026/11/27-00:50:43.650166 712e3dffb6c0 Delete type=0 #3
-2026/11/27-00:50:43.650210 712e3dffb6c0 Manual compaction at level-0 from '!folders!SpellFldr1stLevl' @ 72057594037927935 : 1 .. '!items.effects!mqeOvSwallow0000.mqeSwallowedEf02' @ 0 : 0; will stop at (end)
+2026/11/27-01:05:33.851290 7b14fcfeb6c0 Delete type=3 #1
+2026/11/27-01:05:33.852224 7b14e7fff6c0 Level-0 table #5: started
+2026/11/27-01:05:33.853381 7b14e7fff6c0 Level-0 table #5: 35632 bytes OK
+2026/11/27-01:05:33.854479 7b14e7fff6c0 Delete type=0 #3
+2026/11/27-01:05:33.854537 7b14e7fff6c0 Manual compaction at level-0 from '!folders!SpellFldr1stLevl' @ 72057594037927935 : 1 .. '!items.effects!mqeOvSwallow0000.mqeSwallowedEf02' @ 0 : 0; will stop at (end)

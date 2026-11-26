@@ -12,6 +12,7 @@ import { isTracked, spend } from "../../services/economy/ledger.js";
 import { onTurnEvent } from "../turnEvents.js";
 import { actorEffectEntries, applyingActivity, conditionDataFor, entryHolds, registerEvent, takeEntry, type ActionRun, type EventContext } from "./engine.js";
 import type { FoundEntry } from "./types.js";
+import { actorsFor, withActivityModifiers } from "./useEvents.js";
 
 /*
  * M15 stage 6: actions that run an activity, and the `action` event.
@@ -47,11 +48,23 @@ function entryItem(f: FoundEntry): Item.Implementation | undefined {
   return document.item;
 }
 
-/** An activity of the entry's item by id, identifier or name */
-export function entryActivity(f: FoundEntry, ref: string): Activity | undefined {
+/** The creature whose use applied an effect (its origin's actor) */
+function originActorOf(effect: ActiveEffect.Implementation): Actor.Implementation | undefined {
+  let origin: unknown = effect.origin ? fromUuidSync(effect.origin.replace(/\.Activity\.[^.]+$/, ""), { strict: false }) : undefined;
+  while (origin && !(origin instanceof Actor) && (origin as { parent?: unknown }).parent) origin = (origin as { parent?: unknown }).parent;
+  return origin instanceof Actor ? origin : undefined;
+}
+
+/**
+ * An activity of the entry's item by id, identifier or name; `itemIdentifier`: of another item of that item's actor (the
+ * Ooze Cube's entry using its Engulf's save)
+ */
+export function entryActivity(f: FoundEntry, ref: string, itemIdentifier?: unknown): Activity | undefined {
   const id = ref.startsWith(ACTIVITY_REF) ? ref.slice(ACTIVITY_REF.length) : ref;
+  let item = entryItem(f);
+  if (typeof itemIdentifier === "string" && itemIdentifier) item = item?.actor?.items.find(i => (i.system as { identifier?: string }).identifier === itemIdentifier);
   // @ts-expect-error no dnd5e-types
-  const activities = entryItem(f)?.system.activities;
+  const activities = item?.system.activities;
   if (!activities) return undefined;
   return (activities.get(id) ?? activities.find((a: Activity) => a.identifier === id || a.name === id)) as Activity | undefined;
 }
@@ -81,20 +94,25 @@ function subjectsOf(run: ActionRun): TokenDocument.Implementation[] {
  */
 export async function activityRollAction(run: ActionRun, kind: "save" | "check" | "use"): Promise<{ success?: boolean } | void> {
   const ref = run.action[kind] as string;
-  const activity = entryActivity(run.found, ref);
+  const activity = entryActivity(run.found, ref, run.action.item);
   if (!activity) {
     console.warn(`midi-qol | entry ${run.found.entry.id}: no activity ${ref}`);
     return;
   }
-  const subjects = subjectsOf(run);
+  // `to`: whom (as `for` elsewhere: self, target, taker...), else the event's target, the use's targets or the bearer
+  const near = run.context.target ?? tokenFor(run.found.actor ?? run.context.actor) ?? null;
+  const subjects = typeof run.action.to === "string"
+    ? actorsFor(run.action.to, run, "target").map(actor => tokenFor(actor, { near })).filter((t): t is TokenDocument.Implementation => !!t)
+    : subjectsOf(run);
   if (!subjects.length) return;
-  const used = await completeActivityUse(activity, {
+  // `rollModifier` (`rolls`): on the subjects' rolls of that use (a save with disadvantage)
+  const used = await withActivityModifiers(run, activity.uuid ?? "", subjects.map(t => t.actor?.uuid).filter((u): u is string => !!u), () => completeActivityUse(activity, {
     consume: { action: false, resources: false, spellSlot: false },
     midiOptions: {
       targetUuids: subjects.map(t => t.uuid).filter((uuid): uuid is string => !!uuid),
       workflowOptions: { targetConfirmation: "none", autoRollAttack: true, autoRollDamage: "always", fastForwardAttack: true, fastForwardDamage: true }
     }
-  }, { configure: false }, {}) as Workflow | undefined;
+  }, { configure: false }, {}) as Promise<Workflow | undefined>);
   if (!used) return;
   const failed = subjects.some(t => used.failedSaves.has(t));
   const saved = subjects.every(t => used.saves.has(t));
@@ -211,8 +229,10 @@ function mayTake(f: FoundEntry, taker: Actor.Implementation): boolean {
   for (const who of whoList(f)) {
     if (who === "bearer" && taker === bearer) return true;
     if (who && typeof who === "object" && "within" in who) {
-      const spec = who as { within: number | "reach" };
-      const from = tokenFor(bearer);
+      const spec = who as { within: number | "reach", of?: string };
+      // Measured from the bearer, or from the creature whose use applied the effect (pulling a creature out of a Gelatinous Cube)
+      const origin = spec.of === "origin" && f.document instanceof ActiveEffect ? originActorOf(f.document) : undefined;
+      const from = tokenFor(origin ?? bearer);
       const to = from ? tokenFor(taker, { scene: from.parent, near: from }) : undefined;
       if (!from || !to || to === from) continue;
       const within = spec.within === "reach" ? meleeReach(bearer) : Number(spec.within);

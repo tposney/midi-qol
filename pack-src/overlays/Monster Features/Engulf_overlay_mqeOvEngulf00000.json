@@ -10,7 +10,7 @@
   },
   "system": {
     "description": {
-      "value": "<p><em>Overlay (midi-qol):</em> the Monster Manual's Engulf (Gelatinous Cube, Shambling Mound). A creature that fails the save is inside the engulfer: its token sits in the engulfer's space and moves with it, and it takes the engulfing damage each turn (the Gelatinous Cube's at the start of its turns, 3d6 acid; the Shambling Mound's at the start of the engulfed creature's turns). The engulfed creature can take an action to escape (its card at the start of its turn): the Gelatinous Cube's Strength (Athletics) check against its DC, the Shambling Mound's grapple (Athletics or Acrobatics against its passive Athletics); on a success it comes out on the nearest free space. The Gelatinous Cube engulfs as it moves: when its move enters a creature's space, its owner is asked whether it engulfs that creature, which then makes the save (once per move); on a success it moves to a free space beside the cube. Not covered yet: its room for creatures (one Large or four Medium), a creature entering its space (Ooze Cube), pulling a creature out of it.</p>",
+      "value": "<p><em>Overlay (midi-qol):</em> the Monster Manual's Engulf (Gelatinous Cube, Shambling Mound). A creature that fails the save is inside the engulfer: its token sits in the engulfer's space and moves with it, and it takes the engulfing damage each turn (the Gelatinous Cube's at the start of its turns, 3d6 acid; the Shambling Mound's at the start of the engulfed creature's turns). The engulfed creature can take an action to escape (its card at the start of its turn): the Gelatinous Cube's Strength (Athletics) check against its DC, the Shambling Mound's grapple (Athletics or Acrobatics against its passive Athletics); on a success it comes out on the nearest free space. The Gelatinous Cube engulfs as it moves: when its move enters a creature's space, its owner is asked whether it engulfs that creature, which then makes the save (once per move); on a success it moves to a free space beside the cube. Only a creature that fits the room left inside it (one Large, or up to four Medium or Small) is engulfed. A creature within 5 feet of the cube can pull an engulfed creature out as its action (DC 12 Strength (Athletics); the puller takes the Ooze Cube's acid damage).</p>",
       "chatFlavor": ""
     },
     "identifier": "engulf-overlay",
@@ -196,6 +196,39 @@
                   ]
                 }
               ]
+            },
+            {
+              "id": "pull-out",
+              "on": "action",
+              "label": "Pull it out (Athletics)",
+              "who": [
+                {
+                  "within": 5,
+                  "of": "origin"
+                }
+              ],
+              "if": "config.pullOut",
+              "do": [
+                {
+                  "check": {
+                    "ability": "str",
+                    "skill": [
+                      "ath"
+                    ],
+                    "dc": 12
+                  },
+                  "then": [
+                    {
+                      "end": true
+                    }
+                  ]
+                },
+                {
+                  "use": "activity:PMCvyqxfUYiPzNK8",
+                  "item": "ooze-cube",
+                  "to": "taker"
+                }
+              ]
             }
           ],
           "overlayRole": true
@@ -310,7 +343,7 @@
       "overlay": {
         "identifier": "engulf",
         "rules": "2024",
-        "version": "5",
+        "version": "6",
         "changes": [
           {
             "key": "system.activities.Exfa4q7O4SvXjGt7.midiProperties.automationOnly",
@@ -380,6 +413,15 @@
           "byCreature": {
             "gelatinous-cube": true
           }
+        },
+        {
+          "key": "pullOut",
+          "label": "A creature within 5 feet can pull an engulfed creature out (DC 12 Athletics, the puller takes the Ooze Cube's acid)",
+          "type": "checkbox",
+          "default": false,
+          "byCreature": {
+            "gelatinous-cube": true
+          }
         }
       ],
       "entries": [
@@ -389,7 +431,7 @@
           "offer": "ask",
           "label": "Engulf",
           "description": "midi-qol.Overlay.Engulf.Offer",
-          "if": "config.engulfByMoving && !inside(event.creatureToken)",
+          "if": "config.engulfByMoving && !inside(event.creatureToken) && fitsInside(event.creatureToken, bearer)",
           "do": [
             {
               "save": "activity:5o0Bh8PQaojx5XMx",

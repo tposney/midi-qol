@@ -15,6 +15,8 @@ import { collectEntries, registerAction, registerEvent, runEvent, type ActionRun
  * - entersSpace: raised for a creature after its own move (not forced, not a teleport) for each creature whose space
  *   the move entered for the first time (lib/spaceEntry.ts), in the order it reached them, the entered creature as
  *   event.creature (event.creatureToken, the event's target); before `moved` (the Gelatinous Cube's Engulf).
+ * - spaceEntered: raised for each of those creatures, the mover as event.creature (and the event's target): a creature
+ *   walking into a Gelatinous Cube's space (Ooze Cube).
  * - moved: raised about a creature after any move of it (event.forced for forced movement and teleports; near entries
  *   hear it): event.distance, event.cost, event.action, event.from, event.to. In a running combat its reaction items
  *   with `reaction === "isMoved"` are then offered (the reactionmoved trigger, the same event as `event`).
@@ -31,6 +33,7 @@ export const ENTERS_REACH = "entersReach";
 export const LEAVES_REACH = "leavesReach";
 export const MOVED = "moved";
 export const ENTERS_SPACE = "entersSpace";
+export const SPACE_ENTERED = "spaceEntered";
 
 /** Whether the actor has its own entries for the event (not near ones: the reach events are about a particular bearer) */
 export function hasOwnEntries(eventId: string, actor: Actor.Implementation): boolean {
@@ -157,10 +160,13 @@ function onMoveToken(token: TokenDocument.Implementation, movement: { method?: s
   };
   const context: EventContext = { actor: token.actor, target: token, event };
   void (async () => {
-    if (!event.forced && token.actor && collectEntries(ENTERS_SPACE, { actor: token.actor } as EventContext).length) {
+    if (!event.forced && token.actor) {
+      const mine = collectEntries(ENTERS_SPACE, { actor: token.actor } as EventContext).length > 0;
       for (const entered of enteredTokens(token, movement.origin, movement.passed?.waypoints ?? [])) {
         if (!entered.actor) continue;
-        await runEvent(ENTERS_SPACE, { actor: token.actor, target: entered, event: { creature: entered.actor, creatureToken: entered, bearerToken: token, action } });
+        if (mine) await runEvent(ENTERS_SPACE, { actor: token.actor, target: entered, event: { creature: entered.actor, creatureToken: entered, bearerToken: token, action } });
+        if (collectEntries(SPACE_ENTERED, { actor: entered.actor } as EventContext).length)
+          await runEvent(SPACE_ENTERED, { actor: entered.actor, target: token, event: { creature: token.actor, creatureToken: token, bearerToken: entered, action } });
       }
     }
     if (collectEntries(MOVED, context).length) await runEvent(MOVED, context);
@@ -175,6 +181,7 @@ export function registerMovementEvents() {
   registerEvent(LEAVES_REACH, { label: "A creature leaves the bearer's reach (its own movement, in combat)" });
   registerEvent(MOVED, { label: "The creature has moved (event.forced for forced movement)" });
   registerEvent(ENTERS_SPACE, { label: "The creature's own move entered another creature's space (once each per move)" });
+  registerEvent(SPACE_ENTERED, { label: "Another creature's own move entered the creature's space (once per move)" });
   registerAction("move", moveAction);
   registerAction("opportunityAttack", opportunityAttackAction);
   Hooks.on("moveToken", (token, movement, _operation, user) => onMoveToken(token, movement as never, user as User.Implementation | undefined));
