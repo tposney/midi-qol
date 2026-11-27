@@ -110,7 +110,7 @@ export async function activityRollAction(run: ActionRun, kind: "save" | "check" 
     consume: { action: false, resources: false, spellSlot: false },
     midiOptions: {
       targetUuids: subjects.map(t => t.uuid).filter((uuid): uuid is string => !!uuid),
-      workflowOptions: { targetConfirmation: "none", autoRollAttack: true, autoRollDamage: "always", fastForwardAttack: true, fastForwardDamage: true }
+      workflowOptions: { targetConfirmation: "none", autoRollAttack: true, autoRollDamage: "always", fastForwardAttack: true, fastForwardDamage: true, isTriggered: true }
     }
   }, { configure: false }, {}) as Promise<Workflow | undefined>);
   if (!used) return;

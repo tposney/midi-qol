@@ -5,6 +5,7 @@ import { evalReactionActivationCondition, isActivityType, maxCastLevel, reaction
 import type { ResponseContributor } from "./service.js";
 import { TroubleShooter } from "../../apps/TroubleShooter.js";
 import { eventDataFor } from "../../lib/entries/responseEvents.js";
+import { readsSubject, subjectView, withinReach } from "../../lib/subjectReactions.js";
 
 /*
  * midi's own reaction contributor: the creature's items with a reaction activity it can use now (attuned, prepared,
@@ -23,8 +24,11 @@ function entryCostActivities(item: Item.Implementation): Set<string> {
 }
 
 export const midiItemReactions: ResponseContributor = {
-  async for({ target, usedReaction, triggerType, options, eventId }) {
+  // Reactions about another creature: those whose condition reads `subject`, within reach (lib/subjectReactions.ts)
+  aboutOthers: true,
+  async for({ target, usedReaction, triggerType, options, eventId, subject }) {
     if (!target.actor) return [];
+    const other = subject && subject !== target ? subject : undefined;
     const reactions: Activity[] = [];
     const maxLevel = maxCastLevel(target.actor);
     const items = target.actor.items;
@@ -96,13 +100,16 @@ export const midiItemReactions: ResponseContributor = {
           if (isSpell) foundry.utils.setProperty(config, "consume.spellSlot", false);
           const canUse = await checked._prepareUsageUpdates(config, { returnErrors: true });
           if (canUse instanceof Array) continue; // insufficient uses available
+          // Another creature's trigger: only a reaction about another creature that reaches it
+          if (other && !(readsSubject(reactionCondition) && withinReach(forwarded ?? activity, target, other))) continue;
           // If no condition is specified, default to requiring isHit
           if (!reactionCondition) {
             reactionCondition = 'reaction === "isHit"';
           }
           // The event and its event (M15 4f: attack total and AC, the save, the damage worked out) as entries see them
           const returnvalue = await evalReactionActivationCondition(options.workflow, reactionCondition, target, { async: true,
-            extraData: { reaction: reactionTriggerLabelFor(triggerType), eventId, event: eventDataFor(options.workflow, target, eventId) ?? options?.event ?? {} } });
+            extraData: { reaction: reactionTriggerLabelFor(triggerType), eventId, subject: subjectView(target, other),
+              event: eventDataFor(options.workflow, other ?? target, eventId) ?? options?.event ?? {} } });
           if (debugEnabled > 0) warn(`for ${target.actor.name} ${theItem.name} using condition ${reactionCondition} condition ${returnvalue}`, options.workflow?.conditionData);
           if (!returnvalue) continue;
           reactions.push(activity);

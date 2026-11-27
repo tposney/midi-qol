@@ -1,4 +1,5 @@
 import { tokenFor } from "./lib/tokenResolver.js";
+import { subjectReactors } from "./lib/subjectReactions.js";
 import { activityTargetFilter } from "./lib/targetFilter.js";
 import { nearCandidates, pickNearTargets, resolveTriggerActivity, type ChainState, type NearDisposition, type TriggerSpec } from "./lib/chain.js";
 import { queryUser } from "./lib/midiQueries.js";
@@ -3088,7 +3089,22 @@ export class Workflow {
   async askReactionsStep(target: TokenOrDocument | string, triggerTokenUuid: string | null | undefined, triggeringRoll: Roll | null | undefined, triggerType: string, options: any = {}): Promise<ReactionResult> {
     const id = REACTION_STEPS[triggerType];
     const replaced = this.replacedPort("askReactions");
-    const ask = () => (replaced ?? doReactions)(target, triggerTokenUuid, triggeringRoll, triggerType, options) as Promise<ReactionResult>;
+    const askOf = (reactor: TokenOrDocument | string, reactorOptions: any) => (replaced ?? doReactions)(reactor, triggerTokenUuid, triggeringRoll, triggerType, reactorOptions) as Promise<ReactionResult>;
+    // The trigger's creature's own reactions (unless `ownReactions: false`: a creature casting), then the others' about
+    // it (lib/subjectReactions.ts: Protective Field, Counterspell)
+    const ask = async (): Promise<ReactionResult> => {
+      const own: ReactionResult = options.ownReactions === false ? {} : await askOf(target, options);
+      const subject = tokenFor(target);
+      if (subject && !this.aborted) {
+        const { reactionTicket: _ticket, failedSaveBonus: _bonus, ownReactions: _own, ...others } = options;
+        for (const reactor of subjectReactors(subject)) {
+          if (this.aborted) break;
+          try { await askOf(reactor, { ...others, subject }); }
+          catch (err) { console.warn(`midi-qol | ${triggerType} reactions of ${reactor.name} about ${subject.name}`, err); }
+        }
+      }
+      return own;
+    };
     if (!id) return ask();
     // A step's context gives TokenDocuments (proposal section 18): the target as given goes only to midi's own ask
     return (await this.runInlineStep(id, ask, { reaction: { target: tokenFor(target), triggerTokenUuid, triggeringRoll, triggerType, options } })) ?? {};
@@ -3986,6 +4002,8 @@ export class Workflow {
     } = this.workflowOptions ?? {};
     // Only what transmission would carry: other modules' per-use state stays with this workflow.
     usage.midiOptions.workflowOptions = inheritableWorkflowOptions(inheritedWorkflowOptions);
+    // Launched by this use, not cast (lib/entries/useEvents.ts isCasting)
+    usage.midiOptions.workflowOptions.isTriggered = true;
     // The chain so far: this use's targets taken, one more leap; the first use sets the limit
     let chain: ChainState | undefined;
     if (chained || spec.chain) {
@@ -5681,7 +5699,7 @@ export class Workflow {
         actor: t.actor?.uuid ?? "",
         token: t.uuid,
         //@ts-expect-error no dnd5e-types
-        ac: recorded ? recorded.ac : (hasCoverTotal(t.actor, this.token) ? null : t?.actor?.system.attributes.ac.value as number),
+        ac: recorded ? recorded.ac : (hasCoverTotal(t.actor, this.token, this.activity) ? null : t?.actor?.system.attributes.ac.value as number),
         saved: !!t.uuid && saves.has(t.uuid),
         semiSuperSaver: !!t.uuid && semiSuperSavers.has(t.uuid),
         superSaver: !!t.uuid && superSavers.has(t.uuid),
@@ -6036,7 +6054,7 @@ export class Workflow {
     const targetActor = target.actor;
     //@ts-expect-error no dnd5e-types
     let statusCoverBonus: number = targetActor?.system?.attributes?.ac?.cover ?? 0;
-    if (hasCoverTotal(targetActor, this.token)) statusCoverBonus = TOTAL_COVER;
+    if (hasCoverTotal(targetActor, this.token, this.activity)) statusCoverBonus = TOTAL_COVER;
 
     // Get the raw module-computed cover bonus
     let moduleCoverBonus = 0;
@@ -9522,6 +9540,8 @@ export type WorkflowOptions = InexactPartial<{
   overTimeEffectUuid: string;
   /** An over-time effect's use (utils doOverTimeEffect); CAT reads it too */
   isOverTime: boolean;
+  /** Launched by another use (a Then activity, a chain, an entry's `use`), not chosen: never a spell's casting */
+  isTriggered: boolean;
   // A teleport's destinations, or "button" to leave a Plan: Auto teleport to the card's button.
   teleport: TeleportOption;
 }>

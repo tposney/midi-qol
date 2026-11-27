@@ -1,0 +1,150 @@
+{
+  "name": "Shield of the Cavalier (overlay)",
+  "type": "equipment",
+  "img": "icons/equipment/shield/heater-steel-gold.webp",
+  "_id": "mqeOvShieldCaval",
+  "_key": "!items!mqeOvShieldCaval",
+  "folder": "vRER2gRRqVSRvQEi",
+  "ownership": {
+    "default": 0
+  },
+  "system": {
+    "description": {
+      "value": "<p><em>Overlay (midi-qol):</em> <strong>Forceful Bash</strong>: on a hit you are offered to push the target up to 10 feet away and, if it is your size or smaller, to knock it Prone. <strong>Protective Field</strong>: offered as your reaction when you, or an ally you can see within 5 feet of you, are targeted by an attack or make a saving throw against an area (a reaction about another creature: its condition reads <code>subject</code>). The 5-foot Emanation is placed on you and stays where it is; creatures partly in it are pushed out; the triggering attack or area has no effect on those in it; nothing moves into or out of it (walls made by the GM's client), and no attack or harmful effect crosses its boundary either way (a barrier to uses). It lasts while you concentrate, up to 1 minute. It changes no item: midi applies it to any item with the identifier <code>shield-of-the-cavalier</code> (2024 rules) that nothing else automates.</p>",
+      "chatFlavor": ""
+    },
+    "identifier": "shield-of-the-cavalier-overlay",
+    "source": {
+      "rules": "2024"
+    },
+    "activities": {}
+  },
+  "effects": [],
+  "flags": {
+    "midi-qol": {
+      "overlay": {
+        "identifier": "shield-of-the-cavalier",
+        "rules": "2024",
+        "version": "1",
+        "changes": [
+          {
+            "key": "system.activities.ABPaLpY5mrKpB4ou.effects",
+            "value": "[]",
+            "type": "override"
+          },
+          {
+            "key": "system.activities.Zk2NWOrZcSWTaogR.useConditionText",
+            "value": "(reaction === \"preAttack\" || (reaction === \"isSave\" && !!workflow?.activity?.target?.template?.type)) && (subject.isSelf || (subject.isAlly && subject.canSee))",
+            "type": "override"
+          },
+          {
+            "key": "system.activities.Zk2NWOrZcSWTaogR.midiProperties.forceConsumeDialog",
+            "value": "never",
+            "type": "override"
+          },
+          {
+            "key": "system.activities.Zk2NWOrZcSWTaogR.range.units",
+            "value": "self",
+            "type": "override"
+          },
+          {
+            "key": "system.activities.Zk2NWOrZcSWTaogR.target.template.stationary",
+            "value": "true",
+            "type": "override"
+          },
+          {
+            "key": "system.activities.Zk2NWOrZcSWTaogR.target.affects.count",
+            "value": "",
+            "type": "override"
+          },
+          {
+            "key": "system.activities.Zk2NWOrZcSWTaogR.regionBarrier.enabled",
+            "value": "true",
+            "type": "override"
+          },
+          {
+            "key": "system.activities.Zk2NWOrZcSWTaogR.regionBarrier.move",
+            "value": "true",
+            "type": "override"
+          },
+          {
+            "key": "system.activities.Zk2NWOrZcSWTaogR.regionBarrier.sight",
+            "value": "none",
+            "type": "override"
+          },
+          {
+            "key": "system.activities.Zk2NWOrZcSWTaogR.regionBarrier.uses",
+            "value": "harmful",
+            "type": "override"
+          },
+          {
+            "key": "system.activities.Zk2NWOrZcSWTaogR.regionBarrier.usesDirection",
+            "value": "both",
+            "type": "override"
+          }
+        ]
+      },
+      "entries": [
+        {
+          "id": "bash-push",
+          "on": "use.target.hit",
+          "offer": "ask",
+          "label": "Forceful Bash: Push",
+          "description": "midi-qol.Overlay.ShieldCavalier.Push",
+          "if": "use.activity.id === 'ABPaLpY5mrKpB4ou'",
+          "do": [
+            {
+              "move": {
+                "push": 10
+              }
+            }
+          ]
+        },
+        {
+          "id": "bash-prone",
+          "on": "use.target.hit",
+          "offer": "ask",
+          "label": "Forceful Bash: Knock Prone",
+          "description": "midi-qol.Overlay.ShieldCavalier.Prone",
+          "if": "use.activity.id === 'ABPaLpY5mrKpB4ou' && target.sizeRank <= actor.sizeRank",
+          "do": [
+            {
+              "effect": "apply",
+              "what": "Knocked Down",
+              "to": "target"
+            }
+          ]
+        },
+        {
+          "id": "field",
+          "on": "use.targeted",
+          "label": "Protective Field",
+          "if": "use.activity.id === 'Zk2NWOrZcSWTaogR'",
+          "do": [
+            {
+              "move": {
+                "place": "outside"
+              }
+            },
+            {
+              "fails": {
+                "use": "triggering",
+                "for": [
+                  "targets",
+                  "self"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "_stats": {
+    "compendiumSource": null,
+    "duplicateSource": null,
+    "coreVersion": "14.360",
+    "systemId": "dnd5e",
+    "systemVersion": "6.1.0"
+  }
+}

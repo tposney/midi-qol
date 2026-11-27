@@ -5,6 +5,7 @@ import { findNearby } from "../utils.js";
 import { outcomes } from "./outcomes.js";
 import { chargeToward } from "./charge.js";
 import { coverFor } from "../services/cover/service.js";
+import { isCasting, useCause } from "./useCause.js";
 
 /*
  * Tags (M26; shapes ~/Documents/midi-next-waveB-shapes-2026-11-20.md): named facts about a use, and about a target where
@@ -252,6 +253,10 @@ export function registerMidiTags(): void {
   }));
   registerTag("use.area", use("Has an area", ({ workflow }) => !!workflow.activity?.target?.template?.type));
   // A reaction's use: the trigger it answers (isOpportunity, isCast, isHit...: doReactions sets it), else ""
+  // How the use came about (lib/useCause.ts): direct, reaction, triggered, chain, overTime, area
+  registerTag("use.cause", use("How it came about: direct, reaction, triggered (Then, an entry's use), chain (a leap), overTime, area (a creature in it)", ({ workflow }) => useCause(workflow)));
+  // The casting of a spell, not another use of it (a leap, a lingering area's turn, Moonbeam's move): Counterspell
+  registerTag("use.casts", use("The casting of a spell (not a leap, a tick, an area's turn or a slotless activity)", ({ workflow }) => isCasting(workflow)));
   registerTag("use.reaction", use("The reaction trigger it answers (isOpportunity, isCast, isHit...)", ({ workflow }) => (workflow.workflowOptions as { reactionTrigger?: string } | undefined)?.reactionTrigger ?? ""));
   registerTag("use.targetsScale", use("A spell whose number of targets rises with the level cast", context => targetsScale(itemOf(context))));
   registerTag("use.costlyMaterial", use("A spell with a material component that has a cost or is consumed", context => {

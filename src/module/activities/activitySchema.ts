@@ -139,6 +139,9 @@ function sharedFields(): Fields {
       // used on a creature that ends its turn there, or enters the wall
       sideDepth: new NumberField({ initial: 0, min: 0 }),
       sideActivity: new StringField({ initial: "" }),
+      // Uses stopped crossing the area's boundary (lib/barrierUses.ts): none, harmful (attack, save, damage), all
+      uses: new StringField({ initial: "none", choices: ["none", "harmful", "all"] }),
+      usesDirection: new StringField({ initial: "both", choices: ["both", "into", "out"] }),
     }),
     regionLight: new SchemaField({
       enabled: new BooleanField({ initial: false }),

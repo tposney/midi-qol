@@ -2,7 +2,7 @@ import { tokenFor } from "../tokenResolver.js";
 import { doReactions } from "../../utils.js";
 import { forcedMovement, type Point } from "../../services/forcedMovement/service.js";
 import { isForcedAction } from "../../services/economy/movement.js";
-import { insideOf, placeBeside, placeInside } from "../../services/interactions/carried.js";
+import { insideOf, partlyInside, placeBeside, placeInside, placeOutside } from "../../services/interactions/carried.js";
 import { spacesEntered, type Rect } from "../spaceEntry.js";
 import { collectEntries, registerAction, registerEvent, runEvent, type ActionRun, type EventContext } from "./engine.js";
 
@@ -22,6 +22,8 @@ import { collectEntries, registerAction, registerEvent, runEvent, type ActionRun
  *   with `reaction === "isMoved"` are then offered (the reactionmoved trigger, the same event as `event`).
  * - `{ move: { place: "inside" | "beside", from? }, to? }`: the subjects put centred in `from`'s space, or on the nearest
  *   free space next to it (services/interactions/carried.ts), at once and through anything.
+ * - `{ move: { place: "outside" }, to? }`: the creatures partly in the use's area (not fully contained: some of their
+ *   spaces in it), or `to`, put on the nearest unoccupied space wholly outside it (Protective Field).
  * - `{ opportunityAttack: true }`: the bearer is offered its melee attacks against event.creature as its reaction.
  * - `{ move: { push | pull | slide: feet, angle?, from? }, to? }`: the subjects pushed away from, or pulled towards,
  *   `from` (user: the use's token, default; bearer; area: the centre of the use's area), or slid at `angle` degrees,
@@ -100,8 +102,25 @@ async function amount(value: unknown, run: ActionRun): Promise<number> {
 }
 
 /** `{ move: { push | pull | slide, angle?, from? }, to? }` */
+/** The area the use placed (a region on Foundry 14) */
+function useArea(run: ActionRun): RegionDocument.Implementation | undefined {
+  const area = (run.context.workflow as { template?: unknown } | undefined)?.template;
+  return area instanceof RegionDocument ? area as RegionDocument.Implementation : undefined;
+}
+
+/** `{ move: { place: "outside" }, to? }`: the creatures partly in the use's area (default), or `to`, put outside it */
+async function placeOutsideAction(run: ActionRun) {
+  const area = useArea(run);
+  if (!area?.parent) return { success: false };
+  const subjects = typeof run.action.to === "string" ? moveSubjects(run) : area.parent.tokens.filter(t => !!t.actor && !t.hidden && partlyInside(t, area));
+  let moved = false;
+  for (const token of subjects) moved = (await placeOutside(token, area)) || moved;
+  return { success: moved };
+}
+
 async function moveAction(run: ActionRun) {
   const spec = (run.action.move ?? {}) as { push?: unknown, pull?: unknown, slide?: unknown, angle?: unknown, from?: unknown, place?: unknown };
+  if (spec.place === "outside") return placeOutsideAction(run);
   const subjects = moveSubjects(run);
   if (!subjects.length) return { success: false };
   let moved = false;

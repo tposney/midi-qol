@@ -17,8 +17,10 @@ const { StringField, BooleanField, NumberField } = foundry.data.fields;
  * second region beside the walls, shown to everyone, whose rule uses the activity on a creature ending its turn there.
  * It is made, made again and removed with the walls.
  *
+ * `uses` / `usesDirection`: uses stopped crossing its boundary, with or without walls (stage 4, lib/barrierUses.ts).
+ *
  * Not here: a barrier for some creatures only (terrain, stage 2), one that moves with its caster (stage 3: a wall
- * redrawn at every step is the wrong tool), uses stopped but not creatures (stage 4).
+ * redrawn at every step is the wrong tool).
  */
 
 type Region = RegionDocument.Implementation & { polygons?: { points: number[] }[], levels?: Iterable<string> };
@@ -71,7 +73,10 @@ export class MidiRegionBarrierBehaviorType extends foundry.data.regionBehaviors.
       sideActivityUuid: new StringField({ initial: "", blank: true, label: `${lp}.sideActivityUuid.label` }),
       sourceItemUuid: new StringField({ initial: "", blank: true }),
       sourceActorUuid: new StringField({ initial: "", blank: true }),
-      castLevel: new NumberField({ initial: 0, integer: true, min: 0 })
+      castLevel: new NumberField({ initial: 0, integer: true, min: 0 }),
+      // Uses stopped crossing its boundary (lib/barrierUses.ts)
+      uses: new StringField({ required: true, blank: false, initial: "none", choices: choices("uses", ["none", "harmful", "all"]), label: `${lp}.uses.label`, hint: `${lp}.uses.hint` }),
+      usesDirection: new StringField({ required: true, blank: false, initial: "both", choices: choices("usesDirection", ["both", "into", "out"]), label: `${lp}.usesDirection.label` })
     };
   }
 
@@ -86,6 +91,8 @@ export class MidiRegionBarrierBehaviorType extends foundry.data.regionBehaviors.
   declare sourceItemUuid: string;
   declare sourceActorUuid: string;
   declare castLevel: number;
+  declare uses: string;
+  declare usesDirection: string;
 
   /** The wall data for the region as it is now */
   _wallData(): WallDocument.CreateData[] {
@@ -96,6 +103,8 @@ export class MidiRegionBarrierBehaviorType extends foundry.data.regionBehaviors.
     });
     const polygons = (region.polygons ?? []).map(polygon => polygon.points);
     const levels = Array.from(region.levels ?? []);
+    // A barrier to uses only: no walls
+    if (!this.move && this.sight === "none" && this.sound === "none") return [];
     return barrierSegments(shapes, polygons, this.trace).map(c => ({
       c,
       move: this.move ? CONST.WALL_MOVEMENT_TYPES.NORMAL : CONST.WALL_MOVEMENT_TYPES.NONE,

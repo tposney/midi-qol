@@ -37,3 +37,25 @@ export function besideSpots(outer: Rect, inner: { width: number, height: number 
 export function freeSpot(spots: readonly Spot[], inner: { width: number, height: number }, taken: readonly Rect[], allowed: (spot: Spot) => boolean = () => true): Spot | undefined {
   return spots.find(spot => !taken.some(rect => overlaps({ ...spot, ...inner }, rect)) && allowed(spot));
 }
+
+/** The centres of the grid spaces a rect covers (a token's spaces: what "in an area" counts for it) */
+export function spaceCentres(rect: Rect, step: number): Spot[] {
+  const centres: Spot[] = [];
+  const across = Math.max(1, Math.round(rect.width / step)), down = Math.max(1, Math.round(rect.height / step));
+  const w = rect.width / across, h = rect.height / down;
+  for (let i = 0; i < across; i++) for (let j = 0; j < down; j++) centres.push({ x: rect.x + (i + 0.5) * w, y: rect.y + (j + 0.5) * h });
+  return centres;
+}
+
+/** Spots around `here` a grid step apart, ring by ring up to `rings` steps away, nearest first */
+export function ringSpots(here: Spot, step: number, rings: number): Spot[] {
+  const spots: Spot[] = [];
+  for (let k = 1; k <= rings; k++) {
+    for (let i = -k; i <= k; i++) for (let j = -k; j <= k; j++) {
+      if (Math.max(Math.abs(i), Math.abs(j)) !== k) continue;
+      spots.push({ x: here.x + i * step, y: here.y + j * step });
+    }
+  }
+  const distance = (s: Spot) => Math.hypot(s.x - here.x, s.y - here.y);
+  return spots.sort((a, b) => distance(a) - distance(b));
+}

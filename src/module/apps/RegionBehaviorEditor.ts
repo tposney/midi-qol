@@ -80,6 +80,8 @@ export class RegionBehaviorEditor extends HandlebarsApplicationMixin(Application
       sightOptions: barrierOptions("sense", ["none", "limited", "normal"], barrier?.sight ?? "none"),
       soundOptions: barrierOptions("sense", ["none", "limited", "normal"], barrier?.sound ?? "none"),
       traceOptions: barrierOptions("trace", ["auto", "axis", "outline", "middle"], barrier?.trace ?? "auto"),
+      usesOptions: barrierOptions("uses", ["none", "harmful", "all"], barrier?.uses ?? "none"),
+      usesDirectionOptions: barrierOptions("usesDirection", ["both", "into", "out"], barrier?.usesDirection ?? "both"),
     };
 
     // Wall restriction dropdown — uses Foundry's EDGE_RESTRICTION_TYPES plus "none"
@@ -220,6 +222,8 @@ export class RegionBehaviorEditor extends HandlebarsApplicationMixin(Application
       "regionBarrier.sight": data.barrierSight ?? "none",
       "regionBarrier.sound": data.barrierSound ?? "none",
       "regionBarrier.trace": data.barrierTrace ?? "auto",
+      "regionBarrier.uses": data.barrierUses ?? "none",
+      "regionBarrier.usesDirection": data.barrierUsesDirection ?? "both",
     };
 
     await this.activity.update(update);

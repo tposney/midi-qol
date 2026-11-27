@@ -1,3 +1,4 @@
+import { isCasting } from "../useCause.js";
 import { register } from "../../api/services.js";
 import { unTimedExecuteAsGM } from "../../GMAction.js";
 import { applyTokenDamage } from "../../utils.js";
@@ -44,8 +45,9 @@ const documents = (set: { documents?: TokenDocument.Implementation[] } | undefin
 const allTargets: TargetsOf = w => documents(w.targets);
 const hitTargets: TargetsOf = w => [...new Set([...documents(w.hitTargets), ...documents(w.hitTargetsEC)])];
 const attacks = (w: Workflow) => !!w.activity?.attack;
+const casts = isCasting;
 // @ts-expect-error item.type includes dnd5e subtypes
-const casts = (w: Workflow) => w.item?.type === "spell";
+const isSpellUse = (w: Workflow) => w.item?.type === "spell";
 const missedTargets: TargetsOf = w => { const hit = new Set(hitTargets(w)); return allTargets(w).filter(t => !hit.has(t)); };
 const failedTargets: TargetsOf = w => documents(w.failedSaves);
 const savedTargets: TargetsOf = w => documents(w.saves);
@@ -110,8 +112,9 @@ export async function raiseUseEvents(workflow: Workflow, prePost: "pre" | "post"
   const list = step ? USE_EVENTS[`${prePost} ${step}`] : undefined;
   if (!list || workflow.readOnly) return;
   await raiseListed(workflow, list);
-  // A spell being cast: reactions to it (Counterspell), its slot spent and nothing rolled yet (lib/entries/castReactions.ts)
-  if (prePost === "post" && step === "midi-qol.PreambleComplete" && casts(workflow) && !workflow.aborted) await offerCastReactions(workflow);
+  // A spell's use: reactions to it (Counterspell), its slot spent and nothing rolled yet (lib/entries/castReactions.ts);
+  // whether it is the spell's casting is the reaction's condition's to say (tags.use.casts: a leap isn't)
+  if (prePost === "post" && step === "midi-qol.PreambleComplete" && isSpellUse(workflow) && !workflow.aborted) await offerCastReactions(workflow);
 }
 
 async function raiseListed(workflow: Workflow, list: EventAt[]): Promise<void> {

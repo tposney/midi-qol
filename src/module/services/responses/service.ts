@@ -29,6 +29,11 @@ export interface ResponseQuery {
   usedReaction: boolean;
   /** Contract 2: the event this is (lib/entries: attacked, hit, missed, saveRequested, saveFailed, saveSucceeded, damaging, healing) */
   eventId?: string;
+  /**
+   * The creature the trigger is about when it is not the reacting one (an ally attacked: Protective Field; a creature
+   * casting: Counterspell). Only contributors with `aboutOthers` are asked then (lib/subjectReactions.ts).
+   */
+  subject?: TokenDocument.Implementation;
   options: any;
 }
 
@@ -79,6 +84,8 @@ export type ResponseCandidate = {
 });
 
 export interface ResponseContributor {
+  /** It offers reactions about another creature (query.subject); without it, it is asked only about its own creature */
+  aboutOthers?: boolean;
   for(query: ResponseQuery): readonly ResponseCandidate[] | undefined | Promise<readonly ResponseCandidate[] | undefined>;
 }
 
@@ -101,6 +108,7 @@ export async function collectResponses(query: ResponseQuery): Promise<{ contribu
   const found: { contributor: string, candidate: ResponseCandidate }[] = [];
   const seen = new Set<string>();
   for (const { id, provider } of entries<ResponseContributor>("responses")) {
+    if (query.subject && query.subject !== query.target && !provider.aboutOthers) continue;
     let candidates: readonly ResponseCandidate[];
     try { candidates = await provider.for(query) ?? []; }
     catch (err) { reportServiceProblem("responses", id, "failed", err); continue; }

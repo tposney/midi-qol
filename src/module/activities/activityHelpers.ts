@@ -1,5 +1,6 @@
 import { tokenFor, tokenOf } from "../lib/tokenResolver.js";
 import { lineAxis, segmentCrossesRect, type ShapeFacts } from "../lib/barrierGeometry.js";
+import { useBarrierBetween } from "../lib/barrierUses.js";
 import { stoppedAfterDialog } from "./afterUseDialog.js";
 import { confirmTargets } from "../services/targetConfirmation/service.js";
 import { isMidiActivityType } from "./midiActivity.js";
@@ -1119,7 +1120,17 @@ function computeTargetsFromRegion(
     }
   }
 
-  return candidates.filter(token => isTokenInsideRegion(regionDoc, token, wallsBlockTargeting) && token.id);
+  return candidates.filter(token => isTokenInsideRegion(regionDoc, token, wallsBlockTargeting) && token.id && !areaBarred(regionDoc, token));
+}
+
+/** An area placed on one side of a barrier to uses leaves out those on the other (lib/barrierUses.ts) */
+function areaBarred(regionDoc: RegionDocument.Implementation, token: Token.Implementation): boolean {
+  const origin = regionShapeOrigin(regionDoc);
+  if (!origin) return false;
+  const bottom = (regionDoc as unknown as { elevation?: { bottom?: number | null } }).elevation?.bottom;
+  const activityUuid = foundry.utils.getProperty(regionDoc, "flags.dnd5e.activity");
+  const activity = typeof activityUuid === "string" ? fromUuidSync(activityUuid) as unknown as Activity | null : null;
+  return !!useBarrierBetween({ ...origin, elevation: typeof bottom === "number" && Number.isFinite(bottom) ? bottom : token.document.elevation ?? 0 }, token.document, activity);
 }
 
 /**

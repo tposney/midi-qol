@@ -1,5 +1,6 @@
 import { tokenFor } from "./lib/tokenResolver.js";
 import { sharesInside } from "./services/interactions/carried.js";
+import { useBarrierBetween } from "./lib/barrierUses.js";
 import { defenceMessageMode } from "../rules/activeDefence/index.js";
 import { vitalityItemName } from "../rules/vitalityItem.js";
 import { glancingDamage } from "../rules/challengeModeArmor.js";
@@ -3349,12 +3350,16 @@ export function checkTargetsSeen(activity: Activity, token: TokenOrDocument | un
  * module's total cover. None with *Ignore total cover*.
  */
 export function totalCoverTargets(activity: Activity, token: TokenOrDocument | undefined, targets: Iterable<TokenOrDocument>): TokenOrDocument[] {
-  const coverCalculation = configSettings.optionalRules.coverCalculation;
-  if (!coverCalculation || coverCalculation === "none" || !token || activity.midiProperties?.ignoreFullCover) return [];
+  if (!token) return [];
   const tokenDocument = tokenFor(token);
-  return [...targets].filter(target => tokenFor(target) !== tokenDocument
-    && (hasCoverTotal(tokenFor(target)?.actor, token)
-      || (coverCalculation !== "dnd5eStatus" && computeCoverBonus(token, target, activity) === TOTAL_COVER)));
+  const others = [...targets].filter(target => tokenFor(target) !== tokenDocument);
+  // A barrier to uses is not cover: no setting or property ignores it (lib/barrierUses.ts)
+  const barred = others.filter(target => !!useBarrierBetween(tokenDocument, tokenFor(target), activity));
+  const coverCalculation = configSettings.optionalRules.coverCalculation;
+  if (!coverCalculation || coverCalculation === "none" || activity.midiProperties?.ignoreFullCover) return barred;
+  return others.filter(target => barred.includes(target)
+    || hasCoverTotal(tokenFor(target)?.actor, token)
+    || (coverCalculation !== "dnd5eStatus" && computeCoverBonus(token, target, activity) === TOTAL_COVER));
 }
 
 /** Warn about targets with total cover; false if there are any */
@@ -3369,13 +3374,17 @@ export function checkTotalCover(activity: Activity, token: TokenOrDocument | und
 
 /**
  * Check if an actor has the coverTotal status (impossible to hit). From `from`: not when one is inside the other, or
- * both inside the same creature (a swallowed creature's total cover is against those outside)
+ * both inside the same creature (a swallowed creature's total cover is against those outside); and always when a
+ * barrier to uses (of `activity`'s kind) stands between them
  */
-export function hasCoverTotal(actor: Actor | null | undefined, from?: TokenOrDocument): boolean {
-  if (!actor?.statuses?.has("coverTotal")) return false;
-  if (!from) return true;
+export function hasCoverTotal(actor: Actor | null | undefined, from?: TokenOrDocument, activity?: Activity | null): boolean {
+  if (!actor) return false;
   const target = tokenFor(actor as Actor.Implementation);
-  const attacker = tokenFor(from);
+  const attacker = from ? tokenFor(from) : undefined;
+  // Across a barrier to uses (a Protective Field): as total cover, whatever the statuses
+  if (target && attacker && useBarrierBetween(attacker, target, activity)) return true;
+  if (!actor.statuses?.has("coverTotal")) return false;
+  if (!from) return true;
   return !(target && attacker && sharesInside(target, attacker));
 }
 
@@ -5305,6 +5314,9 @@ export async function doReactions(targetRef: TokenOrDocument | string, triggerTo
 
     if (checkIncapacitated(target.actor, debugEnabled > 0, false)) return noResult;
     if (hasNoReactionsMarker(target.actor)) return noResult;
+    // Another creature's trigger (lib/subjectReactions.ts): its reactions about others only, no AC bonuses of its own
+    const subjectToken = options.subject instanceof TokenDocument ? options.subject : undefined;
+    const aboutOther = subjectToken && subjectToken !== target.document ? subjectToken : undefined;
     let player = playerFor(tokenFor(target));
     const usedReaction = hasUsedReaction(target.actor);
     if (getReactionSetting(player) === "none") return noResult;
@@ -5319,7 +5331,8 @@ export async function doReactions(targetRef: TokenOrDocument | string, triggerTo
     try {
       // The reactions service's contributors (midi's own: services/responses/provider.ts), each candidate once, only
       // those that could change the result
-      reactionQuery = { workflow: options.workflow, target: target.document, actor: target.actor, triggerType, trigger: reactionTriggerLabelFor(triggerType), eventId: eventOfTrigger(triggerType), triggeringRoll, usedReaction, options };
+      reactionQuery = { workflow: options.workflow, target: target.document, actor: target.actor, triggerType, trigger: reactionTriggerLabelFor(triggerType), eventId: eventOfTrigger(triggerType), triggeringRoll, usedReaction, options,
+        ...(aboutOther ? { subject: aboutOther } : {}) };
       const found = await collectResponses(reactionQuery);
       for (const { contributor, candidate } of found) {
         // Contract 2: an offer (not a whole activity) is shown in the same prompt and taken here
@@ -5349,7 +5362,7 @@ export async function doReactions(targetRef: TokenOrDocument | string, triggerTo
       return { name: "Filter", ac: 0, uuid: undefined };
     }
     reactionCount = (reactionActivityList?.length ?? 0) + reactionOffers.size;
-    if (!usedReaction) {
+    if (!usedReaction && !aboutOther) {
       const midiFlags = target.actor.flags[MODULE_ID];
       reactionCount = reactionCount + Object.keys(midiFlags?.optional ?? [])
         .filter(flag => {
@@ -5375,7 +5388,7 @@ export async function doReactions(targetRef: TokenOrDocument | string, triggerTo
     const attacker = triggerTokenUuid ? tokenOf(tokenFor(triggerTokenUuid)) : undefined;
     const seen = attacker && attacker !== target ? canSee(target, attacker, { forceVision: true }) : true;
     const named = reveals({ subject: "attacker", user: player, caster: workflow?.actor ?? undefined, target: target.actor, seen });
-    const reactionFlavor = game.i18n?.format(reactionPromptFor(triggerType), { itemName: named ? (options.item?.name ?? "unknown") : i18n("midi-qol.UnseenSource"), actorName: target.name });
+    const reactionFlavor = game.i18n?.format(reactionPromptFor(triggerType), { itemName: named ? (options.item?.name ?? "unknown") : i18n("midi-qol.UnseenSource"), actorName: aboutOther?.name ?? target.name });
     const chatData: ChatMessage.CreateData = {
       content: reactionFlavor,
       whisper: [player.id]
@@ -6261,6 +6274,13 @@ export function typeOrRace(entity: TokenOrDocument | Actor | string): string {
   else return (systemData.details?.race?.name ?? systemData.details?.race)?.toLocaleLowerCase() ?? "";
 }
 
+/** An actor's size as dnd5e's actorSizes `numerical` (undefined: none known) */
+export function sizeRankOf(actor: Actor | null | undefined): number | undefined {
+  // @ts-expect-error no dnd5e-types
+  const size: unknown = actor?.system?.traits?.size;
+  return typeof size === "string" ? sizeNumeric(size) : undefined;
+}
+
 export function sizeNumeric(size: string): number | undefined {
   const s = size?.toLowerCase();
   if (!s) return undefined;
@@ -6445,6 +6465,8 @@ export function createConditionData(data: {
   rollData.actor = {};
   rollData.actor.raceOrType = actor ? raceOrType(actor) : "";
   rollData.actor.typeOrRace = actor ? typeOrRace(actor) : "";
+  // Sizes compared as numbers (dnd5e's actorSizes numerical: tiny 0 ... gargantuan 5): `target.sizeRank <= actor.sizeRank`
+  rollData.actor.sizeRank = sizeRankOf(actor);
   rollData.items = actor?.items?.map(i => itemConditionData(i)) ?? [];
   rollData.equippedItems = rollData.items.filter(i => i.equipped) ?? [];
   rollData.worldTime = game.time?.worldTime;
@@ -6467,6 +6489,7 @@ export function createConditionData(data: {
         rollData.typeOrRace = theTargetActor ? typeOrRace(theTargetActor) : "";
         rollData.target.raceOrType = theTarget.actor ? raceOrType(theTargetActor) : "";
         rollData.target.typeOrRace = theTarget.actor ? typeOrRace(theTargetActor) : "";
+        rollData.target.sizeRank = sizeRankOf(theTargetActor);
         rollData.target.items = theTargetActor?.items?.map(i => itemConditionData(i)) ?? [];
         rollData.target.equippedItems = rollData.target.items.filter(i => i.equipped) ?? [];
         rollData.target.saved = data.workflow?.saves.has(theTarget);

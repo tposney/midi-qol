@@ -114,6 +114,15 @@
       <label>{{ localize "BEHAVIOR.TYPES.midi-qol.regionBarrier.FIELDS.trace.label" }}</label>
       <div class="form-fields"><select name="barrierTrace">{{#each barrier.traceOptions}}<option value="{{this.value}}" {{#if this.selected}}selected{{/if}}>{{this.label}}</option>{{/each}}</select></div>
     </div>
+    <div class="form-group">
+      <label>{{ localize "BEHAVIOR.TYPES.midi-qol.regionBarrier.FIELDS.uses.label" }}</label>
+      <div class="form-fields"><select name="barrierUses">{{#each barrier.usesOptions}}<option value="{{this.value}}" {{#if this.selected}}selected{{/if}}>{{this.label}}</option>{{/each}}</select></div>
+      <p class="hint">{{ localize "BEHAVIOR.TYPES.midi-qol.regionBarrier.FIELDS.uses.hint" }}</p>
+    </div>
+    <div class="form-group">
+      <label>{{ localize "BEHAVIOR.TYPES.midi-qol.regionBarrier.FIELDS.usesDirection.label" }}</label>
+      <div class="form-fields"><select name="barrierUsesDirection">{{#each barrier.usesDirectionOptions}}<option value="{{this.value}}" {{#if this.selected}}selected{{/if}}>{{this.label}}</option>{{/each}}</select></div>
+    </div>
   </fieldset>
 
   <fieldset>

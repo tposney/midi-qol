@@ -350,7 +350,7 @@ export async function attachRegionActivityBehavior(activity: MidiActivity, regio
 
   // The area as a barrier: its walls are the behaviour's (made by the active GM as it becomes active)
   const barrier = activity.regionBarrier;
-  if (barrier?.enabled && (barrier.move || barrier.sight !== "none" || barrier.sound !== "none")) {
+  if (barrier?.enabled && (barrier.move || barrier.sight !== "none" || barrier.sound !== "none" || (barrier.uses ?? "none") !== "none")) {
     // One side affects those near it: the caster says which, and the behaviour keeps an area beside the wall for it
     // @ts-expect-error no dnd5e types for activities
     const sideActivity = barrier.sideActivity ? activity.item?.system.activities?.get(barrier.sideActivity) : undefined;
@@ -361,7 +361,8 @@ export async function attachRegionActivityBehavior(activity: MidiActivity, regio
     behaviors.push({
       type: `${MODULE_ID}.regionBarrier` as const,
       name: `${activity.item?.name ?? "Activity"} Barrier`,
-      system: { move: barrier.move, sight: barrier.sight ?? "none", sound: barrier.sound ?? "none", direction: barrier.direction ?? "both", trace: barrier.trace ?? "auto", ...sideSystem },
+      system: { move: barrier.move, sight: barrier.sight ?? "none", sound: barrier.sound ?? "none", direction: barrier.direction ?? "both", trace: barrier.trace ?? "auto",
+        uses: barrier.uses ?? "none", usesDirection: barrier.usesDirection ?? "both", ...sideSystem },
     });
     // Entering the wall itself (a round area: crossing its edge either way), the first time on a turn
     if (sided) {

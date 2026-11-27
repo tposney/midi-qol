@@ -164,7 +164,7 @@ const documentOf = (token: TokenOrDocument | undefined) => token instanceof Toke
  */
 export function coverFor(attacker: TokenOrDocument | undefined, target: TokenOrDocument, options: { activity?: Activity, origin?: CoverPosition } = {}): CoverAnswer & { from: "status" | "geometry" | "none" } {
   const targetActor = target.actor;
-  if (targetActor && hasCoverTotal(targetActor, attacker)) return { ...coverAnswer("total"), from: "status" };
+  if (targetActor && hasCoverTotal(targetActor, attacker, options.activity)) return { ...coverAnswer("total"), from: "status" };
   // @ts-expect-error no dnd5e-types
   const statusBonus: number = targetActor?.system?.attributes?.ac?.cover ?? 0;
   const targetDocument = documentOf(target);

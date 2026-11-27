@@ -3,7 +3,7 @@ import { tokenFor } from "../../lib/tokenResolver.js";
 import { effectFlag, itemOfEffect } from "../../lib/entries/rules.js";
 import { toggleStatus } from "../../utils.js";
 import { redrawInside } from "../../lib/insideLook.js";
-import { besideSpots, freeSpot, insideSpot, type Rect, type Spot } from "../../lib/carryGeometry.js";
+import { besideSpots, freeSpot, insideSpot, ringSpots, spaceCentres, type Rect, type Spot } from "../../lib/carryGeometry.js";
 
 /*
  * A creature inside another (swallowed, engulfed). Plan: ~/Documents/midi-next-region-barriers-plan-2026-11-25.md,
@@ -122,6 +122,37 @@ export async function placeBeside(token: TokenDocument.Implementation, carrier: 
     .map(spot => token.getSnappedPosition(spot) as Spot);
   const taken = (carrier.parent?.tokens.filter(other => other !== token && !other.hidden) ?? []).map(rectOf);
   const spot = freeSpot(spots, inner, taken, s => reachable(carrier, s, inner)) ?? freeSpot(spots, inner, taken);
+  if (!spot) return false;
+  return put(token, spot);
+}
+
+type AreaRegion = { testPoint(point: { x: number, y: number, elevation: number }): boolean };
+
+/** Which of a token's spaces (at `spot`, default where it is) are in the region */
+function spacesIn(token: TokenDocument.Implementation, region: AreaRegion, spot?: Spot): boolean[] {
+  const size = canvas!.grid!.size;
+  const rect = { ...rectOf(token), ...(spot ?? {}) };
+  const elevation = token._source.elevation ?? 0;
+  return spaceCentres(rect, size).map(c => region.testPoint({ x: c.x, y: c.y, elevation }));
+}
+
+/** Whether a token is partly in an area: some of its spaces in it, some not (not fully contained) */
+export function partlyInside(token: TokenDocument.Implementation, region: RegionDocument.Implementation): boolean {
+  if (!canvas?.grid || token.parent !== region.parent) return false;
+  const inside = spacesIn(token, region as unknown as AreaRegion);
+  return inside.some(Boolean) && !inside.every(Boolean);
+}
+
+/** The token on the nearest unoccupied space wholly outside the area (Protective Field: those not fully in it) */
+export async function placeOutside(token: TokenDocument.Implementation, region: RegionDocument.Implementation): Promise<boolean> {
+  if (!canvas?.grid || token.parent !== region.parent) return false;
+  const size = canvas.grid.size;
+  const inner = { width: token.width * size, height: token.height * size };
+  const here = rectOf(token);
+  const area = region as unknown as AreaRegion;
+  const spots = ringSpots({ x: here.x, y: here.y }, size, 12).map(spot => token.getSnappedPosition(spot) as Spot);
+  const taken = (token.parent?.tokens.filter(other => other !== token && !other.hidden) ?? []).map(rectOf);
+  const spot = freeSpot(spots, inner, taken, s => !spacesIn(token, area, s).some(Boolean));
   if (!spot) return false;
   return put(token, spot);
 }
