@@ -2731,3 +2731,12 @@ fieldset.midi-qol-use-options .midi-qol-use-options-cost { opacity: 0.8; }
 .condition-editor .condition-editor-reads { font-style: italic; }
 .condition-editor .condition-editor-problem { color: var(--color-level-error, #b00); }
 .condition-editor .condition-editor-unknown { color: var(--color-level-warning, #b67500); }
+/* An overlay drawn as the item it makes: what it adds and changes marked in the margin */
+.midi-qol-entry-editor .midi-qol-entry-overlay-shows { display: flex; gap: 4px; margin: 4px 0; }
+.midi-qol-entry-editor .midi-qol-entry-overlay-shows button { flex: 0 0 auto; width: auto; min-height: 0; line-height: 1.8; font-size: var(--font-size-12); }
+.midi-qol-entry-editor .midi-qol-entry-overlay-shows button.active { outline: 2px solid var(--color-warm-2, #c9593f); }
+.midi-qol-entry-editor .midi-qol-entry-overlay-changes > summary { cursor: pointer; font-weight: bold; }
+.midi-qol-entry-editor .midi-qol-view-added { border-left: 4px solid var(--midi-view-added, #3fae6c); }
+.midi-qol-entry-editor .midi-qol-entry-sentence.midi-qol-view-added { padding-left: 4px; }
+.midi-qol-entry-editor .midi-qol-view-changed { border-left: 4px solid var(--midi-view-added, #3fae6c); padding-left: 6px; font-size: var(--font-size-13); }
+.midi-qol-entry-editor .midi-qol-view-mark { font-size: var(--font-size-11); letter-spacing: 0.06em; text-transform: uppercase; color: var(--midi-view-added, #3fae6c); }

@@ -8,7 +8,8 @@ import { activityOvertimeEntries, overtimeEntries } from "../lib/entries/overtim
 import { ACTIVITY_REF } from "../lib/entries/activityActions.js";
 import { ConditionEditor } from "./ConditionEditor.js";
 import { ConditionBuilder } from "./ConditionBuilder.js";
-import { overlaySummary, setOverlayChange } from "../lib/entries/overlays.js";
+import { overlayBase, overlaySummary, setOverlayChange, type OverlaySummary } from "../lib/entries/overlays.js";
+import { mergeOverlay, type OverlayMarks } from "../lib/entries/overlayMerge.js";
 import { conditionText } from "../lib/entries/conditionVocabulary.js";
 import { behaviourItem, buildBehaviour, namedActivity, type Launch, type OptionalBonusRoll, type Row, type UseNode } from "../lib/entries/behaviour.js";
 import { activityCardContributor, addKindDefs, basicsFieldDefs, contributedActivityCard, effectPresetDefs, optionList, targetPresetDefs, type BasicsFieldDef, contributedEventText } from "../lib/entries/editorServices.js";
@@ -52,6 +53,8 @@ interface EntryDocument {
 type View = "sentence" | "form" | "json";
 /** The views offered; "form" is still accepted when opening: the sentence view with its pane open (the old form view) */
 const VIEWS: readonly View[] = ["sentence", "json"];
+type OverlayShow = "result" | "changes" | "base" | "overlay";
+const OVERLAY_SHOWS: readonly OverlayShow[] = ["result", "changes", "base", "overlay"];
 /**
  * One document of the window: the item, one of its activities or one of its effects. `stored`: its entries as they
  * were read (only a changed home is written); an activity's `choices`: its midiChoices as JSON.
@@ -311,6 +314,11 @@ export class EntryEditor extends HandlebarsApplicationMixin(DocumentSheetV2)<
   #addWhatOpen = false;
   /** The side pane open on the current home's own parts (its choices, settings, an effect's changes) */
   #pane = false;
+  /**
+   * An overlay item opened: drawn as the item it makes (its base with it applied, what it adds and changes marked),
+   * read-only. `show`: that, only what it changes, its base alone, or the overlay item itself (as stored, editable).
+   */
+  #overlay: { item: Item.Implementation, base?: Item.Implementation, marks?: OverlayMarks, summary?: OverlaySummary, show: OverlayShow, resolved: boolean } | undefined;
   /** The "+ effect" form as filled in so far */
   #effectForm: { what: string, name: string, duration: string, units: string, repeat: boolean, param: string } = { what: "", name: "", duration: "", units: "", repeat: false, param: "" };
 
@@ -320,6 +328,8 @@ export class EntryEditor extends HandlebarsApplicationMixin(DocumentSheetV2)<
     // A document sheet's document: the item an activity or an item's effect belongs to, else the effect itself
     super({ ...rest, document: (entryRoot(document) ?? document) as foundry.abstract.Document.Any });
     this.#load(document);
+    // An overlay in the world or a compendium; one an actor holds is that actor's item, used as it is
+    if (this.#root?.getFlag(MODULE_ID, "overlay") && !this.#root.parent) this.#overlay = { item: this.#root, show: "result", resolved: false };
     const last = game.settings.get(MODULE_ID, "EntryEditorView") as View;
     this.#view = view ?? (VIEWS.includes(last) ? last : "sentence");
     if (this.#view === "form") {
@@ -433,6 +443,7 @@ export class EntryEditor extends HandlebarsApplicationMixin(DocumentSheetV2)<
   #ruleSentences(h: Home, activities: Parameters<typeof entrySentence>[1]["activities"]): { lines: { indent: number, text: string }[], options: string }[] {
     const item = h.document instanceof Item ? h.document as Item.Implementation
       : h.document instanceof ActiveEffect ? itemOfEffect(h.document) : (h.document as { item?: Item.Implementation }).item;
+    if (this.#overlay && this.#overlay.show !== "overlay") return [];
     const rule = ruleFor(item)?.rule;
     if (!rule) return [];
     const role = h.document as Parameters<typeof matchesRole>[0];
@@ -446,6 +457,8 @@ export class EntryEditor extends HandlebarsApplicationMixin(DocumentSheetV2)<
 
   /** Where an item's automation comes from when not from the item: a registered rule in use, or one its own automation keeps out */
   #ruleNotice(h: Home): string | undefined {
+    // An overlay drawn as the item it makes: its entries are in the item already, not a rule beside it
+    if (this.#overlay && this.#overlay.show !== "overlay") return undefined;
     if (h.kind !== "item" || !(h.document instanceof Item)) return undefined;
     const item = h.document as Item.Implementation;
     // The item is itself what is registered (a sample item that is also its feature's overlay): nothing is kept out
@@ -488,6 +501,7 @@ export class EntryEditor extends HandlebarsApplicationMixin(DocumentSheetV2)<
       buildCondition: EntryEditor.#onBuildCondition,
       overlayEditChange: EntryEditor.#onOverlayEditChange,
       overlayRemoveChange: EntryEditor.#onOverlayRemoveChange,
+      overlayShow: EntryEditor.#onOverlayShow,
       setView: EntryEditor.#onSetView,
       focusPart: EntryEditor.#onFocusPart,
       editEntry: EntryEditor.#onEditEntry,
@@ -574,7 +588,54 @@ export class EntryEditor extends HandlebarsApplicationMixin(DocumentSheetV2)<
     return problems;
   }
 
+  /** An overlay's base found once (the item it was saved against, else one of its identifier), then what is shown loaded */
+  async #resolveOverlay() {
+    const o = this.#overlay;
+    if (!o || o.resolved) return;
+    o.resolved = true;
+    const flag = o.item.getFlag(MODULE_ID, "overlay");
+    o.base = flag ? await overlayBase(o.item, flag).catch(() => undefined) : undefined;
+    this.#showOverlay(o.show);
+  }
+
+  /** Load what an overlay is shown as: its base with it applied (an item in memory, never saved), its base, or itself */
+  #showOverlay(show: OverlayShow) {
+    const o = this.#overlay;
+    if (!o) return;
+    // Nothing to compare with: the overlay item as it is
+    o.show = o.base ? show : "overlay";
+    o.marks = undefined;
+    let document = o.item;
+    if (o.base && o.show !== "overlay") {
+      const base = o.base.toObject() as unknown as Record<string, unknown>;
+      let data = base;
+      if (o.show !== "base") ({ merged: data, marks: o.marks } = mergeOverlay(base, o.item.toObject() as unknown as Record<string, unknown>));
+      delete data.folder;
+      document = new Item.implementation(data as unknown as Item.CreateData);
+    }
+    this.#load(document as unknown as EntryDocument);
+    this.#at = 0;
+    this.#selected = 0;
+    this.#expanded = false;
+    this.#pane = false;
+    this.#picker = undefined;
+  }
+
+  /** An overlay drawn as the item it makes, or its base, is read: only the overlay item itself is edited here */
+  get isEditable(): boolean {
+    if (this.#overlay && this.#overlay.show !== "overlay") return false;
+    return super.isEditable;
+  }
+
+  static #onOverlayShow(this: EntryEditor, _event: Event, target: HTMLElement) {
+    const show = target.dataset.show as OverlayShow;
+    if (!this.#overlay || !OVERLAY_SHOWS.includes(show)) return;
+    this.#showOverlay(show);
+    this.render();
+  }
+
   async _prepareContext(options) {
+    await this.#resolveOverlay();
     const context = await super._prepareContext(options);
     const draft = this.#drafts[this.#selected];
     const entry = draft?.entry;
@@ -653,7 +714,7 @@ export class EntryEditor extends HandlebarsApplicationMixin(DocumentSheetV2)<
       warnings: this.#document instanceof ActiveEffect ? [] : on.filter(id => EFFECT_ONLY.has(id))
         .map(id => game.i18n?.format("midi-qol.EntryEditor.Warning.EffectOnly", { id }) ?? id),
       overtime: this.#overtimeShown(),
-      canSave: this.#homes.every(h => !h.choicesProblem && !h.settings?.problem && h.drafts.every(d => !d.problems.length))
+      canSave: !(this.#overlay && this.#overlay.show !== "overlay") && this.#homes.every(h => !h.choicesProblem && !h.settings?.problem && h.drafts.every(d => !d.problems.length))
     };
   }
 
@@ -753,8 +814,17 @@ export class EntryEditor extends HandlebarsApplicationMixin(DocumentSheetV2)<
       return activity?.name || (title ? i18n(title) : activity?.type) || id;
     };
     type LaunchContext = { lead: string, name: string, note: string, block?: BlockContext };
-    type RowContext = typeof homes[number]["sentences"][number] & { rowKind: string, replaces: boolean, launches: LaunchContext[] };
-    type BlockContext = Record<string, unknown> & { rows: RowContext[], launches: LaunchContext[] };
+    type RowContext = typeof homes[number]["sentences"][number] & { rowKind: string, replaces: boolean, launches: LaunchContext[], mark?: string };
+    type BlockContext = Record<string, unknown> & { rows: RowContext[], launches: LaunchContext[], mark?: string, changed?: { text: string }[], card?: { stepsBefore?: RowContext[], stepsAfter?: RowContext[] } };
+    // An overlay drawn as the item it makes: what it added and changed
+    const marks = this.#overlay?.marks;
+    const summaryRows = (this.#overlay?.summary?.groups ?? []).flatMap(group => group.rows);
+    const shown = (value: unknown): string => value === undefined || value === null || value === "" ? "—" : typeof value === "boolean" ? i18n(value ? "Yes" : "No") : typeof value === "object" ? JSON.stringify(value) : String(value);
+    const changedIn = (homeId: string) => (marks?.changes ?? []).filter(c => c.home === homeId).map(c => {
+      const row = summaryRows.find(r => r.key === c.key);
+      const read = (value: unknown) => row?.condition && typeof value === "string" && value ? conditionText(value).text : shown(value);
+      return { text: say("Changed", { field: row?.label ?? c.path, base: read(c.base), value: read(c.value) }) };
+    });
     const launch = (l: Launch): LaunchContext => {
       const when = l.when ? (game.i18n?.has(`midi-qol.ItemView.When.${l.when}`) ? say(`When.${l.when}`) : l.when) : say("When.any");
       return {
@@ -791,11 +861,16 @@ export class EntryEditor extends HandlebarsApplicationMixin(DocumentSheetV2)<
       if (!sentence) return undefined;
       // A step the item holds for one activity: that condition is why it is drawn here, not something to read
       const named = r.source.home === "item" && r.kind === "step" ? namedActivity(r.entry.if) : undefined;
-      const lines = named && !named.rest ? sentence.lines.map(line => {
+      // (with more to it, the rest of the condition is what is read)
+      const lines = named ? sentence.lines.map(line => {
         const at = line.parts.findIndex(part => (part as { focus?: string }).focus === "if");
-        return at < 0 ? line : { ...line, parts: line.parts.filter((_part, i) => i !== at && i !== at - 1) };
+        if (at < 0) return line;
+        if (!named.rest) return { ...line, parts: line.parts.filter((_part, i) => i !== at && i !== at - 1) };
+        const read = conditionText(named.rest);
+        return { ...line, parts: line.parts.map((part, i) => i === at ? { ...part, text: read.text, code: !read.known } : part) };
       }) : sentence.lines;
-      return { ...sentence, lines: lead(r, lines), rowKind: r.kind, replaces: r.replaces, launches: r.launches.map(launch) };
+      return { ...sentence, lines: lead(r, lines), rowKind: r.kind, replaces: r.replaces, launches: r.launches.map(launch),
+        mark: marks?.entries.includes(`${r.source.home}:${r.source.homeId ?? ""}:${r.source.entryId}`) ? "added" : undefined };
     };
     const rows = (list: Row[]) => list.flatMap(r => row(r) ?? []);
     function use(node: UseNode, nested = false): BlockContext {
@@ -806,7 +881,8 @@ export class EntryEditor extends HandlebarsApplicationMixin(DocumentSheetV2)<
       const read = reaction && activity?.condition ? conditionText(activity.condition) : undefined;
       const activation = activity?.activation;
       return {
-        home: at, nested, label: nameOf(node.activityId),
+        home: at, nested, label: nameOf(node.activityId), changed: changedIn(node.activityId),
+        mark: marks?.activities.includes(node.activityId) ? "added" : undefined,
         note: [...(runByArea(at) ? [say("RunByArea")] : []), ...(nested ? [say("OnlyFromHere")] : [])].join(" · "),
         cost: activation ? i18n(config.activityActivationTypes?.[activation]?.label ?? activation) : "",
         ...(read ? { trigger: { words: read.text, code: !read.known } } : {}),
@@ -840,7 +916,7 @@ export class EntryEditor extends HandlebarsApplicationMixin(DocumentSheetV2)<
           ...(bonus.condition ? [`${i18n("midi-qol.Sentence.If")} ${conditionText(bonus.condition).text}`] : [])
         ].join(" · ") }))
       ];
-      return { home: at, label: effect?.name ?? e.effectId, lines, effectSummary: home?.effectSummary, automations: home?.automations, recipes: home?.recipes, canAdd: at >= 0,
+      return { home: at, label: effect?.name ?? e.effectId, lines, mark: marks?.effects.includes(e.effectId) ? "added" : undefined, effectSummary: home?.effectSummary, automations: home?.automations, recipes: home?.recipes, canAdd: at >= 0,
         rows: rows(e.rows), launches: e.launches.map(launch) };
     });
     const itemAt = homeAt("item");
@@ -856,10 +932,26 @@ export class EntryEditor extends HandlebarsApplicationMixin(DocumentSheetV2)<
       section("anyUse", { rows: rows(model.anyUse) }),
       section("unreached", { blocks: model.unreached.map(node => use(node)), warning: say(model.ammunition ? "UnreachedAmmunition" : model.hasMacro ? "UnreachedMacro" : "Unreached") })
     ].filter(s => s.blocks.length || s.rows.length);
+    // "Changes only": what the overlay adds or changes, in its place (a block kept for what is inside it)
+    if (this.#overlay?.show === "changes") {
+      const keepRow = (r: RowContext) => r.mark === "added";
+      const prune = (block: BlockContext): BlockContext | undefined => {
+        const launches = block.launches.flatMap(l => { const inner = l.block ? prune(l.block) : undefined; return inner ? [{ ...l, block: inner }] : []; });
+        const rows = block.rows.filter(keepRow);
+        const card = block.card ? { ...block.card, stepsBefore: (block.card.stepsBefore ?? []).filter(keepRow), stepsAfter: (block.card.stepsAfter ?? []).filter(keepRow) } : undefined;
+        const steps = (card?.stepsBefore?.length ?? 0) + (card?.stepsAfter?.length ?? 0);
+        if (block.mark === "added") return block;
+        if (!rows.length && !launches.length && !steps && !block.changed?.length) return undefined;
+        return { ...block, rows, launches, card: steps ? card : undefined, lines: [], effectSummary: undefined, automations: [], choices: [], canAdd: false };
+      };
+      for (const s of sections) { s.blocks = s.blocks.flatMap(block => prune(block) ?? []); s.rows = s.rows.filter(keepRow); }
+    }
+    const kept = sections.filter(s => s.blocks.length || s.rows.length);
     const header = homes[itemAt];
     return {
+      changed: changedIn("item"),
       header: header ? { home: itemAt, notice: header.notice, ruleSentences: header.ruleSentences, choices: header.choices, settings: header.settings, automations: header.automations, recipes: header.recipes } : undefined,
-      sections,
+      sections: kept,
       macro: model.macro.map(launch)
     };
   }
@@ -1890,7 +1982,10 @@ export class EntryEditor extends HandlebarsApplicationMixin(DocumentSheetV2)<
   _toggleDisabled(disabled: boolean) {
     super._toggleDisabled(disabled);
     if (!disabled) return;
-    this.element.querySelectorAll<HTMLButtonElement>('button[data-action="setView"], button[data-action="showRuns"]').forEach(button => { button.disabled = false; });
+    this.element.querySelectorAll<HTMLButtonElement>('button[data-action="setView"], button[data-action="showRuns"], button[data-action="overlayShow"]').forEach(button => { button.disabled = false; });
+    // An overlay's own changed fields are the overlay item's, whatever is drawn
+    if (this.#overlay && this.#overlay.show !== "overlay" && this.#overlayEditable())
+      this.element.querySelectorAll<HTMLButtonElement>('button[data-action="overlayEditChange"], button[data-action="overlayRemoveChange"]').forEach(button => { button.disabled = false; });
   }
 
   async _onRender(context: object, options: object) {
@@ -2417,10 +2512,16 @@ export class EntryEditor extends HandlebarsApplicationMixin(DocumentSheetV2)<
   }
 
   /** An overlay item: what it matches and what it changes, compared with its base */
+  #overlayEditable(): boolean {
+    const item = this.#overlay?.item;
+    return !!item && !!game.user?.isGM && item.isOwner && !(item.pack && game.packs?.get(item.pack)?.locked);
+  }
+
   async #overlayContext() {
-    const item = this.#item();
-    if (!item?.getFlag(MODULE_ID, "overlay")) return undefined;
+    const item = this.#overlay?.item;
+    if (!item) return undefined;
     const summary = await overlaySummary(item);
+    if (this.#overlay) this.#overlay.summary = summary;
     if (!summary) return undefined;
     const say = (key: string, data: Record<string, string> = {}) => game.i18n?.format(`midi-qol.Overlay.Part.${key}`, data) ?? key;
     const words = (row: { value: string, condition: boolean }) => {
@@ -2432,7 +2533,9 @@ export class EntryEditor extends HandlebarsApplicationMixin(DocumentSheetV2)<
       matches: say(summary.rules ? "MatchesRules" : "Matches", { identifier: summary.identifier, rules: summary.rules ?? "", version: summary.version }),
       base: summary.base ? say("Base", { name: summary.base.name }) : say("NoBase"),
       baseChanged: summary.baseChanged,
-      editable: !!game.user?.isGM && item.isOwner && !(item.pack && game.packs?.get(item.pack)?.locked),
+      editable: this.#overlayEditable(),
+      count: summary.groups.reduce((n, group) => n + group.rows.length, 0),
+      shows: this.#overlay?.base ? OVERLAY_SHOWS.map(value => ({ value, label: say(`Show.${value}`), active: value === this.#overlay?.show })) : undefined,
       groups: summary.groups.map(group => ({
         label: group.label || say("Item"),
         rows: group.rows.map(row => { const w = words(row); return { index: row.index, key: row.key, label: row.label, words: w.text, code: !w.known }; })
@@ -2446,11 +2549,11 @@ export class EntryEditor extends HandlebarsApplicationMixin(DocumentSheetV2)<
 
   /** One of an overlay's changed fields: a condition in the builder, anything else as text */
   static async #onOverlayEditChange(this: EntryEditor, _event: Event, target: HTMLElement) {
-    const item = this.#item();
+    const item = this.#overlay?.item;
     const index = Number(target.dataset.index);
     const change = item?.getFlag(MODULE_ID, "overlay")?.changes?.[index];
     if (!item || !change) return;
-    const write = async (value: string) => { await setOverlayChange(item, index, value); this.render(); };
+    const write = async (value: string) => { await setOverlayChange(item, index, value); this.#showOverlay(this.#overlay?.show ?? "result"); this.render(); };
     if (/(ConditionText|[cC]ondition)$/.test(change.key)) {
       new ConditionBuilder({ value: String(change.value ?? ""), label: item.name ?? "", parent: item, onSubmit: value => void write(value) }).render({ force: true });
       return;
@@ -2466,9 +2569,10 @@ export class EntryEditor extends HandlebarsApplicationMixin(DocumentSheetV2)<
   }
 
   static async #onOverlayRemoveChange(this: EntryEditor, _event: Event, target: HTMLElement) {
-    const item = this.#item();
+    const item = this.#overlay?.item;
     if (!item) return;
     await setOverlayChange(item, Number(target.dataset.index), undefined);
+    this.#showOverlay(this.#overlay?.show ?? "result");
     this.render();
   }
 

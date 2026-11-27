@@ -22,7 +22,13 @@
         <div class="midi-qol-entry-choice-line"><i class="fa-solid fa-layer-group"></i> {{matches}}</div>
         {{#if base}}<div class="hint">{{base}}</div>{{/if}}
         {{#if baseChanged}}<div class="midi-qol-entry-warnings">{{localize "midi-qol.Overlay.Part.BaseChanged"}}</div>{{/if}}
-        {{#if groups.length}}<div class="midi-qol-entry-overlay-heading">{{localize "midi-qol.Overlay.Part.Changes"}}</div>{{/if}}
+        {{#if shows}}
+        <div class="midi-qol-entry-overlay-shows">
+            {{#each shows}}<button type="button" data-action="overlayShow" data-show="{{value}}" class="{{#if active}}active{{/if}}" aria-pressed="{{#if active}}true{{else}}false{{/if}}">{{label}}</button>{{/each}}
+        </div>
+        {{/if}}
+        <details class="midi-qol-entry-overlay-changes">
+            <summary>{{localize "midi-qol.Overlay.Part.ChangesCount" n=count}}</summary>
         {{#each groups}}
         <div class="midi-qol-entry-overlay-group">
             <div class="midi-qol-entry-overlay-group-label">{{label}}</div>
@@ -38,6 +44,7 @@
         {{/each}}
         {{#if parts.length}}<div class="midi-qol-entry-overlay-heading">{{localize "midi-qol.Overlay.Part.Carries"}}</div>{{/if}}
         {{#each parts}}<div class="midi-qol-entry-overlay-row"><span>{{this}}</span></div>{{/each}}
+        </details>
         {{#unless editable}}<div class="hint">{{localize "midi-qol.Overlay.Part.Locked"}}</div>{{/unless}}
     </div>
     {{/with}}
@@ -61,6 +68,7 @@
         {{> "modules/midi-qol/templates/apps/EntryEditor/automationNotes.hbs"}}
     </div>
     {{/with}}
+    {{#each behaviour.changed}}<div class="midi-qol-entry-line midi-qol-view-changed">{{text}}</div>{{/each}}
     {{#each behaviour.sections}}
     <section class="midi-qol-view-section midi-qol-view-{{id}}">
         <h4 class="midi-qol-view-section-label">{{label}}{{#if hint}} <span class="hint">{{hint}}</span>{{/if}}</h4>

@@ -1,4 +1,4 @@
-        <div class="midi-qol-entry-sentence {{#if problems.length}}invalid{{/if}} {{#if rowKind}}midi-qol-view-{{rowKind}}{{/if}} {{#if expanded}}selected{{/if}}">
+        <div class="midi-qol-entry-sentence {{#if problems.length}}invalid{{/if}} {{#if rowKind}}midi-qol-view-{{rowKind}}{{/if}} {{#if expanded}}selected{{/if}} {{#if mark}}midi-qol-view-{{mark}}{{/if}}">
             <div class="midi-qol-entry-sentence-row">
                 <span class="midi-qol-entry-number">{{#if rowKind}}{{#if replaces}}<i class="fa-solid fa-right-left" data-tooltip="{{localize "midi-qol.ItemView.Instead"}}"></i>{{else}}▸{{/if}}{{else}}{{number}}{{/if}}</span>
                 <div class="midi-qol-entry-lines">

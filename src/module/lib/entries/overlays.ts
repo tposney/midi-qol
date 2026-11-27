@@ -559,7 +559,7 @@ type SchemaLike = { getField?(path: string): { label?: string } | undefined };
 type ActivityRead = { id: string, type?: string, name?: string, midiEntries?: unknown[], schema?: SchemaLike };
 
 /** An item the overlay is for: the base it was saved against, else an item of its identifier in the world or dnd5e's packs */
-async function overlayBase(overlay: Item.Implementation, flag: OverlayFlag): Promise<Item.Implementation | undefined> {
+export async function overlayBase(overlay: Item.Implementation, flag: OverlayFlag): Promise<Item.Implementation | undefined> {
   if (flag.base?.uuid) {
     const base = await fromUuid(flag.base.uuid).catch(() => null) as Item.Implementation | null;
     if (base) return base;
