@@ -45,7 +45,7 @@
         {{#if parts.length}}<div class="midi-qol-entry-overlay-heading">{{localize "midi-qol.Overlay.Part.Carries"}}</div>{{/if}}
         {{#each parts}}<div class="midi-qol-entry-overlay-row"><span>{{this}}</span></div>{{/each}}
         </details>
-        {{#unless editable}}<div class="hint">{{localize "midi-qol.Overlay.Part.Locked"}}</div>{{/unless}}
+        {{#unless editable}}<div class="hint">{{localize "midi-qol.Overlay.Part.Locked"}}</div>{{else}}{{#if working}}<div class="hint">{{localize "midi-qol.Overlay.Part.Working"}}</div>{{/if}}{{/unless}}
     </div>
     {{/with}}
     {{#if behaviour}}
@@ -189,6 +189,6 @@
 </div>
 {{/if}}
 <footer class="form-footer">
-    <button type="button" data-action="save" {{#unless canSave}}disabled{{/unless}}><i class="fa-solid fa-floppy-disk"></i> {{localize "midi-qol.EntryEditor.Save"}}</button>
+    <button type="button" data-action="save" {{#unless canSave}}disabled{{/unless}}><i class="fa-solid fa-floppy-disk"></i> {{saveLabel}}</button>
 </footer>
 </div>

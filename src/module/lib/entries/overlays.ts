@@ -1,5 +1,6 @@
 import { MODULE_ID } from "../../../midi-qol.js";
 import { automatedBy, registerRule, ruleFor, ruleFromOverlay, type OverlayChange, type OverlayFlag } from "./rules.js";
+import type { Entry } from "./types.js";
 import { invalidateEntryHomes } from "./engine.js";
 
 /*
@@ -394,6 +395,142 @@ function fieldChanges(now: unknown, base: unknown, prefix: string, skip: readonl
 const isOverlayPart = (flags: unknown) => !!(flags as Record<string, { overlayPart?: unknown } | undefined> | undefined)?.[MODULE_ID]?.overlayPart;
 const sameEntries = (a: unknown, b: unknown) => JSON.stringify(a ?? []) === JSON.stringify(b ?? []);
 
+/** What an overlay carries for an item against its base: its changed fields, entries, and the activities and effects the base lacks */
+export interface OverlayDiff {
+  changes: OverlayChange[];
+  /** By activity id: a stub with its entries (the base has the activity), or the whole activity */
+  activities: Record<string, unknown>;
+  effects: ActiveEffect.CreateData[];
+  ownEntries?: Entry[];
+  /** Differences an overlay can't carry (a list can't be one change) */
+  unsaid: string[];
+}
+
+/** Entries the item has that its base doesn't (the same entry, to the letter, is the base's own) */
+function entriesBeyond<T>(now: readonly T[] | undefined | null, base: readonly unknown[] | undefined | null): T[] {
+  const had = new Set((base ?? []).map(e => JSON.stringify(e)));
+  return (now ?? []).filter(e => !had.has(JSON.stringify(e)));
+}
+
+export function overlayDiff(item: Item.Implementation, base: Item.Implementation): OverlayDiff {
+  type ActivityLike = { id: string, type?: string, name?: string, midiEntries?: unknown[], flags?: unknown, toObject(): Record<string, unknown> };
+  const activitiesOf = (doc: Item.Implementation) => [...((doc.system as { activities?: Iterable<ActivityLike> }).activities ?? [])];
+  const baseActivities = activitiesOf(base);
+  const activities: Record<string, unknown> = {};
+  // The item's own source: an overlay's earlier changes (its marker's) are not in it
+  const unsaid: string[] = [];
+  const sourceOf = (doc: Item.Implementation) => (doc as unknown as { _source: { name?: string, system?: Record<string, unknown> & { activities?: Record<string, unknown> } } })._source;
+  const changes = fieldChanges(sourceOf(item).system, sourceOf(base).system, "system.", ITEM_SKIP, unsaid);
+  if (sourceOf(item).name !== sourceOf(base).name && sourceOf(item).name) changes.push({ key: "name", value: String(sourceOf(item).name), type: "override" });
+  for (const activity of activitiesOf(item)) {
+    if (isOverlayPart(activity.flags)) continue;
+    const match = baseActivities.find(a => a.type === activity.type && a.name === activity.name) ?? baseActivities.find(a => a.id === activity.id);
+    if (!match) activities[activity.id] = activity.toObject();
+    else {
+      const beyond = entriesBeyond(activity.midiEntries, match.midiEntries);
+      if (beyond.length) activities[activity.id] = { _id: activity.id, type: activity.type, name: activity.name, midiEntries: beyond };
+      changes.push(...fieldChanges(sourceOf(item).system?.activities?.[activity.id], sourceOf(base).system?.activities?.[match.id], `system.activities.${activity.id}.`, ACTIVITY_SKIP, unsaid));
+    }
+  }
+  const effects: ActiveEffect.CreateData[] = [];
+  for (const effect of item.effects) {
+    // What an overlay added, and its marker, are the overlay's already; an enchantment on the item is not the item's
+    if (isOverlayPart(effect.flags) || (effect as { isAppliedEnchantment?: boolean }).isAppliedEnchantment) continue;
+    const match = base.effects.find(e => e.name === effect.name);
+    const entries = entriesBeyond(effect.getFlag(MODULE_ID, "entries"), match?.getFlag(MODULE_ID, "entries"));
+    if (!match) effects.push(effect.toObject());
+    // What the base's effect of this name does besides: a stub that is never added, only read for its entries
+    else if (entries.length)
+      effects.push({ _id: effect.id, name: effect.name, img: effect.img, flags: { [MODULE_ID]: { entries, overlayRole: true } } } as ActiveEffect.CreateData);
+  }
+  const beyond = entriesBeyond(item.getFlag(MODULE_ID, "entries"), base.getFlag(MODULE_ID, "entries"));
+  const ownEntries = beyond.length ? beyond : undefined;
+  return { changes, activities, effects, ...(ownEntries ? { ownEntries } : {}), unsaid };
+}
+
+/**
+ * An item in memory that takes writes without saving them: the editor's working copy of an overlay's result. Its
+ * update, flags and effects change its own data only; its activities' updates go through it (dnd5e's updateActivity).
+ */
+export function workingItem(data: Record<string, unknown>): Item.Implementation {
+  const item = new Item.implementation(data as unknown as Item.CreateData);
+  type Writable = Record<string, unknown> & { updateSource(changes: object): unknown, reset?(): void };
+  const own = item as unknown as Writable;
+  const adopt = () => {
+    for (const effect of item.effects) {
+      const e = effect as unknown as Writable;
+      e.update = async (changes: object = {}) => { e.updateSource(changes); adopt(); return effect; };
+      e.delete = async () => { own.updateSource({ effects: (item as unknown as { _source: { effects: { _id: string }[] } })._source.effects.filter(x => x._id !== effect.id) }); adopt(); return effect; };
+    }
+  };
+  own.update = async (changes: object = {}) => { own.updateSource(changes); own.reset?.(); adopt(); return item; };
+  own.setFlag = async (scope: string, key: string, value: unknown) => (own.update as (c: object) => Promise<unknown>)({ flags: { [scope]: { [key]: value } } });
+  own.createEmbeddedDocuments = async (name: string, list: Record<string, unknown>[] = []) => {
+    if (name !== "ActiveEffect") return [];
+    const made = list.map(d => ({ ...d, _id: typeof d._id === "string" ? d._id : foundry.utils.randomID() }));
+    own.updateSource({ effects: [...(item as unknown as { _source: { effects: unknown[] } })._source.effects, ...made] });
+    adopt();
+    return made.flatMap(d => item.effects.get(d._id) ?? []);
+  };
+  adopt();
+  return item;
+}
+
+/**
+ * The overlay item rewritten from the item it makes (the editor's working copy) against its base: its changed fields,
+ * entries, and the activities and effects the base lacks; its version raised so overlaid items follow. Returns what it
+ * couldn't carry.
+ */
+export async function writeOverlayFrom(overlay: Item.Implementation, working: Item.Implementation, base: Item.Implementation): Promise<string[]> {
+  const flag = overlay.getFlag(MODULE_ID, "overlay");
+  if (!flag) return [];
+  const diff = overlayDiff(working, base);
+  const version = Number(flag.version);
+  if (overlay.effects.size) await overlay.deleteEmbeddedDocuments("ActiveEffect", overlay.effects.map(e => e.id!));
+  if (diff.effects.length) await overlay.createEmbeddedDocuments("ActiveEffect", diff.effects, { keepId: true });
+  const update: Record<string, unknown> = {
+    [`flags.${MODULE_ID}.overlay`]: { ...flag, changes: diff.changes, version: Number.isFinite(version) ? String(version + 1) : flag.version },
+    [`flags.${MODULE_ID}.entries`]: diff.ownEntries ?? []
+  };
+  const had = Object.keys((overlay as unknown as { _source: { system?: { activities?: Record<string, unknown> } } })._source.system?.activities ?? {});
+  for (const id of had) if (!(id in diff.activities)) update[`system.activities.${id}`] = new foundry.data.operators.ForcedDeletion();
+  for (const [id, data] of Object.entries(diff.activities)) update[`system.activities.${id}`] = new foundry.data.operators.ForcedReplacement(data as never);
+  await overlay.update(update as Item.UpdateData);
+  return diff.unsaid;
+}
+
+/** How an overlay is opened for editing (the entry editor: set by it, which imports this file) */
+let openOverlay: ((overlay: Item.Implementation) => void) | undefined;
+export function setOverlayOpener(open: (overlay: Item.Implementation) => void): void { openOverlay = open; }
+
+function editAsOverlay(item: Item.Implementation): void {
+  void overlayToEdit(item).then(overlay => { if (overlay) openOverlay?.(overlay); });
+}
+
+/**
+ * Edit an item as an overlay: the world's overlay for its identifier (made empty when there is none, against the
+ * item's compendium source), to open in the entry editor as the item it makes.
+ */
+export async function overlayToEdit(item: Item.Implementation): Promise<Item.Implementation | undefined> {
+  const sourceUuid = item._stats?.compendiumSource;
+  const base = sourceUuid ? await fromUuid(sourceUuid).catch(() => null) as Item.Implementation | null : null;
+  const system = item.system as { identifier?: string, source?: { rules?: string } };
+  const identifier = system.identifier || (base?.system as { identifier?: string } | undefined)?.identifier;
+  if (!base || !identifier) {
+    ui.notifications?.warn(game.i18n?.localize(base ? "midi-qol.Overlay.NoIdentifier" : "midi-qol.Overlay.NoBase") ?? "No base item or identifier");
+    return undefined;
+  }
+  const rules = system.source?.rules === "2014" || system.source?.rules === "2024" ? system.source.rules : undefined;
+  const existing = game.items?.find(i => i.getFlag(MODULE_ID, "overlay")?.identifier === identifier && i.getFlag(MODULE_ID, "overlay")?.rules === rules);
+  if (existing) return existing;
+  const [made] = await Item.createDocuments([{
+    name: `${base.name} (overlay)`, type: base.type, img: base.img,
+    system: { identifier: `${identifier}-overlay`, source: { rules }, description: { value: "" } },
+    flags: { [MODULE_ID]: { overlay: { identifier, ...(rules ? { rules } : {}), version: "0", base: { uuid: base.uuid ?? String(sourceUuid), modifiedTime: base._stats?.modifiedTime ?? undefined } } } }
+  } as unknown as Item.CreateData]);
+  return made as Item.Implementation | undefined;
+}
+
 /**
  * The difference between an item and its base (its compendium source) as a world overlay item: the item's entries if
  * changed; an effect or activity the base has, as a stub with its entries if they changed; one the base lacks, whole
@@ -412,37 +549,7 @@ export async function saveAsOverlay(item: Item.Implementation): Promise<Item.Imp
     ui.notifications?.warn(game.i18n?.localize("midi-qol.Overlay.NoIdentifier") ?? "The item has no identifier");
     return undefined;
   }
-  type ActivityLike = { id: string, type?: string, name?: string, midiEntries?: unknown[], flags?: unknown, toObject(): Record<string, unknown> };
-  const activitiesOf = (doc: Item.Implementation) => [...((doc.system as { activities?: Iterable<ActivityLike> }).activities ?? [])];
-  const baseActivities = activitiesOf(base);
-  const activities: Record<string, unknown> = {};
-  // The item's own source: an overlay's earlier changes (its marker's) are not in it
-  const unsaid: string[] = [];
-  const sourceOf = (doc: Item.Implementation) => (doc as unknown as { _source: { name?: string, system?: Record<string, unknown> & { activities?: Record<string, unknown> } } })._source;
-  const changes = fieldChanges(sourceOf(item).system, sourceOf(base).system, "system.", ITEM_SKIP, unsaid);
-  if (sourceOf(item).name !== sourceOf(base).name && sourceOf(item).name) changes.push({ key: "name", value: String(sourceOf(item).name), type: "override" });
-  for (const activity of activitiesOf(item)) {
-    if (isOverlayPart(activity.flags)) continue;
-    const match = baseActivities.find(a => a.type === activity.type && a.name === activity.name) ?? baseActivities.find(a => a.id === activity.id);
-    if (!match) activities[activity.id] = activity.toObject();
-    else {
-      if (activity.midiEntries?.length && !sameEntries(activity.midiEntries, match.midiEntries))
-        activities[activity.id] = { _id: activity.id, type: activity.type, name: activity.name, midiEntries: activity.midiEntries };
-      changes.push(...fieldChanges(sourceOf(item).system?.activities?.[activity.id], sourceOf(base).system?.activities?.[match.id], `system.activities.${activity.id}.`, ACTIVITY_SKIP, unsaid));
-    }
-  }
-  const effects: ActiveEffect.CreateData[] = [];
-  for (const effect of item.effects) {
-    // What an overlay added, and its marker, are the overlay's already; an enchantment on the item is not the item's
-    if (isOverlayPart(effect.flags) || (effect as { isAppliedEnchantment?: boolean }).isAppliedEnchantment) continue;
-    const match = base.effects.find(e => e.name === effect.name);
-    const entries = effect.getFlag(MODULE_ID, "entries");
-    if (!match) effects.push(effect.toObject());
-    else if (entries?.length && !sameEntries(entries, match.getFlag(MODULE_ID, "entries")))
-      effects.push({ _id: effect.id, name: effect.name, img: effect.img, flags: { [MODULE_ID]: { entries } } });
-  }
-  const itemEntries = item.getFlag(MODULE_ID, "entries");
-  const ownEntries = itemEntries?.length && !sameEntries(itemEntries, base.getFlag(MODULE_ID, "entries")) ? itemEntries : undefined;
+  const { changes, activities, effects, ownEntries, unsaid } = overlayDiff(item, base);
   if (!ownEntries && !effects.length && !Object.keys(activities).length && !changes.length) {
     if (unsaid.length) ui.notifications?.warn(`${game.i18n?.localize("midi-qol.Overlay.Unsaid") ?? "An overlay can't carry these changes"}: ${unsaid.join(", ")}`);
     ui.notifications?.info(game.i18n?.localize("midi-qol.Overlay.NoDifference") ?? "No difference from the base item");
@@ -478,6 +585,10 @@ export function watchOverlayAuthoring(): void {
       // @ts-expect-error v13-ism
       onClick: () => saveAsOverlay(item)
     });
+    // onClick: Foundry 14's header controls (fvtt-types 13 doesn't have it)
+    const edit: foundry.applications.api.ApplicationV2.HeaderControlsEntry & { onClick: () => void } = {
+      label: "midi-qol.Overlay.EditAs", icon: "fa-solid fa-pen-to-square", action: "midiEditAsOverlay", onClick: () => editAsOverlay(item) };
+    controls.push(edit);
   });
 }
 

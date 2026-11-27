@@ -6,9 +6,9 @@ import { i18nFormat } from "../../../midi-qol.js";
 
 /*
  * Reacting to a spell being cast (Counterspell):
- * - after a spell's use's preamble (its slot spent, nothing rolled), the reaction step "reactioncast" asks the creatures
- *   with a reaction about another creature (its condition reads `reaction === "isCast"` and `subject`, the caster;
- *   `tags.use.casts` whether the use is the spell's casting, not a leap or an area's turn: lib/useCause.ts)
+ * - after the preamble of a spell's casting (its slot spent, nothing rolled; lib/useCause.ts isCasting: not a leap, a
+ *   chain's arc, an effect's tick or an area's turn use), the reaction step "reactioncast" asks the creatures with a
+ *   reaction about another creature (its condition reads `reaction === "isCast"` and `subject`, the caster)
  *   within that activity's reach of the caster (lib/subjectReactions.ts, as for every trigger), the caster as its
  *   target; the reaction's use knows the use it answers (as every reaction's: doReactions sets
  *   workflowOptions.reactionTrigger, triggeringWorkflowId and triggeringUserId);

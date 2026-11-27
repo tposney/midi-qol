@@ -46,8 +46,6 @@ const allTargets: TargetsOf = w => documents(w.targets);
 const hitTargets: TargetsOf = w => [...new Set([...documents(w.hitTargets), ...documents(w.hitTargetsEC)])];
 const attacks = (w: Workflow) => !!w.activity?.attack;
 const casts = isCasting;
-// @ts-expect-error item.type includes dnd5e subtypes
-const isSpellUse = (w: Workflow) => w.item?.type === "spell";
 const missedTargets: TargetsOf = w => { const hit = new Set(hitTargets(w)); return allTargets(w).filter(t => !hit.has(t)); };
 const failedTargets: TargetsOf = w => documents(w.failedSaves);
 const savedTargets: TargetsOf = w => documents(w.saves);
@@ -112,9 +110,9 @@ export async function raiseUseEvents(workflow: Workflow, prePost: "pre" | "post"
   const list = step ? USE_EVENTS[`${prePost} ${step}`] : undefined;
   if (!list || workflow.readOnly) return;
   await raiseListed(workflow, list);
-  // A spell's use: reactions to it (Counterspell), its slot spent and nothing rolled yet (lib/entries/castReactions.ts);
-  // whether it is the spell's casting is the reaction's condition's to say (tags.use.casts: a leap isn't)
-  if (prePost === "post" && step === "midi-qol.PreambleComplete" && isSpellUse(workflow) && !workflow.aborted) await offerCastReactions(workflow);
+  // A spell being cast: reactions to it (Counterspell), its slot spent and nothing rolled yet (lib/entries/castReactions.ts).
+  // Only its casting (lib/useCause.ts isCasting): a leap, a chain's arc, an effect's tick or an area's turn use is not a cast
+  if (prePost === "post" && step === "midi-qol.PreambleComplete" && isCasting(workflow) && !workflow.aborted) await offerCastReactions(workflow);
 }
 
 async function raiseListed(workflow: Workflow, list: EventAt[]): Promise<void> {

@@ -8,7 +8,7 @@ import { activityOvertimeEntries, overtimeEntries } from "../lib/entries/overtim
 import { ACTIVITY_REF } from "../lib/entries/activityActions.js";
 import { ConditionEditor } from "./ConditionEditor.js";
 import { ConditionBuilder } from "./ConditionBuilder.js";
-import { overlayBase, overlaySummary, setOverlayChange, type OverlaySummary } from "../lib/entries/overlays.js";
+import { overlayBase, overlaySummary, setOverlayChange, setOverlayOpener, workingItem, writeOverlayFrom, type OverlaySummary } from "../lib/entries/overlays.js";
 import { mergeOverlay, type OverlayMarks } from "../lib/entries/overlayMerge.js";
 import { conditionText } from "../lib/entries/conditionVocabulary.js";
 import { behaviourItem, buildBehaviour, namedActivity, type Launch, type OptionalBonusRoll, type Row, type UseNode } from "../lib/entries/behaviour.js";
@@ -497,6 +497,7 @@ export class EntryEditor extends HandlebarsApplicationMixin(DocumentSheetV2)<
       moveEntry: EntryEditor.#onMoveEntry,
       editCondition: EntryEditor.#onEditCondition,
       editHome: EntryEditor.#onEditEffect,
+      editTrigger: EntryEditor.#onEditTrigger,
       closePane: EntryEditor.#onClosePane,
       buildCondition: EntryEditor.#onBuildCondition,
       overlayEditChange: EntryEditor.#onOverlayEditChange,
@@ -611,7 +612,8 @@ export class EntryEditor extends HandlebarsApplicationMixin(DocumentSheetV2)<
       let data = base;
       if (o.show !== "base") ({ merged: data, marks: o.marks } = mergeOverlay(base, o.item.toObject() as unknown as Record<string, unknown>));
       delete data.folder;
-      document = new Item.implementation(data as unknown as Item.CreateData);
+      // In memory, never saved: what is edited here is written to the overlay as its difference from the base
+      document = workingItem(data);
     }
     this.#load(document as unknown as EntryDocument);
     this.#at = 0;
@@ -623,8 +625,14 @@ export class EntryEditor extends HandlebarsApplicationMixin(DocumentSheetV2)<
 
   /** An overlay drawn as the item it makes, or its base, is read: only the overlay item itself is edited here */
   get isEditable(): boolean {
+    if (this.#overlayWorking()) return this.#overlayEditable();
     if (this.#overlay && this.#overlay.show !== "overlay") return false;
     return super.isEditable;
+  }
+
+  /** The overlay's result being edited: the working copy, whose changes Save writes to the overlay as its difference from the base */
+  #overlayWorking(): boolean {
+    return !!this.#overlay?.base && this.#overlay.show === "result";
   }
 
   static #onOverlayShow(this: EntryEditor, _event: Event, target: HTMLElement) {
@@ -714,7 +722,8 @@ export class EntryEditor extends HandlebarsApplicationMixin(DocumentSheetV2)<
       warnings: this.#document instanceof ActiveEffect ? [] : on.filter(id => EFFECT_ONLY.has(id))
         .map(id => game.i18n?.format("midi-qol.EntryEditor.Warning.EffectOnly", { id }) ?? id),
       overtime: this.#overtimeShown(),
-      canSave: !(this.#overlay && this.#overlay.show !== "overlay") && this.#homes.every(h => !h.choicesProblem && !h.settings?.problem && h.drafts.every(d => !d.problems.length))
+      saveLabel: this.#overlayWorking() ? i18n("midi-qol.Overlay.Part.SaveOverlay") : i18n("midi-qol.EntryEditor.Save"),
+      canSave: (!this.#overlay || this.#overlay.show === "overlay" || (this.#overlayWorking() && this.#overlayEditable())) && this.#homes.every(h => !h.choicesProblem && !h.settings?.problem && h.drafts.every(d => !d.problems.length))
     };
   }
 
@@ -803,6 +812,20 @@ export class EntryEditor extends HandlebarsApplicationMixin(DocumentSheetV2)<
     const model = buildBehaviour(item);
 
     const activityOf = (id: string) => item.activities.find(a => a.id === id);
+    // Fields of an activity an enabled enchantment on the item sets (an overlay's marker): in use whatever the item stores
+    type Enchanted = { path: string, by: string, value: unknown };
+    const enchanted = new Map<string, Enchanted[]>();
+    for (const effect of root.effects as Iterable<{ type?: string, disabled?: boolean, name?: string, system?: { changes?: { key?: string, value?: unknown }[] } }>) {
+      if (effect.type !== "enchantment" || effect.disabled) continue;
+      for (const change of effect.system?.changes ?? []) {
+        const found = /^system\.activities\.([^.]+)\.(.+)$/.exec(change.key ?? "");
+        if (found) enchanted.set(found[1], [...(enchanted.get(found[1]) ?? []), { path: found[2], by: effect.name ?? "", value: change.value }]);
+      }
+    }
+    const fieldLabel = (activityId: string, path: string) => {
+      const schema = (this.#homes[homeAt("activity", activityId)]?.document as { schema?: { getField?(path: string): { label?: string } | undefined } } | undefined)?.schema;
+      try { const label = schema?.getField?.(path)?.label; return label ? i18n(label) : path; } catch { return path; }
+    };
     const runByArea = (at: number) => !!this.#homes[at]?.runByArea;
     const config = (CONFIG as unknown as { DND5E?: { activityActivationTypes?: Record<string, { label?: string }>, activityTypes?: Record<string, { documentClass?: { metadata?: { title?: string } } }> } }).DND5E ?? {};
     const nameOf = (id: string) => {
@@ -818,6 +841,13 @@ export class EntryEditor extends HandlebarsApplicationMixin(DocumentSheetV2)<
     type BlockContext = Record<string, unknown> & { rows: RowContext[], launches: LaunchContext[], mark?: string, changed?: { text: string }[], card?: { stepsBefore?: RowContext[], stepsAfter?: RowContext[] } };
     // An overlay drawn as the item it makes: what it added and changed
     const marks = this.#overlay?.marks;
+    // Added: what the base doesn't have (so what is added while editing is marked before it is saved)
+    const baseStored = marks && this.#overlay?.base ? behaviourItem(this.#overlay.base.toObject() as unknown as Record<string, unknown>) : undefined;
+    const baseKeys = new Set(baseStored ? [...(baseStored.entries ?? []).map(e => `item::${e.id}`),
+      ...baseStored.activities.flatMap(a => (a.entries ?? []).map(e => `activity:${a.id}:${e.id}`)),
+      ...baseStored.effects.flatMap(f => (f.entries ?? []).map(e => `effect:${f.id}:${e.id}`))] : []);
+    const added = { entry: (key: string) => !!baseStored && !baseKeys.has(key), activity: (id: string) => !!baseStored && !baseStored.activities.some(a => a.id === id),
+      effect: (id: string) => !!baseStored && !baseStored.effects.some(f => f.id === id) };
     const summaryRows = (this.#overlay?.summary?.groups ?? []).flatMap(group => group.rows);
     const shown = (value: unknown): string => value === undefined || value === null || value === "" ? "—" : typeof value === "boolean" ? i18n(value ? "Yes" : "No") : typeof value === "object" ? JSON.stringify(value) : String(value);
     const changedIn = (homeId: string) => (marks?.changes ?? []).filter(c => c.home === homeId).map(c => {
@@ -870,7 +900,7 @@ export class EntryEditor extends HandlebarsApplicationMixin(DocumentSheetV2)<
         return { ...line, parts: line.parts.map((part, i) => i === at ? { ...part, text: read.text, code: !read.known } : part) };
       }) : sentence.lines;
       return { ...sentence, lines: lead(r, lines), rowKind: r.kind, replaces: r.replaces, launches: r.launches.map(launch),
-        mark: marks?.entries.includes(`${r.source.home}:${r.source.homeId ?? ""}:${r.source.entryId}`) ? "added" : undefined };
+        mark: added.entry(`${r.source.home}:${r.source.homeId ?? ""}:${r.source.entryId}`) ? "added" : undefined };
     };
     const rows = (list: Row[]) => list.flatMap(r => row(r) ?? []);
     function use(node: UseNode, nested = false): BlockContext {
@@ -880,12 +910,19 @@ export class EntryEditor extends HandlebarsApplicationMixin(DocumentSheetV2)<
       const reaction = activity?.activation === "reaction";
       const read = reaction && activity?.condition ? conditionText(activity.condition) : undefined;
       const activation = activity?.activation;
+      const set = enchanted.get(node.activityId) ?? [];
+      const conditionBy = set.find(e => e.path === "useConditionText")?.by;
+      const shownValue = (e: Enchanted) => /(ConditionText|[cC]ondition)$/.test(e.path) && typeof e.value === "string" && e.value ? conditionText(e.value).text
+        : e.value === "true" || e.value === "false" ? i18n(e.value === "true" ? "Yes" : "No") : String(e.value ?? "");
       return {
         home: at, nested, label: nameOf(node.activityId), changed: changedIn(node.activityId),
-        mark: marks?.activities.includes(node.activityId) ? "added" : undefined,
+        mark: added.activity(node.activityId) ? "added" : undefined,
         note: [...(runByArea(at) ? [say("RunByArea")] : []), ...(nested ? [say("OnlyFromHere")] : [])].join(" · "),
         cost: activation ? i18n(config.activityActivationTypes?.[activation]?.label ?? activation) : "",
-        ...(read ? { trigger: { words: read.text, code: !read.known } } : {}),
+        // A reaction's trigger: edited in the condition builder, unless an enchantment (an overlay) sets it
+        ...(reaction ? { trigger: { words: read?.text ?? say("NoTrigger"), code: !!read && !read.known, by: conditionBy ? say("SetBy", { name: conditionBy }) : "", editable: !conditionBy && at >= 0 } } : {}),
+        // What an overlay's marker sets on this activity (the trigger is said on its own line)
+        enchanted: set.filter(e => e.path !== "useConditionText").map(e => ({ text: say("SetField", { name: e.by, field: fieldLabel(node.activityId, e.path), value: shownValue(e) }) })),
         // With a card, the steps go inside it: what comes before the roll above its outcomes, the rest below them
         card: home?.card ? { ...home.card, stepsBefore: rows(node.steps.filter(r => BEFORE_OUTCOMES.has(r.step ?? ""))), stepsAfter: rows(node.steps.filter(r => !BEFORE_OUTCOMES.has(r.step ?? ""))) } : undefined,
         choices: home?.choices, automations: home?.automations, recipes: home?.recipes, canAdd: at >= 0,
@@ -916,7 +953,7 @@ export class EntryEditor extends HandlebarsApplicationMixin(DocumentSheetV2)<
           ...(bonus.condition ? [`${i18n("midi-qol.Sentence.If")} ${conditionText(bonus.condition).text}`] : [])
         ].join(" · ") }))
       ];
-      return { home: at, label: effect?.name ?? e.effectId, lines, mark: marks?.effects.includes(e.effectId) ? "added" : undefined, effectSummary: home?.effectSummary, automations: home?.automations, recipes: home?.recipes, canAdd: at >= 0,
+      return { home: at, label: effect?.name ?? e.effectId, lines, mark: added.effect(e.effectId) ? "added" : undefined, effectSummary: home?.effectSummary, automations: home?.automations, recipes: home?.recipes, canAdd: at >= 0,
         rows: rows(e.rows), launches: e.launches.map(launch) };
     });
     const itemAt = homeAt("item");
@@ -2534,6 +2571,7 @@ export class EntryEditor extends HandlebarsApplicationMixin(DocumentSheetV2)<
       base: summary.base ? say("Base", { name: summary.base.name }) : say("NoBase"),
       baseChanged: summary.baseChanged,
       editable: this.#overlayEditable(),
+      working: this.#overlayWorking(),
       count: summary.groups.reduce((n, group) => n + group.rows.length, 0),
       shows: this.#overlay?.base ? OVERLAY_SHOWS.map(value => ({ value, label: say(`Show.${value}`), active: value === this.#overlay?.show })) : undefined,
       groups: summary.groups.map(group => ({
@@ -2574,6 +2612,18 @@ export class EntryEditor extends HandlebarsApplicationMixin(DocumentSheetV2)<
     await setOverlayChange(item, Number(target.dataset.index), undefined);
     this.#showOverlay(this.#overlay?.show ?? "result");
     this.render();
+  }
+
+  /** A reaction's trigger (its activity's use condition) in the condition builder; written to the activity when used */
+  static #onEditTrigger(this: EntryEditor, _event: Event, target: HTMLElement) {
+    const home = this.#homes[Number(target.dataset.home)];
+    const activity = home?.kind === "activity" ? home.document as unknown as { useConditionText?: string, name?: string, update(changes: object): Promise<unknown> } : undefined;
+    if (!activity) return;
+    const item = this.#item();
+    new ConditionBuilder({
+      value: activity.useConditionText ?? "", label: activity.name ?? item?.name ?? "", parent: item?.parent instanceof Actor ? item.parent : item ?? null,
+      onSubmit: (value: string) => { void activity.update({ useConditionText: value }).then(() => this.render()); }
+    }).render({ force: true });
   }
 
   /** A condition field's other button: the condition built from phrases, its result written back to the field */
@@ -2782,6 +2832,14 @@ export class EntryEditor extends HandlebarsApplicationMixin(DocumentSheetV2)<
       await this.#root.setFlag(MODULE_ID, "onUseMacroName", onUseString(this.#onUse.rows));
     const head = this.#sheetUpdate();
     if (this.#root && Object.keys(head).length) await this.#root.update(head);
+    // An overlay's result: what was edited is in the working copy; the overlay gets its difference from the base
+    const o = this.#overlay;
+    if (o?.base && this.#root && this.#overlayWorking()) {
+      const unsaid = await writeOverlayFrom(o.item, this.#root, o.base);
+      if (unsaid.length) ui.notifications?.warn(`${i18n("midi-qol.Overlay.Unsaid")}: ${unsaid.join(", ")}`);
+      this.#showOverlay("result");
+      return void this.render();
+    }
     this.#saved = true;
     // The item's sheet stays open on what was saved; an editor beside it closes
     if (!this.isItemSheet) return void await this.close();
@@ -2895,6 +2953,8 @@ export async function offerAsRollBonus(activity: EntryDocument & { id?: string |
 
 /** The editor's header button on item, effect and activity sheets (GMs and the document's owners) */
 export function registerEntryEditorControls() {
+  // "Edit as overlay" on an item from a compendium: the world's overlay for it, opened as the item it makes
+  setOverlayOpener(overlay => void new EntryEditor(overlay as unknown as EntryDocument, { view: "sentence" }).render({ force: true }));
   // onClick: Foundry 14's header controls (fvtt-types 13 doesn't have it)
   type Control = foundry.applications.api.ApplicationV2.HeaderControlsEntry & { onClick: () => void };
   const control = (document: () => EntryDocument | undefined): Control => ({

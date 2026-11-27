@@ -112,6 +112,15 @@ describe("the behaviour model", () => {
     expect(self.uses[0].steps[0].launches).toEqual([{ via: "entry", activityId: "orb0000000000000" }]);
   });
 
+  it("a step on every use of an item with one chosen activity is that use's step", () => {
+    const one = buildBehaviour({ name: "x", effects: [], entries: [entry({ id: "any", on: "use.target.saveFailed" })],
+      activities: [{ id: "react00000000000", type: "save", activation: "reaction" }, { id: "auto000000000000", type: "damage", automationOnly: true }] });
+    expect(one.anyUse).toEqual([]);
+    expect(one.reactions[0].use!.steps.map(r => r.entry.id)).toEqual(["any"]);
+    const two = buildBehaviour({ name: "x", effects: [], entries: [entry({ id: "any", on: "use.end" })], activities: [{ id: "a000000000000000", type: "save" }, { id: "b000000000000000", type: "attack" }] });
+    expect(two.anyUse.map(r => r.entry.id)).toEqual(["any"]);
+  });
+
   it("more ways an activity is used: an enchantment's rider, the other activity midi pairs by itself, a macro naming it", () => {
     const m = buildBehaviour({
       name: "x", effects: [], macro: "const a = item.system.activities.find(a => a.identifier === 'burst');",

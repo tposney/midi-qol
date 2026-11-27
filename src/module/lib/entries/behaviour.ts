@@ -10,7 +10,7 @@ import type { Entry, EntryAction, EntryWho } from "./types.js";
  *   bonuses     what is added to, or offered on, the owner's rolls
  *   effects     each effect: its rows (bonuses, triggers, buttons, statements) and what it launches
  *   always      rules statements and buttons of the item itself
- *   anyUse      steps added to every use of the item
+ *   anyUse      steps added to every use of the item (with one chosen activity they are that use's steps)
  *   unreached   activities no player can choose and nothing launches
  * A follow-on activity (one only automation uses) is nested in whatever launches it; one a player can also choose is
  * a link there. Nothing here words anything: rows name their entry, the view words them.
@@ -400,6 +400,12 @@ export function buildBehaviour(item: BehaviourItem): BehaviourModel {
       rows,
       launches: (effect.overTime ?? []).map(ref => b.launch("overTime", ref, none))
     });
+  }
+  // An item with one activity a player chooses: a step on "every use" of the item is a step of that use
+  if (nodes.size === 1 && model.anyUse.length) {
+    const [only] = nodes.values();
+    only.steps.push(...model.anyUse);
+    model.anyUse = [];
   }
   // Steps a nested follow-on gets from the item's entries, then every node's steps in the order they run
   const visit = (node: UseNode) => {

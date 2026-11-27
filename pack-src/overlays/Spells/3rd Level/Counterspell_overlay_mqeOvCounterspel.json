@@ -10,7 +10,7 @@
   },
   "system": {
     "description": {
-      "value": "<p><em>Overlay (midi-qol):</em> offered as your reaction when a creature you can see within 60 feet casts a spell (a reaction about another creature: its condition reads <code>subject</code>) (midi's reaction trigger <em>a creature within its range casts a spell</em>, after the spell's slot is spent and before anything is rolled). The caster makes the Constitution save; on a failure its spell fails: no attack, save, damage or effects, and the spell slot it used isn't expended. Only the casting of a spell (<code>tags.use.casts</code>: not a Chromatic Orb leap, a chain's arc or a lingering area's turn) with Verbal, Somatic or Material components (its reaction condition reads the spell being cast).</p>",
+      "value": "<p><em>Overlay (midi-qol):</em> offered as your reaction when a creature you can see within 60 feet casts a spell (a reaction about another creature: its condition reads <code>subject</code>) (midi's reaction trigger <em>a creature within its range casts a spell</em>, after the spell's slot is spent and before anything is rolled). The caster makes the Constitution save; on a failure its spell fails: no attack, save, damage or effects, and the spell slot it used isn't expended. Only the casting of a spell (midi raises this trigger for a cast, never for a Chromatic Orb leap, a chain's arc or a lingering area's turn) with Verbal, Somatic or Material components (its reaction condition reads the spell being cast).</p>",
       "chatFlavor": ""
     },
     "identifier": "counterspell-overlay",
@@ -25,11 +25,11 @@
       "overlay": {
         "identifier": "counterspell",
         "rules": "2024",
-        "version": "3",
+        "version": "4",
         "changes": [
           {
             "key": "system.activities.dnd5eactivity000.useConditionText",
-            "value": "reaction === \"isCast\" && tags.use.casts && !subject.isSelf && subject.canSee && [...(item.properties ?? [])].some(p => [\"vocal\", \"somatic\", \"material\"].includes(p))",
+            "value": "reaction === \"isCast\" && !subject.isSelf && subject.canSee && [...(item.properties ?? [])].some(p => [\"vocal\", \"somatic\", \"material\"].includes(p))",
             "type": "override"
           }
         ]
