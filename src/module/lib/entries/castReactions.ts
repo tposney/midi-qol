@@ -15,7 +15,7 @@ import { i18nFormat } from "../../../midi-qol.js";
  * - `{ fails: "triggering" | "use" }`: that use (or, with "use", the event's own use) fails: it goes no further (no
  *   attack, save, damage or effects), its card kept and marked with why, and what dnd5e consumed for it handed back
  *   (Workflow#fail; the rules: "the slot isn't expended"; the action used to cast it stays spent). Run where that use runs: asked of its user's client when it isn't here.
- * - `{ fails: { use: "triggering" | "use", for: "targets" | "self" | [...] } }`: that use has no effect on those creatures
+ * - `{ fails: "triggering" | "use", for: "targets" | "self" | [...] }`: that use has no effect on those creatures
  *   (the entry's own use's targets, or its holder): they are dropped from its targets (Workflow#redirect) and its card
  *   says so (Protective Field: the attack or area that triggered it does nothing to those in the field).
  */
@@ -51,7 +51,6 @@ async function failUseHere(workflowId: string, label: string, forUuids?: readonl
   return true;
 }
 
-type FailsSpec = "triggering" | "use" | true | { use?: "triggering" | "use", for?: "targets" | "self" | ("targets" | "self")[] };
 
 /** The creatures `for` names (one or a list): the entry's own use's targets, its holder */
 function failsFor(run: ActionRun, forSpec: string | string[] | undefined): string[] | undefined {
@@ -66,13 +65,13 @@ function failsFor(run: ActionRun, forSpec: string | string[] | undefined): strin
   return [...uuids];
 }
 
-/** `{ fails: "triggering" | "use" | { use?, for? } }` */
+/** `{ fails: "triggering" | "use", for? }` */
 async function failsAction(run: ActionRun): Promise<void> {
   const label = typeof run.action.label === "string" ? run.action.label : (run.found.document as { name?: string }).name ?? run.found.entry.id;
   const own = run.context.workflow;
-  const spec = run.action.fails as FailsSpec;
-  const which = typeof spec === "object" ? spec.use ?? "triggering" : spec;
-  const forUuids = typeof spec === "object" ? failsFor(run, spec.for) : undefined;
+  const which = run.action.fails;
+  const forSpec = run.action.for;
+  const forUuids = typeof forSpec === "string" || Array.isArray(forSpec) ? failsFor(run, forSpec as string | string[]) : undefined;
   if (forUuids && !forUuids.length) return;
   if (which !== "triggering") {
     if (own?.id) await failUseHere(own.id, label, forUuids);

@@ -127,13 +127,11 @@
               }
             },
             {
-              "fails": {
-                "use": "triggering",
-                "for": [
-                  "targets",
-                  "self"
-                ]
-              }
+              "fails": "triggering",
+              "for": [
+                "targets",
+                "self"
+              ]
             }
           ]
         }

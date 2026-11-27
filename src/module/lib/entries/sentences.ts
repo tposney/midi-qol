@@ -221,6 +221,7 @@ const rolls = (value: unknown) => {
 function activityName(ref: unknown, context: SentenceContext): string {
   const id = String(ref).startsWith(ACTIVITY_REF) ? String(ref).slice(ACTIVITY_REF.length) : String(ref);
   return context.activities?.find(a => a.id === id)?.name || id;
+      if (m.place === "outside") return a.to ? say("Action.move.outsideWho", { who: target(a.to, "target") }) : say("Action.move.outside");
 }
 
 function rollSpec(spec: unknown, check: boolean, context: SentenceContext): string {
@@ -276,7 +277,12 @@ export function actionText(action: EntryAction, context: SentenceContext): strin
       return say(a.effect === "remove" ? "Action.effect.remove" : "Action.effect.apply", { what, to: target(a.to, "self") });
     }
     case "end": return say("Action.end");
-    case "fails": return say(a.fails === "triggering" ? "Action.fails.triggering" : "Action.fails.use");
+    case "fails": {
+      const which = a.fails === "triggering" ? "triggering" : "use";
+      const forList = [a.for ?? []].flat().map(String);
+      if (!forList.length) return say(`Action.fails.${which}`);
+      return say(`Action.fails.${which}For`, { who: and(forList.map(f => f === "self" ? target("self", "self") : say("Action.fails.forTargets"))) });
+    }
     case "abort": return say("Action.abort", { reason: a.abort ? `: ${a.abort}` : "" });
     case "save": {
       const by = a.by ? `${target(a.by, "self")}: ` : "";

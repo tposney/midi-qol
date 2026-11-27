@@ -19,7 +19,7 @@ export function registerMidiActionSchemas() {
     { path: "move.pull", label: "midi-qol.Entries.Field.pull", type: "formula", numeric: true },
     { path: "move.slide", label: "midi-qol.Entries.Field.slide", type: "formula", numeric: true },
     { path: "move.angle", label: "midi-qol.Entries.Field.angle", type: "number" },
-    { path: "move.place", label: "midi-qol.Entries.Field.place", type: "select", options: ["", "inside", "beside"] },
+    { path: "move.place", label: "midi-qol.Entries.Field.place", type: "select", options: ["", "inside", "beside", "outside"] },
     { path: "move.from", label: "midi-qol.Entries.Field.from", type: "select", options: ["", "user", "bearer", "area"] },
     TO(["target", "self", "event.creature"])], initial: { push: 10 } });
   setActionSchema("opportunityAttack", { fields: [], initial: true });
@@ -80,7 +80,9 @@ export function registerMidiActionSchemas() {
     { path: "what.changes", label: "midi-qol.Entries.Field.filterChanges", type: "list" },
     TO(["self", "target", "event.creature", "origin", "anyone", "inside"])], initial: "apply" });
   setActionSchema("end", { fields: [{ path: "end", label: "midi-qol.Entries.Field.end", type: "boolean" }], initial: true });
-  setActionSchema("fails", { fields: [{ path: "fails", label: "midi-qol.Entries.Field.fails", type: "select", options: ["triggering", "use"] }], initial: "triggering" });
+  setActionSchema("fails", { fields: [
+    { path: "fails", label: "midi-qol.Entries.Field.fails", type: "select", options: ["triggering", "use"] },
+    { path: "for", label: "midi-qol.Entries.Field.failsFor", type: "multiselect", options: ["targets", "self"] }], initial: "triggering" });
   setActionSchema("abort", { fields: [{ path: "abort", label: "midi-qol.Entries.Field.reason", type: "string" }] });
   setActionSchema("retarget", { fields: [
     { path: "retarget.to", label: "midi-qol.Entries.Field.to", type: "select", options: ["self", "bearer", "choose", "none"] },
