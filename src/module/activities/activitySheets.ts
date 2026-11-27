@@ -2,6 +2,8 @@ import type { AnyMutableObject } from "fvtt-types/utils";
 import { onActivityTypeAdopted } from "./activityPrototype.js";
 import { i18n, specialDurationChoices } from "../../midi-qol.js";
 import { ConditionEditor } from "../apps/ConditionEditor.js";
+import { ConditionBuilder } from "../apps/ConditionBuilder.js";
+import { conditionText } from "../lib/entries/conditionVocabulary.js";
 import { RegionBehaviorEditor } from "../apps/RegionBehaviorEditor.js";
 import {
   aoeTargetTypeOptions, autoCEEffectsOptions, autoTargetOptions, confirmTargetOptions, consumeConfigOptions, damageConfigOptions,
@@ -70,7 +72,7 @@ export function installActivitySheets() {
   const ActivitySheet: ClassStatics = game.system.applications.activity.ActivitySheet;
   // ApplicationV2 merges each class's own DEFAULT_OPTIONS down its chain: midi's actions on dnd5e's base sheet
   setStatic(ActivitySheet, "DEFAULT_OPTIONS", foundry.utils.mergeObject(ActivitySheet.DEFAULT_OPTIONS ?? {}, {
-    actions: { addMacro, openConditionEditor, openRegionBehaviorEditor, addMidiStatus, deleteMidiStatus, deleteMidiStatusDuration }
+    actions: { addMacro, openConditionEditor, openConditionBuilder, openRegionBehaviorEditor, addMidiStatus, deleteMidiStatus, deleteMidiStatusDuration }
   }, { inplace: false }));
   // Each adopted type's sheet: midi's parts and clean arrays
   onActivityTypeAdopted(type => {
@@ -102,6 +104,54 @@ export function installActivitySheets() {
   });
   // DAE's macro editor button in every activity sheet's header
   Hooks.on("renderActivitySheet", renderActivitySheetHook);
+  Hooks.on("renderActivitySheet", showEnchantedFields);
+  Hooks.on("renderActivitySheet", showConditionWords);
+}
+
+/** Under each condition field of the sheet: the condition in words, where midi knows any of it (after the enchanted values are in) */
+function showConditionWords(app: unknown, element: HTMLElement) {
+  if (!isActivitySheet(app)) return;
+  for (const wrapper of Array.from(element.querySelectorAll(".midi-condition-field-wrapper"))) {
+    const input = wrapper.querySelector("input");
+    const group = wrapper.closest(".form-group");
+    if (!input || !group) continue;
+    group.querySelector(".midi-condition-words")?.remove();
+    if (!input.value.trim()) continue;
+    const read = conditionText(input.value);
+    if (!read.known) continue;
+    const hint = document.createElement("p");
+    hint.className = "hint midi-condition-words";
+    hint.textContent = game.i18n?.format("midi-qol.ConditionBuilder.FieldReads", { words: read.text }) ?? read.text;
+    group.appendChild(hint);
+  }
+}
+
+/**
+ * Fields of the activity an enchantment on its item sets (an overlay's marker: Counterspell's use condition): the sheet
+ * draws the stored value, which the enchantment overrides. Shown as in use, read-only, saying what sets them.
+ */
+function showEnchantedFields(app: unknown, element: HTMLElement) {
+  if (!isActivitySheet(app)) return;
+  const activity = app.activity as unknown as { id: string, item?: Item.Implementation };
+  const prefix = `system.activities.${activity.id}.`;
+  type Enchantment = { type?: string, disabled?: boolean, name?: string, system?: { changes?: { key?: string }[] } };
+  for (const effect of (activity.item?.effects.contents ?? []) as Enchantment[]) {
+    if (effect.type !== "enchantment" || effect.disabled) continue;
+    for (const change of effect.system?.changes ?? []) {
+      if (!change.key?.startsWith(prefix)) continue;
+      const path = change.key.slice(prefix.length);
+      const value: unknown = foundry.utils.getProperty(activity, path);
+      const note = game.i18n?.format("midi-qol.Overlay.FieldSetBy", { name: effect.name ?? "" }) ?? "";
+      for (const field of Array.from(element.querySelectorAll<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>(`[name="${CSS.escape(path)}"]`))) {
+        if (field instanceof HTMLInputElement && field.type === "checkbox") field.checked = !!value;
+        else field.value = value === undefined || value === null ? "" : String(value);
+        field.disabled = true;
+        const group: HTMLElement = field.closest(".form-group") ?? field;
+        group.dataset.tooltip = note;
+        for (const button of Array.from(group.querySelectorAll("button"))) button.disabled = true;
+      }
+    }
+  }
 }
 
 /** An activity sheet of a type midi uses */
@@ -311,6 +361,18 @@ function openConditionEditor(this: ActivitySheetApp, _event: PointerEvent, targe
       input.dispatchEvent(new Event("change", { bubbles: true }));
     },
     onCancel: () => { }
+  }).render({ force: true });
+}
+
+function openConditionBuilder(this: ActivitySheetApp, _event: PointerEvent, target: HTMLElement) {
+  const input = target.closest(".midi-condition-field-wrapper")?.querySelector("input") as HTMLInputElement | null;
+  if (!input) return;
+  new ConditionBuilder({
+    value: input.value, label: target.dataset.fieldLabel ?? "", parent: this.activity?.item ?? null,
+    onSubmit: (newValue: string) => {
+      input.value = newValue;
+      input.dispatchEvent(new Event("change", { bubbles: true }));
+    }
   }).render({ force: true });
 }
 

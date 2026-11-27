@@ -1,5 +1,5 @@
 import { MODULE_ID } from "../../../midi-qol.js";
-import { automatedBy, registerRule, ruleFor, ruleFromOverlay, type OverlayChange } from "./rules.js";
+import { automatedBy, registerRule, ruleFor, ruleFromOverlay, type OverlayChange, type OverlayFlag } from "./rules.js";
 import { invalidateEntryHomes } from "./engine.js";
 
 /*
@@ -540,3 +540,94 @@ export async function automationReport(): Promise<{ actors: { name: string, rows
   return { actors, overlays: await overlayRows() };
 }
 
+
+/* An overlay item read back: what it matches and what it changes (the entry editor's Overlay part) */
+
+export interface OverlaySummaryRow { index: number, key: string, path: string, label: string, value: string, condition: boolean }
+export interface OverlaySummary {
+  identifier: string, rules?: string, type?: string, version: string,
+  base?: { name: string, uuid: string }, baseChanged?: boolean,
+  /** Its changed fields: the item's, then each activity's */
+  groups: { label: string, rows: OverlaySummaryRow[] }[],
+  /** What else it carries: activities and effects, whole (the base lacks them) or only their entries */
+  parts: { kind: "activity" | "effect", name: string, whole: boolean | undefined, entries: number }[],
+  entries: number
+}
+
+const CONDITION_PATH = /(ConditionText|[cC]ondition)$/;
+type SchemaLike = { getField?(path: string): { label?: string } | undefined };
+type ActivityRead = { id: string, type?: string, name?: string, midiEntries?: unknown[], schema?: SchemaLike };
+
+/** An item the overlay is for: the base it was saved against, else an item of its identifier in the world or dnd5e's packs */
+async function overlayBase(overlay: Item.Implementation, flag: OverlayFlag): Promise<Item.Implementation | undefined> {
+  if (flag.base?.uuid) {
+    const base = await fromUuid(flag.base.uuid).catch(() => null) as Item.Implementation | null;
+    if (base) return base;
+  }
+  const fits = (item: Item.Implementation) => item !== overlay && !item.getFlag(MODULE_ID, "overlay") && item.type === (flag.type ?? overlay.type)
+    && (item.system as { identifier?: string, source?: { rules?: string } }).identifier === flag.identifier
+    && (!flag.rules || ((item.system as { source?: { rules?: string } }).source?.rules || "2024") === flag.rules);
+  for (const item of game.items ?? []) if (fits(item)) return item;
+  for (const actor of game.actors ?? []) for (const item of actor.items) if (fits(item)) return item;
+  for (const pack of game.packs ?? []) {
+    if (pack.documentName !== "Item" || pack.metadata.packageType !== "system") continue;
+    // Only the identifier: an index of `system.source.rules` fails on the server for a pack whose items' source isn't an object
+    const index = await pack.getIndex({ fields: ["system.identifier"] as never }).catch(() => undefined);
+    for (const entry of (index ?? []) as Iterable<{ _id: string, type?: string, system?: { identifier?: string } }>) {
+      if (entry.system?.identifier !== flag.identifier || entry.type !== (flag.type ?? overlay.type)) continue;
+      const found = await pack.getDocument(entry._id) as Item.Implementation | null | undefined;
+      if (found && fits(found)) return found;
+    }
+  }
+  return undefined;
+}
+
+export async function overlaySummary(overlay: Item.Implementation): Promise<OverlaySummary | undefined> {
+  const flag = overlay.getFlag(MODULE_ID, "overlay");
+  if (!flag?.identifier) return undefined;
+  const base = await overlayBase(overlay, flag);
+  const activitiesOf = (doc: Item.Implementation | undefined) => [...((doc?.system as { activities?: Iterable<ActivityRead> } | undefined)?.activities ?? [])];
+  const baseActivities = activitiesOf(base);
+  const own = activitiesOf(overlay);
+  const say = (label: string | undefined, fallback: string) => label ? game.i18n?.localize(label) ?? label : fallback;
+  const groups = new Map<string, { label: string, rows: OverlaySummaryRow[] }>();
+  (flag.changes ?? []).forEach((change, index) => {
+    if (typeof change?.key !== "string") return;
+    const found = /^system\.activities\.([^.]+)\.(.+)$/.exec(change.key);
+    const activity = found ? baseActivities.find(a => a.id === found[1]) ?? own.find(a => a.id === found[1]) : undefined;
+    const path = found ? found[2] : change.key.replace(/^system\./, "");
+    const group = found ? `activity:${found[1]}` : "item";
+    const schema: SchemaLike | undefined = found ? activity?.schema : (base ?? overlay).system.schema as SchemaLike;
+    if (!groups.has(group)) groups.set(group, { label: found ? (activity?.name || activity?.type || found[1]) : "", rows: [] });
+    let label = path;
+    try { label = say(schema?.getField?.(path)?.label, path); } catch { /* a path the schema doesn't have */ }
+    groups.get(group)!.rows.push({ index, key: change.key, path, label, value: String(change.value ?? ""), condition: CONDITION_PATH.test(path) });
+  });
+  const parts: OverlaySummary["parts"] = [];
+  for (const activity of own) {
+    const whole = base ? !baseActivities.some(a => a.type === activity.type && a.name === activity.name) : undefined;
+    parts.push({ kind: "activity", name: activity.name || activity.type || activity.id, whole, entries: activity.midiEntries?.length ?? 0 });
+  }
+  for (const effect of overlay.effects) {
+    const role = !!effect.getFlag(MODULE_ID, "overlayRole");
+    const whole = role ? false : base ? !base.effects.some(e => e.name === effect.name) : undefined;
+    parts.push({ kind: "effect", name: effect.name ?? "", whole, entries: effect.getFlag(MODULE_ID, "entries")?.length ?? 0 });
+  }
+  return {
+    identifier: flag.identifier, ...(flag.rules ? { rules: flag.rules } : {}), ...(flag.type ? { type: flag.type } : {}), version: versionOf(overlay),
+    ...(base?.uuid ? { base: { name: base.name ?? "", uuid: base.uuid } } : {}),
+    ...(base && flag.base?.modifiedTime ? { baseChanged: (base._stats?.modifiedTime ?? 0) > flag.base.modifiedTime } : {}),
+    groups: [...groups.values()], parts, entries: overlay.getFlag(MODULE_ID, "entries")?.length ?? 0
+  };
+}
+
+/** One changed field of an overlay set (or, with no value, removed); its version raised so overlaid items follow */
+export async function setOverlayChange(overlay: Item.Implementation, index: number, value: string | undefined): Promise<void> {
+  const flag = overlay.getFlag(MODULE_ID, "overlay");
+  const changes = [...(flag?.changes ?? [])];
+  if (!flag || !changes[index]) return;
+  if (value === undefined) changes.splice(index, 1);
+  else changes[index] = { ...changes[index], value };
+  const version = Number(flag.version);
+  await overlay.update({ [`flags.${MODULE_ID}.overlay`]: { ...flag, changes, version: Number.isFinite(version) ? String(version + 1) : flag.version } } as Item.UpdateData);
+}

@@ -57,6 +57,7 @@ import { registerItemAutomationSection } from "./module/apps/itemAutomationSecti
 import { registerRollDialogBonuses } from "./module/lib/rollDialogBonuses.js";
 import { defineSettingNeedsService } from "./module/services/settingNeeds/service.js";
 import { defineEntryEditorServices, registerMidiEditorContributors } from "./module/lib/entries/editorServices.js";
+import { registerMidiConditionPhrases } from "./module/lib/entries/conditionVocabulary.js";
 import { defineEntryAutomationsService, registerMidiAutomationReaders } from "./module/lib/entries/automations.js";
 import { defineTokenVisualsService, refreshTokenVisuals, setupTokenVisuals, tokenVisuals } from "./module/services/tokenVisuals/service.js";
 import { registerTokenVisualProviders } from "./module/services/tokenVisuals/providers.js";
@@ -150,6 +151,7 @@ import { TokenDocumentSet, setupTokenSetMode, tokenSetDocumentMode } from './mod
 import { injectMidiCompletions } from './module/lib/midiCompletions.js';
 import { OverTimeEditor } from './module/apps/OverTimeEditor.js';
 import { ConditionEditor } from './module/apps/ConditionEditor.js';
+import { ConditionBuilder } from './module/apps/ConditionBuilder.js';
 import { ActorOnUseMacrosConfig } from './module/apps/ActorOnUseMacroConfig.js';
 import { ItemOnUseMacrosConfig } from './module/apps/ItemOnUseMacrosConfig.js';
 import { DependentsExplorer } from './module/apps/DependentsExplorer.js';
@@ -532,6 +534,7 @@ Object.assign(globalThis.MidiQOL, {
   apps: {
     ActorOnUseMacrosConfig,
     ConditionEditor,
+    ConditionBuilder,
     ConfigPanel,
     DependentsExplorer,
     ItemOnUseMacrosConfig,
@@ -696,6 +699,7 @@ Hooks.once('init', async function () {
   registerResponseEvents();
   defineEntryEditorServices();
   registerMidiEditorContributors();
+  registerMidiConditionPhrases();
   defineEntryAutomationsService();
   registerMidiAutomationReaders();
   // After every action is registered (M32d)

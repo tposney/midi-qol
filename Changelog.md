@@ -1,5 +1,8 @@
 ### 15.0.0
 In development, not released. Listed here: barriers, creatures inside others, ending conditions (2026-11-25).
+* Conditions as phrases: a condition's pieces read in words where midi knows them ("the trigger is: a creature within its range casts a spell and you can see that creature"), whatever their spacing or quotes; a builder beside each condition field (entry editor, activity sheet) edits them as phrases with places to fill, all of / any of, expressions kept where no phrase fits. A module adds phrases with the `entryWording` service's `conditions()`.
+* Entry editor, on an overlay item: what it matches (identifier, rules, version), the fields it changes compared with its base (by activity, conditions in words) and what else it carries; a changed field's value is edited (a condition in the builder) or removed, raising the overlay's version.
+* Fixed: an activity field an overlay sets (Counterspell's use condition) showed the item's stored value on the activity sheet; it shows the value in use, read-only, naming what sets it.
 * Barrier areas: an activity's area can stop creatures, sight (and light) or sound with real walls (region behaviour *Barrier*, the activity's region settings); made again when the area changes, removed with it.
 * A barrier's area is shown to all players (they are not shown walls), whatever hides placed areas (CAT's *Placed Area Visibility*).
 * A barrier with one side that affects those near it (Wall of Fire): the caster is asked which side, both drawn on the scene; an area that deep on that side, shown to all, uses the activity on a creature ending its turn there; entering the wall uses it too (`regionBarrier.sideDepth`, `sideActivity`). The Wall of Fire overlay sets it (version 2).

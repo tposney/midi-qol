@@ -305,6 +305,16 @@ export class MidiConditionField extends globalThis.dnd5e.dataModels.fields.Formu
     button.dataset.tooltip = i18n("midi-qol.ConditionEditor.Tooltip");
     button.ariaLabel = i18n("midi-qol.ConditionEditor.Tooltip");
 
+    // The same condition built from phrases (apps/ConditionBuilder.ts)
+    const build = document.createElement("button");
+    build.type = "button";
+    build.classList.add("midi-condition-editor-btn", "unbutton", "control-button");
+    build.dataset.action = "openConditionBuilder";
+    build.dataset.fieldLabel = fieldLabel;
+    build.innerHTML = '<i class="fas fa-list-check" inert></i>';
+    build.dataset.tooltip = i18n("midi-qol.ConditionBuilder.Open");
+    build.ariaLabel = i18n("midi-qol.ConditionBuilder.Open");
+    wrapper.appendChild(build);
     wrapper.appendChild(button);
     return wrapper;
   }

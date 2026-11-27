@@ -4,12 +4,14 @@ import type { SentenceContext, TriggerGroup } from "./sentences.js";
 import type { Recipe } from "./recipes.js";
 import { MIDI_EFFECT_PRESETS } from "./effectPresets.js";
 import { activityCard, type ActivityCardModel, type ActivityData, type CardText, type Targeting } from "./activityCard.js";
+import type { ConditionPhraseDef } from "./conditionPhrases.js";
 
 /*
  * The entry editor's vocabulary as contributor services, so modules extend what it offers and how it reads entries the
  * way they extend the rest of midi (MidiQOL.services.register / wrap). Higher priority is asked first.
  *
- *   entryWording   how an action or event reads in the sentence view (the first answer wins; midi's own last)
+ *   entryWording   how an action or event reads in the sentence view (the first answer wins; midi's own last), and
+ *                  the phrases conditions are read and built from (every contributor's, lib/entries/conditionPhrases.ts)
  *   entryTriggers  groups of triggers the sentence view's picker offers (after midi's, before "more")
  *   entryOptions   named option lists fields pick from (`options: { list: "damageTypes" }`); every contributor's values
  *                  for a list are merged, so a module adds to midi's lists as well as making its own
@@ -33,6 +35,8 @@ export interface EntryWordingContributor {
   action?(action: EntryAction, key: string | undefined, context: SentenceContext): string | undefined;
   /** An event in words; `subject` is who it happens to, already worded ("the bearer", "this activity") */
   event?(eventId: string, subject: string, home: EntryHome): string | undefined;
+  /** Condition phrases: known shapes of condition, worded, with places to fill */
+  conditions?(): readonly ConditionPhraseDef[];
 }
 export interface EntryTriggersContributor {
   groups(home: EntryHome, registered: readonly string[]): readonly TriggerGroup[];
@@ -150,6 +154,19 @@ export function contributedActionText(action: EntryAction, key: string | undefin
 
 export function contributedEventText(eventId: string, subject: string, home: EntryHome): string | undefined {
   return ask<EntryWordingContributor, string>("entryWording", p => p.event?.(eventId, subject, home))[0]?.result;
+}
+
+let phraseDefs: { key: string, defs: ConditionPhraseDef[] } | undefined;
+
+/** Every contributor's condition phrases (the first of an id kept); the same array while they are the same */
+export function conditionPhraseDefs(): ConditionPhraseDef[] {
+  const seen = new Map<string, ConditionPhraseDef>();
+  for (const { result } of ask<EntryWordingContributor, readonly ConditionPhraseDef[]>("entryWording", p => p.conditions?.()))
+    for (const def of result) if (def?.id && typeof def.pattern === "string" && !seen.has(def.id)) seen.set(def.id, def);
+  const defs = [...seen.values()];
+  const key = defs.map(d => `${d.id}\u0000${d.pattern}\u0000${d.label}`).join("\u0001");
+  if (phraseDefs?.key !== key) phraseDefs = { key, defs };
+  return phraseDefs.defs;
 }
 
 export function contributedTriggerGroups(home: EntryHome, registered: readonly string[]): TriggerGroup[] {

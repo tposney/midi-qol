@@ -16,6 +16,30 @@
 </nav>
 {{#if sentenceView}}
 <section class="midi-qol-entry-sentences scrollable">
+    {{#with overlay}}
+    <div class="midi-qol-entry-overlay">
+        <div class="midi-qol-entry-choice-line"><i class="fa-solid fa-layer-group"></i> {{matches}}</div>
+        {{#if base}}<div class="hint">{{base}}</div>{{/if}}
+        {{#if baseChanged}}<div class="midi-qol-entry-warnings">{{localize "midi-qol.Overlay.Part.BaseChanged"}}</div>{{/if}}
+        {{#if groups.length}}<div class="midi-qol-entry-overlay-heading">{{localize "midi-qol.Overlay.Part.Changes"}}</div>{{/if}}
+        {{#each groups}}
+        <div class="midi-qol-entry-overlay-group">
+            <div class="midi-qol-entry-overlay-group-label">{{label}}</div>
+            {{#each rows}}
+            <div class="midi-qol-entry-overlay-row" data-tooltip="{{key}}">
+                <span class="midi-qol-entry-overlay-field">{{label}}</span>
+                <span class="midi-qol-entry-overlay-value">{{#if code}}<code>{{words}}</code>{{else}}{{words}}{{/if}}</span>
+                {{#if ../../editable}}<button type="button" class="midi-qol-entry-edit" data-action="overlayEditChange" data-index="{{index}}" data-tooltip="{{localize "midi-qol.Overlay.Part.Edit"}}" aria-label="{{localize "midi-qol.Overlay.Part.Edit"}}"><i class="fa-solid fa-pen"></i></button>
+                <button type="button" class="midi-qol-entry-edit" data-action="overlayRemoveChange" data-index="{{index}}" data-tooltip="{{localize "midi-qol.Overlay.Part.Remove"}}" aria-label="{{localize "midi-qol.Overlay.Part.Remove"}}"><i class="fa-solid fa-trash"></i></button>{{/if}}
+            </div>
+            {{/each}}
+        </div>
+        {{/each}}
+        {{#if parts.length}}<div class="midi-qol-entry-overlay-heading">{{localize "midi-qol.Overlay.Part.Carries"}}</div>{{/if}}
+        {{#each parts}}<div class="midi-qol-entry-overlay-row"><span>{{this}}</span></div>{{/each}}
+        {{#unless editable}}<div class="hint">{{localize "midi-qol.Overlay.Part.Locked"}}</div>{{/unless}}
+    </div>
+    {{/with}}
     {{#each sentences}}
     <div class="midi-qol-entry-home {{#unless (or sentences.length card automations.length settings effectSummary notice ruleSentences.length)}}empty{{/unless}}" data-home="{{home}}">
         {{#unless single}}<h4 class="midi-qol-entry-home-label">{{label}}{{#if effect}} <span class="hint">{{localize "midi-qol.EntryEditor.Home.effectHint"}}</span>{{/if}}</h4>{{/unless}}

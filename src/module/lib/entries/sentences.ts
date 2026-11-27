@@ -3,6 +3,7 @@ import { nearWhoKey } from "./activityCard.js";
 import { actionKeyOf, actionSchema } from "./engine.js";
 import type { Entry, EntryAction, EntryHome, EntryWho } from "./types.js";
 import { contributedActionText, contributedEventText, contributedTriggerGroups } from "./editorServices.js";
+import { conditionText, readyMadeConditions } from "./conditionVocabulary.js";
 
 /*
  * An entry read as a sentence (the entry editor's sentence view): "When the bearer is hit, if the attacker is the
@@ -37,27 +38,6 @@ const and = (items: string[]) => list(items, say("And"));
 /** Events about a use (their subject is the use, not a creature) */
 const USE_EVENT = (id: string) => id.startsWith("use.") || id === "cover" || id === "perception";
 
-/** Conditions midi's samples use, by their exact text */
-const CONDITIONS: Record<string, string> = {
-  "tags.use.kind === 'spell'": "Spell",
-  "!!tags.use.attack": "Attack",
-  "tags.target.sizeRank >= 3": "LargeTarget",
-  "event.actor?.uuid === entry.origin.actor?.uuid": "AttackerIsCaster",
-  "use.activity.damage?.onSave === 'half'": "HalfOnSave",
-  "!tags.use.area": "NotArea",
-  "!!tags.use.area": "Area",
-  "!!tags.use.spellSlot": "SpellSlot",
-  "tags.use.healedOthers > 0": "HealedOther",
-  "tags.target.charge >= 20": "Charge20",
-  "use.activity.range.units === 'touch'": "Touch",
-  "targets.some(t => t.attributes.hp.value < t.attributes.hp.max)": "TargetHurt",
-  "tags.use.targetsScale": "TargetsScale",
-  "tags.use.costlyMaterial": "CostlyMaterial",
-  "!tags.use.costlyMaterial": "NoCostlyMaterial",
-  "target.chosen": "Chosen",
-  "!target.chosen": "NotChosen"
-};
-
 /** `{ effect: "remove", what: <filter> }` in words (lib/entries/effectFilter.ts): Dispel Magic, Remove Curse... */
 function effectFilterWords(f: Record<string, unknown>, to: string): string {
   const names = (key: string, table: string) => (Array.isArray(f[key]) ? f[key] as string[] : []).map(id => labelOf(table, id));
@@ -72,76 +52,9 @@ function effectFilterWords(f: Record<string, unknown>, to: string): string {
   return say("Action.effectFilter.changes", { to, changes });
 }
 
-/** The conditions offered as ready-made (the form's "add a common condition") */
+/** The conditions offered as ready-made (the form's "add a common condition"): the phrases with nothing to fill */
 export function conditionPresets(): { value: string, label: string }[] {
-  return Object.entries(CONDITIONS).map(([value, key]) => ({ value, label: say(`Condition.${key}`) }));
-}
-
-/** An expression split at a top-level operator (nothing inside brackets or quotes) */
-function splitTop(expression: string, operator: "&&" | "||"): string[] {
-  const pieces: string[] = [];
-  let depth = 0, quote = "", start = 0;
-  for (let i = 0; i < expression.length; i++) {
-    const c = expression[i];
-    if (quote) { if (c === quote && expression[i - 1] !== "\\") quote = ""; continue; }
-    if (c === "'" || c === '"' || c === "`") quote = c;
-    else if ("([{".includes(c)) depth++;
-    else if (")]}".includes(c)) depth--;
-    else if (depth === 0 && expression.startsWith(operator, i)) { pieces.push(expression.slice(start, i)); start = i + 2; i++; }
-  }
-  pieces.push(expression.slice(start));
-  return pieces.map(piece => piece.trim()).filter(Boolean);
-}
-
-/** Whether one pair of brackets wraps the whole expression */
-function wrapped(expression: string): boolean {
-  if (!expression.startsWith("(") || !expression.endsWith(")")) return false;
-  let depth = 0;
-  for (let i = 0; i < expression.length; i++) {
-    if (expression[i] === "(") depth++;
-    else if (expression[i] === ")" && --depth === 0 && i < expression.length - 1) return false;
-  }
-  return true;
-}
-
-const quoted = (csv: string) => csv.split(",").map(k => k.trim().replace(/^['"]|['"]$/g, ""));
-
-/** One simple condition in words, where midi knows it */
-function conditionWords(piece: string): string | undefined {
-  const known = CONDITIONS[piece];
-  if (known) return say(`Condition.${known}`);
-  const kinds = /^\[([^\]]+)\]\.includes\(event\.kind\)$/.exec(piece);
-  if (kinds) return say("Condition.RollKinds", { kinds: or(quoted(kinds[1])) });
-  const cls = /^tags\.use\.class === '(\w+)'$/.exec(piece);
-  if (cls) return say("Condition.Class", { name: cls[1] });
-  const types = /^\[([^\]]+)\]\.some\(\w+ => tags\.use\.damageTypes\.has\(\w+\)\)$/.exec(piece);
-  if (types) return say("Condition.DealsTypes", { types: or(quoted(types[1]).map(t => labelOf("damageTypes", t))) });
-  const charge = /^tags\.target\.charge >= (\d+)$/.exec(piece);
-  if (charge) return say("Condition.Charge", { distance: charge[1] });
-  const taken = /^\(event\.damage\?\.applied\?\.(\w+) \?\? 0\) > 0$/.exec(piece);
-  if (taken) return say("Condition.TakesType", { type: labelOf("damageTypes", taken[1]) });
-  if (piece === "!!event.use?.activity?.hasDamage") return say("Condition.DealsDamage");
-  const creatureType = /^(!?)target\.raceOrType\.includes\(['"](\w+)['"]\)$/.exec(piece);
-  if (creatureType) return say(creatureType[1] ? "Condition.TargetNotType" : "Condition.TargetType", { type: labelOf("creatureTypes", creatureType[2]) });
-  return undefined;
-}
-
-/**
- * A condition in words: its `&&` / `||` structure followed, each simple piece in words where midi knows it and as
- * written where it doesn't. `known`: whether any piece was put in words.
- */
-function conditionText(expression: string, nested = false): { text: string, known: boolean } {
-  let e = expression.trim();
-  while (wrapped(e)) e = e.slice(1, -1).trim();
-  for (const [operator, joiner] of [["||", say("Or")], ["&&", say("And")]] as const) {
-    const pieces = splitTop(e, operator);
-    if (pieces.length < 2) continue;
-    const parts = pieces.map(piece => conditionText(piece, true));
-    const joined = parts.map(p => p.text).join(` ${joiner} `);
-    return { text: nested ? `(${joined})` : joined, known: parts.some(p => p.known) };
-  }
-  const words = conditionWords(e);
-  return { text: words ?? e, known: !!words };
+  return readyMadeConditions();
 }
 
 /** A condition in words where midi knows any of it, else as written */
@@ -221,7 +134,6 @@ const rolls = (value: unknown) => {
 function activityName(ref: unknown, context: SentenceContext): string {
   const id = String(ref).startsWith(ACTIVITY_REF) ? String(ref).slice(ACTIVITY_REF.length) : String(ref);
   return context.activities?.find(a => a.id === id)?.name || id;
-      if (m.place === "outside") return a.to ? say("Action.move.outsideWho", { who: target(a.to, "target") }) : say("Action.move.outside");
 }
 
 function rollSpec(spec: unknown, check: boolean, context: SentenceContext): string {
@@ -309,6 +221,7 @@ export function actionText(action: EntryAction, context: SentenceContext): strin
     }
     case "move": {
       const m = part(a.move);
+      if (m.place === "outside") return a.to ? say("Action.move.outsideWho", { who: target(a.to, "target") }) : say("Action.move.outside");
       if (m.place === "inside" || m.place === "beside")
         return say(`Action.move.${m.place}`, { who: target(a.to, "target"), from: say(`Action.move.from.${has(`Action.move.from.${m.from}`) ? m.from : "user"}`) });
       const kind = m.pull !== undefined ? "pull" : m.slide !== undefined ? "slide" : "push";

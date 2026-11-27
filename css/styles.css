@@ -2677,3 +2677,25 @@ fieldset.midi-qol-use-options .midi-qol-use-options-cost { opacity: 0.8; }
 .midi-qol-stack-picker .midi-qol-stack-token img { grid-row: 1 / span 2; width: 56px; height: 56px; object-fit: contain; border: none; }
 .midi-qol-stack-picker .midi-qol-stack-token span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .midi-qol-stack-picker .midi-qol-stack-inside { font-size: var(--font-size-12, 12px); opacity: 0.85; }
+/* The condition builder: a condition's pieces as phrases with places to fill */
+.midi-qol-condition-builder .midi-qol-condition-rows { margin: 0 0 6px; padding: 0; max-height: 50vh; overflow-y: auto; }
+.midi-qol-condition-builder .midi-qol-condition-row { display: flex; align-items: center; gap: 6px; padding: 3px 0; border-bottom: 1px solid var(--color-border-light-2, #999); }
+.midi-qol-condition-builder .midi-qol-condition-phrase { flex: 1; display: flex; flex-wrap: wrap; align-items: center; gap: 4px; }
+.midi-qol-condition-builder .midi-qol-condition-phrase select, .midi-qol-condition-builder .midi-qol-condition-phrase input { width: auto; flex: 0 1 auto; }
+.midi-qol-condition-builder .midi-qol-condition-phrase input[type="number"] { width: 5em; }
+.midi-qol-condition-builder .midi-qol-condition-phrase multi-select { flex: 1 1 200px; }
+.midi-qol-condition-builder .midi-qol-condition-not { flex: 0 0 5.5em; width: 5.5em; min-width: 0; padding-inline: 4px; }
+.midi-qol-condition-builder .midi-qol-condition-code { flex: 1; font-family: var(--font-mono, monospace); }
+.midi-qol-condition-builder .midi-qol-condition-code-label { padding-left: 8px; }
+.midi-condition-words { flex: 0 0 100%; margin: 2px 0 0; font-style: italic; }
+.midi-qol-condition-builder .midi-qol-condition-row button { flex: 0 0 auto; width: auto; }
+.midi-qol-condition-builder .midi-qol-condition-expression { word-break: break-all; white-space: pre-wrap; }
+.midi-qol-condition-builder .midi-qol-condition-problem { color: var(--color-level-error, #b00); margin: 4px 0 0; }
+/* The entry editor's Overlay part: what an overlay item matches and changes */
+.midi-qol-entry-editor .midi-qol-entry-overlay { margin: 0 0 8px; padding: 4px 6px; border: 1px solid var(--color-border-light-2, #999); border-radius: 4px; }
+.midi-qol-entry-editor .midi-qol-entry-overlay-heading { font-weight: bold; margin-top: 4px; }
+.midi-qol-entry-editor .midi-qol-entry-overlay-group-label { font-style: italic; margin-top: 2px; }
+.midi-qol-entry-editor .midi-qol-entry-overlay-row { display: flex; align-items: baseline; gap: 6px; padding-left: 12px; }
+.midi-qol-entry-editor .midi-qol-entry-overlay-field { flex: 0 0 34%; }
+.midi-qol-entry-editor .midi-qol-entry-overlay-value { flex: 1; word-break: break-word; }
+.midi-qol-entry-editor .midi-qol-entry-overlay-row button { flex: 0 0 auto; width: auto; }

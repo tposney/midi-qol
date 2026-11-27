@@ -7,6 +7,9 @@ import { recipe, recipesFor } from "../lib/entries/recipes.js";
 import { activityOvertimeEntries, overtimeEntries } from "../lib/entries/overtime.js";
 import { ACTIVITY_REF } from "../lib/entries/activityActions.js";
 import { ConditionEditor } from "./ConditionEditor.js";
+import { ConditionBuilder } from "./ConditionBuilder.js";
+import { overlaySummary, setOverlayChange } from "../lib/entries/overlays.js";
+import { conditionText } from "../lib/entries/conditionVocabulary.js";
 import { activityCardContributor, addKindDefs, basicsFieldDefs, contributedActivityCard, effectPresetDefs, optionList, targetPresetDefs, type BasicsFieldDef } from "../lib/entries/editorServices.js";
 import { automationNotes } from "../lib/entries/automations.js";
 import { configOptions, type ConfigField } from "../lib/entries/config.js";
@@ -468,6 +471,9 @@ export class EntryEditor extends HandlebarsApplicationMixin(DocumentSheetV2)<
       addBranch: EntryEditor.#onAddBranch,
       moveEntry: EntryEditor.#onMoveEntry,
       editCondition: EntryEditor.#onEditCondition,
+      buildCondition: EntryEditor.#onBuildCondition,
+      overlayEditChange: EntryEditor.#onOverlayEditChange,
+      overlayRemoveChange: EntryEditor.#onOverlayRemoveChange,
       setView: EntryEditor.#onSetView,
       focusPart: EntryEditor.#onFocusPart,
       editEntry: EntryEditor.#onEditEntry,
@@ -594,6 +600,7 @@ export class EntryEditor extends HandlebarsApplicationMixin(DocumentSheetV2)<
       jsonView: this.#jsonView,
       sentenceView: this.#view === "sentence",
       sheetHead: await this.#sheetHeadContext(),
+      overlay: this.#view === "sentence" ? await this.#overlayContext() : undefined,
       addWhat: this.#root ? { open: this.#addWhatOpen, kinds: [...NEW_KINDS.map(k => ({ value: k,
         label: i18n(`midi-qol.EntryEditor.AddWhat.${k}`), hint: i18n(`midi-qol.EntryEditor.AddWhat.${k}Hint`) })),
         ...(this.#addWhatOpen ? addKindDefs(this.#root).map(def => ({ value: `x:${def.id}`, label: i18n(def.label), hint: def.hint ? i18n(def.hint) : "" })) : [])] } : undefined,
@@ -2226,6 +2233,79 @@ export class EntryEditor extends HandlebarsApplicationMixin(DocumentSheetV2)<
         now.dispatchEvent(new Event("change", { bubbles: true }));
       },
       onCancel: () => { }
+    }).render({ force: true });
+  }
+
+  /** An overlay item: what it matches and what it changes, compared with its base */
+  async #overlayContext() {
+    const item = this.#item();
+    if (!item?.getFlag(MODULE_ID, "overlay")) return undefined;
+    const summary = await overlaySummary(item);
+    if (!summary) return undefined;
+    const say = (key: string, data: Record<string, string> = {}) => game.i18n?.format(`midi-qol.Overlay.Part.${key}`, data) ?? key;
+    const words = (row: { value: string, condition: boolean }) => {
+      if (row.condition) return row.value ? conditionText(row.value) : { text: say("NoCondition"), known: true };
+      if (row.value === "true" || row.value === "false") return { text: i18n(row.value === "true" ? "Yes" : "No"), known: true };
+      return { text: row.value, known: true };
+    };
+    return {
+      matches: say(summary.rules ? "MatchesRules" : "Matches", { identifier: summary.identifier, rules: summary.rules ?? "", version: summary.version }),
+      base: summary.base ? say("Base", { name: summary.base.name }) : say("NoBase"),
+      baseChanged: summary.baseChanged,
+      editable: !!game.user?.isGM && item.isOwner && !(item.pack && game.packs?.get(item.pack)?.locked),
+      groups: summary.groups.map(group => ({
+        label: group.label || say("Item"),
+        rows: group.rows.map(row => { const w = words(row); return { index: row.index, key: row.key, label: row.label, words: w.text, code: !w.known }; })
+      })),
+      parts: [
+        ...(summary.entries ? [say("Entries", { n: String(summary.entries) })] : []),
+        ...summary.parts.map(part => say(`${part.kind}.${part.whole === undefined ? "any" : part.whole ? "whole" : "entries"}`, { name: part.name, n: String(part.entries) }))
+      ]
+    };
+  }
+
+  /** One of an overlay's changed fields: a condition in the builder, anything else as text */
+  static async #onOverlayEditChange(this: EntryEditor, _event: Event, target: HTMLElement) {
+    const item = this.#item();
+    const index = Number(target.dataset.index);
+    const change = item?.getFlag(MODULE_ID, "overlay")?.changes?.[index];
+    if (!item || !change) return;
+    const write = async (value: string) => { await setOverlayChange(item, index, value); this.render(); };
+    if (/(ConditionText|[cC]ondition)$/.test(change.key)) {
+      new ConditionBuilder({ value: String(change.value ?? ""), label: item.name ?? "", parent: item, onSubmit: value => void write(value) }).render({ force: true });
+      return;
+    }
+    const input = foundry.applications.fields.createTextInput({ name: "value", value: String(change.value ?? "") });
+    const group = foundry.applications.fields.createFormGroup({ label: change.key, input });
+    const value = await foundry.applications.api.DialogV2.prompt({
+      window: { title: i18n("midi-qol.Overlay.Part.Edit") }, content: group.outerHTML,
+      ok: { callback: (_event: Event, button: HTMLButtonElement) => String((button.form?.elements.namedItem("value") as HTMLInputElement | null)?.value ?? "") },
+      rejectClose: false
+    }).catch(() => undefined) as string | undefined;
+    if (typeof value === "string") await write(value);
+  }
+
+  static async #onOverlayRemoveChange(this: EntryEditor, _event: Event, target: HTMLElement) {
+    const item = this.#item();
+    if (!item) return;
+    await setOverlayChange(item, Number(target.dataset.index), undefined);
+    this.render();
+  }
+
+  /** A condition field's other button: the condition built from phrases, its result written back to the field */
+  static #onBuildCondition(this: EntryEditor, _event: Event, target: HTMLElement) {
+    const name = target.dataset.field ?? "";
+    const field = this.element.querySelector<HTMLInputElement | HTMLTextAreaElement>(`[name='${name}']`);
+    if (!field) return;
+    const item = this.#item();
+    new ConditionBuilder({
+      value: field.value, label: item?.name ?? "", parent: item?.parent instanceof Actor ? item.parent : item ?? null,
+      onSubmit: (value: string) => {
+        const now = this.element?.querySelector<HTMLInputElement | HTMLTextAreaElement>(`[name='${name}']`);
+        if (!now) return;
+        now.value = value;
+        now.dispatchEvent(new Event("change", { bubbles: true }));
+      }
     }).render({ force: true });
   }
 

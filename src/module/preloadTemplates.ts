@@ -24,6 +24,7 @@ export async function preloadTemplates() {
     "modules/midi-qol/templates/activity/parts/save-damage.hbs",
     "modules/midi-qol/templates/activity/parts/save-extras.hbs",
     "modules/midi-qol/templates/apps/ActorOnUseMacroConfig/actorOnUseMacrosConfig.hbs",
+    "modules/midi-qol/templates/apps/ConditionBuilder/conditionBuilder.hbs",
     "modules/midi-qol/templates/apps/ConditionEditor/conditionEditor.hbs",
     "modules/midi-qol/templates/apps/ConfigPanel/concentration.hbs",
     "modules/midi-qol/templates/apps/ConfigPanel/footer.hbs",
