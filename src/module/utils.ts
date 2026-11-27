@@ -5388,7 +5388,13 @@ export async function doReactions(targetRef: TokenOrDocument | string, triggerTo
     const attacker = triggerTokenUuid ? tokenOf(tokenFor(triggerTokenUuid)) : undefined;
     const seen = attacker && attacker !== target ? canSee(target, attacker, { forceVision: true }) : true;
     const named = reveals({ subject: "attacker", user: player, caster: workflow?.actor ?? undefined, target: target.actor, seen });
-    const reactionFlavor = game.i18n?.format(reactionPromptFor(triggerType), { itemName: named ? (options.item?.name ?? "unknown") : i18n("midi-qol.UnseenSource"), actorName: aboutOther?.name ?? target.name });
+    const itemName = named ? (options.item?.name ?? "unknown") : i18n("midi-qol.UnseenSource");
+    // About another creature (lib/subjectReactions.ts): it is named with what happens to it, and the reactor can react
+    // (a cast's prompt already names the reactor)
+    const aboutKey = `midi-qol.reactionAbout.${reactionTriggerLabelFor(triggerType)}`;
+    const reactionFlavor = aboutOther && game.i18n?.has(aboutKey)
+      ? game.i18n.format("midi-qol.reactionFlavorOther", { subjectName: aboutOther.name, about: game.i18n.format(aboutKey, { itemName }), actorName: target.name })
+      : game.i18n?.format(reactionPromptFor(triggerType), { itemName, actorName: target.name });
     const chatData: ChatMessage.CreateData = {
       content: reactionFlavor,
       whisper: [player.id]
