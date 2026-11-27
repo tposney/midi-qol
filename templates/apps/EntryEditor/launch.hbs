@@ -1,0 +1,4 @@
+<div class="midi-qol-view-launch">
+    <div class="midi-qol-entry-line"><span class="midi-qol-view-lab">{{lead}}</span> {{#unless block}}<span class="midi-qol-view-name">{{name}}</span> <span class="hint">{{note}}</span>{{/unless}}</div>
+    {{#with block}}{{> "modules/midi-qol/templates/apps/EntryEditor/useBlock.hbs"}}{{/with}}
+</div>

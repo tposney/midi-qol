@@ -1,0 +1,32 @@
+        <div class="midi-qol-entry-sentence {{#if problems.length}}invalid{{/if}} {{#if rowKind}}midi-qol-view-{{rowKind}}{{/if}}">
+            <div class="midi-qol-entry-sentence-row">
+                <span class="midi-qol-entry-number">{{#if rowKind}}{{#if replaces}}<i class="fa-solid fa-right-left" data-tooltip="{{localize "midi-qol.ItemView.Instead"}}"></i>{{else}}▸{{/if}}{{else}}{{number}}{{/if}}</span>
+                <div class="midi-qol-entry-lines">
+                    {{#each lines}}
+                    <div class="midi-qol-entry-line" style="padding-left: {{indent}}px">{{#each parts}}{{#if kind}}<button type="button" class="midi-qol-entry-chip {{kind}} {{#if code}}code{{/if}}" data-action="focusPart" data-home="{{home}}" data-index="{{index}}" data-focus="{{focus}}">{{text}}</button>{{else}}<span>{{text}}</span>{{/if}} {{/each}}</div>
+                    {{/each}}
+                    {{#if options}}<div class="midi-qol-entry-options">{{options}}</div>{{/if}}
+                    {{#if run}}<div class="midi-qol-entry-run"><i class="fa-solid fa-clock-rotate-left"></i> {{run}}</div>{{/if}}
+                    {{#if problems.length}}<ul class="midi-qol-entry-problems">{{#each problems}}<li>{{this}}</li>{{/each}}</ul>{{/if}}
+                </div>
+                <button type="button" class="midi-qol-entry-edit" data-action="editEntry" data-home="{{home}}" data-index="{{index}}" data-tooltip="{{localize "midi-qol.EntryEditor.Edit"}}" aria-label="{{localize "midi-qol.EntryEditor.Edit"}}" aria-expanded="{{#if expanded}}true{{else}}false{{/if}}"><i class="fa-solid {{#if expanded}}fa-chevron-up{{else}}fa-pen{{/if}}"></i></button>
+            </div>
+            {{#if expanded}}
+            <div class="midi-qol-entry-inline">
+        {{> "modules/midi-qol/templates/apps/EntryEditor/entryForm.hbs" @root}}
+            </div>
+            {{/if}}
+            {{#if picker}}
+            <div class="midi-qol-entry-picker">
+                <div class="midi-qol-entry-picker-head"><strong>{{localize "midi-qol.EntryEditor.PickTrigger"}}</strong> <span class="hint">{{localize "midi-qol.EntryEditor.PickTriggerHint"}}</span>
+                    <button type="button" data-action="closePicker" aria-label="{{localize "Close"}}"><i class="fa-solid fa-xmark"></i></button></div>
+                {{#each picker}}
+                <div class="midi-qol-entry-picker-group">{{label}}</div>
+                <div class="midi-qol-entry-picker-choices">
+                    {{#each choices}}<button type="button" class="{{#if selected}}active{{/if}}" data-action="setTrigger" data-home="{{home}}" data-index="{{index}}" data-event="{{event}}" {{#if setsWho}}data-who="{{who}}"{{/if}}>{{label}}</button>{{/each}}
+                </div>
+                {{/each}}
+            </div>
+            {{/if}}
+            {{#each launches}}{{> "modules/midi-qol/templates/apps/EntryEditor/launch.hbs"}}{{/each}}
+        </div>

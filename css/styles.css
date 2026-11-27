@@ -2699,3 +2699,15 @@ fieldset.midi-qol-use-options .midi-qol-use-options-cost { opacity: 0.8; }
 .midi-qol-entry-editor .midi-qol-entry-overlay-field { flex: 0 0 34%; }
 .midi-qol-entry-editor .midi-qol-entry-overlay-value { flex: 1; word-break: break-word; }
 .midi-qol-entry-editor .midi-qol-entry-overlay-row button { flex: 0 0 auto; width: auto; }
+/* The item view: the item by how each behaviour starts (sections, a block per use or effect, follow-ons nested) */
+.midi-qol-entry-editor .midi-qol-view-section { margin: 0 0 10px; }
+.midi-qol-entry-editor .midi-qol-view-section-label { font-size: var(--font-size-12); letter-spacing: 0.08em; text-transform: uppercase; opacity: 0.75; margin: 6px 0 2px; border: 0; }
+.midi-qol-entry-editor .midi-qol-view-block { border: 1px solid var(--color-border-light-2, #999); border-radius: 5px; padding: 4px 8px; margin: 0 0 6px; }
+.midi-qol-entry-editor .midi-qol-view-block.nested { margin: 2px 0 4px 22px; border-style: dashed; }
+.midi-qol-entry-editor .midi-qol-view-head { display: flex; align-items: baseline; gap: 8px; border-bottom: 1px solid var(--color-border-light-2, #999); margin-bottom: 2px; }
+.midi-qol-entry-editor .midi-qol-view-name { font-weight: bold; }
+.midi-qol-entry-editor .midi-qol-view-head .midi-qol-view-name { font-size: var(--font-size-16); }
+.midi-qol-entry-editor .midi-qol-view-cost { font-size: var(--font-size-12); opacity: 0.8; }
+.midi-qol-entry-editor .midi-qol-view-lab { font-style: italic; font-weight: 600; margin-right: 4px; }
+.midi-qol-entry-editor .midi-qol-view-launch { margin-left: 10px; }
+.midi-qol-entry-editor .midi-qol-view-block .midi-qol-activity-card { border: 0; padding: 0; margin: 0; }

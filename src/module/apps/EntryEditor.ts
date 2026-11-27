@@ -10,7 +10,8 @@ import { ConditionEditor } from "./ConditionEditor.js";
 import { ConditionBuilder } from "./ConditionBuilder.js";
 import { overlaySummary, setOverlayChange } from "../lib/entries/overlays.js";
 import { conditionText } from "../lib/entries/conditionVocabulary.js";
-import { activityCardContributor, addKindDefs, basicsFieldDefs, contributedActivityCard, effectPresetDefs, optionList, targetPresetDefs, type BasicsFieldDef } from "../lib/entries/editorServices.js";
+import { behaviourItem, buildBehaviour, namedActivity, type Launch, type OptionalBonusRoll, type Row, type UseNode } from "../lib/entries/behaviour.js";
+import { activityCardContributor, addKindDefs, basicsFieldDefs, contributedActivityCard, effectPresetDefs, optionList, targetPresetDefs, type BasicsFieldDef, contributedEventText } from "../lib/entries/editorServices.js";
 import { automationNotes } from "../lib/entries/automations.js";
 import { configOptions, type ConfigField } from "../lib/entries/config.js";
 import { effectAction, mainBranch, newEffectData, type NewEffect } from "../lib/entries/activityCard.js";
@@ -64,6 +65,9 @@ type Draft = { entry: Entry, raw: { do: string, choose: string, json?: string },
 const NEAR = "near";
 /** Actions whose then / else run on their roll's result */
 const BRANCHING = new Set(["save", "check"]);
+/** A use's steps that come before its outcomes (the hit or miss, the saves' results): drawn above a card's branches */
+const BEFORE_OUTCOMES = new Set(["use.configure", "use.targeted", "use.attack", "use.saves"]);
+
 /** Every card's own condition */
 const CONDITION_FIELD: ActionField = { path: "if", label: "midi-qol.EntryEditor.Field.if", type: "condition" };
 /** Events that mean something only on an effect (its ending, its origin's turn) */
@@ -607,6 +611,7 @@ export class EntryEditor extends HandlebarsApplicationMixin(DocumentSheetV2)<
       showRuns: this.#showRuns,
       views: VIEWS.map(value => ({ value, label: i18n(`midi-qol.EntryEditor.View.${value}`), active: value === this.#view })),
       sentences: this.#view === "sentence" ? this.#sentences() : undefined,
+      behaviour: this.#view === "sentence" ? this.#behaviour() : undefined,
       json: draft ? draft.raw.json ?? JSON.stringify(this.#entryForSave(draft), null, 2) : "",
       entry,
       events: [...events.map(e => ({ value: e.id, label: `${e.label} (${e.id})${EFFECT_ONLY.has(e.id) ? ` ${i18n("midi-qol.EntryEditor.EffectsOnly")}` : ""}`, selected: on.includes(e.id) })),
@@ -676,7 +681,7 @@ export class EntryEditor extends HandlebarsApplicationMixin(DocumentSheetV2)<
           const on = [entry.on ?? []].flat();
           const who = typeof entry.who === "string" ? entry.who : undefined;
           return {
-            index, home: at, number: index + 1, problems: draft.problems, options: sentence.options,
+            index, home: at, id: entry.id, number: index + 1, problems: draft.problems, options: sentence.options,
             expanded: this.#expanded && this.#at === at && this.#selected === index,
             run: lastRun(h, entry.id),
             lines: sentence.lines.map(line => ({ indent: line.indent * 22, parts: line.parts.map(part => ({ ...part, index, home: at })) })),
@@ -695,6 +700,156 @@ export class EntryEditor extends HandlebarsApplicationMixin(DocumentSheetV2)<
    * Other automation on a home's document (entryAutomations) that isn't a step of using the item: auras, combat, rests.
    * A macro run during a use is drawn in each activity's card instead (an item without activities keeps it here).
    */
+  /**
+   * The item by how each behaviour starts (lib/entries/behaviour.ts): uses with what is added at their steps and the
+   * activities they launch nested in them, reactions, triggers, roll bonuses, effects. Each row is its home's own
+   * sentence (its chips edit it as ever), placed by the model. Undefined for a document that isn't an item's.
+   */
+  #behaviour() {
+    const root = this.#root;
+    if (!root) return undefined;
+    const homes = this.#sentences();
+    const say = (key: string, data: Record<string, string> = {}) => game.i18n?.format(`midi-qol.ItemView.${key}`, data) ?? key;
+    const idOf = (h: Home) => (h.document as { id?: string | null }).id ?? undefined;
+    const homeAt = (kind: EntryHome, id?: string) => this.#homes.findIndex(h => h.kind === kind && (kind === "item" || idOf(h) === id));
+    // The item as stored, its activities' fields as prepared (what an overlay's marker sets is in use), its entries as edited
+    const stored = root.toObject() as unknown as Record<string, unknown> & { system?: { activities?: Record<string, Record<string, unknown>> } };
+    const plain = (value: unknown): unknown => value && typeof value === "object" && "toObject" in value && typeof value.toObject === "function" ? value.toObject() : foundry.utils.deepClone(value);
+    for (const h of this.#homes) {
+      const id = idOf(h);
+      const data = h.kind === "activity" && id ? stored.system?.activities?.[id] : undefined;
+      if (!data) continue;
+      for (const key of ["regionBehavior", "regionBarrier", "midiProperties", "otherActivityId", "useConditionText", "activation"])
+        data[key] = plain((h.document as unknown as Record<string, unknown>)[key]);
+    }
+    const item = behaviourItem(stored);
+    const drafts = (kind: EntryHome, id?: string) => this.#homes[homeAt(kind, id)]?.drafts.map(d => this.#entryForSave(d)) ?? [];
+    item.entries = drafts("item");
+    for (const activity of item.activities) activity.entries = drafts("activity", activity.id);
+    for (const effect of item.effects) effect.entries = drafts("effect", effect.id);
+    const model = buildBehaviour(item);
+
+    const activityOf = (id: string) => item.activities.find(a => a.id === id);
+    const config = (CONFIG as unknown as { DND5E?: { activityActivationTypes?: Record<string, { label?: string }>, activityTypes?: Record<string, { documentClass?: { metadata?: { title?: string } } }> } }).DND5E ?? {};
+    const nameOf = (id: string) => {
+      const activity = activityOf(id);
+      const title = config.activityTypes?.[activity?.type ?? ""]?.documentClass?.metadata?.title;
+      // An unnamed activity that is the item's one chosen use is the item itself
+      const chosen = item.activities.filter(a => !a.automationOnly);
+      if (activity && !activity.name && chosen.length === 1 && chosen[0] === activity) return item.name;
+      return activity?.name || (title ? i18n(title) : activity?.type) || id;
+    };
+    type LaunchContext = { lead: string, name: string, note: string, block?: BlockContext };
+    type RowContext = typeof homes[number]["sentences"][number] & { rowKind: string, replaces: boolean, launches: LaunchContext[] };
+    type BlockContext = Record<string, unknown> & { rows: RowContext[], launches: LaunchContext[] };
+    const launch = (l: Launch): LaunchContext => {
+      const when = l.when ? (game.i18n?.has(`midi-qol.ItemView.When.${l.when}`) ? say(`When.${l.when}`) : l.when) : say("When.any");
+      return {
+        lead: say(l.via === "other" && l.auto ? "Via.otherAuto" : `Via.${l.via}`, { when }),
+        name: l.missing ? l.activityId : nameOf(l.activityId),
+        note: l.missing ? say("Missing", { ref: l.activityId }) : l.repeat ? say("Repeat") : say("Link"),
+        ...(l.use ? { block: use(l.use, true) } : {})
+      };
+    };
+    type Line = typeof homes[number]["sentences"][number]["lines"][number];
+    const word = (t: string) => ({ text: t }) as Line["parts"][number];
+    /** A row's first line led in by its kind: a step says when in the use, a bonus "On", an option "you may"; a replacement "Instead" */
+    const lead = (r: Row, lines: Line[]): Line[] => {
+      const [first, ...rest] = lines;
+      if (!first) return lines;
+      const chipAt = first.parts.findIndex(part => (part as { focus?: string }).focus === "on");
+      const events = [r.entry.on ?? []].flat();
+      let parts = first.parts;
+      if (chipAt === 1 && events.length === 1 && events[0] !== "action") {
+        const stepKey = `midi-qol.Sentence.Step.${events[0]}`;
+        // midi's own wording only: a module's wording of the event stays as it wrote it
+        const own = contributedEventText(String(events[0]), "", r.source.home) === undefined;
+        if (r.kind === "step" && r.step && own && game.i18n?.has(stepKey)) parts = [{ ...parts[1], text: i18n(stepKey) }, ...parts.slice(2)];
+        else if (r.kind === "bonus") parts = [word(say("Lead.bonus")), ...parts.slice(1)];
+        else if (r.kind === "option") parts = [...parts, word(say("Lead.option"))];
+      }
+      // "instead" before what it does (after the line that asks for a choice, when it has one)
+      const at = r.entry.choose ? 1 : 0;
+      const more = r.replaces && rest[at] ? rest.map((line, i) => i === at ? { ...line, parts: [word(say("Lead.instead")), ...line.parts] } : line) : rest;
+      return [{ ...first, parts }, ...more];
+    };
+    const row = (r: Row): RowContext | undefined => {
+      const sentence = homes[homeAt(r.source.home, r.source.homeId)]?.sentences.find(s => s.id === r.source.entryId);
+      if (!sentence) return undefined;
+      // A step the item holds for one activity: that condition is why it is drawn here, not something to read
+      const named = r.source.home === "item" && r.kind === "step" ? namedActivity(r.entry.if) : undefined;
+      const lines = named && !named.rest ? sentence.lines.map(line => {
+        const at = line.parts.findIndex(part => (part as { focus?: string }).focus === "if");
+        return at < 0 ? line : { ...line, parts: line.parts.filter((_part, i) => i !== at && i !== at - 1) };
+      }) : sentence.lines;
+      return { ...sentence, lines: lead(r, lines), rowKind: r.kind, replaces: r.replaces, launches: r.launches.map(launch) };
+    };
+    const rows = (list: Row[]) => list.flatMap(r => row(r) ?? []);
+    function use(node: UseNode, nested = false): BlockContext {
+      const at = homeAt("activity", node.activityId);
+      const home = homes[at];
+      const activity = activityOf(node.activityId);
+      const reaction = activity?.activation === "reaction";
+      const read = reaction && activity?.condition ? conditionText(activity.condition) : undefined;
+      const activation = activity?.activation;
+      return {
+        home: at, nested, label: nameOf(node.activityId), note: nested ? say("OnlyFromHere") : "",
+        cost: activation ? i18n(config.activityActivationTypes?.[activation]?.label ?? activation) : "",
+        ...(read ? { trigger: { words: read.text, code: !read.known } } : {}),
+        // With a card, the steps go inside it: what comes before the roll above its outcomes, the rest below them
+        card: home?.card ? { ...home.card, stepsBefore: rows(node.steps.filter(r => BEFORE_OUTCOMES.has(r.step ?? ""))), stepsAfter: rows(node.steps.filter(r => !BEFORE_OUTCOMES.has(r.step ?? ""))) } : undefined,
+        choices: home?.choices, automations: home?.automations, recipes: home?.recipes, canAdd: at >= 0,
+        rows: home?.card ? [] : rows(node.steps), launches: node.launches.map(launch)
+      };
+    }
+    const known = (key: string, fallback: string) => game.i18n?.has(`midi-qol.ItemView.${key}`) ? say(key) : fallback;
+    /** One roll of an optional bonus: which roll (and when), then what it adds or does */
+    const bonusRoll = (r: OptionalBonusRoll) => {
+      const which = r.which && r.which !== "all" ? ` (${r.which})` : "";
+      const roll = known(`Roll.${r.roll}`, r.roll) + which + (r.outcome ? ` ${say(`Roll.${r.outcome}`)}` : "");
+      return `${roll}: ${known(`Value.${r.value}`, r.value)}`;
+    };
+    const bonusCount = (count: string) => {
+      const uses = /^ItemUses\.(.+)$/.exec(count);
+      if (uses) return say("Count.itemUses", { item: uses[1] });
+      return Number.isNumeric(count) ? say("Count.times", { n: count }) : known(`Count.${count}`, count);
+    };
+    const effects = model.effects.map((e): BlockContext => {
+      const at = homeAt("effect", e.effectId);
+      const home = homes[at];
+      const effect = item.effects.find(f => f.id === e.effectId);
+      const lines = [
+        ...(e.appliedBy.length ? [{ lab: say("AppliedBy"), text: e.appliedBy.map(nameOf).join(", ") }] : []),
+        ...(effect?.optionalBonuses ?? []).map(bonus => ({ lab: say("OnItsRolls"), text: [
+          say("OptionalBonus", { label: bonus.label || bonus.name, rolls: bonus.rolls.map(bonusRoll).join("; ") }),
+          ...(bonus.count ? [bonusCount(bonus.count)] : []),
+          ...(bonus.condition ? [`${i18n("midi-qol.Sentence.If")} ${conditionText(bonus.condition).text}`] : [])
+        ].join(" · ") }))
+      ];
+      return { home: at, label: effect?.name ?? e.effectId, lines, effectSummary: home?.effectSummary, automations: home?.automations, recipes: home?.recipes, canAdd: at >= 0,
+        rows: rows(e.rows), launches: e.launches.map(launch) };
+    });
+    const itemAt = homeAt("item");
+    const section = (id: string, more: { blocks?: BlockContext[], rows?: RowContext[], warning?: string }) => ({ id, label: say(`Section.${id}`), blocks: more.blocks ?? [], rows: more.rows ?? [], warning: more.warning });
+    const reactions = model.reactions.flatMap(r => r.use ? [use(r.use)] : []);
+    const sections = [
+      section("uses", { blocks: model.uses.map(node => use(node)) }),
+      section("reactions", { blocks: reactions, rows: rows(model.reactions.flatMap(r => r.row ? [r.row] : [])) }),
+      section("triggers", { rows: rows(model.triggers) }),
+      section("bonuses", { rows: rows(model.bonuses) }),
+      section("effects", { blocks: effects.filter(e => e.rows.length || e.launches.length || e.effectSummary || (e.lines as unknown[]).length) }),
+      section("always", { rows: rows(model.always) }),
+      section("anyUse", { rows: rows(model.anyUse) }),
+      section("unreached", { blocks: model.unreached.map(node => use(node)), warning: say(model.ammunition ? "UnreachedAmmunition" : model.hasMacro ? "UnreachedMacro" : "Unreached") })
+    ].filter(s => s.blocks.length || s.rows.length);
+    const header = homes[itemAt];
+    return {
+      header: header ? { home: itemAt, notice: header.notice, ruleSentences: header.ruleSentences, choices: header.choices, settings: header.settings, automations: header.automations, recipes: header.recipes } : undefined,
+      sections,
+      macro: model.macro.map(launch)
+    };
+  }
+
   #automations(h: Home) {
     const hasCards = this.#homes.some(home => home.card);
     return automationNotes(h.document)

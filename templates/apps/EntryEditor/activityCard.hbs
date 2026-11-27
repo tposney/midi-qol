@@ -56,6 +56,7 @@
         {{/if}}
     </div>
     {{/if}}
+    {{#each stepsBefore}}{{> "modules/midi-qol/templates/apps/EntryEditor/sentenceRow.hbs"}}{{/each}}
     {{#each branches}}
     <div class="midi-qol-activity-branch" data-branch="{{branch}}">
         <div class="midi-qol-entry-line midi-qol-activity-branch-line">
@@ -92,6 +93,7 @@
         {{/if}}
     </div>
     {{/each}}
+    {{#each stepsAfter}}{{> "modules/midi-qol/templates/apps/EntryEditor/sentenceRow.hbs"}}{{/each}}
     {{#if onUse}}
     <div class="midi-qol-activity-onuse">
         {{#each onUse.rows}}

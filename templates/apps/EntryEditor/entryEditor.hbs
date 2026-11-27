@@ -40,6 +40,46 @@
         {{#unless editable}}<div class="hint">{{localize "midi-qol.Overlay.Part.Locked"}}</div>{{/unless}}
     </div>
     {{/with}}
+    {{#if behaviour}}
+    {{#with behaviour.header}}
+    <div class="midi-qol-entry-home midi-qol-view-header" data-home="{{home}}">
+        {{#if notice}}<div class="midi-qol-entry-choice-line midi-qol-entry-rule-notice"><i class="fa-solid fa-layer-group"></i> {{notice}}</div>{{/if}}
+        {{#each ruleSentences}}
+        <div class="midi-qol-entry-sentence midi-qol-entry-rule-sentence">
+            <div class="midi-qol-entry-sentence-row">
+                <span class="midi-qol-entry-number"><i class="fa-solid fa-layer-group"></i></span>
+                <div class="midi-qol-entry-lines">
+                    {{#each lines}}<div class="midi-qol-entry-line" style="padding-left: {{indent}}px"><span>{{text}}</span></div>{{/each}}
+                    {{#if options}}<div class="midi-qol-entry-options">{{options}}</div>{{/if}}
+                </div>
+            </div>
+        </div>
+        {{/each}}
+        {{#each choices}}<div class="midi-qol-entry-choice-line">{{this}}</div>{{/each}}
+        {{> "modules/midi-qol/templates/apps/EntryEditor/settings.hbs"}}
+        {{> "modules/midi-qol/templates/apps/EntryEditor/automationNotes.hbs"}}
+    </div>
+    {{/with}}
+    {{#each behaviour.sections}}
+    <section class="midi-qol-view-section midi-qol-view-{{id}}">
+        <h4 class="midi-qol-view-section-label">{{label}}{{#if hint}} <span class="hint">{{hint}}</span>{{/if}}</h4>
+        {{#if warning}}<div class="midi-qol-entry-warnings">{{warning}}</div>{{/if}}
+        {{#each blocks}}{{> "modules/midi-qol/templates/apps/EntryEditor/useBlock.hbs"}}{{/each}}
+        {{#if rows.length}}<div class="midi-qol-entry-home midi-qol-view-rows" data-home="{{@root.behaviour.header.home}}">{{#each rows}}{{> "modules/midi-qol/templates/apps/EntryEditor/sentenceRow.hbs"}}{{/each}}</div>{{/if}}
+    </section>
+    {{/each}}
+    {{#with behaviour.header}}
+    <div class="midi-qol-entry-home-buttons" data-home="{{home}}">
+        <button type="button" data-action="showRecipes" data-home="{{home}}"><i class="fa-solid fa-plus"></i> {{localize "midi-qol.EntryEditor.AddRecipe"}}</button>
+        <button type="button" data-action="add" data-home="{{home}}"><i class="fa-solid fa-plus"></i> {{localize "midi-qol.EntryEditor.AddBlank"}}</button>
+    </div>
+    {{#if recipes}}
+    <div class="midi-qol-entry-picker midi-qol-entry-recipes">
+        {{#each recipes}}<button type="button" data-action="useRecipe" data-home="{{home}}" data-recipe="{{id}}"><strong>{{label}}</strong><span>{{hint}}</span></button>{{/each}}
+    </div>
+    {{/if}}
+    {{/with}}
+    {{else}}
     {{#each sentences}}
     <div class="midi-qol-entry-home {{#unless (or sentences.length card automations.length settings effectSummary notice ruleSentences.length)}}empty{{/unless}}" data-home="{{home}}">
         {{#unless single}}<h4 class="midi-qol-entry-home-label">{{label}}{{#if effect}} <span class="hint">{{localize "midi-qol.EntryEditor.Home.effectHint"}}</span>{{/if}}</h4>{{/unless}}
@@ -60,39 +100,7 @@
         {{#with effectSummary}}<div class="midi-qol-entry-effect-summary"><button type="button" class="midi-qol-entry-edit" data-action="editEffect" data-home="{{../home}}" data-tooltip="{{localize "midi-qol.EntryEditor.Effect.Edit"}}" aria-label="{{localize "midi-qol.EntryEditor.Effect.Edit"}}"><i class="fa-solid fa-pen"></i></button>{{#if statuses}}<div>{{localize "midi-qol.EntryEditor.Effect.Statuses"}} {{statuses}}</div>{{/if}}{{#each changes}}<div><code>{{this}}</code></div>{{/each}}{{#if duration}}<div class="hint">{{localize "midi-qol.EntryEditor.Effect.Lasts"}} {{duration}}</div>{{/if}}</div>{{/with}}
         {{> "modules/midi-qol/templates/apps/EntryEditor/automationNotes.hbs"}}
         {{#with card}}{{> "modules/midi-qol/templates/apps/EntryEditor/activityCard.hbs"}}{{/with}}
-        {{#each sentences}}
-        <div class="midi-qol-entry-sentence {{#if problems.length}}invalid{{/if}}">
-            <div class="midi-qol-entry-sentence-row">
-                <span class="midi-qol-entry-number">{{number}}</span>
-                <div class="midi-qol-entry-lines">
-                    {{#each lines}}
-                    <div class="midi-qol-entry-line" style="padding-left: {{indent}}px">{{#each parts}}{{#if kind}}<button type="button" class="midi-qol-entry-chip {{kind}} {{#if code}}code{{/if}}" data-action="focusPart" data-home="{{home}}" data-index="{{index}}" data-focus="{{focus}}">{{text}}</button>{{else}}<span>{{text}}</span>{{/if}} {{/each}}</div>
-                    {{/each}}
-                    {{#if options}}<div class="midi-qol-entry-options">{{options}}</div>{{/if}}
-                    {{#if run}}<div class="midi-qol-entry-run"><i class="fa-solid fa-clock-rotate-left"></i> {{run}}</div>{{/if}}
-                    {{#if problems.length}}<ul class="midi-qol-entry-problems">{{#each problems}}<li>{{this}}</li>{{/each}}</ul>{{/if}}
-                </div>
-                <button type="button" class="midi-qol-entry-edit" data-action="editEntry" data-home="{{home}}" data-index="{{index}}" data-tooltip="{{localize "midi-qol.EntryEditor.Edit"}}" aria-label="{{localize "midi-qol.EntryEditor.Edit"}}" aria-expanded="{{#if expanded}}true{{else}}false{{/if}}"><i class="fa-solid {{#if expanded}}fa-chevron-up{{else}}fa-pen{{/if}}"></i></button>
-            </div>
-            {{#if expanded}}
-            <div class="midi-qol-entry-inline">
-        {{> "modules/midi-qol/templates/apps/EntryEditor/entryForm.hbs" @root}}
-            </div>
-            {{/if}}
-            {{#if picker}}
-            <div class="midi-qol-entry-picker">
-                <div class="midi-qol-entry-picker-head"><strong>{{localize "midi-qol.EntryEditor.PickTrigger"}}</strong> <span class="hint">{{localize "midi-qol.EntryEditor.PickTriggerHint"}}</span>
-                    <button type="button" data-action="closePicker" aria-label="{{localize "Close"}}"><i class="fa-solid fa-xmark"></i></button></div>
-                {{#each picker}}
-                <div class="midi-qol-entry-picker-group">{{label}}</div>
-                <div class="midi-qol-entry-picker-choices">
-                    {{#each choices}}<button type="button" class="{{#if selected}}active{{/if}}" data-action="setTrigger" data-home="{{home}}" data-index="{{index}}" data-event="{{event}}" {{#if setsWho}}data-who="{{who}}"{{/if}}>{{label}}</button>{{/each}}
-                </div>
-                {{/each}}
-            </div>
-            {{/if}}
-        </div>
-        {{/each}}
+        {{#each sentences}}{{> "modules/midi-qol/templates/apps/EntryEditor/sentenceRow.hbs"}}{{/each}}
         <div class="midi-qol-entry-home-buttons">
             <button type="button" data-action="showRecipes" data-home="{{home}}"><i class="fa-solid fa-plus"></i> {{localize "midi-qol.EntryEditor.AddRecipe"}}</button>
             <button type="button" data-action="add" data-home="{{home}}"><i class="fa-solid fa-plus"></i> {{localize "midi-qol.EntryEditor.AddBlank"}}</button>
@@ -104,6 +112,7 @@
         {{/if}}
     </div>
     {{/each}}
+    {{/if}}
     {{#if addWhat}}
     <div class="midi-qol-entry-add-what">
         <button type="button" data-action="toggleAddWhat" class="{{#if addWhat.open}}active{{/if}}"><i class="fa-solid fa-plus"></i> {{localize "midi-qol.EntryEditor.AddWhat.button"}}</button>
