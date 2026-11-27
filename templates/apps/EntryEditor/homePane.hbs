@@ -1,0 +1,43 @@
+        {{#if homeChoices}}
+        <fieldset class="midi-qol-entry-choice midi-qol-home-choices">
+            <legend>{{localize "midi-qol.EntryEditor.Choice.homeLegend"}}</legend>
+            {{#each homeChoiceRows}}
+            <div class="midi-qol-home-choice">
+                <div class="form-group"><label>{{localize "midi-qol.EntryEditor.Choice.kind"}}</label><div class="form-fields"><select name="hc.{{i}}.kind">{{#each kinds}}<option value="{{value}}" {{#if selected}}selected{{/if}}>{{label}}</option>{{/each}}</select>
+                    <button type="button" class="midi-qol-branch-add" data-action="removeHomeChoice" data-index="{{i}}" data-tooltip="{{localize "midi-qol.EntryEditor.Remove"}}"><i class="fa-solid fa-trash"></i></button></div></div>
+                <div class="form-group"><label>{{localize "midi-qol.EntryEditor.Choice.label"}}</label><div class="form-fields"><input type="text" name="hc.{{i}}.label" value="{{label}}">
+                    <input type="text" name="hc.{{i}}.id" value="{{id}}" class="midi-qol-home-choice-id" data-tooltip="{{localize "midi-qol.EntryEditor.Choice.idHint"}}"></div></div>
+                {{#if isOption}}{{#unless source}}<div class="form-group"><label>{{localize "midi-qol.EntryEditor.Choice.options"}}</label><div class="form-fields"><input type="text" name="hc.{{i}}.options" value="{{options}}"></div></div>{{/unless}}{{/if}}
+                <div class="form-group"><label>{{localize "midi-qol.EntryEditor.Choice.howMany"}}</label><div class="form-fields">
+                    <input type="text" name="hc.{{i}}.min" value="{{min}}" placeholder="{{localize "midi-qol.EntryEditor.Choice.min"}}">
+                    <input type="text" name="hc.{{i}}.max" value="{{max}}" placeholder="{{localize "midi-qol.EntryEditor.Choice.max"}}"></div></div>
+            </div>
+            {{/each}}
+            <button type="button" data-action="addHomeChoice"><i class="fa-solid fa-plus"></i> {{localize "midi-qol.EntryEditor.Choice.add"}}</button>
+            <details class="midi-qol-entry-choice-json"><summary>{{localize "midi-qol.EntryEditor.Choice.json"}}</summary><textarea name="homeChoices" rows="4" spellcheck="false">{{homeChoices}}</textarea></details>
+            {{#if homeChoicesProblem}}<ul class="midi-qol-entry-problems"><li>{{homeChoicesProblem}}</li></ul>{{/if}}
+        </fieldset>
+        {{/if}}
+        {{> "modules/midi-qol/templates/apps/EntryEditor/settings.hbs"}}
+        {{#with effectEditor}}
+        <fieldset class="midi-qol-entry-effect-editor">
+            <legend>{{localize "midi-qol.EntryEditor.Effect.Title"}}</legend>
+            {{#if statuses}}<div>{{localize "midi-qol.EntryEditor.Effect.Statuses"}} {{statuses}}</div>{{/if}}
+            {{#if duration}}<div class="hint">{{localize "midi-qol.EntryEditor.Effect.Lasts"}} {{duration}}</div>{{/if}}
+            <div class="midi-qol-entry-changes">
+                {{#each changes}}
+                <div class="midi-qol-entry-change">
+                    <input type="text" name="chg.{{i}}.key" value="{{key}}" title="{{key}}" placeholder="system.attributes.ac.bonus">
+                    <select name="chg.{{i}}.type">{{#each types}}<option value="{{value}}" {{#if selected}}selected{{/if}}>{{label}}</option>{{/each}}</select>
+                    <input type="text" name="chg.{{i}}.value" value="{{value}}">
+                    <button type="button" data-action="removeChange" data-index="{{i}}" data-tooltip="{{localize "midi-qol.EntryEditor.Effect.Remove"}}" aria-label="{{localize "midi-qol.EntryEditor.Effect.Remove"}}"><i class="fa-solid fa-trash"></i></button>
+                </div>
+                {{else}}<p class="hint">{{localize "midi-qol.EntryEditor.Effect.NoChanges"}}</p>
+                {{/each}}
+            </div>
+            <div class="midi-qol-entry-home-buttons">
+                <button type="button" data-action="addChange"><i class="fa-solid fa-plus"></i> {{localize "midi-qol.EntryEditor.Effect.Add"}}</button>
+                <button type="button" data-action="openEffectSheet"><i class="fa-solid fa-up-right-from-square"></i> {{localize "midi-qol.EntryEditor.Effect.Sheet"}}</button>
+            </div>
+        </fieldset>
+        {{/with}}

@@ -2677,20 +2677,25 @@ fieldset.midi-qol-use-options .midi-qol-use-options-cost { opacity: 0.8; }
 .midi-qol-stack-picker .midi-qol-stack-token img { grid-row: 1 / span 2; width: 56px; height: 56px; object-fit: contain; border: none; }
 .midi-qol-stack-picker .midi-qol-stack-token span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .midi-qol-stack-picker .midi-qol-stack-inside { font-size: var(--font-size-12, 12px); opacity: 0.85; }
-/* The condition builder: a condition's pieces as phrases with places to fill */
-.midi-qol-condition-builder .midi-qol-condition-rows { margin: 0 0 6px; padding: 0; max-height: 50vh; overflow-y: auto; }
-.midi-qol-condition-builder .midi-qol-condition-row { display: flex; align-items: center; gap: 6px; padding: 3px 0; border-bottom: 1px solid var(--color-border-light-2, #999); }
-.midi-qol-condition-builder .midi-qol-condition-phrase { flex: 1; display: flex; flex-wrap: wrap; align-items: center; gap: 4px; }
-.midi-qol-condition-builder .midi-qol-condition-phrase select, .midi-qol-condition-builder .midi-qol-condition-phrase input { width: auto; flex: 0 1 auto; }
+/* The condition builder: a group is a box, its rows joined by one and / or; a group inside a group a box inside it */
+.midi-qol-condition-builder .midi-qol-condition-tree { max-height: 55vh; overflow-y: auto; margin-bottom: 6px; }
+.midi-qol-condition-builder .midi-qol-condition-group { flex: 1; min-width: 0; border: 1px solid var(--color-border-light-2, #999); border-left-width: 3px; border-radius: 5px; padding: 4px 6px; }
+.midi-qol-condition-builder .midi-qol-condition-row { display: flex; align-items: flex-start; gap: 6px; padding: 3px 0; }
+.midi-qol-condition-builder .midi-qol-condition-join { flex: 0 0 3.6em; padding-top: 4px; font-size: var(--font-size-12); font-weight: bold; }
+.midi-qol-condition-builder .midi-qol-condition-join button { width: 100%; min-height: 0; line-height: 1.6; padding: 0 2px; }
+.midi-qol-condition-builder .midi-qol-condition-phrase { flex: 1; min-width: 0; display: flex; flex-wrap: wrap; align-items: center; gap: 4px; }
+.midi-qol-condition-builder .midi-qol-condition-phrase select, .midi-qol-condition-builder .midi-qol-condition-phrase input { width: auto; flex: 0 1 auto; min-width: 0; }
 .midi-qol-condition-builder .midi-qol-condition-phrase input[type="number"] { width: 5em; }
 .midi-qol-condition-builder .midi-qol-condition-phrase multi-select { flex: 1 1 200px; }
-.midi-qol-condition-builder .midi-qol-condition-not { flex: 0 0 5.5em; width: 5.5em; min-width: 0; padding-inline: 4px; }
+.midi-qol-condition-builder .midi-qol-condition-sense { font-weight: bold; }
 .midi-qol-condition-builder .midi-qol-condition-code { flex: 1; font-family: var(--font-mono, monospace); }
-.midi-qol-condition-builder .midi-qol-condition-code-label { padding-left: 8px; }
-.midi-condition-words { flex: 0 0 100%; margin: 2px 0 0; font-style: italic; }
-.midi-qol-condition-builder .midi-qol-condition-row button { flex: 0 0 auto; width: auto; }
+.midi-qol-condition-builder .midi-qol-condition-row > button { flex: 0 0 auto; width: auto; }
+.midi-qol-condition-builder .midi-qol-condition-add { display: flex; gap: 6px; margin: 2px 0 0 3.6em; }
+.midi-qol-condition-builder .midi-qol-condition-add select { flex: 1; min-width: 0; }
+.midi-qol-condition-builder .midi-qol-condition-add button { flex: 0 0 auto; width: auto; min-height: 0; line-height: 1.8; }
 .midi-qol-condition-builder .midi-qol-condition-expression { word-break: break-all; white-space: pre-wrap; }
 .midi-qol-condition-builder .midi-qol-condition-problem { color: var(--color-level-error, #b00); margin: 4px 0 0; }
+.midi-condition-words { flex: 0 0 100%; margin: 2px 0 0; font-style: italic; }
 /* The entry editor's Overlay part: what an overlay item matches and changes */
 .midi-qol-entry-editor .midi-qol-entry-overlay { margin: 0 0 8px; padding: 4px 6px; border: 1px solid var(--color-border-light-2, #999); border-radius: 4px; }
 .midi-qol-entry-editor .midi-qol-entry-overlay-heading { font-weight: bold; margin-top: 4px; }
@@ -2711,3 +2716,18 @@ fieldset.midi-qol-use-options .midi-qol-use-options-cost { opacity: 0.8; }
 .midi-qol-entry-editor .midi-qol-view-lab { font-style: italic; font-weight: 600; margin-right: 4px; }
 .midi-qol-entry-editor .midi-qol-view-launch { margin-left: 10px; }
 .midi-qol-entry-editor .midi-qol-view-block .midi-qol-activity-card { border: 0; padding: 0; margin: 0; }
+/* The item view's side pane: the selected row's fields, or a home's own parts, beside the view */
+.midi-qol-entry-editor .midi-qol-view-body { display: flex; gap: 8px; flex: 1; min-height: 0; }
+.midi-qol-entry-editor .midi-qol-view-body > .midi-qol-entry-sentences { flex: 1 1 0; min-width: 0; min-height: 0; }
+.midi-qol-entry-editor .midi-qol-view-pane { flex: 0 0 42%; min-width: 300px; min-height: 0; overflow-y: auto; border-left: 1px solid var(--color-border-light-2, #999); padding-left: 8px; }
+.midi-qol-entry-editor .midi-qol-view-pane-head { display: flex; align-items: center; gap: 6px; margin-bottom: 4px; }
+.midi-qol-entry-editor .midi-qol-view-pane-head button { flex: 0 0 auto; width: auto; }
+.midi-qol-entry-editor .midi-qol-entry-sentence.selected { outline: 2px solid var(--color-warm-2, #c9593f); border-radius: 4px; }
+.midi-qol-entry-editor .midi-qol-view-head .midi-qol-entry-edit { flex: 0 0 auto; width: auto; }
+.midi-qol-entry-editor .midi-qol-view-pane .form-group { flex-direction: column; align-items: stretch; gap: 2px; }
+.midi-qol-entry-editor .midi-qol-view-pane .form-group > label { flex: none; max-width: none; font-size: var(--font-size-12); }
+/* The expression editor's status: the condition in words, what can't be read, names it isn't given */
+.condition-editor .condition-editor-status { font-size: var(--font-size-12); margin: 4px 0; min-height: 1.4em; }
+.condition-editor .condition-editor-reads { font-style: italic; }
+.condition-editor .condition-editor-problem { color: var(--color-level-error, #b00); }
+.condition-editor .condition-editor-unknown { color: var(--color-level-warning, #b67500); }

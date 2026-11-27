@@ -1,4 +1,4 @@
-import { conditionWords, parseCondition, type ConditionPhraseDef, type ConditionSlot, type ConditionWording, type PhraseOption } from "./conditionPhrases.js";
+import { conditionWords, parseCondition, phraseLabel, VERB_FORMS, type ConditionPhraseDef, type ConditionSlot, type ConditionWording, type PhraseOption } from "./conditionPhrases.js";
 import { conditionPhraseDefs, optionList } from "./editorServices.js";
 import { register } from "../../api/services.js";
 
@@ -98,8 +98,10 @@ let midiDefs: ConditionPhraseDef[] | undefined;
 /** midi's own phrases, worded (built once: after the language is loaded) */
 export function midiConditionPhrases(): ConditionPhraseDef[] {
   midiDefs ??= rows().map(([id, group, pattern, slots, extra]) => {
+    // The negative is in the wording ({is|is not}); a label without the two forms may have its negated words apart
+    const label = words(id);
     const not = extra?.not ?? `${id}Not`;
-    return { id, group, pattern, label: words(id), ...(has(not) ? { negatedLabel: words(not) } : {}), ...(slots?.length ? { slots } : {}), ...(extra?.also ? { also: extra.also } : {}) };
+    return { id, group, pattern, label, ...(!VERB_FORMS.test(label) && has(not) ? { negatedLabel: words(not) } : {}), ...(slots?.length ? { slots } : {}), ...(extra?.also ? { also: extra.also } : {}) };
   });
   return midiDefs;
 }
@@ -130,7 +132,7 @@ export function conditionText(expression: string): { text: string, known: boolea
 
 /** Phrases with nothing to fill, as ready-made conditions (the form's "add a common condition") */
 export function readyMadeConditions(): { value: string, label: string }[] {
-  return conditionPhraseDefs().filter(def => !def.slots?.length).flatMap(def => [{ value: def.pattern, label: def.label },
-    // With its opposite, where that has words of its own
-    ...(def.negatedLabel ? [{ value: /===/.test(def.pattern) ? def.pattern.replace("===", "!==") : `!${def.pattern}`, label: def.negatedLabel }] : [])]);
+  return conditionPhraseDefs().filter(def => !def.slots?.length).flatMap(def => [{ value: def.pattern, label: phraseLabel(def, false).text },
+    // With its opposite, where the wording has one
+    ...(phraseLabel(def, true).own ? [{ value: /===/.test(def.pattern) ? def.pattern.replace("===", "!==") : `!${def.pattern}`, label: phraseLabel(def, true).text }] : [])]);
 }

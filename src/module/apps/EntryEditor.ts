@@ -50,7 +50,8 @@ interface EntryDocument {
 }
 /** The same entries three ways: read as sentences, as a form, as JSON */
 type View = "sentence" | "form" | "json";
-const VIEWS: readonly View[] = ["sentence", "form", "json"];
+/** The views offered; "form" is still accepted when opening: the sentence view with its pane open (the old form view) */
+const VIEWS: readonly View[] = ["sentence", "json"];
 /**
  * One document of the window: the item, one of its activities or one of its effects. `stored`: its entries as they
  * were read (only a changed home is written); an activity's `choices`: its midiChoices as JSON.
@@ -308,6 +309,8 @@ export class EntryEditor extends HandlebarsApplicationMixin(DocumentSheetV2)<
   #onUse: { rows: OnUseRow[], stored: string } | undefined;
   /** "+ add what it does" open */
   #addWhatOpen = false;
+  /** The side pane open on the current home's own parts (its choices, settings, an effect's changes) */
+  #pane = false;
   /** The "+ effect" form as filled in so far */
   #effectForm: { what: string, name: string, duration: string, units: string, repeat: boolean, param: string } = { what: "", name: "", duration: "", units: "", repeat: false, param: "" };
 
@@ -319,6 +322,11 @@ export class EntryEditor extends HandlebarsApplicationMixin(DocumentSheetV2)<
     this.#load(document);
     const last = game.settings.get(MODULE_ID, "EntryEditorView") as View;
     this.#view = view ?? (VIEWS.includes(last) ? last : "sentence");
+    if (this.#view === "form") {
+      this.#view = "sentence";
+      this.#pane = true;
+      this.#expanded = true;
+    }
   }
 
   /** The item's (or the document's) homes and entries as stored, `document`'s home the one being edited */
@@ -475,6 +483,8 @@ export class EntryEditor extends HandlebarsApplicationMixin(DocumentSheetV2)<
       addBranch: EntryEditor.#onAddBranch,
       moveEntry: EntryEditor.#onMoveEntry,
       editCondition: EntryEditor.#onEditCondition,
+      editHome: EntryEditor.#onEditEffect,
+      closePane: EntryEditor.#onClosePane,
       buildCondition: EntryEditor.#onBuildCondition,
       overlayEditChange: EntryEditor.#onOverlayEditChange,
       overlayRemoveChange: EntryEditor.#onOverlayRemoveChange,
@@ -516,7 +526,7 @@ export class EntryEditor extends HandlebarsApplicationMixin(DocumentSheetV2)<
   };
 
   static PARTS = {
-    editor: { template: "modules/midi-qol/templates/apps/EntryEditor/entryEditor.hbs", scrollable: [".midi-qol-entry-sentences", ".midi-qol-entry-list", ".midi-qol-entry-form"] }
+    editor: { template: "modules/midi-qol/templates/apps/EntryEditor/entryEditor.hbs", scrollable: [".midi-qol-entry-sentences", ".midi-qol-entry-list", ".midi-qol-entry-form", ".midi-qol-view-pane"] }
   };
 
   get title() {
@@ -594,15 +604,17 @@ export class EntryEditor extends HandlebarsApplicationMixin(DocumentSheetV2)<
       homeLabel: this.#homes.length > 1 ? home.label : undefined,
       activityCard: this.#view === "form" && home.card ? this.#cardContext(home, this.#at) : undefined,
       automations: this.#view === "form" ? this.#automations(home) : undefined,
-      settings: this.#view === "form" ? this.#settingsContext(home, true) : undefined,
-      effectEditor: this.#view === "form" && home.changes ? this.#effectEditorContext(home) : undefined,
-      homeChoices: this.#view === "form" ? home.choices : undefined,
-      homeChoiceRows: this.#view === "form" && home.choices !== undefined ? this.#homeChoiceRows(home) : undefined,
+      settings: this.#view === "form" || this.#pane ? this.#settingsContext(home, true) : undefined,
+      effectEditor: (this.#view === "form" || this.#pane) && home.changes ? this.#effectEditorContext(home) : undefined,
+      homeChoices: this.#view === "form" || this.#pane ? home.choices : undefined,
+      homeChoiceRows: (this.#view === "form" || this.#pane) && home.choices !== undefined ? this.#homeChoiceRows(home) : undefined,
       homeChoicesProblem: home.choicesProblem,
       ifPresets: conditionPresets(),
       hasEntry: !!entry,
       jsonView: this.#jsonView,
       sentenceView: this.#view === "sentence",
+      pane: this.#view === "sentence" && (this.#pane || (this.#expanded && !!entry)) ? { label: home.label, home: this.#pane, entry: this.#expanded && !!entry, at: this.#at, index: this.#selected,
+        first: this.#selected === 0, last: this.#selected >= home.drafts.length - 1 } : undefined,
       sheetHead: await this.#sheetHeadContext(),
       overlay: this.#view === "sentence" ? await this.#overlayContext() : undefined,
       addWhat: this.#root ? { open: this.#addWhatOpen, kinds: [...NEW_KINDS.map(k => ({ value: k,
@@ -730,6 +742,7 @@ export class EntryEditor extends HandlebarsApplicationMixin(DocumentSheetV2)<
     const model = buildBehaviour(item);
 
     const activityOf = (id: string) => item.activities.find(a => a.id === id);
+    const runByArea = (at: number) => !!this.#homes[at]?.runByArea;
     const config = (CONFIG as unknown as { DND5E?: { activityActivationTypes?: Record<string, { label?: string }>, activityTypes?: Record<string, { documentClass?: { metadata?: { title?: string } } }> } }).DND5E ?? {};
     const nameOf = (id: string) => {
       const activity = activityOf(id);
@@ -793,7 +806,8 @@ export class EntryEditor extends HandlebarsApplicationMixin(DocumentSheetV2)<
       const read = reaction && activity?.condition ? conditionText(activity.condition) : undefined;
       const activation = activity?.activation;
       return {
-        home: at, nested, label: nameOf(node.activityId), note: nested ? say("OnlyFromHere") : "",
+        home: at, nested, label: nameOf(node.activityId),
+        note: [...(runByArea(at) ? [say("RunByArea")] : []), ...(nested ? [say("OnlyFromHere")] : [])].join(" · "),
         cost: activation ? i18n(config.activityActivationTypes?.[activation]?.label ?? activation) : "",
         ...(read ? { trigger: { words: read.text, code: !read.known } } : {}),
         // With a card, the steps go inside it: what comes before the roll above its outcomes, the rest below them
@@ -924,9 +938,19 @@ export class EntryEditor extends HandlebarsApplicationMixin(DocumentSheetV2)<
   }
 
   /** The sentence view's effect: opened in the form view, at its own data */
+  /** A home's own parts (an effect's changes, its choices, its settings) in the side pane */
   static #onEditEffect(this: EntryEditor, _event: Event, target: HTMLElement) {
     this.#goHome(target);
-    this.#view = "form";
+    this.#view = "sentence";
+    this.#pane = true;
+    this.#expanded = false;
+    this.render();
+  }
+
+  static #onClosePane(this: EntryEditor) {
+    this.#pane = false;
+    this.#expanded = false;
+    this.#picker = undefined;
     this.render();
   }
 
@@ -2192,8 +2216,7 @@ export class EntryEditor extends HandlebarsApplicationMixin(DocumentSheetV2)<
     this.#readCard(data);
     this.#readSettings(data);
     this.#readChanges(data);
-    // The sentence view's other fields are the entry open under its sentence
-    if (this.#view === "sentence" && !this.#expanded) return void this.render();
+    // A home's choices, when its pane shows them
     const home = this.#homes[this.#at];
     if (typeof data.homeChoices === "string" && home.choices !== undefined) {
       home.choices = this.#homeChoicesFromFields(data, data.homeChoices);
@@ -2201,6 +2224,8 @@ export class EntryEditor extends HandlebarsApplicationMixin(DocumentSheetV2)<
       try { if (!Array.isArray(JSON.parse(home.choices || "[]"))) home.choicesProblem = i18n("midi-qol.EntryEditor.Problem.Choices"); }
       catch (err) { home.choicesProblem = `${i18n("midi-qol.EntryEditor.Problem.Choices")}: ${(err as Error).message}`; }
     }
+    // The sentence view's other fields are the entry open in its pane
+    if (this.#view === "sentence" && !this.#expanded) return void this.render();
     if (!draft) return void this.render();
     if (this.#jsonView) {
       const text = String(data.json ?? "");

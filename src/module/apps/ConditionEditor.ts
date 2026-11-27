@@ -1,4 +1,7 @@
 import { i18n } from "../../midi-qol.js";
+import { tagDefinition, tagNames } from "../lib/tags.js";
+import { conditionProblem, unknownNames } from "../lib/entries/conditionPhrases.js";
+import { conditionText } from "../lib/entries/conditionVocabulary.js";
 
 const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
 
@@ -357,7 +360,64 @@ function buildBlocklyCategories(api: any): Record<string, Record<string, any>> {
   };
 }
 
+type Completion = { type: string, detail?: string, info?: string, children?: Record<string, Completion> };
+const prop = (detail: string, info: string, children?: Record<string, Completion>): Completion => ({ type: "property", detail, info, ...(children ? { children } : {}) });
+const fn = (detail: string, info: string): Completion => ({ type: "function", detail, info });
+
+/**
+ * What entries, reactions and tags add to a condition (lib/entries/conditionData.ts, lib/subjectReactions.ts), the tags
+ * from their registry so a module's are offered as soon as it registers them.
+ */
+export function entryCompletions(): Record<string, Completion> {
+  const tags: Record<string, Completion> = {};
+  for (const name of tagNames()) {
+    const [group, ...rest] = name.split(".");
+    const definition = tagDefinition(name) as { label?: string, kind?: string } | undefined;
+    tags[group] ??= prop("object", `Tags about the ${group}`, {});
+    if (rest.length) tags[group].children![rest.join(".")] = prop(definition?.kind ?? "tag", definition?.label ?? name);
+  }
+  const creature = { token: prop("TokenDocument", "Its token"), actor: prop("Actor", "Its actor"), uuid: prop("string", "Its token's uuid") };
+  return {
+    tags: prop("object", "Named facts about the use, its target and its result", tags),
+    reaction: prop("string", "The reaction trigger being asked about: isHit, isAttacked, preAttack, isDamaged, isSave, isCast, isOpportunity…"),
+    subject: prop("object", "A reaction's trigger is about this creature (the one attacked, hit, saving or casting)", {
+      ...creature, isSelf: prop("boolean", "It is the reacting creature"), isAlly: prop("boolean", "Same disposition as the reacting creature"),
+      canSee: prop("boolean", "The reacting creature sees it"), distance: prop("number", "Feet from the reacting creature") }),
+    use: prop("object", "The use the entry acts in", {
+      workflow: prop("Workflow", "Its workflow"), activity: prop("Activity", "Its activity"), item: prop("Item", "Its item"), actor: prop("Actor", "Its user"),
+      token: prop("TokenDocument", "Its user's token"), spellLevel: prop("number", "The level it is cast at"), targets: prop("TokenDocument[]", "Its targets"),
+      choices: prop("object", "What was chosen before it, by choice id"), tags: prop("object", "Its tags (as tags.use)") }),
+    event: prop("object", "What happened, for the entry's event", {
+      kind: prop("string", "A roll's kind: attack, save, check, skill, tool, damage, death, concentration"), actor: prop("Actor", "Who did it"),
+      creature: prop("Actor", "The creature it is about (near entries)"), creatureToken: prop("TokenDocument", "That creature's token"),
+      use: prop("object", "The use it came from"), damage: prop("object", "Damage being applied (applied.<type>, hp, temp)"), status: prop("string", "The condition gained") }),
+    entry: prop("object", "The entry itself", {
+      owner: prop("Actor", "The actor that has it"), counts: prop("object", "Its counters (the count action)"),
+      origin: prop("object", "The use that applied the effect it is on", { ...creature, item: prop("Item", "The item used"), activity: prop("Activity", "The activity used"),
+        spellLevel: prop("number", "The level it was cast at"), dc: prop("number", "Its save DC") }) }),
+    outcome: prop("object", "This target's outcome so far (attack, save, damage)"),
+    outcomes: prop("object", "Every target's outcome, by token uuid"),
+    choices: prop("object", "What was chosen before the use, by choice id"),
+    tallies: prop("object", "Running totals for the turn or round (the tally action)"),
+    config: prop("object", "The item's automation settings, by key"),
+    bearer: prop("Actor", "The creature that has the effect"),
+    near: prop("object", "The creature a near entry's event is about", { token: prop("TokenDocument", "Its token"), distance: prop("number", "Feet away"), ally: prop("boolean", "Same disposition as the holder") }),
+    targets: prop("object[]", "The use's targets' roll data"),
+    nearby: fn("({ within, of, filter }) => Actor[]", "Creatures within a distance"),
+    canSee: fn("(a, b) => boolean", "Whether one creature sees another"),
+    inside: fn("(token, holder?) => boolean", "Whether a creature is inside another (swallowed, engulfed)"),
+    fitsInside: fn("(token, holder) => boolean", "Whether a creature fits inside another"),
+    dice: prop("object", "Dice helpers", { duplicates: fn("(roll, faces?) => boolean", "Whether a roll has two dice showing the same") })
+  };
+}
+
+/** Names any expression may use besides what a condition is given */
+const JS_GLOBALS = ["Math", "Number", "String", "Array", "Object", "JSON", "Set", "Map", "Date", "RegExp", "parseInt", "parseFloat", "isNaN", "Roll", "game", "canvas",
+  "CONFIG", "CONST", "foundry", "fromUuidSync", "fromUuid", "MidiQOL", "console"];
+
 export class ConditionEditor extends HandlebarsApplicationMixin(ApplicationV2) {
+  #watch: ReturnType<typeof setInterval> | undefined;
+
   declare originalValue: string;
   declare flagKey: string;
   declare effect: ActiveEffect | undefined;
@@ -429,11 +489,44 @@ export class ConditionEditor extends HandlebarsApplicationMixin(ApplicationV2) {
     // Inject contextual completions into the code-mirror element via macro-autocomplete API
     const macroAutoComplete = (game as any).modules?.get("macro-autocomplete");
     const api = macroAutoComplete?.api;
-    if (!api?.setContextCompletions) return;
+    // What entries, reactions and tags add comes from their registries, over the hand-kept base
+    const completions = api?.setContextCompletions ? { ...buildConditionCompletions(api), ...entryCompletions() } : undefined;
+    this.#watchValue(ConditionEditor.knownNames());
+    if (!api?.setContextCompletions || !completions) return;
 
-    const completions = buildConditionCompletions(api);
     const blocklyCategories = buildBlocklyCategories(api);
     api.setContextCompletions(codeMirrorEl, completions, blocklyCategories);
+  }
+
+  /** The names a condition may read: what the autocomplete offers, and JavaScript's own; undefined without the autocomplete module */
+  static knownNames(): Set<string> | undefined {
+    const api = (game as any).modules?.get("macro-autocomplete")?.api;
+    return api?.setContextCompletions ? new Set([...Object.keys(buildConditionCompletions(api)), ...Object.keys(entryCompletions()), ...JS_GLOBALS]) : undefined;
+  }
+
+  /**
+   * Under the editor, as it is typed: the condition in words where midi knows any of it, what JavaScript can't read,
+   * and names a condition isn't given (`known`: absent without the autocomplete module, when they aren't checked).
+   */
+  #watchValue(known: ReadonlySet<string> | undefined) {
+    clearInterval(this.#watch);
+    let last: string | undefined;
+    const update = () => {
+      const status = this.element?.querySelector<HTMLElement>(".condition-editor-status");
+      if (!status) return void clearInterval(this.#watch);
+      const value = this.#getCurrentValue();
+      if (value === last) return;
+      last = value;
+      const read = value.trim() ? conditionText(value) : undefined;
+      const problem = conditionProblem(value);
+      const unknown = !problem && known ? unknownNames(value, known) : [];
+      const line = (cls: string, text: string) => text ? `<div class="${cls}">${foundry.utils.escapeHTML(text)}</div>` : "";
+      status.innerHTML = line("condition-editor-reads", read?.known ? game.i18n?.format("midi-qol.ConditionBuilder.FieldReads", { words: read.text }) ?? read.text : "")
+        + line("condition-editor-problem", problem ? game.i18n?.format("midi-qol.ConditionBuilder.Problem", { problem }) ?? problem : "")
+        + line("condition-editor-unknown", unknown.length ? game.i18n?.format("midi-qol.ConditionEditor.Unknown", { names: unknown.join(", ") }) ?? unknown.join(", ") : "");
+    };
+    update();
+    this.#watch = setInterval(update, 400);
   }
 
   /** Read current value from the code-mirror element */
@@ -458,6 +551,7 @@ export class ConditionEditor extends HandlebarsApplicationMixin(ApplicationV2) {
       });
       if (!confirmed) return this;
     }
+    clearInterval(this.#watch);
     // Clean up contextual completions
     const api = (game as any).modules?.get("macro-autocomplete")?.api;
     const codeMirrorEl = this.element?.querySelector("code-mirror");

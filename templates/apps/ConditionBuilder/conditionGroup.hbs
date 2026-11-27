@@ -1,0 +1,25 @@
+<div class="midi-qol-condition-group" data-path="{{path}}">
+    {{#each rows}}
+    <div class="midi-qol-condition-row">
+        <span class="midi-qol-condition-join">{{#if first}}{{localize "midi-qol.ConditionBuilder.Where"}}{{else}}<button type="button" data-action="toggleJoin" data-path="{{../path}}" data-tooltip="{{localize "midi-qol.ConditionBuilder.JoinHint"}}">{{../joinLabel}}</button>{{/if}}</span>
+        {{#if group}}{{#with group}}{{> "modules/midi-qol/templates/apps/ConditionBuilder/conditionGroup.hbs"}}{{/with}}
+        {{else if phrase}}
+        <span class="midi-qol-condition-phrase">
+            {{#each parts}}{{#if name}}{{#if (eq type "sense")}}<select class="midi-qol-condition-sense" name="{{name}}" data-tooltip="{{localize "midi-qol.ConditionBuilder.Sense"}}">{{#each options}}<option value="{{value}}" {{#if selected}}selected{{/if}}>{{label}}</option>{{/each}}</select>{{else if (eq type "select")}}<select name="{{name}}">{{#each options}}<option value="{{value}}" {{#if selected}}selected{{/if}}>{{label}}</option>{{/each}}</select>{{else if (eq type "multiselect")}}{{#if options.length}}<multi-select name="{{name}}">{{#each options}}<option value="{{value}}" {{#if selected}}selected{{/if}}>{{label}}</option>{{/each}}</multi-select>{{else}}<input type="text" name="{{name}}" value="{{value}}">{{/if}}{{else if (eq type "number")}}<input type="number" name="{{name}}" value="{{value}}" step="any">{{else}}<input type="text" name="{{name}}" value="{{value}}">{{/if}}{{else}}<span>{{text}}</span>{{/if}}{{/each}}
+        </span>
+        {{else}}
+        <input type="text" class="midi-qol-condition-code" name="{{name}}" value="{{source}}" spellcheck="false" placeholder="{{localize "midi-qol.ConditionBuilder.CodeRow"}}">
+        <button type="button" class="unbutton control-button" data-action="editCode" data-path="{{path}}" data-tooltip="{{localize "midi-qol.ConditionBuilder.EditCode"}}"><i class="fa-solid fa-code" inert></i></button>
+        {{/if}}
+        <button type="button" class="unbutton control-button midi-qol-condition-remove" data-action="removeRow" data-path="{{path}}" data-tooltip="{{localize "midi-qol.ConditionBuilder.Remove"}}"><i class="fa-solid fa-xmark" inert></i></button>
+    </div>
+    {{/each}}
+    <div class="midi-qol-condition-add">
+        <select name="add.{{path}}">
+            <option value="">{{localize "midi-qol.ConditionBuilder.Add"}}</option>
+            {{#each @root.groups}}<optgroup label="{{label}}">{{#each phrases}}<option value="{{value}}">{{label}}</option>{{/each}}</optgroup>{{/each}}
+            <option value="{{@root.codeValue}}">{{localize "midi-qol.ConditionBuilder.Code"}}</option>
+        </select>
+        {{#if canGroup}}<button type="button" data-action="addGroup" data-path="{{path}}"><i class="fa-solid fa-plus" inert></i> {{localize "midi-qol.ConditionBuilder.AddGroup"}}</button>{{/if}}
+    </div>
+</div>

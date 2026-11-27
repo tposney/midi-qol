@@ -1,4 +1,4 @@
-        <div class="midi-qol-entry-sentence {{#if problems.length}}invalid{{/if}} {{#if rowKind}}midi-qol-view-{{rowKind}}{{/if}}">
+        <div class="midi-qol-entry-sentence {{#if problems.length}}invalid{{/if}} {{#if rowKind}}midi-qol-view-{{rowKind}}{{/if}} {{#if expanded}}selected{{/if}}">
             <div class="midi-qol-entry-sentence-row">
                 <span class="midi-qol-entry-number">{{#if rowKind}}{{#if replaces}}<i class="fa-solid fa-right-left" data-tooltip="{{localize "midi-qol.ItemView.Instead"}}"></i>{{else}}▸{{/if}}{{else}}{{number}}{{/if}}</span>
                 <div class="midi-qol-entry-lines">
@@ -11,11 +11,6 @@
                 </div>
                 <button type="button" class="midi-qol-entry-edit" data-action="editEntry" data-home="{{home}}" data-index="{{index}}" data-tooltip="{{localize "midi-qol.EntryEditor.Edit"}}" aria-label="{{localize "midi-qol.EntryEditor.Edit"}}" aria-expanded="{{#if expanded}}true{{else}}false{{/if}}"><i class="fa-solid {{#if expanded}}fa-chevron-up{{else}}fa-pen{{/if}}"></i></button>
             </div>
-            {{#if expanded}}
-            <div class="midi-qol-entry-inline">
-        {{> "modules/midi-qol/templates/apps/EntryEditor/entryForm.hbs" @root}}
-            </div>
-            {{/if}}
             {{#if picker}}
             <div class="midi-qol-entry-picker">
                 <div class="midi-qol-entry-picker-head"><strong>{{localize "midi-qol.EntryEditor.PickTrigger"}}</strong> <span class="hint">{{localize "midi-qol.EntryEditor.PickTriggerHint"}}</span>

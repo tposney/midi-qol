@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildCondition, canonical, conditionProblem, conditionWords, fromRows, parseCondition, toRows, type ConditionPhraseDef, type ConditionWording } from "../src/module/lib/entries/conditionPhrases.js";
+import { asGroup, unknownNames, buildCondition, canonical, conditionProblem, conditionWords, fromRows, parseCondition, phraseLabel, pruned, toRows, type ConditionPhraseDef, type ConditionWording } from "../src/module/lib/entries/conditionPhrases.js";
 
 const defs: ConditionPhraseDef[] = [
   { id: "spell", label: "the use is a spell", negatedLabel: "the use is not a spell", pattern: "tags.use.kind === 'spell'" },
@@ -71,6 +71,39 @@ describe("condition phrases", () => {
     expect(fromRows({ joiner: "any", rows: [{ kind: "phrase", id: "casts", values: {}, negated: false }, { kind: "phrase", id: "size", values: { size: 4 }, negated: false }] }, defs))
       .toBe("tags.use.casts || tags.target.sizeRank >= 4");
     expect(fromRows({ joiner: "all", rows: [{ kind: "code", source: " " }, { kind: "phrase", id: "self", values: {}, negated: true }] }, defs)).toBe("!subject.isSelf");
+  });
+
+  it("the negative inside the wording: a label's two verb forms", () => {
+    const sees: ConditionPhraseDef = { id: "sees", label: "you {can|can't} see that creature within {feet} ft", pattern: "subject.canSee && subject.distance <= {feet}", slots: [{ name: "feet", type: "number" }] };
+    expect(phraseLabel(sees, false)).toEqual({ text: "you can see that creature within {feet} ft", own: true });
+    expect(phraseLabel(sees, true)).toEqual({ text: "you can't see that creature within {feet} ft", own: true });
+    expect(phraseLabel(defs[1], true)).toEqual({ text: "the use is the casting of a spell", own: false });
+    expect(phraseLabel(defs[0], true)).toEqual({ text: "the use is not a spell", own: true });
+    const two: ConditionPhraseDef[] = [{ id: "seen", label: "you {can|can't} see that creature", pattern: "subject.canSee" }];
+    expect(conditionWords(parseCondition("!subject.canSee", two), two, wording).text).toBe("you can't see that creature");
+  });
+
+  it("the builder's tree: always a group at the top; nested groups kept; what says nothing pruned", () => {
+    const tree = asGroup(parseCondition("tags.use.casts && (subject.isSelf || (subject.canSee && tags.target.sizeRank >= 3))", defs));
+    expect(tree.kind).toBe("all");
+    expect(tree.parts.map(p => p.kind)).toEqual(["phrase", "any"]);
+    const inner = tree.parts[1];
+    expect(inner.kind === "any" && inner.parts.map(p => p.kind)).toEqual(["phrase", "all"]);
+    expect(buildCondition(pruned(tree)!, defs)).toBe("tags.use.casts && (subject.isSelf || (subject.canSee && tags.target.sizeRank >= 3))");
+    expect(asGroup(parseCondition("", defs))).toEqual({ kind: "all", parts: [] });
+    expect(asGroup(parseCondition("tags.use.casts", defs)).parts.length).toBe(1);
+    expect(pruned({ kind: "all", parts: [{ kind: "code", source: " " }, { kind: "any", parts: [] }] })).toBeUndefined();
+    expect(pruned({ kind: "all", parts: [{ kind: "any", parts: [{ kind: "phrase", id: "casts", values: {}, negated: false }] }] })).toEqual({ kind: "phrase", id: "casts", values: {}, negated: false });
+  });
+
+  it("names an expression reads that a condition isn't given", () => {
+    const known = new Set(["tags", "subject", "target", "reaction", "Math", "item", "nearby"]);
+    expect(unknownNames("tags.use.kind === 'spell' && subject.canSee", known)).toEqual([]);
+    expect(unknownNames("tag.use.kind === 'spell' && subjet?.canSee", known)).toEqual(["tag", "subjet"]);
+    expect(unknownNames("[...(item.properties ?? [])].some(p => ['vocal'].includes(p)) && reaction === \"isCast\"", known)).toEqual([]);
+    expect(unknownNames("nearby({ within: 30, filter: (a, b) => a.effects.some(e => e.name === 'Bonded') }).length > 0", known)).toEqual([]);
+    expect(unknownNames("target?.flags?.['midi-qol']?.echo && Math.max(1, level) > 2 ? true : workflow.x", known)).toEqual(["level", "workflow"]);
+    expect(unknownNames("/evil/i.test(details.alignment ?? '')", known)).toEqual(["details"]);
   });
 
   it("names an expression JavaScript can't read", () => {

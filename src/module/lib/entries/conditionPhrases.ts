@@ -26,9 +26,12 @@ export interface ConditionPhraseDef {
   id: string;
   /** Where the builder lists it: use, target, subject, result, roll, or a module's own */
   group?: string;
-  /** Its words, with {name} for each slot */
+  /**
+   * Its words, with {name} for each slot. The negative lives in the wording: {is|is not} gives the two forms of its
+   * verb ("you {can|can't} see that creature"), which the builder offers in place.
+   */
   label: string;
-  /** Its words when negated (else "not (…)") */
+  /** Its words when negated, for a label without the two forms (else "not (…)") */
   negatedLabel?: string;
   /** The expression written, with its slots' places */
   pattern: string;
@@ -242,6 +245,23 @@ export function fromRows(rows: ConditionRows, defs: readonly ConditionPhraseDef[
   return buildCondition({ kind: rows.joiner, parts: kept }, defs);
 }
 
+export type ConditionGroup = Extract<ConditionNode, { kind: "all" | "any" }>;
+export const isGroup = (node: ConditionNode | undefined): node is ConditionGroup => node?.kind === "all" || node?.kind === "any";
+
+/** A tree as the builder edits it: always a group at the top (one piece is a group of one, nothing a group of none) */
+export function asGroup(node: ConditionNode): ConditionGroup {
+  if (isGroup(node)) return node;
+  return { kind: "all", parts: node.kind === "code" && !node.source.trim() ? [] : [node] };
+}
+
+/** A tree without what says nothing: empty expressions, groups of none; a group of one is its one piece */
+export function pruned(node: ConditionNode): ConditionNode | undefined {
+  if (node.kind === "code") return node.source.trim() ? node : undefined;
+  if (!isGroup(node)) return node;
+  const parts = node.parts.flatMap(part => pruned(part) ?? []);
+  return parts.length === 0 ? undefined : parts.length === 1 ? parts[0] : { kind: node.kind, parts };
+}
+
 export interface ConditionWording {
   and: string;
   or: string;
@@ -251,14 +271,24 @@ export interface ConditionWording {
   value(slot: ConditionSlot | undefined, value: string | number): string;
 }
 
+/** The two forms of a label's verb: {is|is not} */
+export const VERB_FORMS = /\{([^{}|]+)\|([^{}|]+)\}/;
+
+/** A phrase's label for its sense; `own`: whether the wording itself says the negative (else "not (…)" is needed) */
+export function phraseLabel(def: ConditionPhraseDef, negated: boolean): { text: string, own: boolean } {
+  if (VERB_FORMS.test(def.label)) return { text: def.label.replace(VERB_FORMS, negated ? "$2" : "$1"), own: true };
+  if (negated && def.negatedLabel) return { text: def.negatedLabel, own: true };
+  return { text: def.label, own: !negated };
+}
+
 function phraseWords(node: Extract<ConditionNode, { kind: "phrase" }>, def: ConditionPhraseDef, wording: ConditionWording): string {
-  const label = node.negated && def.negatedLabel ? def.negatedLabel : def.label;
+  const { text: label, own } = phraseLabel(def, node.negated);
   const words = label.replace(/\{(\w+)\}/g, (_m, name) => {
     const slot = def.slots?.find(s => s.name === name);
     const names = [node.values[name] ?? ""].flat().map(v => wording.value(slot, v));
     return names.length < 2 ? names.join("") : `${names.slice(0, -1).join(", ")} ${wording.or} ${names.at(-1)}`;
   });
-  return node.negated && !def.negatedLabel ? wording.not(words) : words;
+  return own ? words : wording.not(words);
 }
 
 /** A tree in words; code as written. `known`: whether any piece was put in words */
@@ -280,4 +310,28 @@ export function conditionProblem(expression: string): string | undefined {
     new Function(`return (async () => (${expression}))`);
     return undefined;
   } catch (err) { return err instanceof Error ? err.message : String(err); }
+}
+
+const KEYWORDS = new Set(["true", "false", "null", "undefined", "NaN", "Infinity", "new", "typeof", "instanceof", "in", "of", "await", "async", "void", "delete",
+  "return", "this", "if", "else", "let", "const", "var", "function"]);
+
+/**
+ * Names an expression reads that `known` doesn't have: bare names, not a property after a dot, an object's key, an
+ * arrow function's parameter or anything inside a string. For telling an author before it is saved that a name isn't
+ * one a condition is given (a slip like `tag.use.kind` for `tags.use.kind`).
+ */
+export function unknownNames(expression: string, known: ReadonlySet<string>): string[] {
+  // Strings and regular expression bodies say nothing about names
+  const bare = expression.replace(/(['"`])(?:\\.|(?!\1)[^\\])*\1/g, "''").replace(/\/(?![*/])(?:\\.|[^/\\\n])+\/[a-z]*/g, "''");
+  const parameters = new Set<string>();
+  for (const found of bare.matchAll(/\(([^()]*)\)\s*=>|([A-Za-z_$][\w$]*)\s*=>/g))
+    for (const name of (found[1] ?? found[2] ?? "").split(",")) { const n = name.trim().replace(/^\.\.\./, "").split(/[\s=]/)[0]; if (n) parameters.add(n); }
+  const unknown = new Set<string>();
+  for (const found of bare.matchAll(/(?<![\w$.])([A-Za-z_$][\w$]*)(?![\w$])(?!\s*:(?!:))/g)) {
+    const name = found[1];
+    // `?.name` is a property; `a ? b : c` is not
+    if (bare.slice(0, found.index).trimEnd().endsWith("?.")) continue;
+    if (!KEYWORDS.has(name) && !parameters.has(name) && !known.has(name)) unknown.add(name);
+  }
+  return [...unknown];
 }
